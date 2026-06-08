@@ -68,8 +68,6 @@ export interface Gebouw {
   /** @nullable */
   omschrijving?: string | null;
   /** @nullable */
-  bouwjaar?: number | null;
-  /** @nullable */
   klant_id?: number | null;
   /** @nullable */
   klant_naam?: string | null;
@@ -125,8 +123,6 @@ export interface GebouwDetail {
   postcode?: string | null;
   /** @nullable */
   omschrijving?: string | null;
-  /** @nullable */
-  bouwjaar?: number | null;
   /** @nullable */
   klant_id?: number | null;
   /** @nullable */
@@ -267,7 +263,6 @@ export interface GebouwInput {
   stad?: string;
   postcode?: string;
   omschrijving?: string;
-  bouwjaar?: number;
   klant_id?: number;
   aantal_verdiepingen?: number;
   hoogte?: number;
@@ -285,7 +280,6 @@ export interface GebouwUpdate {
   stad?: string | null;
   postcode?: string | null;
   omschrijving?: string | null;
-  bouwjaar?: number | null;
   klant_id?: number | null;
   aantal_verdiepingen?: number | null;
   hoogte?: number | null;
@@ -332,8 +326,6 @@ export interface GebouwAiAnalyseResultaat {
   oppervlakte?: number | null;
   /** @nullable */
   gebouw_type?: string | null;
-  /** @nullable */
-  bouwjaar?: number | null;
   /** @nullable */
   omschrijving?: string | null;
   /** @nullable */

@@ -17,8 +17,6 @@ export interface Gebouw {
   /** @nullable */
   omschrijving?: string | null;
   /** @nullable */
-  bouwjaar?: number | null;
-  /** @nullable */
   klant_id?: number | null;
   /** @nullable */
   klant_naam?: string | null;

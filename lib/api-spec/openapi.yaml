@@ -1904,8 +1904,6 @@ components:
           type: ["string", "null"]
         omschrijving:
           type: ["string", "null"]
-        bouwjaar:
-          type: ["integer", "null"]
         klant_id:
           type: ["integer", "null"]
         klant_naam:
@@ -1947,8 +1945,6 @@ components:
           type: ["string", "null"]
         omschrijving:
           type: ["string", "null"]
-        bouwjaar:
-          type: ["integer", "null"]
         klant_id:
           type: ["integer", "null"]
         klant_naam:
@@ -2223,8 +2219,6 @@ components:
           type: string
         omschrijving:
           type: string
-        bouwjaar:
-          type: integer
         klant_id:
           type: integer
         aantal_verdiepingen:
@@ -2259,9 +2253,6 @@ components:
           nullable: true
         omschrijving:
           type: string
-          nullable: true
-        bouwjaar:
-          type: integer
           nullable: true
         klant_id:
           type: integer
@@ -2333,8 +2324,6 @@ components:
           type: ["number", "null"]
         gebouw_type:
           type: ["string", "null"]
-        bouwjaar:
-          type: ["integer", "null"]
         omschrijving:
           type: ["string", "null"]
         toelichting:

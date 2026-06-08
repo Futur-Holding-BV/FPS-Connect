@@ -12,7 +12,6 @@ export interface GebouwInput {
   stad?: string;
   postcode?: string;
   omschrijving?: string;
-  bouwjaar?: number;
   klant_id?: number;
   aantal_verdiepingen?: number;
   hoogte?: number;

@@ -70,7 +70,6 @@ export default function GebouwDetail() {
 
   const heeftGegevens =
     gebouw.gebouw_type != null ||
-    gebouw.bouwjaar != null ||
     gebouw.aantal_verdiepingen != null ||
     gebouw.hoogte != null ||
     gebouw.oppervlakte != null ||
@@ -173,12 +172,6 @@ export default function GebouwDetail() {
                     <div>
                       <dt className="text-muted-foreground">Type</dt>
                       <dd className="font-medium capitalize">{gebouw.gebouw_type}</dd>
-                    </div>
-                  )}
-                  {gebouw.bouwjaar != null && (
-                    <div>
-                      <dt className="text-muted-foreground">Bouwjaar</dt>
-                      <dd className="font-medium">{gebouw.bouwjaar}</dd>
                     </div>
                   )}
                   {gebouw.aantal_verdiepingen != null && (

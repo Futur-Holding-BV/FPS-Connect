@@ -37,8 +37,6 @@ export interface GebouwAiAnalyseResultaat {
   /** @nullable */
   gebouw_type?: string | null;
   /** @nullable */
-  bouwjaar?: number | null;
-  /** @nullable */
   omschrijving?: string | null;
   /** @nullable */
   toelichting?: string | null;

@@ -10,7 +10,6 @@ export const gebouwenTable = pgTable("gebouwen", {
   stad: text("stad"),
   postcode: text("postcode"),
   omschrijving: text("omschrijving"),
-  bouwjaar: integer("bouwjaar"),
   klantId: integer("klant_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
   aantalVerdiepingen: integer("aantal_verdiepingen"),
   hoogte: real("hoogte"),

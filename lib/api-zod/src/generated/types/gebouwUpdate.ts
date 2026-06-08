@@ -12,7 +12,6 @@ export interface GebouwUpdate {
   stad?: string | null;
   postcode?: string | null;
   omschrijving?: string | null;
-  bouwjaar?: number | null;
   klant_id?: number | null;
   aantal_verdiepingen?: number | null;
   hoogte?: number | null;

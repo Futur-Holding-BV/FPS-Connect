@@ -24,7 +24,6 @@ export interface GebouwAnalyse {
   diepte: number | null;
   oppervlakte: number | null;
   gebouw_type: string | null;
-  bouwjaar: number | null;
   omschrijving: string | null;
   toelichting: string | null;
   betrouwbaarheid: string | null;
@@ -47,7 +46,6 @@ function leegResultaat(toelichting: string): GebouwAnalyse {
     diepte: null,
     oppervlakte: null,
     gebouw_type: null,
-    bouwjaar: null,
     omschrijving: null,
     toelichting,
     betrouwbaarheid: null,
@@ -129,7 +127,6 @@ Geef uitsluitend geldige JSON terug met deze velden:
 - diepte (getal in meters): kleinste horizontale afmeting van de footprint
 - oppervlakte (getal in m2): grondoppervlak van de footprint
 - gebouw_type (tekst): bijv. "woonhuis", "appartementencomplex", "kantoor", "industrieel/bedrijfshal", "winkel", "school", "overig"
-- bouwjaar (geheel getal of null): geschat bouwjaar indien herkenbaar, anders null
 - omschrijving (korte Nederlandse tekst): 1 zin over het gebouw
 - toelichting (korte Nederlandse tekst): hoe je tot de schatting kwam
 - betrouwbaarheid (tekst): "laag", "midden" of "hoog"
@@ -142,7 +139,6 @@ interface VisionVelden {
   diepte: number | null;
   oppervlakte: number | null;
   gebouw_type: string | null;
-  bouwjaar: number | null;
   omschrijving: string | null;
   toelichting: string | null;
   betrouwbaarheid: string | null;
@@ -202,7 +198,6 @@ async function analyseerBeeld(
     diepte: numOfNull(parsed.diepte),
     oppervlakte: numOfNull(parsed.oppervlakte),
     gebouw_type: strOfNull(parsed.gebouw_type),
-    bouwjaar: intOfNull(parsed.bouwjaar),
     omschrijving: strOfNull(parsed.omschrijving),
     toelichting: strOfNull(parsed.toelichting),
     betrouwbaarheid: strOfNull(parsed.betrouwbaarheid),
@@ -218,7 +213,6 @@ Geef uitsluitend geldige JSON terug met deze velden:
 - stad (tekst of null)
 - postcode (tekst of null)
 - gebouw_type (tekst of null): bijv. "woonhuis", "appartementencomplex", "kantoor", "industrieel/bedrijfshal", "winkel", "school", "overig"
-- bouwjaar (geheel getal of null)
 - aantal_verdiepingen (geheel getal of null)
 - hoogte (getal in meters of null)
 - breedte (getal in meters of null)
@@ -234,7 +228,6 @@ interface ExtractieVelden {
   stad: string | null;
   postcode: string | null;
   gebouw_type: string | null;
-  bouwjaar: number | null;
   aantal_verdiepingen: number | null;
   hoogte: number | null;
   breedte: number | null;
@@ -270,7 +263,6 @@ async function extraheerUitTekst(beschrijving: string): Promise<ExtractieVelden 
     stad: strOfNull(parsed.stad),
     postcode: strOfNull(parsed.postcode),
     gebouw_type: strOfNull(parsed.gebouw_type),
-    bouwjaar: intOfNull(parsed.bouwjaar),
     aantal_verdiepingen: intOfNull(parsed.aantal_verdiepingen),
     hoogte: numOfNull(parsed.hoogte),
     breedte: numOfNull(parsed.breedte),
@@ -336,7 +328,6 @@ export async function analyseerGebouwVrijeTekst(beschrijving: string): Promise<G
     diepte: extract.diepte,
     oppervlakte: extract.oppervlakte,
     gebouw_type: extract.gebouw_type,
-    bouwjaar: extract.bouwjaar,
     omschrijving: extract.omschrijving,
     toelichting: null,
     betrouwbaarheid: null,
@@ -374,7 +365,6 @@ export async function analyseerGebouwVrijeTekst(beschrijving: string): Promise<G
           result.diepte = result.diepte ?? velden.diepte;
           result.oppervlakte = result.oppervlakte ?? velden.oppervlakte;
           result.gebouw_type = result.gebouw_type ?? velden.gebouw_type;
-          result.bouwjaar = result.bouwjaar ?? velden.bouwjaar;
           result.omschrijving = result.omschrijving ?? velden.omschrijving;
           result.toelichting = velden.toelichting;
           result.betrouwbaarheid = velden.betrouwbaarheid;

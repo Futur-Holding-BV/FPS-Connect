@@ -22,7 +22,6 @@ interface Velden {
   stad: string;
   postcode: string;
   omschrijving: string;
-  bouwjaar: string;
   gebouw_type: string;
   aantal_verdiepingen: string;
   hoogte: string;
@@ -48,7 +47,6 @@ function uitGebouw(gebouw: Gebouw): Velden {
     stad: tekst(gebouw.stad),
     postcode: tekst(gebouw.postcode),
     omschrijving: tekst(gebouw.omschrijving),
-    bouwjaar: tekst(gebouw.bouwjaar),
     gebouw_type: tekst(gebouw.gebouw_type),
     aantal_verdiepingen: tekst(gebouw.aantal_verdiepingen),
     hoogte: tekst(gebouw.hoogte),
@@ -97,7 +95,6 @@ export function GebouwBewerkenDialog({ gebouw, open, onOpenChange }: Props) {
           stad: velden.stad || null,
           postcode: velden.postcode || null,
           omschrijving: velden.omschrijving || null,
-          bouwjaar: getalOfNull(velden.bouwjaar),
           gebouw_type: velden.gebouw_type || null,
           aantal_verdiepingen: getalOfNull(velden.aantal_verdiepingen),
           hoogte: getalOfNull(velden.hoogte),
@@ -174,15 +171,6 @@ export function GebouwBewerkenDialog({ gebouw, open, onOpenChange }: Props) {
               placeholder="kantoor, woonhuis..."
               value={velden.gebouw_type}
               onChange={(e) => zet("gebouw_type", e.target.value)}
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="b-bouwjaar">Bouwjaar</Label>
-            <Input
-              id="b-bouwjaar"
-              inputMode="numeric"
-              value={velden.bouwjaar}
-              onChange={(e) => zet("bouwjaar", e.target.value)}
             />
           </div>
           <div className="space-y-1.5">

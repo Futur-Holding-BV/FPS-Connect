@@ -27,7 +27,6 @@ interface Velden {
   stad: string;
   postcode: string;
   omschrijving: string;
-  bouwjaar: string;
   gebouw_type: string;
   aantal_verdiepingen: string;
   hoogte: string;
@@ -42,7 +41,6 @@ const LEEG: Velden = {
   stad: "",
   postcode: "",
   omschrijving: "",
-  bouwjaar: "",
   gebouw_type: "",
   aantal_verdiepingen: "",
   hoogte: "",
@@ -112,7 +110,6 @@ export function GebouwAanmakenDialog() {
         postcode: res.postcode ?? v.postcode,
         gebouw_type: res.gebouw_type ?? v.gebouw_type,
         omschrijving: res.omschrijving ?? v.omschrijving,
-        bouwjaar: res.bouwjaar != null ? String(res.bouwjaar) : v.bouwjaar,
         aantal_verdiepingen:
           res.aantal_verdiepingen != null ? String(res.aantal_verdiepingen) : v.aantal_verdiepingen,
         hoogte: res.hoogte != null ? String(Math.round(res.hoogte * 10) / 10) : v.hoogte,
@@ -139,7 +136,6 @@ export function GebouwAanmakenDialog() {
           stad: velden.stad || undefined,
           postcode: velden.postcode || undefined,
           omschrijving: velden.omschrijving || undefined,
-          bouwjaar: getalOfUndefined(velden.bouwjaar),
           gebouw_type: velden.gebouw_type || undefined,
           aantal_verdiepingen: getalOfUndefined(velden.aantal_verdiepingen),
           hoogte: getalOfUndefined(velden.hoogte),
@@ -289,15 +285,6 @@ export function GebouwAanmakenDialog() {
               placeholder="kantoor, woonhuis..."
               value={velden.gebouw_type}
               onChange={(e) => zet("gebouw_type", e.target.value)}
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="g-bouwjaar">Bouwjaar</Label>
-            <Input
-              id="g-bouwjaar"
-              inputMode="numeric"
-              value={velden.bouwjaar}
-              onChange={(e) => zet("bouwjaar", e.target.value)}
             />
           </div>
           <div className="space-y-1.5">
