@@ -202,7 +202,7 @@ export default function Gebouwen() {
                       <Building className="h-6 w-6 text-primary" />
                     </div>
                     <Badge variant="outline" className="bg-background">
-                      {gebouw.totaal_voorzieningen} voorzieningen
+                      {gebouw.totaal_voorzieningen} {gebouw.totaal_voorzieningen === 1 ? "spot" : "spots"}
                     </Badge>
                   </div>
                   {gebouw.werknummer && (
