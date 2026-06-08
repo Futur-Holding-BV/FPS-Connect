@@ -36,7 +36,6 @@ import {
 import { TekeningViewer } from "./tekening-viewer";
 
 const TEKENING_TYPES = [
-  { waarde: "plattegrond", label: "Plattegrond" },
   { waarde: "gevelaanzicht", label: "Gevelaanzicht" },
   { waarde: "doorsnede", label: "Doorsnede" },
   { waarde: "situatietekening", label: "Situatietekening" },
@@ -44,6 +43,12 @@ const TEKENING_TYPES = [
   { waarde: "detailtekening", label: "Detailtekening" },
   { waarde: "overig", label: "Overig" },
 ];
+
+const TOEGESTANE_TYPES = new Set(TEKENING_TYPES.map((t) => t.waarde));
+
+function veiligType(type: string): string {
+  return TOEGESTANE_TYPES.has(type) ? type : "overig";
+}
 
 function typeLabel(type: string): string {
   return TEKENING_TYPES.find((t) => t.waarde === type)?.label ?? type;
@@ -72,7 +77,7 @@ export default function GebouwTekeningen({
   const inputRef = useRef<HTMLInputElement>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [naam, setNaam] = useState("");
-  const [type, setType] = useState("plattegrond");
+  const [type, setType] = useState("gevelaanzicht");
   const [schaal, setSchaal] = useState("");
   const [verdiepingId, setVerdiepingId] = useState<string>(GEEN_BOUWLAAG);
   const [nieuweBouwlaagNaam, setNieuweBouwlaagNaam] = useState("");
@@ -119,7 +124,7 @@ export default function GebouwTekeningen({
       });
       setAiVoorstel(res);
       setNaam(res.tekening_naam);
-      setType(res.tekening_type);
+      setType(veiligType(res.tekening_type));
       if (res.bestaande_verdieping_id != null) {
         setVerdiepingId(String(res.bestaande_verdieping_id));
       } else if (res.bouwlaag_naam) {
@@ -136,7 +141,7 @@ export default function GebouwTekeningen({
 
   function reset() {
     setNaam("");
-    setType("plattegrond");
+    setType("gevelaanzicht");
     setSchaal("");
     setVerdiepingId(GEEN_BOUWLAAG);
     setNieuweBouwlaagNaam("");
@@ -173,7 +178,7 @@ export default function GebouwTekeningen({
         id: gebouwId,
         data: {
           naam: naam.trim(),
-          type,
+          type: veiligType(type),
           schaal: schaal || undefined,
           url: objectPath,
           verdieping_id,
@@ -191,16 +196,17 @@ export default function GebouwTekeningen({
     queryClient.invalidateQueries();
   }
 
-  const lijst = tekeningen ?? [];
+  const lijst = (tekeningen ?? []).filter((t) => t.type !== "plattegrond");
 
   return (
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <FileText className="h-5 w-5 text-primary" /> Tekeningen
+          <FileText className="h-5 w-5 text-primary" /> Overige tekeningen
         </CardTitle>
         <p className="text-sm text-muted-foreground">
-          Bouwtekeningen met naam, type en schaal.
+          Gevelaanzichten, doorsnedes en andere bouwtekeningen. Plattegronden
+          beheer je in de sectie Plattegronden.
         </p>
       </CardHeader>
       <CardContent className="space-y-4">

@@ -92,6 +92,18 @@ De gebruiker wil voorzieningen in de UI consequent "Spots" noemen (bv. dashboard
 **Why:** spots zijn de markers op de plattegrond; de gebruiker hanteert die term en wil hem overal aanhouden.
 **How to apply:** nieuwe UI-tekst voor voorzieningen → schrijf "Spot(s)"; hernoem geen schema/API-velden.
 
+## Plattegrond = verdieping.plattegrond_url; overige tekeningen = tekening-rijen (twee bronnen)
+Plattegronden worden centraal per gebouw beheerd en als ondergrond opgeslagen op
+`verdieping.plattegrond_url` (upload → client-render naar dataURL → vision-AI koppelt aan bouwlaag →
+update/create verdieping). De "Overige tekeningen"-sectie toont losse `tekening`-rijen en filtert
+`type !== "plattegrond"`. De plattegrond-achtergrond-renderer moet zowel PDF (pdfjs) als afbeelding
+(Image→canvas fallback) aankunnen, want `plattegrond_url` kan beide zijn.
+**Why:** twee aparte opslagplekken; een tekening met `type==="plattegrond"` valt in een gat — niet
+zichtbaar bij Overige tekeningen én niet als ondergrond (die leest `verdieping.plattegrond_url`).
+**How to apply:** in gebouw-tekeningen.tsx ALTIJD het AI-voorgestelde `tekening_type` normaliseren
+naar een toegestaan type (helper `veiligType` → fallback "overig") vóór setType én vóór opslaan;
+AI-vision kan nog steeds "plattegrond" teruggeven ook al staat het niet in de keuzelijst.
+
 ## Plattegrond moet "fit to view" op laden (anders lijken spots verdwenen)
 De plattegrond-SVG rendert de PDF op scale 2 (grote afbeelding, bv. 2380x1684px). Zonder
 auto-fit start de view op {x:0,y:0,zoom:1} en zie je alleen de linkerbovenhoek. Seed-spots hebben

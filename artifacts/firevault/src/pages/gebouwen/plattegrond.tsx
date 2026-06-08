@@ -8,9 +8,9 @@ import {
   useListVoorzieningenOpVerdieping,
   useListVerdiepingen,
   useCreateVoorziening,
-  useUpdateVerdieping,
   useListGebruikers,
   useGetVoorziening,
+  useUpdateVoorzieningStatus,
   useAddFoto,
   useDeleteFoto,
   useListScheidingen,
@@ -24,7 +24,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Plus, X, ZoomIn, ZoomOut, RotateCcw, Map, Upload, FileText, Trash2, Image as ImageIcon, Loader2, Spline, Check } from "lucide-react";
+import { ArrowLeft, Plus, X, ZoomIn, ZoomOut, RotateCcw, Map, FileText, Trash2, Image as ImageIcon, Loader2, Spline, Check } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
@@ -51,19 +51,23 @@ const SCHEIDING_TYPEN: Record<string, { kleur: string; label: string }> = {
 };
 
 const STATUSKLEUREN: Record<string, string> = {
+  concept:       "#94a3b8",
+  in_uitvoering: "#3b82f6",
+  opgeleverd:    "#14b8a6",
   goedgekeurd:   "#22c55e",
   afgekeurd:     "#ef4444",
   in_onderhoud:  "#f97316",
-  in_uitvoering: "#3b82f6",
-  concept:       "#94a3b8",
+  vervallen:     "#6b7280",
 };
 
 const STATUSLABEL: Record<string, string> = {
+  concept:       "Concept",
+  in_uitvoering: "In uitvoering",
+  opgeleverd:    "Opgeleverd",
   goedgekeurd:   "Goedgekeurd",
   afgekeurd:     "Afgekeurd",
   in_onderhoud:  "In onderhoud",
-  in_uitvoering: "In uitvoering",
-  concept:       "Concept",
+  vervallen:     "Vervallen",
 };
 
 const WBDBO_OPTIES = ["20", "30", "60"];
@@ -214,7 +218,6 @@ export default function Plattegrond() {
   const { id, verdiepingId } = useParams<{ id: string; verdiepingId: string }>();
   const svgRef = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const planInputRef = useRef<HTMLInputElement>(null);
 
   const [view, setView] = useState<ViewState>({ x: 0, y: 0, zoom: 1 });
   const [panning, setPanning] = useState(false);
@@ -238,20 +241,17 @@ export default function Plattegrond() {
   const [scheidingSelectie, setScheidingSelectie] = useState<number | null>(null);
 
   const queryClient = useQueryClient();
-  const { data: verdieping, refetch: refetchVerdieping } = useGetVerdieping(Number(verdiepingId));
+  const { data: verdieping } = useGetVerdieping(Number(verdiepingId));
   const { data: gebouw } = useGetGebouw(Number(id));
   const { data: alleVerdiepingen } = useListVerdiepingen(Number(id));
   const { data: voorzieningen, refetch } = useListVoorzieningenOpVerdieping(Number(verdiepingId));
   const { data: gebruikers } = useListGebruikers();
   const maakVoorziening = useCreateVoorziening();
-  const updateVerdieping = useUpdateVerdieping();
   const addFoto = useAddFoto();
 
   const { data: scheidingen, refetch: refetchScheidingen } = useListScheidingen(Number(verdiepingId));
   const maakScheiding = useCreateScheiding();
   const verwijderScheiding = useDeleteScheiding();
-
-  const { uploadFile: uploadPlan, isUploading: planBezig } = useUpload();
 
   const monteurs = (gebruikers ?? []).filter((g: any) => g.rol === "monteur");
 
@@ -270,19 +270,41 @@ export default function Plattegrond() {
     (async () => {
       setPdfLaden(true);
       try {
-        const taak = pdfjsLib.getDocument({ url: `/api/storage${url}` });
-        const pdf = await taak.promise;
-        const page = await pdf.getPage(1);
-        const viewport = page.getViewport({ scale: 2 });
-        const canvas = document.createElement("canvas");
-        canvas.width = Math.ceil(viewport.width);
-        canvas.height = Math.ceil(viewport.height);
-        const ctx = canvas.getContext("2d");
-        if (!ctx) throw new Error("Geen canvas context");
-        await page.render({ canvasContext: ctx, viewport, canvas }).promise;
+        let dataUrl: string;
+        let dims: { w: number; h: number };
+        try {
+          const taak = pdfjsLib.getDocument({ url: `/api/storage${url}` });
+          const pdf = await taak.promise;
+          const page = await pdf.getPage(1);
+          const viewport = page.getViewport({ scale: 2 });
+          const canvas = document.createElement("canvas");
+          canvas.width = Math.ceil(viewport.width);
+          canvas.height = Math.ceil(viewport.height);
+          const ctx = canvas.getContext("2d");
+          if (!ctx) throw new Error("Geen canvas context");
+          await page.render({ canvasContext: ctx, viewport, canvas }).promise;
+          dataUrl = canvas.toDataURL("image/png");
+          dims = { w: canvas.width, h: canvas.height };
+        } catch {
+          // Val terug op een afbeeldingsplattegrond (PNG/JPG)
+          const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+            const i = new Image();
+            i.onload = () => resolve(i);
+            i.onerror = () => reject(new Error("Afbeelding laden mislukt"));
+            i.src = `/api/storage${url}`;
+          });
+          const canvas = document.createElement("canvas");
+          canvas.width = img.naturalWidth;
+          canvas.height = img.naturalHeight;
+          const ctx = canvas.getContext("2d");
+          if (!ctx) throw new Error("Geen canvas context");
+          ctx.drawImage(img, 0, 0);
+          dataUrl = canvas.toDataURL("image/png");
+          dims = { w: canvas.width, h: canvas.height };
+        }
         if (geannuleerd) return;
-        setPdfBeeld(canvas.toDataURL("image/png"));
-        setPdfDims({ w: canvas.width, h: canvas.height });
+        setPdfBeeld(dataUrl);
+        setPdfDims(dims);
       } catch {
         if (!geannuleerd) {
           setPdfBeeld(null);
@@ -422,22 +444,6 @@ export default function Plattegrond() {
   const zoomIn = () => setView((v) => ({ ...v, zoom: Math.min(MAX_ZOOM, v.zoom * 1.25) }));
   const zoomOut = () => setView((v) => ({ ...v, zoom: Math.max(MIN_ZOOM, v.zoom * 0.8) }));
 
-  // ---- Plattegrond (PDF) uploaden ----
-  async function opPlanGekozen(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    e.target.value = "";
-    if (!file) return;
-    const res = await uploadPlan(file);
-    if (res) {
-      await updateVerdieping.mutateAsync({
-        id: Number(verdiepingId),
-        data: { plattegrond_url: res.objectPath },
-      });
-      refetchVerdieping();
-      resetView();
-    }
-  }
-
   // ---- Voorziening aanmaken ----
   async function maakNieuw(e: React.FormEvent) {
     e.preventDefault();
@@ -492,14 +498,6 @@ export default function Plattegrond() {
 
   return (
     <div className="h-[calc(100vh-2rem)] flex flex-col gap-0">
-      <input
-        ref={planInputRef}
-        type="file"
-        accept="application/pdf"
-        className="hidden"
-        onChange={opPlanGekozen}
-      />
-
       {/* Header */}
       <div className="flex items-center justify-between px-1 pb-3 flex-shrink-0">
         <div className="flex items-center gap-3">
@@ -536,18 +534,6 @@ export default function Plattegrond() {
               </SelectContent>
             </Select>
           )}
-
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={planBezig || updateVerdieping.isPending}
-            onClick={() => planInputRef.current?.click()}
-          >
-            {planBezig || updateVerdieping.isPending
-              ? <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-              : <Upload className="h-4 w-4 mr-1" />}
-            {pdfBeeld ? "Plattegrond vervangen" : "Plattegrond uploaden"}
-          </Button>
 
           <Button variant="outline" size="icon" className="h-8 w-8" onClick={zoomOut}><ZoomOut className="h-3.5 w-3.5" /></Button>
           <span className="text-xs text-muted-foreground w-10 text-center">{Math.round(view.zoom * 100)}%</span>
@@ -734,7 +720,7 @@ export default function Plattegrond() {
           {!pdfBeeld && !pdfLaden && (
             <div className="absolute top-3 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-white/90 border rounded-md px-3 py-1.5 text-xs text-muted-foreground shadow-sm">
               <FileText className="h-3.5 w-3.5" />
-              Nog geen PDF-plattegrond — upload er één voor een nauwkeurige ondergrond.
+              Nog geen plattegrond — voeg er één toe via de sectie Plattegronden op de gebouwpagina.
             </div>
           )}
 
@@ -1065,6 +1051,13 @@ function SpotDetail({
   const { data: v, isLoading, refetch } = useGetVoorziening(id);
   const addFoto = useAddFoto();
   const delFoto = useDeleteFoto();
+  const updateStatus = useUpdateVoorzieningStatus();
+
+  async function wijzigStatus(status: string) {
+    await updateStatus.mutateAsync({ id, data: { status } });
+    await refetch();
+    onWijziging();
+  }
 
   const fotos = ((v as any)?.fotos ?? []) as any[];
   const voor = fotos.filter((f) => f.fase === "voor");
@@ -1106,13 +1099,38 @@ function SpotDetail({
             <span className="text-muted-foreground">Type</span>
             <span className="font-medium">{TYPEN[(v as any).type]?.label ?? (v as any).type}</span>
 
-            <span className="text-muted-foreground">Status</span>
-            <Badge variant="outline" className="text-xs w-fit" style={{ borderColor: STATUSKLEUREN[(v as any).status], color: STATUSKLEUREN[(v as any).status] }}>
-              {STATUSLABEL[(v as any).status] ?? (v as any).status}
-            </Badge>
-
-            <span className="text-muted-foreground">Classificatie</span>
-            <span className="font-medium">EI {(v as any).classificatie ?? "—"}</span>
+            <span className="text-muted-foreground self-center">Status</span>
+            <Select
+              value={(v as any).status}
+              onValueChange={wijzigStatus}
+              disabled={updateStatus.isPending}
+            >
+              <SelectTrigger className="h-8 w-fit min-w-[140px] text-xs">
+                <span
+                  className="inline-flex items-center gap-1.5"
+                  style={{ color: STATUSKLEUREN[(v as any).status] }}
+                >
+                  <span
+                    className="h-2 w-2 rounded-full"
+                    style={{ backgroundColor: STATUSKLEUREN[(v as any).status] ?? "#94a3b8" }}
+                  />
+                  {STATUSLABEL[(v as any).status] ?? (v as any).status}
+                </span>
+              </SelectTrigger>
+              <SelectContent>
+                {Object.keys(STATUSLABEL).map((s) => (
+                  <SelectItem key={s} value={s}>
+                    <span className="inline-flex items-center gap-1.5">
+                      <span
+                        className="h-2 w-2 rounded-full"
+                        style={{ backgroundColor: STATUSKLEUREN[s] }}
+                      />
+                      {STATUSLABEL[s]}
+                    </span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
 
             <span className="text-muted-foreground">WBDBO</span>
             <span className="font-medium">{(v as any).wbdbo ? `${(v as any).wbdbo} min` : "—"}</span>

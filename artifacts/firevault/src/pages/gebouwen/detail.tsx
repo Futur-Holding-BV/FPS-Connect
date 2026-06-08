@@ -22,6 +22,7 @@ import { ArrowLeft, Layers, Users, X, UserPlus, Loader2, Building2, Mail, Phone,
 import { useAuth } from "@/context/auth-context";
 import GebouwPartijen from "./gebouw-partijen";
 import GebouwTekeningen from "./gebouw-tekeningen";
+import GebouwPlattegronden from "./gebouw-plattegronden";
 import GebouwBouwlagen from "./gebouw-bouwlagen";
 import { GebouwBewerkenDialog } from "./gebouw-bewerken-dialog";
 
@@ -340,6 +341,12 @@ export default function GebouwDetail() {
           )}
 
           <GebouwPartijen gebouwId={gebouwId} isBeheerder={isBeheerder} />
+
+          <GebouwPlattegronden
+            gebouwId={gebouwId}
+            verdiepingen={gebouw.verdiepingen ?? []}
+            isBeheerder={isBeheerder}
+          />
 
           <GebouwTekeningen
             gebouwId={gebouwId}
