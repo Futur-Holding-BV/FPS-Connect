@@ -35,16 +35,16 @@ export async function stuurUitnodigingsmail(opties: {
   naarNaam: string;
   activatieLink: string;
   isOpnieuw?: boolean;
-}): Promise<void> {
+}): Promise<boolean> {
   const { naarEmail, naarNaam, activatieLink, isOpnieuw = false } = opties;
 
   if (!isGeconfigureerd()) {
     logger.warn(
-      { email: naarEmail, link: activatieLink },
+      { email: naarEmail },
       "E-mailservice niet geconfigureerd — uitnodiging niet verstuurd " +
         "(stel AZURE_TENANT_ID, AZURE_CLIENT_ID, AZURE_CLIENT_SECRET en MAIL_FROM in)"
     );
-    return;
+    return false;
   }
 
   const onderwerp = isOpnieuw
@@ -151,4 +151,5 @@ export async function stuurUitnodigingsmail(opties: {
   }
 
   logger.info({ email: naarEmail, opnieuw: isOpnieuw }, "Uitnodigingsmail verstuurd");
+  return true;
 }

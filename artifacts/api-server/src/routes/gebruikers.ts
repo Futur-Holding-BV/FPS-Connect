@@ -5,8 +5,11 @@ import { db } from "@workspace/db";
 import { gebruikersTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { stuurUitnodigingsmail } from "../services/email";
+import { requireRol } from "../middlewares/auth";
 
 const router = Router();
+
+const alleenBeheerder = requireRol("beheerder");
 
 const mapGebruiker = (g: typeof gebruikersTable.$inferSelect) => ({
   id: g.id,
@@ -53,7 +56,7 @@ router.get("/gebruikers", async (req, res) => {
 });
 
 // POST /gebruikers
-router.post("/gebruikers", async (req, res) => {
+router.post("/gebruikers", alleenBeheerder, async (req, res) => {
   try {
     const {
       naam, email, rol, telefoon, bedrijf, wachtwoord,
@@ -92,7 +95,7 @@ router.post("/gebruikers", async (req, res) => {
 // GET /gebruikers/:id
 router.get("/gebruikers/:id", async (req, res) => {
   try {
-    const id = parseInt(req.params.id);
+    const id = parseInt(String(req.params.id), 10);
     const [g] = await db.select().from(gebruikersTable).where(eq(gebruikersTable.id, id));
     if (!g) return res.status(404).json({ error: "Gebruiker niet gevonden" });
     res.json(mapGebruiker(g));
@@ -103,9 +106,9 @@ router.get("/gebruikers/:id", async (req, res) => {
 });
 
 // PATCH /gebruikers/:id
-router.patch("/gebruikers/:id", async (req, res) => {
+router.patch("/gebruikers/:id", alleenBeheerder, async (req, res) => {
   try {
-    const id = parseInt(req.params.id);
+    const id = parseInt(String(req.params.id), 10);
     const {
       naam, email, rol, telefoon, bedrijf, actief, wachtwoord,
       avatar_url, bedrijfslogo_url, bedrijfskleuren, uitnodiging_status, taal,
@@ -143,9 +146,9 @@ router.patch("/gebruikers/:id", async (req, res) => {
 });
 
 // POST /gebruikers/:id/uitnodigen — eerste uitnodiging sturen
-router.post("/gebruikers/:id/uitnodigen", async (req, res) => {
+router.post("/gebruikers/:id/uitnodigen", alleenBeheerder, async (req, res) => {
   try {
-    const id = parseInt(req.params.id);
+    const id = parseInt(String(req.params.id), 10);
     const [bestaande] = await db
       .select()
       .from(gebruikersTable)
@@ -154,6 +157,22 @@ router.post("/gebruikers/:id/uitnodigen", async (req, res) => {
 
     const token = crypto.randomBytes(32).toString("hex");
     const verlooptOp = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    const activatieLink = `https://${domein()}/uitnodiging/${token}`;
+
+    // Eerst proberen te versturen; alleen bij een echte verzendfout afbreken
+    // zodat de status niet ten onrechte op "uitgenodigd" komt te staan.
+    try {
+      await stuurUitnodigingsmail({
+        naarEmail: bestaande.email,
+        naarNaam: bestaande.naam,
+        activatieLink,
+      });
+    } catch (mailErr) {
+      req.log.error(mailErr, "Uitnodigingsmail mislukt");
+      return res.status(502).json({
+        error: "De uitnodiging kon niet worden verzonden. Probeer het later opnieuw.",
+      });
+    }
 
     const [g] = await db
       .update(gebruikersTable)
@@ -168,13 +187,6 @@ router.post("/gebruikers/:id/uitnodigen", async (req, res) => {
       .where(eq(gebruikersTable.id, id))
       .returning();
 
-    const activatieLink = `https://${domein()}/uitnodiging/${token}`;
-    try {
-      await stuurUitnodigingsmail({ naarEmail: g.email, naarNaam: g.naam, activatieLink });
-    } catch (mailErr) {
-      req.log.error(mailErr, "Uitnodigingsmail mislukt");
-    }
-
     res.json(mapGebruiker(g));
   } catch (err) {
     req.log.error(err);
@@ -183,9 +195,9 @@ router.post("/gebruikers/:id/uitnodigen", async (req, res) => {
 });
 
 // POST /gebruikers/:id/uitnodigen/opnieuw — herinnering sturen
-router.post("/gebruikers/:id/uitnodigen/opnieuw", async (req, res) => {
+router.post("/gebruikers/:id/uitnodigen/opnieuw", alleenBeheerder, async (req, res) => {
   try {
-    const id = parseInt(req.params.id);
+    const id = parseInt(String(req.params.id), 10);
     const [bestaande] = await db
       .select()
       .from(gebruikersTable)
@@ -197,6 +209,21 @@ router.post("/gebruikers/:id/uitnodigen/opnieuw", async (req, res) => {
 
     const token = crypto.randomBytes(32).toString("hex");
     const verlooptOp = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    const activatieLink = `https://${domein()}/uitnodiging/${token}`;
+
+    try {
+      await stuurUitnodigingsmail({
+        naarEmail: bestaande.email,
+        naarNaam: bestaande.naam,
+        activatieLink,
+        isOpnieuw: true,
+      });
+    } catch (mailErr) {
+      req.log.error(mailErr, "Uitnodigingsmail (opnieuw) mislukt");
+      return res.status(502).json({
+        error: "De herinnering kon niet worden verzonden. Probeer het later opnieuw.",
+      });
+    }
 
     const [g] = await db
       .update(gebruikersTable)
@@ -209,18 +236,6 @@ router.post("/gebruikers/:id/uitnodigen/opnieuw", async (req, res) => {
       .where(eq(gebruikersTable.id, id))
       .returning();
 
-    const activatieLink = `https://${domein()}/uitnodiging/${token}`;
-    try {
-      await stuurUitnodigingsmail({
-        naarEmail: g.email,
-        naarNaam: g.naam,
-        activatieLink,
-        isOpnieuw: true,
-      });
-    } catch (mailErr) {
-      req.log.error(mailErr, "Uitnodigingsmail (opnieuw) mislukt");
-    }
-
     res.json(mapGebruiker(g));
   } catch (err) {
     req.log.error(err);
@@ -229,9 +244,9 @@ router.post("/gebruikers/:id/uitnodigen/opnieuw", async (req, res) => {
 });
 
 // DELETE /gebruikers/:id
-router.delete("/gebruikers/:id", async (req, res) => {
+router.delete("/gebruikers/:id", alleenBeheerder, async (req, res) => {
   try {
-    const id = parseInt(req.params.id);
+    const id = parseInt(String(req.params.id), 10);
     await db.delete(gebruikersTable).where(eq(gebruikersTable.id, id));
     res.status(204).send();
   } catch (err) {
