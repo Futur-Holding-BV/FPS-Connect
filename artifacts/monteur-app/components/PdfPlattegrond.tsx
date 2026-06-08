@@ -9,6 +9,7 @@ export type PlattegrondSpot = {
   objectnummer: string;
   type: string;
   status: string;
+  wand_of_plafond?: string | null;
   locatie_x: number | null;
   locatie_y: number | null;
 };
@@ -50,6 +51,8 @@ function bouwHtml(domein: string, token: string, url: string | null): string {
         color:#fff; font-size:12px; font-weight:700; border:2.5px solid #fff; box-shadow:0 2px 6px rgba(0,0,0,.45);
         transform:translate(-50%,-50%) scale(var(--inv,1)); }
   .mk .ring { position:absolute; inset:-7px; border-radius:50%; opacity:.3; z-index:-1; }
+  .mk .arrow { position:absolute; left:50%; top:50%; width:52px; height:52px; transform:translate(-50%,-50%); overflow:visible; pointer-events:none; z-index:1; }
+  .mk span { position:relative; z-index:2; }
   .placing .mk { pointer-events:none; }
   #msg { position:absolute; top:50%; left:0; right:0; text-align:center; color:#cbd5e1; font-size:16px;
          transform:translateY(-50%); padding:24px; line-height:1.5; }
@@ -103,6 +106,12 @@ function bouwHtml(domein: string, token: string, url: string | null): string {
       ring.className='ring';
       ring.style.background=t.kleur;
       el.appendChild(ring);
+      if ((s.wand_of_plafond||'')==='plafond'){
+        var arr=document.createElement('div');
+        arr.className='arrow';
+        arr.innerHTML='<svg width="52" height="52" viewBox="-26 -26 52 52" style="overflow:visible"><g transform="rotate(-45)"><line x1="-24" y1="0" x2="24" y2="0" stroke="#fff" stroke-width="5" stroke-linecap="round"/><line x1="-24" y1="0" x2="24" y2="0" stroke="#1e293b" stroke-width="2.5" stroke-linecap="round"/><polygon points="26,0 16,-6 16,6" fill="#1e293b" stroke="#fff" stroke-width="1.2" stroke-linejoin="round"/></g></svg>';
+        el.appendChild(arr);
+      }
       var lab=document.createElement('span');
       var nr=String(s.objectnummer||'');
       var m=nr.match(/(\d+)$/);

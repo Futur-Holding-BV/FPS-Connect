@@ -101,6 +101,7 @@ export default function Plattegrond() {
     objectnummer: v.objectnummer,
     type: v.type,
     status: v.status,
+    wand_of_plafond: v.wand_of_plafond,
     locatie_x: v.locatie_x,
     locatie_y: v.locatie_y,
   }));

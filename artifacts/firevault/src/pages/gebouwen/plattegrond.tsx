@@ -93,6 +93,7 @@ type SVGVoorziening = {
   status: string;
   classificatie?: string;
   ruimte?: string;
+  wand_of_plafond?: string;
   locatie_x: number;
   locatie_y: number;
 };
@@ -111,6 +112,8 @@ function VoorzieningIcoon({
   const stijl = TYPEN[v.type] ?? { kleur: "#94a3b8", ring: "#475569", label: v.type };
   const r = 16;
   const volgnummer = spotVolgnummer(v.objectnummer);
+  const isPlafond = v.wand_of_plafond === "plafond";
+  const L = r + 11;
 
   return (
     <g
@@ -120,6 +123,13 @@ function VoorzieningIcoon({
     >
       <circle r={r + 5} fill={stijl.kleur} opacity={0.25} />
       <circle r={r} fill={STATUSKLEUREN[v.status] ?? "#94a3b8"} stroke={geselecteerd ? "#fff" : stijl.ring} strokeWidth={geselecteerd ? 3 : 1.5} />
+      {isPlafond && (
+        <g transform="rotate(-45)" style={{ pointerEvents: "none" }}>
+          <line x1={-L} y1={0} x2={L} y2={0} stroke="#fff" strokeWidth={5} strokeLinecap="round" />
+          <line x1={-L} y1={0} x2={L} y2={0} stroke="#1e293b" strokeWidth={2.5} strokeLinecap="round" />
+          <polygon points={`${L + 2},0 ${L - 8},-6 ${L - 8},6`} fill="#1e293b" stroke="#fff" strokeWidth={1.2} strokeLinejoin="round" />
+        </g>
+      )}
       <text
         textAnchor="middle"
         dominantBaseline="central"
@@ -346,6 +356,7 @@ export default function Plattegrond() {
       status: v.status,
       classificatie: v.classificatie,
       ruimte: v.ruimte,
+      wand_of_plafond: v.wand_of_plafond,
       locatie_x: Number(v.locatie_x),
       locatie_y: Number(v.locatie_y),
     }));
