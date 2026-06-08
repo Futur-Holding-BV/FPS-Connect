@@ -33,6 +33,7 @@ const ROL_CONFIG: Record<Rol, {
   icon: React.ElementType;
   kleur: string;
   badge: string;
+  rand: string;
   beschrijving: string;
 }> = {
   beheerder: {
@@ -40,27 +41,31 @@ const ROL_CONFIG: Record<Rol, {
     icon: ShieldCheck,
     kleur: "text-primary",
     badge: "bg-primary/10 text-primary border-primary/20",
+    rand: "border-t-primary",
     beschrijving: "Volledige toegang",
-  },
-  controleur: {
-    label: "Controleurs",
-    icon: Eye,
-    kleur: "text-purple-600",
-    badge: "bg-purple-100 text-purple-800 border-purple-200",
-    beschrijving: "Inspectie & controle",
   },
   monteur: {
     label: "Monteurs",
     icon: Wrench,
     kleur: "text-blue-600",
     badge: "bg-blue-100 text-blue-800 border-blue-200",
+    rand: "border-t-blue-500",
     beschrijving: "Onderhoud & werkorders",
+  },
+  controleur: {
+    label: "Controleurs",
+    icon: Eye,
+    kleur: "text-purple-600",
+    badge: "bg-purple-100 text-purple-800 border-purple-200",
+    rand: "border-t-purple-500",
+    beschrijving: "Inspectie & controle",
   },
   klant: {
     label: "Klanten",
     icon: User,
     kleur: "text-gray-600",
     badge: "bg-gray-100 text-gray-700 border-gray-200",
+    rand: "border-t-gray-400",
     beschrijving: "Rapportages & meldingen",
   },
 };
@@ -247,20 +252,19 @@ export default function Gebruikers() {
             const lijst = perRol[rol] ?? [];
 
             return (
-              <div key={rol} className="space-y-3">
+              <div key={rol} className={`rounded-xl border bg-muted/40 ${cfg.rand} border-t-4 overflow-hidden`}>
                 {/* Kolomkoptekst */}
-                <Card className="border-2">
-                  <CardHeader className="pb-2 pt-4 px-4">
-                    <CardTitle className={`flex items-center gap-2 text-base ${cfg.kleur}`}>
-                      <Icon className="h-4 w-4" />
-                      {cfg.label}
-                      <span className="ml-auto text-lg font-bold">{lijst.length}</span>
-                    </CardTitle>
-                    <p className="text-xs text-muted-foreground">{cfg.beschrijving}</p>
-                  </CardHeader>
-                </Card>
+                <div className="px-4 pt-3 pb-3 border-b bg-background/60">
+                  <div className={`flex items-center gap-2 text-base font-semibold ${cfg.kleur}`}>
+                    <Icon className="h-4 w-4" />
+                    {cfg.label}
+                    <span className="ml-auto text-lg font-bold">{lijst.length}</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-0.5">{cfg.beschrijving}</p>
+                </div>
 
                 {/* Gebruikerskaarten */}
+                <div className="p-3 space-y-3">
                 {lijst.length === 0 && (
                   <div className="text-center text-sm text-muted-foreground py-6 border border-dashed rounded-lg">
                     Geen {cfg.label.toLowerCase()}
@@ -335,6 +339,7 @@ export default function Gebruikers() {
                     </CardContent>
                   </Card>
                 ))}
+                </div>
               </div>
             );
           })}
