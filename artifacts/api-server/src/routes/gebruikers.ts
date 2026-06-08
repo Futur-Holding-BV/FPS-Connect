@@ -40,7 +40,10 @@ router.post("/gebruikers", async (req, res) => {
       .values({ naam, email, rol, telefoon, bedrijf, wachtwoord })
       .returning();
     res.status(201).json(mapGebruiker(g));
-  } catch (err) {
+  } catch (err: any) {
+    if (err?.cause?.code === "23505" || err?.message?.includes("gebruikers_email_unique")) {
+      return res.status(409).json({ error: "Dit e-mailadres is al in gebruik bij een andere gebruiker." });
+    }
     req.log.error(err);
     res.status(500).json({ error: "Interne serverfout" });
   }
@@ -71,7 +74,10 @@ router.patch("/gebruikers/:id", async (req, res) => {
       .returning();
     if (!g) return res.status(404).json({ error: "Gebruiker niet gevonden" });
     res.json(mapGebruiker(g));
-  } catch (err) {
+  } catch (err: any) {
+    if (err?.cause?.code === "23505" || err?.message?.includes("gebruikers_email_unique")) {
+      return res.status(409).json({ error: "Dit e-mailadres is al in gebruik bij een andere gebruiker." });
+    }
     req.log.error(err);
     res.status(500).json({ error: "Interne serverfout" });
   }
