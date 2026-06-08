@@ -23,6 +23,7 @@ export const GetDashboardStatsResponse = zod.object({
   "totaal_gebouwen": zod.number(),
   "totaal_voorzieningen": zod.number(),
   "goedgekeurde_voorzieningen": zod.number(),
+  "afgekeurde_voorzieningen": zod.number(),
   "openstaande_inspecties": zod.number(),
   "openstaande_onderhoud": zod.number(),
   "vervallen_inspecties": zod.number(),

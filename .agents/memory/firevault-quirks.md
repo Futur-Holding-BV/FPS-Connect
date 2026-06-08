@@ -85,6 +85,13 @@ tabblad"-fallback. Gebruikt in gebouw-bouwlagen.tsx (TekeningRegels) en gebouw-t
 aanroepen (anders blijft zwaar werk draaien bij sluiten/wisselen); reset `aantalPaginas` naar 1 bij
 open/url-wissel om stale paginatie te voorkomen.
 
+## "Spots" = gebruikersterm voor voorzieningen (UI-tekst)
+De gebruiker wil voorzieningen in de UI consequent "Spots" noemen (bv. dashboard: "Totaal Spots",
+"Goedgekeurde Spots", "Afgekeurde Spots"). Data/veldnamen blijven `voorzieningen` /
+`*_voorzieningen` in DB + API-contract; alleen de zichtbare labels gebruiken "Spots".
+**Why:** spots zijn de markers op de plattegrond; de gebruiker hanteert die term en wil hem overal aanhouden.
+**How to apply:** nieuwe UI-tekst voor voorzieningen → schrijf "Spot(s)"; hernoem geen schema/API-velden.
+
 ## Plattegrond moet "fit to view" op laden (anders lijken spots verdwenen)
 De plattegrond-SVG rendert de PDF op scale 2 (grote afbeelding, bv. 2380x1684px). Zonder
 auto-fit start de view op {x:0,y:0,zoom:1} en zie je alleen de linkerbovenhoek. Seed-spots hebben

@@ -11,6 +11,7 @@ export interface DashboardStats {
   totaal_gebouwen: number;
   totaal_voorzieningen: number;
   goedgekeurde_voorzieningen: number;
+  afgekeurde_voorzieningen: number;
   openstaande_inspecties: number;
   openstaande_onderhoud: number;
   vervallen_inspecties: number;

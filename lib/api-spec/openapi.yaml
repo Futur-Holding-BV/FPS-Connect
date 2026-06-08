@@ -1856,6 +1856,7 @@ components:
         - totaal_gebouwen
         - totaal_voorzieningen
         - goedgekeurde_voorzieningen
+        - afgekeurde_voorzieningen
         - openstaande_inspecties
         - openstaande_onderhoud
         - vervallen_inspecties
@@ -1866,6 +1867,8 @@ components:
         totaal_voorzieningen:
           type: integer
         goedgekeurde_voorzieningen:
+          type: integer
+        afgekeurde_voorzieningen:
           type: integer
         openstaande_inspecties:
           type: integer

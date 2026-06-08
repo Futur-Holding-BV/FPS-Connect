@@ -38,6 +38,7 @@ router.get("/dashboard/stats", async (req, res) => {
       totaal_gebouwen: Number(totaalGebouwen?.count ?? 0),
       totaal_voorzieningen: alleVoorzieningen.length,
       goedgekeurde_voorzieningen: alleVoorzieningen.filter((v) => v.status === "goedgekeurd").length,
+      afgekeurde_voorzieningen: alleVoorzieningen.filter((v) => v.status === "afgekeurd").length,
       openstaande_inspecties: Number(openInspecties?.count ?? 0),
       openstaande_onderhoud: Number(openOnderhoud?.count ?? 0),
       vervallen_inspecties: Number(vervallenInspecties?.count ?? 0),
