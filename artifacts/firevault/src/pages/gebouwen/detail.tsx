@@ -99,28 +99,33 @@ export default function GebouwDetail() {
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
-      <div className="flex items-center gap-4">
-        <Link href="/gebouwen">
-          <Button variant="outline" size="icon">
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-        </Link>
-        <div className="flex-1">
-          {gebouw.werknummer && (
-            <span className="text-sm font-mono text-muted-foreground">
-              Werknummer {gebouw.werknummer}
-            </span>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+        <div className="lg:col-span-2 flex items-center gap-4">
+          <Link href="/gebouwen">
+            <Button variant="outline" size="icon">
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+          </Link>
+          <div className="flex-1">
+            {gebouw.werknummer && (
+              <span className="text-sm font-mono text-muted-foreground">
+                Werknummer {gebouw.werknummer}
+              </span>
+            )}
+            <h1 className="text-3xl font-bold tracking-tight">{gebouw.naam}</h1>
+            <p className="text-muted-foreground mt-1">
+              {gebouw.adres}, {gebouw.stad}
+            </p>
+          </div>
+          {isBeheerder && (
+            <Button variant="outline" onClick={() => setBewerkenOpen(true)}>
+              <Pencil className="h-4 w-4 mr-2" /> Bewerken
+            </Button>
           )}
-          <h1 className="text-3xl font-bold tracking-tight">{gebouw.naam}</h1>
-          <p className="text-muted-foreground mt-1">
-            {gebouw.adres}, {gebouw.stad}
-          </p>
         </div>
-        {isBeheerder && (
-          <Button variant="outline" onClick={() => setBewerkenOpen(true)}>
-            <Pencil className="h-4 w-4 mr-2" /> Bewerken
-          </Button>
-        )}
+        <div className="lg:col-span-1">
+          <GebouwPartijen gebouwId={gebouwId} isBeheerder={isBeheerder} />
+        </div>
       </div>
 
       {isBeheerder && (
@@ -313,8 +318,6 @@ export default function GebouwDetail() {
               </CardContent>
             </Card>
           )}
-
-          <GebouwPartijen gebouwId={gebouwId} isBeheerder={isBeheerder} />
 
           <GebouwPlattegronden
             gebouwId={gebouwId}
