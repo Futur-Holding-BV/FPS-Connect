@@ -10,6 +10,7 @@ FPS Brandpreventie is een Nederlands platform voor het registreren, beheren en i
 - `pnpm run build` — typecheck + build alle packages
 - `pnpm --filter @workspace/api-spec run codegen` — API hooks en Zod schemas regenereren
 - `pnpm --filter @workspace/db run push` — DB schema pushen (dev only)
+- `pnpm --filter @workspace/scripts run security-scan` — beveiligingsscan (pnpm audit + verouderde pakketten), rapporteert alleen, wijzigt niets
 - Vereiste env: `DATABASE_URL` — Postgres connectiestring
 
 ## Stack
