@@ -1,6 +1,6 @@
 kind = "web"
 previewPath = "/"
-title = "FireVault"
+title = "FPS Brandpreventie"
 version = "1.0.0"
 id = "artifacts/firevault"
 router = "path"
