@@ -321,9 +321,11 @@ export default function Plattegrond() {
       return;
     }
     if (!plaatsenModus) return;
-    setNieuwLocatie({ x: Math.round(svgX), y: Math.round(svgY) });
+    const klemX = Math.min(W, Math.max(0, svgX));
+    const klemY = Math.min(H, Math.max(0, svgY));
+    setNieuwLocatie({ x: Math.round(klemX), y: Math.round(klemY) });
     setNieuwDialoog(true);
-  }, [plaatsenModus, tekenModus, view]);
+  }, [plaatsenModus, tekenModus, view, W, H]);
 
   const startTekenen = useCallback(() => {
     setPlaatsenModus(false);
@@ -395,7 +397,28 @@ export default function Plattegrond() {
     });
   }, []);
 
-  const resetView = () => setView({ x: 0, y: 0, zoom: 1 });
+  // Plattegrond passend en gecentreerd in beeld zetten
+  const fitToView = useCallback(() => {
+    const cont = containerRef.current;
+    if (!cont) return;
+    const cw = cont.clientWidth;
+    const ch = cont.clientHeight;
+    const iw = pdfDims?.w ?? CANVAS_W;
+    const ih = pdfDims?.h ?? CANVAS_H;
+    if (!cw || !ch || !iw || !ih) return;
+    const zoom = Math.min(
+      MAX_ZOOM,
+      Math.max(MIN_ZOOM, Math.min(cw / iw, ch / ih) * 0.95),
+    );
+    setView({ x: (cw - iw * zoom) / 2, y: (ch - ih * zoom) / 2, zoom });
+  }, [pdfDims]);
+
+  // Automatisch passend maken zodra de plattegrond (of het canvas) bekend is
+  useEffect(() => {
+    fitToView();
+  }, [fitToView]);
+
+  const resetView = () => fitToView();
   const zoomIn = () => setView((v) => ({ ...v, zoom: Math.min(MAX_ZOOM, v.zoom * 1.25) }));
   const zoomOut = () => setView((v) => ({ ...v, zoom: Math.max(MIN_ZOOM, v.zoom * 0.8) }));
 

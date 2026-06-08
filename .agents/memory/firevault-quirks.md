@@ -74,3 +74,13 @@ The Expo app can't keep the `Secure; SameSite=None` session cookie in the Replit
 30-day exp). `requireAuth` accepts `Bearer` and re-checks the user is still `actief` per request.
 **How to apply:** mobile must send `Authorization: Bearer <token>`; the shared fetch layer wires this
 via `setAuthTokenGetter`. Token secret falls back to a dev default — set a real `SESSION_SECRET`.
+
+## Plattegrond moet "fit to view" op laden (anders lijken spots verdwenen)
+De plattegrond-SVG rendert de PDF op scale 2 (grote afbeelding, bv. 2380x1684px). Zonder
+auto-fit start de view op {x:0,y:0,zoom:1} en zie je alleen de linkerbovenhoek. Seed-spots hebben
+kleine coords (60-400) en vallen toevallig in die hoek; een nieuw geplaatste spot krijgt grote
+coords (bv. 2001,1822) en valt buiten het zichtbare deel → gebruiker "ziet de spot niet terug".
+**Why:** klacht "spot niet terug op tekening" was puur een viewport-probleem, niet de opslag.
+**How to apply:** fitToView() centreert+schaalt op containerafmetingen + pdfDims; auto-fit via
+useEffect op pdfDims; klikcoords klemmen op [0,W]x[0,H]. Coördinatenopslag (scale 2) NIET wijzigen —
+web en mobile moeten matchen.
