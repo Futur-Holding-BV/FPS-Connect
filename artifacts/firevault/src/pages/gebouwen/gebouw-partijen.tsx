@@ -2,6 +2,7 @@ import { useState } from "react";
 import {
   useListGebouwPartijen,
   useCreateGebouwPartij,
+  useUpdateGebouwPartij,
   useDeleteGebouwPartij,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -17,7 +18,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Contact, Loader2, Plus, X, Mail, Phone, MapPin } from "lucide-react";
+import {
+  Contact,
+  Loader2,
+  Plus,
+  X,
+  Pencil,
+  Mail,
+  Phone,
+  MapPin,
+} from "lucide-react";
 
 const PARTIJ_TYPES = [
   { waarde: "eigenaar", label: "Eigenaar" },
@@ -52,33 +62,60 @@ export default function GebouwPartijen({
   const queryClient = useQueryClient();
   const { data: partijen, isLoading } = useListGebouwPartijen(gebouwId);
   const maakPartij = useCreateGebouwPartij();
+  const wijzigPartij = useUpdateGebouwPartij();
   const verwijderPartij = useDeleteGebouwPartij();
 
   const [formOpen, setFormOpen] = useState(false);
+  const [bewerkId, setBewerkId] = useState<number | null>(null);
   const [form, setForm] = useState({ ...LEEG });
+
+  const bezig = maakPartij.isPending || wijzigPartij.isPending;
 
   function veld(key: keyof typeof LEEG, waarde: string) {
     setForm((f) => ({ ...f, [key]: waarde }));
   }
 
+  function sluitForm() {
+    setForm({ ...LEEG });
+    setBewerkId(null);
+    setFormOpen(false);
+  }
+
+  function startBewerken(p: (typeof lijst)[number]) {
+    setForm({
+      type: p.type ?? "eigenaar",
+      naam: p.naam ?? "",
+      organisatie: p.organisatie ?? "",
+      telefoon: p.telefoon ?? "",
+      email: p.email ?? "",
+      adres: p.adres ?? "",
+      postcode: p.postcode ?? "",
+      plaats: p.plaats ?? "",
+      opmerkingen: p.opmerkingen ?? "",
+    });
+    setBewerkId(p.id);
+    setFormOpen(true);
+  }
+
   async function opslaan() {
     if (!form.naam.trim()) return;
-    await maakPartij.mutateAsync({
-      id: gebouwId,
-      data: {
-        type: form.type,
-        naam: form.naam.trim(),
-        organisatie: form.organisatie || undefined,
-        telefoon: form.telefoon || undefined,
-        email: form.email || undefined,
-        adres: form.adres || undefined,
-        postcode: form.postcode || undefined,
-        plaats: form.plaats || undefined,
-        opmerkingen: form.opmerkingen || undefined,
-      },
-    });
-    setForm({ ...LEEG });
-    setFormOpen(false);
+    const data = {
+      type: form.type,
+      naam: form.naam.trim(),
+      organisatie: form.organisatie || undefined,
+      telefoon: form.telefoon || undefined,
+      email: form.email || undefined,
+      adres: form.adres || undefined,
+      postcode: form.postcode || undefined,
+      plaats: form.plaats || undefined,
+      opmerkingen: form.opmerkingen || undefined,
+    };
+    if (bewerkId != null) {
+      await wijzigPartij.mutateAsync({ partijId: bewerkId, data });
+    } else {
+      await maakPartij.mutateAsync({ id: gebouwId, data });
+    }
+    sluitForm();
     queryClient.invalidateQueries();
   }
 
@@ -156,15 +193,26 @@ export default function GebouwPartijen({
                     )}
                   </div>
                   {isBeheerder && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7 shrink-0 text-muted-foreground hover:text-destructive"
-                      onClick={() => verwijder(p.id)}
-                      disabled={verwijderPartij.isPending}
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-muted-foreground hover:text-primary"
+                        onClick={() => startBewerken(p)}
+                        disabled={bezig || verwijderPartij.isPending}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                        onClick={() => verwijder(p.id)}
+                        disabled={verwijderPartij.isPending}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
                   )}
                 </div>
               </li>
@@ -180,6 +228,9 @@ export default function GebouwPartijen({
 
         {isBeheerder && formOpen && (
           <div className="space-y-3 rounded-md border p-3">
+            <p className="text-sm font-medium">
+              {bewerkId != null ? "Partij wijzigen" : "Nieuwe partij"}
+            </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1">
                 <Label>Type</Label>
@@ -259,21 +310,12 @@ export default function GebouwPartijen({
               <Button
                 size="sm"
                 onClick={opslaan}
-                disabled={!form.naam.trim() || maakPartij.isPending}
+                disabled={!form.naam.trim() || bezig}
               >
-                {maakPartij.isPending ? (
-                  <Loader2 className="h-4 w-4 animate-spin mr-1" />
-                ) : null}
-                Opslaan
+                {bezig ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
+                {bewerkId != null ? "Wijzigingen opslaan" : "Opslaan"}
               </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  setForm({ ...LEEG });
-                  setFormOpen(false);
-                }}
-              >
+              <Button variant="ghost" size="sm" onClick={sluitForm}>
                 Annuleren
               </Button>
             </div>
