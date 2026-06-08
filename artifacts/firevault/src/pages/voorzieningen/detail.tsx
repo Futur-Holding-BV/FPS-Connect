@@ -79,7 +79,14 @@ export default function VoorzieningDetail() {
             {voorziening.classificatie && ` • EI ${voorziening.classificatie}`}
           </p>
         </div>
-        <Button variant="outline">Bewerken</Button>
+        <div className="flex gap-2">
+          <Link href={`/voorzieningen/${id}/qr`}>
+            <Button variant="outline">
+              <QrCode className="h-4 w-4 mr-2" /> QR-label
+            </Button>
+          </Link>
+          <Button variant="outline">Bewerken</Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

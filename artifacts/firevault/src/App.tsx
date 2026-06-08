@@ -14,6 +14,7 @@ import Plattegrond from "@/pages/gebouwen/plattegrond";
 import Voorzieningen from "@/pages/voorzieningen/index";
 import VoorzieningDetail from "@/pages/voorzieningen/detail";
 import VoorzieningNieuw from "@/pages/voorzieningen/nieuw";
+import VoorzieningQr from "@/pages/voorzieningen/qr";
 import Inspecties from "@/pages/inspecties/index";
 import InspectieDetail from "@/pages/inspecties/detail";
 import Onderhoud from "@/pages/onderhoud/index";
@@ -89,6 +90,7 @@ function Router() {
         <Route path="/gebouwen/:id/plattegrond/:verdiepingId" component={Plattegrond} />
         <Route path="/voorzieningen" component={Voorzieningen} />
         <Route path="/voorzieningen/nieuw" component={VoorzieningNieuw} />
+        <Route path="/voorzieningen/:id/qr" component={VoorzieningQr} />
         <Route path="/voorzieningen/:id" component={VoorzieningDetail} />
         <Route path="/inspecties" component={Inspecties} />
         <Route path="/inspecties/:id" component={InspectieDetail} />
