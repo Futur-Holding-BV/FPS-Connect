@@ -139,37 +139,17 @@ export default function GebouwDetail() {
         </div>
 
         <div className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Statistieken</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex justify-between items-center">
-                <span className="text-muted-foreground">Totaal</span>
-                <span className="font-bold">{gebouw.stats?.totaal || 0}</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-muted-foreground">Goedgekeurd</span>
-                <span className="font-bold text-green-600">
-                  {gebouw.stats?.goedgekeurd || 0}
-                </span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-muted-foreground">Afgekeurd</span>
-                <span className="font-bold text-destructive">
-                  {gebouw.stats?.afgekeurd || 0}
-                </span>
-              </div>
-            </CardContent>
-          </Card>
-
           {/* Toewijzingen – alleen zichtbaar voor beheerder */}
           {isBeheerder && (
-            <Card>
+            <Card className="border-primary/40 shadow-sm">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Users className="h-5 w-5" /> Toewijzingen
+                  <Users className="h-5 w-5 text-primary" /> Toewijzingen
                 </CardTitle>
+                <p className="text-sm text-muted-foreground">
+                  Koppel monteurs of controleurs aan dit gebouw. Zij zien alleen
+                  toegewezen gebouwen, inspecties en onderhoud.
+                </p>
               </CardHeader>
               <CardContent className="space-y-4">
                 {toewijzingenLaden ? (
@@ -210,7 +190,7 @@ export default function GebouwDetail() {
                 )}
 
                 {/* Toevoegen */}
-                {beschikbareGebruikers.length > 0 && (
+                {beschikbareGebruikers.length > 0 ? (
                   <div className="flex gap-2 pt-1">
                     <Select
                       value={gekozenGebruikerId}
@@ -243,10 +223,38 @@ export default function GebouwDetail() {
                       )}
                     </Button>
                   </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground pt-1">
+                    Alle beschikbare monteurs en controleurs zijn al toegewezen.
+                  </p>
                 )}
               </CardContent>
             </Card>
           )}
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Statistieken</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex justify-between items-center">
+                <span className="text-muted-foreground">Totaal</span>
+                <span className="font-bold">{gebouw.stats?.totaal || 0}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-muted-foreground">Goedgekeurd</span>
+                <span className="font-bold text-green-600">
+                  {gebouw.stats?.goedgekeurd || 0}
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-muted-foreground">Afgekeurd</span>
+                <span className="font-bold text-destructive">
+                  {gebouw.stats?.afgekeurd || 0}
+                </span>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>
