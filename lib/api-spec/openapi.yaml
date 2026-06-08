@@ -1,22 +1,35 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: FireVault - Brandpreventie Asset & Compliance Platform
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: gebouwen
+    description: Gebouw- en verdiepingsbeheer
+  - name: voorzieningen
+    description: Brandpreventieve voorzieningen (assets)
+  - name: inspecties
+    description: Inspecties en opleverrapporten
+  - name: onderhoud
+    description: Onderhoud en herstelacties
+  - name: gebruikers
+    description: Gebruikers en rollen
+  - name: abonnementen
+    description: Abonnementsbeheer
+  - name: dashboard
+    description: Dashboard statistieken
+
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,13 +37,1788 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  # ── DASHBOARD ────────────────────────────────────────────────────────────
+  /dashboard/stats:
+    get:
+      operationId: getDashboardStats
+      tags: [dashboard]
+      summary: Platform-brede statistieken
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardStats"
+
+  /dashboard/recente-activiteit:
+    get:
+      operationId: getRecenteActiviteit
+      tags: [dashboard]
+      summary: Recente wijzigingen en activiteit
+      parameters:
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 20
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Activiteit"
+
+  /dashboard/status-verdeling:
+    get:
+      operationId: getStatusVerdeling
+      tags: [dashboard]
+      summary: Verdeling voorzieningen per status per gebouw
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/StatusVerdeling"
+
+  /dashboard/vervaldagen:
+    get:
+      operationId: getVervaldagen
+      tags: [dashboard]
+      summary: Aankomende inspectievervaldata
+      parameters:
+        - in: query
+          name: dagen
+          schema:
+            type: integer
+            default: 30
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Vervaldag"
+
+  # ── GEBOUWEN ─────────────────────────────────────────────────────────────
+  /gebouwen:
+    get:
+      operationId: listGebouwen
+      tags: [gebouwen]
+      summary: Lijst van gebouwen
+      parameters:
+        - in: query
+          name: zoek
+          schema:
+            type: string
+        - in: query
+          name: organisatie_id
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Gebouw"
+    post:
+      operationId: createGebouw
+      tags: [gebouwen]
+      summary: Nieuw gebouw aanmaken
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GebouwInput"
+      responses:
+        "201":
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Gebouw"
+
+  /gebouwen/{id}:
+    get:
+      operationId: getGebouw
+      tags: [gebouwen]
+      summary: Gebouwdetails ophalen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GebouwDetail"
+        "404":
+          description: Niet gevonden
+    patch:
+      operationId: updateGebouw
+      tags: [gebouwen]
+      summary: Gebouw bijwerken
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GebouwUpdate"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Gebouw"
+    delete:
+      operationId: deleteGebouw
+      tags: [gebouwen]
+      summary: Gebouw verwijderen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Verwijderd
+
+  /gebouwen/{id}/verdiepingen:
+    get:
+      operationId: listVerdiepingen
+      tags: [gebouwen]
+      summary: Verdiepingen van een gebouw
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Verdieping"
+    post:
+      operationId: createVerdieping
+      tags: [gebouwen]
+      summary: Verdieping toevoegen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VerdiepingInput"
+      responses:
+        "201":
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Verdieping"
+
+  /verdiepingen/{id}:
+    get:
+      operationId: getVerdieping
+      tags: [gebouwen]
+      summary: Verdieping ophalen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Verdieping"
+    patch:
+      operationId: updateVerdieping
+      tags: [gebouwen]
+      summary: Verdieping bijwerken
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VerdiepingUpdate"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Verdieping"
+    delete:
+      operationId: deleteVerdieping
+      tags: [gebouwen]
+      summary: Verdieping verwijderen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Verwijderd
+
+  # ── BRANDVOORZIENINGEN ────────────────────────────────────────────────────
+  /voorzieningen:
+    get:
+      operationId: listVoorzieningen
+      tags: [voorzieningen]
+      summary: Lijst van brandpreventieve voorzieningen
+      parameters:
+        - in: query
+          name: gebouw_id
+          schema:
+            type: integer
+        - in: query
+          name: verdieping_id
+          schema:
+            type: integer
+        - in: query
+          name: type
+          schema:
+            type: string
+        - in: query
+          name: status
+          schema:
+            type: string
+        - in: query
+          name: classificatie
+          schema:
+            type: string
+        - in: query
+          name: zoek
+          schema:
+            type: string
+        - in: query
+          name: pagina
+          schema:
+            type: integer
+            default: 1
+        - in: query
+          name: per_pagina
+          schema:
+            type: integer
+            default: 50
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VoorzieningLijst"
+    post:
+      operationId: createVoorziening
+      tags: [voorzieningen]
+      summary: Nieuwe voorziening registreren
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VoorzieningInput"
+      responses:
+        "201":
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Voorziening"
+
+  /voorzieningen/{id}:
+    get:
+      operationId: getVoorziening
+      tags: [voorzieningen]
+      summary: Voorzieningdetails ophalen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VoorzieningDetail"
+        "404":
+          description: Niet gevonden
+    patch:
+      operationId: updateVoorziening
+      tags: [voorzieningen]
+      summary: Voorziening bijwerken
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VoorzieningUpdate"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Voorziening"
+    delete:
+      operationId: deleteVoorziening
+      tags: [voorzieningen]
+      summary: Voorziening verwijderen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Verwijderd
+
+  /voorzieningen/{id}/fotos:
+    get:
+      operationId: listFotos
+      tags: [voorzieningen]
+      summary: Foto's van een voorziening
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Foto"
+    post:
+      operationId: addFoto
+      tags: [voorzieningen]
+      summary: Foto toevoegen aan voorziening
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FotoInput"
+      responses:
+        "201":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Foto"
+
+  /voorzieningen/{id}/status:
+    patch:
+      operationId: updateVoorzieningStatus
+      tags: [voorzieningen]
+      summary: Status van voorziening wijzigen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StatusUpdate"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Voorziening"
+
+  /verdiepingen/{id}/voorzieningen:
+    get:
+      operationId: listVoorzieningenOpVerdieping
+      tags: [voorzieningen]
+      summary: Voorzieningen op een verdieping (voor plattegrond)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/VoorzieningLocatie"
+
+  # ── INSPECTIES ────────────────────────────────────────────────────────────
+  /inspecties:
+    get:
+      operationId: listInspecties
+      tags: [inspecties]
+      summary: Lijst van inspecties
+      parameters:
+        - in: query
+          name: gebouw_id
+          schema:
+            type: integer
+        - in: query
+          name: voorziening_id
+          schema:
+            type: integer
+        - in: query
+          name: type
+          schema:
+            type: string
+        - in: query
+          name: status
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Inspectie"
+    post:
+      operationId: createInspectie
+      tags: [inspecties]
+      summary: Nieuwe inspectie aanmaken
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InspectieInput"
+      responses:
+        "201":
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Inspectie"
+
+  /inspecties/{id}:
+    get:
+      operationId: getInspectie
+      tags: [inspecties]
+      summary: Inspectiedetails ophalen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InspectieDetail"
+    patch:
+      operationId: updateInspectie
+      tags: [inspecties]
+      summary: Inspectie bijwerken
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InspectieUpdate"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Inspectie"
+
+  /inspecties/{id}/afronden:
+    post:
+      operationId: ronInspectieAf
+      tags: [inspecties]
+      summary: Inspectie afronden en rapport genereren
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InspectieAfronden"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Inspectie"
+
+  # ── ONDERHOUD ─────────────────────────────────────────────────────────────
+  /onderhoud:
+    get:
+      operationId: listOnderhoud
+      tags: [onderhoud]
+      summary: Onderhoudshistorie
+      parameters:
+        - in: query
+          name: voorziening_id
+          schema:
+            type: integer
+        - in: query
+          name: gebouw_id
+          schema:
+            type: integer
+        - in: query
+          name: status
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Onderhoudstaak"
+    post:
+      operationId: createOnderhoud
+      tags: [onderhoud]
+      summary: Onderhoudstaak aanmaken
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OnderhoudInput"
+      responses:
+        "201":
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Onderhoudstaak"
+
+  /onderhoud/{id}:
+    get:
+      operationId: getOnderhoud
+      tags: [onderhoud]
+      summary: Onderhoudstaak ophalen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Onderhoudstaak"
+    patch:
+      operationId: updateOnderhoud
+      tags: [onderhoud]
+      summary: Onderhoudstaak bijwerken
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OnderhoudUpdate"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Onderhoudstaak"
+
+  /onderhoud/{id}/voltooien:
+    post:
+      operationId: voltooiOnderhoud
+      tags: [onderhoud]
+      summary: Onderhoudstaak als voltooid markeren
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OnderhoudVoltooien"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Onderhoudstaak"
+
+  # ── GEBRUIKERS ────────────────────────────────────────────────────────────
+  /gebruikers:
+    get:
+      operationId: listGebruikers
+      tags: [gebruikers]
+      summary: Lijst van gebruikers
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Gebruiker"
+    post:
+      operationId: createGebruiker
+      tags: [gebruikers]
+      summary: Gebruiker aanmaken
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GebruikerInput"
+      responses:
+        "201":
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Gebruiker"
+
+  /gebruikers/{id}:
+    get:
+      operationId: getGebruiker
+      tags: [gebruikers]
+      summary: Gebruiker ophalen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Gebruiker"
+    patch:
+      operationId: updateGebruiker
+      tags: [gebruikers]
+      summary: Gebruiker bijwerken
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GebruikerUpdate"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Gebruiker"
+    delete:
+      operationId: deleteGebruiker
+      tags: [gebruikers]
+      summary: Gebruiker verwijderen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Verwijderd
+
+  # ── ABONNEMENTEN ─────────────────────────────────────────────────────────
+  /abonnementen:
+    get:
+      operationId: listAbonnementen
+      tags: [abonnementen]
+      summary: Lijst van abonnementen
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Abonnement"
+    post:
+      operationId: createAbonnement
+      tags: [abonnementen]
+      summary: Abonnement aanmaken
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AbonnementInput"
+      responses:
+        "201":
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Abonnement"
+
+  /abonnementen/{id}:
+    get:
+      operationId: getAbonnement
+      tags: [abonnementen]
+      summary: Abonnementdetails ophalen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Abonnement"
+    patch:
+      operationId: updateAbonnement
+      tags: [abonnementen]
+      summary: Abonnement bijwerken
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AbonnementUpdate"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Abonnement"
+
 components:
   schemas:
     HealthStatus:
       type: object
+      required: [status]
       properties:
         status:
           type: string
-      required:
-        - status
 
+    # ── DASHBOARD ─────────────────────────────────────────────────────────
+    DashboardStats:
+      type: object
+      required:
+        - totaal_gebouwen
+        - totaal_voorzieningen
+        - goedgekeurde_voorzieningen
+        - openstaande_inspecties
+        - openstaande_onderhoud
+        - vervallen_inspecties
+        - voorzieningen_per_type
+      properties:
+        totaal_gebouwen:
+          type: integer
+        totaal_voorzieningen:
+          type: integer
+        goedgekeurde_voorzieningen:
+          type: integer
+        openstaande_inspecties:
+          type: integer
+        openstaande_onderhoud:
+          type: integer
+        vervallen_inspecties:
+          type: integer
+        voorzieningen_per_type:
+          type: array
+          items:
+            type: object
+            required: [type, aantal]
+            properties:
+              type:
+                type: string
+              aantal:
+                type: integer
+
+    Activiteit:
+      type: object
+      required: [id, type, omschrijving, tijdstip]
+      properties:
+        id:
+          type: integer
+        type:
+          type: string
+        omschrijving:
+          type: string
+        tijdstip:
+          type: string
+        gebouw_naam:
+          type: ["string", "null"]
+        voorziening_nummer:
+          type: ["string", "null"]
+        gebruiker_naam:
+          type: ["string", "null"]
+
+    StatusVerdeling:
+      type: object
+      required: [gebouw_id, gebouw_naam, totaal, goedgekeurd, afgekeurd, in_bewerking, in_onderhoud]
+      properties:
+        gebouw_id:
+          type: integer
+        gebouw_naam:
+          type: string
+        totaal:
+          type: integer
+        goedgekeurd:
+          type: integer
+        afgekeurd:
+          type: integer
+        in_bewerking:
+          type: integer
+        in_onderhoud:
+          type: integer
+
+    Vervaldag:
+      type: object
+      required: [id, voorziening_id, voorziening_nummer, gebouw_naam, vervaldatum, type]
+      properties:
+        id:
+          type: integer
+        voorziening_id:
+          type: integer
+        voorziening_nummer:
+          type: string
+        gebouw_naam:
+          type: string
+        vervaldatum:
+          type: string
+        type:
+          type: string
+        dagen_over:
+          type: integer
+
+    # ── GEBOUW ───────────────────────────────────────────────────────────
+    Gebouw:
+      type: object
+      required: [id, naam, adres, aangemaakt_op]
+      properties:
+        id:
+          type: integer
+        naam:
+          type: string
+        adres:
+          type: string
+        stad:
+          type: ["string", "null"]
+        postcode:
+          type: ["string", "null"]
+        omschrijving:
+          type: ["string", "null"]
+        bouwjaar:
+          type: ["integer", "null"]
+        totaal_voorzieningen:
+          type: integer
+        aangemaakt_op:
+          type: string
+
+    GebouwDetail:
+      type: object
+      required: [id, naam, adres, aangemaakt_op, verdiepingen]
+      properties:
+        id:
+          type: integer
+        naam:
+          type: string
+        adres:
+          type: string
+        stad:
+          type: ["string", "null"]
+        postcode:
+          type: ["string", "null"]
+        omschrijving:
+          type: ["string", "null"]
+        bouwjaar:
+          type: ["integer", "null"]
+        aangemaakt_op:
+          type: string
+        verdiepingen:
+          type: array
+          items:
+            $ref: "#/components/schemas/Verdieping"
+        stats:
+          $ref: "#/components/schemas/GebouwStats"
+
+    GebouwStats:
+      type: object
+      required: [totaal, goedgekeurd, afgekeurd, in_bewerking]
+      properties:
+        totaal:
+          type: integer
+        goedgekeurd:
+          type: integer
+        afgekeurd:
+          type: integer
+        in_bewerking:
+          type: integer
+        in_onderhoud:
+          type: integer
+
+    GebouwInput:
+      type: object
+      required: [naam, adres]
+      properties:
+        naam:
+          type: string
+        adres:
+          type: string
+        stad:
+          type: string
+        postcode:
+          type: string
+        omschrijving:
+          type: string
+        bouwjaar:
+          type: integer
+
+    GebouwUpdate:
+      type: object
+      properties:
+        naam:
+          type: string
+        adres:
+          type: string
+        stad:
+          type: string
+        postcode:
+          type: string
+        omschrijving:
+          type: string
+        bouwjaar:
+          type: integer
+
+    # ── VERDIEPING ───────────────────────────────────────────────────────
+    Verdieping:
+      type: object
+      required: [id, gebouw_id, naam, niveau]
+      properties:
+        id:
+          type: integer
+        gebouw_id:
+          type: integer
+        naam:
+          type: string
+        niveau:
+          type: integer
+        plattegrond_url:
+          type: ["string", "null"]
+        breedte:
+          type: ["number", "null"]
+        hoogte:
+          type: ["number", "null"]
+        totaal_voorzieningen:
+          type: integer
+
+    VerdiepingInput:
+      type: object
+      required: [naam, niveau]
+      properties:
+        naam:
+          type: string
+        niveau:
+          type: integer
+        plattegrond_url:
+          type: string
+        breedte:
+          type: number
+        hoogte:
+          type: number
+
+    VerdiepingUpdate:
+      type: object
+      properties:
+        naam:
+          type: string
+        niveau:
+          type: integer
+        plattegrond_url:
+          type: string
+        breedte:
+          type: number
+        hoogte:
+          type: number
+
+    # ── VOORZIENING ──────────────────────────────────────────────────────
+    Voorziening:
+      type: object
+      required:
+        - id
+        - objectnummer
+        - type
+        - status
+        - classificatie
+        - gebouw_id
+        - aangemaakt_op
+      properties:
+        id:
+          type: integer
+        objectnummer:
+          type: string
+        qr_code:
+          type: ["string", "null"]
+        type:
+          type: string
+          enum:
+            - applicatie
+            - branddeur
+            - brandscheiding
+            - doorvoering
+            - brandklep
+            - brandwerend_glas
+            - luik
+            - rooster
+            - kitvoeg
+            - manchet
+            - coating
+            - plaatconstructie
+        status:
+          type: string
+          enum:
+            - concept
+            - in_uitvoering
+            - opgeleverd
+            - goedgekeurd
+            - afgekeurd
+            - in_onderhoud
+            - vervallen
+        classificatie:
+          type: string
+          enum: ["30", "60", "90", "120"]
+        gebouw_id:
+          type: integer
+        gebouw_naam:
+          type: ["string", "null"]
+        verdieping_id:
+          type: ["integer", "null"]
+        verdieping_naam:
+          type: ["string", "null"]
+        ruimte:
+          type: ["string", "null"]
+        locatie_omschrijving:
+          type: ["string", "null"]
+        locatie_x:
+          type: ["number", "null"]
+        locatie_y:
+          type: ["number", "null"]
+        materialen:
+          type: ["string", "null"]
+        opmerkingen:
+          type: ["string", "null"]
+        monteur_id:
+          type: ["integer", "null"]
+        monteur_naam:
+          type: ["string", "null"]
+        controleur_id:
+          type: ["integer", "null"]
+        controleur_naam:
+          type: ["string", "null"]
+        installatie_datum:
+          type: ["string", "null"]
+        volgende_inspectie:
+          type: ["string", "null"]
+        aangemaakt_op:
+          type: string
+        bijgewerkt_op:
+          type: string
+
+    VoorzieningDetail:
+      type: object
+      required:
+        - id
+        - objectnummer
+        - type
+        - status
+        - classificatie
+        - gebouw_id
+        - aangemaakt_op
+        - fotos
+        - inspecties
+        - onderhoud
+      properties:
+        id:
+          type: integer
+        objectnummer:
+          type: string
+        qr_code:
+          type: ["string", "null"]
+        type:
+          type: string
+        status:
+          type: string
+        classificatie:
+          type: string
+        gebouw_id:
+          type: integer
+        gebouw_naam:
+          type: ["string", "null"]
+        verdieping_id:
+          type: ["integer", "null"]
+        verdieping_naam:
+          type: ["string", "null"]
+        ruimte:
+          type: ["string", "null"]
+        locatie_omschrijving:
+          type: ["string", "null"]
+        locatie_x:
+          type: ["number", "null"]
+        locatie_y:
+          type: ["number", "null"]
+        materialen:
+          type: ["string", "null"]
+        opmerkingen:
+          type: ["string", "null"]
+        monteur_id:
+          type: ["integer", "null"]
+        monteur_naam:
+          type: ["string", "null"]
+        controleur_id:
+          type: ["integer", "null"]
+        controleur_naam:
+          type: ["string", "null"]
+        installatie_datum:
+          type: ["string", "null"]
+        volgende_inspectie:
+          type: ["string", "null"]
+        aangemaakt_op:
+          type: string
+        bijgewerkt_op:
+          type: string
+        fotos:
+          type: array
+          items:
+            $ref: "#/components/schemas/Foto"
+        inspecties:
+          type: array
+          items:
+            $ref: "#/components/schemas/Inspectie"
+        onderhoud:
+          type: array
+          items:
+            $ref: "#/components/schemas/Onderhoudstaak"
+
+    VoorzieningLocatie:
+      type: object
+      required: [id, objectnummer, type, status, classificatie, locatie_x, locatie_y]
+      properties:
+        id:
+          type: integer
+        objectnummer:
+          type: string
+        type:
+          type: string
+        status:
+          type: string
+        classificatie:
+          type: string
+        ruimte:
+          type: ["string", "null"]
+        locatie_x:
+          type: ["number", "null"]
+        locatie_y:
+          type: ["number", "null"]
+
+    VoorzieningLijst:
+      type: object
+      required: [items, totaal, pagina, per_pagina]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Voorziening"
+        totaal:
+          type: integer
+        pagina:
+          type: integer
+        per_pagina:
+          type: integer
+
+    VoorzieningInput:
+      type: object
+      required: [objectnummer, type, status, classificatie, gebouw_id]
+      properties:
+        objectnummer:
+          type: string
+        qr_code:
+          type: string
+        type:
+          type: string
+        status:
+          type: string
+        classificatie:
+          type: string
+        gebouw_id:
+          type: integer
+        verdieping_id:
+          type: integer
+        ruimte:
+          type: string
+        locatie_omschrijving:
+          type: string
+        locatie_x:
+          type: number
+        locatie_y:
+          type: number
+        materialen:
+          type: string
+        opmerkingen:
+          type: string
+        monteur_id:
+          type: integer
+        controleur_id:
+          type: integer
+        installatie_datum:
+          type: string
+        volgende_inspectie:
+          type: string
+
+    VoorzieningUpdate:
+      type: object
+      properties:
+        objectnummer:
+          type: string
+        qr_code:
+          type: string
+        type:
+          type: string
+        status:
+          type: string
+        classificatie:
+          type: string
+        verdieping_id:
+          type: integer
+        ruimte:
+          type: string
+        locatie_omschrijving:
+          type: string
+        locatie_x:
+          type: number
+        locatie_y:
+          type: number
+        materialen:
+          type: string
+        opmerkingen:
+          type: string
+        monteur_id:
+          type: integer
+        controleur_id:
+          type: integer
+        installatie_datum:
+          type: string
+        volgende_inspectie:
+          type: string
+
+    StatusUpdate:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+        opmerkingen:
+          type: string
+
+    # ── FOTO ─────────────────────────────────────────────────────────────
+    Foto:
+      type: object
+      required: [id, voorziening_id, fase, url, aangemaakt_op]
+      properties:
+        id:
+          type: integer
+        voorziening_id:
+          type: integer
+        fase:
+          type: string
+          enum: [voor, tijdens, na]
+        url:
+          type: string
+        beschrijving:
+          type: ["string", "null"]
+        aangemaakt_op:
+          type: string
+
+    FotoInput:
+      type: object
+      required: [fase, url]
+      properties:
+        fase:
+          type: string
+          enum: [voor, tijdens, na]
+        url:
+          type: string
+        beschrijving:
+          type: string
+
+    # ── INSPECTIE ────────────────────────────────────────────────────────
+    Inspectie:
+      type: object
+      required: [id, type, status, aangemaakt_op]
+      properties:
+        id:
+          type: integer
+        voorziening_id:
+          type: ["integer", "null"]
+        gebouw_id:
+          type: ["integer", "null"]
+        gebouw_naam:
+          type: ["string", "null"]
+        type:
+          type: string
+          enum: [oplevering, periodiek, herstel, jaarlijks]
+        status:
+          type: string
+          enum: [gepland, in_uitvoering, afgerond, afgekeurd]
+        inspecteur_id:
+          type: ["integer", "null"]
+        inspecteur_naam:
+          type: ["string", "null"]
+        geplande_datum:
+          type: ["string", "null"]
+        uitgevoerd_datum:
+          type: ["string", "null"]
+        bevindingen:
+          type: ["string", "null"]
+        aanbevelingen:
+          type: ["string", "null"]
+        rapport_url:
+          type: ["string", "null"]
+        aangemaakt_op:
+          type: string
+
+    InspectieDetail:
+      type: object
+      required: [id, type, status, aangemaakt_op, voorzieningen]
+      properties:
+        id:
+          type: integer
+        voorziening_id:
+          type: ["integer", "null"]
+        gebouw_id:
+          type: ["integer", "null"]
+        gebouw_naam:
+          type: ["string", "null"]
+        type:
+          type: string
+        status:
+          type: string
+        inspecteur_id:
+          type: ["integer", "null"]
+        inspecteur_naam:
+          type: ["string", "null"]
+        geplande_datum:
+          type: ["string", "null"]
+        uitgevoerd_datum:
+          type: ["string", "null"]
+        bevindingen:
+          type: ["string", "null"]
+        aanbevelingen:
+          type: ["string", "null"]
+        rapport_url:
+          type: ["string", "null"]
+        aangemaakt_op:
+          type: string
+        voorzieningen:
+          type: array
+          items:
+            $ref: "#/components/schemas/Voorziening"
+
+    InspectieInput:
+      type: object
+      required: [type, gebouw_id]
+      properties:
+        type:
+          type: string
+        gebouw_id:
+          type: integer
+        voorziening_id:
+          type: integer
+        inspecteur_id:
+          type: integer
+        geplande_datum:
+          type: string
+        bevindingen:
+          type: string
+
+    InspectieUpdate:
+      type: object
+      properties:
+        type:
+          type: string
+        status:
+          type: string
+        inspecteur_id:
+          type: integer
+        geplande_datum:
+          type: string
+        uitgevoerd_datum:
+          type: string
+        bevindingen:
+          type: string
+        aanbevelingen:
+          type: string
+        rapport_url:
+          type: string
+
+    InspectieAfronden:
+      type: object
+      required: [bevindingen]
+      properties:
+        bevindingen:
+          type: string
+        aanbevelingen:
+          type: string
+        goedgekeurd:
+          type: boolean
+
+    # ── ONDERHOUD ────────────────────────────────────────────────────────
+    Onderhoudstaak:
+      type: object
+      required: [id, titel, prioriteit, status, aangemaakt_op]
+      properties:
+        id:
+          type: integer
+        voorziening_id:
+          type: ["integer", "null"]
+        voorziening_nummer:
+          type: ["string", "null"]
+        gebouw_id:
+          type: ["integer", "null"]
+          
+        gebouw_naam:
+          type: ["string", "null"]
+        titel:
+          type: string
+        omschrijving:
+          type: ["string", "null"]
+        prioriteit:
+          type: string
+          enum: [laag, normaal, hoog, kritiek]
+        status:
+          type: string
+          enum: [open, in_uitvoering, voltooid, geannuleerd]
+        toegewezen_aan_id:
+          type: ["integer", "null"]
+        toegewezen_aan_naam:
+          type: ["string", "null"]
+        deadline:
+          type: ["string", "null"]
+        voltooid_datum:
+          type: ["string", "null"]
+        resultaat:
+          type: ["string", "null"]
+        aangemaakt_op:
+          type: string
+
+    OnderhoudInput:
+      type: object
+      required: [titel, prioriteit]
+      properties:
+        voorziening_id:
+          type: integer
+        gebouw_id:
+          type: integer
+        titel:
+          type: string
+        omschrijving:
+          type: string
+        prioriteit:
+          type: string
+        toegewezen_aan_id:
+          type: integer
+        deadline:
+          type: string
+
+    OnderhoudUpdate:
+      type: object
+      properties:
+        titel:
+          type: string
+        omschrijving:
+          type: string
+        prioriteit:
+          type: string
+        status:
+          type: string
+        toegewezen_aan_id:
+          type: integer
+        deadline:
+          type: string
+
+    OnderhoudVoltooien:
+      type: object
+      required: [resultaat]
+      properties:
+        resultaat:
+          type: string
+        voltooid_datum:
+          type: string
+
+    # ── GEBRUIKER ────────────────────────────────────────────────────────
+    Gebruiker:
+      type: object
+      required: [id, naam, email, rol, actief, aangemaakt_op]
+      properties:
+        id:
+          type: integer
+        naam:
+          type: string
+        email:
+          type: string
+        rol:
+          type: string
+          enum: [beheerder, monteur, controleur, klant, viewer]
+        telefoon:
+          type: ["string", "null"]
+        bedrijf:
+          type: ["string", "null"]
+        actief:
+          type: boolean
+        aangemaakt_op:
+          type: string
+
+    GebruikerInput:
+      type: object
+      required: [naam, email, rol]
+      properties:
+        naam:
+          type: string
+        email:
+          type: string
+        rol:
+          type: string
+        telefoon:
+          type: string
+        bedrijf:
+          type: string
+        wachtwoord:
+          type: string
+
+    GebruikerUpdate:
+      type: object
+      properties:
+        naam:
+          type: string
+        email:
+          type: string
+        rol:
+          type: string
+        telefoon:
+          type: string
+        bedrijf:
+          type: string
+        actief:
+          type: boolean
+
+    # ── ABONNEMENT ───────────────────────────────────────────────────────
+    Abonnement:
+      type: object
+      required: [id, naam, niveau, prijs_per_maand, actief, aangemaakt_op]
+      properties:
+        id:
+          type: integer
+        naam:
+          type: string
+        niveau:
+          type: string
+          enum: [basis, beheer, volledig]
+        prijs_per_maand:
+          type: number
+        max_gebouwen:
+          type: ["integer", "null"]
+        max_gebruikers:
+          type: ["integer", "null"]
+        functies:
+          type: array
+          items:
+            type: string
+        klant_naam:
+          type: ["string", "null"]
+        klant_email:
+          type: ["string", "null"]
+        start_datum:
+          type: ["string", "null"]
+        eind_datum:
+          type: ["string", "null"]
+        actief:
+          type: boolean
+        aangemaakt_op:
+          type: string
+
+    AbonnementInput:
+      type: object
+      required: [naam, niveau, prijs_per_maand]
+      properties:
+        naam:
+          type: string
+        niveau:
+          type: string
+        prijs_per_maand:
+          type: number
+        max_gebouwen:
+          type: integer
+        max_gebruikers:
+          type: integer
+        functies:
+          type: array
+          items:
+            type: string
+        klant_naam:
+          type: string
+        klant_email:
+          type: string
+        start_datum:
+          type: string
+        eind_datum:
+          type: string
+
+    AbonnementUpdate:
+      type: object
+      properties:
+        naam:
+          type: string
+        niveau:
+          type: string
+        prijs_per_maand:
+          type: number
+        max_gebouwen:
+          type: integer
+        max_gebruikers:
+          type: integer
+        functies:
+          type: array
+          items:
+            type: string
+        klant_naam:
+          type: string
+        klant_email:
+          type: string
+        start_datum:
+          type: string
+        eind_datum:
+          type: string
+        actief:
+          type: boolean
