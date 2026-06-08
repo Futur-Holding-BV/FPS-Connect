@@ -1,5 +1,8 @@
 import { useEffect, useState } from "react";
-import { useUpdateGebouw } from "@workspace/api-client-react";
+import {
+  useUpdateGebouw,
+  useAiAnalyseGebouw,
+} from "@workspace/api-client-react";
 import type { Gebouw } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
@@ -14,7 +17,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, AlertCircle } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { Loader2, AlertCircle, Sparkles } from "lucide-react";
 
 interface Velden {
   naam: string;
@@ -56,6 +61,16 @@ function uitGebouw(gebouw: Gebouw): Velden {
   };
 }
 
+function standaardBeschrijving(gebouw: Gebouw): string {
+  const delen = [
+    tekst(gebouw.naam),
+    tekst(gebouw.adres),
+    tekst(gebouw.postcode),
+    tekst(gebouw.stad),
+  ].filter((d) => d.trim());
+  return delen.join(", ");
+}
+
 interface Props {
   gebouw: Gebouw;
   open: boolean;
@@ -65,19 +80,69 @@ interface Props {
 export function GebouwBewerkenDialog({ gebouw, open, onOpenChange }: Props) {
   const queryClient = useQueryClient();
   const wijzigGebouw = useUpdateGebouw();
+  const aiAnalyse = useAiAnalyseGebouw();
 
   const [velden, setVelden] = useState<Velden>(() => uitGebouw(gebouw));
   const [foutmelding, setFoutmelding] = useState<string | null>(null);
+
+  const [aiTekst, setAiTekst] = useState("");
+  const [satelliet, setSatelliet] = useState<string | null>(null);
+  const [aiToelichting, setAiToelichting] = useState<string | null>(null);
+  const [aiBetrouwbaarheid, setAiBetrouwbaarheid] = useState<string | null>(null);
 
   useEffect(() => {
     if (open) {
       setVelden(uitGebouw(gebouw));
       setFoutmelding(null);
+      setAiTekst(standaardBeschrijving(gebouw));
+      setSatelliet(null);
+      setAiToelichting(null);
+      setAiBetrouwbaarheid(null);
     }
   }, [open, gebouw]);
 
   function zet<K extends keyof Velden>(key: K, waarde: string) {
     setVelden((v) => ({ ...v, [key]: waarde }));
+  }
+
+  async function voerAiUit() {
+    setFoutmelding(null);
+    if (!aiTekst.trim()) {
+      setFoutmelding("Beschrijf eerst het gebouw of het adres voordat de AI kan invullen.");
+      return;
+    }
+    try {
+      const res = await aiAnalyse.mutateAsync({
+        data: { beschrijving: aiTekst },
+      });
+
+      if (!res.gevonden) {
+        setFoutmelding(res.toelichting ?? "De omschrijving kon niet worden verwerkt.");
+        return;
+      }
+
+      setSatelliet(res.satelliet_url ?? null);
+      setAiToelichting(res.toelichting ?? null);
+      setAiBetrouwbaarheid(res.betrouwbaarheid ?? null);
+
+      setVelden((v) => ({
+        ...v,
+        naam: res.naam ?? v.naam,
+        adres: res.adres ?? v.adres,
+        stad: res.stad ?? (afleidStad(res.adres_gevonden) || v.stad),
+        postcode: res.postcode ?? v.postcode,
+        gebouw_type: res.gebouw_type ?? v.gebouw_type,
+        omschrijving: res.omschrijving ?? v.omschrijving,
+        aantal_verdiepingen:
+          res.aantal_verdiepingen != null ? String(res.aantal_verdiepingen) : v.aantal_verdiepingen,
+        hoogte: res.hoogte != null ? String(Math.round(res.hoogte * 10) / 10) : v.hoogte,
+        breedte: res.breedte != null ? String(Math.round(res.breedte * 10) / 10) : v.breedte,
+        diepte: res.diepte != null ? String(Math.round(res.diepte * 10) / 10) : v.diepte,
+        oppervlakte: res.oppervlakte != null ? String(Math.round(res.oppervlakte)) : v.oppervlakte,
+      }));
+    } catch {
+      setFoutmelding("AI-analyse mislukte. Probeer het opnieuw of vul handmatig in.");
+    }
   }
 
   async function bewaar() {
@@ -110,6 +175,7 @@ export function GebouwBewerkenDialog({ gebouw, open, onOpenChange }: Props) {
     }
   }
 
+  const aiBezig = aiAnalyse.isPending;
   const bezig = wijzigGebouw.isPending;
 
   return (
@@ -118,15 +184,74 @@ export function GebouwBewerkenDialog({ gebouw, open, onOpenChange }: Props) {
         <DialogHeader>
           <DialogTitle>Gebouw bewerken</DialogTitle>
           <DialogDescription>
-            Pas de gegevens van dit gebouw aan en sla de wijzigingen op.
+            Pas de gegevens van dit gebouw aan, of laat de AI de afmetingen opnieuw schatten op basis
+            van Google Maps en satellietbeeld.
           </DialogDescription>
         </DialogHeader>
+
+        {/* AI-modus */}
+        <div className="rounded-lg border border-primary/40 bg-primary/5 p-4 space-y-3">
+          <div className="flex items-center gap-2 text-sm font-medium">
+            <Sparkles className="h-4 w-4 text-primary" /> AI-modus
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="b-ai-beschrijving">Beschrijving</Label>
+            <Textarea
+              id="b-ai-beschrijving"
+              rows={2}
+              placeholder="Beschrijf het gebouw of plak een adres. Bijv. 'Coolsingel 40 Rotterdam'."
+              value={aiTekst}
+              onChange={(e) => setAiTekst(e.target.value)}
+            />
+            <p className="text-xs text-muted-foreground">
+              De AI schat o.a. hoogte, breedte, diepte en oppervlakte en vult de velden hieronder in.
+              Wat u zelf benoemt heeft voorrang; de rest wordt geschat via satellietbeeld.
+            </p>
+          </div>
+          <Button
+            type="button"
+            variant="default"
+            className="w-full sm:w-auto"
+            onClick={voerAiUit}
+            disabled={aiBezig}
+          >
+            {aiBezig ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Analyseren...
+              </>
+            ) : (
+              <>
+                <Sparkles className="h-4 w-4 mr-2" /> AI invullen
+              </>
+            )}
+          </Button>
+
+          {satelliet && (
+            <div className="flex gap-3 items-start pt-1">
+              <img
+                src={satelliet}
+                alt="Satellietbeeld"
+                className="h-24 w-24 rounded-md object-cover border shrink-0"
+              />
+              <div className="text-xs text-muted-foreground space-y-1">
+                {aiBetrouwbaarheid && (
+                  <Badge variant="secondary" className="text-xs">
+                    Betrouwbaarheid: {aiBetrouwbaarheid}
+                  </Badge>
+                )}
+                {aiToelichting && <p>{aiToelichting}</p>}
+              </div>
+            </div>
+          )}
+        </div>
 
         {foutmelding && (
           <div className="flex items-center gap-2 text-sm text-destructive">
             <AlertCircle className="h-4 w-4 shrink-0" /> {foutmelding}
           </div>
         )}
+
+        <Separator />
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div className="space-y-1.5">
@@ -247,4 +372,14 @@ export function GebouwBewerkenDialog({ gebouw, open, onOpenChange }: Props) {
       </DialogContent>
     </Dialog>
   );
+}
+
+function afleidStad(adresGevonden: string | null | undefined): string {
+  if (!adresGevonden) return "";
+  const delen = adresGevonden.split(",").map((d) => d.trim());
+  if (delen.length >= 2) {
+    const stadDeel = delen[delen.length - 2];
+    return stadDeel.replace(/^\d{4}\s?[A-Za-z]{0,2}\s*/, "").trim();
+  }
+  return "";
 }
