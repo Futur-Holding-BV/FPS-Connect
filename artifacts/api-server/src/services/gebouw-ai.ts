@@ -58,34 +58,59 @@ interface GeocodeResultaat {
   formatted: string;
 }
 
-async function geocode(adres: string): Promise<GeocodeResultaat | null> {
+type GeocodeUitkomst =
+  | { ok: true; resultaat: GeocodeResultaat }
+  | { ok: false; reden: string };
+
+const MAPS_NIET_GEACTIVEERD =
+  "De Google Maps API is niet geactiveerd voor de gebruikte API-sleutel. Activeer 'Geocoding API' en 'Maps Static API' in de Google Cloud Console om automatisch invullen te gebruiken.";
+
+async function geocode(adres: string): Promise<GeocodeUitkomst> {
   const url = new URL("https://maps.googleapis.com/maps/api/geocode/json");
   url.searchParams.set("address", adres);
   url.searchParams.set("key", GOOGLE_KEY!);
   url.searchParams.set("language", "nl");
   url.searchParams.set("region", "nl");
 
-  const res = await fetch(url.toString());
+  let res: Response;
+  try {
+    res = await fetch(url.toString());
+  } catch (err) {
+    logger.error({ err }, "Geocoding netwerk-fout");
+    return { ok: false, reden: "Het geocoding-verzoek mislukte door een netwerkfout." };
+  }
   if (!res.ok) {
     logger.error({ status: res.status }, "Geocoding HTTP-fout");
-    return null;
+    if (res.status === 403) return { ok: false, reden: MAPS_NIET_GEACTIVEERD };
+    return { ok: false, reden: `Geocoding gaf een serverfout (HTTP ${res.status}).` };
   }
   const data = (await res.json()) as {
     status: string;
+    error_message?: string;
     results: Array<{
       formatted_address: string;
       geometry: { location: { lat: number; lng: number } };
     }>;
   };
+  if (data.status === "REQUEST_DENIED" || data.status === "OVER_QUERY_LIMIT") {
+    logger.error({ status: data.status, error: data.error_message }, "Geocoding geweigerd");
+    return { ok: false, reden: MAPS_NIET_GEACTIVEERD };
+  }
   if (data.status !== "OK" || data.results.length === 0) {
     logger.warn({ status: data.status }, "Geen geocoding-resultaat");
-    return null;
+    return {
+      ok: false,
+      reden: "Geen adres gevonden voor de opgegeven omschrijving. Vul de velden eventueel handmatig in.",
+    };
   }
   const r = data.results[0];
   return {
-    lat: r.geometry.location.lat,
-    lng: r.geometry.location.lng,
-    formatted: r.formatted_address,
+    ok: true,
+    resultaat: {
+      lat: r.geometry.location.lat,
+      lng: r.geometry.location.lng,
+      formatted: r.formatted_address,
+    },
   };
 }
 
@@ -550,8 +575,11 @@ export async function analyseerGebouwVrijeTekst(beschrijving: string): Promise<G
     [extract.adres, extract.postcode, extract.stad].filter(Boolean).join(", ");
 
   if (GOOGLE_KEY && zoek) {
-    const geo = await geocode(zoek);
-    if (geo) {
+    const geoUitkomst = await geocode(zoek);
+    if (!geoUitkomst.ok) {
+      result.toelichting = geoUitkomst.reden;
+    } else {
+      const geo = geoUitkomst.resultaat;
       result.adres_gevonden = geo.formatted;
       result.latitude = geo.lat;
       result.longitude = geo.lng;
