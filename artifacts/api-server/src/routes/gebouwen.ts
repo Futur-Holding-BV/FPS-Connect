@@ -1,9 +1,15 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
-import { gebouwenTable, verdiepingenTable, voorzieningenTable } from "@workspace/db";
+import { gebouwenTable, verdiepingenTable, voorzieningenTable, gebruikersTable } from "@workspace/db";
 import { eq, ilike, count, and, sql } from "drizzle-orm";
 
 const router = Router();
+
+async function klantNaam(klantId: number | null): Promise<string | null> {
+  if (!klantId) return null;
+  const [k] = await db.select({ naam: gebruikersTable.naam }).from(gebruikersTable).where(eq(gebruikersTable.id, klantId));
+  return k?.naam ?? null;
+}
 
 // GET /gebouwen
 router.get("/gebouwen", async (req, res) => {
@@ -33,6 +39,8 @@ router.get("/gebouwen", async (req, res) => {
           postcode: g.postcode,
           omschrijving: g.omschrijving,
           bouwjaar: g.bouwjaar,
+          klant_id: g.klantId,
+          klant_naam: await klantNaam(g.klantId),
           totaal_voorzieningen: Number(totaal?.count ?? 0),
           aangemaakt_op: g.aangemaaktOp.toISOString(),
         };
@@ -49,13 +57,13 @@ router.get("/gebouwen", async (req, res) => {
 // POST /gebouwen
 router.post("/gebouwen", async (req, res) => {
   try {
-    const { naam, adres, stad, postcode, omschrijving, bouwjaar } = req.body;
+    const { naam, adres, stad, postcode, omschrijving, bouwjaar, klant_id } = req.body;
     if (!naam || !adres) {
       return res.status(400).json({ error: "naam en adres zijn verplicht" });
     }
     const [gebouw] = await db
       .insert(gebouwenTable)
-      .values({ naam, adres, stad, postcode, omschrijving, bouwjaar })
+      .values({ naam, adres, stad, postcode, omschrijving, bouwjaar, klantId: klant_id })
       .returning();
     res.status(201).json({
       id: gebouw.id,
@@ -65,6 +73,8 @@ router.post("/gebouwen", async (req, res) => {
       postcode: gebouw.postcode,
       omschrijving: gebouw.omschrijving,
       bouwjaar: gebouw.bouwjaar,
+      klant_id: gebouw.klantId,
+      klant_naam: await klantNaam(gebouw.klantId),
       totaal_voorzieningen: 0,
       aangemaakt_op: gebouw.aangemaaktOp.toISOString(),
     });
@@ -123,6 +133,8 @@ router.get("/gebouwen/:id", async (req, res) => {
       postcode: gebouw.postcode,
       omschrijving: gebouw.omschrijving,
       bouwjaar: gebouw.bouwjaar,
+      klant_id: gebouw.klantId,
+      klant_naam: await klantNaam(gebouw.klantId),
       aangemaakt_op: gebouw.aangemaaktOp.toISOString(),
       verdiepingen: verdiepingenMet,
       stats,
@@ -137,10 +149,10 @@ router.get("/gebouwen/:id", async (req, res) => {
 router.patch("/gebouwen/:id", async (req, res) => {
   try {
     const id = parseInt(req.params.id);
-    const { naam, adres, stad, postcode, omschrijving, bouwjaar } = req.body;
+    const { naam, adres, stad, postcode, omschrijving, bouwjaar, klant_id } = req.body;
     const [gebouw] = await db
       .update(gebouwenTable)
-      .set({ naam, adres, stad, postcode, omschrijving, bouwjaar, bijgewerktOp: new Date() })
+      .set({ naam, adres, stad, postcode, omschrijving, bouwjaar, klantId: klant_id, bijgewerktOp: new Date() })
       .where(eq(gebouwenTable.id, id))
       .returning();
     if (!gebouw) return res.status(404).json({ error: "Gebouw niet gevonden" });
@@ -156,6 +168,8 @@ router.patch("/gebouwen/:id", async (req, res) => {
       postcode: gebouw.postcode,
       omschrijving: gebouw.omschrijving,
       bouwjaar: gebouw.bouwjaar,
+      klant_id: gebouw.klantId,
+      klant_naam: await klantNaam(gebouw.klantId),
       totaal_voorzieningen: Number(totaal?.count ?? 0),
       aangemaakt_op: gebouw.aangemaaktOp.toISOString(),
     });

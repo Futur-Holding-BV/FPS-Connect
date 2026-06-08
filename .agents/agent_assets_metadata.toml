@@ -1,0 +1,8 @@
+uploads = []
+outputs = []
+
+[[generated]]
+id = "nsYzAiPpc4VCcDXa0nlDq"
+uri = "file://artifacts/monteur-app/assets/images/icon.png"
+type = "image"
+title = "fps monteur app icon"

@@ -13,4 +13,5 @@ export interface GebouwUpdate {
   postcode?: string;
   omschrijving?: string;
   bouwjaar?: number;
+  klant_id?: number;
 }

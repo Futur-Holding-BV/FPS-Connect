@@ -48,6 +48,16 @@ export interface Voorziening {
   installatie_datum?: string | null;
   /** @nullable */
   volgende_inspectie?: string | null;
+  /** @nullable */
+  wbdbo?: string | null;
+  /** @nullable */
+  wrd?: string | null;
+  /** @nullable */
+  wand_of_plafond?: string | null;
+  /** @nullable */
+  maker_monteur_id?: number | null;
+  /** @nullable */
+  maker_monteur_naam?: string | null;
   aangemaakt_op: string;
   bijgewerkt_op?: string;
 }

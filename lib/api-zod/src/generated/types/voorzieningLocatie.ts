@@ -18,4 +18,12 @@ export interface VoorzieningLocatie {
   locatie_x: number | null;
   /** @nullable */
   locatie_y: number | null;
+  /** @nullable */
+  locatie_omschrijving?: string | null;
+  /** @nullable */
+  wbdbo?: string | null;
+  /** @nullable */
+  wrd?: string | null;
+  /** @nullable */
+  wand_of_plafond?: string | null;
 }

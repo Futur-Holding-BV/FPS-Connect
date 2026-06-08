@@ -24,4 +24,8 @@ export interface VoorzieningInput {
   controleur_id?: number;
   installatie_datum?: string;
   volgende_inspectie?: string;
+  wbdbo?: string;
+  wrd?: string;
+  wand_of_plafond?: string;
+  maker_monteur_id?: number;
 }

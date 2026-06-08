@@ -1,1 +1,1 @@
-- [Hoofdbeheerder super-rol + rolwisselaar](hoofdbeheerder-rol.md) — hoofdbeheerder passeert elke requireRol én kan via "Bekijken als" elk portaal bekijken; frontend-wissel en backend-bypass moeten synchroon blijven.
+- [FPS Brandpreventie quirks](firevault-quirks.md) — query hooks need queryKey; pre-existing TS7030 in api-server; React 19 (no Uppy overrides); pdfjs v6 getDocument; storage paths; PDF spot coords stored at pdf.js scale:2 (web+mobile must match); mobile auth = HMAC bearer token, not cookies.

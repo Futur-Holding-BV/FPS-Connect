@@ -474,6 +474,26 @@ paths:
               schema:
                 $ref: "#/components/schemas/Foto"
 
+  /voorzieningen/{id}/fotos/{fotoId}:
+    delete:
+      operationId: deleteFoto
+      tags: [voorzieningen]
+      summary: Foto verwijderen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+        - in: path
+          name: fotoId
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Verwijderd
+
   /voorzieningen/{id}/status:
     patch:
       operationId: updateVoorzieningStatus
@@ -519,6 +539,100 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/VoorzieningLocatie"
+
+  # ── STORAGE ───────────────────────────────────────────────────────────────
+  /storage/uploads/request-url:
+    post:
+      tags: [Storage]
+      operationId: requestUploadUrl
+      summary: Vraag een presigned URL aan voor bestandsupload
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UploadUrlRequest"
+      responses:
+        "200":
+          description: Presigned upload URL gegenereerd.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UploadUrlResponse"
+        "400":
+          description: Ontbrekende of ongeldige velden.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "500":
+          description: Genereren van upload URL mislukt.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /storage/public-objects/{filePath}:
+    get:
+      tags: [Storage]
+      operationId: getPublicObject
+      summary: Serveer een publiek bestand
+      parameters:
+        - name: filePath
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Bestand gestreamd.
+          content:
+            "*/*":
+              schema:
+                type: string
+                format: binary
+        "404":
+          description: Niet gevonden.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "500":
+          description: Serveren mislukt.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /storage/objects/{objectPath}:
+    get:
+      tags: [Storage]
+      operationId: getStorageObject
+      summary: Serveer een geüpload object
+      parameters:
+        - name: objectPath
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Object gestreamd.
+          content:
+            "*/*":
+              schema:
+                type: string
+                format: binary
+        "404":
+          description: Niet gevonden.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "500":
+          description: Serveren mislukt.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
 
   # ── INSPECTIES ────────────────────────────────────────────────────────────
   /inspecties:
@@ -1259,6 +1373,10 @@ components:
           type: ["string", "null"]
         bouwjaar:
           type: ["integer", "null"]
+        klant_id:
+          type: ["integer", "null"]
+        klant_naam:
+          type: ["string", "null"]
         totaal_voorzieningen:
           type: integer
         aangemaakt_op:
@@ -1282,6 +1400,10 @@ components:
           type: ["string", "null"]
         bouwjaar:
           type: ["integer", "null"]
+        klant_id:
+          type: ["integer", "null"]
+        klant_naam:
+          type: ["string", "null"]
         aangemaakt_op:
           type: string
         verdiepingen:
@@ -1322,6 +1444,8 @@ components:
           type: string
         bouwjaar:
           type: integer
+        klant_id:
+          type: integer
 
     GebouwUpdate:
       type: object
@@ -1337,6 +1461,8 @@ components:
         omschrijving:
           type: string
         bouwjaar:
+          type: integer
+        klant_id:
           type: integer
 
     # ── VERDIEPING ───────────────────────────────────────────────────────
@@ -1468,6 +1594,16 @@ components:
           type: ["string", "null"]
         volgende_inspectie:
           type: ["string", "null"]
+        wbdbo:
+          type: ["string", "null"]
+        wrd:
+          type: ["string", "null"]
+        wand_of_plafond:
+          type: ["string", "null"]
+        maker_monteur_id:
+          type: ["integer", "null"]
+        maker_monteur_naam:
+          type: ["string", "null"]
         aangemaakt_op:
           type: string
         bijgewerkt_op:
@@ -1531,6 +1667,16 @@ components:
           type: ["string", "null"]
         volgende_inspectie:
           type: ["string", "null"]
+        wbdbo:
+          type: ["string", "null"]
+        wrd:
+          type: ["string", "null"]
+        wand_of_plafond:
+          type: ["string", "null"]
+        maker_monteur_id:
+          type: ["integer", "null"]
+        maker_monteur_naam:
+          type: ["string", "null"]
         aangemaakt_op:
           type: string
         bijgewerkt_op:
@@ -1568,6 +1714,14 @@ components:
           type: ["number", "null"]
         locatie_y:
           type: ["number", "null"]
+        locatie_omschrijving:
+          type: ["string", "null"]
+        wbdbo:
+          type: ["string", "null"]
+        wrd:
+          type: ["string", "null"]
+        wand_of_plafond:
+          type: ["string", "null"]
 
     VoorzieningLijst:
       type: object
@@ -1622,6 +1776,14 @@ components:
           type: string
         volgende_inspectie:
           type: string
+        wbdbo:
+          type: string
+        wrd:
+          type: string
+        wand_of_plafond:
+          type: string
+        maker_monteur_id:
+          type: integer
 
     VoorzieningUpdate:
       type: object
@@ -1658,6 +1820,14 @@ components:
           type: string
         volgende_inspectie:
           type: string
+        wbdbo:
+          type: string
+        wrd:
+          type: string
+        wand_of_plafond:
+          type: string
+        maker_monteur_id:
+          type: integer
 
     StatusUpdate:
       type: object
@@ -1697,6 +1867,38 @@ components:
         url:
           type: string
         beschrijving:
+          type: string
+
+    # ── STORAGE ──────────────────────────────────────────────────────────
+    UploadUrlRequest:
+      type: object
+      required: [name, size, contentType]
+      properties:
+        name:
+          type: string
+          minLength: 1
+        size:
+          type: integer
+          minimum: 1
+        contentType:
+          type: string
+          minLength: 1
+    UploadUrlResponse:
+      type: object
+      required: [uploadURL, objectPath]
+      properties:
+        uploadURL:
+          type: string
+          format: uri
+        objectPath:
+          type: string
+        metadata:
+          $ref: "#/components/schemas/UploadUrlRequest"
+    ErrorEnvelope:
+      type: object
+      required: [error]
+      properties:
+        error:
           type: string
 
     # ── INSPECTIE ────────────────────────────────────────────────────────

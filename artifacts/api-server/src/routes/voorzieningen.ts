@@ -27,6 +27,9 @@ async function mapVoorziening(v: typeof voorzieningenTable.$inferSelect) {
   const controleur = v.controleurId
     ? await db.select({ naam: gebruikersTable.naam }).from(gebruikersTable).where(eq(gebruikersTable.id, v.controleurId)).then((r) => r[0])
     : null;
+  const maker = v.makerMonteurId
+    ? await db.select({ naam: gebruikersTable.naam }).from(gebruikersTable).where(eq(gebruikersTable.id, v.makerMonteurId)).then((r) => r[0])
+    : null;
 
   return {
     id: v.id,
@@ -51,6 +54,11 @@ async function mapVoorziening(v: typeof voorzieningenTable.$inferSelect) {
     controleur_naam: controleur?.naam ?? null,
     installatie_datum: v.installatieDatum,
     volgende_inspectie: v.volgendeInspectie,
+    wbdbo: v.wbdbo,
+    wrd: v.wrd,
+    wand_of_plafond: v.wandOfPlafond,
+    maker_monteur_id: v.makerMonteurId,
+    maker_monteur_naam: maker?.naam ?? null,
     aangemaakt_op: v.aangemaaktOp.toISOString(),
     bijgewerkt_op: v.bijgewerktOp.toISOString(),
   };
@@ -99,6 +107,7 @@ router.post("/voorzieningen", async (req, res) => {
       verdieping_id, ruimte, locatie_omschrijving, locatie_x, locatie_y,
       materialen, opmerkingen, monteur_id, controleur_id,
       installatie_datum, volgende_inspectie,
+      wbdbo, wrd, wand_of_plafond, maker_monteur_id,
     } = req.body;
 
     if (!objectnummer || !type || !gebouw_id) {
@@ -114,6 +123,7 @@ router.post("/voorzieningen", async (req, res) => {
         locatieX: locatie_x, locatieY: locatie_y, materialen, opmerkingen,
         monteurId: monteur_id, controleurId: controleur_id,
         installatieDatum: installatie_datum, volgendeInspectie: volgende_inspectie,
+        wbdbo, wrd, wandOfPlafond: wand_of_plafond, makerMonteurId: maker_monteur_id,
       })
       .returning();
 
@@ -191,6 +201,7 @@ router.patch("/voorzieningen/:id", async (req, res) => {
       verdieping_id, ruimte, locatie_omschrijving, locatie_x, locatie_y,
       materialen, opmerkingen, monteur_id, controleur_id,
       installatie_datum, volgende_inspectie,
+      wbdbo, wrd, wand_of_plafond, maker_monteur_id,
     } = req.body;
 
     const [v] = await db
@@ -201,6 +212,7 @@ router.patch("/voorzieningen/:id", async (req, res) => {
         locatieX: locatie_x, locatieY: locatie_y, materialen, opmerkingen,
         monteurId: monteur_id, controleurId: controleur_id,
         installatieDatum: installatie_datum, volgendeInspectie: volgende_inspectie,
+        wbdbo, wrd, wandOfPlafond: wand_of_plafond, makerMonteurId: maker_monteur_id,
         bijgewerktOp: new Date(),
       })
       .where(eq(voorzieningenTable.id, id))
@@ -270,6 +282,18 @@ router.post("/voorzieningen/:id/fotos", async (req, res) => {
   }
 });
 
+// DELETE /voorzieningen/:id/fotos/:fotoId
+router.delete("/voorzieningen/:id/fotos/:fotoId", async (req, res) => {
+  try {
+    const fotoId = parseInt(req.params.fotoId);
+    await db.delete(fotosTable).where(eq(fotosTable.id, fotoId));
+    res.status(204).send();
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
 // PATCH /voorzieningen/:id/status
 router.patch("/voorzieningen/:id/status", async (req, res) => {
   try {
@@ -316,6 +340,10 @@ router.get("/verdiepingen/:id/voorzieningen", async (req, res) => {
         ruimte: v.ruimte,
         locatie_x: v.locatieX,
         locatie_y: v.locatieY,
+        locatie_omschrijving: v.locatieOmschrijving,
+        wbdbo: v.wbdbo,
+        wrd: v.wrd,
+        wand_of_plafond: v.wandOfPlafond,
       }))
     );
   } catch (err) {

@@ -69,6 +69,10 @@ export interface Gebouw {
   omschrijving?: string | null;
   /** @nullable */
   bouwjaar?: number | null;
+  /** @nullable */
+  klant_id?: number | null;
+  /** @nullable */
+  klant_naam?: string | null;
   totaal_voorzieningen?: number;
   aangemaakt_op: string;
 }
@@ -107,6 +111,10 @@ export interface GebouwDetail {
   omschrijving?: string | null;
   /** @nullable */
   bouwjaar?: number | null;
+  /** @nullable */
+  klant_id?: number | null;
+  /** @nullable */
+  klant_naam?: string | null;
   aangemaakt_op: string;
   verdiepingen: Verdieping[];
   stats?: GebouwStats;
@@ -119,6 +127,7 @@ export interface GebouwInput {
   postcode?: string;
   omschrijving?: string;
   bouwjaar?: number;
+  klant_id?: number;
 }
 
 export interface GebouwUpdate {
@@ -128,6 +137,7 @@ export interface GebouwUpdate {
   postcode?: string;
   omschrijving?: string;
   bouwjaar?: number;
+  klant_id?: number;
 }
 
 export interface VerdiepingInput {
@@ -226,6 +236,16 @@ export interface Voorziening {
   installatie_datum?: string | null;
   /** @nullable */
   volgende_inspectie?: string | null;
+  /** @nullable */
+  wbdbo?: string | null;
+  /** @nullable */
+  wrd?: string | null;
+  /** @nullable */
+  wand_of_plafond?: string | null;
+  /** @nullable */
+  maker_monteur_id?: number | null;
+  /** @nullable */
+  maker_monteur_naam?: string | null;
   aangemaakt_op: string;
   bijgewerkt_op?: string;
 }
@@ -383,6 +403,16 @@ export interface VoorzieningDetail {
   installatie_datum?: string | null;
   /** @nullable */
   volgende_inspectie?: string | null;
+  /** @nullable */
+  wbdbo?: string | null;
+  /** @nullable */
+  wrd?: string | null;
+  /** @nullable */
+  wand_of_plafond?: string | null;
+  /** @nullable */
+  maker_monteur_id?: number | null;
+  /** @nullable */
+  maker_monteur_naam?: string | null;
   aangemaakt_op: string;
   bijgewerkt_op?: string;
   fotos: Foto[];
@@ -402,6 +432,14 @@ export interface VoorzieningLocatie {
   locatie_x: number | null;
   /** @nullable */
   locatie_y: number | null;
+  /** @nullable */
+  locatie_omschrijving?: string | null;
+  /** @nullable */
+  wbdbo?: string | null;
+  /** @nullable */
+  wrd?: string | null;
+  /** @nullable */
+  wand_of_plafond?: string | null;
 }
 
 export interface VoorzieningLijst {
@@ -429,6 +467,10 @@ export interface VoorzieningInput {
   controleur_id?: number;
   installatie_datum?: string;
   volgende_inspectie?: string;
+  wbdbo?: string;
+  wrd?: string;
+  wand_of_plafond?: string;
+  maker_monteur_id?: number;
 }
 
 export interface VoorzieningUpdate {
@@ -448,6 +490,10 @@ export interface VoorzieningUpdate {
   controleur_id?: number;
   installatie_datum?: string;
   volgende_inspectie?: string;
+  wbdbo?: string;
+  wrd?: string;
+  wand_of_plafond?: string;
+  maker_monteur_id?: number;
 }
 
 export interface StatusUpdate {
@@ -468,6 +514,25 @@ export interface FotoInput {
   fase: FotoInputFase;
   url: string;
   beschrijving?: string;
+}
+
+export interface UploadUrlRequest {
+  /** @minLength 1 */
+  name: string;
+  /** @minimum 1 */
+  size: number;
+  /** @minLength 1 */
+  contentType: string;
+}
+
+export interface UploadUrlResponse {
+  uploadURL: string;
+  objectPath: string;
+  metadata?: UploadUrlRequest;
+}
+
+export interface ErrorEnvelope {
+  error: string;
 }
 
 export interface InspectieDetail {

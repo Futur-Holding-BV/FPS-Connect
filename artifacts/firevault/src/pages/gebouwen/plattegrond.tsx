@@ -1,20 +1,30 @@
 import { useRef, useState, useCallback, useEffect } from "react";
 import { useParams, Link } from "wouter";
+import * as pdfjsLib from "pdfjs-dist";
+import pdfWorkerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 import {
   useGetVerdieping,
   useGetGebouw,
   useListVoorzieningenOpVerdieping,
   useListVerdiepingen,
   useCreateVoorziening,
+  useUpdateVerdieping,
+  useListGebruikers,
+  useGetVoorziening,
+  useAddFoto,
+  useDeleteFoto,
 } from "@workspace/api-client-react";
+import { useUpload } from "@workspace/object-storage-web";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Plus, X, ZoomIn, ZoomOut, RotateCcw, Map } from "lucide-react";
+import { ArrowLeft, Plus, X, ZoomIn, ZoomOut, RotateCcw, Map, Upload, FileText, Trash2, Image as ImageIcon, Loader2 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
+
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 
 // ---- Kleuren en labels per type ----
 const TYPEN: Record<string, { kleur: string; label: string; ring: string }> = {
@@ -48,10 +58,14 @@ const STATUSLABEL: Record<string, string> = {
   concept:       "Concept",
 };
 
+const WBDBO_OPTIES = ["20", "30", "60"];
+const WRD_OPTIES = ["30"];
+const WAND_PLAFOND_OPTIES = ["wand", "plafond"];
+
 const CANVAS_W = 1200;
 const CANVAS_H = 800;
-const MIN_ZOOM = 0.3;
-const MAX_ZOOM = 4;
+const MIN_ZOOM = 0.2;
+const MAX_ZOOM = 5;
 
 type SVGVoorziening = {
   id: number;
@@ -84,11 +98,8 @@ function VoorzieningIcoon({
       onClick={(e) => { e.stopPropagation(); onClick(); }}
       style={{ cursor: "pointer" }}
     >
-      {/* Statusring buiten */}
       <circle r={r + 5} fill={STATUSKLEUREN[v.status] ?? "#94a3b8"} opacity={0.25} />
-      {/* Achtergrond cirkel */}
       <circle r={r} fill={stijl.kleur} stroke={geselecteerd ? "#fff" : stijl.ring} strokeWidth={geselecteerd ? 3 : 1.5} />
-      {/* Label */}
       <text
         textAnchor="middle"
         dominantBaseline="central"
@@ -99,14 +110,15 @@ function VoorzieningIcoon({
       >
         {v.type.slice(0, 2).toUpperCase()}
       </text>
-      {/* Objectnummer tooltip label */}
       <text
         y={r + 13}
         textAnchor="middle"
         fontSize={9}
         fill="#1e293b"
         fontWeight="500"
-        style={{ pointerEvents: "none", userSelect: "none" }}
+        style={{ pointerEvents: "none", userSelect: "none", paintOrder: "stroke" }}
+        stroke="#fff"
+        strokeWidth={2.5}
       >
         {v.objectnummer}
       </text>
@@ -114,7 +126,7 @@ function VoorzieningIcoon({
   );
 }
 
-function GridAchtergrond() {
+function GridAchtergrond({ w, h }: { w: number; h: number }) {
   const stapKlein = 40;
   const stapGroot = 200;
   return (
@@ -128,37 +140,142 @@ function GridAchtergrond() {
           <path d={`M ${stapGroot} 0 L 0 0 0 ${stapGroot}`} fill="none" stroke="#cbd5e1" strokeWidth="1" />
         </pattern>
       </defs>
-      <rect width={CANVAS_W} height={CANVAS_H} fill="url(#grid-groot)" />
-      {/* Buitenrand */}
-      <rect x={20} y={20} width={CANVAS_W - 40} height={CANVAS_H - 40}
+      <rect width={w} height={h} fill="url(#grid-groot)" />
+      <rect x={20} y={20} width={w - 40} height={h - 40}
         fill="none" stroke="#94a3b8" strokeWidth="1.5" strokeDasharray="6 3" rx="4" />
     </g>
   );
 }
 
+// Herbruikbare foto-upload knop (presigned URL flow)
+function FotoUploader({
+  label,
+  onUploaded,
+}: {
+  label: string;
+  onUploaded: (objectPath: string) => void;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const { uploadFile, isUploading } = useUpload({
+    onSuccess: (res) => onUploaded(res.objectPath),
+  });
+
+  return (
+    <>
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        className="hidden"
+        onChange={async (e) => {
+          const file = e.target.files?.[0];
+          if (file) await uploadFile(file);
+          e.target.value = "";
+        }}
+      />
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        disabled={isUploading}
+        onClick={() => inputRef.current?.click()}
+      >
+        {isUploading ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <ImageIcon className="h-4 w-4 mr-1" />}
+        {label}
+      </Button>
+    </>
+  );
+}
+
+const LEEG_FORM = {
+  objectnummer: "",
+  type: "branddeur",
+  classificatie: "60",
+  ruimte: "",
+  locatie_omschrijving: "",
+  wbdbo: "60",
+  wrd: "",
+  wand_of_plafond: "",
+  installatie_datum: "",
+  monteur_id: "",
+  maker_monteur_id: "",
+};
+
 export default function Plattegrond() {
   const { id, verdiepingId } = useParams<{ id: string; verdiepingId: string }>();
   const svgRef = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const planInputRef = useRef<HTMLInputElement>(null);
 
   const [view, setView] = useState<ViewState>({ x: 0, y: 0, zoom: 1 });
   const [panning, setPanning] = useState(false);
   const [panStart, setPanStart] = useState({ mx: 0, my: 0, vx: 0, vy: 0 });
-  const [geselecteerd, setGeselecteerd] = useState<SVGVoorziening | null>(null);
+  const [geselecteerdId, setGeselecteerdId] = useState<number | null>(null);
   const [plaatsenModus, setPlaatsenModus] = useState(false);
   const [nieuwDialoog, setNieuwDialoog] = useState(false);
   const [nieuwLocatie, setNieuwLocatie] = useState({ x: 400, y: 300 });
-  const [nieuwForm, setNieuwForm] = useState({
-    objectnummer: "", type: "branddeur", classificatie: "60",
-    ruimte: "", locatie_omschrijving: "",
-  });
+  const [nieuwForm, setNieuwForm] = useState({ ...LEEG_FORM });
+  const [voorFotos, setVoorFotos] = useState<string[]>([]);
+  const [naFotos, setNaFotos] = useState<string[]>([]);
+
+  const [pdfBeeld, setPdfBeeld] = useState<string | null>(null);
+  const [pdfDims, setPdfDims] = useState<{ w: number; h: number } | null>(null);
+  const [pdfLaden, setPdfLaden] = useState(false);
 
   const queryClient = useQueryClient();
-  const { data: verdieping } = useGetVerdieping(Number(verdiepingId));
+  const { data: verdieping, refetch: refetchVerdieping } = useGetVerdieping(Number(verdiepingId));
   const { data: gebouw } = useGetGebouw(Number(id));
   const { data: alleVerdiepingen } = useListVerdiepingen(Number(id));
   const { data: voorzieningen, refetch } = useListVoorzieningenOpVerdieping(Number(verdiepingId));
+  const { data: gebruikers } = useListGebruikers();
   const maakVoorziening = useCreateVoorziening();
+  const updateVerdieping = useUpdateVerdieping();
+  const addFoto = useAddFoto();
+
+  const { uploadFile: uploadPlan, isUploading: planBezig } = useUpload();
+
+  const monteurs = (gebruikers ?? []).filter((g: any) => g.rol === "monteur");
+
+  const W = pdfDims?.w ?? CANVAS_W;
+  const H = pdfDims?.h ?? CANVAS_H;
+
+  // ---- PDF-plattegrond renderen ----
+  useEffect(() => {
+    const url = (verdieping as any)?.plattegrond_url as string | undefined | null;
+    if (!url) {
+      setPdfBeeld(null);
+      setPdfDims(null);
+      return;
+    }
+    let geannuleerd = false;
+    (async () => {
+      setPdfLaden(true);
+      try {
+        const taak = pdfjsLib.getDocument({ url: `/api/storage${url}` });
+        const pdf = await taak.promise;
+        const page = await pdf.getPage(1);
+        const viewport = page.getViewport({ scale: 2 });
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.ceil(viewport.width);
+        canvas.height = Math.ceil(viewport.height);
+        const ctx = canvas.getContext("2d");
+        if (!ctx) throw new Error("Geen canvas context");
+        await page.render({ canvasContext: ctx, viewport, canvas }).promise;
+        if (geannuleerd) return;
+        setPdfBeeld(canvas.toDataURL("image/png"));
+        setPdfDims({ w: canvas.width, h: canvas.height });
+      } catch {
+        if (!geannuleerd) {
+          setPdfBeeld(null);
+          setPdfDims(null);
+        }
+      } finally {
+        if (!geannuleerd) setPdfLaden(false);
+      }
+    })();
+    return () => { geannuleerd = true; };
+  }, [(verdieping as any)?.plattegrond_url]);
 
   // Normaliseer voorzieningen naar SVGVoorziening
   const geplaatst: SVGVoorziening[] = (voorzieningen ?? [])
@@ -223,31 +340,84 @@ export default function Plattegrond() {
   const zoomIn = () => setView((v) => ({ ...v, zoom: Math.min(MAX_ZOOM, v.zoom * 1.25) }));
   const zoomOut = () => setView((v) => ({ ...v, zoom: Math.max(MIN_ZOOM, v.zoom * 0.8) }));
 
+  // ---- Plattegrond (PDF) uploaden ----
+  async function opPlanGekozen(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    const res = await uploadPlan(file);
+    if (res) {
+      await updateVerdieping.mutateAsync({
+        id: Number(verdiepingId),
+        data: { plattegrond_url: res.objectPath },
+      });
+      refetchVerdieping();
+      resetView();
+    }
+  }
+
   // ---- Voorziening aanmaken ----
   async function maakNieuw(e: React.FormEvent) {
     e.preventDefault();
     if (!nieuwForm.objectnummer || !nieuwForm.type) return;
-    await maakVoorziening.mutateAsync({
+    const aangemaakt: any = await maakVoorziening.mutateAsync({
       data: {
         objectnummer: nieuwForm.objectnummer,
         type: nieuwForm.type,
+        status: "in_uitvoering",
         classificatie: nieuwForm.classificatie,
         ruimte: nieuwForm.ruimte || undefined,
         locatie_omschrijving: nieuwForm.locatie_omschrijving || undefined,
+        wbdbo: nieuwForm.wbdbo || undefined,
+        wrd: nieuwForm.wrd || undefined,
+        wand_of_plafond: nieuwForm.wand_of_plafond || undefined,
+        installatie_datum: nieuwForm.installatie_datum || undefined,
+        monteur_id: nieuwForm.monteur_id ? Number(nieuwForm.monteur_id) : undefined,
+        maker_monteur_id: nieuwForm.maker_monteur_id ? Number(nieuwForm.maker_monteur_id) : undefined,
         locatie_x: nieuwLocatie.x,
         locatie_y: nieuwLocatie.y,
         gebouw_id: Number(id),
         verdieping_id: Number(verdiepingId),
       },
     });
+
+    const nieuwId = aangemaakt?.id as number | undefined;
+    if (nieuwId) {
+      for (const url of voorFotos) {
+        await addFoto.mutateAsync({ id: nieuwId, data: { fase: "voor", url } });
+      }
+      for (const url of naFotos) {
+        await addFoto.mutateAsync({ id: nieuwId, data: { fase: "na", url } });
+      }
+    }
+
     setNieuwDialoog(false);
     setPlaatsenModus(false);
-    setNieuwForm({ objectnummer: "", type: "branddeur", classificatie: "60", ruimte: "", locatie_omschrijving: "" });
+    setNieuwForm({ ...LEEG_FORM });
+    setVoorFotos([]);
+    setNaFotos([]);
     refetch();
+  }
+
+  function sluitDialoog(open: boolean) {
+    setNieuwDialoog(open);
+    if (!open) {
+      setPlaatsenModus(false);
+      setVoorFotos([]);
+      setNaFotos([]);
+    }
   }
 
   return (
     <div className="h-[calc(100vh-2rem)] flex flex-col gap-0">
+      <input
+        ref={planInputRef}
+        type="file"
+        accept="application/pdf"
+        className="hidden"
+        onChange={opPlanGekozen}
+      />
+
       {/* Header */}
       <div className="flex items-center justify-between px-1 pb-3 flex-shrink-0">
         <div className="flex items-center gap-3">
@@ -267,7 +437,6 @@ export default function Plattegrond() {
         </div>
 
         <div className="flex items-center gap-2">
-          {/* Verdieping switcher */}
           {alleVerdiepingen && alleVerdiepingen.length > 1 && (
             <Select
               value={verdiepingId}
@@ -286,7 +455,18 @@ export default function Plattegrond() {
             </Select>
           )}
 
-          {/* Zoom controls */}
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={planBezig || updateVerdieping.isPending}
+            onClick={() => planInputRef.current?.click()}
+          >
+            {planBezig || updateVerdieping.isPending
+              ? <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+              : <Upload className="h-4 w-4 mr-1" />}
+            {pdfBeeld ? "Plattegrond vervangen" : "Plattegrond uploaden"}
+          </Button>
+
           <Button variant="outline" size="icon" className="h-8 w-8" onClick={zoomOut}><ZoomOut className="h-3.5 w-3.5" /></Button>
           <span className="text-xs text-muted-foreground w-10 text-center">{Math.round(view.zoom * 100)}%</span>
           <Button variant="outline" size="icon" className="h-8 w-8" onClick={zoomIn}><ZoomIn className="h-3.5 w-3.5" /></Button>
@@ -295,7 +475,7 @@ export default function Plattegrond() {
           <Button
             variant={plaatsenModus ? "destructive" : "default"}
             size="sm"
-            onClick={() => { setPlaatsenModus(!plaatsenModus); setGeselecteerd(null); }}
+            onClick={() => { setPlaatsenModus(!plaatsenModus); setGeselecteerdId(null); }}
           >
             {plaatsenModus ? (<><X className="h-4 w-4 mr-1" />Annuleren</>) : (<><Plus className="h-4 w-4 mr-1" />Plaatsen</>)}
           </Button>
@@ -314,7 +494,7 @@ export default function Plattegrond() {
         {/* SVG Canvas */}
         <div
           ref={containerRef}
-          className={`flex-1 rounded-lg border overflow-hidden bg-white relative ${plaatsenModus ? "cursor-crosshair" : panning ? "cursor-grabbing" : "cursor-grab"}`}
+          className={`flex-1 rounded-lg border overflow-hidden bg-slate-100 relative ${plaatsenModus ? "cursor-crosshair" : panning ? "cursor-grabbing" : "cursor-grab"}`}
         >
           <svg
             ref={svgRef}
@@ -329,25 +509,19 @@ export default function Plattegrond() {
             style={{ display: "block" }}
           >
             <g transform={`translate(${view.x}, ${view.y}) scale(${view.zoom})`}>
-              <GridAchtergrond />
-
-              {/* Ruimtelabels (decoratief) */}
-              <text x={40} y={45} fontSize={11} fill="#94a3b8" fontWeight="500">Ruimte A</text>
-              <text x={CANVAS_W / 2} y={45} fontSize={11} fill="#94a3b8" fontWeight="500">Ruimte B</text>
-              <text x={40} y={CANVAS_H / 2 + 15} fontSize={11} fill="#94a3b8" fontWeight="500">Ruimte C</text>
-              <text x={CANVAS_W / 2} y={CANVAS_H / 2 + 15} fontSize={11} fill="#94a3b8" fontWeight="500">Ruimte D</text>
-              {/* Middenlijn horizontaal */}
-              <line x1={20} y1={CANVAS_H / 2} x2={CANVAS_W - 20} y2={CANVAS_H / 2} stroke="#e2e8f0" strokeWidth="1.5" />
-              {/* Middenlijn verticaal */}
-              <line x1={CANVAS_W / 2} y1={20} x2={CANVAS_W / 2} y2={CANVAS_H - 20} stroke="#e2e8f0" strokeWidth="1.5" />
+              {pdfBeeld ? (
+                <image href={pdfBeeld} x={0} y={0} width={W} height={H} />
+              ) : (
+                <GridAchtergrond w={W} h={H} />
+              )}
 
               {/* Voorzieningen */}
               {geplaatst.map((v) => (
                 <VoorzieningIcoon
                   key={v.id}
                   v={v}
-                  geselecteerd={geselecteerd?.id === v.id}
-                  onClick={() => setGeselecteerd(geselecteerd?.id === v.id ? null : v)}
+                  geselecteerd={geselecteerdId === v.id}
+                  onClick={() => setGeselecteerdId(geselecteerdId === v.id ? null : v.id)}
                 />
               ))}
             </g>
@@ -368,6 +542,21 @@ export default function Plattegrond() {
             })}
           </div>
 
+          {/* PDF aan het laden */}
+          {pdfLaden && (
+            <div className="absolute inset-0 flex items-center justify-center bg-white/60 pointer-events-none">
+              <Loader2 className="h-6 w-6 animate-spin text-primary" />
+            </div>
+          )}
+
+          {/* Geen plattegrond */}
+          {!pdfBeeld && !pdfLaden && (
+            <div className="absolute top-3 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-white/90 border rounded-md px-3 py-1.5 text-xs text-muted-foreground shadow-sm">
+              <FileText className="h-3.5 w-3.5" />
+              Nog geen PDF-plattegrond — upload er één voor een nauwkeurige ondergrond.
+            </div>
+          )}
+
           {/* Geen data */}
           {geplaatst.length === 0 && !plaatsenModus && (
             <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
@@ -379,64 +568,27 @@ export default function Plattegrond() {
         </div>
 
         {/* Zijpaneel: detail geselecteerde voorziening */}
-        {geselecteerd && (
-          <div className="w-72 flex-shrink-0 border rounded-lg bg-white p-4 flex flex-col gap-3 overflow-y-auto">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span
-                  className="w-4 h-4 rounded-full flex-shrink-0"
-                  style={{ backgroundColor: TYPEN[geselecteerd.type]?.kleur ?? "#94a3b8" }}
-                />
-                <span className="font-semibold text-sm">{geselecteerd.objectnummer}</span>
-              </div>
-              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setGeselecteerd(null)}>
-                <X className="h-3.5 w-3.5" />
-              </Button>
-            </div>
-
-            <div className="space-y-2 text-sm">
-              <div className="grid grid-cols-2 gap-y-2">
-                <span className="text-muted-foreground">Type</span>
-                <span className="font-medium">{TYPEN[geselecteerd.type]?.label ?? geselecteerd.type}</span>
-
-                <span className="text-muted-foreground">Status</span>
-                <Badge variant="outline" className="text-xs w-fit" style={{ borderColor: STATUSKLEUREN[geselecteerd.status], color: STATUSKLEUREN[geselecteerd.status] }}>
-                  {STATUSLABEL[geselecteerd.status] ?? geselecteerd.status}
-                </Badge>
-
-                <span className="text-muted-foreground">Classificatie</span>
-                <span className="font-medium">EI {geselecteerd.classificatie ?? "—"}</span>
-
-                {geselecteerd.ruimte && (
-                  <>
-                    <span className="text-muted-foreground">Ruimte</span>
-                    <span className="font-medium">{geselecteerd.ruimte}</span>
-                  </>
-                )}
-
-                <span className="text-muted-foreground">Positie</span>
-                <span className="font-mono text-xs">{geselecteerd.locatie_x}, {geselecteerd.locatie_y}</span>
-              </div>
-            </div>
-
-            <div className="flex flex-col gap-2 mt-auto pt-3 border-t">
-              <Button size="sm" variant="default" asChild>
-                <Link href={`/voorzieningen/${geselecteerd.id}`}>Details openen</Link>
-              </Button>
-              <Button size="sm" variant="outline">Status bijwerken</Button>
-            </div>
-          </div>
+        {geselecteerdId != null && (
+          <SpotDetail
+            id={geselecteerdId}
+            onClose={() => setGeselecteerdId(null)}
+            onWijziging={() => refetch()}
+          />
         )}
 
         {/* Niet-geplaatste voorzieningen */}
-        {nietGeplaatst.length > 0 && !geselecteerd && (
+        {nietGeplaatst.length > 0 && geselecteerdId == null && (
           <div className="w-64 flex-shrink-0 border rounded-lg bg-white p-3 overflow-y-auto">
             <p className="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wide">
               Niet geplaatst ({nietGeplaatst.length})
             </p>
             <div className="space-y-1">
               {nietGeplaatst.map((v: any) => (
-                <div key={v.id} className="flex items-center gap-2 p-2 rounded border hover:bg-muted/50 text-sm">
+                <div
+                  key={v.id}
+                  className="flex items-center gap-2 p-2 rounded border hover:bg-muted/50 text-sm cursor-pointer"
+                  onClick={() => setGeselecteerdId(v.id)}
+                >
                   <span
                     className="w-3 h-3 rounded-full flex-shrink-0"
                     style={{ backgroundColor: TYPEN[v.type]?.kleur ?? "#94a3b8" }}
@@ -453,8 +605,8 @@ export default function Plattegrond() {
       </div>
 
       {/* Dialoog: nieuwe voorziening plaatsen */}
-      <Dialog open={nieuwDialoog} onOpenChange={(o) => { setNieuwDialoog(o); if (!o) setPlaatsenModus(false); }}>
-        <DialogContent className="max-w-md">
+      <Dialog open={nieuwDialoog} onOpenChange={sluitDialoog}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Nieuwe voorziening plaatsen</DialogTitle>
           </DialogHeader>
@@ -472,7 +624,7 @@ export default function Plattegrond() {
               </div>
 
               <div>
-                <Label>Type *</Label>
+                <Label>Type systeem *</Label>
                 <Select value={nieuwForm.type} onValueChange={(v) => setNieuwForm((f) => ({ ...f, type: v }))}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
@@ -496,6 +648,92 @@ export default function Plattegrond() {
               </div>
 
               <div>
+                <Label>WBDBO (min)</Label>
+                <Select value={nieuwForm.wbdbo} onValueChange={(v) => setNieuwForm((f) => ({ ...f, wbdbo: v }))}>
+                  <SelectTrigger><SelectValue placeholder="Kies" /></SelectTrigger>
+                  <SelectContent>
+                    {WBDBO_OPTIES.map((v) => (
+                      <SelectItem key={v} value={v}>{v} minuten</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label>WRD (min)</Label>
+                <Select
+                  value={nieuwForm.wrd || "geen"}
+                  onValueChange={(v) => setNieuwForm((f) => ({ ...f, wrd: v === "geen" ? "" : v }))}
+                >
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="geen">Geen</SelectItem>
+                    {WRD_OPTIES.map((v) => (
+                      <SelectItem key={v} value={v}>{v} minuten</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label>Wand of plafond</Label>
+                <Select
+                  value={nieuwForm.wand_of_plafond || "onbekend"}
+                  onValueChange={(v) => setNieuwForm((f) => ({ ...f, wand_of_plafond: v === "onbekend" ? "" : v }))}
+                >
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="onbekend">Onbekend</SelectItem>
+                    {WAND_PLAFOND_OPTIES.map((v) => (
+                      <SelectItem key={v} value={v} className="capitalize">{v === "wand" ? "Wand" : "Plafond"}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label htmlFor="nw-datum">Datum uitvoering</Label>
+                <Input
+                  id="nw-datum"
+                  type="date"
+                  value={nieuwForm.installatie_datum}
+                  onChange={(e) => setNieuwForm((f) => ({ ...f, installatie_datum: e.target.value }))}
+                />
+              </div>
+
+              <div>
+                <Label>Monteur uitvoering</Label>
+                <Select
+                  value={nieuwForm.monteur_id || "geen"}
+                  onValueChange={(v) => setNieuwForm((f) => ({ ...f, monteur_id: v === "geen" ? "" : v }))}
+                >
+                  <SelectTrigger><SelectValue placeholder="Kies monteur" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="geen">Niet toegewezen</SelectItem>
+                    {monteurs.map((m: any) => (
+                      <SelectItem key={m.id} value={String(m.id)}>{m.naam}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label>Monteur maker</Label>
+                <Select
+                  value={nieuwForm.maker_monteur_id || "geen"}
+                  onValueChange={(v) => setNieuwForm((f) => ({ ...f, maker_monteur_id: v === "geen" ? "" : v }))}
+                >
+                  <SelectTrigger><SelectValue placeholder="Kies monteur" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="geen">Niet toegewezen</SelectItem>
+                    {monteurs.map((m: any) => (
+                      <SelectItem key={m.id} value={String(m.id)}>{m.naam}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
                 <Label htmlFor="nw-ruimte">Ruimte</Label>
                 <Input
                   id="nw-ruimte"
@@ -503,24 +741,6 @@ export default function Plattegrond() {
                   onChange={(e) => setNieuwForm((f) => ({ ...f, ruimte: e.target.value }))}
                   placeholder="Bijv. Trappenhal A"
                 />
-              </div>
-
-              <div>
-                <Label>Positie (X, Y)</Label>
-                <div className="flex gap-1">
-                  <Input
-                    type="number"
-                    value={nieuwLocatie.x}
-                    onChange={(e) => setNieuwLocatie((l) => ({ ...l, x: Number(e.target.value) }))}
-                    className="w-20"
-                  />
-                  <Input
-                    type="number"
-                    value={nieuwLocatie.y}
-                    onChange={(e) => setNieuwLocatie((l) => ({ ...l, y: Number(e.target.value) }))}
-                    className="w-20"
-                  />
-                </div>
               </div>
 
               <div className="col-span-2">
@@ -532,19 +752,235 @@ export default function Plattegrond() {
                   placeholder="Bijv. Bij kabelgoot oost"
                 />
               </div>
+
+              <div className="col-span-2">
+                <Label>Positie (X, Y)</Label>
+                <div className="flex gap-1">
+                  <Input
+                    type="number"
+                    value={nieuwLocatie.x}
+                    onChange={(e) => setNieuwLocatie((l) => ({ ...l, x: Number(e.target.value) }))}
+                    className="w-24"
+                  />
+                  <Input
+                    type="number"
+                    value={nieuwLocatie.y}
+                    onChange={(e) => setNieuwLocatie((l) => ({ ...l, y: Number(e.target.value) }))}
+                    className="w-24"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Foto's voor / na */}
+            <div className="grid grid-cols-2 gap-4 pt-2 border-t">
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <Label className="text-xs uppercase tracking-wide text-muted-foreground">Foto's voor</Label>
+                  <FotoUploader label="Toevoegen" onUploaded={(p) => setVoorFotos((a) => [...a, p])} />
+                </div>
+                <FotoStrip paths={voorFotos} onVerwijder={(i) => setVoorFotos((a) => a.filter((_, idx) => idx !== i))} />
+              </div>
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <Label className="text-xs uppercase tracking-wide text-muted-foreground">Foto's na</Label>
+                  <FotoUploader label="Toevoegen" onUploaded={(p) => setNaFotos((a) => [...a, p])} />
+                </div>
+                <FotoStrip paths={naFotos} onVerwijder={(i) => setNaFotos((a) => a.filter((_, idx) => idx !== i))} />
+              </div>
             </div>
 
             <DialogFooter className="gap-2">
-              <Button type="button" variant="outline" onClick={() => { setNieuwDialoog(false); setPlaatsenModus(false); }}>
+              <Button type="button" variant="outline" onClick={() => sluitDialoog(false)}>
                 Annuleren
               </Button>
-              <Button type="submit" disabled={maakVoorziening.isPending}>
-                {maakVoorziening.isPending ? "Opslaan..." : "Plaatsen"}
+              <Button type="submit" disabled={maakVoorziening.isPending || addFoto.isPending}>
+                {maakVoorziening.isPending || addFoto.isPending ? "Opslaan..." : "Plaatsen"}
               </Button>
             </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
+    </div>
+  );
+}
+
+// Strip van geüploade foto-thumbnails (nieuwe voorziening)
+function FotoStrip({ paths, onVerwijder }: { paths: string[]; onVerwijder: (i: number) => void }) {
+  if (paths.length === 0) {
+    return <p className="text-xs text-muted-foreground italic">Nog geen foto's</p>;
+  }
+  return (
+    <div className="flex flex-wrap gap-2">
+      {paths.map((p, i) => (
+        <div key={i} className="relative group">
+          <img
+            src={`/api/storage${p}`}
+            alt={`Foto ${i + 1}`}
+            className="h-16 w-16 object-cover rounded border"
+          />
+          <button
+            type="button"
+            onClick={() => onVerwijder(i)}
+            className="absolute -top-1.5 -right-1.5 bg-destructive text-white rounded-full p-0.5 opacity-90 hover:opacity-100"
+          >
+            <X className="h-3 w-3" />
+          </button>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// Detail zijpaneel met alle velden + foto's voor/na
+function SpotDetail({
+  id,
+  onClose,
+  onWijziging,
+}: {
+  id: number;
+  onClose: () => void;
+  onWijziging: () => void;
+}) {
+  const { data: v, isLoading, refetch } = useGetVoorziening(id);
+  const addFoto = useAddFoto();
+  const delFoto = useDeleteFoto();
+
+  const fotos = ((v as any)?.fotos ?? []) as any[];
+  const voor = fotos.filter((f) => f.fase === "voor");
+  const na = fotos.filter((f) => f.fase === "na");
+
+  async function voegToe(fase: "voor" | "na", url: string) {
+    await addFoto.mutateAsync({ id, data: { fase, url } });
+    refetch();
+  }
+
+  async function verwijder(fotoId: number) {
+    await delFoto.mutateAsync({ id, fotoId });
+    refetch();
+  }
+
+  const stijl = v ? (TYPEN[(v as any).type] ?? { kleur: "#94a3b8", label: (v as any).type }) : null;
+
+  return (
+    <div className="w-80 flex-shrink-0 border rounded-lg bg-white p-4 flex flex-col gap-3 overflow-y-auto">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          {stijl && (
+            <span className="w-4 h-4 rounded-full flex-shrink-0" style={{ backgroundColor: stijl.kleur }} />
+          )}
+          <span className="font-semibold text-sm">{(v as any)?.objectnummer ?? "…"}</span>
+        </div>
+        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={onClose}>
+          <X className="h-3.5 w-3.5" />
+        </Button>
+      </div>
+
+      {isLoading || !v ? (
+        <div className="flex items-center justify-center py-8">
+          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+        </div>
+      ) : (
+        <>
+          <div className="grid grid-cols-2 gap-y-2 text-sm">
+            <span className="text-muted-foreground">Type</span>
+            <span className="font-medium">{TYPEN[(v as any).type]?.label ?? (v as any).type}</span>
+
+            <span className="text-muted-foreground">Status</span>
+            <Badge variant="outline" className="text-xs w-fit" style={{ borderColor: STATUSKLEUREN[(v as any).status], color: STATUSKLEUREN[(v as any).status] }}>
+              {STATUSLABEL[(v as any).status] ?? (v as any).status}
+            </Badge>
+
+            <span className="text-muted-foreground">Classificatie</span>
+            <span className="font-medium">EI {(v as any).classificatie ?? "—"}</span>
+
+            <span className="text-muted-foreground">WBDBO</span>
+            <span className="font-medium">{(v as any).wbdbo ? `${(v as any).wbdbo} min` : "—"}</span>
+
+            <span className="text-muted-foreground">WRD</span>
+            <span className="font-medium">{(v as any).wrd ? `${(v as any).wrd} min` : "—"}</span>
+
+            <span className="text-muted-foreground">Wand/plafond</span>
+            <span className="font-medium capitalize">{(v as any).wand_of_plafond ?? "—"}</span>
+
+            <span className="text-muted-foreground">Datum</span>
+            <span className="font-medium">{(v as any).installatie_datum ? String((v as any).installatie_datum).slice(0, 10) : "—"}</span>
+
+            <span className="text-muted-foreground">Monteur uitvoering</span>
+            <span className="font-medium">{(v as any).monteur_naam ?? "—"}</span>
+
+            <span className="text-muted-foreground">Monteur maker</span>
+            <span className="font-medium">{(v as any).maker_monteur_naam ?? "—"}</span>
+
+            {(v as any).ruimte && (
+              <>
+                <span className="text-muted-foreground">Ruimte</span>
+                <span className="font-medium">{(v as any).ruimte}</span>
+              </>
+            )}
+
+            {(v as any).locatie_omschrijving && (
+              <>
+                <span className="text-muted-foreground">Locatie</span>
+                <span className="font-medium">{(v as any).locatie_omschrijving}</span>
+              </>
+            )}
+          </div>
+
+          {/* Foto's voor */}
+          <div className="pt-2 border-t">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs uppercase tracking-wide text-muted-foreground font-semibold">Foto's voor</span>
+              <FotoUploader label="Toevoegen" onUploaded={(p) => voegToe("voor", p)} />
+            </div>
+            <FotoGalerij fotos={voor} onVerwijder={verwijder} />
+          </div>
+
+          {/* Foto's na */}
+          <div className="pt-2 border-t">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs uppercase tracking-wide text-muted-foreground font-semibold">Foto's na</span>
+              <FotoUploader label="Toevoegen" onUploaded={(p) => voegToe("na", p)} />
+            </div>
+            <FotoGalerij fotos={na} onVerwijder={verwijder} />
+          </div>
+
+          <div className="flex flex-col gap-2 mt-auto pt-3 border-t">
+            <Button size="sm" variant="default" asChild>
+              <Link href={`/voorzieningen/${id}`} onClick={() => onWijziging()}>Volledige details</Link>
+            </Button>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+// Galerij met bestaande foto's (uit DB) + verwijderknop
+function FotoGalerij({ fotos, onVerwijder }: { fotos: any[]; onVerwijder: (fotoId: number) => void }) {
+  if (fotos.length === 0) {
+    return <p className="text-xs text-muted-foreground italic">Nog geen foto's</p>;
+  }
+  return (
+    <div className="flex flex-wrap gap-2">
+      {fotos.map((f) => (
+        <div key={f.id} className="relative group">
+          <a href={`/api/storage${f.url}`} target="_blank" rel="noreferrer">
+            <img
+              src={`/api/storage${f.url}`}
+              alt={f.beschrijving ?? "Foto"}
+              className="h-16 w-16 object-cover rounded border"
+            />
+          </a>
+          <button
+            type="button"
+            onClick={() => onVerwijder(f.id)}
+            className="absolute -top-1.5 -right-1.5 bg-destructive text-white rounded-full p-0.5 opacity-90 hover:opacity-100"
+          >
+            <Trash2 className="h-3 w-3" />
+          </button>
+        </div>
+      ))}
     </div>
   );
 }

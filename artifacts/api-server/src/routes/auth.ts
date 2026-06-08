@@ -4,6 +4,7 @@ import { authenticator } from "otplib";
 import QRCode from "qrcode";
 import { db, gebruikersTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
+import { maakToken } from "../lib/token";
 
 const router = Router();
 
@@ -145,6 +146,54 @@ router.post("/auth/2fa/verify", async (req, res) => {
     delete req.session.pendingUserId;
     delete req.session.pendingSecret;
     res.json(mapAuthGebruiker(g));
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// POST /auth/mobile/login — login in één stap voor de mobiele monteur-app
+// (e-mail + wachtwoord + bestaande TOTP-code). Retourneert een bearer-token.
+router.post("/auth/mobile/login", async (req, res) => {
+  try {
+    const { email, wachtwoord, code } = req.body ?? {};
+    if (!email || !wachtwoord) {
+      return res.status(400).json({ error: "E-mail en wachtwoord zijn verplicht" });
+    }
+    const [g] = await db
+      .select()
+      .from(gebruikersTable)
+      .where(eq(gebruikersTable.email, String(email).trim().toLowerCase()));
+    if (!g || !g.actief || !g.wachtwoord) {
+      return res.status(401).json({ error: "Onjuiste inloggegevens" });
+    }
+    const ok = await bcrypt.compare(String(wachtwoord), g.wachtwoord);
+    if (!ok) {
+      return res.status(401).json({ error: "Onjuiste inloggegevens" });
+    }
+    if (!g.tweeFactorIngeschakeld || !g.totpSecret) {
+      return res.status(403).json({
+        error:
+          "Tweestapsverificatie is nog niet ingericht. Log eerst in via de webportal om dit te activeren.",
+      });
+    }
+    const ingevoerdeCode = schoonCode(code);
+    if (!ingevoerdeCode) {
+      return res
+        .status(401)
+        .json({ error: "Authenticatiecode is verplicht", status: "verify_2fa" });
+    }
+    if (!authenticator.check(ingevoerdeCode, g.totpSecret)) {
+      return res
+        .status(401)
+        .json({ error: "Onjuiste code, probeer opnieuw", status: "verify_2fa" });
+    }
+    await db
+      .update(gebruikersTable)
+      .set({ laatstOnline: new Date() })
+      .where(eq(gebruikersTable.id, g.id));
+    const token = maakToken(g.id);
+    return res.json({ token, gebruiker: mapAuthGebruiker(g) });
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Interne serverfout" });

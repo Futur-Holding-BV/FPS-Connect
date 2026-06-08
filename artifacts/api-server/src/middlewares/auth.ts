@@ -1,17 +1,42 @@
 import type { Request, Response, NextFunction, RequestHandler } from "express";
 import { db, gebruikersTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
+import { leesToken } from "../lib/token";
 
-export function requireAuth(
+export async function requireAuth(
   req: Request,
   res: Response,
   next: NextFunction,
-): void {
-  if (!req.session.userId) {
-    res.status(401).json({ error: "Niet ingelogd" });
+): Promise<void> {
+  if (req.session.userId) {
+    next();
     return;
   }
-  next();
+  // Mobiele app: bearer-token in plaats van sessie-cookie.
+  const header = req.headers.authorization;
+  if (header && header.startsWith("Bearer ")) {
+    const uid = leesToken(header.slice(7));
+    if (uid) {
+      try {
+        // Verifieer dat het account nog bestaat én actief is; een eerder
+        // uitgegeven token mag niet bruikbaar blijven na deactivatie.
+        const [g] = await db
+          .select({ actief: gebruikersTable.actief })
+          .from(gebruikersTable)
+          .where(eq(gebruikersTable.id, uid));
+        if (g && g.actief) {
+          req.session.userId = uid;
+          next();
+          return;
+        }
+      } catch (err) {
+        req.log.error(err);
+        res.status(500).json({ error: "Interne serverfout" });
+        return;
+      }
+    }
+  }
+  res.status(401).json({ error: "Niet ingelogd" });
 }
 
 export function requireRol(...toegestaneRollen: string[]): RequestHandler {

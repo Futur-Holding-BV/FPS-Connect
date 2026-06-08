@@ -106,6 +106,8 @@ export const ListGebouwenResponseItem = zod.object({
   "postcode": zod.string().nullish(),
   "omschrijving": zod.string().nullish(),
   "bouwjaar": zod.number().nullish(),
+  "klant_id": zod.number().nullish(),
+  "klant_naam": zod.string().nullish(),
   "totaal_voorzieningen": zod.number().optional(),
   "aangemaakt_op": zod.string()
 })
@@ -121,7 +123,8 @@ export const CreateGebouwBody = zod.object({
   "stad": zod.string().optional(),
   "postcode": zod.string().optional(),
   "omschrijving": zod.string().optional(),
-  "bouwjaar": zod.number().optional()
+  "bouwjaar": zod.number().optional(),
+  "klant_id": zod.number().optional()
 })
 
 export const CreateGebouwResponse = zod.void()
@@ -142,6 +145,8 @@ export const GetGebouwResponse = zod.object({
   "postcode": zod.string().nullish(),
   "omschrijving": zod.string().nullish(),
   "bouwjaar": zod.number().nullish(),
+  "klant_id": zod.number().nullish(),
+  "klant_naam": zod.string().nullish(),
   "aangemaakt_op": zod.string(),
   "verdiepingen": zod.array(zod.object({
   "id": zod.number(),
@@ -176,7 +181,8 @@ export const UpdateGebouwBody = zod.object({
   "stad": zod.string().optional(),
   "postcode": zod.string().optional(),
   "omschrijving": zod.string().optional(),
-  "bouwjaar": zod.number().optional()
+  "bouwjaar": zod.number().optional(),
+  "klant_id": zod.number().optional()
 })
 
 export const UpdateGebouwResponse = zod.object({
@@ -187,6 +193,8 @@ export const UpdateGebouwResponse = zod.object({
   "postcode": zod.string().nullish(),
   "omschrijving": zod.string().nullish(),
   "bouwjaar": zod.number().nullish(),
+  "klant_id": zod.number().nullish(),
+  "klant_naam": zod.string().nullish(),
   "totaal_voorzieningen": zod.number().optional(),
   "aangemaakt_op": zod.string()
 })
@@ -337,6 +345,11 @@ export const ListVoorzieningenResponse = zod.object({
   "controleur_naam": zod.string().nullish(),
   "installatie_datum": zod.string().nullish(),
   "volgende_inspectie": zod.string().nullish(),
+  "wbdbo": zod.string().nullish(),
+  "wrd": zod.string().nullish(),
+  "wand_of_plafond": zod.string().nullish(),
+  "maker_monteur_id": zod.number().nullish(),
+  "maker_monteur_naam": zod.string().nullish(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string().optional()
 })),
@@ -366,7 +379,11 @@ export const CreateVoorzieningBody = zod.object({
   "monteur_id": zod.number().optional(),
   "controleur_id": zod.number().optional(),
   "installatie_datum": zod.string().optional(),
-  "volgende_inspectie": zod.string().optional()
+  "volgende_inspectie": zod.string().optional(),
+  "wbdbo": zod.string().optional(),
+  "wrd": zod.string().optional(),
+  "wand_of_plafond": zod.string().optional(),
+  "maker_monteur_id": zod.number().optional()
 })
 
 export const CreateVoorzieningResponse = zod.void()
@@ -402,6 +419,11 @@ export const GetVoorzieningResponse = zod.object({
   "controleur_naam": zod.string().nullish(),
   "installatie_datum": zod.string().nullish(),
   "volgende_inspectie": zod.string().nullish(),
+  "wbdbo": zod.string().nullish(),
+  "wrd": zod.string().nullish(),
+  "wand_of_plafond": zod.string().nullish(),
+  "maker_monteur_id": zod.number().nullish(),
+  "maker_monteur_naam": zod.string().nullish(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string().optional(),
   "fotos": zod.array(zod.object({
@@ -471,7 +493,11 @@ export const UpdateVoorzieningBody = zod.object({
   "monteur_id": zod.number().optional(),
   "controleur_id": zod.number().optional(),
   "installatie_datum": zod.string().optional(),
-  "volgende_inspectie": zod.string().optional()
+  "volgende_inspectie": zod.string().optional(),
+  "wbdbo": zod.string().optional(),
+  "wrd": zod.string().optional(),
+  "wand_of_plafond": zod.string().optional(),
+  "maker_monteur_id": zod.number().optional()
 })
 
 export const UpdateVoorzieningResponse = zod.object({
@@ -497,6 +523,11 @@ export const UpdateVoorzieningResponse = zod.object({
   "controleur_naam": zod.string().nullish(),
   "installatie_datum": zod.string().nullish(),
   "volgende_inspectie": zod.string().nullish(),
+  "wbdbo": zod.string().nullish(),
+  "wrd": zod.string().nullish(),
+  "wand_of_plafond": zod.string().nullish(),
+  "maker_monteur_id": zod.number().nullish(),
+  "maker_monteur_naam": zod.string().nullish(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string().optional()
 })
@@ -547,6 +578,17 @@ export const AddFotoResponse = zod.void()
 
 
 /**
+ * @summary Foto verwijderen
+ */
+export const DeleteFotoParams = zod.object({
+  "id": zod.coerce.number(),
+  "fotoId": zod.coerce.number()
+})
+
+export const DeleteFotoResponse = zod.void()
+
+
+/**
  * @summary Status van voorziening wijzigen
  */
 export const UpdateVoorzieningStatusParams = zod.object({
@@ -581,6 +623,11 @@ export const UpdateVoorzieningStatusResponse = zod.object({
   "controleur_naam": zod.string().nullish(),
   "installatie_datum": zod.string().nullish(),
   "volgende_inspectie": zod.string().nullish(),
+  "wbdbo": zod.string().nullish(),
+  "wrd": zod.string().nullish(),
+  "wand_of_plafond": zod.string().nullish(),
+  "maker_monteur_id": zod.number().nullish(),
+  "maker_monteur_naam": zod.string().nullish(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string().optional()
 })
@@ -601,9 +648,63 @@ export const ListVoorzieningenOpVerdiepingResponseItem = zod.object({
   "classificatie": zod.string(),
   "ruimte": zod.string().nullish(),
   "locatie_x": zod.number().nullable(),
-  "locatie_y": zod.number().nullable()
+  "locatie_y": zod.number().nullable(),
+  "locatie_omschrijving": zod.string().nullish(),
+  "wbdbo": zod.string().nullish(),
+  "wrd": zod.string().nullish(),
+  "wand_of_plafond": zod.string().nullish()
 })
 export const ListVoorzieningenOpVerdiepingResponse = zod.array(ListVoorzieningenOpVerdiepingResponseItem)
+
+
+/**
+ * @summary Vraag een presigned URL aan voor bestandsupload
+ */
+
+
+
+
+
+export const RequestUploadUrlBody = zod.object({
+  "name": zod.string().min(1),
+  "size": zod.number().min(1),
+  "contentType": zod.string().min(1)
+})
+
+
+
+
+
+
+export const RequestUploadUrlResponse = zod.object({
+  "uploadURL": zod.string().url(),
+  "objectPath": zod.string(),
+  "metadata": zod.object({
+  "name": zod.string().min(1),
+  "size": zod.number().min(1),
+  "contentType": zod.string().min(1)
+}).optional()
+})
+
+
+/**
+ * @summary Serveer een publiek bestand
+ */
+export const GetPublicObjectParams = zod.object({
+  "filePath": zod.coerce.string()
+})
+
+export const GetPublicObjectResponse = zod.unknown()
+
+
+/**
+ * @summary Serveer een geüpload object
+ */
+export const GetStorageObjectParams = zod.object({
+  "objectPath": zod.coerce.string()
+})
+
+export const GetStorageObjectResponse = zod.unknown()
 
 
 /**
@@ -695,6 +796,11 @@ export const GetInspectieResponse = zod.object({
   "controleur_naam": zod.string().nullish(),
   "installatie_datum": zod.string().nullish(),
   "volgende_inspectie": zod.string().nullish(),
+  "wbdbo": zod.string().nullish(),
+  "wrd": zod.string().nullish(),
+  "wand_of_plafond": zod.string().nullish(),
+  "maker_monteur_id": zod.number().nullish(),
+  "maker_monteur_naam": zod.string().nullish(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string().optional()
 }))
