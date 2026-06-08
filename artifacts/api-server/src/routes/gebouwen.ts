@@ -18,6 +18,13 @@ const router = Router();
 const BEHEERDER_ROLLEN = ["beheerder", "hoofdbeheerder"];
 const TOEGEWEZEN_ROLLEN = ["monteur", "controleur"];
 
+function kapitaliseerWoorden(waarde: string): string {
+  return waarde.replace(
+    /(^|\s)(\p{L})/gu,
+    (_m, voor: string, letter: string) => voor + letter.toUpperCase(),
+  );
+}
+
 function isUniekWerknummerFout(err: unknown): boolean {
   return (
     typeof err === "object" &&
@@ -163,8 +170,8 @@ router.post("/gebouwen", requireRol("beheerder", "hoofdbeheerder"), async (req, 
       .values({
         werknummer: werknummerWaarde,
         naam,
-        adres,
-        stad,
+        adres: kapitaliseerWoorden(adres),
+        stad: typeof stad === "string" ? kapitaliseerWoorden(stad) : stad,
         postcode,
         omschrijving,
         klantId: klant_id,
@@ -381,8 +388,8 @@ router.patch("/gebouwen/:id", requireRol("beheerder", "hoofdbeheerder"), async (
             }
           : {}),
         naam,
-        adres,
-        stad,
+        adres: typeof adres === "string" ? kapitaliseerWoorden(adres) : adres,
+        stad: typeof stad === "string" ? kapitaliseerWoorden(stad) : stad,
         postcode,
         omschrijving,
         klantId: klant_id,
