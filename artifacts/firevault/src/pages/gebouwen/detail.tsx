@@ -145,16 +145,25 @@ export default function GebouwDetail() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="h-80 bg-muted rounded-md flex items-center justify-center relative perspective-1000 overflow-hidden">
-                <div className="absolute inset-0 flex items-center justify-center transform-style-3d rotate-x-60 rotate-z-45">
+              <div
+                className="h-80 bg-muted rounded-md relative overflow-hidden"
+                style={{ perspective: "1200px" }}
+              >
+                <div
+                  className="absolute inset-0"
+                  style={{
+                    transformStyle: "preserve-3d",
+                    transform: "rotateX(60deg) rotateZ(45deg)",
+                  }}
+                >
                   {Array.from({ length: aantalLagen }).map((_, i) => (
                     <div
                       key={i}
-                      className="bg-primary/20 border border-primary/50 absolute transition-transform"
+                      className="bg-primary/20 border border-primary/50 absolute left-1/2 top-1/2 transition-transform"
                       style={{
                         width: `${plaatBreedte}px`,
                         height: `${plaatDiepte}px`,
-                        transform: `translateZ(${i * laagAfstand}px)`,
+                        transform: `translate(-50%, -50%) translateZ(${i * laagAfstand}px)`,
                       }}
                     />
                   ))}
