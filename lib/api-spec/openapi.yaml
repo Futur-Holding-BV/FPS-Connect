@@ -2253,30 +2253,43 @@ components:
           type: string
         stad:
           type: string
+          nullable: true
         postcode:
           type: string
+          nullable: true
         omschrijving:
           type: string
+          nullable: true
         bouwjaar:
           type: integer
+          nullable: true
         klant_id:
           type: integer
+          nullable: true
         aantal_verdiepingen:
           type: integer
+          nullable: true
         hoogte:
           type: number
+          nullable: true
         breedte:
           type: number
+          nullable: true
         diepte:
           type: number
+          nullable: true
         oppervlakte:
           type: number
+          nullable: true
         gebouw_type:
           type: string
+          nullable: true
         latitude:
           type: number
+          nullable: true
         longitude:
           type: number
+          nullable: true
 
     GebouwAiAnalyseInput:
       type: object

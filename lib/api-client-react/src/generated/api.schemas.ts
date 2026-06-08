@@ -282,19 +282,19 @@ export interface GebouwInput {
 export interface GebouwUpdate {
   naam?: string;
   adres?: string;
-  stad?: string;
-  postcode?: string;
-  omschrijving?: string;
-  bouwjaar?: number;
-  klant_id?: number;
-  aantal_verdiepingen?: number;
-  hoogte?: number;
-  breedte?: number;
-  diepte?: number;
-  oppervlakte?: number;
-  gebouw_type?: string;
-  latitude?: number;
-  longitude?: number;
+  stad?: string | null;
+  postcode?: string | null;
+  omschrijving?: string | null;
+  bouwjaar?: number | null;
+  klant_id?: number | null;
+  aantal_verdiepingen?: number | null;
+  hoogte?: number | null;
+  breedte?: number | null;
+  diepte?: number | null;
+  oppervlakte?: number | null;
+  gebouw_type?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
 }
 
 export interface GebouwAiAnalyseInput {

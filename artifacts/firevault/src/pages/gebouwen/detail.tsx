@@ -18,10 +18,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ArrowLeft, Layers, Map, Users, X, UserPlus, Loader2, Building2, Mail, Phone } from "lucide-react";
+import { ArrowLeft, Layers, Map, Users, X, UserPlus, Loader2, Building2, Mail, Phone, Pencil } from "lucide-react";
 import { useAuth } from "@/context/auth-context";
 import GebouwPartijen from "./gebouw-partijen";
 import GebouwTekeningen from "./gebouw-tekeningen";
+import { GebouwBewerkenDialog } from "./gebouw-bewerken-dialog";
 
 const BEHEERDER_ROLLEN = ["beheerder", "hoofdbeheerder"];
 const TOEWIJSBARE_ROLLEN = ["monteur", "controleur"];
@@ -44,6 +45,7 @@ export default function GebouwDetail() {
 
   const [gekozenGebruikerId, setGekozenGebruikerId] = useState<string>("");
   const [bezig, setBezig] = useState(false);
+  const [bewerkenOpen, setBewerkenOpen] = useState(false);
 
   if (isLoading) return <div className="p-6 text-muted-foreground">Laden...</div>;
   if (!gebouw) return <div className="p-6">Gebouw niet gevonden.</div>;
@@ -102,13 +104,26 @@ export default function GebouwDetail() {
             <ArrowLeft className="h-4 w-4" />
           </Button>
         </Link>
-        <div>
+        <div className="flex-1">
           <h1 className="text-3xl font-bold tracking-tight">{gebouw.naam}</h1>
           <p className="text-muted-foreground mt-1">
             {gebouw.adres}, {gebouw.stad}
           </p>
         </div>
+        {isBeheerder && (
+          <Button variant="outline" onClick={() => setBewerkenOpen(true)}>
+            <Pencil className="h-4 w-4 mr-2" /> Bewerken
+          </Button>
+        )}
       </div>
+
+      {isBeheerder && (
+        <GebouwBewerkenDialog
+          gebouw={gebouw}
+          open={bewerkenOpen}
+          onOpenChange={setBewerkenOpen}
+        />
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">

@@ -233,19 +233,19 @@ export const UpdateGebouwParams = zod.object({
 export const UpdateGebouwBody = zod.object({
   "naam": zod.string().optional(),
   "adres": zod.string().optional(),
-  "stad": zod.string().optional(),
-  "postcode": zod.string().optional(),
-  "omschrijving": zod.string().optional(),
-  "bouwjaar": zod.number().optional(),
-  "klant_id": zod.number().optional(),
-  "aantal_verdiepingen": zod.number().optional(),
-  "hoogte": zod.number().optional(),
-  "breedte": zod.number().optional(),
-  "diepte": zod.number().optional(),
-  "oppervlakte": zod.number().optional(),
-  "gebouw_type": zod.string().optional(),
-  "latitude": zod.number().optional(),
-  "longitude": zod.number().optional()
+  "stad": zod.string().nullish(),
+  "postcode": zod.string().nullish(),
+  "omschrijving": zod.string().nullish(),
+  "bouwjaar": zod.number().nullish(),
+  "klant_id": zod.number().nullish(),
+  "aantal_verdiepingen": zod.number().nullish(),
+  "hoogte": zod.number().nullish(),
+  "breedte": zod.number().nullish(),
+  "diepte": zod.number().nullish(),
+  "oppervlakte": zod.number().nullish(),
+  "gebouw_type": zod.string().nullish(),
+  "latitude": zod.number().nullish(),
+  "longitude": zod.number().nullish()
 })
 
 export const UpdateGebouwResponse = zod.object({
