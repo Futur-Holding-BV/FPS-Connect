@@ -1,1 +1,2 @@
-- [FireVault RBAC](firevault-rbac.md) — no auth; roles are client-side (localStorage RolContext). hoofdbeheerder = super admin, hidden from non-hoofd viewers; UI-only enforcement.
+- [FireVault auth](firevault-auth.md) — hand-rolled session auth + mandatory TOTP 2FA (Clerk/Replit Auth lack MFA); otplib pinned v12; iframe cookies SameSite=None+Secure.
+- [FireVault RBAC](firevault-rbac.md) — role hierarchy; role now comes from the logged-in account; server-side gating via requireAuth; hoofdbeheerder = super admin hidden from non-hoofd viewers.

@@ -1,9 +1,12 @@
 import { Switch, Route, Router as WouterRouter } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { Loader2 } from "lucide-react";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
-import { RolProvider, useRol } from "@/context/rol-context";
+import { AuthProvider, useAuth } from "@/context/auth-context";
+import { useRol } from "@/context/rol-context";
+import LoginPagina from "@/pages/auth/login";
 
 import BeheerderLayout from "@/layouts/beheerder-layout";
 import MonteurLayout from "@/layouts/monteur-layout";
@@ -87,7 +90,7 @@ function KlantPortal() {
   );
 }
 
-function Router() {
+function Portalen() {
   const { rol } = useRol();
 
   if (rol === "klant") return <KlantPortal />;
@@ -95,16 +98,36 @@ function Router() {
   return <BeheerderPortal />;
 }
 
+function Gate() {
+  const { isLoading, isAuthenticated } = useAuth();
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <LoginPagina />;
+  }
+
+  return (
+    <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+      <Portalen />
+    </WouterRouter>
+  );
+}
+
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <RolProvider>
-          <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-            <Router />
-          </WouterRouter>
+        <AuthProvider>
+          <Gate />
           <Toaster />
-        </RolProvider>
+        </AuthProvider>
       </TooltipProvider>
     </QueryClientProvider>
   );

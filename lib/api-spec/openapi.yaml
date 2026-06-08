@@ -2,7 +2,7 @@ openapi: 3.1.0
 info:
   title: Api
   version: 0.1.0
-  description: FireVault - Brandpreventie Asset & Compliance Platform
+  description: FPS Brandpreventie - Platform voor brandpreventieve gebouwvoorzieningen
 servers:
   - url: /api
     description: Base API path
@@ -913,6 +913,99 @@ paths:
               schema:
                 $ref: "#/components/schemas/Abonnement"
 
+  # ── AUTHENTICATIE ────────────────────────────────────────────────────────
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Inloggen met e-mail en wachtwoord (stap 1)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoginResultaat"
+
+  /auth/2fa/setup:
+    post:
+      operationId: tweeFactorSetup
+      tags: [auth]
+      summary: Genereer TOTP-secret en QR-code voor eerste inrichting
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TweeFactorSetup"
+
+  /auth/2fa/activeren:
+    post:
+      operationId: tweeFactorActiveren
+      tags: [auth]
+      summary: Activeer tweestapsverificatie met de eerste code
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CodeInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthGebruiker"
+
+  /auth/2fa/verify:
+    post:
+      operationId: tweeFactorVerify
+      tags: [auth]
+      summary: Verifieer tweestapsverificatie-code (stap 2)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CodeInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthGebruiker"
+
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      summary: Uitloggen
+      responses:
+        "204":
+          description: Uitgelogd
+
+  /auth/me:
+    get:
+      operationId: getHuidigeGebruiker
+      tags: [auth]
+      summary: Huidig ingelogde gebruiker
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthGebruiker"
+
 components:
   schemas:
     HealthStatus:
@@ -1734,6 +1827,58 @@ components:
           type: string
         actief:
           type: boolean
+        wachtwoord:
+          type: string
+
+    # ── AUTHENTICATIE ─────────────────────────────────────────────────────
+    LoginInput:
+      type: object
+      required: [email, wachtwoord]
+      properties:
+        email:
+          type: string
+        wachtwoord:
+          type: string
+
+    LoginResultaat:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [setup_2fa, verify_2fa]
+
+    TweeFactorSetup:
+      type: object
+      required: [secret, qr_code, otpauth_url]
+      properties:
+        secret:
+          type: string
+        qr_code:
+          type: string
+        otpauth_url:
+          type: string
+
+    CodeInput:
+      type: object
+      required: [code]
+      properties:
+        code:
+          type: string
+
+    AuthGebruiker:
+      type: object
+      required: [id, naam, email, rol]
+      properties:
+        id:
+          type: integer
+        naam:
+          type: string
+        email:
+          type: string
+        rol:
+          type: string
+          enum: [hoofdbeheerder, beheerder, monteur, controleur, klant, viewer]
 
     # ── ABONNEMENT ───────────────────────────────────────────────────────
     Abonnement:

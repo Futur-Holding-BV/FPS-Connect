@@ -5,11 +5,11 @@ description: How permissions and the hoofdbeheerder role work in FireVault, and 
 
 # FireVault RBAC
 
-FireVault is a demo with **no authentication**. The "current user" role is purely client-side: `RolContext` (localStorage key `fps_rol`), switched via the "Demo: portalkeuze" dropdown in the sidebar layouts. The server has no notion of who is calling, so all `/api/gebruikers` endpoints are unauthenticated.
+FireVault now has **real authentication** (see `firevault-auth.md`). The current user comes from the logged-in session, and `useRol()` derives the role from that account (no more localStorage role switcher). Data routes are gated server-side with `requireAuth`.
 
-## Decision: permissions are enforced in the UI only
-**Why:** there is no login system; the server cannot identify the caller, so server-side RBAC is not possible without first building real auth. Enforcing in the UI is consistent with the rest of the app (the whole portal system is client-side).
-**How to apply:** gate actions on `useRol()` in the page, not on the API. If the user ever asks for *enforced* security, that requires adding authentication first (see `replit-auth` / `clerk-auth` skills) — flag it as a larger piece of work.
+## Permissions: server-gated auth + UI role checks
+**Why:** access now requires a logged-in session, so data routes are protected server-side. Fine-grained *capability* checks (who may delete, who sees hoofdbeheerder) are still applied in the UI on top of that.
+**How to apply:** `useRol()` returns the authenticated account's role; gate capability/visibility in the page on it. The route-level `requireAuth` only checks "logged in", not role — if the user asks for per-role *endpoint* authorization, that still needs to be added in the route handlers.
 
 ## hoofdbeheerder (super admin) role
 - A distinct role above `beheerder`. Can add/edit/**delete** any user.

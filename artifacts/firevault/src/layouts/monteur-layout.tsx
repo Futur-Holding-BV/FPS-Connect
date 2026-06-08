@@ -4,10 +4,9 @@ import {
   SidebarGroup, SidebarGroupLabel, SidebarGroupContent,
   SidebarMenu, SidebarMenuItem, SidebarMenuButton,
 } from "@/components/ui/sidebar";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ShieldCheck, Home, Wrench, Search, Building, Map } from "lucide-react";
-import { useRol, type Rol } from "@/context/rol-context";
-import { ROL_INFO } from "@/context/rol-types";
+import { useRol } from "@/context/rol-context";
+import { GebruikerMenu } from "@/components/gebruiker-menu";
 
 const ROUTES_MONTEUR = [
   { href: "/", label: "Mijn opdrachten", icoon: Home },
@@ -23,25 +22,6 @@ const ROUTES_CONTROLEUR = [
   { href: "/voorzieningen", label: "Voorzieningen", icoon: ShieldCheck },
   { href: "/gebouwen", label: "Gebouwen & plattegronden", icoon: Map },
 ];
-
-function RolWisselaar() {
-  const { rol, setRol } = useRol();
-  return (
-    <div className="px-3 py-3 border-t">
-      <p className="text-xs text-muted-foreground mb-1.5 group-data-[collapsible=icon]:hidden">Demo: portalkeuze</p>
-      <Select value={rol} onValueChange={(v) => setRol(v as Rol)}>
-        <SelectTrigger className="h-8 text-xs group-data-[collapsible=icon]:hidden">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          {(Object.keys(ROL_INFO) as Rol[]).map((r) => (
-            <SelectItem key={r} value={r}>{ROL_INFO[r].label}</SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-    </div>
-  );
-}
 
 export default function MonteurLayout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
@@ -88,7 +68,7 @@ export default function MonteurLayout({ children }: { children: React.ReactNode 
         </SidebarContent>
 
         <SidebarFooter>
-          <RolWisselaar />
+          <GebruikerMenu />
         </SidebarFooter>
       </Sidebar>
 

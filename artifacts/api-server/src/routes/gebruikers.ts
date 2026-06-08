@@ -1,4 +1,5 @@
 import { Router } from "express";
+import bcrypt from "bcryptjs";
 import { db } from "@workspace/db";
 import { gebruikersTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
@@ -35,9 +36,17 @@ router.post("/gebruikers", async (req, res) => {
     if (!naam || !email || !rol) {
       return res.status(400).json({ error: "naam, email en rol zijn verplicht" });
     }
+    const gehasht = wachtwoord ? await bcrypt.hash(String(wachtwoord), 10) : null;
     const [g] = await db
       .insert(gebruikersTable)
-      .values({ naam, email, rol, telefoon, bedrijf, wachtwoord })
+      .values({
+        naam,
+        email: String(email).trim().toLowerCase(),
+        rol,
+        telefoon,
+        bedrijf,
+        wachtwoord: gehasht,
+      })
       .returning();
     res.status(201).json(mapGebruiker(g));
   } catch (err: any) {
@@ -66,10 +75,21 @@ router.get("/gebruikers/:id", async (req, res) => {
 router.patch("/gebruikers/:id", async (req, res) => {
   try {
     const id = parseInt(req.params.id);
-    const { naam, email, rol, telefoon, bedrijf, actief } = req.body;
+    const { naam, email, rol, telefoon, bedrijf, actief, wachtwoord } = req.body;
+    const wijziging: Partial<typeof gebruikersTable.$inferInsert> = {
+      naam,
+      email: email ? String(email).trim().toLowerCase() : undefined,
+      rol,
+      telefoon,
+      bedrijf,
+      actief,
+    };
+    if (wachtwoord) {
+      wijziging.wachtwoord = await bcrypt.hash(String(wachtwoord), 10);
+    }
     const [g] = await db
       .update(gebruikersTable)
-      .set({ naam, email, rol, telefoon, bedrijf, actief })
+      .set(wijziging)
       .where(eq(gebruikersTable.id, id))
       .returning();
     if (!g) return res.status(404).json({ error: "Gebruiker niet gevonden" });

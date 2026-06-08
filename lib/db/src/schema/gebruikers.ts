@@ -10,6 +10,8 @@ export const gebruikersTable = pgTable("gebruikers", {
   telefoon: text("telefoon"),
   bedrijf: text("bedrijf"),
   wachtwoord: text("wachtwoord"),
+  totpSecret: text("totp_secret"),
+  tweeFactorIngeschakeld: boolean("twee_factor_ingeschakeld").notNull().default(false),
   actief: boolean("actief").notNull().default(true),
   aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
   laatstOnline: timestamp("laatst_online"),

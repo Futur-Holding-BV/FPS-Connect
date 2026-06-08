@@ -1,5 +1,6 @@
 import { Router, type IRouter } from "express";
 import healthRouter from "./health";
+import authRouter from "./auth";
 import dashboardRouter from "./dashboard";
 import gebouwenRouter from "./gebouwen";
 import voorzieningenRouter from "./voorzieningen";
@@ -7,10 +8,17 @@ import inspectiesRouter from "./inspecties";
 import onderhoudRouter from "./onderhoud";
 import gebruikersRouter from "./gebruikers";
 import abonnementenRouter from "./abonnementen";
+import { requireAuth } from "../middlewares/auth";
 
 const router: IRouter = Router();
 
+// Publieke routes
 router.use(healthRouter);
+router.use(authRouter);
+
+// Vanaf hier vereist alles een geldige sessie
+router.use(requireAuth);
+
 router.use(dashboardRouter);
 router.use(gebouwenRouter);
 router.use(voorzieningenRouter);
