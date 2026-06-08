@@ -25,7 +25,7 @@ import { Mail, Phone, Building, Clock, Plus, UserPlus, Pencil, Trash2, RefreshCw
 import { useQueryClient } from "@tanstack/react-query";
 
 // Rolvolgorde: meeste rechten eerst
-const ROLLEN = ["beheerder", "controleur", "monteur", "klant"] as const;
+const ROLLEN = ["beheerder", "monteur", "controleur", "klant"] as const;
 type Rol = typeof ROLLEN[number];
 
 const ROL_CONFIG: Record<Rol, {
