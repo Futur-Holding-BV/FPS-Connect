@@ -31,6 +31,7 @@ export * from './gebouwDetail';
 export * from './gebouwInput';
 export * from './gebouwPartij';
 export * from './gebouwPartijInput';
+export * from './gebouwPartijOptie';
 export * from './gebouwPartijUpdate';
 export * from './gebouwStats';
 export * from './gebouwUpdate';

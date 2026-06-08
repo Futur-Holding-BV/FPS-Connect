@@ -65,7 +65,7 @@ router.get("/gebouwen", async (req, res) => {
   try {
     const userId = req.session.userId!;
     const rol = await gebruikerRol(userId);
-    const { zoek } = req.query;
+    const { zoek, partij_type, partij_naam } = req.query;
 
     let gebouwen = await db.select().from(gebouwenTable);
 
@@ -86,6 +86,20 @@ router.get("/gebouwen", async (req, res) => {
           g.adres.toLowerCase().includes(q) ||
           (g.stad ?? "").toLowerCase().includes(q),
       );
+    }
+
+    // Filter op partij (type en/of naam)
+    const partijType = typeof partij_type === "string" ? partij_type.trim() : "";
+    const partijNaam = typeof partij_naam === "string" ? partij_naam.trim() : "";
+    if (partijType || partijNaam) {
+      const partijen = await db.select().from(gebouwPartijenTable);
+      const naamLc = partijNaam.toLowerCase();
+      const matchendeGebouwIds = new Set(
+        partijen
+          .filter((p) => (!partijType || p.type === partijType) && (!partijNaam || p.naam.toLowerCase() === naamLc))
+          .map((p) => p.gebouwId),
+      );
+      gebouwen = gebouwen.filter((g) => matchendeGebouwIds.has(g.id));
     }
 
     const result = await Promise.all(
@@ -171,6 +185,39 @@ router.post(
     }
   },
 );
+
+// GET /gebouwen/partij-opties — unieke partijen (type + naam) voor filteropties
+router.get("/gebouwen/partij-opties", async (req, res) => {
+  try {
+    const userId = req.session.userId!;
+    const rol = await gebruikerRol(userId);
+
+    let zichtbareGebouwIds: number[] | null = null;
+    if (TOEGEWEZEN_ROLLEN.includes(rol)) {
+      zichtbareGebouwIds = await toegewezenGebouwIds(userId);
+      if (zichtbareGebouwIds.length === 0) {
+        return res.json([]);
+      }
+    }
+
+    const partijen = await db.select().from(gebouwPartijenTable);
+    const gezien = new Set<string>();
+    const opties: { type: string; naam: string }[] = [];
+    for (const p of partijen) {
+      if (zichtbareGebouwIds && !zichtbareGebouwIds.includes(p.gebouwId)) continue;
+      const sleutel = `${p.type}\u0000${p.naam.toLowerCase()}`;
+      if (gezien.has(sleutel)) continue;
+      gezien.add(sleutel);
+      opties.push({ type: p.type, naam: p.naam });
+    }
+    opties.sort((a, b) => a.type.localeCompare(b.type) || a.naam.localeCompare(b.naam));
+
+    res.json(opties);
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
 
 // GET /gebouwen/:id
 router.get("/gebouwen/:id", async (req, res) => {

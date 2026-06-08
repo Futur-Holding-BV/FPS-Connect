@@ -13,4 +13,12 @@ organisatie_id?: number;
  * Indien true: retourneer alleen gebouwen die aan de ingelogde gebruiker zijn toegewezen. Beheerders en hoofdbeheerders zien altijd alle gebouwen. Voor monteur/controleur wordt dit automatisch geforceerd.
  */
 mijn?: boolean;
+/**
+ * Filter op partijtype (eigenaar, gebruiker, opdrachtgever, aanvrager). Retourneer alleen gebouwen met minstens één partij van dit type.
+ */
+partij_type?: string;
+/**
+ * Filter op de naam van een partij. In combinatie met partij_type wordt alleen op partijen van dat type gematcht.
+ */
+partij_naam?: string;
 };

@@ -39,6 +39,7 @@ import type {
   GebouwInput,
   GebouwPartij,
   GebouwPartijInput,
+  GebouwPartijOptie,
   GebouwPartijUpdate,
   GebouwUpdate,
   Gebruiker,
@@ -1537,6 +1538,83 @@ export const useDeleteGebouwToewijzing = <TError = ErrorType<void>,
       > => {
       return useMutation(getDeleteGebouwToewijzingMutationOptions(options));
     }
+
+export const getListGebouwPartijOptiesUrl = () => {
+
+
+
+
+  return `/api/gebouwen/partij-opties`
+}
+
+/**
+ * @summary Unieke partijen (type + naam) over alle zichtbare gebouwen, voor filteropties
+ */
+export const listGebouwPartijOpties = async ( options?: RequestInit): Promise<GebouwPartijOptie[]> => {
+
+  return customFetch<GebouwPartijOptie[]>(getListGebouwPartijOptiesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListGebouwPartijOptiesQueryKey = () => {
+    return [
+    `/api/gebouwen/partij-opties`
+    ] as const;
+    }
+
+
+export const getListGebouwPartijOptiesQueryOptions = <TData = Awaited<ReturnType<typeof listGebouwPartijOpties>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listGebouwPartijOpties>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListGebouwPartijOptiesQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listGebouwPartijOpties>>> = ({ signal }) => listGebouwPartijOpties({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listGebouwPartijOpties>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListGebouwPartijOptiesQueryResult = NonNullable<Awaited<ReturnType<typeof listGebouwPartijOpties>>>
+export type ListGebouwPartijOptiesQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Unieke partijen (type + naam) over alle zichtbare gebouwen, voor filteropties
+ */
+
+export function useListGebouwPartijOpties<TData = Awaited<ReturnType<typeof listGebouwPartijOpties>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listGebouwPartijOpties>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListGebouwPartijOptiesQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
 
 export const getListGebouwPartijenUrl = (id: number,) => {
 

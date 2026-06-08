@@ -96,7 +96,9 @@ export const GetVervaldagenResponse = zod.array(GetVervaldagenResponseItem)
 export const ListGebouwenQueryParams = zod.object({
   "zoek": zod.coerce.string().optional(),
   "organisatie_id": zod.coerce.number().optional(),
-  "mijn": zod.coerce.boolean().optional().describe('Indien true: retourneer alleen gebouwen die aan de ingelogde gebruiker zijn toegewezen. Beheerders en hoofdbeheerders zien altijd alle gebouwen. Voor monteur\/controleur wordt dit automatisch geforceerd.\n')
+  "mijn": zod.coerce.boolean().optional().describe('Indien true: retourneer alleen gebouwen die aan de ingelogde gebruiker zijn toegewezen. Beheerders en hoofdbeheerders zien altijd alle gebouwen. Voor monteur\/controleur wordt dit automatisch geforceerd.\n'),
+  "partij_type": zod.coerce.string().optional().describe('Filter op partijtype (eigenaar, gebruiker, opdrachtgever, aanvrager). Retourneer alleen gebouwen met minstens één partij van dit type.\n'),
+  "partij_naam": zod.coerce.string().optional().describe('Filter op de naam van een partij. In combinatie met partij_type wordt alleen op partijen van dat type gematcht.\n')
 })
 
 export const ListGebouwenResponseItem = zod.object({
@@ -414,6 +416,16 @@ export const DeleteGebouwToewijzingParams = zod.object({
 })
 
 export const DeleteGebouwToewijzingResponse = zod.void()
+
+
+/**
+ * @summary Unieke partijen (type + naam) over alle zichtbare gebouwen, voor filteropties
+ */
+export const ListGebouwPartijOptiesResponseItem = zod.object({
+  "type": zod.string().describe('eigenaar, gebruiker, opdrachtgever of aanvrager'),
+  "naam": zod.string()
+})
+export const ListGebouwPartijOptiesResponse = zod.array(ListGebouwPartijOptiesResponseItem)
 
 
 /**

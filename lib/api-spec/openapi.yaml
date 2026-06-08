@@ -132,6 +132,20 @@ paths:
             Indien true: retourneer alleen gebouwen die aan de ingelogde gebruiker zijn toegewezen.
             Beheerders en hoofdbeheerders zien altijd alle gebouwen.
             Voor monteur/controleur wordt dit automatisch geforceerd.
+        - in: query
+          name: partij_type
+          schema:
+            type: string
+          description: >
+            Filter op partijtype (eigenaar, gebruiker, opdrachtgever, aanvrager).
+            Retourneer alleen gebouwen met minstens één partij van dit type.
+        - in: query
+          name: partij_naam
+          schema:
+            type: string
+          description: >
+            Filter op de naam van een partij. In combinatie met partij_type wordt
+            alleen op partijen van dat type gematcht.
       responses:
         "200":
           description: OK
@@ -406,6 +420,21 @@ paths:
           description: Verwijderd
         "403":
           description: Geen toegang
+
+  /gebouwen/partij-opties:
+    get:
+      operationId: listGebouwPartijOpties
+      tags: [gebouwen]
+      summary: Unieke partijen (type + naam) over alle zichtbare gebouwen, voor filteropties
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/GebouwPartijOptie"
 
   /gebouwen/{id}/partijen:
     get:
@@ -2058,6 +2087,16 @@ components:
           type: string
           nullable: true
         aangemaakt_op:
+          type: string
+
+    GebouwPartijOptie:
+      type: object
+      required: [type, naam]
+      properties:
+        type:
+          type: string
+          description: eigenaar, gebruiker, opdrachtgever of aanvrager
+        naam:
           type: string
 
     GebouwPartijInput:

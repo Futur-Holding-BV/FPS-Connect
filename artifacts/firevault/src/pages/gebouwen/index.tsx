@@ -1,23 +1,66 @@
 import { useTranslation } from "react-i18next";
-import { useListGebouwen } from "@workspace/api-client-react";
+import { useListGebouwen, useListGebouwPartijOpties } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Link } from "wouter";
-import { Search, Building } from "lucide-react";
-import { useState } from "react";
+import { Search, Building, X } from "lucide-react";
+import { useMemo, useState } from "react";
 import { useAuth } from "@/context/auth-context";
 import { GebouwAanmakenDialog } from "./gebouw-aanmaken-dialog";
 
 const BEHEERDER_ROLLEN = ["beheerder", "hoofdbeheerder"];
 
+const PARTIJ_TYPE_LABELS: Record<string, string> = {
+  eigenaar: "Eigenaar",
+  gebruiker: "Gebruiker",
+  opdrachtgever: "Opdrachtgever",
+  aanvrager: "Aanvrager",
+};
+
+const ALLE = "__alle__";
+
 export default function Gebouwen() {
   const { t } = useTranslation();
   const { gebruiker } = useAuth();
   const [search, setSearch] = useState("");
-  const { data: gebouwen, isLoading } = useListGebouwen({ zoek: search });
+  const [partijType, setPartijType] = useState<string>(ALLE);
+  const [partijNaam, setPartijNaam] = useState<string>(ALLE);
+
+  const { data: partijOpties } = useListGebouwPartijOpties();
+
+  const beschikbareTypes = useMemo(() => {
+    const set = new Set<string>();
+    for (const o of partijOpties ?? []) set.add(o.type);
+    return Array.from(set).sort((a, b) =>
+      (PARTIJ_TYPE_LABELS[a] ?? a).localeCompare(PARTIJ_TYPE_LABELS[b] ?? b),
+    );
+  }, [partijOpties]);
+
+  const beschikbareNamen = useMemo(() => {
+    const namen = (partijOpties ?? [])
+      .filter((o) => partijType === ALLE || o.type === partijType)
+      .map((o) => o.naam);
+    return Array.from(new Set(namen)).sort((a, b) => a.localeCompare(b));
+  }, [partijOpties, partijType]);
+
+  const { data: gebouwen, isLoading } = useListGebouwen({
+    zoek: search,
+    ...(partijType !== ALLE ? { partij_type: partijType } : {}),
+    ...(partijNaam !== ALLE ? { partij_naam: partijNaam } : {}),
+  });
   const isBeheerder =
     !!gebruiker?.rol && BEHEERDER_ROLLEN.includes(gebruiker.rol as string);
+
+  const filterActief = partijType !== ALLE || partijNaam !== ALLE;
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
@@ -39,6 +82,55 @@ export default function Gebouwen() {
           </div>
           {isBeheerder && <GebouwAanmakenDialog />}
         </div>
+      </div>
+
+      <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+        <Select
+          value={partijType}
+          onValueChange={(v) => {
+            setPartijType(v);
+            setPartijNaam(ALLE);
+          }}
+        >
+          <SelectTrigger className="w-full sm:w-52">
+            <SelectValue placeholder="Filter op type partij" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={ALLE}>Alle partijtypes</SelectItem>
+            {beschikbareTypes.map((type) => (
+              <SelectItem key={type} value={type}>
+                {PARTIJ_TYPE_LABELS[type] ?? type}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Select value={partijNaam} onValueChange={setPartijNaam}>
+          <SelectTrigger className="w-full sm:w-64">
+            <SelectValue placeholder="Filter op naam" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={ALLE}>Alle namen</SelectItem>
+            {beschikbareNamen.map((naam) => (
+              <SelectItem key={naam} value={naam}>
+                {naam}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        {filterActief && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              setPartijType(ALLE);
+              setPartijNaam(ALLE);
+            }}
+          >
+            <X className="h-4 w-4 mr-1" /> Filter wissen
+          </Button>
+        )}
       </div>
 
       {isLoading ? (
