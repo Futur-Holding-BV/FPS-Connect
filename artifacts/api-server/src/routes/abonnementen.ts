@@ -2,6 +2,7 @@ import { Router } from "express";
 import { db } from "@workspace/db";
 import { abonnementenTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
+import { requireRol } from "../middlewares/auth";
 
 const router = Router();
 
@@ -33,7 +34,7 @@ router.get("/abonnementen", async (req, res) => {
 });
 
 // POST /abonnementen
-router.post("/abonnementen", async (req, res) => {
+router.post("/abonnementen", requireRol("beheerder"), async (req, res) => {
   try {
     const { naam, niveau, prijs_per_maand, max_gebouwen, max_gebruikers, functies, klant_naam, klant_email, start_datum, eind_datum } = req.body;
     if (!naam || !niveau) {
@@ -75,7 +76,7 @@ router.get("/abonnementen/:id", async (req, res) => {
 });
 
 // PATCH /abonnementen/:id
-router.patch("/abonnementen/:id", async (req, res) => {
+router.patch("/abonnementen/:id", requireRol("beheerder"), async (req, res) => {
   try {
     const id = parseInt(req.params.id);
     const { naam, niveau, prijs_per_maand, max_gebouwen, max_gebruikers, functies, klant_naam, klant_email, start_datum, eind_datum, actief } = req.body;

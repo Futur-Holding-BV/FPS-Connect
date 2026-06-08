@@ -13,6 +13,7 @@ const STATUSKLEUR: Record<string, string> = {
   goedgekeurd:   "bg-green-100 text-green-800",
   afgekeurd:     "bg-red-100 text-red-800",
   in_onderhoud:  "bg-orange-100 text-orange-800",
+  in_bewerking:  "bg-blue-100 text-blue-800",
   in_uitvoering: "bg-blue-100 text-blue-800",
   concept:       "bg-gray-100 text-gray-600",
 };
@@ -21,6 +22,7 @@ const STATUSLABEL: Record<string, string> = {
   goedgekeurd:   "Goedgekeurd",
   afgekeurd:     "Afgekeurd",
   in_onderhoud:  "In onderhoud",
+  in_bewerking:  "In bewerking",
   in_uitvoering: "In uitvoering",
   concept:       "Concept",
 };
@@ -31,6 +33,24 @@ export default function BeheerderDashboard() {
   const { data: activiteit } = useGetRecenteActiviteit();
   const { data: verdeling } = useGetStatusVerdeling();
   const { data: vervaldagen } = useGetVervaldagen();
+
+  const statusTotalen = (verdeling ?? []).reduce(
+    (acc, v) => {
+      acc.goedgekeurd += v.goedgekeurd;
+      acc.afgekeurd += v.afgekeurd;
+      acc.in_bewerking += v.in_bewerking;
+      acc.in_onderhoud += v.in_onderhoud;
+      return acc;
+    },
+    { goedgekeurd: 0, afgekeurd: 0, in_bewerking: 0, in_onderhoud: 0 }
+  );
+  const verdelingRijen: { status: string; aantal: number }[] = [
+    { status: "goedgekeurd", aantal: statusTotalen.goedgekeurd },
+    { status: "afgekeurd", aantal: statusTotalen.afgekeurd },
+    { status: "in_bewerking", aantal: statusTotalen.in_bewerking },
+    { status: "in_onderhoud", aantal: statusTotalen.in_onderhoud },
+  ];
+  const totaalVerdeling = verdelingRijen.reduce((s, r) => s + r.aantal, 0);
 
   const kpiKaarten: { label: string; waarde: number; icoon: typeof Building; kleur: string }[] = [
     { label: "Gebouwen",            waarde: stats?.totaal_gebouwen ?? 0,      icoon: Building,      kleur: "text-primary" },
@@ -70,7 +90,7 @@ export default function BeheerderDashboard() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            {verdeling?.map((v) => (
+            {verdelingRijen.map((v) => (
               <div key={v.status} className="flex items-center justify-between">
                 <Badge variant="secondary" className={`text-xs ${STATUSKLEUR[v.status] ?? ""}`}>
                   {STATUSLABEL[v.status] ?? v.status}
@@ -79,14 +99,14 @@ export default function BeheerderDashboard() {
                   <div className="h-2 bg-muted rounded-full w-24 overflow-hidden">
                     <div
                       className="h-full bg-primary/70 rounded-full"
-                      style={{ width: `${Math.min(100, (v.aantal / (stats?.totaal_voorzieningen || 1)) * 100)}%` }}
+                      style={{ width: `${Math.min(100, (v.aantal / (totaalVerdeling || 1)) * 100)}%` }}
                     />
                   </div>
                   <span className="text-sm font-semibold w-6 text-right">{v.aantal}</span>
                 </div>
               </div>
             ))}
-            {!verdeling?.length && <p className="text-sm text-muted-foreground">Geen data.</p>}
+            {totaalVerdeling === 0 && <p className="text-sm text-muted-foreground">Geen data.</p>}
           </CardContent>
         </Card>
 
