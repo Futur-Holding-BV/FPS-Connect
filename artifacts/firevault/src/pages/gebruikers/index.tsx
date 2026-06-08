@@ -240,7 +240,7 @@ export default function Gebruikers() {
           ))}
         </div>
       ) : (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 items-start">
+        <div className="grid grid-cols-4 gap-4 items-start">
           {ROLLEN.map((rol) => {
             const cfg  = ROL_CONFIG[rol];
             const Icon = cfg.icon;
