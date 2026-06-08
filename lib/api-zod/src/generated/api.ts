@@ -148,16 +148,18 @@ export const CreateGebouwResponse = zod.void()
 
 
 /**
- * @summary AI-analyse van een adres (geocoding + satellietbeeld) voor gebouwgegevens
+ * @summary AI-analyse van een vrije beschrijving (extractie + geocoding + satellietbeeld) voor gebouwgegevens
  */
 export const AiAnalyseGebouwBody = zod.object({
-  "adres": zod.string(),
-  "stad": zod.string().optional(),
-  "postcode": zod.string().optional()
+  "beschrijving": zod.string().describe('Vrije omschrijving van het gebouw en\/of adres; de AI leidt hieruit de velden af.')
 })
 
 export const AiAnalyseGebouwResponse = zod.object({
   "gevonden": zod.boolean(),
+  "naam": zod.string().nullish(),
+  "adres": zod.string().nullish(),
+  "stad": zod.string().nullish(),
+  "postcode": zod.string().nullish(),
   "adres_gevonden": zod.string().nullish(),
   "latitude": zod.number().nullish(),
   "longitude": zod.number().nullish(),

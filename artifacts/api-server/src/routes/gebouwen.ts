@@ -11,7 +11,7 @@ import {
 } from "@workspace/db";
 import { eq, inArray, count, and } from "drizzle-orm";
 import { requireRol } from "../middlewares/auth";
-import { analyseerGebouw } from "../services/gebouw-ai";
+import { analyseerGebouwVrijeTekst } from "../services/gebouw-ai";
 
 const router = Router();
 
@@ -162,12 +162,11 @@ router.post(
   requireRol("beheerder", "hoofdbeheerder"),
   async (req, res) => {
     try {
-      const { adres, stad, postcode } = req.body ?? {};
-      if (!adres || typeof adres !== "string" || !adres.trim()) {
-        return res.status(400).json({ error: "adres is verplicht" });
+      const { beschrijving } = req.body ?? {};
+      if (!beschrijving || typeof beschrijving !== "string" || !beschrijving.trim()) {
+        return res.status(400).json({ error: "beschrijving is verplicht" });
       }
-      const volledig = [adres, postcode, stad].filter(Boolean).join(", ");
-      const resultaat = await analyseerGebouw(volledig);
+      const resultaat = await analyseerGebouwVrijeTekst(beschrijving);
       res.json(resultaat);
     } catch (err) {
       req.log.error(err);

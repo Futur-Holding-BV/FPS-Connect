@@ -673,7 +673,7 @@ export const getAiAnalyseGebouwUrl = () => {
 }
 
 /**
- * @summary AI-analyse van een adres (geocoding + satellietbeeld) voor gebouwgegevens
+ * @summary AI-analyse van een vrije beschrijving (extractie + geocoding + satellietbeeld) voor gebouwgegevens
  */
 export const aiAnalyseGebouw = async (gebouwAiAnalyseInput: GebouwAiAnalyseInput, options?: RequestInit): Promise<GebouwAiAnalyseResultaat> => {
 
@@ -721,7 +721,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
     export type AiAnalyseGebouwMutationError = ErrorType<unknown>
 
     /**
- * @summary AI-analyse van een adres (geocoding + satellietbeeld) voor gebouwgegevens
+ * @summary AI-analyse van een vrije beschrijving (extractie + geocoding + satellietbeeld) voor gebouwgegevens
  */
 export const useAiAnalyseGebouw = <TError = ErrorType<unknown>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof aiAnalyseGebouw>>, TError,{data: BodyType<GebouwAiAnalyseInput>}, TContext>, request?: SecondParameter<typeof customFetch>}

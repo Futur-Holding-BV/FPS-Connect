@@ -7,7 +7,6 @@
  */
 
 export interface GebouwAiAnalyseInput {
-  adres: string;
-  stad?: string;
-  postcode?: string;
+  /** Vrije omschrijving van het gebouw en/of adres; de AI leidt hieruit de velden af. */
+  beschrijving: string;
 }

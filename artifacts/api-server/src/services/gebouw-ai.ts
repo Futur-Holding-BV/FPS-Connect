@@ -10,6 +10,10 @@ const STATIC_ZOOM = 19;
 
 export interface GebouwAnalyse {
   gevonden: boolean;
+  naam: string | null;
+  adres: string | null;
+  stad: string | null;
+  postcode: string | null;
   adres_gevonden: string | null;
   latitude: number | null;
   longitude: number | null;
@@ -29,6 +33,10 @@ export interface GebouwAnalyse {
 function leegResultaat(toelichting: string): GebouwAnalyse {
   return {
     gevonden: false,
+    naam: null,
+    adres: null,
+    stad: null,
+    postcode: null,
     adres_gevonden: null,
     latitude: null,
     longitude: null,
@@ -201,46 +209,185 @@ async function analyseerBeeld(
   };
 }
 
-export async function analyseerGebouw(volledigAdres: string): Promise<GebouwAnalyse> {
-  if (!GOOGLE_KEY) return leegResultaat("Google Maps API-sleutel ontbreekt.");
+const EXTRACTIE_PROMPT = `Je helpt bij het invullen van een gebouwregistratie op basis van een vrije omschrijving van de gebruiker.
+Haal uit de tekst alle gebouwgegevens die de gebruiker EXPLICIET noemt. Verzin geen feiten; laat onbekende velden op null.
+Geef uitsluitend geldige JSON terug met deze velden:
+- zoekopdracht (tekst of null): het beste adres/zoekterm om het gebouw op Google Maps te vinden (straat + huisnummer + postcode + plaats voor zover bekend)
+- naam (tekst of null): naam van het gebouw indien genoemd
+- adres (tekst of null): straat + huisnummer
+- stad (tekst of null)
+- postcode (tekst of null)
+- gebouw_type (tekst of null): bijv. "woonhuis", "appartementencomplex", "kantoor", "industrieel/bedrijfshal", "winkel", "school", "overig"
+- bouwjaar (geheel getal of null)
+- aantal_verdiepingen (geheel getal of null)
+- hoogte (getal in meters of null)
+- breedte (getal in meters of null)
+- diepte (getal in meters of null)
+- oppervlakte (getal in m2 of null)
+- omschrijving (korte Nederlandse tekst of null)
+Antwoord in het Nederlands. Alleen JSON, geen extra tekst.`;
+
+interface ExtractieVelden {
+  zoekopdracht: string | null;
+  naam: string | null;
+  adres: string | null;
+  stad: string | null;
+  postcode: string | null;
+  gebouw_type: string | null;
+  bouwjaar: number | null;
+  aantal_verdiepingen: number | null;
+  hoogte: number | null;
+  breedte: number | null;
+  diepte: number | null;
+  oppervlakte: number | null;
+  omschrijving: string | null;
+}
+
+async function extraheerUitTekst(beschrijving: string): Promise<ExtractieVelden | null> {
+  const client = new OpenAI({ apiKey: OPENAI_KEY });
+  const completion = await client.chat.completions.create({
+    model: "gpt-4o-mini",
+    response_format: { type: "json_object" },
+    max_tokens: 600,
+    messages: [
+      { role: "system", content: EXTRACTIE_PROMPT },
+      { role: "user", content: beschrijving },
+    ],
+  });
+  const tekst = completion.choices[0]?.message?.content;
+  if (!tekst) return null;
+  let parsed: Record<string, unknown>;
+  try {
+    parsed = JSON.parse(tekst);
+  } catch {
+    logger.error({ tekst }, "Kon extractie-JSON niet parsen");
+    return null;
+  }
+  return {
+    zoekopdracht: strOfNull(parsed.zoekopdracht),
+    naam: strOfNull(parsed.naam),
+    adres: strOfNull(parsed.adres),
+    stad: strOfNull(parsed.stad),
+    postcode: strOfNull(parsed.postcode),
+    gebouw_type: strOfNull(parsed.gebouw_type),
+    bouwjaar: intOfNull(parsed.bouwjaar),
+    aantal_verdiepingen: intOfNull(parsed.aantal_verdiepingen),
+    hoogte: numOfNull(parsed.hoogte),
+    breedte: numOfNull(parsed.breedte),
+    diepte: numOfNull(parsed.diepte),
+    oppervlakte: numOfNull(parsed.oppervlakte),
+    omschrijving: strOfNull(parsed.omschrijving),
+  };
+}
+
+function splitsAdres(formatted: string): {
+  adres: string | null;
+  postcode: string | null;
+  stad: string | null;
+} {
+  const delen = formatted
+    .split(",")
+    .map((d) => d.trim())
+    .filter(Boolean);
+  if (delen.length && /nederland|netherlands/i.test(delen[delen.length - 1]!)) delen.pop();
+  const adres = delen[0] ?? null;
+  let postcode: string | null = null;
+  let stad: string | null = null;
+  if (delen.length >= 2) {
+    const laatste = delen[delen.length - 1]!;
+    const m = laatste.match(/^(\d{4}\s?[A-Za-z]{2})\s+(.+)$/);
+    if (m) {
+      postcode = m[1]!.toUpperCase();
+      stad = m[2]!;
+    } else {
+      stad = laatste;
+    }
+  }
+  return { adres, postcode, stad };
+}
+
+// Vrije-tekst-analyse: de gebruiker beschrijft het gebouw in eigen woorden;
+// de AI leidt de afzonderlijke velden af en verrijkt deze met geocoding en
+// satellietanalyse waar mogelijk. Door de gebruiker genoemde waarden hebben
+// altijd voorrang op de AI-schatting.
+export async function analyseerGebouwVrijeTekst(beschrijving: string): Promise<GebouwAnalyse> {
   if (!OPENAI_KEY) return leegResultaat("OpenAI API-sleutel ontbreekt.");
 
-  const geo = await geocode(volledigAdres);
-  if (!geo) {
+  const extract = await extraheerUitTekst(beschrijving);
+  if (!extract) {
     return leegResultaat(
-      "Adres niet gevonden via Google Maps. Controleer het adres of vul de velden handmatig in.",
+      "De omschrijving kon niet worden verwerkt. Probeer het opnieuw of vul de velden handmatig in.",
     );
   }
 
-  const beeld = await haalSatellietBeeld(geo.lat, geo.lng);
-  if (!beeld) {
-    return {
-      ...leegResultaat("Satellietbeeld kon niet worden opgehaald."),
-      gevonden: true,
-      adres_gevonden: geo.formatted,
-      latitude: geo.lat,
-      longitude: geo.lng,
-    };
-  }
-
-  const velden = await analyseerBeeld(beeld.dataUrl, beeld.grondBreedteMeter, geo.formatted);
-  if (!velden) {
-    return {
-      ...leegResultaat("AI-analyse mislukte. Vul de velden handmatig in."),
-      gevonden: true,
-      adres_gevonden: geo.formatted,
-      latitude: geo.lat,
-      longitude: geo.lng,
-      satelliet_url: beeld.dataUrl,
-    };
-  }
-
-  return {
+  const result: GebouwAnalyse = {
     gevonden: true,
-    adres_gevonden: geo.formatted,
-    latitude: geo.lat,
-    longitude: geo.lng,
-    satelliet_url: beeld.dataUrl,
-    ...velden,
+    naam: extract.naam,
+    adres: extract.adres,
+    stad: extract.stad,
+    postcode: extract.postcode,
+    adres_gevonden: null,
+    latitude: null,
+    longitude: null,
+    satelliet_url: null,
+    aantal_verdiepingen: extract.aantal_verdiepingen,
+    hoogte: extract.hoogte,
+    breedte: extract.breedte,
+    diepte: extract.diepte,
+    oppervlakte: extract.oppervlakte,
+    gebouw_type: extract.gebouw_type,
+    bouwjaar: extract.bouwjaar,
+    omschrijving: extract.omschrijving,
+    toelichting: null,
+    betrouwbaarheid: null,
   };
+
+  const zoek =
+    extract.zoekopdracht ||
+    [extract.adres, extract.postcode, extract.stad].filter(Boolean).join(", ");
+
+  if (GOOGLE_KEY && zoek) {
+    const geo = await geocode(zoek);
+    if (geo) {
+      result.adres_gevonden = geo.formatted;
+      result.latitude = geo.lat;
+      result.longitude = geo.lng;
+
+      const delen = splitsAdres(geo.formatted);
+      result.adres = result.adres ?? delen.adres;
+      result.stad = result.stad ?? delen.stad;
+      result.postcode = result.postcode ?? delen.postcode;
+      if (!result.naam && delen.adres) result.naam = delen.adres;
+
+      const beeld = await haalSatellietBeeld(geo.lat, geo.lng);
+      if (beeld) {
+        result.satelliet_url = beeld.dataUrl;
+        const velden = await analyseerBeeld(
+          beeld.dataUrl,
+          beeld.grondBreedteMeter,
+          geo.formatted,
+        );
+        if (velden) {
+          result.aantal_verdiepingen = result.aantal_verdiepingen ?? velden.aantal_verdiepingen;
+          result.hoogte = result.hoogte ?? velden.hoogte;
+          result.breedte = result.breedte ?? velden.breedte;
+          result.diepte = result.diepte ?? velden.diepte;
+          result.oppervlakte = result.oppervlakte ?? velden.oppervlakte;
+          result.gebouw_type = result.gebouw_type ?? velden.gebouw_type;
+          result.bouwjaar = result.bouwjaar ?? velden.bouwjaar;
+          result.omschrijving = result.omschrijving ?? velden.omschrijving;
+          result.toelichting = velden.toelichting;
+          result.betrouwbaarheid = velden.betrouwbaarheid;
+        }
+      }
+    }
+  }
+
+  if (!result.toelichting) {
+    result.toelichting = result.adres_gevonden
+      ? "Ingevuld op basis van uw omschrijving en het satellietbeeld."
+      : "Ingevuld op basis van uw omschrijving. Geen adres gevonden voor een satellietanalyse.";
+  }
+
+  return result;
 }

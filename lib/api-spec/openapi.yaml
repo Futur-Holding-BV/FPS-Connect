@@ -163,7 +163,7 @@ paths:
     post:
       operationId: aiAnalyseGebouw
       tags: [gebouwen]
-      summary: AI-analyse van een adres (geocoding + satellietbeeld) voor gebouwgegevens
+      summary: AI-analyse van een vrije beschrijving (extractie + geocoding + satellietbeeld) voor gebouwgegevens
       requestBody:
         required: true
         content:
@@ -2280,14 +2280,11 @@ components:
 
     GebouwAiAnalyseInput:
       type: object
-      required: [adres]
+      required: [beschrijving]
       properties:
-        adres:
+        beschrijving:
           type: string
-        stad:
-          type: string
-        postcode:
-          type: string
+          description: Vrije omschrijving van het gebouw en/of adres; de AI leidt hieruit de velden af.
 
     GebouwAiAnalyseResultaat:
       type: object
@@ -2295,6 +2292,14 @@ components:
       properties:
         gevonden:
           type: boolean
+        naam:
+          type: ["string", "null"]
+        adres:
+          type: ["string", "null"]
+        stad:
+          type: ["string", "null"]
+        postcode:
+          type: ["string", "null"]
         adres_gevonden:
           type: ["string", "null"]
         latitude:

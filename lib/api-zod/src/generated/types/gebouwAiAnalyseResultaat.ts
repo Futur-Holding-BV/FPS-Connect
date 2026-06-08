@@ -9,6 +9,14 @@
 export interface GebouwAiAnalyseResultaat {
   gevonden: boolean;
   /** @nullable */
+  naam?: string | null;
+  /** @nullable */
+  adres?: string | null;
+  /** @nullable */
+  stad?: string | null;
+  /** @nullable */
+  postcode?: string | null;
+  /** @nullable */
   adres_gevonden?: string | null;
   /** @nullable */
   latitude?: number | null;

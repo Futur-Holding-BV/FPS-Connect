@@ -63,6 +63,7 @@ export function GebouwAanmakenDialog() {
 
   const [open, setOpen] = useState(false);
   const [velden, setVelden] = useState<Velden>(LEEG);
+  const [aiTekst, setAiTekst] = useState("");
   const [satelliet, setSatelliet] = useState<string | null>(null);
   const [aiToelichting, setAiToelichting] = useState<string | null>(null);
   const [aiBetrouwbaarheid, setAiBetrouwbaarheid] = useState<string | null>(null);
@@ -74,6 +75,7 @@ export function GebouwAanmakenDialog() {
 
   function herstel() {
     setVelden(LEEG);
+    setAiTekst("");
     setSatelliet(null);
     setAiToelichting(null);
     setAiBetrouwbaarheid(null);
@@ -82,21 +84,17 @@ export function GebouwAanmakenDialog() {
 
   async function voerAiUit() {
     setFoutmelding(null);
-    if (!velden.adres.trim()) {
-      setFoutmelding("Vul eerst een adres in voordat de AI kan analyseren.");
+    if (!aiTekst.trim()) {
+      setFoutmelding("Beschrijf eerst het gebouw of het adres voordat de AI kan invullen.");
       return;
     }
     try {
       const res = await aiAnalyse.mutateAsync({
-        data: {
-          adres: velden.adres,
-          stad: velden.stad || undefined,
-          postcode: velden.postcode || undefined,
-        },
+        data: { beschrijving: aiTekst },
       });
 
       if (!res.gevonden) {
-        setFoutmelding(res.toelichting ?? "Adres kon niet worden gevonden.");
+        setFoutmelding(res.toelichting ?? "De omschrijving kon niet worden verwerkt.");
         return;
       }
 
@@ -106,10 +104,14 @@ export function GebouwAanmakenDialog() {
 
       setVelden((v) => ({
         ...v,
-        naam: v.naam || (res.adres_gevonden ? res.adres_gevonden.split(",")[0] : v.naam),
-        stad: v.stad || afleidStad(res.adres_gevonden),
+        naam:
+          res.naam ??
+          (res.adres_gevonden ? res.adres_gevonden.split(",")[0] : v.naam),
+        adres: res.adres ?? v.adres,
+        stad: res.stad ?? (res.adres_gevonden ? afleidStad(res.adres_gevonden) : v.stad),
+        postcode: res.postcode ?? v.postcode,
         gebouw_type: res.gebouw_type ?? v.gebouw_type,
-        omschrijving: v.omschrijving || (res.omschrijving ?? ""),
+        omschrijving: res.omschrijving ?? v.omschrijving,
         bouwjaar: res.bouwjaar != null ? String(res.bouwjaar) : v.bouwjaar,
         aantal_verdiepingen:
           res.aantal_verdiepingen != null ? String(res.aantal_verdiepingen) : v.aantal_verdiepingen,
@@ -174,7 +176,7 @@ export function GebouwAanmakenDialog() {
         <DialogHeader>
           <DialogTitle>Nieuw gebouw aanmaken</DialogTitle>
           <DialogDescription>
-            Vul het adres in en laat de AI de gebouwgegevens schatten op basis van
+            Beschrijf het gebouw of het adres en laat de AI de gebouwgegevens schatten op basis van
             Google Maps en satellietbeeld, of vul alles handmatig in.
           </DialogDescription>
         </DialogHeader>
@@ -184,56 +186,37 @@ export function GebouwAanmakenDialog() {
           <div className="flex items-center gap-2 text-sm font-medium">
             <Sparkles className="h-4 w-4 text-primary" /> AI-modus
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div className="sm:col-span-2 space-y-1.5">
-              <Label htmlFor="ai-adres">Adres</Label>
-              <Input
-                id="ai-adres"
-                placeholder="Bijv. Coolsingel 40"
-                value={velden.adres}
-                onChange={(e) => zet("adres", e.target.value)}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="ai-postcode">Postcode</Label>
-              <Input
-                id="ai-postcode"
-                placeholder="3011 AD"
-                value={velden.postcode}
-                onChange={(e) => zet("postcode", e.target.value)}
-              />
-            </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="ai-beschrijving">Beschrijving</Label>
+            <Textarea
+              id="ai-beschrijving"
+              rows={3}
+              placeholder="Beschrijf het gebouw of plak een adres. Bijv. 'Kantoorpand Coolsingel 40, Rotterdam, gebouwd in 1998, ongeveer 10 verdiepingen' of simpelweg 'Coolsingel 40 Rotterdam'."
+              value={aiTekst}
+              onChange={(e) => setAiTekst(e.target.value)}
+            />
+            <p className="text-xs text-muted-foreground">
+              De AI vult de velden hieronder in op basis van uw tekst. Wat u zelf
+              benoemt heeft voorrang; de rest wordt geschat via satellietbeeld.
+            </p>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div className="sm:col-span-2 space-y-1.5">
-              <Label htmlFor="ai-stad">Stad</Label>
-              <Input
-                id="ai-stad"
-                placeholder="Rotterdam"
-                value={velden.stad}
-                onChange={(e) => zet("stad", e.target.value)}
-              />
-            </div>
-            <div className="flex items-end">
-              <Button
-                type="button"
-                variant="default"
-                className="w-full"
-                onClick={voerAiUit}
-                disabled={aiBezig}
-              >
-                {aiBezig ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Analyseren...
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="h-4 w-4 mr-2" /> AI invullen
-                  </>
-                )}
-              </Button>
-            </div>
-          </div>
+          <Button
+            type="button"
+            variant="default"
+            className="w-full sm:w-auto"
+            onClick={voerAiUit}
+            disabled={aiBezig}
+          >
+            {aiBezig ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Analyseren...
+              </>
+            ) : (
+              <>
+                <Sparkles className="h-4 w-4 mr-2" /> AI invullen
+              </>
+            )}
+          </Button>
 
           {satelliet && (
             <div className="flex gap-3 items-start pt-1">
@@ -270,6 +253,33 @@ export function GebouwAanmakenDialog() {
               id="g-naam"
               value={velden.naam}
               onChange={(e) => zet("naam", e.target.value)}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="g-adres">Adres *</Label>
+            <Input
+              id="g-adres"
+              placeholder="Coolsingel 40"
+              value={velden.adres}
+              onChange={(e) => zet("adres", e.target.value)}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="g-postcode">Postcode</Label>
+            <Input
+              id="g-postcode"
+              placeholder="3011 AD"
+              value={velden.postcode}
+              onChange={(e) => zet("postcode", e.target.value)}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="g-stad">Stad</Label>
+            <Input
+              id="g-stad"
+              placeholder="Rotterdam"
+              value={velden.stad}
+              onChange={(e) => zet("stad", e.target.value)}
             />
           </div>
           <div className="space-y-1.5">

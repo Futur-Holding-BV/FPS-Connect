@@ -58,6 +58,16 @@ must be updated too or `tsc` reports "Property X does not exist".
 **How to apply:** after extending a generated schema, grep the consuming page for a hand-written
 type and update both.
 
+## Gebouw "AI invullen" = vrije tekst, niet gestructureerde velden
+De gebouw-aanmaak-AI verwacht één vrij tekstveld (`beschrijving`), niet losse adres/postcode/stad
+inputs. Backend doet twee stappen: (1) LLM-extractie van expliciet genoemde velden + een
+geocode-zoekopdracht uit de tekst, (2) geocoding + satelliet-vision als verrijking. Door de
+gebruiker genoemde waarden hebben ALTIJD voorrang op de AI-schatting (merge met `?? visie`).
+**Why:** gebruiker vond de starre adresvelden te beperkend; wil vrij beschrijven en AI vult de rest.
+**How to apply:** het analyse-resultaat levert ook naam/adres/stad/postcode terug zodat het
+onderste formulier (incl. die velden) automatisch gevuld wordt; geocoding/satelliet is optioneel
+(resultaat blijft `gevonden:true` puur uit de tekst).
+
 ## Mobile auth = signed bearer token, not cookies
 The Expo app can't keep the `Secure; SameSite=None` session cookie in the Replit iframe, so it uses
 `POST /auth/mobile/login` (email+wachtwoord+TOTP) → stateless HMAC bearer token (`lib/token.ts`,
