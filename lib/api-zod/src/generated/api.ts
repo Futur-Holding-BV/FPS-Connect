@@ -923,6 +923,9 @@ export const ListGebruikersResponseItem = zod.object({
   "bedrijfskleuren": zod.string().nullish(),
   "uitnodiging_status": zod.enum(['niet_uitgenodigd', 'uitgenodigd', 'geaccepteerd']),
   "uitnodiging_verstuurd_op": zod.string().nullish(),
+  "uitnodiging_verloopt_op": zod.string().nullish(),
+  "uitnodiging_geopend_op": zod.string().nullish(),
+  "uitnodiging_opnieuw_verstuurd_op": zod.string().nullish(),
   "taal": zod.enum(['nl', 'en', 'de', 'fr', 'ar', 'tr']).optional()
 })
 export const ListGebruikersResponse = zod.array(ListGebruikersResponseItem)
@@ -970,6 +973,9 @@ export const GetGebruikerResponse = zod.object({
   "bedrijfskleuren": zod.string().nullish(),
   "uitnodiging_status": zod.enum(['niet_uitgenodigd', 'uitgenodigd', 'geaccepteerd']),
   "uitnodiging_verstuurd_op": zod.string().nullish(),
+  "uitnodiging_verloopt_op": zod.string().nullish(),
+  "uitnodiging_geopend_op": zod.string().nullish(),
+  "uitnodiging_opnieuw_verstuurd_op": zod.string().nullish(),
   "taal": zod.enum(['nl', 'en', 'de', 'fr', 'ar', 'tr']).optional()
 })
 
@@ -1011,6 +1017,9 @@ export const UpdateGebruikerResponse = zod.object({
   "bedrijfskleuren": zod.string().nullish(),
   "uitnodiging_status": zod.enum(['niet_uitgenodigd', 'uitgenodigd', 'geaccepteerd']),
   "uitnodiging_verstuurd_op": zod.string().nullish(),
+  "uitnodiging_verloopt_op": zod.string().nullish(),
+  "uitnodiging_geopend_op": zod.string().nullish(),
+  "uitnodiging_opnieuw_verstuurd_op": zod.string().nullish(),
   "taal": zod.enum(['nl', 'en', 'de', 'fr', 'ar', 'tr']).optional()
 })
 
@@ -1047,7 +1056,70 @@ export const UitnodigingVersturenResponse = zod.object({
   "bedrijfskleuren": zod.string().nullish(),
   "uitnodiging_status": zod.enum(['niet_uitgenodigd', 'uitgenodigd', 'geaccepteerd']),
   "uitnodiging_verstuurd_op": zod.string().nullish(),
+  "uitnodiging_verloopt_op": zod.string().nullish(),
+  "uitnodiging_geopend_op": zod.string().nullish(),
+  "uitnodiging_opnieuw_verstuurd_op": zod.string().nullish(),
   "taal": zod.enum(['nl', 'en', 'de', 'fr', 'ar', 'tr']).optional()
+})
+
+
+/**
+ * @summary Uitnodiging opnieuw sturen naar gebruiker
+ */
+export const UitnodigingOpnieuwVersturenParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UitnodigingOpnieuwVersturenResponse = zod.object({
+  "id": zod.number(),
+  "naam": zod.string(),
+  "email": zod.string(),
+  "rol": zod.enum(['hoofdbeheerder', 'beheerder', 'monteur', 'controleur', 'klant', 'viewer']),
+  "telefoon": zod.string().nullish(),
+  "bedrijf": zod.string().nullish(),
+  "actief": zod.boolean(),
+  "aangemaakt_op": zod.string(),
+  "laatste_online": zod.string().nullish(),
+  "avatar_url": zod.string().nullish(),
+  "bedrijfslogo_url": zod.string().nullish(),
+  "bedrijfskleuren": zod.string().nullish(),
+  "uitnodiging_status": zod.enum(['niet_uitgenodigd', 'uitgenodigd', 'geaccepteerd']),
+  "uitnodiging_verstuurd_op": zod.string().nullish(),
+  "uitnodiging_verloopt_op": zod.string().nullish(),
+  "uitnodiging_geopend_op": zod.string().nullish(),
+  "uitnodiging_opnieuw_verstuurd_op": zod.string().nullish(),
+  "taal": zod.enum(['nl', 'en', 'de', 'fr', 'ar', 'tr']).optional()
+})
+
+
+/**
+ * @summary Uitnodigingstoken controleren en markeren als geopend (publiek)
+ */
+export const UitnodigingVerifieerParams = zod.object({
+  "token": zod.coerce.string()
+})
+
+export const UitnodigingVerifieerResponse = zod.object({
+  "id": zod.number(),
+  "naam": zod.string(),
+  "email": zod.string()
+})
+
+
+/**
+ * @summary Account activeren via uitnodigingstoken (publiek)
+ */
+export const UitnodigingActiverenParams = zod.object({
+  "token": zod.coerce.string()
+})
+
+export const UitnodigingActiverenBody = zod.object({
+  "wachtwoord": zod.string(),
+  "taal": zod.enum(['nl', 'en', 'de', 'fr', 'ar', 'tr'])
+})
+
+export const UitnodigingActiverenResponse = zod.object({
+  "status": zod.string().optional()
 })
 
 

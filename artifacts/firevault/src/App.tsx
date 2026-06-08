@@ -8,6 +8,7 @@ import { AuthProvider, useAuth } from "@/context/auth-context";
 import { TaalProvider } from "@/context/taal-context";
 import { useRol } from "@/context/rol-context";
 import LoginPagina from "@/pages/auth/login";
+import ActivatiePagina from "@/pages/uitnodiging/index";
 
 import BeheerderLayout from "@/layouts/beheerder-layout";
 import MonteurLayout from "@/layouts/monteur-layout";
@@ -101,6 +102,13 @@ function Portalen() {
 
 function Gate() {
   const { isLoading, isAuthenticated } = useAuth();
+
+  const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+  const pad = window.location.pathname.slice(base.length) || "/";
+  if (pad.startsWith("/uitnodiging/")) {
+    const token = pad.replace("/uitnodiging/", "");
+    return <ActivatiePagina token={token} />;
+  }
 
   if (isLoading) {
     return (

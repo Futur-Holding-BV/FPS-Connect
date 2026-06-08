@@ -6,6 +6,7 @@ import {
   useUpdateGebruiker,
   useDeleteGebruiker,
   useUitnodigingVersturen,
+  useUitnodigingOpnieuwVersturen,
   getListGebruikersQueryKey,
 } from "@workspace/api-client-react";
 import { Card, CardContent } from "@/components/ui/card";
@@ -154,12 +155,20 @@ type Gebruiker = {
   bedrijfskleuren?: string | null;
   uitnodiging_status?: string | null;
   uitnodiging_verstuurd_op?: string | null;
+  uitnodiging_verloopt_op?: string | null;
+  uitnodiging_geopend_op?: string | null;
+  uitnodiging_opnieuw_verstuurd_op?: string | null;
 };
 
 function haalPrimairKleur(bedrijfskleuren: string | null | undefined): string {
   if (!bedrijfskleuren) return "#ff6b35";
   try { return JSON.parse(bedrijfskleuren).primair ?? "#ff6b35"; }
   catch { return "#ff6b35"; }
+}
+
+function formatDatum(iso: string | null | undefined): string {
+  if (!iso) return "";
+  return new Date(iso).toLocaleDateString("nl-NL", { day: "numeric", month: "short" });
 }
 
 export default function Gebruikers() {
@@ -174,6 +183,7 @@ export default function Gebruikers() {
   const werkBijGebruiker   = useUpdateGebruiker();
   const verwijderGebruiker = useDeleteGebruiker();
   const uitnodigingVersturen = useUitnodigingVersturen();
+  const uitnodigingOpnieuwVersturen = useUitnodigingOpnieuwVersturen();
 
   const [toevoegenOpen, setToevoegenOpen]     = useState(false);
   const [toevoegenForm, setToevoegenForm]     = useState<GebruikerForm>(leegForm);
@@ -274,17 +284,17 @@ export default function Gebruikers() {
   }
 
   async function stuurUitnodiging(g: Gebruiker) {
+    const status = g.uitnodiging_status ?? "niet_uitgenodigd";
     setUitnodigingBezig(g.id);
     try {
-      await uitnodigingVersturen.mutateAsync({ id: g.id });
+      if (status === "uitgenodigd") {
+        await uitnodigingOpnieuwVersturen.mutateAsync({ id: g.id });
+      } else {
+        await uitnodigingVersturen.mutateAsync({ id: g.id });
+      }
       await invalideer();
-      const onderwerp = encodeURIComponent("Uitnodiging FPS Brandpreventie");
-      const berichttekst = encodeURIComponent(
-        `Geachte ${g.naam ?? ""},\n\nU bent uitgenodigd om in te loggen op het FPS Brandpreventie platform.\n\nMet vriendelijke groet,\nFPS Brandpreventie`
-      );
-      window.open(`mailto:${g.email}?subject=${onderwerp}&body=${berichttekst}`, "_blank");
     } catch {
-      // Stille fout — kaart toont nog steeds de status
+      // stille fout — kaart toont nog steeds de status
     } finally {
       setUitnodigingBezig(null);
     }
@@ -446,6 +456,26 @@ export default function Gebruikers() {
                                   </Badge>
                                 )}
                               </div>
+
+                              {status !== "geaccepteerd" && (g.uitnodiging_verstuurd_op || g.uitnodiging_geopend_op || g.uitnodiging_opnieuw_verstuurd_op) && (
+                                <div className="mt-1 space-y-0.5">
+                                  {g.uitnodiging_verstuurd_op && (
+                                    <p className="text-xs text-muted-foreground">
+                                      Verzonden: {formatDatum(g.uitnodiging_verstuurd_op)}
+                                    </p>
+                                  )}
+                                  {g.uitnodiging_opnieuw_verstuurd_op && (
+                                    <p className="text-xs text-muted-foreground">
+                                      Herinnering: {formatDatum(g.uitnodiging_opnieuw_verstuurd_op)}
+                                    </p>
+                                  )}
+                                  {g.uitnodiging_geopend_op && (
+                                    <p className="text-xs text-purple-600">
+                                      Geopend: {formatDatum(g.uitnodiging_geopend_op)}
+                                    </p>
+                                  )}
+                                </div>
+                              )}
 
                               {status !== "geaccepteerd" && (
                                 <Button

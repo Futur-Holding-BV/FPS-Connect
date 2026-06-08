@@ -1,0 +1,333 @@
+import { useState, useEffect } from "react";
+import { Loader2, ShieldCheck, Eye, EyeOff, CheckCircle, AlertTriangle } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
+
+const api = (pad: string, opties?: RequestInit) =>
+  fetch(`${BASE}/api${pad}`, { credentials: "include", ...opties });
+
+const TALEN = [
+  { code: "nl", label: "Nederlands" },
+  { code: "en", label: "English" },
+  { code: "de", label: "Deutsch" },
+  { code: "fr", label: "Français" },
+  { code: "ar", label: "العربية" },
+  { code: "tr", label: "Türkçe" },
+];
+
+type Stap = "laden" | "fout" | "verlopen" | "al_actief" | "gegevens" | "tweeStap" | "klaar";
+
+interface GebruikerInfo {
+  id: number;
+  naam: string;
+  email: string;
+}
+
+interface Props {
+  token: string;
+}
+
+export default function ActivatiePagina({ token }: Props) {
+  const [stap, setStap] = useState<Stap>("laden");
+  const [gebruiker, setGebruiker] = useState<GebruikerInfo | null>(null);
+  const [foutmelding, setFoutmelding] = useState("");
+
+  const [wachtwoord, setWachtwoord] = useState("");
+  const [bevestig, setBevestig] = useState("");
+  const [taal, setTaal] = useState("nl");
+  const [toonWw, setToonWw] = useState(false);
+  const [toonBev, setToonBev] = useState(false);
+  const [bezig, setBezig] = useState(false);
+
+  const [qrCode, setQrCode] = useState("");
+  const [otpCode, setOtpCode] = useState("");
+  const [otpFout, setOtpFout] = useState("");
+
+  useEffect(() => {
+    api(`/uitnodiging/${token}`)
+      .then(async (r) => {
+        if (r.status === 409) { setStap("al_actief"); return; }
+        if (r.status === 410) { setStap("verlopen"); return; }
+        if (!r.ok) { setStap("fout"); return; }
+        const data = await r.json();
+        setGebruiker(data);
+        setStap("gegevens");
+      })
+      .catch(() => setStap("fout"));
+  }, [token]);
+
+  async function activeer() {
+    setFoutmelding("");
+    if (wachtwoord.length < 8) {
+      setFoutmelding("Wachtwoord moet minimaal 8 tekens bevatten.");
+      return;
+    }
+    if (wachtwoord !== bevestig) {
+      setFoutmelding("Wachtwoorden komen niet overeen.");
+      return;
+    }
+    setBezig(true);
+    try {
+      const r = await api(`/uitnodiging/${token}/activeren`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ wachtwoord, taal }),
+      });
+      const data = await r.json();
+      if (!r.ok) { setFoutmelding(data.error ?? "Er is een fout opgetreden."); return; }
+      if (data.status === "setup_2fa") {
+        const qrRes = await api("/auth/2fa/setup", { method: "POST" });
+        if (qrRes.ok) {
+          const qrData = await qrRes.json();
+          setQrCode(qrData.qr_code);
+          setStap("tweeStap");
+        } else {
+          setFoutmelding("Kon 2FA-setup niet starten. Probeer opnieuw.");
+        }
+      }
+    } catch {
+      setFoutmelding("Er is een netwerkfout opgetreden.");
+    } finally {
+      setBezig(false);
+    }
+  }
+
+  async function bevestig2fa() {
+    setOtpFout("");
+    setBezig(true);
+    try {
+      const r = await api("/auth/2fa/activeren", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: otpCode }),
+      });
+      const data = await r.json();
+      if (!r.ok) { setOtpFout(data.error ?? "Onjuiste code."); return; }
+      setStap("klaar");
+      setTimeout(() => {
+        window.location.href = BASE + "/";
+      }, 2500);
+    } catch {
+      setOtpFout("Er is een netwerkfout opgetreden.");
+    } finally {
+      setBezig(false);
+    }
+  }
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-zinc-950 px-4 py-12">
+      <div className="w-full max-w-md">
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-primary mb-4">
+            <ShieldCheck className="h-7 w-7 text-white" />
+          </div>
+          <p className="text-white font-semibold text-lg">FPS Brandpreventie</p>
+          <p className="text-zinc-400 text-sm">Platform voor brandpreventie</p>
+        </div>
+
+        <div className="bg-white rounded-xl shadow-xl overflow-hidden">
+          {stap === "laden" && (
+            <div className="p-10 flex flex-col items-center gap-3">
+              <Loader2 className="h-7 w-7 animate-spin text-primary" />
+              <p className="text-zinc-600 text-sm">Uitnodiging controleren...</p>
+            </div>
+          )}
+
+          {stap === "fout" && (
+            <div className="p-8 text-center">
+              <AlertTriangle className="h-10 w-10 text-red-500 mx-auto mb-3" />
+              <h2 className="font-semibold text-zinc-900 mb-1">Uitnodiging niet gevonden</h2>
+              <p className="text-zinc-500 text-sm">
+                Deze activatielink is ongeldig. Vraag uw beheerder om een nieuwe uitnodiging.
+              </p>
+            </div>
+          )}
+
+          {stap === "verlopen" && (
+            <div className="p-8 text-center">
+              <AlertTriangle className="h-10 w-10 text-amber-500 mx-auto mb-3" />
+              <h2 className="font-semibold text-zinc-900 mb-1">Uitnodiging verlopen</h2>
+              <p className="text-zinc-500 text-sm">
+                Deze activatielink is verlopen (geldig voor 7 dagen). Vraag uw beheerder om een nieuwe uitnodiging.
+              </p>
+            </div>
+          )}
+
+          {stap === "al_actief" && (
+            <div className="p-8 text-center">
+              <CheckCircle className="h-10 w-10 text-green-500 mx-auto mb-3" />
+              <h2 className="font-semibold text-zinc-900 mb-1">Account al geactiveerd</h2>
+              <p className="text-zinc-500 text-sm mb-4">
+                Uw account is al actief. U kunt inloggen via de inlogpagina.
+              </p>
+              <Button
+                className="bg-primary hover:bg-primary/90 text-white"
+                onClick={() => { window.location.href = BASE + "/"; }}
+              >
+                Naar inlogpagina
+              </Button>
+            </div>
+          )}
+
+          {stap === "gegevens" && gebruiker && (
+            <div className="p-8">
+              <h2 className="font-semibold text-zinc-900 text-xl mb-1">
+                Welkom, {gebruiker.naam}
+              </h2>
+              <p className="text-zinc-500 text-sm mb-6">
+                Stel uw wachtwoord en taalvoorkeur in om uw account te activeren.
+              </p>
+              <div className="space-y-4">
+                <div>
+                  <Label className="text-zinc-700 text-sm font-medium">E-mailadres</Label>
+                  <Input
+                    value={gebruiker.email}
+                    disabled
+                    className="mt-1 bg-zinc-50 text-zinc-500"
+                  />
+                </div>
+                <div>
+                  <Label className="text-zinc-700 text-sm font-medium">
+                    Wachtwoord <span className="text-zinc-400 font-normal">(minimaal 8 tekens)</span>
+                  </Label>
+                  <div className="relative mt-1">
+                    <Input
+                      type={toonWw ? "text" : "password"}
+                      value={wachtwoord}
+                      onChange={(e) => setWachtwoord(e.target.value)}
+                      placeholder="Kies een sterk wachtwoord"
+                      className="pr-10"
+                    />
+                    <button
+                      type="button"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600"
+                      onClick={() => setToonWw((v) => !v)}
+                    >
+                      {toonWw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                </div>
+                <div>
+                  <Label className="text-zinc-700 text-sm font-medium">Wachtwoord bevestigen</Label>
+                  <div className="relative mt-1">
+                    <Input
+                      type={toonBev ? "text" : "password"}
+                      value={bevestig}
+                      onChange={(e) => setBevestig(e.target.value)}
+                      placeholder="Herhaal uw wachtwoord"
+                      className="pr-10"
+                    />
+                    <button
+                      type="button"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600"
+                      onClick={() => setToonBev((v) => !v)}
+                    >
+                      {toonBev ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                </div>
+                <div>
+                  <Label className="text-zinc-700 text-sm font-medium">Voorkeurstaal</Label>
+                  <Select value={taal} onValueChange={setTaal}>
+                    <SelectTrigger className="mt-1">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {TALEN.map((t) => (
+                        <SelectItem key={t.code} value={t.code}>{t.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                {foutmelding && (
+                  <p className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-md px-3 py-2">
+                    {foutmelding}
+                  </p>
+                )}
+                <Button
+                  className="w-full bg-primary hover:bg-primary/90 text-white mt-2"
+                  onClick={activeer}
+                  disabled={bezig}
+                >
+                  {bezig ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                  Doorgaan naar tweestapsverificatie
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {stap === "tweeStap" && (
+            <div className="p-8">
+              <h2 className="font-semibold text-zinc-900 text-xl mb-1">
+                Tweestapsverificatie instellen
+              </h2>
+              <p className="text-zinc-500 text-sm mb-5">
+                Scan onderstaande QR-code met uw authenticator-app (zoals Google Authenticator of Microsoft Authenticator)
+                en voer daarna de 6-cijferige code in.
+              </p>
+              {qrCode && (
+                <div className="flex justify-center mb-5">
+                  <img
+                    src={qrCode}
+                    alt="QR-code voor authenticator-app"
+                    className="w-44 h-44 border border-zinc-200 rounded-lg"
+                  />
+                </div>
+              )}
+              <div className="space-y-4">
+                <div>
+                  <Label className="text-zinc-700 text-sm font-medium">Verificatiecode</Label>
+                  <Input
+                    className="mt-1 tracking-widest text-center text-lg font-mono"
+                    placeholder="123456"
+                    maxLength={6}
+                    value={otpCode}
+                    onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ""))}
+                    onKeyDown={(e) => { if (e.key === "Enter") bevestig2fa(); }}
+                  />
+                </div>
+                {otpFout && (
+                  <p className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-md px-3 py-2">
+                    {otpFout}
+                  </p>
+                )}
+                <Button
+                  className="w-full bg-primary hover:bg-primary/90 text-white"
+                  onClick={bevestig2fa}
+                  disabled={bezig || otpCode.length < 6}
+                >
+                  {bezig ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                  Account activeren
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {stap === "klaar" && (
+            <div className="p-8 text-center">
+              <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-3" />
+              <h2 className="font-semibold text-zinc-900 text-xl mb-2">Account geactiveerd</h2>
+              <p className="text-zinc-500 text-sm">
+                Uw account is actief. U wordt automatisch doorgestuurd...
+              </p>
+            </div>
+          )}
+        </div>
+
+        <p className="text-center text-zinc-600 text-xs mt-6">
+          FPS Brandpreventie &bull; Vragen? Neem contact op met uw beheerder.
+        </p>
+      </div>
+    </div>
+  );
+}

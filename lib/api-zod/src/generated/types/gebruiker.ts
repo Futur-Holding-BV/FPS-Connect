@@ -31,5 +31,11 @@ export interface Gebruiker {
   uitnodiging_status: GebruikerUitnodigingStatus;
   /** @nullable */
   uitnodiging_verstuurd_op?: string | null;
+  /** @nullable */
+  uitnodiging_verloopt_op?: string | null;
+  /** @nullable */
+  uitnodiging_geopend_op?: string | null;
+  /** @nullable */
+  uitnodiging_opnieuw_verstuurd_op?: string | null;
   taal?: GebruikerTaal;
 }

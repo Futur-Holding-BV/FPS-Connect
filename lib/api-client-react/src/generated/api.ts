@@ -58,6 +58,9 @@ import type {
   StatusVerdeling,
   TaalWijzigen,
   TweeFactorSetup,
+  UitnodigingActiveren,
+  UitnodigingActiveren200,
+  UitnodigingInfo,
   Verdieping,
   VerdiepingInput,
   VerdiepingUpdate,
@@ -3067,6 +3070,224 @@ export const useUitnodigingVersturen = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getUitnodigingVersturenMutationOptions(options));
+    }
+
+export const getUitnodigingOpnieuwVersturenUrl = (id: number,) => {
+
+
+
+
+  return `/api/gebruikers/${id}/uitnodigen/opnieuw`
+}
+
+/**
+ * @summary Uitnodiging opnieuw sturen naar gebruiker
+ */
+export const uitnodigingOpnieuwVersturen = async (id: number, options?: RequestInit): Promise<Gebruiker> => {
+
+  return customFetch<Gebruiker>(getUitnodigingOpnieuwVersturenUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getUitnodigingOpnieuwVersturenMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof uitnodigingOpnieuwVersturen>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof uitnodigingOpnieuwVersturen>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['uitnodigingOpnieuwVersturen'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof uitnodigingOpnieuwVersturen>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  uitnodigingOpnieuwVersturen(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UitnodigingOpnieuwVersturenMutationResult = NonNullable<Awaited<ReturnType<typeof uitnodigingOpnieuwVersturen>>>
+
+    export type UitnodigingOpnieuwVersturenMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Uitnodiging opnieuw sturen naar gebruiker
+ */
+export const useUitnodigingOpnieuwVersturen = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof uitnodigingOpnieuwVersturen>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof uitnodigingOpnieuwVersturen>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getUitnodigingOpnieuwVersturenMutationOptions(options));
+    }
+
+export const getUitnodigingVerifieerUrl = (token: string,) => {
+
+
+
+
+  return `/api/uitnodiging/${token}`
+}
+
+/**
+ * @summary Uitnodigingstoken controleren en markeren als geopend (publiek)
+ */
+export const uitnodigingVerifieer = async (token: string, options?: RequestInit): Promise<UitnodigingInfo> => {
+
+  return customFetch<UitnodigingInfo>(getUitnodigingVerifieerUrl(token),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getUitnodigingVerifieerQueryKey = (token: string,) => {
+    return [
+    `/api/uitnodiging/${token}`
+    ] as const;
+    }
+
+
+export const getUitnodigingVerifieerQueryOptions = <TData = Awaited<ReturnType<typeof uitnodigingVerifieer>>, TError = ErrorType<void>>(token: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof uitnodigingVerifieer>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getUitnodigingVerifieerQueryKey(token);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof uitnodigingVerifieer>>> = ({ signal }) => uitnodigingVerifieer(token, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: token !== null && token !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof uitnodigingVerifieer>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type UitnodigingVerifieerQueryResult = NonNullable<Awaited<ReturnType<typeof uitnodigingVerifieer>>>
+export type UitnodigingVerifieerQueryError = ErrorType<void>
+
+
+/**
+ * @summary Uitnodigingstoken controleren en markeren als geopend (publiek)
+ */
+
+export function useUitnodigingVerifieer<TData = Awaited<ReturnType<typeof uitnodigingVerifieer>>, TError = ErrorType<void>>(
+ token: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof uitnodigingVerifieer>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getUitnodigingVerifieerQueryOptions(token,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getUitnodigingActiverenUrl = (token: string,) => {
+
+
+
+
+  return `/api/uitnodiging/${token}/activeren`
+}
+
+/**
+ * @summary Account activeren via uitnodigingstoken (publiek)
+ */
+export const uitnodigingActiveren = async (token: string,
+    uitnodigingActiveren: UitnodigingActiveren, options?: RequestInit): Promise<UitnodigingActiveren200> => {
+
+  return customFetch<UitnodigingActiveren200>(getUitnodigingActiverenUrl(token),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(uitnodigingActiveren)
+  }
+);}
+
+
+
+
+export const getUitnodigingActiverenMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof uitnodigingActiveren>>, TError,{token: string;data: BodyType<UitnodigingActiveren>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof uitnodigingActiveren>>, TError,{token: string;data: BodyType<UitnodigingActiveren>}, TContext> => {
+
+const mutationKey = ['uitnodigingActiveren'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof uitnodigingActiveren>>, {token: string;data: BodyType<UitnodigingActiveren>}> = (props) => {
+          const {token,data} = props ?? {};
+
+          return  uitnodigingActiveren(token,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UitnodigingActiverenMutationResult = NonNullable<Awaited<ReturnType<typeof uitnodigingActiveren>>>
+    export type UitnodigingActiverenMutationBody = BodyType<UitnodigingActiveren>
+    export type UitnodigingActiverenMutationError = ErrorType<void>
+
+    /**
+ * @summary Account activeren via uitnodigingstoken (publiek)
+ */
+export const useUitnodigingActiveren = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof uitnodigingActiveren>>, TError,{token: string;data: BodyType<UitnodigingActiveren>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof uitnodigingActiveren>>,
+        TError,
+        {token: string;data: BodyType<UitnodigingActiveren>},
+        TContext
+      > => {
+      return useMutation(getUitnodigingActiverenMutationOptions(options));
     }
 
 export const getWachtwoordWijzigenUrl = () => {

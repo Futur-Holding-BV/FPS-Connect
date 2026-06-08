@@ -20,6 +20,10 @@ export const gebruikersTable = pgTable("gebruikers", {
   bedrijfskleuren: text("bedrijfskleuren"),
   uitnodigingStatus: text("uitnodiging_status").notNull().default("niet_uitgenodigd"),
   uitnodigingVerstuurdOp: timestamp("uitnodiging_verstuurd_op"),
+  uitnodigingToken: text("uitnodiging_token").unique(),
+  uitnodigingVerlooptOp: timestamp("uitnodiging_verloopt_op"),
+  uitnodigingGeopendOp: timestamp("uitnodiging_geopend_op"),
+  uitnodigingOpnieuwVerstuurdOp: timestamp("uitnodiging_opnieuw_verstuurd_op"),
   taal: text("taal").notNull().default("nl"),
 });
 

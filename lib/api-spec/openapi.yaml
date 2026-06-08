@@ -857,6 +857,86 @@ paths:
               schema:
                 $ref: "#/components/schemas/Gebruiker"
 
+  /gebruikers/{id}/uitnodigen/opnieuw:
+    post:
+      operationId: uitnodigingOpnieuwVersturen
+      tags: [gebruikers]
+      summary: Uitnodiging opnieuw sturen naar gebruiker
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Gebruiker"
+
+  /uitnodiging/{token}:
+    get:
+      operationId: uitnodigingVerifieer
+      tags: [auth]
+      summary: Uitnodigingstoken controleren en markeren als geopend (publiek)
+      parameters:
+        - in: path
+          name: token
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Token geldig
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UitnodigingInfo"
+        "404":
+          description: Token ongeldig of verlopen
+        "410":
+          description: Uitnodiging verlopen
+        "409":
+          description: Account is al geactiveerd
+
+  /uitnodiging/{token}/activeren:
+    post:
+      operationId: uitnodigingActiveren
+      tags: [auth]
+      summary: Account activeren via uitnodigingstoken (publiek)
+      parameters:
+        - in: path
+          name: token
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UitnodigingActiveren"
+      responses:
+        "200":
+          description: Activatie gestart — 2FA-setup volgt
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+        "400":
+          description: Ongeldig verzoek
+        "404":
+          description: Token niet gevonden
+        "409":
+          description: Account is al geactiveerd
+        "410":
+          description: Uitnodiging verlopen
+
   /auth/wachtwoord-wijzigen:
     post:
       operationId: wachtwoordWijzigen
@@ -1858,6 +1938,12 @@ components:
           enum: [niet_uitgenodigd, uitgenodigd, geaccepteerd]
         uitnodiging_verstuurd_op:
           type: ["string", "null"]
+        uitnodiging_verloopt_op:
+          type: ["string", "null"]
+        uitnodiging_geopend_op:
+          type: ["string", "null"]
+        uitnodiging_opnieuw_verstuurd_op:
+          type: ["string", "null"]
         taal:
           type: string
           enum: [nl, en, de, fr, ar, tr]
@@ -1930,6 +2016,27 @@ components:
       type: object
       required: [taal]
       properties:
+        taal:
+          type: string
+          enum: [nl, en, de, fr, ar, tr]
+
+    UitnodigingInfo:
+      type: object
+      required: [id, naam, email]
+      properties:
+        id:
+          type: integer
+        naam:
+          type: string
+        email:
+          type: string
+
+    UitnodigingActiveren:
+      type: object
+      required: [wachtwoord, taal]
+      properties:
+        wachtwoord:
+          type: string
         taal:
           type: string
           enum: [nl, en, de, fr, ar, tr]

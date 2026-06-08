@@ -1,8 +1,10 @@
+import crypto from "node:crypto";
 import { Router } from "express";
 import bcrypt from "bcryptjs";
 import { db } from "@workspace/db";
 import { gebruikersTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
+import { stuurUitnodigingsmail } from "../services/email";
 
 const router = Router();
 
@@ -23,8 +25,21 @@ const mapGebruiker = (g: typeof gebruikersTable.$inferSelect) => ({
   uitnodiging_verstuurd_op: g.uitnodigingVerstuurdOp
     ? g.uitnodigingVerstuurdOp.toISOString()
     : null,
+  uitnodiging_verloopt_op: g.uitnodigingVerlooptOp
+    ? g.uitnodigingVerlooptOp.toISOString()
+    : null,
+  uitnodiging_geopend_op: g.uitnodigingGeopendOp
+    ? g.uitnodigingGeopendOp.toISOString()
+    : null,
+  uitnodiging_opnieuw_verstuurd_op: g.uitnodigingOpnieuwVerstuurdOp
+    ? g.uitnodigingOpnieuwVerstuurdOp.toISOString()
+    : null,
   taal: g.taal ?? "nl",
 });
+
+function domein(): string {
+  return (process.env.REPLIT_DOMAINS ?? "").split(",")[0]?.trim() || "localhost";
+}
 
 // GET /gebruikers
 router.get("/gebruikers", async (req, res) => {
@@ -127,19 +142,85 @@ router.patch("/gebruikers/:id", async (req, res) => {
   }
 });
 
-// POST /gebruikers/:id/uitnodigen
+// POST /gebruikers/:id/uitnodigen — eerste uitnodiging sturen
 router.post("/gebruikers/:id/uitnodigen", async (req, res) => {
   try {
     const id = parseInt(req.params.id);
+    const [bestaande] = await db
+      .select()
+      .from(gebruikersTable)
+      .where(eq(gebruikersTable.id, id));
+    if (!bestaande) return res.status(404).json({ error: "Gebruiker niet gevonden" });
+
+    const token = crypto.randomBytes(32).toString("hex");
+    const verlooptOp = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+
     const [g] = await db
       .update(gebruikersTable)
       .set({
         uitnodigingStatus: "uitgenodigd",
         uitnodigingVerstuurdOp: new Date(),
+        uitnodigingToken: token,
+        uitnodigingVerlooptOp: verlooptOp,
+        uitnodigingGeopendOp: null,
+        uitnodigingOpnieuwVerstuurdOp: null,
       })
       .where(eq(gebruikersTable.id, id))
       .returning();
-    if (!g) return res.status(404).json({ error: "Gebruiker niet gevonden" });
+
+    const activatieLink = `https://${domein()}/uitnodiging/${token}`;
+    try {
+      await stuurUitnodigingsmail({ naarEmail: g.email, naarNaam: g.naam, activatieLink });
+    } catch (mailErr) {
+      req.log.error(mailErr, "Uitnodigingsmail mislukt");
+    }
+
+    res.json(mapGebruiker(g));
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// POST /gebruikers/:id/uitnodigen/opnieuw — herinnering sturen
+router.post("/gebruikers/:id/uitnodigen/opnieuw", async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const [bestaande] = await db
+      .select()
+      .from(gebruikersTable)
+      .where(eq(gebruikersTable.id, id));
+    if (!bestaande) return res.status(404).json({ error: "Gebruiker niet gevonden" });
+    if (bestaande.uitnodigingStatus === "geaccepteerd") {
+      return res.status(400).json({ error: "Gebruiker heeft de uitnodiging al geaccepteerd" });
+    }
+
+    const token = crypto.randomBytes(32).toString("hex");
+    const verlooptOp = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+
+    const [g] = await db
+      .update(gebruikersTable)
+      .set({
+        uitnodigingStatus: "uitgenodigd",
+        uitnodigingOpnieuwVerstuurdOp: new Date(),
+        uitnodigingToken: token,
+        uitnodigingVerlooptOp: verlooptOp,
+      })
+      .where(eq(gebruikersTable.id, id))
+      .returning();
+
+    const activatieLink = `https://${domein()}/uitnodiging/${token}`;
+    try {
+      await stuurUitnodigingsmail({
+        naarEmail: g.email,
+        naarNaam: g.naam,
+        activatieLink,
+        isOpnieuw: true,
+      });
+    } catch (mailErr) {
+      req.log.error(mailErr, "Uitnodigingsmail (opnieuw) mislukt");
+    }
+
     res.json(mapGebruiker(g));
   } catch (err) {
     req.log.error(err);

@@ -603,6 +603,12 @@ export interface Gebruiker {
   uitnodiging_status: GebruikerUitnodigingStatus;
   /** @nullable */
   uitnodiging_verstuurd_op?: string | null;
+  /** @nullable */
+  uitnodiging_verloopt_op?: string | null;
+  /** @nullable */
+  uitnodiging_geopend_op?: string | null;
+  /** @nullable */
+  uitnodiging_opnieuw_verstuurd_op?: string | null;
   taal?: GebruikerTaal;
 }
 
@@ -654,6 +660,29 @@ export const TaalWijzigenTaal = {
 
 export interface TaalWijzigen {
   taal: TaalWijzigenTaal;
+}
+
+export interface UitnodigingInfo {
+  id: number;
+  naam: string;
+  email: string;
+}
+
+export type UitnodigingActiverenTaal = typeof UitnodigingActiverenTaal[keyof typeof UitnodigingActiverenTaal];
+
+
+export const UitnodigingActiverenTaal = {
+  nl: 'nl',
+  en: 'en',
+  de: 'de',
+  fr: 'fr',
+  ar: 'ar',
+  tr: 'tr',
+} as const;
+
+export interface UitnodigingActiveren {
+  wachtwoord: string;
+  taal: UitnodigingActiverenTaal;
 }
 
 export interface LoginInput {
@@ -812,5 +841,9 @@ export type ListOnderhoudParams = {
 voorziening_id?: number;
 gebouw_id?: number;
 status?: string;
+};
+
+export type UitnodigingActiveren200 = {
+  status?: string;
 };
 
