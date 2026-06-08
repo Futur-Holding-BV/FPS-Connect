@@ -14,6 +14,7 @@ const mapGebruiker = (g: typeof gebruikersTable.$inferSelect) => ({
   bedrijf: g.bedrijf,
   actief: g.actief,
   aangemaakt_op: g.aangemaaktOp.toISOString(),
+  laatste_online: g.laatstOnline ? g.laatstOnline.toISOString() : null,
 });
 
 // GET /gebruikers

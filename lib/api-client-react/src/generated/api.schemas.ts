@@ -570,6 +570,8 @@ export interface Gebruiker {
   bedrijf?: string | null;
   actief: boolean;
   aangemaakt_op: string;
+  /** @nullable */
+  laatste_online?: string | null;
 }
 
 export interface GebruikerInput {

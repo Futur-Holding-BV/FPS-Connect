@@ -1699,6 +1699,8 @@ components:
           type: boolean
         aangemaakt_op:
           type: string
+        laatste_online:
+          type: ["string", "null"]
 
     GebruikerInput:
       type: object

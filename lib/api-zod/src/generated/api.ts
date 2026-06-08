@@ -898,7 +898,8 @@ export const ListGebruikersResponseItem = zod.object({
   "telefoon": zod.string().nullish(),
   "bedrijf": zod.string().nullish(),
   "actief": zod.boolean(),
-  "aangemaakt_op": zod.string()
+  "aangemaakt_op": zod.string(),
+  "laatste_online": zod.string().nullish()
 })
 export const ListGebruikersResponse = zod.array(ListGebruikersResponseItem)
 
@@ -931,7 +932,8 @@ export const GetGebruikerResponse = zod.object({
   "telefoon": zod.string().nullish(),
   "bedrijf": zod.string().nullish(),
   "actief": zod.boolean(),
-  "aangemaakt_op": zod.string()
+  "aangemaakt_op": zod.string(),
+  "laatste_online": zod.string().nullish()
 })
 
 
@@ -959,7 +961,8 @@ export const UpdateGebruikerResponse = zod.object({
   "telefoon": zod.string().nullish(),
   "bedrijf": zod.string().nullish(),
   "actief": zod.boolean(),
-  "aangemaakt_op": zod.string()
+  "aangemaakt_op": zod.string(),
+  "laatste_online": zod.string().nullish()
 })
 
 

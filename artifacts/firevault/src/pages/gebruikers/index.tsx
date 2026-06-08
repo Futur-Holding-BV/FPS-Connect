@@ -5,7 +5,7 @@ import {
   useUpdateGebruiker,
   useDeleteGebruiker,
 } from "@workspace/api-client-react";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -21,32 +21,82 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Mail, Phone, Building, Shield, Plus, UserPlus, Pencil, Trash2, RefreshCw } from "lucide-react";
+import { Mail, Phone, Building, Clock, Plus, UserPlus, Pencil, Trash2, RefreshCw, ShieldCheck, Wrench, Eye, User } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 
-const rolKleur: Record<string, string> = {
-  beheerder:  "bg-primary/10 text-primary border-primary/20",
-  monteur:    "bg-blue-100 text-blue-800 border-blue-200",
-  controleur: "bg-purple-100 text-purple-800 border-purple-200",
-  klant:      "bg-gray-100 text-gray-700 border-gray-200",
-};
+// Rolvolgorde: meeste rechten eerst
+const ROLLEN = ["beheerder", "controleur", "monteur", "klant"] as const;
+type Rol = typeof ROLLEN[number];
 
-const rolLabel: Record<string, string> = {
-  beheerder:  "Beheerder",
-  monteur:    "Monteur",
-  controleur: "Controleur",
-  klant:      "Klant",
+const ROL_CONFIG: Record<Rol, {
+  label: string;
+  icon: React.ElementType;
+  kleur: string;
+  badge: string;
+  beschrijving: string;
+}> = {
+  beheerder: {
+    label: "Beheerders",
+    icon: ShieldCheck,
+    kleur: "text-primary",
+    badge: "bg-primary/10 text-primary border-primary/20",
+    beschrijving: "Volledige toegang",
+  },
+  controleur: {
+    label: "Controleurs",
+    icon: Eye,
+    kleur: "text-purple-600",
+    badge: "bg-purple-100 text-purple-800 border-purple-200",
+    beschrijving: "Inspectie & controle",
+  },
+  monteur: {
+    label: "Monteurs",
+    icon: Wrench,
+    kleur: "text-blue-600",
+    badge: "bg-blue-100 text-blue-800 border-blue-200",
+    beschrijving: "Onderhoud & werkorders",
+  },
+  klant: {
+    label: "Klanten",
+    icon: User,
+    kleur: "text-gray-600",
+    badge: "bg-gray-100 text-gray-700 border-gray-200",
+    beschrijving: "Rapportages & meldingen",
+  },
 };
 
 function initialen(naam: string) {
   return naam.split(" ").filter(Boolean).slice(0, 2).map((n) => n[0].toUpperCase()).join("");
 }
 
+function relatiefTijdstip(iso: string | null | undefined): string {
+  if (!iso) return "Nooit ingelogd";
+  const diff = Date.now() - new Date(iso).getTime();
+  const min = Math.floor(diff / 60000);
+  if (min < 2) return "Zojuist actief";
+  if (min < 60) return `${min} minuten geleden`;
+  const uur = Math.floor(min / 60);
+  if (uur < 24) return `${uur} ${uur === 1 ? "uur" : "uur"} geleden`;
+  const dag = Math.floor(uur / 24);
+  if (dag < 7) return `${dag} ${dag === 1 ? "dag" : "dagen"} geleden`;
+  const week = Math.floor(dag / 7);
+  if (week < 5) return `${week} ${week === 1 ? "week" : "weken"} geleden`;
+  const maand = Math.floor(dag / 30);
+  return `${maand} ${maand === 1 ? "maand" : "maanden"} geleden`;
+}
+
+function onlinKleur(iso: string | null | undefined): string {
+  if (!iso) return "text-muted-foreground";
+  const uur = (Date.now() - new Date(iso).getTime()) / 3600000;
+  if (uur < 1) return "text-green-600";
+  if (uur < 24) return "text-amber-600";
+  return "text-muted-foreground";
+}
+
 const leegForm = {
   naam: "", email: "", rol: "monteur",
   telefoon: "", bedrijf: "", wachtwoord: "", actief: true,
 };
-
 type GebruikerForm = typeof leegForm;
 
 type Gebruiker = {
@@ -57,36 +107,28 @@ type Gebruiker = {
   telefoon: string | null;
   bedrijf: string | null;
   actief: boolean | null;
+  laatste_online?: string | null;
 };
 
 export default function Gebruikers() {
   const queryClient = useQueryClient();
   const { data: gebruikers, isLoading, refetch, isFetching } = useListGebruikers();
-  const maakGebruiker   = useCreateGebruiker();
-  const werkBijGebruiker = useUpdateGebruiker();
-  const verwijderGebruiker = useDeleteGebruiker();
+  const maakGebruiker       = useCreateGebruiker();
+  const werkBijGebruiker    = useUpdateGebruiker();
+  const verwijderGebruiker  = useDeleteGebruiker();
 
-  // Toevoegen dialoog
-  const [toevoegenOpen, setToevoegenOpen] = useState(false);
-  const [toevoegenForm, setToevoegenForm] = useState<GebruikerForm>(leegForm);
-  const [toevoegenFout, setToevoegenFout] = useState<string | null>(null);
+  const [toevoegenOpen, setToevoegenOpen]     = useState(false);
+  const [toevoegenForm, setToevoegenForm]     = useState<GebruikerForm>(leegForm);
+  const [toevoegenFout, setToevoegenFout]     = useState<string | null>(null);
 
-  // Bewerken dialoog
   const [bewerkGebruiker, setBewerkGebruiker] = useState<Gebruiker | null>(null);
-  const [bewerkForm, setBewerkForm] = useState<GebruikerForm>(leegForm);
-  const [bewerkFout, setBewerkFout] = useState<string | null>(null);
+  const [bewerkForm, setBewerkForm]           = useState<GebruikerForm>(leegForm);
+  const [bewerkFout, setBewerkFout]           = useState<string | null>(null);
 
-  // Verwijderen dialoog
   const [verwijderTarget, setVerwijderTarget] = useState<Gebruiker | null>(null);
 
-  // --- Helpers ---
   const invalideer = () => queryClient.invalidateQueries({ queryKey: ["listGebruikers"] });
 
-  const setT = (setter: React.Dispatch<React.SetStateAction<GebruikerForm>>, k: keyof GebruikerForm) =>
-    (e: React.ChangeEvent<HTMLInputElement>) =>
-      setter((f) => ({ ...f, [k]: e.target.value }));
-
-  // --- Toevoegen ---
   async function verstuurToevoegen(e: React.FormEvent) {
     e.preventDefault();
     setToevoegenFout(null);
@@ -97,11 +139,11 @@ export default function Gebruikers() {
     try {
       await maakGebruiker.mutateAsync({
         data: {
-          naam: toevoegenForm.naam.trim(),
-          email: toevoegenForm.email.trim(),
-          rol: toevoegenForm.rol as any,
-          telefoon: toevoegenForm.telefoon.trim() || undefined,
-          bedrijf:  toevoegenForm.bedrijf.trim()  || undefined,
+          naam:       toevoegenForm.naam.trim(),
+          email:      toevoegenForm.email.trim(),
+          rol:        toevoegenForm.rol as any,
+          telefoon:   toevoegenForm.telefoon.trim() || undefined,
+          bedrijf:    toevoegenForm.bedrijf.trim()  || undefined,
           wachtwoord: toevoegenForm.wachtwoord.trim() || undefined,
         },
       });
@@ -113,22 +155,20 @@ export default function Gebruikers() {
     }
   }
 
-  // --- Bewerken openen ---
   function openBewerken(g: Gebruiker) {
     setBewerkGebruiker(g);
     setBewerkForm({
-      naam: g.naam ?? "",
-      email: g.email ?? "",
-      rol: g.rol ?? "monteur",
-      telefoon: g.telefoon ?? "",
-      bedrijf: g.bedrijf ?? "",
+      naam:      g.naam      ?? "",
+      email:     g.email     ?? "",
+      rol:       g.rol       ?? "monteur",
+      telefoon:  g.telefoon  ?? "",
+      bedrijf:   g.bedrijf   ?? "",
       wachtwoord: "",
-      actief: g.actief ?? true,
+      actief:    g.actief    ?? true,
     });
     setBewerkFout(null);
   }
 
-  // --- Bewerken opslaan ---
   async function verstuurBewerken(e: React.FormEvent) {
     e.preventDefault();
     if (!bewerkGebruiker) return;
@@ -156,7 +196,6 @@ export default function Gebruikers() {
     }
   }
 
-  // --- Verwijderen bevestigen ---
   async function bevestigVerwijderen() {
     if (!verwijderTarget) return;
     await verwijderGebruiker.mutateAsync({ id: verwijderTarget.id });
@@ -164,12 +203,21 @@ export default function Gebruikers() {
     setVerwijderTarget(null);
   }
 
+  // Groepeer per rol
+  const perRol = ROLLEN.reduce<Record<string, Gebruiker[]>>((acc, rol) => {
+    acc[rol] = (gebruikers ?? []).filter((g) => g.rol === rol) as Gebruiker[];
+    return acc;
+  }, {} as Record<string, Gebruiker[]>);
+
   return (
-    <div className="space-y-6 max-w-7xl mx-auto">
+    <div className="space-y-6 max-w-[1400px] mx-auto">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Gebruikers</h1>
-          <p className="text-muted-foreground mt-1">Beheer accounts en toegangsrechten.</p>
+          <p className="text-muted-foreground mt-1">
+            Beheer accounts en toegangsrechten — geordend op rechtenniveau.
+          </p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" size="icon" onClick={() => refetch()} disabled={isFetching} title="Vernieuwen">
@@ -181,108 +229,119 @@ export default function Gebruikers() {
         </div>
       </div>
 
-      {/* Statistieken per rol */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {(["beheerder", "monteur", "controleur", "klant"] as const).map((rol) => (
-          <Card key={rol}>
-            <CardContent className="pt-4 pb-3">
-              <div className="text-2xl font-bold">
-                {gebruikers?.filter((g) => g.rol === rol).length ?? 0}
-              </div>
-              <div className="text-sm text-muted-foreground">{rolLabel[rol]}</div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      {/* Laadstatus */}
-      {isLoading && (
-        <div className="grid gap-4 sm:grid-cols-2">
-          {[1, 2, 3, 4].map((i) => <div key={i} className="h-32 bg-muted animate-pulse rounded-lg" />)}
-        </div>
-      )}
-
-      {/* Gebruikerskaarten */}
-      {!isLoading && (
-        <div className="grid gap-4 sm:grid-cols-2">
-          {gebruikers?.map((gebruiker) => (
-            <Card key={gebruiker.id} className="hover:shadow-md transition-shadow">
-              <CardContent className="p-4">
-                <div className="flex items-start gap-4">
-                  <Avatar className="h-12 w-12 text-sm border-2 border-primary/20 flex-shrink-0">
-                    <AvatarFallback className="bg-primary/10 text-primary font-semibold">
-                      {initialen(gebruiker.naam ?? "")}
-                    </AvatarFallback>
-                  </Avatar>
-
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-semibold">{gebruiker.naam}</span>
-                      <Badge variant="outline" className={rolKleur[gebruiker.rol ?? ""]}>
-                        <Shield className="h-3 w-3 mr-1" />
-                        {rolLabel[gebruiker.rol ?? ""] ?? gebruiker.rol}
-                      </Badge>
-                      {!gebruiker.actief && (
-                        <Badge variant="outline" className="bg-gray-100 text-gray-500">Inactief</Badge>
-                      )}
-                    </div>
-                    <div className="space-y-1 mt-2">
-                      {gebruiker.email && (
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <Mail className="h-3.5 w-3.5 flex-shrink-0" />
-                          <span className="truncate">{gebruiker.email}</span>
-                        </div>
-                      )}
-                      {gebruiker.telefoon && (
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <Phone className="h-3.5 w-3.5" />
-                          <span>{gebruiker.telefoon}</span>
-                        </div>
-                      )}
-                      {gebruiker.bedrijf && (
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <Building className="h-3.5 w-3.5" />
-                          <span>{gebruiker.bedrijf}</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Acties */}
-                  <div className="flex gap-1 flex-shrink-0">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                      onClick={() => openBewerken(gebruiker as Gebruiker)}
-                    >
-                      <Pencil className="h-3.5 w-3.5" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                      onClick={() => setVerwijderTarget(gebruiker as Gebruiker)}
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+      {/* Kolommenraster */}
+      {isLoading ? (
+        <div className="grid grid-cols-4 gap-4">
+          {ROLLEN.map((rol) => (
+            <div key={rol} className="space-y-3">
+              <div className="h-16 bg-muted animate-pulse rounded-lg" />
+              {[1, 2].map((i) => <div key={i} className="h-28 bg-muted animate-pulse rounded-lg" />)}
+            </div>
           ))}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 items-start">
+          {ROLLEN.map((rol) => {
+            const cfg  = ROL_CONFIG[rol];
+            const Icon = cfg.icon;
+            const lijst = perRol[rol] ?? [];
 
-          {!gebruikers?.length && (
-            <Card className="col-span-2">
-              <CardContent className="py-12 text-center text-muted-foreground">
-                Geen gebruikers gevonden.
-              </CardContent>
-            </Card>
-          )}
+            return (
+              <div key={rol} className="space-y-3">
+                {/* Kolomkoptekst */}
+                <Card className="border-2">
+                  <CardHeader className="pb-2 pt-4 px-4">
+                    <CardTitle className={`flex items-center gap-2 text-base ${cfg.kleur}`}>
+                      <Icon className="h-4 w-4" />
+                      {cfg.label}
+                      <span className="ml-auto text-lg font-bold">{lijst.length}</span>
+                    </CardTitle>
+                    <p className="text-xs text-muted-foreground">{cfg.beschrijving}</p>
+                  </CardHeader>
+                </Card>
+
+                {/* Gebruikerskaarten */}
+                {lijst.length === 0 && (
+                  <div className="text-center text-sm text-muted-foreground py-6 border border-dashed rounded-lg">
+                    Geen {cfg.label.toLowerCase()}
+                  </div>
+                )}
+
+                {lijst.map((g) => (
+                  <Card key={g.id} className="hover:shadow-md transition-shadow">
+                    <CardContent className="p-3">
+                      <div className="flex items-start gap-3">
+                        <Avatar className="h-9 w-9 text-xs border-2 border-primary/10 flex-shrink-0 mt-0.5">
+                          <AvatarFallback className="bg-primary/10 text-primary font-semibold text-xs">
+                            {initialen(g.naam ?? "")}
+                          </AvatarFallback>
+                        </Avatar>
+
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-start justify-between gap-1">
+                            <span className="font-semibold text-sm leading-tight truncate">{g.naam}</span>
+                            <div className="flex gap-0.5 flex-shrink-0">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6 text-muted-foreground hover:text-foreground"
+                                onClick={() => openBewerken(g)}
+                              >
+                                <Pencil className="h-3 w-3" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6 text-muted-foreground hover:text-destructive"
+                                onClick={() => setVerwijderTarget(g)}
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          </div>
+
+                          <div className="space-y-1 mt-1.5">
+                            {g.email && (
+                              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                                <Mail className="h-3 w-3 flex-shrink-0" />
+                                <span className="truncate">{g.email}</span>
+                              </div>
+                            )}
+                            {g.telefoon && (
+                              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                                <Phone className="h-3 w-3 flex-shrink-0" />
+                                <span>{g.telefoon}</span>
+                              </div>
+                            )}
+                            {g.bedrijf && (
+                              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                                <Building className="h-3 w-3 flex-shrink-0" />
+                                <span className="truncate">{g.bedrijf}</span>
+                              </div>
+                            )}
+                            <div className={`flex items-center gap-1.5 text-xs ${onlinKleur(g.laatste_online)} pt-0.5 border-t border-border/50 mt-1.5`}>
+                              <Clock className="h-3 w-3 flex-shrink-0" />
+                              <span>{relatiefTijdstip(g.laatste_online)}</span>
+                            </div>
+                          </div>
+
+                          {!g.actief && (
+                            <Badge variant="outline" className="mt-2 text-xs bg-gray-100 text-gray-500">
+                              Inactief
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            );
+          })}
         </div>
       )}
 
-      {/* ── Dialoog: gebruiker toevoegen ── */}
+      {/* ── Dialoog: toevoegen ── */}
       <Dialog open={toevoegenOpen} onOpenChange={(o) => { if (!o) { setToevoegenOpen(false); setToevoegenFout(null); } }}>
         <DialogContent className="max-w-md" aria-describedby="toevoegen-beschr">
           <DialogHeader>
@@ -306,7 +365,7 @@ export default function Gebruikers() {
         </DialogContent>
       </Dialog>
 
-      {/* ── Dialoog: gebruiker bewerken ── */}
+      {/* ── Dialoog: bewerken ── */}
       <Dialog open={!!bewerkGebruiker} onOpenChange={(o) => { if (!o) { setBewerkGebruiker(null); setBewerkFout(null); } }}>
         <DialogContent className="max-w-md" aria-describedby="bewerk-beschr">
           <DialogHeader>
@@ -330,7 +389,7 @@ export default function Gebruikers() {
         </DialogContent>
       </Dialog>
 
-      {/* ── AlertDialog: verwijderen bevestigen ── */}
+      {/* ── AlertDialog: verwijderen ── */}
       <AlertDialog open={!!verwijderTarget} onOpenChange={(o) => { if (!o) setVerwijderTarget(null); }}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -355,7 +414,6 @@ export default function Gebruikers() {
   );
 }
 
-// ── Gedeeld formuliervelden component ──
 function GebruikerVelden({
   form,
   setForm,
@@ -374,35 +432,30 @@ function GebruikerVelden({
         <Label htmlFor="vld-naam">Volledige naam *</Label>
         <Input id="vld-naam" value={form.naam} onChange={set("naam")} placeholder="Jan de Vries" autoFocus required />
       </div>
-
       <div className="col-span-2">
         <Label htmlFor="vld-email">E-mailadres *</Label>
         <Input id="vld-email" type="email" value={form.email} onChange={set("email")} placeholder="jan@bedrijf.nl" required />
       </div>
-
       <div>
         <Label>Rol *</Label>
         <Select value={form.rol} onValueChange={(v) => setForm((f) => ({ ...f, rol: v }))}>
           <SelectTrigger><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="beheerder">Beheerder</SelectItem>
-            <SelectItem value="monteur">Monteur</SelectItem>
             <SelectItem value="controleur">Controleur</SelectItem>
+            <SelectItem value="monteur">Monteur</SelectItem>
             <SelectItem value="klant">Klant</SelectItem>
           </SelectContent>
         </Select>
       </div>
-
       <div>
         <Label htmlFor="vld-tel">Telefoonnummer</Label>
         <Input id="vld-tel" type="tel" value={form.telefoon} onChange={set("telefoon")} placeholder="+31 6 12345678" />
       </div>
-
       <div className="col-span-2">
         <Label htmlFor="vld-bedrijf">Bedrijf</Label>
         <Input id="vld-bedrijf" value={form.bedrijf} onChange={set("bedrijf")} placeholder="Naam van het bedrijf" />
       </div>
-
       <div className="col-span-2">
         <Label htmlFor="vld-ww">{toonActief ? "Nieuw wachtwoord" : "Tijdelijk wachtwoord"}</Label>
         <Input
@@ -410,10 +463,9 @@ function GebruikerVelden({
           type="password"
           value={form.wachtwoord}
           onChange={set("wachtwoord")}
-          placeholder={toonActief ? "Leeg laten om ongewijzigd te laten" : "Optioneel — gebruiker kan het zelf instellen"}
+          placeholder={toonActief ? "Leeg laten om ongewijzigd te laten" : "Optioneel"}
         />
       </div>
-
       {toonActief && (
         <div className="col-span-2 flex items-center justify-between rounded-lg border p-3">
           <div>
