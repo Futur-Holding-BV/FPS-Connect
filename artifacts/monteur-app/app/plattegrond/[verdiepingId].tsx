@@ -2,6 +2,7 @@ import {
   useAddFoto,
   useCreateVoorziening,
   useGetVerdieping,
+  useGetVolgendSpotnummer,
   useListFotos,
   useListVoorzieningenOpVerdieping,
 } from "@workspace/api-client-react";
@@ -78,6 +79,7 @@ export default function Plattegrond() {
 
   const { data: verdieping } = useGetVerdieping(vId);
   const { data: voorzieningen, refetch } = useListVoorzieningenOpVerdieping(vId);
+  const { data: volgendSpot, refetch: refetchSpotnummer } = useGetVolgendSpotnummer(gId);
   const maakVoorziening = useCreateVoorziening();
   const voegFotoToe = useAddFoto();
 
@@ -106,7 +108,7 @@ export default function Plattegrond() {
 
   function opTap(x: number, y: number) {
     setLocatie({ x, y });
-    setForm({ ...LEEG });
+    setForm({ ...LEEG, objectnummer: volgendSpot?.spotnummer ?? "" });
     setVoorFotos([]);
     setNaFotos([]);
     setFormOpen(true);
@@ -144,15 +146,11 @@ export default function Plattegrond() {
   }
 
   async function bewaar() {
-    if (!form.objectnummer.trim()) {
-      Alert.alert("Objectnummer ontbreekt", "Vul een objectnummer in.");
-      return;
-    }
     setOpslaan(true);
     try {
       const aangemaakt = await maakVoorziening.mutateAsync({
         data: {
-          objectnummer: form.objectnummer.trim(),
+          objectnummer: form.objectnummer.trim() || undefined,
           type: form.type,
           status: form.status,
           classificatie: form.classificatie,
@@ -182,6 +180,7 @@ export default function Plattegrond() {
       setFormOpen(false);
       setPlaatsModus(false);
       await refetch();
+      refetchSpotnummer();
       // Direct synchroniseren zodra verbinding beschikbaar is
       forceerSync();
     } catch (e) {
@@ -312,11 +311,10 @@ export default function Plattegrond() {
             keyboardShouldPersistTaps="handled"
           >
             <TekstVeld
-              label="Objectnummer"
+              label="Spotnummer"
               value={form.objectnummer}
-              onChangeText={(t) => setForm((f) => ({ ...f, objectnummer: t }))}
-              placeholder="bijv. BD-012"
-              autoCapitalize="characters"
+              editable={false}
+              placeholder="Wordt automatisch toegekend"
             />
 
             <View style={{ gap: 8 }}>

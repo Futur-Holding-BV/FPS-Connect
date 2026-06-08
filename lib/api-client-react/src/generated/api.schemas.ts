@@ -722,8 +722,12 @@ export interface VoorzieningLijst {
   per_pagina: number;
 }
 
+export interface VolgendSpotnummer {
+  spotnummer: string;
+}
+
 export interface VoorzieningInput {
-  objectnummer: string;
+  objectnummer?: string;
   qr_code?: string;
   type: string;
   status: string;

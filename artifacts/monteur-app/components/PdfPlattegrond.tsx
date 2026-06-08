@@ -104,7 +104,9 @@ function bouwHtml(domein: string, token: string, url: string | null): string {
       ring.style.background=CFG.status[s.status]||'#94a3b8';
       el.appendChild(ring);
       var lab=document.createElement('span');
-      lab.textContent=String(s.type||'').slice(0,2).toUpperCase();
+      var nr=String(s.objectnummer||'');
+      var m=nr.match(/(\d+)$/);
+      lab.textContent=m?m[1]:nr;
       el.appendChild(lab);
       (function(id){ el.addEventListener('click',function(ev){ ev.stopPropagation(); post({type:'spot',id:id}); }); })(s.id);
       wrap.appendChild(el);

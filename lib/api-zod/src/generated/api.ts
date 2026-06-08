@@ -227,6 +227,18 @@ export const AiAnalysePlattegrondResponse = zod.object({
 
 
 /**
+ * @summary Volgend automatisch spotnummer voor een gebouw ophalen
+ */
+export const GetVolgendSpotnummerParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetVolgendSpotnummerResponse = zod.object({
+  "spotnummer": zod.string()
+})
+
+
+/**
  * @summary Gebouwdetails ophalen
  */
 export const GetGebouwParams = zod.object({
@@ -709,7 +721,7 @@ export const ListVoorzieningenResponse = zod.object({
  * @summary Nieuwe voorziening registreren
  */
 export const CreateVoorzieningBody = zod.object({
-  "objectnummer": zod.string(),
+  "objectnummer": zod.string().optional(),
   "qr_code": zod.string().optional(),
   "type": zod.string(),
   "status": zod.string(),

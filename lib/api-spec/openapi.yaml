@@ -242,6 +242,26 @@ paths:
               schema:
                 $ref: "#/components/schemas/PlattegrondAiAnalyseResultaat"
 
+  /gebouwen/{id}/volgend-spotnummer:
+    get:
+      operationId: getVolgendSpotnummer
+      tags: [gebouwen]
+      summary: Volgend automatisch spotnummer voor een gebouw ophalen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VolgendSpotnummer"
+        "404":
+          description: Niet gevonden
   /gebouwen/{id}:
     get:
       operationId: getGebouw
@@ -2775,9 +2795,15 @@ components:
         per_pagina:
           type: integer
 
+    VolgendSpotnummer:
+      type: object
+      required: [spotnummer]
+      properties:
+        spotnummer:
+          type: string
     VoorzieningInput:
       type: object
-      required: [objectnummer, type, status, classificatie, gebouw_id]
+      required: [type, status, classificatie, gebouw_id]
       properties:
         objectnummer:
           type: string

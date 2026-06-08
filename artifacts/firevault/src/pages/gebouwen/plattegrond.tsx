@@ -8,6 +8,7 @@ import {
   useListVoorzieningenOpVerdieping,
   useListVerdiepingen,
   useCreateVoorziening,
+  useGetVolgendSpotnummer,
   useListGebruikers,
   useGetVoorziening,
   useUpdateVoorzieningStatus,
@@ -103,6 +104,7 @@ function VoorzieningIcoon({
 }) {
   const stijl = TYPEN[v.type] ?? { kleur: "#94a3b8", ring: "#475569", label: v.type };
   const r = 16;
+  const volgnummer = spotVolgnummer(v.objectnummer);
 
   return (
     <g
@@ -115,12 +117,12 @@ function VoorzieningIcoon({
       <text
         textAnchor="middle"
         dominantBaseline="central"
-        fontSize={9}
-        fontWeight="600"
+        fontSize={volgnummer.length > 2 ? 8 : 10}
+        fontWeight="700"
         fill="#fff"
         style={{ pointerEvents: "none", userSelect: "none" }}
       >
-        {v.type.slice(0, 2).toUpperCase()}
+        {volgnummer}
       </text>
       <text
         y={r + 13}
@@ -200,6 +202,11 @@ function FotoUploader({
   );
 }
 
+function spotVolgnummer(objectnummer: string): string {
+  const m = objectnummer?.match(/(\d+)$/);
+  return m ? m[1] : (objectnummer ?? "");
+}
+
 const LEEG_FORM = {
   objectnummer: "",
   type: "branddeur",
@@ -247,6 +254,7 @@ export default function Plattegrond() {
   const { data: voorzieningen, refetch } = useListVoorzieningenOpVerdieping(Number(verdiepingId));
   const { data: gebruikers } = useListGebruikers();
   const maakVoorziening = useCreateVoorziening();
+  const { data: volgendSpot, refetch: refetchSpotnummer } = useGetVolgendSpotnummer(Number(id));
   const addFoto = useAddFoto();
 
   const { data: scheidingen, refetch: refetchScheidingen } = useListScheidingen(Number(verdiepingId));
@@ -346,8 +354,9 @@ export default function Plattegrond() {
     const klemX = Math.min(W, Math.max(0, svgX));
     const klemY = Math.min(H, Math.max(0, svgY));
     setNieuwLocatie({ x: Math.round(klemX), y: Math.round(klemY) });
+    setNieuwForm((f) => ({ ...f, objectnummer: volgendSpot?.spotnummer ?? "" }));
     setNieuwDialoog(true);
-  }, [plaatsenModus, tekenModus, view, W, H]);
+  }, [plaatsenModus, tekenModus, view, W, H, volgendSpot]);
 
   const startTekenen = useCallback(() => {
     setPlaatsenModus(false);
@@ -485,6 +494,7 @@ export default function Plattegrond() {
     setVoorFotos([]);
     setNaFotos([]);
     refetch();
+    refetchSpotnummer();
   }
 
   function sluitDialoog(open: boolean) {
@@ -780,14 +790,17 @@ export default function Plattegrond() {
           <form onSubmit={maakNieuw} className="space-y-4 py-1">
             <div className="grid grid-cols-2 gap-3">
               <div className="col-span-2">
-                <Label htmlFor="nw-nr">Objectnummer *</Label>
+                <Label htmlFor="nw-nr">Spotnummer</Label>
                 <Input
                   id="nw-nr"
                   value={nieuwForm.objectnummer}
-                  onChange={(e) => setNieuwForm((f) => ({ ...f, objectnummer: e.target.value }))}
-                  placeholder="BV-2024-011"
-                  required
+                  readOnly
+                  className="bg-muted"
+                  placeholder="Wordt automatisch toegekend"
                 />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Automatisch toegekend op basis van het gebouw.
+                </p>
               </div>
 
               <div>

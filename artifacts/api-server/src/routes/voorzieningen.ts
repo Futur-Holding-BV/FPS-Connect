@@ -15,6 +15,58 @@ import { eq, and, ilike, sql } from "drizzle-orm";
 
 const router = Router();
 
+// Afkorting uit de gebouwnaam: eerste letter van elk woord (max 3), anders eerste 3 letters.
+function gebouwAfkorting(naam: string): string {
+  const woorden = (naam ?? "").trim().split(/\s+/).filter(Boolean);
+  let afk = "";
+  if (woorden.length >= 2) {
+    afk = woorden.map((w) => w[0]).join("");
+  } else if (woorden.length === 1) {
+    afk = woorden[0];
+  }
+  afk = afk.replace(/[^a-zA-Z0-9]/g, "").toUpperCase().slice(0, 3);
+  return afk || "GEB";
+}
+
+// Volgend uniek spotnummer voor een gebouw: <afkorting>-<volgnummer>.
+async function volgendSpotnummer(gebouwId: number): Promise<string> {
+  const gebouw = await db
+    .select({ naam: gebouwenTable.naam })
+    .from(gebouwenTable)
+    .where(eq(gebouwenTable.id, gebouwId))
+    .then((r) => r[0]);
+  const afk = gebouwAfkorting(gebouw?.naam ?? "");
+  const prefix = `${afk}-`;
+
+  const bestaande = await db
+    .select({ objectnummer: voorzieningenTable.objectnummer })
+    .from(voorzieningenTable)
+    .where(eq(voorzieningenTable.gebouwId, gebouwId));
+
+  let hoogste = 0;
+  for (const r of bestaande) {
+    if (!r.objectnummer?.startsWith(prefix)) continue;
+    const m = r.objectnummer.match(/(\d+)$/);
+    if (m) {
+      const n = parseInt(m[1], 10);
+      if (n > hoogste) hoogste = n;
+    }
+  }
+
+  let n = hoogste + 1;
+  // Garandeer globale uniciteit (objectnummer is uniek over alle gebouwen).
+  while (true) {
+    const kandidaat = `${prefix}${n}`;
+    const bestaat = await db
+      .select({ id: voorzieningenTable.id })
+      .from(voorzieningenTable)
+      .where(eq(voorzieningenTable.objectnummer, kandidaat))
+      .then((r) => r[0]);
+    if (!bestaat) return kandidaat;
+    n++;
+  }
+}
+
 async function mapVoorziening(v: typeof voorzieningenTable.$inferSelect) {
   const gebouw = v.gebouwId
     ? await db.select({ naam: gebouwenTable.naam }).from(gebouwenTable).where(eq(gebouwenTable.id, v.gebouwId)).then((r) => r[0])
@@ -100,6 +152,26 @@ router.get("/voorzieningen", async (req, res) => {
   }
 });
 
+// GET /gebouwen/:id/volgend-spotnummer
+router.get("/gebouwen/:id/volgend-spotnummer", async (req, res) => {
+  try {
+    const gebouwId = Number(req.params.id);
+    const gebouw = await db
+      .select({ id: gebouwenTable.id })
+      .from(gebouwenTable)
+      .where(eq(gebouwenTable.id, gebouwId))
+      .then((r) => r[0]);
+    if (!gebouw) {
+      return res.status(404).json({ error: "Gebouw niet gevonden" });
+    }
+    const spotnummer = await volgendSpotnummer(gebouwId);
+    return res.json({ spotnummer });
+  } catch (err) {
+    req.log.error(err);
+    return res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
 // POST /voorzieningen
 router.post("/voorzieningen", async (req, res) => {
   try {
@@ -111,29 +183,55 @@ router.post("/voorzieningen", async (req, res) => {
       wbdbo, wrd, wand_of_plafond, maker_monteur_id,
     } = req.body;
 
-    if (!objectnummer || !type || !gebouw_id) {
-      return res.status(400).json({ error: "objectnummer, type en gebouw_id zijn verplicht" });
+    if (!type || !gebouw_id) {
+      return res.status(400).json({ error: "type en gebouw_id zijn verplicht" });
     }
 
-    const [v] = await db
-      .insert(voorzieningenTable)
-      .values({
-        objectnummer, qrCode: qr_code, type, status: status ?? "concept",
-        classificatie: classificatie ?? "60", gebouwId: gebouw_id,
-        verdiepingId: verdieping_id, ruimte, locatieOmschrijving: locatie_omschrijving,
-        locatieX: locatie_x, locatieY: locatie_y, materialen, opmerkingen,
-        monteurId: monteur_id, controleurId: controleur_id,
-        installatieDatum: installatie_datum, volgendeInspectie: volgende_inspectie,
-        wbdbo, wrd, wandOfPlafond: wand_of_plafond, makerMonteurId: maker_monteur_id,
-      })
-      .returning();
+    // Een door de client meegestuurd nummer kan verouderd zijn (gebruiker had
+    // een ouder voorgesteld spotnummer in beeld). Bij een uniciteitsbotsing
+    // genereren we daarom een vers spotnummer en proberen we opnieuw.
+    let nummer =
+      objectnummer && String(objectnummer).trim()
+        ? String(objectnummer).trim()
+        : await volgendSpotnummer(Number(gebouw_id));
+
+    let v: typeof voorzieningenTable.$inferSelect | undefined;
+    for (let poging = 0; poging < 5; poging++) {
+      try {
+        [v] = await db
+          .insert(voorzieningenTable)
+          .values({
+            objectnummer: nummer, qrCode: qr_code, type, status: status ?? "concept",
+            classificatie: classificatie ?? "60", gebouwId: gebouw_id,
+            verdiepingId: verdieping_id, ruimte, locatieOmschrijving: locatie_omschrijving,
+            locatieX: locatie_x, locatieY: locatie_y, materialen, opmerkingen,
+            monteurId: monteur_id, controleurId: controleur_id,
+            installatieDatum: installatie_datum, volgendeInspectie: volgende_inspectie,
+            wbdbo, wrd, wandOfPlafond: wand_of_plafond, makerMonteurId: maker_monteur_id,
+          })
+          .returning();
+        break;
+      } catch (insertErr) {
+        const code = (insertErr as { code?: string })?.code;
+        if (code === "23505" && poging < 4) {
+          // Uniciteitsbotsing op objectnummer: genereer een vers spotnummer.
+          nummer = await volgendSpotnummer(Number(gebouw_id));
+          continue;
+        }
+        throw insertErr;
+      }
+    }
+
+    if (!v) {
+      return res.status(409).json({ error: "Kon geen uniek spotnummer toekennen" });
+    }
 
     await db.insert(activiteitenTable).values({
       type: "voorziening_aangemaakt",
-      omschrijving: `Voorziening ${objectnummer} aangemaakt`,
+      omschrijving: `Voorziening ${nummer} aangemaakt`,
       gebouwId: gebouw_id,
       voorzieningId: v.id,
-      voorzieningNummer: objectnummer,
+      voorzieningNummer: nummer,
     });
 
     res.status(201).json(await mapVoorziening(v));

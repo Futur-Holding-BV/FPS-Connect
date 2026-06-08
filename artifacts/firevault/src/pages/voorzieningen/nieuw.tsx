@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
-import { useCreateVoorziening, useListGebouwen, useListVerdiepingen } from "@workspace/api-client-react";
+import { getGetVolgendSpotnummerQueryKey, useCreateVoorziening, useGetVolgendSpotnummer, useListGebouwen, useListVerdiepingen } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -45,6 +45,12 @@ export default function VoorzieningNieuw() {
   const { data: verdiepingen } = useListVerdiepingen(Number(gebouwId), {
     query: { enabled: !!gebouwId },
   });
+  const { data: volgendSpot } = useGetVolgendSpotnummer(Number(gebouwId), {
+    query: {
+      enabled: !!gebouwId,
+      queryKey: getGetVolgendSpotnummerQueryKey(Number(gebouwId)),
+    },
+  });
   const maakVoorziening = useCreateVoorziening();
 
   const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
@@ -52,10 +58,10 @@ export default function VoorzieningNieuw() {
 
   async function verstuur(e: React.FormEvent) {
     e.preventDefault();
-    if (!form.objectnummer || !form.type || !gebouwId) return;
+    if (!form.type || !gebouwId) return;
     await maakVoorziening.mutateAsync({
       data: {
-        objectnummer: form.objectnummer,
+        objectnummer: volgendSpot?.spotnummer,
         type: form.type,
         classificatie: form.classificatie,
         ruimte: form.ruimte || undefined,
@@ -75,7 +81,7 @@ export default function VoorzieningNieuw() {
       <div className="max-w-xl mx-auto py-16 text-center space-y-4">
         <CheckCircle className="h-14 w-14 text-green-600 mx-auto" />
         <h2 className="text-2xl font-bold">Voorziening geregistreerd</h2>
-        <p className="text-muted-foreground">{form.objectnummer} is succesvol aangemaakt in het systeem.</p>
+        <p className="text-muted-foreground">{volgendSpot?.spotnummer ?? "De voorziening"} is succesvol aangemaakt in het systeem.</p>
         <div className="flex justify-center gap-3 pt-2">
           <Button variant="outline" asChild><Link href="/voorzieningen">Terug naar overzicht</Link></Button>
           <Button onClick={() => { setGeslaagd(false); setForm({ objectnummer: "", type: "branddeur", classificatie: "60", ruimte: "", locatie_omschrijving: "", materialen: "", opmerkingen: "", verdieping_id: "", installatie_datum: "" }); setGebouwId(""); }}>
@@ -103,8 +109,17 @@ export default function VoorzieningNieuw() {
           <CardHeader><CardTitle className="text-base">Identificatie</CardTitle></CardHeader>
           <CardContent className="grid grid-cols-2 gap-4">
             <div className="col-span-2">
-              <Label htmlFor="nr">Objectnummer *</Label>
-              <Input id="nr" value={form.objectnummer} onChange={set("objectnummer")} placeholder="BV-2024-011" required />
+              <Label htmlFor="nr">Spotnummer</Label>
+              <Input
+                id="nr"
+                value={volgendSpot?.spotnummer ?? ""}
+                readOnly
+                className="bg-muted"
+                placeholder={gebouwId ? "Wordt automatisch toegekend" : "Kies eerst een gebouw"}
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Automatisch toegekend op basis van het gebouw.
+              </p>
             </div>
             <div>
               <Label>Type *</Label>
@@ -185,7 +200,7 @@ export default function VoorzieningNieuw() {
           <Button type="button" variant="outline" asChild>
             <Link href="/voorzieningen">Annuleren</Link>
           </Button>
-          <Button type="submit" disabled={maakVoorziening.isPending || !form.objectnummer || !gebouwId}>
+          <Button type="submit" disabled={maakVoorziening.isPending || !gebouwId}>
             {maakVoorziening.isPending ? "Opslaan..." : "Voorziening Registreren"}
           </Button>
         </div>

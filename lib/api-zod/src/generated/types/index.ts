@@ -99,6 +99,7 @@ export * from './verdieping';
 export * from './verdiepingInput';
 export * from './verdiepingUpdate';
 export * from './vervaldag';
+export * from './volgendSpotnummer';
 export * from './voorziening';
 export * from './voorzieningClassificatie';
 export * from './voorzieningDetail';

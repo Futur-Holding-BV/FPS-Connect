@@ -7,7 +7,7 @@
  */
 
 export interface VoorzieningInput {
-  objectnummer: string;
+  objectnummer?: string;
   qr_code?: string;
   type: string;
   status: string;

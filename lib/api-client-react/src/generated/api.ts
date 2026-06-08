@@ -95,6 +95,7 @@ import type {
   VerdiepingInput,
   VerdiepingUpdate,
   Vervaldag,
+  VolgendSpotnummer,
   Voorziening,
   VoorzieningDetail,
   VoorzieningInput,
@@ -880,6 +881,83 @@ export const useAiAnalysePlattegrond = <TError = ErrorType<unknown>,
       > => {
       return useMutation(getAiAnalysePlattegrondMutationOptions(options));
     }
+
+export const getGetVolgendSpotnummerUrl = (id: number,) => {
+
+
+
+
+  return `/api/gebouwen/${id}/volgend-spotnummer`
+}
+
+/**
+ * @summary Volgend automatisch spotnummer voor een gebouw ophalen
+ */
+export const getVolgendSpotnummer = async (id: number, options?: RequestInit): Promise<VolgendSpotnummer> => {
+
+  return customFetch<VolgendSpotnummer>(getGetVolgendSpotnummerUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetVolgendSpotnummerQueryKey = (id: number,) => {
+    return [
+    `/api/gebouwen/${id}/volgend-spotnummer`
+    ] as const;
+    }
+
+
+export const getGetVolgendSpotnummerQueryOptions = <TData = Awaited<ReturnType<typeof getVolgendSpotnummer>>, TError = ErrorType<void>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getVolgendSpotnummer>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetVolgendSpotnummerQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getVolgendSpotnummer>>> = ({ signal }) => getVolgendSpotnummer(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getVolgendSpotnummer>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetVolgendSpotnummerQueryResult = NonNullable<Awaited<ReturnType<typeof getVolgendSpotnummer>>>
+export type GetVolgendSpotnummerQueryError = ErrorType<void>
+
+
+/**
+ * @summary Volgend automatisch spotnummer voor een gebouw ophalen
+ */
+
+export function useGetVolgendSpotnummer<TData = Awaited<ReturnType<typeof getVolgendSpotnummer>>, TError = ErrorType<void>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getVolgendSpotnummer>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetVolgendSpotnummerQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
 
 export const getGetGebouwUrl = (id: number,) => {
 

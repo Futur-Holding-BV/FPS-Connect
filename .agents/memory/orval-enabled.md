@@ -9,3 +9,12 @@ description: Pre-existing TypeScript fout bij { query: { enabled } } pattern in 
 **Why:** Vite werkt gewoon ondanks TS-fout. Maar typisch TypeScript type-check via CI/CD geeft fouten. Niet fixen in gegenereerde bestanden.
 
 **How to apply:** Gate op UI-niveau (`{isBeheerder && <Sectie />}`) in plaats van `enabled` in de hook-opties. Of accepteer de TS-fout als pre-existing (ze staan al in `voorzieningen/detail.tsx`, `voorzieningen/nieuw.tsx`, `voorzieningen/qr.tsx`).
+
+## Schone fix zonder TS-fout (voorkeur voor NIEUWE code)
+Geef de gegenereerde queryKey-helper mee zodat het type compleet is:
+```ts
+useGetVolgendSpotnummer(Number(gebouwId), {
+  query: { enabled: !!gebouwId, queryKey: getGetVolgendSpotnummerQueryKey(Number(gebouwId)) },
+});
+```
+Elke operation heeft een `getGet<OperationId>QueryKey(...)` export. Zo voeg je `enabled` toe zonder een nieuwe TS2741 te introduceren. **Why:** taakeis "geen nieuwe typecheck-fouten" terwijl je conditioneel moet fetchen.
