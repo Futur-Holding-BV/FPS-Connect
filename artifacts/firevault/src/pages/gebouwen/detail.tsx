@@ -105,6 +105,11 @@ export default function GebouwDetail() {
           </Button>
         </Link>
         <div className="flex-1">
+          {gebouw.werknummer && (
+            <span className="text-sm font-mono text-muted-foreground">
+              Werknummer {gebouw.werknummer}
+            </span>
+          )}
           <h1 className="text-3xl font-bold tracking-tight">{gebouw.naam}</h1>
           <p className="text-muted-foreground mt-1">
             {gebouw.adres}, {gebouw.stad}

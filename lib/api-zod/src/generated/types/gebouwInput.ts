@@ -7,6 +7,7 @@
  */
 
 export interface GebouwInput {
+  werknummer: string;
   naam: string;
   adres: string;
   stad?: string;

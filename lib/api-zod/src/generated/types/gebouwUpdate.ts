@@ -7,6 +7,7 @@
  */
 
 export interface GebouwUpdate {
+  werknummer?: string | null;
   naam?: string;
   adres?: string;
   stad?: string | null;

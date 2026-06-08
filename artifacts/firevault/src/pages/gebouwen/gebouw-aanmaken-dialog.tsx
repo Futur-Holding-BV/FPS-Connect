@@ -22,6 +22,7 @@ import { Separator } from "@/components/ui/separator";
 import { Plus, Sparkles, Loader2, AlertCircle } from "lucide-react";
 
 interface Velden {
+  werknummer: string;
   naam: string;
   adres: string;
   stad: string;
@@ -36,6 +37,7 @@ interface Velden {
 }
 
 const LEEG: Velden = {
+  werknummer: "",
   naam: "",
   adres: "",
   stad: "",
@@ -128,9 +130,14 @@ export function GebouwAanmakenDialog() {
       setFoutmelding("Naam en adres zijn verplicht.");
       return;
     }
+    if (!velden.werknummer.trim()) {
+      setFoutmelding("Werknummer is verplicht.");
+      return;
+    }
     try {
       await maakGebouw.mutateAsync({
         data: {
+          werknummer: velden.werknummer.trim(),
           naam: velden.naam,
           adres: velden.adres,
           stad: velden.stad || undefined,
@@ -147,8 +154,12 @@ export function GebouwAanmakenDialog() {
       await queryClient.invalidateQueries();
       herstel();
       setOpen(false);
-    } catch {
-      setFoutmelding("Gebouw kon niet worden opgeslagen.");
+    } catch (err) {
+      if ((err as { status?: number })?.status === 409) {
+        setFoutmelding("Dit werknummer is al in gebruik. Kies een uniek werknummer.");
+      } else {
+        setFoutmelding("Gebouw kon niet worden opgeslagen.");
+      }
     }
   }
 
@@ -243,6 +254,18 @@ export function GebouwAanmakenDialog() {
 
         {/* Gegevens */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="space-y-1.5 sm:col-span-2">
+            <Label htmlFor="g-werknummer">Werknummer *</Label>
+            <Input
+              id="g-werknummer"
+              placeholder="bijv. 2026-001"
+              value={velden.werknummer}
+              onChange={(e) => zet("werknummer", e.target.value)}
+            />
+            <p className="text-xs text-muted-foreground">
+              Uniek nummer dat dit gebouw identificeert.
+            </p>
+          </div>
           <div className="space-y-1.5">
             <Label htmlFor="g-naam">Naam *</Label>
             <Input

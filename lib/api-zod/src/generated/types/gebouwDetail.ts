@@ -10,6 +10,8 @@ import type { Verdieping } from './verdieping';
 
 export interface GebouwDetail {
   id: number;
+  /** @nullable */
+  werknummer?: string | null;
   naam: string;
   adres: string;
   /** @nullable */

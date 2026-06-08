@@ -8,6 +8,8 @@
 
 export interface Gebouw {
   id: number;
+  /** @nullable */
+  werknummer?: string | null;
   naam: string;
   adres: string;
   /** @nullable */

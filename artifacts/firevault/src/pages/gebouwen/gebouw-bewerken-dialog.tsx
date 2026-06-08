@@ -22,6 +22,7 @@ import { Separator } from "@/components/ui/separator";
 import { Loader2, AlertCircle, Sparkles } from "lucide-react";
 
 interface Velden {
+  werknummer: string;
   naam: string;
   adres: string;
   stad: string;
@@ -47,6 +48,7 @@ function getalOfNull(v: string): number | null {
 
 function uitGebouw(gebouw: Gebouw): Velden {
   return {
+    werknummer: tekst(gebouw.werknummer),
     naam: tekst(gebouw.naam),
     adres: tekst(gebouw.adres),
     stad: tekst(gebouw.stad),
@@ -155,6 +157,7 @@ export function GebouwBewerkenDialog({ gebouw, open, onOpenChange }: Props) {
       await wijzigGebouw.mutateAsync({
         id: gebouw.id,
         data: {
+          werknummer: velden.werknummer.trim() || null,
           naam: velden.naam,
           adres: velden.adres,
           stad: velden.stad || null,
@@ -170,8 +173,12 @@ export function GebouwBewerkenDialog({ gebouw, open, onOpenChange }: Props) {
       });
       await queryClient.invalidateQueries();
       onOpenChange(false);
-    } catch {
-      setFoutmelding("Gebouw kon niet worden opgeslagen.");
+    } catch (err) {
+      if ((err as { status?: number })?.status === 409) {
+        setFoutmelding("Dit werknummer is al in gebruik. Kies een uniek werknummer.");
+      } else {
+        setFoutmelding("Gebouw kon niet worden opgeslagen.");
+      }
     }
   }
 
@@ -254,6 +261,18 @@ export function GebouwBewerkenDialog({ gebouw, open, onOpenChange }: Props) {
         <Separator />
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="space-y-1.5 sm:col-span-2">
+            <Label htmlFor="b-werknummer">Werknummer</Label>
+            <Input
+              id="b-werknummer"
+              placeholder="bijv. 2026-001"
+              value={velden.werknummer}
+              onChange={(e) => zet("werknummer", e.target.value)}
+            />
+            <p className="text-xs text-muted-foreground">
+              Uniek nummer dat dit gebouw identificeert.
+            </p>
+          </div>
           <div className="space-y-1.5">
             <Label htmlFor="b-naam">Naam *</Label>
             <Input

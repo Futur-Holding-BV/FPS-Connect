@@ -153,7 +153,14 @@ export default function Gebouwen() {
                       {gebouw.totaal_voorzieningen} voorzieningen
                     </Badge>
                   </div>
-                  <CardTitle className="mt-4">{gebouw.naam}</CardTitle>
+                  {gebouw.werknummer && (
+                    <Badge variant="secondary" className="mt-4 w-fit font-mono text-xs">
+                      {gebouw.werknummer}
+                    </Badge>
+                  )}
+                  <CardTitle className={gebouw.werknummer ? "mt-2" : "mt-4"}>
+                    {gebouw.naam}
+                  </CardTitle>
                   <CardDescription>{gebouw.adres}, {gebouw.stad}</CardDescription>
                 </CardHeader>
                 <CardContent className="mt-auto">

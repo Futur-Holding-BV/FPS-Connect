@@ -5,6 +5,7 @@ import { gebruikersTable } from "./gebruikers";
 
 export const gebouwenTable = pgTable("gebouwen", {
   id: serial("id").primaryKey(),
+  werknummer: text("werknummer").unique(),
   naam: text("naam").notNull(),
   adres: text("adres").notNull(),
   stad: text("stad"),

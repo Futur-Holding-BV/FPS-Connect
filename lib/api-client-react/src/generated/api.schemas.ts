@@ -60,6 +60,8 @@ export interface Vervaldag {
 
 export interface Gebouw {
   id: number;
+  /** @nullable */
+  werknummer?: string | null;
   naam: string;
   adres: string;
   /** @nullable */
@@ -116,6 +118,8 @@ export interface GebouwStats {
 
 export interface GebouwDetail {
   id: number;
+  /** @nullable */
+  werknummer?: string | null;
   naam: string;
   adres: string;
   /** @nullable */
@@ -298,6 +302,7 @@ export interface ScheidingUpdate {
 }
 
 export interface GebouwInput {
+  werknummer: string;
   naam: string;
   adres: string;
   stad?: string;
@@ -315,6 +320,7 @@ export interface GebouwInput {
 }
 
 export interface GebouwUpdate {
+  werknummer?: string | null;
   naam?: string;
   adres?: string;
   stad?: string | null;

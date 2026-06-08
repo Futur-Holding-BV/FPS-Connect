@@ -1951,6 +1951,8 @@ components:
       properties:
         id:
           type: integer
+        werknummer:
+          type: ["string", "null"]
         naam:
           type: string
         adres:
@@ -1992,6 +1994,8 @@ components:
       properties:
         id:
           type: integer
+        werknummer:
+          type: ["string", "null"]
         naam:
           type: string
         adres:
@@ -2309,8 +2313,10 @@ components:
 
     GebouwInput:
       type: object
-      required: [naam, adres]
+      required: [werknummer, naam, adres]
       properties:
+        werknummer:
+          type: string
         naam:
           type: string
         adres:
@@ -2343,6 +2349,9 @@ components:
     GebouwUpdate:
       type: object
       properties:
+        werknummer:
+          type: string
+          nullable: true
         naam:
           type: string
         adres:

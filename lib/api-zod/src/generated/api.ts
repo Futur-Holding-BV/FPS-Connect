@@ -104,6 +104,7 @@ export const ListGebouwenQueryParams = zod.object({
 
 export const ListGebouwenResponseItem = zod.object({
   "id": zod.number(),
+  "werknummer": zod.string().nullish(),
   "naam": zod.string(),
   "adres": zod.string(),
   "stad": zod.string().nullish(),
@@ -129,6 +130,7 @@ export const ListGebouwenResponse = zod.array(ListGebouwenResponseItem)
  * @summary Nieuw gebouw aanmaken
  */
 export const CreateGebouwBody = zod.object({
+  "werknummer": zod.string(),
   "naam": zod.string(),
   "adres": zod.string(),
   "stad": zod.string().optional(),
@@ -209,6 +211,7 @@ export const GetGebouwParams = zod.object({
 
 export const GetGebouwResponse = zod.object({
   "id": zod.number(),
+  "werknummer": zod.string().nullish(),
   "naam": zod.string(),
   "adres": zod.string(),
   "stad": zod.string().nullish(),
@@ -253,6 +256,7 @@ export const UpdateGebouwParams = zod.object({
 })
 
 export const UpdateGebouwBody = zod.object({
+  "werknummer": zod.string().nullish(),
   "naam": zod.string().optional(),
   "adres": zod.string().optional(),
   "stad": zod.string().nullish(),
@@ -271,6 +275,7 @@ export const UpdateGebouwBody = zod.object({
 
 export const UpdateGebouwResponse = zod.object({
   "id": zod.number(),
+  "werknummer": zod.string().nullish(),
   "naam": zod.string(),
   "adres": zod.string(),
   "stad": zod.string().nullish(),

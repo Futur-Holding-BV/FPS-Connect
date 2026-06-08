@@ -18,6 +18,17 @@ const router = Router();
 const BEHEERDER_ROLLEN = ["beheerder", "hoofdbeheerder"];
 const TOEGEWEZEN_ROLLEN = ["monteur", "controleur"];
 
+function isUniekWerknummerFout(err: unknown): boolean {
+  return (
+    typeof err === "object" &&
+    err !== null &&
+    "code" in err &&
+    (err as { code?: string }).code === "23505" &&
+    "constraint" in err &&
+    (err as { constraint?: string }).constraint === "gebouwen_werknummer_unique"
+  );
+}
+
 async function klantNaam(klantId: number | null): Promise<string | null> {
   if (!klantId) return null;
   const [k] = await db.select({ naam: gebruikersTable.naam }).from(gebruikersTable).where(eq(gebruikersTable.id, klantId));
@@ -40,6 +51,7 @@ async function toegewezenGebouwIds(userId: number): Promise<number[]> {
 function gebouwRij(g: typeof gebouwenTable.$inferSelect, totaal: number, naam: string | null) {
   return {
     id: g.id,
+    werknummer: g.werknummer,
     naam: g.naam,
     adres: g.adres,
     stad: g.stad,
@@ -123,6 +135,7 @@ router.get("/gebouwen", async (req, res) => {
 router.post("/gebouwen", requireRol("beheerder", "hoofdbeheerder"), async (req, res) => {
   try {
     const {
+      werknummer,
       naam,
       adres,
       stad,
@@ -141,9 +154,14 @@ router.post("/gebouwen", requireRol("beheerder", "hoofdbeheerder"), async (req, 
     if (!naam || !adres) {
       return res.status(400).json({ error: "naam en adres zijn verplicht" });
     }
+    if (typeof werknummer !== "string" || !werknummer.trim()) {
+      return res.status(400).json({ error: "werknummer is verplicht" });
+    }
+    const werknummerWaarde = werknummer.trim();
     const [gebouw] = await db
       .insert(gebouwenTable)
       .values({
+        werknummer: werknummerWaarde,
         naam,
         adres,
         stad,
@@ -162,6 +180,9 @@ router.post("/gebouwen", requireRol("beheerder", "hoofdbeheerder"), async (req, 
       .returning();
     res.status(201).json(gebouwRij(gebouw, 0, await klantNaam(gebouw.klantId)));
   } catch (err) {
+    if (isUniekWerknummerFout(err)) {
+      return res.status(409).json({ error: "Dit werknummer is al in gebruik" });
+    }
     req.log.error(err);
     res.status(500).json({ error: "Interne serverfout" });
   }
@@ -301,6 +322,7 @@ router.get("/gebouwen/:id", async (req, res) => {
 
     res.json({
       id: gebouw.id,
+      werknummer: gebouw.werknummer,
       naam: gebouw.naam,
       adres: gebouw.adres,
       stad: gebouw.stad,
@@ -331,6 +353,7 @@ router.patch("/gebouwen/:id", requireRol("beheerder", "hoofdbeheerder"), async (
   try {
     const id = parseInt(req.params.id);
     const {
+      werknummer,
       naam,
       adres,
       stad,
@@ -349,6 +372,14 @@ router.patch("/gebouwen/:id", requireRol("beheerder", "hoofdbeheerder"), async (
     const [gebouw] = await db
       .update(gebouwenTable)
       .set({
+        ...(werknummer !== undefined
+          ? {
+              werknummer:
+                typeof werknummer === "string" && werknummer.trim()
+                  ? werknummer.trim()
+                  : null,
+            }
+          : {}),
         naam,
         adres,
         stad,
@@ -374,6 +405,9 @@ router.patch("/gebouwen/:id", requireRol("beheerder", "hoofdbeheerder"), async (
       .where(eq(voorzieningenTable.gebouwId, id));
     res.json(gebouwRij(gebouw, Number(totaal?.count ?? 0), await klantNaam(gebouw.klantId)));
   } catch (err) {
+    if (isUniekWerknummerFout(err)) {
+      return res.status(409).json({ error: "Dit werknummer is al in gebruik" });
+    }
     req.log.error(err);
     res.status(500).json({ error: "Interne serverfout" });
   }
