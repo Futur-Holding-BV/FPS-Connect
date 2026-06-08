@@ -6,6 +6,8 @@ import {
   logout as logoutRequest,
   type AuthGebruiker,
 } from "@workspace/api-client-react";
+import { useTaal } from "@/context/taal-context";
+import { isGeldigeTaal } from "@/i18n/talen";
 
 type AuthContextType = {
   gebruiker: AuthGebruiker | null;
@@ -46,6 +48,7 @@ function hexNaarHsl(hex: string): [number, number, number] {
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const queryClient = useQueryClient();
+  const { synchroniseerServerTaal } = useTaal();
 
   const meKey = getGetHuidigeGebruikerQueryKey();
 
@@ -58,6 +61,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   });
 
   const gebruiker = isError ? null : (data ?? null);
+
+  useEffect(() => {
+    if (gebruiker?.taal && isGeldigeTaal(gebruiker.taal)) {
+      synchroniseerServerTaal(gebruiker.taal);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gebruiker?.taal]);
 
   useEffect(() => {
     if (!gebruiker?.bedrijfskleuren) return;

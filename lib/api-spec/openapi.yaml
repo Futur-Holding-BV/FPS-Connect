@@ -872,6 +872,25 @@ paths:
         "204":
           description: Wachtwoord gewijzigd
 
+  /auth/taal:
+    post:
+      operationId: taalWijzigen
+      tags: [auth]
+      summary: Eigen taalvoorkeur wijzigen (ingelogd)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TaalWijzigen"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthGebruiker"
+
   # ── ABONNEMENTEN ─────────────────────────────────────────────────────────
   /abonnementen:
     get:
@@ -1839,6 +1858,9 @@ components:
           enum: [niet_uitgenodigd, uitgenodigd, geaccepteerd]
         uitnodiging_verstuurd_op:
           type: ["string", "null"]
+        taal:
+          type: string
+          enum: [nl, en, de, fr, ar, tr]
 
     GebruikerInput:
       type: object
@@ -1863,6 +1885,8 @@ components:
         bedrijfskleuren:
           type: string
         uitnodiging_status:
+          type: string
+        taal:
           type: string
 
     GebruikerUpdate:
@@ -1890,6 +1914,8 @@ components:
           type: string
         uitnodiging_status:
           type: string
+        taal:
+          type: string
 
     WachtwoordWijzigen:
       type: object
@@ -1899,6 +1925,14 @@ components:
           type: string
         nieuw_wachtwoord:
           type: string
+
+    TaalWijzigen:
+      type: object
+      required: [taal]
+      properties:
+        taal:
+          type: string
+          enum: [nl, en, de, fr, ar, tr]
 
     # ── AUTHENTICATIE ─────────────────────────────────────────────────────
     LoginInput:
@@ -1953,6 +1987,9 @@ components:
           type: ["string", "null"]
         bedrijfskleuren:
           type: ["string", "null"]
+        taal:
+          type: string
+          enum: [nl, en, de, fr, ar, tr]
 
     # ── ABONNEMENT ───────────────────────────────────────────────────────
     Abonnement:

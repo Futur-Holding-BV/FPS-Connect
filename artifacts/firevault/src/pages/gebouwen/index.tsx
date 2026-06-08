@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { useListGebouwen } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -7,6 +8,7 @@ import { Search, Building } from "lucide-react";
 import { useState } from "react";
 
 export default function Gebouwen() {
+  const { t } = useTranslation();
   const [search, setSearch] = useState("");
   const { data: gebouwen, isLoading } = useListGebouwen({ zoek: search });
 
@@ -14,14 +16,14 @@ export default function Gebouwen() {
     <div className="space-y-6 max-w-7xl mx-auto">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Gebouwen</h1>
-          <p className="text-muted-foreground mt-1">Beheer alle gebouwen in uw portfolio.</p>
+          <h1 className="text-3xl font-bold tracking-tight">{t("gebouwen.titel")}</h1>
+          <p className="text-muted-foreground mt-1">{t("gebouwen.ondertitel")}</p>
         </div>
         <div className="relative w-full sm:w-64">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input 
             type="search" 
-            placeholder="Zoek gebouw..." 
+            placeholder={t("gebouwen.zoek")} 
             className="pl-8" 
             value={search}
             onChange={(e) => setSearch(e.target.value)}

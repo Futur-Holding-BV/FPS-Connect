@@ -1,20 +1,29 @@
 import { useState } from "react";
-import { LogOut, KeyRound } from "lucide-react";
+import { useTranslation } from "react-i18next";
+import { LogOut, KeyRound, Languages } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/context/auth-context";
+import { useTaal } from "@/context/taal-context";
+import { TALEN, type TaalCode } from "@/i18n/talen";
 import { ROL_INFO } from "@/context/rol-types";
 import type { Rol } from "@/context/rol-types";
-import { useWachtwoordWijzigen } from "@workspace/api-client-react";
+import { useWachtwoordWijzigen, useTaalWijzigen } from "@workspace/api-client-react";
 
 export function GebruikerMenu() {
   const { gebruiker, uitloggen } = useAuth();
+  const { t } = useTranslation();
+  const { taal, zetTaal } = useTaal();
   const wachtwoordWijzigen = useWachtwoordWijzigen();
+  const taalWijzigen = useTaalWijzigen();
 
   const [wachtwoordOpen, setWachtwoordOpen] = useState(false);
   const [huidig, setHuidig]         = useState("");
@@ -27,6 +36,7 @@ export function GebruikerMenu() {
 
   const rol = gebruiker.rol as Rol;
   const rolLabel = ROL_INFO[rol]?.label ?? rol;
+  const huidigeTaal = TALEN.find((item) => item.code === taal);
   const initialen = gebruiker.naam
     .split(" ")
     .filter(Boolean)
@@ -34,6 +44,18 @@ export function GebruikerMenu() {
     .slice(0, 2)
     .join("")
     .toUpperCase();
+
+  function kiesTaal(code: TaalCode) {
+    if (code === taal) return;
+    const vorige = taal;
+    zetTaal(code, true);
+    taalWijzigen.mutate(
+      { data: { taal: code } },
+      {
+        onError: () => zetTaal(vorige, true),
+      },
+    );
+  }
 
   function resetDialoog() {
     setHuidig("");
@@ -47,15 +69,15 @@ export function GebruikerMenu() {
     e.preventDefault();
     setFout(null);
     if (!huidig || !nieuw) {
-      setFout("Alle velden zijn verplicht.");
+      setFout(t("menu.foutVerplicht"));
       return;
     }
     if (nieuw.length < 8) {
-      setFout("Nieuw wachtwoord moet minimaal 8 tekens bevatten.");
+      setFout(t("menu.foutMinimaal"));
       return;
     }
     if (nieuw !== bevestig) {
-      setFout("Nieuwe wachtwoorden komen niet overeen.");
+      setFout(t("menu.foutOvereen"));
       return;
     }
     try {
@@ -67,7 +89,7 @@ export function GebruikerMenu() {
       setNieuw("");
       setBevestig("");
     } catch (err: any) {
-      setFout(err?.response?.data?.error ?? err?.message ?? "Onbekende fout");
+      setFout(err?.response?.data?.error ?? err?.message ?? t("common.onbekendeFout"));
     }
   }
 
@@ -86,26 +108,57 @@ export function GebruikerMenu() {
             <p className="text-xs text-muted-foreground truncate">{rolLabel}</p>
           </div>
         </div>
+
+        <div className="mt-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full gap-2 group-data-[collapsible=icon]:px-0"
+                title={t("menu.taal")}
+              >
+                <Languages className="h-4 w-4 flex-shrink-0" />
+                <span className="group-data-[collapsible=icon]:hidden truncate">
+                  {huidigeTaal ? `${huidigeTaal.vlag} ${huidigeTaal.naam}` : t("menu.taal")}
+                </span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-44">
+              {TALEN.map((item) => (
+                <DropdownMenuItem
+                  key={item.code}
+                  onClick={() => kiesTaal(item.code)}
+                  className={taal === item.code ? "bg-accent" : ""}
+                >
+                  <span className="mr-2 text-base leading-none">{item.vlag}</span>
+                  {item.naam}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+
         <div className="flex gap-1 mt-2">
           <Button
             variant="outline"
             size="sm"
             onClick={() => { resetDialoog(); setWachtwoordOpen(true); }}
             className="flex-1 gap-2 group-data-[collapsible=icon]:px-0 group-data-[collapsible=icon]:flex-none"
-            title="Wachtwoord wijzigen"
+            title={t("menu.wachtwoordWijzigen")}
           >
             <KeyRound className="h-4 w-4 flex-shrink-0" />
-            <span className="group-data-[collapsible=icon]:hidden truncate">Wachtwoord</span>
+            <span className="group-data-[collapsible=icon]:hidden truncate">{t("menu.wachtwoord")}</span>
           </Button>
           <Button
             variant="outline"
             size="sm"
             onClick={() => void uitloggen()}
             className="flex-1 gap-2 group-data-[collapsible=icon]:px-0 group-data-[collapsible=icon]:flex-none"
-            title="Uitloggen"
+            title={t("menu.uitloggen")}
           >
             <LogOut className="h-4 w-4 flex-shrink-0" />
-            <span className="group-data-[collapsible=icon]:hidden">Uitloggen</span>
+            <span className="group-data-[collapsible=icon]:hidden">{t("menu.uitloggen")}</span>
           </Button>
         </div>
       </div>
@@ -114,28 +167,28 @@ export function GebruikerMenu() {
         <DialogContent className="max-w-sm" aria-describedby="wachtwoord-beschr">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <KeyRound className="h-5 w-5" /> Wachtwoord wijzigen
+              <KeyRound className="h-5 w-5" /> {t("menu.wachtwoordWijzigen")}
             </DialogTitle>
           </DialogHeader>
           <p id="wachtwoord-beschr" className="text-sm text-muted-foreground -mt-1">
-            Stel een nieuw wachtwoord in voor uw account.
+            {t("menu.wachtwoordUitleg")}
           </p>
 
           {gelukt ? (
             <div className="space-y-4">
               <div className="rounded-md border border-green-200 bg-green-50 px-3 py-3 text-sm text-green-800">
-                Wachtwoord succesvol gewijzigd.
+                {t("menu.wachtwoordGewijzigd")}
               </div>
               <DialogFooter>
                 <Button onClick={() => { setWachtwoordOpen(false); resetDialoog(); }}>
-                  Sluiten
+                  {t("common.sluiten")}
                 </Button>
               </DialogFooter>
             </div>
           ) : (
             <form onSubmit={verstuurWijziging} className="space-y-3 pt-1">
               <div className="space-y-1.5">
-                <Label htmlFor="huidig-ww">Huidig wachtwoord</Label>
+                <Label htmlFor="huidig-ww">{t("menu.huidigWachtwoord")}</Label>
                 <Input
                   id="huidig-ww"
                   type="password"
@@ -146,19 +199,19 @@ export function GebruikerMenu() {
                 />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="nieuw-ww">Nieuw wachtwoord</Label>
+                <Label htmlFor="nieuw-ww">{t("menu.nieuwWachtwoord")}</Label>
                 <Input
                   id="nieuw-ww"
                   type="password"
                   value={nieuw}
                   onChange={(e) => setNieuw(e.target.value)}
                   autoComplete="new-password"
-                  placeholder="Minimaal 8 tekens"
+                  placeholder={t("menu.minimaalTekens")}
                   required
                 />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="bevestig-ww">Bevestig nieuw wachtwoord</Label>
+                <Label htmlFor="bevestig-ww">{t("menu.bevestigWachtwoord")}</Label>
                 <Input
                   id="bevestig-ww"
                   type="password"
@@ -177,10 +230,10 @@ export function GebruikerMenu() {
 
               <DialogFooter className="gap-2 pt-1">
                 <Button type="button" variant="outline" onClick={() => { setWachtwoordOpen(false); resetDialoog(); }}>
-                  Annuleren
+                  {t("common.annuleren")}
                 </Button>
                 <Button type="submit" disabled={wachtwoordWijzigen.isPending}>
-                  {wachtwoordWijzigen.isPending ? "Opslaan..." : "Wijzigen"}
+                  {wachtwoordWijzigen.isPending ? t("common.opslaanBezig") : t("common.wijzigen")}
                 </Button>
               </DialogFooter>
             </form>

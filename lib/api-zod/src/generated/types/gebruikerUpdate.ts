@@ -18,4 +18,5 @@ export interface GebruikerUpdate {
   bedrijfslogo_url?: string;
   bedrijfskleuren?: string;
   uitnodiging_status?: string;
+  taal?: string;
 }

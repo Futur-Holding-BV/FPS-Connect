@@ -3,3 +3,4 @@
 - [Nightly security scan](nightly-security-scan.md) — report-only `pnpm audit` script run via a Scheduled Deployment; never auto-update (breaking-change risk).
 - [DB migraties via SQL](db-migrations.md) — drizzle-kit push vereist interactieve TTY; gebruik altijd executeSql() voor schema-wijzigingen in de sandbox, nooit drizzle-kit push.
 - [Uitnodigingsstatus flow](uitnodiging-flow.md) — uitnodiging_status → geaccepteerd bij 2FA activeren + verify; uitnodigen = DB-update + mailto-link; kaartkleur amber=niet uitgenodigd, paars=uitgenodigd.
+- [i18n taal-synchronisatie](i18n-taal-sync.md) — expliciete runtime-keuze wint van server-taal binnen sessie; login-keuze pas na 2FA naar DB; menu-wissel met onError rollback; RTL voor ar.

@@ -20,6 +20,7 @@ export const gebruikersTable = pgTable("gebruikers", {
   bedrijfskleuren: text("bedrijfskleuren"),
   uitnodigingStatus: text("uitnodiging_status").notNull().default("niet_uitgenodigd"),
   uitnodigingVerstuurdOp: timestamp("uitnodiging_verstuurd_op"),
+  taal: text("taal").notNull().default("nl"),
 });
 
 export const insertGebruikerSchema = createInsertSchema(gebruikersTable).omit({ id: true, aangemaaktOp: true });

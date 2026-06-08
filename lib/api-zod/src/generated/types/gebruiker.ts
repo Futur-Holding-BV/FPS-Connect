@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { GebruikerRol } from './gebruikerRol';
+import type { GebruikerTaal } from './gebruikerTaal';
 import type { GebruikerUitnodigingStatus } from './gebruikerUitnodigingStatus';
 
 export interface Gebruiker {
@@ -30,4 +31,5 @@ export interface Gebruiker {
   uitnodiging_status: GebruikerUitnodigingStatus;
   /** @nullable */
   uitnodiging_verstuurd_op?: string | null;
+  taal?: GebruikerTaal;
 }

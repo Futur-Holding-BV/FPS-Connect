@@ -569,6 +569,18 @@ export const GebruikerUitnodigingStatus = {
   geaccepteerd: 'geaccepteerd',
 } as const;
 
+export type GebruikerTaal = typeof GebruikerTaal[keyof typeof GebruikerTaal];
+
+
+export const GebruikerTaal = {
+  nl: 'nl',
+  en: 'en',
+  de: 'de',
+  fr: 'fr',
+  ar: 'ar',
+  tr: 'tr',
+} as const;
+
 export interface Gebruiker {
   id: number;
   naam: string;
@@ -591,6 +603,7 @@ export interface Gebruiker {
   uitnodiging_status: GebruikerUitnodigingStatus;
   /** @nullable */
   uitnodiging_verstuurd_op?: string | null;
+  taal?: GebruikerTaal;
 }
 
 export interface GebruikerInput {
@@ -604,6 +617,7 @@ export interface GebruikerInput {
   bedrijfslogo_url?: string;
   bedrijfskleuren?: string;
   uitnodiging_status?: string;
+  taal?: string;
 }
 
 export interface GebruikerUpdate {
@@ -618,11 +632,28 @@ export interface GebruikerUpdate {
   bedrijfslogo_url?: string;
   bedrijfskleuren?: string;
   uitnodiging_status?: string;
+  taal?: string;
 }
 
 export interface WachtwoordWijzigen {
   huidig_wachtwoord: string;
   nieuw_wachtwoord: string;
+}
+
+export type TaalWijzigenTaal = typeof TaalWijzigenTaal[keyof typeof TaalWijzigenTaal];
+
+
+export const TaalWijzigenTaal = {
+  nl: 'nl',
+  en: 'en',
+  de: 'de',
+  fr: 'fr',
+  ar: 'ar',
+  tr: 'tr',
+} as const;
+
+export interface TaalWijzigen {
+  taal: TaalWijzigenTaal;
 }
 
 export interface LoginInput {
@@ -664,6 +695,18 @@ export const AuthGebruikerRol = {
   viewer: 'viewer',
 } as const;
 
+export type AuthGebruikerTaal = typeof AuthGebruikerTaal[keyof typeof AuthGebruikerTaal];
+
+
+export const AuthGebruikerTaal = {
+  nl: 'nl',
+  en: 'en',
+  de: 'de',
+  fr: 'fr',
+  ar: 'ar',
+  tr: 'tr',
+} as const;
+
 export interface AuthGebruiker {
   id: number;
   naam: string;
@@ -673,6 +716,7 @@ export interface AuthGebruiker {
   avatar_url?: string | null;
   /** @nullable */
   bedrijfskleuren?: string | null;
+  taal?: AuthGebruikerTaal;
 }
 
 export type AbonnementNiveau = typeof AbonnementNiveau[keyof typeof AbonnementNiveau];

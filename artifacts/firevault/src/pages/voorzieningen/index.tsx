@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { useListVoorzieningen } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -7,23 +8,24 @@ import { Link } from "wouter";
 import { Badge } from "@/components/ui/badge";
 
 export default function Voorzieningen() {
+  const { t } = useTranslation();
   const { data: voorzieningenLijst, isLoading } = useListVoorzieningen({});
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Voorzieningen</h1>
-          <p className="text-muted-foreground mt-1">Overzicht van alle brandpreventie assets.</p>
+          <h1 className="text-3xl font-bold tracking-tight">{t("voorzieningen.titel")}</h1>
+          <p className="text-muted-foreground mt-1">{t("voorzieningen.ondertitel")}</p>
         </div>
         <div className="flex gap-2 w-full sm:w-auto">
           <div className="relative flex-1 sm:w-64">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input type="search" placeholder="Zoek op nummer..." className="pl-8" />
+            <Input type="search" placeholder={t("voorzieningen.zoek")} className="pl-8" />
           </div>
           <Link href="/voorzieningen/nieuw">
             <Button>
-              <Plus className="h-4 w-4 mr-2" /> Nieuw
+              <Plus className="h-4 w-4 mr-2" /> {t("common.nieuw")}
             </Button>
           </Link>
         </div>
@@ -35,9 +37,9 @@ export default function Voorzieningen() {
             <table className="w-full text-sm text-left">
               <thead className="bg-muted text-muted-foreground uppercase">
                 <tr>
-                  <th className="px-6 py-3">Nummer</th>
-                  <th className="px-6 py-3">Type</th>
-                  <th className="px-6 py-3">Gebouw</th>
+                  <th className="px-6 py-3">{t("voorzieningen.nummer")}</th>
+                  <th className="px-6 py-3">{t("voorzieningen.type")}</th>
+                  <th className="px-6 py-3">{t("voorzieningen.gebouw")}</th>
                   <th className="px-6 py-3">Status</th>
                   <th className="px-6 py-3 text-right">Acties</th>
                 </tr>

@@ -1,4 +1,5 @@
 import { useState, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import {
   useListGebruikers,
   useCreateGebruiker,
@@ -158,6 +159,7 @@ function haalPrimairKleur(bedrijfskleuren: string | null | undefined): string {
 }
 
 export default function Gebruikers() {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const { rol: viewerRol } = useRol();
   const isHoofd = viewerRol === "hoofdbeheerder";
@@ -297,9 +299,9 @@ export default function Gebruikers() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Gebruikers</h1>
+          <h1 className="text-3xl font-bold tracking-tight">{t("gebruikers.titel")}</h1>
           <p className="text-muted-foreground mt-1">
-            Beheer accounts en toegangsrechten — geordend op rechtenniveau.
+            {t("gebruikers.ondertitel")}
           </p>
         </div>
         <div className="flex gap-2">

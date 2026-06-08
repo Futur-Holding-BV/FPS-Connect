@@ -1,4 +1,5 @@
 import { Link, useLocation } from "wouter";
+import { useTranslation } from "react-i18next";
 import {
   SidebarProvider, Sidebar, SidebarHeader, SidebarContent, SidebarFooter,
   SidebarGroup, SidebarGroupLabel, SidebarGroupContent,
@@ -8,17 +9,18 @@ import { ShieldCheck, Building, Wrench, Users, Search, Home, Receipt } from "luc
 import { GebruikerMenu } from "@/components/gebruiker-menu";
 
 const ROUTES = [
-  { href: "/", label: "Dashboard", icoon: Home },
-  { href: "/gebouwen", label: "Gebouwen", icoon: Building },
-  { href: "/voorzieningen", label: "Voorzieningen", icoon: ShieldCheck },
-  { href: "/inspecties", label: "Inspecties", icoon: Search },
-  { href: "/onderhoud", label: "Onderhoud", icoon: Wrench },
-  { href: "/gebruikers", label: "Gebruikers", icoon: Users },
-  { href: "/abonnementen", label: "Abonnementen", icoon: Receipt },
+  { href: "/", labelKey: "nav.dashboard", icoon: Home },
+  { href: "/gebouwen", labelKey: "nav.gebouwen", icoon: Building },
+  { href: "/voorzieningen", labelKey: "nav.voorzieningen", icoon: ShieldCheck },
+  { href: "/inspecties", labelKey: "nav.inspecties", icoon: Search },
+  { href: "/onderhoud", labelKey: "nav.onderhoud", icoon: Wrench },
+  { href: "/gebruikers", labelKey: "nav.gebruikers", icoon: Users },
+  { href: "/abonnementen", labelKey: "nav.abonnementen", icoon: Receipt },
 ];
 
 export default function BeheerderLayout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
+  const { t } = useTranslation();
 
   return (
     <SidebarProvider>
@@ -29,14 +31,14 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
               <ShieldCheck size={22} />
             </div>
             <span className="font-bold text-base tracking-tight group-data-[collapsible=icon]:hidden">
-              FPS Brandpreventie
+              {t("app.naam")}
             </span>
           </div>
         </SidebarHeader>
 
         <SidebarContent>
           <SidebarGroup>
-            <SidebarGroupLabel>Platform</SidebarGroupLabel>
+            <SidebarGroupLabel>{t("nav.platform")}</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
                 {ROUTES.map((route) => (
@@ -47,7 +49,7 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
                     >
                       <Link href={route.href}>
                         <route.icoon />
-                        <span>{route.label}</span>
+                        <span>{t(route.labelKey)}</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>

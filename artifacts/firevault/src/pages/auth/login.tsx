@@ -1,10 +1,12 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { ShieldCheck, Loader2, KeyRound, ArrowLeft } from "lucide-react";
 import {
   login,
   tweeFactorSetup,
   tweeFactorActiveren,
   tweeFactorVerify,
+  taalWijzigen,
   type TweeFactorSetup,
 } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
@@ -23,11 +25,15 @@ import {
   InputOTPSlot,
 } from "@/components/ui/input-otp";
 import { useAuth } from "@/context/auth-context";
+import { useTaal } from "@/context/taal-context";
+import { TALEN } from "@/i18n/talen";
 
 type Stap = "inloggen" | "setup" | "verify";
 
 export default function LoginPagina() {
   const { herlaad } = useAuth();
+  const { t } = useTranslation();
+  const { taal, zetTaal } = useTaal();
   const [stap, setStap] = useState<Stap>("inloggen");
   const [email, setEmail] = useState("");
   const [wachtwoord, setWachtwoord] = useState("");
@@ -35,6 +41,7 @@ export default function LoginPagina() {
   const [setupData, setSetupData] = useState<TweeFactorSetup | null>(null);
   const [bezig, setBezig] = useState(false);
   const [fout, setFout] = useState<string | null>(null);
+  const [taalGekozen, setTaalGekozen] = useState(false);
 
   async function verstuurInloggen(e: React.FormEvent) {
     e.preventDefault();
@@ -52,7 +59,7 @@ export default function LoginPagina() {
         setStap("verify");
       }
     } catch {
-      setFout("Onjuiste inloggegevens. Controleer uw e-mailadres en wachtwoord.");
+      setFout(t("auth.foutInlog"));
     } finally {
       setBezig(false);
     }
@@ -68,9 +75,16 @@ export default function LoginPagina() {
       } else {
         await tweeFactorVerify({ code: huidigeCode });
       }
+      if (taalGekozen) {
+        try {
+          await taalWijzigen({ taal });
+        } catch {
+          // Taalvoorkeur opslaan mag het inloggen niet blokkeren
+        }
+      }
       herlaad();
     } catch {
-      setFout("Onjuiste of verlopen code. Probeer het opnieuw.");
+      setFout(t("auth.foutCode"));
       setCode("");
       setBezig(false);
     }
@@ -98,23 +112,47 @@ export default function LoginPagina() {
           <div className="bg-primary text-primary-foreground p-3 rounded-xl shadow-lg mb-3">
             <ShieldCheck size={32} />
           </div>
-          <h1 className="text-2xl font-bold text-white tracking-tight">FPS Brandpreventie</h1>
-          <p className="text-sm text-slate-400">Beveiligd platform voor brandpreventie</p>
+          <h1 className="text-2xl font-bold text-white tracking-tight">{t("app.naam")}</h1>
+          <p className="text-sm text-slate-400">{t("auth.ondertitel")}</p>
         </div>
+
+        {stap === "inloggen" && (
+          <div className="mb-4">
+            <p className="text-xs text-slate-400 text-center mb-2">{t("auth.taalKiezen")}</p>
+            <div className="flex flex-wrap justify-center gap-2">
+              {TALEN.map((item) => (
+                <button
+                  key={item.code}
+                  type="button"
+                  onClick={() => {
+                    zetTaal(item.code, true);
+                    setTaalGekozen(true);
+                  }}
+                  className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm transition-colors ${
+                    taal === item.code
+                      ? "border-primary bg-primary/15 text-white"
+                      : "border-slate-700 bg-slate-800/50 text-slate-300 hover:border-slate-500"
+                  }`}
+                >
+                  <span className="text-base leading-none">{item.vlag}</span>
+                  <span>{item.naam}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         <Card className="shadow-xl border-slate-200">
           {stap === "inloggen" && (
             <>
               <CardHeader>
-                <CardTitle>Inloggen</CardTitle>
-                <CardDescription>
-                  Voer uw e-mailadres en wachtwoord in om door te gaan.
-                </CardDescription>
+                <CardTitle>{t("auth.inloggenTitel")}</CardTitle>
+                <CardDescription>{t("auth.inloggenUitleg")}</CardDescription>
               </CardHeader>
               <CardContent>
                 <form onSubmit={verstuurInloggen} className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="email">E-mailadres</Label>
+                    <Label htmlFor="email">{t("auth.email")}</Label>
                     <Input
                       id="email"
                       type="email"
@@ -126,7 +164,7 @@ export default function LoginPagina() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="wachtwoord">Wachtwoord</Label>
+                    <Label htmlFor="wachtwoord">{t("auth.wachtwoord")}</Label>
                     <Input
                       id="wachtwoord"
                       type="password"
@@ -139,7 +177,7 @@ export default function LoginPagina() {
                   {fout && <p className="text-sm text-destructive">{fout}</p>}
                   <Button type="submit" className="w-full" disabled={bezig}>
                     {bezig && <Loader2 className="h-4 w-4 animate-spin" />}
-                    Inloggen
+                    {t("auth.inloggenKnop")}
                   </Button>
                 </form>
               </CardContent>
@@ -151,30 +189,23 @@ export default function LoginPagina() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <KeyRound className="h-5 w-5 text-primary" />
-                  Tweestapsverificatie instellen
+                  {t("auth.setupTitel")}
                 </CardTitle>
-                <CardDescription>
-                  Scan de QR-code met een authenticator-app (bijvoorbeeld Google
-                  Authenticator of Microsoft Authenticator) en voer daarna de
-                  6-cijferige code in.
-                </CardDescription>
+                <CardDescription>{t("auth.setupUitleg")}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex justify-center">
                   <img
                     src={setupData.qr_code}
-                    alt="QR-code voor tweestapsverificatie"
+                    alt="QR"
                     className="h-44 w-44 rounded-lg border bg-white p-2"
                   />
                 </div>
                 <div className="rounded-lg bg-muted p-3 text-center">
-                  <p className="text-xs text-muted-foreground mb-1">
-                    Of voer deze sleutel handmatig in:
-                  </p>
                   <code className="text-sm font-mono break-all">{setupData.secret}</code>
                 </div>
                 <div className="flex flex-col items-center gap-2">
-                  <Label>Verificatiecode</Label>
+                  <Label>{t("auth.verifyTitel")}</Label>
                   <InputOTP maxLength={6} value={code} onChange={wijzigCode} disabled={bezig}>
                     <InputOTPGroup>
                       <InputOTPSlot index={0} />
@@ -194,7 +225,7 @@ export default function LoginPagina() {
                 )}
                 <Button variant="ghost" size="sm" className="w-full gap-2" onClick={naarInloggen}>
                   <ArrowLeft className="h-4 w-4" />
-                  Terug
+                  {t("auth.terug")}
                 </Button>
               </CardContent>
             </>
@@ -205,11 +236,9 @@ export default function LoginPagina() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <KeyRound className="h-5 w-5 text-primary" />
-                  Verificatiecode
+                  {t("auth.verifyTitel")}
                 </CardTitle>
-                <CardDescription>
-                  Voer de 6-cijferige code uit uw authenticator-app in.
-                </CardDescription>
+                <CardDescription>{t("auth.verifyUitleg")}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex flex-col items-center gap-2">
@@ -232,7 +261,7 @@ export default function LoginPagina() {
                 )}
                 <Button variant="ghost" size="sm" className="w-full gap-2" onClick={naarInloggen}>
                   <ArrowLeft className="h-4 w-4" />
-                  Terug
+                  {t("auth.terug")}
                 </Button>
               </CardContent>
             </>

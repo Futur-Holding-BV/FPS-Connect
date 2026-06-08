@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { AuthGebruikerRol } from './authGebruikerRol';
+import type { AuthGebruikerTaal } from './authGebruikerTaal';
 
 export interface AuthGebruiker {
   id: number;
@@ -16,4 +17,5 @@ export interface AuthGebruiker {
   avatar_url?: string | null;
   /** @nullable */
   bedrijfskleuren?: string | null;
+  taal?: AuthGebruikerTaal;
 }

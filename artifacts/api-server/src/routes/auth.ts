@@ -11,6 +11,8 @@ const ISSUER = "FPS Brandpreventie";
 
 authenticator.options = { window: 1 };
 
+const TALEN = ["nl", "en", "de", "fr", "ar", "tr"] as const;
+
 const mapAuthGebruiker = (g: typeof gebruikersTable.$inferSelect) => ({
   id: g.id,
   naam: g.naam,
@@ -18,6 +20,7 @@ const mapAuthGebruiker = (g: typeof gebruikersTable.$inferSelect) => ({
   rol: g.rol,
   avatar_url: g.avatarUrl ?? null,
   bedrijfskleuren: g.bedrijfskleuren ?? null,
+  taal: g.taal ?? "nl",
 });
 
 const schoonCode = (code: unknown) => String(code ?? "").replace(/\s+/g, "");
@@ -184,6 +187,32 @@ router.post("/auth/wachtwoord-wijzigen", async (req, res) => {
       .set({ wachtwoord: gehasht })
       .where(eq(gebruikersTable.id, id));
     res.status(204).send();
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// POST /auth/taal — eigen taalvoorkeur wijzigen
+router.post("/auth/taal", async (req, res) => {
+  try {
+    const id = req.session.userId;
+    if (!id) {
+      return res.status(401).json({ error: "Niet ingelogd" });
+    }
+    const taal = String(req.body?.taal ?? "");
+    if (!TALEN.includes(taal as (typeof TALEN)[number])) {
+      return res.status(400).json({ error: "Ongeldige taalcode" });
+    }
+    const [g] = await db
+      .update(gebruikersTable)
+      .set({ taal })
+      .where(eq(gebruikersTable.id, id))
+      .returning();
+    if (!g) {
+      return res.status(404).json({ error: "Gebruiker niet gevonden" });
+    }
+    res.json(mapAuthGebruiker(g));
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Interne serverfout" });

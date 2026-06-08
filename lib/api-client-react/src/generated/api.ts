@@ -56,6 +56,7 @@ import type {
   Onderhoudstaak,
   StatusUpdate,
   StatusVerdeling,
+  TaalWijzigen,
   TweeFactorSetup,
   Verdieping,
   VerdiepingInput,
@@ -3136,6 +3137,76 @@ export const useWachtwoordWijzigen = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getWachtwoordWijzigenMutationOptions(options));
+    }
+
+export const getTaalWijzigenUrl = () => {
+
+
+
+
+  return `/api/auth/taal`
+}
+
+/**
+ * @summary Eigen taalvoorkeur wijzigen (ingelogd)
+ */
+export const taalWijzigen = async (taalWijzigen: TaalWijzigen, options?: RequestInit): Promise<AuthGebruiker> => {
+
+  return customFetch<AuthGebruiker>(getTaalWijzigenUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(taalWijzigen)
+  }
+);}
+
+
+
+
+export const getTaalWijzigenMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof taalWijzigen>>, TError,{data: BodyType<TaalWijzigen>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof taalWijzigen>>, TError,{data: BodyType<TaalWijzigen>}, TContext> => {
+
+const mutationKey = ['taalWijzigen'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof taalWijzigen>>, {data: BodyType<TaalWijzigen>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  taalWijzigen(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type TaalWijzigenMutationResult = NonNullable<Awaited<ReturnType<typeof taalWijzigen>>>
+    export type TaalWijzigenMutationBody = BodyType<TaalWijzigen>
+    export type TaalWijzigenMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Eigen taalvoorkeur wijzigen (ingelogd)
+ */
+export const useTaalWijzigen = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof taalWijzigen>>, TError,{data: BodyType<TaalWijzigen>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof taalWijzigen>>,
+        TError,
+        {data: BodyType<TaalWijzigen>},
+        TContext
+      > => {
+      return useMutation(getTaalWijzigenMutationOptions(options));
     }
 
 export const getListAbonnementenUrl = () => {

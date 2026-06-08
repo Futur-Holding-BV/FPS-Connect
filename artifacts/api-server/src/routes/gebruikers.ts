@@ -23,6 +23,7 @@ const mapGebruiker = (g: typeof gebruikersTable.$inferSelect) => ({
   uitnodiging_verstuurd_op: g.uitnodigingVerstuurdOp
     ? g.uitnodigingVerstuurdOp.toISOString()
     : null,
+  taal: g.taal ?? "nl",
 });
 
 // GET /gebruikers
@@ -41,7 +42,7 @@ router.post("/gebruikers", async (req, res) => {
   try {
     const {
       naam, email, rol, telefoon, bedrijf, wachtwoord,
-      avatar_url, bedrijfslogo_url, bedrijfskleuren,
+      avatar_url, bedrijfslogo_url, bedrijfskleuren, taal,
     } = req.body;
     if (!naam || !email || !rol) {
       return res.status(400).json({ error: "naam, email en rol zijn verplicht" });
@@ -59,6 +60,7 @@ router.post("/gebruikers", async (req, res) => {
         avatarUrl: avatar_url,
         bedrijfslogoUrl: bedrijfslogo_url,
         bedrijfskleuren,
+        taal: taal || "nl",
         uitnodigingStatus: "niet_uitgenodigd",
       })
       .returning();
@@ -91,7 +93,7 @@ router.patch("/gebruikers/:id", async (req, res) => {
     const id = parseInt(req.params.id);
     const {
       naam, email, rol, telefoon, bedrijf, actief, wachtwoord,
-      avatar_url, bedrijfslogo_url, bedrijfskleuren, uitnodiging_status,
+      avatar_url, bedrijfslogo_url, bedrijfskleuren, uitnodiging_status, taal,
     } = req.body;
     const wijziging: Partial<typeof gebruikersTable.$inferInsert> = {
       naam,
@@ -104,6 +106,7 @@ router.patch("/gebruikers/:id", async (req, res) => {
       bedrijfslogoUrl: bedrijfslogo_url,
       bedrijfskleuren,
       uitnodigingStatus: uitnodiging_status,
+      taal,
     };
     if (wachtwoord) {
       wijziging.wachtwoord = await bcrypt.hash(String(wachtwoord), 10);

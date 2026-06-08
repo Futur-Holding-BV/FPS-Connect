@@ -1,4 +1,5 @@
 import { Link, useLocation } from "wouter";
+import { useTranslation } from "react-i18next";
 import {
   SidebarProvider, Sidebar, SidebarHeader, SidebarContent, SidebarFooter,
   SidebarGroup, SidebarGroupLabel, SidebarGroupContent,
@@ -9,25 +10,26 @@ import { useRol } from "@/context/rol-context";
 import { GebruikerMenu } from "@/components/gebruiker-menu";
 
 const ROUTES_MONTEUR = [
-  { href: "/", label: "Mijn opdrachten", icoon: Home },
-  { href: "/onderhoud", label: "Werkbonnen", icoon: Wrench },
-  { href: "/inspecties", label: "Inspecties", icoon: Search },
-  { href: "/voorzieningen", label: "Voorzieningen", icoon: ShieldCheck },
-  { href: "/gebouwen", label: "Gebouwen", icoon: Building },
+  { href: "/", labelKey: "nav.mijnOpdrachten", icoon: Home },
+  { href: "/onderhoud", labelKey: "nav.werkbonnen", icoon: Wrench },
+  { href: "/inspecties", labelKey: "nav.inspecties", icoon: Search },
+  { href: "/voorzieningen", labelKey: "nav.voorzieningen", icoon: ShieldCheck },
+  { href: "/gebouwen", labelKey: "nav.gebouwen", icoon: Building },
 ];
 
 const ROUTES_CONTROLEUR = [
-  { href: "/", label: "Mijn inspecties", icoon: Home },
-  { href: "/inspecties", label: "Inspecties", icoon: Search },
-  { href: "/voorzieningen", label: "Voorzieningen", icoon: ShieldCheck },
-  { href: "/gebouwen", label: "Gebouwen & plattegronden", icoon: Map },
+  { href: "/", labelKey: "nav.mijnInspecties", icoon: Home },
+  { href: "/inspecties", labelKey: "nav.inspecties", icoon: Search },
+  { href: "/voorzieningen", labelKey: "nav.voorzieningen", icoon: ShieldCheck },
+  { href: "/gebouwen", labelKey: "nav.gebouwenPlattegronden", icoon: Map },
 ];
 
 export default function MonteurLayout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
   const { rol } = useRol();
+  const { t } = useTranslation();
   const routes = rol === "controleur" ? ROUTES_CONTROLEUR : ROUTES_MONTEUR;
-  const portalNaam = rol === "controleur" ? "Controleur portal" : "Monteur portal";
+  const portalNaam = rol === "controleur" ? t("nav.controleurPortal") : t("nav.monteurPortal");
 
   return (
     <SidebarProvider>
@@ -38,7 +40,7 @@ export default function MonteurLayout({ children }: { children: React.ReactNode 
               <ShieldCheck size={22} />
             </div>
             <div className="group-data-[collapsible=icon]:hidden">
-              <div className="font-bold text-sm tracking-tight leading-tight">FPS Brandpreventie</div>
+              <div className="font-bold text-sm tracking-tight leading-tight">{t("app.naam")}</div>
               <div className="text-xs text-muted-foreground">{portalNaam}</div>
             </div>
           </div>
@@ -46,7 +48,7 @@ export default function MonteurLayout({ children }: { children: React.ReactNode 
 
         <SidebarContent>
           <SidebarGroup>
-            <SidebarGroupLabel>Menu</SidebarGroupLabel>
+            <SidebarGroupLabel>{t("nav.menu")}</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
                 {routes.map((route) => (
@@ -57,7 +59,7 @@ export default function MonteurLayout({ children }: { children: React.ReactNode 
                     >
                       <Link href={route.href}>
                         <route.icoon />
-                        <span>{route.label}</span>
+                        <span>{t(route.labelKey)}</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Link } from "wouter";
 import { useListOnderhoud } from "@workspace/api-client-react";
 import { Card, CardContent } from "@/components/ui/card";
@@ -29,6 +30,7 @@ const statusIcon = (status: string) => {
 };
 
 export default function Onderhoud() {
+  const { t } = useTranslation();
   const [statusFilter, setStatusFilter] = useState("all");
   const [prioriteitFilter, setPrioriteitFilter] = useState("all");
 
@@ -44,18 +46,18 @@ export default function Onderhoud() {
     <div className="space-y-6 max-w-7xl mx-auto">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Onderhoud</h1>
-          <p className="text-muted-foreground mt-1">Overzicht van alle onderhoudstaken en werkorders.</p>
+          <h1 className="text-3xl font-bold tracking-tight">{t("onderhoud.titel")}</h1>
+          <p className="text-muted-foreground mt-1">{t("onderhoud.ondertitel")}</p>
         </div>
-        <Button>+ Nieuwe Taak</Button>
+        <Button>+ {t("onderhoud.nieuweTaak")}</Button>
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
-          { label: "Openstaand", status: "open", kleur: "text-yellow-600", count: taken?.filter((t) => t.status === "open").length ?? 0 },
-          { label: "In uitvoering", status: "in_uitvoering", kleur: "text-blue-600", count: taken?.filter((t) => t.status === "in_uitvoering").length ?? 0 },
-          { label: "Voltooid", status: "voltooid", kleur: "text-green-600", count: taken?.filter((t) => t.status === "voltooid").length ?? 0 },
-          { label: "Kritiek", status: "kritiek", kleur: "text-destructive", count: taken?.filter((t) => t.prioriteit === "kritiek").length ?? 0 },
+          { label: t("onderhoud.openstaand"), status: "open", kleur: "text-yellow-600", count: taken?.filter((t) => t.status === "open").length ?? 0 },
+          { label: t("onderhoud.inUitvoering"), status: "in_uitvoering", kleur: "text-blue-600", count: taken?.filter((t) => t.status === "in_uitvoering").length ?? 0 },
+          { label: t("onderhoud.voltooid"), status: "voltooid", kleur: "text-green-600", count: taken?.filter((t) => t.status === "voltooid").length ?? 0 },
+          { label: t("onderhoud.kritiek"), status: "kritiek", kleur: "text-destructive", count: taken?.filter((t) => t.prioriteit === "kritiek").length ?? 0 },
         ].map((s) => (
           <Card key={s.label} className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setStatusFilter(s.status === "kritiek" ? "all" : s.status)}>
             <CardContent className="pt-4 pb-3">

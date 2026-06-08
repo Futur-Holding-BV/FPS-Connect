@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -25,6 +26,7 @@ const STATUSLABEL: Record<string, string> = {
 };
 
 export default function BeheerderDashboard() {
+  const { t } = useTranslation();
   const { data: stats } = useGetDashboardStats();
   const { data: activiteit } = useGetRecenteActiviteit();
   const { data: verdeling } = useGetStatusVerdeling();
@@ -40,8 +42,8 @@ export default function BeheerderDashboard() {
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-        <p className="text-muted-foreground mt-1">Overzicht van het volledige FPS Brandpreventie portfolio.</p>
+        <h1 className="text-3xl font-bold tracking-tight">{t("dashboard.titel")}</h1>
+        <p className="text-muted-foreground mt-1">{t("dashboard.ondertitel")}</p>
       </div>
 
       {/* KPI kaarten */}

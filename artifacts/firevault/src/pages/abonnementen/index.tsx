@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { useListAbonnementen } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -75,6 +76,7 @@ const plannen = [
 ];
 
 export default function Abonnementen() {
+  const { t } = useTranslation();
   const { data: abonnementen, isLoading } = useListAbonnementen();
 
   const actief = abonnementen?.filter((a) => a.actief);
@@ -82,8 +84,8 @@ export default function Abonnementen() {
   return (
     <div className="space-y-10 max-w-7xl mx-auto">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Abonnementen</h1>
-        <p className="text-muted-foreground mt-1">Beheer abonnementen en kies het juiste pakket.</p>
+        <h1 className="text-3xl font-bold tracking-tight">{t("abonnementen.titel")}</h1>
+        <p className="text-muted-foreground mt-1">{t("abonnementen.ondertitel")}</p>
       </div>
 
       {/* Actieve abonnementen */}

@@ -922,7 +922,8 @@ export const ListGebruikersResponseItem = zod.object({
   "bedrijfslogo_url": zod.string().nullish(),
   "bedrijfskleuren": zod.string().nullish(),
   "uitnodiging_status": zod.enum(['niet_uitgenodigd', 'uitgenodigd', 'geaccepteerd']),
-  "uitnodiging_verstuurd_op": zod.string().nullish()
+  "uitnodiging_verstuurd_op": zod.string().nullish(),
+  "taal": zod.enum(['nl', 'en', 'de', 'fr', 'ar', 'tr']).optional()
 })
 export const ListGebruikersResponse = zod.array(ListGebruikersResponseItem)
 
@@ -940,7 +941,8 @@ export const CreateGebruikerBody = zod.object({
   "avatar_url": zod.string().optional(),
   "bedrijfslogo_url": zod.string().optional(),
   "bedrijfskleuren": zod.string().optional(),
-  "uitnodiging_status": zod.string().optional()
+  "uitnodiging_status": zod.string().optional(),
+  "taal": zod.string().optional()
 })
 
 export const CreateGebruikerResponse = zod.void()
@@ -967,7 +969,8 @@ export const GetGebruikerResponse = zod.object({
   "bedrijfslogo_url": zod.string().nullish(),
   "bedrijfskleuren": zod.string().nullish(),
   "uitnodiging_status": zod.enum(['niet_uitgenodigd', 'uitgenodigd', 'geaccepteerd']),
-  "uitnodiging_verstuurd_op": zod.string().nullish()
+  "uitnodiging_verstuurd_op": zod.string().nullish(),
+  "taal": zod.enum(['nl', 'en', 'de', 'fr', 'ar', 'tr']).optional()
 })
 
 
@@ -989,7 +992,8 @@ export const UpdateGebruikerBody = zod.object({
   "avatar_url": zod.string().optional(),
   "bedrijfslogo_url": zod.string().optional(),
   "bedrijfskleuren": zod.string().optional(),
-  "uitnodiging_status": zod.string().optional()
+  "uitnodiging_status": zod.string().optional(),
+  "taal": zod.string().optional()
 })
 
 export const UpdateGebruikerResponse = zod.object({
@@ -1006,7 +1010,8 @@ export const UpdateGebruikerResponse = zod.object({
   "bedrijfslogo_url": zod.string().nullish(),
   "bedrijfskleuren": zod.string().nullish(),
   "uitnodiging_status": zod.enum(['niet_uitgenodigd', 'uitgenodigd', 'geaccepteerd']),
-  "uitnodiging_verstuurd_op": zod.string().nullish()
+  "uitnodiging_verstuurd_op": zod.string().nullish(),
+  "taal": zod.enum(['nl', 'en', 'de', 'fr', 'ar', 'tr']).optional()
 })
 
 
@@ -1041,7 +1046,8 @@ export const UitnodigingVersturenResponse = zod.object({
   "bedrijfslogo_url": zod.string().nullish(),
   "bedrijfskleuren": zod.string().nullish(),
   "uitnodiging_status": zod.enum(['niet_uitgenodigd', 'uitgenodigd', 'geaccepteerd']),
-  "uitnodiging_verstuurd_op": zod.string().nullish()
+  "uitnodiging_verstuurd_op": zod.string().nullish(),
+  "taal": zod.enum(['nl', 'en', 'de', 'fr', 'ar', 'tr']).optional()
 })
 
 
@@ -1054,6 +1060,24 @@ export const WachtwoordWijzigenBody = zod.object({
 })
 
 export const WachtwoordWijzigenResponse = zod.void()
+
+
+/**
+ * @summary Eigen taalvoorkeur wijzigen (ingelogd)
+ */
+export const TaalWijzigenBody = zod.object({
+  "taal": zod.enum(['nl', 'en', 'de', 'fr', 'ar', 'tr'])
+})
+
+export const TaalWijzigenResponse = zod.object({
+  "id": zod.number(),
+  "naam": zod.string(),
+  "email": zod.string(),
+  "rol": zod.enum(['hoofdbeheerder', 'beheerder', 'monteur', 'controleur', 'klant', 'viewer']),
+  "avatar_url": zod.string().nullish(),
+  "bedrijfskleuren": zod.string().nullish(),
+  "taal": zod.enum(['nl', 'en', 'de', 'fr', 'ar', 'tr']).optional()
+})
 
 
 /**
@@ -1194,7 +1218,8 @@ export const TweeFactorActiverenResponse = zod.object({
   "email": zod.string(),
   "rol": zod.enum(['hoofdbeheerder', 'beheerder', 'monteur', 'controleur', 'klant', 'viewer']),
   "avatar_url": zod.string().nullish(),
-  "bedrijfskleuren": zod.string().nullish()
+  "bedrijfskleuren": zod.string().nullish(),
+  "taal": zod.enum(['nl', 'en', 'de', 'fr', 'ar', 'tr']).optional()
 })
 
 
@@ -1211,7 +1236,8 @@ export const TweeFactorVerifyResponse = zod.object({
   "email": zod.string(),
   "rol": zod.enum(['hoofdbeheerder', 'beheerder', 'monteur', 'controleur', 'klant', 'viewer']),
   "avatar_url": zod.string().nullish(),
-  "bedrijfskleuren": zod.string().nullish()
+  "bedrijfskleuren": zod.string().nullish(),
+  "taal": zod.enum(['nl', 'en', 'de', 'fr', 'ar', 'tr']).optional()
 })
 
 
@@ -1230,7 +1256,8 @@ export const GetHuidigeGebruikerResponse = zod.object({
   "email": zod.string(),
   "rol": zod.enum(['hoofdbeheerder', 'beheerder', 'monteur', 'controleur', 'klant', 'viewer']),
   "avatar_url": zod.string().nullish(),
-  "bedrijfskleuren": zod.string().nullish()
+  "bedrijfskleuren": zod.string().nullish(),
+  "taal": zod.enum(['nl', 'en', 'de', 'fr', 'ar', 'tr']).optional()
 })
 
 

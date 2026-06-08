@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
 import { AuthProvider, useAuth } from "@/context/auth-context";
+import { TaalProvider } from "@/context/taal-context";
 import { useRol } from "@/context/rol-context";
 import LoginPagina from "@/pages/auth/login";
 
@@ -124,10 +125,12 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <AuthProvider>
-          <Gate />
-          <Toaster />
-        </AuthProvider>
+        <TaalProvider>
+          <AuthProvider>
+            <Gate />
+            <Toaster />
+          </AuthProvider>
+        </TaalProvider>
       </TooltipProvider>
     </QueryClientProvider>
   );

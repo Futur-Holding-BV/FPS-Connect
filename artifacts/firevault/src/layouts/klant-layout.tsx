@@ -1,4 +1,5 @@
 import { Link, useLocation } from "wouter";
+import { useTranslation } from "react-i18next";
 import {
   SidebarProvider, Sidebar, SidebarHeader, SidebarContent, SidebarFooter,
   SidebarGroup, SidebarGroupContent,
@@ -8,13 +9,14 @@ import { ShieldCheck, Home, FileText, Building } from "lucide-react";
 import { GebruikerMenu } from "@/components/gebruiker-menu";
 
 const ROUTES = [
-  { href: "/", label: "Mijn portaal", icoon: Home },
-  { href: "/gebouwen", label: "Mijn gebouwen & 3D", icoon: Building },
-  { href: "/klant/rapportages", label: "Rapportages", icoon: FileText },
+  { href: "/", labelKey: "nav.mijnPortaal", icoon: Home },
+  { href: "/gebouwen", labelKey: "nav.mijnGebouwen3d", icoon: Building },
+  { href: "/klant/rapportages", labelKey: "nav.rapportages", icoon: FileText },
 ];
 
 export default function KlantLayout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
+  const { t } = useTranslation();
 
   return (
     <SidebarProvider>
@@ -25,8 +27,8 @@ export default function KlantLayout({ children }: { children: React.ReactNode })
               <ShieldCheck size={22} />
             </div>
             <div className="group-data-[collapsible=icon]:hidden">
-              <div className="font-bold text-sm tracking-tight leading-tight">FPS Brandpreventie</div>
-              <div className="text-xs text-muted-foreground">Klantportaal</div>
+              <div className="font-bold text-sm tracking-tight leading-tight">{t("app.naam")}</div>
+              <div className="text-xs text-muted-foreground">{t("nav.klantportaal")}</div>
             </div>
           </div>
         </SidebarHeader>
@@ -43,7 +45,7 @@ export default function KlantLayout({ children }: { children: React.ReactNode })
                     >
                       <Link href={route.href}>
                         <route.icoon />
-                        <span>{route.label}</span>
+                        <span>{t(route.labelKey)}</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>

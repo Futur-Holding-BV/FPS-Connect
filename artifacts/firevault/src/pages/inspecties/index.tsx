@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Link } from "wouter";
 import { useListInspecties } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -29,6 +30,7 @@ const typeLabel: Record<string, string> = {
 };
 
 export default function Inspecties() {
+  const { t } = useTranslation();
   const [statusFilter, setStatusFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
 
@@ -48,11 +50,11 @@ export default function Inspecties() {
     <div className="space-y-6 max-w-7xl mx-auto">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Inspecties</h1>
-          <p className="text-muted-foreground mt-1">Overzicht van alle inspecties en keuringen.</p>
+          <h1 className="text-3xl font-bold tracking-tight">{t("inspecties.titel")}</h1>
+          <p className="text-muted-foreground mt-1">{t("inspecties.ondertitel")}</p>
         </div>
         <Button asChild>
-          <Link href="/inspecties/nieuw">+ Nieuwe Inspectie</Link>
+          <Link href="/inspecties/nieuw">+ {t("inspecties.nieuw")}</Link>
         </Button>
       </div>
 
