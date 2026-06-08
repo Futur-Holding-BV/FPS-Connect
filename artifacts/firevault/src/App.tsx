@@ -3,11 +3,17 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
-import { SidebarProvider, Sidebar, SidebarHeader, SidebarContent, SidebarGroup, SidebarGroupLabel, SidebarGroupContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton } from "@/components/ui/sidebar";
-import { Link, useLocation } from "wouter";
-import { Building, ShieldCheck, Wrench, Users, Search, Home, Map, Receipt, Settings } from "lucide-react";
+import { RolProvider, useRol } from "@/context/rol-context";
 
-import Dashboard from "@/pages/dashboard";
+import BeheerderLayout from "@/layouts/beheerder-layout";
+import MonteurLayout from "@/layouts/monteur-layout";
+import KlantLayout from "@/layouts/klant-layout";
+
+import BeheerderDashboard from "@/pages/dashboard/beheerder";
+import MonteurDashboard from "@/pages/dashboard/monteur";
+import KlantDashboard from "@/pages/dashboard/klant";
+import KlantRapportages from "@/pages/klant/rapportages";
+
 import Gebouwen from "@/pages/gebouwen/index";
 import GebouwDetail from "@/pages/gebouwen/detail";
 import Plattegrond from "@/pages/gebouwen/plattegrond";
@@ -23,68 +29,11 @@ import Abonnementen from "@/pages/abonnementen/index";
 
 const queryClient = new QueryClient();
 
-function AppSidebar() {
-  const [location] = useLocation();
-
-  const routes = [
-    { href: "/", label: "Dashboard", icon: Home },
-    { href: "/gebouwen", label: "Gebouwen", icon: Building },
-    { href: "/voorzieningen", label: "Voorzieningen", icon: ShieldCheck },
-    { href: "/inspecties", label: "Inspecties", icon: Search },
-    { href: "/onderhoud", label: "Onderhoud", icon: Wrench },
-    { href: "/gebruikers", label: "Gebruikers", icon: Users },
-    { href: "/abonnementen", label: "Abonnementen", icon: Receipt },
-  ];
-
+function BeheerderPortal() {
   return (
-    <Sidebar variant="inset" collapsible="icon">
-      <SidebarHeader className="py-4">
-        <div className="flex items-center gap-2 px-4">
-          <div className="bg-primary text-primary-foreground p-1 rounded">
-            <ShieldCheck size={24} />
-          </div>
-          <span className="font-bold text-lg tracking-tight group-data-[collapsible=icon]:hidden">FPS Brandpreventie</span>
-        </div>
-      </SidebarHeader>
-      <SidebarContent>
-        <SidebarGroup>
-          <SidebarGroupLabel>Platform</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {routes.map((route) => (
-                <SidebarMenuItem key={route.href}>
-                  <SidebarMenuButton asChild isActive={location === route.href || (location.startsWith(route.href) && route.href !== "/")}>
-                    <Link href={route.href}>
-                      <route.icon />
-                      <span>{route.label}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-      </SidebarContent>
-    </Sidebar>
-  );
-}
-
-function Layout({ children }: { children: React.ReactNode }) {
-  return (
-    <SidebarProvider>
-      <AppSidebar />
-      <main className="flex-1 min-h-screen overflow-auto bg-background p-6">
-        {children}
-      </main>
-    </SidebarProvider>
-  );
-}
-
-function Router() {
-  return (
-    <Layout>
+    <BeheerderLayout>
       <Switch>
-        <Route path="/" component={Dashboard} />
+        <Route path="/" component={BeheerderDashboard} />
         <Route path="/gebouwen" component={Gebouwen} />
         <Route path="/gebouwen/:id" component={GebouwDetail} />
         <Route path="/gebouwen/:id/plattegrond/:verdiepingId" component={Plattegrond} />
@@ -99,18 +48,63 @@ function Router() {
         <Route path="/abonnementen" component={Abonnementen} />
         <Route component={NotFound} />
       </Switch>
-    </Layout>
+    </BeheerderLayout>
   );
+}
+
+function MonteurPortal() {
+  return (
+    <MonteurLayout>
+      <Switch>
+        <Route path="/" component={MonteurDashboard} />
+        <Route path="/onderhoud" component={Onderhoud} />
+        <Route path="/inspecties" component={Inspecties} />
+        <Route path="/inspecties/:id" component={InspectieDetail} />
+        <Route path="/voorzieningen" component={Voorzieningen} />
+        <Route path="/voorzieningen/:id/qr" component={VoorzieningQr} />
+        <Route path="/voorzieningen/:id" component={VoorzieningDetail} />
+        <Route path="/gebouwen" component={Gebouwen} />
+        <Route path="/gebouwen/:id" component={GebouwDetail} />
+        <Route path="/gebouwen/:id/plattegrond/:verdiepingId" component={Plattegrond} />
+        <Route component={NotFound} />
+      </Switch>
+    </MonteurLayout>
+  );
+}
+
+function KlantPortal() {
+  return (
+    <KlantLayout>
+      <Switch>
+        <Route path="/" component={KlantDashboard} />
+        <Route path="/gebouwen" component={Gebouwen} />
+        <Route path="/gebouwen/:id" component={GebouwDetail} />
+        <Route path="/gebouwen/:id/plattegrond/:verdiepingId" component={Plattegrond} />
+        <Route path="/klant/rapportages" component={KlantRapportages} />
+        <Route component={NotFound} />
+      </Switch>
+    </KlantLayout>
+  );
+}
+
+function Router() {
+  const { rol } = useRol();
+
+  if (rol === "klant") return <KlantPortal />;
+  if (rol === "monteur" || rol === "controleur") return <MonteurPortal />;
+  return <BeheerderPortal />;
 }
 
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-          <Router />
-        </WouterRouter>
-        <Toaster />
+        <RolProvider>
+          <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+            <Router />
+          </WouterRouter>
+          <Toaster />
+        </RolProvider>
       </TooltipProvider>
     </QueryClientProvider>
   );
