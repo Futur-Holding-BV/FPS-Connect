@@ -192,6 +192,31 @@ paths:
               schema:
                 $ref: "#/components/schemas/GebouwAiAnalyseResultaat"
 
+  /gebouwen/{id}/tekeningen/ai-analyse:
+    post:
+      operationId: aiAnalyseTekening
+      tags: [gebouwen]
+      summary: AI-voorstel voor bouwlaag (naam + niveau) en tekeningnaam o.b.v. de bestandsnaam
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TekeningAiAnalyseInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TekeningAiAnalyseResultaat"
+
   /gebouwen/{id}:
     get:
       operationId: getGebouw
@@ -2195,6 +2220,41 @@ components:
         verdieping_id:
           type: integer
           nullable: true
+
+    TekeningAiAnalyseInput:
+      type: object
+      required: [bestandsnaam]
+      properties:
+        bestandsnaam:
+          type: string
+          description: De originele bestandsnaam van de geüploade tekening.
+        type:
+          type: string
+          description: Reeds gekozen tekeningtype (optioneel; de AI mag dit corrigeren).
+
+    TekeningAiAnalyseResultaat:
+      type: object
+      required: [tekening_naam, tekening_type]
+      properties:
+        tekening_naam:
+          type: string
+          description: Voorgestelde nette naam voor de tekening.
+        tekening_type:
+          type: string
+          description: Voorgesteld tekeningtype.
+        bouwlaag_naam:
+          type: ["string", "null"]
+          description: Voorgestelde bouwlaagnaam (bijv. "Begane grond", "1e verdieping").
+        bouwlaag_niveau:
+          type: ["integer", "null"]
+          description: Voorgesteld bouwlaagniveau (kelder negatief, begane grond 0, verdiepingen oplopend).
+        bestaande_verdieping_id:
+          type: ["integer", "null"]
+          description: Id van een bestaande bouwlaag die overeenkomt met het voorstel, indien gevonden.
+        toelichting:
+          type: ["string", "null"]
+        betrouwbaarheid:
+          type: ["string", "null"]
 
     Scheiding:
       type: object

@@ -11,7 +11,7 @@ import {
 } from "@workspace/db";
 import { eq, inArray, count, and } from "drizzle-orm";
 import { requireRol } from "../middlewares/auth";
-import { analyseerGebouwVrijeTekst } from "../services/gebouw-ai";
+import { analyseerGebouwVrijeTekst, analyseerTekening } from "../services/gebouw-ai";
 
 const router = Router();
 
@@ -178,6 +178,34 @@ router.post(
         return res.status(400).json({ error: "beschrijving is verplicht" });
       }
       const resultaat = await analyseerGebouwVrijeTekst(beschrijving);
+      res.json(resultaat);
+    } catch (err) {
+      req.log.error(err);
+      res.status(500).json({ error: "AI-analyse mislukte" });
+    }
+  },
+);
+
+// POST /gebouwen/:id/tekeningen/ai-analyse — alleen beheerder
+router.post(
+  "/gebouwen/:id/tekeningen/ai-analyse",
+  requireRol("beheerder", "hoofdbeheerder"),
+  async (req, res) => {
+    try {
+      const gebouwId = parseInt(req.params.id);
+      const { bestandsnaam, type } = req.body ?? {};
+      if (!bestandsnaam || typeof bestandsnaam !== "string" || !bestandsnaam.trim()) {
+        return res.status(400).json({ error: "bestandsnaam is verplicht" });
+      }
+      const verdiepingen = await db
+        .select()
+        .from(verdiepingenTable)
+        .where(eq(verdiepingenTable.gebouwId, gebouwId));
+      const resultaat = await analyseerTekening(
+        bestandsnaam,
+        typeof type === "string" ? type : null,
+        verdiepingen.map((v) => ({ id: v.id, naam: v.naam, niveau: v.niveau })),
+      );
       res.json(resultaat);
     } catch (err) {
       req.log.error(err);

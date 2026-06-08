@@ -77,6 +77,8 @@ import type {
   StatusVerdeling,
   TaalWijzigen,
   Tekening,
+  TekeningAiAnalyseInput,
+  TekeningAiAnalyseResultaat,
   TekeningInput,
   TekeningUpdate,
   Toewijzing,
@@ -733,6 +735,77 @@ export const useAiAnalyseGebouw = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getAiAnalyseGebouwMutationOptions(options));
+    }
+
+export const getAiAnalyseTekeningUrl = (id: number,) => {
+
+
+
+
+  return `/api/gebouwen/${id}/tekeningen/ai-analyse`
+}
+
+/**
+ * @summary AI-voorstel voor bouwlaag (naam + niveau) en tekeningnaam o.b.v. de bestandsnaam
+ */
+export const aiAnalyseTekening = async (id: number,
+    tekeningAiAnalyseInput: TekeningAiAnalyseInput, options?: RequestInit): Promise<TekeningAiAnalyseResultaat> => {
+
+  return customFetch<TekeningAiAnalyseResultaat>(getAiAnalyseTekeningUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(tekeningAiAnalyseInput)
+  }
+);}
+
+
+
+
+export const getAiAnalyseTekeningMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof aiAnalyseTekening>>, TError,{id: number;data: BodyType<TekeningAiAnalyseInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof aiAnalyseTekening>>, TError,{id: number;data: BodyType<TekeningAiAnalyseInput>}, TContext> => {
+
+const mutationKey = ['aiAnalyseTekening'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof aiAnalyseTekening>>, {id: number;data: BodyType<TekeningAiAnalyseInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  aiAnalyseTekening(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AiAnalyseTekeningMutationResult = NonNullable<Awaited<ReturnType<typeof aiAnalyseTekening>>>
+    export type AiAnalyseTekeningMutationBody = BodyType<TekeningAiAnalyseInput>
+    export type AiAnalyseTekeningMutationError = ErrorType<unknown>
+
+    /**
+ * @summary AI-voorstel voor bouwlaag (naam + niveau) en tekeningnaam o.b.v. de bestandsnaam
+ */
+export const useAiAnalyseTekening = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof aiAnalyseTekening>>, TError,{id: number;data: BodyType<TekeningAiAnalyseInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof aiAnalyseTekening>>,
+        TError,
+        {id: number;data: BodyType<TekeningAiAnalyseInput>},
+        TContext
+      > => {
+      return useMutation(getAiAnalyseTekeningMutationOptions(options));
     }
 
 export const getGetGebouwUrl = (id: number,) => {

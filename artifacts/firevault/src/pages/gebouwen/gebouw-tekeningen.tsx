@@ -3,8 +3,13 @@ import {
   useListGebouwTekeningen,
   useCreateGebouwTekening,
   useDeleteGebouwTekening,
+  useCreateVerdieping,
+  useAiAnalyseTekening,
 } from "@workspace/api-client-react";
-import type { Verdieping } from "@workspace/api-client-react";
+import type {
+  Verdieping,
+  TekeningAiAnalyseResultaat,
+} from "@workspace/api-client-react";
 import { useUpload } from "@workspace/object-storage-web";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,7 +24,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { FileText, Loader2, Plus, X, Upload, ExternalLink } from "lucide-react";
+import {
+  FileText,
+  Loader2,
+  Plus,
+  X,
+  Upload,
+  ExternalLink,
+  Sparkles,
+} from "lucide-react";
 
 const TEKENING_TYPES = [
   { waarde: "plattegrond", label: "Plattegrond" },
@@ -36,6 +49,7 @@ function typeLabel(type: string): string {
 }
 
 const GEEN_BOUWLAAG = "geen";
+const NIEUWE_BOUWLAAG = "nieuw";
 
 export default function GebouwTekeningen({
   gebouwId,
@@ -50,6 +64,8 @@ export default function GebouwTekeningen({
   const { data: tekeningen, isLoading } = useListGebouwTekeningen(gebouwId);
   const maakTekening = useCreateGebouwTekening();
   const verwijderTekening = useDeleteGebouwTekening();
+  const maakVerdieping = useCreateVerdieping();
+  const analyseTekening = useAiAnalyseTekening();
   const { uploadFile, isUploading } = useUpload();
 
   const inputRef = useRef<HTMLInputElement>(null);
@@ -58,8 +74,13 @@ export default function GebouwTekeningen({
   const [type, setType] = useState("plattegrond");
   const [schaal, setSchaal] = useState("");
   const [verdiepingId, setVerdiepingId] = useState<string>(GEEN_BOUWLAAG);
+  const [nieuweBouwlaagNaam, setNieuweBouwlaagNaam] = useState("");
+  const [nieuweBouwlaagNiveau, setNieuweBouwlaagNiveau] = useState("0");
   const [bestandsnaam, setBestandsnaam] = useState("");
   const [objectPath, setObjectPath] = useState("");
+  const [aiVoorstel, setAiVoorstel] = useState<TekeningAiAnalyseResultaat | null>(
+    null,
+  );
   const [fout, setFout] = useState("");
 
   const gesorteerdeVerdiepingen = [...verdiepingen].sort(
@@ -82,8 +103,32 @@ export default function GebouwTekeningen({
       setObjectPath(res.objectPath);
       setBestandsnaam(file.name);
       if (!naam) setNaam(file.name.replace(/\.[^.]+$/, ""));
+      await analyseerBestand(file.name);
     } catch {
       setFout("Uploaden mislukt. Probeer het opnieuw.");
+    }
+  }
+
+  async function analyseerBestand(naamVanBestand: string) {
+    try {
+      const res = await analyseTekening.mutateAsync({
+        id: gebouwId,
+        data: { bestandsnaam: naamVanBestand, type },
+      });
+      setAiVoorstel(res);
+      setNaam(res.tekening_naam);
+      setType(res.tekening_type);
+      if (res.bestaande_verdieping_id != null) {
+        setVerdiepingId(String(res.bestaande_verdieping_id));
+      } else if (res.bouwlaag_naam) {
+        setVerdiepingId(NIEUWE_BOUWLAAG);
+        setNieuweBouwlaagNaam(res.bouwlaag_naam);
+        setNieuweBouwlaagNiveau(String(res.bouwlaag_niveau ?? 0));
+      } else {
+        setVerdiepingId(GEEN_BOUWLAAG);
+      }
+    } catch {
+      // AI-voorstel is optioneel; bij een fout blijft handmatig invullen mogelijk.
     }
   }
 
@@ -92,27 +137,51 @@ export default function GebouwTekeningen({
     setType("plattegrond");
     setSchaal("");
     setVerdiepingId(GEEN_BOUWLAAG);
+    setNieuweBouwlaagNaam("");
+    setNieuweBouwlaagNiveau("0");
     setBestandsnaam("");
     setObjectPath("");
+    setAiVoorstel(null);
     setFout("");
     setFormOpen(false);
   }
 
   async function opslaan() {
     if (!naam.trim() || !objectPath) return;
-    await maakTekening.mutateAsync({
-      id: gebouwId,
-      data: {
-        naam: naam.trim(),
-        type,
-        schaal: schaal || undefined,
-        url: objectPath,
-        verdieping_id:
-          verdiepingId === GEEN_BOUWLAAG ? null : Number(verdiepingId),
-      },
-    });
-    reset();
-    queryClient.invalidateQueries();
+    setFout("");
+    try {
+      let verdieping_id: number | null = null;
+      if (verdiepingId === NIEUWE_BOUWLAAG) {
+        if (!nieuweBouwlaagNaam.trim()) {
+          setFout("Geef de nieuwe bouwlaag een naam.");
+          return;
+        }
+        const nieuw = await maakVerdieping.mutateAsync({
+          id: gebouwId,
+          data: {
+            naam: nieuweBouwlaagNaam.trim(),
+            niveau: Number(nieuweBouwlaagNiveau) || 0,
+          },
+        });
+        verdieping_id = nieuw.id;
+      } else if (verdiepingId !== GEEN_BOUWLAAG) {
+        verdieping_id = Number(verdiepingId);
+      }
+      await maakTekening.mutateAsync({
+        id: gebouwId,
+        data: {
+          naam: naam.trim(),
+          type,
+          schaal: schaal || undefined,
+          url: objectPath,
+          verdieping_id,
+        },
+      });
+      reset();
+      queryClient.invalidateQueries();
+    } catch {
+      setFout("Opslaan mislukt. Probeer het opnieuw.");
+    }
   }
 
   async function verwijder(tekeningId: number) {
@@ -205,6 +274,34 @@ export default function GebouwTekeningen({
                 e.target.value = "";
               }}
             />
+            {analyseTekening.isPending && (
+              <div className="flex items-center gap-2 rounded-md bg-muted/50 p-2 text-sm text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                AI bepaalt bouwlaag en naam...
+              </div>
+            )}
+            {aiVoorstel && !analyseTekening.isPending && (
+              <div className="rounded-md border border-primary/30 bg-primary/5 p-3 space-y-1">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="h-4 w-4 text-primary" />
+                  <span className="text-sm font-medium">AI-voorstel</span>
+                  {aiVoorstel.betrouwbaarheid && (
+                    <Badge variant="secondary" className="text-xs">
+                      betrouwbaarheid {aiVoorstel.betrouwbaarheid}
+                    </Badge>
+                  )}
+                </div>
+                {aiVoorstel.toelichting && (
+                  <p className="text-xs text-muted-foreground">
+                    {aiVoorstel.toelichting}
+                  </p>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  Controleer en pas zo nodig de naam, het type en de bouwlaag
+                  hieronder aan.
+                </p>
+              </div>
+            )}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1">
                 <Label>Naam</Label>
@@ -237,6 +334,9 @@ export default function GebouwTekeningen({
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value={GEEN_BOUWLAAG}>Hele gebouw</SelectItem>
+                    <SelectItem value={NIEUWE_BOUWLAAG}>
+                      Nieuwe bouwlaag aanmaken
+                    </SelectItem>
                     {gesorteerdeVerdiepingen.map((v) => (
                       <SelectItem key={v.id} value={String(v.id)}>
                         {v.naam}
@@ -245,6 +345,30 @@ export default function GebouwTekeningen({
                   </SelectContent>
                 </Select>
               </div>
+              {verdiepingId === NIEUWE_BOUWLAAG && (
+                <>
+                  <div className="space-y-1">
+                    <Label>Naam nieuwe bouwlaag</Label>
+                    <Input
+                      value={nieuweBouwlaagNaam}
+                      onChange={(e) => setNieuweBouwlaagNaam(e.target.value)}
+                      placeholder="bijv. Begane grond"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label>Niveau</Label>
+                    <Input
+                      type="number"
+                      value={nieuweBouwlaagNiveau}
+                      onChange={(e) => setNieuweBouwlaagNiveau(e.target.value)}
+                      placeholder="0"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Kelder negatief, begane grond 0, verdiepingen oplopend.
+                    </p>
+                  </div>
+                </>
+              )}
               <div className="space-y-1">
                 <Label>Schaal</Label>
                 <Input
@@ -278,9 +402,14 @@ export default function GebouwTekeningen({
               <Button
                 size="sm"
                 onClick={opslaan}
-                disabled={!naam.trim() || !objectPath || maakTekening.isPending}
+                disabled={
+                  !naam.trim() ||
+                  !objectPath ||
+                  maakTekening.isPending ||
+                  maakVerdieping.isPending
+                }
               >
-                {maakTekening.isPending ? (
+                {maakTekening.isPending || maakVerdieping.isPending ? (
                   <Loader2 className="h-4 w-4 animate-spin mr-1" />
                 ) : null}
                 Opslaan

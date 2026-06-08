@@ -79,6 +79,8 @@ export * from './statusVerdeling';
 export * from './taalWijzigen';
 export * from './taalWijzigenTaal';
 export * from './tekening';
+export * from './tekeningAiAnalyseInput';
+export * from './tekeningAiAnalyseResultaat';
 export * from './tekeningInput';
 export * from './tekeningUpdate';
 export * from './toewijzing';

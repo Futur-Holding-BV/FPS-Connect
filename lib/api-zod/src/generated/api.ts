@@ -177,6 +177,29 @@ export const AiAnalyseGebouwResponse = zod.object({
 
 
 /**
+ * @summary AI-voorstel voor bouwlaag (naam + niveau) en tekeningnaam o.b.v. de bestandsnaam
+ */
+export const AiAnalyseTekeningParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const AiAnalyseTekeningBody = zod.object({
+  "bestandsnaam": zod.string().describe('De originele bestandsnaam van de geüploade tekening.'),
+  "type": zod.string().optional().describe('Reeds gekozen tekeningtype (optioneel; de AI mag dit corrigeren).')
+})
+
+export const AiAnalyseTekeningResponse = zod.object({
+  "tekening_naam": zod.string().describe('Voorgestelde nette naam voor de tekening.'),
+  "tekening_type": zod.string().describe('Voorgesteld tekeningtype.'),
+  "bouwlaag_naam": zod.string().nullish().describe('Voorgestelde bouwlaagnaam (bijv. \"Begane grond\", \"1e verdieping\").'),
+  "bouwlaag_niveau": zod.number().nullish().describe('Voorgesteld bouwlaagniveau (kelder negatief, begane grond 0, verdiepingen oplopend).'),
+  "bestaande_verdieping_id": zod.number().nullish().describe('Id van een bestaande bouwlaag die overeenkomt met het voorstel, indien gevonden.'),
+  "toelichting": zod.string().nullish(),
+  "betrouwbaarheid": zod.string().nullish()
+})
+
+
+/**
  * @summary Gebouwdetails ophalen
  */
 export const GetGebouwParams = zod.object({

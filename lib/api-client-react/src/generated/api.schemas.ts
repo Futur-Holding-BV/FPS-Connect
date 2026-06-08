@@ -237,6 +237,39 @@ export interface TekeningUpdate {
   verdieping_id?: number | null;
 }
 
+export interface TekeningAiAnalyseInput {
+  /** De originele bestandsnaam van de geüploade tekening. */
+  bestandsnaam: string;
+  /** Reeds gekozen tekeningtype (optioneel; de AI mag dit corrigeren). */
+  type?: string;
+}
+
+export interface TekeningAiAnalyseResultaat {
+  /** Voorgestelde nette naam voor de tekening. */
+  tekening_naam: string;
+  /** Voorgesteld tekeningtype. */
+  tekening_type: string;
+  /**
+     * Voorgestelde bouwlaagnaam (bijv. "Begane grond", "1e verdieping").
+     * @nullable
+     */
+  bouwlaag_naam?: string | null;
+  /**
+     * Voorgesteld bouwlaagniveau (kelder negatief, begane grond 0, verdiepingen oplopend).
+     * @nullable
+     */
+  bouwlaag_niveau?: number | null;
+  /**
+     * Id van een bestaande bouwlaag die overeenkomt met het voorstel, indien gevonden.
+     * @nullable
+     */
+  bestaande_verdieping_id?: number | null;
+  /** @nullable */
+  toelichting?: string | null;
+  /** @nullable */
+  betrouwbaarheid?: string | null;
+}
+
 export interface Scheiding {
   id: number;
   verdieping_id: number;

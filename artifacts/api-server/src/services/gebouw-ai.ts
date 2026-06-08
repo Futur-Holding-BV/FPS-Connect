@@ -272,6 +272,136 @@ async function extraheerUitTekst(beschrijving: string): Promise<ExtractieVelden 
   };
 }
 
+export interface TekeningAnalyse {
+  tekening_naam: string;
+  tekening_type: string;
+  bouwlaag_naam: string | null;
+  bouwlaag_niveau: number | null;
+  bestaande_verdieping_id: number | null;
+  toelichting: string | null;
+  betrouwbaarheid: string | null;
+}
+
+const TEKENING_TYPES = [
+  "plattegrond",
+  "gevelaanzicht",
+  "doorsnede",
+  "situatietekening",
+  "installatietekening",
+  "detailtekening",
+  "overig",
+];
+
+const TEKENING_PROMPT = `Je helpt bij het registreren van een bouwtekening. Op basis van de bestandsnaam (en eventueel het reeds gekozen type) bepaal je een nette tekeningnaam en op welke bouwlaag de tekening hoort.
+Geef uitsluitend geldige JSON terug met deze velden:
+- tekening_naam (tekst): een nette, leesbare naam voor de tekening (verwijder bestandsextensie, koppeltekens en technische codes; gebruik normale Nederlandse hoofdletters).
+- tekening_type (tekst): kies exact één uit: plattegrond, gevelaanzicht, doorsnede, situatietekening, installatietekening, detailtekening, overig.
+- bouwlaag_naam (tekst of null): de bouwlaag waar de tekening bij hoort. Gebruik Nederlandse standaardnamen: "Kelder", "Begane grond", "1e verdieping", "2e verdieping", "Dak", enz. Null als de tekening niet bij één specifieke bouwlaag hoort (bijv. een situatietekening of gevelaanzicht van het hele gebouw).
+- bouwlaag_niveau (geheel getal of null): het niveau van de bouwlaag. Kelder = -1 (lager = -2, -3), begane grond = 0, 1e verdieping = 1, 2e verdieping = 2, dak = hoogste verdieping + 1. Null als bouwlaag_naam null is.
+- toelichting (korte Nederlandse tekst): waarom je deze bouwlaag en naam koos.
+- betrouwbaarheid (tekst): "laag", "midden" of "hoog".
+Verzin geen verdiepingen die niet uit de bestandsnaam blijken. Antwoord in het Nederlands. Alleen JSON, geen extra tekst.`;
+
+function valideerType(v: unknown): string {
+  const s = strOfNull(v);
+  if (s && TEKENING_TYPES.includes(s.toLowerCase())) return s.toLowerCase();
+  return "overig";
+}
+
+function matchVerdiepingId(
+  naam: string | null,
+  niveau: number | null,
+  bestaande: { id: number; naam: string; niveau: number }[],
+): number | null {
+  if (niveau != null) {
+    const opNiveau = bestaande.find((v) => v.niveau === niveau);
+    if (opNiveau) return opNiveau.id;
+  }
+  if (naam) {
+    const n = naam.trim().toLowerCase();
+    const opNaam = bestaande.find((v) => v.naam.trim().toLowerCase() === n);
+    if (opNaam) return opNaam.id;
+  }
+  return null;
+}
+
+function basisTekeningNaam(bestandsnaam: string): string {
+  return (
+    bestandsnaam
+      .replace(/\.[^.]+$/, "")
+      .replace(/[_-]+/g, " ")
+      .replace(/\s+/g, " ")
+      .trim() || bestandsnaam
+  );
+}
+
+// Leidt op basis van de bestandsnaam een tekeningnaam en bouwlaag (naam + niveau)
+// af. Het matchen met een bestaande bouwlaag gebeurt in code, zodat de AI alleen
+// over naamgeving en nummering hoeft te oordelen.
+export async function analyseerTekening(
+  bestandsnaam: string,
+  type: string | null,
+  bestaandeVerdiepingen: { id: number; naam: string; niveau: number }[],
+): Promise<TekeningAnalyse> {
+  const valterug = (toelichting: string): TekeningAnalyse => ({
+    tekening_naam: basisTekeningNaam(bestandsnaam),
+    tekening_type: type && TEKENING_TYPES.includes(type) ? type : "plattegrond",
+    bouwlaag_naam: null,
+    bouwlaag_niveau: null,
+    bestaande_verdieping_id: null,
+    toelichting,
+    betrouwbaarheid: "laag",
+  });
+
+  if (!OPENAI_KEY) {
+    return valterug("AI niet beschikbaar; naam afgeleid van de bestandsnaam.");
+  }
+
+  const bestaandTekst = bestaandeVerdiepingen.length
+    ? bestaandeVerdiepingen
+        .map((v) => `- ${v.naam} (niveau ${v.niveau})`)
+        .join("\n")
+    : "(nog geen bouwlagen)";
+  const userTekst = `Bestandsnaam: "${bestandsnaam}".\nReeds gekozen type: ${type || "(geen)"}.\nBestaande bouwlagen in dit gebouw:\n${bestaandTekst}\nKies, indien passend, een bouwlaagnaam en -niveau die aansluiten op de bestaande bouwlagen.`;
+
+  let parsed: Record<string, unknown>;
+  try {
+    const client = new OpenAI({ apiKey: OPENAI_KEY });
+    const completion = await client.chat.completions.create({
+      model: "gpt-4o-mini",
+      response_format: { type: "json_object" },
+      max_tokens: 400,
+      messages: [
+        { role: "system", content: TEKENING_PROMPT },
+        { role: "user", content: userTekst },
+      ],
+    });
+    const tekst = completion.choices[0]?.message?.content;
+    if (!tekst) return valterug("Geen AI-antwoord ontvangen.");
+    parsed = JSON.parse(tekst);
+  } catch (err) {
+    logger.error({ err }, "Tekening-analyse mislukte");
+    return valterug("AI-analyse mislukte; naam afgeleid van de bestandsnaam.");
+  }
+
+  const bouwlaagNaam = strOfNull(parsed.bouwlaag_naam);
+  const bouwlaagNiveau = intOfNull(parsed.bouwlaag_niveau);
+
+  return {
+    tekening_naam: strOfNull(parsed.tekening_naam) ?? basisTekeningNaam(bestandsnaam),
+    tekening_type: valideerType(parsed.tekening_type),
+    bouwlaag_naam: bouwlaagNaam,
+    bouwlaag_niveau: bouwlaagNaam ? bouwlaagNiveau : null,
+    bestaande_verdieping_id: matchVerdiepingId(
+      bouwlaagNaam,
+      bouwlaagNiveau,
+      bestaandeVerdiepingen,
+    ),
+    toelichting: strOfNull(parsed.toelichting),
+    betrouwbaarheid: strOfNull(parsed.betrouwbaarheid),
+  };
+}
+
 function splitsAdres(formatted: string): {
   adres: string | null;
   postcode: string | null;
