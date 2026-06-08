@@ -42,7 +42,7 @@ function AppSidebar() {
           <div className="bg-primary text-primary-foreground p-1 rounded">
             <ShieldCheck size={24} />
           </div>
-          <span className="font-bold text-lg tracking-tight group-data-[collapsible=icon]:hidden">FireVault</span>
+          <span className="font-bold text-lg tracking-tight group-data-[collapsible=icon]:hidden">FPS Brandpreventie</span>
         </div>
       </SidebarHeader>
       <SidebarContent>
