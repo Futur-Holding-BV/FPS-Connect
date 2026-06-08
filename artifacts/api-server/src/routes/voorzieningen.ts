@@ -112,6 +112,8 @@ async function mapVoorziening(v: typeof voorzieningenTable.$inferSelect) {
     wand_of_plafond: v.wandOfPlafond,
     maker_monteur_id: v.makerMonteurId,
     maker_monteur_naam: maker?.naam ?? null,
+    gearchiveerd: v.gearchiveerd,
+    gearchiveerd_op: v.gearchiveerdOp ? v.gearchiveerdOp.toISOString() : null,
     aangemaakt_op: v.aangemaaktOp.toISOString(),
     bijgewerkt_op: v.bijgewerktOp.toISOString(),
   };
@@ -120,8 +122,12 @@ async function mapVoorziening(v: typeof voorzieningenTable.$inferSelect) {
 // GET /voorzieningen
 router.get("/voorzieningen", async (req, res) => {
   try {
-    const { gebouw_id, verdieping_id, type, status, classificatie, zoek, pagina, per_pagina } = req.query;
+    const { gebouw_id, verdieping_id, type, status, gearchiveerd, classificatie, zoek, pagina, per_pagina } = req.query;
     let all = await db.select().from(voorzieningenTable);
+
+    // Standaard alleen actieve voorzieningen; gearchiveerde alleen op verzoek.
+    if (gearchiveerd === "true") all = all.filter((v) => v.gearchiveerd);
+    else all = all.filter((v) => !v.gearchiveerd);
 
     if (gebouw_id) all = all.filter((v) => v.gebouwId === parseInt(gebouw_id as string));
     if (verdieping_id) all = all.filter((v) => v.verdiepingId === parseInt(verdieping_id as string));
@@ -420,14 +426,62 @@ router.patch("/voorzieningen/:id/status", async (req, res) => {
   }
 });
 
+// PATCH /voorzieningen/:id/archief
+router.patch("/voorzieningen/:id/archief", async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const gearchiveerd = req.body?.gearchiveerd === true;
+
+    // Terug plaatsen (de-archiveren) is uitsluitend voorbehouden aan beheerders.
+    if (!gearchiveerd) {
+      const userId = req.session.userId;
+      const [g] = await db
+        .select({ rol: gebruikersTable.rol })
+        .from(gebruikersTable)
+        .where(eq(gebruikersTable.id, userId!));
+      if (!g || (g.rol !== "hoofdbeheerder" && g.rol !== "beheerder")) {
+        return res.status(403).json({ error: "Geen toegang" });
+      }
+    }
+
+    const [v] = await db
+      .update(voorzieningenTable)
+      .set({
+        gearchiveerd,
+        gearchiveerdOp: gearchiveerd ? new Date() : null,
+        bijgewerktOp: new Date(),
+      })
+      .where(eq(voorzieningenTable.id, id))
+      .returning();
+    if (!v) return res.status(404).json({ error: "Voorziening niet gevonden" });
+
+    await db.insert(activiteitenTable).values({
+      type: gearchiveerd ? "voorziening_gearchiveerd" : "voorziening_teruggeplaatst",
+      omschrijving: gearchiveerd
+        ? `Voorziening ${v.objectnummer} gearchiveerd`
+        : `Voorziening ${v.objectnummer} terug geplaatst`,
+      gebouwId: v.gebouwId,
+      voorzieningId: v.id,
+      voorzieningNummer: v.objectnummer,
+    });
+
+    res.json(await mapVoorziening(v));
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
 // GET /verdiepingen/:id/voorzieningen
 router.get("/verdiepingen/:id/voorzieningen", async (req, res) => {
   try {
     const id = parseInt(req.params.id);
-    const voorzieningen = await db
-      .select()
-      .from(voorzieningenTable)
-      .where(eq(voorzieningenTable.verdiepingId, id));
+    const voorzieningen = (
+      await db
+        .select()
+        .from(voorzieningenTable)
+        .where(eq(voorzieningenTable.verdiepingId, id))
+    ).filter((v) => !v.gearchiveerd);
 
     res.json(
       voorzieningen.map((v) => ({
@@ -443,6 +497,7 @@ router.get("/verdiepingen/:id/voorzieningen", async (req, res) => {
         wbdbo: v.wbdbo,
         wrd: v.wrd,
         wand_of_plafond: v.wandOfPlafond,
+        gearchiveerd: v.gearchiveerd,
       }))
     );
   } catch (err) {

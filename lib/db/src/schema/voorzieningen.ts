@@ -1,4 +1,4 @@
-import { pgTable, serial, text, integer, timestamp, real } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, integer, timestamp, real, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { gebouwenTable, verdiepingenTable } from "./gebouwen";
@@ -27,6 +27,8 @@ export const voorzieningenTable = pgTable("voorzieningen", {
   controleurId: integer("controleur_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
   installatieDatum: text("installatie_datum"),
   volgendeInspectie: text("volgende_inspectie"),
+  gearchiveerd: boolean("gearchiveerd").notNull().default(false),
+  gearchiveerdOp: timestamp("gearchiveerd_op"),
   aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
   bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
 });

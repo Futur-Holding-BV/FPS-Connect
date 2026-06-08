@@ -24,6 +24,7 @@ import type {
   AbonnementInput,
   AbonnementUpdate,
   Activiteit,
+  ArchiefUpdate,
   AuthGebruiker,
   CodeInput,
   DashboardStats,
@@ -3079,6 +3080,77 @@ export const useUpdateVoorzieningStatus = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getUpdateVoorzieningStatusMutationOptions(options));
+    }
+
+export const getArchiveerVoorzieningUrl = (id: number,) => {
+
+
+
+
+  return `/api/voorzieningen/${id}/archief`
+}
+
+/**
+ * @summary Voorziening archiveren of terug plaatsen
+ */
+export const archiveerVoorziening = async (id: number,
+    archiefUpdate: ArchiefUpdate, options?: RequestInit): Promise<Voorziening> => {
+
+  return customFetch<Voorziening>(getArchiveerVoorzieningUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(archiefUpdate)
+  }
+);}
+
+
+
+
+export const getArchiveerVoorzieningMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof archiveerVoorziening>>, TError,{id: number;data: BodyType<ArchiefUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof archiveerVoorziening>>, TError,{id: number;data: BodyType<ArchiefUpdate>}, TContext> => {
+
+const mutationKey = ['archiveerVoorziening'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof archiveerVoorziening>>, {id: number;data: BodyType<ArchiefUpdate>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  archiveerVoorziening(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ArchiveerVoorzieningMutationResult = NonNullable<Awaited<ReturnType<typeof archiveerVoorziening>>>
+    export type ArchiveerVoorzieningMutationBody = BodyType<ArchiefUpdate>
+    export type ArchiveerVoorzieningMutationError = ErrorType<void>
+
+    /**
+ * @summary Voorziening archiveren of terug plaatsen
+ */
+export const useArchiveerVoorziening = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof archiveerVoorziening>>, TError,{id: number;data: BodyType<ArchiefUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof archiveerVoorziening>>,
+        TError,
+        {id: number;data: BodyType<ArchiefUpdate>},
+        TContext
+      > => {
+      return useMutation(getArchiveerVoorzieningMutationOptions(options));
     }
 
 export const getListVoorzieningenOpVerdiepingUrl = (id: number,) => {

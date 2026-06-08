@@ -11,7 +11,10 @@ import {
   useGetVolgendSpotnummer,
   useListGebruikers,
   useGetVoorziening,
+  useUpdateVoorziening,
   useUpdateVoorzieningStatus,
+  useArchiveerVoorziening,
+  useListVoorzieningen,
   useAddFoto,
   useDeleteFoto,
   useListScheidingen,
@@ -25,8 +28,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Plus, X, ZoomIn, ZoomOut, RotateCcw, Map, FileText, Trash2, Image as ImageIcon, Loader2, Spline, Check } from "lucide-react";
+import { ArrowLeft, Plus, X, ZoomIn, ZoomOut, RotateCcw, Map, FileText, Trash2, Image as ImageIcon, Loader2, Spline, Check, Move, Archive, ArchiveRestore } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@/context/auth-context";
+
+const BEHEERDER_ROLLEN = ["beheerder", "hoofdbeheerder"];
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 
@@ -246,6 +252,10 @@ export default function Plattegrond() {
   const [scheidingDialoog, setScheidingDialoog] = useState(false);
   const [scheidingForm, setScheidingForm] = useState({ type: "brand", waarde: "60" });
   const [scheidingSelectie, setScheidingSelectie] = useState<number | null>(null);
+  const [verplaatsModus, setVerplaatsModus] = useState(false);
+
+  const { gebruiker } = useAuth();
+  const isBeheerder = !!gebruiker?.rol && BEHEERDER_ROLLEN.includes(gebruiker.rol as string);
 
   const queryClient = useQueryClient();
   const { data: verdieping } = useGetVerdieping(Number(verdiepingId));
@@ -254,6 +264,7 @@ export default function Plattegrond() {
   const { data: voorzieningen, refetch } = useListVoorzieningenOpVerdieping(Number(verdiepingId));
   const { data: gebruikers } = useListGebruikers();
   const maakVoorziening = useCreateVoorziening();
+  const updateVoorziening = useUpdateVoorziening();
   const { data: volgendSpot, refetch: refetchSpotnummer } = useGetVolgendSpotnummer(Number(id));
   const addFoto = useAddFoto();
 
@@ -350,13 +361,25 @@ export default function Plattegrond() {
       setHuidigePunten((p) => [...p, { x: Math.round(svgX), y: Math.round(svgY) }]);
       return;
     }
+    if (verplaatsModus && geselecteerdId != null) {
+      const klemX = Math.min(W, Math.max(0, svgX));
+      const klemY = Math.min(H, Math.max(0, svgY));
+      void verplaatsSpot(geselecteerdId, Math.round(klemX), Math.round(klemY));
+      return;
+    }
     if (!plaatsenModus) return;
     const klemX = Math.min(W, Math.max(0, svgX));
     const klemY = Math.min(H, Math.max(0, svgY));
     setNieuwLocatie({ x: Math.round(klemX), y: Math.round(klemY) });
     setNieuwForm((f) => ({ ...f, objectnummer: volgendSpot?.spotnummer ?? "" }));
     setNieuwDialoog(true);
-  }, [plaatsenModus, tekenModus, view, W, H, volgendSpot]);
+  }, [plaatsenModus, tekenModus, verplaatsModus, geselecteerdId, view, W, H, volgendSpot]);
+
+  const verplaatsSpot = useCallback(async (spotId: number, x: number, y: number) => {
+    await updateVoorziening.mutateAsync({ id: spotId, data: { locatie_x: x, locatie_y: y } });
+    setVerplaatsModus(false);
+    refetch();
+  }, [updateVoorziening, refetch]);
 
   const startTekenen = useCallback(() => {
     setPlaatsenModus(false);
@@ -396,10 +419,10 @@ export default function Plattegrond() {
   }, [verwijderScheiding, refetchScheidingen]);
 
   const opMouseDown = useCallback((e: React.MouseEvent<SVGSVGElement>) => {
-    if (plaatsenModus || tekenModus) return;
+    if (plaatsenModus || tekenModus || verplaatsModus) return;
     setPanning(true);
     setPanStart({ mx: e.clientX, my: e.clientY, vx: view.x, vy: view.y });
-  }, [plaatsenModus, tekenModus, view.x, view.y]);
+  }, [plaatsenModus, tekenModus, verplaatsModus, view.x, view.y]);
 
   const opMouseMove = useCallback((e: React.MouseEvent<SVGSVGElement>) => {
     if (!panning) return;
@@ -577,6 +600,14 @@ export default function Plattegrond() {
               <Spline className="h-4 w-4 mr-1" />Scheiding tekenen
             </Button>
           )}
+
+          {isBeheerder && (
+            <GearchiveerdSectie
+              gebouwId={Number(id)}
+              verdiepingId={Number(verdiepingId)}
+              onWijziging={() => { refetch(); refetchSpotnummer(); }}
+            />
+          )}
         </div>
       </div>
 
@@ -584,6 +615,16 @@ export default function Plattegrond() {
       {plaatsenModus && (
         <div className="bg-primary/10 border border-primary/30 rounded-md px-3 py-2 mb-2 text-sm text-primary font-medium flex-shrink-0">
           Klik op de plattegrond om een nieuwe voorziening te plaatsen.
+        </div>
+      )}
+
+      {/* Verplaats hint */}
+      {verplaatsModus && (
+        <div className="bg-primary/10 border border-primary/30 rounded-md px-3 py-2 mb-2 text-sm text-primary font-medium flex items-center justify-between flex-shrink-0">
+          <span>Klik op de plattegrond om de geselecteerde voorziening te verplaatsen.</span>
+          <Button variant="destructive" size="sm" onClick={() => setVerplaatsModus(false)}>
+            <X className="h-4 w-4 mr-1" />Annuleren
+          </Button>
         </div>
       )}
 
@@ -599,7 +640,7 @@ export default function Plattegrond() {
         {/* SVG Canvas */}
         <div
           ref={containerRef}
-          className={`flex-1 rounded-lg border overflow-hidden bg-slate-100 relative ${plaatsenModus || tekenModus ? "cursor-crosshair" : panning ? "cursor-grabbing" : "cursor-grab"}`}
+          className={`flex-1 rounded-lg border overflow-hidden bg-slate-100 relative ${plaatsenModus || tekenModus || verplaatsModus ? "cursor-crosshair" : panning ? "cursor-grabbing" : "cursor-grab"}`}
         >
           <svg
             ref={svgRef}
@@ -750,8 +791,11 @@ export default function Plattegrond() {
         {geselecteerdId != null && (
           <SpotDetail
             id={geselecteerdId}
-            onClose={() => setGeselecteerdId(null)}
+            onClose={() => { setGeselecteerdId(null); setVerplaatsModus(false); }}
             onWijziging={() => refetch()}
+            verplaatsModus={verplaatsModus}
+            onVerplaats={() => setVerplaatsModus(true)}
+            onVerplaatsAnnuleer={() => setVerplaatsModus(false)}
           />
         )}
 
@@ -1022,7 +1066,92 @@ export default function Plattegrond() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
     </div>
+  );
+}
+
+// Gearchiveerde voorzieningen beheren (alleen beheerder) — knop + dialoog.
+// Hooks draaien uitsluitend wanneer deze component gemonteerd is (beheerder).
+function GearchiveerdSectie({
+  gebouwId,
+  verdiepingId,
+  onWijziging,
+}: {
+  gebouwId: number;
+  verdiepingId: number;
+  onWijziging: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const { data, refetch } = useListVoorzieningen({
+    gebouw_id: gebouwId,
+    verdieping_id: verdiepingId,
+    gearchiveerd: true,
+    per_pagina: 200,
+  });
+  const archiveer = useArchiveerVoorziening();
+  const gearchiveerde = data?.items ?? [];
+
+  async function terugPlaatsen(spotId: number) {
+    await archiveer.mutateAsync({ id: spotId, data: { gearchiveerd: false } });
+    refetch();
+    onWijziging();
+  }
+
+  return (
+    <>
+      <Button variant="outline" size="sm" onClick={() => setOpen(true)}>
+        <Archive className="h-4 w-4 mr-1" />Gearchiveerd
+        {gearchiveerde.length > 0 && (
+          <Badge variant="secondary" className="ml-1.5">{gearchiveerde.length}</Badge>
+        )}
+      </Button>
+
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Gearchiveerde voorzieningen</DialogTitle>
+          </DialogHeader>
+          {gearchiveerde.length === 0 ? (
+            <p className="text-sm text-muted-foreground py-6 text-center">
+              Geen gearchiveerde voorzieningen op deze verdieping.
+            </p>
+          ) : (
+            <div className="space-y-2 py-1">
+              {gearchiveerde.map((v: any) => (
+                <div
+                  key={v.id}
+                  className="flex items-center gap-3 p-2.5 rounded border text-sm"
+                >
+                  <span
+                    className="w-3 h-3 rounded-full flex-shrink-0"
+                    style={{ backgroundColor: TYPEN[v.type]?.kleur ?? "#94a3b8" }}
+                  />
+                  <div className="min-w-0 flex-1">
+                    <div className="font-medium truncate">{v.objectnummer}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {TYPEN[v.type]?.label ?? v.type}
+                      {v.gearchiveerd_op ? ` — gearchiveerd op ${String(v.gearchiveerd_op).slice(0, 10)}` : ""}
+                    </div>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={archiveer.isPending}
+                    onClick={() => terugPlaatsen(v.id)}
+                  >
+                    <ArchiveRestore className="h-4 w-4 mr-1" />Terug plaatsen
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setOpen(false)}>Sluiten</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
 
@@ -1058,10 +1187,16 @@ function SpotDetail({
   id,
   onClose,
   onWijziging,
+  verplaatsModus,
+  onVerplaats,
+  onVerplaatsAnnuleer,
 }: {
   id: number;
   onClose: () => void;
   onWijziging: () => void;
+  verplaatsModus: boolean;
+  onVerplaats: () => void;
+  onVerplaatsAnnuleer: () => void;
 }) {
   const { data: v, isLoading, refetch } = useGetVoorziening(id);
   const addFoto = useAddFoto();
@@ -1199,6 +1334,15 @@ function SpotDetail({
           </div>
 
           <div className="flex flex-col gap-2 mt-auto pt-3 border-t">
+            {verplaatsModus ? (
+              <Button size="sm" variant="destructive" onClick={onVerplaatsAnnuleer}>
+                <X className="h-4 w-4 mr-1" />Verplaatsen annuleren
+              </Button>
+            ) : (
+              <Button size="sm" variant="outline" onClick={onVerplaats}>
+                <Move className="h-4 w-4 mr-1" />Verplaatsen
+              </Button>
+            )}
             <Button size="sm" variant="default" asChild>
               <Link href={`/voorzieningen/${id}`} onClick={() => onWijziging()}>Volledige details</Link>
             </Button>

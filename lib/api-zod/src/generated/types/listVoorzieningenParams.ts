@@ -11,6 +11,7 @@ gebouw_id?: number;
 verdieping_id?: number;
 type?: string;
 status?: string;
+gearchiveerd?: boolean;
 classificatie?: string;
 zoek?: string;
 pagina?: number;

@@ -58,6 +58,9 @@ export interface Voorziening {
   maker_monteur_id?: number | null;
   /** @nullable */
   maker_monteur_naam?: string | null;
+  gearchiveerd?: boolean;
+  /** @nullable */
+  gearchiveerd_op?: string | null;
   aangemaakt_op: string;
   bijgewerkt_op?: string;
 }

@@ -515,6 +515,9 @@ export interface Voorziening {
   maker_monteur_id?: number | null;
   /** @nullable */
   maker_monteur_naam?: string | null;
+  gearchiveerd?: boolean;
+  /** @nullable */
+  gearchiveerd_op?: string | null;
   aangemaakt_op: string;
   bijgewerkt_op?: string;
 }
@@ -682,11 +685,18 @@ export interface VoorzieningDetail {
   maker_monteur_id?: number | null;
   /** @nullable */
   maker_monteur_naam?: string | null;
+  gearchiveerd?: boolean;
+  /** @nullable */
+  gearchiveerd_op?: string | null;
   aangemaakt_op: string;
   bijgewerkt_op?: string;
   fotos: Foto[];
   inspecties: Inspectie[];
   onderhoud: Onderhoudstaak[];
+}
+
+export interface ArchiefUpdate {
+  gearchiveerd: boolean;
 }
 
 export interface VoorzieningLocatie {
@@ -709,6 +719,7 @@ export interface VoorzieningLocatie {
   wrd?: string | null;
   /** @nullable */
   wand_of_plafond?: string | null;
+  gearchiveerd?: boolean;
 }
 
 export interface VoorzieningLijst {
@@ -1251,6 +1262,7 @@ gebouw_id?: number;
 verdieping_id?: number;
 type?: string;
 status?: string;
+gearchiveerd?: boolean;
 classificatie?: string;
 zoek?: string;
 pagina?: number;

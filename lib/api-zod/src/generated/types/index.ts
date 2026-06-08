@@ -11,6 +11,7 @@ export * from './abonnementInput';
 export * from './abonnementNiveau';
 export * from './abonnementUpdate';
 export * from './activiteit';
+export * from './archiefUpdate';
 export * from './authGebruiker';
 export * from './authGebruikerRol';
 export * from './authGebruikerTaal';

@@ -3,4 +3,5 @@
 - [Toewijzingen API velden](toewijzingen-velden.md) — Toewijzing type heeft naam/rol, NIET gebruiker_naam/gebruiker_rol; ToewijzingInput heeft alleen gebruiker_id.
 - [Orval enabled-opties](orval-enabled.md) — { query: { enabled } } geeft TS2741 (queryKey ontbreekt) in hele codebase; pre-existing; Vite werkt gewoon; gate op UI-niveau ipv hook-niveau.
 - [Rol-filter backend](rol-filter.md) — TOEGEWEZEN_ROLLEN=["monteur","controleur"]; gebouwToewijzingenTable importeren voor toegewezenGebouwIds(); filter in listInspecties en listOnderhoud.
+- [Voorziening archief](voorziening-archief.md) — terugplaatsen=beheerder-only (server-side afdwingen in archief-handler, niet alleen UI); archieflijst-hook in child-component mounten zodat niet-beheerders niet fetchen.
 - [Spotnummer ontwerp](spotnummer.md) — objectnummer = auto <gebouwAfk>-<volgnr> via GET /gebouwen/:id/volgend-spotnummer; POST retry op 23505; markers tonen laatste cijfers (regex /(\d+)$/), niet type.slice(0,2).

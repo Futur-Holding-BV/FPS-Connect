@@ -669,6 +669,7 @@ export const ListVoorzieningenQueryParams = zod.object({
   "verdieping_id": zod.coerce.number().optional(),
   "type": zod.coerce.string().optional(),
   "status": zod.coerce.string().optional(),
+  "gearchiveerd": zod.coerce.boolean().optional(),
   "classificatie": zod.coerce.string().optional(),
   "zoek": zod.coerce.string().optional(),
   "pagina": zod.coerce.number().default(listVoorzieningenQueryPaginaDefault),
@@ -704,6 +705,8 @@ export const ListVoorzieningenResponse = zod.object({
   "wand_of_plafond": zod.string().nullish(),
   "maker_monteur_id": zod.number().nullish(),
   "maker_monteur_naam": zod.string().nullish(),
+  "gearchiveerd": zod.boolean().optional(),
+  "gearchiveerd_op": zod.string().nullish(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string().optional()
 })),
@@ -778,6 +781,8 @@ export const GetVoorzieningResponse = zod.object({
   "wand_of_plafond": zod.string().nullish(),
   "maker_monteur_id": zod.number().nullish(),
   "maker_monteur_naam": zod.string().nullish(),
+  "gearchiveerd": zod.boolean().optional(),
+  "gearchiveerd_op": zod.string().nullish(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string().optional(),
   "fotos": zod.array(zod.object({
@@ -882,6 +887,8 @@ export const UpdateVoorzieningResponse = zod.object({
   "wand_of_plafond": zod.string().nullish(),
   "maker_monteur_id": zod.number().nullish(),
   "maker_monteur_naam": zod.string().nullish(),
+  "gearchiveerd": zod.boolean().optional(),
+  "gearchiveerd_op": zod.string().nullish(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string().optional()
 })
@@ -982,6 +989,54 @@ export const UpdateVoorzieningStatusResponse = zod.object({
   "wand_of_plafond": zod.string().nullish(),
   "maker_monteur_id": zod.number().nullish(),
   "maker_monteur_naam": zod.string().nullish(),
+  "gearchiveerd": zod.boolean().optional(),
+  "gearchiveerd_op": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string().optional()
+})
+
+
+/**
+ * @summary Voorziening archiveren of terug plaatsen
+ */
+export const ArchiveerVoorzieningParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ArchiveerVoorzieningBody = zod.object({
+  "gearchiveerd": zod.boolean()
+})
+
+export const ArchiveerVoorzieningResponse = zod.object({
+  "id": zod.number(),
+  "objectnummer": zod.string(),
+  "qr_code": zod.string().nullish(),
+  "type": zod.enum(['applicatie', 'branddeur', 'brandscheiding', 'doorvoering', 'brandklep', 'brandwerend_glas', 'luik', 'rooster', 'kitvoeg', 'manchet', 'coating', 'plaatconstructie']),
+  "status": zod.enum(['concept', 'in_uitvoering', 'opgeleverd', 'goedgekeurd', 'afgekeurd', 'in_onderhoud', 'vervallen']),
+  "classificatie": zod.enum(['30', '60', '90', '120']),
+  "gebouw_id": zod.number(),
+  "gebouw_naam": zod.string().nullish(),
+  "verdieping_id": zod.number().nullish(),
+  "verdieping_naam": zod.string().nullish(),
+  "ruimte": zod.string().nullish(),
+  "locatie_omschrijving": zod.string().nullish(),
+  "locatie_x": zod.number().nullish(),
+  "locatie_y": zod.number().nullish(),
+  "materialen": zod.string().nullish(),
+  "opmerkingen": zod.string().nullish(),
+  "monteur_id": zod.number().nullish(),
+  "monteur_naam": zod.string().nullish(),
+  "controleur_id": zod.number().nullish(),
+  "controleur_naam": zod.string().nullish(),
+  "installatie_datum": zod.string().nullish(),
+  "volgende_inspectie": zod.string().nullish(),
+  "wbdbo": zod.string().nullish(),
+  "wrd": zod.string().nullish(),
+  "wand_of_plafond": zod.string().nullish(),
+  "maker_monteur_id": zod.number().nullish(),
+  "maker_monteur_naam": zod.string().nullish(),
+  "gearchiveerd": zod.boolean().optional(),
+  "gearchiveerd_op": zod.string().nullish(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string().optional()
 })
@@ -1006,7 +1061,8 @@ export const ListVoorzieningenOpVerdiepingResponseItem = zod.object({
   "locatie_omschrijving": zod.string().nullish(),
   "wbdbo": zod.string().nullish(),
   "wrd": zod.string().nullish(),
-  "wand_of_plafond": zod.string().nullish()
+  "wand_of_plafond": zod.string().nullish(),
+  "gearchiveerd": zod.boolean().optional()
 })
 export const ListVoorzieningenOpVerdiepingResponse = zod.array(ListVoorzieningenOpVerdiepingResponseItem)
 
@@ -1361,6 +1417,8 @@ export const GetInspectieResponse = zod.object({
   "wand_of_plafond": zod.string().nullish(),
   "maker_monteur_id": zod.number().nullish(),
   "maker_monteur_naam": zod.string().nullish(),
+  "gearchiveerd": zod.boolean().optional(),
+  "gearchiveerd_op": zod.string().nullish(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string().optional()
 }))

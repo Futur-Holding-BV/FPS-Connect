@@ -26,4 +26,5 @@ export interface VoorzieningLocatie {
   wrd?: string | null;
   /** @nullable */
   wand_of_plafond?: string | null;
+  gearchiveerd?: boolean;
 }

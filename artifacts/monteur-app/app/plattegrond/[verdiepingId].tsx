@@ -5,6 +5,7 @@ import {
   useGetVolgendSpotnummer,
   useListFotos,
   useListVoorzieningenOpVerdieping,
+  useArchiveerVoorziening,
 } from "@workspace/api-client-react";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
@@ -446,7 +447,19 @@ export default function Plattegrond() {
             }}
             onPress={(e) => e.stopPropagation()}
           >
-            {detailSpot && <SpotDetail spot={detailSpot} token={token ?? ""} onSluit={() => setDetailId(null)} />}
+            {detailSpot && (
+              <SpotDetail
+                spot={detailSpot}
+                token={token ?? ""}
+                onSluit={() => setDetailId(null)}
+                onGearchiveerd={() => {
+                  setDetailId(null);
+                  refetch();
+                  refetchSpotnummer();
+                  forceerSync();
+                }}
+              />
+            )}
           </Pressable>
         </Pressable>
       </Modal>
@@ -561,6 +574,7 @@ function SpotDetail({
   spot,
   token,
   onSluit,
+  onGearchiveerd,
 }: {
   spot: {
     id: number;
@@ -576,9 +590,33 @@ function SpotDetail({
   };
   token: string;
   onSluit: () => void;
+  onGearchiveerd: () => void;
 }) {
   const c = useColors();
   const { data: fotos } = useListFotos(spot.id);
+  const archiveer = useArchiveerVoorziening();
+
+  function bevestigArchiveren() {
+    Alert.alert(
+      "Voorziening archiveren",
+      `Weet je zeker dat je ${spot.objectnummer} wilt archiveren? De voorziening verdwijnt van de plattegrond.`,
+      [
+        { text: "Annuleren", style: "cancel" },
+        {
+          text: "Archiveren",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await archiveer.mutateAsync({ id: spot.id, data: { gearchiveerd: true } });
+              onGearchiveerd();
+            } catch {
+              Alert.alert("Mislukt", "Archiveren is niet gelukt. Probeer het opnieuw.");
+            }
+          },
+        },
+      ],
+    );
+  }
   const ti = typeInfo(spot.type);
   const voor = (fotos ?? []).filter((f) => f.fase === "voor");
   const na = (fotos ?? []).filter((f) => f.fase === "na");
@@ -649,7 +687,13 @@ function SpotDetail({
         </View>
       )}
 
-      <View style={{ marginTop: 20 }}>
+      <View style={{ marginTop: 20, gap: 10 }}>
+        <Knop
+          titel={archiveer.isPending ? "Bezig met archiveren..." : "Archiveren"}
+          onPress={bevestigArchiveren}
+          variant="gevaar"
+          bezig={archiveer.isPending}
+        />
         <Knop titel="Sluiten" onPress={onSluit} variant="secundair" />
       </View>
     </ScrollView>
