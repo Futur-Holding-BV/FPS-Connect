@@ -6,6 +6,7 @@ import {
   useUpdateGebruiker,
   useDeleteGebruiker,
   useUitnodigingVersturen,
+  getListGebruikersQueryKey,
 } from "@workspace/api-client-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -87,17 +88,20 @@ const UITNODIGING_STATUS_CONFIG = {
   niet_uitgenodigd: {
     label: "Niet uitgenodigd",
     badge: "bg-amber-100 text-amber-800 border-amber-200",
-    kaart: "bg-amber-50 border-amber-200",
+    kaartStyle: { backgroundColor: "#fffbeb", borderColor: "#fcd34d" } as React.CSSProperties,
+    balk: "border-l-[4px] border-l-amber-400",
   },
   uitgenodigd: {
     label: "Uitgenodigd",
     badge: "bg-purple-100 text-purple-800 border-purple-200",
-    kaart: "bg-purple-50 border-purple-200",
+    kaartStyle: { backgroundColor: "#faf5ff", borderColor: "#c084fc" } as React.CSSProperties,
+    balk: "border-l-[4px] border-l-purple-400",
   },
   geaccepteerd: {
     label: "",
     badge: "",
-    kaart: "",
+    kaartStyle: undefined as React.CSSProperties | undefined,
+    balk: "",
   },
 } as const;
 
@@ -184,7 +188,7 @@ export default function Gebruikers() {
 
   const [uitnodigingBezig, setUitnodigingBezig] = useState<number | null>(null);
 
-  const invalideer = () => queryClient.invalidateQueries({ queryKey: ["listGebruikers"] });
+  const invalideer = () => queryClient.invalidateQueries({ queryKey: getListGebruikersQueryKey() });
 
   async function verstuurToevoegen(e: React.FormEvent) {
     e.preventDefault();
@@ -357,7 +361,8 @@ export default function Gebruikers() {
                     return (
                       <Card
                         key={g.id}
-                        className={`hover:shadow-md transition-shadow ${statusCfg.kaart}`}
+                        className={`hover:shadow-md transition-shadow ${statusCfg.balk}`}
+                        style={statusCfg.kaartStyle}
                       >
                         <CardContent className="p-3">
                           <div className="flex items-start gap-3">
@@ -444,9 +449,12 @@ export default function Gebruikers() {
 
                               {status !== "geaccepteerd" && (
                                 <Button
-                                  variant="outline"
                                   size="sm"
-                                  className="mt-2 h-6 text-xs w-full gap-1 border-dashed"
+                                  className={`mt-2 h-7 text-xs w-full gap-1.5 font-medium ${
+                                    status === "niet_uitgenodigd"
+                                      ? "bg-amber-500 hover:bg-amber-600 text-white border-0"
+                                      : "bg-purple-500 hover:bg-purple-600 text-white border-0"
+                                  }`}
                                   disabled={uitnodigingBezig === g.id}
                                   onClick={() => stuurUitnodiging(g)}
                                 >
@@ -454,8 +462,8 @@ export default function Gebruikers() {
                                   {uitnodigingBezig === g.id
                                     ? "Bezig..."
                                     : status === "uitgenodigd"
-                                    ? "Opnieuw uitnodigen"
-                                    : "Uitnodigen per e-mail"}
+                                    ? "Gebruiker opnieuw uitnodigen"
+                                    : "Gebruiker per e-mail uitnodigen"}
                                 </Button>
                               )}
                             </div>
