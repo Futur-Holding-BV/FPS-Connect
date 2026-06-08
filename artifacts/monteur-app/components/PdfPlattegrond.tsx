@@ -109,7 +109,7 @@ function bouwHtml(domein: string, token: string, url: string | null): string {
       if ((s.wand_of_plafond||'')==='plafond'){
         var arr=document.createElement('div');
         arr.className='arrow';
-        arr.innerHTML='<svg width="52" height="52" viewBox="-26 -26 52 52" style="overflow:visible"><g transform="rotate(-45)"><line x1="-24" y1="0" x2="24" y2="0" stroke="#fff" stroke-width="5" stroke-linecap="round"/><line x1="-24" y1="0" x2="24" y2="0" stroke="#1e293b" stroke-width="2.5" stroke-linecap="round"/><polygon points="26,0 16,-6 16,6" fill="#1e293b" stroke="#fff" stroke-width="1.2" stroke-linejoin="round"/></g></svg>';
+        arr.innerHTML='<svg width="52" height="52" viewBox="-26 -26 52 52" style="overflow:visible"><line x1="0" y1="-26" x2="0" y2="26" stroke="#fff" stroke-width="5" stroke-linecap="round"/><line x1="0" y1="-26" x2="0" y2="26" stroke="#1e293b" stroke-width="2.5" stroke-linecap="round"/><polygon points="0,-29 -6,-19 6,-19" fill="#1e293b" stroke="#fff" stroke-width="1.2" stroke-linejoin="round"/><polygon points="0,29 -6,19 6,19" fill="#1e293b" stroke="#fff" stroke-width="1.2" stroke-linejoin="round"/></svg>';
         el.appendChild(arr);
       }
       var lab=document.createElement('span');

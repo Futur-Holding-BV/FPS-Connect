@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useParams, Link } from "wouter";
 import {
   useGetGebouw,
+  useGetGebouwKaart,
   useListGebouwToewijzingen,
   useCreateGebouwToewijzing,
   useDeleteGebouwToewijzing,
@@ -18,7 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ArrowLeft, Layers, Users, X, UserPlus, Loader2, Building2, Pencil } from "lucide-react";
+import { ArrowLeft, Layers, Users, X, UserPlus, Loader2, Building2, Pencil, MapPin } from "lucide-react";
 import { useAuth } from "@/context/auth-context";
 import GebouwPartijen from "./gebouw-partijen";
 import GebouwTekeningen from "./gebouw-tekeningen";
@@ -38,6 +39,7 @@ export default function GebouwDetail() {
     !!gebruiker?.rol && BEHEERDER_ROLLEN.includes(gebruiker.rol as string);
 
   const { data: gebouw, isLoading } = useGetGebouw(gebouwId);
+  const { data: kaartData } = useGetGebouwKaart(gebouwId);
   const { data: toewijzingen, isLoading: toewijzingenLaden } =
     useListGebouwToewijzingen(gebouwId);
   const { data: gebruikers } = useListGebruikers();
@@ -180,6 +182,32 @@ export default function GebouwDetail() {
                   ? ` · ${gebouw.breedte} × ${gebouw.diepte} m`
                   : ""}
               </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <MapPin className="h-5 w-5" /> Locatie
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-0 overflow-hidden rounded-b-lg">
+              {kaartData?.embed_url ? (
+                <iframe
+                  src={kaartData.embed_url}
+                  className="w-full h-72 border-0"
+                  loading="lazy"
+                  allowFullScreen
+                  referrerPolicy="no-referrer-when-downgrade"
+                  title={`Kaartlocatie ${gebouw.naam}`}
+                />
+              ) : (
+                <div className="h-48 flex items-center justify-center text-muted-foreground text-sm bg-muted rounded-b-lg px-6">
+                  {gebouw.adres
+                    ? "Kaartlocatie laden..."
+                    : "Geen adres of coördinaten ingevuld voor dit gebouw."}
+                </div>
+              )}
             </CardContent>
           </Card>
 

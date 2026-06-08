@@ -144,7 +144,7 @@ export default function Gebouwen() {
               })}
             >
               <Text style={{ fontSize: 18, color: c.foreground, fontFamily: "Inter_700Bold" }}>
-                {item.naam}
+                {item.projectnummer ? `${item.projectnummer} - ${item.naam}` : item.naam}
               </Text>
               <Text style={{ fontSize: 15, color: c.mutedForeground, marginTop: 4, fontFamily: "Inter_400Regular" }}>
                 {item.adres}

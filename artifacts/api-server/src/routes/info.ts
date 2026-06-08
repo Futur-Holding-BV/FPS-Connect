@@ -1,0 +1,104 @@
+import { Router } from "express";
+import { db, appInstellingenTable } from "@workspace/db";
+import { eq } from "drizzle-orm";
+import { requireRol } from "../middlewares/auth";
+
+const router = Router();
+
+// GET /info/instellingen
+router.get("/info/instellingen", async (req, res) => {
+  try {
+    const [instelling] = await db
+      .select()
+      .from(appInstellingenTable)
+      .orderBy(appInstellingenTable.id)
+      .limit(1);
+
+    if (!instelling) {
+      return res.json({
+        id: 0,
+        support_email: null,
+        support_telefoon: null,
+        support_website: null,
+        extra_disclaimer: null,
+        bijgewerkt_op: new Date().toISOString(),
+        bijgewerkt_door_id: null,
+      });
+    }
+
+    res.json({
+      id: instelling.id,
+      support_email: instelling.supportEmail,
+      support_telefoon: instelling.supportTelefoon,
+      support_website: instelling.supportWebsite,
+      extra_disclaimer: instelling.extraDisclaimer,
+      bijgewerkt_op: instelling.bijgewerktOp.toISOString(),
+      bijgewerkt_door_id: instelling.bijgewerktDoorId,
+    });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// PUT /info/instellingen — alleen hoofdbeheerder
+router.put(
+  "/info/instellingen",
+  requireRol("hoofdbeheerder"),
+  async (req, res) => {
+    try {
+      const { support_email, support_telefoon, support_website, extra_disclaimer } =
+        req.body as {
+          support_email?: string;
+          support_telefoon?: string;
+          support_website?: string;
+          extra_disclaimer?: string;
+        };
+      const gebruikerId = req.session.userId!;
+
+      const payload = {
+        supportEmail: support_email ?? null,
+        supportTelefoon: support_telefoon ?? null,
+        supportWebsite: support_website ?? null,
+        extraDisclaimer: extra_disclaimer ?? null,
+        bijgewerktOp: new Date(),
+        bijgewerktDoorId: gebruikerId,
+      };
+
+      const [bestaand] = await db
+        .select({ id: appInstellingenTable.id })
+        .from(appInstellingenTable);
+
+      let result;
+      if (bestaand) {
+        const [updated] = await db
+          .update(appInstellingenTable)
+          .set(payload)
+          .where(eq(appInstellingenTable.id, bestaand.id))
+          .returning();
+        result = updated;
+      } else {
+        const [inserted] = await db
+          .insert(appInstellingenTable)
+          .values(payload)
+          .returning();
+        result = inserted;
+      }
+
+      res.json({
+        id: result.id,
+        support_email: result.supportEmail,
+        support_telefoon: result.supportTelefoon,
+        support_website: result.supportWebsite,
+        extra_disclaimer: result.extraDisclaimer,
+        bijgewerkt_op: result.bijgewerktOp.toISOString(),
+        bijgewerkt_door_id: result.bijgewerktDoorId,
+      });
+    } catch (err) {
+      req.log.error(err);
+      res.status(500).json({ error: "Interne serverfout" });
+    }
+  },
+);
+
+export default router;

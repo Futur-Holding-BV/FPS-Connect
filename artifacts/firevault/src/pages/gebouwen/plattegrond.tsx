@@ -124,10 +124,11 @@ function VoorzieningIcoon({
       <circle r={r + 5} fill={stijl.kleur} opacity={0.25} />
       <circle r={r} fill={STATUSKLEUREN[v.status] ?? "#94a3b8"} stroke={geselecteerd ? "#fff" : stijl.ring} strokeWidth={geselecteerd ? 3 : 1.5} />
       {isPlafond && (
-        <g transform="rotate(-45)" style={{ pointerEvents: "none" }}>
-          <line x1={-L} y1={0} x2={L} y2={0} stroke="#fff" strokeWidth={5} strokeLinecap="round" />
-          <line x1={-L} y1={0} x2={L} y2={0} stroke="#1e293b" strokeWidth={2.5} strokeLinecap="round" />
-          <polygon points={`${L + 2},0 ${L - 8},-6 ${L - 8},6`} fill="#1e293b" stroke="#fff" strokeWidth={1.2} strokeLinejoin="round" />
+        <g style={{ pointerEvents: "none" }}>
+          <line x1={0} y1={-L} x2={0} y2={L} stroke="#fff" strokeWidth={5} strokeLinecap="round" />
+          <line x1={0} y1={-L} x2={0} y2={L} stroke="#1e293b" strokeWidth={2.5} strokeLinecap="round" />
+          <polygon points={`0,${-L - 3} -6,${-L + 8} 6,${-L + 8}`} fill="#1e293b" stroke="#fff" strokeWidth={1.2} strokeLinejoin="round" />
+          <polygon points={`0,${L + 3} -6,${L - 8} 6,${L - 8}`} fill="#1e293b" stroke="#fff" strokeWidth={1.2} strokeLinejoin="round" />
         </g>
       )}
       <text

@@ -67,3 +67,18 @@ export const muisGebeurtenissenTable = pgTable("muis_gebeurtenissen", {
 export const insertMuisGebeurtenisSchema = createInsertSchema(muisGebeurtenissenTable).omit({ id: true, tijdstip: true });
 export type InsertMuisGebeurtenis = z.infer<typeof insertMuisGebeurtenisSchema>;
 export type MuisGebeurtenis = typeof muisGebeurtenissenTable.$inferSelect;
+
+// ── App-instellingen (singleton, bewerkt door hoofdbeheerder) ────────────────
+export const appInstellingenTable = pgTable("app_instellingen", {
+  id: serial("id").primaryKey(),
+  supportEmail: text("support_email"),
+  supportTelefoon: text("support_telefoon"),
+  supportWebsite: text("support_website"),
+  extraDisclaimer: text("extra_disclaimer"),
+  bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
+  bijgewerktDoorId: integer("bijgewerkt_door_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
+});
+
+export const insertAppInstellingSchema = createInsertSchema(appInstellingenTable).omit({ id: true, bijgewerktOp: true });
+export type InsertAppInstelling = z.infer<typeof insertAppInstellingSchema>;
+export type AppInstelling = typeof appInstellingenTable.$inferSelect;

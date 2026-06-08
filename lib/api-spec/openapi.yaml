@@ -262,6 +262,30 @@ paths:
                 $ref: "#/components/schemas/VolgendSpotnummer"
         "404":
           description: Niet gevonden
+
+  /gebouwen/{id}/kaart:
+    get:
+      operationId: getGebouwKaart
+      tags: [gebouwen]
+      summary: Google Maps kaart-embed URL voor een gebouw
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/KaartEmbed"
+        "404":
+          description: Geen locatiegegevens beschikbaar
+        "503":
+          description: Kaartservice niet beschikbaar
+
   /gebouwen/{id}:
     get:
       operationId: getGebouw
@@ -1915,6 +1939,36 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/AuthGebruiker"
+
+  /info/instellingen:
+    get:
+      operationId: getInfoInstellingen
+      tags: [info]
+      summary: App-instellingen ophalen
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppInstellingen"
+    put:
+      operationId: updateInfoInstellingen
+      tags: [info]
+      summary: App-instellingen bijwerken (alleen hoofdbeheerder)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AppInstellingenInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppInstellingen"
 
 components:
   schemas:
@@ -3627,3 +3681,41 @@ components:
           type: string
         actief:
           type: boolean
+
+    KaartEmbed:
+      type: object
+      required: [embed_url]
+      properties:
+        embed_url:
+          type: string
+
+    AppInstellingen:
+      type: object
+      required: [id, bijgewerkt_op]
+      properties:
+        id:
+          type: integer
+        support_email:
+          type: ["string", "null"]
+        support_telefoon:
+          type: ["string", "null"]
+        support_website:
+          type: ["string", "null"]
+        extra_disclaimer:
+          type: ["string", "null"]
+        bijgewerkt_op:
+          type: string
+        bijgewerkt_door_id:
+          type: ["integer", "null"]
+
+    AppInstellingenInput:
+      type: object
+      properties:
+        support_email:
+          type: string
+        support_telefoon:
+          type: string
+        support_website:
+          type: string
+        extra_disclaimer:
+          type: string

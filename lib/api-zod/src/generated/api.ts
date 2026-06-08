@@ -243,6 +243,18 @@ export const GetVolgendSpotnummerResponse = zod.object({
 
 
 /**
+ * @summary Google Maps kaart-embed URL voor een gebouw
+ */
+export const GetGebouwKaartParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetGebouwKaartResponse = zod.object({
+  "embed_url": zod.string()
+})
+
+
+/**
  * @summary Gebouwdetails ophalen
  */
 export const GetGebouwParams = zod.object({
@@ -2076,6 +2088,41 @@ export const GetHuidigeGebruikerResponse = zod.object({
   "taal": zod.enum(['nl', 'en', 'de', 'fr', 'ar', 'tr']).optional(),
   "nieuw_apparaat": zod.boolean().optional(),
   "nieuw_ip": zod.boolean().optional()
+})
+
+
+/**
+ * @summary App-instellingen ophalen
+ */
+export const GetInfoInstellingenResponse = zod.object({
+  "id": zod.number(),
+  "support_email": zod.string().nullish(),
+  "support_telefoon": zod.string().nullish(),
+  "support_website": zod.string().nullish(),
+  "extra_disclaimer": zod.string().nullish(),
+  "bijgewerkt_op": zod.string(),
+  "bijgewerkt_door_id": zod.number().nullish()
+})
+
+
+/**
+ * @summary App-instellingen bijwerken (alleen hoofdbeheerder)
+ */
+export const UpdateInfoInstellingenBody = zod.object({
+  "support_email": zod.string().optional(),
+  "support_telefoon": zod.string().optional(),
+  "support_website": zod.string().optional(),
+  "extra_disclaimer": zod.string().optional()
+})
+
+export const UpdateInfoInstellingenResponse = zod.object({
+  "id": zod.number(),
+  "support_email": zod.string().nullish(),
+  "support_telefoon": zod.string().nullish(),
+  "support_website": zod.string().nullish(),
+  "extra_disclaimer": zod.string().nullish(),
+  "bijgewerkt_op": zod.string(),
+  "bijgewerkt_door_id": zod.number().nullish()
 })
 
 

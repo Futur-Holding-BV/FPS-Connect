@@ -1242,6 +1242,32 @@ export interface AbonnementUpdate {
   actief?: boolean;
 }
 
+export interface KaartEmbed {
+  embed_url: string;
+}
+
+export interface AppInstellingen {
+  id: number;
+  /** @nullable */
+  support_email?: string | null;
+  /** @nullable */
+  support_telefoon?: string | null;
+  /** @nullable */
+  support_website?: string | null;
+  /** @nullable */
+  extra_disclaimer?: string | null;
+  bijgewerkt_op: string;
+  /** @nullable */
+  bijgewerkt_door_id?: number | null;
+}
+
+export interface AppInstellingenInput {
+  support_email?: string;
+  support_telefoon?: string;
+  support_website?: string;
+  extra_disclaimer?: string;
+}
+
 export type GetRecenteActiviteitParams = {
 limit?: number;
 };

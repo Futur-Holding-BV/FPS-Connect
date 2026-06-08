@@ -24,6 +24,8 @@ import type {
   AbonnementInput,
   AbonnementUpdate,
   Activiteit,
+  AppInstellingen,
+  AppInstellingenInput,
   ArchiefUpdate,
   AuthGebruiker,
   CodeInput,
@@ -57,6 +59,7 @@ import type {
   InspectieDetail,
   InspectieInput,
   InspectieUpdate,
+  KaartEmbed,
   ListGebouwenParams,
   ListInspectiesParams,
   ListMuisGebeurtenissenParams,
@@ -948,6 +951,83 @@ export function useGetVolgendSpotnummer<TData = Awaited<ReturnType<typeof getVol
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetVolgendSpotnummerQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetGebouwKaartUrl = (id: number,) => {
+
+
+
+
+  return `/api/gebouwen/${id}/kaart`
+}
+
+/**
+ * @summary Google Maps kaart-embed URL voor een gebouw
+ */
+export const getGebouwKaart = async (id: number, options?: RequestInit): Promise<KaartEmbed> => {
+
+  return customFetch<KaartEmbed>(getGetGebouwKaartUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetGebouwKaartQueryKey = (id: number,) => {
+    return [
+    `/api/gebouwen/${id}/kaart`
+    ] as const;
+    }
+
+
+export const getGetGebouwKaartQueryOptions = <TData = Awaited<ReturnType<typeof getGebouwKaart>>, TError = ErrorType<void>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getGebouwKaart>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetGebouwKaartQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getGebouwKaart>>> = ({ signal }) => getGebouwKaart(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getGebouwKaart>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetGebouwKaartQueryResult = NonNullable<Awaited<ReturnType<typeof getGebouwKaart>>>
+export type GetGebouwKaartQueryError = ErrorType<void>
+
+
+/**
+ * @summary Google Maps kaart-embed URL voor een gebouw
+ */
+
+export function useGetGebouwKaart<TData = Awaited<ReturnType<typeof getGebouwKaart>>, TError = ErrorType<void>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getGebouwKaart>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetGebouwKaartQueryOptions(id,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
@@ -6676,4 +6756,151 @@ export function useGetHuidigeGebruiker<TData = Awaited<ReturnType<typeof getHuid
 
 
 
+
+export const getGetInfoInstellingenUrl = () => {
+
+
+
+
+  return `/api/info/instellingen`
+}
+
+/**
+ * @summary App-instellingen ophalen
+ */
+export const getInfoInstellingen = async ( options?: RequestInit): Promise<AppInstellingen> => {
+
+  return customFetch<AppInstellingen>(getGetInfoInstellingenUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetInfoInstellingenQueryKey = () => {
+    return [
+    `/api/info/instellingen`
+    ] as const;
+    }
+
+
+export const getGetInfoInstellingenQueryOptions = <TData = Awaited<ReturnType<typeof getInfoInstellingen>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getInfoInstellingen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetInfoInstellingenQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getInfoInstellingen>>> = ({ signal }) => getInfoInstellingen({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getInfoInstellingen>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetInfoInstellingenQueryResult = NonNullable<Awaited<ReturnType<typeof getInfoInstellingen>>>
+export type GetInfoInstellingenQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary App-instellingen ophalen
+ */
+
+export function useGetInfoInstellingen<TData = Awaited<ReturnType<typeof getInfoInstellingen>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getInfoInstellingen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetInfoInstellingenQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getUpdateInfoInstellingenUrl = () => {
+
+
+
+
+  return `/api/info/instellingen`
+}
+
+/**
+ * @summary App-instellingen bijwerken (alleen hoofdbeheerder)
+ */
+export const updateInfoInstellingen = async (appInstellingenInput: AppInstellingenInput, options?: RequestInit): Promise<AppInstellingen> => {
+
+  return customFetch<AppInstellingen>(getUpdateInfoInstellingenUrl(),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(appInstellingenInput)
+  }
+);}
+
+
+
+
+export const getUpdateInfoInstellingenMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateInfoInstellingen>>, TError,{data: BodyType<AppInstellingenInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateInfoInstellingen>>, TError,{data: BodyType<AppInstellingenInput>}, TContext> => {
+
+const mutationKey = ['updateInfoInstellingen'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateInfoInstellingen>>, {data: BodyType<AppInstellingenInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  updateInfoInstellingen(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateInfoInstellingenMutationResult = NonNullable<Awaited<ReturnType<typeof updateInfoInstellingen>>>
+    export type UpdateInfoInstellingenMutationBody = BodyType<AppInstellingenInput>
+    export type UpdateInfoInstellingenMutationError = ErrorType<unknown>
+
+    /**
+ * @summary App-instellingen bijwerken (alleen hoofdbeheerder)
+ */
+export const useUpdateInfoInstellingen = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateInfoInstellingen>>, TError,{data: BodyType<AppInstellingenInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateInfoInstellingen>>,
+        TError,
+        {data: BodyType<AppInstellingenInput>},
+        TContext
+      > => {
+      return useMutation(getUpdateInfoInstellingenMutationOptions(options));
+    }
 

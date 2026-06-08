@@ -5,3 +5,4 @@
 - [Rol-filter backend](rol-filter.md) — TOEGEWEZEN_ROLLEN=["monteur","controleur"]; gebouwToewijzingenTable importeren voor toegewezenGebouwIds(); filter in listInspecties en listOnderhoud.
 - [Voorziening archief](voorziening-archief.md) — terugplaatsen=beheerder-only (server-side afdwingen in archief-handler, niet alleen UI); archieflijst-hook in child-component mounten zodat niet-beheerders niet fetchen.
 - [Spotnummer ontwerp](spotnummer.md) — objectnummer = auto <gebouwAfk>-<volgnr> via GET /gebouwen/:id/volgend-spotnummer; POST retry op 23505; markers tonen laatste cijfers (regex /(\d+)$/), niet type.slice(0,2).
+- [Google Maps embed patroon](maps-embed.md) — GOOGLE_MAPS_API_KEY blijft server-side; GET /gebouwen/:id/kaart geeft embed_url terug; lat/lng geeft satellite view, anders place-query op adres+stad.

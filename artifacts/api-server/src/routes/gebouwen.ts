@@ -355,6 +355,52 @@ router.get("/gebouwen/partij-opties", async (req, res) => {
   }
 });
 
+// GET /gebouwen/:id/kaart
+router.get("/gebouwen/:id/kaart", async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const userId = req.session.userId!;
+    const rol = await gebruikerRol(userId);
+
+    const [gebouw] = await db
+      .select({
+        lat: gebouwenTable.latitude,
+        lng: gebouwenTable.longitude,
+        adres: gebouwenTable.adres,
+        stad: gebouwenTable.stad,
+      })
+      .from(gebouwenTable)
+      .where(eq(gebouwenTable.id, id));
+
+    if (!gebouw) return res.status(404).json({ error: "Gebouw niet gevonden" });
+
+    if (TOEGEWEZEN_ROLLEN.includes(rol)) {
+      const ids = await toegewezenGebouwIds(userId);
+      if (!ids.includes(id)) {
+        return res.status(403).json({ error: "Geen toegang tot dit gebouw" });
+      }
+    }
+
+    const apiKey = process.env.GOOGLE_MAPS_API_KEY;
+    if (!apiKey) return res.status(503).json({ error: "Kaartservice niet beschikbaar" });
+
+    let embed_url: string;
+    if (gebouw.lat != null && gebouw.lng != null) {
+      embed_url = `https://www.google.com/maps/embed/v1/view?key=${apiKey}&center=${gebouw.lat},${gebouw.lng}&zoom=19&maptype=satellite`;
+    } else if (gebouw.adres) {
+      const q = encodeURIComponent(`${gebouw.adres}${gebouw.stad ? " " + gebouw.stad : ""}`);
+      embed_url = `https://www.google.com/maps/embed/v1/place?key=${apiKey}&q=${q}&maptype=satellite`;
+    } else {
+      return res.status(404).json({ error: "Geen locatiegegevens beschikbaar" });
+    }
+
+    res.json({ embed_url });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
 // GET /gebouwen/:id
 router.get("/gebouwen/:id", async (req, res) => {
   try {
