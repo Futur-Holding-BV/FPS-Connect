@@ -630,8 +630,10 @@ export default function Plattegrond() {
                 const mid = punten[Math.floor(punten.length / 2)];
                 const puntenStr = punten.map((p) => `${p.x},${p.y}`).join(" ");
                 return (
-                  <g key={`s${s.id}`} style={{ cursor: tekenModus ? "crosshair" : "pointer" }}
-                     onClick={(e) => { if (tekenModus) return; e.stopPropagation(); setScheidingSelectie(geselecteerd ? null : s.id); }}>
+                  <g key={`s${s.id}`}
+                     pointerEvents={plaatsenModus ? "none" : undefined}
+                     style={{ cursor: tekenModus ? "crosshair" : "pointer" }}
+                     onClick={(e) => { if (tekenModus || plaatsenModus) return; e.stopPropagation(); setScheidingSelectie(geselecteerd ? null : s.id); }}>
                     <polyline points={puntenStr} fill="none" stroke={kleur}
                       strokeWidth={geselecteerd ? 7 : 4}
                       strokeDasharray={s.type === "rook" ? "12 8" : undefined}
