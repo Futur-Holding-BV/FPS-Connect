@@ -96,12 +96,12 @@ function bouwHtml(domein: string, token: string, url: string | null): string {
       var el=document.createElement('div');
       el.className='mk';
       var t=CFG.typen[s.type]||{kleur:'#94a3b8'};
-      el.style.background=t.kleur;
+      el.style.background=CFG.status[s.status]||'#94a3b8';
       el.style.left=s.locatie_x+'px';
       el.style.top=s.locatie_y+'px';
       var ring=document.createElement('div');
       ring.className='ring';
-      ring.style.background=CFG.status[s.status]||'#94a3b8';
+      ring.style.background=t.kleur;
       el.appendChild(ring);
       var lab=document.createElement('span');
       var nr=String(s.objectnummer||'');

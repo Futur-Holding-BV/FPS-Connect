@@ -112,8 +112,8 @@ function VoorzieningIcoon({
       onClick={(e) => { e.stopPropagation(); onClick(); }}
       style={{ cursor: "pointer" }}
     >
-      <circle r={r + 5} fill={STATUSKLEUREN[v.status] ?? "#94a3b8"} opacity={0.25} />
-      <circle r={r} fill={stijl.kleur} stroke={geselecteerd ? "#fff" : stijl.ring} strokeWidth={geselecteerd ? 3 : 1.5} />
+      <circle r={r + 5} fill={stijl.kleur} opacity={0.25} />
+      <circle r={r} fill={STATUSKLEUREN[v.status] ?? "#94a3b8"} stroke={geselecteerd ? "#fff" : stijl.ring} strokeWidth={geselecteerd ? 3 : 1.5} />
       <text
         textAnchor="middle"
         dominantBaseline="central"
@@ -677,13 +677,13 @@ export default function Plattegrond() {
 
           {/* Legende onderin */}
           <div className="absolute bottom-3 left-3 bg-white/90 backdrop-blur-sm border rounded-md px-3 py-2 flex flex-wrap gap-x-4 gap-y-1.5 max-w-lg shadow-sm">
-            {Object.entries(TYPEN).map(([type, stijl]) => {
-              const n = geplaatst.filter((v) => v.type === type).length;
+            {Object.entries(STATUSKLEUREN).map(([status, kleur]) => {
+              const n = geplaatst.filter((v) => v.status === status).length;
               if (n === 0) return null;
               return (
-                <div key={type} className="flex items-center gap-1.5 text-xs">
-                  <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: stijl.kleur }} />
-                  <span className="text-slate-600">{stijl.label}</span>
+                <div key={status} className="flex items-center gap-1.5 text-xs">
+                  <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: kleur }} />
+                  <span className="text-slate-600">{STATUSLABEL[status] ?? status}</span>
                   <span className="text-slate-400 font-medium">({n})</span>
                 </div>
               );
