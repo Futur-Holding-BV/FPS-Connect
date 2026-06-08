@@ -132,6 +132,8 @@ export default function Gebruikers() {
 
   const [verwijderTarget, setVerwijderTarget] = useState<Gebruiker | null>(null);
 
+  const [bekijkGebruiker, setBekijkGebruiker] = useState<Gebruiker | null>(null);
+
   const invalideer = () => queryClient.invalidateQueries({ queryKey: ["listGebruikers"] });
 
   async function verstuurToevoegen(e: React.FormEvent) {
@@ -288,8 +290,18 @@ export default function Gebruikers() {
                               <Button
                                 variant="ghost"
                                 size="icon"
+                                className="h-6 w-6 text-muted-foreground hover:text-primary"
+                                onClick={() => setBekijkGebruiker(g)}
+                                title="Bekijken"
+                              >
+                                <Eye className="h-3 w-3" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
                                 className="h-6 w-6 text-muted-foreground hover:text-foreground"
                                 onClick={() => openBewerken(g)}
+                                title="Bewerken"
                               >
                                 <Pencil className="h-3 w-3" />
                               </Button>
@@ -415,6 +427,88 @@ export default function Gebruikers() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* ── Dialoog: bekijken ── */}
+      <Dialog open={!!bekijkGebruiker} onOpenChange={(o) => { if (!o) setBekijkGebruiker(null); }}>
+        <DialogContent className="max-w-md" aria-describedby="bekijk-beschr">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Eye className="h-5 w-5" /> Gebruikersgegevens
+            </DialogTitle>
+          </DialogHeader>
+          <p id="bekijk-beschr" className="sr-only">Volledige gegevens van de gebruiker.</p>
+
+          {bekijkGebruiker && (() => {
+            const cfg = ROL_CONFIG[bekijkGebruiker.rol as Rol];
+            const RolIcon = cfg?.icon ?? User;
+            return (
+              <div className="space-y-4">
+                <div className="flex items-center gap-3">
+                  <Avatar className="h-14 w-14 border-2 border-primary/10">
+                    <AvatarFallback className="bg-primary/10 text-primary font-semibold">
+                      {initialen(bekijkGebruiker.naam ?? "")}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="min-w-0">
+                    <div className="text-lg font-semibold leading-tight">{bekijkGebruiker.naam}</div>
+                    <Badge variant="outline" className={`mt-1 ${cfg?.badge ?? ""}`}>
+                      <RolIcon className="h-3 w-3 mr-1" />
+                      {cfg?.label ?? bekijkGebruiker.rol}
+                    </Badge>
+                  </div>
+                </div>
+
+                <div className="space-y-3 rounded-lg border bg-muted/30 p-4">
+                  <div className="flex items-start gap-3">
+                    <Mail className="h-4 w-4 mt-0.5 text-muted-foreground flex-shrink-0" />
+                    <div className="min-w-0">
+                      <div className="text-xs text-muted-foreground">E-mailadres</div>
+                      <div className="text-sm break-all">{bekijkGebruiker.email || "—"}</div>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <Phone className="h-4 w-4 mt-0.5 text-muted-foreground flex-shrink-0" />
+                    <div className="min-w-0">
+                      <div className="text-xs text-muted-foreground">Telefoonnummer</div>
+                      <div className="text-sm">{bekijkGebruiker.telefoon || "—"}</div>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <Building className="h-4 w-4 mt-0.5 text-muted-foreground flex-shrink-0" />
+                    <div className="min-w-0">
+                      <div className="text-xs text-muted-foreground">Bedrijf</div>
+                      <div className="text-sm">{bekijkGebruiker.bedrijf || "—"}</div>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <Clock className="h-4 w-4 mt-0.5 text-muted-foreground flex-shrink-0" />
+                    <div className="min-w-0">
+                      <div className="text-xs text-muted-foreground">Laatste online</div>
+                      <div className={`text-sm ${onlinKleur(bekijkGebruiker.laatste_online)}`}>
+                        {relatiefTijdstip(bekijkGebruiker.laatste_online)}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <ShieldCheck className="h-4 w-4 mt-0.5 text-muted-foreground flex-shrink-0" />
+                    <div className="min-w-0">
+                      <div className="text-xs text-muted-foreground">Status</div>
+                      <div className="text-sm">{bekijkGebruiker.actief ? "Actief" : "Inactief"}</div>
+                    </div>
+                  </div>
+                </div>
+
+                <DialogFooter className="gap-2">
+                  <Button variant="outline" onClick={() => { const g = bekijkGebruiker; setBekijkGebruiker(null); openBewerken(g); }}>
+                    <Pencil className="h-4 w-4 mr-1" /> Bewerken
+                  </Button>
+                  <Button onClick={() => setBekijkGebruiker(null)}>Sluiten</Button>
+                </DialogFooter>
+              </div>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
