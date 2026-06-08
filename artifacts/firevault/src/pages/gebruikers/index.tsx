@@ -1,14 +1,15 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import {
   useListGebruikers,
   useCreateGebruiker,
   useUpdateGebruiker,
   useDeleteGebruiker,
+  useUitnodigingVersturen,
 } from "@workspace/api-client-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
@@ -21,11 +22,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Mail, Phone, Building, Clock, Plus, UserPlus, Pencil, Trash2, RefreshCw, ShieldCheck, Wrench, Eye, User, Crown } from "lucide-react";
+import {
+  Mail, Phone, Building, Clock, Plus, UserPlus, Pencil, Trash2,
+  RefreshCw, ShieldCheck, Wrench, Eye, User, Crown, Upload, Palette, SendHorizonal,
+} from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRol } from "@/context/rol-context";
 
-// Rolvolgorde: meeste rechten eerst
 const ROLLEN = ["hoofdbeheerder", "beheerder", "monteur", "controleur", "klant"] as const;
 type Rol = typeof ROLLEN[number];
 
@@ -79,6 +82,24 @@ const ROL_CONFIG: Record<Rol, {
   },
 };
 
+const UITNODIGING_STATUS_CONFIG = {
+  niet_uitgenodigd: {
+    label: "Niet uitgenodigd",
+    badge: "bg-amber-100 text-amber-800 border-amber-200",
+    kaart: "bg-amber-50 border-amber-200",
+  },
+  uitgenodigd: {
+    label: "Uitgenodigd",
+    badge: "bg-purple-100 text-purple-800 border-purple-200",
+    kaart: "bg-purple-50 border-purple-200",
+  },
+  geaccepteerd: {
+    label: "",
+    badge: "",
+    kaart: "",
+  },
+} as const;
+
 function initialen(naam: string) {
   return naam.split(" ").filter(Boolean).slice(0, 2).map((n) => n[0].toUpperCase()).join("");
 }
@@ -90,7 +111,7 @@ function relatiefTijdstip(iso: string | null | undefined): string {
   if (min < 2) return "Zojuist actief";
   if (min < 60) return `${min} minuten geleden`;
   const uur = Math.floor(min / 60);
-  if (uur < 24) return `${uur} ${uur === 1 ? "uur" : "uur"} geleden`;
+  if (uur < 24) return `${uur} uur geleden`;
   const dag = Math.floor(uur / 24);
   if (dag < 7) return `${dag} ${dag === 1 ? "dag" : "dagen"} geleden`;
   const week = Math.floor(dag / 7);
@@ -110,6 +131,7 @@ function onlinKleur(iso: string | null | undefined): string {
 const leegForm = {
   naam: "", email: "", rol: "monteur",
   telefoon: "", bedrijf: "", wachtwoord: "", actief: true,
+  avatar_url: "", bedrijfslogo_url: "", bedrijfskleuren: "",
 };
 type GebruikerForm = typeof leegForm;
 
@@ -122,17 +144,30 @@ type Gebruiker = {
   bedrijf: string | null;
   actief: boolean | null;
   laatste_online?: string | null;
+  avatar_url?: string | null;
+  bedrijfslogo_url?: string | null;
+  bedrijfskleuren?: string | null;
+  uitnodiging_status?: string | null;
+  uitnodiging_verstuurd_op?: string | null;
 };
+
+function haalPrimairKleur(bedrijfskleuren: string | null | undefined): string {
+  if (!bedrijfskleuren) return "#ff6b35";
+  try { return JSON.parse(bedrijfskleuren).primair ?? "#ff6b35"; }
+  catch { return "#ff6b35"; }
+}
 
 export default function Gebruikers() {
   const queryClient = useQueryClient();
   const { rol: viewerRol } = useRol();
   const isHoofd = viewerRol === "hoofdbeheerder";
   const magVerwijderen = isHoofd;
+
   const { data: gebruikers, isLoading, refetch, isFetching } = useListGebruikers();
-  const maakGebruiker       = useCreateGebruiker();
-  const werkBijGebruiker    = useUpdateGebruiker();
-  const verwijderGebruiker  = useDeleteGebruiker();
+  const maakGebruiker      = useCreateGebruiker();
+  const werkBijGebruiker   = useUpdateGebruiker();
+  const verwijderGebruiker = useDeleteGebruiker();
+  const uitnodigingVersturen = useUitnodigingVersturen();
 
   const [toevoegenOpen, setToevoegenOpen]     = useState(false);
   const [toevoegenForm, setToevoegenForm]     = useState<GebruikerForm>(leegForm);
@@ -143,8 +178,9 @@ export default function Gebruikers() {
   const [bewerkFout, setBewerkFout]           = useState<string | null>(null);
 
   const [verwijderTarget, setVerwijderTarget] = useState<Gebruiker | null>(null);
-
   const [bekijkGebruiker, setBekijkGebruiker] = useState<Gebruiker | null>(null);
+
+  const [uitnodigingBezig, setUitnodigingBezig] = useState<number | null>(null);
 
   const invalideer = () => queryClient.invalidateQueries({ queryKey: ["listGebruikers"] });
 
@@ -158,12 +194,15 @@ export default function Gebruikers() {
     try {
       await maakGebruiker.mutateAsync({
         data: {
-          naam:       toevoegenForm.naam.trim(),
-          email:      toevoegenForm.email.trim(),
-          rol:        toevoegenForm.rol as any,
-          telefoon:   toevoegenForm.telefoon.trim() || undefined,
-          bedrijf:    toevoegenForm.bedrijf.trim()  || undefined,
-          wachtwoord: toevoegenForm.wachtwoord.trim() || undefined,
+          naam:            toevoegenForm.naam.trim(),
+          email:           toevoegenForm.email.trim(),
+          rol:             toevoegenForm.rol as any,
+          telefoon:        toevoegenForm.telefoon.trim()     || undefined,
+          bedrijf:         toevoegenForm.bedrijf.trim()      || undefined,
+          wachtwoord:      toevoegenForm.wachtwoord.trim()   || undefined,
+          avatar_url:      toevoegenForm.avatar_url          || undefined,
+          bedrijfslogo_url: toevoegenForm.bedrijfslogo_url   || undefined,
+          bedrijfskleuren: toevoegenForm.bedrijfskleuren     || undefined,
         },
       });
       await invalideer();
@@ -177,13 +216,16 @@ export default function Gebruikers() {
   function openBewerken(g: Gebruiker) {
     setBewerkGebruiker(g);
     setBewerkForm({
-      naam:      g.naam      ?? "",
-      email:     g.email     ?? "",
-      rol:       g.rol       ?? "monteur",
-      telefoon:  g.telefoon  ?? "",
-      bedrijf:   g.bedrijf   ?? "",
-      wachtwoord: "",
-      actief:    g.actief    ?? true,
+      naam:            g.naam           ?? "",
+      email:           g.email          ?? "",
+      rol:             g.rol            ?? "monteur",
+      telefoon:        g.telefoon       ?? "",
+      bedrijf:         g.bedrijf        ?? "",
+      wachtwoord:      "",
+      actief:          g.actief         ?? true,
+      avatar_url:      g.avatar_url     ?? "",
+      bedrijfslogo_url: g.bedrijfslogo_url ?? "",
+      bedrijfskleuren: g.bedrijfskleuren  ?? "",
     });
     setBewerkFout(null);
   }
@@ -200,12 +242,15 @@ export default function Gebruikers() {
       await werkBijGebruiker.mutateAsync({
         id: bewerkGebruiker.id,
         data: {
-          naam:     bewerkForm.naam.trim(),
-          email:    bewerkForm.email.trim(),
-          rol:      bewerkForm.rol as any,
-          telefoon: bewerkForm.telefoon.trim() || undefined,
-          bedrijf:  bewerkForm.bedrijf.trim()  || undefined,
-          actief:   bewerkForm.actief,
+          naam:            bewerkForm.naam.trim(),
+          email:           bewerkForm.email.trim(),
+          rol:             bewerkForm.rol as any,
+          telefoon:        bewerkForm.telefoon.trim()    || undefined,
+          bedrijf:         bewerkForm.bedrijf.trim()     || undefined,
+          actief:          bewerkForm.actief,
+          avatar_url:      bewerkForm.avatar_url         || undefined,
+          bedrijfslogo_url: bewerkForm.bedrijfslogo_url  || undefined,
+          bedrijfskleuren: bewerkForm.bedrijfskleuren    || undefined,
         },
       });
       await invalideer();
@@ -222,13 +267,28 @@ export default function Gebruikers() {
     setVerwijderTarget(null);
   }
 
-  // Groepeer per rol
+  async function stuurUitnodiging(g: Gebruiker) {
+    setUitnodigingBezig(g.id);
+    try {
+      await uitnodigingVersturen.mutateAsync({ id: g.id });
+      await invalideer();
+      const onderwerp = encodeURIComponent("Uitnodiging FPS Brandpreventie");
+      const berichttekst = encodeURIComponent(
+        `Geachte ${g.naam ?? ""},\n\nU bent uitgenodigd om in te loggen op het FPS Brandpreventie platform.\n\nMet vriendelijke groet,\nFPS Brandpreventie`
+      );
+      window.open(`mailto:${g.email}?subject=${onderwerp}&body=${berichttekst}`, "_blank");
+    } catch {
+      // Stille fout — kaart toont nog steeds de status
+    } finally {
+      setUitnodigingBezig(null);
+    }
+  }
+
   const perRol = ROLLEN.reduce<Record<string, Gebruiker[]>>((acc, rol) => {
     acc[rol] = (gebruikers ?? []).filter((g) => g.rol === rol) as Gebruiker[];
     return acc;
   }, {} as Record<string, Gebruiker[]>);
 
-  // Hoofdbeheerders zijn alleen zichtbaar voor een hoofdbeheerder
   const zichtbareRollen = ROLLEN.filter((rol) => isHoofd || rol !== "hoofdbeheerder");
   const gridCols = zichtbareRollen.length === 5 ? "grid-cols-5" : "grid-cols-4";
 
@@ -247,7 +307,7 @@ export default function Gebruikers() {
             <RefreshCw className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`} />
           </Button>
           <Button onClick={() => { setToevoegenOpen(true); setToevoegenForm(leegForm); setToevoegenFout(null); }}>
-            <Plus className="h-4 w-4 mr-2" /> Gebruiker Toevoegen
+            <Plus className="h-4 w-4 mr-2" /> Gebruiker toevoegen
           </Button>
         </div>
       </div>
@@ -271,7 +331,6 @@ export default function Gebruikers() {
 
             return (
               <div key={rol} className={`rounded-xl border bg-muted/40 ${cfg.rand} border-t-4 overflow-hidden`}>
-                {/* Kolomkoptekst */}
                 <div className="px-4 pt-3 pb-3 border-b bg-background/60">
                   <div className={`flex items-center gap-2 text-base font-semibold ${cfg.kleur}`}>
                     <Icon className="h-4 w-4" />
@@ -281,95 +340,128 @@ export default function Gebruikers() {
                   <p className="text-xs text-muted-foreground mt-0.5">{cfg.beschrijving}</p>
                 </div>
 
-                {/* Gebruikerskaarten */}
                 <div className="p-3 space-y-3">
-                {lijst.length === 0 && (
-                  <div className="text-center text-sm text-muted-foreground py-6 border border-dashed rounded-lg">
-                    Geen {cfg.label.toLowerCase()}
-                  </div>
-                )}
+                  {lijst.length === 0 && (
+                    <div className="text-center text-sm text-muted-foreground py-6 border border-dashed rounded-lg">
+                      Geen {cfg.label.toLowerCase()}
+                    </div>
+                  )}
 
-                {lijst.map((g) => (
-                  <Card key={g.id} className="hover:shadow-md transition-shadow">
-                    <CardContent className="p-3">
-                      <div className="flex items-start gap-3">
-                        <Avatar className="h-9 w-9 text-xs border-2 border-primary/10 flex-shrink-0 mt-0.5">
-                          <AvatarFallback className="bg-primary/10 text-primary font-semibold text-xs">
-                            {initialen(g.naam ?? "")}
-                          </AvatarFallback>
-                        </Avatar>
+                  {lijst.map((g) => {
+                    const status = (g.uitnodiging_status ?? "niet_uitgenodigd") as keyof typeof UITNODIGING_STATUS_CONFIG;
+                    const statusCfg = UITNODIGING_STATUS_CONFIG[status] ?? UITNODIGING_STATUS_CONFIG.niet_uitgenodigd;
+                    const heeftAfbeelding = !!g.avatar_url;
 
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-start justify-between gap-1">
-                            <span className="font-semibold text-sm leading-tight truncate">{g.naam}</span>
-                            <div className="flex gap-0.5 flex-shrink-0">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-6 w-6 text-muted-foreground hover:text-primary"
-                                onClick={() => setBekijkGebruiker(g)}
-                                title="Bekijken"
-                              >
-                                <Eye className="h-3 w-3" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-6 w-6 text-muted-foreground hover:text-foreground"
-                                onClick={() => openBewerken(g)}
-                                title="Bewerken"
-                              >
-                                <Pencil className="h-3 w-3" />
-                              </Button>
-                              {magVerwijderen && (
+                    return (
+                      <Card
+                        key={g.id}
+                        className={`hover:shadow-md transition-shadow ${statusCfg.kaart}`}
+                      >
+                        <CardContent className="p-3">
+                          <div className="flex items-start gap-3">
+                            <Avatar className="h-9 w-9 text-xs border-2 border-primary/10 flex-shrink-0 mt-0.5">
+                              {heeftAfbeelding && <AvatarImage src={g.avatar_url!} alt={g.naam ?? ""} />}
+                              <AvatarFallback className="bg-primary/10 text-primary font-semibold text-xs">
+                                {initialen(g.naam ?? "")}
+                              </AvatarFallback>
+                            </Avatar>
+
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-start justify-between gap-1">
+                                <span className="font-semibold text-sm leading-tight truncate">{g.naam}</span>
+                                <div className="flex gap-0.5 flex-shrink-0">
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-6 w-6 text-muted-foreground hover:text-primary"
+                                    onClick={() => setBekijkGebruiker(g)}
+                                    title="Bekijken"
+                                  >
+                                    <Eye className="h-3 w-3" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-6 w-6 text-muted-foreground hover:text-foreground"
+                                    onClick={() => openBewerken(g)}
+                                    title="Bewerken"
+                                  >
+                                    <Pencil className="h-3 w-3" />
+                                  </Button>
+                                  {magVerwijderen && (
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-6 w-6 text-muted-foreground hover:text-destructive"
+                                      onClick={() => setVerwijderTarget(g)}
+                                      title="Verwijderen"
+                                    >
+                                      <Trash2 className="h-3 w-3" />
+                                    </Button>
+                                  )}
+                                </div>
+                              </div>
+
+                              <div className="space-y-1 mt-1.5">
+                                {g.email && (
+                                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                                    <Mail className="h-3 w-3 flex-shrink-0" />
+                                    <span className="truncate">{g.email}</span>
+                                  </div>
+                                )}
+                                {g.telefoon && (
+                                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                                    <Phone className="h-3 w-3 flex-shrink-0" />
+                                    <span>{g.telefoon}</span>
+                                  </div>
+                                )}
+                                {g.bedrijf && (
+                                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                                    <Building className="h-3 w-3 flex-shrink-0" />
+                                    <span className="truncate">{g.bedrijf}</span>
+                                  </div>
+                                )}
+                                <div className={`flex items-center gap-1.5 text-xs ${onlinKleur(g.laatste_online)} pt-0.5 border-t border-border/50 mt-1.5`}>
+                                  <Clock className="h-3 w-3 flex-shrink-0" />
+                                  <span>{relatiefTijdstip(g.laatste_online)}</span>
+                                </div>
+                              </div>
+
+                              <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                                {!g.actief && (
+                                  <Badge variant="outline" className="text-xs bg-gray-100 text-gray-500 border-gray-200 h-5 px-1.5">
+                                    Inactief
+                                  </Badge>
+                                )}
+                                {status !== "geaccepteerd" && (
+                                  <Badge variant="outline" className={`text-xs h-5 px-1.5 ${statusCfg.badge}`}>
+                                    {statusCfg.label}
+                                  </Badge>
+                                )}
+                              </div>
+
+                              {status !== "geaccepteerd" && (
                                 <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-6 w-6 text-muted-foreground hover:text-destructive"
-                                  onClick={() => setVerwijderTarget(g)}
-                                  title="Verwijderen"
+                                  variant="outline"
+                                  size="sm"
+                                  className="mt-2 h-6 text-xs w-full gap-1 border-dashed"
+                                  disabled={uitnodigingBezig === g.id}
+                                  onClick={() => stuurUitnodiging(g)}
                                 >
-                                  <Trash2 className="h-3 w-3" />
+                                  <SendHorizonal className="h-3 w-3" />
+                                  {uitnodigingBezig === g.id
+                                    ? "Bezig..."
+                                    : status === "uitgenodigd"
+                                    ? "Opnieuw uitnodigen"
+                                    : "Uitnodigen per e-mail"}
                                 </Button>
                               )}
                             </div>
                           </div>
-
-                          <div className="space-y-1 mt-1.5">
-                            {g.email && (
-                              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                                <Mail className="h-3 w-3 flex-shrink-0" />
-                                <span className="truncate">{g.email}</span>
-                              </div>
-                            )}
-                            {g.telefoon && (
-                              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                                <Phone className="h-3 w-3 flex-shrink-0" />
-                                <span>{g.telefoon}</span>
-                              </div>
-                            )}
-                            {g.bedrijf && (
-                              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                                <Building className="h-3 w-3 flex-shrink-0" />
-                                <span className="truncate">{g.bedrijf}</span>
-                              </div>
-                            )}
-                            <div className={`flex items-center gap-1.5 text-xs ${onlinKleur(g.laatste_online)} pt-0.5 border-t border-border/50 mt-1.5`}>
-                              <Clock className="h-3 w-3 flex-shrink-0" />
-                              <span>{relatiefTijdstip(g.laatste_online)}</span>
-                            </div>
-                          </div>
-
-                          {!g.actief && (
-                            <Badge variant="outline" className="mt-2 text-xs bg-gray-100 text-gray-500">
-                              Inactief
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
                 </div>
               </div>
             );
@@ -377,12 +469,12 @@ export default function Gebruikers() {
         </div>
       )}
 
-      {/* ── Dialoog: toevoegen ── */}
+      {/* Dialoog: toevoegen */}
       <Dialog open={toevoegenOpen} onOpenChange={(o) => { if (!o) { setToevoegenOpen(false); setToevoegenFout(null); } }}>
-        <DialogContent className="max-w-md" aria-describedby="toevoegen-beschr">
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto" aria-describedby="toevoegen-beschr">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <UserPlus className="h-5 w-5" /> Gebruiker Toevoegen
+              <UserPlus className="h-5 w-5" /> Gebruiker toevoegen
             </DialogTitle>
           </DialogHeader>
           <p id="toevoegen-beschr" className="text-sm text-muted-foreground -mt-1">
@@ -401,9 +493,9 @@ export default function Gebruikers() {
         </DialogContent>
       </Dialog>
 
-      {/* ── Dialoog: bewerken ── */}
+      {/* Dialoog: bewerken */}
       <Dialog open={!!bewerkGebruiker} onOpenChange={(o) => { if (!o) { setBewerkGebruiker(null); setBewerkFout(null); } }}>
-        <DialogContent className="max-w-md" aria-describedby="bewerk-beschr">
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto" aria-describedby="bewerk-beschr">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Pencil className="h-5 w-5" /> Gebruiker bewerken
@@ -425,7 +517,7 @@ export default function Gebruikers() {
         </DialogContent>
       </Dialog>
 
-      {/* ── AlertDialog: verwijderen ── */}
+      {/* AlertDialog: verwijderen */}
       <AlertDialog open={!!verwijderTarget} onOpenChange={(o) => { if (!o) setVerwijderTarget(null); }}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -447,7 +539,7 @@ export default function Gebruikers() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* ── Dialoog: bekijken ── */}
+      {/* Dialoog: bekijken */}
       <Dialog open={!!bekijkGebruiker} onOpenChange={(o) => { if (!o) setBekijkGebruiker(null); }}>
         <DialogContent className="max-w-md" aria-describedby="bekijk-beschr">
           <DialogHeader>
@@ -460,45 +552,46 @@ export default function Gebruikers() {
           {bekijkGebruiker && (() => {
             const cfg = ROL_CONFIG[bekijkGebruiker.rol as Rol];
             const RolIcon = cfg?.icon ?? User;
+            const status = (bekijkGebruiker.uitnodiging_status ?? "niet_uitgenodigd") as keyof typeof UITNODIGING_STATUS_CONFIG;
+            const statusCfg = UITNODIGING_STATUS_CONFIG[status];
             return (
               <div className="space-y-4">
                 <div className="flex items-center gap-3">
                   <Avatar className="h-14 w-14 border-2 border-primary/10">
+                    {bekijkGebruiker.avatar_url && (
+                      <AvatarImage src={bekijkGebruiker.avatar_url} alt={bekijkGebruiker.naam ?? ""} />
+                    )}
                     <AvatarFallback className="bg-primary/10 text-primary font-semibold">
                       {initialen(bekijkGebruiker.naam ?? "")}
                     </AvatarFallback>
                   </Avatar>
-                  <div className="min-w-0">
+                  <div className="min-w-0 flex-1">
                     <div className="text-lg font-semibold leading-tight">{bekijkGebruiker.naam}</div>
-                    <Badge variant="outline" className={`mt-1 ${cfg?.badge ?? ""}`}>
-                      <RolIcon className="h-3 w-3 mr-1" />
-                      {cfg?.label ?? bekijkGebruiker.rol}
-                    </Badge>
+                    <div className="flex flex-wrap gap-1.5 mt-1">
+                      <Badge variant="outline" className={cfg?.badge ?? ""}>
+                        <RolIcon className="h-3 w-3 mr-1" />
+                        {cfg?.label ?? bekijkGebruiker.rol}
+                      </Badge>
+                      {status !== "geaccepteerd" && statusCfg.label && (
+                        <Badge variant="outline" className={statusCfg.badge}>
+                          {statusCfg.label}
+                        </Badge>
+                      )}
+                    </div>
                   </div>
+                  {bekijkGebruiker.bedrijfslogo_url && (
+                    <img
+                      src={bekijkGebruiker.bedrijfslogo_url}
+                      alt="Bedrijfslogo"
+                      className="h-10 w-10 object-contain rounded border bg-white p-0.5"
+                    />
+                  )}
                 </div>
 
                 <div className="space-y-3 rounded-lg border bg-muted/30 p-4">
-                  <div className="flex items-start gap-3">
-                    <Mail className="h-4 w-4 mt-0.5 text-muted-foreground flex-shrink-0" />
-                    <div className="min-w-0">
-                      <div className="text-xs text-muted-foreground">E-mailadres</div>
-                      <div className="text-sm break-all">{bekijkGebruiker.email || "—"}</div>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <Phone className="h-4 w-4 mt-0.5 text-muted-foreground flex-shrink-0" />
-                    <div className="min-w-0">
-                      <div className="text-xs text-muted-foreground">Telefoonnummer</div>
-                      <div className="text-sm">{bekijkGebruiker.telefoon || "—"}</div>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <Building className="h-4 w-4 mt-0.5 text-muted-foreground flex-shrink-0" />
-                    <div className="min-w-0">
-                      <div className="text-xs text-muted-foreground">Bedrijf</div>
-                      <div className="text-sm">{bekijkGebruiker.bedrijf || "—"}</div>
-                    </div>
-                  </div>
+                  <VeldRij icon={Mail} label="E-mailadres" waarde={bekijkGebruiker.email} />
+                  <VeldRij icon={Phone} label="Telefoonnummer" waarde={bekijkGebruiker.telefoon} />
+                  <VeldRij icon={Building} label="Bedrijf" waarde={bekijkGebruiker.bedrijf} />
                   <div className="flex items-start gap-3">
                     <Clock className="h-4 w-4 mt-0.5 text-muted-foreground flex-shrink-0" />
                     <div className="min-w-0">
@@ -515,6 +608,23 @@ export default function Gebruikers() {
                       <div className="text-sm">{bekijkGebruiker.actief ? "Actief" : "Inactief"}</div>
                     </div>
                   </div>
+                  {bekijkGebruiker.bedrijfskleuren && (
+                    <div className="flex items-start gap-3">
+                      <Palette className="h-4 w-4 mt-0.5 text-muted-foreground flex-shrink-0" />
+                      <div className="min-w-0">
+                        <div className="text-xs text-muted-foreground">Accentkleur</div>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <div
+                            className="h-4 w-4 rounded-full border"
+                            style={{ backgroundColor: haalPrimairKleur(bekijkGebruiker.bedrijfskleuren) }}
+                          />
+                          <span className="text-sm font-mono text-xs">
+                            {haalPrimairKleur(bekijkGebruiker.bedrijfskleuren)}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <DialogFooter className="gap-2">
@@ -532,6 +642,18 @@ export default function Gebruikers() {
   );
 }
 
+function VeldRij({ icon: Icon, label, waarde }: { icon: React.ElementType; label: string; waarde?: string | null }) {
+  return (
+    <div className="flex items-start gap-3">
+      <Icon className="h-4 w-4 mt-0.5 text-muted-foreground flex-shrink-0" />
+      <div className="min-w-0">
+        <div className="text-xs text-muted-foreground">{label}</div>
+        <div className="text-sm">{waarde || "—"}</div>
+      </div>
+    </div>
+  );
+}
+
 function GebruikerVelden({
   form,
   setForm,
@@ -543,69 +665,263 @@ function GebruikerVelden({
   toonActief: boolean;
   toonHoofd: boolean;
 }) {
-  const set = (k: keyof GebruikerForm) =>
-    (e: React.ChangeEvent<HTMLInputElement>) => setForm((f) => ({ ...f, [k]: e.target.value }));
+  const fotoInputRef = useRef<HTMLInputElement>(null);
+  const logoInputRef = useRef<HTMLInputElement>(null);
+
+  function leesBestand(file: File, veld: "avatar_url" | "bedrijfslogo_url") {
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const resultaat = ev.target?.result as string;
+      setForm((f) => ({ ...f, [veld]: resultaat }));
+    };
+    reader.readAsDataURL(file);
+  }
+
+  const primairKleur = haalPrimairKleur(form.bedrijfskleuren);
 
   return (
-    <div className="grid grid-cols-2 gap-3">
-      <div className="col-span-2">
-        <Label htmlFor="vld-naam">Volledige naam *</Label>
-        <Input id="vld-naam" value={form.naam} onChange={set("naam")} placeholder="Jan de Vries" autoFocus required />
-      </div>
-      <div className="col-span-2">
-        <Label htmlFor="vld-email">E-mailadres *</Label>
-        <Input id="vld-email" type="email" value={form.email} onChange={set("email")} placeholder="jan@bedrijf.nl" required />
-      </div>
-      <div>
-        <Label>Rol *</Label>
-        <Select value={form.rol} onValueChange={(v) => setForm((f) => ({ ...f, rol: v }))}>
-          <SelectTrigger><SelectValue /></SelectTrigger>
-          <SelectContent>
-            {toonHoofd && <SelectItem value="hoofdbeheerder">Hoofdbeheerder</SelectItem>}
-            <SelectItem value="beheerder">Beheerder</SelectItem>
-            <SelectItem value="controleur">Controleur</SelectItem>
-            <SelectItem value="monteur">Monteur</SelectItem>
-            <SelectItem value="klant">Klant</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-      <div>
-        <Label htmlFor="vld-tel">Telefoonnummer</Label>
-        <Input id="vld-tel" type="tel" value={form.telefoon} onChange={set("telefoon")} placeholder="+31 6 12345678" />
-      </div>
-      <div className="col-span-2">
-        <Label htmlFor="vld-bedrijf">Bedrijf</Label>
-        <Input id="vld-bedrijf" value={form.bedrijf} onChange={set("bedrijf")} placeholder="Naam van het bedrijf" />
-      </div>
-      <div className="col-span-2">
-        <Label htmlFor="vld-ww">{toonActief ? "Nieuw wachtwoord" : "Tijdelijk wachtwoord"}</Label>
-        <Input
-          id="vld-ww"
-          type="password"
-          value={form.wachtwoord}
-          onChange={set("wachtwoord")}
-          placeholder={toonActief ? "Leeg laten om ongewijzigd te laten" : "Optioneel"}
-        />
-      </div>
-      {toonActief && (
-        <div className="col-span-2 flex items-center justify-between rounded-lg border p-3">
-          <div>
-            <div className="text-sm font-medium">Account actief</div>
-            <div className="text-xs text-muted-foreground">Inactieve gebruikers kunnen niet inloggen.</div>
-          </div>
-          <Switch
-            checked={form.actief}
-            onCheckedChange={(checked) => setForm((f) => ({ ...f, actief: checked }))}
+    <div className="space-y-4">
+      {/* Basisvelden */}
+      <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-1.5">
+          <Label htmlFor="g-naam">Naam <span className="text-destructive">*</span></Label>
+          <Input
+            id="g-naam"
+            value={form.naam}
+            onChange={(e) => setForm((f) => ({ ...f, naam: e.target.value }))}
+            placeholder="Volledige naam"
+            required
           />
         </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="g-email">E-mailadres <span className="text-destructive">*</span></Label>
+          <Input
+            id="g-email"
+            type="email"
+            value={form.email}
+            onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
+            placeholder="naam@bedrijf.nl"
+            required
+          />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-1.5">
+          <Label htmlFor="g-rol">Rol <span className="text-destructive">*</span></Label>
+          <Select value={form.rol} onValueChange={(v) => setForm((f) => ({ ...f, rol: v }))}>
+            <SelectTrigger id="g-rol">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {toonHoofd && <SelectItem value="hoofdbeheerder">Hoofdbeheerder</SelectItem>}
+              <SelectItem value="beheerder">Beheerder</SelectItem>
+              <SelectItem value="monteur">Monteur</SelectItem>
+              <SelectItem value="controleur">Controleur</SelectItem>
+              <SelectItem value="klant">Klant</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="g-telefoon">Telefoonnummer</Label>
+          <Input
+            id="g-telefoon"
+            value={form.telefoon}
+            onChange={(e) => setForm((f) => ({ ...f, telefoon: e.target.value }))}
+            placeholder="+31 6 12345678"
+          />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-1.5">
+          <Label htmlFor="g-bedrijf">Bedrijf</Label>
+          <Input
+            id="g-bedrijf"
+            value={form.bedrijf}
+            onChange={(e) => setForm((f) => ({ ...f, bedrijf: e.target.value }))}
+            placeholder="Bedrijfsnaam"
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="g-wachtwoord">Wachtwoord</Label>
+          <Input
+            id="g-wachtwoord"
+            type="password"
+            value={form.wachtwoord}
+            onChange={(e) => setForm((f) => ({ ...f, wachtwoord: e.target.value }))}
+            placeholder={toonActief ? "Leeg = ongewijzigd" : "Instellen"}
+            autoComplete="new-password"
+          />
+        </div>
+      </div>
+
+      {toonActief && (
+        <div className="flex items-center gap-3 rounded-lg border bg-muted/30 p-3">
+          <Switch
+            id="g-actief"
+            checked={form.actief}
+            onCheckedChange={(v) => setForm((f) => ({ ...f, actief: v }))}
+          />
+          <Label htmlFor="g-actief" className="cursor-pointer">
+            Account actief
+          </Label>
+          <span className="text-xs text-muted-foreground ml-auto">
+            {form.actief ? "Kan inloggen" : "Kan niet inloggen"}
+          </span>
+        </div>
       )}
+
+      {/* Profiel en branding */}
+      <div className="rounded-lg border p-3 space-y-3">
+        <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+          <Palette className="h-3.5 w-3.5" /> Profiel en branding
+        </div>
+
+        {/* Profielfoto */}
+        <div className="space-y-1.5">
+          <Label>Profielfoto</Label>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => fotoInputRef.current?.click()}
+              className="h-14 w-14 rounded-full border-2 border-dashed border-muted-foreground/30 hover:border-primary/50 transition-colors overflow-hidden flex-shrink-0 bg-muted/30"
+            >
+              {form.avatar_url ? (
+                <img src={form.avatar_url} className="h-full w-full object-cover" alt="Profielfoto" />
+              ) : (
+                <div className="h-full w-full flex items-center justify-center">
+                  <Upload className="h-5 w-5 text-muted-foreground" />
+                </div>
+              )}
+            </button>
+            <div className="space-y-1">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => fotoInputRef.current?.click()}
+                className="text-xs h-7"
+              >
+                Foto uploaden
+              </Button>
+              {form.avatar_url && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setForm((f) => ({ ...f, avatar_url: "" }))}
+                  className="text-xs h-7 text-muted-foreground"
+                >
+                  Verwijderen
+                </Button>
+              )}
+              <p className="text-xs text-muted-foreground">JPG, PNG of WebP</p>
+            </div>
+          </div>
+          <input
+            ref={fotoInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => { const f = e.target.files?.[0]; if (f) leesBestand(f, "avatar_url"); }}
+          />
+        </div>
+
+        {/* Bedrijfslogo */}
+        <div className="space-y-1.5">
+          <Label>Bedrijfslogo</Label>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => logoInputRef.current?.click()}
+              className="h-14 w-14 rounded-lg border-2 border-dashed border-muted-foreground/30 hover:border-primary/50 transition-colors overflow-hidden flex-shrink-0 bg-white/50"
+            >
+              {form.bedrijfslogo_url ? (
+                <img src={form.bedrijfslogo_url} className="h-full w-full object-contain p-1" alt="Bedrijfslogo" />
+              ) : (
+                <div className="h-full w-full flex items-center justify-center">
+                  <Building className="h-5 w-5 text-muted-foreground" />
+                </div>
+              )}
+            </button>
+            <div className="space-y-1">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => logoInputRef.current?.click()}
+                className="text-xs h-7"
+              >
+                Logo uploaden
+              </Button>
+              {form.bedrijfslogo_url && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setForm((f) => ({ ...f, bedrijfslogo_url: "" }))}
+                  className="text-xs h-7 text-muted-foreground"
+                >
+                  Verwijderen
+                </Button>
+              )}
+              <p className="text-xs text-muted-foreground">JPG, PNG of SVG</p>
+            </div>
+          </div>
+          <input
+            ref={logoInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => { const f = e.target.files?.[0]; if (f) leesBestand(f, "bedrijfslogo_url"); }}
+          />
+        </div>
+
+        {/* Accentkleur */}
+        <div className="space-y-1.5">
+          <Label htmlFor="g-kleur">Accentkleur</Label>
+          <div className="flex items-center gap-3">
+            <div className="relative">
+              <input
+                id="g-kleur"
+                type="color"
+                value={primairKleur}
+                onChange={(e) =>
+                  setForm((f) => ({
+                    ...f,
+                    bedrijfskleuren: JSON.stringify({ primair: e.target.value }),
+                  }))
+                }
+                className="h-9 w-16 rounded cursor-pointer border border-input bg-transparent p-0.5"
+                title="Kies accentkleur"
+              />
+            </div>
+            <div>
+              <span className="text-sm font-mono">{primairKleur}</span>
+              <p className="text-xs text-muted-foreground">Accentkleur voor dit account</p>
+            </div>
+            {form.bedrijfskleuren && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => setForm((f) => ({ ...f, bedrijfskleuren: "" }))}
+                className="text-xs h-7 text-muted-foreground ml-auto"
+              >
+                Resetten
+              </Button>
+            )}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
 
 function Foutmelding({ tekst }: { tekst: string }) {
   return (
-    <div className="text-sm text-destructive bg-destructive/10 rounded-md px-3 py-2 border border-destructive/20">
+    <div className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
       {tekst}
     </div>
   );

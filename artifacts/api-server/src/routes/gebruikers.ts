@@ -16,6 +16,13 @@ const mapGebruiker = (g: typeof gebruikersTable.$inferSelect) => ({
   actief: g.actief,
   aangemaakt_op: g.aangemaaktOp.toISOString(),
   laatste_online: g.laatstOnline ? g.laatstOnline.toISOString() : null,
+  avatar_url: g.avatarUrl,
+  bedrijfslogo_url: g.bedrijfslogoUrl,
+  bedrijfskleuren: g.bedrijfskleuren,
+  uitnodiging_status: g.uitnodigingStatus,
+  uitnodiging_verstuurd_op: g.uitnodigingVerstuurdOp
+    ? g.uitnodigingVerstuurdOp.toISOString()
+    : null,
 });
 
 // GET /gebruikers
@@ -32,7 +39,10 @@ router.get("/gebruikers", async (req, res) => {
 // POST /gebruikers
 router.post("/gebruikers", async (req, res) => {
   try {
-    const { naam, email, rol, telefoon, bedrijf, wachtwoord } = req.body;
+    const {
+      naam, email, rol, telefoon, bedrijf, wachtwoord,
+      avatar_url, bedrijfslogo_url, bedrijfskleuren,
+    } = req.body;
     if (!naam || !email || !rol) {
       return res.status(400).json({ error: "naam, email en rol zijn verplicht" });
     }
@@ -46,6 +56,10 @@ router.post("/gebruikers", async (req, res) => {
         telefoon,
         bedrijf,
         wachtwoord: gehasht,
+        avatarUrl: avatar_url,
+        bedrijfslogoUrl: bedrijfslogo_url,
+        bedrijfskleuren,
+        uitnodigingStatus: "niet_uitgenodigd",
       })
       .returning();
     res.status(201).json(mapGebruiker(g));
@@ -75,7 +89,10 @@ router.get("/gebruikers/:id", async (req, res) => {
 router.patch("/gebruikers/:id", async (req, res) => {
   try {
     const id = parseInt(req.params.id);
-    const { naam, email, rol, telefoon, bedrijf, actief, wachtwoord } = req.body;
+    const {
+      naam, email, rol, telefoon, bedrijf, actief, wachtwoord,
+      avatar_url, bedrijfslogo_url, bedrijfskleuren, uitnodiging_status,
+    } = req.body;
     const wijziging: Partial<typeof gebruikersTable.$inferInsert> = {
       naam,
       email: email ? String(email).trim().toLowerCase() : undefined,
@@ -83,6 +100,10 @@ router.patch("/gebruikers/:id", async (req, res) => {
       telefoon,
       bedrijf,
       actief,
+      avatarUrl: avatar_url,
+      bedrijfslogoUrl: bedrijfslogo_url,
+      bedrijfskleuren,
+      uitnodigingStatus: uitnodiging_status,
     };
     if (wachtwoord) {
       wijziging.wachtwoord = await bcrypt.hash(String(wachtwoord), 10);
@@ -98,6 +119,26 @@ router.patch("/gebruikers/:id", async (req, res) => {
     if (err?.cause?.code === "23505" || err?.message?.includes("gebruikers_email_unique")) {
       return res.status(409).json({ error: "Dit e-mailadres is al in gebruik bij een andere gebruiker." });
     }
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// POST /gebruikers/:id/uitnodigen
+router.post("/gebruikers/:id/uitnodigen", async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const [g] = await db
+      .update(gebruikersTable)
+      .set({
+        uitnodigingStatus: "uitgenodigd",
+        uitnodigingVerstuurdOp: new Date(),
+      })
+      .where(eq(gebruikersTable.id, id))
+      .returning();
+    if (!g) return res.status(404).json({ error: "Gebruiker niet gevonden" });
+    res.json(mapGebruiker(g));
+  } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Interne serverfout" });
   }

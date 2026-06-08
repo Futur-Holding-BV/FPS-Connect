@@ -6,11 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface GebouwInput {
-  naam: string;
-  adres: string;
-  stad?: string;
-  postcode?: string;
-  omschrijving?: string;
-  bouwjaar?: number;
+export interface WachtwoordWijzigen {
+  huidig_wachtwoord: string;
+  nieuw_wachtwoord: string;
 }

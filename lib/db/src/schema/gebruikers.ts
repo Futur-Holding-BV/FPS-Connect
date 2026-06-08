@@ -15,6 +15,11 @@ export const gebruikersTable = pgTable("gebruikers", {
   actief: boolean("actief").notNull().default(true),
   aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
   laatstOnline: timestamp("laatst_online"),
+  avatarUrl: text("avatar_url"),
+  bedrijfslogoUrl: text("bedrijfslogo_url"),
+  bedrijfskleuren: text("bedrijfskleuren"),
+  uitnodigingStatus: text("uitnodiging_status").notNull().default("niet_uitgenodigd"),
+  uitnodigingVerstuurdOp: timestamp("uitnodiging_verstuurd_op"),
 });
 
 export const insertGebruikerSchema = createInsertSchema(gebruikersTable).omit({ id: true, aangemaaktOp: true });

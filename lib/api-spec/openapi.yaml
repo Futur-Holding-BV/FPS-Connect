@@ -838,6 +838,40 @@ paths:
         "204":
           description: Verwijderd
 
+  /gebruikers/{id}/uitnodigen:
+    post:
+      operationId: uitnodigingVersturen
+      tags: [gebruikers]
+      summary: Uitnodiging sturen naar gebruiker
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Gebruiker"
+
+  /auth/wachtwoord-wijzigen:
+    post:
+      operationId: wachtwoordWijzigen
+      tags: [auth]
+      summary: Eigen wachtwoord wijzigen (ingelogd)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WachtwoordWijzigen"
+      responses:
+        "204":
+          description: Wachtwoord gewijzigd
+
   # ── ABONNEMENTEN ─────────────────────────────────────────────────────────
   /abonnementen:
     get:
@@ -1773,7 +1807,7 @@ components:
     # ── GEBRUIKER ────────────────────────────────────────────────────────
     Gebruiker:
       type: object
-      required: [id, naam, email, rol, actief, aangemaakt_op]
+      required: [id, naam, email, rol, actief, aangemaakt_op, uitnodiging_status]
       properties:
         id:
           type: integer
@@ -1794,6 +1828,17 @@ components:
           type: string
         laatste_online:
           type: ["string", "null"]
+        avatar_url:
+          type: ["string", "null"]
+        bedrijfslogo_url:
+          type: ["string", "null"]
+        bedrijfskleuren:
+          type: ["string", "null"]
+        uitnodiging_status:
+          type: string
+          enum: [niet_uitgenodigd, uitgenodigd, geaccepteerd]
+        uitnodiging_verstuurd_op:
+          type: ["string", "null"]
 
     GebruikerInput:
       type: object
@@ -1810,6 +1855,14 @@ components:
         bedrijf:
           type: string
         wachtwoord:
+          type: string
+        avatar_url:
+          type: string
+        bedrijfslogo_url:
+          type: string
+        bedrijfskleuren:
+          type: string
+        uitnodiging_status:
           type: string
 
     GebruikerUpdate:
@@ -1828,6 +1881,23 @@ components:
         actief:
           type: boolean
         wachtwoord:
+          type: string
+        avatar_url:
+          type: string
+        bedrijfslogo_url:
+          type: string
+        bedrijfskleuren:
+          type: string
+        uitnodiging_status:
+          type: string
+
+    WachtwoordWijzigen:
+      type: object
+      required: [huidig_wachtwoord, nieuw_wachtwoord]
+      properties:
+        huidig_wachtwoord:
+          type: string
+        nieuw_wachtwoord:
           type: string
 
     # ── AUTHENTICATIE ─────────────────────────────────────────────────────
@@ -1879,6 +1949,10 @@ components:
         rol:
           type: string
           enum: [hoofdbeheerder, beheerder, monteur, controleur, klant, viewer]
+        avatar_url:
+          type: ["string", "null"]
+        bedrijfskleuren:
+          type: ["string", "null"]
 
     # ── ABONNEMENT ───────────────────────────────────────────────────────
     Abonnement:

@@ -16,6 +16,8 @@ const mapAuthGebruiker = (g: typeof gebruikersTable.$inferSelect) => ({
   naam: g.naam,
   email: g.email,
   rol: g.rol,
+  avatar_url: g.avatarUrl ?? null,
+  bedrijfskleuren: g.bedrijfskleuren ?? null,
 });
 
 const schoonCode = (code: unknown) => String(code ?? "").replace(/\s+/g, "");
@@ -97,6 +99,7 @@ router.post("/auth/2fa/activeren", async (req, res) => {
         totpSecret: secret,
         tweeFactorIngeschakeld: true,
         laatstOnline: new Date(),
+        uitnodigingStatus: "geaccepteerd",
       })
       .where(eq(gebruikersTable.id, pendingId))
       .returning();
@@ -133,7 +136,7 @@ router.post("/auth/2fa/verify", async (req, res) => {
     }
     await db
       .update(gebruikersTable)
-      .set({ laatstOnline: new Date() })
+      .set({ laatstOnline: new Date(), uitnodigingStatus: "geaccepteerd" })
       .where(eq(gebruikersTable.id, g.id));
     req.session.userId = g.id;
     delete req.session.pendingUserId;
@@ -151,6 +154,40 @@ router.post("/auth/logout", (req, res) => {
     res.clearCookie("fps.sid");
     res.status(204).send();
   });
+});
+
+// POST /auth/wachtwoord-wijzigen
+router.post("/auth/wachtwoord-wijzigen", async (req, res) => {
+  try {
+    const id = req.session.userId;
+    if (!id) {
+      return res.status(401).json({ error: "Niet ingelogd" });
+    }
+    const { huidig_wachtwoord, nieuw_wachtwoord } = req.body ?? {};
+    if (!huidig_wachtwoord || !nieuw_wachtwoord) {
+      return res.status(400).json({ error: "Huidig en nieuw wachtwoord zijn verplicht" });
+    }
+    if (String(nieuw_wachtwoord).length < 8) {
+      return res.status(400).json({ error: "Nieuw wachtwoord moet minimaal 8 tekens bevatten" });
+    }
+    const [g] = await db.select().from(gebruikersTable).where(eq(gebruikersTable.id, id));
+    if (!g || !g.wachtwoord) {
+      return res.status(404).json({ error: "Gebruiker niet gevonden" });
+    }
+    const klopt = await bcrypt.compare(String(huidig_wachtwoord), g.wachtwoord);
+    if (!klopt) {
+      return res.status(400).json({ error: "Huidig wachtwoord is onjuist" });
+    }
+    const gehasht = await bcrypt.hash(String(nieuw_wachtwoord), 10);
+    await db
+      .update(gebruikersTable)
+      .set({ wachtwoord: gehasht })
+      .where(eq(gebruikersTable.id, id));
+    res.status(204).send();
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
 });
 
 // GET /auth/me
