@@ -3,6 +3,7 @@ import { Link } from "wouter";
 import {
   useListGebouwTekeningen,
   useCreateVerdieping,
+  useDeleteGebouwTekening,
 } from "@workspace/api-client-react";
 import type { Verdieping, Tekening } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -11,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Layers, Map, FileText, Plus, Loader2 } from "lucide-react";
+import { Layers, Map, FileText, Plus, Loader2, X } from "lucide-react";
 import { TekeningViewer } from "./tekening-viewer";
 
 const TEKENING_LABELS: Record<string, string> = {
@@ -28,8 +29,22 @@ function typeLabel(type: string): string {
   return TEKENING_LABELS[type] ?? type;
 }
 
-function TekeningRegels({ items }: { items: Tekening[] }) {
+function TekeningRegels({
+  items,
+  isBeheerder,
+}: {
+  items: Tekening[];
+  isBeheerder: boolean;
+}) {
+  const queryClient = useQueryClient();
+  const verwijderTekening = useDeleteGebouwTekening();
   const [actief, setActief] = useState<Tekening | null>(null);
+
+  async function verwijder(tekeningId: number) {
+    await verwijderTekening.mutateAsync({ tekeningId });
+    queryClient.invalidateQueries();
+  }
+
   if (items.length === 0) {
     return <p className="text-xs text-muted-foreground">Nog geen tekeningen.</p>;
   }
@@ -49,6 +64,17 @@ function TekeningRegels({ items }: { items: Tekening[] }) {
             <Badge variant="secondary" className="text-xs shrink-0">
               {typeLabel(t.type)}
             </Badge>
+            {isBeheerder && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6 shrink-0 ml-auto text-muted-foreground hover:text-destructive"
+                onClick={() => verwijder(t.id)}
+                disabled={verwijderTekening.isPending}
+              >
+                <X className="h-3.5 w-3.5" />
+              </Button>
+            )}
           </li>
         ))}
       </ul>
@@ -139,7 +165,7 @@ export default function GebouwBouwlagen({
                     </Button>
                   </Link>
                 </div>
-                <TekeningRegels items={tk} />
+                <TekeningRegels items={tk} isBeheerder={isBeheerder} />
               </div>
             );
           })
@@ -153,7 +179,7 @@ export default function GebouwBouwlagen({
                 Tekeningen zonder specifieke bouwlaag.
               </p>
             </div>
-            <TekeningRegels items={algemeen} />
+            <TekeningRegels items={algemeen} isBeheerder={isBeheerder} />
           </div>
         )}
 
