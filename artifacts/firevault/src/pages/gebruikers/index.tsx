@@ -21,7 +21,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Mail, Phone, Building, Shield, Plus, UserPlus, Pencil, Trash2 } from "lucide-react";
+import { Mail, Phone, Building, Shield, Plus, UserPlus, Pencil, Trash2, RefreshCw } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 
 const rolKleur: Record<string, string> = {
@@ -61,7 +61,7 @@ type Gebruiker = {
 
 export default function Gebruikers() {
   const queryClient = useQueryClient();
-  const { data: gebruikers, isLoading } = useListGebruikers();
+  const { data: gebruikers, isLoading, refetch, isFetching } = useListGebruikers();
   const maakGebruiker   = useCreateGebruiker();
   const werkBijGebruiker = useUpdateGebruiker();
   const verwijderGebruiker = useDeleteGebruiker();
@@ -171,9 +171,14 @@ export default function Gebruikers() {
           <h1 className="text-3xl font-bold tracking-tight">Gebruikers</h1>
           <p className="text-muted-foreground mt-1">Beheer accounts en toegangsrechten.</p>
         </div>
-        <Button onClick={() => { setToevoegenOpen(true); setToevoegenForm(leegForm); setToevoegenFout(null); }}>
-          <Plus className="h-4 w-4 mr-2" /> Gebruiker Toevoegen
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" size="icon" onClick={() => refetch()} disabled={isFetching} title="Vernieuwen">
+            <RefreshCw className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`} />
+          </Button>
+          <Button onClick={() => { setToevoegenOpen(true); setToevoegenForm(leegForm); setToevoegenFout(null); }}>
+            <Plus className="h-4 w-4 mr-2" /> Gebruiker Toevoegen
+          </Button>
+        </div>
       </div>
 
       {/* Statistieken per rol */}
