@@ -159,6 +159,25 @@ paths:
               schema:
                 $ref: "#/components/schemas/Gebouw"
 
+  /gebouwen/ai-analyse:
+    post:
+      operationId: aiAnalyseGebouw
+      tags: [gebouwen]
+      summary: AI-analyse van een adres (geocoding + satellietbeeld) voor gebouwgegevens
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GebouwAiAnalyseInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GebouwAiAnalyseResultaat"
+
   /gebouwen/{id}:
     get:
       operationId: getGebouw
@@ -379,6 +398,194 @@ paths:
             type: integer
         - in: path
           name: gebruikerId
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Verwijderd
+        "403":
+          description: Geen toegang
+
+  /gebouwen/{id}/partijen:
+    get:
+      operationId: listGebouwPartijen
+      tags: [gebouwen]
+      summary: Partijen (eigenaar/gebruiker/opdrachtgever/aanvrager) van een gebouw
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/GebouwPartij"
+        "403":
+          description: Geen toegang
+    post:
+      operationId: createGebouwPartij
+      tags: [gebouwen]
+      summary: Partij toevoegen aan gebouw (alleen beheerder)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GebouwPartijInput"
+      responses:
+        "201":
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GebouwPartij"
+        "400":
+          description: Ongeldige invoer
+        "403":
+          description: Geen toegang
+
+  /gebouwen/partijen/{partijId}:
+    patch:
+      operationId: updateGebouwPartij
+      tags: [gebouwen]
+      summary: Partij bijwerken (alleen beheerder)
+      parameters:
+        - in: path
+          name: partijId
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GebouwPartijUpdate"
+      responses:
+        "200":
+          description: Bijgewerkt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GebouwPartij"
+        "403":
+          description: Geen toegang
+        "404":
+          description: Niet gevonden
+    delete:
+      operationId: deleteGebouwPartij
+      tags: [gebouwen]
+      summary: Partij verwijderen (alleen beheerder)
+      parameters:
+        - in: path
+          name: partijId
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Verwijderd
+        "403":
+          description: Geen toegang
+
+  /gebouwen/{id}/tekeningen:
+    get:
+      operationId: listGebouwTekeningen
+      tags: [gebouwen]
+      summary: Tekeningen van een gebouw
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Tekening"
+        "403":
+          description: Geen toegang
+    post:
+      operationId: createGebouwTekening
+      tags: [gebouwen]
+      summary: Tekening toevoegen aan gebouw (alleen beheerder)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TekeningInput"
+      responses:
+        "201":
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Tekening"
+        "400":
+          description: Ongeldige invoer
+        "403":
+          description: Geen toegang
+
+  /gebouwen/tekeningen/{tekeningId}:
+    patch:
+      operationId: updateGebouwTekening
+      tags: [gebouwen]
+      summary: Tekening bijwerken (alleen beheerder)
+      parameters:
+        - in: path
+          name: tekeningId
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TekeningUpdate"
+      responses:
+        "200":
+          description: Bijgewerkt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Tekening"
+        "403":
+          description: Geen toegang
+        "404":
+          description: Niet gevonden
+    delete:
+      operationId: deleteGebouwTekening
+      tags: [gebouwen]
+      summary: Tekening verwijderen (alleen beheerder)
+      parameters:
+        - in: path
+          name: tekeningId
           required: true
           schema:
             type: integer
@@ -620,6 +827,251 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/VoorzieningLocatie"
+
+  /verdiepingen/{id}/scheidingen:
+    get:
+      operationId: listScheidingen
+      tags: [voorzieningen]
+      summary: Brand- en rookscheidingen op een verdieping
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Scheiding"
+    post:
+      operationId: createScheiding
+      tags: [voorzieningen]
+      summary: Scheiding toevoegen aan verdieping
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ScheidingInput"
+      responses:
+        "201":
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Scheiding"
+        "400":
+          description: Ongeldige invoer
+
+  /verdiepingen/scheidingen/{scheidingId}:
+    patch:
+      operationId: updateScheiding
+      tags: [voorzieningen]
+      summary: Scheiding bijwerken
+      parameters:
+        - in: path
+          name: scheidingId
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ScheidingUpdate"
+      responses:
+        "200":
+          description: Bijgewerkt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Scheiding"
+        "404":
+          description: Niet gevonden
+    delete:
+      operationId: deleteScheiding
+      tags: [voorzieningen]
+      summary: Scheiding verwijderen
+      parameters:
+        - in: path
+          name: scheidingId
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Verwijderd
+
+  # ── LOGIN-POGINGEN (risicosignalen) ───────────────────────────────────────
+  /login-pogingen:
+    get:
+      operationId: listLoginPogingen
+      tags: [systeem]
+      summary: Loginpogingen met risicosignalen (beheerder)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/LoginPoging"
+
+  # ── HELPDESK ──────────────────────────────────────────────────────────────
+  /helpdesk:
+    get:
+      operationId: listHelpdeskTickets
+      tags: [systeem]
+      summary: Helpdesktickets (beheerder)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/HelpdeskTicket"
+    post:
+      operationId: createHelpdeskTicket
+      tags: [systeem]
+      summary: Helpdeskticket indienen
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/HelpdeskTicketInput"
+      responses:
+        "201":
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HelpdeskTicket"
+
+  /helpdesk/{id}:
+    patch:
+      operationId: updateHelpdeskTicket
+      tags: [systeem]
+      summary: Helpdeskticket-status bijwerken (beheerder)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/HelpdeskTicketUpdate"
+      responses:
+        "200":
+          description: Bijgewerkt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HelpdeskTicket"
+        "404":
+          description: Niet gevonden
+
+  # ── FEEDBACK ──────────────────────────────────────────────────────────────
+  /feedback:
+    get:
+      operationId: listFeedback
+      tags: [systeem]
+      summary: Feedbackoverzicht (beheerder)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Feedback"
+    post:
+      operationId: createFeedback
+      tags: [systeem]
+      summary: Feedback indienen
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FeedbackInput"
+      responses:
+        "201":
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Feedback"
+
+  # ── HEATMAPS (muisgebeurtenissen) ─────────────────────────────────────────
+  /muis-gebeurtenissen:
+    get:
+      operationId: listMuisGebeurtenissen
+      tags: [systeem]
+      summary: Muisgebeurtenissen per pagina (beheerder)
+      parameters:
+        - in: query
+          name: pagina
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MuisGebeurtenis"
+    post:
+      operationId: createMuisGebeurtenissen
+      tags: [systeem]
+      summary: Batch muisgebeurtenissen vastleggen
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MuisGebeurtenisBatch"
+      responses:
+        "204":
+          description: Vastgelegd
+
+  /muis-gebeurtenissen/paginas:
+    get:
+      operationId: listHeatmapPaginas
+      tags: [systeem]
+      summary: Pagina's waarvoor heatmapdata bestaat (beheerder)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
 
   # ── STORAGE ───────────────────────────────────────────────────────────────
   /storage/uploads/request-url:
@@ -1458,6 +1910,22 @@ components:
           type: ["integer", "null"]
         klant_naam:
           type: ["string", "null"]
+        aantal_verdiepingen:
+          type: ["integer", "null"]
+        hoogte:
+          type: ["number", "null"]
+        breedte:
+          type: ["number", "null"]
+        diepte:
+          type: ["number", "null"]
+        oppervlakte:
+          type: ["number", "null"]
+        gebouw_type:
+          type: ["string", "null"]
+        latitude:
+          type: ["number", "null"]
+        longitude:
+          type: ["number", "null"]
         totaal_voorzieningen:
           type: integer
         aangemaakt_op:
@@ -1485,6 +1953,22 @@ components:
           type: ["integer", "null"]
         klant_naam:
           type: ["string", "null"]
+        aantal_verdiepingen:
+          type: ["integer", "null"]
+        hoogte:
+          type: ["number", "null"]
+        breedte:
+          type: ["number", "null"]
+        diepte:
+          type: ["number", "null"]
+        oppervlakte:
+          type: ["number", "null"]
+        gebouw_type:
+          type: ["string", "null"]
+        latitude:
+          type: ["number", "null"]
+        longitude:
+          type: ["number", "null"]
         aangemaakt_op:
           type: string
         verdiepingen:
@@ -1525,6 +2009,14 @@ components:
           type: string
         rol:
           type: string
+        telefoon:
+          type: string
+          nullable: true
+        organisatie:
+          type: string
+          nullable: true
+        actief:
+          type: boolean
         aangemaakt_op:
           type: string
 
@@ -1534,6 +2026,188 @@ components:
       properties:
         gebruiker_id:
           type: integer
+
+    GebouwPartij:
+      type: object
+      required: [id, gebouw_id, type, naam, aangemaakt_op]
+      properties:
+        id:
+          type: integer
+        gebouw_id:
+          type: integer
+        type:
+          type: string
+          description: eigenaar, gebruiker, opdrachtgever of aanvrager
+        naam:
+          type: string
+        organisatie:
+          type: string
+          nullable: true
+        telefoon:
+          type: string
+          nullable: true
+        email:
+          type: string
+          nullable: true
+        adres:
+          type: string
+          nullable: true
+        postcode:
+          type: string
+          nullable: true
+        plaats:
+          type: string
+          nullable: true
+        opmerkingen:
+          type: string
+          nullable: true
+        aangemaakt_op:
+          type: string
+
+    GebouwPartijInput:
+      type: object
+      required: [type, naam]
+      properties:
+        type:
+          type: string
+        naam:
+          type: string
+        organisatie:
+          type: string
+        telefoon:
+          type: string
+        email:
+          type: string
+        adres:
+          type: string
+        postcode:
+          type: string
+        plaats:
+          type: string
+        opmerkingen:
+          type: string
+
+    GebouwPartijUpdate:
+      type: object
+      properties:
+        type:
+          type: string
+        naam:
+          type: string
+        organisatie:
+          type: string
+        telefoon:
+          type: string
+        email:
+          type: string
+        adres:
+          type: string
+        postcode:
+          type: string
+        plaats:
+          type: string
+        opmerkingen:
+          type: string
+
+    Tekening:
+      type: object
+      required: [id, gebouw_id, naam, type, url, aangemaakt_op]
+      properties:
+        id:
+          type: integer
+        gebouw_id:
+          type: integer
+        verdieping_id:
+          type: integer
+          nullable: true
+        naam:
+          type: string
+        type:
+          type: string
+        schaal:
+          type: string
+          nullable: true
+        url:
+          type: string
+        aangemaakt_op:
+          type: string
+
+    TekeningInput:
+      type: object
+      required: [naam, type, url]
+      properties:
+        naam:
+          type: string
+        type:
+          type: string
+        schaal:
+          type: string
+        url:
+          type: string
+        verdieping_id:
+          type: integer
+          nullable: true
+
+    TekeningUpdate:
+      type: object
+      properties:
+        naam:
+          type: string
+        type:
+          type: string
+        schaal:
+          type: string
+        verdieping_id:
+          type: integer
+          nullable: true
+
+    Scheiding:
+      type: object
+      required: [id, verdieping_id, type, punten, aangemaakt_op]
+      properties:
+        id:
+          type: integer
+        verdieping_id:
+          type: integer
+        type:
+          type: string
+          description: brand of rook
+        waarde:
+          type: string
+          nullable: true
+        kleur:
+          type: string
+          nullable: true
+        punten:
+          type: string
+          description: JSON-array van punten [{x, y}]
+        aangemaakt_op:
+          type: string
+
+    ScheidingInput:
+      type: object
+      required: [type, punten]
+      properties:
+        type:
+          type: string
+        waarde:
+          type: string
+        kleur:
+          type: string
+        punten:
+          type: string
+
+    ScheidingUpdate:
+      type: object
+      properties:
+        type:
+          type: string
+        waarde:
+          type: string
+        kleur:
+          type: string
+        punten:
+          type: string
 
     GebouwInput:
       type: object
@@ -1553,6 +2227,22 @@ components:
           type: integer
         klant_id:
           type: integer
+        aantal_verdiepingen:
+          type: integer
+        hoogte:
+          type: number
+        breedte:
+          type: number
+        diepte:
+          type: number
+        oppervlakte:
+          type: number
+        gebouw_type:
+          type: string
+        latitude:
+          type: number
+        longitude:
+          type: number
 
     GebouwUpdate:
       type: object
@@ -1571,6 +2261,68 @@ components:
           type: integer
         klant_id:
           type: integer
+        aantal_verdiepingen:
+          type: integer
+        hoogte:
+          type: number
+        breedte:
+          type: number
+        diepte:
+          type: number
+        oppervlakte:
+          type: number
+        gebouw_type:
+          type: string
+        latitude:
+          type: number
+        longitude:
+          type: number
+
+    GebouwAiAnalyseInput:
+      type: object
+      required: [adres]
+      properties:
+        adres:
+          type: string
+        stad:
+          type: string
+        postcode:
+          type: string
+
+    GebouwAiAnalyseResultaat:
+      type: object
+      required: [gevonden]
+      properties:
+        gevonden:
+          type: boolean
+        adres_gevonden:
+          type: ["string", "null"]
+        latitude:
+          type: ["number", "null"]
+        longitude:
+          type: ["number", "null"]
+        satelliet_url:
+          type: ["string", "null"]
+        aantal_verdiepingen:
+          type: ["integer", "null"]
+        hoogte:
+          type: ["number", "null"]
+        breedte:
+          type: ["number", "null"]
+        diepte:
+          type: ["number", "null"]
+        oppervlakte:
+          type: ["number", "null"]
+        gebouw_type:
+          type: ["string", "null"]
+        bouwjaar:
+          type: ["integer", "null"]
+        omschrijving:
+          type: ["string", "null"]
+        toelichting:
+          type: ["string", "null"]
+        betrouwbaarheid:
+          type: ["string", "null"]
 
     # ── VERDIEPING ───────────────────────────────────────────────────────
     Verdieping:
@@ -2253,9 +3005,129 @@ components:
           type: ["string", "null"]
         uitnodiging_opnieuw_verstuurd_op:
           type: ["string", "null"]
+        uitnodiging_geaccepteerd_op:
+          type: ["string", "null"]
         taal:
           type: string
           enum: [nl, en, de, fr, ar, tr]
+
+    LoginPoging:
+      type: object
+      required: [id, email, gelukt, tijdstip]
+      properties:
+        id:
+          type: integer
+        gebruiker_id:
+          type: ["integer", "null"]
+        naam:
+          type: ["string", "null"]
+        email:
+          type: string
+        ip:
+          type: ["string", "null"]
+        user_agent:
+          type: ["string", "null"]
+        gelukt:
+          type: boolean
+        nieuw_apparaat:
+          type: boolean
+        nieuw_ip:
+          type: boolean
+        tijdstip:
+          type: string
+
+    HelpdeskTicket:
+      type: object
+      required: [id, onderwerp, bericht, status, aangemaakt_op]
+      properties:
+        id:
+          type: integer
+        gebruiker_id:
+          type: ["integer", "null"]
+        naam:
+          type: ["string", "null"]
+        email:
+          type: ["string", "null"]
+        onderwerp:
+          type: string
+        bericht:
+          type: string
+        status:
+          type: string
+        aangemaakt_op:
+          type: string
+
+    HelpdeskTicketInput:
+      type: object
+      required: [onderwerp, bericht]
+      properties:
+        onderwerp:
+          type: string
+        bericht:
+          type: string
+
+    HelpdeskTicketUpdate:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+
+    Feedback:
+      type: object
+      required: [id, type, bericht, aangemaakt_op]
+      properties:
+        id:
+          type: integer
+        gebruiker_id:
+          type: ["integer", "null"]
+        naam:
+          type: ["string", "null"]
+        type:
+          type: string
+        waardering:
+          type: ["integer", "null"]
+        bericht:
+          type: string
+        pagina:
+          type: ["string", "null"]
+        aangemaakt_op:
+          type: string
+
+    FeedbackInput:
+      type: object
+      required: [bericht]
+      properties:
+        type:
+          type: string
+        waardering:
+          type: integer
+        bericht:
+          type: string
+        pagina:
+          type: string
+
+    MuisGebeurtenis:
+      type: object
+      required: [pagina, type, x, y]
+      properties:
+        pagina:
+          type: string
+        type:
+          type: string
+        x:
+          type: number
+        y:
+          type: number
+
+    MuisGebeurtenisBatch:
+      type: object
+      required: [gebeurtenissen]
+      properties:
+        gebeurtenissen:
+          type: array
+          items:
+            $ref: "#/components/schemas/MuisGebeurtenis"
 
     GebruikerInput:
       type: object
@@ -2406,6 +3278,10 @@ components:
         taal:
           type: string
           enum: [nl, en, de, fr, ar, tr]
+        nieuw_apparaat:
+          type: boolean
+        nieuw_ip:
+          type: boolean
 
     # ── ABONNEMENT ───────────────────────────────────────────────────────
     Abonnement:

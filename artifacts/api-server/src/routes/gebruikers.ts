@@ -37,6 +37,9 @@ const mapGebruiker = (g: typeof gebruikersTable.$inferSelect) => ({
   uitnodiging_opnieuw_verstuurd_op: g.uitnodigingOpnieuwVerstuurdOp
     ? g.uitnodigingOpnieuwVerstuurdOp.toISOString()
     : null,
+  uitnodiging_geaccepteerd_op: g.uitnodigingGeaccepteerdOp
+    ? g.uitnodigingGeaccepteerdOp.toISOString()
+    : null,
   taal: g.taal ?? "nl",
 });
 

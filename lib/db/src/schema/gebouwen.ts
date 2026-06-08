@@ -12,6 +12,14 @@ export const gebouwenTable = pgTable("gebouwen", {
   omschrijving: text("omschrijving"),
   bouwjaar: integer("bouwjaar"),
   klantId: integer("klant_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
+  aantalVerdiepingen: integer("aantal_verdiepingen"),
+  hoogte: real("hoogte"),
+  breedte: real("breedte"),
+  diepte: real("diepte"),
+  oppervlakte: real("oppervlakte"),
+  gebouwType: text("gebouw_type"),
+  latitude: real("latitude"),
+  longitude: real("longitude"),
   aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
   bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
 });
@@ -44,3 +52,54 @@ export const gebouwToewijzingenTable = pgTable("gebouw_toewijzingen", {
 });
 
 export type GebouwToewijzing = typeof gebouwToewijzingenTable.$inferSelect;
+
+export const gebouwPartijenTable = pgTable("gebouw_partijen", {
+  id: serial("id").primaryKey(),
+  gebouwId: integer("gebouw_id").notNull().references(() => gebouwenTable.id, { onDelete: "cascade" }),
+  type: text("type").notNull(),
+  naam: text("naam").notNull(),
+  organisatie: text("organisatie"),
+  telefoon: text("telefoon"),
+  email: text("email"),
+  adres: text("adres"),
+  postcode: text("postcode"),
+  plaats: text("plaats"),
+  opmerkingen: text("opmerkingen"),
+  aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
+  bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
+});
+
+export const insertGebouwPartijSchema = createInsertSchema(gebouwPartijenTable).omit({ id: true, aangemaaktOp: true, bijgewerktOp: true });
+export type InsertGebouwPartij = z.infer<typeof insertGebouwPartijSchema>;
+export type GebouwPartij = typeof gebouwPartijenTable.$inferSelect;
+
+export const tekeningenTable = pgTable("tekeningen", {
+  id: serial("id").primaryKey(),
+  gebouwId: integer("gebouw_id").notNull().references(() => gebouwenTable.id, { onDelete: "cascade" }),
+  verdiepingId: integer("verdieping_id").references(() => verdiepingenTable.id, { onDelete: "set null" }),
+  naam: text("naam").notNull(),
+  type: text("type").notNull(),
+  schaal: text("schaal"),
+  url: text("url").notNull(),
+  aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
+  bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
+});
+
+export const insertTekeningSchema = createInsertSchema(tekeningenTable).omit({ id: true, aangemaaktOp: true, bijgewerktOp: true });
+export type InsertTekening = z.infer<typeof insertTekeningSchema>;
+export type Tekening = typeof tekeningenTable.$inferSelect;
+
+export const scheidingenTable = pgTable("scheidingen", {
+  id: serial("id").primaryKey(),
+  verdiepingId: integer("verdieping_id").notNull().references(() => verdiepingenTable.id, { onDelete: "cascade" }),
+  type: text("type").notNull(),
+  waarde: text("waarde"),
+  kleur: text("kleur"),
+  punten: text("punten").notNull(),
+  aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
+  bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
+});
+
+export const insertScheidingSchema = createInsertSchema(scheidingenTable).omit({ id: true, aangemaaktOp: true, bijgewerktOp: true });
+export type InsertScheiding = z.infer<typeof insertScheidingSchema>;
+export type Scheiding = typeof scheidingenTable.$inferSelect;

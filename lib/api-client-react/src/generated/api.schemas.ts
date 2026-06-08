@@ -73,6 +73,22 @@ export interface Gebouw {
   klant_id?: number | null;
   /** @nullable */
   klant_naam?: string | null;
+  /** @nullable */
+  aantal_verdiepingen?: number | null;
+  /** @nullable */
+  hoogte?: number | null;
+  /** @nullable */
+  breedte?: number | null;
+  /** @nullable */
+  diepte?: number | null;
+  /** @nullable */
+  oppervlakte?: number | null;
+  /** @nullable */
+  gebouw_type?: string | null;
+  /** @nullable */
+  latitude?: number | null;
+  /** @nullable */
+  longitude?: number | null;
   totaal_voorzieningen?: number;
   aangemaakt_op: string;
 }
@@ -115,6 +131,22 @@ export interface GebouwDetail {
   klant_id?: number | null;
   /** @nullable */
   klant_naam?: string | null;
+  /** @nullable */
+  aantal_verdiepingen?: number | null;
+  /** @nullable */
+  hoogte?: number | null;
+  /** @nullable */
+  breedte?: number | null;
+  /** @nullable */
+  diepte?: number | null;
+  /** @nullable */
+  oppervlakte?: number | null;
+  /** @nullable */
+  gebouw_type?: string | null;
+  /** @nullable */
+  latitude?: number | null;
+  /** @nullable */
+  longitude?: number | null;
   aangemaakt_op: string;
   verdiepingen: Verdieping[];
   stats?: GebouwStats;
@@ -127,11 +159,106 @@ export interface Toewijzing {
   naam: string;
   email?: string;
   rol: string;
+  telefoon?: string | null;
+  organisatie?: string | null;
+  actief?: boolean;
   aangemaakt_op: string;
 }
 
 export interface ToewijzingInput {
   gebruiker_id: number;
+}
+
+export interface GebouwPartij {
+  id: number;
+  gebouw_id: number;
+  /** eigenaar, gebruiker, opdrachtgever of aanvrager */
+  type: string;
+  naam: string;
+  organisatie?: string | null;
+  telefoon?: string | null;
+  email?: string | null;
+  adres?: string | null;
+  postcode?: string | null;
+  plaats?: string | null;
+  opmerkingen?: string | null;
+  aangemaakt_op: string;
+}
+
+export interface GebouwPartijInput {
+  type: string;
+  naam: string;
+  organisatie?: string;
+  telefoon?: string;
+  email?: string;
+  adres?: string;
+  postcode?: string;
+  plaats?: string;
+  opmerkingen?: string;
+}
+
+export interface GebouwPartijUpdate {
+  type?: string;
+  naam?: string;
+  organisatie?: string;
+  telefoon?: string;
+  email?: string;
+  adres?: string;
+  postcode?: string;
+  plaats?: string;
+  opmerkingen?: string;
+}
+
+export interface Tekening {
+  id: number;
+  gebouw_id: number;
+  verdieping_id?: number | null;
+  naam: string;
+  type: string;
+  schaal?: string | null;
+  url: string;
+  aangemaakt_op: string;
+}
+
+export interface TekeningInput {
+  naam: string;
+  type: string;
+  schaal?: string;
+  url: string;
+  verdieping_id?: number | null;
+}
+
+export interface TekeningUpdate {
+  naam?: string;
+  type?: string;
+  schaal?: string;
+  verdieping_id?: number | null;
+}
+
+export interface Scheiding {
+  id: number;
+  verdieping_id: number;
+  /** brand of rook */
+  type: string;
+  waarde?: string | null;
+  kleur?: string | null;
+  /** JSON-array van punten [{x, y}] */
+  punten: string;
+  aangemaakt_op: string;
+}
+
+export interface ScheidingInput {
+  type: string;
+  waarde?: string;
+  kleur?: string;
+  punten: string;
+}
+
+export interface ScheidingUpdate {
+  type?: string;
+  waarde?: string;
+  kleur?: string;
+  punten?: string;
 }
 
 export interface GebouwInput {
@@ -142,6 +269,14 @@ export interface GebouwInput {
   omschrijving?: string;
   bouwjaar?: number;
   klant_id?: number;
+  aantal_verdiepingen?: number;
+  hoogte?: number;
+  breedte?: number;
+  diepte?: number;
+  oppervlakte?: number;
+  gebouw_type?: string;
+  latitude?: number;
+  longitude?: number;
 }
 
 export interface GebouwUpdate {
@@ -152,6 +287,52 @@ export interface GebouwUpdate {
   omschrijving?: string;
   bouwjaar?: number;
   klant_id?: number;
+  aantal_verdiepingen?: number;
+  hoogte?: number;
+  breedte?: number;
+  diepte?: number;
+  oppervlakte?: number;
+  gebouw_type?: string;
+  latitude?: number;
+  longitude?: number;
+}
+
+export interface GebouwAiAnalyseInput {
+  adres: string;
+  stad?: string;
+  postcode?: string;
+}
+
+export interface GebouwAiAnalyseResultaat {
+  gevonden: boolean;
+  /** @nullable */
+  adres_gevonden?: string | null;
+  /** @nullable */
+  latitude?: number | null;
+  /** @nullable */
+  longitude?: number | null;
+  /** @nullable */
+  satelliet_url?: string | null;
+  /** @nullable */
+  aantal_verdiepingen?: number | null;
+  /** @nullable */
+  hoogte?: number | null;
+  /** @nullable */
+  breedte?: number | null;
+  /** @nullable */
+  diepte?: number | null;
+  /** @nullable */
+  oppervlakte?: number | null;
+  /** @nullable */
+  gebouw_type?: string | null;
+  /** @nullable */
+  bouwjaar?: number | null;
+  /** @nullable */
+  omschrijving?: string | null;
+  /** @nullable */
+  toelichting?: string | null;
+  /** @nullable */
+  betrouwbaarheid?: string | null;
 }
 
 export interface VerdiepingInput {
@@ -688,7 +869,82 @@ export interface Gebruiker {
   uitnodiging_geopend_op?: string | null;
   /** @nullable */
   uitnodiging_opnieuw_verstuurd_op?: string | null;
+  /** @nullable */
+  uitnodiging_geaccepteerd_op?: string | null;
   taal?: GebruikerTaal;
+}
+
+export interface LoginPoging {
+  id: number;
+  /** @nullable */
+  gebruiker_id?: number | null;
+  /** @nullable */
+  naam?: string | null;
+  email: string;
+  /** @nullable */
+  ip?: string | null;
+  /** @nullable */
+  user_agent?: string | null;
+  gelukt: boolean;
+  nieuw_apparaat?: boolean;
+  nieuw_ip?: boolean;
+  tijdstip: string;
+}
+
+export interface HelpdeskTicket {
+  id: number;
+  /** @nullable */
+  gebruiker_id?: number | null;
+  /** @nullable */
+  naam?: string | null;
+  /** @nullable */
+  email?: string | null;
+  onderwerp: string;
+  bericht: string;
+  status: string;
+  aangemaakt_op: string;
+}
+
+export interface HelpdeskTicketInput {
+  onderwerp: string;
+  bericht: string;
+}
+
+export interface HelpdeskTicketUpdate {
+  status: string;
+}
+
+export interface Feedback {
+  id: number;
+  /** @nullable */
+  gebruiker_id?: number | null;
+  /** @nullable */
+  naam?: string | null;
+  type: string;
+  /** @nullable */
+  waardering?: number | null;
+  bericht: string;
+  /** @nullable */
+  pagina?: string | null;
+  aangemaakt_op: string;
+}
+
+export interface FeedbackInput {
+  type?: string;
+  waardering?: number;
+  bericht: string;
+  pagina?: string;
+}
+
+export interface MuisGebeurtenis {
+  pagina: string;
+  type: string;
+  x: number;
+  y: number;
+}
+
+export interface MuisGebeurtenisBatch {
+  gebeurtenissen: MuisGebeurtenis[];
 }
 
 export interface GebruikerInput {
@@ -825,6 +1081,8 @@ export interface AuthGebruiker {
   /** @nullable */
   bedrijfskleuren?: string | null;
   taal?: AuthGebruikerTaal;
+  nieuw_apparaat?: boolean;
+  nieuw_ip?: boolean;
 }
 
 export type AbonnementNiveau = typeof AbonnementNiveau[keyof typeof AbonnementNiveau];
@@ -911,6 +1169,10 @@ classificatie?: string;
 zoek?: string;
 pagina?: number;
 per_pagina?: number;
+};
+
+export type ListMuisGebeurtenissenParams = {
+pagina?: string;
 };
 
 export type ListInspectiesParams = {

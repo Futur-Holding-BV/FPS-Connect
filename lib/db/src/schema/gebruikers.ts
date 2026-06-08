@@ -24,6 +24,7 @@ export const gebruikersTable = pgTable("gebruikers", {
   uitnodigingVerlooptOp: timestamp("uitnodiging_verloopt_op"),
   uitnodigingGeopendOp: timestamp("uitnodiging_geopend_op"),
   uitnodigingOpnieuwVerstuurdOp: timestamp("uitnodiging_opnieuw_verstuurd_op"),
+  uitnodigingGeaccepteerdOp: timestamp("uitnodiging_geaccepteerd_op"),
   taal: text("taal").notNull().default("nl"),
 });
 

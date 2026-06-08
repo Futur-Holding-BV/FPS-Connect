@@ -18,4 +18,6 @@ export interface AuthGebruiker {
   /** @nullable */
   bedrijfskleuren?: string | null;
   taal?: AuthGebruikerTaal;
+  nieuw_apparaat?: boolean;
+  nieuw_ip?: boolean;
 }

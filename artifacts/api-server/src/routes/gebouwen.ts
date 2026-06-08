@@ -6,9 +6,12 @@ import {
   voorzieningenTable,
   gebruikersTable,
   gebouwToewijzingenTable,
+  gebouwPartijenTable,
+  tekeningenTable,
 } from "@workspace/db";
 import { eq, inArray, count, and } from "drizzle-orm";
 import { requireRol } from "../middlewares/auth";
+import { analyseerGebouw } from "../services/gebouw-ai";
 
 const router = Router();
 
@@ -45,6 +48,14 @@ function gebouwRij(g: typeof gebouwenTable.$inferSelect, totaal: number, naam: s
     bouwjaar: g.bouwjaar,
     klant_id: g.klantId,
     klant_naam: naam,
+    aantal_verdiepingen: g.aantalVerdiepingen,
+    hoogte: g.hoogte,
+    breedte: g.breedte,
+    diepte: g.diepte,
+    oppervlakte: g.oppervlakte,
+    gebouw_type: g.gebouwType,
+    latitude: g.latitude,
+    longitude: g.longitude,
     totaal_voorzieningen: totaal,
     aangemaakt_op: g.aangemaaktOp.toISOString(),
   };
@@ -96,15 +107,47 @@ router.get("/gebouwen", async (req, res) => {
 });
 
 // POST /gebouwen
-router.post("/gebouwen", async (req, res) => {
+router.post("/gebouwen", requireRol("beheerder", "hoofdbeheerder"), async (req, res) => {
   try {
-    const { naam, adres, stad, postcode, omschrijving, bouwjaar, klant_id } = req.body;
+    const {
+      naam,
+      adres,
+      stad,
+      postcode,
+      omschrijving,
+      bouwjaar,
+      klant_id,
+      aantal_verdiepingen,
+      hoogte,
+      breedte,
+      diepte,
+      oppervlakte,
+      gebouw_type,
+      latitude,
+      longitude,
+    } = req.body;
     if (!naam || !adres) {
       return res.status(400).json({ error: "naam en adres zijn verplicht" });
     }
     const [gebouw] = await db
       .insert(gebouwenTable)
-      .values({ naam, adres, stad, postcode, omschrijving, bouwjaar, klantId: klant_id })
+      .values({
+        naam,
+        adres,
+        stad,
+        postcode,
+        omschrijving,
+        bouwjaar,
+        klantId: klant_id,
+        aantalVerdiepingen: aantal_verdiepingen,
+        hoogte,
+        breedte,
+        diepte,
+        oppervlakte,
+        gebouwType: gebouw_type,
+        latitude,
+        longitude,
+      })
       .returning();
     res.status(201).json(gebouwRij(gebouw, 0, await klantNaam(gebouw.klantId)));
   } catch (err) {
@@ -112,6 +155,26 @@ router.post("/gebouwen", async (req, res) => {
     res.status(500).json({ error: "Interne serverfout" });
   }
 });
+
+// POST /gebouwen/ai-analyse — alleen beheerder
+router.post(
+  "/gebouwen/ai-analyse",
+  requireRol("beheerder", "hoofdbeheerder"),
+  async (req, res) => {
+    try {
+      const { adres, stad, postcode } = req.body ?? {};
+      if (!adres || typeof adres !== "string" || !adres.trim()) {
+        return res.status(400).json({ error: "adres is verplicht" });
+      }
+      const volledig = [adres, postcode, stad].filter(Boolean).join(", ");
+      const resultaat = await analyseerGebouw(volledig);
+      res.json(resultaat);
+    } catch (err) {
+      req.log.error(err);
+      res.status(500).json({ error: "AI-analyse mislukte" });
+    }
+  },
+);
 
 // GET /gebouwen/:id
 router.get("/gebouwen/:id", async (req, res) => {
@@ -175,6 +238,14 @@ router.get("/gebouwen/:id", async (req, res) => {
       bouwjaar: gebouw.bouwjaar,
       klant_id: gebouw.klantId,
       klant_naam: await klantNaam(gebouw.klantId),
+      aantal_verdiepingen: gebouw.aantalVerdiepingen,
+      hoogte: gebouw.hoogte,
+      breedte: gebouw.breedte,
+      diepte: gebouw.diepte,
+      oppervlakte: gebouw.oppervlakte,
+      gebouw_type: gebouw.gebouwType,
+      latitude: gebouw.latitude,
+      longitude: gebouw.longitude,
       aangemaakt_op: gebouw.aangemaaktOp.toISOString(),
       verdiepingen: verdiepingenMet,
       stats,
@@ -186,13 +257,46 @@ router.get("/gebouwen/:id", async (req, res) => {
 });
 
 // PATCH /gebouwen/:id
-router.patch("/gebouwen/:id", async (req, res) => {
+router.patch("/gebouwen/:id", requireRol("beheerder", "hoofdbeheerder"), async (req, res) => {
   try {
     const id = parseInt(req.params.id);
-    const { naam, adres, stad, postcode, omschrijving, bouwjaar, klant_id } = req.body;
+    const {
+      naam,
+      adres,
+      stad,
+      postcode,
+      omschrijving,
+      bouwjaar,
+      klant_id,
+      aantal_verdiepingen,
+      hoogte,
+      breedte,
+      diepte,
+      oppervlakte,
+      gebouw_type,
+      latitude,
+      longitude,
+    } = req.body;
     const [gebouw] = await db
       .update(gebouwenTable)
-      .set({ naam, adres, stad, postcode, omschrijving, bouwjaar, klantId: klant_id, bijgewerktOp: new Date() })
+      .set({
+        naam,
+        adres,
+        stad,
+        postcode,
+        omschrijving,
+        bouwjaar,
+        klantId: klant_id,
+        aantalVerdiepingen: aantal_verdiepingen,
+        hoogte,
+        breedte,
+        diepte,
+        oppervlakte,
+        gebouwType: gebouw_type,
+        latitude,
+        longitude,
+        bijgewerktOp: new Date(),
+      })
       .where(eq(gebouwenTable.id, id))
       .returning();
     if (!gebouw) return res.status(404).json({ error: "Gebouw niet gevonden" });
@@ -208,7 +312,7 @@ router.patch("/gebouwen/:id", async (req, res) => {
 });
 
 // DELETE /gebouwen/:id
-router.delete("/gebouwen/:id", async (req, res) => {
+router.delete("/gebouwen/:id", requireRol("beheerder", "hoofdbeheerder"), async (req, res) => {
   try {
     const id = parseInt(req.params.id);
     await db.delete(gebouwenTable).where(eq(gebouwenTable.id, id));
@@ -357,6 +461,9 @@ router.get("/gebouwen/:id/toewijzingen", async (req, res) => {
         naam: gebruikersTable.naam,
         email: gebruikersTable.email,
         rol: gebruikersTable.rol,
+        telefoon: gebruikersTable.telefoon,
+        organisatie: gebruikersTable.bedrijf,
+        actief: gebruikersTable.actief,
         aangemaaktOp: gebouwToewijzingenTable.aangemaaktOp,
       })
       .from(gebouwToewijzingenTable)
@@ -371,6 +478,9 @@ router.get("/gebouwen/:id/toewijzingen", async (req, res) => {
         naam: r.naam,
         email: r.email,
         rol: r.rol,
+        telefoon: r.telefoon,
+        organisatie: r.organisatie,
+        actief: r.actief,
         aangemaakt_op: r.aangemaaktOp.toISOString(),
       })),
     );
@@ -465,6 +575,230 @@ router.delete(
             eq(gebouwToewijzingenTable.gebruikerId, gebruikerId),
           ),
         );
+      res.status(204).send();
+    } catch (err) {
+      req.log.error(err);
+      res.status(500).json({ error: "Interne serverfout" });
+    }
+  },
+);
+
+// ── PARTIJEN ──────────────────────────────────────────────────────────────
+
+const PARTIJ_TYPES = ["eigenaar", "gebruiker", "opdrachtgever", "aanvrager"];
+
+function partijRij(p: typeof gebouwPartijenTable.$inferSelect) {
+  return {
+    id: p.id,
+    gebouw_id: p.gebouwId,
+    type: p.type,
+    naam: p.naam,
+    organisatie: p.organisatie,
+    telefoon: p.telefoon,
+    email: p.email,
+    adres: p.adres,
+    postcode: p.postcode,
+    plaats: p.plaats,
+    opmerkingen: p.opmerkingen,
+    aangemaakt_op: p.aangemaaktOp.toISOString(),
+  };
+}
+
+// GET /gebouwen/:id/partijen
+router.get("/gebouwen/:id/partijen", async (req, res) => {
+  try {
+    const gebouwId = parseInt(req.params.id);
+    const rows = await db
+      .select()
+      .from(gebouwPartijenTable)
+      .where(eq(gebouwPartijenTable.gebouwId, gebouwId));
+    res.json(rows.map(partijRij));
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// POST /gebouwen/:id/partijen — alleen beheerder
+router.post(
+  "/gebouwen/:id/partijen",
+  requireRol("beheerder", "hoofdbeheerder"),
+  async (req, res) => {
+    try {
+      const gebouwId = parseInt(req.params.id);
+      const { type, naam, organisatie, telefoon, email, adres, postcode, plaats, opmerkingen } = req.body ?? {};
+      if (!type || !PARTIJ_TYPES.includes(type)) {
+        return res.status(400).json({ error: "Ongeldig partijtype" });
+      }
+      if (!naam || typeof naam !== "string") {
+        return res.status(400).json({ error: "naam is verplicht" });
+      }
+      const [partij] = await db
+        .insert(gebouwPartijenTable)
+        .values({ gebouwId, type, naam, organisatie, telefoon, email, adres, postcode, plaats, opmerkingen })
+        .returning();
+      res.status(201).json(partijRij(partij!));
+    } catch (err) {
+      req.log.error(err);
+      res.status(500).json({ error: "Interne serverfout" });
+    }
+  },
+);
+
+// PATCH /gebouwen/partijen/:partijId — alleen beheerder
+router.patch(
+  "/gebouwen/partijen/:partijId",
+  requireRol("beheerder", "hoofdbeheerder"),
+  async (req, res) => {
+    try {
+      const partijId = parseInt(req.params.partijId);
+      const { type, naam, organisatie, telefoon, email, adres, postcode, plaats, opmerkingen } = req.body ?? {};
+      if (type !== undefined && !PARTIJ_TYPES.includes(type)) {
+        return res.status(400).json({ error: "Ongeldig partijtype" });
+      }
+      const updates: Record<string, unknown> = { bijgewerktOp: new Date() };
+      if (type !== undefined) updates.type = type;
+      if (naam !== undefined) updates.naam = naam;
+      if (organisatie !== undefined) updates.organisatie = organisatie;
+      if (telefoon !== undefined) updates.telefoon = telefoon;
+      if (email !== undefined) updates.email = email;
+      if (adres !== undefined) updates.adres = adres;
+      if (postcode !== undefined) updates.postcode = postcode;
+      if (plaats !== undefined) updates.plaats = plaats;
+      if (opmerkingen !== undefined) updates.opmerkingen = opmerkingen;
+
+      const [partij] = await db
+        .update(gebouwPartijenTable)
+        .set(updates)
+        .where(eq(gebouwPartijenTable.id, partijId))
+        .returning();
+      if (!partij) return res.status(404).json({ error: "Partij niet gevonden" });
+      res.json(partijRij(partij));
+    } catch (err) {
+      req.log.error(err);
+      res.status(500).json({ error: "Interne serverfout" });
+    }
+  },
+);
+
+// DELETE /gebouwen/partijen/:partijId — alleen beheerder
+router.delete(
+  "/gebouwen/partijen/:partijId",
+  requireRol("beheerder", "hoofdbeheerder"),
+  async (req, res) => {
+    try {
+      const partijId = parseInt(req.params.partijId);
+      await db.delete(gebouwPartijenTable).where(eq(gebouwPartijenTable.id, partijId));
+      res.status(204).send();
+    } catch (err) {
+      req.log.error(err);
+      res.status(500).json({ error: "Interne serverfout" });
+    }
+  },
+);
+
+// ── TEKENINGEN ────────────────────────────────────────────────────────────
+
+function tekeningRij(t: typeof tekeningenTable.$inferSelect) {
+  return {
+    id: t.id,
+    gebouw_id: t.gebouwId,
+    verdieping_id: t.verdiepingId,
+    naam: t.naam,
+    type: t.type,
+    schaal: t.schaal,
+    url: t.url,
+    aangemaakt_op: t.aangemaaktOp.toISOString(),
+  };
+}
+
+// GET /gebouwen/:id/tekeningen
+router.get("/gebouwen/:id/tekeningen", async (req, res) => {
+  try {
+    const gebouwId = parseInt(req.params.id);
+    const rows = await db
+      .select()
+      .from(tekeningenTable)
+      .where(eq(tekeningenTable.gebouwId, gebouwId));
+    res.json(rows.map(tekeningRij));
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// POST /gebouwen/:id/tekeningen — alleen beheerder
+router.post(
+  "/gebouwen/:id/tekeningen",
+  requireRol("beheerder", "hoofdbeheerder"),
+  async (req, res) => {
+    try {
+      const gebouwId = parseInt(req.params.id);
+      const { naam, type, schaal, url, verdieping_id } = req.body ?? {};
+      if (!naam || typeof naam !== "string") {
+        return res.status(400).json({ error: "naam is verplicht" });
+      }
+      if (!type || typeof type !== "string") {
+        return res.status(400).json({ error: "type is verplicht" });
+      }
+      if (!url || typeof url !== "string") {
+        return res.status(400).json({ error: "url is verplicht" });
+      }
+      const [tekening] = await db
+        .insert(tekeningenTable)
+        .values({
+          gebouwId,
+          naam,
+          type,
+          schaal: schaal ?? null,
+          url,
+          verdiepingId: verdieping_id ?? null,
+        })
+        .returning();
+      res.status(201).json(tekeningRij(tekening!));
+    } catch (err) {
+      req.log.error(err);
+      res.status(500).json({ error: "Interne serverfout" });
+    }
+  },
+);
+
+// PATCH /gebouwen/tekeningen/:tekeningId — alleen beheerder
+router.patch(
+  "/gebouwen/tekeningen/:tekeningId",
+  requireRol("beheerder", "hoofdbeheerder"),
+  async (req, res) => {
+    try {
+      const tekeningId = parseInt(req.params.tekeningId);
+      const { naam, type, schaal, verdieping_id } = req.body ?? {};
+      const updates: Record<string, unknown> = { bijgewerktOp: new Date() };
+      if (naam !== undefined) updates.naam = naam;
+      if (type !== undefined) updates.type = type;
+      if (schaal !== undefined) updates.schaal = schaal;
+      if (verdieping_id !== undefined) updates.verdiepingId = verdieping_id;
+
+      const [tekening] = await db
+        .update(tekeningenTable)
+        .set(updates)
+        .where(eq(tekeningenTable.id, tekeningId))
+        .returning();
+      if (!tekening) return res.status(404).json({ error: "Tekening niet gevonden" });
+      res.json(tekeningRij(tekening));
+    } catch (err) {
+      req.log.error(err);
+      res.status(500).json({ error: "Interne serverfout" });
+    }
+  },
+);
+
+// DELETE /gebouwen/tekeningen/:tekeningId — alleen beheerder
+router.delete(
+  "/gebouwen/tekeningen/:tekeningId",
+  requireRol("beheerder", "hoofdbeheerder"),
+  async (req, res) => {
+    try {
+      const tekeningId = parseInt(req.params.tekeningId);
+      await db.delete(tekeningenTable).where(eq(tekeningenTable.id, tekeningId));
       res.status(204).send();
     } catch (err) {
       req.log.error(err);

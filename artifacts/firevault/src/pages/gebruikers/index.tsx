@@ -158,6 +158,7 @@ type Gebruiker = {
   uitnodiging_verloopt_op?: string | null;
   uitnodiging_geopend_op?: string | null;
   uitnodiging_opnieuw_verstuurd_op?: string | null;
+  uitnodiging_geaccepteerd_op?: string | null;
 };
 
 function haalPrimairKleur(bedrijfskleuren: string | null | undefined): string {
@@ -455,7 +456,20 @@ export default function Gebruikers() {
                                     {statusCfg.label}
                                   </Badge>
                                 )}
+                                {status === "uitgenodigd" &&
+                                  g.uitnodiging_verloopt_op &&
+                                  new Date(g.uitnodiging_verloopt_op).getTime() < Date.now() && (
+                                    <Badge variant="outline" className="text-xs h-5 px-1.5 bg-red-100 text-red-800 border-red-200">
+                                      Verlopen
+                                    </Badge>
+                                  )}
                               </div>
+
+                              {status === "geaccepteerd" && g.uitnodiging_geaccepteerd_op && (
+                                <p className="mt-1 text-xs text-green-600">
+                                  Geaccepteerd: {formatDatum(g.uitnodiging_geaccepteerd_op)}
+                                </p>
+                              )}
 
                               {status !== "geaccepteerd" && (g.uitnodiging_verstuurd_op || g.uitnodiging_geopend_op || g.uitnodiging_opnieuw_verstuurd_op) && (
                                 <div className="mt-1 space-y-0.5">

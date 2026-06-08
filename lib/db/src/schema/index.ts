@@ -5,3 +5,4 @@ export * from "./inspecties";
 export * from "./onderhoud";
 export * from "./abonnementen";
 export * from "./activiteiten";
+export * from "./systeem";

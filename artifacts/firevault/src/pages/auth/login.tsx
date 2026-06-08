@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/input-otp";
 import { useAuth } from "@/context/auth-context";
 import { useTaal } from "@/context/taal-context";
+import { useToast } from "@/hooks/use-toast";
 import { TALEN } from "@/i18n/talen";
 
 type Stap = "inloggen" | "setup" | "verify";
@@ -34,6 +35,7 @@ export default function LoginPagina() {
   const { herlaad } = useAuth();
   const { t } = useTranslation();
   const { taal, zetTaal } = useTaal();
+  const { toast } = useToast();
   const [stap, setStap] = useState<Stap>("inloggen");
   const [email, setEmail] = useState("");
   const [wachtwoord, setWachtwoord] = useState("");
@@ -70,10 +72,18 @@ export default function LoginPagina() {
     setFout(null);
     setBezig(true);
     try {
-      if (stap === "setup") {
-        await tweeFactorActiveren({ code: huidigeCode });
-      } else {
-        await tweeFactorVerify({ code: huidigeCode });
+      const ingelogd =
+        stap === "setup"
+          ? await tweeFactorActiveren({ code: huidigeCode })
+          : await tweeFactorVerify({ code: huidigeCode });
+      if (ingelogd.nieuw_apparaat || ingelogd.nieuw_ip) {
+        const signalen: string[] = [];
+        if (ingelogd.nieuw_apparaat) signalen.push("een nieuw apparaat");
+        if (ingelogd.nieuw_ip) signalen.push("een nieuw IP-adres");
+        toast({
+          title: "Nieuwe aanmelding gedetecteerd",
+          description: `Je bent ingelogd vanaf ${signalen.join(" en ")}. Was jij dit niet? Neem contact op met je beheerder.`,
+        });
       }
       if (taalGekozen) {
         try {

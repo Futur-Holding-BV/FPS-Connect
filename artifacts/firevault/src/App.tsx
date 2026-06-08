@@ -31,6 +31,12 @@ import InspectieDetail from "@/pages/inspecties/detail";
 import Onderhoud from "@/pages/onderhoud/index";
 import Gebruikers from "@/pages/gebruikers/index";
 import Abonnementen from "@/pages/abonnementen/index";
+import LoginPogingen from "@/pages/beheer/login-pogingen";
+import HelpdeskBeheer from "@/pages/beheer/helpdesk";
+import FeedbackBeheer from "@/pages/beheer/feedback";
+import Heatmaps from "@/pages/beheer/heatmaps";
+import { OndersteuningWidget } from "@/components/ondersteuning-widget";
+import { HeatmapTracker } from "@/components/heatmap-tracker";
 
 const queryClient = new QueryClient();
 
@@ -51,6 +57,10 @@ function BeheerderPortal() {
         <Route path="/onderhoud" component={Onderhoud} />
         <Route path="/gebruikers" component={Gebruikers} />
         <Route path="/abonnementen" component={Abonnementen} />
+        <Route path="/beheer/login-pogingen" component={LoginPogingen} />
+        <Route path="/beheer/helpdesk" component={HelpdeskBeheer} />
+        <Route path="/beheer/feedback" component={FeedbackBeheer} />
+        <Route path="/beheer/heatmaps" component={Heatmaps} />
         <Route component={NotFound} />
       </Switch>
     </BeheerderLayout>
@@ -125,6 +135,8 @@ function Gate() {
   return (
     <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
       <Portalen />
+      <OndersteuningWidget />
+      <HeatmapTracker />
     </WouterRouter>
   );
 }

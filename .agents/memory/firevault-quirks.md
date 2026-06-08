@@ -42,6 +42,22 @@ space, so markers line up across clients.
 **How to apply:** never change the render scale on only one client; if you change it, migrate stored
 coords or change both clients together.
 
+## Login risk IP must come from `req.ip`, not raw X-Forwarded-For
+`app.set("trust proxy", 1)` is configured, so Express resolves `req.ip` from the trusted Replit
+proxy chain. Do NOT manually parse `req.headers["x-forwarded-for"]` for security signals — that
+header is client-spoofable and lets an attacker forge a "known" IP to suppress the new-IP login
+alert. The login-risk helper (`legLoginPogingVast`) compares each successful login's ip/user-agent
+against prior successful logins to flag `nieuwApparaat`/`nieuwIp`.
+**How to apply:** use `req.ip` for any trust/security decision; only the value Express derives via
+trust-proxy is reliable.
+
+## Some pages keep a LOCAL row type that shadows the generated schema
+`pages/gebruikers/index.tsx` declares its own `Gebruiker`-shaped type instead of importing the
+Orval-generated one. Adding a field to the OpenAPI schema + codegen is NOT enough — the local type
+must be updated too or `tsc` reports "Property X does not exist".
+**How to apply:** after extending a generated schema, grep the consuming page for a hand-written
+type and update both.
+
 ## Mobile auth = signed bearer token, not cookies
 The Expo app can't keep the `Secure; SameSite=None` session cookie in the Replit iframe, so it uses
 `POST /auth/mobile/login` (email+wachtwoord+TOTP) → stateless HMAC bearer token (`lib/token.ts`,

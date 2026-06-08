@@ -9,6 +9,7 @@ import {
   inspectiesTable,
   onderhoudTable,
   activiteitenTable,
+  scheidingenTable,
 } from "@workspace/db";
 import { eq, and, ilike, sql } from "drizzle-orm";
 
@@ -346,6 +347,98 @@ router.get("/verdiepingen/:id/voorzieningen", async (req, res) => {
         wand_of_plafond: v.wandOfPlafond,
       }))
     );
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// ── SCHEIDINGEN (brand-/rookscheidingen op de plattegrond) ─────────────────
+
+const SCHEIDING_TYPES = ["brand", "rook"];
+
+function scheidingRij(s: typeof scheidingenTable.$inferSelect) {
+  return {
+    id: s.id,
+    verdieping_id: s.verdiepingId,
+    type: s.type,
+    waarde: s.waarde,
+    kleur: s.kleur,
+    punten: s.punten,
+    aangemaakt_op: s.aangemaaktOp.toISOString(),
+  };
+}
+
+// GET /verdiepingen/:id/scheidingen
+router.get("/verdiepingen/:id/scheidingen", async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const rows = await db
+      .select()
+      .from(scheidingenTable)
+      .where(eq(scheidingenTable.verdiepingId, id));
+    res.json(rows.map(scheidingRij));
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// POST /verdiepingen/:id/scheidingen
+router.post("/verdiepingen/:id/scheidingen", async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const { type, waarde, kleur, punten } = req.body ?? {};
+    if (!type || !SCHEIDING_TYPES.includes(type)) {
+      return res.status(400).json({ error: "Ongeldig scheidingstype" });
+    }
+    if (!punten || typeof punten !== "string") {
+      return res.status(400).json({ error: "punten is verplicht" });
+    }
+    const [scheiding] = await db
+      .insert(scheidingenTable)
+      .values({ verdiepingId: id, type, waarde: waarde ?? null, kleur: kleur ?? null, punten })
+      .returning();
+    res.status(201).json(scheidingRij(scheiding!));
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// PATCH /verdiepingen/scheidingen/:scheidingId
+router.patch("/verdiepingen/scheidingen/:scheidingId", async (req, res) => {
+  try {
+    const scheidingId = parseInt(req.params.scheidingId);
+    const { type, waarde, kleur, punten } = req.body ?? {};
+    if (type !== undefined && !SCHEIDING_TYPES.includes(type)) {
+      return res.status(400).json({ error: "Ongeldig scheidingstype" });
+    }
+    const updates: Record<string, unknown> = { bijgewerktOp: new Date() };
+    if (type !== undefined) updates.type = type;
+    if (waarde !== undefined) updates.waarde = waarde;
+    if (kleur !== undefined) updates.kleur = kleur;
+    if (punten !== undefined) updates.punten = punten;
+
+    const [scheiding] = await db
+      .update(scheidingenTable)
+      .set(updates)
+      .where(eq(scheidingenTable.id, scheidingId))
+      .returning();
+    if (!scheiding) return res.status(404).json({ error: "Scheiding niet gevonden" });
+    res.json(scheidingRij(scheiding));
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// DELETE /verdiepingen/scheidingen/:scheidingId
+router.delete("/verdiepingen/scheidingen/:scheidingId", async (req, res) => {
+  try {
+    const scheidingId = parseInt(req.params.scheidingId);
+    await db.delete(scheidingenTable).where(eq(scheidingenTable.id, scheidingId));
+    res.status(204).send();
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Interne serverfout" });

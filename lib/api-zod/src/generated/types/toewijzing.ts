@@ -13,5 +13,8 @@ export interface Toewijzing {
   naam: string;
   email?: string;
   rol: string;
+  telefoon?: string | null;
+  organisatie?: string | null;
+  actief?: boolean;
   aangemaakt_op: string;
 }

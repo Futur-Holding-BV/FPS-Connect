@@ -37,5 +37,7 @@ export interface Gebruiker {
   uitnodiging_geopend_op?: string | null;
   /** @nullable */
   uitnodiging_opnieuw_verstuurd_op?: string | null;
+  /** @nullable */
+  uitnodiging_geaccepteerd_op?: string | null;
   taal?: GebruikerTaal;
 }

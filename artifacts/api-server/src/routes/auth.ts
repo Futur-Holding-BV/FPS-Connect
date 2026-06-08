@@ -5,6 +5,7 @@ import QRCode from "qrcode";
 import { db, gebruikersTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { maakToken } from "../lib/token";
+import { legLoginPogingVast } from "./systeem";
 
 const router = Router();
 
@@ -26,6 +27,17 @@ const mapAuthGebruiker = (g: typeof gebruikersTable.$inferSelect) => ({
 
 const schoonCode = (code: unknown) => String(code ?? "").replace(/\s+/g, "");
 
+function verzoekIp(req: { ip?: string }): string | null {
+  // De app draait achter de Replit-proxy met `trust proxy` = 1, dus Express
+  // resolvet req.ip betrouwbaar uit de vertrouwde proxy-keten. Handmatige
+  // X-Forwarded-For-parsing is bewust vermeden omdat die header spoofbaar is.
+  return req.ip ?? null;
+}
+function verzoekUserAgent(req: { headers: Record<string, unknown> }): string | null {
+  const ua = req.headers["user-agent"];
+  return typeof ua === "string" ? ua : null;
+}
+
 // POST /auth/login — stap 1: e-mail + wachtwoord
 router.post("/auth/login", async (req, res) => {
   try {
@@ -38,10 +50,24 @@ router.post("/auth/login", async (req, res) => {
       .from(gebruikersTable)
       .where(eq(gebruikersTable.email, String(email).trim().toLowerCase()));
     if (!g || !g.actief || !g.wachtwoord) {
+      await legLoginPogingVast({
+        gebruikerId: g?.id ?? null,
+        email: String(email).trim().toLowerCase(),
+        ip: verzoekIp(req),
+        userAgent: verzoekUserAgent(req),
+        gelukt: false,
+      });
       return res.status(401).json({ error: "Onjuiste inloggegevens" });
     }
     const ok = await bcrypt.compare(String(wachtwoord), g.wachtwoord);
     if (!ok) {
+      await legLoginPogingVast({
+        gebruikerId: g.id,
+        email: g.email,
+        ip: verzoekIp(req),
+        userAgent: verzoekUserAgent(req),
+        gelukt: false,
+      });
       return res.status(401).json({ error: "Onjuiste inloggegevens" });
     }
     req.session.pendingUserId = g.id;
@@ -104,13 +130,21 @@ router.post("/auth/2fa/activeren", async (req, res) => {
         tweeFactorIngeschakeld: true,
         laatstOnline: new Date(),
         uitnodigingStatus: "geaccepteerd",
+        uitnodigingGeaccepteerdOp: new Date(),
       })
       .where(eq(gebruikersTable.id, pendingId))
       .returning();
     req.session.userId = pendingId;
     delete req.session.pendingUserId;
     delete req.session.pendingSecret;
-    res.json(mapAuthGebruiker(g));
+    const risico = await legLoginPogingVast({
+      gebruikerId: g!.id,
+      email: g!.email,
+      ip: verzoekIp(req),
+      userAgent: verzoekUserAgent(req),
+      gelukt: true,
+    });
+    res.json({ ...mapAuthGebruiker(g), nieuw_apparaat: risico.nieuwApparaat, nieuw_ip: risico.nieuwIp });
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Interne serverfout" });
@@ -136,16 +170,34 @@ router.post("/auth/2fa/verify", async (req, res) => {
       return res.status(401).json({ error: "Tweestapsverificatie niet ingericht" });
     }
     if (!authenticator.check(code, g.totpSecret)) {
+      await legLoginPogingVast({
+        gebruikerId: g.id,
+        email: g.email,
+        ip: verzoekIp(req),
+        userAgent: verzoekUserAgent(req),
+        gelukt: false,
+      });
       return res.status(401).json({ error: "Onjuiste code, probeer opnieuw" });
     }
     await db
       .update(gebruikersTable)
-      .set({ laatstOnline: new Date(), uitnodigingStatus: "geaccepteerd" })
+      .set({
+        laatstOnline: new Date(),
+        uitnodigingStatus: "geaccepteerd",
+        uitnodigingGeaccepteerdOp: g.uitnodigingGeaccepteerdOp ?? new Date(),
+      })
       .where(eq(gebruikersTable.id, g.id));
     req.session.userId = g.id;
     delete req.session.pendingUserId;
     delete req.session.pendingSecret;
-    res.json(mapAuthGebruiker(g));
+    const risico = await legLoginPogingVast({
+      gebruikerId: g.id,
+      email: g.email,
+      ip: verzoekIp(req),
+      userAgent: verzoekUserAgent(req),
+      gelukt: true,
+    });
+    res.json({ ...mapAuthGebruiker(g), nieuw_apparaat: risico.nieuwApparaat, nieuw_ip: risico.nieuwIp });
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Interne serverfout" });

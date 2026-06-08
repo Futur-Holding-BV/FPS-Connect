@@ -13,6 +13,9 @@ import {
   useGetVoorziening,
   useAddFoto,
   useDeleteFoto,
+  useListScheidingen,
+  useCreateScheiding,
+  useDeleteScheiding,
 } from "@workspace/api-client-react";
 import { useUpload } from "@workspace/object-storage-web";
 import { Button } from "@/components/ui/button";
@@ -21,7 +24,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Plus, X, ZoomIn, ZoomOut, RotateCcw, Map, Upload, FileText, Trash2, Image as ImageIcon, Loader2 } from "lucide-react";
+import { ArrowLeft, Plus, X, ZoomIn, ZoomOut, RotateCcw, Map, Upload, FileText, Trash2, Image as ImageIcon, Loader2, Spline, Check } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
@@ -40,6 +43,11 @@ const TYPEN: Record<string, { kleur: string; label: string; ring: string }> = {
   schuifdeur:      { kleur: "#dc2626", ring: "#991b1b", label: "Schuifdeur" },
   puiconstructie:  { kleur: "#6366f1", ring: "#3730a3", label: "Puiconstructie" },
   dakdoorvoer:     { kleur: "#14b8a6", ring: "#0f766e", label: "Dakdoorvoer" },
+};
+
+const SCHEIDING_TYPEN: Record<string, { kleur: string; label: string }> = {
+  brand: { kleur: "#dc2626", label: "Brandscheiding" },
+  rook:  { kleur: "#2563eb", label: "Rookscheiding" },
 };
 
 const STATUSKLEUREN: Record<string, string> = {
@@ -223,6 +231,12 @@ export default function Plattegrond() {
   const [pdfDims, setPdfDims] = useState<{ w: number; h: number } | null>(null);
   const [pdfLaden, setPdfLaden] = useState(false);
 
+  const [tekenModus, setTekenModus] = useState(false);
+  const [huidigePunten, setHuidigePunten] = useState<{ x: number; y: number }[]>([]);
+  const [scheidingDialoog, setScheidingDialoog] = useState(false);
+  const [scheidingForm, setScheidingForm] = useState({ type: "brand", waarde: "60" });
+  const [scheidingSelectie, setScheidingSelectie] = useState<number | null>(null);
+
   const queryClient = useQueryClient();
   const { data: verdieping, refetch: refetchVerdieping } = useGetVerdieping(Number(verdiepingId));
   const { data: gebouw } = useGetGebouw(Number(id));
@@ -232,6 +246,10 @@ export default function Plattegrond() {
   const maakVoorziening = useCreateVoorziening();
   const updateVerdieping = useUpdateVerdieping();
   const addFoto = useAddFoto();
+
+  const { data: scheidingen, refetch: refetchScheidingen } = useListScheidingen(Number(verdiepingId));
+  const maakScheiding = useCreateScheiding();
+  const verwijderScheiding = useDeleteScheiding();
 
   const { uploadFile: uploadPlan, isUploading: planBezig } = useUpload();
 
@@ -295,19 +313,60 @@ export default function Plattegrond() {
 
   // ---- Pan & Zoom handlers ----
   const opCanvasKlik = useCallback((e: React.MouseEvent<SVGSVGElement>) => {
-    if (!plaatsenModus) return;
     const rect = svgRef.current!.getBoundingClientRect();
     const svgX = (e.clientX - rect.left - view.x) / view.zoom;
     const svgY = (e.clientY - rect.top - view.y) / view.zoom;
+    if (tekenModus) {
+      setHuidigePunten((p) => [...p, { x: Math.round(svgX), y: Math.round(svgY) }]);
+      return;
+    }
+    if (!plaatsenModus) return;
     setNieuwLocatie({ x: Math.round(svgX), y: Math.round(svgY) });
     setNieuwDialoog(true);
-  }, [plaatsenModus, view]);
+  }, [plaatsenModus, tekenModus, view]);
+
+  const startTekenen = useCallback(() => {
+    setPlaatsenModus(false);
+    setGeselecteerdId(null);
+    setScheidingSelectie(null);
+    setHuidigePunten([]);
+    setTekenModus(true);
+  }, []);
+
+  const annuleerTekenen = useCallback(() => {
+    setTekenModus(false);
+    setHuidigePunten([]);
+  }, []);
+
+  const bewaarScheiding = useCallback(async () => {
+    if (huidigePunten.length < 2) return;
+    const kleur = SCHEIDING_TYPEN[scheidingForm.type]?.kleur ?? "#dc2626";
+    await maakScheiding.mutateAsync({
+      id: Number(verdiepingId),
+      data: {
+        type: scheidingForm.type,
+        waarde: scheidingForm.waarde || undefined,
+        kleur,
+        punten: JSON.stringify(huidigePunten),
+      },
+    });
+    setScheidingDialoog(false);
+    setTekenModus(false);
+    setHuidigePunten([]);
+    refetchScheidingen();
+  }, [huidigePunten, scheidingForm, verdiepingId, maakScheiding, refetchScheidingen]);
+
+  const wisScheiding = useCallback(async (scheidingId: number) => {
+    await verwijderScheiding.mutateAsync({ scheidingId });
+    setScheidingSelectie(null);
+    refetchScheidingen();
+  }, [verwijderScheiding, refetchScheidingen]);
 
   const opMouseDown = useCallback((e: React.MouseEvent<SVGSVGElement>) => {
-    if (plaatsenModus) return;
+    if (plaatsenModus || tekenModus) return;
     setPanning(true);
     setPanStart({ mx: e.clientX, my: e.clientY, vx: view.x, vy: view.y });
-  }, [plaatsenModus, view.x, view.y]);
+  }, [plaatsenModus, tekenModus, view.x, view.y]);
 
   const opMouseMove = useCallback((e: React.MouseEvent<SVGSVGElement>) => {
     if (!panning) return;
@@ -475,10 +534,30 @@ export default function Plattegrond() {
           <Button
             variant={plaatsenModus ? "destructive" : "default"}
             size="sm"
-            onClick={() => { setPlaatsenModus(!plaatsenModus); setGeselecteerdId(null); }}
+            onClick={() => { setPlaatsenModus(!plaatsenModus); setGeselecteerdId(null); if (tekenModus) annuleerTekenen(); }}
           >
             {plaatsenModus ? (<><X className="h-4 w-4 mr-1" />Annuleren</>) : (<><Plus className="h-4 w-4 mr-1" />Plaatsen</>)}
           </Button>
+
+          {tekenModus ? (
+            <>
+              <Button
+                variant="default"
+                size="sm"
+                disabled={huidigePunten.length < 2}
+                onClick={() => setScheidingDialoog(true)}
+              >
+                <Check className="h-4 w-4 mr-1" />Voltooien
+              </Button>
+              <Button variant="destructive" size="sm" onClick={annuleerTekenen}>
+                <X className="h-4 w-4 mr-1" />Annuleren
+              </Button>
+            </>
+          ) : (
+            <Button variant="outline" size="sm" onClick={startTekenen}>
+              <Spline className="h-4 w-4 mr-1" />Scheiding tekenen
+            </Button>
+          )}
         </div>
       </div>
 
@@ -489,12 +568,19 @@ export default function Plattegrond() {
         </div>
       )}
 
+      {/* Teken hint */}
+      {tekenModus && (
+        <div className="bg-primary/10 border border-primary/30 rounded-md px-3 py-2 mb-2 text-sm text-primary font-medium flex-shrink-0">
+          Klik om punten te plaatsen voor de scheidingslijn. Klik op &quot;Voltooien&quot; om op te slaan ({huidigePunten.length} {huidigePunten.length === 1 ? "punt" : "punten"}).
+        </div>
+      )}
+
       {/* Hoofd canvas + zijpaneel */}
       <div className="flex flex-1 gap-3 min-h-0">
         {/* SVG Canvas */}
         <div
           ref={containerRef}
-          className={`flex-1 rounded-lg border overflow-hidden bg-slate-100 relative ${plaatsenModus ? "cursor-crosshair" : panning ? "cursor-grabbing" : "cursor-grab"}`}
+          className={`flex-1 rounded-lg border overflow-hidden bg-slate-100 relative ${plaatsenModus || tekenModus ? "cursor-crosshair" : panning ? "cursor-grabbing" : "cursor-grab"}`}
         >
           <svg
             ref={svgRef}
@@ -513,6 +599,49 @@ export default function Plattegrond() {
                 <image href={pdfBeeld} x={0} y={0} width={W} height={H} />
               ) : (
                 <GridAchtergrond w={W} h={H} />
+              )}
+
+              {/* Scheidingen */}
+              {(scheidingen ?? []).map((s: any) => {
+                let punten: { x: number; y: number }[] = [];
+                try { punten = JSON.parse(s.punten); } catch { punten = []; }
+                if (punten.length < 2) return null;
+                const kleur = s.kleur || SCHEIDING_TYPEN[s.type]?.kleur || "#dc2626";
+                const geselecteerd = scheidingSelectie === s.id;
+                const mid = punten[Math.floor(punten.length / 2)];
+                const puntenStr = punten.map((p) => `${p.x},${p.y}`).join(" ");
+                return (
+                  <g key={`s${s.id}`} style={{ cursor: tekenModus ? "crosshair" : "pointer" }}
+                     onClick={(e) => { if (tekenModus) return; e.stopPropagation(); setScheidingSelectie(geselecteerd ? null : s.id); }}>
+                    <polyline points={puntenStr} fill="none" stroke={kleur}
+                      strokeWidth={geselecteerd ? 7 : 4}
+                      strokeDasharray={s.type === "rook" ? "12 8" : undefined}
+                      strokeLinecap="round" strokeLinejoin="round" opacity={0.9} />
+                    {s.waarde && (
+                      <g transform={`translate(${mid.x}, ${mid.y})`}>
+                        <rect x={-18} y={-12} width={36} height={20} rx={4} fill={kleur} />
+                        <text x={0} y={2} textAnchor="middle" fontSize={12} fontWeight={700} fill="#fff">{s.waarde}</text>
+                      </g>
+                    )}
+                  </g>
+                );
+              })}
+
+              {/* Scheiding in aanmaak */}
+              {tekenModus && huidigePunten.length > 0 && (
+                <g pointerEvents="none">
+                  {huidigePunten.length >= 2 && (
+                    <polyline
+                      points={huidigePunten.map((p) => `${p.x},${p.y}`).join(" ")}
+                      fill="none"
+                      stroke={SCHEIDING_TYPEN[scheidingForm.type]?.kleur ?? "#dc2626"}
+                      strokeWidth={4} strokeDasharray="8 6" strokeLinecap="round" strokeLinejoin="round" />
+                  )}
+                  {huidigePunten.map((p, i) => (
+                    <circle key={i} cx={p.x} cy={p.y} r={5}
+                      fill="#fff" stroke={SCHEIDING_TYPEN[scheidingForm.type]?.kleur ?? "#dc2626"} strokeWidth={3} />
+                  ))}
+                </g>
               )}
 
               {/* Voorzieningen */}
@@ -540,7 +669,36 @@ export default function Plattegrond() {
                 </div>
               );
             })}
+            {Object.entries(SCHEIDING_TYPEN).map(([type, stijl]) => {
+              const n = (scheidingen ?? []).filter((s: any) => s.type === type).length;
+              if (n === 0) return null;
+              return (
+                <div key={`s-${type}`} className="flex items-center gap-1.5 text-xs">
+                  <span className="w-4 h-0 border-t-2 flex-shrink-0" style={{ borderColor: stijl.kleur, borderStyle: type === "rook" ? "dashed" : "solid" }} />
+                  <span className="text-slate-600">{stijl.label}</span>
+                  <span className="text-slate-400 font-medium">({n})</span>
+                </div>
+              );
+            })}
           </div>
+
+          {/* Geselecteerde scheiding verwijderen */}
+          {scheidingSelectie != null && !tekenModus && (() => {
+            const s = (scheidingen ?? []).find((x: any) => x.id === scheidingSelectie);
+            if (!s) return null;
+            return (
+              <div className="absolute top-3 right-3 bg-white border rounded-md shadow-md px-3 py-2 flex items-center gap-3 text-sm">
+                <span className="flex items-center gap-1.5">
+                  <span className="w-4 h-0 border-t-2" style={{ borderColor: s.kleur || SCHEIDING_TYPEN[s.type]?.kleur, borderStyle: s.type === "rook" ? "dashed" : "solid" }} />
+                  <span className="font-medium">{SCHEIDING_TYPEN[s.type]?.label ?? s.type}</span>
+                  {s.waarde && <span className="text-muted-foreground">{s.waarde} min</span>}
+                </span>
+                <Button variant="destructive" size="sm" disabled={verwijderScheiding.isPending} onClick={() => wisScheiding(s.id)}>
+                  <Trash2 className="h-4 w-4 mr-1" />Verwijderen
+                </Button>
+              </div>
+            );
+          })()}
 
           {/* PDF aan het laden */}
           {pdfLaden && (
@@ -799,6 +957,45 @@ export default function Plattegrond() {
               </Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Scheiding opslaan dialoog */}
+      <Dialog open={scheidingDialoog} onOpenChange={setScheidingDialoog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Scheiding vastleggen</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label>Type scheiding</Label>
+              <Select value={scheidingForm.type} onValueChange={(v) => setScheidingForm((f) => ({ ...f, type: v }))}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {Object.entries(SCHEIDING_TYPEN).map(([type, stijl]) => (
+                    <SelectItem key={type} value={type}>{stijl.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>WBDBO-waarde (minuten)</Label>
+              <Select value={scheidingForm.waarde} onValueChange={(v) => setScheidingForm((f) => ({ ...f, waarde: v }))}>
+                <SelectTrigger><SelectValue placeholder="Kies waarde" /></SelectTrigger>
+                <SelectContent>
+                  {WBDBO_OPTIES.map((w) => (
+                    <SelectItem key={w} value={w}>{w} minuten</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setScheidingDialoog(false)}>Annuleren</Button>
+            <Button disabled={maakScheiding.isPending || huidigePunten.length < 2} onClick={bewaarScheiding}>
+              {maakScheiding.isPending ? "Opslaan..." : "Opslaan"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

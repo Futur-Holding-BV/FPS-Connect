@@ -6,11 +6,18 @@ import { Badge } from "@/components/ui/badge";
 import { Link } from "wouter";
 import { Search, Building } from "lucide-react";
 import { useState } from "react";
+import { useAuth } from "@/context/auth-context";
+import { GebouwAanmakenDialog } from "./gebouw-aanmaken-dialog";
+
+const BEHEERDER_ROLLEN = ["beheerder", "hoofdbeheerder"];
 
 export default function Gebouwen() {
   const { t } = useTranslation();
+  const { gebruiker } = useAuth();
   const [search, setSearch] = useState("");
   const { data: gebouwen, isLoading } = useListGebouwen({ zoek: search });
+  const isBeheerder =
+    !!gebruiker?.rol && BEHEERDER_ROLLEN.includes(gebruiker.rol as string);
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
@@ -19,15 +26,18 @@ export default function Gebouwen() {
           <h1 className="text-3xl font-bold tracking-tight">{t("gebouwen.titel")}</h1>
           <p className="text-muted-foreground mt-1">{t("gebouwen.ondertitel")}</p>
         </div>
-        <div className="relative w-full sm:w-64">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input 
-            type="search" 
-            placeholder={t("gebouwen.zoek")} 
-            className="pl-8" 
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
+        <div className="flex w-full sm:w-auto items-center gap-3">
+          <div className="relative w-full sm:w-64">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              type="search"
+              placeholder={t("gebouwen.zoek")}
+              className="pl-8"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+          {isBeheerder && <GebouwAanmakenDialog />}
         </div>
       </div>
 

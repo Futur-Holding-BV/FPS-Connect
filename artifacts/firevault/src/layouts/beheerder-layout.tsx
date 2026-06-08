@@ -5,7 +5,7 @@ import {
   SidebarGroup, SidebarGroupLabel, SidebarGroupContent,
   SidebarMenu, SidebarMenuItem, SidebarMenuButton,
 } from "@/components/ui/sidebar";
-import { ShieldCheck, Building, Wrench, Users, Search, Home, Receipt } from "lucide-react";
+import { ShieldCheck, Building, Wrench, Users, Search, Home, Receipt, ShieldAlert, LifeBuoy, MessageSquarePlus, Activity } from "lucide-react";
 import { GebruikerMenu } from "@/components/gebruiker-menu";
 
 const ROUTES = [
@@ -16,6 +16,13 @@ const ROUTES = [
   { href: "/onderhoud", labelKey: "nav.onderhoud", icoon: Wrench },
   { href: "/gebruikers", labelKey: "nav.gebruikers", icoon: Users },
   { href: "/abonnementen", labelKey: "nav.abonnementen", icoon: Receipt },
+];
+
+const BEHEER_ROUTES = [
+  { href: "/beheer/login-pogingen", label: "Login-pogingen", icoon: ShieldAlert },
+  { href: "/beheer/helpdesk", label: "Helpdesk", icoon: LifeBuoy },
+  { href: "/beheer/feedback", label: "Feedback", icoon: MessageSquarePlus },
+  { href: "/beheer/heatmaps", label: "Heatmaps", icoon: Activity },
 ];
 
 export default function BeheerderLayout({ children }: { children: React.ReactNode }) {
@@ -50,6 +57,27 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
                       <Link href={route.href}>
                         <route.icoon />
                         <span>{t(route.labelKey)}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+
+          <SidebarGroup>
+            <SidebarGroupLabel>Beheer</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {BEHEER_ROUTES.map((route) => (
+                  <SidebarMenuItem key={route.href}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={location === route.href || location.startsWith(route.href)}
+                    >
+                      <Link href={route.href}>
+                        <route.icoon />
+                        <span>{route.label}</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>

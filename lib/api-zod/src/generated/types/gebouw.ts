@@ -22,6 +22,22 @@ export interface Gebouw {
   klant_id?: number | null;
   /** @nullable */
   klant_naam?: string | null;
+  /** @nullable */
+  aantal_verdiepingen?: number | null;
+  /** @nullable */
+  hoogte?: number | null;
+  /** @nullable */
+  breedte?: number | null;
+  /** @nullable */
+  diepte?: number | null;
+  /** @nullable */
+  oppervlakte?: number | null;
+  /** @nullable */
+  gebouw_type?: string | null;
+  /** @nullable */
+  latitude?: number | null;
+  /** @nullable */
+  longitude?: number | null;
   totaal_voorzieningen?: number;
   aangemaakt_op: string;
 }

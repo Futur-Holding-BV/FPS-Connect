@@ -18,8 +18,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ArrowLeft, Layers, Map, Users, X, UserPlus, Loader2 } from "lucide-react";
+import { ArrowLeft, Layers, Map, Users, X, UserPlus, Loader2, Building2, Mail, Phone } from "lucide-react";
 import { useAuth } from "@/context/auth-context";
+import GebouwPartijen from "./gebouw-partijen";
+import GebouwTekeningen from "./gebouw-tekeningen";
 
 const BEHEERDER_ROLLEN = ["beheerder", "hoofdbeheerder"];
 const TOEWIJSBARE_ROLLEN = ["monteur", "controleur"];
@@ -51,6 +53,26 @@ export default function GebouwDetail() {
       TOEWIJSBARE_ROLLEN.includes(g.rol ?? "") &&
       !(toewijzingen ?? []).some((t) => t.gebruiker_id === g.id),
   );
+
+  const aantalLagen = Math.max(
+    1,
+    Math.min(gebouw.aantal_verdiepingen ?? gebouw.verdiepingen?.length ?? 1, 30),
+  );
+  const maxFootprint = Math.max(gebouw.breedte ?? 0, gebouw.diepte ?? 0);
+  const plaatBreedte =
+    maxFootprint > 0 && gebouw.breedte ? Math.round(160 * (gebouw.breedte / maxFootprint)) : 160;
+  const plaatDiepte =
+    maxFootprint > 0 && gebouw.diepte ? Math.round(160 * (gebouw.diepte / maxFootprint)) : 160;
+  const laagAfstand = Math.max(8, Math.min(40, Math.round(240 / aantalLagen)));
+
+  const heeftGegevens =
+    gebouw.gebouw_type != null ||
+    gebouw.bouwjaar != null ||
+    gebouw.aantal_verdiepingen != null ||
+    gebouw.hoogte != null ||
+    gebouw.oppervlakte != null ||
+    gebouw.breedte != null ||
+    gebouw.diepte != null;
 
   async function voegToe() {
     if (!gekozenGebruikerId) return;
@@ -97,19 +119,82 @@ export default function GebouwDetail() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="h-80 bg-muted rounded-md flex items-center justify-center relative perspective-1000">
-                <div className="absolute inset-0 flex flex-col items-center justify-center transform-style-3d rotate-x-60 rotate-z-45">
-                  {gebouw.verdiepingen?.map((v, i) => (
+              <div className="h-80 bg-muted rounded-md flex items-center justify-center relative perspective-1000 overflow-hidden">
+                <div className="absolute inset-0 flex items-center justify-center transform-style-3d rotate-x-60 rotate-z-45">
+                  {Array.from({ length: aantalLagen }).map((_, i) => (
                     <div
-                      key={v.id}
-                      className="w-48 h-48 bg-primary/20 border border-primary/50 absolute transition-transform"
-                      style={{ transform: `translateZ(${i * 40}px)` }}
+                      key={i}
+                      className="bg-primary/20 border border-primary/50 absolute transition-transform"
+                      style={{
+                        width: `${plaatBreedte}px`,
+                        height: `${plaatDiepte}px`,
+                        transform: `translateZ(${i * laagAfstand}px)`,
+                      }}
                     />
                   ))}
                 </div>
               </div>
+              <p className="text-xs text-muted-foreground mt-3 text-center">
+                {aantalLagen} {aantalLagen === 1 ? "bouwlaag" : "bouwlagen"}
+                {gebouw.hoogte != null ? ` · ${gebouw.hoogte} m hoog` : ""}
+                {gebouw.breedte != null && gebouw.diepte != null
+                  ? ` · ${gebouw.breedte} × ${gebouw.diepte} m`
+                  : ""}
+              </p>
             </CardContent>
           </Card>
+
+          {heeftGegevens && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Building2 className="h-5 w-5" /> Gebouwgegevens
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <dl className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-sm">
+                  {gebouw.gebouw_type != null && (
+                    <div>
+                      <dt className="text-muted-foreground">Type</dt>
+                      <dd className="font-medium capitalize">{gebouw.gebouw_type}</dd>
+                    </div>
+                  )}
+                  {gebouw.bouwjaar != null && (
+                    <div>
+                      <dt className="text-muted-foreground">Bouwjaar</dt>
+                      <dd className="font-medium">{gebouw.bouwjaar}</dd>
+                    </div>
+                  )}
+                  {gebouw.aantal_verdiepingen != null && (
+                    <div>
+                      <dt className="text-muted-foreground">Verdiepingen</dt>
+                      <dd className="font-medium">{gebouw.aantal_verdiepingen}</dd>
+                    </div>
+                  )}
+                  {gebouw.hoogte != null && (
+                    <div>
+                      <dt className="text-muted-foreground">Hoogte</dt>
+                      <dd className="font-medium">{gebouw.hoogte} m</dd>
+                    </div>
+                  )}
+                  {gebouw.oppervlakte != null && (
+                    <div>
+                      <dt className="text-muted-foreground">Oppervlakte</dt>
+                      <dd className="font-medium">{gebouw.oppervlakte} m²</dd>
+                    </div>
+                  )}
+                  {gebouw.breedte != null && gebouw.diepte != null && (
+                    <div>
+                      <dt className="text-muted-foreground">Afmeting</dt>
+                      <dd className="font-medium">
+                        {gebouw.breedte} × {gebouw.diepte} m
+                      </dd>
+                    </div>
+                  )}
+                </dl>
+              </CardContent>
+            </Card>
+          )}
 
           <Card>
             <CardHeader>
@@ -165,15 +250,43 @@ export default function GebouwDetail() {
                     {(toewijzingen ?? []).map((t) => (
                       <li
                         key={t.gebruiker_id}
-                        className="flex items-center justify-between gap-2 p-2 rounded-md border"
+                        className="flex items-start justify-between gap-2 p-2 rounded-md border"
                       >
-                        <div className="flex items-center gap-2 min-w-0">
-                          <span className="font-medium text-sm truncate">
-                            {t.naam}
-                          </span>
-                          <Badge variant="secondary" className="text-xs shrink-0">
-                            {t.rol}
-                          </Badge>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-medium text-sm truncate">
+                              {t.naam}
+                            </span>
+                            <Badge variant="secondary" className="text-xs shrink-0">
+                              {t.rol}
+                            </Badge>
+                            {t.actief === false && (
+                              <Badge variant="outline" className="text-xs shrink-0 text-muted-foreground">
+                                Inactief
+                              </Badge>
+                            )}
+                          </div>
+                          {t.organisatie && (
+                            <p className="text-xs text-muted-foreground">{t.organisatie}</p>
+                          )}
+                          <div className="mt-1 space-y-0.5">
+                            {t.email && (
+                              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                                <Mail className="h-3 w-3 shrink-0" />
+                                <a href={`mailto:${t.email}`} className="hover:underline truncate">
+                                  {t.email}
+                                </a>
+                              </div>
+                            )}
+                            {t.telefoon && (
+                              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                                <Phone className="h-3 w-3 shrink-0" />
+                                <a href={`tel:${t.telefoon}`} className="hover:underline">
+                                  {t.telefoon}
+                                </a>
+                              </div>
+                            )}
+                          </div>
                         </div>
                         <Button
                           variant="ghost"
@@ -231,6 +344,10 @@ export default function GebouwDetail() {
               </CardContent>
             </Card>
           )}
+
+          <GebouwPartijen gebouwId={gebouwId} isBeheerder={isBeheerder} />
+
+          <GebouwTekeningen gebouwId={gebouwId} isBeheerder={isBeheerder} />
 
           <Card>
             <CardHeader>

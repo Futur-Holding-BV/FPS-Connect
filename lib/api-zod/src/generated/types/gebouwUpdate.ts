@@ -14,4 +14,12 @@ export interface GebouwUpdate {
   omschrijving?: string;
   bouwjaar?: number;
   klant_id?: number;
+  aantal_verdiepingen?: number;
+  hoogte?: number;
+  breedte?: number;
+  diepte?: number;
+  oppervlakte?: number;
+  gebouw_type?: string;
+  latitude?: number;
+  longitude?: number;
 }

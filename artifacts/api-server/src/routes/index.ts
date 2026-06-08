@@ -10,6 +10,7 @@ import onderhoudRouter from "./onderhoud";
 import gebruikersRouter from "./gebruikers";
 import abonnementenRouter from "./abonnementen";
 import storageRouter from "./storage";
+import systeemRouter from "./systeem";
 import { requireAuth } from "../middlewares/auth";
 
 const router: IRouter = Router();
@@ -30,5 +31,6 @@ router.use(onderhoudRouter);
 router.use(gebruikersRouter);
 router.use(abonnementenRouter);
 router.use(storageRouter);
+router.use(systeemRouter);
 
 export default router;
