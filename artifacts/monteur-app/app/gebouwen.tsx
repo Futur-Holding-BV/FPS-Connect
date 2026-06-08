@@ -12,14 +12,17 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { TekstVeld, bovenInset } from "@/components/ui";
+import { SyncStatusBadge } from "@/components/SyncStatusBadge";
 import { useColors } from "@/hooks/useColors";
 import { useAuth } from "@/context/auth";
+import { useSync } from "@/context/sync";
 
 export default function Gebouwen() {
   const c = useColors();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { gebruiker, token, uitloggen } = useAuth();
+  const { syncStatus, aantalWachtend, forceerSync, isSyncing } = useSync();
   const [zoek, setZoek] = useState("");
 
   const { data, isLoading, refetch, isRefetching } = useListGebouwen();
@@ -35,6 +38,11 @@ export default function Gebouwen() {
       (g.stad ?? "").toLowerCase().includes(q)
     );
   });
+
+  async function herlaadMetSync() {
+    await forceerSync();
+    await refetch();
+  }
 
   return (
     <View style={{ flex: 1, backgroundColor: c.background }}>
@@ -70,7 +78,27 @@ export default function Gebouwen() {
           </Pressable>
         </View>
 
-        <View style={{ marginTop: 16 }}>
+        {/* Sync-statusregel */}
+        <View style={{ marginTop: 10, flexDirection: "row", alignItems: "center", gap: 10 }}>
+          <SyncStatusBadge status={syncStatus} aantalWachtend={aantalWachtend} />
+          {aantalWachtend > 0 && !isSyncing && (
+            <Pressable
+              onPress={forceerSync}
+              style={{
+                paddingHorizontal: 10,
+                paddingVertical: 5,
+                borderRadius: 20,
+                backgroundColor: "rgba(242,59,13,0.18)",
+              }}
+            >
+              <Text style={{ color: c.primary, fontSize: 12, fontFamily: "Inter_600SemiBold" }}>
+                Nu synchroniseren
+              </Text>
+            </Pressable>
+          )}
+        </View>
+
+        <View style={{ marginTop: 14 }}>
           <TekstVeld
             label=""
             value={zoek}
@@ -92,7 +120,11 @@ export default function Gebouwen() {
           keyExtractor={(g) => String(g.id)}
           contentContainerStyle={{ padding: 16, gap: 12, paddingBottom: insets.bottom + 24 }}
           refreshControl={
-            <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={c.primary} />
+            <RefreshControl
+              refreshing={isRefetching || isSyncing}
+              onRefresh={herlaadMetSync}
+              tintColor={c.primary}
+            />
           }
           ListEmptyComponent={
             <Text style={{ textAlign: "center", color: c.mutedForeground, marginTop: 48, fontFamily: "Inter_400Regular" }}>

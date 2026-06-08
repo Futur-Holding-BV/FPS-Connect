@@ -1,9 +1,19 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
-import { gebouwenTable, verdiepingenTable, voorzieningenTable, gebruikersTable } from "@workspace/db";
-import { eq, ilike, count, and, sql } from "drizzle-orm";
+import {
+  gebouwenTable,
+  verdiepingenTable,
+  voorzieningenTable,
+  gebruikersTable,
+  gebouwToewijzingenTable,
+} from "@workspace/db";
+import { eq, inArray, count, and } from "drizzle-orm";
+import { requireRol } from "../middlewares/auth";
 
 const router = Router();
+
+const BEHEERDER_ROLLEN = ["beheerder", "hoofdbeheerder"];
+const TOEGEWEZEN_ROLLEN = ["monteur", "controleur"];
 
 async function klantNaam(klantId: number | null): Promise<string | null> {
   if (!klantId) return null;
@@ -11,40 +21,71 @@ async function klantNaam(klantId: number | null): Promise<string | null> {
   return k?.naam ?? null;
 }
 
+async function gebruikerRol(userId: number): Promise<string> {
+  const [g] = await db.select({ rol: gebruikersTable.rol }).from(gebruikersTable).where(eq(gebruikersTable.id, userId));
+  return g?.rol ?? "viewer";
+}
+
+async function toegewezenGebouwIds(userId: number): Promise<number[]> {
+  const rows = await db
+    .select({ gebouwId: gebouwToewijzingenTable.gebouwId })
+    .from(gebouwToewijzingenTable)
+    .where(eq(gebouwToewijzingenTable.gebruikerId, userId));
+  return rows.map((r) => r.gebouwId);
+}
+
+function gebouwRij(g: typeof gebouwenTable.$inferSelect, totaal: number, naam: string | null) {
+  return {
+    id: g.id,
+    naam: g.naam,
+    adres: g.adres,
+    stad: g.stad,
+    postcode: g.postcode,
+    omschrijving: g.omschrijving,
+    bouwjaar: g.bouwjaar,
+    klant_id: g.klantId,
+    klant_naam: naam,
+    totaal_voorzieningen: totaal,
+    aangemaakt_op: g.aangemaaktOp.toISOString(),
+  };
+}
+
 // GET /gebouwen
 router.get("/gebouwen", async (req, res) => {
   try {
-    const { zoek, organisatie_id } = req.query;
-    const gebouwen = await db.select().from(gebouwenTable);
+    const userId = req.session.userId!;
+    const rol = await gebruikerRol(userId);
+    const { zoek } = req.query;
 
-    const filtered = zoek
-      ? gebouwen.filter(
-          (g) =>
-            g.naam.toLowerCase().includes((zoek as string).toLowerCase()) ||
-            g.adres.toLowerCase().includes((zoek as string).toLowerCase())
-        )
-      : gebouwen;
+    let gebouwen = await db.select().from(gebouwenTable);
+
+    // Monteurs en controleurs zien alleen hun toegewezen gebouwen
+    if (TOEGEWEZEN_ROLLEN.includes(rol)) {
+      const ids = await toegewezenGebouwIds(userId);
+      if (ids.length === 0) {
+        return res.json([]);
+      }
+      gebouwen = gebouwen.filter((g) => ids.includes(g.id));
+    }
+
+    if (zoek) {
+      const q = (zoek as string).toLowerCase();
+      gebouwen = gebouwen.filter(
+        (g) =>
+          g.naam.toLowerCase().includes(q) ||
+          g.adres.toLowerCase().includes(q) ||
+          (g.stad ?? "").toLowerCase().includes(q),
+      );
+    }
 
     const result = await Promise.all(
-      filtered.map(async (g) => {
+      gebouwen.map(async (g) => {
         const [totaal] = await db
           .select({ count: count() })
           .from(voorzieningenTable)
           .where(eq(voorzieningenTable.gebouwId, g.id));
-        return {
-          id: g.id,
-          naam: g.naam,
-          adres: g.adres,
-          stad: g.stad,
-          postcode: g.postcode,
-          omschrijving: g.omschrijving,
-          bouwjaar: g.bouwjaar,
-          klant_id: g.klantId,
-          klant_naam: await klantNaam(g.klantId),
-          totaal_voorzieningen: Number(totaal?.count ?? 0),
-          aangemaakt_op: g.aangemaaktOp.toISOString(),
-        };
-      })
+        return gebouwRij(g, Number(totaal?.count ?? 0), await klantNaam(g.klantId));
+      }),
     );
 
     res.json(result);
@@ -65,19 +106,7 @@ router.post("/gebouwen", async (req, res) => {
       .insert(gebouwenTable)
       .values({ naam, adres, stad, postcode, omschrijving, bouwjaar, klantId: klant_id })
       .returning();
-    res.status(201).json({
-      id: gebouw.id,
-      naam: gebouw.naam,
-      adres: gebouw.adres,
-      stad: gebouw.stad,
-      postcode: gebouw.postcode,
-      omschrijving: gebouw.omschrijving,
-      bouwjaar: gebouw.bouwjaar,
-      klant_id: gebouw.klantId,
-      klant_naam: await klantNaam(gebouw.klantId),
-      totaal_voorzieningen: 0,
-      aangemaakt_op: gebouw.aangemaaktOp.toISOString(),
-    });
+    res.status(201).json(gebouwRij(gebouw, 0, await klantNaam(gebouw.klantId)));
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Interne serverfout" });
@@ -88,8 +117,19 @@ router.post("/gebouwen", async (req, res) => {
 router.get("/gebouwen/:id", async (req, res) => {
   try {
     const id = parseInt(req.params.id);
+    const userId = req.session.userId!;
+    const rol = await gebruikerRol(userId);
+
     const [gebouw] = await db.select().from(gebouwenTable).where(eq(gebouwenTable.id, id));
     if (!gebouw) return res.status(404).json({ error: "Gebouw niet gevonden" });
+
+    // Toegangscontrole: monteur/controleur mag alleen toegewezen gebouwen zien
+    if (TOEGEWEZEN_ROLLEN.includes(rol)) {
+      const ids = await toegewezenGebouwIds(userId);
+      if (!ids.includes(id)) {
+        return res.status(403).json({ error: "Geen toegang tot dit gebouw" });
+      }
+    }
 
     const verdiepingen = await db.select().from(verdiepingenTable).where(eq(verdiepingenTable.gebouwId, id));
 
@@ -109,7 +149,7 @@ router.get("/gebouwen/:id", async (req, res) => {
           hoogte: v.hoogte,
           totaal_voorzieningen: Number(totaal?.count ?? 0),
         };
-      })
+      }),
     );
 
     const alleVoorzieningen = await db
@@ -160,19 +200,7 @@ router.patch("/gebouwen/:id", async (req, res) => {
       .select({ count: count() })
       .from(voorzieningenTable)
       .where(eq(voorzieningenTable.gebouwId, id));
-    res.json({
-      id: gebouw.id,
-      naam: gebouw.naam,
-      adres: gebouw.adres,
-      stad: gebouw.stad,
-      postcode: gebouw.postcode,
-      omschrijving: gebouw.omschrijving,
-      bouwjaar: gebouw.bouwjaar,
-      klant_id: gebouw.klantId,
-      klant_naam: await klantNaam(gebouw.klantId),
-      totaal_voorzieningen: Number(totaal?.count ?? 0),
-      aangemaakt_op: gebouw.aangemaaktOp.toISOString(),
-    });
+    res.json(gebouwRij(gebouw, Number(totaal?.count ?? 0), await klantNaam(gebouw.klantId)));
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Interne serverfout" });
@@ -212,7 +240,7 @@ router.get("/gebouwen/:id/verdiepingen", async (req, res) => {
           hoogte: v.hoogte,
           totaal_voorzieningen: Number(totaal?.count ?? 0),
         };
-      })
+      }),
     );
     res.json(result);
   } catch (err) {
@@ -314,5 +342,135 @@ router.delete("/verdiepingen/:id", async (req, res) => {
     res.status(500).json({ error: "Interne serverfout" });
   }
 });
+
+// ── TOEWIJZINGEN ──────────────────────────────────────────────────────────
+
+// GET /gebouwen/:id/toewijzingen
+router.get("/gebouwen/:id/toewijzingen", async (req, res) => {
+  try {
+    const gebouwId = parseInt(req.params.id);
+    const rows = await db
+      .select({
+        id: gebouwToewijzingenTable.id,
+        gebouwId: gebouwToewijzingenTable.gebouwId,
+        gebruikerId: gebouwToewijzingenTable.gebruikerId,
+        naam: gebruikersTable.naam,
+        email: gebruikersTable.email,
+        rol: gebruikersTable.rol,
+        aangemaaktOp: gebouwToewijzingenTable.aangemaaktOp,
+      })
+      .from(gebouwToewijzingenTable)
+      .innerJoin(gebruikersTable, eq(gebouwToewijzingenTable.gebruikerId, gebruikersTable.id))
+      .where(eq(gebouwToewijzingenTable.gebouwId, gebouwId));
+
+    res.json(
+      rows.map((r) => ({
+        id: r.id,
+        gebouw_id: r.gebouwId,
+        gebruiker_id: r.gebruikerId,
+        naam: r.naam,
+        email: r.email,
+        rol: r.rol,
+        aangemaakt_op: r.aangemaaktOp.toISOString(),
+      })),
+    );
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// POST /gebouwen/:id/toewijzingen — alleen beheerder
+router.post(
+  "/gebouwen/:id/toewijzingen",
+  requireRol("beheerder", "hoofdbeheerder"),
+  async (req, res) => {
+    try {
+      const gebouwId = parseInt(req.params.id);
+      const { gebruiker_id } = req.body ?? {};
+      if (!gebruiker_id) {
+        return res.status(400).json({ error: "gebruiker_id is verplicht" });
+      }
+
+      // Controleer of gebruiker bestaat
+      const [gebruiker] = await db
+        .select({ id: gebruikersTable.id, naam: gebruikersTable.naam, email: gebruikersTable.email, rol: gebruikersTable.rol })
+        .from(gebruikersTable)
+        .where(eq(gebruikersTable.id, Number(gebruiker_id)));
+      if (!gebruiker) {
+        return res.status(404).json({ error: "Gebruiker niet gevonden" });
+      }
+
+      const [toewijzing] = await db
+        .insert(gebouwToewijzingenTable)
+        .values({
+          gebouwId,
+          gebruikerId: Number(gebruiker_id),
+          aangemaaktDoorId: req.session.userId,
+        })
+        .onConflictDoNothing()
+        .returning();
+
+      if (!toewijzing) {
+        // Al toegewezen — retourneer bestaande
+        const [bestaand] = await db
+          .select({ id: gebouwToewijzingenTable.id, aangemaaktOp: gebouwToewijzingenTable.aangemaaktOp })
+          .from(gebouwToewijzingenTable)
+          .where(
+            and(
+              eq(gebouwToewijzingenTable.gebouwId, gebouwId),
+              eq(gebouwToewijzingenTable.gebruikerId, Number(gebruiker_id)),
+            ),
+          );
+        return res.status(201).json({
+          id: bestaand!.id,
+          gebouw_id: gebouwId,
+          gebruiker_id: gebruiker.id,
+          naam: gebruiker.naam,
+          email: gebruiker.email,
+          rol: gebruiker.rol,
+          aangemaakt_op: bestaand!.aangemaaktOp.toISOString(),
+        });
+      }
+
+      res.status(201).json({
+        id: toewijzing.id,
+        gebouw_id: gebouwId,
+        gebruiker_id: gebruiker.id,
+        naam: gebruiker.naam,
+        email: gebruiker.email,
+        rol: gebruiker.rol,
+        aangemaakt_op: toewijzing.aangemaaktOp.toISOString(),
+      });
+    } catch (err) {
+      req.log.error(err);
+      res.status(500).json({ error: "Interne serverfout" });
+    }
+  },
+);
+
+// DELETE /gebouwen/:id/toewijzingen/:gebruikerId — alleen beheerder
+router.delete(
+  "/gebouwen/:id/toewijzingen/:gebruikerId",
+  requireRol("beheerder", "hoofdbeheerder"),
+  async (req, res) => {
+    try {
+      const gebouwId = parseInt(req.params.id);
+      const gebruikerId = parseInt(req.params.gebruikerId);
+      await db
+        .delete(gebouwToewijzingenTable)
+        .where(
+          and(
+            eq(gebouwToewijzingenTable.gebouwId, gebouwId),
+            eq(gebouwToewijzingenTable.gebruikerId, gebruikerId),
+          ),
+        );
+      res.status(204).send();
+    } catch (err) {
+      req.log.error(err);
+      res.status(500).json({ error: "Interne serverfout" });
+    }
+  },
+);
 
 export default router;

@@ -1,19 +1,57 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
-import { onderhoudTable, gebouwenTable, voorzieningenTable, gebruikersTable, activiteitenTable } from "@workspace/db";
+import {
+  onderhoudTable,
+  gebouwenTable,
+  voorzieningenTable,
+  gebruikersTable,
+  activiteitenTable,
+  gebouwToewijzingenTable,
+} from "@workspace/db";
 import { eq } from "drizzle-orm";
+import { requireRol } from "../middlewares/auth";
 
 const router = Router();
 
+const TOEGEWEZEN_ROLLEN = ["monteur", "controleur"];
+
+async function gebruikerInfo(userId: number) {
+  const [g] = await db
+    .select({ rol: gebruikersTable.rol })
+    .from(gebruikersTable)
+    .where(eq(gebruikersTable.id, userId));
+  return g;
+}
+
+async function toegewezenGebouwIds(userId: number): Promise<number[]> {
+  const rows = await db
+    .select({ gebouwId: gebouwToewijzingenTable.gebouwId })
+    .from(gebouwToewijzingenTable)
+    .where(eq(gebouwToewijzingenTable.gebruikerId, userId));
+  return rows.map((r) => r.gebouwId);
+}
+
 async function mapOnderhoud(o: typeof onderhoudTable.$inferSelect) {
   const gebouw = o.gebouwId
-    ? await db.select({ naam: gebouwenTable.naam }).from(gebouwenTable).where(eq(gebouwenTable.id, o.gebouwId)).then((r) => r[0])
+    ? await db
+        .select({ naam: gebouwenTable.naam })
+        .from(gebouwenTable)
+        .where(eq(gebouwenTable.id, o.gebouwId))
+        .then((r) => r[0])
     : null;
   const voorziening = o.voorzieningId
-    ? await db.select({ objectnummer: voorzieningenTable.objectnummer }).from(voorzieningenTable).where(eq(voorzieningenTable.id, o.voorzieningId)).then((r) => r[0])
+    ? await db
+        .select({ objectnummer: voorzieningenTable.objectnummer })
+        .from(voorzieningenTable)
+        .where(eq(voorzieningenTable.id, o.voorzieningId))
+        .then((r) => r[0])
     : null;
   const toegewezen = o.toegewezenAanId
-    ? await db.select({ naam: gebruikersTable.naam }).from(gebruikersTable).where(eq(gebruikersTable.id, o.toegewezenAanId)).then((r) => r[0])
+    ? await db
+        .select({ naam: gebruikersTable.naam })
+        .from(gebruikersTable)
+        .where(eq(gebruikersTable.id, o.toegewezenAanId))
+        .then((r) => r[0])
     : null;
 
   return {
@@ -38,8 +76,23 @@ async function mapOnderhoud(o: typeof onderhoudTable.$inferSelect) {
 // GET /onderhoud
 router.get("/onderhoud", async (req, res) => {
   try {
+    const userId = req.session.userId!;
+    const gebruiker = await gebruikerInfo(userId);
     const { voorziening_id, gebouw_id, status } = req.query;
+
     let all = await db.select().from(onderhoudTable);
+
+    // Monteur/controleur ziet alleen onderhoud dat:
+    //   (a) direct aan hen is toegewezen (toegewezen_aan_id = userId), OF
+    //   (b) hoort bij een gebouw dat aan hen is toegewezen
+    if (gebruiker && TOEGEWEZEN_ROLLEN.includes(gebruiker.rol)) {
+      const gebouwIds = await toegewezenGebouwIds(userId);
+      all = all.filter(
+        (o) =>
+          o.toegewezenAanId === userId ||
+          (o.gebouwId != null && gebouwIds.includes(o.gebouwId)),
+      );
+    }
 
     if (voorziening_id) all = all.filter((o) => o.voorzieningId === parseInt(voorziening_id as string));
     if (gebouw_id) all = all.filter((o) => o.gebouwId === parseInt(gebouw_id as string));
@@ -91,8 +144,21 @@ router.post("/onderhoud", async (req, res) => {
 router.get("/onderhoud/:id", async (req, res) => {
   try {
     const id = parseInt(req.params.id);
+    const userId = req.session.userId!;
+    const gebruiker = await gebruikerInfo(userId);
+
     const [o] = await db.select().from(onderhoudTable).where(eq(onderhoudTable.id, id));
     if (!o) return res.status(404).json({ error: "Onderhoudstaak niet gevonden" });
+
+    // Toegangscontrole voor monteur/controleur
+    if (gebruiker && TOEGEWEZEN_ROLLEN.includes(gebruiker.rol)) {
+      const gebouwIds = await toegewezenGebouwIds(userId);
+      const toegang =
+        o.toegewezenAanId === userId ||
+        (o.gebouwId != null && gebouwIds.includes(o.gebouwId));
+      if (!toegang) return res.status(403).json({ error: "Geen toegang tot deze taak" });
+    }
+
     res.json(await mapOnderhoud(o));
   } catch (err) {
     req.log.error(err);
@@ -104,17 +170,35 @@ router.get("/onderhoud/:id", async (req, res) => {
 router.patch("/onderhoud/:id", async (req, res) => {
   try {
     const id = parseInt(req.params.id);
-    const { titel, omschrijving, prioriteit, status, toegewezen_aan_id, deadline } = req.body;
+    const {
+      titel, omschrijving, prioriteit, status,
+      toegewezen_aan_id, deadline, voltooid_datum, resultaat,
+    } = req.body;
+
     const [o] = await db
       .update(onderhoudTable)
       .set({
         titel, omschrijving, prioriteit, status,
         toegewezenAanId: toegewezen_aan_id,
-        deadline, bijgewerktOp: new Date(),
+        deadline,
+        voltooidDatum: voltooid_datum,
+        resultaat,
+        bijgewerktOp: new Date(),
       })
       .where(eq(onderhoudTable.id, id))
       .returning();
+
     if (!o) return res.status(404).json({ error: "Onderhoudstaak niet gevonden" });
+
+    if (status === "voltooid") {
+      await db.insert(activiteitenTable).values({
+        type: "onderhoud_voltooid",
+        omschrijving: `Onderhoudstaak voltooid: ${o.titel}`,
+        gebouwId: o.gebouwId,
+        voorzieningId: o.voorzieningId,
+      });
+    }
+
     res.json(await mapOnderhoud(o));
   } catch (err) {
     req.log.error(err);
@@ -122,31 +206,12 @@ router.patch("/onderhoud/:id", async (req, res) => {
   }
 });
 
-// POST /onderhoud/:id/voltooien
-router.post("/onderhoud/:id/voltooien", async (req, res) => {
+// DELETE /onderhoud/:id
+router.delete("/onderhoud/:id", requireRol("beheerder", "hoofdbeheerder"), async (req, res) => {
   try {
     const id = parseInt(req.params.id);
-    const { resultaat, voltooid_datum } = req.body;
-    const [o] = await db
-      .update(onderhoudTable)
-      .set({
-        status: "voltooid",
-        resultaat,
-        voltooidDatum: voltooid_datum ?? new Date().toISOString().split("T")[0],
-        bijgewerktOp: new Date(),
-      })
-      .where(eq(onderhoudTable.id, id))
-      .returning();
-    if (!o) return res.status(404).json({ error: "Onderhoudstaak niet gevonden" });
-
-    await db.insert(activiteitenTable).values({
-      type: "onderhoud_voltooid",
-      omschrijving: `Onderhoudstaak voltooid: ${o.titel}`,
-      gebouwId: o.gebouwId,
-      voorzieningId: o.voorzieningId,
-    });
-
-    res.json(await mapOnderhoud(o));
+    await db.delete(onderhoudTable).where(eq(onderhoudTable.id, id));
+    res.status(204).send();
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Interne serverfout" });

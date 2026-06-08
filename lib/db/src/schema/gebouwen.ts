@@ -1,4 +1,4 @@
-import { pgTable, serial, text, integer, timestamp, real } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, integer, timestamp, real, primaryKey } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { gebruikersTable } from "./gebruikers";
@@ -34,3 +34,13 @@ export const verdiepingenTable = pgTable("verdiepingen", {
 export const insertVerdiepingSchema = createInsertSchema(verdiepingenTable).omit({ id: true, aangemaaktOp: true });
 export type InsertVerdieping = z.infer<typeof insertVerdiepingSchema>;
 export type Verdieping = typeof verdiepingenTable.$inferSelect;
+
+export const gebouwToewijzingenTable = pgTable("gebouw_toewijzingen", {
+  id: serial("id").primaryKey(),
+  gebouwId: integer("gebouw_id").notNull().references(() => gebouwenTable.id, { onDelete: "cascade" }),
+  gebruikerId: integer("gebruiker_id").notNull().references(() => gebruikersTable.id, { onDelete: "cascade" }),
+  aangemaaktDoorId: integer("aangemaakt_door_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
+  aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
+});
+
+export type GebouwToewijzing = typeof gebouwToewijzingenTable.$inferSelect;

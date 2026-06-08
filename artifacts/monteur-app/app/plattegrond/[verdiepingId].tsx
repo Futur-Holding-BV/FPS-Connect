@@ -44,6 +44,8 @@ import {
 } from "@/constants/spots";
 import { useColors } from "@/hooks/useColors";
 import { useAuth } from "@/context/auth";
+import { useSync } from "@/context/sync";
+import { SyncStatusBadge } from "@/components/SyncStatusBadge";
 import { uploadFoto } from "@/lib/upload";
 
 const LEEG = {
@@ -78,6 +80,8 @@ export default function Plattegrond() {
   const { data: voorzieningen, refetch } = useListVoorzieningenOpVerdieping(vId);
   const maakVoorziening = useCreateVoorziening();
   const voegFotoToe = useAddFoto();
+
+  const { syncStatus, aantalWachtend, forceerSync } = useSync();
 
   const [plaatsModus, setPlaatsModus] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
@@ -178,6 +182,8 @@ export default function Plattegrond() {
       setFormOpen(false);
       setPlaatsModus(false);
       await refetch();
+      // Direct synchroniseren zodra verbinding beschikbaar is
+      forceerSync();
     } catch (e) {
       Alert.alert("Opslaan mislukt", e instanceof Error ? e.message : "Onbekende fout");
     } finally {
@@ -224,6 +230,7 @@ export default function Plattegrond() {
             {spots.length} voorzieningen · knijp om te zoomen
           </Text>
         </View>
+        <SyncStatusBadge status={syncStatus} aantalWachtend={aantalWachtend} />
       </View>
 
       {/* Instructiebalk in plaatsmodus */}

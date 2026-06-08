@@ -1,1 +1,5 @@
 - [FPS Brandpreventie quirks](firevault-quirks.md) — query hooks need queryKey; pre-existing TS7030 in api-server; React 19 (no Uppy overrides); pdfjs v6 getDocument; storage paths; PDF spot coords stored at pdf.js scale:2 (web+mobile must match); mobile auth = HMAC bearer token, not cookies.
+- [Sync context patroon](sync-context.md) — SyncProvider + AbortSignal.timeout voor connectiviteitscheck; forceerSync direct aanroepen na bewaar().
+- [Toewijzingen API velden](toewijzingen-velden.md) — Toewijzing type heeft naam/rol, NIET gebruiker_naam/gebruiker_rol; ToewijzingInput heeft alleen gebruiker_id.
+- [Orval enabled-opties](orval-enabled.md) — { query: { enabled } } geeft TS2741 (queryKey ontbreekt) in hele codebase; pre-existing; Vite werkt gewoon; gate op UI-niveau ipv hook-niveau.
+- [Rol-filter backend](rol-filter.md) — TOEGEWEZEN_ROLLEN=["monteur","controleur"]; gebouwToewijzingenTable importeren voor toegewezenGebouwIds(); filter in listInspecties en listOnderhoud.

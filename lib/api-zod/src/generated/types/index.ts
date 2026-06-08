@@ -60,6 +60,8 @@ export * from './statusUpdate';
 export * from './statusVerdeling';
 export * from './taalWijzigen';
 export * from './taalWijzigenTaal';
+export * from './toewijzing';
+export * from './toewijzingInput';
 export * from './tweeFactorSetup';
 export * from './uitnodigingActiveren';
 export * from './uitnodigingActiveren200';

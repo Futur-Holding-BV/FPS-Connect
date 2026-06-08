@@ -16,9 +16,8 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { AuthProvider, getHuidigToken } from "@/context/auth";
+import { SyncProvider } from "@/context/sync";
 
-// De Expo-bundle praat met de externe API-server. Stel basis-URL + bearer-token
-// eenmalig in voor de gedeelde fetch-laag.
 setBaseUrl(`https://${process.env.EXPO_PUBLIC_DOMAIN}`);
 setAuthTokenGetter(() => getHuidigToken());
 
@@ -59,11 +58,13 @@ export default function RootLayout() {
       <ErrorBoundary>
         <QueryClientProvider client={queryClient}>
           <AuthProvider>
-            <GestureHandlerRootView style={{ flex: 1 }}>
-              <KeyboardProvider>
-                <RootLayoutNav />
-              </KeyboardProvider>
-            </GestureHandlerRootView>
+            <SyncProvider>
+              <GestureHandlerRootView style={{ flex: 1 }}>
+                <KeyboardProvider>
+                  <RootLayoutNav />
+                </KeyboardProvider>
+              </GestureHandlerRootView>
+            </SyncProvider>
           </AuthProvider>
         </QueryClientProvider>
       </ErrorBoundary>

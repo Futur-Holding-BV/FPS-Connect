@@ -95,7 +95,8 @@ export const GetVervaldagenResponse = zod.array(GetVervaldagenResponseItem)
  */
 export const ListGebouwenQueryParams = zod.object({
   "zoek": zod.coerce.string().optional(),
-  "organisatie_id": zod.coerce.number().optional()
+  "organisatie_id": zod.coerce.number().optional(),
+  "mijn": zod.coerce.boolean().optional().describe('Indien true: retourneer alleen gebouwen die aan de ingelogde gebruiker zijn toegewezen. Beheerders en hoofdbeheerders zien altijd alle gebouwen. Voor monteur\/controleur wordt dit automatisch geforceerd.\n')
 })
 
 export const ListGebouwenResponseItem = zod.object({
@@ -302,6 +303,50 @@ export const DeleteVerdiepingParams = zod.object({
 })
 
 export const DeleteVerdiepingResponse = zod.void()
+
+
+/**
+ * @summary Toewijzingen van een gebouw ophalen
+ */
+export const ListGebouwToewijzingenParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ListGebouwToewijzingenResponseItem = zod.object({
+  "id": zod.number(),
+  "gebouw_id": zod.number(),
+  "gebruiker_id": zod.number(),
+  "naam": zod.string(),
+  "email": zod.string().optional(),
+  "rol": zod.string(),
+  "aangemaakt_op": zod.string()
+})
+export const ListGebouwToewijzingenResponse = zod.array(ListGebouwToewijzingenResponseItem)
+
+
+/**
+ * @summary Gebouw toewijzen aan gebruiker (alleen beheerder)
+ */
+export const CreateGebouwToewijzingParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const CreateGebouwToewijzingBody = zod.object({
+  "gebruiker_id": zod.number()
+})
+
+export const CreateGebouwToewijzingResponse = zod.void()
+
+
+/**
+ * @summary Toewijzing verwijderen (alleen beheerder)
+ */
+export const DeleteGebouwToewijzingParams = zod.object({
+  "id": zod.coerce.number(),
+  "gebruikerId": zod.coerce.number()
+})
+
+export const DeleteGebouwToewijzingResponse = zod.void()
 
 
 /**

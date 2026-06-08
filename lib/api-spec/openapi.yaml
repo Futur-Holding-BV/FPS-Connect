@@ -124,6 +124,14 @@ paths:
           name: organisatie_id
           schema:
             type: integer
+        - in: query
+          name: mijn
+          schema:
+            type: boolean
+          description: >
+            Indien true: retourneer alleen gebouwen die aan de ingelogde gebruiker zijn toegewezen.
+            Beheerders en hoofdbeheerders zien altijd alle gebouwen.
+            Voor monteur/controleur wordt dit automatisch geforceerd.
       responses:
         "200":
           description: OK
@@ -306,6 +314,79 @@ paths:
       responses:
         "204":
           description: Verwijderd
+
+  # ── GEBOUW TOEWIJZINGEN ───────────────────────────────────────────────────
+  /gebouwen/{id}/toewijzingen:
+    get:
+      operationId: listGebouwToewijzingen
+      tags: [gebouwen]
+      summary: Toewijzingen van een gebouw ophalen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Toewijzing"
+        "403":
+          description: Geen toegang
+    post:
+      operationId: createGebouwToewijzing
+      tags: [gebouwen]
+      summary: Gebouw toewijzen aan gebruiker (alleen beheerder)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ToewijzingInput"
+      responses:
+        "201":
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Toewijzing"
+        "400":
+          description: Ongeldige invoer
+        "403":
+          description: Geen toegang
+
+  /gebouwen/{id}/toewijzingen/{gebruikerId}:
+    delete:
+      operationId: deleteGebouwToewijzing
+      tags: [gebouwen]
+      summary: Toewijzing verwijderen (alleen beheerder)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+        - in: path
+          name: gebruikerId
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Verwijderd
+        "403":
+          description: Geen toegang
 
   # ── BRANDVOORZIENINGEN ────────────────────────────────────────────────────
   /voorzieningen:
@@ -1426,6 +1507,32 @@ components:
         in_bewerking:
           type: integer
         in_onderhoud:
+          type: integer
+
+    Toewijzing:
+      type: object
+      required: [id, gebouw_id, gebruiker_id, naam, rol, aangemaakt_op]
+      properties:
+        id:
+          type: integer
+        gebouw_id:
+          type: integer
+        gebruiker_id:
+          type: integer
+        naam:
+          type: string
+        email:
+          type: string
+        rol:
+          type: string
+        aangemaakt_op:
+          type: string
+
+    ToewijzingInput:
+      type: object
+      required: [gebruiker_id]
+      properties:
+        gebruiker_id:
           type: integer
 
     GebouwInput:

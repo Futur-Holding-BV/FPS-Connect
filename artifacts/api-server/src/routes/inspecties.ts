@@ -1,16 +1,50 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
-import { inspectiesTable, gebouwenTable, gebruikersTable, voorzieningenTable, activiteitenTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import {
+  inspectiesTable,
+  gebouwenTable,
+  gebruikersTable,
+  voorzieningenTable,
+  activiteitenTable,
+  gebouwToewijzingenTable,
+} from "@workspace/db";
+import { eq, inArray } from "drizzle-orm";
+import { requireRol } from "../middlewares/auth";
 
 const router = Router();
 
+const TOEGEWEZEN_ROLLEN = ["monteur", "controleur"];
+
+async function gebruikerInfo(userId: number) {
+  const [g] = await db
+    .select({ rol: gebruikersTable.rol })
+    .from(gebruikersTable)
+    .where(eq(gebruikersTable.id, userId));
+  return g;
+}
+
+async function toegewezenGebouwIds(userId: number): Promise<number[]> {
+  const rows = await db
+    .select({ gebouwId: gebouwToewijzingenTable.gebouwId })
+    .from(gebouwToewijzingenTable)
+    .where(eq(gebouwToewijzingenTable.gebruikerId, userId));
+  return rows.map((r) => r.gebouwId);
+}
+
 async function mapInspectie(i: typeof inspectiesTable.$inferSelect) {
   const gebouw = i.gebouwId
-    ? await db.select({ naam: gebouwenTable.naam }).from(gebouwenTable).where(eq(gebouwenTable.id, i.gebouwId)).then((r) => r[0])
+    ? await db
+        .select({ naam: gebouwenTable.naam })
+        .from(gebouwenTable)
+        .where(eq(gebouwenTable.id, i.gebouwId))
+        .then((r) => r[0])
     : null;
   const inspecteur = i.inspecteurId
-    ? await db.select({ naam: gebruikersTable.naam }).from(gebruikersTable).where(eq(gebruikersTable.id, i.inspecteurId)).then((r) => r[0])
+    ? await db
+        .select({ naam: gebruikersTable.naam })
+        .from(gebruikersTable)
+        .where(eq(gebruikersTable.id, i.inspecteurId))
+        .then((r) => r[0])
     : null;
 
   return {
@@ -34,8 +68,23 @@ async function mapInspectie(i: typeof inspectiesTable.$inferSelect) {
 // GET /inspecties
 router.get("/inspecties", async (req, res) => {
   try {
+    const userId = req.session.userId!;
+    const gebruiker = await gebruikerInfo(userId);
     const { gebouw_id, voorziening_id, type, status } = req.query;
+
     let all = await db.select().from(inspectiesTable);
+
+    // Monteur/controleur ziet alleen inspecties die:
+    //   (a) direct aan hen zijn toegewezen (inspecteur_id = userId), OF
+    //   (b) horen bij een gebouw dat aan hen is toegewezen
+    if (gebruiker && TOEGEWEZEN_ROLLEN.includes(gebruiker.rol)) {
+      const gebouwIds = await toegewezenGebouwIds(userId);
+      all = all.filter(
+        (i) =>
+          i.inspecteurId === userId ||
+          (i.gebouwId != null && gebouwIds.includes(i.gebouwId)),
+      );
+    }
 
     if (gebouw_id) all = all.filter((i) => i.gebouwId === parseInt(gebouw_id as string));
     if (voorziening_id) all = all.filter((i) => i.voorzieningId === parseInt(voorziening_id as string));
@@ -87,24 +136,35 @@ router.post("/inspecties", async (req, res) => {
 router.get("/inspecties/:id", async (req, res) => {
   try {
     const id = parseInt(req.params.id);
+    const userId = req.session.userId!;
+    const gebruiker = await gebruikerInfo(userId);
+
     const [i] = await db.select().from(inspectiesTable).where(eq(inspectiesTable.id, id));
     if (!i) return res.status(404).json({ error: "Inspectie niet gevonden" });
 
-    const base = await mapInspectie(i);
+    // Toegangscontrole voor monteur/controleur
+    if (gebruiker && TOEGEWEZEN_ROLLEN.includes(gebruiker.rol)) {
+      const gebouwIds = await toegewezenGebouwIds(userId);
+      const toegang =
+        i.inspecteurId === userId ||
+        (i.gebouwId != null && gebouwIds.includes(i.gebouwId));
+      if (!toegang) return res.status(403).json({ error: "Geen toegang tot deze inspectie" });
+    }
+
     const voorzieningen = i.voorzieningId
-      ? await db.select().from(voorzieningenTable).where(eq(voorzieningenTable.id, i.voorzieningId))
-      : i.gebouwId
-      ? await db.select().from(voorzieningenTable).where(eq(voorzieningenTable.gebouwId, i.gebouwId))
+      ? await db
+          .select()
+          .from(voorzieningenTable)
+          .where(eq(voorzieningenTable.id, i.voorzieningId))
       : [];
 
     res.json({
-      ...base,
+      ...(await mapInspectie(i)),
       voorzieningen: voorzieningen.map((v) => ({
         id: v.id,
         objectnummer: v.objectnummer,
         type: v.type,
         status: v.status,
-        classificatie: v.classificatie,
       })),
     });
   } catch (err) {
@@ -117,17 +177,25 @@ router.get("/inspecties/:id", async (req, res) => {
 router.patch("/inspecties/:id", async (req, res) => {
   try {
     const id = parseInt(req.params.id);
-    const { type, status, inspecteur_id, geplande_datum, uitgevoerd_datum, bevindingen, aanbevelingen, rapport_url } = req.body;
+    const {
+      type, status, inspecteur_id, geplande_datum, uitgevoerd_datum,
+      bevindingen, aanbevelingen, rapport_url,
+    } = req.body;
+
     const [i] = await db
       .update(inspectiesTable)
       .set({
-        type, status, inspecteurId: inspecteur_id,
-        geplandeDatum: geplande_datum, uitgevoerdDatum: uitgevoerd_datum,
-        bevindingen, aanbevelingen, rapportUrl: rapport_url,
+        type, status,
+        inspecteurId: inspecteur_id,
+        geplandeDatum: geplande_datum,
+        uitgevoerdDatum: uitgevoerd_datum,
+        bevindingen, aanbevelingen,
+        rapportUrl: rapport_url,
         bijgewerktOp: new Date(),
       })
       .where(eq(inspectiesTable.id, id))
       .returning();
+
     if (!i) return res.status(404).json({ error: "Inspectie niet gevonden" });
     res.json(await mapInspectie(i));
   } catch (err) {
@@ -136,32 +204,12 @@ router.patch("/inspecties/:id", async (req, res) => {
   }
 });
 
-// POST /inspecties/:id/afronden
-router.post("/inspecties/:id/afronden", async (req, res) => {
+// DELETE /inspecties/:id
+router.delete("/inspecties/:id", requireRol("beheerder", "hoofdbeheerder"), async (req, res) => {
   try {
     const id = parseInt(req.params.id);
-    const { bevindingen, aanbevelingen, goedgekeurd } = req.body;
-    const [i] = await db
-      .update(inspectiesTable)
-      .set({
-        status: goedgekeurd ? "afgerond" : "afgekeurd",
-        bevindingen,
-        aanbevelingen,
-        goedgekeurd,
-        uitgevoerdDatum: new Date().toISOString().split("T")[0],
-        bijgewerktOp: new Date(),
-      })
-      .where(eq(inspectiesTable.id, id))
-      .returning();
-    if (!i) return res.status(404).json({ error: "Inspectie niet gevonden" });
-
-    await db.insert(activiteitenTable).values({
-      type: "inspectie_afgerond",
-      omschrijving: `Inspectie ${goedgekeurd ? "goedgekeurd" : "afgekeurd"}`,
-      gebouwId: i.gebouwId,
-    });
-
-    res.json(await mapInspectie(i));
+    await db.delete(inspectiesTable).where(eq(inspectiesTable.id, id));
+    res.status(204).send();
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Interne serverfout" });

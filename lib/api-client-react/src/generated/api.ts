@@ -58,6 +58,8 @@ import type {
   StatusUpdate,
   StatusVerdeling,
   TaalWijzigen,
+  Toewijzing,
+  ToewijzingInput,
   TweeFactorSetup,
   UitnodigingActiveren,
   UitnodigingActiveren200,
@@ -1224,6 +1226,226 @@ export const useDeleteVerdieping = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getDeleteVerdiepingMutationOptions(options));
+    }
+
+export const getListGebouwToewijzingenUrl = (id: number,) => {
+
+
+
+
+  return `/api/gebouwen/${id}/toewijzingen`
+}
+
+/**
+ * @summary Toewijzingen van een gebouw ophalen
+ */
+export const listGebouwToewijzingen = async (id: number, options?: RequestInit): Promise<Toewijzing[]> => {
+
+  return customFetch<Toewijzing[]>(getListGebouwToewijzingenUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListGebouwToewijzingenQueryKey = (id: number,) => {
+    return [
+    `/api/gebouwen/${id}/toewijzingen`
+    ] as const;
+    }
+
+
+export const getListGebouwToewijzingenQueryOptions = <TData = Awaited<ReturnType<typeof listGebouwToewijzingen>>, TError = ErrorType<void>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listGebouwToewijzingen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListGebouwToewijzingenQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listGebouwToewijzingen>>> = ({ signal }) => listGebouwToewijzingen(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listGebouwToewijzingen>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListGebouwToewijzingenQueryResult = NonNullable<Awaited<ReturnType<typeof listGebouwToewijzingen>>>
+export type ListGebouwToewijzingenQueryError = ErrorType<void>
+
+
+/**
+ * @summary Toewijzingen van een gebouw ophalen
+ */
+
+export function useListGebouwToewijzingen<TData = Awaited<ReturnType<typeof listGebouwToewijzingen>>, TError = ErrorType<void>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listGebouwToewijzingen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListGebouwToewijzingenQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateGebouwToewijzingUrl = (id: number,) => {
+
+
+
+
+  return `/api/gebouwen/${id}/toewijzingen`
+}
+
+/**
+ * @summary Gebouw toewijzen aan gebruiker (alleen beheerder)
+ */
+export const createGebouwToewijzing = async (id: number,
+    toewijzingInput: ToewijzingInput, options?: RequestInit): Promise<Toewijzing> => {
+
+  return customFetch<Toewijzing>(getCreateGebouwToewijzingUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(toewijzingInput)
+  }
+);}
+
+
+
+
+export const getCreateGebouwToewijzingMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createGebouwToewijzing>>, TError,{id: number;data: BodyType<ToewijzingInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createGebouwToewijzing>>, TError,{id: number;data: BodyType<ToewijzingInput>}, TContext> => {
+
+const mutationKey = ['createGebouwToewijzing'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createGebouwToewijzing>>, {id: number;data: BodyType<ToewijzingInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  createGebouwToewijzing(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateGebouwToewijzingMutationResult = NonNullable<Awaited<ReturnType<typeof createGebouwToewijzing>>>
+    export type CreateGebouwToewijzingMutationBody = BodyType<ToewijzingInput>
+    export type CreateGebouwToewijzingMutationError = ErrorType<void>
+
+    /**
+ * @summary Gebouw toewijzen aan gebruiker (alleen beheerder)
+ */
+export const useCreateGebouwToewijzing = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createGebouwToewijzing>>, TError,{id: number;data: BodyType<ToewijzingInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createGebouwToewijzing>>,
+        TError,
+        {id: number;data: BodyType<ToewijzingInput>},
+        TContext
+      > => {
+      return useMutation(getCreateGebouwToewijzingMutationOptions(options));
+    }
+
+export const getDeleteGebouwToewijzingUrl = (id: number,
+    gebruikerId: number,) => {
+
+
+
+
+  return `/api/gebouwen/${id}/toewijzingen/${gebruikerId}`
+}
+
+/**
+ * @summary Toewijzing verwijderen (alleen beheerder)
+ */
+export const deleteGebouwToewijzing = async (id: number,
+    gebruikerId: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteGebouwToewijzingUrl(id,gebruikerId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteGebouwToewijzingMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteGebouwToewijzing>>, TError,{id: number;gebruikerId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteGebouwToewijzing>>, TError,{id: number;gebruikerId: number}, TContext> => {
+
+const mutationKey = ['deleteGebouwToewijzing'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteGebouwToewijzing>>, {id: number;gebruikerId: number}> = (props) => {
+          const {id,gebruikerId} = props ?? {};
+
+          return  deleteGebouwToewijzing(id,gebruikerId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteGebouwToewijzingMutationResult = NonNullable<Awaited<ReturnType<typeof deleteGebouwToewijzing>>>
+
+    export type DeleteGebouwToewijzingMutationError = ErrorType<void>
+
+    /**
+ * @summary Toewijzing verwijderen (alleen beheerder)
+ */
+export const useDeleteGebouwToewijzing = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteGebouwToewijzing>>, TError,{id: number;gebruikerId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteGebouwToewijzing>>,
+        TError,
+        {id: number;gebruikerId: number},
+        TContext
+      > => {
+      return useMutation(getDeleteGebouwToewijzingMutationOptions(options));
     }
 
 export const getListVoorzieningenUrl = (params?: ListVoorzieningenParams,) => {

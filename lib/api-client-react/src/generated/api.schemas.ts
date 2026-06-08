@@ -120,6 +120,20 @@ export interface GebouwDetail {
   stats?: GebouwStats;
 }
 
+export interface Toewijzing {
+  id: number;
+  gebouw_id: number;
+  gebruiker_id: number;
+  naam: string;
+  email?: string;
+  rol: string;
+  aangemaakt_op: string;
+}
+
+export interface ToewijzingInput {
+  gebruiker_id: number;
+}
+
 export interface GebouwInput {
   naam: string;
   adres: string;
@@ -882,6 +896,10 @@ dagen?: number;
 export type ListGebouwenParams = {
 zoek?: string;
 organisatie_id?: number;
+/**
+ * Indien true: retourneer alleen gebouwen die aan de ingelogde gebruiker zijn toegewezen. Beheerders en hoofdbeheerders zien altijd alle gebouwen. Voor monteur/controleur wordt dit automatisch geforceerd.
+ */
+mijn?: boolean;
 };
 
 export type ListVoorzieningenParams = {
