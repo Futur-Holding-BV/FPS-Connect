@@ -22,7 +22,8 @@ export default function Gebouwen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { gebruiker, token, uitloggen } = useAuth();
-  const { syncStatus, aantalWachtend, forceerSync, isSyncing } = useSync();
+  const { syncStatus, aantalWachtend, aantalMislukt, wisMislukte, forceerSync, isSyncing } =
+    useSync();
   const [zoek, setZoek] = useState("");
 
   const { data, isLoading, refetch, isRefetching } = useListGebouwen();
@@ -80,7 +81,12 @@ export default function Gebouwen() {
 
         {/* Sync-statusregel */}
         <View style={{ marginTop: 10, flexDirection: "row", alignItems: "center", gap: 10 }}>
-          <SyncStatusBadge status={syncStatus} aantalWachtend={aantalWachtend} />
+          <SyncStatusBadge
+            status={syncStatus}
+            aantalWachtend={aantalWachtend}
+            aantalMislukt={aantalMislukt}
+            onWisMislukte={wisMislukte}
+          />
           {aantalWachtend > 0 && !isSyncing && (
             <Pressable
               onPress={forceerSync}

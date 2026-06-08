@@ -43,6 +43,40 @@ const mapGebruiker = (g: typeof gebruikersTable.$inferSelect) => ({
   taal: g.taal ?? "nl",
 });
 
+// Veilige projectie zonder PII voor niet-beheerders: namen/rol blijven zichtbaar
+// (nodig voor toewijzings- en naamweergave), maar e-mail, telefoon, bedrijf en
+// uitnodigingsgegevens worden weggelaten.
+const mapGebruikerPubliek = (g: typeof gebruikersTable.$inferSelect) => ({
+  id: g.id,
+  naam: g.naam,
+  email: "",
+  rol: g.rol,
+  telefoon: null,
+  bedrijf: null,
+  actief: g.actief,
+  aangemaakt_op: g.aangemaaktOp.toISOString(),
+  laatste_online: null,
+  avatar_url: g.avatarUrl,
+  bedrijfslogo_url: null,
+  bedrijfskleuren: null,
+  uitnodiging_status: null,
+  uitnodiging_verstuurd_op: null,
+  uitnodiging_verloopt_op: null,
+  uitnodiging_geopend_op: null,
+  uitnodiging_opnieuw_verstuurd_op: null,
+  uitnodiging_geaccepteerd_op: null,
+  taal: g.taal ?? "nl",
+});
+
+async function isBeheerder(userId: number | undefined): Promise<boolean> {
+  if (!userId) return false;
+  const [g] = await db
+    .select({ rol: gebruikersTable.rol })
+    .from(gebruikersTable)
+    .where(eq(gebruikersTable.id, userId));
+  return g?.rol === "beheerder" || g?.rol === "hoofdbeheerder";
+}
+
 function domein(): string {
   return (process.env.REPLIT_DOMAINS ?? "").split(",")[0]?.trim() || "localhost";
 }
@@ -51,7 +85,9 @@ function domein(): string {
 router.get("/gebruikers", async (req, res) => {
   try {
     const gebruikers = await db.select().from(gebruikersTable);
-    res.json(gebruikers.map(mapGebruiker));
+    const volledig = await isBeheerder(req.session.userId);
+    const mapper = volledig ? mapGebruiker : mapGebruikerPubliek;
+    res.json(gebruikers.map((g) => mapper(g)));
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Interne serverfout" });
@@ -101,7 +137,9 @@ router.get("/gebruikers/:id", async (req, res) => {
     const id = parseInt(String(req.params.id), 10);
     const [g] = await db.select().from(gebruikersTable).where(eq(gebruikersTable.id, id));
     if (!g) return res.status(404).json({ error: "Gebruiker niet gevonden" });
-    res.json(mapGebruiker(g));
+    // Beheerders en het eigen account zien volledige gegevens; anderen alleen veilig.
+    const volledig = id === req.session.userId || (await isBeheerder(req.session.userId));
+    res.json(volledig ? mapGebruiker(g) : mapGebruikerPubliek(g));
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Interne serverfout" });

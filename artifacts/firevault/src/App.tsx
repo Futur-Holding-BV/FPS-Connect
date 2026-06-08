@@ -106,12 +106,34 @@ function KlantPortal() {
   );
 }
 
+function GeenToegang() {
+  const { uitloggen } = useAuth();
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-background p-6">
+      <div className="max-w-sm text-center space-y-4">
+        <h1 className="text-xl font-semibold text-foreground">Geen toegang</h1>
+        <p className="text-sm text-muted-foreground">
+          Je account heeft geen geldige rol om dit portaal te tonen. Neem contact
+          op met een beheerder.
+        </p>
+        <button
+          onClick={() => uitloggen()}
+          className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90"
+        >
+          Uitloggen
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function Portalen() {
   const { rol } = useRol();
 
-  if (rol === "klant") return <KlantPortal />;
+  if (rol === "beheerder" || rol === "hoofdbeheerder") return <BeheerderPortal />;
   if (rol === "monteur" || rol === "controleur") return <MonteurPortal />;
-  return <BeheerderPortal />;
+  if (rol === "klant") return <KlantPortal />;
+  return <GeenToegang />;
 }
 
 function Gate() {

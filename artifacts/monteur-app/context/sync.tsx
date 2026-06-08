@@ -12,8 +12,10 @@ import { AppState, AppStateStatus } from "react-native";
 import { useAuth } from "@/context/auth";
 import {
   WachtrijItem,
-  aantalWachtrij,
+  aantalActief,
+  aantalMislukt,
   verwerkWachtrij,
+  wisMislukteItems,
 } from "@/lib/syncQueue";
 
 const INTERVAL_MS = 5 * 60 * 1000;
@@ -22,22 +24,27 @@ export type SyncStatus =
   | "gesynchroniseerd"
   | "opgeslagen"
   | "synchroniseert"
-  | "wacht_op_verbinding";
+  | "wacht_op_verbinding"
+  | "mislukt";
 
 type SyncContextType = {
   aantalWachtend: number;
+  aantalMislukt: number;
   isSyncing: boolean;
   syncStatus: SyncStatus;
   forceerSync: () => Promise<void>;
   herlaadAantal: () => Promise<void>;
+  wisMislukte: () => Promise<void>;
 };
 
 const SyncContext = createContext<SyncContextType>({
   aantalWachtend: 0,
+  aantalMislukt: 0,
   isSyncing: false,
   syncStatus: "gesynchroniseerd",
   forceerSync: async () => {},
   herlaadAantal: async () => {},
+  wisMislukte: async () => {},
 });
 
 async function controleerVerbinding(basis: string): Promise<boolean> {
@@ -57,6 +64,7 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
   const { token } = useAuth();
   const queryClient = useQueryClient();
   const [aantalWachtend, setAantalWachtend] = useState(0);
+  const [aantalMisluktState, setAantalMislukt] = useState(0);
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncStatus, setSyncStatus] = useState<SyncStatus>("gesynchroniseerd");
   const syncRef = useRef(false);
@@ -64,11 +72,22 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
   const basis = `https://${process.env.EXPO_PUBLIC_DOMAIN}`;
 
   const herlaadAantal = useCallback(async () => {
-    const n = await aantalWachtrij();
-    setAantalWachtend(n);
-    if (n === 0) setSyncStatus("gesynchroniseerd");
-    else if (!syncRef.current) setSyncStatus("opgeslagen");
+    const actief = await aantalActief();
+    const mislukt = await aantalMislukt();
+    setAantalWachtend(actief);
+    setAantalMislukt(mislukt);
+    if (syncRef.current) return;
+    // Mislukte items vereisen handmatige actie en krijgen daarom voorrang,
+    // ook als er nog wachtende items zijn die automatisch synchroniseren.
+    if (mislukt > 0) setSyncStatus("mislukt");
+    else if (actief > 0) setSyncStatus("opgeslagen");
+    else setSyncStatus("gesynchroniseerd");
   }, []);
+
+  const wisMislukte = useCallback(async () => {
+    await wisMislukteItems();
+    await herlaadAantal();
+  }, [herlaadAantal]);
 
   const verwerkItem = useCallback(
     async (item: WachtrijItem) => {
@@ -102,7 +121,7 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
     // Controleer verbinding vóór sync
     const online = await controleerVerbinding(basis);
     if (!online) {
-      const n = await aantalWachtrij();
+      const n = await aantalActief();
       setAantalWachtend(n);
       if (n > 0) setSyncStatus("wacht_op_verbinding");
       return;
@@ -145,7 +164,15 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <SyncContext.Provider
-      value={{ aantalWachtend, isSyncing, syncStatus, forceerSync, herlaadAantal }}
+      value={{
+        aantalWachtend,
+        aantalMislukt: aantalMisluktState,
+        isSyncing,
+        syncStatus,
+        forceerSync,
+        herlaadAantal,
+        wisMislukte,
+      }}
     >
       {children}
     </SyncContext.Provider>

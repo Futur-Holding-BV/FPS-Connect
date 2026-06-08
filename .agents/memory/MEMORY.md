@@ -7,3 +7,4 @@
 - [Spotnummer ontwerp](spotnummer.md) — objectnummer = auto <gebouwAfk>-<volgnr> via GET /gebouwen/:id/volgend-spotnummer; POST retry op 23505; markers tonen laatste cijfers (regex /(\d+)$/), niet type.slice(0,2).
 - [Google Maps embed patroon](maps-embed.md) — GOOGLE_MAPS_API_KEY blijft server-side; GET /gebouwen/:id/kaart geeft embed_url terug; lat/lng geeft satellite view, anders place-query op adres+stad.
 - [Scheiding-code op lijn](scheiding-code.md) — code = classificatie-prefix + WBDBO-minuten (bv. EW60) opgeslagen in bestaand scheiding.waarde veld; getekend als bolletje op lijn-midpunt; geen DB/OpenAPI wijziging.
+- [Autorisatie-patroon](autorisatie-patroon.md) — requireRol (rol) + magBijGebouw (gebouwtoewijzing, fail-closed) per object-level endpoint; nest-IDs aan parent koppelen; klant bewust niet gefilterd.

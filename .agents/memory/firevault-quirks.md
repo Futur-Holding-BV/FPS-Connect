@@ -114,7 +114,14 @@ coords (bv. 2001,1822) en valt buiten het zichtbare deel → gebruiker "ziet de 
 useEffect op pdfDims; klikcoords klemmen op [0,W]x[0,H]. Coördinatenopslag (scale 2) NIET wijzigen —
 web en mobile moeten matchen.
 
-## requireRol + TS7030 → cascading TS2345 (api-server)
-Adding `requireRol(...)` middleware to a route whose handler has a pre-existing TS7030 ("not all code paths return a value") makes tsc fail Express's `router.patch/post` overload resolution and emit a misleading `TS2345: 'string | string[]' not assignable to 'string'` on the *path* argument. This is pre-existing and tolerated — gebouwen.ts has the identical pattern at its requireRol PATCH routes. esbuild bundles fine; the app runs. Do NOT chase it; it is not introduced by the middleware itself.
-**Why:** wasted a cycle thinking the spread `requireRol(...ARR)` caused it; switching to literal args did not help — root cause is the handler's TS7030.
-**How to apply:** when adding role guards, ignore new TS2345-on-path if the handler already had TS7030; only real concern is functional correctness.
+## requireRol middleware widens req.params → TS2345 on `parseInt(req.params.x)`
+Adding any middleware (e.g. `requireRol(...)`) before a route handler changes Express 5's overload
+resolution so `req.params.x` is typed `string | string[]`. A bare `parseInt(req.params.id)` then emits
+`TS2345: 'string | string[]' not assignable to 'string'` — a NEW error you introduced by adding the guard.
+**Fix:** wrap every `req.params.*` read in `String(...)`: `parseInt(String(req.params.id))`. This is the
+established baseline pattern across the routes and keeps the typecheck count flat. Do this for ALL param
+reads in a handler you add a guard to (path id AND nested ids like `:fotoId`/`:scheidingId`).
+**Note (separate issue):** the `TS7030` ("not all code paths return a value") errors are pre-existing and
+tolerated; esbuild bundles fine. Keep added branches consistent with the handler's existing return style
+(value-return handlers → `return res.status(403)...`; void handlers → `res.status(403)...; return;`) so you
+don't flip a clean handler into TS7030.

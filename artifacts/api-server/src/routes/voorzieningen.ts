@@ -6,6 +6,7 @@ import {
   gebouwenTable,
   verdiepingenTable,
   gebruikersTable,
+  gebouwToewijzingenTable,
   inspectiesTable,
   onderhoudTable,
   activiteitenTable,
@@ -15,6 +16,64 @@ import { eq, and, ilike, sql } from "drizzle-orm";
 import { requireRol } from "../middlewares/auth";
 
 const router = Router();
+
+// Rollen die uitsluitend hun toegewezen gebouwen mogen zien.
+const TOEGEWEZEN_ROLLEN = ["monteur", "controleur"];
+
+async function gebruikerRol(userId: number): Promise<string> {
+  const [g] = await db
+    .select({ rol: gebruikersTable.rol })
+    .from(gebruikersTable)
+    .where(eq(gebruikersTable.id, userId));
+  return g?.rol ?? "";
+}
+
+async function toegewezenGebouwIds(userId: number): Promise<number[]> {
+  const rows = await db
+    .select({ gebouwId: gebouwToewijzingenTable.gebouwId })
+    .from(gebouwToewijzingenTable)
+    .where(eq(gebouwToewijzingenTable.gebruikerId, userId));
+  return rows.map((r) => r.gebouwId);
+}
+
+// Geeft de gebouwId van een verdieping terug, of null als die niet bestaat.
+async function gebouwIdVanVerdieping(verdiepingId: number): Promise<number | null> {
+  const [v] = await db
+    .select({ gebouwId: verdiepingenTable.gebouwId })
+    .from(verdiepingenTable)
+    .where(eq(verdiepingenTable.id, verdiepingId));
+  return v?.gebouwId ?? null;
+}
+
+// Geeft de gebouwId van een voorziening terug, of null als die niet bestaat.
+async function gebouwIdVanVoorziening(voorzieningId: number): Promise<number | null> {
+  const [v] = await db
+    .select({ gebouwId: voorzieningenTable.gebouwId })
+    .from(voorzieningenTable)
+    .where(eq(voorzieningenTable.id, voorzieningId));
+  return v?.gebouwId ?? null;
+}
+
+// Geeft de gebouwId van een scheiding terug (via verdieping), of null.
+async function gebouwIdVanScheiding(scheidingId: number): Promise<number | null> {
+  const [s] = await db
+    .select({ verdiepingId: scheidingenTable.verdiepingId })
+    .from(scheidingenTable)
+    .where(eq(scheidingenTable.id, scheidingId));
+  if (!s?.verdiepingId) return null;
+  return gebouwIdVanVerdieping(s.verdiepingId);
+}
+
+// Centrale toewijzingsguard: monteur/controleur mogen alleen bij hun toegewezen
+// gebouwen. Andere rollen (beheerder/hoofdbeheerder/klant) worden hier niet
+// beperkt; rolafdwinging gebeurt via requireRol. Geeft true als toegestaan.
+async function magBijGebouw(userId: number, gebouwId: number | null): Promise<boolean> {
+  const rol = await gebruikerRol(userId);
+  if (!TOEGEWEZEN_ROLLEN.includes(rol)) return true;
+  if (gebouwId == null) return false;
+  const ids = await toegewezenGebouwIds(userId);
+  return ids.includes(gebouwId);
+}
 
 // Afkorting uit de gebouwnaam: eerste letter van elk woord (max 3), anders eerste 3 letters.
 function gebouwAfkorting(naam: string): string {
@@ -126,6 +185,13 @@ router.get("/voorzieningen", async (req, res) => {
     const { gebouw_id, verdieping_id, type, status, gearchiveerd, classificatie, zoek, pagina, per_pagina } = req.query;
     let all = await db.select().from(voorzieningenTable);
 
+    // Monteurs en controleurs zien alleen voorzieningen in hun toegewezen gebouwen.
+    const rol = await gebruikerRol(req.session.userId!);
+    if (TOEGEWEZEN_ROLLEN.includes(rol)) {
+      const ids = await toegewezenGebouwIds(req.session.userId!);
+      all = all.filter((v) => ids.includes(v.gebouwId));
+    }
+
     // Standaard alleen actieve voorzieningen; gearchiveerde alleen op verzoek.
     if (gearchiveerd === "true") all = all.filter((v) => v.gearchiveerd);
     else all = all.filter((v) => !v.gearchiveerd);
@@ -171,6 +237,9 @@ router.get("/gebouwen/:id/volgend-spotnummer", async (req, res) => {
     if (!gebouw) {
       return res.status(404).json({ error: "Gebouw niet gevonden" });
     }
+    if (!(await magBijGebouw(req.session.userId!, gebouwId))) {
+      return res.status(403).json({ error: "Geen toegang tot dit gebouw" });
+    }
     const spotnummer = await volgendSpotnummer(gebouwId);
     return res.json({ spotnummer });
   } catch (err) {
@@ -180,7 +249,7 @@ router.get("/gebouwen/:id/volgend-spotnummer", async (req, res) => {
 });
 
 // POST /voorzieningen
-router.post("/voorzieningen", async (req, res) => {
+router.post("/voorzieningen", requireRol("monteur", "controleur", "beheerder", "hoofdbeheerder"), async (req, res) => {
   try {
     const {
       objectnummer, qr_code, type, status, classificatie, gebouw_id,
@@ -192,6 +261,19 @@ router.post("/voorzieningen", async (req, res) => {
 
     if (!type || !gebouw_id) {
       return res.status(400).json({ error: "type en gebouw_id zijn verplicht" });
+    }
+
+    if (!(await magBijGebouw(req.session.userId!, Number(gebouw_id)))) {
+      return res.status(403).json({ error: "Geen toegang tot dit gebouw" });
+    }
+
+    // Integriteit: een meegestuurde verdieping moet bij hetzelfde gebouw horen,
+    // anders kan een voorziening cross-gebouw aan een vreemde verdieping hangen.
+    if (verdieping_id != null) {
+      const verdiepingGebouwId = await gebouwIdVanVerdieping(Number(verdieping_id));
+      if (verdiepingGebouwId !== Number(gebouw_id)) {
+        return res.status(400).json({ error: "verdieping_id hoort niet bij dit gebouw" });
+      }
     }
 
     // Een door de client meegestuurd nummer kan verouderd zijn (gebruiker had
@@ -254,6 +336,9 @@ router.get("/voorzieningen/:id", async (req, res) => {
     const id = parseInt(req.params.id);
     const [v] = await db.select().from(voorzieningenTable).where(eq(voorzieningenTable.id, id));
     if (!v) return res.status(404).json({ error: "Voorziening niet gevonden" });
+    if (!(await magBijGebouw(req.session.userId!, v.gebouwId))) {
+      return res.status(403).json({ error: "Geen toegang tot deze voorziening" });
+    }
 
     const fotos = await db.select().from(fotosTable).where(eq(fotosTable.voorzieningId, id));
     const inspecties = await db.select().from(inspectiesTable).where(eq(inspectiesTable.voorzieningId, id));
@@ -301,7 +386,10 @@ router.get("/voorzieningen/:id", async (req, res) => {
 // PATCH /voorzieningen/:id
 router.patch("/voorzieningen/:id", requireRol("monteur", "controleur", "beheerder", "hoofdbeheerder"), async (req, res) => {
   try {
-    const id = parseInt(req.params.id);
+    const id = parseInt(String(req.params.id));
+    if (!(await magBijGebouw(req.session.userId!, await gebouwIdVanVoorziening(id)))) {
+      return res.status(403).json({ error: "Geen toegang tot deze voorziening" });
+    }
     const {
       objectnummer, qr_code, type, status, classificatie,
       verdieping_id, ruimte, locatie_omschrijving, locatie_x, locatie_y,
@@ -309,6 +397,16 @@ router.patch("/voorzieningen/:id", requireRol("monteur", "controleur", "beheerde
       installatie_datum, volgende_inspectie,
       wbdbo, wrd, wand_of_plafond, maker_monteur_id,
     } = req.body;
+
+    // Integriteit: een meegestuurde verdieping moet bij het gebouw van deze
+    // voorziening horen (geen cross-gebouw koppeling via verdieping_id).
+    if (verdieping_id != null) {
+      const huidigGebouwId = await gebouwIdVanVoorziening(id);
+      const verdiepingGebouwId = await gebouwIdVanVerdieping(Number(verdieping_id));
+      if (verdiepingGebouwId !== huidigGebouwId) {
+        return res.status(400).json({ error: "verdieping_id hoort niet bij dit gebouw" });
+      }
+    }
 
     const [v] = await db
       .update(voorzieningenTable)
@@ -333,9 +431,9 @@ router.patch("/voorzieningen/:id", requireRol("monteur", "controleur", "beheerde
 });
 
 // DELETE /voorzieningen/:id
-router.delete("/voorzieningen/:id", async (req, res) => {
+router.delete("/voorzieningen/:id", requireRol("beheerder", "hoofdbeheerder"), async (req, res) => {
   try {
-    const id = parseInt(req.params.id);
+    const id = parseInt(String(req.params.id));
     await db.delete(voorzieningenTable).where(eq(voorzieningenTable.id, id));
     res.status(204).send();
   } catch (err) {
@@ -348,6 +446,10 @@ router.delete("/voorzieningen/:id", async (req, res) => {
 router.get("/voorzieningen/:id/fotos", async (req, res) => {
   try {
     const id = parseInt(req.params.id);
+    if (!(await magBijGebouw(req.session.userId!, await gebouwIdVanVoorziening(id)))) {
+      res.status(403).json({ error: "Geen toegang tot deze voorziening" });
+      return;
+    }
     const fotos = await db.select().from(fotosTable).where(eq(fotosTable.voorzieningId, id));
     res.json(
       fotos.map((f) => ({
@@ -366,9 +468,13 @@ router.get("/voorzieningen/:id/fotos", async (req, res) => {
 });
 
 // POST /voorzieningen/:id/fotos
-router.post("/voorzieningen/:id/fotos", async (req, res) => {
+router.post("/voorzieningen/:id/fotos", requireRol("monteur", "controleur", "beheerder", "hoofdbeheerder"), async (req, res) => {
   try {
-    const voorzieningId = parseInt(req.params.id);
+    const voorzieningId = parseInt(String(req.params.id));
+    if (!(await magBijGebouw(req.session.userId!, await gebouwIdVanVoorziening(voorzieningId)))) {
+      res.status(403).json({ error: "Geen toegang tot deze voorziening" });
+      return;
+    }
     const { fase, url, beschrijving } = req.body;
     const [f] = await db
       .insert(fotosTable)
@@ -389,10 +495,24 @@ router.post("/voorzieningen/:id/fotos", async (req, res) => {
 });
 
 // DELETE /voorzieningen/:id/fotos/:fotoId
-router.delete("/voorzieningen/:id/fotos/:fotoId", async (req, res) => {
+router.delete("/voorzieningen/:id/fotos/:fotoId", requireRol("monteur", "controleur", "beheerder", "hoofdbeheerder"), async (req, res) => {
   try {
-    const fotoId = parseInt(req.params.fotoId);
-    await db.delete(fotosTable).where(eq(fotosTable.id, fotoId));
+    const fotoId = parseInt(String(req.params.fotoId));
+    const voorzieningId = parseInt(String(req.params.id));
+    if (!(await magBijGebouw(req.session.userId!, await gebouwIdVanVoorziening(voorzieningId)))) {
+      res.status(403).json({ error: "Geen toegang tot deze voorziening" });
+      return;
+    }
+    // Koppel het foto-ID expliciet aan de voorziening: een gegokt fotoId uit
+    // een andere (niet-toegankelijke) voorziening mag niet verwijderd worden.
+    const verwijderd = await db
+      .delete(fotosTable)
+      .where(and(eq(fotosTable.id, fotoId), eq(fotosTable.voorzieningId, voorzieningId)))
+      .returning();
+    if (verwijderd.length === 0) {
+      res.status(404).json({ error: "Foto niet gevonden" });
+      return;
+    }
     res.status(204).send();
   } catch (err) {
     req.log.error(err);
@@ -403,7 +523,10 @@ router.delete("/voorzieningen/:id/fotos/:fotoId", async (req, res) => {
 // PATCH /voorzieningen/:id/status
 router.patch("/voorzieningen/:id/status", requireRol("monteur", "controleur", "beheerder", "hoofdbeheerder"), async (req, res) => {
   try {
-    const id = parseInt(req.params.id);
+    const id = parseInt(String(req.params.id));
+    if (!(await magBijGebouw(req.session.userId!, await gebouwIdVanVoorziening(id)))) {
+      return res.status(403).json({ error: "Geen toegang tot deze voorziening" });
+    }
     const { status, opmerkingen } = req.body;
     const [v] = await db
       .update(voorzieningenTable)
@@ -428,9 +551,12 @@ router.patch("/voorzieningen/:id/status", requireRol("monteur", "controleur", "b
 });
 
 // PATCH /voorzieningen/:id/archief
-router.patch("/voorzieningen/:id/archief", async (req, res) => {
+router.patch("/voorzieningen/:id/archief", requireRol("monteur", "controleur", "beheerder", "hoofdbeheerder"), async (req, res) => {
   try {
-    const id = parseInt(req.params.id);
+    const id = parseInt(String(req.params.id));
+    if (!(await magBijGebouw(req.session.userId!, await gebouwIdVanVoorziening(id)))) {
+      return res.status(403).json({ error: "Geen toegang tot deze voorziening" });
+    }
     const gearchiveerd = req.body?.gearchiveerd === true;
 
     // Terug plaatsen (de-archiveren) is uitsluitend voorbehouden aan beheerders.
@@ -477,6 +603,18 @@ router.patch("/voorzieningen/:id/archief", async (req, res) => {
 router.get("/verdiepingen/:id/voorzieningen", async (req, res) => {
   try {
     const id = parseInt(req.params.id);
+
+    // Monteur/controleur mag alleen verdiepingen van toegewezen gebouwen zien.
+    const rol = await gebruikerRol(req.session.userId!);
+    if (TOEGEWEZEN_ROLLEN.includes(rol)) {
+      const gebouwId = await gebouwIdVanVerdieping(id);
+      const ids = await toegewezenGebouwIds(req.session.userId!);
+      if (gebouwId == null || !ids.includes(gebouwId)) {
+        res.status(403).json({ error: "Geen toegang tot deze verdieping" });
+        return;
+      }
+    }
+
     const voorzieningen = (
       await db
         .select()
@@ -527,6 +665,18 @@ function scheidingRij(s: typeof scheidingenTable.$inferSelect) {
 router.get("/verdiepingen/:id/scheidingen", async (req, res) => {
   try {
     const id = parseInt(req.params.id);
+
+    // Monteur/controleur mag alleen verdiepingen van toegewezen gebouwen zien.
+    const rol = await gebruikerRol(req.session.userId!);
+    if (TOEGEWEZEN_ROLLEN.includes(rol)) {
+      const gebouwId = await gebouwIdVanVerdieping(id);
+      const ids = await toegewezenGebouwIds(req.session.userId!);
+      if (gebouwId == null || !ids.includes(gebouwId)) {
+        res.status(403).json({ error: "Geen toegang tot deze verdieping" });
+        return;
+      }
+    }
+
     const rows = await db
       .select()
       .from(scheidingenTable)
@@ -539,9 +689,12 @@ router.get("/verdiepingen/:id/scheidingen", async (req, res) => {
 });
 
 // POST /verdiepingen/:id/scheidingen
-router.post("/verdiepingen/:id/scheidingen", async (req, res) => {
+router.post("/verdiepingen/:id/scheidingen", requireRol("monteur", "controleur", "beheerder", "hoofdbeheerder"), async (req, res) => {
   try {
-    const id = parseInt(req.params.id);
+    const id = parseInt(String(req.params.id));
+    if (!(await magBijGebouw(req.session.userId!, await gebouwIdVanVerdieping(id)))) {
+      return res.status(403).json({ error: "Geen toegang tot deze verdieping" });
+    }
     const { type, waarde, kleur, punten } = req.body ?? {};
     if (!type || !SCHEIDING_TYPES.includes(type)) {
       return res.status(400).json({ error: "Ongeldig scheidingstype" });
@@ -561,9 +714,12 @@ router.post("/verdiepingen/:id/scheidingen", async (req, res) => {
 });
 
 // PATCH /verdiepingen/scheidingen/:scheidingId
-router.patch("/verdiepingen/scheidingen/:scheidingId", async (req, res) => {
+router.patch("/verdiepingen/scheidingen/:scheidingId", requireRol("monteur", "controleur", "beheerder", "hoofdbeheerder"), async (req, res) => {
   try {
-    const scheidingId = parseInt(req.params.scheidingId);
+    const scheidingId = parseInt(String(req.params.scheidingId));
+    if (!(await magBijGebouw(req.session.userId!, await gebouwIdVanScheiding(scheidingId)))) {
+      return res.status(403).json({ error: "Geen toegang tot deze scheiding" });
+    }
     const { type, waarde, kleur, punten } = req.body ?? {};
     if (type !== undefined && !SCHEIDING_TYPES.includes(type)) {
       return res.status(400).json({ error: "Ongeldig scheidingstype" });
@@ -588,9 +744,13 @@ router.patch("/verdiepingen/scheidingen/:scheidingId", async (req, res) => {
 });
 
 // DELETE /verdiepingen/scheidingen/:scheidingId
-router.delete("/verdiepingen/scheidingen/:scheidingId", async (req, res) => {
+router.delete("/verdiepingen/scheidingen/:scheidingId", requireRol("monteur", "controleur", "beheerder", "hoofdbeheerder"), async (req, res) => {
   try {
-    const scheidingId = parseInt(req.params.scheidingId);
+    const scheidingId = parseInt(String(req.params.scheidingId));
+    if (!(await magBijGebouw(req.session.userId!, await gebouwIdVanScheiding(scheidingId)))) {
+      res.status(403).json({ error: "Geen toegang tot deze scheiding" });
+      return;
+    }
     await db.delete(scheidingenTable).where(eq(scheidingenTable.id, scheidingId));
     res.status(204).send();
   } catch (err) {

@@ -31,7 +31,10 @@ function leesOpgeslagenRol(): Rol | null {
 
 export function RolProvider({ children }: { children: React.ReactNode }) {
   const { gebruiker } = useAuth();
-  const echteRol = (gebruiker?.rol as Rol) ?? "beheerder";
+  // Deny-by-default: een ontbrekende of ongeldige rol mag NIET stilzwijgend
+  // beheerder worden. We laten de waarde ongeldig zodat Portalen naar
+  // GeenToegang valt in plaats van het beheerderportaal te tonen.
+  const echteRol = (gebruiker?.rol as Rol) ?? ("" as Rol);
   const kanWisselen = echteRol === "hoofdbeheerder";
 
   const [override, setOverride] = useState<Rol | null>(() => leesOpgeslagenRol());

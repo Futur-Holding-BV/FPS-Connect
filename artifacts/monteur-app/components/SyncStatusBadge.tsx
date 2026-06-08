@@ -1,5 +1,5 @@
 import React from "react";
-import { ActivityIndicator, Text, View } from "react-native";
+import { ActivityIndicator, Pressable, Text, View } from "react-native";
 
 import { SyncStatus } from "@/context/sync";
 
@@ -28,13 +28,25 @@ const CONFIG: Record<
     achtergrond: "rgba(156,163,175,0.18)",
     tekst: "#9ca3af",
   },
+  mislukt: {
+    label: "Synchronisatie mislukt",
+    achtergrond: "rgba(239,68,68,0.18)",
+    tekst: "#f87171",
+  },
 };
 
-type Props = { status: SyncStatus; aantalWachtend?: number };
+type Props = {
+  status: SyncStatus;
+  aantalWachtend?: number;
+  aantalMislukt?: number;
+  onWisMislukte?: () => void;
+};
 
-export function SyncStatusBadge({ status, aantalWachtend }: Props) {
+export function SyncStatusBadge({ status, aantalWachtend, aantalMislukt, onWisMislukte }: Props) {
   const cfg = CONFIG[status];
-  return (
+  const toonWissen = status === "mislukt" && (aantalMislukt ?? 0) > 0 && !!onWisMislukte;
+
+  const inhoud = (
     <View
       style={{
         flexDirection: "row",
@@ -46,17 +58,22 @@ export function SyncStatusBadge({ status, aantalWachtend }: Props) {
         borderRadius: 20,
       }}
     >
-      {cfg.laden && (
-        <ActivityIndicator size={10} color={cfg.tekst} />
-      )}
+      {cfg.laden && <ActivityIndicator size={10} color={cfg.tekst} />}
       <Text
         style={{ color: cfg.tekst, fontSize: 12, fontFamily: "Inter_500Medium" }}
       >
         {cfg.label}
-        {aantalWachtend != null && aantalWachtend > 0 && status !== "synchroniseert"
-          ? ` (${aantalWachtend})`
-          : ""}
+        {status === "mislukt" && (aantalMislukt ?? 0) > 0
+          ? ` (${aantalMislukt})${toonWissen ? " — wissen" : ""}`
+          : aantalWachtend != null && aantalWachtend > 0 && status !== "synchroniseert"
+            ? ` (${aantalWachtend})`
+            : ""}
       </Text>
     </View>
   );
+
+  if (toonWissen) {
+    return <Pressable onPress={onWisMislukte}>{inhoud}</Pressable>;
+  }
+  return inhoud;
 }

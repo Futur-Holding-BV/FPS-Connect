@@ -77,6 +77,17 @@ async function toegewezenGebouwIds(userId: number): Promise<number[]> {
   return rows.map((r) => r.gebouwId);
 }
 
+// Centrale toewijzingsguard: monteur/controleur mogen alleen bij hun toegewezen
+// gebouwen. Andere rollen worden hier niet beperkt; rolafdwinging gebeurt via
+// requireRol. Geeft true als toegestaan.
+async function magBijGebouw(userId: number, gebouwId: number | null): Promise<boolean> {
+  const rol = await gebruikerRol(userId);
+  if (!TOEGEWEZEN_ROLLEN.includes(rol)) return true;
+  if (gebouwId == null) return false;
+  const ids = await toegewezenGebouwIds(userId);
+  return ids.includes(gebouwId);
+}
+
 function gebouwRij(
   g: typeof gebouwenTable.$inferSelect,
   totaal: number,
@@ -572,6 +583,17 @@ router.delete("/gebouwen/:id", requireRol("beheerder", "hoofdbeheerder"), async 
 router.get("/gebouwen/:id/verdiepingen", async (req, res) => {
   try {
     const id = parseInt(req.params.id);
+
+    // Monteur/controleur mag alleen verdiepingen van toegewezen gebouwen zien.
+    const rol = await gebruikerRol(req.session.userId!);
+    if (TOEGEWEZEN_ROLLEN.includes(rol)) {
+      const ids = await toegewezenGebouwIds(req.session.userId!);
+      if (!ids.includes(id)) {
+        res.status(403).json({ error: "Geen toegang tot dit gebouw" });
+        return;
+      }
+    }
+
     const verdiepingen = await db.select().from(verdiepingenTable).where(eq(verdiepingenTable.gebouwId, id));
     const result = await Promise.all(
       verdiepingen.map(async (v) => {
@@ -629,6 +651,15 @@ router.get("/verdiepingen/:id", async (req, res) => {
     const id = parseInt(req.params.id);
     const [v] = await db.select().from(verdiepingenTable).where(eq(verdiepingenTable.id, id));
     if (!v) return res.status(404).json({ error: "Verdieping niet gevonden" });
+
+    // Monteur/controleur mag alleen verdiepingen van toegewezen gebouwen zien.
+    const rol = await gebruikerRol(req.session.userId!);
+    if (TOEGEWEZEN_ROLLEN.includes(rol)) {
+      const ids = await toegewezenGebouwIds(req.session.userId!);
+      if (!ids.includes(v.gebouwId)) {
+        return res.status(403).json({ error: "Geen toegang tot deze verdieping" });
+      }
+    }
     const [totaal] = await db
       .select({ count: count() })
       .from(voorzieningenTable)
@@ -698,6 +729,10 @@ router.delete("/verdiepingen/:id", requireRol("beheerder", "hoofdbeheerder"), as
 router.get("/gebouwen/:id/toewijzingen", async (req, res) => {
   try {
     const gebouwId = parseInt(req.params.id);
+    if (!(await magBijGebouw(req.session.userId!, gebouwId))) {
+      res.status(403).json({ error: "Geen toegang tot dit gebouw" });
+      return;
+    }
     const rows = await db
       .select({
         id: gebouwToewijzingenTable.id,
@@ -845,6 +880,10 @@ function partijRij(p: typeof gebouwPartijenTable.$inferSelect) {
 router.get("/gebouwen/:id/partijen", async (req, res) => {
   try {
     const gebouwId = parseInt(req.params.id);
+    if (!(await magBijGebouw(req.session.userId!, gebouwId))) {
+      res.status(403).json({ error: "Geen toegang tot dit gebouw" });
+      return;
+    }
     const rows = await db
       .select()
       .from(gebouwPartijenTable)
@@ -953,6 +992,10 @@ function tekeningRij(t: typeof tekeningenTable.$inferSelect) {
 router.get("/gebouwen/:id/tekeningen", async (req, res) => {
   try {
     const gebouwId = parseInt(req.params.id);
+    if (!(await magBijGebouw(req.session.userId!, gebouwId))) {
+      res.status(403).json({ error: "Geen toegang tot dit gebouw" });
+      return;
+    }
     const rows = await db
       .select()
       .from(tekeningenTable)

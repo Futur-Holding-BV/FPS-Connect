@@ -84,7 +84,7 @@ export default function Plattegrond() {
   const maakVoorziening = useCreateVoorziening();
   const voegFotoToe = useAddFoto();
 
-  const { syncStatus, aantalWachtend, forceerSync } = useSync();
+  const { syncStatus, aantalWachtend, aantalMislukt, wisMislukte, forceerSync } = useSync();
 
   const [plaatsModus, setPlaatsModus] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
@@ -231,7 +231,12 @@ export default function Plattegrond() {
             {spots.length} voorzieningen · knijp om te zoomen
           </Text>
         </View>
-        <SyncStatusBadge status={syncStatus} aantalWachtend={aantalWachtend} />
+        <SyncStatusBadge
+          status={syncStatus}
+          aantalWachtend={aantalWachtend}
+          aantalMislukt={aantalMislukt}
+          onWisMislukte={wisMislukte}
+        />
       </View>
 
       {/* Instructiebalk in plaatsmodus */}
