@@ -8,6 +8,9 @@ const STATIC_SIZE = 640;
 const STATIC_SCALE = 2;
 const STATIC_ZOOM = 19;
 
+const STREET_SIZE = 640;
+const STREET_SCALE = 2;
+
 export interface GebouwAnalyse {
   gevonden: boolean;
   naam: string | null;
@@ -219,10 +222,81 @@ async function haalSatellietBeeld(
   return { dataUrl, grondBreedteMeter };
 }
 
-const SYSTEM_PROMPT = `Je bent een expert bouwkundig analist. Je analyseert een satellietbeeld (bovenaanzicht) van een gebouw en schat de fysieke eigenschappen.
-Het gebouw van belang staat in het MIDDEN van het beeld.
+// Kompasrichting (graden) van punt 1 naar punt 2 (Web Mercator / great-circle bearing).
+function berekenHeading(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const toRad = (d: number) => (d * Math.PI) / 180;
+  const dLng = toRad(lng2 - lng1);
+  const y = Math.sin(dLng) * Math.cos(toRad(lat2));
+  const x =
+    Math.cos(toRad(lat1)) * Math.sin(toRad(lat2)) -
+    Math.sin(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.cos(dLng);
+  return (((Math.atan2(y, x) * 180) / Math.PI) + 360) % 360;
+}
+
+async function haalStreetViewBeeld(lat: number, lng: number): Promise<string | null> {
+  // Niet elke locatie heeft Street View-dekking; eerst de metadata controleren (gratis call).
+  let panoLat: number | null = null;
+  let panoLng: number | null = null;
+  const metaUrl = new URL("https://maps.googleapis.com/maps/api/streetview/metadata");
+  metaUrl.searchParams.set("location", `${lat},${lng}`);
+  metaUrl.searchParams.set("source", "outdoor");
+  metaUrl.searchParams.set("key", GOOGLE_KEY!);
+  try {
+    const metaRes = await fetch(metaUrl.toString(), { signal: AbortSignal.timeout(8000) });
+    if (!metaRes.ok) return null;
+    const meta = (await metaRes.json()) as {
+      status: string;
+      location?: { lat: number; lng: number };
+    };
+    if (meta.status !== "OK") {
+      logger.info({ status: meta.status }, "Geen Street View-dekking voor locatie");
+      return null;
+    }
+    if (meta.location) {
+      panoLat = meta.location.lat;
+      panoLng = meta.location.lng;
+    }
+  } catch (err) {
+    logger.warn({ err }, "Street View metadata-fout");
+    return null;
+  }
+
+  const url = new URL("https://maps.googleapis.com/maps/api/streetview");
+  url.searchParams.set("size", `${STREET_SIZE}x${STREET_SIZE}`);
+  url.searchParams.set("location", `${lat},${lng}`);
+  url.searchParams.set("scale", String(STREET_SCALE));
+  url.searchParams.set("fov", "80");
+  url.searchParams.set("pitch", "10");
+  url.searchParams.set("source", "outdoor");
+  url.searchParams.set("return_error_code", "true");
+  url.searchParams.set("key", GOOGLE_KEY!);
+  // Richt de camera vanaf het opnamepunt expliciet op het gebouw, zodat de gevel
+  // (en dus de verdiepingen) in beeld komt i.p.v. een willekeurige standaardrichting.
+  if (panoLat != null && panoLng != null && (panoLat !== lat || panoLng !== lng)) {
+    url.searchParams.set("heading", berekenHeading(panoLat, panoLng, lat, lng).toFixed(1));
+  }
+
+  try {
+    const res = await fetch(url.toString(), { signal: AbortSignal.timeout(10000) });
+    if (!res.ok) {
+      logger.warn({ status: res.status }, "Street View Static HTTP-fout");
+      return null;
+    }
+    const buffer = Buffer.from(await res.arrayBuffer());
+    return `data:image/jpeg;base64,${buffer.toString("base64")}`;
+  } catch (err) {
+    logger.warn({ err }, "Street View Static netwerk-fout");
+    return null;
+  }
+}
+
+const SYSTEM_PROMPT = `Je bent een expert bouwkundig analist. Je analyseert beeldmateriaal van een gebouw en schat de fysieke eigenschappen.
+Je krijgt altijd een satellietbeeld (bovenaanzicht); het gebouw van belang staat in het MIDDEN van dat beeld. Soms krijg je daarnaast een tweede beeld: een Street View-foto (zijaanzicht/straatniveau) van hetzelfde gebouw.
+Gebruik het satellietbeeld voor de footprint-afmetingen (breedte, diepte, oppervlakte) en de opgegeven schaal.
+Gebruik de Street View-foto, indien aanwezig, om het aantal bouwlagen te BEPALEN door de rijen ramen/verdiepingen te tellen; dat is veel betrouwbaarder dan schatten. Ontbreekt de Street View-foto, schat het aantal dan o.b.v. gebouwtype/regio.
+Zet betrouwbaarheid op "hoog" wanneer je de verdiepingen op een Street View-foto hebt kunnen tellen.
 Geef uitsluitend geldige JSON terug met deze velden:
-- aantal_verdiepingen (geheel getal, schatting o.b.v. gebouwtype/regio): aantal bouwlagen
+- aantal_verdiepingen (geheel getal): aantal bouwlagen; tel ze op de Street View-foto indien beschikbaar, schat anders
 - hoogte (getal in meters): totale gebouwhoogte
 - breedte (getal in meters): grootste horizontale afmeting van de footprint
 - diepte (getal in meters): kleinste horizontale afmeting van de footprint
@@ -263,9 +337,20 @@ async function analyseerBeeld(
   dataUrl: string,
   grondBreedteMeter: number,
   adres: string,
+  straatbeeldUrl: string | null = null,
 ): Promise<VisionVelden | null> {
   const client = new OpenAI({ apiKey: OPENAI_KEY });
-  const userTekst = `Adres: ${adres}. Het satellietbeeld is vierkant en beslaat ongeveer ${grondBreedteMeter} bij ${grondBreedteMeter} meter op de grond. Analyseer het gebouw in het midden.`;
+  const userTekst = straatbeeldUrl
+    ? `Adres: ${adres}. Het EERSTE beeld is een satellietbeeld (bovenaanzicht), vierkant en ongeveer ${grondBreedteMeter} bij ${grondBreedteMeter} meter op de grond — gebruik dit voor de footprint-afmetingen. Het TWEEDE beeld is een Street View-foto (zijaanzicht) van hetzelfde gebouw — gebruik dit om het aantal bouwlagen te tellen aan de hand van de rijen ramen.`
+    : `Adres: ${adres}. Het satellietbeeld is vierkant en beslaat ongeveer ${grondBreedteMeter} bij ${grondBreedteMeter} meter op de grond. Analyseer het gebouw in het midden.`;
+
+  const content: OpenAI.Chat.Completions.ChatCompletionContentPart[] = [
+    { type: "text", text: userTekst },
+    { type: "image_url", image_url: { url: dataUrl } },
+  ];
+  if (straatbeeldUrl) {
+    content.push({ type: "image_url", image_url: { url: straatbeeldUrl } });
+  }
 
   const completion = await client.chat.completions.create({
     model: "gpt-4o",
@@ -273,13 +358,7 @@ async function analyseerBeeld(
     max_tokens: 800,
     messages: [
       { role: "system", content: SYSTEM_PROMPT },
-      {
-        role: "user",
-        content: [
-          { type: "text", text: userTekst },
-          { type: "image_url", image_url: { url: dataUrl } },
-        ],
-      },
+      { role: "user", content },
     ],
   });
 
@@ -708,13 +787,21 @@ export async function analyseerGebouwVrijeTekst(beschrijving: string): Promise<G
   result.postcode = result.postcode ?? geo.postcode ?? delen.postcode;
   if (!result.naam && (geo.adres ?? delen.adres)) result.naam = geo.adres ?? delen.adres;
 
-  // Stap 4: satellietbeeld ophalen en via AI analyseren.
-  const beeld = await haalSatellietBeeld(geo.lat, geo.lng);
+  // Stap 4: satellietbeeld (bovenaanzicht) + Street View (zijaanzicht) ophalen en via AI analyseren.
+  const [beeld, straatbeeld] = await Promise.all([
+    haalSatellietBeeld(geo.lat, geo.lng),
+    OPENAI_KEY ? haalStreetViewBeeld(geo.lat, geo.lng) : Promise.resolve(null),
+  ]);
   if (beeld) {
     result.satelliet_url = beeld.dataUrl;
     if (OPENAI_KEY) {
       try {
-        const velden = await analyseerBeeld(beeld.dataUrl, beeld.grondBreedteMeter, geo.formatted);
+        const velden = await analyseerBeeld(
+          beeld.dataUrl,
+          beeld.grondBreedteMeter,
+          geo.formatted,
+          straatbeeld,
+        );
         if (velden) {
           result.aantal_verdiepingen = result.aantal_verdiepingen ?? velden.aantal_verdiepingen;
           result.hoogte = result.hoogte ?? velden.hoogte;
