@@ -149,11 +149,19 @@ export default function GebouwBouwlagen({
         ) : (
           gesorteerd.map((v) => {
             const tk = tekeningenVoor(v.id);
+            const heeftPlattegrond = Boolean(v.plattegrond_url);
             return (
               <div key={v.id} className="rounded-md border p-4 space-y-3">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <h3 className="font-semibold truncate">{v.naam}</h3>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h3 className="font-semibold truncate">{v.naam}</h3>
+                      {heeftPlattegrond && (
+                        <Badge variant="secondary" className="text-xs shrink-0">
+                          Plattegrond aanwezig
+                        </Badge>
+                      )}
+                    </div>
                     <p className="text-sm text-muted-foreground">
                       {v.totaal_voorzieningen || 0} voorzieningen ·{" "}
                       {tk.length} {tk.length === 1 ? "tekening" : "tekeningen"}
