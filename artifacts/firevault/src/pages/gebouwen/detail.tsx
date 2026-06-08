@@ -18,10 +18,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ArrowLeft, Layers, Map, Users, X, UserPlus, Loader2, Building2, Mail, Phone, Pencil } from "lucide-react";
+import { ArrowLeft, Layers, Users, X, UserPlus, Loader2, Building2, Mail, Phone, Pencil } from "lucide-react";
 import { useAuth } from "@/context/auth-context";
 import GebouwPartijen from "./gebouw-partijen";
 import GebouwTekeningen from "./gebouw-tekeningen";
+import GebouwBouwlagen from "./gebouw-bouwlagen";
 import { GebouwBewerkenDialog } from "./gebouw-bewerken-dialog";
 
 const BEHEERDER_ROLLEN = ["beheerder", "hoofdbeheerder"];
@@ -211,31 +212,11 @@ export default function GebouwDetail() {
             </Card>
           )}
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Verdiepingen</CardTitle>
-            </CardHeader>
-            <CardContent className="grid gap-4">
-              {gebouw.verdiepingen?.map((verdieping) => (
-                <div
-                  key={verdieping.id}
-                  className="flex items-center justify-between p-4 border rounded-md"
-                >
-                  <div>
-                    <h3 className="font-semibold">{verdieping.naam}</h3>
-                    <p className="text-sm text-muted-foreground">
-                      {verdieping.totaal_voorzieningen || 0} voorzieningen
-                    </p>
-                  </div>
-                  <Link href={`/gebouwen/${gebouw.id}/plattegrond/${verdieping.id}`}>
-                    <Button variant="secondary" size="sm">
-                      <Map className="h-4 w-4 mr-2" /> Plattegrond
-                    </Button>
-                  </Link>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
+          <GebouwBouwlagen
+            gebouwId={gebouwId}
+            verdiepingen={gebouw.verdiepingen ?? []}
+            isBeheerder={isBeheerder}
+          />
         </div>
 
         <div className="space-y-6">
@@ -362,7 +343,11 @@ export default function GebouwDetail() {
 
           <GebouwPartijen gebouwId={gebouwId} isBeheerder={isBeheerder} />
 
-          <GebouwTekeningen gebouwId={gebouwId} isBeheerder={isBeheerder} />
+          <GebouwTekeningen
+            gebouwId={gebouwId}
+            verdiepingen={gebouw.verdiepingen ?? []}
+            isBeheerder={isBeheerder}
+          />
 
           <Card>
             <CardHeader>

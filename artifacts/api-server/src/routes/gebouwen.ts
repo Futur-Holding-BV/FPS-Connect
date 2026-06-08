@@ -353,7 +353,7 @@ router.get("/gebouwen/:id/verdiepingen", async (req, res) => {
 });
 
 // POST /gebouwen/:id/verdiepingen
-router.post("/gebouwen/:id/verdiepingen", async (req, res) => {
+router.post("/gebouwen/:id/verdiepingen", requireRol("beheerder", "hoofdbeheerder"), async (req, res) => {
   try {
     const gebouwId = parseInt(req.params.id);
     const { naam, niveau, plattegrond_url, breedte, hoogte } = req.body;
@@ -404,7 +404,7 @@ router.get("/verdiepingen/:id", async (req, res) => {
 });
 
 // PATCH /verdiepingen/:id
-router.patch("/verdiepingen/:id", async (req, res) => {
+router.patch("/verdiepingen/:id", requireRol("beheerder", "hoofdbeheerder"), async (req, res) => {
   try {
     const id = parseInt(req.params.id);
     const { naam, niveau, plattegrond_url, breedte, hoogte } = req.body;
@@ -435,7 +435,7 @@ router.patch("/verdiepingen/:id", async (req, res) => {
 });
 
 // DELETE /verdiepingen/:id
-router.delete("/verdiepingen/:id", async (req, res) => {
+router.delete("/verdiepingen/:id", requireRol("beheerder", "hoofdbeheerder"), async (req, res) => {
   try {
     const id = parseInt(req.params.id);
     await db.delete(verdiepingenTable).where(eq(verdiepingenTable.id, id));

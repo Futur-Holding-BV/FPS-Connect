@@ -4,6 +4,7 @@ import {
   useCreateGebouwTekening,
   useDeleteGebouwTekening,
 } from "@workspace/api-client-react";
+import type { Verdieping } from "@workspace/api-client-react";
 import { useUpload } from "@workspace/object-storage-web";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -34,11 +35,15 @@ function typeLabel(type: string): string {
   return TEKENING_TYPES.find((t) => t.waarde === type)?.label ?? type;
 }
 
+const GEEN_BOUWLAAG = "geen";
+
 export default function GebouwTekeningen({
   gebouwId,
+  verdiepingen = [],
   isBeheerder,
 }: {
   gebouwId: number;
+  verdiepingen?: Verdieping[];
   isBeheerder: boolean;
 }) {
   const queryClient = useQueryClient();
@@ -52,9 +57,19 @@ export default function GebouwTekeningen({
   const [naam, setNaam] = useState("");
   const [type, setType] = useState("plattegrond");
   const [schaal, setSchaal] = useState("");
+  const [verdiepingId, setVerdiepingId] = useState<string>(GEEN_BOUWLAAG);
   const [bestandsnaam, setBestandsnaam] = useState("");
   const [objectPath, setObjectPath] = useState("");
   const [fout, setFout] = useState("");
+
+  const gesorteerdeVerdiepingen = [...verdiepingen].sort(
+    (a, b) => a.niveau - b.niveau,
+  );
+
+  function bouwlaagNaam(id: number | null | undefined): string | null {
+    if (id == null) return null;
+    return verdiepingen.find((v) => v.id === id)?.naam ?? null;
+  }
 
   async function kiesBestand(file: File) {
     setFout("");
@@ -76,6 +91,7 @@ export default function GebouwTekeningen({
     setNaam("");
     setType("plattegrond");
     setSchaal("");
+    setVerdiepingId(GEEN_BOUWLAAG);
     setBestandsnaam("");
     setObjectPath("");
     setFout("");
@@ -91,6 +107,8 @@ export default function GebouwTekeningen({
         type,
         schaal: schaal || undefined,
         url: objectPath,
+        verdieping_id:
+          verdiepingId === GEEN_BOUWLAAG ? null : Number(verdiepingId),
       },
     });
     reset();
@@ -141,6 +159,9 @@ export default function GebouwTekeningen({
                     </a>
                     <Badge variant="secondary" className="text-xs shrink-0">
                       {typeLabel(t.type)}
+                    </Badge>
+                    <Badge variant="outline" className="text-xs shrink-0">
+                      {bouwlaagNaam(t.verdieping_id) ?? "Hele gebouw"}
                     </Badge>
                     {t.schaal && (
                       <span className="text-xs text-muted-foreground">
@@ -203,6 +224,22 @@ export default function GebouwTekeningen({
                     {TEKENING_TYPES.map((t) => (
                       <SelectItem key={t.waarde} value={t.waarde}>
                         {t.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label>Bouwlaag</Label>
+                <Select value={verdiepingId} onValueChange={setVerdiepingId}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={GEEN_BOUWLAAG}>Hele gebouw</SelectItem>
+                    {gesorteerdeVerdiepingen.map((v) => (
+                      <SelectItem key={v.id} value={String(v.id)}>
+                        {v.naam}
                       </SelectItem>
                     ))}
                   </SelectContent>
