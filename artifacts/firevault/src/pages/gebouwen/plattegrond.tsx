@@ -77,7 +77,8 @@ const STATUSLABEL: Record<string, string> = {
   vervallen:     "Vervallen",
 };
 
-const WBDBO_OPTIES = ["20", "30", "60"];
+const WBDBO_OPTIES = ["20", "30", "60", "90", "120"];
+const SCHEIDING_CLASSIFICATIES = ["WRD", "EW", "EI", "E", "R", "Sa"];
 const WRD_OPTIES = ["30"];
 const WAND_PLAFOND_OPTIES = ["wand", "plafond"];
 
@@ -261,7 +262,7 @@ export default function Plattegrond() {
   const [tekenModus, setTekenModus] = useState(false);
   const [huidigePunten, setHuidigePunten] = useState<{ x: number; y: number }[]>([]);
   const [scheidingDialoog, setScheidingDialoog] = useState(false);
-  const [scheidingForm, setScheidingForm] = useState({ type: "brand", waarde: "60" });
+  const [scheidingForm, setScheidingForm] = useState({ type: "brand", classificatie: "EW", waarde: "60" });
   const [scheidingSelectie, setScheidingSelectie] = useState<number | null>(null);
   const [verplaatsModus, setVerplaatsModus] = useState(false);
 
@@ -409,11 +410,14 @@ export default function Plattegrond() {
   const bewaarScheiding = useCallback(async () => {
     if (huidigePunten.length < 2) return;
     const kleur = SCHEIDING_TYPEN[scheidingForm.type]?.kleur ?? "#dc2626";
+    const code = scheidingForm.waarde
+      ? `${scheidingForm.classificatie}${scheidingForm.waarde}`
+      : undefined;
     await maakScheiding.mutateAsync({
       id: Number(verdiepingId),
       data: {
         type: scheidingForm.type,
-        waarde: scheidingForm.waarde || undefined,
+        waarde: code,
         kleur,
         punten: JSON.stringify(huidigePunten),
       },
@@ -693,8 +697,9 @@ export default function Plattegrond() {
                       strokeLinecap="round" strokeLinejoin="round" opacity={0.9} />
                     {s.waarde && (
                       <g transform={`translate(${mid.x}, ${mid.y})`}>
-                        <rect x={-18} y={-12} width={36} height={20} rx={4} fill={kleur} />
-                        <text x={0} y={2} textAnchor="middle" fontSize={12} fontWeight={700} fill="#fff">{s.waarde}</text>
+                        <circle r={18} fill="#fff" stroke={kleur} strokeWidth={geselecteerd ? 4 : 3} />
+                        <text x={0} y={0} textAnchor="middle" dominantBaseline="central"
+                          fontSize={String(s.waarde).length >= 6 ? 8 : String(s.waarde).length >= 5 ? 9.5 : 11} fontWeight={800} fill={kleur}>{s.waarde}</text>
                       </g>
                     )}
                   </g>
@@ -765,7 +770,7 @@ export default function Plattegrond() {
                 <span className="flex items-center gap-1.5">
                   <span className="w-4 h-0 border-t-2" style={{ borderColor: s.kleur || SCHEIDING_TYPEN[s.type]?.kleur, borderStyle: s.type === "rook" ? "dashed" : "solid" }} />
                   <span className="font-medium">{SCHEIDING_TYPEN[s.type]?.label ?? s.type}</span>
-                  {s.waarde && <span className="text-muted-foreground">{s.waarde} min</span>}
+                  {s.waarde && <span className="text-muted-foreground">{s.waarde}</span>}
                 </span>
                 <Button variant="destructive" size="sm" disabled={verwijderScheiding.isPending} onClick={() => wisScheiding(s.id)}>
                   <Trash2 className="h-4 w-4 mr-1" />Verwijderen
@@ -1058,17 +1063,35 @@ export default function Plattegrond() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-2">
-              <Label>WBDBO-waarde (minuten)</Label>
-              <Select value={scheidingForm.waarde} onValueChange={(v) => setScheidingForm((f) => ({ ...f, waarde: v }))}>
-                <SelectTrigger><SelectValue placeholder="Kies waarde" /></SelectTrigger>
-                <SelectContent>
-                  {WBDBO_OPTIES.map((w) => (
-                    <SelectItem key={w} value={w}>{w} minuten</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label>Classificatie</Label>
+                <Select value={scheidingForm.classificatie} onValueChange={(v) => setScheidingForm((f) => ({ ...f, classificatie: v }))}>
+                  <SelectTrigger><SelectValue placeholder="Kies code" /></SelectTrigger>
+                  <SelectContent>
+                    {SCHEIDING_CLASSIFICATIES.map((c) => (
+                      <SelectItem key={c} value={c}>{c}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>WBDBO-waarde (minuten)</Label>
+                <Select value={scheidingForm.waarde} onValueChange={(v) => setScheidingForm((f) => ({ ...f, waarde: v }))}>
+                  <SelectTrigger><SelectValue placeholder="Kies waarde" /></SelectTrigger>
+                  <SelectContent>
+                    {WBDBO_OPTIES.map((w) => (
+                      <SelectItem key={w} value={w}>{w} minuten</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
+            {scheidingForm.waarde && (
+              <p className="text-sm text-muted-foreground">
+                Code op de lijn: <span className="font-semibold text-foreground">{scheidingForm.classificatie}{scheidingForm.waarde}</span>
+              </p>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setScheidingDialoog(false)}>Annuleren</Button>
