@@ -1,9 +1,15 @@
+import { useState } from "react";
 import { useParams, Link } from "wouter";
-import { useGetVoorziening } from "@workspace/api-client-react";
+import { useGetVoorziening, getGetVoorzieningQueryKey } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Building, Calendar, User, Package, MapPin, QrCode, CheckCircle, AlertCircle, Clock } from "lucide-react";
+import { ArrowLeft, Building, Calendar, User, Package, MapPin, QrCode, CheckCircle, AlertCircle, Clock, Pencil } from "lucide-react";
+import { useAuth } from "@/context/auth-context";
+import { VoorzieningStatusDialog } from "./voorziening-status-dialog";
+import { VoorzieningBewerkenDialog } from "./voorziening-bewerken-dialog";
+
+const BEWERK_ROLLEN = ["monteur", "controleur", "beheerder", "hoofdbeheerder"];
 
 const statusKleur: Record<string, string> = {
   concept: "bg-gray-100 text-gray-700 border-gray-200",
@@ -38,7 +44,13 @@ const typeLabel: Record<string, string> = {
 
 export default function VoorzieningDetail() {
   const { id } = useParams<{ id: string }>();
-  const { data: voorziening, isLoading } = useGetVoorziening(Number(id), { query: { enabled: !!id } });
+  const { gebruiker } = useAuth();
+  const { data: voorziening, isLoading } = useGetVoorziening(Number(id), {
+    query: { enabled: !!id, queryKey: getGetVoorzieningQueryKey(Number(id)) },
+  });
+  const [statusOpen, setStatusOpen] = useState(false);
+  const [bewerkenOpen, setBewerkenOpen] = useState(false);
+  const magBewerken = !!gebruiker?.rol && BEWERK_ROLLEN.includes(gebruiker.rol as string);
 
   if (isLoading) {
     return (
@@ -85,7 +97,11 @@ export default function VoorzieningDetail() {
               <QrCode className="h-4 w-4 mr-2" /> QR-label
             </Button>
           </Link>
-          <Button variant="outline">Bewerken</Button>
+          {magBewerken && (
+            <Button variant="outline" onClick={() => setBewerkenOpen(true)}>
+              <Pencil className="h-4 w-4 mr-2" /> Bewerken
+            </Button>
+          )}
         </div>
       </div>
 
@@ -242,13 +258,34 @@ export default function VoorzieningDetail() {
           </Card>
 
           {/* Acties */}
-          <div className="space-y-2">
-            <Button className="w-full" variant="default">Status Bijwerken</Button>
-            <Button className="w-full" variant="outline">Inspectie Plannen</Button>
-            <Button className="w-full" variant="outline">Onderhoud Aanmaken</Button>
-          </div>
+          {magBewerken && (
+            <div className="space-y-2">
+              <Button className="w-full" variant="default" onClick={() => setStatusOpen(true)}>
+                Status Bijwerken
+              </Button>
+              <Button className="w-full" variant="outline" onClick={() => setBewerkenOpen(true)}>
+                Spot Bewerken
+              </Button>
+            </div>
+          )}
         </div>
       </div>
+
+      {magBewerken && (
+        <>
+          <VoorzieningStatusDialog
+            voorzieningId={voorziening.id}
+            huidigeStatus={voorziening.status ?? "concept"}
+            open={statusOpen}
+            onOpenChange={setStatusOpen}
+          />
+          <VoorzieningBewerkenDialog
+            voorziening={voorziening}
+            open={bewerkenOpen}
+            onOpenChange={setBewerkenOpen}
+          />
+        </>
+      )}
     </div>
   );
 }

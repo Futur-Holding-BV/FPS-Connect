@@ -12,6 +12,7 @@ import {
   scheidingenTable,
 } from "@workspace/db";
 import { eq, and, ilike, sql } from "drizzle-orm";
+import { requireRol } from "../middlewares/auth";
 
 const router = Router();
 
@@ -298,7 +299,7 @@ router.get("/voorzieningen/:id", async (req, res) => {
 });
 
 // PATCH /voorzieningen/:id
-router.patch("/voorzieningen/:id", async (req, res) => {
+router.patch("/voorzieningen/:id", requireRol("monteur", "controleur", "beheerder", "hoofdbeheerder"), async (req, res) => {
   try {
     const id = parseInt(req.params.id);
     const {
@@ -400,7 +401,7 @@ router.delete("/voorzieningen/:id/fotos/:fotoId", async (req, res) => {
 });
 
 // PATCH /voorzieningen/:id/status
-router.patch("/voorzieningen/:id/status", async (req, res) => {
+router.patch("/voorzieningen/:id/status", requireRol("monteur", "controleur", "beheerder", "hoofdbeheerder"), async (req, res) => {
   try {
     const id = parseInt(req.params.id);
     const { status, opmerkingen } = req.body;
