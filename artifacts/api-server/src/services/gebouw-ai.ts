@@ -56,6 +56,35 @@ interface GeocodeResultaat {
   lat: number;
   lng: number;
   formatted: string;
+  adres: string | null;
+  postcode: string | null;
+  stad: string | null;
+}
+
+interface AdresComponent {
+  long_name: string;
+  short_name: string;
+  types: string[];
+}
+
+function parseComponents(components: AdresComponent[] | undefined): {
+  adres: string | null;
+  postcode: string | null;
+  stad: string | null;
+} {
+  const zoek = (type: string) =>
+    components?.find((c) => c.types.includes(type)) ?? null;
+  const route = zoek("route")?.long_name ?? null;
+  const huisnummer = zoek("street_number")?.long_name ?? null;
+  const adres = route ? (huisnummer ? `${route} ${huisnummer}` : route) : null;
+  const postcodeRuw = zoek("postal_code")?.long_name ?? null;
+  const postcode = postcodeRuw ? postcodeRuw.toUpperCase().replace(/\s+/g, " ").trim() : null;
+  const stad =
+    zoek("locality")?.long_name ??
+    zoek("postal_town")?.long_name ??
+    zoek("administrative_area_level_2")?.long_name ??
+    null;
+  return { adres, postcode, stad };
 }
 
 type GeocodeUitkomst =
@@ -89,6 +118,7 @@ async function geocode(adres: string): Promise<GeocodeUitkomst> {
     error_message?: string;
     results: Array<{
       formatted_address: string;
+      address_components?: AdresComponent[];
       geometry: { location: { lat: number; lng: number } };
     }>;
   };
@@ -104,14 +134,60 @@ async function geocode(adres: string): Promise<GeocodeUitkomst> {
     };
   }
   const r = data.results[0];
+  const comp = parseComponents(r.address_components);
+  let gevondenAdres = comp.adres;
+  let gevondenPostcode = comp.postcode;
+  let gevondenStad = comp.stad;
+  // POI/locatie-zoekresultaten missen vaak een postcode; haal die via reverse-geocode op de coördinaten op.
+  if (!gevondenPostcode) {
+    const omgekeerd = await reverseGeocode(r.geometry.location.lat, r.geometry.location.lng);
+    if (omgekeerd) {
+      gevondenPostcode = gevondenPostcode ?? omgekeerd.postcode;
+      gevondenStad = gevondenStad ?? omgekeerd.stad;
+      gevondenAdres = gevondenAdres ?? omgekeerd.adres;
+    }
+  }
   return {
     ok: true,
     resultaat: {
       lat: r.geometry.location.lat,
       lng: r.geometry.location.lng,
       formatted: r.formatted_address,
+      adres: gevondenAdres,
+      postcode: gevondenPostcode,
+      stad: gevondenStad,
     },
   };
+}
+
+async function reverseGeocode(
+  lat: number,
+  lng: number,
+): Promise<{ adres: string | null; postcode: string | null; stad: string | null } | null> {
+  const url = new URL("https://maps.googleapis.com/maps/api/geocode/json");
+  url.searchParams.set("latlng", `${lat},${lng}`);
+  url.searchParams.set("key", GOOGLE_KEY!);
+  url.searchParams.set("language", "nl");
+  url.searchParams.set("region", "nl");
+  url.searchParams.set("result_type", "street_address|premise|postal_code");
+  try {
+    const res = await fetch(url.toString());
+    if (!res.ok) return null;
+    const data = (await res.json()) as {
+      status: string;
+      results: Array<{ address_components?: AdresComponent[] }>;
+    };
+    if (data.status !== "OK" || data.results.length === 0) return null;
+    // Zoek het eerste resultaat dat een postcode bevat.
+    for (const res2 of data.results) {
+      const c = parseComponents(res2.address_components);
+      if (c.postcode) return c;
+    }
+    return parseComponents(data.results[0]!.address_components);
+  } catch (err) {
+    logger.warn({ err }, "Reverse-geocode mislukte");
+    return null;
+  }
 }
 
 async function haalSatellietBeeld(
@@ -626,10 +702,11 @@ export async function analyseerGebouwVrijeTekst(beschrijving: string): Promise<G
   result.longitude = geo.lng;
 
   const delen = splitsAdres(geo.formatted);
-  result.adres = result.adres ?? delen.adres;
-  result.stad = result.stad ?? delen.stad;
-  result.postcode = result.postcode ?? delen.postcode;
-  if (!result.naam && delen.adres) result.naam = delen.adres;
+  // Gestructureerde address_components (geo.*) zijn betrouwbaarder dan string-parsing (delen.*).
+  result.adres = result.adres ?? geo.adres ?? delen.adres;
+  result.stad = result.stad ?? geo.stad ?? delen.stad;
+  result.postcode = result.postcode ?? geo.postcode ?? delen.postcode;
+  if (!result.naam && (geo.adres ?? delen.adres)) result.naam = geo.adres ?? delen.adres;
 
   // Stap 4: satellietbeeld ophalen en via AI analyseren.
   const beeld = await haalSatellietBeeld(geo.lat, geo.lng);
