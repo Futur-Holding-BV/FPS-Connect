@@ -10,6 +10,7 @@ export type GebruikerRol = typeof GebruikerRol[keyof typeof GebruikerRol];
 
 
 export const GebruikerRol = {
+  hoofdbeheerder: 'hoofdbeheerder',
   beheerder: 'beheerder',
   monteur: 'monteur',
   controleur: 'controleur',

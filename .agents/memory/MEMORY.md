@@ -1,0 +1,1 @@
+- [FireVault RBAC](firevault-rbac.md) — no auth; roles are client-side (localStorage RolContext). hoofdbeheerder = super admin, hidden from non-hoofd viewers; UI-only enforcement.

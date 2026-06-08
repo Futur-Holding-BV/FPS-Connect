@@ -1690,7 +1690,7 @@ components:
           type: string
         rol:
           type: string
-          enum: [beheerder, monteur, controleur, klant, viewer]
+          enum: [hoofdbeheerder, beheerder, monteur, controleur, klant, viewer]
         telefoon:
           type: ["string", "null"]
         bedrijf:

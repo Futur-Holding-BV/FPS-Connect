@@ -21,11 +21,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Mail, Phone, Building, Clock, Plus, UserPlus, Pencil, Trash2, RefreshCw, ShieldCheck, Wrench, Eye, User } from "lucide-react";
+import { Mail, Phone, Building, Clock, Plus, UserPlus, Pencil, Trash2, RefreshCw, ShieldCheck, Wrench, Eye, User, Crown } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
+import { useRol } from "@/context/rol-context";
 
 // Rolvolgorde: meeste rechten eerst
-const ROLLEN = ["beheerder", "monteur", "controleur", "klant"] as const;
+const ROLLEN = ["hoofdbeheerder", "beheerder", "monteur", "controleur", "klant"] as const;
 type Rol = typeof ROLLEN[number];
 
 const ROL_CONFIG: Record<Rol, {
@@ -36,6 +37,14 @@ const ROL_CONFIG: Record<Rol, {
   rand: string;
   beschrijving: string;
 }> = {
+  hoofdbeheerder: {
+    label: "Hoofdbeheerders",
+    icon: Crown,
+    kleur: "text-amber-600",
+    badge: "bg-amber-100 text-amber-800 border-amber-200",
+    rand: "border-t-amber-500",
+    beschrijving: "Volledig beheer — alle rechten",
+  },
   beheerder: {
     label: "Beheerders",
     icon: ShieldCheck,
@@ -117,6 +126,9 @@ type Gebruiker = {
 
 export default function Gebruikers() {
   const queryClient = useQueryClient();
+  const { rol: viewerRol } = useRol();
+  const isHoofd = viewerRol === "hoofdbeheerder";
+  const magVerwijderen = isHoofd;
   const { data: gebruikers, isLoading, refetch, isFetching } = useListGebruikers();
   const maakGebruiker       = useCreateGebruiker();
   const werkBijGebruiker    = useUpdateGebruiker();
@@ -216,6 +228,10 @@ export default function Gebruikers() {
     return acc;
   }, {} as Record<string, Gebruiker[]>);
 
+  // Hoofdbeheerders zijn alleen zichtbaar voor een hoofdbeheerder
+  const zichtbareRollen = ROLLEN.filter((rol) => isHoofd || rol !== "hoofdbeheerder");
+  const gridCols = zichtbareRollen.length === 5 ? "grid-cols-5" : "grid-cols-4";
+
   return (
     <div className="space-y-6 max-w-[1400px] mx-auto">
       {/* Header */}
@@ -238,8 +254,8 @@ export default function Gebruikers() {
 
       {/* Kolommenraster */}
       {isLoading ? (
-        <div className="grid grid-cols-4 gap-4">
-          {ROLLEN.map((rol) => (
+        <div className={`grid ${gridCols} gap-4`}>
+          {zichtbareRollen.map((rol) => (
             <div key={rol} className="space-y-3">
               <div className="h-16 bg-muted animate-pulse rounded-lg" />
               {[1, 2].map((i) => <div key={i} className="h-28 bg-muted animate-pulse rounded-lg" />)}
@@ -247,8 +263,8 @@ export default function Gebruikers() {
           ))}
         </div>
       ) : (
-        <div className="grid grid-cols-4 gap-4 items-start">
-          {ROLLEN.map((rol) => {
+        <div className={`grid ${gridCols} gap-4 items-start`}>
+          {zichtbareRollen.map((rol) => {
             const cfg  = ROL_CONFIG[rol];
             const Icon = cfg.icon;
             const lijst = perRol[rol] ?? [];
@@ -305,14 +321,17 @@ export default function Gebruikers() {
                               >
                                 <Pencil className="h-3 w-3" />
                               </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-6 w-6 text-muted-foreground hover:text-destructive"
-                                onClick={() => setVerwijderTarget(g)}
-                              >
-                                <Trash2 className="h-3 w-3" />
-                              </Button>
+                              {magVerwijderen && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-6 w-6 text-muted-foreground hover:text-destructive"
+                                  onClick={() => setVerwijderTarget(g)}
+                                  title="Verwijderen"
+                                >
+                                  <Trash2 className="h-3 w-3" />
+                                </Button>
+                              )}
                             </div>
                           </div>
 
@@ -370,7 +389,7 @@ export default function Gebruikers() {
             Vul de gegevens in om een nieuw account aan te maken.
           </p>
           <form onSubmit={verstuurToevoegen} className="space-y-4 pt-1">
-            <GebruikerVelden form={toevoegenForm} setForm={setToevoegenForm} toonActief={false} />
+            <GebruikerVelden form={toevoegenForm} setForm={setToevoegenForm} toonActief={false} toonHoofd={isHoofd} />
             {toevoegenFout && <Foutmelding tekst={toevoegenFout} />}
             <DialogFooter className="gap-2 pt-1">
               <Button type="button" variant="outline" onClick={() => setToevoegenOpen(false)}>Annuleren</Button>
@@ -394,7 +413,7 @@ export default function Gebruikers() {
             Pas de gegevens van <strong>{bewerkGebruiker?.naam}</strong> aan.
           </p>
           <form onSubmit={verstuurBewerken} className="space-y-4 pt-1">
-            <GebruikerVelden form={bewerkForm} setForm={setBewerkForm} toonActief />
+            <GebruikerVelden form={bewerkForm} setForm={setBewerkForm} toonActief toonHoofd={isHoofd} />
             {bewerkFout && <Foutmelding tekst={bewerkFout} />}
             <DialogFooter className="gap-2 pt-1">
               <Button type="button" variant="outline" onClick={() => setBewerkGebruiker(null)}>Annuleren</Button>
@@ -517,10 +536,12 @@ function GebruikerVelden({
   form,
   setForm,
   toonActief,
+  toonHoofd,
 }: {
   form: GebruikerForm;
   setForm: React.Dispatch<React.SetStateAction<GebruikerForm>>;
   toonActief: boolean;
+  toonHoofd: boolean;
 }) {
   const set = (k: keyof GebruikerForm) =>
     (e: React.ChangeEvent<HTMLInputElement>) => setForm((f) => ({ ...f, [k]: e.target.value }));
@@ -540,6 +561,7 @@ function GebruikerVelden({
         <Select value={form.rol} onValueChange={(v) => setForm((f) => ({ ...f, rol: v }))}>
           <SelectTrigger><SelectValue /></SelectTrigger>
           <SelectContent>
+            {toonHoofd && <SelectItem value="hoofdbeheerder">Hoofdbeheerder</SelectItem>}
             <SelectItem value="beheerder">Beheerder</SelectItem>
             <SelectItem value="controleur">Controleur</SelectItem>
             <SelectItem value="monteur">Monteur</SelectItem>
