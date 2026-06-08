@@ -1,7 +1,1 @@
-- [FireVault auth](firevault-auth.md) — hand-rolled session auth + mandatory TOTP 2FA (Clerk/Replit Auth lack MFA); otplib pinned v12; iframe cookies SameSite=None+Secure.
-- [FireVault RBAC](firevault-rbac.md) — role hierarchy; role now comes from the logged-in account; server-side gating via requireAuth; hoofdbeheerder = super admin hidden from non-hoofd viewers.
-- [Nightly security scan](nightly-security-scan.md) — report-only `pnpm audit` script run via a Scheduled Deployment; never auto-update (breaking-change risk).
-- [DB migraties via SQL](db-migrations.md) — drizzle-kit push vereist interactieve TTY; gebruik altijd executeSql() voor schema-wijzigingen in de sandbox, nooit drizzle-kit push.
-- [Uitnodigingsstatus flow](uitnodiging-flow.md) — M365 Graph mail, send-before-persist (502 op echte fout), beheerder-only RBAC, nooit token loggen; status→geaccepteerd bij 2FA.
-- [Express 5 route params](express5-route-params.md) — middleware vóór handler verbreedt `:id` naar string|string[]; gebruik `parseInt(String(req.params.id),10)`.
-- [i18n taal-synchronisatie](i18n-taal-sync.md) — expliciete runtime-keuze wint van server-taal binnen sessie; login-keuze pas na 2FA naar DB; menu-wissel met onError rollback; RTL voor ar.
+- [Hoofdbeheerder super-rol + rolwisselaar](hoofdbeheerder-rol.md) — hoofdbeheerder passeert elke requireRol én kan via "Bekijken als" elk portaal bekijken; frontend-wissel en backend-bypass moeten synchroon blijven.

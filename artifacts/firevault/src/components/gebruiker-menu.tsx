@@ -1,6 +1,7 @@
 import { useState } from "react";
+import { useLocation } from "wouter";
 import { useTranslation } from "react-i18next";
-import { LogOut, KeyRound, Languages } from "lucide-react";
+import { LogOut, KeyRound, Languages, Eye, ChevronsUpDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,12 +17,15 @@ import { useTaal } from "@/context/taal-context";
 import { TALEN, type TaalCode } from "@/i18n/talen";
 import { ROL_INFO } from "@/context/rol-types";
 import type { Rol } from "@/context/rol-types";
+import { useRol, WISSELBARE_ROLLEN } from "@/context/rol-context";
 import { useWachtwoordWijzigen, useTaalWijzigen } from "@workspace/api-client-react";
 
 export function GebruikerMenu() {
   const { gebruiker, uitloggen } = useAuth();
   const { t } = useTranslation();
   const { taal, zetTaal } = useTaal();
+  const { rol: actieveRol, kanWisselen, zetRol } = useRol();
+  const [, setLocation] = useLocation();
   const wachtwoordWijzigen = useWachtwoordWijzigen();
   const taalWijzigen = useTaalWijzigen();
 
@@ -44,6 +48,12 @@ export function GebruikerMenu() {
     .slice(0, 2)
     .join("")
     .toUpperCase();
+
+  function wisselRol(nieuw: Rol) {
+    if (nieuw === actieveRol) return;
+    zetRol(nieuw);
+    setLocation("/");
+  }
 
   function kiesTaal(code: TaalCode) {
     if (code === taal) return;
@@ -108,6 +118,43 @@ export function GebruikerMenu() {
             <p className="text-xs text-muted-foreground truncate">{rolLabel}</p>
           </div>
         </div>
+
+        {kanWisselen && (
+          <div className="mt-2 group-data-[collapsible=icon]:hidden">
+            <p className="text-[11px] font-medium text-muted-foreground px-0.5 mb-1">
+              {t("menu.bekijkenAls")}
+            </p>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full justify-between gap-2"
+                >
+                  <span className="flex items-center gap-2 truncate">
+                    <Eye className="h-4 w-4 flex-shrink-0" />
+                    <span className="truncate">{ROL_INFO[actieveRol]?.label ?? actieveRol}</span>
+                  </span>
+                  <ChevronsUpDown className="h-3.5 w-3.5 flex-shrink-0 opacity-60" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-56">
+                {WISSELBARE_ROLLEN.map((r) => (
+                  <DropdownMenuItem
+                    key={r}
+                    onClick={() => wisselRol(r)}
+                    className={actieveRol === r ? "bg-accent" : ""}
+                  >
+                    <span className="flex flex-col">
+                      <span className="text-sm font-medium">{ROL_INFO[r].label}</span>
+                      <span className="text-xs text-muted-foreground">{ROL_INFO[r].omschrijving}</span>
+                    </span>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        )}
 
         <div className="mt-2">
           <DropdownMenu>

@@ -30,7 +30,8 @@ export function requireRol(...toegestaneRollen: string[]): RequestHandler {
         .select({ rol: gebruikersTable.rol })
         .from(gebruikersTable)
         .where(eq(gebruikersTable.id, id));
-      if (!g || !toegestaneRollen.includes(g.rol)) {
+      // De hoofdbeheerder heeft volledige rechten en passeert elke rolcontrole.
+      if (!g || (g.rol !== "hoofdbeheerder" && !toegestaneRollen.includes(g.rol))) {
         res.status(403).json({ error: "Geen toegang" });
         return;
       }

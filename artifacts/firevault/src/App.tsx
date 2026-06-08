@@ -6,7 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
 import { AuthProvider, useAuth } from "@/context/auth-context";
 import { TaalProvider } from "@/context/taal-context";
-import { useRol } from "@/context/rol-context";
+import { useRol, RolProvider } from "@/context/rol-context";
 import LoginPagina from "@/pages/auth/login";
 import ActivatiePagina from "@/pages/uitnodiging/index";
 
@@ -135,7 +135,9 @@ function App() {
       <TooltipProvider>
         <TaalProvider>
           <AuthProvider>
-            <Gate />
+            <RolProvider>
+              <Gate />
+            </RolProvider>
             <Toaster />
           </AuthProvider>
         </TaalProvider>
