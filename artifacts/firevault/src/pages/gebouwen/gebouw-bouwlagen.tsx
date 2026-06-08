@@ -4,6 +4,7 @@ import {
   useListGebouwTekeningen,
   useCreateVerdieping,
   useDeleteGebouwTekening,
+  useDeleteVerdieping,
 } from "@workspace/api-client-react";
 import type { Verdieping, Tekening } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -12,7 +13,18 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Layers, Map, FileText, Plus, Loader2, X } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Layers, Map, FileText, Plus, Loader2, X, Trash2 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 import { TekeningViewer } from "./tekening-viewer";
 
 const TEKENING_LABELS: Record<string, string> = {
@@ -100,12 +112,15 @@ export default function GebouwBouwlagen({
   isBeheerder: boolean;
 }) {
   const queryClient = useQueryClient();
+  const { toast } = useToast();
   const { data: tekeningen } = useListGebouwTekeningen(gebouwId);
   const maakVerdieping = useCreateVerdieping();
+  const verwijderVerdieping = useDeleteVerdieping();
 
   const [formOpen, setFormOpen] = useState(false);
   const [naam, setNaam] = useState("");
   const [niveau, setNiveau] = useState("");
+  const [teVerwijderen, setTeVerwijderen] = useState<Verdieping | null>(null);
 
   const lijst = tekeningen ?? [];
   const gesorteerd = [...verdiepingen].sort((a, b) => a.niveau - b.niveau);
@@ -114,6 +129,22 @@ export default function GebouwBouwlagen({
     lijst.filter((t) => (t.verdieping_id ?? null) === verdiepingId);
 
   const algemeen = tekeningenVoor(null);
+
+  async function bevestigVerwijderen() {
+    if (!teVerwijderen) return;
+    try {
+      await verwijderVerdieping.mutateAsync({ id: teVerwijderen.id });
+      toast({ title: "Bouwlaag verwijderd", description: `"${teVerwijderen.naam}" is verwijderd.` });
+      setTeVerwijderen(null);
+      queryClient.invalidateQueries();
+    } catch {
+      toast({
+        variant: "destructive",
+        title: "Verwijderen mislukt",
+        description: "De bouwlaag kon niet worden verwijderd. Probeer het opnieuw.",
+      });
+    }
+  }
 
   async function voegToe() {
     if (!naam.trim()) return;
@@ -167,11 +198,24 @@ export default function GebouwBouwlagen({
                       {tk.length} {tk.length === 1 ? "tekening" : "tekeningen"}
                     </p>
                   </div>
-                  <Link href={`/gebouwen/${gebouwId}/plattegrond/${v.id}`}>
-                    <Button variant="secondary" size="sm" className="shrink-0">
-                      <Map className="h-4 w-4 mr-2" /> Plattegrond
-                    </Button>
-                  </Link>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <Link href={`/gebouwen/${gebouwId}/plattegrond/${v.id}`}>
+                      <Button variant="secondary" size="sm">
+                        <Map className="h-4 w-4 mr-2" /> Plattegrond
+                      </Button>
+                    </Link>
+                    {isBeheerder && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-9 w-9 text-muted-foreground hover:text-destructive"
+                        onClick={() => setTeVerwijderen(v)}
+                        title="Bouwlaag verwijderen"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
                 </div>
                 <TekeningRegels items={tk} isBeheerder={isBeheerder} />
               </div>
@@ -243,6 +287,38 @@ export default function GebouwBouwlagen({
             </Button>
           ))}
       </CardContent>
+
+      <AlertDialog open={teVerwijderen !== null} onOpenChange={(o) => { if (!o) setTeVerwijderen(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Bouwlaag verwijderen?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {teVerwijderen && (
+                <>
+                  Weet u zeker dat u de bouwlaag &quot;{teVerwijderen.naam}&quot; wilt verwijderen?
+                  {(teVerwijderen.totaal_voorzieningen || 0) > 0 && (
+                    <> De {teVerwijderen.totaal_voorzieningen} voorziening(en) op deze bouwlaag blijven behouden, maar worden losgekoppeld van de bouwlaag.</>
+                  )}
+                  {" "}Eventuele scheidingslijnen op de plattegrond worden definitief verwijderd. Deze actie kan niet ongedaan worden gemaakt.
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={verwijderVerdieping.isPending}>Annuleren</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => { e.preventDefault(); bevestigVerwijderen(); }}
+              disabled={verwijderVerdieping.isPending}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {verwijderVerdieping.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-1" />
+              ) : null}
+              Verwijderen
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 }
