@@ -217,6 +217,31 @@ paths:
               schema:
                 $ref: "#/components/schemas/TekeningAiAnalyseResultaat"
 
+  /gebouwen/{id}/plattegrond/ai-analyse:
+    post:
+      operationId: aiAnalysePlattegrond
+      tags: [gebouwen]
+      summary: AI-voorstel voor bouwlaag o.b.v. de inhoud van de plattegrond (vision)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PlattegrondAiAnalyseInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlattegrondAiAnalyseResultaat"
+
   /gebouwen/{id}:
     get:
       operationId: getGebouw
@@ -1985,6 +2010,16 @@ components:
           type: ["number", "null"]
         totaal_voorzieningen:
           type: integer
+        partijen:
+          type: array
+          items:
+            type: object
+            required: [type, naam]
+            properties:
+              type:
+                type: string
+              naam:
+                type: string
         aangemaakt_op:
           type: string
 
@@ -2249,6 +2284,31 @@ components:
         tekening_type:
           type: string
           description: Voorgesteld tekeningtype.
+        bouwlaag_naam:
+          type: ["string", "null"]
+          description: Voorgestelde bouwlaagnaam (bijv. "Begane grond", "1e verdieping").
+        bouwlaag_niveau:
+          type: ["integer", "null"]
+          description: Voorgesteld bouwlaagniveau (kelder negatief, begane grond 0, verdiepingen oplopend).
+        bestaande_verdieping_id:
+          type: ["integer", "null"]
+          description: Id van een bestaande bouwlaag die overeenkomt met het voorstel, indien gevonden.
+        toelichting:
+          type: ["string", "null"]
+        betrouwbaarheid:
+          type: ["string", "null"]
+
+    PlattegrondAiAnalyseInput:
+      type: object
+      required: [afbeelding]
+      properties:
+        afbeelding:
+          type: string
+          description: Data-URL (base64) van de gerenderde plattegrond voor vision-analyse.
+
+    PlattegrondAiAnalyseResultaat:
+      type: object
+      properties:
         bouwlaag_naam:
           type: ["string", "null"]
           description: Voorgestelde bouwlaagnaam (bijv. "Begane grond", "1e verdieping").

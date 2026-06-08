@@ -121,6 +121,10 @@ export const ListGebouwenResponseItem = zod.object({
   "latitude": zod.number().nullish(),
   "longitude": zod.number().nullish(),
   "totaal_voorzieningen": zod.number().optional(),
+  "partijen": zod.array(zod.object({
+  "type": zod.string(),
+  "naam": zod.string()
+})).optional(),
   "aangemaakt_op": zod.string()
 })
 export const ListGebouwenResponse = zod.array(ListGebouwenResponseItem)
@@ -194,6 +198,26 @@ export const AiAnalyseTekeningBody = zod.object({
 export const AiAnalyseTekeningResponse = zod.object({
   "tekening_naam": zod.string().describe('Voorgestelde nette naam voor de tekening.'),
   "tekening_type": zod.string().describe('Voorgesteld tekeningtype.'),
+  "bouwlaag_naam": zod.string().nullish().describe('Voorgestelde bouwlaagnaam (bijv. \"Begane grond\", \"1e verdieping\").'),
+  "bouwlaag_niveau": zod.number().nullish().describe('Voorgesteld bouwlaagniveau (kelder negatief, begane grond 0, verdiepingen oplopend).'),
+  "bestaande_verdieping_id": zod.number().nullish().describe('Id van een bestaande bouwlaag die overeenkomt met het voorstel, indien gevonden.'),
+  "toelichting": zod.string().nullish(),
+  "betrouwbaarheid": zod.string().nullish()
+})
+
+
+/**
+ * @summary AI-voorstel voor bouwlaag o.b.v. de inhoud van de plattegrond (vision)
+ */
+export const AiAnalysePlattegrondParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const AiAnalysePlattegrondBody = zod.object({
+  "afbeelding": zod.string().describe('Data-URL (base64) van de gerenderde plattegrond voor vision-analyse.')
+})
+
+export const AiAnalysePlattegrondResponse = zod.object({
   "bouwlaag_naam": zod.string().nullish().describe('Voorgestelde bouwlaagnaam (bijv. \"Begane grond\", \"1e verdieping\").'),
   "bouwlaag_niveau": zod.number().nullish().describe('Voorgesteld bouwlaagniveau (kelder negatief, begane grond 0, verdiepingen oplopend).'),
   "bestaande_verdieping_id": zod.number().nullish().describe('Id van een bestaande bouwlaag die overeenkomt met het voorstel, indien gevonden.'),
@@ -292,6 +316,10 @@ export const UpdateGebouwResponse = zod.object({
   "latitude": zod.number().nullish(),
   "longitude": zod.number().nullish(),
   "totaal_voorzieningen": zod.number().optional(),
+  "partijen": zod.array(zod.object({
+  "type": zod.string(),
+  "naam": zod.string()
+})).optional(),
   "aangemaakt_op": zod.string()
 })
 

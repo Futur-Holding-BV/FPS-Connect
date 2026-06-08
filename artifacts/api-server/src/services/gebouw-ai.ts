@@ -402,6 +402,88 @@ export async function analyseerTekening(
   };
 }
 
+export interface PlattegrondAnalyse {
+  bouwlaag_naam: string | null;
+  bouwlaag_niveau: number | null;
+  bestaande_verdieping_id: number | null;
+  toelichting: string | null;
+  betrouwbaarheid: string | null;
+}
+
+const PLATTEGROND_PROMPT = `Je analyseert een bouwkundige plattegrond van één bouwlaag van een gebouw. Bepaal bij welke bouwlaag deze plattegrond hoort op basis van de inhoud van de tekening: titelblok, stempel, labels of teksten zoals "Begane grond", "Verdieping 1", "1e verdieping", "2e verdieping", "Kelder", "Souterrain", "Dak", "Plattegrond BG", enzovoort.
+Geef uitsluitend geldige JSON terug met deze velden:
+- bouwlaag_naam (tekst of null): de bouwlaag waar de plattegrond bij hoort. Gebruik Nederlandse standaardnamen: "Kelder", "Begane grond", "1e verdieping", "2e verdieping", "Dak", enz. Null als je het niet uit de tekening kunt afleiden.
+- bouwlaag_niveau (geheel getal of null): het niveau. Kelder = -1 (lager = -2, -3), begane grond = 0, 1e verdieping = 1, 2e verdieping = 2, dak = hoogste verdieping + 1. Null als bouwlaag_naam null is.
+- toelichting (korte Nederlandse tekst): welke tekst of aanwijzing in de tekening je gebruikte.
+- betrouwbaarheid (tekst): "laag", "midden" of "hoog".
+Verzin geen bouwlaag die niet uit de tekening blijkt. Antwoord in het Nederlands. Alleen JSON, geen extra tekst.`;
+
+// Leest de inhoud van een plattegrond (afbeelding/PDF-render) met vision en
+// bepaalt de bijbehorende bouwlaag. Het matchen met een bestaande bouwlaag
+// gebeurt in code via matchVerdiepingId.
+export async function analyseerPlattegrond(
+  afbeeldingDataUrl: string,
+  bestaandeVerdiepingen: { id: number; naam: string; niveau: number }[],
+): Promise<PlattegrondAnalyse> {
+  const valterug = (toelichting: string): PlattegrondAnalyse => ({
+    bouwlaag_naam: null,
+    bouwlaag_niveau: null,
+    bestaande_verdieping_id: null,
+    toelichting,
+    betrouwbaarheid: "laag",
+  });
+
+  if (!OPENAI_KEY) {
+    return valterug("AI niet beschikbaar; kies de bouwlaag handmatig.");
+  }
+
+  const bestaandTekst = bestaandeVerdiepingen.length
+    ? bestaandeVerdiepingen.map((v) => `- ${v.naam} (niveau ${v.niveau})`).join("\n")
+    : "(nog geen bouwlagen)";
+  const userTekst = `Bestaande bouwlagen in dit gebouw:\n${bestaandTekst}\nKies, indien passend, een bouwlaagnaam en -niveau die aansluiten op de bestaande bouwlagen. Lees de tekst in de plattegrond om de bouwlaag te bepalen.`;
+
+  let parsed: Record<string, unknown>;
+  try {
+    const client = new OpenAI({ apiKey: OPENAI_KEY });
+    const completion = await client.chat.completions.create({
+      model: "gpt-4o",
+      response_format: { type: "json_object" },
+      max_tokens: 400,
+      messages: [
+        { role: "system", content: PLATTEGROND_PROMPT },
+        {
+          role: "user",
+          content: [
+            { type: "text", text: userTekst },
+            { type: "image_url", image_url: { url: afbeeldingDataUrl } },
+          ],
+        },
+      ],
+    });
+    const tekst = completion.choices[0]?.message?.content;
+    if (!tekst) return valterug("Geen AI-antwoord ontvangen.");
+    parsed = JSON.parse(tekst);
+  } catch (err) {
+    logger.error({ err }, "Plattegrond-analyse mislukte");
+    return valterug("AI-analyse mislukte; kies de bouwlaag handmatig.");
+  }
+
+  const bouwlaagNaam = strOfNull(parsed.bouwlaag_naam);
+  const bouwlaagNiveau = intOfNull(parsed.bouwlaag_niveau);
+
+  return {
+    bouwlaag_naam: bouwlaagNaam,
+    bouwlaag_niveau: bouwlaagNaam ? bouwlaagNiveau : null,
+    bestaande_verdieping_id: matchVerdiepingId(
+      bouwlaagNaam,
+      bouwlaagNiveau,
+      bestaandeVerdiepingen,
+    ),
+    toelichting: strOfNull(parsed.toelichting),
+    betrouwbaarheid: strOfNull(parsed.betrouwbaarheid),
+  };
+}
+
 function splitsAdres(formatted: string): {
   adres: string | null;
   postcode: string | null;

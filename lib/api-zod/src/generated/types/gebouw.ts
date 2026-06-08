@@ -5,6 +5,7 @@
  * FPS Brandpreventie - Platform voor brandpreventieve gebouwvoorzieningen
  * OpenAPI spec version: 0.1.0
  */
+import type { GebouwPartijenItem } from './gebouwPartijenItem';
 
 export interface Gebouw {
   id: number;
@@ -39,5 +40,6 @@ export interface Gebouw {
   /** @nullable */
   longitude?: number | null;
   totaal_voorzieningen?: number;
+  partijen?: GebouwPartijenItem[];
   aangemaakt_op: string;
 }

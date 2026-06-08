@@ -70,6 +70,8 @@ import type {
   OnderhoudUpdate,
   OnderhoudVoltooien,
   Onderhoudstaak,
+  PlattegrondAiAnalyseInput,
+  PlattegrondAiAnalyseResultaat,
   Scheiding,
   ScheidingInput,
   ScheidingUpdate,
@@ -806,6 +808,77 @@ export const useAiAnalyseTekening = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getAiAnalyseTekeningMutationOptions(options));
+    }
+
+export const getAiAnalysePlattegrondUrl = (id: number,) => {
+
+
+
+
+  return `/api/gebouwen/${id}/plattegrond/ai-analyse`
+}
+
+/**
+ * @summary AI-voorstel voor bouwlaag o.b.v. de inhoud van de plattegrond (vision)
+ */
+export const aiAnalysePlattegrond = async (id: number,
+    plattegrondAiAnalyseInput: PlattegrondAiAnalyseInput, options?: RequestInit): Promise<PlattegrondAiAnalyseResultaat> => {
+
+  return customFetch<PlattegrondAiAnalyseResultaat>(getAiAnalysePlattegrondUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(plattegrondAiAnalyseInput)
+  }
+);}
+
+
+
+
+export const getAiAnalysePlattegrondMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof aiAnalysePlattegrond>>, TError,{id: number;data: BodyType<PlattegrondAiAnalyseInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof aiAnalysePlattegrond>>, TError,{id: number;data: BodyType<PlattegrondAiAnalyseInput>}, TContext> => {
+
+const mutationKey = ['aiAnalysePlattegrond'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof aiAnalysePlattegrond>>, {id: number;data: BodyType<PlattegrondAiAnalyseInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  aiAnalysePlattegrond(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AiAnalysePlattegrondMutationResult = NonNullable<Awaited<ReturnType<typeof aiAnalysePlattegrond>>>
+    export type AiAnalysePlattegrondMutationBody = BodyType<PlattegrondAiAnalyseInput>
+    export type AiAnalysePlattegrondMutationError = ErrorType<unknown>
+
+    /**
+ * @summary AI-voorstel voor bouwlaag o.b.v. de inhoud van de plattegrond (vision)
+ */
+export const useAiAnalysePlattegrond = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof aiAnalysePlattegrond>>, TError,{id: number;data: BodyType<PlattegrondAiAnalyseInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof aiAnalysePlattegrond>>,
+        TError,
+        {id: number;data: BodyType<PlattegrondAiAnalyseInput>},
+        TContext
+      > => {
+      return useMutation(getAiAnalysePlattegrondMutationOptions(options));
     }
 
 export const getGetGebouwUrl = (id: number,) => {

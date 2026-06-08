@@ -58,6 +58,11 @@ export interface Vervaldag {
   dagen_over?: number;
 }
 
+export type GebouwPartijenItem = {
+  type: string;
+  naam: string;
+};
+
 export interface Gebouw {
   id: number;
   /** @nullable */
@@ -91,6 +96,7 @@ export interface Gebouw {
   /** @nullable */
   longitude?: number | null;
   totaal_voorzieningen?: number;
+  partijen?: GebouwPartijenItem[];
   aangemaakt_op: string;
 }
 
@@ -254,6 +260,33 @@ export interface TekeningAiAnalyseResultaat {
   tekening_naam: string;
   /** Voorgesteld tekeningtype. */
   tekening_type: string;
+  /**
+     * Voorgestelde bouwlaagnaam (bijv. "Begane grond", "1e verdieping").
+     * @nullable
+     */
+  bouwlaag_naam?: string | null;
+  /**
+     * Voorgesteld bouwlaagniveau (kelder negatief, begane grond 0, verdiepingen oplopend).
+     * @nullable
+     */
+  bouwlaag_niveau?: number | null;
+  /**
+     * Id van een bestaande bouwlaag die overeenkomt met het voorstel, indien gevonden.
+     * @nullable
+     */
+  bestaande_verdieping_id?: number | null;
+  /** @nullable */
+  toelichting?: string | null;
+  /** @nullable */
+  betrouwbaarheid?: string | null;
+}
+
+export interface PlattegrondAiAnalyseInput {
+  /** Data-URL (base64) van de gerenderde plattegrond voor vision-analyse. */
+  afbeelding: string;
+}
+
+export interface PlattegrondAiAnalyseResultaat {
   /**
      * Voorgestelde bouwlaagnaam (bijv. "Begane grond", "1e verdieping").
      * @nullable

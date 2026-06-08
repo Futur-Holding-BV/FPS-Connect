@@ -11,7 +11,11 @@ import {
 } from "@workspace/db";
 import { eq, inArray, count, and } from "drizzle-orm";
 import { requireRol } from "../middlewares/auth";
-import { analyseerGebouwVrijeTekst, analyseerTekening } from "../services/gebouw-ai";
+import {
+  analyseerGebouwVrijeTekst,
+  analyseerTekening,
+  analyseerPlattegrond,
+} from "../services/gebouw-ai";
 
 const router = Router();
 
@@ -55,7 +59,12 @@ async function toegewezenGebouwIds(userId: number): Promise<number[]> {
   return rows.map((r) => r.gebouwId);
 }
 
-function gebouwRij(g: typeof gebouwenTable.$inferSelect, totaal: number, naam: string | null) {
+function gebouwRij(
+  g: typeof gebouwenTable.$inferSelect,
+  totaal: number,
+  naam: string | null,
+  partijen: { type: string; naam: string }[] = [],
+) {
   return {
     id: g.id,
     werknummer: g.werknummer,
@@ -75,6 +84,7 @@ function gebouwRij(g: typeof gebouwenTable.$inferSelect, totaal: number, naam: s
     latitude: g.latitude,
     longitude: g.longitude,
     totaal_voorzieningen: totaal,
+    partijen,
     aangemaakt_op: g.aangemaaktOp.toISOString(),
   };
 }
@@ -121,13 +131,26 @@ router.get("/gebouwen", async (req, res) => {
       gebouwen = gebouwen.filter((g) => matchendeGebouwIds.has(g.id));
     }
 
+    const allePartijen = await db.select().from(gebouwPartijenTable);
+    const partijenPerGebouw = new Map<number, { type: string; naam: string }[]>();
+    for (const p of allePartijen) {
+      const lijst = partijenPerGebouw.get(p.gebouwId) ?? [];
+      lijst.push({ type: p.type, naam: p.naam });
+      partijenPerGebouw.set(p.gebouwId, lijst);
+    }
+
     const result = await Promise.all(
       gebouwen.map(async (g) => {
         const [totaal] = await db
           .select({ count: count() })
           .from(voorzieningenTable)
           .where(eq(voorzieningenTable.gebouwId, g.id));
-        return gebouwRij(g, Number(totaal?.count ?? 0), await klantNaam(g.klantId));
+        return gebouwRij(
+          g,
+          Number(totaal?.count ?? 0),
+          await klantNaam(g.klantId),
+          partijenPerGebouw.get(g.id) ?? [],
+        );
       }),
     );
 
@@ -232,6 +255,33 @@ router.post(
       const resultaat = await analyseerTekening(
         bestandsnaam,
         typeof type === "string" ? type : null,
+        verdiepingen.map((v) => ({ id: v.id, naam: v.naam, niveau: v.niveau })),
+      );
+      res.json(resultaat);
+    } catch (err) {
+      req.log.error(err);
+      res.status(500).json({ error: "AI-analyse mislukte" });
+    }
+  },
+);
+
+// POST /gebouwen/:id/plattegrond/ai-analyse — alleen beheerder
+router.post(
+  "/gebouwen/:id/plattegrond/ai-analyse",
+  requireRol("beheerder", "hoofdbeheerder"),
+  async (req, res) => {
+    try {
+      const gebouwId = parseInt(req.params.id);
+      const { afbeelding } = req.body ?? {};
+      if (!afbeelding || typeof afbeelding !== "string" || !afbeelding.startsWith("data:")) {
+        return res.status(400).json({ error: "afbeelding is verplicht" });
+      }
+      const verdiepingen = await db
+        .select()
+        .from(verdiepingenTable)
+        .where(eq(verdiepingenTable.gebouwId, gebouwId));
+      const resultaat = await analyseerPlattegrond(
+        afbeelding,
         verdiepingen.map((v) => ({ id: v.id, naam: v.naam, niveau: v.niveau })),
       );
       res.json(resultaat);

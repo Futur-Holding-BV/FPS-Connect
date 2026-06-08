@@ -162,6 +162,23 @@ export default function Gebouwen() {
                     {gebouw.naam}
                   </CardTitle>
                   <CardDescription>{gebouw.adres}, {gebouw.stad}</CardDescription>
+                  {gebouw.partijen && gebouw.partijen.length > 0 && (
+                    <div className="mt-3 space-y-1">
+                      {gebouw.partijen.map((partij, i) => (
+                        <div
+                          key={i}
+                          className="flex items-baseline gap-1.5 text-sm"
+                        >
+                          <span className="text-muted-foreground shrink-0">
+                            {PARTIJ_TYPE_LABELS[partij.type] ?? partij.type}:
+                          </span>
+                          <span className="font-medium truncate">
+                            {partij.naam}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </CardHeader>
                 <CardContent className="mt-auto">
                   <div className="flex gap-2">
