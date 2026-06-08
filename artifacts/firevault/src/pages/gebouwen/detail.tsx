@@ -18,7 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ArrowLeft, Layers, Users, X, UserPlus, Loader2, Building2, Mail, Phone, Pencil } from "lucide-react";
+import { ArrowLeft, Layers, Users, X, UserPlus, Loader2, Building2, Pencil } from "lucide-react";
 import { useAuth } from "@/context/auth-context";
 import GebouwPartijen from "./gebouw-partijen";
 import GebouwTekeningen from "./gebouw-tekeningen";
@@ -255,32 +255,6 @@ export default function GebouwDetail() {
                             <Badge variant="secondary" className="text-xs shrink-0">
                               {t.rol}
                             </Badge>
-                            {t.actief === false && (
-                              <Badge variant="outline" className="text-xs shrink-0 text-muted-foreground">
-                                Inactief
-                              </Badge>
-                            )}
-                          </div>
-                          {t.organisatie && (
-                            <p className="text-xs text-muted-foreground">{t.organisatie}</p>
-                          )}
-                          <div className="mt-1 space-y-0.5">
-                            {t.email && (
-                              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                                <Mail className="h-3 w-3 shrink-0" />
-                                <a href={`mailto:${t.email}`} className="hover:underline truncate">
-                                  {t.email}
-                                </a>
-                              </div>
-                            )}
-                            {t.telefoon && (
-                              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                                <Phone className="h-3 w-3 shrink-0" />
-                                <a href={`tel:${t.telefoon}`} className="hover:underline">
-                                  {t.telefoon}
-                                </a>
-                              </div>
-                            )}
                           </div>
                         </div>
                         <Button

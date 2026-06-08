@@ -2117,18 +2117,8 @@ components:
           type: integer
         naam:
           type: string
-        email:
-          type: string
         rol:
           type: string
-        telefoon:
-          type: string
-          nullable: true
-        organisatie:
-          type: string
-          nullable: true
-        actief:
-          type: boolean
         aangemaakt_op:
           type: string
 

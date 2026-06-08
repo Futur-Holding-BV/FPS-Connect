@@ -618,11 +618,7 @@ router.get("/gebouwen/:id/toewijzingen", async (req, res) => {
         gebouwId: gebouwToewijzingenTable.gebouwId,
         gebruikerId: gebouwToewijzingenTable.gebruikerId,
         naam: gebruikersTable.naam,
-        email: gebruikersTable.email,
         rol: gebruikersTable.rol,
-        telefoon: gebruikersTable.telefoon,
-        organisatie: gebruikersTable.bedrijf,
-        actief: gebruikersTable.actief,
         aangemaaktOp: gebouwToewijzingenTable.aangemaaktOp,
       })
       .from(gebouwToewijzingenTable)
@@ -635,11 +631,7 @@ router.get("/gebouwen/:id/toewijzingen", async (req, res) => {
         gebouw_id: r.gebouwId,
         gebruiker_id: r.gebruikerId,
         naam: r.naam,
-        email: r.email,
         rol: r.rol,
-        telefoon: r.telefoon,
-        organisatie: r.organisatie,
-        actief: r.actief,
         aangemaakt_op: r.aangemaaktOp.toISOString(),
       })),
     );

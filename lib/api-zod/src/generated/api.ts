@@ -452,11 +452,7 @@ export const ListGebouwToewijzingenResponseItem = zod.object({
   "gebouw_id": zod.number(),
   "gebruiker_id": zod.number(),
   "naam": zod.string(),
-  "email": zod.string().optional(),
   "rol": zod.string(),
-  "telefoon": zod.string().nullish(),
-  "organisatie": zod.string().nullish(),
-  "actief": zod.boolean().optional(),
   "aangemaakt_op": zod.string()
 })
 export const ListGebouwToewijzingenResponse = zod.array(ListGebouwToewijzingenResponseItem)
