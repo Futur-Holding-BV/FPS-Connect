@@ -11,7 +11,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Layers, Map, FileText, Plus, Loader2, ExternalLink } from "lucide-react";
+import { Layers, Map, FileText, Plus, Loader2 } from "lucide-react";
+import { TekeningViewer } from "./tekening-viewer";
 
 const TEKENING_LABELS: Record<string, string> = {
   plattegrond: "Plattegrond",
@@ -28,29 +29,38 @@ function typeLabel(type: string): string {
 }
 
 function TekeningRegels({ items }: { items: Tekening[] }) {
+  const [actief, setActief] = useState<Tekening | null>(null);
   if (items.length === 0) {
     return <p className="text-xs text-muted-foreground">Nog geen tekeningen.</p>;
   }
   return (
-    <ul className="space-y-1">
-      {items.map((t) => (
-        <li key={t.id} className="flex items-center gap-2 text-sm min-w-0">
-          <FileText className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-          <a
-            href={`/api/storage${t.url}`}
-            target="_blank"
-            rel="noreferrer"
-            className="hover:underline truncate inline-flex items-center gap-1"
-          >
-            {t.naam}
-            <ExternalLink className="h-3 w-3 shrink-0" />
-          </a>
-          <Badge variant="secondary" className="text-xs shrink-0">
-            {typeLabel(t.type)}
-          </Badge>
-        </li>
-      ))}
-    </ul>
+    <>
+      <ul className="space-y-1">
+        {items.map((t) => (
+          <li key={t.id} className="flex items-center gap-2 text-sm min-w-0">
+            <FileText className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+            <button
+              type="button"
+              onClick={() => setActief(t)}
+              className="hover:underline truncate text-left"
+            >
+              {t.naam}
+            </button>
+            <Badge variant="secondary" className="text-xs shrink-0">
+              {typeLabel(t.type)}
+            </Badge>
+          </li>
+        ))}
+      </ul>
+      <TekeningViewer
+        open={actief !== null}
+        onOpenChange={(o) => {
+          if (!o) setActief(null);
+        }}
+        url={actief?.url ?? ""}
+        naam={actief?.naam ?? ""}
+      />
+    </>
   );
 }
 

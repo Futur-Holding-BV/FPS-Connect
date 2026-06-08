@@ -75,6 +75,16 @@ The Expo app can't keep the `Secure; SameSite=None` session cookie in the Replit
 **How to apply:** mobile must send `Authorization: Bearer <token>`; the shared fetch layer wires this
 via `setAuthTokenGetter`. Token secret falls back to a dev default — set a real `SESSION_SECRET`.
 
+## Tekeningen openen via ingebouwde TekeningViewer, niet ruwe storage-link
+Tekening-links openden voorheen `/api/storage${url}` in een nieuw browser-tab → grote PDF/afbeelding
+startte linksboven (niet gecentreerd). Opgelost met herbruikbare `gebouwen/tekening-viewer.tsx`
+(Dialog): PDF via pdf.js scale:2 → dataURL, afbeeldingen direct, beide `object-contain` in een
+`flex items-center justify-center` container = passend + gecentreerd. Multi-pagina nav + "Nieuw
+tabblad"-fallback. Gebruikt in gebouw-bouwlagen.tsx (TekeningRegels) en gebouw-tekeningen.tsx.
+**How to apply:** pdf.js render-effect MOET in cleanup `renderTask.cancel()` + `loadingTask.destroy()`
+aanroepen (anders blijft zwaar werk draaien bij sluiten/wisselen); reset `aantalPaginas` naar 1 bij
+open/url-wissel om stale paginatie te voorkomen.
+
 ## Plattegrond moet "fit to view" op laden (anders lijken spots verdwenen)
 De plattegrond-SVG rendert de PDF op scale 2 (grote afbeelding, bv. 2380x1684px). Zonder
 auto-fit start de view op {x:0,y:0,zoom:1} en zie je alleen de linkerbovenhoek. Seed-spots hebben

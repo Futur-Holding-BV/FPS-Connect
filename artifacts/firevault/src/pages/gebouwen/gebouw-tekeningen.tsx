@@ -8,6 +8,7 @@ import {
 } from "@workspace/api-client-react";
 import type {
   Verdieping,
+  Tekening,
   TekeningAiAnalyseResultaat,
 } from "@workspace/api-client-react";
 import { useUpload } from "@workspace/object-storage-web";
@@ -30,9 +31,9 @@ import {
   Plus,
   X,
   Upload,
-  ExternalLink,
   Sparkles,
 } from "lucide-react";
+import { TekeningViewer } from "./tekening-viewer";
 
 const TEKENING_TYPES = [
   { waarde: "plattegrond", label: "Plattegrond" },
@@ -82,6 +83,7 @@ export default function GebouwTekeningen({
     null,
   );
   const [fout, setFout] = useState("");
+  const [actief, setActief] = useState<Tekening | null>(null);
 
   const gesorteerdeVerdiepingen = [...verdiepingen].sort(
     (a, b) => a.niveau - b.niveau,
@@ -217,15 +219,13 @@ export default function GebouwTekeningen({
               >
                 <div className="min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <a
-                      href={`/api/storage${t.url}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="font-medium text-sm hover:underline truncate inline-flex items-center gap-1"
+                    <button
+                      type="button"
+                      onClick={() => setActief(t)}
+                      className="font-medium text-sm hover:underline truncate text-left"
                     >
                       {t.naam}
-                      <ExternalLink className="h-3 w-3 shrink-0" />
-                    </a>
+                    </button>
                     <Badge variant="secondary" className="text-xs shrink-0">
                       {typeLabel(t.type)}
                     </Badge>
@@ -421,6 +421,14 @@ export default function GebouwTekeningen({
           </div>
         )}
       </CardContent>
+      <TekeningViewer
+        open={actief !== null}
+        onOpenChange={(o) => {
+          if (!o) setActief(null);
+        }}
+        url={actief?.url ?? ""}
+        naam={actief?.naam ?? ""}
+      />
     </Card>
   );
 }
