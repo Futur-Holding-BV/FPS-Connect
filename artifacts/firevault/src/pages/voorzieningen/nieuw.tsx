@@ -63,6 +63,7 @@ export default function VoorzieningNieuw() {
       data: {
         objectnummer: volgendSpot?.spotnummer,
         type: form.type,
+        status: "concept",
         classificatie: form.classificatie,
         ruimte: form.ruimte || undefined,
         locatie_omschrijving: form.locatie_omschrijving || undefined,

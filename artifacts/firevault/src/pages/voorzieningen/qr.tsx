@@ -1,5 +1,5 @@
 import { useParams, Link } from "wouter";
-import { useGetVoorziening } from "@workspace/api-client-react";
+import { useGetVoorziening, getGetVoorzieningQueryKey } from "@workspace/api-client-react";
 import { QRCodeSVG } from "qrcode.react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -144,7 +144,7 @@ export default function VoorzieningQr() {
   const { id } = useParams<{ id: string }>();
   const printRef = useRef<HTMLDivElement>(null);
   const { data: voorziening, isLoading } = useGetVoorziening(Number(id), {
-    query: { enabled: !!id },
+    query: { enabled: !!id, queryKey: getGetVoorzieningQueryKey(Number(id)) },
   });
 
   function afdrukken() {

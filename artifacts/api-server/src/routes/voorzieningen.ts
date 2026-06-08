@@ -553,10 +553,10 @@ router.post("/verdiepingen/:id/scheidingen", async (req, res) => {
       .insert(scheidingenTable)
       .values({ verdiepingId: id, type, waarde: waarde ?? null, kleur: kleur ?? null, punten })
       .returning();
-    res.status(201).json(scheidingRij(scheiding!));
+    return res.status(201).json(scheidingRij(scheiding!));
   } catch (err) {
     req.log.error(err);
-    res.status(500).json({ error: "Interne serverfout" });
+    return res.status(500).json({ error: "Interne serverfout" });
   }
 });
 
@@ -580,10 +580,10 @@ router.patch("/verdiepingen/scheidingen/:scheidingId", async (req, res) => {
       .where(eq(scheidingenTable.id, scheidingId))
       .returning();
     if (!scheiding) return res.status(404).json({ error: "Scheiding niet gevonden" });
-    res.json(scheidingRij(scheiding));
+    return res.json(scheidingRij(scheiding));
   } catch (err) {
     req.log.error(err);
-    res.status(500).json({ error: "Interne serverfout" });
+    return res.status(500).json({ error: "Interne serverfout" });
   }
 });
 
