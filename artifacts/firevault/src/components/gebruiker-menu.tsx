@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { useTranslation } from "react-i18next";
-import { LogOut, KeyRound, Languages, Eye, ChevronsUpDown } from "lucide-react";
+import { LogOut, KeyRound, Languages, Eye, ChevronsUpDown, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -184,6 +184,19 @@ export function GebruikerMenu() {
               ))}
             </DropdownMenuContent>
           </DropdownMenu>
+        </div>
+
+        <div className="mt-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setLocation("/info")}
+            className="w-full justify-start gap-2 text-muted-foreground group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0"
+            title="App-informatie"
+          >
+            <Info className="h-4 w-4 flex-shrink-0" />
+            <span className="group-data-[collapsible=icon]:hidden">App-informatie</span>
+          </Button>
         </div>
 
         <div className="flex gap-1 mt-2">

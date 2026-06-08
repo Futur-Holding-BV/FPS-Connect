@@ -35,6 +35,7 @@ import LoginPogingen from "@/pages/beheer/login-pogingen";
 import HelpdeskBeheer from "@/pages/beheer/helpdesk";
 import FeedbackBeheer from "@/pages/beheer/feedback";
 import Heatmaps from "@/pages/beheer/heatmaps";
+import InfoPagina from "@/pages/info/index";
 import { OndersteuningWidget } from "@/components/ondersteuning-widget";
 import { HeatmapTracker } from "@/components/heatmap-tracker";
 
@@ -61,6 +62,7 @@ function BeheerderPortal() {
         <Route path="/beheer/helpdesk" component={HelpdeskBeheer} />
         <Route path="/beheer/feedback" component={FeedbackBeheer} />
         <Route path="/beheer/heatmaps" component={Heatmaps} />
+        <Route path="/info" component={InfoPagina} />
         <Route component={NotFound} />
       </Switch>
     </BeheerderLayout>
@@ -81,6 +83,7 @@ function MonteurPortal() {
         <Route path="/gebouwen" component={Gebouwen} />
         <Route path="/gebouwen/:id" component={GebouwDetail} />
         <Route path="/gebouwen/:id/plattegrond/:verdiepingId" component={Plattegrond} />
+        <Route path="/info" component={InfoPagina} />
         <Route component={NotFound} />
       </Switch>
     </MonteurLayout>
@@ -96,6 +99,7 @@ function KlantPortal() {
         <Route path="/gebouwen/:id" component={GebouwDetail} />
         <Route path="/gebouwen/:id/plattegrond/:verdiepingId" component={Plattegrond} />
         <Route path="/klant/rapportages" component={KlantRapportages} />
+        <Route path="/info" component={InfoPagina} />
         <Route component={NotFound} />
       </Switch>
     </KlantLayout>
