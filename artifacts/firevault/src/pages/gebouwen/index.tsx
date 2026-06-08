@@ -12,7 +12,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Link } from "wouter";
-import { Search, Building, X } from "lucide-react";
+import { Search, Building, X, ArrowDownUp } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useAuth } from "@/context/auth-context";
 import { GebouwAanmakenDialog } from "./gebouw-aanmaken-dialog";
@@ -28,12 +28,32 @@ const PARTIJ_TYPE_LABELS: Record<string, string> = {
 
 const ALLE = "__alle__";
 
+type SorteerOptie =
+  | "alfabetisch"
+  | "laatst_toegevoegd"
+  | "laatst_bewerkt"
+  | "laatst_spot";
+
+const SORTEER_LABELS: Record<SorteerOptie, string> = {
+  alfabetisch: "Alfabetisch (A-Z)",
+  laatst_toegevoegd: "Laatst toegevoegd",
+  laatst_bewerkt: "Laatst bewerkt",
+  laatst_spot: "Laatst spot toegevoegd",
+};
+
+function tijd(waarde: string | null | undefined): number {
+  if (!waarde) return 0;
+  const ms = new Date(waarde).getTime();
+  return isFinite(ms) ? ms : 0;
+}
+
 export default function Gebouwen() {
   const { t } = useTranslation();
   const { gebruiker } = useAuth();
   const [search, setSearch] = useState("");
   const [partijType, setPartijType] = useState<string>(ALLE);
   const [partijNaam, setPartijNaam] = useState<string>(ALLE);
+  const [sortering, setSortering] = useState<SorteerOptie>("alfabetisch");
 
   const { data: partijOpties } = useListGebouwPartijOpties();
 
@@ -61,6 +81,21 @@ export default function Gebouwen() {
     !!gebruiker?.rol && BEHEERDER_ROLLEN.includes(gebruiker.rol as string);
 
   const filterActief = partijType !== ALLE || partijNaam !== ALLE;
+
+  const gesorteerdeGebouwen = useMemo(() => {
+    const lijst = [...(gebouwen ?? [])];
+    switch (sortering) {
+      case "laatst_toegevoegd":
+        return lijst.sort((a, b) => tijd(b.aangemaakt_op) - tijd(a.aangemaakt_op));
+      case "laatst_bewerkt":
+        return lijst.sort((a, b) => tijd(b.bijgewerkt_op) - tijd(a.bijgewerkt_op));
+      case "laatst_spot":
+        return lijst.sort((a, b) => tijd(b.laatste_spot_op) - tijd(a.laatste_spot_op));
+      case "alfabetisch":
+      default:
+        return lijst.sort((a, b) => a.naam.localeCompare(b.naam, "nl"));
+    }
+  }, [gebouwen, sortering]);
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
@@ -131,6 +166,23 @@ export default function Gebouwen() {
             <X className="h-4 w-4 mr-1" /> Filter wissen
           </Button>
         )}
+
+        <Select
+          value={sortering}
+          onValueChange={(v) => setSortering(v as SorteerOptie)}
+        >
+          <SelectTrigger className="w-full sm:w-56 sm:ml-auto">
+            <ArrowDownUp className="h-4 w-4 mr-1 text-muted-foreground" />
+            <SelectValue placeholder="Sorteren" />
+          </SelectTrigger>
+          <SelectContent>
+            {(Object.keys(SORTEER_LABELS) as SorteerOptie[]).map((optie) => (
+              <SelectItem key={optie} value={optie}>
+                {SORTEER_LABELS[optie]}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       {isLoading ? (
@@ -141,7 +193,7 @@ export default function Gebouwen() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {gebouwen?.map((gebouw) => (
+          {gesorteerdeGebouwen.map((gebouw) => (
             <Link key={gebouw.id} href={`/gebouwen/${gebouw.id}`}>
               <Card className="hover:border-primary transition-colors cursor-pointer h-full flex flex-col">
                 <CardHeader>
@@ -159,7 +211,9 @@ export default function Gebouwen() {
                     </Badge>
                   )}
                   <CardTitle className={gebouw.werknummer ? "mt-2" : "mt-4"}>
-                    {gebouw.naam}
+                    {gebouw.projectnummer
+                      ? `${gebouw.projectnummer} - ${gebouw.naam}`
+                      : gebouw.naam}
                   </CardTitle>
                   <CardDescription>{gebouw.adres}, {gebouw.stad}</CardDescription>
                   {gebouw.partijen && gebouw.partijen.length > 0 && (

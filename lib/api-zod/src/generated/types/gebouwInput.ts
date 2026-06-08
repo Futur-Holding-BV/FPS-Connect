@@ -8,6 +8,7 @@
 
 export interface GebouwInput {
   werknummer: string;
+  projectnummer?: string;
   naam: string;
   adres: string;
   stad?: string;

@@ -12,6 +12,8 @@ export interface GebouwDetail {
   id: number;
   /** @nullable */
   werknummer?: string | null;
+  /** @nullable */
+  projectnummer?: string | null;
   naam: string;
   adres: string;
   /** @nullable */

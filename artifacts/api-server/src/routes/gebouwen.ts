@@ -9,7 +9,7 @@ import {
   gebouwPartijenTable,
   tekeningenTable,
 } from "@workspace/db";
-import { eq, inArray, count, and } from "drizzle-orm";
+import { eq, inArray, count, and, sql } from "drizzle-orm";
 import { requireRol } from "../middlewares/auth";
 import {
   analyseerGebouwVrijeTekst,
@@ -29,15 +29,33 @@ function kapitaliseerWoorden(waarde: string): string {
   );
 }
 
-function isUniekWerknummerFout(err: unknown): boolean {
-  return (
+function uniekeConstraintNaam(err: unknown): string | null {
+  if (
     typeof err === "object" &&
     err !== null &&
     "code" in err &&
     (err as { code?: string }).code === "23505" &&
-    "constraint" in err &&
-    (err as { constraint?: string }).constraint === "gebouwen_werknummer_unique"
-  );
+    "constraint" in err
+  ) {
+    return (err as { constraint?: string }).constraint ?? null;
+  }
+  return null;
+}
+
+function uniekFoutAntwoord(
+  err: unknown,
+  res: { status: (code: number) => { json: (body: unknown) => unknown } },
+): boolean {
+  const constraint = uniekeConstraintNaam(err);
+  if (constraint === "gebouwen_werknummer_unique") {
+    res.status(409).json({ error: "Dit werknummer is al in gebruik" });
+    return true;
+  }
+  if (constraint === "gebouwen_projectnummer_unique") {
+    res.status(409).json({ error: "Dit projectnummer is al in gebruik" });
+    return true;
+  }
+  return false;
 }
 
 async function klantNaam(klantId: number | null): Promise<string | null> {
@@ -64,10 +82,12 @@ function gebouwRij(
   totaal: number,
   naam: string | null,
   partijen: { type: string; naam: string }[] = [],
+  laatsteSpotOp: Date | null = null,
 ) {
   return {
     id: g.id,
     werknummer: g.werknummer,
+    projectnummer: g.projectnummer,
     naam: g.naam,
     adres: g.adres,
     stad: g.stad,
@@ -86,6 +106,8 @@ function gebouwRij(
     totaal_voorzieningen: totaal,
     partijen,
     aangemaakt_op: g.aangemaaktOp.toISOString(),
+    bijgewerkt_op: g.bijgewerktOp ? g.bijgewerktOp.toISOString() : null,
+    laatste_spot_op: laatsteSpotOp ? laatsteSpotOp.toISOString() : null,
   };
 }
 
@@ -141,15 +163,19 @@ router.get("/gebouwen", async (req, res) => {
 
     const result = await Promise.all(
       gebouwen.map(async (g) => {
-        const [totaal] = await db
-          .select({ count: count() })
+        const [stats] = await db
+          .select({
+            count: count(),
+            laatsteSpotOp: sql<Date | null>`max(${voorzieningenTable.aangemaaktOp})`,
+          })
           .from(voorzieningenTable)
           .where(eq(voorzieningenTable.gebouwId, g.id));
         return gebouwRij(
           g,
-          Number(totaal?.count ?? 0),
+          Number(stats?.count ?? 0),
           await klantNaam(g.klantId),
           partijenPerGebouw.get(g.id) ?? [],
+          stats?.laatsteSpotOp ?? null,
         );
       }),
     );
@@ -166,6 +192,7 @@ router.post("/gebouwen", requireRol("beheerder", "hoofdbeheerder"), async (req, 
   try {
     const {
       werknummer,
+      projectnummer,
       naam,
       adres,
       stad,
@@ -188,10 +215,13 @@ router.post("/gebouwen", requireRol("beheerder", "hoofdbeheerder"), async (req, 
       return res.status(400).json({ error: "werknummer is verplicht" });
     }
     const werknummerWaarde = werknummer.trim();
+    const projectnummerWaarde =
+      typeof projectnummer === "string" && projectnummer.trim() ? projectnummer.trim() : null;
     const [gebouw] = await db
       .insert(gebouwenTable)
       .values({
         werknummer: werknummerWaarde,
+        projectnummer: projectnummerWaarde,
         naam,
         adres: kapitaliseerWoorden(adres),
         stad: typeof stad === "string" ? kapitaliseerWoorden(stad) : stad,
@@ -210,8 +240,8 @@ router.post("/gebouwen", requireRol("beheerder", "hoofdbeheerder"), async (req, 
       .returning();
     res.status(201).json(gebouwRij(gebouw, 0, await klantNaam(gebouw.klantId)));
   } catch (err) {
-    if (isUniekWerknummerFout(err)) {
-      return res.status(409).json({ error: "Dit werknummer is al in gebruik" });
+    if (uniekFoutAntwoord(err, res)) {
+      return;
     }
     req.log.error(err);
     res.status(500).json({ error: "Interne serverfout" });
@@ -380,6 +410,7 @@ router.get("/gebouwen/:id", async (req, res) => {
     res.json({
       id: gebouw.id,
       werknummer: gebouw.werknummer,
+      projectnummer: gebouw.projectnummer,
       naam: gebouw.naam,
       adres: gebouw.adres,
       stad: gebouw.stad,
@@ -411,6 +442,7 @@ router.patch("/gebouwen/:id", requireRol("beheerder", "hoofdbeheerder"), async (
     const id = parseInt(req.params.id);
     const {
       werknummer,
+      projectnummer,
       naam,
       adres,
       stad,
@@ -434,6 +466,14 @@ router.patch("/gebouwen/:id", requireRol("beheerder", "hoofdbeheerder"), async (
               werknummer:
                 typeof werknummer === "string" && werknummer.trim()
                   ? werknummer.trim()
+                  : null,
+            }
+          : {}),
+        ...(projectnummer !== undefined
+          ? {
+              projectnummer:
+                typeof projectnummer === "string" && projectnummer.trim()
+                  ? projectnummer.trim()
                   : null,
             }
           : {}),
@@ -462,8 +502,8 @@ router.patch("/gebouwen/:id", requireRol("beheerder", "hoofdbeheerder"), async (
       .where(eq(voorzieningenTable.gebouwId, id));
     res.json(gebouwRij(gebouw, Number(totaal?.count ?? 0), await klantNaam(gebouw.klantId)));
   } catch (err) {
-    if (isUniekWerknummerFout(err)) {
-      return res.status(409).json({ error: "Dit werknummer is al in gebruik" });
+    if (uniekFoutAntwoord(err, res)) {
+      return;
     }
     req.log.error(err);
     res.status(500).json({ error: "Interne serverfout" });

@@ -105,6 +105,7 @@ export const ListGebouwenQueryParams = zod.object({
 export const ListGebouwenResponseItem = zod.object({
   "id": zod.number(),
   "werknummer": zod.string().nullish(),
+  "projectnummer": zod.string().nullish(),
   "naam": zod.string(),
   "adres": zod.string(),
   "stad": zod.string().nullish(),
@@ -125,7 +126,9 @@ export const ListGebouwenResponseItem = zod.object({
   "type": zod.string(),
   "naam": zod.string()
 })).optional(),
-  "aangemaakt_op": zod.string()
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string().nullish(),
+  "laatste_spot_op": zod.string().nullish()
 })
 export const ListGebouwenResponse = zod.array(ListGebouwenResponseItem)
 
@@ -135,6 +138,7 @@ export const ListGebouwenResponse = zod.array(ListGebouwenResponseItem)
  */
 export const CreateGebouwBody = zod.object({
   "werknummer": zod.string(),
+  "projectnummer": zod.string().optional(),
   "naam": zod.string(),
   "adres": zod.string(),
   "stad": zod.string().optional(),
@@ -248,6 +252,7 @@ export const GetGebouwParams = zod.object({
 export const GetGebouwResponse = zod.object({
   "id": zod.number(),
   "werknummer": zod.string().nullish(),
+  "projectnummer": zod.string().nullish(),
   "naam": zod.string(),
   "adres": zod.string(),
   "stad": zod.string().nullish(),
@@ -293,6 +298,7 @@ export const UpdateGebouwParams = zod.object({
 
 export const UpdateGebouwBody = zod.object({
   "werknummer": zod.string().nullish(),
+  "projectnummer": zod.string().nullish(),
   "naam": zod.string().optional(),
   "adres": zod.string().optional(),
   "stad": zod.string().nullish(),
@@ -312,6 +318,7 @@ export const UpdateGebouwBody = zod.object({
 export const UpdateGebouwResponse = zod.object({
   "id": zod.number(),
   "werknummer": zod.string().nullish(),
+  "projectnummer": zod.string().nullish(),
   "naam": zod.string(),
   "adres": zod.string(),
   "stad": zod.string().nullish(),
@@ -332,7 +339,9 @@ export const UpdateGebouwResponse = zod.object({
   "type": zod.string(),
   "naam": zod.string()
 })).optional(),
-  "aangemaakt_op": zod.string()
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string().nullish(),
+  "laatste_spot_op": zod.string().nullish()
 })
 
 

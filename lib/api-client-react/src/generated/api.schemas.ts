@@ -67,6 +67,8 @@ export interface Gebouw {
   id: number;
   /** @nullable */
   werknummer?: string | null;
+  /** @nullable */
+  projectnummer?: string | null;
   naam: string;
   adres: string;
   /** @nullable */
@@ -98,6 +100,10 @@ export interface Gebouw {
   totaal_voorzieningen?: number;
   partijen?: GebouwPartijenItem[];
   aangemaakt_op: string;
+  /** @nullable */
+  bijgewerkt_op?: string | null;
+  /** @nullable */
+  laatste_spot_op?: string | null;
 }
 
 export interface Verdieping {
@@ -126,6 +132,8 @@ export interface GebouwDetail {
   id: number;
   /** @nullable */
   werknummer?: string | null;
+  /** @nullable */
+  projectnummer?: string | null;
   naam: string;
   adres: string;
   /** @nullable */
@@ -332,6 +340,7 @@ export interface ScheidingUpdate {
 
 export interface GebouwInput {
   werknummer: string;
+  projectnummer?: string;
   naam: string;
   adres: string;
   stad?: string;
@@ -350,6 +359,7 @@ export interface GebouwInput {
 
 export interface GebouwUpdate {
   werknummer?: string | null;
+  projectnummer?: string | null;
   naam?: string;
   adres?: string;
   stad?: string | null;

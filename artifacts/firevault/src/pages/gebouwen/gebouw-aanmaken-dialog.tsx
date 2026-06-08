@@ -23,6 +23,7 @@ import { Plus, Sparkles, Loader2, AlertCircle } from "lucide-react";
 
 interface Velden {
   werknummer: string;
+  projectnummer: string;
   naam: string;
   adres: string;
   stad: string;
@@ -38,6 +39,7 @@ interface Velden {
 
 const LEEG: Velden = {
   werknummer: "",
+  projectnummer: "",
   naam: "",
   adres: "",
   stad: "",
@@ -138,6 +140,7 @@ export function GebouwAanmakenDialog() {
       await maakGebouw.mutateAsync({
         data: {
           werknummer: velden.werknummer.trim(),
+          projectnummer: velden.projectnummer.trim() || undefined,
           naam: velden.naam,
           adres: velden.adres,
           stad: velden.stad || undefined,
@@ -155,8 +158,11 @@ export function GebouwAanmakenDialog() {
       herstel();
       setOpen(false);
     } catch (err) {
-      if ((err as { status?: number })?.status === 409) {
-        setFoutmelding("Dit werknummer is al in gebruik. Kies een uniek werknummer.");
+      const fout = err as { status?: number; data?: { error?: string } };
+      if (fout?.status === 409) {
+        setFoutmelding(
+          fout.data?.error ?? "Dit nummer is al in gebruik. Kies een uniek nummer.",
+        );
       } else {
         setFoutmelding("Gebouw kon niet worden opgeslagen.");
       }
@@ -254,7 +260,7 @@ export function GebouwAanmakenDialog() {
 
         {/* Gegevens */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div className="space-y-1.5 sm:col-span-2">
+          <div className="space-y-1.5">
             <Label htmlFor="g-werknummer">Werknummer *</Label>
             <Input
               id="g-werknummer"
@@ -264,6 +270,18 @@ export function GebouwAanmakenDialog() {
             />
             <p className="text-xs text-muted-foreground">
               Uniek nummer dat dit gebouw identificeert.
+            </p>
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="g-projectnummer">Projectnummer</Label>
+            <Input
+              id="g-projectnummer"
+              placeholder="bijv. P-2026-014"
+              value={velden.projectnummer}
+              onChange={(e) => zet("projectnummer", e.target.value)}
+            />
+            <p className="text-xs text-muted-foreground">
+              Uniek projectnummer, getoond als "projectnummer - naam".
             </p>
           </div>
           <div className="space-y-1.5">

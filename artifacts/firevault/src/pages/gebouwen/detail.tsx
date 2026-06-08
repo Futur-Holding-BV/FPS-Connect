@@ -112,7 +112,11 @@ export default function GebouwDetail() {
                 Werknummer {gebouw.werknummer}
               </span>
             )}
-            <h1 className="text-3xl font-bold tracking-tight">{gebouw.naam}</h1>
+            <h1 className="text-3xl font-bold tracking-tight">
+              {gebouw.projectnummer
+                ? `${gebouw.projectnummer} - ${gebouw.naam}`
+                : gebouw.naam}
+            </h1>
             <p className="text-muted-foreground mt-1">
               {gebouw.adres}, {gebouw.stad}
             </p>

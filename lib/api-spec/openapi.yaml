@@ -2029,6 +2029,8 @@ components:
           type: integer
         werknummer:
           type: ["string", "null"]
+        projectnummer:
+          type: ["string", "null"]
         naam:
           type: string
         adres:
@@ -2073,6 +2075,10 @@ components:
                 type: string
         aangemaakt_op:
           type: string
+        bijgewerkt_op:
+          type: ["string", "null"]
+        laatste_spot_op:
+          type: ["string", "null"]
 
     GebouwDetail:
       type: object
@@ -2081,6 +2087,8 @@ components:
         id:
           type: integer
         werknummer:
+          type: ["string", "null"]
+        projectnummer:
           type: ["string", "null"]
         naam:
           type: string
@@ -2418,6 +2426,8 @@ components:
       properties:
         werknummer:
           type: string
+        projectnummer:
+          type: string
         naam:
           type: string
         adres:
@@ -2451,6 +2461,9 @@ components:
       type: object
       properties:
         werknummer:
+          type: string
+          nullable: true
+        projectnummer:
           type: string
           nullable: true
         naam:

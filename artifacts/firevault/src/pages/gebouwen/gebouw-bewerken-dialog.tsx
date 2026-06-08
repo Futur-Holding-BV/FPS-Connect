@@ -23,6 +23,7 @@ import { Loader2, AlertCircle, Sparkles } from "lucide-react";
 
 interface Velden {
   werknummer: string;
+  projectnummer: string;
   naam: string;
   adres: string;
   stad: string;
@@ -49,6 +50,7 @@ function getalOfNull(v: string): number | null {
 function uitGebouw(gebouw: Gebouw): Velden {
   return {
     werknummer: tekst(gebouw.werknummer),
+    projectnummer: tekst(gebouw.projectnummer),
     naam: tekst(gebouw.naam),
     adres: tekst(gebouw.adres),
     stad: tekst(gebouw.stad),
@@ -158,6 +160,7 @@ export function GebouwBewerkenDialog({ gebouw, open, onOpenChange }: Props) {
         id: gebouw.id,
         data: {
           werknummer: velden.werknummer.trim() || null,
+          projectnummer: velden.projectnummer.trim() || null,
           naam: velden.naam,
           adres: velden.adres,
           stad: velden.stad || null,
@@ -174,8 +177,11 @@ export function GebouwBewerkenDialog({ gebouw, open, onOpenChange }: Props) {
       await queryClient.invalidateQueries();
       onOpenChange(false);
     } catch (err) {
-      if ((err as { status?: number })?.status === 409) {
-        setFoutmelding("Dit werknummer is al in gebruik. Kies een uniek werknummer.");
+      const fout = err as { status?: number; data?: { error?: string } };
+      if (fout?.status === 409) {
+        setFoutmelding(
+          fout.data?.error ?? "Dit nummer is al in gebruik. Kies een uniek nummer.",
+        );
       } else {
         setFoutmelding("Gebouw kon niet worden opgeslagen.");
       }
@@ -261,7 +267,7 @@ export function GebouwBewerkenDialog({ gebouw, open, onOpenChange }: Props) {
         <Separator />
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div className="space-y-1.5 sm:col-span-2">
+          <div className="space-y-1.5">
             <Label htmlFor="b-werknummer">Werknummer</Label>
             <Input
               id="b-werknummer"
@@ -271,6 +277,18 @@ export function GebouwBewerkenDialog({ gebouw, open, onOpenChange }: Props) {
             />
             <p className="text-xs text-muted-foreground">
               Uniek nummer dat dit gebouw identificeert.
+            </p>
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="b-projectnummer">Projectnummer</Label>
+            <Input
+              id="b-projectnummer"
+              placeholder="bijv. P-2026-014"
+              value={velden.projectnummer}
+              onChange={(e) => zet("projectnummer", e.target.value)}
+            />
+            <p className="text-xs text-muted-foreground">
+              Uniek projectnummer, getoond als "projectnummer - naam".
             </p>
           </div>
           <div className="space-y-1.5">
