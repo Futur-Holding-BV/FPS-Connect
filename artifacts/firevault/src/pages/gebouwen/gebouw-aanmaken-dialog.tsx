@@ -2,6 +2,7 @@ import { useState } from "react";
 import {
   useCreateGebouw,
   useAiAnalyseGebouw,
+  type ErrorType,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
@@ -121,8 +122,16 @@ export function GebouwAanmakenDialog() {
         diepte: res.diepte != null ? String(Math.round(res.diepte * 10) / 10) : v.diepte,
         oppervlakte: res.oppervlakte != null ? String(Math.round(res.oppervlakte)) : v.oppervlakte,
       }));
-    } catch {
-      setFoutmelding("AI-analyse mislukte. Probeer het opnieuw of vul handmatig in.");
+    } catch (err) {
+      const apiErr = err as ErrorType<{ error?: string }>;
+      const melding =
+        apiErr?.data?.error ||
+        (apiErr?.status === 500
+          ? "De AI-service is tijdelijk niet beschikbaar. Controleer de API-sleutels of vul de velden handmatig in."
+          : apiErr?.status === 401 || apiErr?.status === 403
+            ? "Geen toegang tot de AI-functie."
+            : "AI-analyse mislukte. Probeer het opnieuw of vul de velden handmatig in.");
+      setFoutmelding(melding);
     }
   }
 
@@ -204,7 +213,7 @@ export function GebouwAanmakenDialog() {
             <Textarea
               id="ai-beschrijving"
               rows={3}
-              placeholder="Beschrijf het gebouw of plak een adres. Bijv. 'Kantoorpand Coolsingel 40, Rotterdam, gebouwd in 1998, ongeveer 10 verdiepingen' of simpelweg 'Coolsingel 40 Rotterdam'."
+              placeholder="Bijv. 'Colosseum Enschede', 'kantoorpand Stationsplein 1 Utrecht' of 'schoolgebouw De Regenboog Zwolle'."
               value={aiTekst}
               onChange={(e) => setAiTekst(e.target.value)}
             />
@@ -251,8 +260,20 @@ export function GebouwAanmakenDialog() {
         </div>
 
         {foutmelding && (
-          <div className="flex items-center gap-2 text-sm text-destructive">
-            <AlertCircle className="h-4 w-4 shrink-0" /> {foutmelding}
+          <div className="flex items-start gap-2 text-sm text-destructive">
+            <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+            <div className="flex-1 space-y-1">
+              <p>{foutmelding}</p>
+              {velden !== LEEG && (
+                <button
+                  type="button"
+                  className="underline text-xs text-muted-foreground hover:text-foreground"
+                  onClick={() => setVelden(LEEG)}
+                >
+                  Velden wissen en handmatig invullen
+                </button>
+              )}
+            </div>
           </div>
         )}
 
@@ -296,7 +317,7 @@ export function GebouwAanmakenDialog() {
             <Label htmlFor="g-adres">Adres *</Label>
             <Input
               id="g-adres"
-              placeholder="Coolsingel 40"
+              placeholder="bijv. Kerkstraat 10"
               value={velden.adres}
               onChange={(e) => zet("adres", e.target.value)}
             />
@@ -305,7 +326,7 @@ export function GebouwAanmakenDialog() {
             <Label htmlFor="g-postcode">Postcode</Label>
             <Input
               id="g-postcode"
-              placeholder="3011 AD"
+              placeholder="bijv. 1234 AB"
               value={velden.postcode}
               onChange={(e) => zet("postcode", e.target.value)}
             />
@@ -314,7 +335,7 @@ export function GebouwAanmakenDialog() {
             <Label htmlFor="g-stad">Stad</Label>
             <Input
               id="g-stad"
-              placeholder="Rotterdam"
+              placeholder="bijv. Amsterdam"
               value={velden.stad}
               onChange={(e) => zet("stad", e.target.value)}
             />

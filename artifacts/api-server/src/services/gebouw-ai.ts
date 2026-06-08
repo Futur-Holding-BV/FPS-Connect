@@ -539,65 +539,105 @@ function splitsAdres(formatted: string): {
 // de AI leidt de afzonderlijke velden af en verrijkt deze met geocoding en
 // satellietanalyse waar mogelijk. Door de gebruiker genoemde waarden hebben
 // altijd voorrang op de AI-schatting.
+//
+// Robuustheid: de OpenAI-extractiestap en de vision-stap zijn omgeven door
+// try/catch zodat een API-fout (quota, ongeldige sleutel, time-out) nooit
+// als onbehandelde uitzondering naar de route-handler doorslaat.
+// Fallback-volgorde: OpenAI-extractie → als dat mislukt, geocoding op de
+// ruwe invoer → als dat ook mislukt, leeg resultaat met duidelijke melding.
 export async function analyseerGebouwVrijeTekst(beschrijving: string): Promise<GebouwAnalyse> {
-  if (!OPENAI_KEY) return leegResultaat("OpenAI API-sleutel ontbreekt.");
-
-  const extract = await extraheerUitTekst(beschrijving);
-  if (!extract) {
+  if (!OPENAI_KEY && !GOOGLE_KEY) {
     return leegResultaat(
-      "De omschrijving kon niet worden verwerkt. Probeer het opnieuw of vul de velden handmatig in.",
+      "Zowel de OpenAI API-sleutel als de Google Maps API-sleutel ontbreken. " +
+        "Activeer de sleutels in de omgevingsvariabelen of vul de velden handmatig in.",
     );
   }
 
+  // Stap 1: probeer via OpenAI gestructureerde velden te extraheren uit de vrije tekst.
+  // Bij een fout (ongeldige sleutel, quota, time-out) vallen we terug op geocoding van de ruwe invoer.
+  let extract: ExtractieVelden | null = null;
+  if (OPENAI_KEY) {
+    try {
+      extract = await extraheerUitTekst(beschrijving);
+    } catch (err) {
+      logger.warn({ err }, "extraheerUitTekst mislukte; val terug op directe geocoding");
+    }
+  }
+
+  // Bouw het resultaatobject op met wat de extractie opleverde (kan allemaal null zijn).
   const result: GebouwAnalyse = {
     gevonden: true,
-    naam: extract.naam,
-    adres: extract.adres,
-    stad: extract.stad,
-    postcode: extract.postcode,
+    naam: extract?.naam ?? null,
+    adres: extract?.adres ?? null,
+    stad: extract?.stad ?? null,
+    postcode: extract?.postcode ?? null,
     adres_gevonden: null,
     latitude: null,
     longitude: null,
     satelliet_url: null,
-    aantal_verdiepingen: extract.aantal_verdiepingen,
-    hoogte: extract.hoogte,
-    breedte: extract.breedte,
-    diepte: extract.diepte,
-    oppervlakte: extract.oppervlakte,
-    gebouw_type: extract.gebouw_type,
-    omschrijving: extract.omschrijving,
+    aantal_verdiepingen: extract?.aantal_verdiepingen ?? null,
+    hoogte: extract?.hoogte ?? null,
+    breedte: extract?.breedte ?? null,
+    diepte: extract?.diepte ?? null,
+    oppervlakte: extract?.oppervlakte ?? null,
+    gebouw_type: extract?.gebouw_type ?? null,
+    omschrijving: extract?.omschrijving ?? null,
     toelichting: null,
     betrouwbaarheid: null,
   };
 
+  // Stap 2: bepaal de zoekterm voor geocoding.
+  // Voorkeursvolgorde: zoekopdracht uit extractie → opgebouwde adresstring → ruwe invoer.
   const zoek =
-    extract.zoekopdracht ||
-    [extract.adres, extract.postcode, extract.stad].filter(Boolean).join(", ");
+    extract?.zoekopdracht ||
+    [extract?.adres, extract?.postcode, extract?.stad].filter(Boolean).join(", ") ||
+    beschrijving.slice(0, 200).trim();
 
-  if (GOOGLE_KEY && zoek) {
-    const geoUitkomst = await geocode(zoek);
-    if (!geoUitkomst.ok) {
-      result.toelichting = geoUitkomst.reden;
-    } else {
-      const geo = geoUitkomst.resultaat;
-      result.adres_gevonden = geo.formatted;
-      result.latitude = geo.lat;
-      result.longitude = geo.lng;
+  if (!GOOGLE_KEY) {
+    // Geen kaart-API: tevreden met alleen de OpenAI-extractie.
+    if (!extract) {
+      return leegResultaat(
+        "De Google Maps API-sleutel ontbreekt en de omschrijving kon niet worden verwerkt. " +
+          "Vul de velden handmatig in.",
+      );
+    }
+    result.toelichting =
+      "Google Maps API-sleutel ontbreekt; geen adresopzoek of satellietanalyse mogelijk. " +
+      "Alleen de uit uw tekst herkende velden zijn ingevuld.";
+    return result;
+  }
 
-      const delen = splitsAdres(geo.formatted);
-      result.adres = result.adres ?? delen.adres;
-      result.stad = result.stad ?? delen.stad;
-      result.postcode = result.postcode ?? delen.postcode;
-      if (!result.naam && delen.adres) result.naam = delen.adres;
+  // Stap 3: geocoding.
+  const geoUitkomst = await geocode(zoek);
+  if (!geoUitkomst.ok) {
+    // Geocoding mislukt. Als we via OpenAI al iets hebben gevonden, retourneer dat gedeeltelijk.
+    result.toelichting = geoUitkomst.reden;
+    if (!extract) {
+      // Helemaal niets nuttig gevonden.
+      return { ...result, gevonden: false };
+    }
+    // Gedeeltelijk resultaat: extractievelden zonder locatie.
+    return result;
+  }
 
-      const beeld = await haalSatellietBeeld(geo.lat, geo.lng);
-      if (beeld) {
-        result.satelliet_url = beeld.dataUrl;
-        const velden = await analyseerBeeld(
-          beeld.dataUrl,
-          beeld.grondBreedteMeter,
-          geo.formatted,
-        );
+  const geo = geoUitkomst.resultaat;
+  result.adres_gevonden = geo.formatted;
+  result.latitude = geo.lat;
+  result.longitude = geo.lng;
+
+  const delen = splitsAdres(geo.formatted);
+  result.adres = result.adres ?? delen.adres;
+  result.stad = result.stad ?? delen.stad;
+  result.postcode = result.postcode ?? delen.postcode;
+  if (!result.naam && delen.adres) result.naam = delen.adres;
+
+  // Stap 4: satellietbeeld ophalen en via AI analyseren.
+  const beeld = await haalSatellietBeeld(geo.lat, geo.lng);
+  if (beeld) {
+    result.satelliet_url = beeld.dataUrl;
+    if (OPENAI_KEY) {
+      try {
+        const velden = await analyseerBeeld(beeld.dataUrl, beeld.grondBreedteMeter, geo.formatted);
         if (velden) {
           result.aantal_verdiepingen = result.aantal_verdiepingen ?? velden.aantal_verdiepingen;
           result.hoogte = result.hoogte ?? velden.hoogte;
@@ -609,6 +649,11 @@ export async function analyseerGebouwVrijeTekst(beschrijving: string): Promise<G
           result.toelichting = velden.toelichting;
           result.betrouwbaarheid = velden.betrouwbaarheid;
         }
+      } catch (err) {
+        logger.warn({ err }, "analyseerBeeld mislukte; satellietanalyse overgeslagen");
+        result.toelichting =
+          "Adres gevonden, maar de satellietanalyse mislukte. " +
+          "De afmetingen zijn niet automatisch geschat.";
       }
     }
   }
