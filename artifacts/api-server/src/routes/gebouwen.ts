@@ -82,7 +82,7 @@ function gebouwRij(
   totaal: number,
   naam: string | null,
   partijen: { type: string; naam: string }[] = [],
-  laatsteSpotOp: Date | null = null,
+  laatsteSpotOp: Date | string | null = null,
 ) {
   return {
     id: g.id,
@@ -107,7 +107,7 @@ function gebouwRij(
     partijen,
     aangemaakt_op: g.aangemaaktOp.toISOString(),
     bijgewerkt_op: g.bijgewerktOp ? g.bijgewerktOp.toISOString() : null,
-    laatste_spot_op: laatsteSpotOp ? laatsteSpotOp.toISOString() : null,
+    laatste_spot_op: laatsteSpotOp ? new Date(laatsteSpotOp).toISOString() : null,
   };
 }
 
