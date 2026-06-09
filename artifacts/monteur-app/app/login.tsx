@@ -1,6 +1,7 @@
 import { Redirect, useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
+  Image,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -57,23 +58,25 @@ export default function Login() {
           <View style={{ alignItems: "center", marginBottom: 36 }}>
             <View
               style={{
-                width: 72,
-                height: 72,
-                borderRadius: 20,
-                backgroundColor: c.primary,
-                alignItems: "center",
-                justifyContent: "center",
-                marginBottom: 18,
+                backgroundColor: "#fff",
+                borderRadius: 16,
+                paddingHorizontal: 24,
+                paddingVertical: 12,
+                marginBottom: 20,
+                shadowColor: "#000",
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.18,
+                shadowRadius: 6,
+                elevation: 4,
               }}
             >
-              <Text style={{ color: "#fff", fontSize: 30, fontFamily: "Inter_700Bold" }}>
-                FPS
-              </Text>
+              <Image
+                source={require("../assets/images/logo-fps.png")}
+                style={{ width: 160, height: 62, resizeMode: "contain" }}
+                accessibilityLabel="FPS Brandpreventie"
+              />
             </View>
-            <Text style={{ color: c.darkForeground, fontSize: 26, fontFamily: "Inter_700Bold" }}>
-              FPS Monteur
-            </Text>
-            <Text style={{ color: c.darkMuted, fontSize: 15, marginTop: 6, fontFamily: "Inter_400Regular" }}>
+            <Text style={{ color: c.darkMuted, fontSize: 15, fontFamily: "Inter_400Regular" }}>
               Brandpreventie op de bouwplaats
             </Text>
           </View>

@@ -84,10 +84,12 @@ export default function InfoPagina() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
-      <div className="flex items-center gap-3">
-        <div className="bg-primary/10 text-primary p-2 rounded-lg">
-          <Info className="h-6 w-6" />
-        </div>
+      <div className="flex items-start gap-4">
+        <img
+          src="/logo-fps.png"
+          alt="FPS Brandpreventie"
+          className="h-10 w-auto object-contain flex-shrink-0 hidden sm:block"
+        />
         <div>
           <h1 className="text-2xl font-bold tracking-tight">App-informatie</h1>
           <p className="text-sm text-muted-foreground">

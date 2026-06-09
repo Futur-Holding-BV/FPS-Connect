@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ShieldCheck, Loader2, KeyRound, ArrowLeft } from "lucide-react";
+import { Loader2, KeyRound, ArrowLeft } from "lucide-react";
 import {
   login,
   tweeFactorSetup,
@@ -119,10 +119,9 @@ export default function LoginPagina() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-900 to-slate-800 p-4">
       <div className="w-full max-w-md">
         <div className="flex flex-col items-center mb-6 text-center">
-          <div className="bg-primary text-primary-foreground p-3 rounded-xl shadow-lg mb-3">
-            <ShieldCheck size={32} />
+          <div className="bg-white rounded-2xl shadow-lg px-6 py-3 mb-4">
+            <img src="/logo-fps.png" alt="FPS Brandpreventie" className="h-12 w-auto object-contain" />
           </div>
-          <h1 className="text-2xl font-bold text-white tracking-tight">{t("app.naam")}</h1>
           <p className="text-sm text-slate-400">{t("auth.ondertitel")}</p>
         </div>
 

@@ -1,7 +1,7 @@
 import { useGetInfoInstellingen } from "@workspace/api-client-react";
 import { useRouter } from "expo-router";
 import React from "react";
-import { Linking, Pressable, ScrollView, Text, View } from "react-native";
+import { Image, Linking, Pressable, ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { bovenInset } from "@/components/ui";
@@ -122,12 +122,30 @@ export default function InfoScherm() {
             ‹ Terug
           </Text>
         </Pressable>
-        <Text style={{ color: c.darkForeground, fontSize: 22, fontFamily: "Inter_700Bold" }}>
-          App-informatie
-        </Text>
-        <Text style={{ color: c.darkMuted, fontSize: 14, marginTop: 4, fontFamily: "Inter_400Regular" }}>
-          Versiebeheer, juridische verantwoordelijkheid en ondersteuning
-        </Text>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
+          <View
+            style={{
+              backgroundColor: "#fff",
+              borderRadius: 10,
+              paddingHorizontal: 10,
+              paddingVertical: 6,
+            }}
+          >
+            <Image
+              source={require("../assets/images/logo-fps.png")}
+              style={{ width: 90, height: 35, resizeMode: "contain" }}
+              accessibilityLabel="FPS Brandpreventie"
+            />
+          </View>
+          <View>
+            <Text style={{ color: c.darkForeground, fontSize: 20, fontFamily: "Inter_700Bold" }}>
+              App-informatie
+            </Text>
+            <Text style={{ color: c.darkMuted, fontSize: 13, marginTop: 2, fontFamily: "Inter_400Regular" }}>
+              v{APP_VERSIE}
+            </Text>
+          </View>
+        </View>
       </View>
 
       <ScrollView

@@ -5,7 +5,7 @@ import {
   SidebarGroup, SidebarGroupContent,
   SidebarMenu, SidebarMenuItem, SidebarMenuButton,
 } from "@/components/ui/sidebar";
-import { Flame, Home, FileText, Building, Info } from "lucide-react";
+import { Home, FileText, Building, Info } from "lucide-react";
 import { GebruikerMenu } from "@/components/gebruiker-menu";
 
 const ROUTES = [
@@ -22,14 +22,15 @@ export default function KlantLayout({ children }: { children: React.ReactNode })
   return (
     <SidebarProvider>
       <Sidebar variant="inset" collapsible="icon">
-        <SidebarHeader className="py-4">
-          <div className="flex items-center gap-2 px-4">
-            <div className="bg-primary text-primary-foreground p-1.5 rounded flex-shrink-0">
-              <Flame size={20} />
-            </div>
-            <div className="group-data-[collapsible=icon]:hidden leading-tight">
-              <div className="font-extrabold text-sm tracking-wide uppercase text-primary">FPS</div>
-              <div className="text-xs text-muted-foreground font-medium">{t("nav.klantportaal")}</div>
+        <SidebarHeader className="py-3">
+          <div className="flex items-center justify-center px-2">
+            <img
+              src="/logo-fps.png"
+              alt="FPS Brandpreventie"
+              className="group-data-[collapsible=icon]:hidden h-9 w-auto object-contain bg-white rounded px-2 py-1"
+            />
+            <div className="hidden group-data-[collapsible=icon]:flex items-center justify-center w-8 h-8 bg-white rounded text-[10px] font-extrabold text-primary leading-none">
+              FPS
             </div>
           </div>
         </SidebarHeader>
