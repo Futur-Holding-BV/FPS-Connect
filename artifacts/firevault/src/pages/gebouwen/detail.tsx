@@ -413,12 +413,12 @@ export default function GebouwDetail() {
 
                 {/* Toevoegen */}
                 {beschikbareGebruikers.length > 0 && (
-                  <div className="flex flex-col gap-2 pt-1 sm:flex-row">
+                  <div className="flex flex-col gap-2 pt-1">
                     <Select
                       value={gekozenGebruikerId}
                       onValueChange={setGekozenGebruikerId}
                     >
-                      <SelectTrigger className="flex-1 text-sm">
+                      <SelectTrigger className="w-full text-sm">
                         <SelectValue placeholder="Kies teamlid" />
                       </SelectTrigger>
                       <SelectContent>
@@ -436,7 +436,7 @@ export default function GebouwDetail() {
                       value={gekozenProjectRol}
                       onValueChange={setGekozenProjectRol}
                     >
-                      <SelectTrigger className="sm:w-48 text-sm">
+                      <SelectTrigger className="w-full text-sm">
                         <SelectValue placeholder="Kies projectfunctie" />
                       </SelectTrigger>
                       <SelectContent>
@@ -446,16 +446,16 @@ export default function GebouwDetail() {
                       </SelectContent>
                     </Select>
                     <Button
-                      size="icon"
                       onClick={voegToe}
                       disabled={!gekozenGebruikerId || !gekozenProjectRol || bezig}
-                      className="shrink-0"
+                      className="w-full gap-2"
                     >
                       {bezig ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
                       ) : (
                         <UserPlus className="h-4 w-4" />
                       )}
+                      Teamlid toevoegen
                     </Button>
                   </div>
                 )}
