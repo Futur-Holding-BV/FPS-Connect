@@ -306,10 +306,9 @@ function SpotDetailBlok({
         {/* Ingezoomd stuk tekening */}
         <div className="prt-spot-tekening">
           <svg
-            width="100%"
             viewBox={`${vbX} ${vbY} ${vbW} ${vbH}`}
             preserveAspectRatio="xMidYMid meet"
-            style={{ display: "block" }}
+            style={{ display: "block", width: "100%", height: "100%" }}
           >
             {pdfBeeld
               ? <image href={pdfBeeld} x={0} y={0} width={W} height={H} />
@@ -812,7 +811,7 @@ export default function GebouwPrint() {
         .prt-spot-nr { font-size: 20px; font-weight: 800; color: #F23B0D; }
         .prt-spot-datum { font-size: 10px; color: #94a3b8; margin-top: 2px; }
         .prt-spot-body { display: flex; gap: 16px; margin-bottom: 12px; align-items: flex-start; }
-        .prt-spot-tekening { flex: 1; min-width: 0; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; background: #f8fafc; }
+        .prt-spot-tekening { flex: 1; min-width: 0; height: 280px; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; background: #f8fafc; }
         .prt-spot-info { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 16px; margin-bottom: 12px; }
         .prt-spot-info-rij { display: contents; }
         .prt-spot-lbl { font-size: 10px; font-weight: 600; color: #64748b; padding: 3px 0; }
@@ -822,10 +821,11 @@ export default function GebouwPrint() {
         .prt-spot-testitem { display: flex; flex-wrap: wrap; gap: 8px; align-items: baseline; margin-bottom: 4px; }
         .prt-spot-testitem-naam { font-size: 11px; font-weight: 600; color: #0f172a; }
         .prt-spot-testitem-meta { font-size: 10px; color: #64748b; }
-        .prt-spot-fotos { margin-top: 4px; }
-        .prt-spot-foto-label { font-size: 10px; font-weight: 600; color: #64748b; margin-bottom: 6px; margin-top: 8px; }
-        .prt-spot-foto-rij { display: flex; flex-wrap: wrap; gap: 8px; }
-        .prt-spot-foto { width: 120px; height: 90px; object-fit: cover; border-radius: 6px; border: 1px solid #e2e8f0; }
+        .prt-spot-fotos { margin-top: 4px; display: flex; gap: 16px; flex-wrap: wrap; }
+        .prt-spot-fotos > div { flex: 1; min-width: 0; }
+        .prt-spot-foto-label { font-size: 10px; font-weight: 600; color: #64748b; margin-bottom: 6px; margin-top: 4px; }
+        .prt-spot-foto-rij { display: flex; flex-wrap: wrap; gap: 6px; }
+        .prt-spot-foto { width: 96px; height: 72px; object-fit: cover; border-radius: 6px; border: 1px solid #e2e8f0; }
 
         /* Toolbar */
         .prt-toolbar { position: sticky; top: 0; z-index: 10; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; padding: 10px 24px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; }
