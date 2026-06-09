@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   useUpdateVoorziening,
   useListVerdiepingen,
+  useListLabels,
   getListVerdiepingenQueryKey,
 } from "@workspace/api-client-react";
-import type { VoorzieningDetail } from "@workspace/api-client-react";
+import type { VoorzieningDetail, Label } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   Dialog,
@@ -16,7 +17,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Label as UiLabel } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
@@ -28,11 +29,11 @@ import {
 import { AlertCircle } from "lucide-react";
 import { ApplicatiePicker } from "@/components/applicatie-picker";
 import { ToepassingMultiSelect } from "@/components/toepassing-multi-select";
-import { FabrikantSectie } from "@/components/fabrikant-sectie";
 import { useRol } from "@/context/rol-context";
 
 const GEEN_VERDIEPING = "__geen__";
 const GEEN_WERENDHEID = "__geen__";
+const GEEN_RUIMTE = "__geen__";
 
 const WERENDHEID_OPTIES = [
   { waarde: "WRD30", label: "WRD 30 — rookwerend 30 min" },
@@ -42,6 +43,44 @@ const WERENDHEID_OPTIES = [
   { waarde: "EI30", label: "EI 30 — brandwerend 30 min" },
   { waarde: "EI60", label: "EI 60 — brandwerend 60 min" },
 ];
+
+const RUIMTE_STANDAARD = [
+  "entree",
+  "keuken",
+  "badkamer",
+  "toilet",
+  "slaapkamer",
+  "woonkamer",
+  "trappenhuis",
+  "gang",
+  "meterkast",
+  "zolder",
+  "berging",
+  "kelder",
+  "parkeergarage",
+  "buitenruimte",
+];
+
+function getRuimteVolgorde(): string[] {
+  try {
+    const raw = localStorage.getItem("fps_ruimte_gebruik");
+    if (!raw) return RUIMTE_STANDAARD;
+    const counts: Record<string, number> = JSON.parse(raw);
+    return [...RUIMTE_STANDAARD].sort((a, b) => (counts[b] ?? 0) - (counts[a] ?? 0));
+  } catch {
+    return RUIMTE_STANDAARD;
+  }
+}
+
+function registreerRuimteGebruik(ruimte: string) {
+  if (!RUIMTE_STANDAARD.includes(ruimte)) return;
+  try {
+    const raw = localStorage.getItem("fps_ruimte_gebruik");
+    const counts: Record<string, number> = raw ? JSON.parse(raw) : {};
+    counts[ruimte] = (counts[ruimte] ?? 0) + 1;
+    localStorage.setItem("fps_ruimte_gebruik", JSON.stringify(counts));
+  } catch { /* ignore */ }
+}
 
 function toWerendheid(classificatie: string, wbdbo?: string | null, wrd?: string | null): string {
   if (wrd) return `WRD${wrd}`;
@@ -62,8 +101,8 @@ interface Velden {
   werendheid: string;
   verdieping_id: string;
   ruimte: string;
-  locatie_omschrijving: string;
-  productsoorten: string;
+  huisnummer: string;
+  materialen: string;
   installatie_datum: string;
   opmerkingen: string;
 }
@@ -82,8 +121,8 @@ function uitVoorziening(v: VoorzieningDetail): Velden {
     ),
     verdieping_id: v.verdieping_id != null ? String(v.verdieping_id) : "",
     ruimte: tekst(v.ruimte),
-    locatie_omschrijving: tekst(v.locatie_omschrijving),
-    productsoorten: tekst((v as any).materialen),
+    huisnummer: tekst((v as any).huisnummer),
+    materialen: tekst((v as any).materialen),
     installatie_datum: tekst((v as any).installatie_datum),
     opmerkingen: tekst((v as any).opmerkingen),
   };
@@ -109,6 +148,7 @@ export function VoorzieningBewerkenDialog({
   const [velden, setVelden] = useState<Velden>(() => uitVoorziening(voorziening));
   const [labelIds, setLabelIds] = useState<number[]>([]);
   const [foutmelding, setFoutmelding] = useState<string | null>(null);
+  const [ruimteOpties] = useState(() => getRuimteVolgorde());
 
   const vandaag = new Date().toISOString().slice(0, 10);
 
@@ -118,6 +158,18 @@ export function VoorzieningBewerkenDialog({
       queryKey: getListVerdiepingenQueryKey(voorziening.gebouw_id),
     },
   });
+
+  const { data: labelData = [] } = useListLabels(
+    velden.type ? { type_code: velden.type } : {},
+  );
+
+  const fabrikanten = useMemo(() => {
+    if (!labelIds.length) return [];
+    const geselecteerd = (labelData as Label[]).filter(
+      (l) => labelIds.includes(l.id) && l.fabrikant,
+    );
+    return [...new Set(geselecteerd.map((l) => l.fabrikant as string))];
+  }, [labelData, labelIds]);
 
   useEffect(() => {
     if (open) {
@@ -142,6 +194,9 @@ export function VoorzieningBewerkenDialog({
   async function verstuur() {
     setFoutmelding(null);
     try {
+      if (velden.ruimte && velden.ruimte !== GEEN_RUIMTE) {
+        registreerRuimteGebruik(velden.ruimte);
+      }
       const werendheidVelden = fromWerendheid(velden.werendheid);
       await wijzigVoorziening.mutateAsync({
         id: voorziening.id,
@@ -153,9 +208,11 @@ export function VoorzieningBewerkenDialog({
           verdieping_id: velden.verdieping_id
             ? Number(velden.verdieping_id)
             : undefined,
-          ruimte: velden.ruimte.trim() || undefined,
-          locatie_omschrijving: velden.locatie_omschrijving.trim() || undefined,
-          materialen: velden.productsoorten.trim() || undefined,
+          ruimte: velden.ruimte && velden.ruimte !== GEEN_RUIMTE
+            ? velden.ruimte
+            : undefined,
+          huisnummer: velden.huisnummer.trim() || undefined,
+          materialen: velden.materialen.trim() || undefined,
           installatie_datum: velden.installatie_datum || undefined,
           opmerkingen: velden.opmerkingen.trim() || undefined,
           label_ids: labelIds,
@@ -181,7 +238,7 @@ export function VoorzieningBewerkenDialog({
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="col-span-2">
-              <Label>Applicatie (type)</Label>
+              <UiLabel>Applicatie (type)</UiLabel>
               <ApplicatiePicker
                 value={velden.type}
                 onValueChange={(v) => {
@@ -194,8 +251,29 @@ export function VoorzieningBewerkenDialog({
               </p>
             </div>
 
+            {velden.type && (
+              <div className="col-span-2 border rounded-lg p-4 space-y-2">
+                <p className="text-sm font-medium">Toepassing</p>
+                <p className="text-xs text-muted-foreground">
+                  Selecteer de gebruikte producten of systemen bij deze spot.
+                </p>
+                <ToepassingMultiSelect
+                  typeCode={velden.type}
+                  selectedIds={labelIds}
+                  onSelectionChange={setLabelIds}
+                  magLabelsAanmaken={magLabelsAanmaken}
+                />
+                {fabrikanten.length > 0 && (
+                  <p className="text-xs text-muted-foreground pt-1 border-t">
+                    <span className="font-medium">Fabrikant(en):</span>{" "}
+                    {fabrikanten.join(", ")}
+                  </p>
+                )}
+              </div>
+            )}
+
             <div className="col-span-2">
-              <Label>Werendheid</Label>
+              <UiLabel>Brand- of rookwerendheid</UiLabel>
               <Select
                 value={velden.werendheid || GEEN_WERENDHEID}
                 onValueChange={(v) =>
@@ -218,7 +296,7 @@ export function VoorzieningBewerkenDialog({
             </div>
 
             <div>
-              <Label>Verdieping</Label>
+              <UiLabel>Verdieping</UiLabel>
               <Select
                 value={velden.verdieping_id || GEEN_VERDIEPING}
                 onValueChange={(v) =>
@@ -243,37 +321,42 @@ export function VoorzieningBewerkenDialog({
             </div>
 
             <div>
-              <Label htmlFor="bw-ruimte">Ruimte</Label>
-              <Input
-                id="bw-ruimte"
-                value={velden.ruimte}
-                onChange={set("ruimte")}
-                placeholder="Bijv. Trappenhal A"
-              />
+              <UiLabel>Ruimte</UiLabel>
+              <Select
+                value={velden.ruimte || GEEN_RUIMTE}
+                onValueChange={(v) =>
+                  setVelden((f) => ({
+                    ...f,
+                    ruimte: v === GEEN_RUIMTE ? "" : v,
+                  }))
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Kies ruimte..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={GEEN_RUIMTE}>Niet opgegeven</SelectItem>
+                  {ruimteOpties.map((r) => (
+                    <SelectItem key={r} value={r}>
+                      {r.charAt(0).toUpperCase() + r.slice(1)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
-            <div className="col-span-2">
-              <Label htmlFor="bw-locatie">Locatieomschrijving</Label>
+            <div>
+              <UiLabel htmlFor="bw-huisnummer">Huisnummer (optioneel)</UiLabel>
               <Input
-                id="bw-locatie"
-                value={velden.locatie_omschrijving}
-                onChange={set("locatie_omschrijving")}
-                placeholder="Bijv. Noord-oost muur"
-              />
-            </div>
-
-            <div className="col-span-2">
-              <Label htmlFor="bw-prod">Productsoorten</Label>
-              <Input
-                id="bw-prod"
-                value={velden.productsoorten}
-                onChange={set("productsoorten")}
-                placeholder="Bijv. Hilti CP 611A brandmortel"
+                id="bw-huisnummer"
+                value={velden.huisnummer}
+                onChange={set("huisnummer")}
+                placeholder="Bijv. 12 of 4B"
               />
             </div>
 
             <div>
-              <Label htmlFor="bw-inst">Installatiedatum</Label>
+              <UiLabel htmlFor="bw-inst">Installatiedatum</UiLabel>
               <Input
                 id="bw-inst"
                 type="date"
@@ -286,7 +369,17 @@ export function VoorzieningBewerkenDialog({
             </div>
 
             <div className="col-span-2">
-              <Label htmlFor="bw-opm">Opmerkingen</Label>
+              <UiLabel htmlFor="bw-mat">Materialen (optioneel)</UiLabel>
+              <Input
+                id="bw-mat"
+                value={velden.materialen}
+                onChange={set("materialen")}
+                placeholder="Bijv. Hilti CP 611A brandmortel"
+              />
+            </div>
+
+            <div className="col-span-2">
+              <UiLabel htmlFor="bw-opm">Opmerkingen</UiLabel>
               <Textarea
                 id="bw-opm"
                 value={velden.opmerkingen}
@@ -295,26 +388,6 @@ export function VoorzieningBewerkenDialog({
                 rows={3}
               />
             </div>
-          </div>
-
-          {velden.type && (
-            <div className="border rounded-lg p-4 space-y-2">
-              <p className="text-sm font-medium">Toepassing</p>
-              <p className="text-xs text-muted-foreground">
-                Selecteer de gebruikte producten of systemen bij deze spot.
-              </p>
-              <ToepassingMultiSelect
-                typeCode={velden.type}
-                selectedIds={labelIds}
-                onSelectionChange={setLabelIds}
-                magLabelsAanmaken={magLabelsAanmaken}
-              />
-            </div>
-          )}
-
-          <div className="border rounded-lg p-4 space-y-2">
-            <p className="text-sm font-medium">Fabrikant- en systeeminformatie</p>
-            <FabrikantSectie />
           </div>
 
           {foutmelding && (

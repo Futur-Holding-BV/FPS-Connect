@@ -15,6 +15,8 @@ export interface VoorzieningLocatie {
   /** @nullable */
   ruimte?: string | null;
   /** @nullable */
+  huisnummer?: string | null;
+  /** @nullable */
   locatie_x: number | null;
   /** @nullable */
   locatie_y: number | null;

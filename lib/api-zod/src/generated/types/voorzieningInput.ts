@@ -15,6 +15,7 @@ export interface VoorzieningInput {
   gebouw_id: number;
   verdieping_id?: number;
   ruimte?: string;
+  huisnummer?: string;
   locatie_omschrijving?: string;
   locatie_x?: number;
   locatie_y?: number;

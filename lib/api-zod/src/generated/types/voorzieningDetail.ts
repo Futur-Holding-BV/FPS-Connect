@@ -28,6 +28,8 @@ export interface VoorzieningDetail {
   /** @nullable */
   ruimte?: string | null;
   /** @nullable */
+  huisnummer?: string | null;
+  /** @nullable */
   locatie_omschrijving?: string | null;
   /** @nullable */
   locatie_x?: number | null;

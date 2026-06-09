@@ -157,6 +157,7 @@ async function mapVoorziening(v: typeof voorzieningenTable.$inferSelect) {
     verdieping_id: v.verdiepingId,
     verdieping_naam: verdieping?.naam ?? null,
     ruimte: v.ruimte,
+    huisnummer: v.huisnummer,
     locatie_omschrijving: v.locatieOmschrijving,
     locatie_x: v.locatieX,
     locatie_y: v.locatieY,
@@ -254,7 +255,7 @@ router.post("/voorzieningen", requireRol("monteur", "controleur", "beheerder", "
   try {
     const {
       objectnummer, qr_code, type, status, classificatie, gebouw_id,
-      verdieping_id, ruimte, locatie_omschrijving, locatie_x, locatie_y,
+      verdieping_id, ruimte, huisnummer, locatie_omschrijving, locatie_x, locatie_y,
       materialen, opmerkingen, monteur_id, controleur_id,
       installatie_datum, volgende_inspectie,
       wbdbo, wrd, wand_of_plafond, maker_monteur_id, label_ids,
@@ -293,7 +294,7 @@ router.post("/voorzieningen", requireRol("monteur", "controleur", "beheerder", "
           .values({
             objectnummer: nummer, qrCode: qr_code, type, status: status ?? "concept",
             classificatie: classificatie ?? "60", gebouwId: gebouw_id,
-            verdiepingId: verdieping_id, ruimte, locatieOmschrijving: locatie_omschrijving,
+            verdiepingId: verdieping_id, ruimte, huisnummer, locatieOmschrijving: locatie_omschrijving,
             locatieX: locatie_x, locatieY: locatie_y, materialen, opmerkingen,
             monteurId: monteur_id, controleurId: controleur_id,
             installatieDatum: installatie_datum, volgendeInspectie: volgende_inspectie,
@@ -399,7 +400,7 @@ router.patch("/voorzieningen/:id", requireRol("monteur", "controleur", "beheerde
     }
     const {
       objectnummer, qr_code, type, status, classificatie,
-      verdieping_id, ruimte, locatie_omschrijving, locatie_x, locatie_y,
+      verdieping_id, ruimte, huisnummer, locatie_omschrijving, locatie_x, locatie_y,
       materialen, opmerkingen, monteur_id, controleur_id,
       installatie_datum, volgende_inspectie,
       wbdbo, wrd, wand_of_plafond, maker_monteur_id, label_ids,
@@ -419,7 +420,7 @@ router.patch("/voorzieningen/:id", requireRol("monteur", "controleur", "beheerde
       .update(voorzieningenTable)
       .set({
         objectnummer, qrCode: qr_code, type, status, classificatie,
-        verdiepingId: verdieping_id, ruimte, locatieOmschrijving: locatie_omschrijving,
+        verdiepingId: verdieping_id, ruimte, huisnummer, locatieOmschrijving: locatie_omschrijving,
         locatieX: locatie_x, locatieY: locatie_y, materialen, opmerkingen,
         monteurId: monteur_id, controleurId: controleur_id,
         installatieDatum: installatie_datum, volgendeInspectie: volgende_inspectie,

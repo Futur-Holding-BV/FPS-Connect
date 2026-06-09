@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
+import * as XLSX from "xlsx";
 import {
   useListVoorzieningTypes,
   useListLabels,
@@ -24,6 +25,7 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -34,11 +36,14 @@ import {
   ArchiveRestore,
   BookOpen,
   Building2,
+  CheckCircle2,
   ExternalLink,
+  FileSpreadsheet,
   FlameKindling,
   Plus,
   ShieldCheck,
   Wind,
+  XCircle,
 } from "lucide-react";
 
 const GEEN_TYPE = "__alle__";
@@ -127,12 +132,29 @@ function TabApplicaties() {
   );
 }
 
+interface ExcelRij {
+  type_code: string;
+  naam: string;
+  fabrikant?: string;
+  testnorm?: string;
+}
+
+interface ImportResultaat {
+  geslaagd: number;
+  mislukt: Array<{ rij: number; reden: string }>;
+}
+
 // ── Tab Toepassingen ─────────────────────────────────────────────────────────
 function TabToepassingen() {
   const queryClient = useQueryClient();
   const [typeFilter, setTypeFilter] = useState(GEEN_TYPE);
   const [inclGearchiveerd, setInclGearchiveerd] = useState(false);
   const [nieuwOpen, setNieuwOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
+  const [importRijen, setImportRijen] = useState<ExcelRij[]>([]);
+  const [importResultaat, setImportResultaat] = useState<ImportResultaat | null>(null);
+  const [importBezig, setImportBezig] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { data: typen = [] } = useListVoorzieningTypes();
   const { data: labels = [], isLoading } = useListLabels({
@@ -170,6 +192,67 @@ function TabToepassingen() {
     await queryClient.invalidateQueries({ queryKey: getListLabelsQueryKey() });
   }
 
+  function verwerkBestand(file: File) {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const data = new Uint8Array(e.target!.result as ArrayBuffer);
+        const wb = XLSX.read(data, { type: "array" });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const rows: string[][] = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "" });
+        const rijen: ExcelRij[] = [];
+        for (let i = 1; i < rows.length; i++) {
+          const r = rows[i];
+          const type_code = String(r[0] ?? "").trim();
+          const naam = String(r[1] ?? "").trim();
+          if (!type_code || !naam) continue;
+          rijen.push({
+            type_code,
+            naam,
+            fabrikant: String(r[2] ?? "").trim() || undefined,
+            testnorm: String(r[3] ?? "").trim() || undefined,
+          });
+        }
+        setImportRijen(rijen);
+        setImportResultaat(null);
+      } catch {
+        setImportRijen([]);
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  }
+
+  async function voerImportUit() {
+    setImportBezig(true);
+    const resultaat: ImportResultaat = { geslaagd: 0, mislukt: [] };
+    for (let i = 0; i < importRijen.length; i++) {
+      const rij = importRijen[i];
+      try {
+        await maakLabel.mutateAsync({
+          data: {
+            type_code: rij.type_code,
+            naam: rij.naam,
+            fabrikant: rij.fabrikant || undefined,
+            testnorm: rij.testnorm || undefined,
+          },
+        });
+        resultaat.geslaagd++;
+      } catch {
+        resultaat.mislukt.push({ rij: i + 2, reden: "Aanmaak mislukt (mogelijk duplicaat)" });
+      }
+    }
+    await queryClient.invalidateQueries({ queryKey: getListLabelsQueryKey() });
+    setImportResultaat(resultaat);
+    setImportBezig(false);
+  }
+
+  function sluitImport() {
+    setImportOpen(false);
+    setImportRijen([]);
+    setImportResultaat(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  }
+
   const typeLookup = Object.fromEntries(
     (typen as VoorzieningType[]).map((t) => [t.code, t])
   );
@@ -181,12 +264,126 @@ function TabToepassingen() {
         zoals "Schakelmanchet Multicollar Slim". Ze zijn beschikbaar als keuze bij het registreren
         van een concrete spot.
       </p>
-      <div className="flex justify-end">
+      <div className="flex justify-end gap-2">
+        <Button variant="outline" onClick={() => setImportOpen(true)}>
+          <FileSpreadsheet className="h-4 w-4 mr-2" />
+          Importeren via Excel
+        </Button>
         <Button onClick={() => setNieuwOpen(true)}>
           <Plus className="h-4 w-4 mr-2" />
           Nieuwe toepassing
         </Button>
       </div>
+
+      <Dialog open={importOpen} onOpenChange={(o) => { if (!o) sluitImport(); }}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Toepassingen importeren via Excel</DialogTitle>
+            <DialogDescription>
+              Upload een Excel-bestand (.xlsx). Kolom A: applicatie-code, B: naam, C: fabrikant (optioneel), D: werendheid (optioneel).
+              Rij 1 is de koptekst en wordt overgeslagen.
+            </DialogDescription>
+          </DialogHeader>
+
+          {!importResultaat ? (
+            <div className="space-y-4">
+              <div className="border-2 border-dashed border-muted rounded-lg p-6 text-center">
+                <FileSpreadsheet className="h-10 w-10 mx-auto text-muted-foreground mb-3" />
+                <p className="text-sm text-muted-foreground mb-3">
+                  Kies een Excel-bestand om te importeren
+                </p>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".xlsx,.xls"
+                  className="hidden"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) verwerkBestand(f);
+                  }}
+                />
+                <Button
+                  variant="outline"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  Bestand kiezen
+                </Button>
+              </div>
+
+              {importRijen.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-sm font-medium">
+                    {importRijen.length} rij(en) gevonden — voorbeeld:
+                  </p>
+                  <div className="border rounded-md overflow-auto max-h-48">
+                    <table className="w-full text-xs">
+                      <thead>
+                        <tr className="border-b bg-muted/30">
+                          <th className="text-left p-2 font-medium">Type</th>
+                          <th className="text-left p-2 font-medium">Naam</th>
+                          <th className="text-left p-2 font-medium">Fabrikant</th>
+                          <th className="text-left p-2 font-medium">Werendheid</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {importRijen.slice(0, 10).map((r, i) => (
+                          <tr key={i} className="border-b last:border-0">
+                            <td className="p-2 font-mono">{r.type_code}</td>
+                            <td className="p-2">{r.naam}</td>
+                            <td className="p-2 text-muted-foreground">{r.fabrikant ?? "—"}</td>
+                            <td className="p-2 text-muted-foreground">{r.testnorm ?? "—"}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  {importRijen.length > 10 && (
+                    <p className="text-xs text-muted-foreground">
+                      … en nog {importRijen.length - 10} rij(en) meer.
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 text-green-700">
+                <CheckCircle2 className="h-5 w-5" />
+                <span className="font-medium">{importResultaat.geslaagd} toepassing(en) geimporteerd</span>
+              </div>
+              {importResultaat.mislukt.length > 0 && (
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-destructive flex items-center gap-1">
+                    <XCircle className="h-4 w-4" />
+                    {importResultaat.mislukt.length} rij(en) mislukt:
+                  </p>
+                  {importResultaat.mislukt.map((m, i) => (
+                    <p key={i} className="text-xs text-muted-foreground pl-5">
+                      Rij {m.rij}: {m.reden}
+                    </p>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={sluitImport}>
+              {importResultaat ? "Sluiten" : "Annuleren"}
+            </Button>
+            {!importResultaat && (
+              <Button
+                onClick={voerImportUit}
+                disabled={importRijen.length === 0 || importBezig}
+              >
+                {importBezig
+                  ? `Importeren... (${importRijen.length} rijen)`
+                  : `${importRijen.length} rij(en) importeren`}
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Card>
         <CardHeader className="pb-3">

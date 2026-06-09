@@ -347,29 +347,23 @@ export default function Plattegrond() {
   const W = pdfDims?.w ?? CANVAS_W;
   const H = pdfDims?.h ?? CANVAS_H;
 
-  // Wit titelblok onder de tekening waar geen spots/lijnen mogen — het logo leeft hier
-  // zodat het altijd vrij versleepbaar is, ongeacht hoeveel spots er op de tekening staan.
-  const logoStandaardBreedte = Math.max(W, H) * 0.16;
-  const footerH = logoStandaardBreedte / 2.59 + Math.max(W, H) * 0.04;
-
-  // ---- Logo-positie initialiseren in het witte titelblok onder de tekening ----
+  // ---- Logo-positie initialiseren uit verdieping (standaard rechtsboven op de tekening) ----
   useEffect(() => {
     if (!verdieping) return;
     if (logoSleep) return; // niet overschrijven tijdens slepen/schalen
     const v = verdieping as any;
     const pad = Math.max(W, H) * 0.02;
-    // Breedte zo nodig beperken zodat het logo binnen de footer-hoogte past
-    let b = v.logo_breedte ?? logoStandaardBreedte;
-    b = Math.max(Math.max(W, H) * 0.05, Math.min(b, W - pad * 2, footerH * 2.59));
+    const minB = Math.max(W, H) * 0.05;
+    let b = v.logo_breedte ?? Math.max(W, H) * 0.16;
+    b = Math.max(minB, Math.min(b, W - pad * 2));
     const h = b / 2.59;
-    // Standaard rechtsonder in het titelblok; opgeslagen posities terugklemmen naar de footer
     let x = v.logo_x ?? W - b - pad;
-    let y = v.logo_y ?? H + (footerH - h) / 2;
+    let y = v.logo_y ?? pad;
     x = Math.max(0, Math.min(x, W - b));
-    y = Math.max(H, Math.min(y, H + footerH - h));
+    y = Math.max(0, Math.min(y, H - h));
     setLogoBox({ x, y, b });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [verdieping, W, H, footerH]);
+  }, [verdieping, W, H]);
 
   // ---- Logo verslepen/schalen (beheerder, desktop) ----
   useEffect(() => {
@@ -391,16 +385,13 @@ export default function Plattegrond() {
           let nx = p.x - logoSleep.offsetX;
           let ny = p.y - logoSleep.offsetY;
           const h = prev.b / 2.59;
-          // Logo blijft binnen het witte titelblok onder de tekening
           nx = Math.max(0, Math.min(nx, W - prev.b));
-          ny = Math.max(H, Math.min(ny, H + footerH - h));
+          ny = Math.max(0, Math.min(ny, H - h));
           return { ...prev, x: nx, y: ny };
         }
         const maxByRight = W - logoSleep.ankerX;
-        // Begrens schaal op de footer-hoogte zodat het logo het titelblok niet uit groeit
-        const maxByBottom = (H + footerH - logoSleep.ankerY) * 2.59;
-        const maxByFooter = footerH * 2.59;
-        const grens = Math.min(maxB, maxByRight, maxByBottom, maxByFooter);
+        const maxByBottom = (H - logoSleep.ankerY) * 2.59;
+        const grens = Math.min(maxB, maxByRight, maxByBottom);
         const nb = Math.max(minB, Math.min(grens, p.x - logoSleep.ankerX));
         return { ...prev, b: nb };
       });
@@ -422,7 +413,7 @@ export default function Plattegrond() {
       window.removeEventListener("mouseup", onUp);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [logoSleep, view, W, H, footerH, verdiepingId]);
+  }, [logoSleep, view, W, H, verdiepingId]);
 
   const startLogoVerplaats = (e: React.MouseEvent) => {
     if (!isBeheerder || !logoBox || plaatsenModus || tekenModus || verplaatsModus) return;
@@ -523,9 +514,7 @@ export default function Plattegrond() {
     const svgX = (e.clientX - rect.left - view.x) / view.zoom;
     const svgY = (e.clientY - rect.top - view.y) / view.zoom;
     if (tekenModus) {
-      const tx = Math.min(W, Math.max(0, svgX));
-      const ty = Math.min(H, Math.max(0, svgY));
-      setHuidigePunten((p) => [...p, { x: Math.round(tx), y: Math.round(ty) }]);
+      setHuidigePunten((p) => [...p, { x: Math.round(svgX), y: Math.round(svgY) }]);
       return;
     }
     if (verplaatsModus && geselecteerdId != null) {
@@ -638,14 +627,14 @@ export default function Plattegrond() {
     const cw = cont.clientWidth;
     const ch = cont.clientHeight;
     const iw = W;
-    const ih = H + footerH; // titelblok meenemen zodat het logo altijd zichtbaar blijft
+    const ih = H;
     if (!cw || !ch || !iw || !ih) return;
     const zoom = Math.min(
       MAX_ZOOM,
       Math.max(MIN_ZOOM, Math.min(cw / iw, ch / ih) * 0.95),
     );
     setView({ x: (cw - iw * zoom) / 2, y: (ch - ih * zoom) / 2, zoom });
-  }, [W, H, footerH]);
+  }, [W, H]);
 
   // Automatisch passend maken zodra de plattegrond (of het canvas) bekend is
   useEffect(() => {
@@ -842,9 +831,6 @@ export default function Plattegrond() {
               {pdfBeeld ? (
                 <>
                   <image href={pdfBeeld} x={0} y={0} width={W} height={H} />
-                  {/* Wit titelblok onder de tekening — spot-vrije zone voor het logo */}
-                  <rect x={0} y={H} width={W} height={footerH} fill="#ffffff" />
-                  <line x1={0} y1={H} x2={W} y2={H} stroke="#cbd5e1" strokeWidth={1.5 / view.zoom} />
                 </>
               ) : (
                 <GridAchtergrond w={W} h={H} />

@@ -14,6 +14,7 @@ export const voorzieningenTable = pgTable("voorzieningen", {
   gebouwId: integer("gebouw_id").notNull().references(() => gebouwenTable.id, { onDelete: "cascade" }),
   verdiepingId: integer("verdieping_id").references(() => verdiepingenTable.id, { onDelete: "set null" }),
   ruimte: text("ruimte"),
+  huisnummer: text("huisnummer"),
   locatieOmschrijving: text("locatie_omschrijving"),
   locatieX: real("locatie_x"),
   locatieY: real("locatie_y"),

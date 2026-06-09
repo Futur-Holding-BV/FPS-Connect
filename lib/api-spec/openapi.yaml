@@ -4025,6 +4025,8 @@ components:
           type: ["string", "null"]
         ruimte:
           type: ["string", "null"]
+        huisnummer:
+          type: ["string", "null"]
         locatie_omschrijving:
           type: ["string", "null"]
         locatie_x:
@@ -4101,6 +4103,8 @@ components:
         verdieping_naam:
           type: ["string", "null"]
         ruimte:
+          type: ["string", "null"]
+        huisnummer:
           type: ["string", "null"]
         locatie_omschrijving:
           type: ["string", "null"]
@@ -4182,6 +4186,8 @@ components:
           type: string
         ruimte:
           type: ["string", "null"]
+        huisnummer:
+          type: ["string", "null"]
         locatie_x:
           type: ["number", "null"]
         locatie_y:
@@ -4238,6 +4244,8 @@ components:
           type: integer
         ruimte:
           type: string
+        huisnummer:
+          type: string
         locatie_omschrijving:
           type: string
         locatie_x:
@@ -4285,6 +4293,8 @@ components:
         verdieping_id:
           type: integer
         ruimte:
+          type: string
+        huisnummer:
           type: string
         locatie_omschrijving:
           type: string

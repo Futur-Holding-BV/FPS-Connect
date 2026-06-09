@@ -798,6 +798,8 @@ export interface Voorziening {
   /** @nullable */
   ruimte?: string | null;
   /** @nullable */
+  huisnummer?: string | null;
+  /** @nullable */
   locatie_omschrijving?: string | null;
   /** @nullable */
   locatie_x?: number | null;
@@ -1000,6 +1002,8 @@ export interface VoorzieningDetail {
   /** @nullable */
   ruimte?: string | null;
   /** @nullable */
+  huisnummer?: string | null;
+  /** @nullable */
   locatie_omschrijving?: string | null;
   /** @nullable */
   locatie_x?: number | null;
@@ -1055,6 +1059,8 @@ export interface VoorzieningLocatie {
   /** @nullable */
   ruimte?: string | null;
   /** @nullable */
+  huisnummer?: string | null;
+  /** @nullable */
   locatie_x: number | null;
   /** @nullable */
   locatie_y: number | null;
@@ -1089,6 +1095,7 @@ export interface VoorzieningInput {
   gebouw_id: number;
   verdieping_id?: number;
   ruimte?: string;
+  huisnummer?: string;
   locatie_omschrijving?: string;
   locatie_x?: number;
   locatie_y?: number;
@@ -1113,6 +1120,7 @@ export interface VoorzieningUpdate {
   classificatie?: string;
   verdieping_id?: number;
   ruimte?: string;
+  huisnummer?: string;
   locatie_omschrijving?: string;
   locatie_x?: number;
   locatie_y?: number;
