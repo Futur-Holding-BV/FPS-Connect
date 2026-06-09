@@ -31,6 +31,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ArrowLeft, Plus, X, ZoomIn, ZoomOut, RotateCcw, Map, FileText, Trash2, Image as ImageIcon, Loader2, Spline, Check, Move, Archive, ArchiveRestore } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/context/auth-context";
+import { useRol } from "@/context/rol-context";
 
 const BEHEERDER_ROLLEN = ["beheerder", "hoofdbeheerder"];
 // Rollen die de plattegrond mogen bewerken (spots plaatsen/verplaatsen, status,
@@ -306,8 +307,11 @@ export default function Plattegrond() {
   const [verplaatsModus, setVerplaatsModus] = useState(false);
 
   const { gebruiker } = useAuth();
-  const isBeheerder = !!gebruiker?.rol && BEHEERDER_ROLLEN.includes(gebruiker.rol as string);
-  const magBewerken = !!gebruiker?.rol && BEWERKER_ROLLEN.includes(gebruiker.rol as string);
+  // Bewerkrechten volgen de EFFECTIEVE rol zodat "bekijken als" een teamlid exact
+  // toont wat dat teamlid mag. Backend dwingt schrijven op de echte rol af.
+  const { rol: effectieveRol } = useRol();
+  const isBeheerder = BEHEERDER_ROLLEN.includes(effectieveRol as string);
+  const magBewerken = BEWERKER_ROLLEN.includes(effectieveRol as string);
 
   const queryClient = useQueryClient();
   const { data: verdieping } = useGetVerdieping(Number(verdiepingId));

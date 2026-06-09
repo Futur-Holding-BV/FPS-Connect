@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/select";
 import { ArrowLeft, Layers, Users, X, UserPlus, Loader2, Building2, Pencil, MapPin, CheckCircle, RotateCcw, Calendar, Hash, ClipboardList } from "lucide-react";
 import { useAuth } from "@/context/auth-context";
+import { useRol } from "@/context/rol-context";
 import GebouwPartijen from "./gebouw-partijen";
 import GebouwTekeningen from "./gebouw-tekeningen";
 import GebouwPlattegronden from "./gebouw-plattegronden";
@@ -39,9 +40,13 @@ export default function GebouwDetail() {
   const { id } = useParams<{ id: string }>();
   const gebouwId = Number(id);
   const { gebruiker } = useAuth();
+  // Beheerder-acties (teamleden toevoegen, gebouw bewerken, partijen, tekeningen,
+  // emails, gereed melden) volgen de EFFECTIEVE rol, zodat een hoofdbeheerder die
+  // "bekijken als" monteur/controleur gebruikt exact ziet wat dat teamlid ziet —
+  // dus zonder beheerderknoppen. De backend dwingt schrijven sowieso op de echte rol af.
+  const { rol: effectieveRol } = useRol();
   const queryClient = useQueryClient();
-  const isBeheerder =
-    !!gebruiker?.rol && BEHEERDER_ROLLEN.includes(gebruiker.rol as string);
+  const isBeheerder = BEHEERDER_ROLLEN.includes(effectieveRol as string);
 
   const { data: gebouw, isLoading } = useGetGebouw(gebouwId);
   const { data: kaartData } = useGetGebouwKaart(gebouwId);

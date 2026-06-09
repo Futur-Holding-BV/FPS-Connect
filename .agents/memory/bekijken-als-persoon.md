@@ -16,7 +16,11 @@ Hoofdbeheerder kiest een echt teamlid en ziet exact diens portaal (op basis van 
 **Why:** Bij de eerste ombouw kreeg alleen `GET /gebouwen` (list) + `magBijGebouw` de effectieve context. Detail/sub-resource routes (`/gebouwen/:id`, `/:id/kaart`, `/:id/verdiepingen`, `/gebouwen/partij-opties`, verdieping-voorzieningen) bleven op `req.session.userId` + lokale `gebruikerRol()` draaien → een hoofdbeheerder-in-impersonatie kon via directe URL data zien die het teamlid niet mag. Architect markeerde dit als bypass.
 **How to apply:** Elke route die op `userId`/`rol` filtert (toewijzingscheck, scope) moet `const {userId, rol} = await effectieveContext(req)` gebruiken — niet alleen list-endpoints. Na conversie werd de lokale `gebruikerRol()`-helper in gebouwen.ts overbodig en verwijderd.
 
+## Regel: UI permissie-gating volgt de EFFECTIEVE rol, niet de echte rol
+**Why:** `gebouwen/detail.tsx` én `gebouwen/plattegrond.tsx` berekenden `isBeheerder`/`magBewerken` uit `useAuth().gebruiker.rol` (echte rol). Een hoofdbeheerder die "bekijken als" monteur/controleur gebruikte zag dan nog steeds beheerderknoppen (o.a. "Teamlid toevoegen") terwijl het monteurportaal getoond werd — verwarrend en lijkt op een lek.
+**How to apply:** Frontend capability-gating (welke knoppen/acties tonen) moet `const { rol } = useRol()` (effectieve rol) gebruiken, zodat de preview exact klopt. Dit is veilig want de backend dwingt schrijven sowieso op de ECHTE sessie-rol af (`requireRol` + `magBijGebouw` met `echteRol`); de UI-gating is alleen voor weergave. Gebruik `useAuth().gebruiker` alleen nog voor identiteit (naam/id), niet voor rol-gating.
+
 ## Frontend
-- `rol-context.tsx`: geïmiteerde persoon `{id,naam,rol,functietitel}` in localStorage (`fps.bekijkenAlsPersoon`); `rol` = `persoon.rol`.
+- `rol-context.tsx`: geïmiteerde persoon `{id,naam,rol,functietitels}` in localStorage (`fps.bekijkenAlsPersoon`); `rol` = `persoon.rol`. `useRol()` geeft `{rol (effectief), echteRol, kanWisselen, persoon}`.
 - `custom-fetch.ts`: `setGebruikerOverrideGetter`, stuurt header `x-gebruiker-override` = id.
 - `gebruiker-menu.tsx` `BekijkenAlsSelector` (alleen voor hoofdbeheerder gemount): selector van actieve teamleden + "Eigen weergave" reset. Bevat een `useEffect` die de opgeslagen persoon reconcilieert met de actuele `useListGebruikers`-data: reset bij verwijderd/inactief account, werkt rol/naam/functietitel bij als die serverzijde wijzigden (zodat getoonde portaal klopt).
