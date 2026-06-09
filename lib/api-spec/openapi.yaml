@@ -4417,8 +4417,10 @@ components:
         rol:
           type: string
           enum: [hoofdbeheerder, beheerder, monteur, controleur, klant, viewer]
-        functietitel:
-          type: ["string", "null"]
+        functietitels:
+          type: array
+          items:
+            type: string
         telefoon:
           type: ["string", "null"]
         bedrijf:
@@ -4580,8 +4582,10 @@ components:
           type: string
         rol:
           type: string
-        functietitel:
-          type: string
+        functietitels:
+          type: array
+          items:
+            type: string
         telefoon:
           type: string
         bedrijf:
@@ -4608,8 +4612,10 @@ components:
           type: string
         rol:
           type: string
-        functietitel:
-          type: string
+        functietitels:
+          type: array
+          items:
+            type: string
         telefoon:
           type: string
         bedrijf:

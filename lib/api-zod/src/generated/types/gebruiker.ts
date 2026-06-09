@@ -14,8 +14,7 @@ export interface Gebruiker {
   naam: string;
   email: string;
   rol: GebruikerRol;
-  /** @nullable */
-  functietitel?: string | null;
+  functietitels?: string[];
   /** @nullable */
   telefoon?: string | null;
   /** @nullable */

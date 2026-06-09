@@ -296,9 +296,13 @@ function BekijkenAlsSelector({
       return;
     }
     const r = actueel.rol as Rol;
-    const ft = actueel.functietitel ?? null;
-    if (actueel.naam !== persoon.naam || r !== persoon.rol || ft !== persoon.functietitel) {
-      zetPersoon({ id: actueel.id, naam: actueel.naam, rol: r, functietitel: ft });
+    const ft = actueel.functietitels ?? [];
+    if (
+      actueel.naam !== persoon.naam ||
+      r !== persoon.rol ||
+      ft.join("|") !== (persoon.functietitels ?? []).join("|")
+    ) {
+      zetPersoon({ id: actueel.id, naam: actueel.naam, rol: r, functietitels: ft });
     }
   }, [teamleden, persoon, zetPersoon]);
 
@@ -347,7 +351,7 @@ function BekijkenAlsSelector({
                     id: g.id,
                     naam: g.naam,
                     rol: r,
-                    functietitel: g.functietitel ?? null,
+                    functietitels: g.functietitels ?? [],
                   })
                 }
                 className={persoon?.id === g.id ? "bg-accent" : ""}
@@ -355,7 +359,7 @@ function BekijkenAlsSelector({
                 <span className="flex flex-col">
                   <span className="text-sm font-medium">{g.naam}</span>
                   <span className="text-xs text-muted-foreground">
-                    {g.functietitel ? `${g.functietitel} · ` : ""}
+                    {(g.functietitels ?? []).length > 0 ? `${(g.functietitels ?? []).join(", ")} · ` : ""}
                     {ROL_INFO[r]?.label ?? r}
                   </span>
                 </span>

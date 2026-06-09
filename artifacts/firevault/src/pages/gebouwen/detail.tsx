@@ -31,8 +31,9 @@ import GebouwEmails from "./gebouw-emails";
 import { GebouwBewerkenDialog } from "./gebouw-bewerken-dialog";
 
 const BEHEERDER_ROLLEN = ["beheerder", "hoofdbeheerder"];
-const SYSTEEM_ROLLEN_UITGESLOTEN = ["beheerder", "hoofdbeheerder"];
-const PROJECT_ROLLEN = ["Projectleider", "Werkvoorbereider", "Calculator", "Commercie", "Project-admin", "Financieel", "Uitvoerder", "Controleur", "Monteur"];
+// Beheerders zijn koppelbaar aan een project (mét projectfunctie); de
+// hoofdbeheerder (super-admin), klanten en viewers niet.
+const TEAM_UITGESLOTEN_ROLLEN = ["hoofdbeheerder", "klant", "viewer"];
 
 export default function GebouwDetail() {
   const { id } = useParams<{ id: string }>();
@@ -64,8 +65,15 @@ export default function GebouwDetail() {
   if (!gebouw) return <div className="p-6">Gebouw niet gevonden.</div>;
 
   const beschikbareGebruikers = (gebruikers ?? []).filter(
-    (g) => !SYSTEEM_ROLLEN_UITGESLOTEN.includes(g.rol ?? ""),
+    (g) => !TEAM_UITGESLOTEN_ROLLEN.includes(g.rol ?? ""),
   );
+
+  const gekozenGebruiker = beschikbareGebruikers.find(
+    (g) => String(g.id) === gekozenGebruikerId,
+  );
+  const isGekozenBeheerder =
+    !!gekozenGebruiker?.rol && BEHEERDER_ROLLEN.includes(gekozenGebruiker.rol);
+  const gekozenFuncties = gekozenGebruiker?.functietitels ?? [];
 
   const aantalLagen = Math.max(
     1,
@@ -87,9 +95,19 @@ export default function GebouwDetail() {
     gebouw.diepte != null;
 
   async function voegToe() {
-    if (!gekozenGebruikerId || !gekozenProjectRol) return;
+    if (!gekozenGebruikerId) return;
+    const gekozen = beschikbareGebruikers.find(
+      (g) => String(g.id) === gekozenGebruikerId,
+    );
+    const beheerder = !!gekozen?.rol && BEHEERDER_ROLLEN.includes(gekozen.rol);
+    // Een beheerder wordt altijd gekoppeld mét een projectfunctie uit zijn
+    // profiel; monteurs/controleurs uitsluitend op naam.
+    if (beheerder && !gekozenProjectRol) return;
+    const projectRol = beheerder ? gekozenProjectRol : "";
     const duplicaat = (toewijzingen ?? []).some(
-      (t) => t.gebruiker_id === Number(gekozenGebruikerId) && t.project_rol === gekozenProjectRol,
+      (t) =>
+        t.gebruiker_id === Number(gekozenGebruikerId) &&
+        (t.project_rol ?? "") === projectRol,
     );
     if (duplicaat) return;
     setBezig(true);
@@ -98,7 +116,7 @@ export default function GebouwDetail() {
         id: gebouwId,
         data: {
           gebruiker_id: Number(gekozenGebruikerId),
-          project_rol: gekozenProjectRol,
+          project_rol: projectRol || undefined,
         },
       });
       setGekozenGebruikerId("");
@@ -125,7 +143,7 @@ export default function GebouwDetail() {
     }
   }
 
-  const projectAdmin = (toewijzingen ?? []).find((t) => t.project_rol === "Project-admin");
+  const projectAdmin = (toewijzingen ?? []).find((t) => t.project_rol === "Project-administratie");
 
   const gegroepeerdeTeamleden = Object.values(
     (toewijzingen ?? []).reduce<
@@ -195,7 +213,7 @@ export default function GebouwDetail() {
               )}
               {projectAdmin && (
                 <span className="flex items-center gap-1">
-                  <ClipboardList className="h-3 w-3" /> Project-admin: {projectAdmin.naam}
+                  <ClipboardList className="h-3 w-3" /> Project-administratie: {projectAdmin.naam}
                 </span>
               )}
             </div>
@@ -416,7 +434,10 @@ export default function GebouwDetail() {
                   <div className="flex flex-col gap-2 pt-1">
                     <Select
                       value={gekozenGebruikerId}
-                      onValueChange={setGekozenGebruikerId}
+                      onValueChange={(v) => {
+                        setGekozenGebruikerId(v);
+                        setGekozenProjectRol("");
+                      }}
                     >
                       <SelectTrigger className="w-full text-sm">
                         <SelectValue placeholder="Kies teamlid" />
@@ -432,22 +453,33 @@ export default function GebouwDetail() {
                         ))}
                       </SelectContent>
                     </Select>
-                    <Select
-                      value={gekozenProjectRol}
-                      onValueChange={setGekozenProjectRol}
-                    >
-                      <SelectTrigger className="w-full text-sm">
-                        <SelectValue placeholder="Kies projectfunctie" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {PROJECT_ROLLEN.map((pr) => (
-                          <SelectItem key={pr} value={pr}>{pr}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    {isGekozenBeheerder && gekozenFuncties.length > 0 && (
+                      <Select
+                        value={gekozenProjectRol}
+                        onValueChange={setGekozenProjectRol}
+                      >
+                        <SelectTrigger className="w-full text-sm">
+                          <SelectValue placeholder="Kies projectfunctie" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {gekozenFuncties.map((pr) => (
+                            <SelectItem key={pr} value={pr}>{pr}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                    {isGekozenBeheerder && gekozenFuncties.length === 0 && (
+                      <p className="text-xs text-muted-foreground">
+                        Deze beheerder heeft geen projectfuncties in het profiel.
+                      </p>
+                    )}
                     <Button
                       onClick={voegToe}
-                      disabled={!gekozenGebruikerId || !gekozenProjectRol || bezig}
+                      disabled={
+                        !gekozenGebruikerId ||
+                        bezig ||
+                        (isGekozenBeheerder && !gekozenProjectRol)
+                      }
                       className="w-full gap-2"
                     >
                       {bezig ? (

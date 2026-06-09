@@ -11,12 +11,37 @@ const router = Router();
 
 const alleenBeheerder = requireRol("beheerder");
 
+// De enige toegestane projectfuncties (profiel) voor een beheerder.
+const FUNCTIETITELS_TOEGESTAAN = [
+  "Projectleider",
+  "Werkvoorbereider",
+  "Calculator",
+  "Commercieel",
+  "Project-administratie",
+  "Financieel",
+];
+
+const isBeheerderRol = (rol: unknown) =>
+  rol === "beheerder" || rol === "hoofdbeheerder";
+
+// Normaliseer en valideer projectfuncties: alleen toegestane waarden, ontdubbeld.
+const schoonFunctietitels = (waarde: unknown): string[] => {
+  if (!Array.isArray(waarde)) return [];
+  const uniek = new Set(
+    waarde
+      .filter((f): f is string => typeof f === "string")
+      .map((f) => f.trim())
+      .filter((f) => FUNCTIETITELS_TOEGESTAAN.includes(f)),
+  );
+  return [...uniek];
+};
+
 const mapGebruiker = (g: typeof gebruikersTable.$inferSelect) => ({
   id: g.id,
   naam: g.naam,
   email: g.email,
   rol: g.rol,
-  functietitel: g.functietitel ?? null,
+  functietitels: g.functietitels ?? [],
   telefoon: g.telefoon,
   bedrijf: g.bedrijf,
   actief: g.actief,
@@ -52,7 +77,7 @@ const mapGebruikerPubliek = (g: typeof gebruikersTable.$inferSelect) => ({
   naam: g.naam,
   email: "",
   rol: g.rol,
-  functietitel: g.functietitel ?? null,
+  functietitels: g.functietitels ?? [],
   telefoon: null,
   bedrijf: null,
   actief: g.actief,
@@ -100,12 +125,13 @@ router.get("/gebruikers", async (req, res) => {
 router.post("/gebruikers", alleenBeheerder, async (req, res) => {
   try {
     const {
-      naam, email, rol, telefoon, bedrijf, wachtwoord,
+      naam, email, rol, functietitels, telefoon, bedrijf, wachtwoord,
       avatar_url, bedrijfslogo_url, bedrijfskleuren, taal,
     } = req.body;
     if (!naam || !email || !rol) {
       return res.status(400).json({ error: "naam, email en rol zijn verplicht" });
     }
+    const functies = isBeheerderRol(rol) ? schoonFunctietitels(functietitels) : [];
     const gehasht = wachtwoord ? await bcrypt.hash(String(wachtwoord), 10) : null;
     const [g] = await db
       .insert(gebruikersTable)
@@ -113,6 +139,7 @@ router.post("/gebruikers", alleenBeheerder, async (req, res) => {
         naam,
         email: String(email).trim().toLowerCase(),
         rol,
+        functietitels: functies,
         telefoon,
         bedrijf,
         wachtwoord: gehasht,
@@ -153,14 +180,34 @@ router.patch("/gebruikers/:id", alleenBeheerder, async (req, res) => {
   try {
     const id = parseInt(String(req.params.id), 10);
     const {
-      naam, email, rol, functietitel, telefoon, bedrijf, actief, wachtwoord,
+      naam, email, rol, functietitels, telefoon, bedrijf, actief, wachtwoord,
       avatar_url, bedrijfslogo_url, bedrijfskleuren, uitnodiging_status, taal,
     } = req.body;
+    // Effectieve rol: gebruik de bestaande rol wanneer 'rol' niet wordt
+    // meegestuurd, zodat een partiële PATCH de functietitels niet onterecht wist.
+    let effectieveRol: unknown = rol;
+    if (effectieveRol === undefined) {
+      const [bestaand] = await db
+        .select({ rol: gebruikersTable.rol })
+        .from(gebruikersTable)
+        .where(eq(gebruikersTable.id, id));
+      if (!bestaand) return res.status(404).json({ error: "Gebruiker niet gevonden" });
+      effectieveRol = bestaand.rol;
+    }
+    let functies: string[] | undefined;
+    if (!isBeheerderRol(effectieveRol)) {
+      // Niet-beheerder (ook bij rolwissel): nooit een projectfunctie.
+      functies = [];
+    } else if (functietitels !== undefined) {
+      functies = schoonFunctietitels(functietitels);
+    } else {
+      functies = undefined; // beheerder, niet meegestuurd: ongemoeid laten
+    }
     const wijziging: Partial<typeof gebruikersTable.$inferInsert> = {
       naam,
       email: email ? String(email).trim().toLowerCase() : undefined,
       rol,
-      functietitel,
+      functietitels: functies,
       telefoon,
       bedrijf,
       actief,

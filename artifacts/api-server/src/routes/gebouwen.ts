@@ -881,11 +881,31 @@ router.post(
 
       // Controleer of gebruiker bestaat
       const [gebruiker] = await db
-        .select({ id: gebruikersTable.id, naam: gebruikersTable.naam, email: gebruikersTable.email, rol: gebruikersTable.rol })
+        .select({ id: gebruikersTable.id, naam: gebruikersTable.naam, email: gebruikersTable.email, rol: gebruikersTable.rol, functietitels: gebruikersTable.functietitels })
         .from(gebruikersTable)
         .where(eq(gebruikersTable.id, Number(gebruiker_id)));
       if (!gebruiker) {
         return res.status(404).json({ error: "Gebruiker niet gevonden" });
+      }
+
+      // Projectteam-regels: een beheerder wordt gekoppeld mét een projectfunctie
+      // uit zijn eigen profiel; monteurs/controleurs uitsluitend op naam (null).
+      const isBeheerder =
+        gebruiker.rol === "beheerder" || gebruiker.rol === "hoofdbeheerder";
+      let projectRol: string | null = null;
+      if (isBeheerder) {
+        const gekozen = project_rol ? String(project_rol) : "";
+        if (!gekozen) {
+          return res
+            .status(400)
+            .json({ error: "Een beheerder vereist een projectfunctie" });
+        }
+        if (!(gebruiker.functietitels ?? []).includes(gekozen)) {
+          return res.status(400).json({
+            error: "Projectfunctie hoort niet bij het profiel van deze beheerder",
+          });
+        }
+        projectRol = gekozen;
       }
 
       const [toewijzing] = await db
@@ -894,7 +914,7 @@ router.post(
           gebouwId,
           gebruikerId: Number(gebruiker_id),
           aangemaaktDoorId: req.session.userId,
-          projectRol: project_rol ? String(project_rol) : null,
+          projectRol,
         })
         .onConflictDoNothing()
         .returning();

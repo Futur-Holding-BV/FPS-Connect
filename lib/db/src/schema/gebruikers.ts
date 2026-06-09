@@ -26,7 +26,7 @@ export const gebruikersTable = pgTable("gebruikers", {
   uitnodigingOpnieuwVerstuurdOp: timestamp("uitnodiging_opnieuw_verstuurd_op"),
   uitnodigingGeaccepteerdOp: timestamp("uitnodiging_geaccepteerd_op"),
   taal: text("taal").notNull().default("nl"),
-  functietitel: text("functietitel"),
+  functietitels: text("functietitels").array().notNull().default([]),
 });
 
 export const insertGebruikerSchema = createInsertSchema(gebruikersTable).omit({ id: true, aangemaaktOp: true });

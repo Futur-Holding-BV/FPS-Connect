@@ -24,6 +24,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
 import {
   Mail, Phone, Building, Clock, Plus, UserPlus, Pencil, Trash2,
@@ -39,13 +40,10 @@ const FUNCTIETITELS = [
   "Projectleider",
   "Werkvoorbereider",
   "Calculator",
-  "Uitvoerder",
-  "Hoofduitvoerder",
-  "Bedrijfsleider",
-  "Monteur",
-  "Inspecteur",
+  "Commercieel",
+  "Project-administratie",
+  "Financieel",
 ] as const;
-const GEEN_FUNCTIE = "geen";
 
 const ROL_CONFIG: Record<Rol, {
   label: string;
@@ -147,7 +145,7 @@ function onlinKleur(iso: string | null | undefined): string {
 }
 
 const leegForm = {
-  naam: "", email: "", rol: "monteur", functietitel: "",
+  naam: "", email: "", rol: "monteur", functietitels: [] as string[],
   telefoon: "", bedrijf: "", wachtwoord: "", actief: true,
   avatar_url: "", bedrijfslogo_url: "", bedrijfskleuren: "",
 };
@@ -158,7 +156,7 @@ type Gebruiker = {
   naam: string | null;
   email: string | null;
   rol: string | null;
-  functietitel?: string | null;
+  functietitels?: string[] | null;
   telefoon: string | null;
   bedrijf: string | null;
   actief: boolean | null;
@@ -227,7 +225,7 @@ export default function Gebruikers() {
           naam:            toevoegenForm.naam.trim(),
           email:           toevoegenForm.email.trim(),
           rol:             toevoegenForm.rol as any,
-          functietitel:    toevoegenForm.functietitel.trim() || undefined,
+          functietitels:   toevoegenForm.functietitels,
           telefoon:        toevoegenForm.telefoon.trim()     || undefined,
           bedrijf:         toevoegenForm.bedrijf.trim()      || undefined,
           wachtwoord:      toevoegenForm.wachtwoord.trim()   || undefined,
@@ -250,7 +248,7 @@ export default function Gebruikers() {
       naam:            g.naam           ?? "",
       email:           g.email          ?? "",
       rol:             g.rol            ?? "monteur",
-      functietitel:    g.functietitel   ?? "",
+      functietitels:   g.functietitels  ?? [],
       telefoon:        g.telefoon       ?? "",
       bedrijf:         g.bedrijf        ?? "",
       wachtwoord:      "",
@@ -277,7 +275,7 @@ export default function Gebruikers() {
           naam:            bewerkForm.naam.trim(),
           email:           bewerkForm.email.trim(),
           rol:             bewerkForm.rol as any,
-          functietitel:    bewerkForm.functietitel.trim() || undefined,
+          functietitels:   bewerkForm.functietitels,
           telefoon:        bewerkForm.telefoon.trim()    || undefined,
           bedrijf:         bewerkForm.bedrijf.trim()     || undefined,
           actief:          bewerkForm.actief,
@@ -660,7 +658,7 @@ export default function Gebruikers() {
 
                 <div className="space-y-3 rounded-lg border bg-muted/30 p-4">
                   <VeldRij icon={Mail} label="E-mailadres" waarde={bekijkGebruiker.email} />
-                  <VeldRij icon={User} label="Projectfunctie" waarde={bekijkGebruiker.functietitel} />
+                  <VeldRij icon={User} label="Projectfunctie" waarde={(bekijkGebruiker.functietitels ?? []).join(", ")} />
                   <VeldRij icon={Phone} label="Telefoonnummer" waarde={bekijkGebruiker.telefoon} />
                   <VeldRij icon={Building} label="Bedrijf" waarde={bekijkGebruiker.bedrijf} />
                   <div className="flex items-start gap-3">
@@ -780,7 +778,17 @@ function GebruikerVelden({
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1.5">
           <Label htmlFor="g-rol">Rol <span className="text-destructive">*</span></Label>
-          <Select value={form.rol} onValueChange={(v) => setForm((f) => ({ ...f, rol: v }))}>
+          <Select
+            value={form.rol}
+            onValueChange={(v) =>
+              setForm((f) => ({
+                ...f,
+                rol: v,
+                functietitels:
+                  v === "beheerder" || v === "hoofdbeheerder" ? f.functietitels : [],
+              }))
+            }
+          >
             <SelectTrigger id="g-rol">
               <SelectValue />
             </SelectTrigger>
@@ -793,24 +801,40 @@ function GebruikerVelden({
             </SelectContent>
           </Select>
         </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="g-functie">Projectfunctie</Label>
-          <Select
-            value={form.functietitel ? form.functietitel : GEEN_FUNCTIE}
-            onValueChange={(v) => setForm((f) => ({ ...f, functietitel: v === GEEN_FUNCTIE ? "" : v }))}
-          >
-            <SelectTrigger id="g-functie">
-              <SelectValue placeholder="Geen functie" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={GEEN_FUNCTIE}>Geen functie</SelectItem>
-              {FUNCTIETITELS.map((ft) => (
-                <SelectItem key={ft} value={ft}>{ft}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
       </div>
+
+      {(form.rol === "beheerder" || form.rol === "hoofdbeheerder") && (
+        <div className="space-y-1.5">
+          <Label>Projectfunctie</Label>
+          <p className="text-xs text-muted-foreground">
+            Een beheerder kan één of meer projectfuncties hebben.
+          </p>
+          <div className="grid grid-cols-2 gap-2 rounded-md border p-3">
+            {FUNCTIETITELS.map((ft) => {
+              const aan = form.functietitels.includes(ft);
+              return (
+                <label
+                  key={ft}
+                  className="flex items-center gap-2 text-sm cursor-pointer"
+                >
+                  <Checkbox
+                    checked={aan}
+                    onCheckedChange={(c) =>
+                      setForm((f) => ({
+                        ...f,
+                        functietitels: c
+                          ? [...f.functietitels, ft]
+                          : f.functietitels.filter((x) => x !== ft),
+                      }))
+                    }
+                  />
+                  {ft}
+                </label>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1.5">

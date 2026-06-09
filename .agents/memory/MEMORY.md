@@ -10,3 +10,4 @@
 - [mailparser + esbuild](mailparser-esbuild.md) — mailparser vereist nodemailer als runtime dep; nodemailer staat in externals van build.mjs maar moet ook geïnstalleerd zijn in api-server/package.json.
 - [Autorisatie-patroon](autorisatie-patroon.md) — requireRol (rol) + magBijGebouw (gebouwtoewijzing, fail-closed) per object-level endpoint; nest-IDs aan parent koppelen; klant bewust niet gefilterd.
 - [Bekijken als persoon](bekijken-als-persoon.md) — hoofdbeheerder impersoneert teamlid via effectieveContext(req); ALLE leesfilter-endpoints (ook detail/sub-resource) moeten het gebruiken, niet alleen list; permissie-gating blijft op echte rol.
+- [Projectfuncties / functietitels](projectfuncties.md) — gebruikers.functietitels = text[]; alleen beheerder heeft ze (6 vaste); regels server-side afdwingen (whitelist + effectieve rol bij PATCH + projectteam project_rol ⊂ profiel).

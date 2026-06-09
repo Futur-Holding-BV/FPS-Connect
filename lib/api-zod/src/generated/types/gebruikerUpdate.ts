@@ -10,7 +10,7 @@ export interface GebruikerUpdate {
   naam?: string;
   email?: string;
   rol?: string;
-  functietitel?: string;
+  functietitels?: string[];
   telefoon?: string;
   bedrijf?: string;
   actief?: boolean;

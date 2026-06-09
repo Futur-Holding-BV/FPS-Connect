@@ -9,7 +9,7 @@ export type GeimiteerdePersoon = {
   id: number;
   naam: string;
   rol: Rol;
-  functietitel: string | null;
+  functietitels: string[];
 };
 
 const OPSLAG_SLEUTEL = "fps.bekijkenAlsPersoon";

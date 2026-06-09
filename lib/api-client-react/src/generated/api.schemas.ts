@@ -1239,8 +1239,7 @@ export interface Gebruiker {
   naam: string;
   email: string;
   rol: GebruikerRol;
-  /** @nullable */
-  functietitel?: string | null;
+  functietitels?: string[];
   /** @nullable */
   telefoon?: string | null;
   /** @nullable */
@@ -1346,7 +1345,7 @@ export interface GebruikerInput {
   naam: string;
   email: string;
   rol: string;
-  functietitel?: string;
+  functietitels?: string[];
   telefoon?: string;
   bedrijf?: string;
   wachtwoord?: string;
@@ -1361,7 +1360,7 @@ export interface GebruikerUpdate {
   naam?: string;
   email?: string;
   rol?: string;
-  functietitel?: string;
+  functietitels?: string[];
   telefoon?: string;
   bedrijf?: string;
   actief?: boolean;
