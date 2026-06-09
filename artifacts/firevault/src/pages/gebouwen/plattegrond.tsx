@@ -1,4 +1,4 @@
-import { useRef, useState, useCallback, useEffect } from "react";
+import { useRef, useState, useCallback, useEffect, useMemo } from "react";
 import { useParams, Link } from "wouter";
 import * as pdfjsLib from "pdfjs-dist";
 import pdfWorkerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
@@ -22,6 +22,7 @@ import {
   useListScheidingen,
   useCreateScheiding,
   useDeleteScheiding,
+  useListLabels,
 } from "@workspace/api-client-react";
 import { useUpload } from "@workspace/object-storage-web";
 import { Button } from "@/components/ui/button";
@@ -31,6 +32,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowLeft, Plus, X, ZoomIn, ZoomOut, RotateCcw, Map, FileText, Trash2, Image as ImageIcon, Loader2, Spline, Check, Move, Archive, ArchiveRestore } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { ApplicatiePicker } from "@/components/applicatie-picker";
+import { ToepassingMultiSelect } from "@/components/toepassing-multi-select";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/context/auth-context";
 import { useRol } from "@/context/rol-context";
@@ -88,6 +92,51 @@ const WBDBO_OPTIES = ["20", "30", "60", "90", "120"];
 const SCHEIDING_CLASSIFICATIES = ["WRD", "EW", "EI", "E", "R", "Sa"];
 const WRD_OPTIES = ["30"];
 const WAND_PLAFOND_OPTIES = ["wand", "plafond"];
+
+const WERENDHEID_OPTIES = [
+  { waarde: "WRD30", label: "WRD 30 — rookwerend 30 min" },
+  { waarde: "EW20",  label: "EW 20 — brandwerend WBDBO 20 min" },
+  { waarde: "EW30",  label: "EW 30 — brandwerend WBDBO 30 min" },
+  { waarde: "EW60",  label: "EW 60 — brandwerend WBDBO 60 min" },
+  { waarde: "EI30",  label: "EI 30 — brandwerend 30 min" },
+  { waarde: "EI60",  label: "EI 60 — brandwerend 60 min" },
+];
+
+const RUIMTE_STANDAARD = [
+  "entree", "keuken", "badkamer", "toilet", "slaapkamer", "woonkamer",
+  "trappenhuis", "gang", "meterkast", "zolder", "berging", "kelder",
+  "parkeergarage", "buitenruimte",
+];
+
+const GEEN_RUIMTE_VAL = "__geen__";
+const GEEN_WERENDHEID_VAL = "__geen__";
+
+function getRuimteVolgorde(): string[] {
+  try {
+    const raw = localStorage.getItem("fps_ruimte_gebruik");
+    if (!raw) return RUIMTE_STANDAARD;
+    const counts: Record<string, number> = JSON.parse(raw);
+    return [...RUIMTE_STANDAARD].sort((a, b) => (counts[b] ?? 0) - (counts[a] ?? 0));
+  } catch { return RUIMTE_STANDAARD; }
+}
+
+function registreerRuimteGebruik(ruimte: string) {
+  if (!RUIMTE_STANDAARD.includes(ruimte)) return;
+  try {
+    const raw = localStorage.getItem("fps_ruimte_gebruik");
+    const counts: Record<string, number> = raw ? JSON.parse(raw) : {};
+    counts[ruimte] = (counts[ruimte] ?? 0) + 1;
+    localStorage.setItem("fps_ruimte_gebruik", JSON.stringify(counts));
+  } catch { /* ignore */ }
+}
+
+function fromWerendheid(w: string): { classificatie: string; wbdbo?: string; wrd?: string } {
+  if (!w || w === GEEN_WERENDHEID_VAL) return { classificatie: "60" };
+  if (w.startsWith("WRD")) return { classificatie: "60", wrd: w.slice(3) };
+  if (w.startsWith("EW"))  return { classificatie: "60", wbdbo: w.slice(2) };
+  if (w.startsWith("EI"))  return { classificatie: w.slice(2) };
+  return { classificatie: "60" };
+}
 
 const CANVAS_W = 1200;
 const CANVAS_H = 800;
@@ -269,17 +318,13 @@ function spotVolgnummer(objectnummer: string): string {
 
 const LEEG_FORM = {
   objectnummer: "",
-  type: "branddeur",
-  classificatie: "60",
+  type: "",
+  werendheid: "",
   ruimte: "",
-  locatie_omschrijving: "",
-  meting: "wbdbo",
-  wbdbo: "60",
-  wrd: "",
-  wand_of_plafond: "",
+  huisnummer: "",
+  opmerkingen: "",
   installatie_datum: "",
-  monteur_id: "",
-  maker_monteur_id: "",
+  status: "in_uitvoering",
 };
 
 export default function Plattegrond() {
@@ -295,8 +340,10 @@ export default function Plattegrond() {
   const [nieuwDialoog, setNieuwDialoog] = useState(false);
   const [nieuwLocatie, setNieuwLocatie] = useState({ x: 400, y: 300 });
   const [nieuwForm, setNieuwForm] = useState({ ...LEEG_FORM });
+  const [nieuwLabelIds, setNieuwLabelIds] = useState<number[]>([]);
   const [voorFotos, setVoorFotos] = useState<string[]>([]);
   const [naFotos, setNaFotos] = useState<string[]>([]);
+  const [ruimteOpties] = useState(() => getRuimteVolgorde());
 
   const [pdfBeeld, setPdfBeeld] = useState<string | null>(null);
   const [pdfDims, setPdfDims] = useState<{ w: number; h: number } | null>(null);
@@ -343,6 +390,18 @@ export default function Plattegrond() {
   const verwijderScheiding = useDeleteScheiding();
 
   const monteurs = (gebruikers ?? []).filter((g: any) => g.rol === "monteur");
+
+  const { data: nieuwLabelData = [] } = useListLabels(
+    nieuwForm.type ? { type_code: nieuwForm.type } : {},
+  );
+
+  const nieuwFabrikanten = useMemo(() => {
+    if (!nieuwLabelIds.length) return [];
+    const geselecteerd = (nieuwLabelData as any[]).filter(
+      (l) => nieuwLabelIds.includes(l.id) && l.fabrikant,
+    );
+    return [...new Set(geselecteerd.map((l) => l.fabrikant as string))];
+  }, [nieuwLabelData, nieuwLabelIds]);
 
   const W = pdfDims?.w ?? CANVAS_W;
   const H = pdfDims?.h ?? CANVAS_H;
@@ -529,14 +588,10 @@ export default function Plattegrond() {
     setNieuwLocatie({ x: Math.round(klemX), y: Math.round(klemY) });
     const nu = new Date();
     const vandaag = `${nu.getFullYear()}-${String(nu.getMonth() + 1).padStart(2, "0")}-${String(nu.getDate()).padStart(2, "0")}`;
-    const huidigeId = gebruiker?.id != null ? String(gebruiker.id) : "";
-    const huidigeIsMonteur = monteurs.some((m: any) => String(m.id) === huidigeId);
     setNieuwForm({
       ...LEEG_FORM,
       objectnummer: volgendSpot?.spotnummer ?? "",
       installatie_datum: vandaag,
-      maker_monteur_id: huidigeId,
-      monteur_id: huidigeIsMonteur ? huidigeId : "",
     });
     setNieuwDialoog(true);
   }, [plaatsenModus, tekenModus, verplaatsModus, geselecteerdId, view, W, H, volgendSpot, gebruiker, monteurs]);
@@ -649,20 +704,25 @@ export default function Plattegrond() {
   async function maakNieuw(e: React.FormEvent) {
     e.preventDefault();
     if (!nieuwForm.objectnummer || !nieuwForm.type) return;
+
+    if (nieuwForm.ruimte && nieuwForm.ruimte !== GEEN_RUIMTE_VAL) {
+      registreerRuimteGebruik(nieuwForm.ruimte);
+    }
+    const wv = fromWerendheid(nieuwForm.werendheid);
+
     const aangemaakt: any = await maakVoorziening.mutateAsync({
       data: {
         objectnummer: nieuwForm.objectnummer,
         type: nieuwForm.type,
-        status: "in_uitvoering",
-        classificatie: nieuwForm.classificatie,
-        ruimte: nieuwForm.ruimte || undefined,
-        locatie_omschrijving: nieuwForm.locatie_omschrijving || undefined,
-        wbdbo: nieuwForm.wbdbo || undefined,
-        wrd: nieuwForm.wrd || undefined,
-        wand_of_plafond: nieuwForm.wand_of_plafond || undefined,
+        status: nieuwForm.status || "in_uitvoering",
+        classificatie: wv.classificatie,
+        wbdbo: wv.wbdbo,
+        wrd: wv.wrd,
+        ruimte: nieuwForm.ruimte && nieuwForm.ruimte !== GEEN_RUIMTE_VAL ? nieuwForm.ruimte : undefined,
+        huisnummer: nieuwForm.huisnummer.trim() || undefined,
+        opmerkingen: nieuwForm.opmerkingen.trim() || undefined,
         installatie_datum: nieuwForm.installatie_datum || undefined,
-        monteur_id: nieuwForm.monteur_id ? Number(nieuwForm.monteur_id) : undefined,
-        maker_monteur_id: nieuwForm.maker_monteur_id ? Number(nieuwForm.maker_monteur_id) : undefined,
+        label_ids: nieuwLabelIds,
         locatie_x: nieuwLocatie.x,
         locatie_y: nieuwLocatie.y,
         gebouw_id: Number(id),
@@ -683,6 +743,7 @@ export default function Plattegrond() {
     setNieuwDialoog(false);
     setPlaatsenModus(false);
     setNieuwForm({ ...LEEG_FORM });
+    setNieuwLabelIds([]);
     setVoorFotos([]);
     setNaFotos([]);
     refetch();
@@ -693,6 +754,7 @@ export default function Plattegrond() {
     setNieuwDialoog(open);
     if (!open) {
       setPlaatsenModus(false);
+      setNieuwLabelIds([]);
       setVoorFotos([]);
       setNaFotos([]);
     }
@@ -1062,96 +1124,116 @@ export default function Plattegrond() {
       <Dialog open={nieuwDialoog} onOpenChange={sluitDialoog}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Nieuwe voorziening plaatsen</DialogTitle>
+            <DialogTitle>Spot plaatsen</DialogTitle>
           </DialogHeader>
           <form onSubmit={maakNieuw} className="space-y-4 py-1">
-            <div className="grid grid-cols-2 gap-3">
-              <div className="col-span-2">
-                <Label htmlFor="nw-nr">Spotnummer</Label>
-                <Input
-                  id="nw-nr"
-                  value={nieuwForm.objectnummer}
-                  readOnly
-                  className="bg-muted"
-                  placeholder="Wordt automatisch toegekend"
-                />
-                <p className="text-xs text-muted-foreground mt-1">
-                  Automatisch toegekend op basis van het gebouw.
+
+            {/* Spotnummer (auto) */}
+            <div>
+              <Label htmlFor="nw-nr">Spotnummer</Label>
+              <Input
+                id="nw-nr"
+                value={nieuwForm.objectnummer}
+                readOnly
+                className="bg-muted"
+                placeholder="Wordt automatisch toegekend"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Automatisch toegekend op basis van het gebouw.
+              </p>
+            </div>
+
+            {/* Applicatie */}
+            <div>
+              <Label>Applicatie *</Label>
+              <ApplicatiePicker
+                value={nieuwForm.type}
+                onValueChange={(v) => {
+                  setNieuwForm((f) => ({ ...f, type: v }));
+                  setNieuwLabelIds([]);
+                }}
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Kies de applicatie uit de centrale bibliotheek.
+              </p>
+            </div>
+
+            {/* Toepassing (alleen als applicatie gekozen) */}
+            {nieuwForm.type && (
+              <div className="border rounded-lg p-4 space-y-2">
+                <p className="text-sm font-medium">Toepassing</p>
+                <p className="text-xs text-muted-foreground">
+                  Selecteer de gebruikte producten of systemen bij deze spot.
                 </p>
-              </div>
-
-              <div>
-                <Label>Type systeem *</Label>
-                <Select value={nieuwForm.type} onValueChange={(v) => setNieuwForm((f) => ({ ...f, type: v }))}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {Object.entries(TYPEN).map(([k, s]) => (
-                      <SelectItem key={k} value={k}>{s.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <Label>Type meting</Label>
-                <Select
-                  value={nieuwForm.meting}
-                  onValueChange={(v) => setNieuwForm((f) => ({
-                    ...f,
-                    meting: v,
-                    wbdbo: v === "wbdbo" ? (f.wbdbo || "60") : "",
-                    wrd: v === "wrd" ? (f.wrd || "30") : "",
-                  }))}
-                >
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="wbdbo">WBDBO</SelectItem>
-                    <SelectItem value="wrd">WRD</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <Label>Waarde (min)</Label>
-                {nieuwForm.meting === "wbdbo" ? (
-                  <Select value={nieuwForm.wbdbo} onValueChange={(v) => setNieuwForm((f) => ({ ...f, wbdbo: v }))}>
-                    <SelectTrigger><SelectValue placeholder="Kies" /></SelectTrigger>
-                    <SelectContent>
-                      {WBDBO_OPTIES.map((v) => (
-                        <SelectItem key={v} value={v}>{v} minuten</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                ) : (
-                  <Select value={nieuwForm.wrd} onValueChange={(v) => setNieuwForm((f) => ({ ...f, wrd: v }))}>
-                    <SelectTrigger><SelectValue placeholder="Kies" /></SelectTrigger>
-                    <SelectContent>
-                      {WRD_OPTIES.map((v) => (
-                        <SelectItem key={v} value={v}>{v} minuten</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                <ToepassingMultiSelect
+                  typeCode={nieuwForm.type}
+                  selectedIds={nieuwLabelIds}
+                  onSelectionChange={setNieuwLabelIds}
+                  magLabelsAanmaken={isBeheerder}
+                />
+                {nieuwFabrikanten.length > 0 && (
+                  <p className="text-xs text-muted-foreground pt-1 border-t">
+                    <span className="font-medium">Fabrikant(en):</span>{" "}
+                    {nieuwFabrikanten.join(", ")}
+                  </p>
                 )}
               </div>
+            )}
 
-              <div>
-                <Label>Wand of plafond</Label>
+            <div className="grid grid-cols-2 gap-3">
+              {/* Brand- of rookwerendheid */}
+              <div className="col-span-2">
+                <Label>Brand- of rookwerendheid</Label>
                 <Select
-                  value={nieuwForm.wand_of_plafond || "onbekend"}
-                  onValueChange={(v) => setNieuwForm((f) => ({ ...f, wand_of_plafond: v === "onbekend" ? "" : v }))}
+                  value={nieuwForm.werendheid || GEEN_WERENDHEID_VAL}
+                  onValueChange={(v) => setNieuwForm((f) => ({ ...f, werendheid: v }))}
                 >
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder="Kies werendheid..." /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="onbekend">Onbekend</SelectItem>
-                    {WAND_PLAFOND_OPTIES.map((v) => (
-                      <SelectItem key={v} value={v} className="capitalize">{v === "wand" ? "Wand" : "Plafond"}</SelectItem>
+                    <SelectItem value={GEEN_WERENDHEID_VAL}>Niet opgegeven</SelectItem>
+                    {WERENDHEID_OPTIES.map((w) => (
+                      <SelectItem key={w.waarde} value={w.waarde}>
+                        <span className="font-mono text-xs mr-2">{w.waarde}</span>
+                        {w.label.split(" — ")[1]}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
 
+              {/* Ruimte */}
               <div>
-                <Label htmlFor="nw-datum">Datum uitvoering</Label>
+                <Label>Ruimte</Label>
+                <Select
+                  value={nieuwForm.ruimte || GEEN_RUIMTE_VAL}
+                  onValueChange={(v) => setNieuwForm((f) => ({ ...f, ruimte: v === GEEN_RUIMTE_VAL ? "" : v }))}
+                >
+                  <SelectTrigger><SelectValue placeholder="Kies ruimte..." /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={GEEN_RUIMTE_VAL}>Niet opgegeven</SelectItem>
+                    {ruimteOpties.map((r) => (
+                      <SelectItem key={r} value={r}>
+                        {r.charAt(0).toUpperCase() + r.slice(1)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Huisnummer */}
+              <div>
+                <Label htmlFor="nw-huisnummer">Huisnummer (optioneel)</Label>
+                <Input
+                  id="nw-huisnummer"
+                  value={nieuwForm.huisnummer}
+                  onChange={(e) => setNieuwForm((f) => ({ ...f, huisnummer: e.target.value }))}
+                  placeholder="Bijv. 12 of 4B"
+                />
+              </div>
+
+              {/* Installatiedatum */}
+              <div>
+                <Label htmlFor="nw-datum">Installatiedatum</Label>
                 <Input
                   id="nw-datum"
                   type="date"
@@ -1160,63 +1242,56 @@ export default function Plattegrond() {
                 />
               </div>
 
+              {/* Status */}
               <div>
-                <Label>Monteur uitvoering</Label>
+                <Label>Status</Label>
                 <Select
-                  value={nieuwForm.monteur_id || "geen"}
-                  onValueChange={(v) => setNieuwForm((f) => ({ ...f, monteur_id: v === "geen" ? "" : v }))}
+                  value={nieuwForm.status}
+                  onValueChange={(v) => setNieuwForm((f) => ({ ...f, status: v }))}
                 >
-                  <SelectTrigger><SelectValue placeholder="Kies monteur" /></SelectTrigger>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="geen">Niet toegewezen</SelectItem>
-                    {monteurs.map((m: any) => (
-                      <SelectItem key={m.id} value={String(m.id)}>{m.naam}</SelectItem>
+                    {Object.entries(STATUSLABEL).map(([k, label]) => (
+                      <SelectItem key={k} value={k}>{label}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
 
+              {/* Aanmaker (leesbaar) + beheerder-only: monteur toewijzen */}
               <div>
-                <Label>Aanmaker spot</Label>
+                <Label>Geplaatst door</Label>
                 <Input value={gebruiker?.naam ?? ""} readOnly className="bg-muted" />
               </div>
 
-              <div>
-                <Label htmlFor="nw-ruimte">Ruimte</Label>
-                <Input
-                  id="nw-ruimte"
-                  value={nieuwForm.ruimte}
-                  onChange={(e) => setNieuwForm((f) => ({ ...f, ruimte: e.target.value }))}
-                  placeholder="Bijv. Trappenhal A"
-                />
-              </div>
-
-              <div className="col-span-2">
-                <Label htmlFor="nw-loc">Locatieomschrijving</Label>
-                <Input
-                  id="nw-loc"
-                  value={nieuwForm.locatie_omschrijving}
-                  onChange={(e) => setNieuwForm((f) => ({ ...f, locatie_omschrijving: e.target.value }))}
-                  placeholder="Bijv. Bij kabelgoot oost"
-                />
-              </div>
-
-              <div className="col-span-2">
-                <Label>Positie (X, Y)</Label>
-                <div className="flex gap-1">
-                  <Input
-                    type="number"
-                    value={nieuwLocatie.x}
-                    onChange={(e) => setNieuwLocatie((l) => ({ ...l, x: Number(e.target.value) }))}
-                    className="w-24"
-                  />
-                  <Input
-                    type="number"
-                    value={nieuwLocatie.y}
-                    onChange={(e) => setNieuwLocatie((l) => ({ ...l, y: Number(e.target.value) }))}
-                    className="w-24"
-                  />
+              {isBeheerder && (
+                <div className="col-span-2">
+                  <Label>Monteur toewijzen (optioneel)</Label>
+                  <Select
+                    value={(nieuwForm as any).monteur_id || "geen"}
+                    onValueChange={(v) => setNieuwForm((f) => ({ ...f, monteur_id: v === "geen" ? "" : v } as any))}
+                  >
+                    <SelectTrigger><SelectValue placeholder="Kies monteur" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="geen">Niet toegewezen</SelectItem>
+                      {monteurs.map((m: any) => (
+                        <SelectItem key={m.id} value={String(m.id)}>{m.naam}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
+              )}
+
+              {/* Opmerkingen */}
+              <div className="col-span-2">
+                <Label htmlFor="nw-opm">Opmerking</Label>
+                <Textarea
+                  id="nw-opm"
+                  value={nieuwForm.opmerkingen}
+                  onChange={(e) => setNieuwForm((f) => ({ ...f, opmerkingen: e.target.value }))}
+                  placeholder="Optionele opmerking..."
+                  rows={2}
+                />
               </div>
             </div>
 
@@ -1242,8 +1317,8 @@ export default function Plattegrond() {
               <Button type="button" variant="outline" onClick={() => sluitDialoog(false)}>
                 Annuleren
               </Button>
-              <Button type="submit" disabled={maakVoorziening.isPending || addFoto.isPending}>
-                {maakVoorziening.isPending || addFoto.isPending ? "Opslaan..." : "Plaatsen"}
+              <Button type="submit" disabled={!nieuwForm.type || maakVoorziening.isPending || addFoto.isPending}>
+                {maakVoorziening.isPending || addFoto.isPending ? "Opslaan..." : "Spot plaatsen"}
               </Button>
             </DialogFooter>
           </form>

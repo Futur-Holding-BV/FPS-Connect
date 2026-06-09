@@ -10,6 +10,7 @@ import {
   useListInspecties,
   useListVoorzieningenOpVerdieping,
   useListScheidingen,
+  useGetVoorziening,
   type Verdieping,
 } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
@@ -98,14 +99,8 @@ const PARTIJ_TYPELABEL: Record<string, string> = {
 const CANVAS_W = 1200;
 const CANVAS_H = 800;
 
-// Raster-tegels: vaste vakgrootte in SVG-coördinaten
-const RASTER_B = 1200;
-const RASTER_H = 1200;
-
-// Clusters: spot-groepering
-const CLUSTER_RADIUS = 260;   // max afstand om spots samen te voegen
-const MIN_CLUSTER    = 3;     // minimaal aantal spots per cluster
-const CLUSTER_MARGE  = 200;   // padding rondom cluster-bbox
+// Crop-grootte rondom een spot in SVG-coördinaten (ingezoomde detailweergave)
+const SPOT_CROP = 600;
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -121,84 +116,13 @@ type SVGVoorziening = {
   locatie_y: number;
 };
 
-type Tegel = {
-  col: number; rij: number; code: string;
-  x: number; y: number; w: number; h: number;
-};
-
-type Cluster = {
-  idx: number; spots: SVGVoorziening[];
-  x: number; y: number; w: number; h: number;
-};
-
 // ─── Hulpfuncties ────────────────────────────────────────────────────────────
 
-function kolomLabel(col: number): string {
-  let label = "";
-  let n = col;
-  for (;;) {
-    label = String.fromCharCode(65 + (n % 26)) + label;
-    if (n < 26) break;
-    n = Math.floor(n / 26) - 1;
-  }
-  return label;
-}
-
-function berekenRasterTegels(W: number, H: number): Tegel[] {
-  const cols  = Math.max(1, Math.ceil(W / RASTER_B));
-  const rijen = Math.max(1, Math.ceil(H / RASTER_H));
-  const tegels: Tegel[] = [];
-  for (let r = 0; r < rijen; r++) {
-    for (let c = 0; c < cols; c++) {
-      const x = c * RASTER_B, y = r * RASTER_H;
-      const w = Math.min(RASTER_B, W - x), h = Math.min(RASTER_H, H - y);
-      if (w > 0 && h > 0)
-        tegels.push({ col: c, rij: r, code: `${kolomLabel(c)}${r + 1}`, x, y, w, h });
-    }
-  }
-  return tegels;
-}
-
-function detecteerClusters(spots: SVGVoorziening[], W: number, H: number): Cluster[] {
-  if (spots.length < MIN_CLUSTER) return [];
-  const bezoekt = new Set<number>();
-  const groepen: SVGVoorziening[][] = [];
-
-  for (const spot of spots) {
-    if (bezoekt.has(spot.id)) continue;
-    const groep: SVGVoorziening[] = [];
-    const wachtrij: SVGVoorziening[] = [spot];
-    bezoekt.add(spot.id);
-    while (wachtrij.length > 0) {
-      const huidig = wachtrij.shift()!;
-      groep.push(huidig);
-      for (const andere of spots) {
-        if (bezoekt.has(andere.id)) continue;
-        if (Math.hypot(andere.locatie_x - huidig.locatie_x, andere.locatie_y - huidig.locatie_y) <= CLUSTER_RADIUS) {
-          bezoekt.add(andere.id);
-          wachtrij.push(andere);
-        }
-      }
-    }
-    if (groep.length >= MIN_CLUSTER) groepen.push(groep);
-  }
-
-  // Alleen clusters die aanzienlijk kleiner zijn dan een raster-tile (anders dekt raster al af)
-  const maxOpp = RASTER_B * RASTER_H * 0.55;
-
-  return groepen
-    .map((groep, idx) => {
-      const minX = Math.min(...groep.map(s => s.locatie_x));
-      const maxX = Math.max(...groep.map(s => s.locatie_x));
-      const minY = Math.min(...groep.map(s => s.locatie_y));
-      const maxY = Math.max(...groep.map(s => s.locatie_y));
-      const x = Math.max(0, minX - CLUSTER_MARGE);
-      const y = Math.max(0, minY - CLUSTER_MARGE);
-      const w = Math.min(maxX - minX + 2 * CLUSTER_MARGE, W - x);
-      const h = Math.min(maxY - minY + 2 * CLUSTER_MARGE, H - y);
-      return { idx: idx + 1, spots: groep, x, y, w, h };
-    })
-    .filter(c => c.w > 0 && c.h > 0 && c.w * c.h < maxOpp);
+function weergeefWerendheid(wbdbo?: string | null, wrd?: string | null, classificatie?: string | null): string {
+  if (wrd)   return `WRD ${wrd} min (rookwerend)`;
+  if (wbdbo) return `EW ${wbdbo} min (WBDBO brandwerend)`;
+  if (classificatie && classificatie !== "60") return `EI ${classificatie} min`;
+  return "—";
 }
 
 function spotVolgnummer(objectnummer: string): string {
@@ -307,66 +231,204 @@ function Minimap({
   );
 }
 
-// Raster-overlay voor de overzichtsplattegrond
-function RasterOverlay({ tegels, W, H }: { tegels: Tegel[]; W: number; H: number }) {
-  const cols = Math.max(1, Math.ceil(W / RASTER_B));
-  const rijen = Math.max(1, Math.ceil(H / RASTER_H));
-  const labelGrootte = Math.min(W, H) * 0.035;
-  const elementen: React.ReactNode[] = [];
+// ─── SpotDetailBlok ──────────────────────────────────────────────────────────
 
-  // Verticale lijnen
-  for (let c = 1; c < cols; c++) {
-    const lx = c * RASTER_B;
-    elementen.push(<line key={`vl${c}`} x1={lx} y1={0} x2={lx} y2={H} stroke="#64748b" strokeWidth={2} strokeDasharray="10 6" opacity={0.6} />);
-  }
-  // Horizontale lijnen
-  for (let r = 1; r < rijen; r++) {
-    const ly = r * RASTER_H;
-    elementen.push(<line key={`hl${r}`} x1={0} y1={ly} x2={W} y2={ly} stroke="#64748b" strokeWidth={2} strokeDasharray="10 6" opacity={0.6} />);
-  }
-  // Kolomlabels bovenaan
-  for (let c = 0; c < cols; c++) {
-    const cx = c * RASTER_B + Math.min(RASTER_B, W - c * RASTER_B) / 2;
-    elementen.push(
-      <text key={`cl${c}`} x={cx} y={labelGrootte * 1.2} textAnchor="middle" fontSize={labelGrootte}
-        fontWeight={700} fill="#F23B0D" opacity={0.85}>{kolomLabel(c)}</text>
-    );
-  }
-  // Rijlabels links
-  for (let r = 0; r < rijen; r++) {
-    const cy = r * RASTER_H + Math.min(RASTER_H, H - r * RASTER_H) / 2;
-    elementen.push(
-      <text key={`rl${r}`} x={labelGrootte * 0.6} y={cy} textAnchor="middle" dominantBaseline="central"
-        fontSize={labelGrootte} fontWeight={700} fill="#F23B0D" opacity={0.85}>{r + 1}</text>
-    );
-  }
-  // Vak-codes in elke cel (klein, subtiel)
-  for (const t of tegels) {
-    const cx = t.x + t.w / 2, cy = t.y + t.h / 2;
-    elementen.push(
-      <text key={`vc${t.code}`} x={cx} y={cy} textAnchor="middle" dominantBaseline="central"
-        fontSize={labelGrootte * 1.8} fontWeight={800} fill="#F23B0D" opacity={0.07}>
-        {t.code}
-      </text>
-    );
-  }
-  return <g style={{ pointerEvents: "none" }}>{elementen}</g>;
-}
+function SpotDetailBlok({
+  spot,
+  pdfBeeld,
+  W,
+  H,
+  scheidingen,
+  gebouwNaam,
+  bouwlaag,
+  exportDatum,
+  logoSrc,
+  onGereed,
+}: {
+  spot: SVGVoorziening;
+  pdfBeeld: string | null;
+  W: number;
+  H: number;
+  scheidingen: any[] | undefined;
+  gebouwNaam: string;
+  bouwlaag: string;
+  exportDatum: string;
+  logoSrc: string;
+  onGereed: () => void;
+}) {
+  const { data: detail } = useGetVoorziening(spot.id);
+  const gereedGemeld = useRef(false);
 
-// Logo in de rechterbovenhoek van een tegel-viewBox
-function LogoOpTegel({ x, y, w, h, logoSrc }: { x: number; y: number; w: number; h: number; logoSrc: string }) {
-  const logoB  = Math.max(w, h) * 0.13;
-  const logoH  = logoB / 2.59;
-  const logoPad = Math.max(w, h) * 0.025;
+  useEffect(() => {
+    if (detail && !gereedGemeld.current) {
+      gereedGemeld.current = true;
+      onGereed();
+    }
+  }, [detail, onGereed]);
+
+  // Ingezoomde SVG-viewBox rondom de spot
+  const half = SPOT_CROP / 2;
+  const vbX = Math.max(0, spot.locatie_x - half);
+  const vbY = Math.max(0, spot.locatie_y - half);
+  const vbW = Math.min(SPOT_CROP, W - vbX);
+  const vbH = Math.min(SPOT_CROP, H - vbY);
+
+  const fotos    = (detail as any)?.fotos  as any[] | undefined ?? [];
+  const labels   = (detail as any)?.labels as any[] | undefined ?? [];
+  const voorFotos = fotos.filter((f: any) => f.fase === "voor");
+  const naFotos   = fotos.filter((f: any) => f.fase === "na");
+
+  const d = detail as any;
+  const applicatieLabel = TYPEN[spot.type]?.label ?? spot.type;
+  const werendheidLabel = weergeefWerendheid(d?.wbdbo, d?.wrd, d?.classificatie);
+
+  const heeftTestinfo = labels.some((l: any) => l.testnorm || l.fabrikant);
+
   return (
-    <image
-      href={logoSrc}
-      x={x + w - logoB - logoPad}
-      y={y + logoPad}
-      width={logoB}
-      height={logoH}
-      preserveAspectRatio="xMidYMid meet"
-    />
+    <div className="prt-spot-detail">
+      {/* Koptekst */}
+      <div className="prt-spot-kop">
+        <div className="prt-spot-kop-links">
+          <img src={logoSrc} alt="FPS Brandpreventie" className="prt-spot-logo" />
+          <div>
+            <div className="prt-spot-gebouw">{gebouwNaam}</div>
+            <div className="prt-spot-bouwlaag">{bouwlaag}</div>
+          </div>
+        </div>
+        <div className="prt-spot-kop-rechts">
+          <div className="prt-spot-nr">{spot.objectnummer}</div>
+          <div className="prt-spot-datum">Export: {exportDatum}</div>
+        </div>
+      </div>
+
+      {/* Tekening + minimap */}
+      <div className="prt-spot-body">
+        {/* Ingezoomd stuk tekening */}
+        <div className="prt-spot-tekening">
+          <svg
+            width="100%"
+            viewBox={`${vbX} ${vbY} ${vbW} ${vbH}`}
+            preserveAspectRatio="xMidYMid meet"
+            style={{ display: "block" }}
+          >
+            {pdfBeeld
+              ? <image href={pdfBeeld} x={0} y={0} width={W} height={H} />
+              : <GridAchtergrond w={W} h={H} />}
+            {renderScheidingen(scheidingen, W, H)}
+            {/* Alle spots licht weergeven */}
+            <SpotIcoon v={spot} />
+            {/* Uitlichtring rondom de geselecteerde spot */}
+            <circle
+              cx={spot.locatie_x}
+              cy={spot.locatie_y}
+              r={40}
+              fill="none"
+              stroke="#F23B0D"
+              strokeWidth={4}
+              strokeDasharray="12 6"
+              opacity={0.9}
+            />
+          </svg>
+        </div>
+
+        {/* Minimap rechtsboven */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 8, flexShrink: 0, width: 120 }}>
+          <Minimap W={W} H={H} x={vbX} y={vbY} w={vbW} h={vbH} label={spot.objectnummer} />
+          <div style={{ fontSize: 10, color: "#64748b", textAlign: "center", lineHeight: 1.4 }}>
+            Locatie op plattegrond
+          </div>
+        </div>
+      </div>
+
+      {/* Spotinformatie */}
+      <div className="prt-spot-info">
+        <div className="prt-spot-info-rij">
+          <span className="prt-spot-lbl">Applicatie</span>
+          <span className="prt-spot-val">{applicatieLabel}</span>
+        </div>
+        <div className="prt-spot-info-rij">
+          <span className="prt-spot-lbl">Status</span>
+          <span className="prt-spot-val">
+            <span className="prt-stip" style={{ backgroundColor: STATUSKLEUREN[spot.status] ?? "#94a3b8" }} />
+            {STATUSLABEL[spot.status] ?? spot.status}
+          </span>
+        </div>
+        <div className="prt-spot-info-rij">
+          <span className="prt-spot-lbl">Brand- of rookwerendheid</span>
+          <span className="prt-spot-val">{werendheidLabel}</span>
+        </div>
+        {d?.ruimte && (
+          <div className="prt-spot-info-rij">
+            <span className="prt-spot-lbl">Ruimte</span>
+            <span className="prt-spot-val">{d.ruimte}</span>
+          </div>
+        )}
+        {d?.huisnummer && (
+          <div className="prt-spot-info-rij">
+            <span className="prt-spot-lbl">Huisnummer</span>
+            <span className="prt-spot-val">{d.huisnummer}</span>
+          </div>
+        )}
+        {d?.installatie_datum && (
+          <div className="prt-spot-info-rij">
+            <span className="prt-spot-lbl">Installatiedatum</span>
+            <span className="prt-spot-val">{datumNL(d.installatie_datum)}</span>
+          </div>
+        )}
+        {d?.opmerkingen && (
+          <div className="prt-spot-info-rij">
+            <span className="prt-spot-lbl">Opmerking</span>
+            <span className="prt-spot-val">{d.opmerkingen}</span>
+          </div>
+        )}
+        {labels.length > 0 && (
+          <div className="prt-spot-info-rij">
+            <span className="prt-spot-lbl">Toepassing(en)</span>
+            <span className="prt-spot-val">{labels.map((l: any) => l.naam).join(", ")}</span>
+          </div>
+        )}
+      </div>
+
+      {/* Testrapporten / fabrikantinfo */}
+      {heeftTestinfo && (
+        <div className="prt-spot-testinfo">
+          <div className="prt-spot-testinfo-titel">Gekoppelde bibliotheekdocumenten</div>
+          {labels.filter((l: any) => l.testnorm || l.fabrikant).map((l: any) => (
+            <div key={l.id} className="prt-spot-testitem">
+              <span className="prt-spot-testitem-naam">{l.naam}</span>
+              {l.fabrikant && <span className="prt-spot-testitem-meta">Fabrikant: {l.fabrikant}</span>}
+              {l.testnorm  && <span className="prt-spot-testitem-meta">Testnorm: {l.testnorm}</span>}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Foto's */}
+      {(voorFotos.length > 0 || naFotos.length > 0) && (
+        <div className="prt-spot-fotos">
+          {voorFotos.length > 0 && (
+            <div>
+              <div className="prt-spot-foto-label">Foto's voor</div>
+              <div className="prt-spot-foto-rij">
+                {voorFotos.map((f: any) => (
+                  <img key={f.id} src={`/api/storage${f.url}`} alt="Foto voor" className="prt-spot-foto" />
+                ))}
+              </div>
+            </div>
+          )}
+          {naFotos.length > 0 && (
+            <div>
+              <div className="prt-spot-foto-label">Foto's na</div>
+              <div className="prt-spot-foto-rij">
+                {naFotos.map((f: any) => (
+                  <img key={f.id} src={`/api/storage${f.url}`} alt="Foto na" className="prt-spot-foto" />
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -406,8 +468,7 @@ function PrintVerdieping({
   exportDatum,
   logoSrc,
   toonOverzicht,
-  toonRaster,
-  toonClusters,
+  toonSpotDetails,
 }: {
   verdieping: Verdieping;
   onGereed: () => void;
@@ -415,12 +476,12 @@ function PrintVerdieping({
   exportDatum: string;
   logoSrc: string;
   toonOverzicht: boolean;
-  toonRaster: boolean;
-  toonClusters: boolean;
+  toonSpotDetails: boolean;
 }) {
-  const [pdfBeeld, setPdfBeeld]   = useState<string | null>(null);
-  const [pdfDims, setPdfDims]     = useState<{ w: number; h: number } | null>(null);
+  const [pdfBeeld, setPdfBeeld]     = useState<string | null>(null);
+  const [pdfDims, setPdfDims]       = useState<{ w: number; h: number } | null>(null);
   const [beeldKlaar, setBeeldKlaar] = useState(false);
+  const [spotsGereed, setSpotsGereed] = useState(0);
   const gereedGemeld = useRef(false);
 
   const plattegrondUrl = verdieping.plattegrond_url;
@@ -473,13 +534,6 @@ function PrintVerdieping({
     return () => { geannuleerd = true; laadTaak?.destroy().catch(() => undefined); };
   }, [plattegrondUrl]);
 
-  useEffect(() => {
-    if (beeldKlaar && dataKlaar && !gereedGemeld.current) {
-      gereedGemeld.current = true;
-      onGereed();
-    }
-  }, [beeldKlaar, dataKlaar, onGereed]);
-
   const W = pdfDims?.w ?? CANVAS_W;
   const H = pdfDims?.h ?? CANVAS_H;
 
@@ -496,47 +550,23 @@ function PrintVerdieping({
     }));
 
   const alleVoorzieningen = (voorzieningen ?? []) as any[];
+  const aantalSpots = toonSpotDetails ? geplaatst.length : 0;
+  const alleSpotsGereed = spotsGereed >= aantalSpots;
 
-  // Raster en clusters
-  const tegels   = berekenRasterTegels(W, H);
-  const clusters = detecteerClusters(geplaatst, W, H);
+  useEffect(() => {
+    if (beeldKlaar && dataKlaar && alleSpotsGereed && !gereedGemeld.current) {
+      gereedGemeld.current = true;
+      onGereed();
+    }
+  }, [beeldKlaar, dataKlaar, alleSpotsGereed, onGereed]);
 
-  // Logo-positie op overzichtsplattegrond (uit verdieping of standaard rechtsboven)
+  // Logo-positie op overzichtsplattegrond
   const vd = verdieping as any;
   const logoPad = Math.max(W, H) * 0.015;
   const logoB   = vd.logo_breedte ?? Math.max(W, H) * 0.16;
   const logoHH  = logoB / 2.59;
   const logoX   = vd.logo_x != null ? Number(vd.logo_x) : W - logoB - logoPad;
   const logoY   = vd.logo_y != null ? Number(vd.logo_y) : logoPad;
-
-  // Helper: legenda voor spots in een bepaalde regio
-  function tegelLegende(spots: SVGVoorziening[]) {
-    const statussen = [...new Set(spots.map(v => v.status))];
-    if (statussen.length === 0) return null;
-    return (
-      <div className="prt-tegel-legende">
-        {statussen.map(s => (
-          <span key={s} className="prt-tegel-status">
-            <span className="prt-stip" style={{ backgroundColor: STATUSKLEUREN[s] ?? "#94a3b8" }} />
-            {STATUSLABEL[s] ?? s}
-            {" "}({spots.filter(v => v.status === s).length})
-          </span>
-        ))}
-      </div>
-    );
-  }
-
-  // Spots in een rechthoekig gebied
-  function spotsIn(x: number, y: number, w: number, h: number) {
-    return geplaatst.filter(v =>
-      v.locatie_x >= x && v.locatie_x <= x + w &&
-      v.locatie_y >= y && v.locatie_y <= y + h
-    );
-  }
-
-  const heeftSpots = geplaatst.length > 0;
-  const toonRasterWerkelijk  = toonRaster  && heeftSpots && tegels.length > 1;
-  const toonClustersWerkelijk = toonClusters && heeftSpots && clusters.length > 0;
 
   return (
     <div className="prt-verdieping">
@@ -545,17 +575,13 @@ function PrintVerdieping({
         <span className="prt-subtitel-meta">
           {alleVoorzieningen.length} {alleVoorzieningen.length === 1 ? "voorziening" : "voorzieningen"}
           {geplaatst.length > 0 ? ` · ${geplaatst.length} op plattegrond` : ""}
-          {toonRasterWerkelijk ? ` · ${tegels.length} vakken` : ""}
-          {toonClustersWerkelijk ? ` · ${clusters.length} cluster${clusters.length !== 1 ? "s" : ""}` : ""}
         </span>
       </h3>
 
       {/* ── Overzichtsplattegrond ── */}
-      {(toonOverzicht || toonRasterWerkelijk) && (
+      {toonOverzicht && (
         <div className="prt-verdieping-blok">
-          {toonRasterWerkelijk && (
-            <div className="prt-tegel-koplabel">Overzichtsplattegrond met vakindeling</div>
-          )}
+          <div className="prt-tegel-koplabel">Overzichtsplattegrond — {verdieping.naam}</div>
           <div className="prt-plattegrond">
             <svg width="100%" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="xMidYMid meet" style={{ display: "block" }}>
               {pdfBeeld
@@ -563,9 +589,6 @@ function PrintVerdieping({
                 : <GridAchtergrond w={W} h={H} />}
               {renderScheidingen(scheidingen, W, H)}
               {geplaatst.map(v => <SpotIcoon key={v.id} v={v} />)}
-              {/* Raster-overlay (zichtbaar als raster-modus actief) */}
-              {toonRasterWerkelijk && <RasterOverlay tegels={tegels} W={W} H={H} />}
-              {/* Logo rechtsboven op de tekening */}
               {pdfBeeld && (
                 <image href={logoSrc} x={logoX} y={logoY} width={logoB} height={logoHH}
                   preserveAspectRatio="xMidYMid meet" />
@@ -575,102 +598,25 @@ function PrintVerdieping({
         </div>
       )}
 
-      {/* ── Raster-uitsneden ── */}
-      {toonRasterWerkelijk && tegels.map((tegel) => {
-        const tegelSpots = spotsIn(tegel.x, tegel.y, tegel.w, tegel.h);
-        return (
-          <div key={`r-${tegel.code}`} className="prt-tegel-blok">
-            <div className="prt-tegel-kop">
-              <div className="prt-tegel-kop-info">
-                <div className="prt-tegel-titel">
-                  Vak {tegel.code} — {verdieping.naam}
-                </div>
-                <div className="prt-tegel-meta">
-                  {gebouwNaam} · Export: {exportDatum}
-                </div>
-                <div className="prt-tegel-meta" style={{ marginTop: 1 }}>
-                  {tegelSpots.length} spot{tegelSpots.length !== 1 ? "s" : ""} in dit vak
-                </div>
-                {tegelLegende(tegelSpots)}
-              </div>
-              <Minimap W={W} H={H} x={tegel.x} y={tegel.y} w={tegel.w} h={tegel.h} label={`Vak ${tegel.code}`} />
-            </div>
-            <div className="prt-plattegrond">
-              <svg width="100%" viewBox={`${tegel.x} ${tegel.y} ${tegel.w} ${tegel.h}`}
-                preserveAspectRatio="xMidYMid meet" style={{ display: "block" }}>
-                {pdfBeeld
-                  ? <image href={pdfBeeld} x={0} y={0} width={W} height={H} />
-                  : <GridAchtergrond w={W} h={H} />}
-                {renderScheidingen(scheidingen, W, H)}
-                {geplaatst.map(v => <SpotIcoon key={v.id} v={v} />)}
-                {/* Vak-code badge linksboven */}
-                <g>
-                  <rect x={tegel.x + 8} y={tegel.y + 8} width={tegel.w * 0.08 + 16} height={tegel.h * 0.06 + 12}
-                    rx={6} fill="white" fillOpacity={0.9} />
-                  <text x={tegel.x + 16} y={tegel.y + 8 + (tegel.h * 0.06 + 12) / 2}
-                    dominantBaseline="central" fontSize={Math.min(tegel.w, tegel.h) * 0.055}
-                    fontWeight={800} fill="#F23B0D">{tegel.code}</text>
-                </g>
-                {/* Logo rechtsboven */}
-                <LogoOpTegel x={tegel.x} y={tegel.y} w={tegel.w} h={tegel.h} logoSrc={logoSrc} />
-              </svg>
-            </div>
-          </div>
-        );
-      })}
+      {/* ── Spot-detailpagina's ── */}
+      {toonSpotDetails && geplaatst.map(spot => (
+        <SpotDetailBlok
+          key={spot.id}
+          spot={spot}
+          pdfBeeld={pdfBeeld}
+          W={W}
+          H={H}
+          scheidingen={scheidingen}
+          gebouwNaam={gebouwNaam}
+          bouwlaag={verdieping.naam}
+          exportDatum={exportDatum}
+          logoSrc={logoSrc}
+          onGereed={() => setSpotsGereed(n => n + 1)}
+        />
+      ))}
 
-      {/* ── Cluster-uitsneden ── */}
-      {toonClustersWerkelijk && clusters.map((cluster) => {
-        const clusterSpots = cluster.spots;
-        const typen = [...new Set(clusterSpots.map(v => v.type))];
-        return (
-          <div key={`c-${cluster.idx}`} className="prt-tegel-blok">
-            <div className="prt-tegel-kop">
-              <div className="prt-tegel-kop-info">
-                <div className="prt-tegel-titel">
-                  Spotcluster {cluster.idx} — {verdieping.naam}
-                </div>
-                <div className="prt-tegel-meta">
-                  {gebouwNaam} · Export: {exportDatum}
-                </div>
-                <div className="prt-tegel-meta" style={{ marginTop: 1 }}>
-                  {clusterSpots.length} spots
-                  {typen.length <= 3 ? ` · ${typen.map(t => TYPEN[t]?.label ?? t).join(", ")}` : ""}
-                </div>
-                {tegelLegende(clusterSpots)}
-              </div>
-              <Minimap W={W} H={H} x={cluster.x} y={cluster.y} w={cluster.w} h={cluster.h}
-                label={`Cluster ${cluster.idx}`} />
-            </div>
-            <div className="prt-plattegrond">
-              <svg width="100%" viewBox={`${cluster.x} ${cluster.y} ${cluster.w} ${cluster.h}`}
-                preserveAspectRatio="xMidYMid meet" style={{ display: "block" }}>
-                {pdfBeeld
-                  ? <image href={pdfBeeld} x={0} y={0} width={W} height={H} />
-                  : <GridAchtergrond w={W} h={H} />}
-                {renderScheidingen(scheidingen, W, H)}
-                {geplaatst.map(v => <SpotIcoon key={v.id} v={v} />)}
-                {/* Cluster-badge */}
-                <g>
-                  <rect x={cluster.x + 8} y={cluster.y + 8}
-                    width={cluster.w * 0.14 + 20} height={cluster.h * 0.07 + 14}
-                    rx={6} fill="white" fillOpacity={0.9} />
-                  <text x={cluster.x + 18} y={cluster.y + 8 + (cluster.h * 0.07 + 14) / 2}
-                    dominantBaseline="central" fontSize={Math.min(cluster.w, cluster.h) * 0.055}
-                    fontWeight={800} fill="#F23B0D">
-                    Cluster {cluster.idx}
-                  </text>
-                </g>
-                {/* Logo rechtsboven */}
-                <LogoOpTegel x={cluster.x} y={cluster.y} w={cluster.w} h={cluster.h} logoSrc={logoSrc} />
-              </svg>
-            </div>
-          </div>
-        );
-      })}
-
-      {/* ── Voorzieningenlijst ── */}
-      {alleVoorzieningen.length > 0 && (
+      {/* ── Voorzieningenlijst (compacte samenvatting) ── */}
+      {!toonSpotDetails && alleVoorzieningen.length > 0 && (
         <table className="prt-tabel">
           <thead>
             <tr>
@@ -716,9 +662,8 @@ export default function GebouwPrint() {
   const gedrukt = useRef(false);
 
   // Moduskeuze
-  const [toonOverzicht, setToonOverzicht] = useState(true);
-  const [toonRaster,    setToonRaster]    = useState(true);
-  const [toonClusters,  setToonClusters]  = useState(true);
+  const [toonOverzicht,    setToonOverzicht]    = useState(true);
+  const [toonSpotDetails,  setToonSpotDetails]  = useState(true);
 
   const verdiepingen = [...((gebouw?.verdiepingen ?? []) as Verdieping[])].sort(
     (a, b) => (a.niveau ?? 0) - (b.niveau ?? 0),
@@ -837,7 +782,7 @@ export default function GebouwPrint() {
         .prt-subtitel-meta { font-size: 11px; font-weight: 500; color: #64748b; }
         .prt-plattegrond { border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; background: #f8fafc; }
 
-        /* Tegels (raster / clusters) */
+        /* Tegel koplabels (overzichtsplattegrond subtitel) */
         .prt-tegel-blok { break-before: page; break-inside: avoid; margin-bottom: 18px; }
         .prt-tegel-kop { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 6px; }
         .prt-tegel-kop-info { flex: 1; min-width: 0; }
@@ -846,6 +791,32 @@ export default function GebouwPrint() {
         .prt-tegel-koplabel { font-size: 11px; font-weight: 600; color: #64748b; margin-bottom: 4px; }
         .prt-tegel-legende { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 5px; }
         .prt-tegel-status { font-size: 10px; color: #475569; display: flex; align-items: center; gap: 3px; }
+
+        /* Spot-detailpagina */
+        .prt-spot-detail { break-before: page; break-inside: avoid; margin-bottom: 0; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px; background: #fff; }
+        .prt-spot-kop { display: flex; align-items: flex-start; justify-content: space-between; border-bottom: 2px solid #F23B0D; padding-bottom: 10px; margin-bottom: 12px; }
+        .prt-spot-kop-links { display: flex; align-items: center; gap: 12px; }
+        .prt-spot-logo { height: 28px; width: auto; }
+        .prt-spot-gebouw { font-size: 13px; font-weight: 700; color: #0f172a; }
+        .prt-spot-bouwlaag { font-size: 11px; color: #64748b; margin-top: 1px; }
+        .prt-spot-kop-rechts { text-align: right; }
+        .prt-spot-nr { font-size: 20px; font-weight: 800; color: #F23B0D; }
+        .prt-spot-datum { font-size: 10px; color: #94a3b8; margin-top: 2px; }
+        .prt-spot-body { display: flex; gap: 16px; margin-bottom: 12px; align-items: flex-start; }
+        .prt-spot-tekening { flex: 1; min-width: 0; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; background: #f8fafc; }
+        .prt-spot-info { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 16px; margin-bottom: 12px; }
+        .prt-spot-info-rij { display: contents; }
+        .prt-spot-lbl { font-size: 10px; font-weight: 600; color: #64748b; padding: 3px 0; }
+        .prt-spot-val { font-size: 11px; color: #0f172a; padding: 3px 0; display: flex; align-items: center; gap: 4px; }
+        .prt-spot-testinfo { background: #f1f5f9; border-radius: 6px; padding: 10px 12px; margin-bottom: 12px; }
+        .prt-spot-testinfo-titel { font-size: 11px; font-weight: 700; color: #334155; margin-bottom: 6px; }
+        .prt-spot-testitem { display: flex; flex-wrap: wrap; gap: 8px; align-items: baseline; margin-bottom: 4px; }
+        .prt-spot-testitem-naam { font-size: 11px; font-weight: 600; color: #0f172a; }
+        .prt-spot-testitem-meta { font-size: 10px; color: #64748b; }
+        .prt-spot-fotos { margin-top: 4px; }
+        .prt-spot-foto-label { font-size: 10px; font-weight: 600; color: #64748b; margin-bottom: 6px; margin-top: 8px; }
+        .prt-spot-foto-rij { display: flex; flex-wrap: wrap; gap: 8px; }
+        .prt-spot-foto { width: 120px; height: 90px; object-fit: cover; border-radius: 6px; border: 1px solid #e2e8f0; }
 
         /* Toolbar */
         .prt-toolbar { position: sticky; top: 0; z-index: 10; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; padding: 10px 24px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; }
@@ -883,12 +854,8 @@ export default function GebouwPrint() {
               Overzichtsplattegrond
             </label>
             <label className="prt-modus-opt">
-              <input type="checkbox" checked={toonRaster} onChange={e => setToonRaster(e.target.checked)} />
-              Raster-uitsneden (A1, B2…)
-            </label>
-            <label className="prt-modus-opt">
-              <input type="checkbox" checked={toonClusters} onChange={e => setToonClusters(e.target.checked)} />
-              Automatische clusteruitsneden
+              <input type="checkbox" checked={toonSpotDetails} onChange={e => setToonSpotDetails(e.target.checked)} />
+              Spot-detailpagina's
             </label>
           </div>
         </div>
@@ -1063,8 +1030,7 @@ export default function GebouwPrint() {
                 exportDatum={exportDatum}
                 logoSrc={logoSrc}
                 toonOverzicht={toonOverzicht}
-                toonRaster={toonRaster}
-                toonClusters={toonClusters}
+                toonSpotDetails={toonSpotDetails}
               />
             ))
           )}
