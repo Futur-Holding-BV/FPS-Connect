@@ -55,7 +55,7 @@ const STATUSLABEL: Record<string, string> = {
   concept:       "Concept",
   in_uitvoering: "In uitvoering",
   opgeleverd:    "Opgeleverd",
-  goedgekeurd:   "Goedgekeurd",
+  goedgekeurd:   "Gereed",
   afgekeurd:     "Afgekeurd",
   in_onderhoud:  "In onderhoud",
   vervallen:     "Vervallen",
@@ -192,15 +192,15 @@ function SpotIcoon({ v }: { v: SVGVoorziening }) {
   const r = 16;
   const volgnummer = spotVolgnummer(v.objectnummer);
   const isPlafond = v.wand_of_plafond === "plafond";
-  const L = r + 11;
   return (
     <g transform={`translate(${v.locatie_x}, ${v.locatie_y})`}>
       <circle r={r + 5} fill={stijl.kleur} opacity={0.25} />
       <circle r={r} fill={STATUSKLEUREN[v.status] ?? "#94a3b8"} stroke={stijl.ring} strokeWidth={1.5} />
       {isPlafond && (
         <g>
-          <line x1={0} y1={-L} x2={0} y2={L} stroke="#fff" strokeWidth={5} strokeLinecap="round" />
-          <line x1={0} y1={-L} x2={0} y2={L} stroke="#1e293b" strokeWidth={2.5} strokeLinecap="round" />
+          <path d="M 7,4 A 9,9 0 1,1 7,-4" fill="none" stroke="#fff" strokeWidth={3.5} strokeLinecap="round" />
+          <path d="M 7,4 A 9,9 0 1,1 7,-4" fill="none" stroke="#1e293b" strokeWidth={2} strokeLinecap="round" />
+          <polygon points="7,-4 4,-5 8,-7" fill="#1e293b" stroke="#fff" strokeWidth={0.8} strokeLinejoin="round" />
         </g>
       )}
       <text textAnchor="middle" dominantBaseline="central" fontSize={volgnummer.length > 2 ? 8 : 10} fontWeight="700" fill="#fff">
@@ -381,27 +381,33 @@ function SpotDetailBlok({
             <span className="prt-spot-val">{d.opmerkingen}</span>
           </div>
         )}
-        {labels.length > 0 && (
-          <div className="prt-spot-info-rij">
-            <span className="prt-spot-lbl">Toepassing(en)</span>
-            <span className="prt-spot-val">{labels.map((l: any) => l.naam).join(", ")}</span>
-          </div>
-        )}
+        <div className="prt-spot-info-rij">
+          <span className="prt-spot-lbl">Toepassing</span>
+          <span className="prt-spot-val">
+            {labels.length > 0
+              ? labels.map((l: any) => l.naam).join(", ")
+              : <em style={{ color: "#94a3b8" }}>Geen toepassing</em>}
+          </span>
+        </div>
       </div>
 
-      {/* Testrapporten / fabrikantinfo */}
-      {heeftTestinfo && (
-        <div className="prt-spot-testinfo">
-          <div className="prt-spot-testinfo-titel">Gekoppelde bibliotheekdocumenten</div>
-          {labels.filter((l: any) => l.testnorm || l.fabrikant).map((l: any) => (
+      {/* Testrapporten / fabrikantinfo — altijd tonen */}
+      <div className="prt-spot-testinfo">
+        <div className="prt-spot-testinfo-titel">Gekoppelde bibliotheekdocumenten</div>
+        {heeftTestinfo ? (
+          labels.filter((l: any) => l.testnorm || l.fabrikant).map((l: any) => (
             <div key={l.id} className="prt-spot-testitem">
               <span className="prt-spot-testitem-naam">{l.naam}</span>
               {l.fabrikant && <span className="prt-spot-testitem-meta">Fabrikant: {l.fabrikant}</span>}
               {l.testnorm  && <span className="prt-spot-testitem-meta">Testnorm: {l.testnorm}</span>}
             </div>
-          ))}
-        </div>
-      )}
+          ))
+        ) : (
+          <div className="prt-spot-testitem">
+            <span className="prt-spot-testitem-naam" style={{ color: "#94a3b8", fontStyle: "italic" }}>Geen gekoppeld document</span>
+          </div>
+        )}
+      </div>
 
       {/* Foto's */}
       {(voorFotos.length > 0 || naFotos.length > 0) && (
@@ -446,14 +452,17 @@ function renderScheidingen(scheidingen: any[] | undefined, W: number, H: number)
         <polyline points={puntenStr} fill="none" stroke={kleur} strokeWidth={4}
           strokeDasharray={s.type === "rook" ? "12 8" : undefined}
           strokeLinecap="round" strokeLinejoin="round" opacity={0.9} />
-        {s.waarde && markers.map((m, mi) => (
-          <g key={mi} transform={`translate(${m.x}, ${m.y})`}>
-            <circle r={18} fill="#fff" stroke={kleur} strokeWidth={3} />
-            <text x={0} y={0} textAnchor="middle" dominantBaseline="central"
-              fontSize={String(s.waarde).length >= 6 ? 8 : String(s.waarde).length >= 5 ? 9.5 : 11}
-              fontWeight={800} fill={kleur}>{s.waarde}</text>
-          </g>
-        ))}
+        {s.waarde && markers.map((m, mi) => {
+          const codeWeergave = s.type === "rook" && !String(s.waarde).startsWith("WRD") ? `WRD${s.waarde}` : String(s.waarde);
+          return (
+            <g key={mi} transform={`translate(${m.x}, ${m.y})`}>
+              <circle r={18} fill="#fff" stroke={kleur} strokeWidth={3} />
+              <text x={0} y={0} textAnchor="middle" dominantBaseline="central"
+                fontSize={codeWeergave.length >= 6 ? 8 : codeWeergave.length >= 5 ? 9.5 : 11}
+                fontWeight={800} fill={kleur}>{codeWeergave}</text>
+            </g>
+          );
+        })}
       </g>
     );
   });
@@ -565,7 +574,7 @@ function PrintVerdieping({
   const logoPad = Math.max(W, H) * 0.015;
   const logoB   = vd.logo_breedte ?? Math.max(W, H) * 0.16;
   const logoHH  = logoB / 2.59;
-  const logoX   = vd.logo_x != null ? Number(vd.logo_x) : W - logoB - logoPad;
+  const logoX   = vd.logo_x != null ? Number(vd.logo_x) : logoPad;
   const logoY   = vd.logo_y != null ? Number(vd.logo_y) : logoPad;
 
   return (
@@ -719,7 +728,7 @@ export default function GebouwPrint() {
 
   // Voortgang per status
   const voortgangStatussen: Array<{ status: string; label: string; aantal: number; kleur: string }> = [
-    { status: "goedgekeurd",   label: "Goedgekeurd",   aantal: stats?.goedgekeurd  ?? 0, kleur: "#22c55e" },
+    { status: "goedgekeurd",   label: "Gereed",         aantal: stats?.goedgekeurd  ?? 0, kleur: "#22c55e" },
     { status: "in_uitvoering", label: "In uitvoering", aantal: stats?.in_bewerking ?? 0, kleur: "#3b82f6" },
     { status: "in_onderhoud",  label: "In onderhoud",  aantal: stats?.in_onderhoud ?? 0, kleur: "#f97316" },
     { status: "afgekeurd",     label: "Afgekeurd",     aantal: stats?.afgekeurd    ?? 0, kleur: "#ef4444" },
@@ -941,7 +950,7 @@ export default function GebouwPrint() {
             <div className="prt-grid" style={{ marginBottom: 14 }}>
               <div><div className="lbl">Totaal spots</div><div className="val">{totaalSpots}</div></div>
               <div>
-                <div className="lbl">Goedgekeurd</div>
+                <div className="lbl">Gereed</div>
                 <div className="val" style={{ color: "#16a34a" }}>
                   {stats?.goedgekeurd ?? 0}
                   {totaalSpots > 0 && <span style={{ fontSize: 11, fontWeight: 500, color: "#64748b", marginLeft: 5 }}>

@@ -51,7 +51,7 @@ export const STATUSKLEUREN: Record<string, string> = {
 };
 
 export const STATUSLABEL: Record<string, string> = {
-  goedgekeurd: "Goedgekeurd",
+  goedgekeurd: "Gereed",
   afgekeurd: "Afgekeurd",
   in_onderhoud: "In onderhoud",
   in_uitvoering: "In uitvoering",

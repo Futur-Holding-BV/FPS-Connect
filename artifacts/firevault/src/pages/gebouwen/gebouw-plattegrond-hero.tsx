@@ -48,7 +48,7 @@ const STATUSLABEL: Record<string, string> = {
   concept:       "Concept",
   in_uitvoering: "In uitvoering",
   opgeleverd:    "Opgeleverd",
-  goedgekeurd:   "Goedgekeurd",
+  goedgekeurd:   "Gereed",
   afgekeurd:     "Afgekeurd",
   in_onderhoud:  "In onderhoud",
   vervallen:     "Vervallen",

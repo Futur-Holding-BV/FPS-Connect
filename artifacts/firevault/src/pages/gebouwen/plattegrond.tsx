@@ -82,7 +82,7 @@ const STATUSLABEL: Record<string, string> = {
   concept:       "Concept",
   in_uitvoering: "In uitvoering",
   opgeleverd:    "Opgeleverd",
-  goedgekeurd:   "Goedgekeurd",
+  goedgekeurd:   "Gereed",
   afgekeurd:     "Afgekeurd",
   in_onderhoud:  "In onderhoud",
   vervallen:     "Vervallen",
@@ -205,8 +205,6 @@ function VoorzieningIcoon({
   const r = 16;
   const volgnummer = spotVolgnummer(v.objectnummer);
   const isPlafond = v.wand_of_plafond === "plafond";
-  const L = r + 11;
-
   return (
     <g
       transform={`translate(${v.locatie_x}, ${v.locatie_y})`}
@@ -217,10 +215,9 @@ function VoorzieningIcoon({
       <circle r={r} fill={STATUSKLEUREN[v.status] ?? "#94a3b8"} stroke={geselecteerd ? "#fff" : stijl.ring} strokeWidth={geselecteerd ? 3 : 1.5} />
       {isPlafond && (
         <g style={{ pointerEvents: "none" }}>
-          <line x1={0} y1={-L} x2={0} y2={L} stroke="#fff" strokeWidth={5} strokeLinecap="round" />
-          <line x1={0} y1={-L} x2={0} y2={L} stroke="#1e293b" strokeWidth={2.5} strokeLinecap="round" />
-          <polygon points={`0,${-L - 3} -6,${-L + 8} 6,${-L + 8}`} fill="#1e293b" stroke="#fff" strokeWidth={1.2} strokeLinejoin="round" />
-          <polygon points={`0,${L + 3} -6,${L - 8} 6,${L - 8}`} fill="#1e293b" stroke="#fff" strokeWidth={1.2} strokeLinejoin="round" />
+          <path d="M 7,4 A 9,9 0 1,1 7,-4" fill="none" stroke="#fff" strokeWidth={3.5} strokeLinecap="round" />
+          <path d="M 7,4 A 9,9 0 1,1 7,-4" fill="none" stroke="#1e293b" strokeWidth={2} strokeLinecap="round" />
+          <polygon points="7,-4 4,-5 8,-7" fill="#1e293b" stroke="#fff" strokeWidth={0.8} strokeLinejoin="round" />
         </g>
       )}
       <text
@@ -923,13 +920,16 @@ export default function Plattegrond() {
                       strokeWidth={geselecteerd ? 7 : 4}
                       strokeDasharray={s.type === "rook" ? "12 8" : undefined}
                       strokeLinecap="round" strokeLinejoin="round" opacity={0.9} />
-                    {s.waarde && markers.map((m, mi) => (
-                      <g key={mi} transform={`translate(${m.x}, ${m.y})`}>
-                        <circle r={18} fill="#fff" stroke={kleur} strokeWidth={geselecteerd ? 4 : 3} />
-                        <text x={0} y={0} textAnchor="middle" dominantBaseline="central"
-                          fontSize={String(s.waarde).length >= 6 ? 8 : String(s.waarde).length >= 5 ? 9.5 : 11} fontWeight={800} fill={kleur}>{s.waarde}</text>
-                      </g>
-                    ))}
+                    {s.waarde && markers.map((m, mi) => {
+                      const codeWeergave = s.type === "rook" && !String(s.waarde).startsWith("WRD") ? `WRD${s.waarde}` : String(s.waarde);
+                      return (
+                        <g key={mi} transform={`translate(${m.x}, ${m.y})`}>
+                          <circle r={18} fill="#fff" stroke={kleur} strokeWidth={geselecteerd ? 4 : 3} />
+                          <text x={0} y={0} textAnchor="middle" dominantBaseline="central"
+                            fontSize={codeWeergave.length >= 6 ? 8 : codeWeergave.length >= 5 ? 9.5 : 11} fontWeight={800} fill={kleur}>{codeWeergave}</text>
+                        </g>
+                      );
+                    })}
                   </g>
                 );
               })}

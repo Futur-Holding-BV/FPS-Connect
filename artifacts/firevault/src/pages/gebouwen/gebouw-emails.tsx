@@ -71,7 +71,7 @@ function bestandsUrl(objectPad: string | null | undefined): string | null {
 
 // ── Centrale projectsamenvatting ────────────────────────────────────────────
 
-function ProjectSamenvatting({ gebouwId, isBeheerder }: { gebouwId: number; isBeheerder: boolean }) {
+export function ProjectSamenvatting({ gebouwId, isBeheerder }: { gebouwId: number; isBeheerder: boolean }) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const { data: samenvatting, isLoading, error } = useGetGebouwEmailSamenvatting(gebouwId);
@@ -357,9 +357,6 @@ export default function GebouwEmails({
             Ondersteunde bestandstypen: <code className="bg-muted px-1 rounded">.eml</code> en <code className="bg-muted px-1 rounded">.msg</code>. Bijlagen worden automatisch uitgelezen. Andere bestandstypen worden geweigerd.
           </p>
         )}
-
-        {/* Centrale AI-projectsamenvatting */}
-        <ProjectSamenvatting gebouwId={gebouwId} isBeheerder={isBeheerder} />
 
         {/* E-maillijst */}
         <div>

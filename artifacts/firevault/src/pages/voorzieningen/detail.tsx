@@ -25,7 +25,7 @@ const statusKleur: Record<string, string> = {
 const statusLabel: Record<string, string> = {
   concept: "Concept",
   in_uitvoering: "In uitvoering",
-  goedgekeurd: "Goedgekeurd",
+  goedgekeurd: "Gereed",
   afgekeurd: "Afgekeurd",
   in_onderhoud: "In onderhoud",
 };

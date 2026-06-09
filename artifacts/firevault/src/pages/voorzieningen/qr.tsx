@@ -22,7 +22,7 @@ const TYPEN: Record<string, string> = {
 };
 
 const STATUSKLEUR: Record<string, { bg: string; text: string; label: string }> = {
-  goedgekeurd:   { bg: "#dcfce7", text: "#166534", label: "Goedgekeurd" },
+  goedgekeurd:   { bg: "#dcfce7", text: "#166534", label: "Gereed" },
   afgekeurd:     { bg: "#fee2e2", text: "#991b1b", label: "Afgekeurd" },
   in_onderhoud:  { bg: "#ffedd5", text: "#9a3412", label: "In onderhoud" },
   in_uitvoering: { bg: "#dbeafe", text: "#1e40af", label: "In uitvoering" },
