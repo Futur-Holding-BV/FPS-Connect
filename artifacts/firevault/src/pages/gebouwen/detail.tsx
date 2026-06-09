@@ -32,8 +32,7 @@ import { GebouwBewerkenDialog } from "./gebouw-bewerken-dialog";
 
 const BEHEERDER_ROLLEN = ["beheerder", "hoofdbeheerder"];
 const SYSTEEM_ROLLEN_UITGESLOTEN = ["beheerder", "hoofdbeheerder"];
-const PROJECT_ROLLEN = ["Projectleider", "Werkvoorbereider", "Calculator", "Commercie", "Project-admin", "Financieel", "Uitvoerder"];
-const GEEN_PROJECT_ROL = "geen";
+const PROJECT_ROLLEN = ["Projectleider", "Werkvoorbereider", "Calculator", "Commercie", "Project-admin", "Financieel", "Uitvoerder", "Controleur", "Monteur"];
 
 export default function GebouwDetail() {
   const { id } = useParams<{ id: string }>();
@@ -65,9 +64,7 @@ export default function GebouwDetail() {
   if (!gebouw) return <div className="p-6">Gebouw niet gevonden.</div>;
 
   const beschikbareGebruikers = (gebruikers ?? []).filter(
-    (g) =>
-      !SYSTEEM_ROLLEN_UITGESLOTEN.includes(g.rol ?? "") &&
-      !(toewijzingen ?? []).some((t) => t.gebruiker_id === g.id),
+    (g) => !SYSTEEM_ROLLEN_UITGESLOTEN.includes(g.rol ?? ""),
   );
 
   const aantalLagen = Math.max(
@@ -90,14 +87,18 @@ export default function GebouwDetail() {
     gebouw.diepte != null;
 
   async function voegToe() {
-    if (!gekozenGebruikerId) return;
+    if (!gekozenGebruikerId || !gekozenProjectRol) return;
+    const duplicaat = (toewijzingen ?? []).some(
+      (t) => t.gebruiker_id === Number(gekozenGebruikerId) && t.project_rol === gekozenProjectRol,
+    );
+    if (duplicaat) return;
     setBezig(true);
     try {
       await maakToewijzing.mutateAsync({
         id: gebouwId,
         data: {
           gebruiker_id: Number(gekozenGebruikerId),
-          project_rol: gekozenProjectRol || undefined,
+          project_rol: gekozenProjectRol,
         },
       });
       setGekozenGebruikerId("");
@@ -125,6 +126,18 @@ export default function GebouwDetail() {
   }
 
   const projectAdmin = (toewijzingen ?? []).find((t) => t.project_rol === "Project-admin");
+
+  const gegroepeerdeTeamleden = Object.values(
+    (toewijzingen ?? []).reduce<
+      Record<number, { gebruikerId: number; naam: string; rol: string; rollen: string[] }>
+    >((acc, t) => {
+      if (!acc[t.gebruiker_id]) {
+        acc[t.gebruiker_id] = { gebruikerId: t.gebruiker_id, naam: t.naam, rol: t.rol ?? "", rollen: [] };
+      }
+      if (t.project_rol) acc[t.gebruiker_id].rollen.push(t.project_rol);
+      return acc;
+    }, {}),
+  );
 
   async function herstelActief() {
     if (!confirm("Weet u zeker dat u de gereed-status wilt terugzetten? Het project wordt weer actief.")) return;
@@ -360,28 +373,26 @@ export default function GebouwDetail() {
                   <div className="flex items-center gap-2 text-muted-foreground text-sm">
                     <Loader2 className="h-4 w-4 animate-spin" /> Laden...
                   </div>
-                ) : (toewijzingen ?? []).length === 0 ? (
+                ) : gegroepeerdeTeamleden.length === 0 ? (
                   <p className="text-sm text-muted-foreground">
                     Nog geen teamleden toegewezen aan dit project.
                   </p>
                 ) : (
                   <ul className="space-y-2">
-                    {(toewijzingen ?? []).map((t) => (
+                    {gegroepeerdeTeamleden.map((t) => (
                       <li
-                        key={t.gebruiker_id}
+                        key={t.gebruikerId}
                         className="flex items-start justify-between gap-2 p-2 rounded-md border"
                       >
                         <div className="min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <span className="font-medium text-sm truncate">
+                            <span className="font-medium text-sm">
                               {t.naam}
                             </span>
-                            <Badge variant="secondary" className="text-xs shrink-0">
-                              {t.rol}
-                            </Badge>
-                            {t.project_rol && (
+                            <span className="text-muted-foreground text-xs">({t.rol})</span>
+                            {t.rollen.length > 0 && (
                               <Badge className="text-xs shrink-0 bg-primary/10 text-primary border-primary/20">
-                                {t.project_rol}
+                                {t.rollen.join(" | ")}
                               </Badge>
                             )}
                           </div>
@@ -390,7 +401,7 @@ export default function GebouwDetail() {
                           variant="ghost"
                           size="icon"
                           className="h-7 w-7 shrink-0 text-muted-foreground hover:text-destructive"
-                          onClick={() => verwijder(t.gebruiker_id)}
+                          onClick={() => verwijder(t.gebruikerId)}
                           disabled={verwijderToewijzing.isPending}
                         >
                           <X className="h-4 w-4" />
@@ -401,7 +412,7 @@ export default function GebouwDetail() {
                 )}
 
                 {/* Toevoegen */}
-                {beschikbareGebruikers.length > 0 ? (
+                {beschikbareGebruikers.length > 0 && (
                   <div className="flex flex-col gap-2 pt-1 sm:flex-row">
                     <Select
                       value={gekozenGebruikerId}
@@ -422,16 +433,13 @@ export default function GebouwDetail() {
                       </SelectContent>
                     </Select>
                     <Select
-                      value={gekozenProjectRol ? gekozenProjectRol : GEEN_PROJECT_ROL}
-                      onValueChange={(v) =>
-                        setGekozenProjectRol(v === GEEN_PROJECT_ROL ? "" : v)
-                      }
+                      value={gekozenProjectRol}
+                      onValueChange={setGekozenProjectRol}
                     >
-                      <SelectTrigger className="sm:w-44 text-sm">
-                        <SelectValue placeholder="Projectfunctie" />
+                      <SelectTrigger className="sm:w-48 text-sm">
+                        <SelectValue placeholder="Kies projectfunctie" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value={GEEN_PROJECT_ROL}>Geen projectfunctie</SelectItem>
                         {PROJECT_ROLLEN.map((pr) => (
                           <SelectItem key={pr} value={pr}>{pr}</SelectItem>
                         ))}
@@ -440,7 +448,7 @@ export default function GebouwDetail() {
                     <Button
                       size="icon"
                       onClick={voegToe}
-                      disabled={!gekozenGebruikerId || bezig}
+                      disabled={!gekozenGebruikerId || !gekozenProjectRol || bezig}
                       className="shrink-0"
                     >
                       {bezig ? (
@@ -450,10 +458,6 @@ export default function GebouwDetail() {
                       )}
                     </Button>
                   </div>
-                ) : (
-                  <p className="text-xs text-muted-foreground pt-1">
-                    Alle beschikbare teamleden zijn al toegewezen.
-                  </p>
                 )}
               </CardContent>
             </Card>
