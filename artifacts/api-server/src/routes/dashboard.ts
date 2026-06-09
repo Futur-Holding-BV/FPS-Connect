@@ -6,23 +6,14 @@ import {
   inspectiesTable,
   onderhoudTable,
   activiteitenTable,
-  gebruikersTable,
   gebouwToewijzingenTable,
 } from "@workspace/db";
 import { eq, count, desc, inArray } from "drizzle-orm";
-import { resolveRolOverride } from "../utils/rol";
+import { effectieveContext } from "../utils/rol";
 
 const router = Router();
 
 const TOEGEWEZEN_ROLLEN = ["monteur", "controleur"];
-
-async function gebruikerRol(userId: number): Promise<string> {
-  const [g] = await db
-    .select({ rol: gebruikersTable.rol })
-    .from(gebruikersTable)
-    .where(eq(gebruikersTable.id, userId));
-  return g?.rol ?? "viewer";
-}
 
 async function toegewezenGebouwIds(userId: number): Promise<number[]> {
   const rows = await db
@@ -36,10 +27,8 @@ async function toegewezenGebouwIds(userId: number): Promise<number[]> {
 // (monteur/controleur) en zo ja welke gebouw-id's zichtbaar zijn.
 async function gebouwScope(
   req: import("express").Request,
-  userId: number,
 ): Promise<{ beperkt: boolean; ids: number[] }> {
-  const echteRol = await gebruikerRol(userId);
-  const rol = resolveRolOverride(req, echteRol);
+  const { userId, rol } = await effectieveContext(req);
   if (!TOEGEWEZEN_ROLLEN.includes(rol)) return { beperkt: false, ids: [] };
   return { beperkt: true, ids: await toegewezenGebouwIds(userId) };
 }
@@ -47,8 +36,7 @@ async function gebouwScope(
 // GET /dashboard/stats
 router.get("/dashboard/stats", async (req, res) => {
   try {
-    const userId = req.session.userId!;
-    const { beperkt, ids } = await gebouwScope(req, userId);
+    const { beperkt, ids } = await gebouwScope(req);
 
     // Beperkte rol zonder toewijzingen ziet niets
     if (beperkt && ids.length === 0) {
@@ -119,8 +107,7 @@ router.get("/dashboard/stats", async (req, res) => {
 // GET /dashboard/recente-activiteit
 router.get("/dashboard/recente-activiteit", async (req, res) => {
   try {
-    const userId = req.session.userId!;
-    const { beperkt, ids } = await gebouwScope(req, userId);
+    const { beperkt, ids } = await gebouwScope(req);
 
     const limit = parseInt((req.query.limit as string) ?? "20");
 
@@ -169,8 +156,7 @@ router.get("/dashboard/recente-activiteit", async (req, res) => {
 // GET /dashboard/status-verdeling
 router.get("/dashboard/status-verdeling", async (req, res) => {
   try {
-    const userId = req.session.userId!;
-    const { beperkt, ids } = await gebouwScope(req, userId);
+    const { beperkt, ids } = await gebouwScope(req);
 
     if (beperkt && ids.length === 0) {
       res.json([]);
@@ -208,8 +194,7 @@ router.get("/dashboard/status-verdeling", async (req, res) => {
 // GET /dashboard/vervaldagen
 router.get("/dashboard/vervaldagen", async (req, res) => {
   try {
-    const userId = req.session.userId!;
-    const { beperkt, ids } = await gebouwScope(req, userId);
+    const { beperkt, ids } = await gebouwScope(req);
 
     if (beperkt && ids.length === 0) {
       res.json([]);

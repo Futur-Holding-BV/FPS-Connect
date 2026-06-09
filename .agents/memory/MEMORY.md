@@ -9,3 +9,4 @@
 - [Scheiding-code op lijn](scheiding-code.md) — code = classificatie-prefix + WBDBO-minuten (bv. EW60) opgeslagen in bestaand scheiding.waarde veld; getekend als bolletje op lijn-midpunt; geen DB/OpenAPI wijziging.
 - [mailparser + esbuild](mailparser-esbuild.md) — mailparser vereist nodemailer als runtime dep; nodemailer staat in externals van build.mjs maar moet ook geïnstalleerd zijn in api-server/package.json.
 - [Autorisatie-patroon](autorisatie-patroon.md) — requireRol (rol) + magBijGebouw (gebouwtoewijzing, fail-closed) per object-level endpoint; nest-IDs aan parent koppelen; klant bewust niet gefilterd.
+- [Bekijken als persoon](bekijken-als-persoon.md) — hoofdbeheerder impersoneert teamlid via effectieveContext(req); ALLE leesfilter-endpoints (ook detail/sub-resource) moeten het gebruiken, niet alleen list; permissie-gating blijft op echte rol.

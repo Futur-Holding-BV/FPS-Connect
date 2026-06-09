@@ -1,21 +1,45 @@
 import type { Request } from "express";
+import { db, gebruikersTable } from "@workspace/db";
+import { eq } from "drizzle-orm";
 
-const WISSELBARE_ROLLEN = ["beheerder", "monteur", "controleur", "klant"] as const;
+async function gebruikerVan(userId: number): Promise<{ rol: string; actief: boolean } | null> {
+  const [g] = await db
+    .select({ rol: gebruikersTable.rol, actief: gebruikersTable.actief })
+    .from(gebruikersTable)
+    .where(eq(gebruikersTable.id, userId));
+  return g ?? null;
+}
+
+export type EffectieveContext = {
+  userId: number;
+  rol: string;
+  impersonatie: boolean;
+};
 
 /**
- * Wanneer een hoofdbeheerder "Bekijken als <rol>" gebruikt, stuurt de frontend
- * de header X-Rol-Override. Deze helper lost de effectieve rol op voor
- * data-filteringsdoeleinden (NIET voor permissie-gating — permissies blijven
- * altijd gebaseerd op de echte sessie-rol).
+ * Lost de effectieve identiteit op voor data-filtering. Een hoofdbeheerder kan
+ * via "Bekijken als" een specifiek teamlid nabootsen (header X-Gebruiker-Override
+ * met diens id). De effectieve gebruiker bepaalt zowel de rol als de
+ * toewijzings-scope, zodat de hoofdbeheerder exact ziet wat dat teamlid ziet.
+ *
+ * Permissie-gating (requireRol) blijft ALTIJD op de echte sessie-rol gebaseerd;
+ * deze helper beïnvloedt uitsluitend welke data zichtbaar is.
  */
-export function resolveRolOverride(req: Request, echteRol: string): string {
-  if (echteRol !== "hoofdbeheerder") return echteRol;
-  const header = req.headers["x-rol-override"];
-  if (
-    typeof header === "string" &&
-    (WISSELBARE_ROLLEN as readonly string[]).includes(header)
-  ) {
-    return header;
+export async function effectieveContext(req: Request): Promise<EffectieveContext> {
+  const echteUserId = req.session.userId!;
+  const echte = await gebruikerVan(echteUserId);
+  const echteRol = echte?.rol ?? "viewer";
+  if (echteRol !== "hoofdbeheerder") {
+    return { userId: echteUserId, rol: echteRol, impersonatie: false };
   }
-  return echteRol;
+  const header = req.headers["x-gebruiker-override"];
+  const impId = typeof header === "string" ? Number.parseInt(header, 10) : NaN;
+  if (!Number.isInteger(impId) || impId === echteUserId) {
+    return { userId: echteUserId, rol: echteRol, impersonatie: false };
+  }
+  const imp = await gebruikerVan(impId);
+  if (!imp || !imp.actief || imp.rol === "viewer") {
+    return { userId: echteUserId, rol: echteRol, impersonatie: false };
+  }
+  return { userId: impId, rol: imp.rol, impersonatie: true };
 }

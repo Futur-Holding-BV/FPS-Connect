@@ -17,7 +17,7 @@ const DEFAULT_JSON_ACCEPT = "application/json, application/problem+json";
 
 let _baseUrl: string | null = null;
 let _authTokenGetter: AuthTokenGetter | null = null;
-let _rolOverrideGetter: (() => string | null) | null = null;
+let _gebruikerOverrideGetter: (() => string | null) | null = null;
 
 /**
  * Set a base URL that is prepended to every relative request URL
@@ -31,14 +31,15 @@ export function setBaseUrl(url: string | null): void {
 }
 
 /**
- * Register a getter that supplies the active rol-override for "Bekijken als"
- * (hoofdbeheerder only). When set and returning a non-null value, the header
- * X-Rol-Override is attached so the backend can apply the correct data filter.
+ * Register a getter that supplies the id of the team member being impersonated
+ * via "Bekijken als <persoon>" (hoofdbeheerder only). When set and returning a
+ * non-null value, the header X-Gebruiker-Override is attached so the backend
+ * applies that person's exact data scope.
  *
- * Pass `null` to clear the getter (e.g. on logout or when no override is active).
+ * Pass `null` to clear the getter (e.g. on logout or when no impersonation is active).
  */
-export function setRolOverrideGetter(getter: (() => string | null) | null): void {
-  _rolOverrideGetter = getter;
+export function setGebruikerOverrideGetter(getter: (() => string | null) | null): void {
+  _gebruikerOverrideGetter = getter;
 }
 
 /**
@@ -361,10 +362,10 @@ export async function customFetch<T = unknown>(
     headers.set("accept", DEFAULT_JSON_ACCEPT);
   }
 
-  // Attach rol-override header for "Bekijken als" (hoofdbeheerder only).
-  if (_rolOverrideGetter) {
-    const override = _rolOverrideGetter();
-    if (override) headers.set("x-rol-override", override);
+  // Attach gebruiker-override header for "Bekijken als <persoon>" (hoofdbeheerder only).
+  if (_gebruikerOverrideGetter) {
+    const override = _gebruikerOverrideGetter();
+    if (override) headers.set("x-gebruiker-override", override);
   }
 
   // Attach bearer token when an auth getter is configured and no

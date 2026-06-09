@@ -10,19 +10,11 @@ import {
 } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { requireRol } from "../middlewares/auth";
-import { resolveRolOverride } from "../utils/rol";
+import { effectieveContext } from "../utils/rol";
 
 const router = Router();
 
 const TOEGEWEZEN_ROLLEN = ["monteur", "controleur"];
-
-async function gebruikerInfo(userId: number) {
-  const [g] = await db
-    .select({ rol: gebruikersTable.rol })
-    .from(gebruikersTable)
-    .where(eq(gebruikersTable.id, userId));
-  return g;
-}
 
 async function toegewezenGebouwIds(userId: number): Promise<number[]> {
   const rows = await db
@@ -77,9 +69,7 @@ async function mapOnderhoud(o: typeof onderhoudTable.$inferSelect) {
 // GET /onderhoud
 router.get("/onderhoud", async (req, res) => {
   try {
-    const userId = req.session.userId!;
-    const gebruiker = await gebruikerInfo(userId);
-    const effectiefRol = gebruiker ? resolveRolOverride(req, gebruiker.rol) : null;
+    const { userId, rol: effectiefRol } = await effectieveContext(req);
     const { voorziening_id, gebouw_id, status } = req.query;
 
     let all = await db.select().from(onderhoudTable);
@@ -87,7 +77,7 @@ router.get("/onderhoud", async (req, res) => {
     // Monteur/controleur ziet alleen onderhoud dat:
     //   (a) direct aan hen is toegewezen (toegewezen_aan_id = userId), OF
     //   (b) hoort bij een gebouw dat aan hen is toegewezen
-    if (effectiefRol && TOEGEWEZEN_ROLLEN.includes(effectiefRol)) {
+    if (TOEGEWEZEN_ROLLEN.includes(effectiefRol)) {
       const gebouwIds = await toegewezenGebouwIds(userId);
       all = all.filter(
         (o) =>
@@ -146,15 +136,13 @@ router.post("/onderhoud", async (req, res) => {
 router.get("/onderhoud/:id", async (req, res) => {
   try {
     const id = parseInt(req.params.id);
-    const userId = req.session.userId!;
-    const gebruiker = await gebruikerInfo(userId);
+    const { userId, rol: effectiefRolDetail } = await effectieveContext(req);
 
     const [o] = await db.select().from(onderhoudTable).where(eq(onderhoudTable.id, id));
     if (!o) return res.status(404).json({ error: "Onderhoudstaak niet gevonden" });
 
     // Toegangscontrole voor monteur/controleur
-    const effectiefRolDetail = gebruiker ? resolveRolOverride(req, gebruiker.rol) : null;
-    if (effectiefRolDetail && TOEGEWEZEN_ROLLEN.includes(effectiefRolDetail)) {
+    if (TOEGEWEZEN_ROLLEN.includes(effectiefRolDetail)) {
       const gebouwIds = await toegewezenGebouwIds(userId);
       const toegang =
         o.toegewezenAanId === userId ||

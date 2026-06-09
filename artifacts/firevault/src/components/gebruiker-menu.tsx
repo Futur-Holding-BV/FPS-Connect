@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useTranslation } from "react-i18next";
 import { LogOut, KeyRound, Languages, Eye, ChevronsUpDown, Info } from "lucide-react";
@@ -17,14 +17,18 @@ import { useTaal } from "@/context/taal-context";
 import { TALEN, type TaalCode } from "@/i18n/talen";
 import { ROL_INFO } from "@/context/rol-types";
 import type { Rol } from "@/context/rol-types";
-import { useRol, WISSELBARE_ROLLEN } from "@/context/rol-context";
-import { useWachtwoordWijzigen, useTaalWijzigen } from "@workspace/api-client-react";
+import { useRol, type GeimiteerdePersoon } from "@/context/rol-context";
+import {
+  useWachtwoordWijzigen,
+  useTaalWijzigen,
+  useListGebruikers,
+} from "@workspace/api-client-react";
 
 export function GebruikerMenu() {
   const { gebruiker, uitloggen } = useAuth();
   const { t } = useTranslation();
   const { taal, zetTaal } = useTaal();
-  const { rol: actieveRol, kanWisselen, zetRol } = useRol();
+  const { kanWisselen, persoon, zetPersoon } = useRol();
   const [, setLocation] = useLocation();
   const wachtwoordWijzigen = useWachtwoordWijzigen();
   const taalWijzigen = useTaalWijzigen();
@@ -48,12 +52,6 @@ export function GebruikerMenu() {
     .slice(0, 2)
     .join("")
     .toUpperCase();
-
-  function wisselRol(nieuw: Rol) {
-    if (nieuw === actieveRol) return;
-    zetRol(nieuw);
-    setLocation("/");
-  }
 
   function kiesTaal(code: TaalCode) {
     if (code === taal) return;
@@ -120,40 +118,7 @@ export function GebruikerMenu() {
         </div>
 
         {kanWisselen && (
-          <div className="mt-2 group-data-[collapsible=icon]:hidden">
-            <p className="text-[11px] font-medium text-muted-foreground px-0.5 mb-1">
-              {t("menu.bekijkenAls")}
-            </p>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="w-full justify-between gap-2"
-                >
-                  <span className="flex items-center gap-2 truncate">
-                    <Eye className="h-4 w-4 flex-shrink-0" />
-                    <span className="truncate">{ROL_INFO[actieveRol]?.label ?? actieveRol}</span>
-                  </span>
-                  <ChevronsUpDown className="h-3.5 w-3.5 flex-shrink-0 opacity-60" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="w-56">
-                {WISSELBARE_ROLLEN.map((r) => (
-                  <DropdownMenuItem
-                    key={r}
-                    onClick={() => wisselRol(r)}
-                    className={actieveRol === r ? "bg-accent" : ""}
-                  >
-                    <span className="flex flex-col">
-                      <span className="text-sm font-medium">{ROL_INFO[r].label}</span>
-                      <span className="text-xs text-muted-foreground">{ROL_INFO[r].omschrijving}</span>
-                    </span>
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
+          <BekijkenAlsSelector persoon={persoon} zetPersoon={zetPersoon} />
         )}
 
         <div className="mt-2">
@@ -301,5 +266,104 @@ export function GebruikerMenu() {
         </DialogContent>
       </Dialog>
     </>
+  );
+}
+
+function BekijkenAlsSelector({
+  persoon,
+  zetPersoon,
+}: {
+  persoon: GeimiteerdePersoon | null;
+  zetPersoon: (p: GeimiteerdePersoon | null) => void;
+}) {
+  const { t } = useTranslation();
+  const { gebruiker } = useAuth();
+  const [, setLocation] = useLocation();
+  const { data: teamleden } = useListGebruikers();
+
+  const kandidaten = (teamleden ?? []).filter(
+    (g) => g.actief && g.id !== gebruiker?.id,
+  );
+
+  // Houd de geïmiteerde persoon in sync met de actuele serverdata: reset als het
+  // account is verwijderd of gedeactiveerd, en werk rol/naam/functietitel bij
+  // wanneer die op de server zijn gewijzigd (zodat het getoonde portaal klopt).
+  useEffect(() => {
+    if (!persoon || !teamleden) return;
+    const actueel = teamleden.find((g) => g.id === persoon.id);
+    if (!actueel || !actueel.actief) {
+      zetPersoon(null);
+      return;
+    }
+    const r = actueel.rol as Rol;
+    const ft = actueel.functietitel ?? null;
+    if (actueel.naam !== persoon.naam || r !== persoon.rol || ft !== persoon.functietitel) {
+      zetPersoon({ id: actueel.id, naam: actueel.naam, rol: r, functietitel: ft });
+    }
+  }, [teamleden, persoon, zetPersoon]);
+
+  function kies(p: GeimiteerdePersoon | null) {
+    if ((p?.id ?? null) === (persoon?.id ?? null)) return;
+    zetPersoon(p);
+    setLocation("/");
+  }
+
+  const triggerLabel = persoon ? persoon.naam : t("menu.eigenWeergave");
+
+  return (
+    <div className="mt-2 group-data-[collapsible=icon]:hidden">
+      <p className="text-[11px] font-medium text-muted-foreground px-0.5 mb-1">
+        {t("menu.bekijkenAls")}
+      </p>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="outline" size="sm" className="w-full justify-between gap-2">
+            <span className="flex items-center gap-2 truncate">
+              <Eye className="h-4 w-4 flex-shrink-0" />
+              <span className="truncate">{triggerLabel}</span>
+            </span>
+            <ChevronsUpDown className="h-3.5 w-3.5 flex-shrink-0 opacity-60" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start" className="w-64 max-h-80 overflow-y-auto">
+          <DropdownMenuItem
+            onClick={() => kies(null)}
+            className={persoon === null ? "bg-accent" : ""}
+          >
+            <span className="flex flex-col">
+              <span className="text-sm font-medium">{t("menu.eigenWeergave")}</span>
+              <span className="text-xs text-muted-foreground">
+                {t("menu.eigenWeergaveUitleg")}
+              </span>
+            </span>
+          </DropdownMenuItem>
+          {kandidaten.map((g) => {
+            const r = g.rol as Rol;
+            return (
+              <DropdownMenuItem
+                key={g.id}
+                onClick={() =>
+                  kies({
+                    id: g.id,
+                    naam: g.naam,
+                    rol: r,
+                    functietitel: g.functietitel ?? null,
+                  })
+                }
+                className={persoon?.id === g.id ? "bg-accent" : ""}
+              >
+                <span className="flex flex-col">
+                  <span className="text-sm font-medium">{g.naam}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {g.functietitel ? `${g.functietitel} · ` : ""}
+                    {ROL_INFO[r]?.label ?? r}
+                  </span>
+                </span>
+              </DropdownMenuItem>
+            );
+          })}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
   );
 }

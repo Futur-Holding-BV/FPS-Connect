@@ -1,33 +1,48 @@
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import type { Rol } from "./rol-types";
 import { useAuth } from "./auth-context";
-import { setRolOverrideGetter } from "@workspace/api-client-react";
+import { setGebruikerOverrideGetter } from "@workspace/api-client-react";
 
 export type { Rol };
 
-export const WISSELBARE_ROLLEN: Rol[] = ["beheerder", "monteur", "controleur", "klant"];
-const OPSLAG_SLEUTEL = "fps.actieveRol";
+export type GeimiteerdePersoon = {
+  id: number;
+  naam: string;
+  rol: Rol;
+  functietitel: string | null;
+};
+
+const OPSLAG_SLEUTEL = "fps.bekijkenAlsPersoon";
 
 type RolContextType = {
   rol: Rol;
   echteRol: Rol;
   kanWisselen: boolean;
-  zetRol: (rol: Rol) => void;
+  persoon: GeimiteerdePersoon | null;
+  zetPersoon: (persoon: GeimiteerdePersoon | null) => void;
 };
 
 const RolContext = createContext<RolContextType>({
   rol: "beheerder",
   echteRol: "beheerder",
   kanWisselen: false,
-  zetRol: () => {},
+  persoon: null,
+  zetPersoon: () => {},
 });
 
-function leesOpgeslagenRol(): Rol | null {
+function leesOpgeslagenPersoon(): GeimiteerdePersoon | null {
   if (typeof localStorage === "undefined") return null;
-  const opgeslagen = localStorage.getItem(OPSLAG_SLEUTEL);
-  return opgeslagen && WISSELBARE_ROLLEN.includes(opgeslagen as Rol)
-    ? (opgeslagen as Rol)
-    : null;
+  const ruw = localStorage.getItem(OPSLAG_SLEUTEL);
+  if (!ruw) return null;
+  try {
+    const p = JSON.parse(ruw) as GeimiteerdePersoon;
+    if (typeof p?.id === "number" && typeof p?.rol === "string" && p.rol) {
+      return p;
+    }
+    return null;
+  } catch {
+    return null;
+  }
 }
 
 export function RolProvider({ children }: { children: React.ReactNode }) {
@@ -38,32 +53,40 @@ export function RolProvider({ children }: { children: React.ReactNode }) {
   const echteRol = (gebruiker?.rol as Rol) ?? ("" as Rol);
   const kanWisselen = echteRol === "hoofdbeheerder";
 
-  const [override, setOverride] = useState<Rol | null>(() => leesOpgeslagenRol());
+  const [persoon, setPersoon] = useState<GeimiteerdePersoon | null>(() =>
+    leesOpgeslagenPersoon(),
+  );
 
-  const zetRol = useCallback((nieuw: Rol) => {
-    setOverride(nieuw);
+  const zetPersoon = useCallback((nieuw: GeimiteerdePersoon | null) => {
+    setPersoon(nieuw);
     if (typeof localStorage !== "undefined") {
-      localStorage.setItem(OPSLAG_SLEUTEL, nieuw);
+      if (nieuw) localStorage.setItem(OPSLAG_SLEUTEL, JSON.stringify(nieuw));
+      else localStorage.removeItem(OPSLAG_SLEUTEL);
     }
   }, []);
 
-  // De hoofdbeheerder kan in elk portaal kijken; standaard het beheerderportaal.
-  // Andere rollen zien altijd hun eigen portaal.
-  const rol: Rol = kanWisselen ? (override ?? "beheerder") : echteRol;
+  // Alleen de hoofdbeheerder kan een teamlid nabootsen. Zonder selectie ziet
+  // de hoofdbeheerder zijn eigen (beheerder)portaal; andere rollen zien altijd
+  // hun eigen portaal.
+  const actievePersoon = kanWisselen ? persoon : null;
+  const rol: Rol = kanWisselen ? (actievePersoon?.rol ?? "beheerder") : echteRol;
 
-  // Synchroniseer de rol-override naar de API-client zodat de backend
-  // dezelfde filtering toepast als de frontend laat zien.
+  // Synchroniseer de impersonatie naar de API-client zodat de backend exact
+  // dezelfde data filtert als het portaal toont (op basis van het teamlid-id).
   useEffect(() => {
-    if (kanWisselen && override && override !== "beheerder") {
-      setRolOverrideGetter(() => override);
+    if (kanWisselen && actievePersoon) {
+      const id = String(actievePersoon.id);
+      setGebruikerOverrideGetter(() => id);
     } else {
-      setRolOverrideGetter(null);
+      setGebruikerOverrideGetter(null);
     }
-    return () => setRolOverrideGetter(null);
-  }, [kanWisselen, override]);
+    return () => setGebruikerOverrideGetter(null);
+  }, [kanWisselen, actievePersoon]);
 
   return (
-    <RolContext.Provider value={{ rol, echteRol, kanWisselen, zetRol }}>
+    <RolContext.Provider
+      value={{ rol, echteRol, kanWisselen, persoon: actievePersoon, zetPersoon }}
+    >
       {children}
     </RolContext.Provider>
   );

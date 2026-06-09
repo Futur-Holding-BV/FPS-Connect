@@ -47,6 +47,8 @@ export const vertalingen: Record<TaalCode, Boom> = {
     "menu.wachtwoord": "Wachtwoord",
     "menu.uitloggen": "Uitloggen",
     "menu.bekijkenAls": "Bekijken als",
+    "menu.eigenWeergave": "Eigen weergave",
+    "menu.eigenWeergaveUitleg": "Uw eigen portaal en gegevens",
     "menu.taal": "Taal",
     "menu.taalWijzigen": "Taal wijzigen",
     "menu.wachtwoordWijzigen": "Wachtwoord wijzigen",
