@@ -46,6 +46,7 @@ export * from './gebouwDetail';
 export * from './gebouwEmail';
 export * from './gebouwEmailBijlage';
 export * from './gebouwEmailInput';
+export * from './gebouwEmailSamenvatting';
 export * from './gebouwGereedInput';
 export * from './gebouwInput';
 export * from './gebouwPartij';

@@ -245,6 +245,29 @@ export interface GebouwEmailInput {
   bestandsnaam: string;
 }
 
+export interface GebouwEmailSamenvatting {
+  id: number;
+  gebouw_id: number;
+  /** @nullable */
+  opdrachtomschrijving?: string | null;
+  /** @nullable */
+  opdrachtgever?: string | null;
+  /** @nullable */
+  contactgegevens?: string | null;
+  /** @nullable */
+  afspraken?: string | null;
+  /** @nullable */
+  actiepunten?: string | null;
+  /** @nullable */
+  besluiten?: string | null;
+  /** @nullable */
+  tekeningen?: string | null;
+  /** @nullable */
+  risicos?: string | null;
+  aantal_emails: number;
+  bijgewerkt_op: string;
+}
+
 export type DashboardStatsVoorzieningenPerTypeItem = {
   type: string;
   aantal: number;

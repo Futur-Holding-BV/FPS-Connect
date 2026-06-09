@@ -2573,6 +2573,48 @@ paths:
         "403":
           description: Geen toegang
 
+  /gebouwen/{id}/emails/samenvatting:
+    get:
+      operationId: getGebouwEmailSamenvatting
+      tags: [emails]
+      summary: Gecombineerde AI-projectsamenvatting van alle e-mails
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GebouwEmailSamenvatting"
+        "404":
+          description: Nog geen samenvatting beschikbaar
+        "403":
+          description: Geen toegang
+    post:
+      operationId: generateGebouwEmailSamenvatting
+      tags: [emails]
+      summary: AI-projectsamenvatting genereren of bijwerken (beheerder+)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GebouwEmailSamenvatting"
+        "403":
+          description: Geen toegang
+
   /gebouwen/{id}/emails/{emailId}:
     get:
       operationId: getGebouwEmail
@@ -2981,6 +3023,35 @@ components:
         object_pad:
           type: string
         bestandsnaam:
+          type: string
+
+    GebouwEmailSamenvatting:
+      type: object
+      required: [id, gebouw_id, aantal_emails, bijgewerkt_op]
+      properties:
+        id:
+          type: integer
+        gebouw_id:
+          type: integer
+        opdrachtomschrijving:
+          type: ["string", "null"]
+        opdrachtgever:
+          type: ["string", "null"]
+        contactgegevens:
+          type: ["string", "null"]
+        afspraken:
+          type: ["string", "null"]
+        actiepunten:
+          type: ["string", "null"]
+        besluiten:
+          type: ["string", "null"]
+        tekeningen:
+          type: ["string", "null"]
+        risicos:
+          type: ["string", "null"]
+        aantal_emails:
+          type: integer
+        bijgewerkt_op:
           type: string
 
     # ── DASHBOARD ─────────────────────────────────────────────────────────

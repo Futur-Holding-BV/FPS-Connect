@@ -53,6 +53,7 @@ import type {
   GebouwDetail,
   GebouwEmail,
   GebouwEmailInput,
+  GebouwEmailSamenvatting,
   GebouwGereedInput,
   GebouwInput,
   GebouwPartij,
@@ -9023,6 +9024,153 @@ export const useCreateGebouwEmail = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getCreateGebouwEmailMutationOptions(options));
+    }
+
+export const getGetGebouwEmailSamenvattingUrl = (id: number,) => {
+
+
+
+
+  return `/api/gebouwen/${id}/emails/samenvatting`
+}
+
+/**
+ * @summary Gecombineerde AI-projectsamenvatting van alle e-mails
+ */
+export const getGebouwEmailSamenvatting = async (id: number, options?: RequestInit): Promise<GebouwEmailSamenvatting> => {
+
+  return customFetch<GebouwEmailSamenvatting>(getGetGebouwEmailSamenvattingUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetGebouwEmailSamenvattingQueryKey = (id: number,) => {
+    return [
+    `/api/gebouwen/${id}/emails/samenvatting`
+    ] as const;
+    }
+
+
+export const getGetGebouwEmailSamenvattingQueryOptions = <TData = Awaited<ReturnType<typeof getGebouwEmailSamenvatting>>, TError = ErrorType<void>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getGebouwEmailSamenvatting>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetGebouwEmailSamenvattingQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getGebouwEmailSamenvatting>>> = ({ signal }) => getGebouwEmailSamenvatting(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getGebouwEmailSamenvatting>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetGebouwEmailSamenvattingQueryResult = NonNullable<Awaited<ReturnType<typeof getGebouwEmailSamenvatting>>>
+export type GetGebouwEmailSamenvattingQueryError = ErrorType<void>
+
+
+/**
+ * @summary Gecombineerde AI-projectsamenvatting van alle e-mails
+ */
+
+export function useGetGebouwEmailSamenvatting<TData = Awaited<ReturnType<typeof getGebouwEmailSamenvatting>>, TError = ErrorType<void>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getGebouwEmailSamenvatting>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetGebouwEmailSamenvattingQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGenerateGebouwEmailSamenvattingUrl = (id: number,) => {
+
+
+
+
+  return `/api/gebouwen/${id}/emails/samenvatting`
+}
+
+/**
+ * @summary AI-projectsamenvatting genereren of bijwerken (beheerder+)
+ */
+export const generateGebouwEmailSamenvatting = async (id: number, options?: RequestInit): Promise<GebouwEmailSamenvatting> => {
+
+  return customFetch<GebouwEmailSamenvatting>(getGenerateGebouwEmailSamenvattingUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getGenerateGebouwEmailSamenvattingMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof generateGebouwEmailSamenvatting>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof generateGebouwEmailSamenvatting>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['generateGebouwEmailSamenvatting'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof generateGebouwEmailSamenvatting>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  generateGebouwEmailSamenvatting(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type GenerateGebouwEmailSamenvattingMutationResult = NonNullable<Awaited<ReturnType<typeof generateGebouwEmailSamenvatting>>>
+
+    export type GenerateGebouwEmailSamenvattingMutationError = ErrorType<void>
+
+    /**
+ * @summary AI-projectsamenvatting genereren of bijwerken (beheerder+)
+ */
+export const useGenerateGebouwEmailSamenvatting = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof generateGebouwEmailSamenvatting>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof generateGebouwEmailSamenvatting>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getGenerateGebouwEmailSamenvattingMutationOptions(options));
     }
 
 export const getGetGebouwEmailUrl = (id: number,

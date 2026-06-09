@@ -31,3 +31,20 @@ export const gebouwEmailBijlagenTable = pgTable("gebouw_email_bijlagen", {
 
 export type GebouwEmail = typeof gebouwEmailsTable.$inferSelect;
 export type GebouwEmailBijlage = typeof gebouwEmailBijlagenTable.$inferSelect;
+
+export const gebouwEmailSamenvattingenTable = pgTable("gebouw_email_samenvattingen", {
+  id: serial("id").primaryKey(),
+  gebouwId: integer("gebouw_id").notNull().unique().references(() => gebouwenTable.id, { onDelete: "cascade" }),
+  opdrachtomschrijving: text("opdrachtomschrijving"),
+  opdrachtgever: text("opdrachtgever"),
+  contactgegevens: text("contactgegevens"),
+  afspraken: text("afspraken"),
+  actiepunten: text("actiepunten"),
+  besluiten: text("besluiten"),
+  tekeningen: text("tekeningen"),
+  risicos: text("risicos"),
+  aantalEmails: integer("aantal_emails").notNull().default(0),
+  bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
+});
+
+export type GebouwEmailSamenvatting = typeof gebouwEmailSamenvattingenTable.$inferSelect;

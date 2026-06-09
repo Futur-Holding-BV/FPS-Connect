@@ -118,6 +118,83 @@ Geef uitsluitend geldige JSON terug met deze velden:
 - actiepunten (tekst of null): openstaande actiepunten, verzoeken of to-do's die uit de e-mail voortvloeien, als genummerde lijst. Null als er geen zijn.
 Antwoord in het Nederlands. Alleen JSON, geen extra tekst.`;
 
+const SAMENVATTING_PROMPT = `Je analyseert de gecombineerde e-mailcorrespondentie van een brandpreventie-project.
+Maak een overzichtelijke projectsamenvatting op basis van ALLE e-mails samen.
+Geef uitsluitend geldige JSON terug met deze velden (null als onbekend):
+- opdrachtomschrijving: korte Nederlandse omschrijving van het project/de opdracht (1-4 zinnen) of null.
+- opdrachtgever: naam, bedrijf en/of adres van de opdrachtgever of null.
+- contactgegevens: alle e-mailadressen en telefoonnummers die zijn gevonden, als leesbare lijst of null.
+- afspraken: gemaakte afspraken, toezeggingen of deadlines als korte opsomming of null.
+- actiepunten: alle openstaande actiepunten en to-do's als genummerde lijst of null.
+- besluiten: relevante besluiten of overeenkomsten uit de correspondentie of null.
+- tekeningen: genoemde bouwtekeningen, plattegronden of technische documenten of null.
+- risicos: risico's, aandachtspunten of bezwaren die zijn geuit of null.
+Antwoord in het Nederlands. Alleen JSON, geen extra tekst.`;
+
+export interface ProjectSamenvatting {
+  opdrachtomschrijving: string | null;
+  opdrachtgever: string | null;
+  contactgegevens: string | null;
+  afspraken: string | null;
+  actiepunten: string | null;
+  besluiten: string | null;
+  tekeningen: string | null;
+  risicos: string | null;
+}
+
+export async function genereerProjectSamenvatting(
+  emails: GeparseerdeEmail[],
+): Promise<ProjectSamenvatting> {
+  const leeg: ProjectSamenvatting = {
+    opdrachtomschrijving: null, opdrachtgever: null, contactgegevens: null,
+    afspraken: null, actiepunten: null, besluiten: null, tekeningen: null, risicos: null,
+  };
+  if (!heeftOpenAi() || emails.length === 0) return leeg;
+
+  const blokken = emails.map((e, i) => {
+    const delen = [
+      `--- E-mail ${i + 1} ---`,
+      `Afzender: ${e.afzender ?? "(onbekend)"}`,
+      `Onderwerp: ${e.onderwerp ?? "(geen)"}`,
+      `Bijlagen: ${e.bijlagen.map((b) => b.bestandsnaam).join(", ") || "(geen)"}`,
+      "",
+      (e.inhoudTekst ?? "(geen tekstinhoud)").slice(0, 3000),
+    ];
+    return delen.join("\n");
+  });
+
+  const userTekst = blokken.join("\n\n");
+
+  try {
+    const client = maakOpenAiClient();
+    const completion = await client.chat.completions.create({
+      model: "gpt-4o-mini",
+      response_format: { type: "json_object" },
+      max_tokens: 1200,
+      messages: [
+        { role: "system", content: SAMENVATTING_PROMPT },
+        { role: "user", content: userTekst.slice(0, 20000) },
+      ],
+    });
+    const tekst = completion.choices[0]?.message?.content;
+    if (!tekst) return leeg;
+    const p = JSON.parse(tekst) as Record<string, unknown>;
+    return {
+      opdrachtomschrijving: strOfNull(p.opdrachtomschrijving),
+      opdrachtgever: strOfNull(p.opdrachtgever),
+      contactgegevens: strOfNull(p.contactgegevens),
+      afspraken: strOfNull(p.afspraken),
+      actiepunten: strOfNull(p.actiepunten),
+      besluiten: strOfNull(p.besluiten),
+      tekeningen: strOfNull(p.tekeningen),
+      risicos: strOfNull(p.risicos),
+    };
+  } catch (err) {
+    logger.error({ err }, "Project-samenvatting genereren mislukt");
+    return leeg;
+  }
+}
+
 export async function extraheerEmailInzicht(
   email: GeparseerdeEmail,
 ): Promise<EmailAiResultaat> {

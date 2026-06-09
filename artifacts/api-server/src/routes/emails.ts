@@ -1,16 +1,84 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
-import { gebouwEmailsTable, gebouwEmailBijlagenTable, gebouwenTable } from "@workspace/db";
+import {
+  gebouwEmailsTable,
+  gebouwEmailBijlagenTable,
+  gebouwEmailSamenvattingenTable,
+  gebouwenTable,
+} from "@workspace/db";
 import { eq, and, desc } from "drizzle-orm";
 import { requireRol } from "../middlewares/auth";
 import { ObjectStorageService, ObjectNotFoundError } from "../lib/objectStorage";
-import { parseEmailBestand, extraheerEmailInzicht, type GeparseerdeBijlage } from "../services/email-ai";
+import {
+  parseEmailBestand,
+  extraheerEmailInzicht,
+  genereerProjectSamenvatting,
+  type GeparseerdeBijlage,
+  type GeparseerdeEmail,
+} from "../services/email-ai";
 
 const router = Router();
 const objectStorage = new ObjectStorageService();
 const beheerderPlus = requireRol("beheerder");
 
 const iso = (d: Date) => d.toISOString();
+
+const mapSamenvatting = (s: typeof gebouwEmailSamenvattingenTable.$inferSelect) => ({
+  id: s.id,
+  gebouw_id: s.gebouwId,
+  opdrachtomschrijving: s.opdrachtomschrijving,
+  opdrachtgever: s.opdrachtgever,
+  contactgegevens: s.contactgegevens,
+  afspraken: s.afspraken,
+  actiepunten: s.actiepunten,
+  besluiten: s.besluiten,
+  tekeningen: s.tekeningen,
+  risicos: s.risicos,
+  aantal_emails: s.aantalEmails,
+  bijgewerkt_op: iso(s.bijgewerktOp),
+});
+
+async function herberekeningUitvoeren(gebouwId: number): Promise<void> {
+  try {
+    const emails = await db
+      .select()
+      .from(gebouwEmailsTable)
+      .where(eq(gebouwEmailsTable.gebouwId, gebouwId))
+      .orderBy(desc(gebouwEmailsTable.aangemaaktOp));
+    if (emails.length === 0) return;
+
+    const als: GeparseerdeEmail[] = emails.map((e) => ({
+      afzender: e.afzender,
+      ontvanger: e.ontvanger,
+      onderwerp: e.onderwerp,
+      datum: e.datum,
+      inhoudTekst: e.inhoudTekst,
+      bijlagen: [],
+    }));
+
+    const samenvatting = await genereerProjectSamenvatting(als);
+
+    await db
+      .insert(gebouwEmailSamenvattingenTable)
+      .values({
+        gebouwId,
+        aantalEmails: emails.length,
+        bijgewerktOp: new Date(),
+        ...samenvatting,
+      })
+      .onConflictDoUpdate({
+        target: gebouwEmailSamenvattingenTable.gebouwId,
+        set: {
+          aantalEmails: emails.length,
+          bijgewerktOp: new Date(),
+          ...samenvatting,
+        },
+      });
+  } catch (err) {
+    // fire-and-forget — log maar blokkeer niet
+    console.error("herberekeningUitvoeren mislukt:", err);
+  }
+}
 
 function parseId(v: unknown): number {
   return parseInt(String(v), 10);
@@ -89,6 +157,39 @@ router.get("/gebouwen/:id/emails", beheerderPlus, async (req, res) => {
       perEmail.get(b.emailId)!.push(b);
     }
     res.json(emails.map((e) => mapEmail(e, perEmail.get(e.id) ?? [])));
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// GET /gebouwen/:id/emails/samenvatting — VOOR :emailId zodat Express niet "samenvatting" als id matcht
+router.get("/gebouwen/:id/emails/samenvatting", beheerderPlus, async (req, res) => {
+  try {
+    const gebouwId = parseId(req.params.id);
+    const [s] = await db
+      .select()
+      .from(gebouwEmailSamenvattingenTable)
+      .where(eq(gebouwEmailSamenvattingenTable.gebouwId, gebouwId));
+    if (!s) return res.status(404).json({ error: "Nog geen samenvatting beschikbaar" });
+    res.json(mapSamenvatting(s));
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// POST /gebouwen/:id/emails/samenvatting — genereer of herbereken projectsamenvatting
+router.post("/gebouwen/:id/emails/samenvatting", beheerderPlus, async (req, res) => {
+  try {
+    const gebouwId = parseId(req.params.id);
+    await herberekeningUitvoeren(gebouwId);
+    const [s] = await db
+      .select()
+      .from(gebouwEmailSamenvattingenTable)
+      .where(eq(gebouwEmailSamenvattingenTable.gebouwId, gebouwId));
+    if (!s) return res.status(404).json({ error: "Geen e-mails gevonden om een samenvatting van te maken" });
+    res.json(mapSamenvatting(s));
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Interne serverfout" });
@@ -177,6 +278,8 @@ router.post("/gebouwen/:id/emails", beheerderPlus, async (req, res) => {
     }
 
     res.status(201).json(mapEmail(e, opgeslagenBijlagen));
+    // Herbereken projectsamenvatting op de achtergrond
+    void herberekeningUitvoeren(gebouwId);
   } catch (err) {
     if (err instanceof ObjectNotFoundError) {
       return res.status(404).json({ error: "Het geüploade bestand is niet gevonden." });

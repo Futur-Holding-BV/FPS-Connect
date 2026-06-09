@@ -3,7 +3,10 @@ import {
   useListGebouwEmails,
   useCreateGebouwEmail,
   useDeleteGebouwEmail,
+  useGetGebouwEmailSamenvatting,
+  useGenerateGebouwEmailSamenvatting,
   getListGebouwEmailsQueryKey,
+  getGetGebouwEmailSamenvattingQueryKey,
 } from "@workspace/api-client-react";
 import type { GebouwEmail } from "@workspace/api-client-react";
 import { useUpload } from "@workspace/object-storage-web";
@@ -23,7 +26,8 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import {
   Mail, Upload, Loader2, Trash2, Paperclip, Sparkles, User, MapPin,
-  Phone, FileText, ChevronRight, ListChecks,
+  Phone, FileText, ChevronRight, ListChecks, RefreshCw, Building2,
+  ClipboardList, AlertTriangle, CheckSquare, Handshake,
 } from "lucide-react";
 
 function datum(s: string | null | undefined): string {
@@ -36,8 +40,108 @@ function bestandsUrl(objectPad: string | null | undefined): string | null {
   if (!objectPad) return null;
   const base = import.meta.env.BASE_URL.replace(/\/$/, "");
   const pad = objectPad.startsWith("/") ? objectPad : `/${objectPad}`;
-  return `${base}${pad}`;
+  return `${base}/api/storage${pad}`;
 }
+
+// ── Centrale projectsamenvatting ────────────────────────────────────────────
+
+function ProjectSamenvatting({ gebouwId, isBeheerder }: { gebouwId: number; isBeheerder: boolean }) {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const { data: samenvatting, isLoading, error } = useGetGebouwEmailSamenvatting(gebouwId);
+  const genereer = useGenerateGebouwEmailSamenvatting();
+
+  const bezig = genereer.isPending;
+
+  async function herbereken() {
+    try {
+      await genereer.mutateAsync({ id: gebouwId });
+      queryClient.invalidateQueries({ queryKey: getGetGebouwEmailSamenvattingQueryKey(gebouwId) });
+      toast({ title: "Projectsamenvatting bijgewerkt" });
+    } catch {
+      toast({ title: "Bijwerken mislukt", variant: "destructive" });
+    }
+  }
+
+  if (isLoading) {
+    return (
+      <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 space-y-3">
+        <Skeleton className="h-4 w-48" />
+        <Skeleton className="h-3 w-full" />
+        <Skeleton className="h-3 w-3/4" />
+      </div>
+    );
+  }
+
+  const geenSamenvatting = !samenvatting || (error && (error as { status?: number }).status === 404);
+
+  if (geenSamenvatting) {
+    if (!isBeheerder) return null;
+    return (
+      <div className="rounded-xl border border-dashed border-primary/30 bg-primary/5 p-4 flex items-center justify-between gap-3">
+        <div className="text-sm text-muted-foreground">
+          <span className="font-medium text-foreground">Geen projectsamenvatting</span> — upload een e-mail om automatisch een samenvatting te genereren.
+        </div>
+      </div>
+    );
+  }
+
+  const velden: { icoon: React.ReactNode; titel: string; waarde: string | null | undefined }[] = [
+    { icoon: <ClipboardList className="h-4 w-4" />, titel: "Opdrachtomschrijving", waarde: samenvatting.opdrachtomschrijving },
+    { icoon: <Building2 className="h-4 w-4" />, titel: "Opdrachtgever", waarde: samenvatting.opdrachtgever },
+    { icoon: <Phone className="h-4 w-4" />, titel: "Contactgegevens", waarde: samenvatting.contactgegevens },
+    { icoon: <Handshake className="h-4 w-4" />, titel: "Gemaakte afspraken", waarde: samenvatting.afspraken },
+    { icoon: <ListChecks className="h-4 w-4" />, titel: "Openstaande actiepunten", waarde: samenvatting.actiepunten },
+    { icoon: <CheckSquare className="h-4 w-4" />, titel: "Besluiten", waarde: samenvatting.besluiten },
+    { icoon: <FileText className="h-4 w-4" />, titel: "Tekeningen / bijlagen", waarde: samenvatting.tekeningen },
+    { icoon: <AlertTriangle className="h-4 w-4" />, titel: "Risico's en aandachtspunten", waarde: samenvatting.risicos },
+  ].filter((v) => v.waarde);
+
+  return (
+    <div className="rounded-xl border border-primary/25 bg-primary/5 overflow-hidden">
+      <div className="flex items-center justify-between gap-2 px-4 py-3 border-b border-primary/15">
+        <div className="flex items-center gap-2 text-primary font-semibold text-sm">
+          <Sparkles className="h-4 w-4" />
+          AI-projectsamenvatting
+          <Badge variant="secondary" className="text-xs font-normal">
+            {samenvatting.aantal_emails} {samenvatting.aantal_emails === 1 ? "e-mail" : "e-mails"}
+          </Badge>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-muted-foreground hidden sm:block">
+            Bijgewerkt {datum(samenvatting.bijgewerkt_op)}
+          </span>
+          {isBeheerder && (
+            <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={herbereken} disabled={bezig}>
+              {bezig
+                ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                : <RefreshCw className="h-3.5 w-3.5" />}
+              Bijwerken
+            </Button>
+          )}
+        </div>
+      </div>
+      {velden.length === 0 ? (
+        <div className="px-4 py-3 text-sm text-muted-foreground">
+          Geen relevante informatie gevonden in de e-mails.
+        </div>
+      ) : (
+        <div className="divide-y divide-primary/10">
+          {velden.map((v) => (
+            <div key={v.titel} className="px-4 py-3">
+              <div className="flex items-center gap-1.5 text-xs font-medium text-primary mb-1">
+                {v.icoon} {v.titel}
+              </div>
+              <div className="text-sm text-foreground/80 whitespace-pre-wrap">{v.waarde}</div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Hoofdcomponent ──────────────────────────────────────────────────────────
 
 export default function GebouwEmails({
   gebouwId,
@@ -57,25 +161,38 @@ export default function GebouwEmails({
   const [bezig, setBezig] = useState(false);
   const [actief, setActief] = useState<GebouwEmail | null>(null);
 
-  const invalidate = () =>
+  const invalideer = () => {
     queryClient.invalidateQueries({ queryKey: getListGebouwEmailsQueryKey(gebouwId) });
+    queryClient.invalidateQueries({ queryKey: getGetGebouwEmailSamenvattingQueryKey(gebouwId) });
+  };
 
   async function kiesBestand(file: File) {
+    const ext = file.name.split(".").pop()?.toLowerCase();
+    if (ext !== "eml" && ext !== "msg") {
+      toast({
+        title: "Bestandstype niet ondersteund",
+        description: "Upload een .eml- of .msg-bestand. Andere bestandstypen worden niet geaccepteerd.",
+        variant: "destructive",
+      });
+      if (fileRef.current) fileRef.current.value = "";
+      return;
+    }
+
     setBezig(true);
     try {
       const res = await uploadFile(file);
       if (!res?.objectPath) {
-        toast({ title: "Uploaden mislukt", variant: "destructive" });
+        toast({ title: "Uploaden mislukt", description: "Het bestand kon niet worden opgeslagen. Probeer opnieuw.", variant: "destructive" });
         return;
       }
       await maak.mutateAsync({
         id: gebouwId,
         data: { object_pad: res.objectPath, bestandsnaam: file.name },
       });
-      await invalidate();
-      toast({ title: "E-mail verwerkt", description: "AI-analyse voltooid." });
+      invalideer();
+      toast({ title: "E-mail verwerkt", description: "De e-mail is verwerkt. De AI-samenvatting wordt op de achtergrond bijgewerkt." });
     } catch {
-      toast({ title: "Verwerken mislukt", variant: "destructive" });
+      toast({ title: "Verwerken mislukt", description: "Er is een fout opgetreden. Controleer of het bestand een geldig .eml- of .msg-bestand is.", variant: "destructive" });
     } finally {
       setBezig(false);
       if (fileRef.current) fileRef.current.value = "";
@@ -95,7 +212,7 @@ export default function GebouwEmails({
             <input
               ref={fileRef}
               type="file"
-              accept=".eml,.msg,message/rfc822,application/vnd.ms-outlook"
+              accept=".eml,.msg"
               className="hidden"
               onChange={(e) => {
                 const f = e.target.files?.[0];
@@ -109,61 +226,73 @@ export default function GebouwEmails({
           </>
         )}
       </CardHeader>
-      <CardContent className="space-y-2">
+      <CardContent className="space-y-4">
         {isBeheerder && (
-          <p className="text-xs text-muted-foreground">
-            Upload een <code>.eml</code> of <code>.msg</code> bestand. De inhoud, afzender,
-            NAW-gegevens en bijlagen worden automatisch met AI uitgelezen.
+          <p className="text-xs text-muted-foreground -mt-2">
+            Ondersteunde bestandstypen: <code className="bg-muted px-1 rounded">.eml</code> en <code className="bg-muted px-1 rounded">.msg</code>. Bijlagen worden automatisch uitgelezen. Andere bestandstypen worden geweigerd.
           </p>
         )}
-        {isLoading ? (
-          <Skeleton className="h-24 w-full" />
-        ) : (emails ?? []).length === 0 ? (
-          <div className="py-8 text-center text-sm text-muted-foreground">
-            Nog geen e-mails gearchiveerd.
-          </div>
-        ) : (
-          <div className="divide-y">
-            {(emails ?? []).map((e) => (
-              <button
-                key={e.id}
-                onClick={() => setActief(e)}
-                className="w-full flex items-center justify-between gap-3 py-3 text-left hover:bg-muted/50 -mx-2 px-2 rounded"
-              >
-                <div className="min-w-0">
-                  <div className="font-medium truncate">{e.onderwerp || e.bestandsnaam}</div>
-                  <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-muted-foreground mt-0.5">
-                    {e.afzender && <span className="truncate">{e.afzender}</span>}
-                    <span>{datum(e.datum)}</span>
-                    {(e.bijlagen?.length ?? 0) > 0 && (
-                      <span className="flex items-center gap-1">
-                        <Paperclip className="h-3 w-3" />{e.bijlagen?.length}
-                      </span>
-                    )}
+
+        {/* Centrale AI-projectsamenvatting */}
+        <ProjectSamenvatting gebouwId={gebouwId} isBeheerder={isBeheerder} />
+
+        {/* E-maillijst */}
+        <div>
+          {(emails ?? []).length > 0 && (
+            <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">
+              Gearchiveerde e-mails
+            </div>
+          )}
+          {isLoading ? (
+            <Skeleton className="h-24 w-full" />
+          ) : (emails ?? []).length === 0 ? (
+            <div className="py-6 text-center text-sm text-muted-foreground">
+              Nog geen e-mails gearchiveerd.
+            </div>
+          ) : (
+            <div className="divide-y">
+              {(emails ?? []).map((e) => (
+                <button
+                  key={e.id}
+                  onClick={() => setActief(e)}
+                  className="w-full flex items-center justify-between gap-3 py-3 text-left hover:bg-muted/50 -mx-2 px-2 rounded"
+                >
+                  <div className="min-w-0">
+                    <div className="font-medium truncate">{e.onderwerp || e.bestandsnaam}</div>
+                    <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-muted-foreground mt-0.5">
+                      {e.afzender && <span className="truncate">{e.afzender}</span>}
+                      <span>{datum(e.datum)}</span>
+                      {(e.bijlagen?.length ?? 0) > 0 && (
+                        <span className="flex items-center gap-1">
+                          <Paperclip className="h-3 w-3" />{e.bijlagen?.length}
+                        </span>
+                      )}
+                    </div>
                   </div>
-                </div>
-                <div className="flex items-center gap-2 flex-shrink-0">
-                  {e.ai_omschrijving && (
-                    <Badge variant="secondary" className="gap-1">
-                      <Sparkles className="h-3 w-3" /> AI
-                    </Badge>
-                  )}
-                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                </div>
-              </button>
-            ))}
-          </div>
-        )}
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    {e.ai_omschrijving && (
+                      <Badge variant="secondary" className="gap-1 text-xs">
+                        <Sparkles className="h-3 w-3" /> AI
+                      </Badge>
+                    )}
+                    <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
       </CardContent>
 
+      {/* E-mail detail dialoog */}
       <Dialog open={!!actief} onOpenChange={(o) => !o && setActief(null)}>
-        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto" aria-describedby="email-detail-inhoud">
           {actief && (
             <>
               <DialogHeader>
                 <DialogTitle className="pr-6">{actief.onderwerp || actief.bestandsnaam}</DialogTitle>
               </DialogHeader>
-              <div className="space-y-4 text-sm">
+              <div id="email-detail-inhoud" className="space-y-4 text-sm">
                 <div className="grid gap-1 text-muted-foreground">
                   {actief.afzender && <div><span className="font-medium text-foreground">Van:</span> {actief.afzender}</div>}
                   {actief.ontvanger && <div><span className="font-medium text-foreground">Aan:</span> {actief.ontvanger}</div>}
@@ -238,7 +367,7 @@ export default function GebouwEmails({
                             onClick={async () => {
                               try {
                                 await verwijder.mutateAsync({ id: gebouwId, emailId: actief.id });
-                                await invalidate();
+                                invalideer();
                                 setActief(null);
                                 toast({ title: "E-mail verwijderd" });
                               } catch {

@@ -2806,6 +2806,52 @@ export const CreateGebouwEmailResponse = zod.void()
 
 
 /**
+ * @summary Gecombineerde AI-projectsamenvatting van alle e-mails
+ */
+export const GetGebouwEmailSamenvattingParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetGebouwEmailSamenvattingResponse = zod.object({
+  "id": zod.number(),
+  "gebouw_id": zod.number(),
+  "opdrachtomschrijving": zod.string().nullish(),
+  "opdrachtgever": zod.string().nullish(),
+  "contactgegevens": zod.string().nullish(),
+  "afspraken": zod.string().nullish(),
+  "actiepunten": zod.string().nullish(),
+  "besluiten": zod.string().nullish(),
+  "tekeningen": zod.string().nullish(),
+  "risicos": zod.string().nullish(),
+  "aantal_emails": zod.number(),
+  "bijgewerkt_op": zod.string()
+})
+
+
+/**
+ * @summary AI-projectsamenvatting genereren of bijwerken (beheerder+)
+ */
+export const GenerateGebouwEmailSamenvattingParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GenerateGebouwEmailSamenvattingResponse = zod.object({
+  "id": zod.number(),
+  "gebouw_id": zod.number(),
+  "opdrachtomschrijving": zod.string().nullish(),
+  "opdrachtgever": zod.string().nullish(),
+  "contactgegevens": zod.string().nullish(),
+  "afspraken": zod.string().nullish(),
+  "actiepunten": zod.string().nullish(),
+  "besluiten": zod.string().nullish(),
+  "tekeningen": zod.string().nullish(),
+  "risicos": zod.string().nullish(),
+  "aantal_emails": zod.number(),
+  "bijgewerkt_op": zod.string()
+})
+
+
+/**
  * @summary E-mail ophalen
  */
 export const GetGebouwEmailParams = zod.object({
