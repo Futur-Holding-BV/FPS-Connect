@@ -38,6 +38,7 @@ import LoginPogingen from "@/pages/beheer/login-pogingen";
 import HelpdeskBeheer from "@/pages/beheer/helpdesk";
 import FeedbackBeheer from "@/pages/beheer/feedback";
 import Heatmaps from "@/pages/beheer/heatmaps";
+import ToepassingenBeheer from "@/pages/beheer/toepassingen";
 import InfoPagina from "@/pages/info/index";
 import { OndersteuningWidget } from "@/components/ondersteuning-widget";
 import { HeatmapTracker } from "@/components/heatmap-tracker";
@@ -63,6 +64,7 @@ function BeheerderPortal() {
         <Route path="/crm" component={CrmKlanten} />
         <Route path="/crm/:id" component={CrmKlantDetail} />
         <Route path="/abonnementen" component={Abonnementen} />
+        <Route path="/beheer/toepassingen" component={ToepassingenBeheer} />
         <Route path="/beheer/login-pogingen" component={LoginPogingen} />
         <Route path="/beheer/helpdesk" component={HelpdeskBeheer} />
         <Route path="/beheer/feedback" component={FeedbackBeheer} />

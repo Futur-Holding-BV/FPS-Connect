@@ -745,24 +745,6 @@ export interface VerdiepingUpdate {
   hoogte?: number;
 }
 
-export type VoorzieningType = typeof VoorzieningType[keyof typeof VoorzieningType];
-
-
-export const VoorzieningType = {
-  applicatie: 'applicatie',
-  branddeur: 'branddeur',
-  brandscheiding: 'brandscheiding',
-  doorvoering: 'doorvoering',
-  brandklep: 'brandklep',
-  brandwerend_glas: 'brandwerend_glas',
-  luik: 'luik',
-  rooster: 'rooster',
-  kitvoeg: 'kitvoeg',
-  manchet: 'manchet',
-  coating: 'coating',
-  plaatconstructie: 'plaatconstructie',
-} as const;
-
 export type VoorzieningStatus = typeof VoorzieningStatus[keyof typeof VoorzieningStatus];
 
 
@@ -791,7 +773,7 @@ export interface Voorziening {
   objectnummer: string;
   /** @nullable */
   qr_code?: string | null;
-  type: VoorzieningType;
+  type: string;
   status: VoorzieningStatus;
   classificatie: VoorzieningClassificatie;
   gebouw_id: number;
@@ -956,6 +938,38 @@ export interface Onderhoudstaak {
   aangemaakt_op: string;
 }
 
+export interface Testrapport {
+  id: number;
+  naam: string;
+  /** @nullable */
+  fabrikant?: string | null;
+  /** @nullable */
+  norm?: string | null;
+  /** @nullable */
+  rapportnummer?: string | null;
+  /** @nullable */
+  pdf_url?: string | null;
+  gearchiveerd: boolean;
+  aangemaakt_op: string;
+  bijgewerkt_op?: string;
+}
+
+export interface Label {
+  id: number;
+  type_code: string;
+  naam: string;
+  /** @nullable */
+  fabrikant?: string | null;
+  /** @nullable */
+  testnorm?: string | null;
+  /** @nullable */
+  testrapport_id?: number | null;
+  testrapport?: Testrapport | null;
+  gearchiveerd: boolean;
+  aangemaakt_op: string;
+  bijgewerkt_op?: string;
+}
+
 export interface VoorzieningDetail {
   id: number;
   objectnummer: string;
@@ -1013,6 +1027,7 @@ export interface VoorzieningDetail {
   fotos: Foto[];
   inspecties: Inspectie[];
   onderhoud: Onderhoudstaak[];
+  labels?: Label[];
 }
 
 export interface ArchiefUpdate {
@@ -1075,6 +1090,7 @@ export interface VoorzieningInput {
   wrd?: string;
   wand_of_plafond?: string;
   maker_monteur_id?: number;
+  label_ids?: number[];
 }
 
 export interface VoorzieningUpdate {
@@ -1098,6 +1114,7 @@ export interface VoorzieningUpdate {
   wrd?: string;
   wand_of_plafond?: string;
   maker_monteur_id?: number;
+  label_ids?: number[];
 }
 
 export interface StatusUpdate {
@@ -1582,6 +1599,54 @@ export interface AppInstellingenInput {
   extra_disclaimer?: string;
 }
 
+export interface VoorzieningType {
+  code: string;
+  naam: string;
+  categorie: string;
+  volgorde: number;
+  actief: boolean;
+}
+
+export interface TestrapportInput {
+  naam: string;
+  fabrikant?: string;
+  norm?: string;
+  rapportnummer?: string;
+  pdf_url?: string;
+}
+
+export interface TestrapportUpdate {
+  naam?: string;
+  /** @nullable */
+  fabrikant?: string | null;
+  /** @nullable */
+  norm?: string | null;
+  /** @nullable */
+  rapportnummer?: string | null;
+  /** @nullable */
+  pdf_url?: string | null;
+  gearchiveerd?: boolean;
+}
+
+export interface LabelInput {
+  type_code: string;
+  naam: string;
+  fabrikant?: string;
+  testnorm?: string;
+  testrapport_id?: number;
+}
+
+export interface LabelUpdate {
+  naam?: string;
+  /** @nullable */
+  fabrikant?: string | null;
+  /** @nullable */
+  testnorm?: string | null;
+  /** @nullable */
+  testrapport_id?: number | null;
+  gearchiveerd?: boolean;
+}
+
 export type GetRecenteActiviteitParams = {
 limit?: number;
 };
@@ -1617,6 +1682,19 @@ classificatie?: string;
 zoek?: string;
 pagina?: number;
 per_pagina?: number;
+};
+
+export type ListVoorzieningTypesParams = {
+inclusief_inactief?: boolean;
+};
+
+export type ListLabelsParams = {
+type_code?: string;
+inclusief_gearchiveerd?: boolean;
+};
+
+export type ListTestrapportenParams = {
+inclusief_gearchiveerd?: boolean;
 };
 
 export type ListMuisGebeurtenissenParams = {

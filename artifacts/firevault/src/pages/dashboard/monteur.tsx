@@ -1,5 +1,5 @@
 import { Link } from "wouter";
-import { useListOnderhoud, useListInspecties, useListVoorzieningen } from "@workspace/api-client-react";
+import { useListOnderhoud, useListInspecties } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -31,8 +31,15 @@ export default function MonteurDashboard() {
   const { data: onderhoud } = useListOnderhoud();
   const { data: inspecties } = useListInspecties();
 
+  const ONDERHOUD_TYPES = ["periodiek", "jaarlijks", "herstel"];
+
   const mijnOpdrachten = onderhoud?.filter((o: any) => o.status !== "afgerond" && o.status !== "geannuleerd") ?? [];
-  const mijnInspecties = inspecties?.filter((i: any) => i.status !== "goedgekeurd") ?? [];
+  const mijnInspecties = (inspecties?.filter((i: any) => {
+    if (rol === "controleur") {
+      return i.status !== "goedgekeurd" && ONDERHOUD_TYPES.includes(i.type);
+    }
+    return i.status !== "goedgekeurd";
+  }) ?? []);
 
   const isControleur = rol === "controleur";
 
@@ -40,11 +47,11 @@ export default function MonteurDashboard() {
     <div className="space-y-6 max-w-4xl mx-auto">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">
-          {isControleur ? "Controleur overzicht" : "Monteur overzicht"}
+          {isControleur ? "Onderhoudscontroleur overzicht" : "Monteur overzicht"}
         </h1>
         <p className="text-muted-foreground mt-1">
           {isControleur
-            ? "Uw inspectieopdrachten en keuringslijst."
+            ? "Uw periodieke en jaarlijkse controle-inspecties bij onderhoudscontracten."
             : "Uw werkbonnen en onderhoudsopdrachten."}
         </p>
       </div>
@@ -72,12 +79,12 @@ export default function MonteurDashboard() {
       </div>
 
       <div className="grid grid-cols-1 gap-6">
-        {/* Werkbonnen */}
-        {!isControleur && (
-          <Card>
+        {/* Werkbonnen — monteur: eigen werkbonnen; controleur: onderhoudswerkbonnen waarbij betrokken */}
+        <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-3">
               <CardTitle className="text-base flex items-center gap-2">
-                <Wrench className="h-4 w-4" /> Mijn werkbonnen
+                <Wrench className="h-4 w-4" />
+                {isControleur ? "Onderhoudswerkbonnen" : "Mijn werkbonnen"}
               </CardTitle>
               <Button variant="outline" size="sm" asChild>
                 <Link href="/onderhoud">Alle werkbonnen</Link>
@@ -116,14 +123,13 @@ export default function MonteurDashboard() {
               </div>
             </CardContent>
           </Card>
-        )}
 
-        {/* Inspecties */}
+        {/* Inspecties — controleur ziet alleen onderhoudsinspecties (periodiek/jaarlijks/herstel) */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-3">
             <CardTitle className="text-base flex items-center gap-2">
               <ClipboardCheck className="h-4 w-4" />
-              {isControleur ? "Mijn inspectieopdrachten" : "Inspecties"}
+              {isControleur ? "Periodieke controle-inspecties" : "Inspecties"}
             </CardTitle>
             <Button variant="outline" size="sm" asChild>
               <Link href="/inspecties">Alle inspecties</Link>
@@ -141,7 +147,12 @@ export default function MonteurDashboard() {
                   <div className="flex items-center gap-3 p-3 rounded-lg border hover:bg-muted/50 cursor-pointer transition-colors">
                     <Calendar className="h-4 w-4 text-purple-500 flex-shrink-0" />
                     <div className="flex-1 min-w-0">
-                      <div className="text-sm font-medium truncate">{i.type} — {i.voorziening_nummer ?? i.voorziening_id}</div>
+                      <div className="text-sm font-medium truncate">
+              {i.type === "periodiek" ? "Periodieke controle"
+                : i.type === "jaarlijks" ? "Jaarlijkse controle"
+                : i.type === "herstel" ? "Herstel controle"
+                : i.type} — {i.voorziening_nummer ?? i.voorziening_id}
+            </div>
                       <div className="text-xs text-muted-foreground">
                         {i.gebouw_naam ?? "Onbekend gebouw"}
                         {i.datum && ` — ${new Date(i.datum).toLocaleDateString("nl-NL")}`}
@@ -166,11 +177,13 @@ export default function MonteurDashboard() {
             <CardTitle className="text-base">Snelkoppelingen</CardTitle>
           </CardHeader>
           <CardContent className="grid grid-cols-2 gap-3">
-            <Button variant="outline" className="justify-start h-12" asChild>
-              <Link href="/voorzieningen">
-                <Clock className="h-4 w-4 mr-2 text-primary" /> Voorzieningen
-              </Link>
-            </Button>
+            {!isControleur && (
+              <Button variant="outline" className="justify-start h-12" asChild>
+                <Link href="/voorzieningen">
+                  <Clock className="h-4 w-4 mr-2 text-primary" /> Voorzieningen
+                </Link>
+              </Button>
+            )}
             <Button variant="outline" className="justify-start h-12" asChild>
               <Link href="/gebouwen">
                 <Clock className="h-4 w-4 mr-2 text-primary" /> Gebouwen en plattegronden

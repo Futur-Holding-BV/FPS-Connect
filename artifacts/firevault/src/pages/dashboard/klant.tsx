@@ -48,7 +48,6 @@ export default function KlantDashboard() {
         omschrijving: ticket.omschrijving || undefined,
         prioriteit: ticket.prioriteit as any,
         gebouw_id: Number(ticket.gebouw_id),
-        type: ticket.categorie as any,
       },
     });
     await queryClient.invalidateQueries({ queryKey: ["listOnderhoud"] });

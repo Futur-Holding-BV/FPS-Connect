@@ -7,14 +7,13 @@
  */
 import type { VoorzieningClassificatie } from './voorzieningClassificatie';
 import type { VoorzieningStatus } from './voorzieningStatus';
-import type { VoorzieningType } from './voorzieningType';
 
 export interface Voorziening {
   id: number;
   objectnummer: string;
   /** @nullable */
   qr_code?: string | null;
-  type: VoorzieningType;
+  type: string;
   status: VoorzieningStatus;
   classificatie: VoorzieningClassificatie;
   gebouw_id: number;

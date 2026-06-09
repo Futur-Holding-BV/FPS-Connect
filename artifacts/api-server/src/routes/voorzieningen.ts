@@ -14,6 +14,7 @@ import {
 } from "@workspace/db";
 import { eq, and, ilike, sql } from "drizzle-orm";
 import { requireRol } from "../middlewares/auth";
+import { getLabelsVoorVoorziening, syncVoorzieningLabels } from "../lib/classificatie";
 
 const router = Router();
 
@@ -256,7 +257,7 @@ router.post("/voorzieningen", requireRol("monteur", "controleur", "beheerder", "
       verdieping_id, ruimte, locatie_omschrijving, locatie_x, locatie_y,
       materialen, opmerkingen, monteur_id, controleur_id,
       installatie_datum, volgende_inspectie,
-      wbdbo, wrd, wand_of_plafond, maker_monteur_id,
+      wbdbo, wrd, wand_of_plafond, maker_monteur_id, label_ids,
     } = req.body;
 
     if (!type || !gebouw_id) {
@@ -315,6 +316,10 @@ router.post("/voorzieningen", requireRol("monteur", "controleur", "beheerder", "
       return res.status(409).json({ error: "Kon geen uniek spotnummer toekennen" });
     }
 
+    if (Array.isArray(label_ids)) {
+      await syncVoorzieningLabels(v.id, label_ids.map((n: unknown) => Number(n)));
+    }
+
     await db.insert(activiteitenTable).values({
       type: "voorziening_aangemaakt",
       omschrijving: `Voorziening ${nummer} aangemaakt`,
@@ -345,9 +350,11 @@ router.get("/voorzieningen/:id", async (req, res) => {
     const onderhoud = await db.select().from(onderhoudTable).where(eq(onderhoudTable.voorzieningId, id));
 
     const base = await mapVoorziening(v);
+    const labels = await getLabelsVoorVoorziening(id);
 
     res.json({
       ...base,
+      labels,
       fotos: fotos.map((f) => ({
         id: f.id,
         voorziening_id: f.voorzieningId,
@@ -395,7 +402,7 @@ router.patch("/voorzieningen/:id", requireRol("monteur", "controleur", "beheerde
       verdieping_id, ruimte, locatie_omschrijving, locatie_x, locatie_y,
       materialen, opmerkingen, monteur_id, controleur_id,
       installatie_datum, volgende_inspectie,
-      wbdbo, wrd, wand_of_plafond, maker_monteur_id,
+      wbdbo, wrd, wand_of_plafond, maker_monteur_id, label_ids,
     } = req.body;
 
     // Integriteit: een meegestuurde verdieping moet bij het gebouw van deze
@@ -423,6 +430,11 @@ router.patch("/voorzieningen/:id", requireRol("monteur", "controleur", "beheerde
       .returning();
 
     if (!v) return res.status(404).json({ error: "Voorziening niet gevonden" });
+
+    if (Array.isArray(label_ids)) {
+      await syncVoorzieningLabels(v.id, label_ids.map((n: unknown) => Number(n)));
+    }
+
     res.json(await mapVoorziening(v));
   } catch (err) {
     req.log.error(err);

@@ -28,4 +28,5 @@ export interface VoorzieningInput {
   wrd?: string;
   wand_of_plafond?: string;
   maker_monteur_id?: number;
+  label_ids?: number[];
 }

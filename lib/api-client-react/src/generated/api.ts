@@ -76,10 +76,16 @@ import type {
   InspectieInput,
   InspectieUpdate,
   KaartEmbed,
+  Label,
+  LabelInput,
+  LabelUpdate,
   ListGebouwenParams,
   ListInspectiesParams,
+  ListLabelsParams,
   ListMuisGebeurtenissenParams,
   ListOnderhoudParams,
+  ListTestrapportenParams,
+  ListVoorzieningTypesParams,
   ListVoorzieningenParams,
   LoginInput,
   LoginPoging,
@@ -104,6 +110,9 @@ import type {
   TekeningAiAnalyseResultaat,
   TekeningInput,
   TekeningUpdate,
+  Testrapport,
+  TestrapportInput,
+  TestrapportUpdate,
   Toewijzing,
   ToewijzingInput,
   TweeFactorSetup,
@@ -122,6 +131,7 @@ import type {
   VoorzieningInput,
   VoorzieningLijst,
   VoorzieningLocatie,
+  VoorzieningType,
   VoorzieningUpdate,
   WachtwoordWijzigen
 } from './api.schemas';
@@ -3466,6 +3476,540 @@ export const useArchiveerVoorziening = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getArchiveerVoorzieningMutationOptions(options));
+    }
+
+export const getListVoorzieningTypesUrl = (params?: ListVoorzieningTypesParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/voorziening-types?${stringifiedParams}` : `/api/voorziening-types`
+}
+
+/**
+ * @summary Catalogus van applicaties (genummerde voorziening-types)
+ */
+export const listVoorzieningTypes = async (params?: ListVoorzieningTypesParams, options?: RequestInit): Promise<VoorzieningType[]> => {
+
+  return customFetch<VoorzieningType[]>(getListVoorzieningTypesUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListVoorzieningTypesQueryKey = (params?: ListVoorzieningTypesParams,) => {
+    return [
+    `/api/voorziening-types`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListVoorzieningTypesQueryOptions = <TData = Awaited<ReturnType<typeof listVoorzieningTypes>>, TError = ErrorType<unknown>>(params?: ListVoorzieningTypesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listVoorzieningTypes>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListVoorzieningTypesQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listVoorzieningTypes>>> = ({ signal }) => listVoorzieningTypes(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listVoorzieningTypes>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListVoorzieningTypesQueryResult = NonNullable<Awaited<ReturnType<typeof listVoorzieningTypes>>>
+export type ListVoorzieningTypesQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Catalogus van applicaties (genummerde voorziening-types)
+ */
+
+export function useListVoorzieningTypes<TData = Awaited<ReturnType<typeof listVoorzieningTypes>>, TError = ErrorType<unknown>>(
+ params?: ListVoorzieningTypesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listVoorzieningTypes>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListVoorzieningTypesQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getListLabelsUrl = (params?: ListLabelsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/labels?${stringifiedParams}` : `/api/labels`
+}
+
+/**
+ * @summary Toepassingen (labels), optioneel gefilterd op applicatie
+ */
+export const listLabels = async (params?: ListLabelsParams, options?: RequestInit): Promise<Label[]> => {
+
+  return customFetch<Label[]>(getListLabelsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListLabelsQueryKey = (params?: ListLabelsParams,) => {
+    return [
+    `/api/labels`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListLabelsQueryOptions = <TData = Awaited<ReturnType<typeof listLabels>>, TError = ErrorType<unknown>>(params?: ListLabelsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listLabels>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListLabelsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listLabels>>> = ({ signal }) => listLabels(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listLabels>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListLabelsQueryResult = NonNullable<Awaited<ReturnType<typeof listLabels>>>
+export type ListLabelsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Toepassingen (labels), optioneel gefilterd op applicatie
+ */
+
+export function useListLabels<TData = Awaited<ReturnType<typeof listLabels>>, TError = ErrorType<unknown>>(
+ params?: ListLabelsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listLabels>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListLabelsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateLabelUrl = () => {
+
+
+
+
+  return `/api/labels`
+}
+
+/**
+ * @summary Nieuwe toepassing (label) aanmaken (beheerder)
+ */
+export const createLabel = async (labelInput: LabelInput, options?: RequestInit): Promise<Label> => {
+
+  return customFetch<Label>(getCreateLabelUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(labelInput)
+  }
+);}
+
+
+
+
+export const getCreateLabelMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createLabel>>, TError,{data: BodyType<LabelInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createLabel>>, TError,{data: BodyType<LabelInput>}, TContext> => {
+
+const mutationKey = ['createLabel'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createLabel>>, {data: BodyType<LabelInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createLabel(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateLabelMutationResult = NonNullable<Awaited<ReturnType<typeof createLabel>>>
+    export type CreateLabelMutationBody = BodyType<LabelInput>
+    export type CreateLabelMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Nieuwe toepassing (label) aanmaken (beheerder)
+ */
+export const useCreateLabel = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createLabel>>, TError,{data: BodyType<LabelInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createLabel>>,
+        TError,
+        {data: BodyType<LabelInput>},
+        TContext
+      > => {
+      return useMutation(getCreateLabelMutationOptions(options));
+    }
+
+export const getUpdateLabelUrl = (id: number,) => {
+
+
+
+
+  return `/api/labels/${id}`
+}
+
+/**
+ * @summary Toepassing bijwerken of archiveren (beheerder)
+ */
+export const updateLabel = async (id: number,
+    labelUpdate: LabelUpdate, options?: RequestInit): Promise<Label> => {
+
+  return customFetch<Label>(getUpdateLabelUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(labelUpdate)
+  }
+);}
+
+
+
+
+export const getUpdateLabelMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateLabel>>, TError,{id: number;data: BodyType<LabelUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateLabel>>, TError,{id: number;data: BodyType<LabelUpdate>}, TContext> => {
+
+const mutationKey = ['updateLabel'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateLabel>>, {id: number;data: BodyType<LabelUpdate>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateLabel(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateLabelMutationResult = NonNullable<Awaited<ReturnType<typeof updateLabel>>>
+    export type UpdateLabelMutationBody = BodyType<LabelUpdate>
+    export type UpdateLabelMutationError = ErrorType<void>
+
+    /**
+ * @summary Toepassing bijwerken of archiveren (beheerder)
+ */
+export const useUpdateLabel = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateLabel>>, TError,{id: number;data: BodyType<LabelUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateLabel>>,
+        TError,
+        {id: number;data: BodyType<LabelUpdate>},
+        TContext
+      > => {
+      return useMutation(getUpdateLabelMutationOptions(options));
+    }
+
+export const getListTestrapportenUrl = (params?: ListTestrapportenParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/testrapporten?${stringifiedParams}` : `/api/testrapporten`
+}
+
+/**
+ * @summary Testrapporten-bibliotheek
+ */
+export const listTestrapporten = async (params?: ListTestrapportenParams, options?: RequestInit): Promise<Testrapport[]> => {
+
+  return customFetch<Testrapport[]>(getListTestrapportenUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListTestrapportenQueryKey = (params?: ListTestrapportenParams,) => {
+    return [
+    `/api/testrapporten`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListTestrapportenQueryOptions = <TData = Awaited<ReturnType<typeof listTestrapporten>>, TError = ErrorType<unknown>>(params?: ListTestrapportenParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listTestrapporten>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListTestrapportenQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listTestrapporten>>> = ({ signal }) => listTestrapporten(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listTestrapporten>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListTestrapportenQueryResult = NonNullable<Awaited<ReturnType<typeof listTestrapporten>>>
+export type ListTestrapportenQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Testrapporten-bibliotheek
+ */
+
+export function useListTestrapporten<TData = Awaited<ReturnType<typeof listTestrapporten>>, TError = ErrorType<unknown>>(
+ params?: ListTestrapportenParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listTestrapporten>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListTestrapportenQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateTestrapportUrl = () => {
+
+
+
+
+  return `/api/testrapporten`
+}
+
+/**
+ * @summary Testrapport toevoegen aan bibliotheek (beheerder)
+ */
+export const createTestrapport = async (testrapportInput: TestrapportInput, options?: RequestInit): Promise<Testrapport> => {
+
+  return customFetch<Testrapport>(getCreateTestrapportUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(testrapportInput)
+  }
+);}
+
+
+
+
+export const getCreateTestrapportMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createTestrapport>>, TError,{data: BodyType<TestrapportInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createTestrapport>>, TError,{data: BodyType<TestrapportInput>}, TContext> => {
+
+const mutationKey = ['createTestrapport'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createTestrapport>>, {data: BodyType<TestrapportInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createTestrapport(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateTestrapportMutationResult = NonNullable<Awaited<ReturnType<typeof createTestrapport>>>
+    export type CreateTestrapportMutationBody = BodyType<TestrapportInput>
+    export type CreateTestrapportMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Testrapport toevoegen aan bibliotheek (beheerder)
+ */
+export const useCreateTestrapport = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createTestrapport>>, TError,{data: BodyType<TestrapportInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createTestrapport>>,
+        TError,
+        {data: BodyType<TestrapportInput>},
+        TContext
+      > => {
+      return useMutation(getCreateTestrapportMutationOptions(options));
+    }
+
+export const getUpdateTestrapportUrl = (id: number,) => {
+
+
+
+
+  return `/api/testrapporten/${id}`
+}
+
+/**
+ * @summary Testrapport bijwerken of archiveren (beheerder)
+ */
+export const updateTestrapport = async (id: number,
+    testrapportUpdate: TestrapportUpdate, options?: RequestInit): Promise<Testrapport> => {
+
+  return customFetch<Testrapport>(getUpdateTestrapportUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(testrapportUpdate)
+  }
+);}
+
+
+
+
+export const getUpdateTestrapportMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateTestrapport>>, TError,{id: number;data: BodyType<TestrapportUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateTestrapport>>, TError,{id: number;data: BodyType<TestrapportUpdate>}, TContext> => {
+
+const mutationKey = ['updateTestrapport'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateTestrapport>>, {id: number;data: BodyType<TestrapportUpdate>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateTestrapport(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateTestrapportMutationResult = NonNullable<Awaited<ReturnType<typeof updateTestrapport>>>
+    export type UpdateTestrapportMutationBody = BodyType<TestrapportUpdate>
+    export type UpdateTestrapportMutationError = ErrorType<void>
+
+    /**
+ * @summary Testrapport bijwerken of archiveren (beheerder)
+ */
+export const useUpdateTestrapport = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateTestrapport>>, TError,{id: number;data: BodyType<TestrapportUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateTestrapport>>,
+        TError,
+        {id: number;data: BodyType<TestrapportUpdate>},
+        TContext
+      > => {
+      return useMutation(getUpdateTestrapportMutationOptions(options));
     }
 
 export const getListVoorzieningenOpVerdiepingUrl = (id: number,) => {

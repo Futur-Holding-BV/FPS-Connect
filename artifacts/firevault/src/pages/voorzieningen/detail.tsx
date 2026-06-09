@@ -1,15 +1,18 @@
 import { useState } from "react";
 import { useParams, Link } from "wouter";
 import { useGetVoorziening, getGetVoorzieningQueryKey } from "@workspace/api-client-react";
+import type { Label } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Building, Calendar, User, Package, MapPin, QrCode, CheckCircle, AlertCircle, Clock, Pencil } from "lucide-react";
+import { ArrowLeft, Building, Calendar, User, Package, MapPin, QrCode, CheckCircle, AlertCircle, Clock, Pencil, Tag } from "lucide-react";
 import { useAuth } from "@/context/auth-context";
 import { VoorzieningStatusDialog } from "./voorziening-status-dialog";
 import { VoorzieningBewerkenDialog } from "./voorziening-bewerken-dialog";
 
-const BEWERK_ROLLEN = ["monteur", "controleur", "beheerder", "hoofdbeheerder"];
+// Controleur valt buiten de normale project-/opleverworkflow; alleen monteur en beheerder
+// mogen spots bewerken. Controleur krijgt inzagerechten via TOEGEWEZEN_ROLLEN op de server.
+const BEWERK_ROLLEN = ["monteur", "beheerder", "hoofdbeheerder"];
 
 const statusKleur: Record<string, string> = {
   concept: "bg-gray-100 text-gray-700 border-gray-200",
@@ -162,6 +165,42 @@ export default function VoorzieningDetail() {
             </CardContent>
           </Card>
 
+          {/* Toepassingen */}
+          {Array.isArray((voorziening as any).labels) && (voorziening as any).labels.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Tag className="h-4 w-4" /> Toepassingen
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-wrap gap-2">
+                  {((voorziening as any).labels as Label[]).map((l) => (
+                    <div
+                      key={l.id}
+                      className="border rounded-md px-3 py-1.5 text-sm bg-muted/30"
+                    >
+                      <span className="font-medium">{l.naam}</span>
+                      {l.fabrikant && (
+                        <span className="text-muted-foreground ml-2 text-xs">
+                          {l.fabrikant}
+                        </span>
+                      )}
+                      {l.testnorm && (
+                        <Badge
+                          variant="outline"
+                          className="ml-2 text-[10px] px-1 py-0"
+                        >
+                          {l.testnorm}
+                        </Badge>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Inspecties */}
           {Array.isArray((voorziening as any).inspecties) && (voorziening as any).inspecties.length > 0 && (
             <Card>
@@ -224,7 +263,7 @@ export default function VoorzieningDetail() {
                 <div className="font-medium">{voorziening.monteur_naam ?? "—"}</div>
               </div>
               <div>
-                <div className="text-muted-foreground">Controleur</div>
+                <div className="text-muted-foreground">Onderhoudscontroleur</div>
                 <div className="font-medium">{voorziening.controleur_naam ?? "—"}</div>
               </div>
             </CardContent>

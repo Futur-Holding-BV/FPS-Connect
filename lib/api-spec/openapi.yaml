@@ -1032,6 +1032,158 @@ paths:
         "404":
           description: Niet gevonden
 
+  /voorziening-types:
+    get:
+      operationId: listVoorzieningTypes
+      tags: [classificatie]
+      summary: Catalogus van applicaties (genummerde voorziening-types)
+      parameters:
+        - in: query
+          name: inclusief_inactief
+          schema:
+            type: boolean
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/VoorzieningType"
+
+  /labels:
+    get:
+      operationId: listLabels
+      tags: [classificatie]
+      summary: Toepassingen (labels), optioneel gefilterd op applicatie
+      parameters:
+        - in: query
+          name: type_code
+          schema:
+            type: string
+        - in: query
+          name: inclusief_gearchiveerd
+          schema:
+            type: boolean
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Label"
+    post:
+      operationId: createLabel
+      tags: [classificatie]
+      summary: Nieuwe toepassing (label) aanmaken (beheerder)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LabelInput"
+      responses:
+        "201":
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Label"
+
+  /labels/{id}:
+    patch:
+      operationId: updateLabel
+      tags: [classificatie]
+      summary: Toepassing bijwerken of archiveren (beheerder)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LabelUpdate"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Label"
+        "404":
+          description: Niet gevonden
+
+  /testrapporten:
+    get:
+      operationId: listTestrapporten
+      tags: [classificatie]
+      summary: Testrapporten-bibliotheek
+      parameters:
+        - in: query
+          name: inclusief_gearchiveerd
+          schema:
+            type: boolean
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Testrapport"
+    post:
+      operationId: createTestrapport
+      tags: [classificatie]
+      summary: Testrapport toevoegen aan bibliotheek (beheerder)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TestrapportInput"
+      responses:
+        "201":
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Testrapport"
+
+  /testrapporten/{id}:
+    patch:
+      operationId: updateTestrapport
+      tags: [classificatie]
+      summary: Testrapport bijwerken of archiveren (beheerder)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TestrapportUpdate"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Testrapport"
+        "404":
+          description: Niet gevonden
+
   /verdiepingen/{id}/voorzieningen:
     get:
       operationId: listVoorzieningenOpVerdieping
@@ -3838,19 +3990,6 @@ components:
           type: ["string", "null"]
         type:
           type: string
-          enum:
-            - applicatie
-            - branddeur
-            - brandscheiding
-            - doorvoering
-            - brandklep
-            - brandwerend_glas
-            - luik
-            - rooster
-            - kitvoeg
-            - manchet
-            - coating
-            - plaatconstructie
         status:
           type: string
           enum:
@@ -4003,6 +4142,10 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/Onderhoudstaak"
+        labels:
+          type: array
+          items:
+            $ref: "#/components/schemas/Label"
 
     ArchiefUpdate:
       type: object
@@ -4109,6 +4252,10 @@ components:
           type: string
         maker_monteur_id:
           type: integer
+        label_ids:
+          type: array
+          items:
+            type: integer
 
     VoorzieningUpdate:
       type: object
@@ -4153,6 +4300,10 @@ components:
           type: string
         maker_monteur_id:
           type: integer
+        label_ids:
+          type: array
+          items:
+            type: integer
 
     StatusUpdate:
       type: object
@@ -4892,3 +5043,129 @@ components:
           type: string
         extra_disclaimer:
           type: string
+
+    # ── APPLICATIES, TOEPASSINGEN & TESTRAPPORTEN ────────────────────────
+    VoorzieningType:
+      type: object
+      required: [code, naam, categorie, volgorde, actief]
+      properties:
+        code:
+          type: string
+        naam:
+          type: string
+        categorie:
+          type: string
+        volgorde:
+          type: integer
+        actief:
+          type: boolean
+
+    Testrapport:
+      type: object
+      required: [id, naam, gearchiveerd, aangemaakt_op]
+      properties:
+        id:
+          type: integer
+        naam:
+          type: string
+        fabrikant:
+          type: ["string", "null"]
+        norm:
+          type: ["string", "null"]
+        rapportnummer:
+          type: ["string", "null"]
+        pdf_url:
+          type: ["string", "null"]
+        gearchiveerd:
+          type: boolean
+        aangemaakt_op:
+          type: string
+        bijgewerkt_op:
+          type: string
+
+    TestrapportInput:
+      type: object
+      required: [naam]
+      properties:
+        naam:
+          type: string
+        fabrikant:
+          type: string
+        norm:
+          type: string
+        rapportnummer:
+          type: string
+        pdf_url:
+          type: string
+
+    TestrapportUpdate:
+      type: object
+      properties:
+        naam:
+          type: string
+        fabrikant:
+          type: ["string", "null"]
+        norm:
+          type: ["string", "null"]
+        rapportnummer:
+          type: ["string", "null"]
+        pdf_url:
+          type: ["string", "null"]
+        gearchiveerd:
+          type: boolean
+
+    Label:
+      type: object
+      required: [id, type_code, naam, gearchiveerd, aangemaakt_op]
+      properties:
+        id:
+          type: integer
+        type_code:
+          type: string
+        naam:
+          type: string
+        fabrikant:
+          type: ["string", "null"]
+        testnorm:
+          type: ["string", "null"]
+        testrapport_id:
+          type: ["integer", "null"]
+        testrapport:
+          oneOf:
+            - $ref: "#/components/schemas/Testrapport"
+            - type: "null"
+        gearchiveerd:
+          type: boolean
+        aangemaakt_op:
+          type: string
+        bijgewerkt_op:
+          type: string
+
+    LabelInput:
+      type: object
+      required: [type_code, naam]
+      properties:
+        type_code:
+          type: string
+        naam:
+          type: string
+        fabrikant:
+          type: string
+        testnorm:
+          type: string
+        testrapport_id:
+          type: integer
+
+    LabelUpdate:
+      type: object
+      properties:
+        naam:
+          type: string
+        fabrikant:
+          type: ["string", "null"]
+        testnorm:
+          type: ["string", "null"]
+        testrapport_id:
+          type: ["integer", "null"]
+        gearchiveerd:
+          type: boolean

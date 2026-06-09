@@ -35,8 +35,9 @@ import { useRol } from "@/context/rol-context";
 
 const BEHEERDER_ROLLEN = ["beheerder", "hoofdbeheerder"];
 // Rollen die de plattegrond mogen bewerken (spots plaatsen/verplaatsen, status,
-// foto's, scheidingen). Klant/viewer mogen uitsluitend inzien.
-const BEWERKER_ROLLEN = ["monteur", "controleur", "beheerder", "hoofdbeheerder"];
+// foto's, scheidingen). Klant en controleur mogen uitsluitend inzien —
+// controleur is alleen actief bij onderhoudscontracten, niet in de projectfase.
+const BEWERKER_ROLLEN = ["monteur", "beheerder", "hoofdbeheerder"];
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 

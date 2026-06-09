@@ -20,8 +20,8 @@ const ROUTES_MONTEUR = [
 
 const ROUTES_CONTROLEUR = [
   { href: "/", labelKey: "nav.mijnInspecties", icoon: Home },
+  { href: "/onderhoud", labelKey: "nav.werkbonnen", icoon: Wrench },
   { href: "/inspecties", labelKey: "nav.inspecties", icoon: Search },
-  { href: "/voorzieningen", labelKey: "nav.voorzieningen", icoon: ShieldCheck },
   { href: "/gebouwen", labelKey: "nav.gebouwenPlattegronden", icoon: Map },
   { href: "/info", labelKey: "nav.info", icoon: Info },
 ];

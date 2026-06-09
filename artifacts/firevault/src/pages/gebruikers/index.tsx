@@ -83,7 +83,7 @@ const ROL_CONFIG: Record<Rol, {
     kleur: "text-purple-600",
     badge: "bg-purple-100 text-purple-800 border-purple-200",
     rand: "border-t-purple-500",
-    beschrijving: "Inspectie & controle",
+    beschrijving: "Periodieke controles bij onderhoudscontracten",
   },
   klant: {
     label: "Klanten",

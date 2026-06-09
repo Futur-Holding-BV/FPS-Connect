@@ -6,10 +6,6 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface VoorzieningType {
-  code: string;
-  naam: string;
-  categorie: string;
-  volgorde: number;
-  actief: boolean;
-}
+export type ListTestrapportenParams = {
+inclusief_gearchiveerd?: boolean;
+};

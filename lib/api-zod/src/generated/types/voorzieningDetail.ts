@@ -7,6 +7,7 @@
  */
 import type { Foto } from './foto';
 import type { Inspectie } from './inspectie';
+import type { Label } from './label';
 import type { Onderhoudstaak } from './onderhoudstaak';
 
 export interface VoorzieningDetail {
@@ -66,4 +67,5 @@ export interface VoorzieningDetail {
   fotos: Foto[];
   inspecties: Inspectie[];
   onderhoud: Onderhoudstaak[];
+  labels?: Label[];
 }

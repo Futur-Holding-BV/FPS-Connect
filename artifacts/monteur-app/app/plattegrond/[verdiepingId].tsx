@@ -7,6 +7,8 @@ import {
   useListVoorzieningenOpVerdieping,
   useArchiveerVoorziening,
 } from "@workspace/api-client-react";
+import { ApplicatieKiezer } from "@/components/ApplicatieKiezer";
+import { ToepassingKiezer } from "@/components/ToepassingKiezer";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
 import React, { useState } from "react";
@@ -36,7 +38,6 @@ import { PdfPlattegrond, type PlattegrondSpot } from "@/components/PdfPlattegron
 import {
   CLASSIFICATIE_OPTIES,
   STATUS_VOLGORDE,
-  TYPE_VOLGORDE,
   WAND_PLAFOND_OPTIES,
   WBDBO_OPTIES,
   WRD_OPTIES,
@@ -47,12 +48,13 @@ import {
 import { useColors } from "@/hooks/useColors";
 import { useAuth } from "@/context/auth";
 import { useSync } from "@/context/sync";
+import { FabrikantSectie } from "@/components/FabrikantSectie";
 import { SyncStatusBadge } from "@/components/SyncStatusBadge";
 import { uploadFoto } from "@/lib/upload";
 
 const LEEG = {
   objectnummer: "",
-  type: "branddeur",
+  type: "",
   status: "in_uitvoering",
   classificatie: "60",
   wbdbo: "60",
@@ -90,6 +92,7 @@ export default function Plattegrond() {
   const [formOpen, setFormOpen] = useState(false);
   const [locatie, setLocatie] = useState({ x: 0, y: 0 });
   const [form, setForm] = useState({ ...LEEG });
+  const [labelIds, setLabelIds] = useState<number[]>([]);
   const [voorFotos, setVoorFotos] = useState<string[]>([]);
   const [naFotos, setNaFotos] = useState<string[]>([]);
   const [fotoBezig, setFotoBezig] = useState(false);
@@ -111,6 +114,7 @@ export default function Plattegrond() {
   function opTap(x: number, y: number) {
     setLocatie({ x, y });
     setForm({ ...LEEG, objectnummer: volgendSpot?.spotnummer ?? "" });
+    setLabelIds([]);
     setVoorFotos([]);
     setNaFotos([]);
     setFormOpen(true);
@@ -153,7 +157,7 @@ export default function Plattegrond() {
       const aangemaakt = await maakVoorziening.mutateAsync({
         data: {
           objectnummer: form.objectnummer.trim() || undefined,
-          type: form.type,
+          type: form.type || "overig",
           status: form.status,
           classificatie: form.classificatie,
           gebouw_id: gId,
@@ -168,6 +172,7 @@ export default function Plattegrond() {
           installatie_datum: new Date().toISOString().slice(0, 10),
           maker_monteur_id: gebruiker?.id,
           monteur_id: gebruiker?.id,
+          label_ids: labelIds.length > 0 ? labelIds : undefined,
         },
       });
       const nieuwId = (aangemaakt as { id?: number })?.id;
@@ -325,17 +330,26 @@ export default function Plattegrond() {
             />
 
             <View style={{ gap: 8 }}>
-              <SectieLabel>Type voorziening</SectieLabel>
-              <ChipRij
-                opties={TYPE_VOLGORDE.map((t) => ({
-                  waarde: t,
-                  label: typeInfo(t).label,
-                  kleur: typeInfo(t).kleur,
-                }))}
-                geselecteerd={form.type}
-                onKies={(v) => setForm((f) => ({ ...f, type: v }))}
+              <SectieLabel>Applicatie (type)</SectieLabel>
+              <ApplicatieKiezer
+                waarde={form.type}
+                onKies={(code) => {
+                  setForm((f) => ({ ...f, type: code }));
+                  setLabelIds([]);
+                }}
               />
             </View>
+
+            {form.type !== "" && (
+              <View style={{ gap: 8 }}>
+                <SectieLabel>Toepassing (optioneel)</SectieLabel>
+                <ToepassingKiezer
+                  typeCode={form.type}
+                  geselecteerdeIds={labelIds}
+                  onWijzig={setLabelIds}
+                />
+              </View>
+            )}
 
             <View style={{ gap: 8 }}>
               <SectieLabel>Status</SectieLabel>
@@ -404,6 +418,11 @@ export default function Plattegrond() {
               multiline
               style={{ minHeight: 70, textAlignVertical: "top" }}
             />
+
+            <View style={{ gap: 8 }}>
+              <SectieLabel>Fabrikant- en systeeminformatie (optioneel)</SectieLabel>
+              <FabrikantSectie />
+            </View>
 
             <FotoSectie
               titel="Foto's vóór"

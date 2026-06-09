@@ -6,10 +6,10 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface VoorzieningType {
-  code: string;
+export interface LabelInput {
+  type_code: string;
   naam: string;
-  categorie: string;
-  volgorde: number;
-  actief: boolean;
+  fabrikant?: string;
+  testnorm?: string;
+  testrapport_id?: number;
 }

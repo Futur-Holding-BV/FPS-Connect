@@ -96,6 +96,12 @@ router.get("/inspecties", async (req, res) => {
       );
     }
 
+    // Controleur mag uitsluitend onderhoudsinspecties zien — oplevering en
+    // projectinspecties vallen buiten hun workflow.
+    if ((await echteRol(userId)) === "controleur") {
+      all = all.filter((i) => CONTROLEUR_INSPECTIE_TYPES.includes(i.type));
+    }
+
     if (gebouw_id) all = all.filter((i) => i.gebouwId === parseInt(gebouw_id as string));
     if (voorziening_id) all = all.filter((i) => i.voorzieningId === parseInt(voorziening_id as string));
     if (type) all = all.filter((i) => i.type === type);
@@ -110,11 +116,22 @@ router.get("/inspecties", async (req, res) => {
 });
 
 // POST /inspecties
+// Controleur mag alleen onderhoudsinspecties aanmaken (periodiek/jaarlijks/herstel).
+// Oplevering en projectinspecties zijn voorbehouden aan monteur en beheerder.
+const CONTROLEUR_INSPECTIE_TYPES = ["periodiek", "jaarlijks", "herstel"];
+
 router.post("/inspecties", requireRol("monteur", "controleur", "beheerder", "hoofdbeheerder"), async (req, res) => {
   try {
     const { type, gebouw_id, voorziening_id, inspecteur_id, geplande_datum, bevindingen } = req.body;
     if (!type || !gebouw_id) {
       return res.status(400).json({ error: "type en gebouw_id zijn verplicht" });
+    }
+    // Controleur mag uitsluitend onderhoudsinspecties registreren
+    const rolAanvrager = await echteRol(req.session.userId!);
+    if (rolAanvrager === "controleur" && !CONTROLEUR_INSPECTIE_TYPES.includes(type)) {
+      return res.status(403).json({
+        error: "Controleurs mogen alleen periodieke, jaarlijkse of herstel-inspecties aanmaken.",
+      });
     }
     if (!(await magBijGebouw(req.session.userId!, gebouw_id))) {
       return res.status(403).json({ error: "Geen toegang tot dit gebouw" });

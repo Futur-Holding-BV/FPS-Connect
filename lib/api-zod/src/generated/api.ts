@@ -818,7 +818,7 @@ export const ListVoorzieningenResponse = zod.object({
   "id": zod.number(),
   "objectnummer": zod.string(),
   "qr_code": zod.string().nullish(),
-  "type": zod.enum(['applicatie', 'branddeur', 'brandscheiding', 'doorvoering', 'brandklep', 'brandwerend_glas', 'luik', 'rooster', 'kitvoeg', 'manchet', 'coating', 'plaatconstructie']),
+  "type": zod.string(),
   "status": zod.enum(['concept', 'in_uitvoering', 'opgeleverd', 'goedgekeurd', 'afgekeurd', 'in_onderhoud', 'vervallen']),
   "classificatie": zod.enum(['30', '60', '90', '120']),
   "gebouw_id": zod.number(),
@@ -877,7 +877,8 @@ export const CreateVoorzieningBody = zod.object({
   "wbdbo": zod.string().optional(),
   "wrd": zod.string().optional(),
   "wand_of_plafond": zod.string().optional(),
-  "maker_monteur_id": zod.number().optional()
+  "maker_monteur_id": zod.number().optional(),
+  "label_ids": zod.array(zod.number()).optional()
 })
 
 export const CreateVoorzieningResponse = zod.void()
@@ -962,7 +963,29 @@ export const GetVoorzieningResponse = zod.object({
   "voltooid_datum": zod.string().nullish(),
   "resultaat": zod.string().nullish(),
   "aangemaakt_op": zod.string()
-}))
+})),
+  "labels": zod.array(zod.object({
+  "id": zod.number(),
+  "type_code": zod.string(),
+  "naam": zod.string(),
+  "fabrikant": zod.string().nullish(),
+  "testnorm": zod.string().nullish(),
+  "testrapport_id": zod.number().nullish(),
+  "testrapport": zod.union([zod.object({
+  "id": zod.number(),
+  "naam": zod.string(),
+  "fabrikant": zod.string().nullish(),
+  "norm": zod.string().nullish(),
+  "rapportnummer": zod.string().nullish(),
+  "pdf_url": zod.string().nullish(),
+  "gearchiveerd": zod.boolean(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string().optional()
+}),zod.null()]).optional(),
+  "gearchiveerd": zod.boolean(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string().optional()
+})).optional()
 })
 
 
@@ -993,14 +1016,15 @@ export const UpdateVoorzieningBody = zod.object({
   "wbdbo": zod.string().optional(),
   "wrd": zod.string().optional(),
   "wand_of_plafond": zod.string().optional(),
-  "maker_monteur_id": zod.number().optional()
+  "maker_monteur_id": zod.number().optional(),
+  "label_ids": zod.array(zod.number()).optional()
 })
 
 export const UpdateVoorzieningResponse = zod.object({
   "id": zod.number(),
   "objectnummer": zod.string(),
   "qr_code": zod.string().nullish(),
-  "type": zod.enum(['applicatie', 'branddeur', 'brandscheiding', 'doorvoering', 'brandklep', 'brandwerend_glas', 'luik', 'rooster', 'kitvoeg', 'manchet', 'coating', 'plaatconstructie']),
+  "type": zod.string(),
   "status": zod.enum(['concept', 'in_uitvoering', 'opgeleverd', 'goedgekeurd', 'afgekeurd', 'in_onderhoud', 'vervallen']),
   "classificatie": zod.enum(['30', '60', '90', '120']),
   "gebouw_id": zod.number(),
@@ -1102,7 +1126,7 @@ export const UpdateVoorzieningStatusResponse = zod.object({
   "id": zod.number(),
   "objectnummer": zod.string(),
   "qr_code": zod.string().nullish(),
-  "type": zod.enum(['applicatie', 'branddeur', 'brandscheiding', 'doorvoering', 'brandklep', 'brandwerend_glas', 'luik', 'rooster', 'kitvoeg', 'manchet', 'coating', 'plaatconstructie']),
+  "type": zod.string(),
   "status": zod.enum(['concept', 'in_uitvoering', 'opgeleverd', 'goedgekeurd', 'afgekeurd', 'in_onderhoud', 'vervallen']),
   "classificatie": zod.enum(['30', '60', '90', '120']),
   "gebouw_id": zod.number(),
@@ -1148,7 +1172,7 @@ export const ArchiveerVoorzieningResponse = zod.object({
   "id": zod.number(),
   "objectnummer": zod.string(),
   "qr_code": zod.string().nullish(),
-  "type": zod.enum(['applicatie', 'branddeur', 'brandscheiding', 'doorvoering', 'brandklep', 'brandwerend_glas', 'luik', 'rooster', 'kitvoeg', 'manchet', 'coating', 'plaatconstructie']),
+  "type": zod.string(),
   "status": zod.enum(['concept', 'in_uitvoering', 'opgeleverd', 'goedgekeurd', 'afgekeurd', 'in_onderhoud', 'vervallen']),
   "classificatie": zod.enum(['30', '60', '90', '120']),
   "gebouw_id": zod.number(),
@@ -1174,6 +1198,173 @@ export const ArchiveerVoorzieningResponse = zod.object({
   "maker_monteur_naam": zod.string().nullish(),
   "gearchiveerd": zod.boolean().optional(),
   "gearchiveerd_op": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string().optional()
+})
+
+
+/**
+ * @summary Catalogus van applicaties (genummerde voorziening-types)
+ */
+export const ListVoorzieningTypesQueryParams = zod.object({
+  "inclusief_inactief": zod.coerce.boolean().optional()
+})
+
+export const ListVoorzieningTypesResponseItem = zod.object({
+  "code": zod.string(),
+  "naam": zod.string(),
+  "categorie": zod.string(),
+  "volgorde": zod.number(),
+  "actief": zod.boolean()
+})
+export const ListVoorzieningTypesResponse = zod.array(ListVoorzieningTypesResponseItem)
+
+
+/**
+ * @summary Toepassingen (labels), optioneel gefilterd op applicatie
+ */
+export const ListLabelsQueryParams = zod.object({
+  "type_code": zod.coerce.string().optional(),
+  "inclusief_gearchiveerd": zod.coerce.boolean().optional()
+})
+
+export const ListLabelsResponseItem = zod.object({
+  "id": zod.number(),
+  "type_code": zod.string(),
+  "naam": zod.string(),
+  "fabrikant": zod.string().nullish(),
+  "testnorm": zod.string().nullish(),
+  "testrapport_id": zod.number().nullish(),
+  "testrapport": zod.union([zod.object({
+  "id": zod.number(),
+  "naam": zod.string(),
+  "fabrikant": zod.string().nullish(),
+  "norm": zod.string().nullish(),
+  "rapportnummer": zod.string().nullish(),
+  "pdf_url": zod.string().nullish(),
+  "gearchiveerd": zod.boolean(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string().optional()
+}),zod.null()]).optional(),
+  "gearchiveerd": zod.boolean(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string().optional()
+})
+export const ListLabelsResponse = zod.array(ListLabelsResponseItem)
+
+
+/**
+ * @summary Nieuwe toepassing (label) aanmaken (beheerder)
+ */
+export const CreateLabelBody = zod.object({
+  "type_code": zod.string(),
+  "naam": zod.string(),
+  "fabrikant": zod.string().optional(),
+  "testnorm": zod.string().optional(),
+  "testrapport_id": zod.number().optional()
+})
+
+export const CreateLabelResponse = zod.void()
+
+
+/**
+ * @summary Toepassing bijwerken of archiveren (beheerder)
+ */
+export const UpdateLabelParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateLabelBody = zod.object({
+  "naam": zod.string().optional(),
+  "fabrikant": zod.string().nullish(),
+  "testnorm": zod.string().nullish(),
+  "testrapport_id": zod.number().nullish(),
+  "gearchiveerd": zod.boolean().optional()
+})
+
+export const UpdateLabelResponse = zod.object({
+  "id": zod.number(),
+  "type_code": zod.string(),
+  "naam": zod.string(),
+  "fabrikant": zod.string().nullish(),
+  "testnorm": zod.string().nullish(),
+  "testrapport_id": zod.number().nullish(),
+  "testrapport": zod.union([zod.object({
+  "id": zod.number(),
+  "naam": zod.string(),
+  "fabrikant": zod.string().nullish(),
+  "norm": zod.string().nullish(),
+  "rapportnummer": zod.string().nullish(),
+  "pdf_url": zod.string().nullish(),
+  "gearchiveerd": zod.boolean(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string().optional()
+}),zod.null()]).optional(),
+  "gearchiveerd": zod.boolean(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string().optional()
+})
+
+
+/**
+ * @summary Testrapporten-bibliotheek
+ */
+export const ListTestrapportenQueryParams = zod.object({
+  "inclusief_gearchiveerd": zod.coerce.boolean().optional()
+})
+
+export const ListTestrapportenResponseItem = zod.object({
+  "id": zod.number(),
+  "naam": zod.string(),
+  "fabrikant": zod.string().nullish(),
+  "norm": zod.string().nullish(),
+  "rapportnummer": zod.string().nullish(),
+  "pdf_url": zod.string().nullish(),
+  "gearchiveerd": zod.boolean(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string().optional()
+})
+export const ListTestrapportenResponse = zod.array(ListTestrapportenResponseItem)
+
+
+/**
+ * @summary Testrapport toevoegen aan bibliotheek (beheerder)
+ */
+export const CreateTestrapportBody = zod.object({
+  "naam": zod.string(),
+  "fabrikant": zod.string().optional(),
+  "norm": zod.string().optional(),
+  "rapportnummer": zod.string().optional(),
+  "pdf_url": zod.string().optional()
+})
+
+export const CreateTestrapportResponse = zod.void()
+
+
+/**
+ * @summary Testrapport bijwerken of archiveren (beheerder)
+ */
+export const UpdateTestrapportParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateTestrapportBody = zod.object({
+  "naam": zod.string().optional(),
+  "fabrikant": zod.string().nullish(),
+  "norm": zod.string().nullish(),
+  "rapportnummer": zod.string().nullish(),
+  "pdf_url": zod.string().nullish(),
+  "gearchiveerd": zod.boolean().optional()
+})
+
+export const UpdateTestrapportResponse = zod.object({
+  "id": zod.number(),
+  "naam": zod.string(),
+  "fabrikant": zod.string().nullish(),
+  "norm": zod.string().nullish(),
+  "rapportnummer": zod.string().nullish(),
+  "pdf_url": zod.string().nullish(),
+  "gearchiveerd": zod.boolean(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string().optional()
 })
@@ -1530,7 +1721,7 @@ export const GetInspectieResponse = zod.object({
   "id": zod.number(),
   "objectnummer": zod.string(),
   "qr_code": zod.string().nullish(),
-  "type": zod.enum(['applicatie', 'branddeur', 'brandscheiding', 'doorvoering', 'brandklep', 'brandwerend_glas', 'luik', 'rooster', 'kitvoeg', 'manchet', 'coating', 'plaatconstructie']),
+  "type": zod.string(),
   "status": zod.enum(['concept', 'in_uitvoering', 'opgeleverd', 'goedgekeurd', 'afgekeurd', 'in_onderhoud', 'vervallen']),
   "classificatie": zod.enum(['30', '60', '90', '120']),
   "gebouw_id": zod.number(),

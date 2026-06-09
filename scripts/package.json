@@ -6,7 +6,11 @@
   "scripts": {
     "hello": "tsx ./src/hello.ts",
     "security-scan": "tsx ./src/security-scan.ts",
+    "seed-applicaties": "tsx ./src/seed-applicaties.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@workspace/db": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "catalog:",

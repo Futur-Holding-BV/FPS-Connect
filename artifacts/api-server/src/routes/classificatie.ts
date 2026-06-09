@@ -1,0 +1,168 @@
+import { Router } from "express";
+import { db, voorzieningTypesTable, labelsTable, testrapportenTable } from "@workspace/db";
+import { eq, asc } from "drizzle-orm";
+import { requireRol } from "../middlewares/auth";
+import { mapLabel, mapTestrapport } from "../lib/classificatie";
+
+const router = Router();
+
+// ── APPLICATIES (voorziening-types) ─────────────────────────────────────────
+// GET /voorziening-types
+router.get("/voorziening-types", async (req, res) => {
+  try {
+    const inclusiefInactief = req.query.inclusief_inactief === "true";
+    let rows = await db
+      .select()
+      .from(voorzieningTypesTable)
+      .orderBy(asc(voorzieningTypesTable.volgorde));
+    if (!inclusiefInactief) rows = rows.filter((t) => t.actief);
+    res.json(
+      rows.map((t) => ({
+        code: t.code,
+        naam: t.naam,
+        categorie: t.categorie,
+        volgorde: t.volgorde,
+        actief: t.actief,
+      })),
+    );
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// ── TOEPASSINGEN (labels) ───────────────────────────────────────────────────
+// GET /labels
+router.get("/labels", async (req, res) => {
+  try {
+    const { type_code, inclusief_gearchiveerd } = req.query;
+    let rows = await db.select().from(labelsTable).orderBy(asc(labelsTable.naam));
+    if (type_code) rows = rows.filter((l) => l.typeCode === type_code);
+    if (inclusief_gearchiveerd !== "true") rows = rows.filter((l) => !l.gearchiveerd);
+    res.json(await Promise.all(rows.map(mapLabel)));
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// POST /labels (beheerder)
+router.post("/labels", requireRol("beheerder"), async (req, res) => {
+  try {
+    const { type_code, naam, testrapport_id } = req.body;
+    if (!type_code || !naam || !String(naam).trim()) {
+      return res.status(400).json({ error: "type_code en naam zijn verplicht" });
+    }
+    // De applicatie (type) moet bestaan.
+    const [type] = await db
+      .select({ code: voorzieningTypesTable.code })
+      .from(voorzieningTypesTable)
+      .where(eq(voorzieningTypesTable.code, type_code));
+    if (!type) return res.status(400).json({ error: "Onbekende applicatie (type_code)" });
+
+    const [l] = await db
+      .insert(labelsTable)
+      .values({
+        typeCode: type_code,
+        naam: String(naam).trim(),
+        testrapportId: testrapport_id ?? null,
+      })
+      .returning();
+    return res.status(201).json(await mapLabel(l));
+  } catch (err) {
+    req.log.error(err);
+    return res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// PATCH /labels/:id (beheerder)
+router.patch("/labels/:id", requireRol("beheerder"), async (req, res) => {
+  try {
+    const id = parseInt(String(req.params.id));
+    const { naam, testrapport_id, gearchiveerd } = req.body;
+    const set: Record<string, unknown> = { bijgewerktOp: new Date() };
+    if (naam !== undefined) set.naam = String(naam).trim();
+    if (testrapport_id !== undefined) set.testrapportId = testrapport_id;
+    if (gearchiveerd !== undefined) set.gearchiveerd = gearchiveerd === true;
+
+    const [l] = await db
+      .update(labelsTable)
+      .set(set)
+      .where(eq(labelsTable.id, id))
+      .returning();
+    if (!l) return res.status(404).json({ error: "Toepassing niet gevonden" });
+    return res.json(await mapLabel(l));
+  } catch (err) {
+    req.log.error(err);
+    return res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// ── TESTRAPPORTEN (bibliotheek) ─────────────────────────────────────────────
+// GET /testrapporten
+router.get("/testrapporten", async (req, res) => {
+  try {
+    const inclusiefGearchiveerd = req.query.inclusief_gearchiveerd === "true";
+    let rows = await db
+      .select()
+      .from(testrapportenTable)
+      .orderBy(asc(testrapportenTable.naam));
+    if (!inclusiefGearchiveerd) rows = rows.filter((t) => !t.gearchiveerd);
+    res.json(rows.map(mapTestrapport));
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// POST /testrapporten (beheerder)
+router.post("/testrapporten", requireRol("beheerder"), async (req, res) => {
+  try {
+    const { naam, fabrikant, norm, rapportnummer, pdf_url } = req.body;
+    if (!naam || !String(naam).trim()) {
+      return res.status(400).json({ error: "naam is verplicht" });
+    }
+    const [t] = await db
+      .insert(testrapportenTable)
+      .values({
+        naam: String(naam).trim(),
+        fabrikant: fabrikant ?? null,
+        norm: norm ?? null,
+        rapportnummer: rapportnummer ?? null,
+        pdfUrl: pdf_url ?? null,
+      })
+      .returning();
+    return res.status(201).json(mapTestrapport(t));
+  } catch (err) {
+    req.log.error(err);
+    return res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// PATCH /testrapporten/:id (beheerder)
+router.patch("/testrapporten/:id", requireRol("beheerder"), async (req, res) => {
+  try {
+    const id = parseInt(String(req.params.id));
+    const { naam, fabrikant, norm, rapportnummer, pdf_url, gearchiveerd } = req.body;
+    const set: Record<string, unknown> = { bijgewerktOp: new Date() };
+    if (naam !== undefined) set.naam = String(naam).trim();
+    if (fabrikant !== undefined) set.fabrikant = fabrikant;
+    if (norm !== undefined) set.norm = norm;
+    if (rapportnummer !== undefined) set.rapportnummer = rapportnummer;
+    if (pdf_url !== undefined) set.pdfUrl = pdf_url;
+    if (gearchiveerd !== undefined) set.gearchiveerd = gearchiveerd === true;
+
+    const [t] = await db
+      .update(testrapportenTable)
+      .set(set)
+      .where(eq(testrapportenTable.id, id))
+      .returning();
+    if (!t) return res.status(404).json({ error: "Testrapport niet gevonden" });
+    return res.json(mapTestrapport(t));
+  } catch (err) {
+    req.log.error(err);
+    return res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+export default router;
