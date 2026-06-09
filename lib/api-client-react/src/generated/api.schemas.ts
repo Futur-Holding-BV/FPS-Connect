@@ -9,6 +9,240 @@ export interface HealthStatus {
   status: string;
 }
 
+export interface CrmKlant {
+  id: number;
+  naam: string;
+  /** @nullable */
+  kvk?: string | null;
+  /** @nullable */
+  adres?: string | null;
+  /** @nullable */
+  postcode?: string | null;
+  /** @nullable */
+  stad?: string | null;
+  /** @nullable */
+  telefoon?: string | null;
+  /** @nullable */
+  email?: string | null;
+  /** @nullable */
+  website?: string | null;
+  /** @nullable */
+  branche?: string | null;
+  status: string;
+  /** @nullable */
+  opmerkingen?: string | null;
+  aangemaakt_op: string;
+  bijgewerkt_op: string;
+}
+
+export interface CrmKlantInput {
+  naam: string;
+  kvk?: string;
+  adres?: string;
+  postcode?: string;
+  stad?: string;
+  telefoon?: string;
+  email?: string;
+  website?: string;
+  branche?: string;
+  status?: string;
+  opmerkingen?: string;
+}
+
+export interface CrmContactpersoon {
+  id: number;
+  klant_id: number;
+  naam: string;
+  /** @nullable */
+  functie?: string | null;
+  /** @nullable */
+  email?: string | null;
+  /** @nullable */
+  telefoon?: string | null;
+  /** @nullable */
+  mobiel?: string | null;
+  primair: boolean;
+  /** @nullable */
+  opmerkingen?: string | null;
+  aangemaakt_op: string;
+  bijgewerkt_op: string;
+}
+
+export interface CrmContactpersoonInput {
+  naam: string;
+  functie?: string;
+  email?: string;
+  telefoon?: string;
+  mobiel?: string;
+  primair?: boolean;
+  opmerkingen?: string;
+}
+
+export interface CrmOpdracht {
+  id: number;
+  klant_id: number;
+  /** @nullable */
+  gebouw_id?: number | null;
+  /** @nullable */
+  gebouw_naam?: string | null;
+  titel: string;
+  /** @nullable */
+  omschrijving?: string | null;
+  status: string;
+  /** @nullable */
+  waarde?: number | null;
+  /** @nullable */
+  start_datum?: string | null;
+  /** @nullable */
+  eind_datum?: string | null;
+  aangemaakt_op: string;
+  bijgewerkt_op: string;
+}
+
+export interface CrmOpdrachtInput {
+  titel: string;
+  /** @nullable */
+  gebouw_id?: number | null;
+  omschrijving?: string;
+  status?: string;
+  waarde?: number;
+  start_datum?: string;
+  eind_datum?: string;
+}
+
+export interface CrmCommunicatie {
+  id: number;
+  klant_id: number;
+  /** @nullable */
+  contactpersoon_id?: number | null;
+  /** @nullable */
+  contactpersoon_naam?: string | null;
+  type: string;
+  onderwerp: string;
+  /** @nullable */
+  inhoud?: string | null;
+  /** @nullable */
+  datum?: string | null;
+  /** @nullable */
+  gebruiker_id?: number | null;
+  /** @nullable */
+  gebruiker_naam?: string | null;
+  aangemaakt_op: string;
+}
+
+export interface CrmCommunicatieInput {
+  onderwerp: string;
+  /** @nullable */
+  contactpersoon_id?: number | null;
+  type?: string;
+  inhoud?: string;
+  datum?: string;
+}
+
+export interface CrmCommercieel {
+  id: number;
+  klant_id: number;
+  titel: string;
+  fase: string;
+  /** @nullable */
+  waarde?: number | null;
+  /** @nullable */
+  kans?: number | null;
+  /** @nullable */
+  verwachte_sluitdatum?: string | null;
+  /** @nullable */
+  opmerkingen?: string | null;
+  aangemaakt_op: string;
+  bijgewerkt_op: string;
+}
+
+export interface CrmCommercieelInput {
+  titel: string;
+  fase?: string;
+  waarde?: number;
+  kans?: number;
+  verwachte_sluitdatum?: string;
+  opmerkingen?: string;
+}
+
+export interface CrmFinancieel {
+  id: number;
+  klant_id: number;
+  type: string;
+  /** @nullable */
+  omschrijving?: string | null;
+  /** @nullable */
+  bedrag?: number | null;
+  status: string;
+  /** @nullable */
+  factuurnummer?: string | null;
+  /** @nullable */
+  datum?: string | null;
+  /** @nullable */
+  vervaldatum?: string | null;
+  /** @nullable */
+  opmerkingen?: string | null;
+  aangemaakt_op: string;
+  bijgewerkt_op: string;
+}
+
+export interface CrmFinancieelInput {
+  type: string;
+  omschrijving?: string;
+  bedrag?: number;
+  status?: string;
+  factuurnummer?: string;
+  datum?: string;
+  vervaldatum?: string;
+  opmerkingen?: string;
+}
+
+export interface GebouwEmailBijlage {
+  id: number;
+  email_id: number;
+  bestandsnaam: string;
+  /** @nullable */
+  object_pad?: string | null;
+  /** @nullable */
+  content_type?: string | null;
+  /** @nullable */
+  grootte?: number | null;
+}
+
+export interface GebouwEmail {
+  id: number;
+  gebouw_id: number;
+  bestandsnaam: string;
+  /** @nullable */
+  object_pad?: string | null;
+  /** @nullable */
+  afzender?: string | null;
+  /** @nullable */
+  ontvanger?: string | null;
+  /** @nullable */
+  onderwerp?: string | null;
+  /** @nullable */
+  datum?: string | null;
+  /** @nullable */
+  inhoud_tekst?: string | null;
+  /** @nullable */
+  ai_omschrijving?: string | null;
+  /** @nullable */
+  ai_naw?: string | null;
+  /** @nullable */
+  ai_contactinfo?: string | null;
+  /** @nullable */
+  ai_tekeningen?: string | null;
+  status: string;
+  aangemaakt_op: string;
+  bijlagen?: GebouwEmailBijlage[];
+}
+
+export interface GebouwEmailInput {
+  object_pad: string;
+  bestandsnaam: string;
+}
+
 export type DashboardStatsVoorzieningenPerTypeItem = {
   type: string;
   aantal: number;

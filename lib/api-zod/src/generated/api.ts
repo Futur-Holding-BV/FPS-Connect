@@ -2206,3 +2206,608 @@ export const UpdateInfoInstellingenResponse = zod.object({
 })
 
 
+/**
+ * @summary Klanten ophalen (beheerder+)
+ */
+export const ListCrmKlantenResponseItem = zod.object({
+  "id": zod.number(),
+  "naam": zod.string(),
+  "kvk": zod.string().nullish(),
+  "adres": zod.string().nullish(),
+  "postcode": zod.string().nullish(),
+  "stad": zod.string().nullish(),
+  "telefoon": zod.string().nullish(),
+  "email": zod.string().nullish(),
+  "website": zod.string().nullish(),
+  "branche": zod.string().nullish(),
+  "status": zod.string(),
+  "opmerkingen": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+export const ListCrmKlantenResponse = zod.array(ListCrmKlantenResponseItem)
+
+
+/**
+ * @summary Klant aanmaken (beheerder+)
+ */
+export const CreateCrmKlantBody = zod.object({
+  "naam": zod.string(),
+  "kvk": zod.string().optional(),
+  "adres": zod.string().optional(),
+  "postcode": zod.string().optional(),
+  "stad": zod.string().optional(),
+  "telefoon": zod.string().optional(),
+  "email": zod.string().optional(),
+  "website": zod.string().optional(),
+  "branche": zod.string().optional(),
+  "status": zod.string().optional(),
+  "opmerkingen": zod.string().optional()
+})
+
+export const CreateCrmKlantResponse = zod.void()
+
+
+/**
+ * @summary Klant ophalen (beheerder+)
+ */
+export const GetCrmKlantParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetCrmKlantResponse = zod.object({
+  "id": zod.number(),
+  "naam": zod.string(),
+  "kvk": zod.string().nullish(),
+  "adres": zod.string().nullish(),
+  "postcode": zod.string().nullish(),
+  "stad": zod.string().nullish(),
+  "telefoon": zod.string().nullish(),
+  "email": zod.string().nullish(),
+  "website": zod.string().nullish(),
+  "branche": zod.string().nullish(),
+  "status": zod.string(),
+  "opmerkingen": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+
+
+/**
+ * @summary Klant bijwerken (beheerder+)
+ */
+export const UpdateCrmKlantParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateCrmKlantBody = zod.object({
+  "naam": zod.string(),
+  "kvk": zod.string().optional(),
+  "adres": zod.string().optional(),
+  "postcode": zod.string().optional(),
+  "stad": zod.string().optional(),
+  "telefoon": zod.string().optional(),
+  "email": zod.string().optional(),
+  "website": zod.string().optional(),
+  "branche": zod.string().optional(),
+  "status": zod.string().optional(),
+  "opmerkingen": zod.string().optional()
+})
+
+export const UpdateCrmKlantResponse = zod.object({
+  "id": zod.number(),
+  "naam": zod.string(),
+  "kvk": zod.string().nullish(),
+  "adres": zod.string().nullish(),
+  "postcode": zod.string().nullish(),
+  "stad": zod.string().nullish(),
+  "telefoon": zod.string().nullish(),
+  "email": zod.string().nullish(),
+  "website": zod.string().nullish(),
+  "branche": zod.string().nullish(),
+  "status": zod.string(),
+  "opmerkingen": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+
+
+/**
+ * @summary Klant verwijderen (beheerder+)
+ */
+export const DeleteCrmKlantParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteCrmKlantResponse = zod.void()
+
+
+/**
+ * @summary Contactpersonen van een klant
+ */
+export const ListCrmContactpersonenParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ListCrmContactpersonenResponseItem = zod.object({
+  "id": zod.number(),
+  "klant_id": zod.number(),
+  "naam": zod.string(),
+  "functie": zod.string().nullish(),
+  "email": zod.string().nullish(),
+  "telefoon": zod.string().nullish(),
+  "mobiel": zod.string().nullish(),
+  "primair": zod.boolean(),
+  "opmerkingen": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+export const ListCrmContactpersonenResponse = zod.array(ListCrmContactpersonenResponseItem)
+
+
+/**
+ * @summary Contactpersoon toevoegen
+ */
+export const CreateCrmContactpersoonParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const CreateCrmContactpersoonBody = zod.object({
+  "naam": zod.string(),
+  "functie": zod.string().optional(),
+  "email": zod.string().optional(),
+  "telefoon": zod.string().optional(),
+  "mobiel": zod.string().optional(),
+  "primair": zod.boolean().optional(),
+  "opmerkingen": zod.string().optional()
+})
+
+export const CreateCrmContactpersoonResponse = zod.void()
+
+
+/**
+ * @summary Contactpersoon bijwerken
+ */
+export const UpdateCrmContactpersoonParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateCrmContactpersoonBody = zod.object({
+  "naam": zod.string(),
+  "functie": zod.string().optional(),
+  "email": zod.string().optional(),
+  "telefoon": zod.string().optional(),
+  "mobiel": zod.string().optional(),
+  "primair": zod.boolean().optional(),
+  "opmerkingen": zod.string().optional()
+})
+
+export const UpdateCrmContactpersoonResponse = zod.object({
+  "id": zod.number(),
+  "klant_id": zod.number(),
+  "naam": zod.string(),
+  "functie": zod.string().nullish(),
+  "email": zod.string().nullish(),
+  "telefoon": zod.string().nullish(),
+  "mobiel": zod.string().nullish(),
+  "primair": zod.boolean(),
+  "opmerkingen": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+
+
+/**
+ * @summary Contactpersoon verwijderen
+ */
+export const DeleteCrmContactpersoonParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteCrmContactpersoonResponse = zod.void()
+
+
+/**
+ * @summary Opdrachten van een klant
+ */
+export const ListCrmOpdrachtenParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ListCrmOpdrachtenResponseItem = zod.object({
+  "id": zod.number(),
+  "klant_id": zod.number(),
+  "gebouw_id": zod.number().nullish(),
+  "gebouw_naam": zod.string().nullish(),
+  "titel": zod.string(),
+  "omschrijving": zod.string().nullish(),
+  "status": zod.string(),
+  "waarde": zod.number().nullish(),
+  "start_datum": zod.string().nullish(),
+  "eind_datum": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+export const ListCrmOpdrachtenResponse = zod.array(ListCrmOpdrachtenResponseItem)
+
+
+/**
+ * @summary Opdracht toevoegen
+ */
+export const CreateCrmOpdrachtParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const CreateCrmOpdrachtBody = zod.object({
+  "titel": zod.string(),
+  "gebouw_id": zod.number().nullish(),
+  "omschrijving": zod.string().optional(),
+  "status": zod.string().optional(),
+  "waarde": zod.number().optional(),
+  "start_datum": zod.string().optional(),
+  "eind_datum": zod.string().optional()
+})
+
+export const CreateCrmOpdrachtResponse = zod.void()
+
+
+/**
+ * @summary Opdracht bijwerken
+ */
+export const UpdateCrmOpdrachtParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateCrmOpdrachtBody = zod.object({
+  "titel": zod.string(),
+  "gebouw_id": zod.number().nullish(),
+  "omschrijving": zod.string().optional(),
+  "status": zod.string().optional(),
+  "waarde": zod.number().optional(),
+  "start_datum": zod.string().optional(),
+  "eind_datum": zod.string().optional()
+})
+
+export const UpdateCrmOpdrachtResponse = zod.object({
+  "id": zod.number(),
+  "klant_id": zod.number(),
+  "gebouw_id": zod.number().nullish(),
+  "gebouw_naam": zod.string().nullish(),
+  "titel": zod.string(),
+  "omschrijving": zod.string().nullish(),
+  "status": zod.string(),
+  "waarde": zod.number().nullish(),
+  "start_datum": zod.string().nullish(),
+  "eind_datum": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+
+
+/**
+ * @summary Opdracht verwijderen
+ */
+export const DeleteCrmOpdrachtParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteCrmOpdrachtResponse = zod.void()
+
+
+/**
+ * @summary Communicatielogboek van een klant
+ */
+export const ListCrmCommunicatieParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ListCrmCommunicatieResponseItem = zod.object({
+  "id": zod.number(),
+  "klant_id": zod.number(),
+  "contactpersoon_id": zod.number().nullish(),
+  "contactpersoon_naam": zod.string().nullish(),
+  "type": zod.string(),
+  "onderwerp": zod.string(),
+  "inhoud": zod.string().nullish(),
+  "datum": zod.string().nullish(),
+  "gebruiker_id": zod.number().nullish(),
+  "gebruiker_naam": zod.string().nullish(),
+  "aangemaakt_op": zod.string()
+})
+export const ListCrmCommunicatieResponse = zod.array(ListCrmCommunicatieResponseItem)
+
+
+/**
+ * @summary Communicatie-item toevoegen
+ */
+export const CreateCrmCommunicatieParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const CreateCrmCommunicatieBody = zod.object({
+  "onderwerp": zod.string(),
+  "contactpersoon_id": zod.number().nullish(),
+  "type": zod.string().optional(),
+  "inhoud": zod.string().optional(),
+  "datum": zod.string().optional()
+})
+
+export const CreateCrmCommunicatieResponse = zod.void()
+
+
+/**
+ * @summary Communicatie-item verwijderen
+ */
+export const DeleteCrmCommunicatieParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteCrmCommunicatieResponse = zod.void()
+
+
+/**
+ * @summary Commerciële kansen van een klant
+ */
+export const ListCrmCommercieelParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ListCrmCommercieelResponseItem = zod.object({
+  "id": zod.number(),
+  "klant_id": zod.number(),
+  "titel": zod.string(),
+  "fase": zod.string(),
+  "waarde": zod.number().nullish(),
+  "kans": zod.number().nullish(),
+  "verwachte_sluitdatum": zod.string().nullish(),
+  "opmerkingen": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+export const ListCrmCommercieelResponse = zod.array(ListCrmCommercieelResponseItem)
+
+
+/**
+ * @summary Commerciële kans toevoegen
+ */
+export const CreateCrmCommercieelParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const CreateCrmCommercieelBody = zod.object({
+  "titel": zod.string(),
+  "fase": zod.string().optional(),
+  "waarde": zod.number().optional(),
+  "kans": zod.number().optional(),
+  "verwachte_sluitdatum": zod.string().optional(),
+  "opmerkingen": zod.string().optional()
+})
+
+export const CreateCrmCommercieelResponse = zod.void()
+
+
+/**
+ * @summary Commerciële kans bijwerken
+ */
+export const UpdateCrmCommercieelParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateCrmCommercieelBody = zod.object({
+  "titel": zod.string(),
+  "fase": zod.string().optional(),
+  "waarde": zod.number().optional(),
+  "kans": zod.number().optional(),
+  "verwachte_sluitdatum": zod.string().optional(),
+  "opmerkingen": zod.string().optional()
+})
+
+export const UpdateCrmCommercieelResponse = zod.object({
+  "id": zod.number(),
+  "klant_id": zod.number(),
+  "titel": zod.string(),
+  "fase": zod.string(),
+  "waarde": zod.number().nullish(),
+  "kans": zod.number().nullish(),
+  "verwachte_sluitdatum": zod.string().nullish(),
+  "opmerkingen": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+
+
+/**
+ * @summary Commerciële kans verwijderen
+ */
+export const DeleteCrmCommercieelParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteCrmCommercieelResponse = zod.void()
+
+
+/**
+ * @summary Financiële posten van een klant (alleen hoofdbeheerder)
+ */
+export const ListCrmFinancieelParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ListCrmFinancieelResponseItem = zod.object({
+  "id": zod.number(),
+  "klant_id": zod.number(),
+  "type": zod.string(),
+  "omschrijving": zod.string().nullish(),
+  "bedrag": zod.number().nullish(),
+  "status": zod.string(),
+  "factuurnummer": zod.string().nullish(),
+  "datum": zod.string().nullish(),
+  "vervaldatum": zod.string().nullish(),
+  "opmerkingen": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+export const ListCrmFinancieelResponse = zod.array(ListCrmFinancieelResponseItem)
+
+
+/**
+ * @summary Financiële post toevoegen (alleen hoofdbeheerder)
+ */
+export const CreateCrmFinancieelParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const CreateCrmFinancieelBody = zod.object({
+  "type": zod.string(),
+  "omschrijving": zod.string().optional(),
+  "bedrag": zod.number().optional(),
+  "status": zod.string().optional(),
+  "factuurnummer": zod.string().optional(),
+  "datum": zod.string().optional(),
+  "vervaldatum": zod.string().optional(),
+  "opmerkingen": zod.string().optional()
+})
+
+export const CreateCrmFinancieelResponse = zod.void()
+
+
+/**
+ * @summary Financiële post bijwerken (alleen hoofdbeheerder)
+ */
+export const UpdateCrmFinancieelParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateCrmFinancieelBody = zod.object({
+  "type": zod.string(),
+  "omschrijving": zod.string().optional(),
+  "bedrag": zod.number().optional(),
+  "status": zod.string().optional(),
+  "factuurnummer": zod.string().optional(),
+  "datum": zod.string().optional(),
+  "vervaldatum": zod.string().optional(),
+  "opmerkingen": zod.string().optional()
+})
+
+export const UpdateCrmFinancieelResponse = zod.object({
+  "id": zod.number(),
+  "klant_id": zod.number(),
+  "type": zod.string(),
+  "omschrijving": zod.string().nullish(),
+  "bedrag": zod.number().nullish(),
+  "status": zod.string(),
+  "factuurnummer": zod.string().nullish(),
+  "datum": zod.string().nullish(),
+  "vervaldatum": zod.string().nullish(),
+  "opmerkingen": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+
+
+/**
+ * @summary Financiële post verwijderen (alleen hoofdbeheerder)
+ */
+export const DeleteCrmFinancieelParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteCrmFinancieelResponse = zod.void()
+
+
+/**
+ * @summary E-mailarchief van een gebouw
+ */
+export const ListGebouwEmailsParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ListGebouwEmailsResponseItem = zod.object({
+  "id": zod.number(),
+  "gebouw_id": zod.number(),
+  "bestandsnaam": zod.string(),
+  "object_pad": zod.string().nullish(),
+  "afzender": zod.string().nullish(),
+  "ontvanger": zod.string().nullish(),
+  "onderwerp": zod.string().nullish(),
+  "datum": zod.string().nullish(),
+  "inhoud_tekst": zod.string().nullish(),
+  "ai_omschrijving": zod.string().nullish(),
+  "ai_naw": zod.string().nullish(),
+  "ai_contactinfo": zod.string().nullish(),
+  "ai_tekeningen": zod.string().nullish(),
+  "status": zod.string(),
+  "aangemaakt_op": zod.string(),
+  "bijlagen": zod.array(zod.object({
+  "id": zod.number(),
+  "email_id": zod.number(),
+  "bestandsnaam": zod.string(),
+  "object_pad": zod.string().nullish(),
+  "content_type": zod.string().nullish(),
+  "grootte": zod.number().nullish()
+})).optional()
+})
+export const ListGebouwEmailsResponse = zod.array(ListGebouwEmailsResponseItem)
+
+
+/**
+ * @summary E-mail uploaden en verwerken (beheerder+)
+ */
+export const CreateGebouwEmailParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const CreateGebouwEmailBody = zod.object({
+  "object_pad": zod.string(),
+  "bestandsnaam": zod.string()
+})
+
+export const CreateGebouwEmailResponse = zod.void()
+
+
+/**
+ * @summary E-mail ophalen
+ */
+export const GetGebouwEmailParams = zod.object({
+  "id": zod.coerce.number(),
+  "emailId": zod.coerce.number()
+})
+
+export const GetGebouwEmailResponse = zod.object({
+  "id": zod.number(),
+  "gebouw_id": zod.number(),
+  "bestandsnaam": zod.string(),
+  "object_pad": zod.string().nullish(),
+  "afzender": zod.string().nullish(),
+  "ontvanger": zod.string().nullish(),
+  "onderwerp": zod.string().nullish(),
+  "datum": zod.string().nullish(),
+  "inhoud_tekst": zod.string().nullish(),
+  "ai_omschrijving": zod.string().nullish(),
+  "ai_naw": zod.string().nullish(),
+  "ai_contactinfo": zod.string().nullish(),
+  "ai_tekeningen": zod.string().nullish(),
+  "status": zod.string(),
+  "aangemaakt_op": zod.string(),
+  "bijlagen": zod.array(zod.object({
+  "id": zod.number(),
+  "email_id": zod.number(),
+  "bestandsnaam": zod.string(),
+  "object_pad": zod.string().nullish(),
+  "content_type": zod.string().nullish(),
+  "grootte": zod.number().nullish()
+})).optional()
+})
+
+
+/**
+ * @summary E-mail verwijderen (beheerder+)
+ */
+export const DeleteGebouwEmailParams = zod.object({
+  "id": zod.coerce.number(),
+  "emailId": zod.coerce.number()
+})
+
+export const DeleteGebouwEmailResponse = zod.void()
+
+

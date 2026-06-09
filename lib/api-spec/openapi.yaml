@@ -23,6 +23,10 @@ tags:
     description: Abonnementsbeheer
   - name: dashboard
     description: Dashboard statistieken
+  - name: crm
+    description: CRM - klanten, contactpersonen, opdrachten en commercieel
+  - name: emails
+    description: E-mailarchief per gebouw
 
 paths:
   /healthz:
@@ -2018,6 +2022,582 @@ paths:
               schema:
                 $ref: "#/components/schemas/AppInstellingen"
 
+  /crm/klanten:
+    get:
+      operationId: listCrmKlanten
+      tags: [crm]
+      summary: Klanten ophalen (beheerder+)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CrmKlant"
+    post:
+      operationId: createCrmKlant
+      tags: [crm]
+      summary: Klant aanmaken (beheerder+)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CrmKlantInput"
+      responses:
+        "201":
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CrmKlant"
+
+  /crm/klanten/{id}:
+    get:
+      operationId: getCrmKlant
+      tags: [crm]
+      summary: Klant ophalen (beheerder+)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CrmKlant"
+        "404":
+          description: Niet gevonden
+    patch:
+      operationId: updateCrmKlant
+      tags: [crm]
+      summary: Klant bijwerken (beheerder+)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CrmKlantInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CrmKlant"
+    delete:
+      operationId: deleteCrmKlant
+      tags: [crm]
+      summary: Klant verwijderen (beheerder+)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Verwijderd
+
+  /crm/klanten/{id}/contactpersonen:
+    get:
+      operationId: listCrmContactpersonen
+      tags: [crm]
+      summary: Contactpersonen van een klant
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CrmContactpersoon"
+    post:
+      operationId: createCrmContactpersoon
+      tags: [crm]
+      summary: Contactpersoon toevoegen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CrmContactpersoonInput"
+      responses:
+        "201":
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CrmContactpersoon"
+
+  /crm/contactpersonen/{id}:
+    patch:
+      operationId: updateCrmContactpersoon
+      tags: [crm]
+      summary: Contactpersoon bijwerken
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CrmContactpersoonInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CrmContactpersoon"
+    delete:
+      operationId: deleteCrmContactpersoon
+      tags: [crm]
+      summary: Contactpersoon verwijderen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Verwijderd
+
+  /crm/klanten/{id}/opdrachten:
+    get:
+      operationId: listCrmOpdrachten
+      tags: [crm]
+      summary: Opdrachten van een klant
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CrmOpdracht"
+    post:
+      operationId: createCrmOpdracht
+      tags: [crm]
+      summary: Opdracht toevoegen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CrmOpdrachtInput"
+      responses:
+        "201":
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CrmOpdracht"
+
+  /crm/opdrachten/{id}:
+    patch:
+      operationId: updateCrmOpdracht
+      tags: [crm]
+      summary: Opdracht bijwerken
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CrmOpdrachtInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CrmOpdracht"
+    delete:
+      operationId: deleteCrmOpdracht
+      tags: [crm]
+      summary: Opdracht verwijderen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Verwijderd
+
+  /crm/klanten/{id}/communicatie:
+    get:
+      operationId: listCrmCommunicatie
+      tags: [crm]
+      summary: Communicatielogboek van een klant
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CrmCommunicatie"
+    post:
+      operationId: createCrmCommunicatie
+      tags: [crm]
+      summary: Communicatie-item toevoegen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CrmCommunicatieInput"
+      responses:
+        "201":
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CrmCommunicatie"
+
+  /crm/communicatie/{id}:
+    delete:
+      operationId: deleteCrmCommunicatie
+      tags: [crm]
+      summary: Communicatie-item verwijderen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Verwijderd
+
+  /crm/klanten/{id}/commercieel:
+    get:
+      operationId: listCrmCommercieel
+      tags: [crm]
+      summary: Commerciële kansen van een klant
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CrmCommercieel"
+    post:
+      operationId: createCrmCommercieel
+      tags: [crm]
+      summary: Commerciële kans toevoegen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CrmCommercieelInput"
+      responses:
+        "201":
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CrmCommercieel"
+
+  /crm/commercieel/{id}:
+    patch:
+      operationId: updateCrmCommercieel
+      tags: [crm]
+      summary: Commerciële kans bijwerken
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CrmCommercieelInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CrmCommercieel"
+    delete:
+      operationId: deleteCrmCommercieel
+      tags: [crm]
+      summary: Commerciële kans verwijderen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Verwijderd
+
+  /crm/klanten/{id}/financieel:
+    get:
+      operationId: listCrmFinancieel
+      tags: [crm]
+      summary: Financiële posten van een klant (alleen hoofdbeheerder)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CrmFinancieel"
+        "403":
+          description: Geen toegang
+    post:
+      operationId: createCrmFinancieel
+      tags: [crm]
+      summary: Financiële post toevoegen (alleen hoofdbeheerder)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CrmFinancieelInput"
+      responses:
+        "201":
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CrmFinancieel"
+        "403":
+          description: Geen toegang
+
+  /crm/financieel/{id}:
+    patch:
+      operationId: updateCrmFinancieel
+      tags: [crm]
+      summary: Financiële post bijwerken (alleen hoofdbeheerder)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CrmFinancieelInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CrmFinancieel"
+        "403":
+          description: Geen toegang
+    delete:
+      operationId: deleteCrmFinancieel
+      tags: [crm]
+      summary: Financiële post verwijderen (alleen hoofdbeheerder)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Verwijderd
+        "403":
+          description: Geen toegang
+
+  /gebouwen/{id}/emails:
+    get:
+      operationId: listGebouwEmails
+      tags: [emails]
+      summary: E-mailarchief van een gebouw
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/GebouwEmail"
+        "403":
+          description: Geen toegang
+    post:
+      operationId: createGebouwEmail
+      tags: [emails]
+      summary: E-mail uploaden en verwerken (beheerder+)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GebouwEmailInput"
+      responses:
+        "201":
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GebouwEmail"
+        "403":
+          description: Geen toegang
+
+  /gebouwen/{id}/emails/{emailId}:
+    get:
+      operationId: getGebouwEmail
+      tags: [emails]
+      summary: E-mail ophalen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+        - in: path
+          name: emailId
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GebouwEmail"
+        "404":
+          description: Niet gevonden
+    delete:
+      operationId: deleteGebouwEmail
+      tags: [emails]
+      summary: E-mail verwijderen (beheerder+)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+        - in: path
+          name: emailId
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Verwijderd
+
 components:
   schemas:
     HealthStatus:
@@ -2025,6 +2605,361 @@ components:
       required: [status]
       properties:
         status:
+          type: string
+
+    # ── CRM ───────────────────────────────────────────────────────────────
+    CrmKlant:
+      type: object
+      required: [id, naam, status, aangemaakt_op, bijgewerkt_op]
+      properties:
+        id:
+          type: integer
+        naam:
+          type: string
+        kvk:
+          type: ["string", "null"]
+        adres:
+          type: ["string", "null"]
+        postcode:
+          type: ["string", "null"]
+        stad:
+          type: ["string", "null"]
+        telefoon:
+          type: ["string", "null"]
+        email:
+          type: ["string", "null"]
+        website:
+          type: ["string", "null"]
+        branche:
+          type: ["string", "null"]
+        status:
+          type: string
+        opmerkingen:
+          type: ["string", "null"]
+        aangemaakt_op:
+          type: string
+        bijgewerkt_op:
+          type: string
+
+    CrmKlantInput:
+      type: object
+      required: [naam]
+      properties:
+        naam:
+          type: string
+        kvk:
+          type: string
+        adres:
+          type: string
+        postcode:
+          type: string
+        stad:
+          type: string
+        telefoon:
+          type: string
+        email:
+          type: string
+        website:
+          type: string
+        branche:
+          type: string
+        status:
+          type: string
+        opmerkingen:
+          type: string
+
+    CrmContactpersoon:
+      type: object
+      required: [id, klant_id, naam, primair, aangemaakt_op, bijgewerkt_op]
+      properties:
+        id:
+          type: integer
+        klant_id:
+          type: integer
+        naam:
+          type: string
+        functie:
+          type: ["string", "null"]
+        email:
+          type: ["string", "null"]
+        telefoon:
+          type: ["string", "null"]
+        mobiel:
+          type: ["string", "null"]
+        primair:
+          type: boolean
+        opmerkingen:
+          type: ["string", "null"]
+        aangemaakt_op:
+          type: string
+        bijgewerkt_op:
+          type: string
+
+    CrmContactpersoonInput:
+      type: object
+      required: [naam]
+      properties:
+        naam:
+          type: string
+        functie:
+          type: string
+        email:
+          type: string
+        telefoon:
+          type: string
+        mobiel:
+          type: string
+        primair:
+          type: boolean
+        opmerkingen:
+          type: string
+
+    CrmOpdracht:
+      type: object
+      required: [id, klant_id, titel, status, aangemaakt_op, bijgewerkt_op]
+      properties:
+        id:
+          type: integer
+        klant_id:
+          type: integer
+        gebouw_id:
+          type: ["integer", "null"]
+        gebouw_naam:
+          type: ["string", "null"]
+        titel:
+          type: string
+        omschrijving:
+          type: ["string", "null"]
+        status:
+          type: string
+        waarde:
+          type: ["number", "null"]
+        start_datum:
+          type: ["string", "null"]
+        eind_datum:
+          type: ["string", "null"]
+        aangemaakt_op:
+          type: string
+        bijgewerkt_op:
+          type: string
+
+    CrmOpdrachtInput:
+      type: object
+      required: [titel]
+      properties:
+        titel:
+          type: string
+        gebouw_id:
+          type: ["integer", "null"]
+        omschrijving:
+          type: string
+        status:
+          type: string
+        waarde:
+          type: number
+        start_datum:
+          type: string
+        eind_datum:
+          type: string
+
+    CrmCommunicatie:
+      type: object
+      required: [id, klant_id, type, onderwerp, aangemaakt_op]
+      properties:
+        id:
+          type: integer
+        klant_id:
+          type: integer
+        contactpersoon_id:
+          type: ["integer", "null"]
+        contactpersoon_naam:
+          type: ["string", "null"]
+        type:
+          type: string
+        onderwerp:
+          type: string
+        inhoud:
+          type: ["string", "null"]
+        datum:
+          type: ["string", "null"]
+        gebruiker_id:
+          type: ["integer", "null"]
+        gebruiker_naam:
+          type: ["string", "null"]
+        aangemaakt_op:
+          type: string
+
+    CrmCommunicatieInput:
+      type: object
+      required: [onderwerp]
+      properties:
+        onderwerp:
+          type: string
+        contactpersoon_id:
+          type: ["integer", "null"]
+        type:
+          type: string
+        inhoud:
+          type: string
+        datum:
+          type: string
+
+    CrmCommercieel:
+      type: object
+      required: [id, klant_id, titel, fase, aangemaakt_op, bijgewerkt_op]
+      properties:
+        id:
+          type: integer
+        klant_id:
+          type: integer
+        titel:
+          type: string
+        fase:
+          type: string
+        waarde:
+          type: ["number", "null"]
+        kans:
+          type: ["integer", "null"]
+        verwachte_sluitdatum:
+          type: ["string", "null"]
+        opmerkingen:
+          type: ["string", "null"]
+        aangemaakt_op:
+          type: string
+        bijgewerkt_op:
+          type: string
+
+    CrmCommercieelInput:
+      type: object
+      required: [titel]
+      properties:
+        titel:
+          type: string
+        fase:
+          type: string
+        waarde:
+          type: number
+        kans:
+          type: integer
+        verwachte_sluitdatum:
+          type: string
+        opmerkingen:
+          type: string
+
+    CrmFinancieel:
+      type: object
+      required: [id, klant_id, type, status, aangemaakt_op, bijgewerkt_op]
+      properties:
+        id:
+          type: integer
+        klant_id:
+          type: integer
+        type:
+          type: string
+        omschrijving:
+          type: ["string", "null"]
+        bedrag:
+          type: ["number", "null"]
+        status:
+          type: string
+        factuurnummer:
+          type: ["string", "null"]
+        datum:
+          type: ["string", "null"]
+        vervaldatum:
+          type: ["string", "null"]
+        opmerkingen:
+          type: ["string", "null"]
+        aangemaakt_op:
+          type: string
+        bijgewerkt_op:
+          type: string
+
+    CrmFinancieelInput:
+      type: object
+      required: [type]
+      properties:
+        type:
+          type: string
+        omschrijving:
+          type: string
+        bedrag:
+          type: number
+        status:
+          type: string
+        factuurnummer:
+          type: string
+        datum:
+          type: string
+        vervaldatum:
+          type: string
+        opmerkingen:
+          type: string
+
+    # ── E-MAILARCHIEF ─────────────────────────────────────────────────────
+    GebouwEmailBijlage:
+      type: object
+      required: [id, email_id, bestandsnaam]
+      properties:
+        id:
+          type: integer
+        email_id:
+          type: integer
+        bestandsnaam:
+          type: string
+        object_pad:
+          type: ["string", "null"]
+        content_type:
+          type: ["string", "null"]
+        grootte:
+          type: ["integer", "null"]
+
+    GebouwEmail:
+      type: object
+      required: [id, gebouw_id, bestandsnaam, status, aangemaakt_op]
+      properties:
+        id:
+          type: integer
+        gebouw_id:
+          type: integer
+        bestandsnaam:
+          type: string
+        object_pad:
+          type: ["string", "null"]
+        afzender:
+          type: ["string", "null"]
+        ontvanger:
+          type: ["string", "null"]
+        onderwerp:
+          type: ["string", "null"]
+        datum:
+          type: ["string", "null"]
+        inhoud_tekst:
+          type: ["string", "null"]
+        ai_omschrijving:
+          type: ["string", "null"]
+        ai_naw:
+          type: ["string", "null"]
+        ai_contactinfo:
+          type: ["string", "null"]
+        ai_tekeningen:
+          type: ["string", "null"]
+        status:
+          type: string
+        aangemaakt_op:
+          type: string
+        bijlagen:
+          type: array
+          items:
+            $ref: "#/components/schemas/GebouwEmailBijlage"
+
+    GebouwEmailInput:
+      type: object
+      required: [object_pad, bestandsnaam]
+      properties:
+        object_pad:
+          type: string
+        bestandsnaam:
           type: string
 
     # ── DASHBOARD ─────────────────────────────────────────────────────────

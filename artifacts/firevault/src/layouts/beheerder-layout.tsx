@@ -5,7 +5,7 @@ import {
   SidebarGroup, SidebarGroupLabel, SidebarGroupContent,
   SidebarMenu, SidebarMenuItem, SidebarMenuButton,
 } from "@/components/ui/sidebar";
-import { Flame, ShieldCheck, Building, Wrench, Users, Search, Home, Receipt, ShieldAlert, LifeBuoy, MessageSquarePlus, Activity } from "lucide-react";
+import { Flame, ShieldCheck, Building, Wrench, Users, Search, Home, Receipt, ShieldAlert, LifeBuoy, MessageSquarePlus, Activity, Contact } from "lucide-react";
 import { GebruikerMenu } from "@/components/gebruiker-menu";
 
 const ROUTES = [
@@ -15,6 +15,7 @@ const ROUTES = [
   { href: "/inspecties", labelKey: "nav.inspecties", icoon: Search },
   { href: "/onderhoud", labelKey: "nav.onderhoud", icoon: Wrench },
   { href: "/gebruikers", labelKey: "nav.gebruikers", icoon: Users },
+  { href: "/crm", labelKey: "nav.crm", icoon: Contact },
   { href: "/abonnementen", labelKey: "nav.abonnementen", icoon: Receipt },
 ];
 

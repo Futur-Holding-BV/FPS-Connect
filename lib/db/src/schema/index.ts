@@ -6,3 +6,5 @@ export * from "./onderhoud";
 export * from "./abonnementen";
 export * from "./activiteiten";
 export * from "./systeem";
+export * from "./crm";
+export * from "./emails";

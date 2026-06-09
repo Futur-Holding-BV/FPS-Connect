@@ -26,6 +26,7 @@ import GebouwPartijen from "./gebouw-partijen";
 import GebouwTekeningen from "./gebouw-tekeningen";
 import GebouwPlattegronden from "./gebouw-plattegronden";
 import GebouwBouwlagen from "./gebouw-bouwlagen";
+import GebouwEmails from "./gebouw-emails";
 import { GebouwBewerkenDialog } from "./gebouw-bewerken-dialog";
 
 const BEHEERDER_ROLLEN = ["beheerder", "hoofdbeheerder"];
@@ -429,6 +430,8 @@ export default function GebouwDetail() {
             verdiepingen={gebouw.verdiepingen ?? []}
             isBeheerder={isBeheerder}
           />
+
+          <GebouwEmails gebouwId={gebouwId} isBeheerder={isBeheerder} />
 
           <Card>
             <CardHeader>

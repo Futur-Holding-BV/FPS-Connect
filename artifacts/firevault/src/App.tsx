@@ -30,6 +30,8 @@ import Inspecties from "@/pages/inspecties/index";
 import InspectieDetail from "@/pages/inspecties/detail";
 import Onderhoud from "@/pages/onderhoud/index";
 import Gebruikers from "@/pages/gebruikers/index";
+import CrmKlanten from "@/pages/crm/index";
+import CrmKlantDetail from "@/pages/crm/detail";
 import Abonnementen from "@/pages/abonnementen/index";
 import LoginPogingen from "@/pages/beheer/login-pogingen";
 import HelpdeskBeheer from "@/pages/beheer/helpdesk";
@@ -57,6 +59,8 @@ function BeheerderPortal() {
         <Route path="/inspecties/:id" component={InspectieDetail} />
         <Route path="/onderhoud" component={Onderhoud} />
         <Route path="/gebruikers" component={Gebruikers} />
+        <Route path="/crm" component={CrmKlanten} />
+        <Route path="/crm/:id" component={CrmKlantDetail} />
         <Route path="/abonnementen" component={Abonnementen} />
         <Route path="/beheer/login-pogingen" component={LoginPogingen} />
         <Route path="/beheer/helpdesk" component={HelpdeskBeheer} />
