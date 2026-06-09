@@ -186,7 +186,7 @@ export function ProjectSamenvatting({ gebouwId, isBeheerder }: { gebouwId: numbe
   );
 }
 
-function ContactpersoonRij({
+export function ContactpersoonRij({
   contact,
   gebouwId,
   isBeheerder,

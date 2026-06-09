@@ -54,6 +54,7 @@ import type {
   GebouwEmail,
   GebouwEmailInput,
   GebouwEmailSamenvatting,
+  GebouwEmailSamenvattingUpdate,
   GebouwGereedInput,
   GebouwInput,
   GebouwPartij,
@@ -9715,6 +9716,77 @@ export const useGenerateGebouwEmailSamenvatting = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getGenerateGebouwEmailSamenvattingMutationOptions(options));
+    }
+
+export const getUpdateGebouwEmailSamenvattingUrl = (id: number,) => {
+
+
+
+
+  return `/api/gebouwen/${id}/emails/samenvatting`
+}
+
+/**
+ * @summary Projectsamenvatting bewerken en bevestigen (beheerder+)
+ */
+export const updateGebouwEmailSamenvatting = async (id: number,
+    gebouwEmailSamenvattingUpdate: GebouwEmailSamenvattingUpdate, options?: RequestInit): Promise<GebouwEmailSamenvatting> => {
+
+  return customFetch<GebouwEmailSamenvatting>(getUpdateGebouwEmailSamenvattingUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(gebouwEmailSamenvattingUpdate)
+  }
+);}
+
+
+
+
+export const getUpdateGebouwEmailSamenvattingMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateGebouwEmailSamenvatting>>, TError,{id: number;data: BodyType<GebouwEmailSamenvattingUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateGebouwEmailSamenvatting>>, TError,{id: number;data: BodyType<GebouwEmailSamenvattingUpdate>}, TContext> => {
+
+const mutationKey = ['updateGebouwEmailSamenvatting'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateGebouwEmailSamenvatting>>, {id: number;data: BodyType<GebouwEmailSamenvattingUpdate>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateGebouwEmailSamenvatting(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateGebouwEmailSamenvattingMutationResult = NonNullable<Awaited<ReturnType<typeof updateGebouwEmailSamenvatting>>>
+    export type UpdateGebouwEmailSamenvattingMutationBody = BodyType<GebouwEmailSamenvattingUpdate>
+    export type UpdateGebouwEmailSamenvattingMutationError = ErrorType<void>
+
+    /**
+ * @summary Projectsamenvatting bewerken en bevestigen (beheerder+)
+ */
+export const useUpdateGebouwEmailSamenvatting = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateGebouwEmailSamenvatting>>, TError,{id: number;data: BodyType<GebouwEmailSamenvattingUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateGebouwEmailSamenvatting>>,
+        TError,
+        {id: number;data: BodyType<GebouwEmailSamenvattingUpdate>},
+        TContext
+      > => {
+      return useMutation(getUpdateGebouwEmailSamenvattingMutationOptions(options));
     }
 
 export const getGetGebouwEmailUrl = (id: number,

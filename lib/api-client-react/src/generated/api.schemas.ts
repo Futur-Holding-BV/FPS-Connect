@@ -278,7 +278,32 @@ export interface GebouwEmailSamenvatting {
   risicos?: string | null;
   contactpersonen?: EmailContactpersoon[];
   aantal_emails: number;
+  geverifieerd: boolean;
+  /** @nullable */
+  gecontroleerd_door?: string | null;
+  /** @nullable */
+  gecontroleerd_op?: string | null;
   bijgewerkt_op: string;
+}
+
+export interface GebouwEmailSamenvattingUpdate {
+  /** @nullable */
+  opdrachtomschrijving?: string | null;
+  /** @nullable */
+  opdrachtgever?: string | null;
+  /** @nullable */
+  contactgegevens?: string | null;
+  /** @nullable */
+  afspraken?: string | null;
+  /** @nullable */
+  actiepunten?: string | null;
+  /** @nullable */
+  besluiten?: string | null;
+  /** @nullable */
+  tekeningen?: string | null;
+  /** @nullable */
+  risicos?: string | null;
+  geverifieerd?: boolean;
 }
 
 export type DashboardStatsVoorzieningenPerTypeItem = {

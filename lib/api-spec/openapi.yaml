@@ -2766,6 +2766,31 @@ paths:
                 $ref: "#/components/schemas/GebouwEmailSamenvatting"
         "403":
           description: Geen toegang
+    patch:
+      operationId: updateGebouwEmailSamenvatting
+      tags: [emails]
+      summary: Projectsamenvatting bewerken en bevestigen (beheerder+)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GebouwEmailSamenvattingUpdate"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GebouwEmailSamenvatting"
+        "403":
+          description: Geen toegang
 
   /gebouwen/{id}/emails/{emailId}:
     get:
@@ -3179,7 +3204,7 @@ components:
 
     GebouwEmailSamenvatting:
       type: object
-      required: [id, gebouw_id, aantal_emails, bijgewerkt_op]
+      required: [id, gebouw_id, aantal_emails, geverifieerd, bijgewerkt_op]
       properties:
         id:
           type: integer
@@ -3207,8 +3232,36 @@ components:
             $ref: "#/components/schemas/EmailContactpersoon"
         aantal_emails:
           type: integer
+        geverifieerd:
+          type: boolean
+        gecontroleerd_door:
+          type: ["string", "null"]
+        gecontroleerd_op:
+          type: ["string", "null"]
         bijgewerkt_op:
           type: string
+
+    GebouwEmailSamenvattingUpdate:
+      type: object
+      properties:
+        opdrachtomschrijving:
+          type: ["string", "null"]
+        opdrachtgever:
+          type: ["string", "null"]
+        contactgegevens:
+          type: ["string", "null"]
+        afspraken:
+          type: ["string", "null"]
+        actiepunten:
+          type: ["string", "null"]
+        besluiten:
+          type: ["string", "null"]
+        tekeningen:
+          type: ["string", "null"]
+        risicos:
+          type: ["string", "null"]
+        geverifieerd:
+          type: boolean
 
     EmailContactpersoon:
       type: object

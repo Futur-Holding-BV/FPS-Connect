@@ -24,6 +24,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  Tabs,
+  TabsList,
+  TabsTrigger,
+  TabsContent,
+} from "@/components/ui/tabs";
+import {
   ArrowLeft,
   Layers,
   Users,
@@ -53,7 +59,8 @@ import GebouwPartijen from "./gebouw-partijen";
 import GebouwTekeningen from "./gebouw-tekeningen";
 import GebouwPlattegronden from "./gebouw-plattegronden";
 import GebouwBouwlagen from "./gebouw-bouwlagen";
-import GebouwEmails, { ProjectSamenvatting } from "./gebouw-emails";
+import GebouwEmails from "./gebouw-emails";
+import { Projectformulier } from "./gebouw-projectformulier";
 import { GebouwBewerkenDialog } from "./gebouw-bewerken-dialog";
 import GebouwPlattegrondHero from "./gebouw-plattegrond-hero";
 import GebouwActiviteit from "./gebouw-activiteit";
@@ -424,7 +431,24 @@ export default function GebouwDetail() {
       {/* ════════════════════════════════════════════════════
           SEGMENT 1 — Project- en gebouwgegevens
           ════════════════════════════════════════════════════ */}
-      <section className="space-y-4">
+      <Tabs defaultValue="project" className="w-full">
+        <TabsList className="grid w-full max-w-2xl grid-cols-3">
+          <TabsTrigger value="project" className="gap-1.5">
+            <Building2 className="h-4 w-4" />
+            <span className="hidden sm:inline">Project &amp; gegevens</span>
+            <span className="sm:hidden">Project</span>
+          </TabsTrigger>
+          <TabsTrigger value="uitvoering" className="gap-1.5">
+            <Wrench className="h-4 w-4" />
+            Uitvoering
+          </TabsTrigger>
+          <TabsTrigger value="beheer" className="gap-1.5">
+            <Sparkles className="h-4 w-4" />
+            Beheer
+          </TabsTrigger>
+        </TabsList>
+
+      <TabsContent value="project" className="space-y-4 mt-6">
         <SegmentKop
           nummer={1}
           icoon={<Building2 className="h-5 w-5" />}
@@ -452,8 +476,8 @@ export default function GebouwDetail() {
               </Card>
             )}
 
-            {/* AI-contactsuggesties vanuit e-mails */}
-            <ProjectSamenvatting gebouwId={gebouwId} isBeheerder={isBeheerder} />
+            {/* Bewerkbaar projectformulier (AI-aangevuld, beheerder bevestigt) */}
+            <Projectformulier gebouwId={gebouwId} isBeheerder={isBeheerder} />
 
             {/* Open actiepunten */}
             {actiepunten.length > 0 && (
@@ -579,12 +603,12 @@ export default function GebouwDetail() {
             )}
           </div>
         </div>
-      </section>
+      </TabsContent>
 
       {/* ════════════════════════════════════════════════════
           SEGMENT 2 — Uitvoering op locatie
           ════════════════════════════════════════════════════ */}
-      <section className="space-y-4">
+      <TabsContent value="uitvoering" className="space-y-4 mt-6">
         <SegmentKop
           nummer={2}
           icoon={<Wrench className="h-5 w-5" />}
@@ -674,12 +698,12 @@ export default function GebouwDetail() {
             </Card>
           </div>
         </div>
-      </section>
+      </TabsContent>
 
       {/* ════════════════════════════════════════════════════
           SEGMENT 3 — Beheer en communicatie
           ════════════════════════════════════════════════════ */}
-      <section className="space-y-4">
+      <TabsContent value="beheer" className="space-y-4 mt-6">
         <SegmentKop
           nummer={3}
           icoon={<Sparkles className="h-5 w-5" />}
@@ -864,7 +888,8 @@ export default function GebouwDetail() {
             Beheerinhoud is alleen beschikbaar voor beheerders.
           </div>
         )}
-      </section>
+      </TabsContent>
+      </Tabs>
 
     </div>
   );

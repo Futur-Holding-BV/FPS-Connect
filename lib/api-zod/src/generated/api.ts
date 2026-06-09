@@ -3054,6 +3054,9 @@ export const GetGebouwEmailSamenvattingResponse = zod.object({
   "telefoon": zod.string().nullish()
 })).optional(),
   "aantal_emails": zod.number(),
+  "geverifieerd": zod.boolean(),
+  "gecontroleerd_door": zod.string().nullish(),
+  "gecontroleerd_op": zod.string().nullish(),
   "bijgewerkt_op": zod.string()
 })
 
@@ -3084,6 +3087,54 @@ export const GenerateGebouwEmailSamenvattingResponse = zod.object({
   "telefoon": zod.string().nullish()
 })).optional(),
   "aantal_emails": zod.number(),
+  "geverifieerd": zod.boolean(),
+  "gecontroleerd_door": zod.string().nullish(),
+  "gecontroleerd_op": zod.string().nullish(),
+  "bijgewerkt_op": zod.string()
+})
+
+
+/**
+ * @summary Projectsamenvatting bewerken en bevestigen (beheerder+)
+ */
+export const UpdateGebouwEmailSamenvattingParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateGebouwEmailSamenvattingBody = zod.object({
+  "opdrachtomschrijving": zod.string().nullish(),
+  "opdrachtgever": zod.string().nullish(),
+  "contactgegevens": zod.string().nullish(),
+  "afspraken": zod.string().nullish(),
+  "actiepunten": zod.string().nullish(),
+  "besluiten": zod.string().nullish(),
+  "tekeningen": zod.string().nullish(),
+  "risicos": zod.string().nullish(),
+  "geverifieerd": zod.boolean().optional()
+})
+
+export const UpdateGebouwEmailSamenvattingResponse = zod.object({
+  "id": zod.number(),
+  "gebouw_id": zod.number(),
+  "opdrachtomschrijving": zod.string().nullish(),
+  "opdrachtgever": zod.string().nullish(),
+  "contactgegevens": zod.string().nullish(),
+  "afspraken": zod.string().nullish(),
+  "actiepunten": zod.string().nullish(),
+  "besluiten": zod.string().nullish(),
+  "tekeningen": zod.string().nullish(),
+  "risicos": zod.string().nullish(),
+  "contactpersonen": zod.array(zod.object({
+  "rol": zod.string().describe('opdrachtgever, gebruiker, installateur, aannemer, eigenaar of aanvrager'),
+  "naam": zod.string(),
+  "organisatie": zod.string().nullish(),
+  "email": zod.string().nullish(),
+  "telefoon": zod.string().nullish()
+})).optional(),
+  "aantal_emails": zod.number(),
+  "geverifieerd": zod.boolean(),
+  "gecontroleerd_door": zod.string().nullish(),
+  "gecontroleerd_op": zod.string().nullish(),
   "bijgewerkt_op": zod.string()
 })
 

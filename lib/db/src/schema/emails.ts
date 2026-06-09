@@ -1,4 +1,4 @@
-import { pgTable, serial, text, integer, timestamp, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, integer, timestamp, jsonb, boolean } from "drizzle-orm/pg-core";
 import { gebouwenTable } from "./gebouwen";
 
 export interface EmailContactpersoon {
@@ -53,6 +53,9 @@ export const gebouwEmailSamenvattingenTable = pgTable("gebouw_email_samenvatting
   risicos: text("risicos"),
   contactpersonen: jsonb("contactpersonen").$type<EmailContactpersoon[]>().notNull().default([]),
   aantalEmails: integer("aantal_emails").notNull().default(0),
+  geverifieerd: boolean("geverifieerd").notNull().default(false),
+  gecontroleerdDoor: text("gecontroleerd_door"),
+  gecontroleerdOp: timestamp("gecontroleerd_op"),
   bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
 });
 

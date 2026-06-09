@@ -5,6 +5,7 @@ import {
   gebouwEmailBijlagenTable,
   gebouwEmailSamenvattingenTable,
   gebouwenTable,
+  gebruikersTable,
 } from "@workspace/db";
 import { eq, and, desc } from "drizzle-orm";
 import { requireRol } from "../middlewares/auth";
@@ -42,10 +43,19 @@ const mapSamenvatting = (s: typeof gebouwEmailSamenvattingenTable.$inferSelect) 
     telefoon: c.telefoon,
   })),
   aantal_emails: s.aantalEmails,
+  geverifieerd: s.geverifieerd,
+  gecontroleerd_door: s.gecontroleerdDoor,
+  gecontroleerd_op: s.gecontroleerdOp ? iso(s.gecontroleerdOp) : null,
   bijgewerkt_op: iso(s.bijgewerktOp),
 });
 
-async function herberekeningUitvoeren(gebouwId: number): Promise<void> {
+// herbereken de AI-samenvatting. Wanneer een beheerder de samenvatting heeft
+// geverifieerd (handmatig gecontroleerd/aangepast) overschrijft de automatische
+// herberekening de inhoud NIET, tenzij forceer=true (expliciete "Bijwerken").
+async function herberekeningUitvoeren(
+  gebouwId: number,
+  forceer = false,
+): Promise<void> {
   try {
     const emails = await db
       .select()
@@ -61,6 +71,22 @@ async function herberekeningUitvoeren(gebouwId: number): Promise<void> {
       return;
     }
 
+    if (!forceer) {
+      const [bestaand] = await db
+        .select()
+        .from(gebouwEmailSamenvattingenTable)
+        .where(eq(gebouwEmailSamenvattingenTable.gebouwId, gebouwId));
+      if (bestaand?.geverifieerd) {
+        // Door beheerder gecontroleerd: alleen het e-mailaantal bijwerken,
+        // de gecontroleerde inhoud blijft behouden.
+        await db
+          .update(gebouwEmailSamenvattingenTable)
+          .set({ aantalEmails: emails.length })
+          .where(eq(gebouwEmailSamenvattingenTable.gebouwId, gebouwId));
+        return;
+      }
+    }
+
     const als: GeparseerdeEmail[] = emails.map((e) => ({
       afzender: e.afzender,
       ontvanger: e.ontvanger,
@@ -72,21 +98,27 @@ async function herberekeningUitvoeren(gebouwId: number): Promise<void> {
 
     const samenvatting = await genereerProjectSamenvatting(als);
 
+    const nieuweWaarden = {
+      aantalEmails: emails.length,
+      geverifieerd: false,
+      gecontroleerdDoor: null,
+      gecontroleerdOp: null,
+      bijgewerktOp: new Date(),
+      ...samenvatting,
+    };
+
+    // Atomaire guard: als !forceer mag een tijdens de (trage) AI-call door een
+    // beheerder bevestigde samenvatting NIET overschreven worden. De WHERE op
+    // geverifieerd=false sluit die race op DB-niveau af.
     await db
       .insert(gebouwEmailSamenvattingenTable)
-      .values({
-        gebouwId,
-        aantalEmails: emails.length,
-        bijgewerktOp: new Date(),
-        ...samenvatting,
-      })
+      .values({ gebouwId, ...nieuweWaarden })
       .onConflictDoUpdate({
         target: gebouwEmailSamenvattingenTable.gebouwId,
-        set: {
-          aantalEmails: emails.length,
-          bijgewerktOp: new Date(),
-          ...samenvatting,
-        },
+        set: nieuweWaarden,
+        setWhere: forceer
+          ? undefined
+          : eq(gebouwEmailSamenvattingenTable.geverifieerd, false),
       });
   } catch (err) {
     // fire-and-forget — log maar blokkeer niet
@@ -197,12 +229,72 @@ router.get("/gebouwen/:id/emails/samenvatting", beheerderPlus, async (req, res) 
 router.post("/gebouwen/:id/emails/samenvatting", beheerderPlus, async (req, res) => {
   try {
     const gebouwId = parseId(req.params.id);
-    await herberekeningUitvoeren(gebouwId);
+    await herberekeningUitvoeren(gebouwId, true);
     const [s] = await db
       .select()
       .from(gebouwEmailSamenvattingenTable)
       .where(eq(gebouwEmailSamenvattingenTable.gebouwId, gebouwId));
     if (!s) return res.status(404).json({ error: "Geen e-mails gevonden om een samenvatting van te maken" });
+    res.json(mapSamenvatting(s));
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// PATCH /gebouwen/:id/emails/samenvatting — beheerder controleert/bewerkt en bevestigt
+router.patch("/gebouwen/:id/emails/samenvatting", beheerderPlus, async (req, res) => {
+  try {
+    const gebouwId = parseId(req.params.id);
+    const body = (req.body ?? {}) as Record<string, unknown>;
+
+    const tekstVeld = (v: unknown): string | null => {
+      if (v === null || v === undefined) return null;
+      const s = String(v).trim();
+      return s === "" ? null : s;
+    };
+
+    const geverifieerd = body.geverifieerd === true;
+
+    let gecontroleerdDoor: string | null = null;
+    if (geverifieerd) {
+      const userId = req.session.userId;
+      if (userId) {
+        const [g] = await db
+          .select({ naam: gebruikersTable.naam })
+          .from(gebruikersTable)
+          .where(eq(gebruikersTable.id, userId));
+        gecontroleerdDoor = g?.naam ?? null;
+      }
+    }
+
+    const velden = {
+      opdrachtomschrijving: tekstVeld(body.opdrachtomschrijving),
+      opdrachtgever: tekstVeld(body.opdrachtgever),
+      contactgegevens: tekstVeld(body.contactgegevens),
+      afspraken: tekstVeld(body.afspraken),
+      actiepunten: tekstVeld(body.actiepunten),
+      besluiten: tekstVeld(body.besluiten),
+      tekeningen: tekstVeld(body.tekeningen),
+      risicos: tekstVeld(body.risicos),
+      geverifieerd,
+      gecontroleerdDoor,
+      gecontroleerdOp: geverifieerd ? new Date() : null,
+      bijgewerktOp: new Date(),
+    };
+
+    await db
+      .insert(gebouwEmailSamenvattingenTable)
+      .values({ gebouwId, aantalEmails: 0, ...velden })
+      .onConflictDoUpdate({
+        target: gebouwEmailSamenvattingenTable.gebouwId,
+        set: velden,
+      });
+
+    const [s] = await db
+      .select()
+      .from(gebouwEmailSamenvattingenTable)
+      .where(eq(gebouwEmailSamenvattingenTable.gebouwId, gebouwId));
     res.json(mapSamenvatting(s));
   } catch (err) {
     req.log.error(err);
