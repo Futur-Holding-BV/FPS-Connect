@@ -3938,6 +3938,12 @@ components:
           type: ["number", "null"]
         hoogte:
           type: ["number", "null"]
+        logo_x:
+          type: ["number", "null"]
+        logo_y:
+          type: ["number", "null"]
+        logo_breedte:
+          type: ["number", "null"]
         totaal_voorzieningen:
           type: integer
 
@@ -3969,6 +3975,12 @@ components:
           type: number
         hoogte:
           type: number
+        logo_x:
+          type: ["number", "null"]
+        logo_y:
+          type: ["number", "null"]
+        logo_breedte:
+          type: ["number", "null"]
 
     # ── VOORZIENING ──────────────────────────────────────────────────────
     Voorziening:

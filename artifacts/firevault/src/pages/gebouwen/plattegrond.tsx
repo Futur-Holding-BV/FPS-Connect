@@ -4,6 +4,8 @@ import * as pdfjsLib from "pdfjs-dist";
 import pdfWorkerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 import {
   useGetVerdieping,
+  useUpdateVerdieping,
+  getGetVerdiepingQueryKey,
   useGetGebouw,
   useListVoorzieningenOpVerdieping,
   useListVerdiepingen,
@@ -307,6 +309,16 @@ export default function Plattegrond() {
   const [scheidingSelectie, setScheidingSelectie] = useState<number | null>(null);
   const [verplaatsModus, setVerplaatsModus] = useState(false);
 
+  // Logo op de plattegrond — beheerder kan het verslepen en schalen (desktop).
+  const [logoBox, setLogoBox] = useState<{ x: number; y: number; b: number } | null>(null);
+  const logoBoxRef = useRef<{ x: number; y: number; b: number } | null>(null);
+  const [logoSleep, setLogoSleep] = useState<
+    | null
+    | { modus: "verplaats"; offsetX: number; offsetY: number }
+    | { modus: "schaal"; ankerX: number; ankerY: number }
+  >(null);
+  useEffect(() => { logoBoxRef.current = logoBox; }, [logoBox]);
+
   const { gebruiker } = useAuth();
   // Bewerkrechten volgen de EFFECTIEVE rol zodat "bekijken als" een teamlid exact
   // toont wat dat teamlid mag. Backend dwingt schrijven op de echte rol af.
@@ -322,6 +334,7 @@ export default function Plattegrond() {
   const { data: gebruikers } = useListGebruikers();
   const maakVoorziening = useCreateVoorziening();
   const updateVoorziening = useUpdateVoorziening();
+  const updateVerdieping = useUpdateVerdieping();
   const { data: volgendSpot, refetch: refetchSpotnummer } = useGetVolgendSpotnummer(Number(id));
   const addFoto = useAddFoto();
 
@@ -333,6 +346,86 @@ export default function Plattegrond() {
 
   const W = pdfDims?.w ?? CANVAS_W;
   const H = pdfDims?.h ?? CANVAS_H;
+
+  // ---- Logo-positie initialiseren uit verdieping (val terug op rechtsboven) ----
+  useEffect(() => {
+    if (!verdieping) return;
+    if (logoSleep) return; // niet overschrijven tijdens slepen/schalen
+    const v = verdieping as any;
+    const pad = Math.max(W, H) * 0.02;
+    const b = v.logo_breedte ?? Math.max(W, H) * 0.16;
+    const x = v.logo_x ?? W - b - pad;
+    const y = v.logo_y ?? pad;
+    setLogoBox({ x, y, b });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [verdieping, W, H]);
+
+  // ---- Logo verslepen/schalen (beheerder, desktop) ----
+  useEffect(() => {
+    if (!logoSleep) return;
+    const clientNaarBeeld = (cx: number, cy: number) => {
+      const rect = svgRef.current!.getBoundingClientRect();
+      return {
+        x: (cx - rect.left - view.x) / view.zoom,
+        y: (cy - rect.top - view.y) / view.zoom,
+      };
+    };
+    const minB = Math.max(W, H) * 0.05;
+    const maxB = Math.max(W, H) * 0.6;
+    const onMove = (e: MouseEvent) => {
+      const p = clientNaarBeeld(e.clientX, e.clientY);
+      setLogoBox((prev) => {
+        if (!prev) return prev;
+        if (logoSleep.modus === "verplaats") {
+          let nx = p.x - logoSleep.offsetX;
+          let ny = p.y - logoSleep.offsetY;
+          const h = prev.b / 2.59;
+          nx = Math.max(0, Math.min(nx, W - prev.b));
+          ny = Math.max(0, Math.min(ny, H - h));
+          return { ...prev, x: nx, y: ny };
+        }
+        const maxByRight = W - logoSleep.ankerX;
+        const maxByBottom = (H - logoSleep.ankerY) * 2.59;
+        const grens = Math.min(maxB, maxByRight, maxByBottom);
+        const nb = Math.max(minB, Math.min(grens, p.x - logoSleep.ankerX));
+        return { ...prev, b: nb };
+      });
+    };
+    const onUp = () => {
+      setLogoSleep(null);
+      const box = logoBoxRef.current;
+      if (box) {
+        updateVerdieping.mutate(
+          { id: Number(verdiepingId), data: { logo_x: box.x, logo_y: box.y, logo_breedte: box.b } },
+          { onSuccess: () => queryClient.invalidateQueries({ queryKey: getGetVerdiepingQueryKey(Number(verdiepingId)) }) },
+        );
+      }
+    };
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+    return () => {
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [logoSleep, view, W, H, verdiepingId]);
+
+  const startLogoVerplaats = (e: React.MouseEvent) => {
+    if (!isBeheerder || !logoBox || plaatsenModus || tekenModus || verplaatsModus) return;
+    e.stopPropagation();
+    e.preventDefault();
+    const rect = svgRef.current!.getBoundingClientRect();
+    const mx = (e.clientX - rect.left - view.x) / view.zoom;
+    const my = (e.clientY - rect.top - view.y) / view.zoom;
+    setLogoSleep({ modus: "verplaats", offsetX: mx - logoBox.x, offsetY: my - logoBox.y });
+  };
+
+  const startLogoSchaal = (e: React.MouseEvent) => {
+    if (!isBeheerder || !logoBox || plaatsenModus || tekenModus || verplaatsModus) return;
+    e.stopPropagation();
+    e.preventDefault();
+    setLogoSleep({ modus: "schaal", ankerX: logoBox.x, ankerY: logoBox.y });
+  };
 
   // ---- PDF-plattegrond renderen ----
   useEffect(() => {
@@ -733,20 +826,54 @@ export default function Plattegrond() {
               {pdfBeeld ? (
                 <>
                   <image href={pdfBeeld} x={0} y={0} width={W} height={H} />
-                  {(() => {
-                    const logoB = Math.max(W, H) * 0.16;
-                    const logoH = logoB / 2.59;
-                    const pad = Math.max(W, H) * 0.02;
+                  {logoBox && (() => {
+                    const logoH = logoBox.b / 2.59;
+                    const handle = Math.max(W, H) * 0.02;
+                    const sleepBezig = logoSleep != null;
                     return (
-                      <image
-                        href="/logo-fps.png"
-                        x={W - logoB - pad}
-                        y={pad}
-                        width={logoB}
-                        height={logoH}
-                        preserveAspectRatio="xMaxYMin meet"
-                        style={{ pointerEvents: "none" }}
-                      />
+                      <g>
+                        <image
+                          href="/logo-fps.png"
+                          x={logoBox.x}
+                          y={logoBox.y}
+                          width={logoBox.b}
+                          height={logoH}
+                          preserveAspectRatio="xMidYMid meet"
+                          style={{
+                            pointerEvents: isBeheerder && !plaatsenModus && !tekenModus && !verplaatsModus ? "auto" : "none",
+                            cursor: isBeheerder ? "move" : "default",
+                          }}
+                          onMouseDown={isBeheerder ? startLogoVerplaats : undefined}
+                        />
+                        {isBeheerder && (
+                          <>
+                            <rect
+                              x={logoBox.x}
+                              y={logoBox.y}
+                              width={logoBox.b}
+                              height={logoH}
+                              fill="none"
+                              stroke="#F23B0D"
+                              strokeWidth={1.5 / view.zoom}
+                              strokeDasharray={`${6 / view.zoom} ${4 / view.zoom}`}
+                              opacity={sleepBezig ? 0.9 : 0.5}
+                              style={{ pointerEvents: "none" }}
+                            />
+                            <rect
+                              x={logoBox.x + logoBox.b - handle / 2}
+                              y={logoBox.y + logoH - handle / 2}
+                              width={handle}
+                              height={handle}
+                              rx={handle * 0.18}
+                              fill="#F23B0D"
+                              stroke="#fff"
+                              strokeWidth={1.5 / view.zoom}
+                              style={{ cursor: "nwse-resize" }}
+                              onMouseDown={startLogoSchaal}
+                            />
+                          </>
+                        )}
+                      </g>
                     );
                   })()}
                 </>

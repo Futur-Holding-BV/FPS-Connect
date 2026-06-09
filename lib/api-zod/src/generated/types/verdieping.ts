@@ -17,5 +17,11 @@ export interface Verdieping {
   breedte?: number | null;
   /** @nullable */
   hoogte?: number | null;
+  /** @nullable */
+  logo_x?: number | null;
+  /** @nullable */
+  logo_y?: number | null;
+  /** @nullable */
+  logo_breedte?: number | null;
   totaal_voorzieningen?: number;
 }

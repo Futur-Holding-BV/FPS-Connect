@@ -39,6 +39,9 @@ export const verdiepingenTable = pgTable("verdiepingen", {
   plattegrondUrl: text("plattegrond_url"),
   breedte: real("breedte"),
   hoogte: real("hoogte"),
+  logoX: real("logo_x"),
+  logoY: real("logo_y"),
+  logoBreedte: real("logo_breedte"),
   aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
 });
 

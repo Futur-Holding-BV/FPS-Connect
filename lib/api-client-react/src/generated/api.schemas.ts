@@ -397,6 +397,12 @@ export interface Verdieping {
   breedte?: number | null;
   /** @nullable */
   hoogte?: number | null;
+  /** @nullable */
+  logo_x?: number | null;
+  /** @nullable */
+  logo_y?: number | null;
+  /** @nullable */
+  logo_breedte?: number | null;
   totaal_voorzieningen?: number;
 }
 
@@ -743,6 +749,12 @@ export interface VerdiepingUpdate {
   plattegrond_url?: string;
   breedte?: number;
   hoogte?: number;
+  /** @nullable */
+  logo_x?: number | null;
+  /** @nullable */
+  logo_y?: number | null;
+  /** @nullable */
+  logo_breedte?: number | null;
 }
 
 export type VoorzieningStatus = typeof VoorzieningStatus[keyof typeof VoorzieningStatus];

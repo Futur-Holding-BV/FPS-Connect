@@ -710,6 +710,9 @@ router.get("/verdiepingen/:id", async (req, res) => {
       plattegrond_url: v.plattegrondUrl,
       breedte: v.breedte,
       hoogte: v.hoogte,
+      logo_x: v.logoX,
+      logo_y: v.logoY,
+      logo_breedte: v.logoBreedte,
       totaal_voorzieningen: Number(totaal?.count ?? 0),
     });
   } catch (err) {
@@ -722,10 +725,19 @@ router.get("/verdiepingen/:id", async (req, res) => {
 router.patch("/verdiepingen/:id", requireRol("beheerder", "hoofdbeheerder"), async (req, res) => {
   try {
     const id = parseInt(req.params.id);
-    const { naam, niveau, plattegrond_url, breedte, hoogte } = req.body;
+    const { naam, niveau, plattegrond_url, breedte, hoogte, logo_x, logo_y, logo_breedte } = req.body;
+    const wijziging: Record<string, unknown> = {};
+    if (naam !== undefined) wijziging.naam = naam;
+    if (niveau !== undefined) wijziging.niveau = niveau;
+    if (plattegrond_url !== undefined) wijziging.plattegrondUrl = plattegrond_url;
+    if (breedte !== undefined) wijziging.breedte = breedte;
+    if (hoogte !== undefined) wijziging.hoogte = hoogte;
+    if (logo_x !== undefined) wijziging.logoX = logo_x;
+    if (logo_y !== undefined) wijziging.logoY = logo_y;
+    if (logo_breedte !== undefined) wijziging.logoBreedte = logo_breedte;
     const [v] = await db
       .update(verdiepingenTable)
-      .set({ naam, niveau, plattegrondUrl: plattegrond_url, breedte, hoogte })
+      .set(wijziging)
       .where(eq(verdiepingenTable.id, id))
       .returning();
     if (!v) return res.status(404).json({ error: "Verdieping niet gevonden" });
@@ -741,6 +753,9 @@ router.patch("/verdiepingen/:id", requireRol("beheerder", "hoofdbeheerder"), asy
       plattegrond_url: v.plattegrondUrl,
       breedte: v.breedte,
       hoogte: v.hoogte,
+      logo_x: v.logoX,
+      logo_y: v.logoY,
+      logo_breedte: v.logoBreedte,
       totaal_voorzieningen: Number(totaal?.count ?? 0),
     });
   } catch (err) {

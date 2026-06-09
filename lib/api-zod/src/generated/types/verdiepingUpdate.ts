@@ -12,4 +12,10 @@ export interface VerdiepingUpdate {
   plattegrond_url?: string;
   breedte?: number;
   hoogte?: number;
+  /** @nullable */
+  logo_x?: number | null;
+  /** @nullable */
+  logo_y?: number | null;
+  /** @nullable */
+  logo_breedte?: number | null;
 }

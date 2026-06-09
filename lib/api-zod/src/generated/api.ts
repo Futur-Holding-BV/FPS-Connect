@@ -294,6 +294,9 @@ export const GetGebouwResponse = zod.object({
   "plattegrond_url": zod.string().nullish(),
   "breedte": zod.number().nullish(),
   "hoogte": zod.number().nullish(),
+  "logo_x": zod.number().nullish(),
+  "logo_y": zod.number().nullish(),
+  "logo_breedte": zod.number().nullish(),
   "totaal_voorzieningen": zod.number().optional()
 })),
   "stats": zod.object({
@@ -471,6 +474,9 @@ export const ListVerdiepingenResponseItem = zod.object({
   "plattegrond_url": zod.string().nullish(),
   "breedte": zod.number().nullish(),
   "hoogte": zod.number().nullish(),
+  "logo_x": zod.number().nullish(),
+  "logo_y": zod.number().nullish(),
+  "logo_breedte": zod.number().nullish(),
   "totaal_voorzieningen": zod.number().optional()
 })
 export const ListVerdiepingenResponse = zod.array(ListVerdiepingenResponseItem)
@@ -509,6 +515,9 @@ export const GetVerdiepingResponse = zod.object({
   "plattegrond_url": zod.string().nullish(),
   "breedte": zod.number().nullish(),
   "hoogte": zod.number().nullish(),
+  "logo_x": zod.number().nullish(),
+  "logo_y": zod.number().nullish(),
+  "logo_breedte": zod.number().nullish(),
   "totaal_voorzieningen": zod.number().optional()
 })
 
@@ -525,7 +534,10 @@ export const UpdateVerdiepingBody = zod.object({
   "niveau": zod.number().optional(),
   "plattegrond_url": zod.string().optional(),
   "breedte": zod.number().optional(),
-  "hoogte": zod.number().optional()
+  "hoogte": zod.number().optional(),
+  "logo_x": zod.number().nullish(),
+  "logo_y": zod.number().nullish(),
+  "logo_breedte": zod.number().nullish()
 })
 
 export const UpdateVerdiepingResponse = zod.object({
@@ -536,6 +548,9 @@ export const UpdateVerdiepingResponse = zod.object({
   "plattegrond_url": zod.string().nullish(),
   "breedte": zod.number().nullish(),
   "hoogte": zod.number().nullish(),
+  "logo_x": zod.number().nullish(),
+  "logo_y": zod.number().nullish(),
+  "logo_breedte": zod.number().nullish(),
   "totaal_voorzieningen": zod.number().optional()
 })
 
