@@ -334,6 +334,41 @@ function strOfNull(v: unknown): string | null {
   return typeof v === "string" && v.trim() ? v.trim() : null;
 }
 
+interface StandaardWaarden {
+  aantal_verdiepingen: number;
+  hoogte: number;
+  breedte: number;
+  diepte: number;
+  oppervlakte: number;
+}
+
+function standaardWaardenOpType(gebouwType: string | null): StandaardWaarden {
+  const type = (gebouwType ?? "").toLowerCase();
+  if (type.includes("woonhuis") || type.includes("woning") || type.includes("villa")) {
+    return { aantal_verdiepingen: 2, hoogte: 7, breedte: 8, diepte: 10, oppervlakte: 80 };
+  }
+  if (type.includes("appartement") || type.includes("flat")) {
+    return { aantal_verdiepingen: 5, hoogte: 15, breedte: 20, diepte: 15, oppervlakte: 300 };
+  }
+  if (type.includes("kantoor")) {
+    return { aantal_verdiepingen: 3, hoogte: 11, breedte: 20, diepte: 15, oppervlakte: 300 };
+  }
+  if (type.includes("industri") || type.includes("bedrijfshal") || type.includes("loods") || type.includes("magazijn")) {
+    return { aantal_verdiepingen: 1, hoogte: 9, breedte: 30, diepte: 25, oppervlakte: 750 };
+  }
+  if (type.includes("school") || type.includes("onderwijs")) {
+    return { aantal_verdiepingen: 2, hoogte: 8, breedte: 30, diepte: 20, oppervlakte: 600 };
+  }
+  if (type.includes("winkel") || type.includes("retail")) {
+    return { aantal_verdiepingen: 1, hoogte: 5, breedte: 15, diepte: 12, oppervlakte: 180 };
+  }
+  if (type.includes("zorg") || type.includes("ziekenhuis") || type.includes("kliniek")) {
+    return { aantal_verdiepingen: 3, hoogte: 12, breedte: 40, diepte: 25, oppervlakte: 1000 };
+  }
+  // Standaard: middelgroot bedrijfspand
+  return { aantal_verdiepingen: 2, hoogte: 7, breedte: 15, diepte: 12, oppervlakte: 180 };
+}
+
 async function analyseerBeeld(
   dataUrl: string,
   grondBreedteMeter: number,
@@ -819,6 +854,60 @@ export async function analyseerGebouwVrijeTekst(beschrijving: string): Promise<G
         result.toelichting =
           "Adres gevonden, maar de satellietanalyse mislukte. " +
           "De afmetingen zijn niet automatisch geschat.";
+      }
+    }
+  }
+
+  // Stap 5: Vul ontbrekende afmetingen altijd in met conservatieve standaardwaarden op basis
+  // van gebouwtype. Zo zijn de velden nooit leeg na een succesvolle adresopzoek.
+  const afmetingsVeldenOntbreken =
+    result.aantal_verdiepingen === null ||
+    result.hoogte === null ||
+    result.breedte === null ||
+    result.diepte === null ||
+    result.oppervlakte === null;
+
+  if (afmetingsVeldenOntbreken) {
+    const defaults = standaardWaardenOpType(result.gebouw_type);
+    const gebruikteDefaults: string[] = [];
+
+    if (result.aantal_verdiepingen === null) {
+      result.aantal_verdiepingen = defaults.aantal_verdiepingen;
+      gebruikteDefaults.push("verdiepingen");
+    }
+    if (result.hoogte === null) {
+      result.hoogte = defaults.hoogte;
+      gebruikteDefaults.push("hoogte");
+    }
+    if (result.breedte === null) {
+      result.breedte = defaults.breedte;
+      gebruikteDefaults.push("breedte");
+    }
+    if (result.diepte === null) {
+      result.diepte = defaults.diepte;
+      gebruikteDefaults.push("diepte");
+    }
+    if (result.oppervlakte === null) {
+      result.oppervlakte = defaults.oppervlakte;
+      gebruikteDefaults.push("oppervlakte");
+    }
+
+    if (gebruikteDefaults.length > 0) {
+      const typeLabel = result.gebouw_type ?? "onbekend gebouwtype";
+      const bronLabel = result.satelliet_url
+        ? "satellietanalyse onvolledig"
+        : HEEFT_OPENAI
+          ? "geen satellietanalyse beschikbaar"
+          : "geen AI-beeldanalyse beschikbaar (OpenAI-sleutel ontbreekt)";
+      const fallbackToelichting =
+        `Geschatte waarden voor ${gebruikteDefaults.join(", ")} zijn standaardschattingen ` +
+        `voor gebouwtype "${typeLabel}" (${bronLabel}). Controleer en corrigeer deze waarden.`;
+      result.toelichting = result.toelichting
+        ? `${result.toelichting} ${fallbackToelichting}`
+        : fallbackToelichting;
+      // Zet betrouwbaarheid naar "laag" als er geen betere schatting beschikbaar was.
+      if (!result.betrouwbaarheid || result.betrouwbaarheid === "laag") {
+        result.betrouwbaarheid = "laag";
       }
     }
   }

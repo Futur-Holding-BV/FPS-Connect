@@ -20,7 +20,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Plus, Sparkles, Loader2, AlertCircle } from "lucide-react";
+import { Plus, Sparkles, Loader2, AlertCircle, TriangleAlert } from "lucide-react";
 
 interface Velden {
   projectnummer: string;
@@ -72,6 +72,7 @@ export function GebouwAanmakenDialog() {
   const [satelliet, setSatelliet] = useState<string | null>(null);
   const [aiToelichting, setAiToelichting] = useState<string | null>(null);
   const [aiBetrouwbaarheid, setAiBetrouwbaarheid] = useState<string | null>(null);
+  const [geschatteAfmetingen, setGeschatteAfmetingen] = useState(false);
   const [foutmelding, setFoutmelding] = useState<string | null>(null);
 
   function zet<K extends keyof Velden>(key: K, waarde: string) {
@@ -88,6 +89,7 @@ export function GebouwAanmakenDialog() {
     setSatelliet(null);
     setAiToelichting(null);
     setAiBetrouwbaarheid(null);
+    setGeschatteAfmetingen(false);
     setFoutmelding(null);
   }
 
@@ -131,29 +133,38 @@ export function GebouwAanmakenDialog() {
       const vul = (huidig: string, nieuw: string | null | undefined): string =>
         huidig.trim() ? huidig : (nieuw ?? "");
 
-      setVelden((v) => ({
-        ...v,
-        naam: vul(
-          v.naam,
-          res.naam ?? (res.adres_gevonden ? res.adres_gevonden.split(",")[0] : null),
-        ),
-        adres: vul(v.adres, res.adres),
-        stad: vul(v.stad, res.stad ?? (res.adres_gevonden ? afleidStad(res.adres_gevonden) : null)),
-        postcode: vul(v.postcode, res.postcode),
-        gebouw_type: vul(v.gebouw_type, res.gebouw_type),
-        omschrijving: vul(v.omschrijving, res.omschrijving),
-        aantal_verdiepingen: vul(
-          v.aantal_verdiepingen,
-          res.aantal_verdiepingen != null ? String(res.aantal_verdiepingen) : null,
-        ),
-        hoogte: vul(v.hoogte, res.hoogte != null ? String(Math.round(res.hoogte * 10) / 10) : null),
-        breedte: vul(v.breedte, res.breedte != null ? String(Math.round(res.breedte * 10) / 10) : null),
-        diepte: vul(v.diepte, res.diepte != null ? String(Math.round(res.diepte * 10) / 10) : null),
-        oppervlakte: vul(
-          v.oppervlakte,
-          res.oppervlakte != null ? String(Math.round(res.oppervlakte)) : null,
-        ),
-      }));
+      setVelden((prev) => {
+        const bijgewerkt = {
+          ...prev,
+          naam: vul(
+            prev.naam,
+            res.naam ?? (res.adres_gevonden ? res.adres_gevonden.split(",")[0] : null),
+          ),
+          adres: vul(prev.adres, res.adres),
+          stad: vul(prev.stad, res.stad ?? (res.adres_gevonden ? afleidStad(res.adres_gevonden) : null)),
+          postcode: vul(prev.postcode, res.postcode),
+          gebouw_type: vul(prev.gebouw_type, res.gebouw_type),
+          omschrijving: vul(prev.omschrijving, res.omschrijving),
+          aantal_verdiepingen: vul(
+            prev.aantal_verdiepingen,
+            res.aantal_verdiepingen != null ? String(res.aantal_verdiepingen) : null,
+          ),
+          hoogte: vul(prev.hoogte, res.hoogte != null ? String(Math.round(res.hoogte * 10) / 10) : null),
+          breedte: vul(prev.breedte, res.breedte != null ? String(Math.round(res.breedte * 10) / 10) : null),
+          diepte: vul(prev.diepte, res.diepte != null ? String(Math.round(res.diepte * 10) / 10) : null),
+          oppervlakte: vul(
+            prev.oppervlakte,
+            res.oppervlakte != null ? String(Math.round(res.oppervlakte)) : null,
+          ),
+        };
+        // Toon waarschuwing als afmetingen als standaardschatting zijn ingevuld.
+        const heeftAfmetingen =
+          bijgewerkt.aantal_verdiepingen || bijgewerkt.hoogte || bijgewerkt.breedte;
+        setGeschatteAfmetingen(
+          heeftAfmetingen ? (res.betrouwbaarheid === "laag" || !res.betrouwbaarheid) : false,
+        );
+        return bijgewerkt;
+      });
     } catch (err) {
       const apiErr = err as ErrorType<{ error?: string }>;
       const melding =
@@ -269,16 +280,25 @@ export function GebouwAanmakenDialog() {
             )}
           </Button>
 
-          {satelliet && (
+          {(satelliet || aiToelichting) && (
             <div className="flex gap-3 items-start pt-1">
-              <img
-                src={satelliet}
-                alt="Satellietbeeld"
-                className="h-24 w-24 rounded-md object-cover border shrink-0"
-              />
+              {satelliet && (
+                <img
+                  src={satelliet}
+                  alt="Satellietbeeld"
+                  className="h-24 w-24 rounded-md object-cover border shrink-0"
+                />
+              )}
               <div className="text-xs text-muted-foreground space-y-1">
                 {aiBetrouwbaarheid && (
-                  <Badge variant="secondary" className="text-xs">
+                  <Badge
+                    variant={aiBetrouwbaarheid === "laag" ? "outline" : "secondary"}
+                    className={
+                      aiBetrouwbaarheid === "laag"
+                        ? "text-xs border-amber-500/60 text-amber-600"
+                        : "text-xs"
+                    }
+                  >
                     Betrouwbaarheid: {aiBetrouwbaarheid}
                   </Badge>
                 )}
@@ -369,6 +389,15 @@ export function GebouwAanmakenDialog() {
               onChange={(e) => zet("gebouw_type", e.target.value)}
             />
           </div>
+          {geschatteAfmetingen && (
+            <div className="sm:col-span-2 flex items-start gap-2 rounded-md border border-amber-500/40 bg-amber-50/60 dark:bg-amber-950/20 px-3 py-2 text-xs text-amber-700 dark:text-amber-400">
+              <TriangleAlert className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+              <span>
+                De onderstaande afmetingen zijn conservatieve schattingen — controleer en corrigeer ze voor opslaan.
+              </span>
+            </div>
+          )}
+
           <div className="space-y-1.5">
             <Label htmlFor="g-verdiepingen">Aantal verdiepingen</Label>
             <Input
