@@ -10,6 +10,6 @@ De code op een scheidingslijn = classificatie-prefix (WRD/EW/EI/E/R/Sa) + WBDBO-
 
 **How to apply:**
 - Het formulier (scheidingForm) houdt `classificatie` + `waarde` apart; bij opslaan worden ze samengevoegd.
-- Op de plattegrond wordt de code als bolletje (witte cirkel, gekleurde rand + tekst) op het midpunt van de polyline getekend, niet als rechthoek.
+- Op de plattegrond wordt de code als meerdere bolletjes (witte cirkel, gekleurde rand + tekst) langs de polyline getekend: aan begin én eind, plus evenredig verdeelde tussenposities. Aantal tussenmarkers schaalt met booglengte (helper `markerPosities(punten, stap)` + `puntOpAfstand()` voor arc-length interpolatie). `stap = Math.max(W,H)/4.6` normaliseert dichtheid t.o.v. tekening-resolutie (PDF rendert op scale:2, dus W/H kan ~2x zijn). Cap op 8 tussenmarkers. Niet als rechthoek.
 - Lettergrootte schaalt met codelengte (>=6 tekens kleiner) om overflow in de r=18 cirkel te beperken.
 - Legenda/selectiepaneel toont `s.waarde` zonder " min" suffix (de code bevat zelf al de betekenis).

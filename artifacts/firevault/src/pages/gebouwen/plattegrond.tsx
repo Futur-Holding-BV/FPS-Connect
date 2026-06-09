@@ -87,6 +87,41 @@ const CANVAS_H = 800;
 const MIN_ZOOM = 0.2;
 const MAX_ZOOM = 5;
 
+type Punt = { x: number; y: number };
+
+function puntOpAfstand(punten: Punt[], segLengtes: number[], d: number): Punt {
+  if (d <= 0) return { ...punten[0]! };
+  let rest = d;
+  for (let i = 0; i < segLengtes.length; i++) {
+    const len = segLengtes[i]!;
+    if (rest <= len || i === segLengtes.length - 1) {
+      const t = len === 0 ? 0 : Math.min(1, rest / len);
+      const a = punten[i]!;
+      const b = punten[i + 1]!;
+      return { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t };
+    }
+    rest -= len;
+  }
+  return { ...punten[punten.length - 1]! };
+}
+
+function markerPosities(punten: Punt[], stap: number): Punt[] {
+  if (punten.length < 2) return punten.slice();
+  const segLengtes: number[] = [];
+  let totaal = 0;
+  for (let i = 1; i < punten.length; i++) {
+    const len = Math.hypot(punten[i]!.x - punten[i - 1]!.x, punten[i]!.y - punten[i - 1]!.y);
+    segLengtes.push(len);
+    totaal += len;
+  }
+  if (totaal === 0) return [{ ...punten[0]! }];
+  const tussen = Math.min(8, Math.max(1, Math.round(totaal / stap)));
+  const afstanden = [0];
+  for (let i = 1; i <= tussen; i++) afstanden.push((totaal * i) / (tussen + 1));
+  afstanden.push(totaal);
+  return afstanden.map((d) => puntOpAfstand(punten, segLengtes, d));
+}
+
 type SVGVoorziening = {
   id: number;
   objectnummer: string;
@@ -684,7 +719,7 @@ export default function Plattegrond() {
                 if (punten.length < 2) return null;
                 const kleur = s.kleur || SCHEIDING_TYPEN[s.type]?.kleur || "#dc2626";
                 const geselecteerd = scheidingSelectie === s.id;
-                const mid = punten[Math.floor(punten.length / 2)];
+                const markers = markerPosities(punten, Math.max(W, H) / 4.6);
                 const puntenStr = punten.map((p) => `${p.x},${p.y}`).join(" ");
                 return (
                   <g key={`s${s.id}`}
@@ -695,13 +730,13 @@ export default function Plattegrond() {
                       strokeWidth={geselecteerd ? 7 : 4}
                       strokeDasharray={s.type === "rook" ? "12 8" : undefined}
                       strokeLinecap="round" strokeLinejoin="round" opacity={0.9} />
-                    {s.waarde && (
-                      <g transform={`translate(${mid.x}, ${mid.y})`}>
+                    {s.waarde && markers.map((m, mi) => (
+                      <g key={mi} transform={`translate(${m.x}, ${m.y})`}>
                         <circle r={18} fill="#fff" stroke={kleur} strokeWidth={geselecteerd ? 4 : 3} />
                         <text x={0} y={0} textAnchor="middle" dominantBaseline="central"
                           fontSize={String(s.waarde).length >= 6 ? 8 : String(s.waarde).length >= 5 ? 9.5 : 11} fontWeight={800} fill={kleur}>{s.waarde}</text>
                       </g>
-                    )}
+                    ))}
                   </g>
                 );
               })}
