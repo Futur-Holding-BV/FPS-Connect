@@ -5,13 +5,14 @@ import {
   SidebarGroup, SidebarGroupContent,
   SidebarMenu, SidebarMenuItem, SidebarMenuButton,
 } from "@/components/ui/sidebar";
-import { Flame, Home, FileText, Building } from "lucide-react";
+import { Flame, Home, FileText, Building, Info } from "lucide-react";
 import { GebruikerMenu } from "@/components/gebruiker-menu";
 
 const ROUTES = [
   { href: "/", labelKey: "nav.mijnPortaal", icoon: Home },
   { href: "/gebouwen", labelKey: "nav.mijnGebouwen3d", icoon: Building },
   { href: "/klant/rapportages", labelKey: "nav.rapportages", icoon: FileText },
+  { href: "/info", labelKey: "nav.info", icoon: Info },
 ];
 
 export default function KlantLayout({ children }: { children: React.ReactNode }) {

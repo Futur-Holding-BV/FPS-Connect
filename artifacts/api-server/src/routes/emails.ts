@@ -42,6 +42,7 @@ const mapEmail = (
   ai_naw: e.aiNaw,
   ai_contactinfo: e.aiContactinfo,
   ai_tekeningen: e.aiTekeningen,
+  ai_actiepunten: e.aiActiepunten,
   status: e.status,
   aangemaakt_op: iso(e.aangemaaktOp),
   bijlagen: bijlagen.map(mapBijlage),
@@ -154,6 +155,7 @@ router.post("/gebouwen/:id/emails", beheerderPlus, async (req, res) => {
         aiNaw: ai.naw,
         aiContactinfo: ai.contactinfo,
         aiTekeningen: ai.tekeningen,
+        aiActiepunten: ai.actiepunten,
         status: "verwerkt",
       })
       .returning();

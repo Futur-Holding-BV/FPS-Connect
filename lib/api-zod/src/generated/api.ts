@@ -418,6 +418,45 @@ export const MeldGebouwGereedResponse = zod.object({
 
 
 /**
+ * @summary Gereed-status terugzetten naar actief
+ */
+export const HerstelGebouwActiefParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const HerstelGebouwActiefResponse = zod.object({
+  "id": zod.number(),
+  "werknummer": zod.string().nullish(),
+  "projectnummer": zod.string().nullish(),
+  "naam": zod.string(),
+  "adres": zod.string(),
+  "stad": zod.string().nullish(),
+  "postcode": zod.string().nullish(),
+  "omschrijving": zod.string().nullish(),
+  "klant_id": zod.number().nullish(),
+  "klant_naam": zod.string().nullish(),
+  "aantal_verdiepingen": zod.number().nullish(),
+  "hoogte": zod.number().nullish(),
+  "breedte": zod.number().nullish(),
+  "diepte": zod.number().nullish(),
+  "oppervlakte": zod.number().nullish(),
+  "gebouw_type": zod.string().nullish(),
+  "latitude": zod.number().nullish(),
+  "longitude": zod.number().nullish(),
+  "totaal_voorzieningen": zod.number().optional(),
+  "partijen": zod.array(zod.object({
+  "type": zod.string(),
+  "naam": zod.string()
+})).optional(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string().nullish(),
+  "laatste_spot_op": zod.string().nullish(),
+  "gereed_op": zod.string().nullish(),
+  "gereed_door": zod.string().nullish()
+})
+
+
+/**
  * @summary Verdiepingen van een gebouw
  */
 export const ListVerdiepingenParams = zod.object({
@@ -2736,6 +2775,7 @@ export const ListGebouwEmailsResponseItem = zod.object({
   "ai_naw": zod.string().nullish(),
   "ai_contactinfo": zod.string().nullish(),
   "ai_tekeningen": zod.string().nullish(),
+  "ai_actiepunten": zod.string().nullish(),
   "status": zod.string(),
   "aangemaakt_op": zod.string(),
   "bijlagen": zod.array(zod.object({
@@ -2787,6 +2827,7 @@ export const GetGebouwEmailResponse = zod.object({
   "ai_naw": zod.string().nullish(),
   "ai_contactinfo": zod.string().nullish(),
   "ai_tekeningen": zod.string().nullish(),
+  "ai_actiepunten": zod.string().nullish(),
   "status": zod.string(),
   "aangemaakt_op": zod.string(),
   "bijlagen": zod.array(zod.object({

@@ -206,6 +206,9 @@ importers:
       mailparser:
         specifier: ^3.9.9
         version: 3.9.9
+      nodemailer:
+        specifier: ^8.0.10
+        version: 8.0.10
       openai:
         specifier: ^6.42.0
         version: 6.42.0(ws@8.21.0)(zod@3.25.76)

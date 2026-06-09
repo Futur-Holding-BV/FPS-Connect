@@ -5,7 +5,7 @@ import {
   SidebarGroup, SidebarGroupLabel, SidebarGroupContent,
   SidebarMenu, SidebarMenuItem, SidebarMenuButton,
 } from "@/components/ui/sidebar";
-import { Flame, ShieldCheck, Building, Wrench, Users, Search, Home, Receipt, ShieldAlert, LifeBuoy, MessageSquarePlus, Activity, Contact } from "lucide-react";
+import { Flame, ShieldCheck, Building, Wrench, Users, Search, Home, Receipt, ShieldAlert, LifeBuoy, MessageSquarePlus, Activity, Contact, Info } from "lucide-react";
 import { GebruikerMenu } from "@/components/gebruiker-menu";
 
 const ROUTES = [
@@ -24,6 +24,7 @@ const BEHEER_ROUTES = [
   { href: "/beheer/helpdesk", label: "Helpdesk", icoon: LifeBuoy },
   { href: "/beheer/feedback", label: "Feedback", icoon: MessageSquarePlus },
   { href: "/beheer/heatmaps", label: "Heatmaps", icoon: Activity },
+  { href: "/info", label: "App-informatie", icoon: Info },
 ];
 
 export default function BeheerderLayout({ children }: { children: React.ReactNode }) {

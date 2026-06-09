@@ -373,6 +373,25 @@ paths:
                 $ref: "#/components/schemas/Gebouw"
         "404":
           description: Niet gevonden
+    delete:
+      operationId: herstelGebouwActief
+      tags: [gebouwen]
+      summary: Gereed-status terugzetten naar actief
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Gebouw"
+        "404":
+          description: Niet gevonden
 
   /gebouwen/{id}/verdiepingen:
     get:
@@ -2943,6 +2962,8 @@ components:
         ai_contactinfo:
           type: ["string", "null"]
         ai_tekeningen:
+          type: ["string", "null"]
+        ai_actiepunten:
           type: ["string", "null"]
         status:
           type: string

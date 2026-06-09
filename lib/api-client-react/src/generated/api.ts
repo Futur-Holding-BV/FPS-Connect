@@ -1345,6 +1345,76 @@ export const useMeldGebouwGereed = <TError = ErrorType<void>,
       return useMutation(getMeldGebouwGereedMutationOptions(options));
     }
 
+export const getHerstelGebouwActiefUrl = (id: number,) => {
+
+
+
+
+  return `/api/gebouwen/${id}/gereed`
+}
+
+/**
+ * @summary Gereed-status terugzetten naar actief
+ */
+export const herstelGebouwActief = async (id: number, options?: RequestInit): Promise<Gebouw> => {
+
+  return customFetch<Gebouw>(getHerstelGebouwActiefUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getHerstelGebouwActiefMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof herstelGebouwActief>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof herstelGebouwActief>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['herstelGebouwActief'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof herstelGebouwActief>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  herstelGebouwActief(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type HerstelGebouwActiefMutationResult = NonNullable<Awaited<ReturnType<typeof herstelGebouwActief>>>
+
+    export type HerstelGebouwActiefMutationError = ErrorType<void>
+
+    /**
+ * @summary Gereed-status terugzetten naar actief
+ */
+export const useHerstelGebouwActief = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof herstelGebouwActief>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof herstelGebouwActief>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getHerstelGebouwActiefMutationOptions(options));
+    }
+
 export const getListVerdiepingenUrl = (id: number,) => {
 
 

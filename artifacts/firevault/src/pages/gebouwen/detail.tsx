@@ -8,6 +8,7 @@ import {
   useDeleteGebouwToewijzing,
   useListGebruikers,
   useMeldGebouwGereed,
+  useHerstelGebouwActief,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,7 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ArrowLeft, Layers, Users, X, UserPlus, Loader2, Building2, Pencil, MapPin, CheckCircle } from "lucide-react";
+import { ArrowLeft, Layers, Users, X, UserPlus, Loader2, Building2, Pencil, MapPin, CheckCircle, RotateCcw, Calendar, Hash, ClipboardList } from "lucide-react";
 import { useAuth } from "@/context/auth-context";
 import GebouwPartijen from "./gebouw-partijen";
 import GebouwTekeningen from "./gebouw-tekeningen";
@@ -30,8 +31,8 @@ import GebouwEmails from "./gebouw-emails";
 import { GebouwBewerkenDialog } from "./gebouw-bewerken-dialog";
 
 const BEHEERDER_ROLLEN = ["beheerder", "hoofdbeheerder"];
-const TOEWIJSBARE_ROLLEN = ["monteur", "controleur"];
-const PROJECT_ROLLEN = ["Projectleider", "Werkvoorbereider", "Monteur", "Controleur"];
+const SYSTEEM_ROLLEN_UITGESLOTEN = ["beheerder", "hoofdbeheerder"];
+const PROJECT_ROLLEN = ["Projectleider", "Werkvoorbereider", "Calculator", "Commercie", "Project-admin", "Financieel", "Uitvoerder"];
 const GEEN_PROJECT_ROL = "geen";
 
 export default function GebouwDetail() {
@@ -51,19 +52,21 @@ export default function GebouwDetail() {
   const maakToewijzing = useCreateGebouwToewijzing();
   const verwijderToewijzing = useDeleteGebouwToewijzing();
   const gereedMelden = useMeldGebouwGereed();
+  const herstelGereed = useHerstelGebouwActief();
 
   const [gekozenGebruikerId, setGekozenGebruikerId] = useState<string>("");
   const [gekozenProjectRol, setGekozenProjectRol] = useState<string>("");
   const [bezig, setBezig] = useState(false);
   const [bewerkenOpen, setBewerkenOpen] = useState(false);
   const [gereedBezig, setGereedBezig] = useState(false);
+  const [herstelBezig, setHerstelBezig] = useState(false);
 
   if (isLoading) return <div className="p-6 text-muted-foreground">Laden...</div>;
   if (!gebouw) return <div className="p-6">Gebouw niet gevonden.</div>;
 
   const beschikbareGebruikers = (gebruikers ?? []).filter(
     (g) =>
-      TOEWIJSBARE_ROLLEN.includes(g.rol ?? "") &&
+      !SYSTEEM_ROLLEN_UITGESLOTEN.includes(g.rol ?? "") &&
       !(toewijzingen ?? []).some((t) => t.gebruiker_id === g.id),
   );
 
@@ -111,13 +114,26 @@ export default function GebouwDetail() {
   }
 
   async function meldGereed() {
-    if (!confirm("Weet u zeker dat u dit gebouw als gereed wilt melden?")) return;
+    if (!confirm("Weet u zeker dat u dit project als gereed wilt melden?")) return;
     setGereedBezig(true);
     try {
       await gereedMelden.mutateAsync({ id: gebouwId, data: { gereed_door: gebruiker?.naam ?? undefined } });
       queryClient.invalidateQueries();
     } finally {
       setGereedBezig(false);
+    }
+  }
+
+  const projectAdmin = (toewijzingen ?? []).find((t) => t.project_rol === "Project-admin");
+
+  async function herstelActief() {
+    if (!confirm("Weet u zeker dat u de gereed-status wilt terugzetten? Het project wordt weer actief.")) return;
+    setHerstelBezig(true);
+    try {
+      await herstelGereed.mutateAsync({ id: gebouwId });
+      queryClient.invalidateQueries();
+    } finally {
+      setHerstelBezig(false);
     }
   }
 
@@ -152,17 +168,41 @@ export default function GebouwDetail() {
                 {gebouw.gereed_door ? ` door ${gebouw.gereed_door}` : ""}
               </p>
             )}
+            {/* Compact projectoverzicht */}
+            <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-xs text-muted-foreground">
+              {gebouw.werknummer && (
+                <span className="flex items-center gap-1">
+                  <Hash className="h-3 w-3" /> {gebouw.werknummer}
+                </span>
+              )}
+              {gebouw.aangemaakt_op && (
+                <span className="flex items-center gap-1">
+                  <Calendar className="h-3 w-3" /> Start {new Date(gebouw.aangemaakt_op).toLocaleDateString("nl-NL")}
+                </span>
+              )}
+              {projectAdmin && (
+                <span className="flex items-center gap-1">
+                  <ClipboardList className="h-3 w-3" /> Project-admin: {projectAdmin.naam}
+                </span>
+              )}
+            </div>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap justify-end">
             {isBeheerder && !gebouw.gereed_op && (
               <Button variant="outline" onClick={meldGereed} disabled={gereedBezig}>
-                {gereedBezig ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <CheckCircle className="h-4 w-4 mr-2" />}
-                Gereedmelden
+                {gereedBezig ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}
+                Gebouw gereedmelden
+              </Button>
+            )}
+            {isBeheerder && gebouw.gereed_op && (
+              <Button variant="outline" onClick={herstelActief} disabled={herstelBezig}>
+                {herstelBezig ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4" />}
+                Terugzetten naar actief
               </Button>
             )}
             {isBeheerder && (
               <Button variant="outline" onClick={() => setBewerkenOpen(true)}>
-                <Pencil className="h-4 w-4 mr-2" /> Bewerken
+                <Pencil className="h-4 w-4" /> Bewerken
               </Button>
             )}
           </div>
@@ -308,11 +348,11 @@ export default function GebouwDetail() {
             <Card className="border-primary/40 shadow-sm">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Users className="h-5 w-5 text-primary" /> Toewijzingen
+                  <Users className="h-5 w-5 text-primary" /> Teamleden
                 </CardTitle>
                 <p className="text-sm text-muted-foreground">
-                  Koppel monteurs of controleurs aan dit gebouw. Zij zien alleen
-                  toegewezen gebouwen, inspecties en onderhoud.
+                  Koppel teamleden aan dit project en wijs projectfuncties toe.
+                  Monteurs en controleurs zien alleen hun toegewezen projecten.
                 </p>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -322,7 +362,7 @@ export default function GebouwDetail() {
                   </div>
                 ) : (toewijzingen ?? []).length === 0 ? (
                   <p className="text-sm text-muted-foreground">
-                    Geen monteurs of controleurs toegewezen.
+                    Nog geen teamleden toegewezen aan dit project.
                   </p>
                 ) : (
                   <ul className="space-y-2">
@@ -368,7 +408,7 @@ export default function GebouwDetail() {
                       onValueChange={setGekozenGebruikerId}
                     >
                       <SelectTrigger className="flex-1 text-sm">
-                        <SelectValue placeholder="Kies monteur of controleur" />
+                        <SelectValue placeholder="Kies teamlid" />
                       </SelectTrigger>
                       <SelectContent>
                         {beschikbareGebruikers.map((g) => (
@@ -412,7 +452,7 @@ export default function GebouwDetail() {
                   </div>
                 ) : (
                   <p className="text-xs text-muted-foreground pt-1">
-                    Alle beschikbare monteurs en controleurs zijn al toegewezen.
+                    Alle beschikbare teamleden zijn al toegewezen.
                   </p>
                 )}
               </CardContent>
@@ -435,25 +475,41 @@ export default function GebouwDetail() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Statistieken</CardTitle>
+              <CardTitle>Spot-statistieken</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex justify-between items-center">
-                <span className="text-muted-foreground">Totaal</span>
+                <span className="text-muted-foreground">Totaal spots</span>
                 <span className="font-bold">{gebouw.stats?.totaal || 0}</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-muted-foreground">Goedgekeurd</span>
+                <span className="text-muted-foreground">Goedgekeurde spots</span>
                 <span className="font-bold text-green-600">
                   {gebouw.stats?.goedgekeurd || 0}
                 </span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-muted-foreground">Afgekeurd</span>
+                <span className="text-muted-foreground">Afgekeurde spots</span>
                 <span className="font-bold text-destructive">
                   {gebouw.stats?.afgekeurd || 0}
                 </span>
               </div>
+              {(gebouw.stats?.in_bewerking ?? 0) > 0 && (
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground">Spots in uitvoering</span>
+                  <span className="font-bold text-amber-600">
+                    {gebouw.stats?.in_bewerking || 0}
+                  </span>
+                </div>
+              )}
+              {(gebouw.stats?.in_onderhoud ?? 0) > 0 && (
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground">Spots in onderhoud</span>
+                  <span className="font-bold text-orange-600">
+                    {gebouw.stats?.in_onderhoud || 0}
+                  </span>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>

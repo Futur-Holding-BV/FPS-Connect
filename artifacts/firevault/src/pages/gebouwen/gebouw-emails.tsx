@@ -23,7 +23,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import {
   Mail, Upload, Loader2, Trash2, Paperclip, Sparkles, User, MapPin,
-  Phone, FileText, ChevronRight,
+  Phone, FileText, ChevronRight, ListChecks,
 } from "lucide-react";
 
 function datum(s: string | null | undefined): string {
@@ -181,6 +181,9 @@ export default function GebouwEmails({
                 )}
                 {actief.ai_tekeningen && (
                   <AiBlok titel="Genoemde tekeningen" icoon={<FileText className="h-4 w-4" />} tekst={actief.ai_tekeningen} />
+                )}
+                {actief.ai_actiepunten && (
+                  <AiBlok titel="Openstaande actiepunten" icoon={<ListChecks className="h-4 w-4" />} tekst={actief.ai_actiepunten} />
                 )}
 
                 {actief.inhoud_tekst && (

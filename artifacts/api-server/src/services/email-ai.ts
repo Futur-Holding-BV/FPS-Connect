@@ -25,6 +25,7 @@ export interface EmailAiResultaat {
   naw: string | null;
   contactinfo: string | null;
   tekeningen: string | null;
+  actiepunten: string | null;
 }
 
 function strOfNull(v: unknown): string | null {
@@ -116,12 +117,13 @@ Geef uitsluitend geldige JSON terug met deze velden:
 - naw (tekst of null): naam, adres, woonplaats (NAW-gegevens) van personen of bedrijven die in de e-mail worden genoemd. Combineer tot leesbare regels.
 - contactinfo (tekst of null): e-mailadressen en telefoonnummers die in de e-mail worden genoemd.
 - tekeningen (tekst of null): noem bijlagen of verwijzingen die bouwtekeningen, plattegronden of technische tekeningen lijken te zijn.
+- actiepunten (tekst of null): openstaande actiepunten, verzoeken of to-do's die uit de e-mail voortvloeien, als genummerde lijst. Null als er geen zijn.
 Antwoord in het Nederlands. Alleen JSON, geen extra tekst.`;
 
 export async function extraheerEmailInzicht(
   email: GeparseerdeEmail,
 ): Promise<EmailAiResultaat> {
-  const leeg: EmailAiResultaat = { omschrijving: null, naw: null, contactinfo: null, tekeningen: null };
+  const leeg: EmailAiResultaat = { omschrijving: null, naw: null, contactinfo: null, tekeningen: null, actiepunten: null };
   if (!OPENAI_KEY) return leeg;
 
   const bijlageNamen = email.bijlagen.map((b) => b.bestandsnaam).join(", ") || "(geen)";
@@ -154,6 +156,7 @@ export async function extraheerEmailInzicht(
       naw: strOfNull(parsed.naw),
       contactinfo: strOfNull(parsed.contactinfo),
       tekeningen: strOfNull(parsed.tekeningen),
+      actiepunten: strOfNull(parsed.actiepunten),
     };
   } catch (err) {
     logger.error({ err }, "E-mail AI-extractie mislukte");

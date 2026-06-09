@@ -5,7 +5,7 @@ import {
   SidebarGroup, SidebarGroupLabel, SidebarGroupContent,
   SidebarMenu, SidebarMenuItem, SidebarMenuButton,
 } from "@/components/ui/sidebar";
-import { Flame, ShieldCheck, Home, Wrench, Search, Building, Map } from "lucide-react";
+import { Flame, ShieldCheck, Home, Wrench, Search, Building, Map, Info } from "lucide-react";
 import { useRol } from "@/context/rol-context";
 import { GebruikerMenu } from "@/components/gebruiker-menu";
 
@@ -15,6 +15,7 @@ const ROUTES_MONTEUR = [
   { href: "/inspecties", labelKey: "nav.inspecties", icoon: Search },
   { href: "/voorzieningen", labelKey: "nav.voorzieningen", icoon: ShieldCheck },
   { href: "/gebouwen", labelKey: "nav.gebouwen", icoon: Building },
+  { href: "/info", labelKey: "nav.info", icoon: Info },
 ];
 
 const ROUTES_CONTROLEUR = [
@@ -22,6 +23,7 @@ const ROUTES_CONTROLEUR = [
   { href: "/inspecties", labelKey: "nav.inspecties", icoon: Search },
   { href: "/voorzieningen", labelKey: "nav.voorzieningen", icoon: ShieldCheck },
   { href: "/gebouwen", labelKey: "nav.gebouwenPlattegronden", icoon: Map },
+  { href: "/info", labelKey: "nav.info", icoon: Info },
 ];
 
 export default function MonteurLayout({ children }: { children: React.ReactNode }) {

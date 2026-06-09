@@ -592,6 +592,27 @@ router.patch("/gebouwen/:id/gereed", requireRol("beheerder", "hoofdbeheerder"), 
   }
 });
 
+// DELETE /gebouwen/:id/gereed — reset gereed-status naar actief
+router.delete("/gebouwen/:id/gereed", requireRol("beheerder", "hoofdbeheerder"), async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const [gebouw] = await db
+      .update(gebouwenTable)
+      .set({ gereedOp: null, gereedDoor: null, bijgewerktOp: new Date() })
+      .where(eq(gebouwenTable.id, id))
+      .returning();
+    if (!gebouw) return res.status(404).json({ error: "Gebouw niet gevonden" });
+    const [totaal] = await db
+      .select({ count: count() })
+      .from(voorzieningenTable)
+      .where(eq(voorzieningenTable.gebouwId, id));
+    res.json(gebouwRij(gebouw, Number(totaal?.count ?? 0), await klantNaam(gebouw.klantId)));
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
 // DELETE /gebouwen/:id
 router.delete("/gebouwen/:id", requireRol("beheerder", "hoofdbeheerder"), async (req, res) => {
   try {

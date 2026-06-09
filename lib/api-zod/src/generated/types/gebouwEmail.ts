@@ -31,6 +31,8 @@ export interface GebouwEmail {
   ai_contactinfo?: string | null;
   /** @nullable */
   ai_tekeningen?: string | null;
+  /** @nullable */
+  ai_actiepunten?: string | null;
   status: string;
   aangemaakt_op: string;
   bijlagen?: GebouwEmailBijlage[];
