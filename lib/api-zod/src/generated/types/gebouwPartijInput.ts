@@ -12,6 +12,7 @@ export interface GebouwPartijInput {
   organisatie?: string;
   telefoon?: string;
   email?: string;
+  website?: string;
   adres?: string;
   postcode?: string;
   plaats?: string;

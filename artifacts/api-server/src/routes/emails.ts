@@ -34,6 +34,13 @@ const mapSamenvatting = (s: typeof gebouwEmailSamenvattingenTable.$inferSelect) 
   besluiten: s.besluiten,
   tekeningen: s.tekeningen,
   risicos: s.risicos,
+  contactpersonen: (s.contactpersonen ?? []).map((c) => ({
+    rol: c.rol,
+    naam: c.naam,
+    organisatie: c.organisatie,
+    email: c.email,
+    telefoon: c.telefoon,
+  })),
   aantal_emails: s.aantalEmails,
   bijgewerkt_op: iso(s.bijgewerktOp),
 });
@@ -45,7 +52,14 @@ async function herberekeningUitvoeren(gebouwId: number): Promise<void> {
       .from(gebouwEmailsTable)
       .where(eq(gebouwEmailsTable.gebouwId, gebouwId))
       .orderBy(desc(gebouwEmailsTable.aangemaaktOp));
-    if (emails.length === 0) return;
+    if (emails.length === 0) {
+      // Geen e-mails meer: bestaande samenvatting verwijderen zodat er geen
+      // verouderde contactpersonen of teksten blijven hangen.
+      await db
+        .delete(gebouwEmailSamenvattingenTable)
+        .where(eq(gebouwEmailSamenvattingenTable.gebouwId, gebouwId));
+      return;
+    }
 
     const als: GeparseerdeEmail[] = emails.map((e) => ({
       afzender: e.afzender,
@@ -297,6 +311,7 @@ router.delete("/gebouwen/:id/emails/:emailId", beheerderPlus, async (req, res) =
     await db
       .delete(gebouwEmailsTable)
       .where(and(eq(gebouwEmailsTable.id, emailId), eq(gebouwEmailsTable.gebouwId, gebouwId)));
+    void herberekeningUitvoeren(gebouwId);
     res.status(204).send();
   } catch (err) {
     req.log.error(err);

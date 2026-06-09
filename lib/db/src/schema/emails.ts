@@ -1,5 +1,13 @@
-import { pgTable, serial, text, integer, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, integer, timestamp, jsonb } from "drizzle-orm/pg-core";
 import { gebouwenTable } from "./gebouwen";
+
+export interface EmailContactpersoon {
+  rol: string;
+  naam: string;
+  organisatie: string | null;
+  email: string | null;
+  telefoon: string | null;
+}
 
 export const gebouwEmailsTable = pgTable("gebouw_emails", {
   id: serial("id").primaryKey(),
@@ -43,6 +51,7 @@ export const gebouwEmailSamenvattingenTable = pgTable("gebouw_email_samenvatting
   besluiten: text("besluiten"),
   tekeningen: text("tekeningen"),
   risicos: text("risicos"),
+  contactpersonen: jsonb("contactpersonen").$type<EmailContactpersoon[]>().notNull().default([]),
   aantalEmails: integer("aantal_emails").notNull().default(0),
   bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
 });

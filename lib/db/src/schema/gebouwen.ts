@@ -65,6 +65,7 @@ export const gebouwPartijenTable = pgTable("gebouw_partijen", {
   organisatie: text("organisatie"),
   telefoon: text("telefoon"),
   email: text("email"),
+  website: text("website"),
   adres: text("adres"),
   postcode: text("postcode"),
   plaats: text("plaats"),

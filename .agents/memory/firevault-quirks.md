@@ -58,15 +58,17 @@ must be updated too or `tsc` reports "Property X does not exist".
 **How to apply:** after extending a generated schema, grep the consuming page for a hand-written
 type and update both.
 
-## Gebouw "AI invullen" = vrije tekst, niet gestructureerde velden
-De gebouw-aanmaak-AI verwacht één vrij tekstveld (`beschrijving`), niet losse adres/postcode/stad
-inputs. Backend doet twee stappen: (1) LLM-extractie van expliciet genoemde velden + een
-geocode-zoekopdracht uit de tekst, (2) geocoding + satelliet-vision als verrijking. Door de
-gebruiker genoemde waarden hebben ALTIJD voorrang op de AI-schatting (merge met `?? visie`).
-**Why:** gebruiker vond de starre adresvelden te beperkend; wil vrij beschrijven en AI vult de rest.
-**How to apply:** het analyse-resultaat levert ook naam/adres/stad/postcode terug zodat het
-onderste formulier (incl. die velden) automatisch gevuld wordt; geocoding/satelliet is optioneel
-(resultaat blijft `gevonden:true` puur uit de tekst).
+## Gebouw "AI aanvullen" = vrije tekst OF reeds ingevulde velden als basis
+De backend-AI verwacht één vrij tekstveld (`beschrijving`); de frontend (`gebouw-aanmaken-dialog.tsx`)
+bouwt die beschrijving zelf op uit reeds ingevulde formuliervelden (naam/adres/postcode+stad/type)
+wanneer het AI-tekstvak leeg is (`aiTekst.trim() || beschrijvingUitVelden()`). De merge vult via de
+`vul(huidig, nieuw)`-helper ALLEEN lege velden aan — door de gebruiker ingevulde waarden worden nooit
+overschreven. Backend doet twee stappen: (1) LLM-extractie van genoemde velden + geocode-query,
+(2) geocoding + satelliet-vision als verrijking.
+**Why:** gebruiker verwachtte dat de AI-knop aanvult op basis van wat al is ingevuld; de oude versie
+eiste losse vrije tekst en deed schijnbaar niets. Knop heet nu "AI aanvullen".
+**How to apply:** voeg nieuwe formuliervelden die als AI-basis moeten dienen toe aan
+`beschrijvingUitVelden()`; gebruik `vul()` (niet `res.x ?? v.x`) zodat handmatige invoer voorrang houdt.
 
 ## Mobile auth = signed bearer token, not cookies
 The Expo app can't keep the `Secure; SameSite=None` session cookie in the Replit iframe, so it uses
@@ -138,3 +140,13 @@ reads in a handler you add a guard to (path id AND nested ids like `:fotoId`/`:s
 tolerated; esbuild bundles fine. Keep added branches consistent with the handler's existing return style
 (value-return handlers → `return res.status(403)...`; void handlers → `res.status(403)...; return;`) so you
 don't flip a clean handler into TS7030.
+
+## `pnpm --filter @workspace/db run push` kan blokkeren op een interactieve TTY-prompt
+Bij bestaande schema-drift (bv. een al-bestaande unique-constraint die drizzle-kit wil toepassen) vraagt
+`drizzle-kit push` interactief "Do you want to truncate?" en faalt dan in de non-interactieve shell met
+`Error: Interactive prompts require a TTY terminal`. Je eigen additieve kolommen worden dan NIET gepusht.
+**Why:** push wil ALLE diffs toepassen, ook drift die niets met je wijziging te maken heeft; één
+truncate-prompt blokkeert de hele push.
+**How to apply:** voor puur additieve kolommen, pas ze direct toe via SQL
+(`ALTER TABLE ... ADD COLUMN IF NOT EXISTS ...`) i.p.v. de interactieve push — veilig en geen dataverlies.
+Gebruik de `executeSql`-callback in code_execution.

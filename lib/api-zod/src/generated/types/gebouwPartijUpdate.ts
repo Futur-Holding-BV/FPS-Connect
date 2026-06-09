@@ -12,6 +12,7 @@ export interface GebouwPartijUpdate {
   organisatie?: string;
   telefoon?: string;
   email?: string;
+  website?: string;
   adres?: string;
   postcode?: string;
   plaats?: string;

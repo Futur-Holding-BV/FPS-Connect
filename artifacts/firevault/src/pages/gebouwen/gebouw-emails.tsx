@@ -5,10 +5,12 @@ import {
   useDeleteGebouwEmail,
   useGetGebouwEmailSamenvatting,
   useGenerateGebouwEmailSamenvatting,
+  useCreateGebouwPartij,
   getListGebouwEmailsQueryKey,
   getGetGebouwEmailSamenvattingQueryKey,
+  getListGebouwPartijenQueryKey,
 } from "@workspace/api-client-react";
-import type { GebouwEmail } from "@workspace/api-client-react";
+import type { GebouwEmail, EmailContactpersoon } from "@workspace/api-client-react";
 import { useUpload } from "@workspace/object-storage-web";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -27,8 +29,32 @@ import { useToast } from "@/hooks/use-toast";
 import {
   Mail, Upload, Loader2, Trash2, Paperclip, Sparkles, User, MapPin,
   Phone, FileText, ChevronRight, ListChecks, RefreshCw, Building2,
-  ClipboardList, AlertTriangle, CheckSquare, Handshake,
+  ClipboardList, AlertTriangle, CheckSquare, Handshake, Users, UserPlus, Check,
 } from "lucide-react";
+
+const ROL_LABELS: Record<string, string> = {
+  opdrachtgever: "Opdrachtgever",
+  gebruiker: "Gebruiker",
+  installateur: "Installateur",
+  aannemer: "Aannemer",
+  eigenaar: "Eigenaar",
+  aanvrager: "Aanvrager",
+};
+
+// Rollen die als partij kunnen worden opgeslagen (moeten overeenkomen met de
+// backend PARTIJ_TYPES).
+const PARTIJ_ROLLEN = new Set([
+  "opdrachtgever",
+  "gebruiker",
+  "installateur",
+  "aannemer",
+  "eigenaar",
+  "aanvrager",
+]);
+
+function rolLabel(rol: string): string {
+  return ROL_LABELS[rol] ?? rol;
+}
 
 function datum(s: string | null | undefined): string {
   if (!s) return "—";
@@ -97,6 +123,8 @@ function ProjectSamenvatting({ gebouwId, isBeheerder }: { gebouwId: number; isBe
     { icoon: <AlertTriangle className="h-4 w-4" />, titel: "Risico's en aandachtspunten", waarde: samenvatting.risicos },
   ].filter((v) => v.waarde);
 
+  const contactpersonen = samenvatting.contactpersonen ?? [];
+
   return (
     <div className="rounded-xl border border-primary/25 bg-primary/5 overflow-hidden">
       <div className="flex items-center justify-between gap-2 px-4 py-3 border-b border-primary/15">
@@ -121,7 +149,7 @@ function ProjectSamenvatting({ gebouwId, isBeheerder }: { gebouwId: number; isBe
           )}
         </div>
       </div>
-      {velden.length === 0 ? (
+      {velden.length === 0 && contactpersonen.length === 0 ? (
         <div className="px-4 py-3 text-sm text-muted-foreground">
           Geen relevante informatie gevonden in de e-mails.
         </div>
@@ -135,9 +163,106 @@ function ProjectSamenvatting({ gebouwId, isBeheerder }: { gebouwId: number; isBe
               <div className="text-sm text-foreground/80 whitespace-pre-wrap">{v.waarde}</div>
             </div>
           ))}
+          {contactpersonen.length > 0 && (
+            <div className="px-4 py-3">
+              <div className="flex items-center gap-1.5 text-xs font-medium text-primary mb-2">
+                <Users className="h-4 w-4" /> Contactpersonen
+              </div>
+              <ul className="space-y-2">
+                {contactpersonen.map((c, i) => (
+                  <ContactpersoonRij
+                    key={`${c.naam}-${c.email ?? i}`}
+                    contact={c}
+                    gebouwId={gebouwId}
+                    isBeheerder={isBeheerder}
+                  />
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
       )}
     </div>
+  );
+}
+
+function ContactpersoonRij({
+  contact,
+  gebouwId,
+  isBeheerder,
+}: {
+  contact: EmailContactpersoon;
+  gebouwId: number;
+  isBeheerder: boolean;
+}) {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const maakPartij = useCreateGebouwPartij();
+  const [toegevoegd, setToegevoegd] = useState(false);
+
+  const kanToevoegen = isBeheerder && PARTIJ_ROLLEN.has(contact.rol);
+
+  async function toevoegenAlsPartij() {
+    try {
+      await maakPartij.mutateAsync({
+        id: gebouwId,
+        data: {
+          type: contact.rol,
+          naam: contact.naam,
+          organisatie: contact.organisatie ?? undefined,
+          email: contact.email ?? undefined,
+          telefoon: contact.telefoon ?? undefined,
+        },
+      });
+      queryClient.invalidateQueries({ queryKey: getListGebouwPartijenQueryKey(gebouwId) });
+      setToegevoegd(true);
+      toast({ title: "Toegevoegd als opdrachtgever", description: `${contact.naam} (${rolLabel(contact.rol)})` });
+    } catch {
+      toast({ title: "Toevoegen mislukt", variant: "destructive" });
+    }
+  }
+
+  return (
+    <li className="flex items-start justify-between gap-3 rounded-md border border-primary/10 bg-background/50 px-3 py-2">
+      <div className="min-w-0 text-sm">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="font-medium">{contact.naam}</span>
+          <Badge variant="secondary" className="text-xs font-normal">{rolLabel(contact.rol)}</Badge>
+        </div>
+        {contact.organisatie && (
+          <div className="text-xs text-muted-foreground">{contact.organisatie}</div>
+        )}
+        <div className="mt-0.5 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
+          {contact.email && (
+            <a href={`mailto:${contact.email}`} className="flex items-center gap-1 hover:underline">
+              <Mail className="h-3 w-3" /> {contact.email}
+            </a>
+          )}
+          {contact.telefoon && (
+            <a href={`tel:${contact.telefoon}`} className="flex items-center gap-1 hover:underline">
+              <Phone className="h-3 w-3" /> {contact.telefoon}
+            </a>
+          )}
+        </div>
+      </div>
+      {kanToevoegen && (
+        <Button
+          size="sm"
+          variant="ghost"
+          className="h-7 px-2 text-xs shrink-0"
+          onClick={toevoegenAlsPartij}
+          disabled={maakPartij.isPending || toegevoegd}
+        >
+          {toegevoegd ? (
+            <><Check className="h-3.5 w-3.5" /> Toegevoegd</>
+          ) : maakPartij.isPending ? (
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          ) : (
+            <><UserPlus className="h-3.5 w-3.5" /> Toevoegen</>
+          )}
+        </Button>
+      )}
+    </li>
   );
 }
 

@@ -1,7 +1,17 @@
 import { simpleParser } from "mailparser";
-import MsgReader from "@kenjiuno/msgreader";
+import MsgReaderImport from "@kenjiuno/msgreader";
+import type { EmailContactpersoon } from "@workspace/db";
 import { logger } from "../lib/logger";
 import { heeftOpenAi, maakOpenAiClient } from "../lib/openai";
+
+// esbuild bundelt dit pakket als ESM en wikkelt de CJS-default in een
+// namespace-object, waardoor de echte constructor op `.default.default` belandt.
+// Vandaar de robuuste resolutie hieronder (werkt ook bij directe default).
+const MsgReader = ((MsgReaderImport as unknown as { default?: unknown }).default ??
+  MsgReaderImport) as new (ab: ArrayBuffer) => {
+  getFileData: () => Record<string, unknown>;
+  getAttachment: (i: number) => { fileName?: string; content?: Uint8Array };
+};
 
 export interface GeparseerdeBijlage {
   bestandsnaam: string;
@@ -175,6 +185,7 @@ Geef uitsluitend geldige JSON terug met deze velden (null als onbekend):
 - besluiten: relevante besluiten of overeenkomsten uit de correspondentie of null.
 - tekeningen: genoemde bouwtekeningen, plattegronden of technische documenten of null.
 - risicos: risico's, aandachtspunten of bezwaren die zijn geuit of null.
+- contactpersonen: een array met de relevante betrokkenen die uit de e-mails naar voren komen. Geef per persoon een object met: rol (een van: "opdrachtgever", "gebruiker", "installateur", "aannemer", "eigenaar", "aanvrager"), naam, organisatie (of null), email (of null), telefoon (of null). Bepaal de rol op basis van de inhoud en handtekeningen van de e-mails. Neem alleen echte personen/bedrijven op, geen algemene mailboxen. Lege array als er niets te vinden is. Verzin geen e-mailadressen.
 Antwoord in het Nederlands. Alleen JSON, geen extra tekst.`;
 
 export interface ProjectSamenvatting {
@@ -186,6 +197,36 @@ export interface ProjectSamenvatting {
   besluiten: string | null;
   tekeningen: string | null;
   risicos: string | null;
+  contactpersonen: EmailContactpersoon[];
+}
+
+const GELDIGE_ROLLEN = new Set([
+  "opdrachtgever",
+  "gebruiker",
+  "installateur",
+  "aannemer",
+  "eigenaar",
+  "aanvrager",
+]);
+
+function parseContactpersonen(v: unknown): EmailContactpersoon[] {
+  if (!Array.isArray(v)) return [];
+  const resultaat: EmailContactpersoon[] = [];
+  for (const item of v) {
+    if (!item || typeof item !== "object") continue;
+    const o = item as Record<string, unknown>;
+    const rol = typeof o.rol === "string" ? o.rol.trim().toLowerCase() : "";
+    const naam = strOfNull(o.naam);
+    if (!naam || !GELDIGE_ROLLEN.has(rol)) continue;
+    resultaat.push({
+      rol,
+      naam,
+      organisatie: strOfNull(o.organisatie),
+      email: strOfNull(o.email),
+      telefoon: strOfNull(o.telefoon),
+    });
+  }
+  return resultaat;
 }
 
 export async function genereerProjectSamenvatting(
@@ -194,6 +235,7 @@ export async function genereerProjectSamenvatting(
   const leeg: ProjectSamenvatting = {
     opdrachtomschrijving: null, opdrachtgever: null, contactgegevens: null,
     afspraken: null, actiepunten: null, besluiten: null, tekeningen: null, risicos: null,
+    contactpersonen: [],
   };
   if (!heeftOpenAi() || emails.length === 0) return leeg;
 
@@ -234,6 +276,7 @@ export async function genereerProjectSamenvatting(
       besluiten: strOfNull(p.besluiten),
       tekeningen: strOfNull(p.tekeningen),
       risicos: strOfNull(p.risicos),
+      contactpersonen: parseContactpersonen(p.contactpersonen),
     };
   } catch (err) {
     logger.error({ err }, "Project-samenvatting genereren mislukt");

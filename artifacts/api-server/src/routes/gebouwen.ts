@@ -985,7 +985,7 @@ router.delete(
 
 // ── PARTIJEN ──────────────────────────────────────────────────────────────
 
-const PARTIJ_TYPES = ["eigenaar", "gebruiker", "opdrachtgever", "aanvrager"];
+const PARTIJ_TYPES = ["eigenaar", "gebruiker", "opdrachtgever", "aanvrager", "installateur", "aannemer"];
 
 function partijRij(p: typeof gebouwPartijenTable.$inferSelect) {
   return {
@@ -996,6 +996,7 @@ function partijRij(p: typeof gebouwPartijenTable.$inferSelect) {
     organisatie: p.organisatie,
     telefoon: p.telefoon,
     email: p.email,
+    website: p.website,
     adres: p.adres,
     postcode: p.postcode,
     plaats: p.plaats,
@@ -1030,7 +1031,7 @@ router.post(
   async (req, res) => {
     try {
       const gebouwId = parseInt(req.params.id);
-      const { type, naam, organisatie, telefoon, email, adres, postcode, plaats, opmerkingen } = req.body ?? {};
+      const { type, naam, organisatie, telefoon, email, website, adres, postcode, plaats, opmerkingen } = req.body ?? {};
       if (!type || !PARTIJ_TYPES.includes(type)) {
         return res.status(400).json({ error: "Ongeldig partijtype" });
       }
@@ -1039,7 +1040,7 @@ router.post(
       }
       const [partij] = await db
         .insert(gebouwPartijenTable)
-        .values({ gebouwId, type, naam, organisatie, telefoon, email, adres, postcode, plaats, opmerkingen })
+        .values({ gebouwId, type, naam, organisatie, telefoon, email, website, adres, postcode, plaats, opmerkingen })
         .returning();
       res.status(201).json(partijRij(partij!));
     } catch (err) {
@@ -1056,7 +1057,7 @@ router.patch(
   async (req, res) => {
     try {
       const partijId = parseInt(req.params.partijId);
-      const { type, naam, organisatie, telefoon, email, adres, postcode, plaats, opmerkingen } = req.body ?? {};
+      const { type, naam, organisatie, telefoon, email, website, adres, postcode, plaats, opmerkingen } = req.body ?? {};
       if (type !== undefined && !PARTIJ_TYPES.includes(type)) {
         return res.status(400).json({ error: "Ongeldig partijtype" });
       }
@@ -1066,6 +1067,7 @@ router.patch(
       if (organisatie !== undefined) updates.organisatie = organisatie;
       if (telefoon !== undefined) updates.telefoon = telefoon;
       if (email !== undefined) updates.email = email;
+      if (website !== undefined) updates.website = website;
       if (adres !== undefined) updates.adres = adres;
       if (postcode !== undefined) updates.postcode = postcode;
       if (plaats !== undefined) updates.plaats = plaats;

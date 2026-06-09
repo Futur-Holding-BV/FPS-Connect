@@ -32,6 +32,7 @@ export * from './crmOpdracht';
 export * from './crmOpdrachtInput';
 export * from './dashboardStats';
 export * from './dashboardStatsVoorzieningenPerTypeItem';
+export * from './emailContactpersoon';
 export * from './errorEnvelope';
 export * from './feedback';
 export * from './feedbackInput';

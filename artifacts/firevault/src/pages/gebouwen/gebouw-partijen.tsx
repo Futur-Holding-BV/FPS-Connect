@@ -28,6 +28,7 @@ import {
   Mail,
   Phone,
   MapPin,
+  Globe,
 } from "lucide-react";
 
 const PARTIJ_TYPES = [
@@ -35,7 +36,13 @@ const PARTIJ_TYPES = [
   { waarde: "gebruiker", label: "Gebruiker" },
   { waarde: "opdrachtgever", label: "Opdrachtgever" },
   { waarde: "aanvrager", label: "Aanvrager" },
+  { waarde: "installateur", label: "Installateur" },
+  { waarde: "aannemer", label: "Aannemer" },
 ];
+
+function websiteHref(website: string): string {
+  return /^https?:\/\//i.test(website) ? website : `https://${website}`;
+}
 
 function typeLabel(type: string): string {
   return PARTIJ_TYPES.find((t) => t.waarde === type)?.label ?? type;
@@ -47,6 +54,7 @@ const LEEG = {
   organisatie: "",
   telefoon: "",
   email: "",
+  website: "",
   adres: "",
   postcode: "",
   plaats: "",
@@ -99,6 +107,7 @@ export default function GebouwPartijen({
       organisatie: p.organisatie ?? "",
       telefoon: p.telefoon ?? "",
       email: p.email ?? "",
+      website: p.website ?? "",
       adres: p.adres ?? "",
       postcode: p.postcode ?? "",
       plaats: p.plaats ?? "",
@@ -116,6 +125,7 @@ export default function GebouwPartijen({
       organisatie: form.organisatie || undefined,
       telefoon: form.telefoon || undefined,
       email: form.email || undefined,
+      website: form.website || undefined,
       adres: form.adres || undefined,
       postcode: form.postcode || undefined,
       plaats: form.plaats || undefined,
@@ -187,6 +197,19 @@ export default function GebouwPartijen({
                               <Phone className="h-3.5 w-3.5 shrink-0" />
                               <a href={`tel:${p.telefoon}`} className="hover:underline">
                                 {p.telefoon}
+                              </a>
+                            </div>
+                          )}
+                          {p.website && (
+                            <div className="flex items-center gap-2 text-muted-foreground">
+                              <Globe className="h-3.5 w-3.5 shrink-0" />
+                              <a
+                                href={websiteHref(p.website)}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="hover:underline truncate"
+                              >
+                                {p.website}
                               </a>
                             </div>
                           )}
@@ -301,6 +324,15 @@ export default function GebouwPartijen({
                   type="email"
                   value={form.email}
                   onChange={(e) => veld("email", e.target.value)}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label>Website</Label>
+                <Input
+                  type="url"
+                  placeholder="bijv. www.bedrijf.nl"
+                  value={form.website}
+                  onChange={(e) => veld("website", e.target.value)}
                 />
               </div>
               <div className="space-y-1">

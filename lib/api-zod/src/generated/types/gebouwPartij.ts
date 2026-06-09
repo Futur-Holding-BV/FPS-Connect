@@ -9,12 +9,13 @@
 export interface GebouwPartij {
   id: number;
   gebouw_id: number;
-  /** eigenaar, gebruiker, opdrachtgever of aanvrager */
+  /** eigenaar, gebruiker, opdrachtgever, aanvrager, installateur of aannemer */
   type: string;
   naam: string;
   organisatie?: string | null;
   telefoon?: string | null;
   email?: string | null;
+  website?: string | null;
   adres?: string | null;
   postcode?: string | null;
   plaats?: string | null;

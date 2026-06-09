@@ -245,6 +245,18 @@ export interface GebouwEmailInput {
   bestandsnaam: string;
 }
 
+export interface EmailContactpersoon {
+  /** opdrachtgever, gebruiker, installateur, aannemer, eigenaar of aanvrager */
+  rol: string;
+  naam: string;
+  /** @nullable */
+  organisatie?: string | null;
+  /** @nullable */
+  email?: string | null;
+  /** @nullable */
+  telefoon?: string | null;
+}
+
 export interface GebouwEmailSamenvatting {
   id: number;
   gebouw_id: number;
@@ -264,6 +276,7 @@ export interface GebouwEmailSamenvatting {
   tekeningen?: string | null;
   /** @nullable */
   risicos?: string | null;
+  contactpersonen?: EmailContactpersoon[];
   aantal_emails: number;
   bijgewerkt_op: string;
 }
@@ -477,12 +490,13 @@ export interface SpotsInzicht {
 export interface GebouwPartij {
   id: number;
   gebouw_id: number;
-  /** eigenaar, gebruiker, opdrachtgever of aanvrager */
+  /** eigenaar, gebruiker, opdrachtgever, aanvrager, installateur of aannemer */
   type: string;
   naam: string;
   organisatie?: string | null;
   telefoon?: string | null;
   email?: string | null;
+  website?: string | null;
   adres?: string | null;
   postcode?: string | null;
   plaats?: string | null;
@@ -502,6 +516,7 @@ export interface GebouwPartijInput {
   organisatie?: string;
   telefoon?: string;
   email?: string;
+  website?: string;
   adres?: string;
   postcode?: string;
   plaats?: string;
@@ -514,6 +529,7 @@ export interface GebouwPartijUpdate {
   organisatie?: string;
   telefoon?: string;
   email?: string;
+  website?: string;
   adres?: string;
   postcode?: string;
   plaats?: string;

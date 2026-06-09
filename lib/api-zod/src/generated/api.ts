@@ -636,11 +636,12 @@ export const ListGebouwPartijenParams = zod.object({
 export const ListGebouwPartijenResponseItem = zod.object({
   "id": zod.number(),
   "gebouw_id": zod.number(),
-  "type": zod.string().describe('eigenaar, gebruiker, opdrachtgever of aanvrager'),
+  "type": zod.string().describe('eigenaar, gebruiker, opdrachtgever, aanvrager, installateur of aannemer'),
   "naam": zod.string(),
   "organisatie": zod.string().nullish(),
   "telefoon": zod.string().nullish(),
   "email": zod.string().nullish(),
+  "website": zod.string().nullish(),
   "adres": zod.string().nullish(),
   "postcode": zod.string().nullish(),
   "plaats": zod.string().nullish(),
@@ -663,6 +664,7 @@ export const CreateGebouwPartijBody = zod.object({
   "organisatie": zod.string().optional(),
   "telefoon": zod.string().optional(),
   "email": zod.string().optional(),
+  "website": zod.string().optional(),
   "adres": zod.string().optional(),
   "postcode": zod.string().optional(),
   "plaats": zod.string().optional(),
@@ -685,6 +687,7 @@ export const UpdateGebouwPartijBody = zod.object({
   "organisatie": zod.string().optional(),
   "telefoon": zod.string().optional(),
   "email": zod.string().optional(),
+  "website": zod.string().optional(),
   "adres": zod.string().optional(),
   "postcode": zod.string().optional(),
   "plaats": zod.string().optional(),
@@ -694,11 +697,12 @@ export const UpdateGebouwPartijBody = zod.object({
 export const UpdateGebouwPartijResponse = zod.object({
   "id": zod.number(),
   "gebouw_id": zod.number(),
-  "type": zod.string().describe('eigenaar, gebruiker, opdrachtgever of aanvrager'),
+  "type": zod.string().describe('eigenaar, gebruiker, opdrachtgever, aanvrager, installateur of aannemer'),
   "naam": zod.string(),
   "organisatie": zod.string().nullish(),
   "telefoon": zod.string().nullish(),
   "email": zod.string().nullish(),
+  "website": zod.string().nullish(),
   "adres": zod.string().nullish(),
   "postcode": zod.string().nullish(),
   "plaats": zod.string().nullish(),
@@ -2823,6 +2827,13 @@ export const GetGebouwEmailSamenvattingResponse = zod.object({
   "besluiten": zod.string().nullish(),
   "tekeningen": zod.string().nullish(),
   "risicos": zod.string().nullish(),
+  "contactpersonen": zod.array(zod.object({
+  "rol": zod.string().describe('opdrachtgever, gebruiker, installateur, aannemer, eigenaar of aanvrager'),
+  "naam": zod.string(),
+  "organisatie": zod.string().nullish(),
+  "email": zod.string().nullish(),
+  "telefoon": zod.string().nullish()
+})).optional(),
   "aantal_emails": zod.number(),
   "bijgewerkt_op": zod.string()
 })
@@ -2846,6 +2857,13 @@ export const GenerateGebouwEmailSamenvattingResponse = zod.object({
   "besluiten": zod.string().nullish(),
   "tekeningen": zod.string().nullish(),
   "risicos": zod.string().nullish(),
+  "contactpersonen": zod.array(zod.object({
+  "rol": zod.string().describe('opdrachtgever, gebruiker, installateur, aannemer, eigenaar of aanvrager'),
+  "naam": zod.string(),
+  "organisatie": zod.string().nullish(),
+  "email": zod.string().nullish(),
+  "telefoon": zod.string().nullish()
+})).optional(),
   "aantal_emails": zod.number(),
   "bijgewerkt_op": zod.string()
 })

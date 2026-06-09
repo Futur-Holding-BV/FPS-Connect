@@ -3049,10 +3049,30 @@ components:
           type: ["string", "null"]
         risicos:
           type: ["string", "null"]
+        contactpersonen:
+          type: array
+          items:
+            $ref: "#/components/schemas/EmailContactpersoon"
         aantal_emails:
           type: integer
         bijgewerkt_op:
           type: string
+
+    EmailContactpersoon:
+      type: object
+      required: [rol, naam]
+      properties:
+        rol:
+          type: string
+          description: opdrachtgever, gebruiker, installateur, aannemer, eigenaar of aanvrager
+        naam:
+          type: string
+        organisatie:
+          type: ["string", "null"]
+        email:
+          type: ["string", "null"]
+        telefoon:
+          type: ["string", "null"]
 
     # ── DASHBOARD ─────────────────────────────────────────────────────────
     DashboardStats:
@@ -3362,7 +3382,7 @@ components:
           type: integer
         type:
           type: string
-          description: eigenaar, gebruiker, opdrachtgever of aanvrager
+          description: eigenaar, gebruiker, opdrachtgever, aanvrager, installateur of aannemer
         naam:
           type: string
         organisatie:
@@ -3372,6 +3392,9 @@ components:
           type: string
           nullable: true
         email:
+          type: string
+          nullable: true
+        website:
           type: string
           nullable: true
         adres:
@@ -3413,6 +3436,8 @@ components:
           type: string
         email:
           type: string
+        website:
+          type: string
         adres:
           type: string
         postcode:
@@ -3434,6 +3459,8 @@ components:
         telefoon:
           type: string
         email:
+          type: string
+        website:
           type: string
         adres:
           type: string

@@ -83,15 +83,30 @@ export function GebouwAanmakenDialog() {
     setFoutmelding(null);
   }
 
+  function beschrijvingUitVelden(): string {
+    const delen = [
+      velden.naam,
+      velden.adres,
+      [velden.postcode, velden.stad].filter(Boolean).join(" "),
+      velden.gebouw_type,
+    ]
+      .map((d) => d.trim())
+      .filter(Boolean);
+    return delen.join(", ");
+  }
+
   async function voerAiUit() {
     setFoutmelding(null);
-    if (!aiTekst.trim()) {
-      setFoutmelding("Beschrijf eerst het gebouw of het adres voordat de AI kan invullen.");
+    const basis = aiTekst.trim() || beschrijvingUitVelden();
+    if (!basis) {
+      setFoutmelding(
+        "Vul eerst minimaal een naam of adres in (of beschrijf het gebouw hierboven) voordat de AI kan aanvullen.",
+      );
       return;
     }
     try {
       const res = await aiAnalyse.mutateAsync({
-        data: { beschrijving: aiTekst },
+        data: { beschrijving: basis },
       });
 
       if (!res.gevonden) {
@@ -103,22 +118,33 @@ export function GebouwAanmakenDialog() {
       setAiToelichting(res.toelichting ?? null);
       setAiBetrouwbaarheid(res.betrouwbaarheid ?? null);
 
+      // Alleen lege velden aanvullen — door de gebruiker ingevulde gegevens
+      // blijven altijd staan.
+      const vul = (huidig: string, nieuw: string | null | undefined): string =>
+        huidig.trim() ? huidig : (nieuw ?? "");
+
       setVelden((v) => ({
         ...v,
-        naam:
-          res.naam ??
-          (res.adres_gevonden ? res.adres_gevonden.split(",")[0] : v.naam),
-        adres: res.adres ?? v.adres,
-        stad: res.stad ?? (res.adres_gevonden ? afleidStad(res.adres_gevonden) : v.stad),
-        postcode: res.postcode ?? v.postcode,
-        gebouw_type: res.gebouw_type ?? v.gebouw_type,
-        omschrijving: res.omschrijving ?? v.omschrijving,
-        aantal_verdiepingen:
-          res.aantal_verdiepingen != null ? String(res.aantal_verdiepingen) : v.aantal_verdiepingen,
-        hoogte: res.hoogte != null ? String(Math.round(res.hoogte * 10) / 10) : v.hoogte,
-        breedte: res.breedte != null ? String(Math.round(res.breedte * 10) / 10) : v.breedte,
-        diepte: res.diepte != null ? String(Math.round(res.diepte * 10) / 10) : v.diepte,
-        oppervlakte: res.oppervlakte != null ? String(Math.round(res.oppervlakte)) : v.oppervlakte,
+        naam: vul(
+          v.naam,
+          res.naam ?? (res.adres_gevonden ? res.adres_gevonden.split(",")[0] : null),
+        ),
+        adres: vul(v.adres, res.adres),
+        stad: vul(v.stad, res.stad ?? (res.adres_gevonden ? afleidStad(res.adres_gevonden) : null)),
+        postcode: vul(v.postcode, res.postcode),
+        gebouw_type: vul(v.gebouw_type, res.gebouw_type),
+        omschrijving: vul(v.omschrijving, res.omschrijving),
+        aantal_verdiepingen: vul(
+          v.aantal_verdiepingen,
+          res.aantal_verdiepingen != null ? String(res.aantal_verdiepingen) : null,
+        ),
+        hoogte: vul(v.hoogte, res.hoogte != null ? String(Math.round(res.hoogte * 10) / 10) : null),
+        breedte: vul(v.breedte, res.breedte != null ? String(Math.round(res.breedte * 10) / 10) : null),
+        diepte: vul(v.diepte, res.diepte != null ? String(Math.round(res.diepte * 10) / 10) : null),
+        oppervlakte: vul(
+          v.oppervlakte,
+          res.oppervlakte != null ? String(Math.round(res.oppervlakte)) : null,
+        ),
       }));
     } catch (err) {
       const apiErr = err as ErrorType<{ error?: string }>;
@@ -202,7 +228,7 @@ export function GebouwAanmakenDialog() {
             <Sparkles className="h-4 w-4 text-primary" /> AI-modus
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="ai-beschrijving">Beschrijving</Label>
+            <Label htmlFor="ai-beschrijving">Beschrijving (optioneel)</Label>
             <Textarea
               id="ai-beschrijving"
               rows={3}
@@ -211,8 +237,10 @@ export function GebouwAanmakenDialog() {
               onChange={(e) => setAiTekst(e.target.value)}
             />
             <p className="text-xs text-muted-foreground">
-              De AI vult de velden hieronder in op basis van uw tekst. Wat u zelf
-              benoemt heeft voorrang; de rest wordt geschat via satellietbeeld.
+              Laat dit veld leeg om de AI te laten aanvullen op basis van de velden
+              die u hieronder al hebt ingevuld (naam, adres, postcode, stad of type),
+              of beschrijf het gebouw hier zelf. Alleen lege velden worden aangevuld;
+              wat u zelf invult blijft staan.
             </p>
           </div>
           <Button
@@ -228,7 +256,7 @@ export function GebouwAanmakenDialog() {
               </>
             ) : (
               <>
-                <Sparkles className="h-4 w-4 mr-2" /> AI invullen
+                <Sparkles className="h-4 w-4 mr-2" /> AI aanvullen
               </>
             )}
           </Button>
