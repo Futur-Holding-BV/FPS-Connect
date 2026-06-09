@@ -266,6 +266,7 @@ const LEEG_FORM = {
   classificatie: "60",
   ruimte: "",
   locatie_omschrijving: "",
+  meting: "wbdbo",
   wbdbo: "60",
   wrd: "",
   wand_of_plafond: "",
@@ -419,9 +420,19 @@ export default function Plattegrond() {
     const klemX = Math.min(W, Math.max(0, svgX));
     const klemY = Math.min(H, Math.max(0, svgY));
     setNieuwLocatie({ x: Math.round(klemX), y: Math.round(klemY) });
-    setNieuwForm((f) => ({ ...f, objectnummer: volgendSpot?.spotnummer ?? "" }));
+    const nu = new Date();
+    const vandaag = `${nu.getFullYear()}-${String(nu.getMonth() + 1).padStart(2, "0")}-${String(nu.getDate()).padStart(2, "0")}`;
+    const huidigeId = gebruiker?.id != null ? String(gebruiker.id) : "";
+    const huidigeIsMonteur = monteurs.some((m: any) => String(m.id) === huidigeId);
+    setNieuwForm({
+      ...LEEG_FORM,
+      objectnummer: volgendSpot?.spotnummer ?? "",
+      installatie_datum: vandaag,
+      maker_monteur_id: huidigeId,
+      monteur_id: huidigeIsMonteur ? huidigeId : "",
+    });
     setNieuwDialoog(true);
-  }, [plaatsenModus, tekenModus, verplaatsModus, geselecteerdId, view, W, H, volgendSpot]);
+  }, [plaatsenModus, tekenModus, verplaatsModus, geselecteerdId, view, W, H, volgendSpot, gebruiker, monteurs]);
 
   const verplaatsSpot = useCallback(async (spotId: number, x: number, y: number) => {
     await updateVoorziening.mutateAsync({ id: spotId, data: { locatie_x: x, locatie_y: y } });
@@ -932,43 +943,45 @@ export default function Plattegrond() {
               </div>
 
               <div>
-                <Label>Classificatie (EI)</Label>
-                <Select value={nieuwForm.classificatie} onValueChange={(v) => setNieuwForm((f) => ({ ...f, classificatie: v }))}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {["30", "60", "90", "120"].map((v) => (
-                      <SelectItem key={v} value={v}>EI {v}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <Label>WBDBO (min)</Label>
-                <Select value={nieuwForm.wbdbo} onValueChange={(v) => setNieuwForm((f) => ({ ...f, wbdbo: v }))}>
-                  <SelectTrigger><SelectValue placeholder="Kies" /></SelectTrigger>
-                  <SelectContent>
-                    {WBDBO_OPTIES.map((v) => (
-                      <SelectItem key={v} value={v}>{v} minuten</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <Label>WRD (min)</Label>
+                <Label>Type meting</Label>
                 <Select
-                  value={nieuwForm.wrd || "geen"}
-                  onValueChange={(v) => setNieuwForm((f) => ({ ...f, wrd: v === "geen" ? "" : v }))}
+                  value={nieuwForm.meting}
+                  onValueChange={(v) => setNieuwForm((f) => ({
+                    ...f,
+                    meting: v,
+                    wbdbo: v === "wbdbo" ? (f.wbdbo || "60") : "",
+                    wrd: v === "wrd" ? (f.wrd || "30") : "",
+                  }))}
                 >
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="geen">Geen</SelectItem>
-                    {WRD_OPTIES.map((v) => (
-                      <SelectItem key={v} value={v}>{v} minuten</SelectItem>
-                    ))}
+                    <SelectItem value="wbdbo">WBDBO</SelectItem>
+                    <SelectItem value="wrd">WRD</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+
+              <div>
+                <Label>Waarde (min)</Label>
+                {nieuwForm.meting === "wbdbo" ? (
+                  <Select value={nieuwForm.wbdbo} onValueChange={(v) => setNieuwForm((f) => ({ ...f, wbdbo: v }))}>
+                    <SelectTrigger><SelectValue placeholder="Kies" /></SelectTrigger>
+                    <SelectContent>
+                      {WBDBO_OPTIES.map((v) => (
+                        <SelectItem key={v} value={v}>{v} minuten</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <Select value={nieuwForm.wrd} onValueChange={(v) => setNieuwForm((f) => ({ ...f, wrd: v }))}>
+                    <SelectTrigger><SelectValue placeholder="Kies" /></SelectTrigger>
+                    <SelectContent>
+                      {WRD_OPTIES.map((v) => (
+                        <SelectItem key={v} value={v}>{v} minuten</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
               </div>
 
               <div>
@@ -1014,19 +1027,8 @@ export default function Plattegrond() {
               </div>
 
               <div>
-                <Label>Monteur maker</Label>
-                <Select
-                  value={nieuwForm.maker_monteur_id || "geen"}
-                  onValueChange={(v) => setNieuwForm((f) => ({ ...f, maker_monteur_id: v === "geen" ? "" : v }))}
-                >
-                  <SelectTrigger><SelectValue placeholder="Kies monteur" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="geen">Niet toegewezen</SelectItem>
-                    {monteurs.map((m: any) => (
-                      <SelectItem key={m.id} value={String(m.id)}>{m.naam}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Label>Aanmaker spot</Label>
+                <Input value={gebruiker?.naam ?? ""} readOnly className="bg-muted" />
               </div>
 
               <div>
