@@ -4760,6 +4760,10 @@ components:
           type: boolean
         nieuw_ip:
           type: boolean
+        functietitels:
+          type: array
+          items:
+            type: string
 
     # ── ABONNEMENT ───────────────────────────────────────────────────────
     Abonnement:

@@ -20,4 +20,5 @@ export interface AuthGebruiker {
   taal?: AuthGebruikerTaal;
   nieuw_apparaat?: boolean;
   nieuw_ip?: boolean;
+  functietitels?: string[];
 }

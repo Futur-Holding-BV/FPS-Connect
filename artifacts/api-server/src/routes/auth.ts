@@ -23,6 +23,7 @@ const mapAuthGebruiker = (g: typeof gebruikersTable.$inferSelect) => ({
   avatar_url: g.avatarUrl ?? null,
   bedrijfskleuren: g.bedrijfskleuren ?? null,
   taal: g.taal ?? "nl",
+  functietitels: g.functietitels ?? [],
 });
 
 const schoonCode = (code: unknown) => String(code ?? "").replace(/\s+/g, "");

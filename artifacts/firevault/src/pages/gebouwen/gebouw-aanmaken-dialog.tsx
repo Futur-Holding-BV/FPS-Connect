@@ -57,6 +57,10 @@ function getalOfUndefined(v: string): number | undefined {
   return isFinite(n) ? n : undefined;
 }
 
+function metHoofdletters(v: string): string {
+  return v.replace(/(^|[\s'-])([a-zà-ÿ])/g, (_, sep, letter) => sep + letter.toUpperCase());
+}
+
 export function GebouwAanmakenDialog() {
   const queryClient = useQueryClient();
   const maakGebouw = useCreateGebouw();
@@ -72,6 +76,10 @@ export function GebouwAanmakenDialog() {
 
   function zet<K extends keyof Velden>(key: K, waarde: string) {
     setVelden((v) => ({ ...v, [key]: waarde }));
+  }
+
+  function zetMetHoofdletters<K extends keyof Velden>(key: K) {
+    setVelden((v) => ({ ...v, [key]: metHoofdletters(String(v[key])) }));
   }
 
   function herstel() {
@@ -169,9 +177,9 @@ export function GebouwAanmakenDialog() {
       await maakGebouw.mutateAsync({
         data: {
           projectnummer: velden.projectnummer.trim() || undefined,
-          naam: velden.naam,
-          adres: velden.adres,
-          stad: velden.stad || undefined,
+          naam: metHoofdletters(velden.naam),
+          adres: metHoofdletters(velden.adres),
+          stad: velden.stad ? metHoofdletters(velden.stad) : undefined,
           postcode: velden.postcode || undefined,
           omschrijving: velden.omschrijving || undefined,
           gebouw_type: velden.gebouw_type || undefined,
@@ -320,6 +328,7 @@ export function GebouwAanmakenDialog() {
               id="g-naam"
               value={velden.naam}
               onChange={(e) => zet("naam", e.target.value)}
+              onBlur={() => zetMetHoofdletters("naam")}
             />
           </div>
           <div className="space-y-1.5">
@@ -329,6 +338,7 @@ export function GebouwAanmakenDialog() {
               placeholder="bijv. Kerkstraat 10"
               value={velden.adres}
               onChange={(e) => zet("adres", e.target.value)}
+              onBlur={() => zetMetHoofdletters("adres")}
             />
           </div>
           <div className="space-y-1.5">
@@ -347,6 +357,7 @@ export function GebouwAanmakenDialog() {
               placeholder="bijv. Amsterdam"
               value={velden.stad}
               onChange={(e) => zet("stad", e.target.value)}
+              onBlur={() => zetMetHoofdletters("stad")}
             />
           </div>
           <div className="space-y-1.5">

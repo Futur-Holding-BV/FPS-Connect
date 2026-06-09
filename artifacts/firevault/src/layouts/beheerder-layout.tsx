@@ -4,32 +4,41 @@ import {
   SidebarProvider, Sidebar, SidebarHeader, SidebarContent, SidebarFooter,
   SidebarGroup, SidebarGroupLabel, SidebarGroupContent,
   SidebarMenu, SidebarMenuItem, SidebarMenuButton,
+  SidebarMenuSub, SidebarMenuSubItem, SidebarMenuSubButton,
 } from "@/components/ui/sidebar";
-import { ShieldCheck, Building, Wrench, Users, Search, Home, Receipt, ShieldAlert, LifeBuoy, MessageSquarePlus, Activity, Contact, Info } from "lucide-react";
+import {
+  ShieldCheck, Building, Wrench, Users, Search, Home, Receipt,
+  ShieldAlert, LifeBuoy, MessageSquarePlus, Activity, Contact, Info,
+  Clock, UserRound,
+} from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { GebruikerMenu } from "@/components/gebruiker-menu";
-
-const ROUTES = [
-  { href: "/", labelKey: "nav.dashboard", icoon: Home },
-  { href: "/gebouwen", labelKey: "nav.gebouwen", icoon: Building },
-  { href: "/voorzieningen", labelKey: "nav.voorzieningen", icoon: ShieldCheck },
-  { href: "/inspecties", labelKey: "nav.inspecties", icoon: Search },
-  { href: "/onderhoud", labelKey: "nav.onderhoud", icoon: Wrench },
-  { href: "/gebruikers", labelKey: "nav.gebruikers", icoon: Users },
-  { href: "/crm", labelKey: "nav.crm", icoon: Contact },
-  { href: "/abonnementen", labelKey: "nav.abonnementen", icoon: Receipt },
-];
-
-const BEHEER_ROUTES = [
-  { href: "/beheer/login-pogingen", label: "Login-pogingen", icoon: ShieldAlert },
-  { href: "/beheer/helpdesk", label: "Helpdesk", icoon: LifeBuoy },
-  { href: "/beheer/feedback", label: "Feedback", icoon: MessageSquarePlus },
-  { href: "/beheer/heatmaps", label: "Heatmaps", icoon: Activity },
-  { href: "/info", label: "App-informatie", icoon: Info },
-];
+import { useAuth } from "@/context/auth-context";
+import { useRol } from "@/context/rol-context";
 
 export default function BeheerderLayout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
   const { t } = useTranslation();
+  const { gebruiker } = useAuth();
+  const { echteRol } = useRol();
+
+  const isHoofdBeheerder = echteRol === "hoofdbeheerder";
+  const heeftCommercieel = gebruiker?.functietitels?.includes("Commercieel") ?? false;
+  const toonAbonnementen = isHoofdBeheerder || (echteRol === "beheerder" && heeftCommercieel);
+  const toonKlantPortaal = isHoofdBeheerder || echteRol === "beheerder";
+
+  const beheerRoutes: { href: string; label: string; icoon: React.ElementType }[] = [
+    { href: "/gebruikers", label: t("nav.gebruikers"), icoon: Users },
+    { href: "/beheer/login-pogingen", label: "Login-pogingen", icoon: ShieldAlert },
+    { href: "/beheer/helpdesk", label: "Helpdesk", icoon: LifeBuoy },
+    { href: "/beheer/feedback", label: "Feedback", icoon: MessageSquarePlus },
+    { href: "/beheer/heatmaps", label: "Heatmaps", icoon: Activity },
+    { href: "/info", label: t("nav.info"), icoon: Info },
+  ];
+
+  const projectenActief =
+    location === "/gebouwen" || location.startsWith("/gebouwen/") ||
+    location === "/voorzieningen" || location.startsWith("/voorzieningen/");
 
   return (
     <SidebarProvider>
@@ -48,36 +57,129 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
         </SidebarHeader>
 
         <SidebarContent>
+          {/* ── Platform ── */}
           <SidebarGroup>
             <SidebarGroupLabel>{t("nav.platform")}</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
-                {ROUTES.map((route) => (
-                  <SidebarMenuItem key={route.href}>
-                    <SidebarMenuButton
-                      asChild
-                      isActive={location === route.href || (location.startsWith(route.href) && route.href !== "/")}
-                    >
-                      <Link href={route.href}>
-                        <route.icoon />
-                        <span>{t(route.labelKey)}</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))}
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={location === "/"}>
+                    <Link href="/">
+                      <Home />
+                      <span>{t("nav.dashboard")}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={projectenActief}>
+                    <Link href="/gebouwen">
+                      <Building />
+                      <span>{t("nav.gebouwen")}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                  <SidebarMenuSub>
+                    <SidebarMenuSubItem>
+                      <SidebarMenuSubButton
+                        asChild
+                        isActive={location === "/voorzieningen" || location.startsWith("/voorzieningen/")}
+                      >
+                        <Link href="/voorzieningen">
+                          <ShieldCheck />
+                          <span>{t("nav.voorzieningen")}</span>
+                        </Link>
+                      </SidebarMenuSubButton>
+                    </SidebarMenuSubItem>
+                  </SidebarMenuSub>
+                </SidebarMenuItem>
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
 
+          {/* ── Domeinen ── */}
+          <SidebarGroup>
+            <SidebarGroupLabel>{t("nav.domeinen")}</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={location === "/inspecties" || location.startsWith("/inspecties/")}
+                  >
+                    <Link href="/inspecties">
+                      <Search />
+                      <span>{t("nav.inspecties")}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={location === "/onderhoud" || location.startsWith("/onderhoud/")}
+                  >
+                    <Link href="/onderhoud">
+                      <Wrench />
+                      <span>{t("nav.onderhoud")}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={location === "/crm" || location.startsWith("/crm/")}
+                  >
+                    <Link href="/crm">
+                      <Contact />
+                      <span>{t("nav.crm")}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+
+                {toonAbonnementen && (
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={location === "/abonnementen" || location.startsWith("/abonnementen/")}
+                    >
+                      <Link href="/abonnementen">
+                        <Receipt />
+                        <span>{t("nav.abonnementen")}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                )}
+
+                {toonKlantPortaal && (
+                  <SidebarMenuItem>
+                    <SidebarMenuButton className="opacity-60 cursor-default" disabled>
+                      <UserRound />
+                      <span>{t("nav.klantportaal")}</span>
+                      <Badge
+                        variant="outline"
+                        className="ml-auto text-[10px] px-1.5 py-0 leading-tight border-muted-foreground/40 text-muted-foreground group-data-[collapsible=icon]:hidden"
+                      >
+                        <Clock className="h-2.5 w-2.5 mr-0.5" />
+                        {t("nav.inUitvoering")}
+                      </Badge>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                )}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+
+          {/* ── Beheer ── */}
           <SidebarGroup>
             <SidebarGroupLabel>Beheer</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
-                {BEHEER_ROUTES.map((route) => (
+                {beheerRoutes.map((route) => (
                   <SidebarMenuItem key={route.href}>
                     <SidebarMenuButton
                       asChild
-                      isActive={location === route.href || location.startsWith(route.href)}
+                      isActive={location === route.href || location.startsWith(route.href + "/")}
                     >
                       <Link href={route.href}>
                         <route.icoon />

@@ -23,6 +23,7 @@ export const vertalingen: Record<TaalCode, Boom> = {
     "auth.foutCode": "Onjuiste of verlopen code. Probeer het opnieuw.",
 
     "nav.platform": "Platform",
+    "nav.domeinen": "Domeinen",
     "nav.menu": "Menu",
     "nav.dashboard": "Dashboard",
     "nav.gebouwen": "Projecten",
@@ -33,6 +34,8 @@ export const vertalingen: Record<TaalCode, Boom> = {
     "nav.abonnementen": "Abonnementen",
     "nav.crm": "CRM",
     "nav.info": "App-informatie",
+    "nav.klantportaal": "Klant-portaal",
+    "nav.inUitvoering": "In uitvoering",
     "nav.mijnOpdrachten": "Mijn opdrachten",
     "nav.werkbonnen": "Werkbonnen",
     "nav.mijnInspecties": "Mijn inspecties",
@@ -42,7 +45,6 @@ export const vertalingen: Record<TaalCode, Boom> = {
     "nav.rapportages": "Rapportages",
     "nav.monteurPortal": "Monteur portal",
     "nav.controleurPortal": "Controleur portal",
-    "nav.klantportaal": "Klantportaal",
 
     "menu.wachtwoord": "Wachtwoord",
     "menu.uitloggen": "Uitloggen",
@@ -144,6 +146,7 @@ export const vertalingen: Record<TaalCode, Boom> = {
     "auth.foutCode": "Incorrect or expired code. Please try again.",
 
     "nav.platform": "Platform",
+    "nav.domeinen": "Domains",
     "nav.menu": "Menu",
     "nav.dashboard": "Dashboard",
     "nav.gebouwen": "Projects",
@@ -154,6 +157,8 @@ export const vertalingen: Record<TaalCode, Boom> = {
     "nav.abonnementen": "Subscriptions",
     "nav.crm": "CRM",
     "nav.info": "App info",
+    "nav.klantportaal": "Client portal",
+    "nav.inUitvoering": "In progress",
     "nav.mijnOpdrachten": "My assignments",
     "nav.werkbonnen": "Work orders",
     "nav.mijnInspecties": "My inspections",
@@ -163,7 +168,6 @@ export const vertalingen: Record<TaalCode, Boom> = {
     "nav.rapportages": "Reports",
     "nav.monteurPortal": "Engineer portal",
     "nav.controleurPortal": "Inspector portal",
-    "nav.klantportaal": "Customer portal",
 
     "menu.wachtwoord": "Password",
     "menu.uitloggen": "Sign out",
@@ -262,6 +266,7 @@ export const vertalingen: Record<TaalCode, Boom> = {
     "auth.foutCode": "Falscher oder abgelaufener Code. Bitte erneut versuchen.",
 
     "nav.platform": "Plattform",
+    "nav.domeinen": "Domänen",
     "nav.menu": "Menü",
     "nav.dashboard": "Dashboard",
     "nav.gebouwen": "Projekte",
@@ -272,6 +277,8 @@ export const vertalingen: Record<TaalCode, Boom> = {
     "nav.abonnementen": "Abonnements",
     "nav.crm": "CRM",
     "nav.info": "App-Informationen",
+    "nav.klantportaal": "Kundenportal",
+    "nav.inUitvoering": "In Bearbeitung",
     "nav.mijnOpdrachten": "Meine Aufträge",
     "nav.werkbonnen": "Arbeitsaufträge",
     "nav.mijnInspecties": "Meine Inspektionen",
@@ -281,7 +288,6 @@ export const vertalingen: Record<TaalCode, Boom> = {
     "nav.rapportages": "Berichte",
     "nav.monteurPortal": "Techniker-Portal",
     "nav.controleurPortal": "Prüfer-Portal",
-    "nav.klantportaal": "Kundenportal",
 
     "menu.wachtwoord": "Passwort",
     "menu.uitloggen": "Abmelden",
@@ -380,6 +386,7 @@ export const vertalingen: Record<TaalCode, Boom> = {
     "auth.foutCode": "Code incorrect ou expiré. Veuillez réessayer.",
 
     "nav.platform": "Plateforme",
+    "nav.domeinen": "Domaines",
     "nav.menu": "Menu",
     "nav.dashboard": "Tableau de bord",
     "nav.gebouwen": "Projets",
@@ -390,6 +397,8 @@ export const vertalingen: Record<TaalCode, Boom> = {
     "nav.abonnementen": "Abonnements",
     "nav.crm": "CRM",
     "nav.info": "Infos appli",
+    "nav.klantportaal": "Portail client",
+    "nav.inUitvoering": "En cours",
     "nav.mijnOpdrachten": "Mes missions",
     "nav.werkbonnen": "Ordres de travail",
     "nav.mijnInspecties": "Mes inspections",
@@ -399,7 +408,6 @@ export const vertalingen: Record<TaalCode, Boom> = {
     "nav.rapportages": "Rapports",
     "nav.monteurPortal": "Portail technicien",
     "nav.controleurPortal": "Portail inspecteur",
-    "nav.klantportaal": "Portail client",
 
     "menu.wachtwoord": "Mot de passe",
     "menu.uitloggen": "Déconnexion",
@@ -498,6 +506,7 @@ export const vertalingen: Record<TaalCode, Boom> = {
     "auth.foutCode": "رمز غير صحيح أو منتهي الصلاحية. حاول مرة أخرى.",
 
     "nav.platform": "المنصة",
+    "nav.domeinen": "النطاقات",
     "nav.menu": "القائمة",
     "nav.dashboard": "لوحة التحكم",
     "nav.gebouwen": "المشاريع",
@@ -508,6 +517,8 @@ export const vertalingen: Record<TaalCode, Boom> = {
     "nav.abonnementen": "الاشتراكات",
     "nav.crm": "CRM",
     "nav.info": "معلومات التطبيق",
+    "nav.klantportaal": "بوابة العميل",
+    "nav.inUitvoering": "قيد التنفيذ",
     "nav.mijnOpdrachten": "مهامي",
     "nav.werkbonnen": "أوامر العمل",
     "nav.mijnInspecties": "عمليات التفتيش الخاصة بي",
@@ -517,7 +528,6 @@ export const vertalingen: Record<TaalCode, Boom> = {
     "nav.rapportages": "التقارير",
     "nav.monteurPortal": "بوابة الفني",
     "nav.controleurPortal": "بوابة المفتش",
-    "nav.klantportaal": "بوابة العميل",
 
     "menu.wachtwoord": "كلمة المرور",
     "menu.uitloggen": "تسجيل الخروج",
@@ -616,6 +626,7 @@ export const vertalingen: Record<TaalCode, Boom> = {
     "auth.foutCode": "Hatalı veya süresi dolmuş kod. Lütfen tekrar deneyin.",
 
     "nav.platform": "Platform",
+    "nav.domeinen": "Alanlar",
     "nav.menu": "Menü",
     "nav.dashboard": "Panel",
     "nav.gebouwen": "Projeler",
@@ -626,6 +637,8 @@ export const vertalingen: Record<TaalCode, Boom> = {
     "nav.abonnementen": "Abonelikler",
     "nav.crm": "CRM",
     "nav.info": "Uygulama bilgisi",
+    "nav.klantportaal": "Müşteri portalı",
+    "nav.inUitvoering": "Devam ediyor",
     "nav.mijnOpdrachten": "Görevlerim",
     "nav.werkbonnen": "İş emirleri",
     "nav.mijnInspecties": "Denetimlerim",
@@ -635,7 +648,6 @@ export const vertalingen: Record<TaalCode, Boom> = {
     "nav.rapportages": "Raporlar",
     "nav.monteurPortal": "Teknisyen portalı",
     "nav.controleurPortal": "Denetçi portalı",
-    "nav.klantportaal": "Müşteri portalı",
 
     "menu.wachtwoord": "Şifre",
     "menu.uitloggen": "Çıkış yap",

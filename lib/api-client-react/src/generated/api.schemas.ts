@@ -1495,6 +1495,7 @@ export interface AuthGebruiker {
   taal?: AuthGebruikerTaal;
   nieuw_apparaat?: boolean;
   nieuw_ip?: boolean;
+  functietitels?: string[];
 }
 
 export type AbonnementNiveau = typeof AbonnementNiveau[keyof typeof AbonnementNiveau];

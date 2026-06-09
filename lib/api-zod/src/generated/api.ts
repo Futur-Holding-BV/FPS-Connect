@@ -2023,7 +2023,8 @@ export const TaalWijzigenResponse = zod.object({
   "bedrijfskleuren": zod.string().nullish(),
   "taal": zod.enum(['nl', 'en', 'de', 'fr', 'ar', 'tr']).optional(),
   "nieuw_apparaat": zod.boolean().optional(),
-  "nieuw_ip": zod.boolean().optional()
+  "nieuw_ip": zod.boolean().optional(),
+  "functietitels": zod.array(zod.string()).optional()
 })
 
 
@@ -2168,7 +2169,8 @@ export const TweeFactorActiverenResponse = zod.object({
   "bedrijfskleuren": zod.string().nullish(),
   "taal": zod.enum(['nl', 'en', 'de', 'fr', 'ar', 'tr']).optional(),
   "nieuw_apparaat": zod.boolean().optional(),
-  "nieuw_ip": zod.boolean().optional()
+  "nieuw_ip": zod.boolean().optional(),
+  "functietitels": zod.array(zod.string()).optional()
 })
 
 
@@ -2188,7 +2190,8 @@ export const TweeFactorVerifyResponse = zod.object({
   "bedrijfskleuren": zod.string().nullish(),
   "taal": zod.enum(['nl', 'en', 'de', 'fr', 'ar', 'tr']).optional(),
   "nieuw_apparaat": zod.boolean().optional(),
-  "nieuw_ip": zod.boolean().optional()
+  "nieuw_ip": zod.boolean().optional(),
+  "functietitels": zod.array(zod.string()).optional()
 })
 
 
@@ -2210,7 +2213,8 @@ export const GetHuidigeGebruikerResponse = zod.object({
   "bedrijfskleuren": zod.string().nullish(),
   "taal": zod.enum(['nl', 'en', 'de', 'fr', 'ar', 'tr']).optional(),
   "nieuw_apparaat": zod.boolean().optional(),
-  "nieuw_ip": zod.boolean().optional()
+  "nieuw_ip": zod.boolean().optional(),
+  "functietitels": zod.array(zod.string()).optional()
 })
 
 
