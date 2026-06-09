@@ -21,7 +21,22 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ArrowLeft, Layers, Users, X, UserPlus, Loader2, Building2, Pencil, MapPin, CheckCircle, RotateCcw, Calendar, Hash, ClipboardList } from "lucide-react";
+import {
+  ArrowLeft,
+  Layers,
+  Users,
+  X,
+  UserPlus,
+  Loader2,
+  Building2,
+  Pencil,
+  MapPin,
+  CheckCircle,
+  RotateCcw,
+  Calendar,
+  Hash,
+  ClipboardList,
+} from "lucide-react";
 import { useAuth } from "@/context/auth-context";
 import { useRol } from "@/context/rol-context";
 import GebouwPartijen from "./gebouw-partijen";
@@ -30,20 +45,16 @@ import GebouwPlattegronden from "./gebouw-plattegronden";
 import GebouwBouwlagen from "./gebouw-bouwlagen";
 import GebouwEmails from "./gebouw-emails";
 import { GebouwBewerkenDialog } from "./gebouw-bewerken-dialog";
+import GebouwPlattegrondHero from "./gebouw-plattegrond-hero";
+import GebouwActiviteit from "./gebouw-activiteit";
 
 const BEHEERDER_ROLLEN = ["beheerder", "hoofdbeheerder"];
-// Beheerders zijn koppelbaar aan een project (mét projectfunctie); de
-// hoofdbeheerder (super-admin), klanten en viewers niet.
 const TEAM_UITGESLOTEN_ROLLEN = ["hoofdbeheerder", "klant", "viewer"];
 
 export default function GebouwDetail() {
   const { id } = useParams<{ id: string }>();
   const gebouwId = Number(id);
   const { gebruiker } = useAuth();
-  // Beheerder-acties (teamleden toevoegen, gebouw bewerken, partijen, tekeningen,
-  // emails, gereed melden) volgen de EFFECTIEVE rol, zodat een hoofdbeheerder die
-  // "bekijken als" monteur/controleur gebruikt exact ziet wat dat teamlid ziet —
-  // dus zonder beheerderknoppen. De backend dwingt schrijven sowieso op de echte rol af.
   const { rol: effectieveRol } = useRol();
   const queryClient = useQueryClient();
   const isBeheerder = BEHEERDER_ROLLEN.includes(effectieveRol as string);
@@ -86,10 +97,14 @@ export default function GebouwDetail() {
   );
   const maxFootprint = Math.max(gebouw.breedte ?? 0, gebouw.diepte ?? 0);
   const plaatBreedte =
-    maxFootprint > 0 && gebouw.breedte ? Math.round(160 * (gebouw.breedte / maxFootprint)) : 160;
+    maxFootprint > 0 && gebouw.breedte
+      ? Math.round(120 * (gebouw.breedte / maxFootprint))
+      : 120;
   const plaatDiepte =
-    maxFootprint > 0 && gebouw.diepte ? Math.round(160 * (gebouw.diepte / maxFootprint)) : 160;
-  const laagAfstand = Math.max(8, Math.min(40, Math.round(240 / aantalLagen)));
+    maxFootprint > 0 && gebouw.diepte
+      ? Math.round(120 * (gebouw.diepte / maxFootprint))
+      : 120;
+  const laagAfstand = Math.max(6, Math.min(30, Math.round(180 / aantalLagen)));
 
   const heeftGegevens =
     gebouw.gebouw_type != null ||
@@ -105,8 +120,6 @@ export default function GebouwDetail() {
       (g) => String(g.id) === gekozenGebruikerId,
     );
     const beheerder = !!gekozen?.rol && BEHEERDER_ROLLEN.includes(gekozen.rol);
-    // Een beheerder wordt altijd gekoppeld mét een projectfunctie uit zijn
-    // profiel; monteurs/controleurs uitsluitend op naam.
     if (beheerder && !gekozenProjectRol) return;
     const projectRol = beheerder ? gekozenProjectRol : "";
     const duplicaat = (toewijzingen ?? []).some(
@@ -141,29 +154,23 @@ export default function GebouwDetail() {
     if (!confirm("Weet u zeker dat u dit project als gereed wilt melden?")) return;
     setGereedBezig(true);
     try {
-      await gereedMelden.mutateAsync({ id: gebouwId, data: { gereed_door: gebruiker?.naam ?? undefined } });
+      await gereedMelden.mutateAsync({
+        id: gebouwId,
+        data: { gereed_door: gebruiker?.naam ?? undefined },
+      });
       queryClient.invalidateQueries();
     } finally {
       setGereedBezig(false);
     }
   }
 
-  const projectAdmin = (toewijzingen ?? []).find((t) => t.project_rol === "Project-administratie");
-
-  const gegroepeerdeTeamleden = Object.values(
-    (toewijzingen ?? []).reduce<
-      Record<number, { gebruikerId: number; naam: string; rol: string; rollen: string[] }>
-    >((acc, t) => {
-      if (!acc[t.gebruiker_id]) {
-        acc[t.gebruiker_id] = { gebruikerId: t.gebruiker_id, naam: t.naam, rol: t.rol ?? "", rollen: [] };
-      }
-      if (t.project_rol) acc[t.gebruiker_id].rollen.push(t.project_rol);
-      return acc;
-    }, {}),
-  );
-
   async function herstelActief() {
-    if (!confirm("Weet u zeker dat u de gereed-status wilt terugzetten? Het project wordt weer actief.")) return;
+    if (
+      !confirm(
+        "Weet u zeker dat u de gereed-status wilt terugzetten? Het project wordt weer actief.",
+      )
+    )
+      return;
     setHerstelBezig(true);
     try {
       await herstelGereed.mutateAsync({ id: gebouwId });
@@ -173,8 +180,32 @@ export default function GebouwDetail() {
     }
   }
 
+  const projectAdmin = (toewijzingen ?? []).find(
+    (t) => t.project_rol === "Project-administratie",
+  );
+
+  const gegroepeerdeTeamleden = Object.values(
+    (toewijzingen ?? []).reduce<
+      Record<number, { gebruikerId: number; naam: string; rol: string; rollen: string[] }>
+    >((acc, t) => {
+      if (!acc[t.gebruiker_id]) {
+        acc[t.gebruiker_id] = {
+          gebruikerId: t.gebruiker_id,
+          naam: t.naam,
+          rol: t.rol ?? "",
+          rollen: [],
+        };
+      }
+      if (t.project_rol) acc[t.gebruiker_id].rollen.push(t.project_rol);
+      return acc;
+    }, {}),
+  );
+
+  const verdiepingen = gebouw.verdiepingen ?? [];
+
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
+      {/* Header rij: titel + acties | partijen */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
         <div className="lg:col-span-2 flex items-center gap-4">
           <Link href="/gebouwen">
@@ -200,11 +231,11 @@ export default function GebouwDetail() {
             </p>
             {gebouw.gereed_op && (
               <p className="text-xs text-muted-foreground mt-0.5">
-                Gereedgemeld op {new Date(gebouw.gereed_op).toLocaleDateString("nl-NL")}
+                Gereedgemeld op{" "}
+                {new Date(gebouw.gereed_op).toLocaleDateString("nl-NL")}
                 {gebouw.gereed_door ? ` door ${gebouw.gereed_door}` : ""}
               </p>
             )}
-            {/* Compact projectoverzicht */}
             <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-xs text-muted-foreground">
               {gebouw.werknummer && (
                 <span className="flex items-center gap-1">
@@ -213,12 +244,14 @@ export default function GebouwDetail() {
               )}
               {gebouw.aangemaakt_op && (
                 <span className="flex items-center gap-1">
-                  <Calendar className="h-3 w-3" /> Start {new Date(gebouw.aangemaakt_op).toLocaleDateString("nl-NL")}
+                  <Calendar className="h-3 w-3" /> Start{" "}
+                  {new Date(gebouw.aangemaakt_op).toLocaleDateString("nl-NL")}
                 </span>
               )}
               {projectAdmin && (
                 <span className="flex items-center gap-1">
-                  <ClipboardList className="h-3 w-3" /> Project-administratie: {projectAdmin.naam}
+                  <ClipboardList className="h-3 w-3" /> Project-administratie:{" "}
+                  {projectAdmin.naam}
                 </span>
               )}
             </div>
@@ -226,13 +259,25 @@ export default function GebouwDetail() {
           <div className="flex gap-2 flex-wrap justify-end">
             {isBeheerder && !gebouw.gereed_op && (
               <Button variant="outline" onClick={meldGereed} disabled={gereedBezig}>
-                {gereedBezig ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}
+                {gereedBezig ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <CheckCircle className="h-4 w-4" />
+                )}
                 Gebouw gereedmelden
               </Button>
             )}
             {isBeheerder && gebouw.gereed_op && (
-              <Button variant="outline" onClick={herstelActief} disabled={herstelBezig}>
-                {herstelBezig ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4" />}
+              <Button
+                variant="outline"
+                onClick={herstelActief}
+                disabled={herstelBezig}
+              >
+                {herstelBezig ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <RotateCcw className="h-4 w-4" />
+                )}
                 Terugzetten naar actief
               </Button>
             )}
@@ -256,74 +301,91 @@ export default function GebouwDetail() {
         />
       )}
 
+      {/* Plattegrond-hero + live activiteitsfeed */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+        <div className="lg:col-span-2">
+          <GebouwPlattegrondHero
+            gebouwId={gebouwId}
+            verdiepingen={verdiepingen}
+          />
+        </div>
+        <div className="lg:col-span-1 h-full min-h-[520px]">
+          <GebouwActiviteit gebouwNaam={gebouw.naam} />
+        </div>
+      </div>
+
+      {/* Secundaire content: 3D/locatie/gegevens/bouwlagen | beheer */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Layers className="h-5 w-5" /> 3D Visualisatie
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div
-                className="h-80 bg-muted rounded-md relative overflow-hidden"
-                style={{ perspective: "1200px" }}
-              >
+          {/* 3D + Locatie compact naast elkaar */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <Layers className="h-4 w-4" /> 3D Visualisatie
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
                 <div
-                  className="absolute inset-0"
-                  style={{
-                    transformStyle: "preserve-3d",
-                    transform: "rotateX(60deg) rotateZ(45deg)",
-                  }}
+                  className="h-44 bg-muted rounded-md relative overflow-hidden"
+                  style={{ perspective: "1000px" }}
                 >
-                  {Array.from({ length: aantalLagen }).map((_, i) => (
-                    <div
-                      key={i}
-                      className="bg-primary/20 border border-primary/50 absolute left-1/2 top-1/2 transition-transform"
-                      style={{
-                        width: `${plaatBreedte}px`,
-                        height: `${plaatDiepte}px`,
-                        transform: `translate(-50%, -50%) translateZ(${i * laagAfstand}px)`,
-                      }}
-                    />
-                  ))}
+                  <div
+                    className="absolute inset-0"
+                    style={{
+                      transformStyle: "preserve-3d",
+                      transform: "rotateX(55deg) rotateZ(45deg)",
+                    }}
+                  >
+                    {Array.from({ length: aantalLagen }).map((_, i) => (
+                      <div
+                        key={i}
+                        className="bg-primary/20 border border-primary/50 absolute left-1/2 top-1/2"
+                        style={{
+                          width: `${plaatBreedte}px`,
+                          height: `${plaatDiepte}px`,
+                          transform: `translate(-50%, -50%) translateZ(${i * laagAfstand}px)`,
+                        }}
+                      />
+                    ))}
+                  </div>
                 </div>
-              </div>
-              <p className="text-xs text-muted-foreground mt-3 text-center">
-                {aantalLagen} {aantalLagen === 1 ? "bouwlaag" : "bouwlagen"}
-                {gebouw.hoogte != null ? ` · ${gebouw.hoogte} m hoog` : ""}
-                {gebouw.breedte != null && gebouw.diepte != null
-                  ? ` · ${gebouw.breedte} × ${gebouw.diepte} m`
-                  : ""}
-              </p>
-            </CardContent>
-          </Card>
+                <p className="text-xs text-muted-foreground mt-2 text-center">
+                  {aantalLagen} {aantalLagen === 1 ? "bouwlaag" : "bouwlagen"}
+                  {gebouw.hoogte != null ? ` · ${gebouw.hoogte} m` : ""}
+                  {gebouw.breedte != null && gebouw.diepte != null
+                    ? ` · ${gebouw.breedte}×${gebouw.diepte} m`
+                    : ""}
+                </p>
+              </CardContent>
+            </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <MapPin className="h-5 w-5" /> Locatie
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-0 overflow-hidden rounded-b-lg">
-              {kaartData?.embed_url ? (
-                <iframe
-                  src={kaartData.embed_url}
-                  className="w-full h-72 border-0"
-                  loading="lazy"
-                  allowFullScreen
-                  referrerPolicy="no-referrer-when-downgrade"
-                  title={`Kaartlocatie ${gebouw.naam}`}
-                />
-              ) : (
-                <div className="h-48 flex items-center justify-center text-muted-foreground text-sm bg-muted rounded-b-lg px-6">
-                  {gebouw.adres
-                    ? "Kaartlocatie laden..."
-                    : "Geen adres of coördinaten ingevuld voor dit gebouw."}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <MapPin className="h-4 w-4" /> Locatie
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-0 overflow-hidden rounded-b-lg">
+                {kaartData?.embed_url ? (
+                  <iframe
+                    src={kaartData.embed_url}
+                    className="w-full h-52 border-0"
+                    loading="lazy"
+                    allowFullScreen
+                    referrerPolicy="no-referrer-when-downgrade"
+                    title={`Kaartlocatie ${gebouw.naam}`}
+                  />
+                ) : (
+                  <div className="h-52 flex items-center justify-center text-muted-foreground text-sm bg-muted rounded-b-lg px-6">
+                    {gebouw.adres
+                      ? "Kaartlocatie laden..."
+                      : "Geen adres ingevuld voor dit gebouw."}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
 
           {heeftGegevens && (
             <Card>
@@ -337,7 +399,9 @@ export default function GebouwDetail() {
                   {gebouw.gebouw_type != null && (
                     <div>
                       <dt className="text-muted-foreground">Type</dt>
-                      <dd className="font-medium capitalize">{gebouw.gebouw_type}</dd>
+                      <dd className="font-medium capitalize">
+                        {gebouw.gebouw_type}
+                      </dd>
                     </div>
                   )}
                   {gebouw.aantal_verdiepingen != null && (
@@ -373,13 +437,12 @@ export default function GebouwDetail() {
 
           <GebouwBouwlagen
             gebouwId={gebouwId}
-            verdiepingen={gebouw.verdiepingen ?? []}
+            verdiepingen={verdiepingen}
             isBeheerder={isBeheerder}
           />
         </div>
 
         <div className="space-y-6">
-          {/* Toewijzingen – alleen zichtbaar voor beheerder */}
           {isBeheerder && (
             <Card className="border-primary/40 shadow-sm">
               <CardHeader>
@@ -409,10 +472,10 @@ export default function GebouwDetail() {
                       >
                         <div className="min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <span className="font-medium text-sm">
-                              {t.naam}
+                            <span className="font-medium text-sm">{t.naam}</span>
+                            <span className="text-muted-foreground text-xs">
+                              ({t.rol})
                             </span>
-                            <span className="text-muted-foreground text-xs">({t.rol})</span>
                             {t.rollen.length > 0 && (
                               <Badge className="text-xs shrink-0 bg-primary/10 text-primary border-primary/20">
                                 {t.rollen.join(" | ")}
@@ -434,7 +497,6 @@ export default function GebouwDetail() {
                   </ul>
                 )}
 
-                {/* Toevoegen */}
                 {beschikbareGebruikers.length > 0 && (
                   <div className="flex flex-col gap-2 pt-1">
                     <Select
@@ -468,7 +530,9 @@ export default function GebouwDetail() {
                         </SelectTrigger>
                         <SelectContent>
                           {gekozenFuncties.map((pr) => (
-                            <SelectItem key={pr} value={pr}>{pr}</SelectItem>
+                            <SelectItem key={pr} value={pr}>
+                              {pr}
+                            </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
@@ -502,13 +566,13 @@ export default function GebouwDetail() {
 
           <GebouwPlattegronden
             gebouwId={gebouwId}
-            verdiepingen={gebouw.verdiepingen ?? []}
+            verdiepingen={verdiepingen}
             isBeheerder={isBeheerder}
           />
 
           <GebouwTekeningen
             gebouwId={gebouwId}
-            verdiepingen={gebouw.verdiepingen ?? []}
+            verdiepingen={verdiepingen}
             isBeheerder={isBeheerder}
           />
 
