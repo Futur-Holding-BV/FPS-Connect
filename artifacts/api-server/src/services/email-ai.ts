@@ -34,6 +34,33 @@ function isMsg(bestandsnaam: string): boolean {
   return bestandsnaam.toLowerCase().endsWith(".msg");
 }
 
+const MIME_PER_EXTENSIE: Record<string, string> = {
+  pdf: "application/pdf",
+  png: "image/png",
+  jpg: "image/jpeg",
+  jpeg: "image/jpeg",
+  gif: "image/gif",
+  webp: "image/webp",
+  bmp: "image/bmp",
+  tif: "image/tiff",
+  tiff: "image/tiff",
+  svg: "image/svg+xml",
+  dwg: "image/vnd.dwg",
+  dxf: "image/vnd.dxf",
+  doc: "application/msword",
+  docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  xls: "application/vnd.ms-excel",
+  xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  txt: "text/plain",
+  csv: "text/csv",
+  zip: "application/zip",
+};
+
+function mimeUitBestandsnaam(bestandsnaam: string): string | null {
+  const ext = bestandsnaam.split(".").pop()?.toLowerCase();
+  return ext ? (MIME_PER_EXTENSIE[ext] ?? null) : null;
+}
+
 async function parseEml(buffer: Buffer): Promise<GeparseerdeEmail> {
   const mail = await simpleParser(buffer);
   const afzender = mail.from?.text ?? null;
@@ -41,11 +68,14 @@ async function parseEml(buffer: Buffer): Promise<GeparseerdeEmail> {
   const ontvanger = ontvangerVeld?.text ?? null;
   const bijlagen: GeparseerdeBijlage[] = (mail.attachments ?? [])
     .filter((a) => a.content && (a.filename || a.contentType))
-    .map((a, i) => ({
-      bestandsnaam: a.filename || `bijlage-${i + 1}`,
-      contentType: a.contentType ?? null,
-      inhoud: a.content as Buffer,
-    }));
+    .map((a, i) => {
+      const naam = a.filename || `bijlage-${i + 1}`;
+      return {
+        bestandsnaam: naam,
+        contentType: a.contentType ?? mimeUitBestandsnaam(naam),
+        inhoud: a.content as Buffer,
+      };
+    });
   return {
     afzender,
     ontvanger,
@@ -77,9 +107,12 @@ function parseMsg(buffer: Buffer): GeparseerdeEmail {
     try {
       const file = reader.getAttachment(i) as { fileName?: string; content?: Uint8Array };
       if (file?.content) {
+        const naam = file.fileName || att.fileName || att.fileNameShort || `bijlage-${i + 1}`;
+        const ruweTag = typeof att.attachMimeTag === "string" ? att.attachMimeTag.trim() : "";
+        const mimeTag = /^[a-z0-9.+-]+\/[a-z0-9.+-]+$/i.test(ruweTag) ? ruweTag : null;
         bijlagen.push({
-          bestandsnaam: file.fileName || att.fileName || `bijlage-${i + 1}`,
-          contentType: null,
+          bestandsnaam: naam,
+          contentType: mimeTag ?? mimeUitBestandsnaam(naam),
           inhoud: Buffer.from(file.content),
         });
       }
@@ -98,14 +131,27 @@ function parseMsg(buffer: Buffer): GeparseerdeEmail {
   };
 }
 
+function isLegeEmail(e: GeparseerdeEmail): boolean {
+  return (
+    !e.afzender &&
+    !e.ontvanger &&
+    !e.onderwerp &&
+    !e.inhoudTekst &&
+    e.bijlagen.length === 0
+  );
+}
+
 export async function parseEmailBestand(
   bestandsnaam: string,
   buffer: Buffer,
 ): Promise<GeparseerdeEmail> {
-  if (isMsg(bestandsnaam)) {
-    return parseMsg(buffer);
+  const geparseerd = isMsg(bestandsnaam) ? parseMsg(buffer) : await parseEml(buffer);
+  if (isLegeEmail(geparseerd)) {
+    throw new Error(
+      "Het bestand bevat geen leesbare e-mailgegevens (geen afzender, onderwerp, inhoud of bijlagen).",
+    );
   }
-  return parseEml(buffer);
+  return geparseerd;
 }
 
 const AI_PROMPT = `Je analyseert een e-mail die hoort bij een brandpreventie-dossier van een gebouw.
