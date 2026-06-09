@@ -24,6 +24,24 @@ async function toegewezenGebouwIds(userId: number): Promise<number[]> {
   return rows.map((r) => r.gebouwId);
 }
 
+// Echte sessie-rol (geen impersonatie): write-autorisatie blijft altijd op de
+// werkelijke gebruiker gebaseerd.
+async function echteRol(userId: number): Promise<string> {
+  const [g] = await db
+    .select({ rol: gebruikersTable.rol })
+    .from(gebruikersTable)
+    .where(eq(gebruikersTable.id, userId));
+  return g?.rol ?? "viewer";
+}
+
+// Object-level guard: monteur/controleur mogen alleen muteren bij hun toegewezen
+// gebouwen. Beheerder/hoofdbeheerder zijn niet beperkt (rolafdwinging via requireRol).
+async function magBijGebouw(userId: number, gebouwId: number | null): Promise<boolean> {
+  if (!TOEGEWEZEN_ROLLEN.includes(await echteRol(userId))) return true;
+  if (gebouwId == null) return false;
+  return (await toegewezenGebouwIds(userId)).includes(gebouwId);
+}
+
 async function mapInspectie(i: typeof inspectiesTable.$inferSelect) {
   const gebouw = i.gebouwId
     ? await db
@@ -92,11 +110,25 @@ router.get("/inspecties", async (req, res) => {
 });
 
 // POST /inspecties
-router.post("/inspecties", async (req, res) => {
+router.post("/inspecties", requireRol("monteur", "controleur", "beheerder", "hoofdbeheerder"), async (req, res) => {
   try {
     const { type, gebouw_id, voorziening_id, inspecteur_id, geplande_datum, bevindingen } = req.body;
     if (!type || !gebouw_id) {
       return res.status(400).json({ error: "type en gebouw_id zijn verplicht" });
+    }
+    if (!(await magBijGebouw(req.session.userId!, gebouw_id))) {
+      return res.status(403).json({ error: "Geen toegang tot dit gebouw" });
+    }
+    // Cross-entity integriteit: voorziening moet bij hetzelfde gebouw horen.
+    if (voorziening_id != null) {
+      const [vz] = await db
+        .select({ gebouwId: voorzieningenTable.gebouwId })
+        .from(voorzieningenTable)
+        .where(eq(voorzieningenTable.id, voorziening_id));
+      if (!vz) return res.status(400).json({ error: "Voorziening niet gevonden" });
+      if (vz.gebouwId !== gebouw_id) {
+        return res.status(400).json({ error: "Voorziening hoort niet bij dit gebouw" });
+      }
     }
     const [i] = await db
       .insert(inspectiesTable)
@@ -165,13 +197,22 @@ router.get("/inspecties/:id", async (req, res) => {
 });
 
 // PATCH /inspecties/:id
-router.patch("/inspecties/:id", async (req, res) => {
+router.patch("/inspecties/:id", requireRol("monteur", "controleur", "beheerder", "hoofdbeheerder"), async (req, res) => {
   try {
     const id = parseInt(req.params.id);
     const {
       type, status, inspecteur_id, geplande_datum, uitgevoerd_datum,
       bevindingen, aanbevelingen, rapport_url,
     } = req.body;
+
+    const [bestaand] = await db
+      .select({ gebouwId: inspectiesTable.gebouwId })
+      .from(inspectiesTable)
+      .where(eq(inspectiesTable.id, id));
+    if (!bestaand) return res.status(404).json({ error: "Inspectie niet gevonden" });
+    if (!(await magBijGebouw(req.session.userId!, bestaand.gebouwId))) {
+      return res.status(403).json({ error: "Geen toegang tot deze inspectie" });
+    }
 
     const [i] = await db
       .update(inspectiesTable)

@@ -33,6 +33,9 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/context/auth-context";
 
 const BEHEERDER_ROLLEN = ["beheerder", "hoofdbeheerder"];
+// Rollen die de plattegrond mogen bewerken (spots plaatsen/verplaatsen, status,
+// foto's, scheidingen). Klant/viewer mogen uitsluitend inzien.
+const BEWERKER_ROLLEN = ["monteur", "controleur", "beheerder", "hoofdbeheerder"];
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 
@@ -304,6 +307,7 @@ export default function Plattegrond() {
 
   const { gebruiker } = useAuth();
   const isBeheerder = !!gebruiker?.rol && BEHEERDER_ROLLEN.includes(gebruiker.rol as string);
+  const magBewerken = !!gebruiker?.rol && BEWERKER_ROLLEN.includes(gebruiker.rol as string);
 
   const queryClient = useQueryClient();
   const { data: verdieping } = useGetVerdieping(Number(verdiepingId));
@@ -635,32 +639,36 @@ export default function Plattegrond() {
           <Button variant="outline" size="icon" className="h-8 w-8" onClick={zoomIn}><ZoomIn className="h-3.5 w-3.5" /></Button>
           <Button variant="outline" size="icon" className="h-8 w-8" onClick={resetView}><RotateCcw className="h-3.5 w-3.5" /></Button>
 
-          <Button
-            variant={plaatsenModus ? "destructive" : "default"}
-            size="sm"
-            onClick={() => { setPlaatsenModus(!plaatsenModus); setGeselecteerdId(null); if (tekenModus) annuleerTekenen(); }}
-          >
-            {plaatsenModus ? (<><X className="h-4 w-4 mr-1" />Annuleren</>) : (<><Plus className="h-4 w-4 mr-1" />Plaatsen</>)}
-          </Button>
-
-          {tekenModus ? (
+          {magBewerken && (
             <>
               <Button
-                variant="default"
+                variant={plaatsenModus ? "destructive" : "default"}
                 size="sm"
-                disabled={huidigePunten.length < 2}
-                onClick={() => setScheidingDialoog(true)}
+                onClick={() => { setPlaatsenModus(!plaatsenModus); setGeselecteerdId(null); if (tekenModus) annuleerTekenen(); }}
               >
-                <Check className="h-4 w-4 mr-1" />Voltooien
+                {plaatsenModus ? (<><X className="h-4 w-4 mr-1" />Annuleren</>) : (<><Plus className="h-4 w-4 mr-1" />Plaatsen</>)}
               </Button>
-              <Button variant="destructive" size="sm" onClick={annuleerTekenen}>
-                <X className="h-4 w-4 mr-1" />Annuleren
-              </Button>
+
+              {tekenModus ? (
+                <>
+                  <Button
+                    variant="default"
+                    size="sm"
+                    disabled={huidigePunten.length < 2}
+                    onClick={() => setScheidingDialoog(true)}
+                  >
+                    <Check className="h-4 w-4 mr-1" />Voltooien
+                  </Button>
+                  <Button variant="destructive" size="sm" onClick={annuleerTekenen}>
+                    <X className="h-4 w-4 mr-1" />Annuleren
+                  </Button>
+                </>
+              ) : (
+                <Button variant="outline" size="sm" onClick={startTekenen}>
+                  <Spline className="h-4 w-4 mr-1" />Scheiding tekenen
+                </Button>
+              )}
             </>
-          ) : (
-            <Button variant="outline" size="sm" onClick={startTekenen}>
-              <Spline className="h-4 w-4 mr-1" />Scheiding tekenen
-            </Button>
           )}
 
           {isBeheerder && (
@@ -836,9 +844,11 @@ export default function Plattegrond() {
                   <span className="font-medium">{SCHEIDING_TYPEN[s.type]?.label ?? s.type}</span>
                   {s.waarde && <span className="text-muted-foreground">{s.waarde}</span>}
                 </span>
-                <Button variant="destructive" size="sm" disabled={verwijderScheiding.isPending} onClick={() => wisScheiding(s.id)}>
-                  <Trash2 className="h-4 w-4 mr-1" />Verwijderen
-                </Button>
+                {magBewerken && (
+                  <Button variant="destructive" size="sm" disabled={verwijderScheiding.isPending} onClick={() => wisScheiding(s.id)}>
+                    <Trash2 className="h-4 w-4 mr-1" />Verwijderen
+                  </Button>
+                )}
               </div>
             );
           })()}
@@ -872,6 +882,7 @@ export default function Plattegrond() {
         {geselecteerdId != null && (
           <SpotDetail
             id={geselecteerdId}
+            magBewerken={magBewerken}
             onClose={() => { setGeselecteerdId(null); setVerplaatsModus(false); }}
             onWijziging={() => refetch()}
             verplaatsModus={verplaatsModus}
@@ -1275,6 +1286,7 @@ function FotoStrip({ paths, onVerwijder }: { paths: string[]; onVerwijder: (i: n
 // Detail zijpaneel met alle velden + foto's voor/na
 function SpotDetail({
   id,
+  magBewerken,
   onClose,
   onWijziging,
   verplaatsModus,
@@ -1282,6 +1294,7 @@ function SpotDetail({
   onVerplaatsAnnuleer,
 }: {
   id: number;
+  magBewerken: boolean;
   onClose: () => void;
   onWijziging: () => void;
   verplaatsModus: boolean;
@@ -1340,6 +1353,7 @@ function SpotDetail({
             <span className="font-medium">{TYPEN[(v as any).type]?.label ?? (v as any).type}</span>
 
             <span className="text-muted-foreground self-center">Status</span>
+            {magBewerken ? (
             <Select
               value={(v as any).status}
               onValueChange={wijzigStatus}
@@ -1371,6 +1385,18 @@ function SpotDetail({
                 ))}
               </SelectContent>
             </Select>
+            ) : (
+              <span
+                className="inline-flex items-center gap-1.5 text-sm font-medium"
+                style={{ color: STATUSKLEUREN[(v as any).status] }}
+              >
+                <span
+                  className="h-2 w-2 rounded-full"
+                  style={{ backgroundColor: STATUSKLEUREN[(v as any).status] ?? "#94a3b8" }}
+                />
+                {STATUSLABEL[(v as any).status] ?? (v as any).status}
+              </span>
+            )}
 
             <span className="text-muted-foreground">WBDBO</span>
             <span className="font-medium">{(v as any).wbdbo ? `${(v as any).wbdbo} min` : "—"}</span>
@@ -1409,22 +1435,22 @@ function SpotDetail({
           <div className="pt-2 border-t">
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs uppercase tracking-wide text-muted-foreground font-semibold">Foto's voor</span>
-              <FotoUploader label="Toevoegen" onUploaded={(p) => voegToe("voor", p)} />
+              {magBewerken && <FotoUploader label="Toevoegen" onUploaded={(p) => voegToe("voor", p)} />}
             </div>
-            <FotoGalerij fotos={voor} onVerwijder={verwijder} />
+            <FotoGalerij fotos={voor} onVerwijder={magBewerken ? verwijder : undefined} />
           </div>
 
           {/* Foto's na */}
           <div className="pt-2 border-t">
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs uppercase tracking-wide text-muted-foreground font-semibold">Foto's na</span>
-              <FotoUploader label="Toevoegen" onUploaded={(p) => voegToe("na", p)} />
+              {magBewerken && <FotoUploader label="Toevoegen" onUploaded={(p) => voegToe("na", p)} />}
             </div>
-            <FotoGalerij fotos={na} onVerwijder={verwijder} />
+            <FotoGalerij fotos={na} onVerwijder={magBewerken ? verwijder : undefined} />
           </div>
 
           <div className="flex flex-col gap-2 mt-auto pt-3 border-t">
-            {verplaatsModus ? (
+            {magBewerken && (verplaatsModus ? (
               <Button size="sm" variant="destructive" onClick={onVerplaatsAnnuleer}>
                 <X className="h-4 w-4 mr-1" />Verplaatsen annuleren
               </Button>
@@ -1432,7 +1458,7 @@ function SpotDetail({
               <Button size="sm" variant="outline" onClick={onVerplaats}>
                 <Move className="h-4 w-4 mr-1" />Verplaatsen
               </Button>
-            )}
+            ))}
             <Button size="sm" variant="default" asChild>
               <Link href={`/voorzieningen/${id}`} onClick={() => onWijziging()}>Volledige details</Link>
             </Button>
@@ -1444,7 +1470,7 @@ function SpotDetail({
 }
 
 // Galerij met bestaande foto's (uit DB) + verwijderknop
-function FotoGalerij({ fotos, onVerwijder }: { fotos: any[]; onVerwijder: (fotoId: number) => void }) {
+function FotoGalerij({ fotos, onVerwijder }: { fotos: any[]; onVerwijder?: (fotoId: number) => void }) {
   if (fotos.length === 0) {
     return <p className="text-xs text-muted-foreground italic">Nog geen foto's</p>;
   }
@@ -1459,13 +1485,15 @@ function FotoGalerij({ fotos, onVerwijder }: { fotos: any[]; onVerwijder: (fotoI
               className="h-16 w-16 object-cover rounded border"
             />
           </a>
-          <button
-            type="button"
-            onClick={() => onVerwijder(f.id)}
-            className="absolute -top-1.5 -right-1.5 bg-destructive text-white rounded-full p-0.5 opacity-90 hover:opacity-100"
-          >
-            <Trash2 className="h-3 w-3" />
-          </button>
+          {onVerwijder && (
+            <button
+              type="button"
+              onClick={() => onVerwijder(f.id)}
+              className="absolute -top-1.5 -right-1.5 bg-destructive text-white rounded-full p-0.5 opacity-90 hover:opacity-100"
+            >
+              <Trash2 className="h-3 w-3" />
+            </button>
+          )}
         </div>
       ))}
     </div>

@@ -24,6 +24,35 @@ async function toegewezenGebouwIds(userId: number): Promise<number[]> {
   return rows.map((r) => r.gebouwId);
 }
 
+// Echte sessie-rol (geen impersonatie): write-autorisatie blijft altijd op de
+// werkelijke gebruiker gebaseerd.
+async function echteRol(userId: number): Promise<string> {
+  const [g] = await db
+    .select({ rol: gebruikersTable.rol })
+    .from(gebruikersTable)
+    .where(eq(gebruikersTable.id, userId));
+  return g?.rol ?? "viewer";
+}
+
+// Leidt het gebouw af uit een voorziening (onderhoud kan aan een voorziening
+// hangen zonder expliciet gebouw_id).
+async function gebouwIdVanVoorziening(voorzieningId: number | null | undefined): Promise<number | null> {
+  if (voorzieningId == null) return null;
+  const [v] = await db
+    .select({ gebouwId: voorzieningenTable.gebouwId })
+    .from(voorzieningenTable)
+    .where(eq(voorzieningenTable.id, voorzieningId));
+  return v?.gebouwId ?? null;
+}
+
+// Object-level guard: monteur/controleur mogen alleen muteren bij hun toegewezen
+// gebouwen. Beheerder/hoofdbeheerder zijn niet beperkt (rolafdwinging via requireRol).
+async function magBijGebouw(userId: number, gebouwId: number | null): Promise<boolean> {
+  if (!TOEGEWEZEN_ROLLEN.includes(await echteRol(userId))) return true;
+  if (gebouwId == null) return false;
+  return (await toegewezenGebouwIds(userId)).includes(gebouwId);
+}
+
 async function mapOnderhoud(o: typeof onderhoudTable.$inferSelect) {
   const gebouw = o.gebouwId
     ? await db
@@ -99,11 +128,26 @@ router.get("/onderhoud", async (req, res) => {
 });
 
 // POST /onderhoud
-router.post("/onderhoud", async (req, res) => {
+router.post("/onderhoud", requireRol("monteur", "controleur", "beheerder", "hoofdbeheerder"), async (req, res) => {
   try {
     const { voorziening_id, gebouw_id, titel, omschrijving, prioriteit, toegewezen_aan_id, deadline } = req.body;
     if (!titel || !prioriteit) {
       return res.status(400).json({ error: "titel en prioriteit zijn verplicht" });
+    }
+    // Cross-entity integriteit: als beide zijn opgegeven moet de voorziening bij
+    // hetzelfde gebouw horen, zodat toegang tot gebouw A geen taak op een
+    // voorziening uit gebouw B kan koppelen.
+    const voorzieningGebouw =
+      voorziening_id != null ? await gebouwIdVanVoorziening(voorziening_id) : null;
+    if (voorziening_id != null && voorzieningGebouw == null) {
+      return res.status(400).json({ error: "Voorziening niet gevonden" });
+    }
+    if (gebouw_id != null && voorzieningGebouw != null && gebouw_id !== voorzieningGebouw) {
+      return res.status(400).json({ error: "Voorziening hoort niet bij dit gebouw" });
+    }
+    const doelGebouw = gebouw_id ?? voorzieningGebouw;
+    if (!(await magBijGebouw(req.session.userId!, doelGebouw))) {
+      return res.status(403).json({ error: "Geen toegang tot dit gebouw" });
     }
     const [o] = await db
       .insert(onderhoudTable)
@@ -158,13 +202,23 @@ router.get("/onderhoud/:id", async (req, res) => {
 });
 
 // PATCH /onderhoud/:id
-router.patch("/onderhoud/:id", async (req, res) => {
+router.patch("/onderhoud/:id", requireRol("monteur", "controleur", "beheerder", "hoofdbeheerder"), async (req, res) => {
   try {
     const id = parseInt(req.params.id);
     const {
       titel, omschrijving, prioriteit, status,
       toegewezen_aan_id, deadline, voltooid_datum, resultaat,
     } = req.body;
+
+    const [bestaand] = await db
+      .select({ gebouwId: onderhoudTable.gebouwId, voorzieningId: onderhoudTable.voorzieningId })
+      .from(onderhoudTable)
+      .where(eq(onderhoudTable.id, id));
+    if (!bestaand) return res.status(404).json({ error: "Onderhoudstaak niet gevonden" });
+    const doelGebouw = bestaand.gebouwId ?? (await gebouwIdVanVoorziening(bestaand.voorzieningId));
+    if (!(await magBijGebouw(req.session.userId!, doelGebouw))) {
+      return res.status(403).json({ error: "Geen toegang tot deze taak" });
+    }
 
     const [o] = await db
       .update(onderhoudTable)

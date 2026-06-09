@@ -24,8 +24,20 @@ Twee onafhankelijke lagen, beide server-side afdwingen:
   `id = :fotoId AND voorziening_id = :id` (anders verwijdert een toegestane voorziening een vreemde foto).
 - **Integriteit bij create/update**: `verdieping_id` moet bij hetzelfde `gebouw_id` horen (anders kan een
   monteur cross-gebouw een voorziening aan een vreemde verdieping hangen). Check via `gebouwIdVanVerdieping`.
+- **Cross-entity bij POST inspecties/onderhoud**: niet alleen op `gebouw_id` autoriseren — als ook
+  `voorziening_id` is meegegeven, haal het gebouw van die voorziening op en eis match met `gebouw_id`
+  (bij `gebouw_id ?? gebouwIdVanVoorziening` wint anders `gebouw_id` en koppel je een record aan een
+  voorziening uit een ander gebouw). Mismatch → 400.
 - **Mutaties zonder requireRol**: `PATCH .../archief` stond open voor elke ingelogde user (incl. klant) —
   mutatiepaden horen minstens `requireRol("monteur","controleur","beheerder","hoofdbeheerder")` te hebben.
+
+## Frontend read-only gating (plattegrond)
+`BEWERKER_ROLLEN = ["monteur","controleur","beheerder","hoofdbeheerder"]` → `magBewerken`. Klant/viewer
+mogen ALLEEN inzien. Gate consequent ALLE mutatie-UI, niet alleen de toolbar: spot plaatsen + scheiding
+tekenen (toolbar), status-select (read-only fallback-badge), foto-uploaders, verplaatsen-knop,
+scheiding-verwijderknop, én foto-verwijderknoppen. Patroon voor delete-knoppen: maak `onVerwijder`
+optioneel en geef het alleen door wanneer `magBewerken` (component verbergt de knop bij `undefined`).
+Architect markeert "altijd zichtbare delete-knop" als gat — gate ze stuk voor stuk.
 
 ## Bewuste scope-grens
 `klant` wordt NIET door gebouwtoewijzing gefilterd (bestaand productgedrag; staat in replit.md). Een
