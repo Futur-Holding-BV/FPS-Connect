@@ -186,19 +186,6 @@ export function GebruikerMenu() {
           </DropdownMenu>
         </div>
 
-        <div className="mt-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setLocation("/info")}
-            className="w-full justify-start gap-2 text-muted-foreground group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0"
-            title="App-informatie"
-          >
-            <Info className="h-4 w-4 flex-shrink-0" />
-            <span className="group-data-[collapsible=icon]:hidden">App-informatie</span>
-          </Button>
-        </div>
-
         <div className="flex gap-1 mt-2">
           <Button
             variant="outline"
@@ -219,6 +206,19 @@ export function GebruikerMenu() {
           >
             <LogOut className="h-4 w-4 flex-shrink-0" />
             <span className="group-data-[collapsible=icon]:hidden">{t("menu.uitloggen")}</span>
+          </Button>
+        </div>
+
+        <div className="mt-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setLocation("/info")}
+            className="w-full justify-start gap-2 text-muted-foreground group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0"
+            title="App-informatie"
+          >
+            <Info className="h-4 w-4 flex-shrink-0" />
+            <span className="group-data-[collapsible=icon]:hidden">App-informatie</span>
           </Button>
         </div>
       </div>
