@@ -16,6 +16,7 @@ const mapGebruiker = (g: typeof gebruikersTable.$inferSelect) => ({
   naam: g.naam,
   email: g.email,
   rol: g.rol,
+  functietitel: g.functietitel ?? null,
   telefoon: g.telefoon,
   bedrijf: g.bedrijf,
   actief: g.actief,
@@ -51,6 +52,7 @@ const mapGebruikerPubliek = (g: typeof gebruikersTable.$inferSelect) => ({
   naam: g.naam,
   email: "",
   rol: g.rol,
+  functietitel: g.functietitel ?? null,
   telefoon: null,
   bedrijf: null,
   actief: g.actief,
@@ -151,13 +153,14 @@ router.patch("/gebruikers/:id", alleenBeheerder, async (req, res) => {
   try {
     const id = parseInt(String(req.params.id), 10);
     const {
-      naam, email, rol, telefoon, bedrijf, actief, wachtwoord,
+      naam, email, rol, functietitel, telefoon, bedrijf, actief, wachtwoord,
       avatar_url, bedrijfslogo_url, bedrijfskleuren, uitnodiging_status, taal,
     } = req.body;
     const wijziging: Partial<typeof gebruikersTable.$inferInsert> = {
       naam,
       email: email ? String(email).trim().toLowerCase() : undefined,
       rol,
+      functietitel,
       telefoon,
       bedrijf,
       actief,

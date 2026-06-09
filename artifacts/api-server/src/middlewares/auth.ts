@@ -3,6 +3,12 @@ import { db, gebruikersTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { leesToken } from "../lib/token";
 
+declare module "express-session" {
+  interface SessionData {
+    rol?: string;
+  }
+}
+
 export async function requireAuth(
   req: Request,
   res: Response,
@@ -21,11 +27,12 @@ export async function requireAuth(
         // Verifieer dat het account nog bestaat én actief is; een eerder
         // uitgegeven token mag niet bruikbaar blijven na deactivatie.
         const [g] = await db
-          .select({ actief: gebruikersTable.actief })
+          .select({ actief: gebruikersTable.actief, rol: gebruikersTable.rol })
           .from(gebruikersTable)
           .where(eq(gebruikersTable.id, uid));
         if (g && g.actief) {
           req.session.userId = uid;
+          req.session.rol = g.rol;
           next();
           return;
         }

@@ -343,6 +343,33 @@ paths:
         "204":
           description: Verwijderd
 
+  /gebouwen/{id}/gereed:
+    patch:
+      operationId: meldGebouwGereed
+      tags: [gebouwen]
+      summary: Gebouw gereedmelden
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GebouwGereedInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Gebouw"
+        "404":
+          description: Niet gevonden
+
   /gebouwen/{id}/verdiepingen:
     get:
       operationId: listVerdiepingen
@@ -490,6 +517,27 @@ paths:
                 $ref: "#/components/schemas/Toewijzing"
         "400":
           description: Ongeldige invoer
+        "403":
+          description: Geen toegang
+
+  /gebouwen/{id}/spots-inzicht:
+    get:
+      operationId: getGebouwSpotsInzicht
+      tags: [gebouwen]
+      summary: Spots-inzicht van een gebouw (per monteur per dag)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpotsInzicht"
         "403":
           description: Geen toegang
 
@@ -2074,6 +2122,12 @@ components:
         dagen_over:
           type: integer
 
+    GebouwGereedInput:
+      type: object
+      properties:
+        gereed_door:
+          type: string
+
     # ── GEBOUW ───────────────────────────────────────────────────────────
     Gebouw:
       type: object
@@ -2133,6 +2187,10 @@ components:
           type: ["string", "null"]
         laatste_spot_op:
           type: ["string", "null"]
+        gereed_op:
+          type: ["string", "null"]
+        gereed_door:
+          type: ["string", "null"]
 
     GebouwDetail:
       type: object
@@ -2176,6 +2234,12 @@ components:
           type: ["number", "null"]
         aangemaakt_op:
           type: string
+        bijgewerkt_op:
+          type: ["string", "null"]
+        gereed_op:
+          type: ["string", "null"]
+        gereed_door:
+          type: ["string", "null"]
         verdiepingen:
           type: array
           items:
@@ -2212,6 +2276,8 @@ components:
           type: string
         rol:
           type: string
+        project_rol:
+          type: ["string", "null"]
         aangemaakt_op:
           type: string
 
@@ -2221,6 +2287,43 @@ components:
       properties:
         gebruiker_id:
           type: integer
+        project_rol:
+          type: string
+
+    SpotsInzichtDag:
+      type: object
+      required: [datum, aantal]
+      properties:
+        datum:
+          type: string
+        aantal:
+          type: integer
+
+    SpotsInzichtMonteur:
+      type: object
+      required: [naam, totaal, per_dag]
+      properties:
+        monteur_id:
+          type: ["integer", "null"]
+        naam:
+          type: string
+        totaal:
+          type: integer
+        per_dag:
+          type: array
+          items:
+            $ref: "#/components/schemas/SpotsInzichtDag"
+
+    SpotsInzicht:
+      type: object
+      required: [totaal, per_monteur]
+      properties:
+        totaal:
+          type: integer
+        per_monteur:
+          type: array
+          items:
+            $ref: "#/components/schemas/SpotsInzichtMonteur"
 
     GebouwPartij:
       type: object
@@ -2476,7 +2579,7 @@ components:
 
     GebouwInput:
       type: object
-      required: [werknummer, naam, adres]
+      required: [naam, adres]
       properties:
         werknummer:
           type: string
@@ -3287,6 +3390,8 @@ components:
         rol:
           type: string
           enum: [hoofdbeheerder, beheerder, monteur, controleur, klant, viewer]
+        functietitel:
+          type: ["string", "null"]
         telefoon:
           type: ["string", "null"]
         bedrijf:
@@ -3448,6 +3553,8 @@ components:
           type: string
         rol:
           type: string
+        functietitel:
+          type: string
         telefoon:
           type: string
         bedrijf:
@@ -3473,6 +3580,8 @@ components:
         email:
           type: string
         rol:
+          type: string
+        functietitel:
           type: string
         telefoon:
           type: string

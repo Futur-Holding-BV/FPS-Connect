@@ -39,6 +39,7 @@ import type {
   GebouwAiAnalyseInput,
   GebouwAiAnalyseResultaat,
   GebouwDetail,
+  GebouwGereedInput,
   GebouwInput,
   GebouwPartij,
   GebouwPartijInput,
@@ -79,6 +80,7 @@ import type {
   Scheiding,
   ScheidingInput,
   ScheidingUpdate,
+  SpotsInzicht,
   StatusUpdate,
   StatusVerdeling,
   TaalWijzigen,
@@ -1258,6 +1260,77 @@ export const useDeleteGebouw = <TError = ErrorType<unknown>,
       return useMutation(getDeleteGebouwMutationOptions(options));
     }
 
+export const getMeldGebouwGereedUrl = (id: number,) => {
+
+
+
+
+  return `/api/gebouwen/${id}/gereed`
+}
+
+/**
+ * @summary Gebouw gereedmelden
+ */
+export const meldGebouwGereed = async (id: number,
+    gebouwGereedInput: GebouwGereedInput, options?: RequestInit): Promise<Gebouw> => {
+
+  return customFetch<Gebouw>(getMeldGebouwGereedUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(gebouwGereedInput)
+  }
+);}
+
+
+
+
+export const getMeldGebouwGereedMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof meldGebouwGereed>>, TError,{id: number;data: BodyType<GebouwGereedInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof meldGebouwGereed>>, TError,{id: number;data: BodyType<GebouwGereedInput>}, TContext> => {
+
+const mutationKey = ['meldGebouwGereed'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof meldGebouwGereed>>, {id: number;data: BodyType<GebouwGereedInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  meldGebouwGereed(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type MeldGebouwGereedMutationResult = NonNullable<Awaited<ReturnType<typeof meldGebouwGereed>>>
+    export type MeldGebouwGereedMutationBody = BodyType<GebouwGereedInput>
+    export type MeldGebouwGereedMutationError = ErrorType<void>
+
+    /**
+ * @summary Gebouw gereedmelden
+ */
+export const useMeldGebouwGereed = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof meldGebouwGereed>>, TError,{id: number;data: BodyType<GebouwGereedInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof meldGebouwGereed>>,
+        TError,
+        {id: number;data: BodyType<GebouwGereedInput>},
+        TContext
+      > => {
+      return useMutation(getMeldGebouwGereedMutationOptions(options));
+    }
+
 export const getListVerdiepingenUrl = (id: number,) => {
 
 
@@ -1771,6 +1844,83 @@ export const useCreateGebouwToewijzing = <TError = ErrorType<void>,
       > => {
       return useMutation(getCreateGebouwToewijzingMutationOptions(options));
     }
+
+export const getGetGebouwSpotsInzichtUrl = (id: number,) => {
+
+
+
+
+  return `/api/gebouwen/${id}/spots-inzicht`
+}
+
+/**
+ * @summary Spots-inzicht van een gebouw (per monteur per dag)
+ */
+export const getGebouwSpotsInzicht = async (id: number, options?: RequestInit): Promise<SpotsInzicht> => {
+
+  return customFetch<SpotsInzicht>(getGetGebouwSpotsInzichtUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetGebouwSpotsInzichtQueryKey = (id: number,) => {
+    return [
+    `/api/gebouwen/${id}/spots-inzicht`
+    ] as const;
+    }
+
+
+export const getGetGebouwSpotsInzichtQueryOptions = <TData = Awaited<ReturnType<typeof getGebouwSpotsInzicht>>, TError = ErrorType<void>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getGebouwSpotsInzicht>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetGebouwSpotsInzichtQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getGebouwSpotsInzicht>>> = ({ signal }) => getGebouwSpotsInzicht(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getGebouwSpotsInzicht>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetGebouwSpotsInzichtQueryResult = NonNullable<Awaited<ReturnType<typeof getGebouwSpotsInzicht>>>
+export type GetGebouwSpotsInzichtQueryError = ErrorType<void>
+
+
+/**
+ * @summary Spots-inzicht van een gebouw (per monteur per dag)
+ */
+
+export function useGetGebouwSpotsInzicht<TData = Awaited<ReturnType<typeof getGebouwSpotsInzicht>>, TError = ErrorType<void>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getGebouwSpotsInzicht>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetGebouwSpotsInzichtQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
 
 export const getDeleteGebouwToewijzingUrl = (id: number,
     gebruikerId: number,) => {

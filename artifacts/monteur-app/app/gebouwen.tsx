@@ -57,10 +57,13 @@ export default function Gebouwen() {
       >
         <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
           <View style={{ flex: 1 }}>
-            <Text style={{ color: c.darkMuted, fontSize: 14, fontFamily: "Inter_400Regular" }}>
+            <Text style={{ color: c.primary, fontSize: 11, fontFamily: "Inter_700Bold", letterSpacing: 1.5, textTransform: "uppercase" }}>
+              FPS Brandpreventie
+            </Text>
+            <Text style={{ color: c.darkMuted, fontSize: 13, fontFamily: "Inter_400Regular" }}>
               Welkom terug
             </Text>
-            <Text style={{ color: c.darkForeground, fontSize: 22, fontFamily: "Inter_700Bold" }}>
+            <Text style={{ color: c.darkForeground, fontSize: 20, fontFamily: "Inter_700Bold" }}>
               {gebruiker?.naam ?? "Monteur"}
             </Text>
           </View>
@@ -167,7 +170,7 @@ export default function Gebouwen() {
                 }}
               >
                 <Text style={{ color: c.accentForeground, fontSize: 13, fontFamily: "Inter_600SemiBold" }}>
-                  {item.totaal_voorzieningen ?? 0} voorzieningen
+                  {item.totaal_voorzieningen ?? 0} {(item.totaal_voorzieningen ?? 0) === 1 ? "spot" : "spots"}
                 </Text>
               </View>
             </Pressable>

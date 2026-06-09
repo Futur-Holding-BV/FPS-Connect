@@ -5,7 +5,7 @@ import {
   SidebarGroup, SidebarGroupLabel, SidebarGroupContent,
   SidebarMenu, SidebarMenuItem, SidebarMenuButton,
 } from "@/components/ui/sidebar";
-import { ShieldCheck, Home, Wrench, Search, Building, Map } from "lucide-react";
+import { Flame, ShieldCheck, Home, Wrench, Search, Building, Map } from "lucide-react";
 import { useRol } from "@/context/rol-context";
 import { GebruikerMenu } from "@/components/gebruiker-menu";
 
@@ -36,12 +36,12 @@ export default function MonteurLayout({ children }: { children: React.ReactNode 
       <Sidebar variant="inset" collapsible="icon">
         <SidebarHeader className="py-4">
           <div className="flex items-center gap-2 px-4">
-            <div className="bg-blue-600 text-white p-1 rounded flex-shrink-0">
-              <ShieldCheck size={22} />
+            <div className="bg-primary text-primary-foreground p-1.5 rounded flex-shrink-0">
+              <Flame size={20} />
             </div>
-            <div className="group-data-[collapsible=icon]:hidden">
-              <div className="font-bold text-sm tracking-tight leading-tight">{t("app.naam")}</div>
-              <div className="text-xs text-muted-foreground">{portalNaam}</div>
+            <div className="group-data-[collapsible=icon]:hidden leading-tight">
+              <div className="font-extrabold text-sm tracking-wide uppercase text-primary">FPS</div>
+              <div className="text-xs text-muted-foreground font-medium">{portalNaam}</div>
             </div>
           </div>
         </SidebarHeader>

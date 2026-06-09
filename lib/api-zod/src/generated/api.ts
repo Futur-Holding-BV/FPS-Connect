@@ -128,7 +128,9 @@ export const ListGebouwenResponseItem = zod.object({
 })).optional(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string().nullish(),
-  "laatste_spot_op": zod.string().nullish()
+  "laatste_spot_op": zod.string().nullish(),
+  "gereed_op": zod.string().nullish(),
+  "gereed_door": zod.string().nullish()
 })
 export const ListGebouwenResponse = zod.array(ListGebouwenResponseItem)
 
@@ -137,7 +139,7 @@ export const ListGebouwenResponse = zod.array(ListGebouwenResponseItem)
  * @summary Nieuw gebouw aanmaken
  */
 export const CreateGebouwBody = zod.object({
-  "werknummer": zod.string(),
+  "werknummer": zod.string().optional(),
   "projectnummer": zod.string().optional(),
   "naam": zod.string(),
   "adres": zod.string(),
@@ -281,6 +283,9 @@ export const GetGebouwResponse = zod.object({
   "latitude": zod.number().nullish(),
   "longitude": zod.number().nullish(),
   "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string().nullish(),
+  "gereed_op": zod.string().nullish(),
+  "gereed_door": zod.string().nullish(),
   "verdiepingen": zod.array(zod.object({
   "id": zod.number(),
   "gebouw_id": zod.number(),
@@ -353,7 +358,9 @@ export const UpdateGebouwResponse = zod.object({
 })).optional(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string().nullish(),
-  "laatste_spot_op": zod.string().nullish()
+  "laatste_spot_op": zod.string().nullish(),
+  "gereed_op": zod.string().nullish(),
+  "gereed_door": zod.string().nullish()
 })
 
 
@@ -365,6 +372,49 @@ export const DeleteGebouwParams = zod.object({
 })
 
 export const DeleteGebouwResponse = zod.void()
+
+
+/**
+ * @summary Gebouw gereedmelden
+ */
+export const MeldGebouwGereedParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const MeldGebouwGereedBody = zod.object({
+  "gereed_door": zod.string().optional()
+})
+
+export const MeldGebouwGereedResponse = zod.object({
+  "id": zod.number(),
+  "werknummer": zod.string().nullish(),
+  "projectnummer": zod.string().nullish(),
+  "naam": zod.string(),
+  "adres": zod.string(),
+  "stad": zod.string().nullish(),
+  "postcode": zod.string().nullish(),
+  "omschrijving": zod.string().nullish(),
+  "klant_id": zod.number().nullish(),
+  "klant_naam": zod.string().nullish(),
+  "aantal_verdiepingen": zod.number().nullish(),
+  "hoogte": zod.number().nullish(),
+  "breedte": zod.number().nullish(),
+  "diepte": zod.number().nullish(),
+  "oppervlakte": zod.number().nullish(),
+  "gebouw_type": zod.string().nullish(),
+  "latitude": zod.number().nullish(),
+  "longitude": zod.number().nullish(),
+  "totaal_voorzieningen": zod.number().optional(),
+  "partijen": zod.array(zod.object({
+  "type": zod.string(),
+  "naam": zod.string()
+})).optional(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string().nullish(),
+  "laatste_spot_op": zod.string().nullish(),
+  "gereed_op": zod.string().nullish(),
+  "gereed_door": zod.string().nullish()
+})
 
 
 /**
@@ -474,6 +524,7 @@ export const ListGebouwToewijzingenResponseItem = zod.object({
   "gebruiker_id": zod.number(),
   "naam": zod.string(),
   "rol": zod.string(),
+  "project_rol": zod.string().nullish(),
   "aangemaakt_op": zod.string()
 })
 export const ListGebouwToewijzingenResponse = zod.array(ListGebouwToewijzingenResponseItem)
@@ -487,10 +538,32 @@ export const CreateGebouwToewijzingParams = zod.object({
 })
 
 export const CreateGebouwToewijzingBody = zod.object({
-  "gebruiker_id": zod.number()
+  "gebruiker_id": zod.number(),
+  "project_rol": zod.string().optional()
 })
 
 export const CreateGebouwToewijzingResponse = zod.void()
+
+
+/**
+ * @summary Spots-inzicht van een gebouw (per monteur per dag)
+ */
+export const GetGebouwSpotsInzichtParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetGebouwSpotsInzichtResponse = zod.object({
+  "totaal": zod.number(),
+  "per_monteur": zod.array(zod.object({
+  "monteur_id": zod.number().nullish(),
+  "naam": zod.string(),
+  "totaal": zod.number(),
+  "per_dag": zod.array(zod.object({
+  "datum": zod.string(),
+  "aantal": zod.number()
+}))
+}))
+})
 
 
 /**
@@ -1658,6 +1731,7 @@ export const ListGebruikersResponseItem = zod.object({
   "naam": zod.string(),
   "email": zod.string(),
   "rol": zod.enum(['hoofdbeheerder', 'beheerder', 'monteur', 'controleur', 'klant', 'viewer']),
+  "functietitel": zod.string().nullish(),
   "telefoon": zod.string().nullish(),
   "bedrijf": zod.string().nullish(),
   "actief": zod.boolean(),
@@ -1684,6 +1758,7 @@ export const CreateGebruikerBody = zod.object({
   "naam": zod.string(),
   "email": zod.string(),
   "rol": zod.string(),
+  "functietitel": zod.string().optional(),
   "telefoon": zod.string().optional(),
   "bedrijf": zod.string().optional(),
   "wachtwoord": zod.string().optional(),
@@ -1709,6 +1784,7 @@ export const GetGebruikerResponse = zod.object({
   "naam": zod.string(),
   "email": zod.string(),
   "rol": zod.enum(['hoofdbeheerder', 'beheerder', 'monteur', 'controleur', 'klant', 'viewer']),
+  "functietitel": zod.string().nullish(),
   "telefoon": zod.string().nullish(),
   "bedrijf": zod.string().nullish(),
   "actief": zod.boolean(),
@@ -1738,6 +1814,7 @@ export const UpdateGebruikerBody = zod.object({
   "naam": zod.string().optional(),
   "email": zod.string().optional(),
   "rol": zod.string().optional(),
+  "functietitel": zod.string().optional(),
   "telefoon": zod.string().optional(),
   "bedrijf": zod.string().optional(),
   "actief": zod.boolean().optional(),
@@ -1754,6 +1831,7 @@ export const UpdateGebruikerResponse = zod.object({
   "naam": zod.string(),
   "email": zod.string(),
   "rol": zod.enum(['hoofdbeheerder', 'beheerder', 'monteur', 'controleur', 'klant', 'viewer']),
+  "functietitel": zod.string().nullish(),
   "telefoon": zod.string().nullish(),
   "bedrijf": zod.string().nullish(),
   "actief": zod.boolean(),
@@ -1794,6 +1872,7 @@ export const UitnodigingVersturenResponse = zod.object({
   "naam": zod.string(),
   "email": zod.string(),
   "rol": zod.enum(['hoofdbeheerder', 'beheerder', 'monteur', 'controleur', 'klant', 'viewer']),
+  "functietitel": zod.string().nullish(),
   "telefoon": zod.string().nullish(),
   "bedrijf": zod.string().nullish(),
   "actief": zod.boolean(),
@@ -1824,6 +1903,7 @@ export const UitnodigingOpnieuwVersturenResponse = zod.object({
   "naam": zod.string(),
   "email": zod.string(),
   "rol": zod.enum(['hoofdbeheerder', 'beheerder', 'monteur', 'controleur', 'klant', 'viewer']),
+  "functietitel": zod.string().nullish(),
   "telefoon": zod.string().nullish(),
   "bedrijf": zod.string().nullish(),
   "actief": zod.boolean(),

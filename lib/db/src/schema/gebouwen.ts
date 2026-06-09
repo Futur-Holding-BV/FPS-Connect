@@ -23,6 +23,8 @@ export const gebouwenTable = pgTable("gebouwen", {
   longitude: real("longitude"),
   aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
   bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
+  gereedOp: timestamp("gereed_op"),
+  gereedDoor: text("gereed_door"),
 });
 
 export const insertGebouwSchema = createInsertSchema(gebouwenTable).omit({ id: true, aangemaaktOp: true, bijgewerktOp: true });
@@ -50,6 +52,7 @@ export const gebouwToewijzingenTable = pgTable("gebouw_toewijzingen", {
   gebruikerId: integer("gebruiker_id").notNull().references(() => gebruikersTable.id, { onDelete: "cascade" }),
   aangemaaktDoorId: integer("aangemaakt_door_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
   aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
+  projectRol: text("project_rol"),
 });
 
 export type GebouwToewijzing = typeof gebouwToewijzingenTable.$inferSelect;

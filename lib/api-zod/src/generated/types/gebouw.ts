@@ -48,4 +48,8 @@ export interface Gebouw {
   bijgewerkt_op?: string | null;
   /** @nullable */
   laatste_spot_op?: string | null;
+  /** @nullable */
+  gereed_op?: string | null;
+  /** @nullable */
+  gereed_door?: string | null;
 }

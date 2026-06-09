@@ -1,5 +1,10 @@
 import { useTranslation } from "react-i18next";
-import { useListGebouwen, useListGebouwPartijOpties } from "@workspace/api-client-react";
+import {
+  useListGebouwen,
+  useListGebouwPartijOpties,
+  useGetGebouwSpotsInzicht,
+  useListGebouwToewijzingen,
+} from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -11,8 +16,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { Link } from "wouter";
-import { Search, Building, X, ArrowDownUp } from "lucide-react";
+import { Search, Building, X, ArrowDownUp, Calendar, BarChart3, Users } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useAuth } from "@/context/auth-context";
 import { GebouwAanmakenDialog } from "./gebouw-aanmaken-dialog";
@@ -27,6 +39,156 @@ const PARTIJ_TYPE_LABELS: Record<string, string> = {
 };
 
 const ALLE = "__alle__";
+
+function SpotsInzichtDialog({
+  gebouwId,
+  gebouwNaam,
+  open,
+  onOpenChange,
+}: {
+  gebouwId: number;
+  gebouwNaam: string;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
+  const { data: inzicht, isLoading: inzichtLaadt } = useGetGebouwSpotsInzicht(
+    gebouwId,
+    { query: { enabled: open, queryKey: ["spots-inzicht", gebouwId] } },
+  );
+  const { data: toewijzingen, isLoading: toewijzingenLaden } =
+    useListGebouwToewijzingen(gebouwId, {
+      query: { enabled: open, queryKey: ["toewijzingen", gebouwId] },
+    });
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Spots-inzicht</DialogTitle>
+          <DialogDescription>{gebouwNaam}</DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-6">
+          <div>
+            <div className="flex items-center gap-2 mb-2 text-sm font-medium">
+              <Users className="h-4 w-4 text-primary" />
+              Toegewezen gebruikers
+            </div>
+            {toewijzingenLaden ? (
+              <p className="text-sm text-muted-foreground">Laden…</p>
+            ) : toewijzingen && toewijzingen.length > 0 ? (
+              <div className="space-y-1">
+                {toewijzingen.map((t) => (
+                  <div
+                    key={t.id}
+                    className="flex items-center justify-between text-sm"
+                  >
+                    <span className="font-medium">{t.naam}</span>
+                    <Badge variant="outline">
+                      {t.project_rol ? t.project_rol : t.rol}
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                Geen toegewezen gebruikers.
+              </p>
+            )}
+          </div>
+
+          <div>
+            <div className="flex items-center gap-2 mb-2 text-sm font-medium">
+              <BarChart3 className="h-4 w-4 text-primary" />
+              Spots per monteur
+              {inzicht ? (
+                <Badge variant="secondary" className="ml-auto">
+                  {inzicht.totaal} totaal
+                </Badge>
+              ) : null}
+            </div>
+            {inzichtLaadt ? (
+              <p className="text-sm text-muted-foreground">Laden…</p>
+            ) : inzicht && inzicht.per_monteur.length > 0 ? (
+              <div className="space-y-3">
+                {inzicht.per_monteur.map((m) => (
+                  <div
+                    key={m.monteur_id ?? m.naam}
+                    className="rounded-md border p-3"
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="font-medium text-sm">{m.naam}</span>
+                      <Badge variant="outline">
+                        {m.totaal} {m.totaal === 1 ? "spot" : "spots"}
+                      </Badge>
+                    </div>
+                    <div className="space-y-0.5">
+                      {m.per_dag.map((d) => (
+                        <div
+                          key={d.datum}
+                          className="flex items-center justify-between text-xs text-muted-foreground"
+                        >
+                          <span>
+                            {new Date(d.datum).toLocaleDateString("nl-NL", {
+                              day: "numeric",
+                              month: "short",
+                              year: "numeric",
+                            })}
+                          </span>
+                          <span>
+                            {d.aantal} {d.aantal === 1 ? "spot" : "spots"}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                Nog geen spots geregistreerd.
+              </p>
+            )}
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function SpotsInzichtKnop({
+  gebouwId,
+  gebouwNaam,
+}: {
+  gebouwId: number;
+  gebouwNaam: string;
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        className="h-7 gap-1 px-2 text-xs"
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          setOpen(true);
+        }}
+      >
+        <BarChart3 className="h-3.5 w-3.5" />
+        Inzicht
+      </Button>
+      <SpotsInzichtDialog
+        gebouwId={gebouwId}
+        gebouwNaam={gebouwNaam}
+        open={open}
+        onOpenChange={setOpen}
+      />
+    </>
+  );
+}
 
 type SorteerOptie =
   | "alfabetisch"
@@ -128,10 +290,10 @@ export default function Gebouwen() {
           }}
         >
           <SelectTrigger className="w-full sm:w-52">
-            <SelectValue placeholder="Filter op type partij" />
+            <SelectValue placeholder="Filter op opdrachtgevertype" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value={ALLE}>Alle partijtypes</SelectItem>
+            <SelectItem value={ALLE}>Alle opdrachtgevertypes</SelectItem>
             {beschikbareTypes.map((type) => (
               <SelectItem key={type} value={type}>
                 {PARTIJ_TYPE_LABELS[type] ?? type}
@@ -195,27 +357,44 @@ export default function Gebouwen() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {gesorteerdeGebouwen.map((gebouw) => (
             <Link key={gebouw.id} href={`/gebouwen/${gebouw.id}`}>
-              <Card className="hover:border-primary transition-colors cursor-pointer h-full flex flex-col">
+              <Card className={`hover:border-primary transition-colors cursor-pointer h-full flex flex-col ${(gebouw.totaal_voorzieningen ?? 0) > 0 ? "border-primary/40 bg-primary/5" : ""}`}>
                 <CardHeader>
                   <div className="flex justify-between items-start">
                     <div className="bg-primary/10 p-2 rounded-md">
                       <Building className="h-6 w-6 text-primary" />
                     </div>
-                    <Badge variant="outline" className="bg-background">
-                      {gebouw.totaal_voorzieningen} {gebouw.totaal_voorzieningen === 1 ? "spot" : "spots"}
-                    </Badge>
+                    <div className="flex items-center gap-1">
+                      {(gebouw.totaal_voorzieningen ?? 0) > 0 && (
+                        <SpotsInzichtKnop
+                          gebouwId={gebouw.id}
+                          gebouwNaam={
+                            gebouw.projectnummer
+                              ? `${gebouw.projectnummer} - ${gebouw.naam}`
+                              : gebouw.naam
+                          }
+                        />
+                      )}
+                      <Badge variant="outline" className="bg-background">
+                        {gebouw.totaal_voorzieningen} {gebouw.totaal_voorzieningen === 1 ? "spot" : "spots"}
+                      </Badge>
+                    </div>
                   </div>
-                  {gebouw.werknummer && (
-                    <Badge variant="secondary" className="mt-4 w-fit font-mono text-xs">
-                      {gebouw.werknummer}
-                    </Badge>
-                  )}
-                  <CardTitle className={gebouw.werknummer ? "mt-2" : "mt-4"}>
+                  <CardTitle className="mt-4">
                     {gebouw.projectnummer
                       ? `${gebouw.projectnummer} - ${gebouw.naam}`
                       : gebouw.naam}
                   </CardTitle>
                   <CardDescription>{gebouw.adres}, {gebouw.stad}</CardDescription>
+                  <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
+                    <Calendar className="h-3 w-3 shrink-0" />
+                    <span>
+                      {new Date(gebouw.aangemaakt_op).toLocaleDateString("nl-NL", {
+                        day: "numeric",
+                        month: "short",
+                        year: "numeric",
+                      })}
+                    </span>
+                  </div>
                   {gebouw.partijen && gebouw.partijen.length > 0 && (
                     <div className="mt-3 space-y-1">
                       {gebouw.partijen.map((partij, i) => (
@@ -234,14 +413,6 @@ export default function Gebouwen() {
                     </div>
                   )}
                 </CardHeader>
-                <CardContent className="mt-auto">
-                  <div className="flex gap-2">
-                    {/* Simplified stats placeholder */}
-                    <Badge variant="secondary" className="bg-green-100 text-green-800 hover:bg-green-100">
-                      Ok
-                    </Badge>
-                  </div>
-                </CardContent>
               </Card>
             </Link>
           ))}

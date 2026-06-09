@@ -22,7 +22,6 @@ import { Separator } from "@/components/ui/separator";
 import { Loader2, AlertCircle, Sparkles } from "lucide-react";
 
 interface Velden {
-  werknummer: string;
   projectnummer: string;
   naam: string;
   adres: string;
@@ -49,7 +48,6 @@ function getalOfNull(v: string): number | null {
 
 function uitGebouw(gebouw: Gebouw): Velden {
   return {
-    werknummer: tekst(gebouw.werknummer),
     projectnummer: tekst(gebouw.projectnummer),
     naam: tekst(gebouw.naam),
     adres: tekst(gebouw.adres),
@@ -159,7 +157,6 @@ export function GebouwBewerkenDialog({ gebouw, open, onOpenChange }: Props) {
       await wijzigGebouw.mutateAsync({
         id: gebouw.id,
         data: {
-          werknummer: velden.werknummer.trim() || null,
           projectnummer: velden.projectnummer.trim() || null,
           naam: velden.naam,
           adres: velden.adres,
@@ -267,18 +264,6 @@ export function GebouwBewerkenDialog({ gebouw, open, onOpenChange }: Props) {
         <Separator />
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div className="space-y-1.5">
-            <Label htmlFor="b-werknummer">Werknummer</Label>
-            <Input
-              id="b-werknummer"
-              placeholder="bijv. 2026-001"
-              value={velden.werknummer}
-              onChange={(e) => zet("werknummer", e.target.value)}
-            />
-            <p className="text-xs text-muted-foreground">
-              Uniek nummer dat dit gebouw identificeert.
-            </p>
-          </div>
           <div className="space-y-1.5">
             <Label htmlFor="b-projectnummer">Projectnummer</Label>
             <Input

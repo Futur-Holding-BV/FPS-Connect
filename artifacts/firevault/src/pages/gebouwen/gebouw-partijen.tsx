@@ -24,6 +24,7 @@ import {
   Plus,
   X,
   Pencil,
+  Eye,
   Mail,
   Phone,
   MapPin,
@@ -68,6 +69,16 @@ export default function GebouwPartijen({
   const [formOpen, setFormOpen] = useState(false);
   const [bewerkId, setBewerkId] = useState<number | null>(null);
   const [form, setForm] = useState({ ...LEEG });
+  const [ingeklapt, setIngeklapt] = useState<Set<number>>(new Set());
+
+  function toggleIngeklapt(id: number) {
+    setIngeklapt((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
 
   const bezig = maakPartij.isPending || wijzigPartij.isPending;
 
@@ -130,7 +141,7 @@ export default function GebouwPartijen({
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Contact className="h-5 w-5 text-primary" /> Partijen
+          <Contact className="h-5 w-5 text-primary" /> Opdrachtgevers
         </CardTitle>
         <p className="text-sm text-muted-foreground">
           Eigenaar, gebruiker, opdrachtgever en aanvrager met contactgegevens.
@@ -143,7 +154,7 @@ export default function GebouwPartijen({
           </div>
         ) : lijst.length === 0 ? (
           <p className="text-sm text-muted-foreground">
-            Nog geen partijen geregistreerd.
+            Nog geen opdrachtgevers geregistreerd.
           </p>
         ) : (
           <ul className="space-y-3">
@@ -160,60 +171,75 @@ export default function GebouwPartijen({
                     {p.organisatie && (
                       <p className="text-sm text-muted-foreground">{p.organisatie}</p>
                     )}
-                    <div className="mt-2 space-y-1 text-sm">
-                      {p.email && (
-                        <div className="flex items-center gap-2 text-muted-foreground">
-                          <Mail className="h-3.5 w-3.5 shrink-0" />
-                          <a href={`mailto:${p.email}`} className="hover:underline truncate">
-                            {p.email}
-                          </a>
+                    {!ingeklapt.has(p.id) && (
+                      <>
+                        <div className="mt-2 space-y-1 text-sm">
+                          {p.email && (
+                            <div className="flex items-center gap-2 text-muted-foreground">
+                              <Mail className="h-3.5 w-3.5 shrink-0" />
+                              <a href={`mailto:${p.email}`} className="hover:underline truncate">
+                                {p.email}
+                              </a>
+                            </div>
+                          )}
+                          {p.telefoon && (
+                            <div className="flex items-center gap-2 text-muted-foreground">
+                              <Phone className="h-3.5 w-3.5 shrink-0" />
+                              <a href={`tel:${p.telefoon}`} className="hover:underline">
+                                {p.telefoon}
+                              </a>
+                            </div>
+                          )}
+                          {(p.adres || p.postcode || p.plaats) && (
+                            <div className="flex items-center gap-2 text-muted-foreground">
+                              <MapPin className="h-3.5 w-3.5 shrink-0" />
+                              <span className="truncate">
+                                {[p.adres, [p.postcode, p.plaats].filter(Boolean).join(" ")]
+                                  .filter(Boolean)
+                                  .join(", ")}
+                              </span>
+                            </div>
+                          )}
                         </div>
-                      )}
-                      {p.telefoon && (
-                        <div className="flex items-center gap-2 text-muted-foreground">
-                          <Phone className="h-3.5 w-3.5 shrink-0" />
-                          <a href={`tel:${p.telefoon}`} className="hover:underline">
-                            {p.telefoon}
-                          </a>
-                        </div>
-                      )}
-                      {(p.adres || p.postcode || p.plaats) && (
-                        <div className="flex items-center gap-2 text-muted-foreground">
-                          <MapPin className="h-3.5 w-3.5 shrink-0" />
-                          <span className="truncate">
-                            {[p.adres, [p.postcode, p.plaats].filter(Boolean).join(" ")]
-                              .filter(Boolean)
-                              .join(", ")}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                    {p.opmerkingen && (
-                      <p className="mt-2 text-xs text-muted-foreground">{p.opmerkingen}</p>
+                        {p.opmerkingen && (
+                          <p className="mt-2 text-xs text-muted-foreground">{p.opmerkingen}</p>
+                        )}
+                      </>
                     )}
                   </div>
-                  {isBeheerder && (
-                    <div className="flex items-center gap-1 shrink-0">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 text-muted-foreground hover:text-primary"
-                        onClick={() => startBewerken(p)}
-                        disabled={bezig || verwijderPartij.isPending}
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                        onClick={() => verwijder(p.id)}
-                        disabled={verwijderPartij.isPending}
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  )}
+                  <div className="flex items-center gap-1 shrink-0">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 text-muted-foreground hover:text-primary"
+                      onClick={() => toggleIngeklapt(p.id)}
+                      title={ingeklapt.has(p.id) ? "Details tonen" : "Details verbergen"}
+                    >
+                      <Eye className="h-4 w-4" />
+                    </Button>
+                    {isBeheerder && (
+                      <>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 text-muted-foreground hover:text-primary"
+                          onClick={() => startBewerken(p)}
+                          disabled={bezig || verwijderPartij.isPending}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                          onClick={() => verwijder(p.id)}
+                          disabled={verwijderPartij.isPending}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </>
+                    )}
+                  </div>
                 </div>
               </li>
             ))}
@@ -222,14 +248,14 @@ export default function GebouwPartijen({
 
         {isBeheerder && !formOpen && (
           <Button variant="outline" size="sm" onClick={() => setFormOpen(true)}>
-            <Plus className="h-4 w-4 mr-1" /> Partij toevoegen
+            <Plus className="h-4 w-4 mr-1" /> Opdrachtgever toevoegen
           </Button>
         )}
 
         {isBeheerder && formOpen && (
           <div className="space-y-3 rounded-md border p-3">
             <p className="text-sm font-medium">
-              {bewerkId != null ? "Partij wijzigen" : "Nieuwe partij"}
+              {bewerkId != null ? "Opdrachtgever wijzigen" : "Nieuwe opdrachtgever"}
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1">

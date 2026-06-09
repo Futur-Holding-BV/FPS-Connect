@@ -7,6 +7,7 @@ import {
   useCreateGebouwToewijzing,
   useDeleteGebouwToewijzing,
   useListGebruikers,
+  useMeldGebouwGereed,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,7 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ArrowLeft, Layers, Users, X, UserPlus, Loader2, Building2, Pencil, MapPin } from "lucide-react";
+import { ArrowLeft, Layers, Users, X, UserPlus, Loader2, Building2, Pencil, MapPin, CheckCircle } from "lucide-react";
 import { useAuth } from "@/context/auth-context";
 import GebouwPartijen from "./gebouw-partijen";
 import GebouwTekeningen from "./gebouw-tekeningen";
@@ -29,6 +30,8 @@ import { GebouwBewerkenDialog } from "./gebouw-bewerken-dialog";
 
 const BEHEERDER_ROLLEN = ["beheerder", "hoofdbeheerder"];
 const TOEWIJSBARE_ROLLEN = ["monteur", "controleur"];
+const PROJECT_ROLLEN = ["Projectleider", "Werkvoorbereider", "Monteur", "Controleur"];
+const GEEN_PROJECT_ROL = "geen";
 
 export default function GebouwDetail() {
   const { id } = useParams<{ id: string }>();
@@ -46,10 +49,13 @@ export default function GebouwDetail() {
 
   const maakToewijzing = useCreateGebouwToewijzing();
   const verwijderToewijzing = useDeleteGebouwToewijzing();
+  const gereedMelden = useMeldGebouwGereed();
 
   const [gekozenGebruikerId, setGekozenGebruikerId] = useState<string>("");
+  const [gekozenProjectRol, setGekozenProjectRol] = useState<string>("");
   const [bezig, setBezig] = useState(false);
   const [bewerkenOpen, setBewerkenOpen] = useState(false);
+  const [gereedBezig, setGereedBezig] = useState(false);
 
   if (isLoading) return <div className="p-6 text-muted-foreground">Laden...</div>;
   if (!gebouw) return <div className="p-6">Gebouw niet gevonden.</div>;
@@ -85,9 +91,13 @@ export default function GebouwDetail() {
     try {
       await maakToewijzing.mutateAsync({
         id: gebouwId,
-        data: { gebruiker_id: Number(gekozenGebruikerId) },
+        data: {
+          gebruiker_id: Number(gekozenGebruikerId),
+          project_rol: gekozenProjectRol || undefined,
+        },
       });
       setGekozenGebruikerId("");
+      setGekozenProjectRol("");
       queryClient.invalidateQueries();
     } finally {
       setBezig(false);
@@ -97,6 +107,17 @@ export default function GebouwDetail() {
   async function verwijder(gebruikerId: number) {
     await verwijderToewijzing.mutateAsync({ id: gebouwId, gebruikerId });
     queryClient.invalidateQueries();
+  }
+
+  async function meldGereed() {
+    if (!confirm("Weet u zeker dat u dit gebouw als gereed wilt melden?")) return;
+    setGereedBezig(true);
+    try {
+      await gereedMelden.mutateAsync({ id: gebouwId, data: { gereed_door: gebruiker?.naam ?? undefined } });
+      queryClient.invalidateQueries();
+    } finally {
+      setGereedBezig(false);
+    }
   }
 
   return (
@@ -109,25 +130,41 @@ export default function GebouwDetail() {
             </Button>
           </Link>
           <div className="flex-1">
-            {gebouw.werknummer && (
-              <span className="text-sm font-mono text-muted-foreground">
-                Werknummer {gebouw.werknummer}
-              </span>
-            )}
-            <h1 className="text-3xl font-bold tracking-tight">
-              {gebouw.projectnummer
-                ? `${gebouw.projectnummer} - ${gebouw.naam}`
-                : gebouw.naam}
-            </h1>
+            <div className="flex items-center gap-3 flex-wrap">
+              <h1 className="text-3xl font-bold tracking-tight">
+                {gebouw.projectnummer
+                  ? `${gebouw.projectnummer} - ${gebouw.naam}`
+                  : gebouw.naam}
+              </h1>
+              {gebouw.gereed_op && (
+                <Badge className="bg-green-600 text-white gap-1">
+                  <CheckCircle className="h-3 w-3" /> Gereed
+                </Badge>
+              )}
+            </div>
             <p className="text-muted-foreground mt-1">
               {gebouw.adres}, {gebouw.stad}
             </p>
+            {gebouw.gereed_op && (
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Gereedgemeld op {new Date(gebouw.gereed_op).toLocaleDateString("nl-NL")}
+                {gebouw.gereed_door ? ` door ${gebouw.gereed_door}` : ""}
+              </p>
+            )}
           </div>
-          {isBeheerder && (
-            <Button variant="outline" onClick={() => setBewerkenOpen(true)}>
-              <Pencil className="h-4 w-4 mr-2" /> Bewerken
-            </Button>
-          )}
+          <div className="flex gap-2">
+            {isBeheerder && !gebouw.gereed_op && (
+              <Button variant="outline" onClick={meldGereed} disabled={gereedBezig}>
+                {gereedBezig ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <CheckCircle className="h-4 w-4 mr-2" />}
+                Gereedmelden
+              </Button>
+            )}
+            {isBeheerder && (
+              <Button variant="outline" onClick={() => setBewerkenOpen(true)}>
+                <Pencil className="h-4 w-4 mr-2" /> Bewerken
+              </Button>
+            )}
+          </div>
         </div>
         <div className="lg:col-span-1">
           <GebouwPartijen gebouwId={gebouwId} isBeheerder={isBeheerder} />
@@ -301,6 +338,11 @@ export default function GebouwDetail() {
                             <Badge variant="secondary" className="text-xs shrink-0">
                               {t.rol}
                             </Badge>
+                            {t.project_rol && (
+                              <Badge className="text-xs shrink-0 bg-primary/10 text-primary border-primary/20">
+                                {t.project_rol}
+                              </Badge>
+                            )}
                           </div>
                         </div>
                         <Button
@@ -319,7 +361,7 @@ export default function GebouwDetail() {
 
                 {/* Toevoegen */}
                 {beschikbareGebruikers.length > 0 ? (
-                  <div className="flex gap-2 pt-1">
+                  <div className="flex flex-col gap-2 pt-1 sm:flex-row">
                     <Select
                       value={gekozenGebruikerId}
                       onValueChange={setGekozenGebruikerId}
@@ -335,6 +377,22 @@ export default function GebouwDetail() {
                               ({g.rol})
                             </span>
                           </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Select
+                      value={gekozenProjectRol ? gekozenProjectRol : GEEN_PROJECT_ROL}
+                      onValueChange={(v) =>
+                        setGekozenProjectRol(v === GEEN_PROJECT_ROL ? "" : v)
+                      }
+                    >
+                      <SelectTrigger className="sm:w-44 text-sm">
+                        <SelectValue placeholder="Projectfunctie" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value={GEEN_PROJECT_ROL}>Geen projectfunctie</SelectItem>
+                        {PROJECT_ROLLEN.map((pr) => (
+                          <SelectItem key={pr} value={pr}>{pr}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>

@@ -23,7 +23,6 @@ import { Separator } from "@/components/ui/separator";
 import { Plus, Sparkles, Loader2, AlertCircle } from "lucide-react";
 
 interface Velden {
-  werknummer: string;
   projectnummer: string;
   naam: string;
   adres: string;
@@ -39,7 +38,6 @@ interface Velden {
 }
 
 const LEEG: Velden = {
-  werknummer: "",
   projectnummer: "",
   naam: "",
   adres: "",
@@ -141,14 +139,9 @@ export function GebouwAanmakenDialog() {
       setFoutmelding("Naam en adres zijn verplicht.");
       return;
     }
-    if (!velden.werknummer.trim()) {
-      setFoutmelding("Werknummer is verplicht.");
-      return;
-    }
     try {
       await maakGebouw.mutateAsync({
         data: {
-          werknummer: velden.werknummer.trim(),
           projectnummer: velden.projectnummer.trim() || undefined,
           naam: velden.naam,
           adres: velden.adres,
@@ -281,18 +274,6 @@ export function GebouwAanmakenDialog() {
 
         {/* Gegevens */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div className="space-y-1.5">
-            <Label htmlFor="g-werknummer">Werknummer *</Label>
-            <Input
-              id="g-werknummer"
-              placeholder="bijv. 2026-001"
-              value={velden.werknummer}
-              onChange={(e) => zet("werknummer", e.target.value)}
-            />
-            <p className="text-xs text-muted-foreground">
-              Uniek nummer dat dit gebouw identificeert.
-            </p>
-          </div>
           <div className="space-y-1.5">
             <Label htmlFor="g-projectnummer">Projectnummer</Label>
             <Input

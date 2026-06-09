@@ -194,8 +194,9 @@ export default function GebouwBouwlagen({
                       )}
                     </div>
                     <p className="text-sm text-muted-foreground">
-                      {v.totaal_voorzieningen || 0} voorzieningen ·{" "}
-                      {tk.length} {tk.length === 1 ? "tekening" : "tekeningen"}
+                      {v.totaal_voorzieningen || 0} spots ·{" "}
+                      {(heeftPlattegrond ? 1 : 0) + tk.length}{" "}
+                      {(heeftPlattegrond ? 1 : 0) + tk.length === 1 ? "tekening" : "tekeningen"}
                     </p>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">

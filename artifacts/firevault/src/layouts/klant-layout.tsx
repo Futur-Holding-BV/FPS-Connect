@@ -5,7 +5,7 @@ import {
   SidebarGroup, SidebarGroupContent,
   SidebarMenu, SidebarMenuItem, SidebarMenuButton,
 } from "@/components/ui/sidebar";
-import { ShieldCheck, Home, FileText, Building } from "lucide-react";
+import { Flame, Home, FileText, Building } from "lucide-react";
 import { GebruikerMenu } from "@/components/gebruiker-menu";
 
 const ROUTES = [
@@ -23,12 +23,12 @@ export default function KlantLayout({ children }: { children: React.ReactNode })
       <Sidebar variant="inset" collapsible="icon">
         <SidebarHeader className="py-4">
           <div className="flex items-center gap-2 px-4">
-            <div className="bg-slate-700 text-white p-1 rounded flex-shrink-0">
-              <ShieldCheck size={22} />
+            <div className="bg-primary text-primary-foreground p-1.5 rounded flex-shrink-0">
+              <Flame size={20} />
             </div>
-            <div className="group-data-[collapsible=icon]:hidden">
-              <div className="font-bold text-sm tracking-tight leading-tight">{t("app.naam")}</div>
-              <div className="text-xs text-muted-foreground">{t("nav.klantportaal")}</div>
+            <div className="group-data-[collapsible=icon]:hidden leading-tight">
+              <div className="font-extrabold text-sm tracking-wide uppercase text-primary">FPS</div>
+              <div className="text-xs text-muted-foreground font-medium">{t("nav.klantportaal")}</div>
             </div>
           </div>
         </SidebarHeader>

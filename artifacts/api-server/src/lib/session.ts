@@ -6,6 +6,7 @@ import { pool } from "@workspace/db";
 declare module "express-session" {
   interface SessionData {
     userId?: number;
+    rol?: string;
     pendingUserId?: number;
     pendingSecret?: string;
   }

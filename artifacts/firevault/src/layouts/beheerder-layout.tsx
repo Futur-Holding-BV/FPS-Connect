@@ -5,7 +5,7 @@ import {
   SidebarGroup, SidebarGroupLabel, SidebarGroupContent,
   SidebarMenu, SidebarMenuItem, SidebarMenuButton,
 } from "@/components/ui/sidebar";
-import { ShieldCheck, Building, Wrench, Users, Search, Home, Receipt, ShieldAlert, LifeBuoy, MessageSquarePlus, Activity } from "lucide-react";
+import { Flame, ShieldCheck, Building, Wrench, Users, Search, Home, Receipt, ShieldAlert, LifeBuoy, MessageSquarePlus, Activity } from "lucide-react";
 import { GebruikerMenu } from "@/components/gebruiker-menu";
 
 const ROUTES = [
@@ -34,12 +34,13 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
       <Sidebar variant="inset" collapsible="icon">
         <SidebarHeader className="py-4">
           <div className="flex items-center gap-2 px-4">
-            <div className="bg-primary text-primary-foreground p-1 rounded flex-shrink-0">
-              <ShieldCheck size={22} />
+            <div className="bg-primary text-primary-foreground p-1.5 rounded flex-shrink-0">
+              <Flame size={20} />
             </div>
-            <span className="font-bold text-base tracking-tight group-data-[collapsible=icon]:hidden">
-              {t("app.naam")}
-            </span>
+            <div className="group-data-[collapsible=icon]:hidden leading-tight">
+              <div className="font-extrabold text-sm tracking-wide uppercase text-primary">FPS</div>
+              <div className="text-xs text-muted-foreground font-medium">Brandpreventie</div>
+            </div>
           </div>
         </SidebarHeader>
 

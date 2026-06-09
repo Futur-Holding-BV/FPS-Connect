@@ -6,7 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface ToewijzingInput {
-  gebruiker_id: number;
-  project_rol?: string;
+export interface SpotsInzichtDag {
+  datum: string;
+  aantal: number;
 }

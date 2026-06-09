@@ -35,6 +35,18 @@ import { useRol } from "@/context/rol-context";
 const ROLLEN = ["hoofdbeheerder", "beheerder", "monteur", "controleur", "klant"] as const;
 type Rol = typeof ROLLEN[number];
 
+const FUNCTIETITELS = [
+  "Projectleider",
+  "Werkvoorbereider",
+  "Calculator",
+  "Uitvoerder",
+  "Hoofduitvoerder",
+  "Bedrijfsleider",
+  "Monteur",
+  "Inspecteur",
+] as const;
+const GEEN_FUNCTIE = "geen";
+
 const ROL_CONFIG: Record<Rol, {
   label: string;
   icon: React.ElementType;
@@ -135,7 +147,7 @@ function onlinKleur(iso: string | null | undefined): string {
 }
 
 const leegForm = {
-  naam: "", email: "", rol: "monteur",
+  naam: "", email: "", rol: "monteur", functietitel: "",
   telefoon: "", bedrijf: "", wachtwoord: "", actief: true,
   avatar_url: "", bedrijfslogo_url: "", bedrijfskleuren: "",
 };
@@ -146,6 +158,7 @@ type Gebruiker = {
   naam: string | null;
   email: string | null;
   rol: string | null;
+  functietitel?: string | null;
   telefoon: string | null;
   bedrijf: string | null;
   actief: boolean | null;
@@ -214,6 +227,7 @@ export default function Gebruikers() {
           naam:            toevoegenForm.naam.trim(),
           email:           toevoegenForm.email.trim(),
           rol:             toevoegenForm.rol as any,
+          functietitel:    toevoegenForm.functietitel.trim() || undefined,
           telefoon:        toevoegenForm.telefoon.trim()     || undefined,
           bedrijf:         toevoegenForm.bedrijf.trim()      || undefined,
           wachtwoord:      toevoegenForm.wachtwoord.trim()   || undefined,
@@ -236,6 +250,7 @@ export default function Gebruikers() {
       naam:            g.naam           ?? "",
       email:           g.email          ?? "",
       rol:             g.rol            ?? "monteur",
+      functietitel:    g.functietitel   ?? "",
       telefoon:        g.telefoon       ?? "",
       bedrijf:         g.bedrijf        ?? "",
       wachtwoord:      "",
@@ -262,6 +277,7 @@ export default function Gebruikers() {
           naam:            bewerkForm.naam.trim(),
           email:           bewerkForm.email.trim(),
           rol:             bewerkForm.rol as any,
+          functietitel:    bewerkForm.functietitel.trim() || undefined,
           telefoon:        bewerkForm.telefoon.trim()    || undefined,
           bedrijf:         bewerkForm.bedrijf.trim()     || undefined,
           actief:          bewerkForm.actief,
@@ -644,6 +660,7 @@ export default function Gebruikers() {
 
                 <div className="space-y-3 rounded-lg border bg-muted/30 p-4">
                   <VeldRij icon={Mail} label="E-mailadres" waarde={bekijkGebruiker.email} />
+                  <VeldRij icon={User} label="Projectfunctie" waarde={bekijkGebruiker.functietitel} />
                   <VeldRij icon={Phone} label="Telefoonnummer" waarde={bekijkGebruiker.telefoon} />
                   <VeldRij icon={Building} label="Bedrijf" waarde={bekijkGebruiker.bedrijf} />
                   <div className="flex items-start gap-3">
@@ -776,6 +793,26 @@ function GebruikerVelden({
             </SelectContent>
           </Select>
         </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="g-functie">Projectfunctie</Label>
+          <Select
+            value={form.functietitel ? form.functietitel : GEEN_FUNCTIE}
+            onValueChange={(v) => setForm((f) => ({ ...f, functietitel: v === GEEN_FUNCTIE ? "" : v }))}
+          >
+            <SelectTrigger id="g-functie">
+              <SelectValue placeholder="Geen functie" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={GEEN_FUNCTIE}>Geen functie</SelectItem>
+              {FUNCTIETITELS.map((ft) => (
+                <SelectItem key={ft} value={ft}>{ft}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1.5">
           <Label htmlFor="g-telefoon">Telefoonnummer</Label>
           <Input

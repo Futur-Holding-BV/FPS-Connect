@@ -15,6 +15,8 @@ export interface Gebruiker {
   email: string;
   rol: GebruikerRol;
   /** @nullable */
+  functietitel?: string | null;
+  /** @nullable */
   telefoon?: string | null;
   /** @nullable */
   bedrijf?: string | null;

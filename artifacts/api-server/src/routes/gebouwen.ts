@@ -119,6 +119,8 @@ function gebouwRij(
     aangemaakt_op: g.aangemaaktOp.toISOString(),
     bijgewerkt_op: g.bijgewerktOp ? g.bijgewerktOp.toISOString() : null,
     laatste_spot_op: laatsteSpotOp ? new Date(laatsteSpotOp).toISOString() : null,
+    gereed_op: g.gereedOp ? g.gereedOp.toISOString() : null,
+    gereed_door: g.gereedDoor ?? null,
   };
 }
 
@@ -222,10 +224,8 @@ router.post("/gebouwen", requireRol("beheerder", "hoofdbeheerder"), async (req, 
     if (!naam || !adres) {
       return res.status(400).json({ error: "naam en adres zijn verplicht" });
     }
-    if (typeof werknummer !== "string" || !werknummer.trim()) {
-      return res.status(400).json({ error: "werknummer is verplicht" });
-    }
-    const werknummerWaarde = werknummer.trim();
+    const werknummerWaarde =
+      typeof werknummer === "string" && werknummer.trim() ? werknummer.trim() : null;
     const projectnummerWaarde =
       typeof projectnummer === "string" && projectnummer.trim() ? projectnummer.trim() : null;
     const [gebouw] = await db
@@ -484,6 +484,9 @@ router.get("/gebouwen/:id", async (req, res) => {
       latitude: gebouw.latitude,
       longitude: gebouw.longitude,
       aangemaakt_op: gebouw.aangemaaktOp.toISOString(),
+      bijgewerkt_op: gebouw.bijgewerktOp ? gebouw.bijgewerktOp.toISOString() : null,
+      gereed_op: gebouw.gereedOp ? gebouw.gereedOp.toISOString() : null,
+      gereed_door: gebouw.gereedDoor ?? null,
       verdiepingen: verdiepingenMet,
       stats,
     });
@@ -562,6 +565,28 @@ router.patch("/gebouwen/:id", requireRol("beheerder", "hoofdbeheerder"), async (
     if (uniekFoutAntwoord(err, res)) {
       return;
     }
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// PATCH /gebouwen/:id/gereed
+router.patch("/gebouwen/:id/gereed", requireRol("beheerder", "hoofdbeheerder"), async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const { gereed_door } = req.body;
+    const [gebouw] = await db
+      .update(gebouwenTable)
+      .set({ gereedOp: new Date(), gereedDoor: gereed_door ?? null, bijgewerktOp: new Date() })
+      .where(eq(gebouwenTable.id, id))
+      .returning();
+    if (!gebouw) return res.status(404).json({ error: "Gebouw niet gevonden" });
+    const [totaal] = await db
+      .select({ count: count() })
+      .from(voorzieningenTable)
+      .where(eq(voorzieningenTable.gebouwId, id));
+    res.json(gebouwRij(gebouw, Number(totaal?.count ?? 0), await klantNaam(gebouw.klantId)));
+  } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Interne serverfout" });
   }
@@ -740,6 +765,7 @@ router.get("/gebouwen/:id/toewijzingen", async (req, res) => {
         gebruikerId: gebouwToewijzingenTable.gebruikerId,
         naam: gebruikersTable.naam,
         rol: gebruikersTable.rol,
+        projectRol: gebouwToewijzingenTable.projectRol,
         aangemaaktOp: gebouwToewijzingenTable.aangemaaktOp,
       })
       .from(gebouwToewijzingenTable)
@@ -753,9 +779,75 @@ router.get("/gebouwen/:id/toewijzingen", async (req, res) => {
         gebruiker_id: r.gebruikerId,
         naam: r.naam,
         rol: r.rol,
+        project_rol: r.projectRol ?? null,
         aangemaakt_op: r.aangemaaktOp.toISOString(),
       })),
     );
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// GET /gebouwen/:id/spots-inzicht — spots per monteur per dag
+router.get("/gebouwen/:id/spots-inzicht", async (req, res) => {
+  try {
+    const gebouwId = parseInt(req.params.id);
+    if (!(await magBijGebouw(req.session.userId!, gebouwId))) {
+      res.status(403).json({ error: "Geen toegang tot dit gebouw" });
+      return;
+    }
+
+    const rows = await db
+      .select({
+        makerId: voorzieningenTable.makerMonteurId,
+        naam: gebruikersTable.naam,
+        aangemaaktOp: voorzieningenTable.aangemaaktOp,
+      })
+      .from(voorzieningenTable)
+      .leftJoin(gebruikersTable, eq(voorzieningenTable.makerMonteurId, gebruikersTable.id))
+      .where(
+        and(
+          eq(voorzieningenTable.gebouwId, gebouwId),
+          eq(voorzieningenTable.gearchiveerd, false),
+        ),
+      );
+
+    type DagMap = Map<string, number>;
+    const perMonteur = new Map<
+      string,
+      { monteur_id: number | null; naam: string; totaal: number; dagen: DagMap }
+    >();
+
+    for (const r of rows) {
+      const sleutel = r.makerId != null ? String(r.makerId) : "onbekend";
+      let item = perMonteur.get(sleutel);
+      if (!item) {
+        item = {
+          monteur_id: r.makerId ?? null,
+          naam: r.naam ?? "Onbekend",
+          totaal: 0,
+          dagen: new Map(),
+        };
+        perMonteur.set(sleutel, item);
+      }
+      item.totaal += 1;
+      const datum = r.aangemaaktOp.toISOString().slice(0, 10);
+      item.dagen.set(datum, (item.dagen.get(datum) ?? 0) + 1);
+    }
+
+    const per_monteur = Array.from(perMonteur.values())
+      .map((m) => ({
+        monteur_id: m.monteur_id,
+        naam: m.naam,
+        totaal: m.totaal,
+        per_dag: Array.from(m.dagen.entries())
+          .map(([datum, aantal]) => ({ datum, aantal }))
+          .sort((a, b) => b.datum.localeCompare(a.datum)),
+      }))
+      .sort((a, b) => b.totaal - a.totaal);
+
+    res.json({ totaal: rows.length, per_monteur });
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Interne serverfout" });
@@ -769,7 +861,7 @@ router.post(
   async (req, res) => {
     try {
       const gebouwId = parseInt(req.params.id);
-      const { gebruiker_id } = req.body ?? {};
+      const { gebruiker_id, project_rol } = req.body ?? {};
       if (!gebruiker_id) {
         return res.status(400).json({ error: "gebruiker_id is verplicht" });
       }
@@ -789,6 +881,7 @@ router.post(
           gebouwId,
           gebruikerId: Number(gebruiker_id),
           aangemaaktDoorId: req.session.userId,
+          projectRol: project_rol ? String(project_rol) : null,
         })
         .onConflictDoNothing()
         .returning();
@@ -796,7 +889,7 @@ router.post(
       if (!toewijzing) {
         // Al toegewezen — retourneer bestaande
         const [bestaand] = await db
-          .select({ id: gebouwToewijzingenTable.id, aangemaaktOp: gebouwToewijzingenTable.aangemaaktOp })
+          .select({ id: gebouwToewijzingenTable.id, projectRol: gebouwToewijzingenTable.projectRol, aangemaaktOp: gebouwToewijzingenTable.aangemaaktOp })
           .from(gebouwToewijzingenTable)
           .where(
             and(
@@ -811,6 +904,7 @@ router.post(
           naam: gebruiker.naam,
           email: gebruiker.email,
           rol: gebruiker.rol,
+          project_rol: bestaand!.projectRol ?? null,
           aangemaakt_op: bestaand!.aangemaaktOp.toISOString(),
         });
       }
@@ -822,6 +916,7 @@ router.post(
         naam: gebruiker.naam,
         email: gebruiker.email,
         rol: gebruiker.rol,
+        project_rol: toewijzing.projectRol ?? null,
         aangemaakt_op: toewijzing.aangemaaktOp.toISOString(),
       });
     } catch (err) {

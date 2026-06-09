@@ -58,6 +58,10 @@ export interface Vervaldag {
   dagen_over?: number;
 }
 
+export interface GebouwGereedInput {
+  gereed_door?: string;
+}
+
 export type GebouwPartijenItem = {
   type: string;
   naam: string;
@@ -104,6 +108,10 @@ export interface Gebouw {
   bijgewerkt_op?: string | null;
   /** @nullable */
   laatste_spot_op?: string | null;
+  /** @nullable */
+  gereed_op?: string | null;
+  /** @nullable */
+  gereed_door?: string | null;
 }
 
 export interface Verdieping {
@@ -163,6 +171,12 @@ export interface GebouwDetail {
   /** @nullable */
   longitude?: number | null;
   aangemaakt_op: string;
+  /** @nullable */
+  bijgewerkt_op?: string | null;
+  /** @nullable */
+  gereed_op?: string | null;
+  /** @nullable */
+  gereed_door?: string | null;
   verdiepingen: Verdieping[];
   stats?: GebouwStats;
 }
@@ -173,11 +187,32 @@ export interface Toewijzing {
   gebruiker_id: number;
   naam: string;
   rol: string;
+  /** @nullable */
+  project_rol?: string | null;
   aangemaakt_op: string;
 }
 
 export interface ToewijzingInput {
   gebruiker_id: number;
+  project_rol?: string;
+}
+
+export interface SpotsInzichtDag {
+  datum: string;
+  aantal: number;
+}
+
+export interface SpotsInzichtMonteur {
+  /** @nullable */
+  monteur_id?: number | null;
+  naam: string;
+  totaal: number;
+  per_dag: SpotsInzichtDag[];
+}
+
+export interface SpotsInzicht {
+  totaal: number;
+  per_monteur: SpotsInzichtMonteur[];
 }
 
 export interface GebouwPartij {
@@ -339,7 +374,7 @@ export interface ScheidingUpdate {
 }
 
 export interface GebouwInput {
-  werknummer: string;
+  werknummer?: string;
   projectnummer?: string;
   naam: string;
   adres: string;
@@ -946,6 +981,8 @@ export interface Gebruiker {
   email: string;
   rol: GebruikerRol;
   /** @nullable */
+  functietitel?: string | null;
+  /** @nullable */
   telefoon?: string | null;
   /** @nullable */
   bedrijf?: string | null;
@@ -1050,6 +1087,7 @@ export interface GebruikerInput {
   naam: string;
   email: string;
   rol: string;
+  functietitel?: string;
   telefoon?: string;
   bedrijf?: string;
   wachtwoord?: string;
@@ -1064,6 +1102,7 @@ export interface GebruikerUpdate {
   naam?: string;
   email?: string;
   rol?: string;
+  functietitel?: string;
   telefoon?: string;
   bedrijf?: string;
   actief?: boolean;

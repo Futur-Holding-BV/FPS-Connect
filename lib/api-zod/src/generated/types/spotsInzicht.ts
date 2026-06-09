@@ -5,8 +5,9 @@
  * FPS Brandpreventie - Platform voor brandpreventieve gebouwvoorzieningen
  * OpenAPI spec version: 0.1.0
  */
+import type { SpotsInzichtMonteur } from './spotsInzichtMonteur';
 
-export interface ToewijzingInput {
-  gebruiker_id: number;
-  project_rol?: string;
+export interface SpotsInzicht {
+  totaal: number;
+  per_monteur: SpotsInzichtMonteur[];
 }

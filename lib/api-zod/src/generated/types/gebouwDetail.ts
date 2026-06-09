@@ -43,6 +43,12 @@ export interface GebouwDetail {
   /** @nullable */
   longitude?: number | null;
   aangemaakt_op: string;
+  /** @nullable */
+  bijgewerkt_op?: string | null;
+  /** @nullable */
+  gereed_op?: string | null;
+  /** @nullable */
+  gereed_door?: string | null;
   verdiepingen: Verdieping[];
   stats?: GebouwStats;
 }
