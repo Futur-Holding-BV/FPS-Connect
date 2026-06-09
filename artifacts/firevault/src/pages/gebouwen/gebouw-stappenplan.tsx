@@ -7,8 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
   HelpCircle, CheckCircle2, AlertCircle, Minus,
-  Building2, Users, Mail, Layers, BookOpen,
-  MapPin, ClipboardCheck, FileText, CheckSquare, Sparkles,
+  Building2, Users, Mail, Layers, BookOpen, MapPin,
 } from "lucide-react";
 
 type StapStatus = "gereed" | "ontbrekend" | "optioneel";
@@ -21,10 +20,9 @@ type Stap = {
   icoon: React.ReactNode;
 };
 
-type Segment = {
+type Fase = {
   nummer: number;
   titel: string;
-  noodzakelijk: boolean;
   stappen: Stap[];
 };
 
@@ -63,9 +61,7 @@ function StapRij({ stap, volgnummer }: { stap: Stap; volgnummer: number }) {
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-start justify-between gap-2">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-sm font-semibold text-slate-800">{stap.titel}</span>
-          </div>
+          <span className="text-sm font-semibold text-slate-800">{stap.titel}</span>
           <StatusBadge status={stap.status} />
         </div>
         <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">{stap.beschrijving}</p>
@@ -84,172 +80,156 @@ function StappenplanInhoud({
   const { data: partijen }     = useListGebouwPartijen(gebouwId);
   const { data: toewijzingen } = useListGebouwToewijzingen(gebouwId);
 
-  const stats                  = gebouw?.stats;
-  const verdiepingen: any[]    = gebouw?.verdiepingen ?? [];
+  const verdiepingen: any[] = gebouw?.verdiepingen ?? [];
 
+  const heeftAdres         = !!(gebouw?.adres && gebouw?.stad);
   const heeftOpdrachtgever = (partijen ?? []).some(
     (p: any) => p.type === "opdrachtgever" || p.type === "eigenaar",
   );
-  const heeftAdres      = !!(gebouw?.adres && gebouw?.stad);
   const heeftBouwlagen  = verdiepingen.length > 0;
   const heeftToewijzing = (toewijzingen ?? []).length > 0;
-  const heeftSpots      = (stats?.totaal ?? 0) > 0;
-  const heeftGereedSpots= (stats?.goedgekeurd ?? 0) > 0;
-  const isGereedgemeld  = !!gebouw?.gereed_op;
 
-  const segmenten: Segment[] = [
+  const fasen: Fase[] = [
     {
       nummer: 1,
       titel: "Project- en gebouwgegevens",
-      noodzakelijk: true,
       stappen: [
         {
           id: "gebouw",
           icoon: <Building2 className="h-4 w-4" />,
           titel: "Project/gebouw aanmaken",
-          beschrijving: "Registreer het gebouw met naam, projectnummer en type. Dit is de basis van het dossier.",
+          beschrijving:
+            "Registreer het gebouw met naam, projectnummer en type. Dit is de basis van het administratieve dossier.",
           status: "gereed",
         },
         {
           id: "gegevens",
           icoon: <MapPin className="h-4 w-4" />,
-          titel: "Gebouwgegevens aanvullen",
-          beschrijving: "Voeg adres, postcode, stad, gebouwtype en aanvullende kenmerken toe.",
+          titel: "Gebouwgegevens controleren",
+          beschrijving:
+            "Controleer en vul adres, postcode, stad, gebouwtype en aanvullende kenmerken in (tabblad 'Project & gegevens').",
           status: heeftAdres ? "gereed" : "ontbrekend",
         },
         {
           id: "opdrachtgever",
           icoon: <Users className="h-4 w-4" />,
-          titel: "Opdrachtgever/contactgegevens toevoegen",
-          beschrijving: "Koppel de opdrachtgever, eigenaar of aanvrager aan het project via 'Contactpartijen' (segment 1).",
+          titel: "Opdrachtgever en contactgegevens toevoegen",
+          beschrijving:
+            "Koppel de opdrachtgever, eigenaar of aanvrager aan het project via 'Contactpartijen' in tabblad 'Project & gegevens'.",
           status: heeftOpdrachtgever ? "gereed" : "ontbrekend",
         },
         {
           id: "emails",
           icoon: <Mail className="h-4 w-4" />,
-          titel: "E-mails uploaden voor AI-contactextractie",
-          beschrijving: "Importeer correspondentie via segment 3. De AI haalt automatisch contactpersonen, telefoonnummers en NAW-gegevens op als voorstel.",
+          titel: "E-mails uploaden en AI-contactvoorstellen controleren",
+          beschrijving:
+            "Importeer correspondentie via tabblad 'Beheer'. De AI haalt contactpersonen, telefoonnummers en NAW-gegevens op als voorstel. Controleer en bevestig de voorstellen in tabblad 'Project & gegevens'.",
           status: "optioneel",
         },
       ],
     },
     {
       nummer: 2,
-      titel: "Uitvoering op locatie",
-      noodzakelijk: true,
+      titel: "Locatie en uitvoeringsbasis",
       stappen: [
         {
           id: "bouwlagen",
           icoon: <Layers className="h-4 w-4" />,
           titel: "Bouwlagen en plattegronden toevoegen",
-          beschrijving: "Maak bouwlagen aan en upload een PDF-plattegrond per verdieping. Zonder plattegrond kunnen geen spots worden geplaatst.",
+          beschrijving:
+            "Maak bouwlagen aan en upload een PDF-plattegrond per verdieping via tabblad 'Uitvoering'. Zonder plattegrond kunnen monteurs geen voorzieningen intekenen.",
           status: heeftBouwlagen ? "gereed" : "ontbrekend",
         },
         {
-          id: "spots",
-          icoon: <MapPin className="h-4 w-4" />,
-          titel: "Spots plaatsen op de plattegrond",
-          beschrijving: "Open een plattegrond, activeer de plaatsingsmodus en klik om brandpreventieve voorzieningen in te tekenen.",
-          status: heeftSpots ? "gereed" : (heeftBouwlagen ? "ontbrekend" : "optioneel"),
-        },
-        {
-          id: "gereedmelden",
-          icoon: <ClipboardCheck className="h-4 w-4" />,
-          titel: "Spots als 'Gereed' markeren",
-          beschrijving: "Verander de status van voltooide spots naar 'Gereed' na inspectie of oplevering.",
-          status: heeftGereedSpots ? "gereed" : (heeftSpots ? "ontbrekend" : "optioneel"),
-        },
-        {
-          id: "rapport",
-          icoon: <FileText className="h-4 w-4" />,
-          titel: "PDF/opleverrapport genereren",
-          beschrijving: "Gebruik 'PDF / afdrukken' (header of segment 2) voor een volledig overzichtsrapport met plattegronden en spotdetails.",
+          id: "bibliotheek",
+          icoon: <BookOpen className="h-4 w-4" />,
+          titel: "Applicaties/toepassingen in de bibliotheek beschikbaar maken",
+          beschrijving:
+            "Controleer in de Bibliotheek of de juiste applicaties, toepassingen en testdocumenten aanwezig zijn die de monteur nodig heeft voor dit project.",
           status: "optioneel",
         },
       ],
     },
     {
       nummer: 3,
-      titel: "Beheer en communicatie",
-      noodzakelijk: false,
+      titel: "Projectteam",
       stappen: [
         {
-          id: "gebruikers",
+          id: "toewijzingen",
           icoon: <Users className="h-4 w-4" />,
-          titel: "Monteurs en projectleider toewijzen",
-          beschrijving: "Wijs monteurs, controleurs en een projectadministrateur toe via segment 3 (Teamleden). Toegewezen monteurs kunnen op het gebouw werken.",
+          titel: "Monteurs en projectteam toewijzen",
+          beschrijving:
+            "Wijs monteurs, controleurs en een projectadministrateur toe via tabblad 'Beheer' (Teamleden). Toegewezen monteurs krijgen toegang tot dit gebouw in de monteur-app.",
           status: heeftToewijzing ? "gereed" : "ontbrekend",
-        },
-        {
-          id: "bibliotheek",
-          icoon: <BookOpen className="h-4 w-4" />,
-          titel: "Bibliotheekkeuzes controleren",
-          beschrijving: "Controleer in de Bibliotheek of de juiste applicaties, toepassingen en testdocumenten beschikbaar zijn.",
-          status: "optioneel",
-        },
-        {
-          id: "gebouw_gereed",
-          icoon: <CheckSquare className="h-4 w-4" />,
-          titel: "Gebouw gereedmelden",
-          beschrijving: "Meld het volledige project als gereed via de knop 'Gereedmelden' (header). Dit sluit het dossier af.",
-          status: isGereedgemeld ? "gereed" : "optioneel",
         },
       ],
     },
   ];
 
-  const alleStappen      = segmenten.flatMap(s => s.stappen);
+  const alleStappen      = fasen.flatMap(f => f.stappen);
   const aantalGereed     = alleStappen.filter(s => s.status === "gereed").length;
   const aantalOntbrekend = alleStappen.filter(s => s.status === "ontbrekend").length;
+  const administratiefGereed = aantalOntbrekend === 0;
 
   let volgnummer = 0;
 
   return (
     <div className="space-y-5">
       {/* Voortgangsoverzicht */}
-      <div className="flex items-center gap-3 rounded-lg bg-slate-50 border px-4 py-3">
+      <div
+        className={`flex items-start gap-3 rounded-lg border px-4 py-3 ${
+          administratiefGereed
+            ? "bg-green-50 border-green-200"
+            : "bg-amber-50 border-amber-200"
+        }`}
+      >
+        <div className="mt-0.5 shrink-0">
+          {administratiefGereed ? (
+            <CheckCircle2 className="h-5 w-5 text-green-600" />
+          ) : (
+            <AlertCircle className="h-5 w-5 text-amber-500" />
+          )}
+        </div>
         <div className="flex-1 space-y-1">
+          <p
+            className={`text-sm font-semibold ${
+              administratiefGereed ? "text-green-800" : "text-amber-800"
+            }`}
+          >
+            {administratiefGereed
+              ? "Administratief gereed om door te zetten naar uitvoering"
+              : "Nog niet administratief gereed voor uitvoering"}
+          </p>
           <div className="flex items-center gap-2 flex-wrap">
-            <Badge variant="outline" className="text-green-700 border-green-300 bg-green-50 text-xs">
+            <Badge
+              variant="outline"
+              className="text-green-700 border-green-300 bg-white text-xs"
+            >
               <CheckCircle2 className="h-3 w-3 mr-1" /> {aantalGereed} gereed
             </Badge>
             {aantalOntbrekend > 0 && (
-              <Badge variant="outline" className="text-amber-700 border-amber-300 bg-amber-50 text-xs">
+              <Badge
+                variant="outline"
+                className="text-amber-700 border-amber-300 bg-white text-xs"
+              >
                 <AlertCircle className="h-3 w-3 mr-1" /> {aantalOntbrekend} ontbrekend
               </Badge>
             )}
           </div>
-          <p className="text-xs text-slate-500">
-            {aantalOntbrekend === 0
-              ? "Alle verplichte stappen zijn afgerond."
-              : "Vul de ontbrekende stappen in voor een volledig dossier."}
-          </p>
         </div>
       </div>
 
-      {/* Stappen per segment */}
+      {/* Stappen per fase */}
       <div className="max-h-[62vh] overflow-y-auto pr-1 space-y-5">
-        {segmenten.map((seg) => (
-          <div key={seg.nummer}>
+        {fasen.map((fase) => (
+          <div key={fase.nummer}>
             <div className="flex items-center gap-2 mb-2">
               <span className="text-xs font-bold text-muted-foreground uppercase tracking-wide">
-                Segment {seg.nummer} — {seg.titel}
+                Fase {fase.nummer} — {fase.titel}
               </span>
-              {seg.noodzakelijk ? (
-                <Badge className="text-xs bg-primary/10 text-primary border-primary/20 font-normal">
-                  Noodzakelijk
-                </Badge>
-              ) : (
-                <Badge variant="outline" className="text-xs text-muted-foreground font-normal">
-                  Aanvullend
-                </Badge>
-              )}
-              {seg.nummer === 3 && (
-                <Sparkles className="h-3.5 w-3.5 text-primary shrink-0" />
-              )}
             </div>
             <div className="space-y-2">
-              {seg.stappen.map((stap) => {
+              {fase.stappen.map((stap) => {
                 volgnummer += 1;
                 return <StapRij key={stap.id} stap={stap} volgnummer={volgnummer} />;
               })}
@@ -259,7 +239,7 @@ function StappenplanInhoud({
       </div>
 
       <p className="text-xs text-slate-400 text-center pt-1">
-        Stappen met status 'Optioneel' zijn niet verplicht maar aanbevolen voor een compleet dossier.
+        Stappen met status 'Optioneel' zijn aanbevolen maar niet vereist voor doorzetbaarheid naar uitvoering.
       </p>
     </div>
   );
