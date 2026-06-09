@@ -79,6 +79,18 @@ function rolLabel(rol: string): string {
   return ROL_LABELS[rol] ?? rol;
 }
 
+const BASIS_ROL_LABELS: Record<string, string> = {
+  beheerder: "Beheerder",
+  hoofdbeheerder: "Hoofdbeheerder",
+  monteur: "Monteur",
+  controleur: "Controleur",
+  klant: "Klant",
+};
+
+function basisRolLabel(rol: string): string {
+  return BASIS_ROL_LABELS[rol] ?? rol;
+}
+
 function datum(s: string | null | undefined): string {
   if (!s) return "—";
   const d = new Date(s);
@@ -467,10 +479,24 @@ export function Projectformulier({
     }
   }
 
-  // ── Toewijzingen ──
-  const projectleider = (toewijzingen ?? []).find((t) => t.project_rol === "Projectleider");
-  const projectAdmin = (toewijzingen ?? []).find(
-    (t) => t.project_rol === "Project-administratie",
+  // ── Toewijzingen / team (alle leden, gegroepeerd per gebruiker) ──
+  const teamleden = Object.values(
+    (toewijzingen ?? []).reduce<
+      Record<number, { gebruikerId: number; naam: string; rol: string; rollen: string[] }>
+    >((acc, t) => {
+      if (!acc[t.gebruiker_id]) {
+        acc[t.gebruiker_id] = {
+          gebruikerId: t.gebruiker_id,
+          naam: t.naam,
+          rol: t.rol ?? "",
+          rollen: [],
+        };
+      }
+      if (t.project_rol && !acc[t.gebruiker_id].rollen.includes(t.project_rol)) {
+        acc[t.gebruiker_id].rollen.push(t.project_rol);
+      }
+      return acc;
+    }, {}),
   );
 
   // ── Contact-groeperingen ──
@@ -666,22 +692,42 @@ export function Projectformulier({
 
         {/* ── Sectie 2: Projectteam ── */}
         <div className="space-y-2.5">
-          <SectieLabel icoon={<Wrench className="h-3.5 w-3.5" />} titel="Projectteam" />
-          {projectleider || projectAdmin ? (
-            <dl className="grid grid-cols-2 gap-x-4 gap-y-2">
-              {projectleider && (
-                <div>
-                  <dt className="text-xs text-muted-foreground">Projectleider</dt>
-                  <dd className="text-sm font-medium">{projectleider.naam}</dd>
-                </div>
-              )}
-              {projectAdmin && (
-                <div>
-                  <dt className="text-xs text-muted-foreground">Project-administratie</dt>
-                  <dd className="text-sm font-medium">{projectAdmin.naam}</dd>
-                </div>
-              )}
-            </dl>
+          <SectieLabel
+            icoon={<Wrench className="h-3.5 w-3.5" />}
+            titel="Projectteam"
+            extra={
+              teamleden.length > 0 ? (
+                <span className="font-normal normal-case tracking-normal text-muted-foreground ml-1">
+                  — {teamleden.length}
+                </span>
+              ) : undefined
+            }
+          />
+          {teamleden.length > 0 ? (
+            <ul className="space-y-1.5">
+              {teamleden.map((lid) => (
+                <li
+                  key={lid.gebruikerId}
+                  className="flex items-center justify-between gap-3 rounded-md border bg-background/50 px-3 py-2"
+                >
+                  <div className="min-w-0 flex items-center gap-2 flex-wrap">
+                    <span className="text-sm font-medium">{lid.naam}</span>
+                    {lid.rol && (
+                      <span className="text-xs text-muted-foreground">{basisRolLabel(lid.rol)}</span>
+                    )}
+                  </div>
+                  {lid.rollen.length > 0 && (
+                    <div className="flex flex-wrap gap-1 justify-end shrink-0">
+                      {lid.rollen.map((r) => (
+                        <Badge key={r} variant="secondary" className="text-xs font-normal px-1.5">
+                          {r}
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
+                </li>
+              ))}
+            </ul>
           ) : (
             <p className="text-xs text-muted-foreground">
               Geen teamleden toegewezen. Voeg toe via het tabblad Beheer.
