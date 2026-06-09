@@ -861,6 +861,7 @@ export async function analyseerGebouwVrijeTekst(beschrijving: string): Promise<G
   // Stap 5: Vul ontbrekende afmetingen altijd in met conservatieve standaardwaarden op basis
   // van gebouwtype. Zo zijn de velden nooit leeg na een succesvolle adresopzoek.
   const afmetingsVeldenOntbreken =
+    result.gebouw_type === null ||
     result.aantal_verdiepingen === null ||
     result.hoogte === null ||
     result.breedte === null ||
@@ -871,6 +872,11 @@ export async function analyseerGebouwVrijeTekst(beschrijving: string): Promise<G
     const defaults = standaardWaardenOpType(result.gebouw_type);
     const gebruikteDefaults: string[] = [];
 
+    // Type gebruik nooit leeg laten: val terug op "overig" als het niet bepaald kon worden.
+    if (result.gebouw_type === null) {
+      result.gebouw_type = "overig";
+      gebruikteDefaults.push("type gebruik");
+    }
     if (result.aantal_verdiepingen === null) {
       result.aantal_verdiepingen = defaults.aantal_verdiepingen;
       gebruikteDefaults.push("verdiepingen");
