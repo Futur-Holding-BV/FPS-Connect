@@ -14,6 +14,7 @@ import {
 } from "@workspace/db";
 import { eq, and, ilike, sql } from "drizzle-orm";
 import { requireRol } from "../middlewares/auth";
+import { effectieveContext } from "../utils/rol";
 import { getLabelsVoorVoorziening, syncVoorzieningLabels } from "../lib/classificatie";
 
 const router = Router();
@@ -188,9 +189,10 @@ router.get("/voorzieningen", async (req, res) => {
     let all = await db.select().from(voorzieningenTable);
 
     // Monteurs en controleurs zien alleen voorzieningen in hun toegewezen gebouwen.
-    const rol = await gebruikerRol(req.session.userId!);
-    if (TOEGEWEZEN_ROLLEN.includes(rol)) {
-      const ids = await toegewezenGebouwIds(req.session.userId!);
+    // effectieveContext zodat impersonatie (bekijken als) correct doorwerkt.
+    const { userId: effectiefUserId, rol: effectiefRol } = await effectieveContext(req);
+    if (TOEGEWEZEN_ROLLEN.includes(effectiefRol)) {
+      const ids = await toegewezenGebouwIds(effectiefUserId);
       all = all.filter((v) => ids.includes(v.gebouwId));
     }
 
@@ -622,10 +624,11 @@ router.get("/verdiepingen/:id/voorzieningen", async (req, res) => {
     const id = parseInt(req.params.id);
 
     // Monteur/controleur mag alleen verdiepingen van toegewezen gebouwen zien.
-    const rol = await gebruikerRol(req.session.userId!);
-    if (TOEGEWEZEN_ROLLEN.includes(rol)) {
+    // effectieveContext zodat impersonatie (bekijken als) correct doorwerkt.
+    const { userId: effectiefUserId, rol: effectiefRol } = await effectieveContext(req);
+    if (TOEGEWEZEN_ROLLEN.includes(effectiefRol)) {
       const gebouwId = await gebouwIdVanVerdieping(id);
-      const ids = await toegewezenGebouwIds(req.session.userId!);
+      const ids = await toegewezenGebouwIds(effectiefUserId);
       if (gebouwId == null || !ids.includes(gebouwId)) {
         res.status(403).json({ error: "Geen toegang tot deze verdieping" });
         return;
@@ -684,10 +687,11 @@ router.get("/verdiepingen/:id/scheidingen", async (req, res) => {
     const id = parseInt(req.params.id);
 
     // Monteur/controleur mag alleen verdiepingen van toegewezen gebouwen zien.
-    const rol = await gebruikerRol(req.session.userId!);
-    if (TOEGEWEZEN_ROLLEN.includes(rol)) {
+    // effectieveContext zodat impersonatie (bekijken als) correct doorwerkt.
+    const { userId: effectiefUserId, rol: effectiefRol } = await effectieveContext(req);
+    if (TOEGEWEZEN_ROLLEN.includes(effectiefRol)) {
       const gebouwId = await gebouwIdVanVerdieping(id);
-      const ids = await toegewezenGebouwIds(req.session.userId!);
+      const ids = await toegewezenGebouwIds(effectiefUserId);
       if (gebouwId == null || !ids.includes(gebouwId)) {
         res.status(403).json({ error: "Geen toegang tot deze verdieping" });
         return;
