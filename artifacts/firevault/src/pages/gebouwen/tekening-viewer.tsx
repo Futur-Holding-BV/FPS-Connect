@@ -121,19 +121,33 @@ export function TekeningViewer({ open, onOpenChange, url, naam }: Props) {
                 De tekening kon niet worden geladen.
               </p>
             ) : beeld ? (
-              <img
-                src={beeld}
-                alt={naam}
-                className="max-w-full max-h-full object-contain shadow-sm bg-white"
-              />
+              <div className="relative inline-block max-w-full max-h-full">
+                <img
+                  src={beeld}
+                  alt={naam}
+                  className="max-w-full max-h-full object-contain shadow-sm bg-white"
+                />
+                <img
+                  src="/logo-fps.png"
+                  alt="FPS Brandpreventie"
+                  className="pointer-events-none absolute top-2 right-2 h-8 w-auto object-contain"
+                />
+              </div>
             ) : null
           ) : bron ? (
-            <img
-              src={bron}
-              alt={naam}
-              className="max-w-full max-h-full object-contain shadow-sm bg-white"
-              onError={() => setFout(true)}
-            />
+            <div className="relative inline-block max-w-full max-h-full">
+              <img
+                src={bron}
+                alt={naam}
+                className="max-w-full max-h-full object-contain shadow-sm bg-white"
+                onError={() => setFout(true)}
+              />
+              <img
+                src="/logo-fps.png"
+                alt="FPS Brandpreventie"
+                className="pointer-events-none absolute top-2 right-2 h-8 w-auto object-contain"
+              />
+            </div>
           ) : null}
           {!pdf && fout && (
             <p className="text-sm text-muted-foreground">

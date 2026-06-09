@@ -707,7 +707,25 @@ export default function Plattegrond() {
           >
             <g transform={`translate(${view.x}, ${view.y}) scale(${view.zoom})`}>
               {pdfBeeld ? (
-                <image href={pdfBeeld} x={0} y={0} width={W} height={H} />
+                <>
+                  <image href={pdfBeeld} x={0} y={0} width={W} height={H} />
+                  {(() => {
+                    const logoB = Math.max(W, H) * 0.16;
+                    const logoH = logoB / 2.59;
+                    const pad = Math.max(W, H) * 0.02;
+                    return (
+                      <image
+                        href="/logo-fps.png"
+                        x={W - logoB - pad}
+                        y={pad}
+                        width={logoB}
+                        height={logoH}
+                        preserveAspectRatio="xMaxYMin meet"
+                        style={{ pointerEvents: "none" }}
+                      />
+                    );
+                  })()}
+                </>
               ) : (
                 <GridAchtergrond w={W} h={H} />
               )}
