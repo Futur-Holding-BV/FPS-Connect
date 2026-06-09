@@ -17,6 +17,7 @@ const DEFAULT_JSON_ACCEPT = "application/json, application/problem+json";
 
 let _baseUrl: string | null = null;
 let _authTokenGetter: AuthTokenGetter | null = null;
+let _rolOverrideGetter: (() => string | null) | null = null;
 
 /**
  * Set a base URL that is prepended to every relative request URL
@@ -27,6 +28,17 @@ let _authTokenGetter: AuthTokenGetter | null = null;
  */
 export function setBaseUrl(url: string | null): void {
   _baseUrl = url ? url.replace(/\/+$/, "") : null;
+}
+
+/**
+ * Register a getter that supplies the active rol-override for "Bekijken als"
+ * (hoofdbeheerder only). When set and returning a non-null value, the header
+ * X-Rol-Override is attached so the backend can apply the correct data filter.
+ *
+ * Pass `null` to clear the getter (e.g. on logout or when no override is active).
+ */
+export function setRolOverrideGetter(getter: (() => string | null) | null): void {
+  _rolOverrideGetter = getter;
 }
 
 /**
@@ -347,6 +359,12 @@ export async function customFetch<T = unknown>(
 
   if (responseType === "json" && !headers.has("accept")) {
     headers.set("accept", DEFAULT_JSON_ACCEPT);
+  }
+
+  // Attach rol-override header for "Bekijken als" (hoofdbeheerder only).
+  if (_rolOverrideGetter) {
+    const override = _rolOverrideGetter();
+    if (override) headers.set("x-rol-override", override);
   }
 
   // Attach bearer token when an auth getter is configured and no

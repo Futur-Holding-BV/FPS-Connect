@@ -11,6 +11,7 @@ import {
 } from "@workspace/db";
 import { eq, inArray, count, and, sql } from "drizzle-orm";
 import { requireRol } from "../middlewares/auth";
+import { resolveRolOverride } from "../utils/rol";
 import {
   analyseerGebouwVrijeTekst,
   analyseerTekening,
@@ -80,8 +81,9 @@ async function toegewezenGebouwIds(userId: number): Promise<number[]> {
 // Centrale toewijzingsguard: monteur/controleur mogen alleen bij hun toegewezen
 // gebouwen. Andere rollen worden hier niet beperkt; rolafdwinging gebeurt via
 // requireRol. Geeft true als toegestaan.
-async function magBijGebouw(userId: number, gebouwId: number | null): Promise<boolean> {
-  const rol = await gebruikerRol(userId);
+async function magBijGebouw(req: import("express").Request, userId: number, gebouwId: number | null): Promise<boolean> {
+  const echteRol = await gebruikerRol(userId);
+  const rol = resolveRolOverride(req, echteRol);
   if (!TOEGEWEZEN_ROLLEN.includes(rol)) return true;
   if (gebouwId == null) return false;
   const ids = await toegewezenGebouwIds(userId);
@@ -128,7 +130,8 @@ function gebouwRij(
 router.get("/gebouwen", async (req, res) => {
   try {
     const userId = req.session.userId!;
-    const rol = await gebruikerRol(userId);
+    const echteRol = await gebruikerRol(userId);
+    const rol = resolveRolOverride(req, echteRol);
     const { zoek, partij_type, partij_naam } = req.query;
 
     let gebouwen = await db.select().from(gebouwenTable);
@@ -775,7 +778,7 @@ router.delete("/verdiepingen/:id", requireRol("beheerder", "hoofdbeheerder"), as
 router.get("/gebouwen/:id/toewijzingen", async (req, res) => {
   try {
     const gebouwId = parseInt(req.params.id);
-    if (!(await magBijGebouw(req.session.userId!, gebouwId))) {
+    if (!(await magBijGebouw(req, req.session.userId!, gebouwId))) {
       res.status(403).json({ error: "Geen toegang tot dit gebouw" });
       return;
     }
@@ -814,7 +817,7 @@ router.get("/gebouwen/:id/toewijzingen", async (req, res) => {
 router.get("/gebouwen/:id/spots-inzicht", async (req, res) => {
   try {
     const gebouwId = parseInt(req.params.id);
-    if (!(await magBijGebouw(req.session.userId!, gebouwId))) {
+    if (!(await magBijGebouw(req, req.session.userId!, gebouwId))) {
       res.status(403).json({ error: "Geen toegang tot dit gebouw" });
       return;
     }
@@ -996,7 +999,7 @@ function partijRij(p: typeof gebouwPartijenTable.$inferSelect) {
 router.get("/gebouwen/:id/partijen", async (req, res) => {
   try {
     const gebouwId = parseInt(req.params.id);
-    if (!(await magBijGebouw(req.session.userId!, gebouwId))) {
+    if (!(await magBijGebouw(req, req.session.userId!, gebouwId))) {
       res.status(403).json({ error: "Geen toegang tot dit gebouw" });
       return;
     }
@@ -1108,7 +1111,7 @@ function tekeningRij(t: typeof tekeningenTable.$inferSelect) {
 router.get("/gebouwen/:id/tekeningen", async (req, res) => {
   try {
     const gebouwId = parseInt(req.params.id);
-    if (!(await magBijGebouw(req.session.userId!, gebouwId))) {
+    if (!(await magBijGebouw(req, req.session.userId!, gebouwId))) {
       res.status(403).json({ error: "Geen toegang tot dit gebouw" });
       return;
     }

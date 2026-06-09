@@ -10,6 +10,7 @@ import {
   gebouwToewijzingenTable,
 } from "@workspace/db";
 import { eq, count, desc, inArray } from "drizzle-orm";
+import { resolveRolOverride } from "../utils/rol";
 
 const router = Router();
 
@@ -34,9 +35,11 @@ async function toegewezenGebouwIds(userId: number): Promise<number[]> {
 // Bepaalt of de huidige gebruiker beperkt is tot toegewezen gebouwen
 // (monteur/controleur) en zo ja welke gebouw-id's zichtbaar zijn.
 async function gebouwScope(
+  req: import("express").Request,
   userId: number,
 ): Promise<{ beperkt: boolean; ids: number[] }> {
-  const rol = await gebruikerRol(userId);
+  const echteRol = await gebruikerRol(userId);
+  const rol = resolveRolOverride(req, echteRol);
   if (!TOEGEWEZEN_ROLLEN.includes(rol)) return { beperkt: false, ids: [] };
   return { beperkt: true, ids: await toegewezenGebouwIds(userId) };
 }
@@ -45,7 +48,7 @@ async function gebouwScope(
 router.get("/dashboard/stats", async (req, res) => {
   try {
     const userId = req.session.userId!;
-    const { beperkt, ids } = await gebouwScope(userId);
+    const { beperkt, ids } = await gebouwScope(req, userId);
 
     // Beperkte rol zonder toewijzingen ziet niets
     if (beperkt && ids.length === 0) {
@@ -117,7 +120,7 @@ router.get("/dashboard/stats", async (req, res) => {
 router.get("/dashboard/recente-activiteit", async (req, res) => {
   try {
     const userId = req.session.userId!;
-    const { beperkt, ids } = await gebouwScope(userId);
+    const { beperkt, ids } = await gebouwScope(req, userId);
 
     const limit = parseInt((req.query.limit as string) ?? "20");
 
@@ -167,7 +170,7 @@ router.get("/dashboard/recente-activiteit", async (req, res) => {
 router.get("/dashboard/status-verdeling", async (req, res) => {
   try {
     const userId = req.session.userId!;
-    const { beperkt, ids } = await gebouwScope(userId);
+    const { beperkt, ids } = await gebouwScope(req, userId);
 
     if (beperkt && ids.length === 0) {
       res.json([]);
@@ -206,7 +209,7 @@ router.get("/dashboard/status-verdeling", async (req, res) => {
 router.get("/dashboard/vervaldagen", async (req, res) => {
   try {
     const userId = req.session.userId!;
-    const { beperkt, ids } = await gebouwScope(userId);
+    const { beperkt, ids } = await gebouwScope(req, userId);
 
     if (beperkt && ids.length === 0) {
       res.json([]);

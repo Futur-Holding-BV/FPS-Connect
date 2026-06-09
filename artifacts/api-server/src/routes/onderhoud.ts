@@ -10,6 +10,7 @@ import {
 } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { requireRol } from "../middlewares/auth";
+import { resolveRolOverride } from "../utils/rol";
 
 const router = Router();
 
@@ -78,6 +79,7 @@ router.get("/onderhoud", async (req, res) => {
   try {
     const userId = req.session.userId!;
     const gebruiker = await gebruikerInfo(userId);
+    const effectiefRol = gebruiker ? resolveRolOverride(req, gebruiker.rol) : null;
     const { voorziening_id, gebouw_id, status } = req.query;
 
     let all = await db.select().from(onderhoudTable);
@@ -85,7 +87,7 @@ router.get("/onderhoud", async (req, res) => {
     // Monteur/controleur ziet alleen onderhoud dat:
     //   (a) direct aan hen is toegewezen (toegewezen_aan_id = userId), OF
     //   (b) hoort bij een gebouw dat aan hen is toegewezen
-    if (gebruiker && TOEGEWEZEN_ROLLEN.includes(gebruiker.rol)) {
+    if (effectiefRol && TOEGEWEZEN_ROLLEN.includes(effectiefRol)) {
       const gebouwIds = await toegewezenGebouwIds(userId);
       all = all.filter(
         (o) =>
@@ -151,7 +153,8 @@ router.get("/onderhoud/:id", async (req, res) => {
     if (!o) return res.status(404).json({ error: "Onderhoudstaak niet gevonden" });
 
     // Toegangscontrole voor monteur/controleur
-    if (gebruiker && TOEGEWEZEN_ROLLEN.includes(gebruiker.rol)) {
+    const effectiefRolDetail = gebruiker ? resolveRolOverride(req, gebruiker.rol) : null;
+    if (effectiefRolDetail && TOEGEWEZEN_ROLLEN.includes(effectiefRolDetail)) {
       const gebouwIds = await toegewezenGebouwIds(userId);
       const toegang =
         o.toegewezenAanId === userId ||

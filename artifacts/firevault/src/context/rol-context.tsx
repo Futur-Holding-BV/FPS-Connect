@@ -1,6 +1,7 @@
-import { createContext, useCallback, useContext, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import type { Rol } from "./rol-types";
 import { useAuth } from "./auth-context";
+import { setRolOverrideGetter } from "@workspace/api-client-react";
 
 export type { Rol };
 
@@ -49,6 +50,17 @@ export function RolProvider({ children }: { children: React.ReactNode }) {
   // De hoofdbeheerder kan in elk portaal kijken; standaard het beheerderportaal.
   // Andere rollen zien altijd hun eigen portaal.
   const rol: Rol = kanWisselen ? (override ?? "beheerder") : echteRol;
+
+  // Synchroniseer de rol-override naar de API-client zodat de backend
+  // dezelfde filtering toepast als de frontend laat zien.
+  useEffect(() => {
+    if (kanWisselen && override && override !== "beheerder") {
+      setRolOverrideGetter(() => override);
+    } else {
+      setRolOverrideGetter(null);
+    }
+    return () => setRolOverrideGetter(null);
+  }, [kanWisselen, override]);
 
   return (
     <RolContext.Provider value={{ rol, echteRol, kanWisselen, zetRol }}>
