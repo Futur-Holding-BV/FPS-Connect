@@ -66,7 +66,7 @@ export async function stuurUitnodigingsmail(opties: {
         <table width="560" cellpadding="0" cellspacing="0"
           style="background:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.12);">
           <tr>
-            <td style="background:#E8440F;padding:32px 40px;text-align:center;">
+            <td style="background:#F23B0D;padding:32px 40px;text-align:center;">
               <p style="margin:0;color:#ffffff;font-size:13px;letter-spacing:1px;text-transform:uppercase;font-weight:600;">
                 FPS Brandpreventie
               </p>
@@ -94,7 +94,7 @@ export async function stuurUitnodigingsmail(opties: {
               </p>
               <table cellpadding="0" cellspacing="0" style="margin:0 auto 32px;">
                 <tr>
-                  <td style="background:#E8440F;border-radius:6px;">
+                  <td style="background:#F23B0D;border-radius:6px;">
                     <a href="${activatieLink}"
                       style="display:inline-block;padding:14px 32px;color:#ffffff;font-size:15px;font-weight:600;text-decoration:none;letter-spacing:.3px;">
                       Account activeren
