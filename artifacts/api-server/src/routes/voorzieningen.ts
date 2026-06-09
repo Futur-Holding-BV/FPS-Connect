@@ -258,8 +258,12 @@ router.post("/voorzieningen", requireRol("monteur", "controleur", "beheerder", "
       verdieping_id, ruimte, huisnummer, locatie_omschrijving, locatie_x, locatie_y,
       materialen, opmerkingen, monteur_id, controleur_id,
       installatie_datum, volgende_inspectie,
-      wbdbo, wrd, wand_of_plafond, maker_monteur_id, label_ids,
+      wbdbo, wrd, wand_of_plafond, label_ids,
     } = req.body;
+
+    // De aanmaker (maker) wordt altijd afgeleid uit de ingelogde sessie,
+    // nooit vanuit de request body — voorkomt vervalsen van de creator-attributie.
+    const maker_monteur_id = req.session.userId;
 
     if (!type || !gebouw_id) {
       return res.status(400).json({ error: "type en gebouw_id zijn verplicht" });

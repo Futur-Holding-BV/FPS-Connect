@@ -325,6 +325,7 @@ const LEEG_FORM = {
   opmerkingen: "",
   installatie_datum: "",
   status: "in_uitvoering",
+  monteur_id: "",
 };
 
 export default function Plattegrond() {
@@ -588,10 +589,14 @@ export default function Plattegrond() {
     setNieuwLocatie({ x: Math.round(klemX), y: Math.round(klemY) });
     const nu = new Date();
     const vandaag = `${nu.getFullYear()}-${String(nu.getMonth() + 1).padStart(2, "0")}-${String(nu.getDate()).padStart(2, "0")}`;
+    const huidigeIsMonteur =
+      gebruiker?.rol === "monteur" ||
+      monteurs.some((m: any) => String(m.id) === String(gebruiker?.id));
     setNieuwForm({
       ...LEEG_FORM,
       objectnummer: volgendSpot?.spotnummer ?? "",
       installatie_datum: vandaag,
+      monteur_id: huidigeIsMonteur && gebruiker?.id != null ? String(gebruiker.id) : "",
     });
     setNieuwDialoog(true);
   }, [plaatsenModus, tekenModus, verplaatsModus, geselecteerdId, view, W, H, volgendSpot, gebruiker, monteurs]);
@@ -723,6 +728,8 @@ export default function Plattegrond() {
         opmerkingen: nieuwForm.opmerkingen.trim() || undefined,
         installatie_datum: nieuwForm.installatie_datum || undefined,
         label_ids: nieuwLabelIds,
+        monteur_id: nieuwForm.monteur_id ? Number(nieuwForm.monteur_id) : undefined,
+        maker_monteur_id: gebruiker?.id != null ? Number(gebruiker.id) : undefined,
         locatie_x: nieuwLocatie.x,
         locatie_y: nieuwLocatie.y,
         gebouw_id: Number(id),
@@ -1258,29 +1265,30 @@ export default function Plattegrond() {
                 </Select>
               </div>
 
-              {/* Aanmaker (leesbaar) + beheerder-only: monteur toewijzen */}
+              {/* Aanmaker (leesbaar) */}
               <div>
                 <Label>Geplaatst door</Label>
                 <Input value={gebruiker?.naam ?? ""} readOnly className="bg-muted" />
               </div>
 
-              {isBeheerder && (
-                <div className="col-span-2">
-                  <Label>Monteur toewijzen (optioneel)</Label>
-                  <Select
-                    value={(nieuwForm as any).monteur_id || "geen"}
-                    onValueChange={(v) => setNieuwForm((f) => ({ ...f, monteur_id: v === "geen" ? "" : v } as any))}
-                  >
-                    <SelectTrigger><SelectValue placeholder="Kies monteur" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="geen">Niet toegewezen</SelectItem>
-                      {monteurs.map((m: any) => (
-                        <SelectItem key={m.id} value={String(m.id)}>{m.naam}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
+              {/* Monteur uitvoering — wie de spot daadwerkelijk uitvoert.
+                  Standaard de aanmaker zelf; aanpasbaar wanneer een andere
+                  monteur enkel de spot aanmaakt. */}
+              <div>
+                <Label>Monteur uitvoering</Label>
+                <Select
+                  value={nieuwForm.monteur_id || "geen"}
+                  onValueChange={(v) => setNieuwForm((f) => ({ ...f, monteur_id: v === "geen" ? "" : v }))}
+                >
+                  <SelectTrigger><SelectValue placeholder="Kies monteur" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="geen">Niet ingevuld</SelectItem>
+                    {monteurs.map((m: any) => (
+                      <SelectItem key={m.id} value={String(m.id)}>{m.naam}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
               {/* Opmerkingen */}
               <div className="col-span-2">
