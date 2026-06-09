@@ -5,6 +5,7 @@
  * FPS Brandpreventie - Platform voor brandpreventieve gebouwvoorzieningen
  * OpenAPI spec version: 0.1.0
  */
+import type { EmailContactpersoon } from './emailContactpersoon';
 
 export interface GebouwEmailSamenvattingUpdate {
   /** @nullable */
@@ -24,4 +25,5 @@ export interface GebouwEmailSamenvattingUpdate {
   /** @nullable */
   risicos?: string | null;
   geverifieerd?: boolean;
+  contactpersonen?: EmailContactpersoon[];
 }

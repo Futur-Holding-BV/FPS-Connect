@@ -28,6 +28,10 @@ export interface GeparseerdeEmail {
   bijlagen: GeparseerdeBijlage[];
 }
 
+export interface GeparseerdeEmailMetId extends GeparseerdeEmail {
+  id: number;
+}
+
 export interface EmailAiResultaat {
   omschrijving: string | null;
   naw: string | null;
@@ -174,9 +178,9 @@ Geef uitsluitend geldige JSON terug met deze velden:
 - actiepunten (tekst of null): openstaande actiepunten, verzoeken of to-do's die uit de e-mail voortvloeien, als genummerde lijst. Null als er geen zijn.
 Antwoord in het Nederlands. Alleen JSON, geen extra tekst.`;
 
-const SAMENVATTING_PROMPT = `Je analyseert de gecombineerde e-mailcorrespondentie van een brandpreventie-project.
-Maak een overzichtelijke projectsamenvatting op basis van ALLE e-mails samen.
-Geef uitsluitend geldige JSON terug met deze velden (null als onbekend):
+const SAMENVATTING_PROMPT = `Je analyseert de gecombineerde e-mailcorrespondentie van een brandpreventie-project (FPS Brandpreventie: passieve brandpreventie, branddoorvoering, branddeuren, brandkleppen etc.).
+Maak een overzichtelijke projectsamenvatting. Geef uitsluitend geldige JSON terug met deze velden (null als onbekend):
+
 - opdrachtomschrijving: korte Nederlandse omschrijving van het project/de opdracht (1-4 zinnen) of null.
 - opdrachtgever: naam, bedrijf en/of adres van de opdrachtgever of null.
 - contactgegevens: alle e-mailadressen en telefoonnummers die zijn gevonden, als leesbare lijst of null.
@@ -185,7 +189,17 @@ Geef uitsluitend geldige JSON terug met deze velden (null als onbekend):
 - besluiten: relevante besluiten of overeenkomsten uit de correspondentie of null.
 - tekeningen: genoemde bouwtekeningen, plattegronden of technische documenten of null.
 - risicos: risico's, aandachtspunten of bezwaren die zijn geuit of null.
-- contactpersonen: een array met de relevante betrokkenen die uit de e-mails naar voren komen. Geef per persoon een object met: rol (een van: "opdrachtgever", "gebruiker", "installateur", "aannemer", "eigenaar", "aanvrager"), naam, organisatie (of null), email (of null), telefoon (of null). Bepaal de rol op basis van de inhoud en handtekeningen van de e-mails. Neem alleen echte personen/bedrijven op, geen algemene mailboxen. Lege array als er niets te vinden is. Verzin geen e-mailadressen.
+- contactpersonen: array met betrokkenen. Geef per persoon een object met:
+  - rol: een van "opdrachtgever", "gebruiker", "installateur", "aannemer", "eigenaar", "aanvrager"
+  - naam: volledige naam of bedrijfsnaam (verplicht)
+  - organisatie: bedrijfsnaam of null
+  - functie: functietitel binnen de organisatie (bijv. "Projectleider", "Directeur", "Facility Manager") of null
+  - email: e-mailadres of null — verzin GEEN e-mailadressen
+  - telefoon: telefoonnummer of null
+  - relevantie: "relevant" als de persoon/organisatie een actieve rol speelt in opdracht, uitvoering, planning, communicatie of oplevering van het FPS-project; "ter_controle" als ze uitsluitend in CC staan, een onduidelijke of marginale rol hebben, of het twijfelgevallen zijn die de beheerder zelf moet beoordelen
+  - bron_email_nr: het e-mailnummer (1, 2, 3...) waaruit de informatie voornamelijk afkomstig is
+  Neem alleen echte personen of bedrijven op die daadwerkelijk in de e-mails voorkomen. Geen algemene mailboxen (info@, noreply@). Lege array als niets gevonden.
+
 Antwoord in het Nederlands. Alleen JSON, geen extra tekst.`;
 
 export interface ProjectSamenvatting {
@@ -209,7 +223,10 @@ const GELDIGE_ROLLEN = new Set([
   "aanvrager",
 ]);
 
-function parseContactpersonen(v: unknown): EmailContactpersoon[] {
+function parseContactpersonen(
+  v: unknown,
+  emailIds: number[],
+): EmailContactpersoon[] {
   if (!Array.isArray(v)) return [];
   const resultaat: EmailContactpersoon[] = [];
   for (const item of v) {
@@ -218,19 +235,36 @@ function parseContactpersonen(v: unknown): EmailContactpersoon[] {
     const rol = typeof o.rol === "string" ? o.rol.trim().toLowerCase() : "";
     const naam = strOfNull(o.naam);
     if (!naam || !GELDIGE_ROLLEN.has(rol)) continue;
+
+    // Zet bron_email_nr (1-based) om naar echte bron_email_id
+    const bronNr = typeof o.bron_email_nr === "number" ? o.bron_email_nr : null;
+    const bronEmailId =
+      bronNr !== null && bronNr >= 1 && bronNr <= emailIds.length
+        ? emailIds[bronNr - 1]
+        : null;
+
+    const relevantieRuw = typeof o.relevantie === "string" ? o.relevantie.trim() : "relevant";
+    const relevantie: "relevant" | "ter_controle" =
+      relevantieRuw === "ter_controle" ? "ter_controle" : "relevant";
+
     resultaat.push({
       rol,
       naam,
       organisatie: strOfNull(o.organisatie),
       email: strOfNull(o.email),
       telefoon: strOfNull(o.telefoon),
+      functie: strOfNull(o.functie),
+      status: "voorstel",
+      relevantie,
+      bron_email_id: bronEmailId,
+      bron_onderwerp: null, // wordt ingevuld door de caller met de werkelijke onderwerpregel
     });
   }
   return resultaat;
 }
 
 export async function genereerProjectSamenvatting(
-  emails: GeparseerdeEmail[],
+  emails: GeparseerdeEmailMetId[],
 ): Promise<ProjectSamenvatting> {
   const leeg: ProjectSamenvatting = {
     opdrachtomschrijving: null, opdrachtgever: null, contactgegevens: null,
@@ -239,9 +273,14 @@ export async function genereerProjectSamenvatting(
   };
   if (!heeftOpenAi() || emails.length === 0) return leeg;
 
+  const emailIds = emails.map((e) => e.id);
+  const onderwerpPerNr = new Map<number, string | null>(
+    emails.map((e, i) => [i + 1, e.onderwerp]),
+  );
+
   const blokken = emails.map((e, i) => {
     const delen = [
-      `--- E-mail ${i + 1} ---`,
+      `--- E-mail ${i + 1} (id: ${e.id}) ---`,
       `Afzender: ${e.afzender ?? "(onbekend)"}`,
       `Onderwerp: ${e.onderwerp ?? "(geen)"}`,
       `Bijlagen: ${e.bijlagen.map((b) => b.bestandsnaam).join(", ") || "(geen)"}`,
@@ -258,7 +297,7 @@ export async function genereerProjectSamenvatting(
     const completion = await client.chat.completions.create({
       model: "gpt-4o-mini",
       response_format: { type: "json_object" },
-      max_tokens: 1200,
+      max_tokens: 1800,
       messages: [
         { role: "system", content: SAMENVATTING_PROMPT },
         { role: "user", content: userTekst.slice(0, 20000) },
@@ -267,6 +306,16 @@ export async function genereerProjectSamenvatting(
     const tekst = completion.choices[0]?.message?.content;
     if (!tekst) return leeg;
     const p = JSON.parse(tekst) as Record<string, unknown>;
+
+    // Parseer contacten en vul bron_onderwerp in vanuit de lokale email-index
+    const contactpersonen = parseContactpersonen(p.contactpersonen, emailIds).map((c) => {
+      const bronNrVoorOnderwerp = emailIds.indexOf(c.bron_email_id ?? -1) + 1;
+      return {
+        ...c,
+        bron_onderwerp: onderwerpPerNr.get(bronNrVoorOnderwerp) ?? null,
+      };
+    });
+
     return {
       opdrachtomschrijving: strOfNull(p.opdrachtomschrijving),
       opdrachtgever: strOfNull(p.opdrachtgever),
@@ -276,7 +325,7 @@ export async function genereerProjectSamenvatting(
       besluiten: strOfNull(p.besluiten),
       tekeningen: strOfNull(p.tekeningen),
       risicos: strOfNull(p.risicos),
-      contactpersonen: parseContactpersonen(p.contactpersonen),
+      contactpersonen,
     };
   } catch (err) {
     logger.error({ err }, "Project-samenvatting genereren mislukt");

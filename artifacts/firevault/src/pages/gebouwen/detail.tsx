@@ -290,8 +290,6 @@ export default function GebouwDetail() {
   if (!gebouw.adres) ontbrekendeProjectdata.push("adres van het gebouw");
   if (partijenLijst.length === 0)
     ontbrekendeProjectdata.push("contactpartijen (opdrachtgever/eigenaar)");
-  if (!gebouw.omschrijving)
-    ontbrekendeProjectdata.push("opdrachtomschrijving");
 
   const ontbrekendeUitvoeringsdata: string[] = [];
   if ((gebouw.verdiepingen ?? []).length === 0)
@@ -460,24 +458,8 @@ export default function GebouwDetail() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
           <div className="lg:col-span-2 space-y-6">
 
-            {/* Opdrachtomschrijving */}
-            {gebouw.omschrijving && (
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="flex items-center gap-2 text-base">
-                    <FileText className="h-4 w-4" /> Opdrachtomschrijving
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm whitespace-pre-wrap text-foreground/80">
-                    {gebouw.omschrijving}
-                  </p>
-                </CardContent>
-              </Card>
-            )}
-
             {/* Bewerkbaar projectformulier (AI-aangevuld, beheerder bevestigt) */}
-            <Projectformulier gebouwId={gebouwId} isBeheerder={isBeheerder} />
+            <Projectformulier gebouwId={gebouwId} isBeheerder={isBeheerder} gebouw={gebouw} />
 
             {/* Open actiepunten */}
             {actiepunten.length > 0 && (

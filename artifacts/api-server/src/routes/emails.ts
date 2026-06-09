@@ -7,6 +7,7 @@ import {
   gebouwenTable,
   gebruikersTable,
 } from "@workspace/db";
+import type { EmailContactpersoon } from "@workspace/db";
 import { eq, and, desc } from "drizzle-orm";
 import { requireRol } from "../middlewares/auth";
 import { ObjectStorageService, ObjectNotFoundError } from "../lib/objectStorage";
@@ -24,6 +25,21 @@ const beheerderPlus = requireRol("beheerder");
 
 const iso = (d: Date) => d.toISOString();
 
+function mapContact(c: EmailContactpersoon) {
+  return {
+    rol: c.rol,
+    naam: c.naam,
+    organisatie: c.organisatie ?? null,
+    email: c.email ?? null,
+    telefoon: c.telefoon ?? null,
+    functie: c.functie ?? null,
+    status: c.status ?? "voorstel",
+    relevantie: c.relevantie ?? "relevant",
+    bron_email_id: c.bron_email_id ?? null,
+    bron_onderwerp: c.bron_onderwerp ?? null,
+  };
+}
+
 const mapSamenvatting = (s: typeof gebouwEmailSamenvattingenTable.$inferSelect) => ({
   id: s.id,
   gebouw_id: s.gebouwId,
@@ -35,13 +51,7 @@ const mapSamenvatting = (s: typeof gebouwEmailSamenvattingenTable.$inferSelect) 
   besluiten: s.besluiten,
   tekeningen: s.tekeningen,
   risicos: s.risicos,
-  contactpersonen: (s.contactpersonen ?? []).map((c) => ({
-    rol: c.rol,
-    naam: c.naam,
-    organisatie: c.organisatie,
-    email: c.email,
-    telefoon: c.telefoon,
-  })),
+  contactpersonen: (s.contactpersonen ?? []).map(mapContact),
   aantal_emails: s.aantalEmails,
   geverifieerd: s.geverifieerd,
   gecontroleerd_door: s.gecontroleerdDoor,
@@ -49,9 +59,53 @@ const mapSamenvatting = (s: typeof gebouwEmailSamenvattingenTable.$inferSelect) 
   bijgewerkt_op: iso(s.bijgewerktOp),
 });
 
+/**
+ * Merge bestaande contacten (met hun accept/reject-beslissingen) met nieuwe AI-voorstellen.
+ * Bevestigde en afgewezen contacten blijven altijd behouden.
+ * Nieuwe AI-voorstellen worden alleen toegevoegd als ze nog niet in de bestaande lijst staan.
+ * Match op e-mailadres (case-insensitive) of naam+organisatie.
+ */
+function mergeContactpersonen(
+  bestaand: EmailContactpersoon[],
+  nieuwVanAi: EmailContactpersoon[],
+): EmailContactpersoon[] {
+  const vast = bestaand.filter(
+    (c) => c.status === "bevestigd" || c.status === "afgewezen",
+  );
+
+  const isAlInVast = (n: EmailContactpersoon) =>
+    vast.some(
+      (v) =>
+        (v.email && n.email && v.email.toLowerCase() === n.email.toLowerCase()) ||
+        (v.naam.toLowerCase() === n.naam.toLowerCase() &&
+          (v.organisatie ?? "") === (n.organisatie ?? "")),
+    );
+
+  // Bestaande voorstel-contacten die niet in de nieuwe AI-lijst zitten, bewaren
+  const oudVoorstelBehouden = bestaand
+    .filter((c) => (c.status ?? "voorstel") === "voorstel")
+    .filter((b) => {
+      const inNieuw = nieuwVanAi.some(
+        (n) =>
+          (n.email && b.email && n.email.toLowerCase() === b.email.toLowerCase()) ||
+          (n.naam.toLowerCase() === b.naam.toLowerCase() &&
+            (n.organisatie ?? "") === (b.organisatie ?? "")),
+      );
+      return !inNieuw;
+    });
+
+  // Nieuwe AI-contacten die nog niet bevestigd/afgewezen zijn
+  const nieuwToevoegen = nieuwVanAi
+    .filter((n) => !isAlInVast(n))
+    .map((n) => ({ ...n, status: "voorstel" as const }));
+
+  return [...vast, ...oudVoorstelBehouden, ...nieuwToevoegen];
+}
+
 // herbereken de AI-samenvatting. Wanneer een beheerder de samenvatting heeft
 // geverifieerd (handmatig gecontroleerd/aangepast) overschrijft de automatische
-// herberekening de inhoud NIET, tenzij forceer=true (expliciete "Bijwerken").
+// herberekening de tekstvelden NIET (tenzij forceer=true), maar worden
+// nieuwe contacten wel gemerged zodat het formulier meegroeit bij nieuwe e-mails.
 async function herberekeningUitvoeren(
   gebouwId: number,
   forceer = false,
@@ -62,54 +116,86 @@ async function herberekeningUitvoeren(
       .from(gebouwEmailsTable)
       .where(eq(gebouwEmailsTable.gebouwId, gebouwId))
       .orderBy(desc(gebouwEmailsTable.aangemaaktOp));
+
     if (emails.length === 0) {
-      // Geen e-mails meer: bestaande samenvatting verwijderen zodat er geen
-      // verouderde contactpersonen of teksten blijven hangen.
       await db
         .delete(gebouwEmailSamenvattingenTable)
         .where(eq(gebouwEmailSamenvattingenTable.gebouwId, gebouwId));
       return;
     }
 
-    if (!forceer) {
-      const [bestaand] = await db
-        .select()
-        .from(gebouwEmailSamenvattingenTable)
-        .where(eq(gebouwEmailSamenvattingenTable.gebouwId, gebouwId));
-      if (bestaand?.geverifieerd) {
-        // Door beheerder gecontroleerd: alleen het e-mailaantal bijwerken,
-        // de gecontroleerde inhoud blijft behouden.
+    // Haal bestaand record op voor merge-logica en geverifieerd-check
+    const [bestaand] = await db
+      .select()
+      .from(gebouwEmailSamenvattingenTable)
+      .where(eq(gebouwEmailSamenvattingenTable.gebouwId, gebouwId));
+
+    if (!forceer && bestaand?.geverifieerd) {
+      // Tekstvelden zijn door beheerder bevestigd: alleen e-mailaantal bijwerken
+      // en nieuwe contacten als voorstel toevoegen.
+      if (emails.length !== bestaand.aantalEmails) {
+        const bestaandeContacten: EmailContactpersoon[] = bestaand.contactpersonen ?? [];
+        const emailsMetId = emails.map((e) => ({
+          id: e.id,
+          afzender: e.afzender,
+          ontvanger: e.ontvanger,
+          onderwerp: e.onderwerp,
+          datum: e.datum,
+          inhoudTekst: e.inhoudTekst,
+          bijlagen: [] as GeparseerdeBijlage[],
+        }));
+        const nieuweSamenvatting = await genereerProjectSamenvatting(emailsMetId);
+        const gemergd = mergeContactpersonen(
+          bestaandeContacten,
+          nieuweSamenvatting.contactpersonen,
+        );
         await db
           .update(gebouwEmailSamenvattingenTable)
-          .set({ aantalEmails: emails.length })
+          .set({ aantalEmails: emails.length, contactpersonen: gemergd, bijgewerktOp: new Date() })
           .where(eq(gebouwEmailSamenvattingenTable.gebouwId, gebouwId));
-        return;
       }
+      return;
     }
 
-    const als: GeparseerdeEmail[] = emails.map((e) => ({
+    const bestaandeContacten: EmailContactpersoon[] = bestaand?.contactpersonen ?? [];
+
+    const emailsMetId = emails.map((e) => ({
+      id: e.id,
       afzender: e.afzender,
       ontvanger: e.ontvanger,
       onderwerp: e.onderwerp,
       datum: e.datum,
       inhoudTekst: e.inhoudTekst,
-      bijlagen: [],
+      bijlagen: [] as GeparseerdeBijlage[],
     }));
 
-    const samenvatting = await genereerProjectSamenvatting(als);
+    const samenvatting = await genereerProjectSamenvatting(emailsMetId);
+
+    // Merge: bewaar bevestigde/afgewezen contacten, voeg nieuwe AI-voorstellen toe
+    const gemergdContacten = mergeContactpersonen(
+      bestaandeContacten,
+      samenvatting.contactpersonen,
+    );
 
     const nieuweWaarden = {
       aantalEmails: emails.length,
       geverifieerd: false,
-      gecontroleerdDoor: null,
-      gecontroleerdOp: null,
+      gecontroleerdDoor: null as string | null,
+      gecontroleerdOp: null as Date | null,
       bijgewerktOp: new Date(),
-      ...samenvatting,
+      opdrachtomschrijving: samenvatting.opdrachtomschrijving,
+      opdrachtgever: samenvatting.opdrachtgever,
+      contactgegevens: samenvatting.contactgegevens,
+      afspraken: samenvatting.afspraken,
+      actiepunten: samenvatting.actiepunten,
+      besluiten: samenvatting.besluiten,
+      tekeningen: samenvatting.tekeningen,
+      risicos: samenvatting.risicos,
+      contactpersonen: gemergdContacten,
     };
 
     // Atomaire guard: als !forceer mag een tijdens de (trage) AI-call door een
-    // beheerder bevestigde samenvatting NIET overschreven worden. De WHERE op
-    // geverifieerd=false sluit die race op DB-niveau af.
+    // beheerder bevestigde samenvatting NIET overschreven worden.
     await db
       .insert(gebouwEmailSamenvattingenTable)
       .values({ gebouwId, ...nieuweWaarden })
@@ -121,7 +207,6 @@ async function herberekeningUitvoeren(
           : eq(gebouwEmailSamenvattingenTable.geverifieerd, false),
       });
   } catch (err) {
-    // fire-and-forget — log maar blokkeer niet
     console.error("herberekeningUitvoeren mislukt:", err);
   }
 }
@@ -242,7 +327,7 @@ router.post("/gebouwen/:id/emails/samenvatting", beheerderPlus, async (req, res)
   }
 });
 
-// PATCH /gebouwen/:id/emails/samenvatting — beheerder controleert/bewerkt en bevestigt
+// PATCH /gebouwen/:id/emails/samenvatting — beheerder controleert/bewerkt, bevestigt en beheert contacten
 router.patch("/gebouwen/:id/emails/samenvatting", beheerderPlus, async (req, res) => {
   try {
     const gebouwId = parseId(req.params.id);
@@ -268,7 +353,31 @@ router.patch("/gebouwen/:id/emails/samenvatting", beheerderPlus, async (req, res
       }
     }
 
-    const velden = {
+    // Verwerk contactpersonen-update (accept/reject/edit per contact)
+    let bijgewerktePersoon: EmailContactpersoon[] | undefined;
+    if (Array.isArray(body.contactpersonen)) {
+      bijgewerktePersoon = (body.contactpersonen as unknown[])
+        .filter((c): c is Record<string, unknown> => !!c && typeof c === "object")
+        .filter((c) => typeof c.naam === "string" && typeof c.rol === "string")
+        .map((c) => ({
+          rol: String(c.rol),
+          naam: String(c.naam),
+          organisatie: typeof c.organisatie === "string" ? c.organisatie : null,
+          email: typeof c.email === "string" ? c.email : null,
+          telefoon: typeof c.telefoon === "string" ? c.telefoon : null,
+          functie: typeof c.functie === "string" ? c.functie : null,
+          status: (["voorstel", "bevestigd", "afgewezen"] as const).includes(c.status as any)
+            ? (c.status as "voorstel" | "bevestigd" | "afgewezen")
+            : "voorstel",
+          relevantie: (["relevant", "ter_controle"] as const).includes(c.relevantie as any)
+            ? (c.relevantie as "relevant" | "ter_controle")
+            : "relevant",
+          bron_email_id: typeof c.bron_email_id === "number" ? c.bron_email_id : null,
+          bron_onderwerp: typeof c.bron_onderwerp === "string" ? c.bron_onderwerp : null,
+        }));
+    }
+
+    const velden: Record<string, unknown> = {
       opdrachtomschrijving: tekstVeld(body.opdrachtomschrijving),
       opdrachtgever: tekstVeld(body.opdrachtgever),
       contactgegevens: tekstVeld(body.contactgegevens),
@@ -281,6 +390,7 @@ router.patch("/gebouwen/:id/emails/samenvatting", beheerderPlus, async (req, res
       gecontroleerdDoor,
       gecontroleerdOp: geverifieerd ? new Date() : null,
       bijgewerktOp: new Date(),
+      ...(bijgewerktePersoon !== undefined && { contactpersonen: bijgewerktePersoon }),
     };
 
     await db
@@ -336,7 +446,7 @@ router.post("/gebouwen/:id/emails", beheerderPlus, async (req, res) => {
 
     const normPad = objectStorage.normalizeObjectEntityPath(String(object_pad));
 
-    let geparseerd;
+    let geparseerd: GeparseerdeEmail;
     try {
       const buffer = await leesObjectBuffer(normPad);
       geparseerd = await parseEmailBestand(String(bestandsnaam), buffer);

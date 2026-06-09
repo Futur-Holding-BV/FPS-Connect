@@ -7,6 +7,16 @@ export interface EmailContactpersoon {
   organisatie: string | null;
   email: string | null;
   telefoon: string | null;
+  /** Functietitel binnen de organisatie (bijv. "Projectleider", "Directeur") */
+  functie?: string | null;
+  /** AI-voorstel, door beheerder bevestigd, of afgewezen */
+  status?: "voorstel" | "bevestigd" | "afgewezen";
+  /** AI-inschatting van relevantie voor het FPS-project */
+  relevantie?: "relevant" | "ter_controle";
+  /** ID van de e-mail waaruit dit contact is geëxtraheerd */
+  bron_email_id?: number | null;
+  /** Onderwerp van de bronemail (voor weergave) */
+  bron_onderwerp?: string | null;
 }
 
 export const gebouwEmailsTable = pgTable("gebouw_emails", {

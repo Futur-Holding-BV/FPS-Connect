@@ -3262,6 +3262,10 @@ components:
           type: ["string", "null"]
         geverifieerd:
           type: boolean
+        contactpersonen:
+          type: array
+          items:
+            $ref: "#/components/schemas/EmailContactpersoon"
 
     EmailContactpersoon:
       type: object
@@ -3278,6 +3282,21 @@ components:
           type: ["string", "null"]
         telefoon:
           type: ["string", "null"]
+        functie:
+          type: ["string", "null"]
+          description: Functietitel binnen de organisatie
+        status:
+          type: ["string", "null"]
+          description: voorstel, bevestigd of afgewezen
+        relevantie:
+          type: ["string", "null"]
+          description: relevant of ter_controle
+        bron_email_id:
+          type: ["integer", "null"]
+          description: ID van de e-mail waaruit dit contact is geextraheerd
+        bron_onderwerp:
+          type: ["string", "null"]
+          description: Onderwerp van de bronemail
 
     # ── DASHBOARD ─────────────────────────────────────────────────────────
     DashboardStats:

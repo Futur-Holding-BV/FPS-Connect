@@ -3051,7 +3051,12 @@ export const GetGebouwEmailSamenvattingResponse = zod.object({
   "naam": zod.string(),
   "organisatie": zod.string().nullish(),
   "email": zod.string().nullish(),
-  "telefoon": zod.string().nullish()
+  "telefoon": zod.string().nullish(),
+  "functie": zod.string().nullish().describe('Functietitel binnen de organisatie'),
+  "status": zod.string().nullish().describe('voorstel, bevestigd of afgewezen'),
+  "relevantie": zod.string().nullish().describe('relevant of ter_controle'),
+  "bron_email_id": zod.number().nullish().describe('ID van de e-mail waaruit dit contact is geextraheerd'),
+  "bron_onderwerp": zod.string().nullish().describe('Onderwerp van de bronemail')
 })).optional(),
   "aantal_emails": zod.number(),
   "geverifieerd": zod.boolean(),
@@ -3084,7 +3089,12 @@ export const GenerateGebouwEmailSamenvattingResponse = zod.object({
   "naam": zod.string(),
   "organisatie": zod.string().nullish(),
   "email": zod.string().nullish(),
-  "telefoon": zod.string().nullish()
+  "telefoon": zod.string().nullish(),
+  "functie": zod.string().nullish().describe('Functietitel binnen de organisatie'),
+  "status": zod.string().nullish().describe('voorstel, bevestigd of afgewezen'),
+  "relevantie": zod.string().nullish().describe('relevant of ter_controle'),
+  "bron_email_id": zod.number().nullish().describe('ID van de e-mail waaruit dit contact is geextraheerd'),
+  "bron_onderwerp": zod.string().nullish().describe('Onderwerp van de bronemail')
 })).optional(),
   "aantal_emails": zod.number(),
   "geverifieerd": zod.boolean(),
@@ -3110,7 +3120,19 @@ export const UpdateGebouwEmailSamenvattingBody = zod.object({
   "besluiten": zod.string().nullish(),
   "tekeningen": zod.string().nullish(),
   "risicos": zod.string().nullish(),
-  "geverifieerd": zod.boolean().optional()
+  "geverifieerd": zod.boolean().optional(),
+  "contactpersonen": zod.array(zod.object({
+  "rol": zod.string().describe('opdrachtgever, gebruiker, installateur, aannemer, eigenaar of aanvrager'),
+  "naam": zod.string(),
+  "organisatie": zod.string().nullish(),
+  "email": zod.string().nullish(),
+  "telefoon": zod.string().nullish(),
+  "functie": zod.string().nullish().describe('Functietitel binnen de organisatie'),
+  "status": zod.string().nullish().describe('voorstel, bevestigd of afgewezen'),
+  "relevantie": zod.string().nullish().describe('relevant of ter_controle'),
+  "bron_email_id": zod.number().nullish().describe('ID van de e-mail waaruit dit contact is geextraheerd'),
+  "bron_onderwerp": zod.string().nullish().describe('Onderwerp van de bronemail')
+})).optional()
 })
 
 export const UpdateGebouwEmailSamenvattingResponse = zod.object({
@@ -3129,7 +3151,12 @@ export const UpdateGebouwEmailSamenvattingResponse = zod.object({
   "naam": zod.string(),
   "organisatie": zod.string().nullish(),
   "email": zod.string().nullish(),
-  "telefoon": zod.string().nullish()
+  "telefoon": zod.string().nullish(),
+  "functie": zod.string().nullish().describe('Functietitel binnen de organisatie'),
+  "status": zod.string().nullish().describe('voorstel, bevestigd of afgewezen'),
+  "relevantie": zod.string().nullish().describe('relevant of ter_controle'),
+  "bron_email_id": zod.number().nullish().describe('ID van de e-mail waaruit dit contact is geextraheerd'),
+  "bron_onderwerp": zod.string().nullish().describe('Onderwerp van de bronemail')
 })).optional(),
   "aantal_emails": zod.number(),
   "geverifieerd": zod.boolean(),

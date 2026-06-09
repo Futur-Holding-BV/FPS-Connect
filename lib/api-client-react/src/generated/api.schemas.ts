@@ -255,6 +255,31 @@ export interface EmailContactpersoon {
   email?: string | null;
   /** @nullable */
   telefoon?: string | null;
+  /**
+     * Functietitel binnen de organisatie
+     * @nullable
+     */
+  functie?: string | null;
+  /**
+     * voorstel, bevestigd of afgewezen
+     * @nullable
+     */
+  status?: string | null;
+  /**
+     * relevant of ter_controle
+     * @nullable
+     */
+  relevantie?: string | null;
+  /**
+     * ID van de e-mail waaruit dit contact is geextraheerd
+     * @nullable
+     */
+  bron_email_id?: number | null;
+  /**
+     * Onderwerp van de bronemail
+     * @nullable
+     */
+  bron_onderwerp?: string | null;
 }
 
 export interface GebouwEmailSamenvatting {
@@ -304,6 +329,7 @@ export interface GebouwEmailSamenvattingUpdate {
   /** @nullable */
   risicos?: string | null;
   geverifieerd?: boolean;
+  contactpersonen?: EmailContactpersoon[];
 }
 
 export type DashboardStatsVoorzieningenPerTypeItem = {

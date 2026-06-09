@@ -1,6 +1,6 @@
 ---
 name: Gebouwkaart segmenten & projectformulier
-description: detail.tsx 3-segment tabbladen + bewerkbare/bevestigbare AI-projectsamenvatting
+description: detail.tsx 3-segment tabbladen + bewerkbare/bevestigbare AI-projectsamenvatting met CRM-contactbeheer
 ---
 
 # Gebouwkaart (gebouwen/detail.tsx)
@@ -11,11 +11,22 @@ description: detail.tsx 3-segment tabbladen + bewerkbare/bevestigbare AI-project
 
 # Projectformulier (gebouw-projectformulier.tsx)
 
-- De AI-projectsamenvatting in tab 1 is bewerkbaar én bevestigbaar door beheerder.
-  Component `Projectformulier` (vervangt het oude read-only `ProjectSamenvatting`).
-- Beheerder: textareas + "Opslaan" (geverifieerd=false) / "Opslaan en bevestigen"
-  (geverifieerd=true). Niet-beheerder: alleen-lezen weergave + "Gecontroleerd"-badge.
-- `ContactpersoonRij` wordt geëxporteerd uit gebouw-emails.tsx en hergebruikt.
+- Volledig herbouwd als CRM-klaar formulier. Props: `{ gebouwId, isBeheerder, gebouw }`.
+  `gebouw` is de GebouwProp (naam/projectnummer/werknummer/adres/stad/postcode/gebouw_type/datum).
+- Secties: Projectidentiteit (read-only grid) → Projectteam (uit toewijzingen) →
+  Betrokken contacten (per status) → Opdracht en inhoud (AI+editable).
+- Beheerder: textareas + "Opslaan" (geverifieerd=false) / "Opslaan en bevestigen" (geverifieerd=true).
+  Niet-beheerder: alleen bevestigde contacten + bevestigde tekstvelden.
+
+# CRM Contactpersonen
+
+- `EmailContactpersoon` uitgebreid (JSONB) met: `functie?`, `status?` ("voorstel"|"bevestigd"|"afgewezen"),
+  `relevantie?` ("relevant"|"ter_controle"), `bron_email_id?`, `bron_onderwerp?`.
+- Groepen in UI: Bevestigd (groen) → AI-voorstellen relevant (amber) → Ter controle (inklapbaar) → Afgewezen (inklapbaar).
+- Accept/afwijzen direct via `bewaarContacten()` — stuurt VOLLEDIGE payload (tekstvelden + contacten samen).
+  Reden: PATCH nullt altijd alle niet-verstuurde tekstvelden. Oplossing: altijd combineer huidige `form` state
+  + updated contactenlijst in één mutate call.
+- Bevestigde contacten kunnen als CRM-partij worden opgeslagen via "Toevoegen als partij"-knop.
 
 # Verificatie-semantiek (backend, routes/emails.ts)
 
