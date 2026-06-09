@@ -102,51 +102,59 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
             <SidebarGroupContent>
               <SidebarMenu>
                 <SidebarMenuItem>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={location === "/inspecties" || location.startsWith("/inspecties/")}
-                  >
-                    <Link href="/inspecties">
-                      <Search />
-                      <span>{t("nav.inspecties")}</span>
-                    </Link>
+                  <SidebarMenuButton className="opacity-60 cursor-default" disabled>
+                    <Search />
+                    <span>{t("nav.inspecties")}</span>
+                    <Badge
+                      variant="outline"
+                      className="ml-auto text-[10px] px-1.5 py-0 leading-tight border-muted-foreground/40 text-muted-foreground group-data-[collapsible=icon]:hidden"
+                    >
+                      <Clock className="h-2.5 w-2.5 mr-0.5" />
+                      {t("nav.inUitvoering")}
+                    </Badge>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
 
                 <SidebarMenuItem>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={location === "/onderhoud" || location.startsWith("/onderhoud/")}
-                  >
-                    <Link href="/onderhoud">
-                      <Wrench />
-                      <span>{t("nav.onderhoud")}</span>
-                    </Link>
+                  <SidebarMenuButton className="opacity-60 cursor-default" disabled>
+                    <Wrench />
+                    <span>{t("nav.onderhoud")}</span>
+                    <Badge
+                      variant="outline"
+                      className="ml-auto text-[10px] px-1.5 py-0 leading-tight border-muted-foreground/40 text-muted-foreground group-data-[collapsible=icon]:hidden"
+                    >
+                      <Clock className="h-2.5 w-2.5 mr-0.5" />
+                      {t("nav.inUitvoering")}
+                    </Badge>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
 
                 <SidebarMenuItem>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={location === "/crm" || location.startsWith("/crm/")}
-                  >
-                    <Link href="/crm">
-                      <Contact />
-                      <span>{t("nav.crm")}</span>
-                    </Link>
+                  <SidebarMenuButton className="opacity-60 cursor-default" disabled>
+                    <Contact />
+                    <span>{t("nav.crm")}</span>
+                    <Badge
+                      variant="outline"
+                      className="ml-auto text-[10px] px-1.5 py-0 leading-tight border-muted-foreground/40 text-muted-foreground group-data-[collapsible=icon]:hidden"
+                    >
+                      <Clock className="h-2.5 w-2.5 mr-0.5" />
+                      {t("nav.inUitvoering")}
+                    </Badge>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
 
                 {toonAbonnementen && (
                   <SidebarMenuItem>
-                    <SidebarMenuButton
-                      asChild
-                      isActive={location === "/abonnementen" || location.startsWith("/abonnementen/")}
-                    >
-                      <Link href="/abonnementen">
-                        <Receipt />
-                        <span>{t("nav.abonnementen")}</span>
-                      </Link>
+                    <SidebarMenuButton className="opacity-60 cursor-default" disabled>
+                      <Receipt />
+                      <span>{t("nav.abonnementen")}</span>
+                      <Badge
+                        variant="outline"
+                        className="ml-auto text-[10px] px-1.5 py-0 leading-tight border-muted-foreground/40 text-muted-foreground group-data-[collapsible=icon]:hidden"
+                      >
+                        <Clock className="h-2.5 w-2.5 mr-0.5" />
+                        {t("nav.inUitvoering")}
+                      </Badge>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 )}
