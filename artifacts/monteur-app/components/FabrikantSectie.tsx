@@ -12,6 +12,7 @@ const FABRIKANTEN: { naam: string; url: string | null }[] = [
   },
   { naam: "Nullifire", url: "https://www.nullifire.com/nl-nl/" },
   { naam: "Flamro", url: "https://flamro.nl/product-selector" },
+  { naam: "Red Profs", url: "https://redprofs.com/" },
   { naam: "Overige", url: null },
 ];
 

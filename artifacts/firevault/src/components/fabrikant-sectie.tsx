@@ -17,6 +17,7 @@ const FABRIKANTEN: { naam: string; url: string | null }[] = [
   { naam: "Rockwool", url: "https://www.rockwool.com/nl/producten/categorieen/fire-protection/" },
   { naam: "Nullifire", url: "https://www.nullifire.com/nl-nl/" },
   { naam: "Flamro", url: "https://flamro.nl/product-selector" },
+  { naam: "Red Profs", url: "https://redprofs.com/" },
   { naam: "Overige", url: null },
 ];
 
