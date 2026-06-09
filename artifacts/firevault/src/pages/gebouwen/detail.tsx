@@ -36,6 +36,7 @@ import {
   Calendar,
   Hash,
   ClipboardList,
+  Printer,
 } from "lucide-react";
 import { useAuth } from "@/context/auth-context";
 import { useRol } from "@/context/rol-context";
@@ -257,6 +258,11 @@ export default function GebouwDetail() {
             </div>
           </div>
           <div className="flex gap-2 flex-wrap justify-end">
+            <Link href={`/gebouwen/${gebouwId}/print`}>
+              <Button variant="outline">
+                <Printer className="h-4 w-4" /> PDF / afdrukken
+              </Button>
+            </Link>
             {isBeheerder && !gebouw.gereed_op && (
               <Button variant="outline" onClick={meldGereed} disabled={gereedBezig}>
                 {gereedBezig ? (

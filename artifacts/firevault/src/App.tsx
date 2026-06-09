@@ -21,6 +21,7 @@ import KlantRapportages from "@/pages/klant/rapportages";
 
 import Gebouwen from "@/pages/gebouwen/index";
 import GebouwDetail from "@/pages/gebouwen/detail";
+import GebouwPrint from "@/pages/gebouwen/print";
 import Plattegrond from "@/pages/gebouwen/plattegrond";
 import Voorzieningen from "@/pages/voorzieningen/index";
 import VoorzieningDetail from "@/pages/voorzieningen/detail";
@@ -164,9 +165,14 @@ function Gate() {
 
   return (
     <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-      <Portalen />
-      <OndersteuningWidget />
-      <HeatmapTracker />
+      <Switch>
+        <Route path="/gebouwen/:id/print" component={GebouwPrint} />
+        <Route>
+          <Portalen />
+          <OndersteuningWidget />
+          <HeatmapTracker />
+        </Route>
+      </Switch>
     </WouterRouter>
   );
 }

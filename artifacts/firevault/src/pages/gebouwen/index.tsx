@@ -23,8 +23,8 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { Link } from "wouter";
-import { Search, Building, X, ArrowDownUp, Calendar, BarChart3, Users } from "lucide-react";
+import { Link, useLocation } from "wouter";
+import { Search, Building, X, ArrowDownUp, Calendar, BarChart3, Users, Printer } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useAuth } from "@/context/auth-context";
 import { GebouwAanmakenDialog } from "./gebouw-aanmaken-dialog";
@@ -187,6 +187,26 @@ function SpotsInzichtKnop({
         onOpenChange={setOpen}
       />
     </>
+  );
+}
+
+function PrintKnop({ gebouwId }: { gebouwId: number }) {
+  const [, setLocation] = useLocation();
+  return (
+    <Button
+      type="button"
+      variant="ghost"
+      size="sm"
+      className="h-7 w-7 px-0"
+      title="PDF / afdrukken"
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setLocation(`/gebouwen/${gebouwId}/print`);
+      }}
+    >
+      <Printer className="h-3.5 w-3.5" />
+    </Button>
   );
 }
 
@@ -374,6 +394,7 @@ export default function Gebouwen() {
                           }
                         />
                       )}
+                      <PrintKnop gebouwId={gebouw.id} />
                       <Badge variant="outline" className="bg-background">
                         {gebouw.totaal_voorzieningen} {gebouw.totaal_voorzieningen === 1 ? "spot" : "spots"}
                       </Badge>
