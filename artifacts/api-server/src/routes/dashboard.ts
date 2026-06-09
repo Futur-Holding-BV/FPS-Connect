@@ -6,42 +6,105 @@ import {
   inspectiesTable,
   onderhoudTable,
   activiteitenTable,
+  gebruikersTable,
+  gebouwToewijzingenTable,
 } from "@workspace/db";
-import { eq, count, desc } from "drizzle-orm";
+import { eq, count, desc, inArray } from "drizzle-orm";
 
 const router = Router();
+
+const TOEGEWEZEN_ROLLEN = ["monteur", "controleur"];
+
+async function gebruikerRol(userId: number): Promise<string> {
+  const [g] = await db
+    .select({ rol: gebruikersTable.rol })
+    .from(gebruikersTable)
+    .where(eq(gebruikersTable.id, userId));
+  return g?.rol ?? "viewer";
+}
+
+async function toegewezenGebouwIds(userId: number): Promise<number[]> {
+  const rows = await db
+    .select({ gebouwId: gebouwToewijzingenTable.gebouwId })
+    .from(gebouwToewijzingenTable)
+    .where(eq(gebouwToewijzingenTable.gebruikerId, userId));
+  return rows.map((r) => r.gebouwId);
+}
+
+// Bepaalt of de huidige gebruiker beperkt is tot toegewezen gebouwen
+// (monteur/controleur) en zo ja welke gebouw-id's zichtbaar zijn.
+async function gebouwScope(
+  userId: number,
+): Promise<{ beperkt: boolean; ids: number[] }> {
+  const rol = await gebruikerRol(userId);
+  if (!TOEGEWEZEN_ROLLEN.includes(rol)) return { beperkt: false, ids: [] };
+  return { beperkt: true, ids: await toegewezenGebouwIds(userId) };
+}
 
 // GET /dashboard/stats
 router.get("/dashboard/stats", async (req, res) => {
   try {
-    const [totaalGebouwen] = await db.select({ count: count() }).from(gebouwenTable);
-    const alleVoorzieningen = await db.select({ status: voorzieningenTable.status, type: voorzieningenTable.type }).from(voorzieningenTable);
-    const [openInspecties] = await db
-      .select({ count: count() })
-      .from(inspectiesTable)
-      .where(eq(inspectiesTable.status, "gepland"));
-    const [openOnderhoud] = await db
-      .select({ count: count() })
-      .from(onderhoudTable)
-      .where(eq(onderhoudTable.status, "open"));
-    const [vervallenInspecties] = await db
-      .select({ count: count() })
-      .from(inspectiesTable)
-      .where(eq(inspectiesTable.status, "afgekeurd"));
+    const userId = req.session.userId!;
+    const { beperkt, ids } = await gebouwScope(userId);
+
+    // Beperkte rol zonder toewijzingen ziet niets
+    if (beperkt && ids.length === 0) {
+      res.json({
+        totaal_gebouwen: 0,
+        totaal_voorzieningen: 0,
+        goedgekeurde_voorzieningen: 0,
+        afgekeurde_voorzieningen: 0,
+        openstaande_inspecties: 0,
+        openstaande_onderhoud: 0,
+        vervallen_inspecties: 0,
+        voorzieningen_per_type: [],
+      });
+      return;
+    }
+
+    const set = new Set(ids);
+
+    const totaalGebouwen = beperkt
+      ? ids.length
+      : Number(
+          (await db.select({ count: count() }).from(gebouwenTable))[0]?.count ?? 0,
+        );
+
+    let voorzieningen = await db
+      .select({
+        status: voorzieningenTable.status,
+        type: voorzieningenTable.type,
+        gebouwId: voorzieningenTable.gebouwId,
+      })
+      .from(voorzieningenTable);
+    let inspecties = await db
+      .select({ status: inspectiesTable.status, gebouwId: inspectiesTable.gebouwId })
+      .from(inspectiesTable);
+    let onderhoud = await db
+      .select({ status: onderhoudTable.status, gebouwId: onderhoudTable.gebouwId })
+      .from(onderhoudTable);
+
+    if (beperkt) {
+      voorzieningen = voorzieningen.filter(
+        (v) => v.gebouwId != null && set.has(v.gebouwId),
+      );
+      inspecties = inspecties.filter((i) => i.gebouwId != null && set.has(i.gebouwId));
+      onderhoud = onderhoud.filter((o) => o.gebouwId != null && set.has(o.gebouwId));
+    }
 
     const typeCount: Record<string, number> = {};
-    for (const v of alleVoorzieningen) {
+    for (const v of voorzieningen) {
       typeCount[v.type] = (typeCount[v.type] ?? 0) + 1;
     }
 
     res.json({
-      totaal_gebouwen: Number(totaalGebouwen?.count ?? 0),
-      totaal_voorzieningen: alleVoorzieningen.length,
-      goedgekeurde_voorzieningen: alleVoorzieningen.filter((v) => v.status === "goedgekeurd").length,
-      afgekeurde_voorzieningen: alleVoorzieningen.filter((v) => v.status === "afgekeurd").length,
-      openstaande_inspecties: Number(openInspecties?.count ?? 0),
-      openstaande_onderhoud: Number(openOnderhoud?.count ?? 0),
-      vervallen_inspecties: Number(vervallenInspecties?.count ?? 0),
+      totaal_gebouwen: totaalGebouwen,
+      totaal_voorzieningen: voorzieningen.length,
+      goedgekeurde_voorzieningen: voorzieningen.filter((v) => v.status === "goedgekeurd").length,
+      afgekeurde_voorzieningen: voorzieningen.filter((v) => v.status === "afgekeurd").length,
+      openstaande_inspecties: inspecties.filter((i) => i.status === "gepland").length,
+      openstaande_onderhoud: onderhoud.filter((o) => o.status === "open").length,
+      vervallen_inspecties: inspecties.filter((i) => i.status === "afgekeurd").length,
       voorzieningen_per_type: Object.entries(typeCount).map(([type, aantal]) => ({ type, aantal })),
     });
   } catch (err) {
@@ -53,15 +116,38 @@ router.get("/dashboard/stats", async (req, res) => {
 // GET /dashboard/recente-activiteit
 router.get("/dashboard/recente-activiteit", async (req, res) => {
   try {
+    const userId = req.session.userId!;
+    const { beperkt, ids } = await gebouwScope(userId);
+
     const limit = parseInt((req.query.limit as string) ?? "20");
+
+    // Beperkte rollen: filter op de namen van toegewezen gebouwen. Algemene
+    // activiteiten zonder gebouw blijven zichtbaar.
+    let toegestaneNamen: Set<string> | null = null;
+    if (beperkt) {
+      if (ids.length === 0) {
+        res.json([]);
+        return;
+      }
+      const gebouwen = await db
+        .select({ naam: gebouwenTable.naam })
+        .from(gebouwenTable)
+        .where(inArray(gebouwenTable.id, ids));
+      toegestaneNamen = new Set(gebouwen.map((g) => g.naam));
+    }
+
     const activiteiten = await db
       .select()
       .from(activiteitenTable)
       .orderBy(desc(activiteitenTable.tijdstip))
-      .limit(limit);
+      .limit(toegestaneNamen ? limit * 5 : limit);
+
+    const zichtbaar = toegestaneNamen
+      ? activiteiten.filter((a) => !a.gebouwNaam || toegestaneNamen!.has(a.gebouwNaam)).slice(0, limit)
+      : activiteiten;
 
     res.json(
-      activiteiten.map((a) => ({
+      zichtbaar.map((a) => ({
         id: a.id,
         type: a.type,
         omschrijving: a.omschrijving,
@@ -69,7 +155,7 @@ router.get("/dashboard/recente-activiteit", async (req, res) => {
         gebouw_naam: a.gebouwNaam,
         voorziening_nummer: a.voorzieningNummer,
         gebruiker_naam: a.gebruikerNaam,
-      }))
+      })),
     );
   } catch (err) {
     req.log.error(err);
@@ -80,7 +166,18 @@ router.get("/dashboard/recente-activiteit", async (req, res) => {
 // GET /dashboard/status-verdeling
 router.get("/dashboard/status-verdeling", async (req, res) => {
   try {
-    const gebouwen = await db.select().from(gebouwenTable);
+    const userId = req.session.userId!;
+    const { beperkt, ids } = await gebouwScope(userId);
+
+    if (beperkt && ids.length === 0) {
+      res.json([]);
+      return;
+    }
+
+    const gebouwen = beperkt
+      ? await db.select().from(gebouwenTable).where(inArray(gebouwenTable.id, ids))
+      : await db.select().from(gebouwenTable);
+
     const result = await Promise.all(
       gebouwen.map(async (g) => {
         const vv = await db
@@ -108,6 +205,15 @@ router.get("/dashboard/status-verdeling", async (req, res) => {
 // GET /dashboard/vervaldagen
 router.get("/dashboard/vervaldagen", async (req, res) => {
   try {
+    const userId = req.session.userId!;
+    const { beperkt, ids } = await gebouwScope(userId);
+
+    if (beperkt && ids.length === 0) {
+      res.json([]);
+      return;
+    }
+    const set = new Set(ids);
+
     const dagen = parseInt((req.query.dagen as string) ?? "30");
     const grens = new Date();
     grens.setDate(grens.getDate() + dagen);
@@ -123,6 +229,7 @@ router.get("/dashboard/vervaldagen", async (req, res) => {
     const result = [];
     for (const v of voorzieningen) {
       if (!v.volgendeInspectie) continue;
+      if (beperkt && !(v.gebouwId != null && set.has(v.gebouwId))) continue;
       const d = new Date(v.volgendeInspectie);
       if (d <= grens) {
         const gebouw = v.gebouwId

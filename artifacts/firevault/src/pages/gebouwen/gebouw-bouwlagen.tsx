@@ -180,7 +180,10 @@ export default function GebouwBouwlagen({
         ) : (
           gesorteerd.map((v) => {
             const tk = tekeningenVoor(v.id);
-            const heeftPlattegrond = Boolean(v.plattegrond_url);
+            const overigeTekeningen = tk.filter((t) => t.type !== "plattegrond");
+            const heeftPlattegrond =
+              Boolean(v.plattegrond_url) || tk.some((t) => t.type === "plattegrond");
+            const aantalTekeningen = (heeftPlattegrond ? 1 : 0) + overigeTekeningen.length;
             return (
               <div key={v.id} className="rounded-md border p-4 space-y-3">
                 <div className="flex items-start justify-between gap-3">
@@ -195,8 +198,8 @@ export default function GebouwBouwlagen({
                     </div>
                     <p className="text-sm text-muted-foreground">
                       {v.totaal_voorzieningen || 0} spots ·{" "}
-                      {(heeftPlattegrond ? 1 : 0) + tk.length}{" "}
-                      {(heeftPlattegrond ? 1 : 0) + tk.length === 1 ? "tekening" : "tekeningen"}
+                      {aantalTekeningen}{" "}
+                      {aantalTekeningen === 1 ? "tekening" : "tekeningen"}
                     </p>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">

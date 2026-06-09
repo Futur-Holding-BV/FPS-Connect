@@ -1,8 +1,9 @@
-import OpenAI from "openai";
+import type OpenAI from "openai";
 import { logger } from "../lib/logger";
+import { heeftOpenAi, maakOpenAiClient } from "../lib/openai";
 
 const GOOGLE_KEY = process.env.GOOGLE_MAPS_API_KEY;
-const OPENAI_KEY = process.env.OPENAI_API_KEY;
+const HEEFT_OPENAI = heeftOpenAi();
 
 const STATIC_SIZE = 640;
 const STATIC_SCALE = 2;
@@ -339,7 +340,7 @@ async function analyseerBeeld(
   adres: string,
   straatbeeldUrl: string | null = null,
 ): Promise<VisionVelden | null> {
-  const client = new OpenAI({ apiKey: OPENAI_KEY });
+  const client = maakOpenAiClient();
   const userTekst = straatbeeldUrl
     ? `Adres: ${adres}. Het EERSTE beeld is een satellietbeeld (bovenaanzicht), vierkant en ongeveer ${grondBreedteMeter} bij ${grondBreedteMeter} meter op de grond — gebruik dit voor de footprint-afmetingen. Het TWEEDE beeld is een Street View-foto (zijaanzicht) van hetzelfde gebouw — gebruik dit om het aantal bouwlagen te tellen aan de hand van de rijen ramen.`
     : `Adres: ${adres}. Het satellietbeeld is vierkant en beslaat ongeveer ${grondBreedteMeter} bij ${grondBreedteMeter} meter op de grond. Analyseer het gebouw in het midden.`;
@@ -417,7 +418,7 @@ interface ExtractieVelden {
 }
 
 async function extraheerUitTekst(beschrijving: string): Promise<ExtractieVelden | null> {
-  const client = new OpenAI({ apiKey: OPENAI_KEY });
+  const client = maakOpenAiClient();
   const completion = await client.chat.completions.create({
     model: "gpt-4o-mini",
     response_format: { type: "json_object" },
@@ -533,7 +534,7 @@ export async function analyseerTekening(
     betrouwbaarheid: "laag",
   });
 
-  if (!OPENAI_KEY) {
+  if (!HEEFT_OPENAI) {
     return valterug("AI niet beschikbaar; naam afgeleid van de bestandsnaam.");
   }
 
@@ -546,7 +547,7 @@ export async function analyseerTekening(
 
   let parsed: Record<string, unknown>;
   try {
-    const client = new OpenAI({ apiKey: OPENAI_KEY });
+    const client = maakOpenAiClient();
     const completion = await client.chat.completions.create({
       model: "gpt-4o-mini",
       response_format: { type: "json_object" },
@@ -613,7 +614,7 @@ export async function analyseerPlattegrond(
     betrouwbaarheid: "laag",
   });
 
-  if (!OPENAI_KEY) {
+  if (!HEEFT_OPENAI) {
     return valterug("AI niet beschikbaar; kies de bouwlaag handmatig.");
   }
 
@@ -624,7 +625,7 @@ export async function analyseerPlattegrond(
 
   let parsed: Record<string, unknown>;
   try {
-    const client = new OpenAI({ apiKey: OPENAI_KEY });
+    const client = maakOpenAiClient();
     const completion = await client.chat.completions.create({
       model: "gpt-4o",
       response_format: { type: "json_object" },
@@ -701,7 +702,7 @@ function splitsAdres(formatted: string): {
 // Fallback-volgorde: OpenAI-extractie → als dat mislukt, geocoding op de
 // ruwe invoer → als dat ook mislukt, leeg resultaat met duidelijke melding.
 export async function analyseerGebouwVrijeTekst(beschrijving: string): Promise<GebouwAnalyse> {
-  if (!OPENAI_KEY && !GOOGLE_KEY) {
+  if (!HEEFT_OPENAI && !GOOGLE_KEY) {
     return leegResultaat(
       "Zowel de OpenAI API-sleutel als de Google Maps API-sleutel ontbreken. " +
         "Activeer de sleutels in de omgevingsvariabelen of vul de velden handmatig in.",
@@ -711,7 +712,7 @@ export async function analyseerGebouwVrijeTekst(beschrijving: string): Promise<G
   // Stap 1: probeer via OpenAI gestructureerde velden te extraheren uit de vrije tekst.
   // Bij een fout (ongeldige sleutel, quota, time-out) vallen we terug op geocoding van de ruwe invoer.
   let extract: ExtractieVelden | null = null;
-  if (OPENAI_KEY) {
+  if (HEEFT_OPENAI) {
     try {
       extract = await extraheerUitTekst(beschrijving);
     } catch (err) {
@@ -790,11 +791,11 @@ export async function analyseerGebouwVrijeTekst(beschrijving: string): Promise<G
   // Stap 4: satellietbeeld (bovenaanzicht) + Street View (zijaanzicht) ophalen en via AI analyseren.
   const [beeld, straatbeeld] = await Promise.all([
     haalSatellietBeeld(geo.lat, geo.lng),
-    OPENAI_KEY ? haalStreetViewBeeld(geo.lat, geo.lng) : Promise.resolve(null),
+    HEEFT_OPENAI ? haalStreetViewBeeld(geo.lat, geo.lng) : Promise.resolve(null),
   ]);
   if (beeld) {
     result.satelliet_url = beeld.dataUrl;
-    if (OPENAI_KEY) {
+    if (HEEFT_OPENAI) {
       try {
         const velden = await analyseerBeeld(
           beeld.dataUrl,

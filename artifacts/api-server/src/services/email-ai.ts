@@ -1,9 +1,7 @@
 import { simpleParser } from "mailparser";
 import MsgReader from "@kenjiuno/msgreader";
-import OpenAI from "openai";
 import { logger } from "../lib/logger";
-
-const OPENAI_KEY = process.env.OPENAI_API_KEY;
+import { heeftOpenAi, maakOpenAiClient } from "../lib/openai";
 
 export interface GeparseerdeBijlage {
   bestandsnaam: string;
@@ -124,7 +122,7 @@ export async function extraheerEmailInzicht(
   email: GeparseerdeEmail,
 ): Promise<EmailAiResultaat> {
   const leeg: EmailAiResultaat = { omschrijving: null, naw: null, contactinfo: null, tekeningen: null, actiepunten: null };
-  if (!OPENAI_KEY) return leeg;
+  if (!heeftOpenAi()) return leeg;
 
   const bijlageNamen = email.bijlagen.map((b) => b.bestandsnaam).join(", ") || "(geen)";
   const userTekst = [
@@ -138,7 +136,7 @@ export async function extraheerEmailInzicht(
   ].join("\n");
 
   try {
-    const client = new OpenAI({ apiKey: OPENAI_KEY });
+    const client = maakOpenAiClient();
     const completion = await client.chat.completions.create({
       model: "gpt-4o-mini",
       response_format: { type: "json_object" },

@@ -114,6 +114,19 @@ coords (bv. 2001,1822) en valt buiten het zichtbare deel → gebruiker "ziet de 
 useEffect op pdfDims; klikcoords klemmen op [0,W]x[0,H]. Coördinatenopslag (scale 2) NIET wijzigen —
 web en mobile moeten matchen.
 
+## OpenAI = Replit AI-integratie-proxy, niet de eigen OPENAI_API_KEY
+De eigen `OPENAI_API_KEY` had geen quota (429 `insufficient_quota`), waardoor e-mail-AI én
+gebouw-"AI invullen" stilletjes lege/null resultaten gaven — wat als "upload werkt niet" /
+"AI werkt niet" werd gemeld terwijl de upload/parse zelf prima werkten.
+**Why:** de AI-services slikken fouten in en retourneren een leeg resultaat, dus een quota/billing-fout
+is onzichtbaar in de UI; alleen de server-log toont de 429.
+**How to apply:** bouw OpenAI-clients via de centrale helper `artifacts/api-server/src/lib/openai.ts`
+(`maakOpenAiClient()` + `heeftOpenAi()`). Die geeft voorrang aan de proxy-env-vars
+`AI_INTEGRATIONS_OPENAI_BASE_URL` + `AI_INTEGRATIONS_OPENAI_API_KEY` (gezet via
+`setupReplitAIIntegrations`), met fallback op `OPENAI_API_KEY`. Geen eigen billing nodig.
+Modellen blijven gpt-4o/gpt-4o-mini (proxy ondersteunt ze; project gebruikt ze al). Herstart de
+api-server na het provisioneren zodat de nieuwe env-vars geladen worden.
+
 ## requireRol middleware widens req.params → TS2345 on `parseInt(req.params.x)`
 Adding any middleware (e.g. `requireRol(...)`) before a route handler changes Express 5's overload
 resolution so `req.params.x` is typed `string | string[]`. A bare `parseInt(req.params.id)` then emits
