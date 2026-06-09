@@ -9,7 +9,7 @@ import {
 import {
   ShieldCheck, Building, Wrench, Users, Search, Home, Receipt,
   ShieldAlert, LifeBuoy, MessageSquarePlus, Activity, Contact, Info,
-  Clock, UserRound, Tag,
+  Clock, UserRound, BookOpen,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { GebruikerMenu } from "@/components/gebruiker-menu";
@@ -28,7 +28,6 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
   const toonKlantPortaal = isHoofdBeheerder || echteRol === "beheerder";
 
   const beheerRoutes: { href: string; label: string; icoon: React.ElementType }[] = [
-    { href: "/beheer/toepassingen", label: "Toepassingen", icoon: Tag },
     { href: "/gebruikers", label: t("nav.gebruikers"), icoon: Users },
     { href: "/beheer/login-pogingen", label: "Login-pogingen", icoon: ShieldAlert },
     { href: "/beheer/helpdesk", label: "Helpdesk", icoon: LifeBuoy },
@@ -175,6 +174,38 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 )}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+
+          {/* ── Bibliotheek ── */}
+          <SidebarGroup>
+            <SidebarGroupLabel>Bibliotheek</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={location === "/beheer/bibliotheek" || location.startsWith("/beheer/bibliotheek/")}
+                  >
+                    <Link href="/beheer/bibliotheek">
+                      <BookOpen />
+                      <span>Bibliotheek</span>
+                    </Link>
+                  </SidebarMenuButton>
+                  <SidebarMenuSub>
+                    <SidebarMenuSubItem>
+                      <SidebarMenuSubButton
+                        asChild
+                        isActive={location === "/voorzieningen/nieuw"}
+                      >
+                        <Link href="/voorzieningen/nieuw">
+                          <span>Toepassing toevoegen</span>
+                        </Link>
+                      </SidebarMenuSubButton>
+                    </SidebarMenuSubItem>
+                  </SidebarMenuSub>
+                </SidebarMenuItem>
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>

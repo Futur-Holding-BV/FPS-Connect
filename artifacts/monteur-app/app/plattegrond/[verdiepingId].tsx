@@ -36,11 +36,10 @@ import {
 } from "@/components/ui";
 import { PdfPlattegrond, type PlattegrondSpot } from "@/components/PdfPlattegrond";
 import {
-  CLASSIFICATIE_OPTIES,
   STATUS_VOLGORDE,
   WAND_PLAFOND_OPTIES,
-  WBDBO_OPTIES,
-  WRD_OPTIES,
+  WERENDHEID_OPTIES,
+  fromWerendheid,
   statusKleur,
   statusLabel,
   typeInfo,
@@ -56,9 +55,7 @@ const LEEG = {
   objectnummer: "",
   type: "",
   status: "in_uitvoering",
-  classificatie: "60",
-  wbdbo: "60",
-  wrd: "",
+  werendheid: "EI60",
   wand_of_plafond: "",
   ruimte: "",
   locatie_omschrijving: "",
@@ -159,15 +156,13 @@ export default function Plattegrond() {
           objectnummer: form.objectnummer.trim() || undefined,
           type: form.type || "overig",
           status: form.status,
-          classificatie: form.classificatie,
+          ...fromWerendheid(form.werendheid),
           gebouw_id: gId,
           verdieping_id: vId,
           locatie_x: locatie.x,
           locatie_y: locatie.y,
           ruimte: form.ruimte || undefined,
           locatie_omschrijving: form.locatie_omschrijving || undefined,
-          wbdbo: form.wbdbo || undefined,
-          wrd: form.wrd || undefined,
           wand_of_plafond: form.wand_of_plafond || undefined,
           installatie_datum: new Date().toISOString().slice(0, 10),
           maker_monteur_id: gebruiker?.id,
@@ -365,29 +360,11 @@ export default function Plattegrond() {
             </View>
 
             <View style={{ gap: 8 }}>
-              <SectieLabel>Classificatie (EI)</SectieLabel>
+              <SectieLabel>Werendheid</SectieLabel>
               <ChipRij
-                opties={CLASSIFICATIE_OPTIES.map((v) => ({ waarde: v, label: `EI ${v}` }))}
-                geselecteerd={form.classificatie}
-                onKies={(v) => setForm((f) => ({ ...f, classificatie: v }))}
-              />
-            </View>
-
-            <View style={{ gap: 8 }}>
-              <SectieLabel>WBDBO (min)</SectieLabel>
-              <ChipRij
-                opties={WBDBO_OPTIES.map((v) => ({ waarde: v, label: v }))}
-                geselecteerd={form.wbdbo}
-                onKies={(v) => setForm((f) => ({ ...f, wbdbo: v }))}
-              />
-            </View>
-
-            <View style={{ gap: 8 }}>
-              <SectieLabel>WRD (min)</SectieLabel>
-              <ChipRij
-                opties={[{ waarde: "", label: "Geen" }, ...WRD_OPTIES.map((v) => ({ waarde: v, label: v }))]}
-                geselecteerd={form.wrd}
-                onKies={(v) => setForm((f) => ({ ...f, wrd: v }))}
+                opties={WERENDHEID_OPTIES.map((v) => ({ waarde: v, label: v }))}
+                geselecteerd={form.werendheid}
+                onKies={(v) => setForm((f) => ({ ...f, werendheid: v }))}
               />
             </View>
 

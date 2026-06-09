@@ -1,16 +1,15 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import {
-  getGetVolgendSpotnummerQueryKey,
-  useCreateVoorziening,
-  useGetVolgendSpotnummer,
-  useListGebouwen,
-  useListVerdiepingen,
+  useCreateLabel,
+  useListVoorzieningTypes,
+  getListLabelsQueryKey,
 } from "@workspace/api-client-react";
+import type { VoorzieningType } from "@workspace/api-client-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -19,101 +18,73 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, CheckCircle } from "lucide-react";
-import { ApplicatiePicker } from "@/components/applicatie-picker";
-import { ToepassingMultiSelect } from "@/components/toepassing-multi-select";
-import { FabrikantSectie } from "@/components/fabrikant-sectie";
-import { useRol } from "@/context/rol-context";
+import { ArrowLeft, BookOpen, CheckCircle, Info } from "lucide-react";
+
+const WERENDHEID_OPTIES = [
+  { waarde: "WRD30", label: "WRD 30 — rookwerend 30 min" },
+  { waarde: "EW20", label: "EW 20 — brandwerend WBDBO 20 min" },
+  { waarde: "EW30", label: "EW 30 — brandwerend WBDBO 30 min" },
+  { waarde: "EW60", label: "EW 60 — brandwerend WBDBO 60 min" },
+  { waarde: "EI30", label: "EI 30 — brandwerend 30 min" },
+  { waarde: "EI60", label: "EI 60 — brandwerend 60 min" },
+];
+
+const GEEN_TYPE = "__geen__";
+const GEEN_WERENDHEID = "__geen__";
 
 export default function VoorzieningNieuw() {
   const [, navigate] = useLocation();
+  const queryClient = useQueryClient();
   const [geslaagd, setGeslaagd] = useState(false);
-  const [gebouwId, setGebouwId] = useState("");
-  const [labelIds, setLabelIds] = useState<number[]>([]);
-  const { echteRol } = useRol();
-  const magLabelsAanmaken =
-    echteRol === "beheerder" || echteRol === "hoofdbeheerder";
-
   const [form, setForm] = useState({
-    type: "",
-    classificatie: "60",
-    ruimte: "",
-    locatie_omschrijving: "",
-    materialen: "",
-    opmerkingen: "",
-    verdieping_id: "",
-    installatie_datum: "",
+    type_code: "",
+    naam: "",
+    werendheid: GEEN_WERENDHEID,
+    fabrikant: "",
   });
 
-  const { data: gebouwen } = useListGebouwen();
-  const { data: verdiepingen } = useListVerdiepingen(Number(gebouwId), {
-    query: { enabled: !!gebouwId, queryKey: getGetVolgendSpotnummerQueryKey(Number(gebouwId)) },
-  });
-  const { data: volgendSpot } = useGetVolgendSpotnummer(Number(gebouwId), {
-    query: {
-      enabled: !!gebouwId,
-      queryKey: getGetVolgendSpotnummerQueryKey(Number(gebouwId)),
-    },
-  });
-  const maakVoorziening = useCreateVoorziening();
+  const { data: typen = [] } = useListVoorzieningTypes();
+  const maakLabel = useCreateLabel();
 
-  const set =
-    (k: keyof typeof form) =>
-    (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
+  function set(k: keyof typeof form) {
+    return (e: React.ChangeEvent<HTMLInputElement>) =>
       setForm((f) => ({ ...f, [k]: e.target.value }));
+  }
 
   async function verstuur(e: React.FormEvent) {
     e.preventDefault();
-    if (!form.type || !gebouwId) return;
-    await maakVoorziening.mutateAsync({
+    if (!form.type_code || !form.naam.trim()) return;
+    await maakLabel.mutateAsync({
       data: {
-        objectnummer: volgendSpot?.spotnummer,
-        type: form.type,
-        status: "concept",
-        classificatie: form.classificatie,
-        ruimte: form.ruimte || undefined,
-        locatie_omschrijving: form.locatie_omschrijving || undefined,
-        materialen: form.materialen || undefined,
-        opmerkingen: form.opmerkingen || undefined,
-        gebouw_id: Number(gebouwId),
-        verdieping_id: form.verdieping_id ? Number(form.verdieping_id) : undefined,
-        installatie_datum: form.installatie_datum || undefined,
-        label_ids: labelIds.length > 0 ? labelIds : undefined,
+        type_code: form.type_code,
+        naam: form.naam.trim(),
+        testnorm: form.werendheid !== GEEN_WERENDHEID ? form.werendheid : undefined,
+        fabrikant: form.fabrikant.trim() || undefined,
       },
     });
+    await queryClient.invalidateQueries({ queryKey: getListLabelsQueryKey() });
     setGeslaagd(true);
   }
 
   function reset() {
     setGeslaagd(false);
-    setForm({
-      type: "",
-      classificatie: "60",
-      ruimte: "",
-      locatie_omschrijving: "",
-      materialen: "",
-      opmerkingen: "",
-      verdieping_id: "",
-      installatie_datum: "",
-    });
-    setGebouwId("");
-    setLabelIds([]);
+    setForm({ type_code: "", naam: "", werendheid: GEEN_WERENDHEID, fabrikant: "" });
   }
 
   if (geslaagd) {
     return (
       <div className="max-w-xl mx-auto py-16 text-center space-y-4">
         <CheckCircle className="h-14 w-14 text-green-600 mx-auto" />
-        <h2 className="text-2xl font-bold">Spot geregistreerd</h2>
+        <h2 className="text-2xl font-bold">Toepassing toegevoegd</h2>
         <p className="text-muted-foreground">
-          {volgendSpot?.spotnummer ?? "De spot"} is succesvol aangemaakt in het
-          systeem.
+          De toepassing is opgeslagen in de bibliotheek en is voortaan beschikbaar als keuze
+          bij het aanmaken van een concrete spot in een gebouw.
         </p>
         <div className="flex justify-center gap-3 pt-2">
           <Button variant="outline" asChild>
-            <Link href="/voorzieningen">Terug naar overzicht</Link>
+            <Link href="/beheer/bibliotheek">Naar bibliotheek</Link>
           </Button>
-          <Button onClick={reset}>Nog een registreren</Button>
+          <Button onClick={reset}>Nog een toepassing toevoegen</Button>
         </div>
       </div>
     );
@@ -122,199 +93,124 @@ export default function VoorzieningNieuw() {
   return (
     <div className="max-w-2xl mx-auto space-y-6">
       <div className="flex items-center gap-3">
-        <Link href="/voorzieningen">
+        <Link href="/beheer/bibliotheek">
           <Button variant="outline" size="icon">
             <ArrowLeft className="h-4 w-4" />
           </Button>
         </Link>
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Nieuwe Spot</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Nieuwe toepassing</h1>
           <p className="text-muted-foreground text-sm">
-            Registreer een nieuw brandpreventief object.
+            Voeg een productsoort of product toe aan de centrale bibliotheek.
           </p>
         </div>
+      </div>
+
+      <div className="flex items-start gap-3 p-4 rounded-lg border bg-muted/30 text-sm text-muted-foreground">
+        <Info className="h-4 w-4 mt-0.5 shrink-0 text-blue-500" />
+        <span>
+          Toepassingen in de bibliotheek zijn <strong>niet gebouwgebonden</strong>. Bij het
+          aanmaken of bewerken van een concrete spot in een gebouw kiest de monteur de
+          applicatie (type) en vervolgens de toepassing (product) uit deze bibliotheek.
+          Concrete spots worden aangemaakt via de plattegrond van een gebouw.
+        </span>
       </div>
 
       <form onSubmit={verstuur} className="space-y-5">
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Identificatie</CardTitle>
-          </CardHeader>
-          <CardContent className="grid grid-cols-2 gap-4">
-            <div className="col-span-2">
-              <Label htmlFor="nr">Spotnummer</Label>
-              <Input
-                id="nr"
-                value={volgendSpot?.spotnummer ?? ""}
-                readOnly
-                className="bg-muted"
-                placeholder={
-                  gebouwId
-                    ? "Wordt automatisch toegekend"
-                    : "Kies eerst een gebouw"
-                }
-              />
-              <p className="text-xs text-muted-foreground mt-1">
-                Automatisch toegekend op basis van het gebouw.
-              </p>
-            </div>
-            <div className="col-span-2">
-              <Label>Applicatie (type) *</Label>
-              <ApplicatiePicker
-                value={form.type}
-                onValueChange={(v) => {
-                  setForm((f) => ({ ...f, type: v }));
-                  setLabelIds([]);
-                }}
-              />
-            </div>
-            <div className="col-span-2">
-              <Label>Classificatie (EI)</Label>
-              <Select
-                value={form.classificatie}
-                onValueChange={(v) => setForm((f) => ({ ...f, classificatie: v }))}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {["30", "60", "90", "120"].map((v) => (
-                    <SelectItem key={v} value={v}>
-                      EI {v}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </CardContent>
-        </Card>
-
-        {form.type && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Toepassing</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-xs text-muted-foreground mb-3">
-                Selecteer het gebruikte product of systeem dat bij deze spot
-                hoort. Meerdere toepassingen zijn mogelijk.
-              </p>
-              <ToepassingMultiSelect
-                typeCode={form.type}
-                selectedIds={labelIds}
-                onSelectionChange={setLabelIds}
-                magLabelsAanmaken={magLabelsAanmaken}
-              />
-            </CardContent>
-          </Card>
-        )}
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Locatie</CardTitle>
-          </CardHeader>
-          <CardContent className="grid grid-cols-2 gap-4">
-            <div>
-              <Label>Gebouw *</Label>
-              <Select
-                value={gebouwId}
-                onValueChange={(v) => {
-                  setGebouwId(v);
-                  setForm((f) => ({ ...f, verdieping_id: "" }));
-                }}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Kies gebouw" />
-                </SelectTrigger>
-                <SelectContent>
-                  {gebouwen?.map((g: any) => (
-                    <SelectItem key={g.id} value={String(g.id)}>
-                      {g.naam}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label>Verdieping</Label>
-              <Select
-                value={form.verdieping_id}
-                onValueChange={(v) => setForm((f) => ({ ...f, verdieping_id: v }))}
-                disabled={!gebouwId}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Kies verdieping" />
-                </SelectTrigger>
-                <SelectContent>
-                  {verdiepingen?.map((v: any) => (
-                    <SelectItem key={v.id} value={String(v.id)}>
-                      {v.naam}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label htmlFor="ruimte">Ruimte</Label>
-              <Input
-                id="ruimte"
-                value={form.ruimte}
-                onChange={set("ruimte")}
-                placeholder="Bijv. Trappenhal A"
-              />
-            </div>
-            <div>
-              <Label htmlFor="locatie">Locatieomschrijving</Label>
-              <Input
-                id="locatie"
-                value={form.locatie_omschrijving}
-                onChange={set("locatie_omschrijving")}
-                placeholder="Bijv. Noord-oost muur"
-              />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Fabrikant- en systeeminformatie</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <FabrikantSectie />
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Technische details</CardTitle>
+            <CardTitle className="text-base flex items-center gap-2">
+              <BookOpen className="h-4 w-4 text-muted-foreground" />
+              Applicatie-type
+            </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
-              <Label htmlFor="mat">Toegepaste materialen</Label>
-              <Input
-                id="mat"
-                value={form.materialen}
-                onChange={set("materialen")}
-                placeholder="Bijv. Hilti CP 611A brandmortel"
-              />
+              <Label>Type *</Label>
+              <Select
+                value={form.type_code || GEEN_TYPE}
+                onValueChange={(v) =>
+                  setForm((f) => ({ ...f, type_code: v === GEEN_TYPE ? "" : v }))
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Kies een applicatie-type..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={GEEN_TYPE} disabled>
+                    Kies een applicatie-type...
+                  </SelectItem>
+                  {(typen as VoorzieningType[])
+                    .filter((t) => t.actief)
+                    .map((t) => (
+                      <SelectItem key={t.code} value={t.code}>
+                        <span className="font-mono text-xs mr-2 text-muted-foreground">
+                          {t.code}
+                        </span>
+                        {t.naam}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground mt-1">
+                Kies het applicatie-type waaronder deze toepassing valt (bijv. 1.6 kabel).
+              </p>
             </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Product / productsoort</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
             <div>
-              <Label htmlFor="inst">Installatiedatum</Label>
+              <Label htmlFor="naam">Naam of omschrijving *</Label>
               <Input
-                id="inst"
-                type="date"
-                value={form.installatie_datum}
-                onChange={set("installatie_datum")}
+                id="naam"
+                value={form.naam}
+                onChange={set("naam")}
+                placeholder="Bijv. Schakelmanchet Multicollar Slim"
+                autoComplete="off"
               />
+              <p className="text-xs text-muted-foreground mt-1">
+                Gebruik de productnaam zoals vermeld op de fabrikantwebsite of het productblad.
+              </p>
             </div>
+
             <div>
-              <Label htmlFor="opm">Opmerkingen</Label>
-              <Textarea
-                id="opm"
-                value={form.opmerkingen}
-                onChange={set("opmerkingen")}
-                placeholder="Optionele opmerkingen..."
-                rows={3}
+              <Label>Werendheid</Label>
+              <Select
+                value={form.werendheid}
+                onValueChange={(v) => setForm((f) => ({ ...f, werendheid: v }))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Kies werendheid (optioneel)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={GEEN_WERENDHEID}>Niet opgegeven</SelectItem>
+                  {WERENDHEID_OPTIES.map((w) => (
+                    <SelectItem key={w.waarde} value={w.waarde}>
+                      <span className="font-mono text-xs mr-2">{w.waarde}</span>
+                      {w.label.split(" — ")[1]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground mt-1">
+                Kies "Brandwerendheid WBDBO" voor EW-waarden, "Rookwerendheid" voor WRD,
+                of "Brandwerendheid" voor EI-waarden.
+              </p>
+            </div>
+
+            <div>
+              <Label htmlFor="fabrikant">Fabrikant</Label>
+              <Input
+                id="fabrikant"
+                value={form.fabrikant}
+                onChange={set("fabrikant")}
+                placeholder="Bijv. Hilti (optioneel)"
+                autoComplete="off"
               />
             </div>
           </CardContent>
@@ -322,13 +218,13 @@ export default function VoorzieningNieuw() {
 
         <div className="flex gap-3 justify-end">
           <Button type="button" variant="outline" asChild>
-            <Link href="/voorzieningen">Annuleren</Link>
+            <Link href="/beheer/bibliotheek">Annuleren</Link>
           </Button>
           <Button
             type="submit"
-            disabled={maakVoorziening.isPending || !gebouwId || !form.type}
+            disabled={maakLabel.isPending || !form.type_code || !form.naam.trim()}
           >
-            {maakVoorziening.isPending ? "Opslaan..." : "Spot Registreren"}
+            {maakLabel.isPending ? "Opslaan..." : "Toepassing toevoegen aan bibliotheek"}
           </Button>
         </div>
       </form>

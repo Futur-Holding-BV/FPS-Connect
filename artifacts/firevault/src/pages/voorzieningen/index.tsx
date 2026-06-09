@@ -24,8 +24,8 @@ export default function Voorzieningen() {
             <Input type="search" placeholder={t("voorzieningen.zoek")} className="pl-8" />
           </div>
           <Link href="/voorzieningen/nieuw">
-            <Button>
-              <Plus className="h-4 w-4 mr-2" /> {t("common.nieuw")}
+            <Button variant="outline">
+              <Plus className="h-4 w-4 mr-2" />Toepassing toevoegen
             </Button>
           </Link>
         </div>

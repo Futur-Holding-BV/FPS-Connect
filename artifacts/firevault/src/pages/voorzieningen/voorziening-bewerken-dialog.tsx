@@ -32,14 +32,38 @@ import { FabrikantSectie } from "@/components/fabrikant-sectie";
 import { useRol } from "@/context/rol-context";
 
 const GEEN_VERDIEPING = "__geen__";
+const GEEN_WERENDHEID = "__geen__";
+
+const WERENDHEID_OPTIES = [
+  { waarde: "WRD30", label: "WRD 30 — rookwerend 30 min" },
+  { waarde: "EW20", label: "EW 20 — brandwerend WBDBO 20 min" },
+  { waarde: "EW30", label: "EW 30 — brandwerend WBDBO 30 min" },
+  { waarde: "EW60", label: "EW 60 — brandwerend WBDBO 60 min" },
+  { waarde: "EI30", label: "EI 30 — brandwerend 30 min" },
+  { waarde: "EI60", label: "EI 60 — brandwerend 60 min" },
+];
+
+function toWerendheid(classificatie: string, wbdbo?: string | null, wrd?: string | null): string {
+  if (wrd) return `WRD${wrd}`;
+  if (wbdbo) return `EW${wbdbo}`;
+  if (classificatie) return `EI${classificatie}`;
+  return GEEN_WERENDHEID;
+}
+
+function fromWerendheid(w: string): { classificatie: string; wbdbo?: string; wrd?: string } {
+  if (w.startsWith("WRD")) return { classificatie: "60", wrd: w.slice(3) };
+  if (w.startsWith("EW")) return { classificatie: "60", wbdbo: w.slice(2) };
+  if (w.startsWith("EI")) return { classificatie: w.slice(2) };
+  return { classificatie: "60" };
+}
 
 interface Velden {
   type: string;
-  classificatie: string;
+  werendheid: string;
   verdieping_id: string;
   ruimte: string;
   locatie_omschrijving: string;
-  materialen: string;
+  productsoorten: string;
   installatie_datum: string;
   opmerkingen: string;
 }
@@ -51,13 +75,17 @@ function tekst(v: string | number | null | undefined): string {
 function uitVoorziening(v: VoorzieningDetail): Velden {
   return {
     type: tekst(v.type) || "",
-    classificatie: tekst(v.classificatie) || "60",
+    werendheid: toWerendheid(
+      tekst(v.classificatie),
+      (v as any).wbdbo,
+      (v as any).wrd,
+    ),
     verdieping_id: v.verdieping_id != null ? String(v.verdieping_id) : "",
     ruimte: tekst(v.ruimte),
     locatie_omschrijving: tekst(v.locatie_omschrijving),
-    materialen: tekst(v.materialen),
-    installatie_datum: tekst(v.installatie_datum),
-    opmerkingen: tekst(v.opmerkingen),
+    productsoorten: tekst((v as any).materialen),
+    installatie_datum: tekst((v as any).installatie_datum),
+    opmerkingen: tekst((v as any).opmerkingen),
   };
 }
 
@@ -82,6 +110,8 @@ export function VoorzieningBewerkenDialog({
   const [labelIds, setLabelIds] = useState<number[]>([]);
   const [foutmelding, setFoutmelding] = useState<string | null>(null);
 
+  const vandaag = new Date().toISOString().slice(0, 10);
+
   const { data: verdiepingen } = useListVerdiepingen(voorziening.gebouw_id, {
     query: {
       enabled: open && !!voorziening.gebouw_id,
@@ -91,7 +121,9 @@ export function VoorzieningBewerkenDialog({
 
   useEffect(() => {
     if (open) {
-      setVelden(uitVoorziening(voorziening));
+      const init = uitVoorziening(voorziening);
+      if (!init.installatie_datum) init.installatie_datum = vandaag;
+      setVelden(init);
       const bestaandLabels = (voorziening as any).labels;
       setLabelIds(
         Array.isArray(bestaandLabels)
@@ -110,17 +142,20 @@ export function VoorzieningBewerkenDialog({
   async function verstuur() {
     setFoutmelding(null);
     try {
+      const werendheidVelden = fromWerendheid(velden.werendheid);
       await wijzigVoorziening.mutateAsync({
         id: voorziening.id,
         data: {
           type: velden.type || undefined,
-          classificatie: velden.classificatie,
+          classificatie: werendheidVelden.classificatie,
+          wbdbo: werendheidVelden.wbdbo,
+          wrd: werendheidVelden.wrd,
           verdieping_id: velden.verdieping_id
             ? Number(velden.verdieping_id)
             : undefined,
           ruimte: velden.ruimte.trim() || undefined,
           locatie_omschrijving: velden.locatie_omschrijving.trim() || undefined,
-          materialen: velden.materialen.trim() || undefined,
+          materialen: velden.productsoorten.trim() || undefined,
           installatie_datum: velden.installatie_datum || undefined,
           opmerkingen: velden.opmerkingen.trim() || undefined,
           label_ids: labelIds,
@@ -154,23 +189,28 @@ export function VoorzieningBewerkenDialog({
                   setLabelIds([]);
                 }}
               />
+              <p className="text-xs text-muted-foreground mt-1">
+                Kies de applicatie uit de centrale bibliotheek.
+              </p>
             </div>
 
             <div className="col-span-2">
-              <Label>Classificatie (EI)</Label>
+              <Label>Werendheid</Label>
               <Select
-                value={velden.classificatie}
+                value={velden.werendheid || GEEN_WERENDHEID}
                 onValueChange={(v) =>
-                  setVelden((f) => ({ ...f, classificatie: v }))
+                  setVelden((f) => ({ ...f, werendheid: v }))
                 }
               >
                 <SelectTrigger>
-                  <SelectValue />
+                  <SelectValue placeholder="Kies werendheid..." />
                 </SelectTrigger>
                 <SelectContent>
-                  {["30", "60", "90", "120"].map((v) => (
-                    <SelectItem key={v} value={v}>
-                      EI {v}
+                  <SelectItem value={GEEN_WERENDHEID}>Niet opgegeven</SelectItem>
+                  {WERENDHEID_OPTIES.map((w) => (
+                    <SelectItem key={w.waarde} value={w.waarde}>
+                      <span className="font-mono text-xs mr-2">{w.waarde}</span>
+                      {w.label.split(" — ")[1]}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -223,11 +263,11 @@ export function VoorzieningBewerkenDialog({
             </div>
 
             <div className="col-span-2">
-              <Label htmlFor="bw-mat">Toegepaste materialen</Label>
+              <Label htmlFor="bw-prod">Productsoorten</Label>
               <Input
-                id="bw-mat"
-                value={velden.materialen}
-                onChange={set("materialen")}
+                id="bw-prod"
+                value={velden.productsoorten}
+                onChange={set("productsoorten")}
                 placeholder="Bijv. Hilti CP 611A brandmortel"
               />
             </div>
@@ -240,6 +280,9 @@ export function VoorzieningBewerkenDialog({
                 value={velden.installatie_datum}
                 onChange={set("installatie_datum")}
               />
+              <p className="text-xs text-muted-foreground mt-1">
+                Standaard de datum van vandaag.
+              </p>
             </div>
 
             <div className="col-span-2">

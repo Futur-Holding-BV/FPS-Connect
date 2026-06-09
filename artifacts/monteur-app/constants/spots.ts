@@ -60,6 +60,27 @@ export const STATUSLABEL: Record<string, string> = {
 
 export const STATUS_VOLGORDE = ["in_uitvoering", "goedgekeurd", "afgekeurd", "in_onderhoud", "concept"];
 
+// Werendheid — enkelvoudig keuzemenu dat classificatie/WBDBO/WRD samenvoegt
+export const WERENDHEID_OPTIES = ["WRD30", "EW20", "EW30", "EW60", "EI30", "EI60"];
+
+export function werendheidLabel(w: string): string {
+  return w;
+}
+
+export function fromWerendheid(w: string): { classificatie: string; wbdbo?: string; wrd?: string } {
+  if (w.startsWith("WRD")) return { classificatie: "60", wrd: w.slice(3) };
+  if (w.startsWith("EW")) return { classificatie: "60", wbdbo: w.slice(2) };
+  if (w.startsWith("EI")) return { classificatie: w.slice(2) };
+  return { classificatie: "60" };
+}
+
+export function toWerendheid(classificatie: string, wbdbo?: string | null, wrd?: string | null): string {
+  if (wrd) return `WRD${wrd}`;
+  if (wbdbo) return `EW${wbdbo}`;
+  return `EI${classificatie || "60"}`;
+}
+
+// Behouden voor backward compatibiliteit
 export const CLASSIFICATIE_OPTIES = ["30", "60", "90", "120"];
 export const WBDBO_OPTIES = ["20", "30", "60"];
 export const WRD_OPTIES = ["30"];
