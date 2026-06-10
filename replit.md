@@ -57,51 +57,27 @@ FPS Brandpreventie biedt:
 - **Gebruikersbeheer**: rollen beheerder, monteur, controleur en klant
 - **Abonnementen**: 3 pakketten (Basis €149, Beheer €349, Volledig €699/maand)
 
-## Ontwikkelstop & roadmap (Versie 1.0)
+## Ontwikkelstop & roadmap
 
-Doel Versie 1.0: "Administratief gereed voor uitvoering" — een project moet volledig binnen de app voorbereid kunnen worden, zonder Excel, losse e-mails of externe documenten.
+V1.0 ("Administratief gereed voor uitvoering" — een project volledig binnen de app voorbereiden, zonder Excel, losse e-mails of externe documenten) is afgerond. De huidige lopende fase is V1.1 (Rollen & bevoegdheden).
 
-**Ontwikkelstop (harde projectregel).** Tot Versie 1.0 formeel akkoord is: géén nieuwe modules of grote functionaliteiten starten. Geparkeerd blijven en NIET uitbouwen: mobiele monteur-app, CRM-module, onderhoudsmodule, klantportaal, abonnementen, afspraakplanner, bibliotheek/versiebeheer, documentbewaking, urenregistratie, verlofmodule, gereedschapbeheer. Bestaande scaffolds (o.a. `artifacts/firevault/src/pages/crm/`) niet verder uitbouwen.
+**Ontwikkelstop (harde projectregel).** Blijft als principe gelden: per fase pas bouwen ná formeel akkoord op die fase; start geen latere fasen vooruit. Geparkeerd tot hun fase formeel akkoord is en NIET vooruit uitbouwen: bibliotheek/versiebeheer & documentbewaking (V1.2), spots & uitvoering (V1.3), opleverrapportage (V1.4), rapportenmodule (V1.5), mobiele monteur-app (V2.0), personeel/medewerkerportaal incl. verlof/uren/gereedschap (V3.0), en de CRM-module. Bestaande scaffolds (o.a. `artifacts/firevault/src/pages/crm/`) niet verder uitbouwen.
 
-**Roadmap (volgorde, na formeel akkoord per fase):**
-- **V1.0** — Administratief gereed voor uitvoering (huidige focus)
-- **V1.1** — Bibliotheekherstructurering & Documenten (naar voren gehaald: eerstvolgende fase, vóór Spots & Uitvoering en vóór de mobiele monteur-app)
-- **V1.2** — Spots & Uitvoering
-- **V1.3** — Opleverrapportage
-- **V2.0** — Mobiele monteur-app (monteurflow: werk, route, plattegronden, spots, foto's, gereedmelden)
-- **V2.1** — Medewerkerportaal Desktop (HRM-module, mogelijke vervanger Apployed)
-- **V2.2** — Medewerkermodule mobiel (optionele module naast monteurmodule)
+**Roadmap (volgorde, per fase formeel akkoord vóór bouw):**
+- **V1.0** — Administratief gereed voor uitvoering — Afgerond
+- **V1.1** — Rollen & bevoegdheden — Lopend
+- **V1.2** — Bibliotheek & documentstructuur (applicaties, toepassingen, documenten, ETA's, koppelingen, versiebeheer)
+- **V1.3** — Spots & uitvoering (spotflow, plattegronden, toewijzingen, voorbereide spots, clustering)
+- **V1.4** — Opleverrapportage (voorblad, rapportopmaak, e-mailselectie, bijlagenpakket, definitief maken)
+- **V1.5** — Rapportenmodule (definitieve rapporten per gebouw, centrale rapportenbibliotheek, versiebeheer rapporten, bevriezing documenten, zoek- en filterfuncties, koppeling naar CRM/onderhoud/klantportaal)
+- **V2.0** — Mobiele monteur-app (mijn werk, gebouwen, plattegronden, spots, foto's, offline synchronisatie, routeplanning)
+- **V3.0** — Personeel / Medewerkerportaal (verlof, uren, gereedschap, opleidingen, contracten, HRM)
 
-Volgorde-wijziging (vastgelegd): de bibliotheekherstructurering is op verzoek naar voren gehaald naar V1.1. De opleverrapportage (V1.3) leunt op een betrouwbare, gestructureerde bibliotheek (toepassingen + gekoppelde ETA's/DoP's/classificatierapporten), dus de bibliotheek wordt eerst op orde gebracht. De Ontwikkelstop blijft gelden: bouwen pas ná formeel akkoord op V1.0.
+Volgorde-wijziging (vastgelegd, vervangt de eerdere ordening): Rollen & bevoegdheden is nu V1.1 (lopend). De bibliotheekherstructurering verschuift naar V1.2, gevolgd door Spots & uitvoering (V1.3) en Opleverrapportage (V1.4). Nieuw is V1.5 Rapportenmodule: een centrale, juridisch correcte rapportenbibliotheek met definitieve rapporten per gebouw, versiebeheer en documentbevriezing. Dit wordt bewust als kernonderdeel behandeld (geen "extra wens") en krijgt voorrang boven een bredere CRM. De eerdere V2.1 (Medewerkerportaal Desktop) en V2.2 (Medewerkermodule mobiel) zijn samengevoegd tot V3.0 (Personeel / Medewerkerportaal). De Ontwikkelstop blijft als principe gelden: per fase pas bouwen ná formeel akkoord.
 
-### V2.1 — Medewerkerportaal Desktop (vastgelegd, NIET bouwen voor V2.0 afgerond)
+### V1.2 — Bibliotheek & documentstructuur (vastgelegde architectuur, ~90-95% definitief)
 
-NIET bouwen voor V2.0 (mobiele monteurflow) formeel akkoord is. Mogelijke vervanger van Apployed. De bevoegdheden-matrix in `lib/permissies` wordt uitgebreid met module-ID's `personeel` en `verlof` zodat toegang per gebruiker instelbaar blijft.
-
-Doelgroepen: hoofdbeheerder, beheerder-financien, HRM-adviseur.
-
-Functies (desktop/webapp):
-- Medewerkersprofielen (persoonsgegevens, noodcontact, BSN/contractgegevens)
-- Contractbeheer (type, uren, looptijd, verlengingen)
-- Verlofsaldo en verlofopbouw (automatisch of handmatig)
-- Verlofaanvragen — aanvragen, goedkeuren/afwijzen, kalenderoverzicht
-- Ziekte en verzuim bijhouden
-- Urenoverzichten per medewerker of team
-- Documenten (arbeidsovereenkomsten, loonstroken, certificaten)
-- Opleidingen en cursussen (bijhouden voortgang en certificaten)
-- Gereedschap en materieel beheer per medewerker
-- Rapportages (verlofsaldo, verzuimpercentage, urenbezetting)
-
-### V2.2 — Medewerkermodule mobiel (optionele module in FPS Monteur-app, NIET bouwen voor V2.1)
-
-De FPS Monteur-app wordt modulair: modules per gebruiker aan- of uitzetten via bevoegdheden-matrix.
-
-- **Monteurmodule** (bestaand doel V2.0): werk, route, plattegronden, spots, foto's, gereedmelden.
-- **Medewerkermodule** (V2.2): eigen profiel, verlof aanvragen, verlofsaldo bekijken, uren invullen, weekplanning inzien, eigen gereedschap bekijken, instructies/cursussen afronden.
-
-### V1.1 — Bibliotheekherstructurering & Documenten (vastgelegde architectuur, ~90-95% definitief)
-
-NIET bouwen tijdens V1.0. Pas bouwen na formeel akkoord op V1.0; dit is dan de eerstvolgende fase (vóór Spots & Uitvoering en vóór de mobiele monteur-app). Onderstaande architectuur is vastgelegd om verschuiven te voorkomen.
+NIET bouwen voordat de voorgaande fasen formeel akkoord zijn. Volgt op V1.1 (Rollen & bevoegdheden) en gaat vóór V1.3 (Spots & uitvoering). Onderstaande architectuur is vastgelegd om verschuiven te voorkomen.
 
 Doel: de bibliotheek wordt de centrale kennisbank voor alle brandveiligheidsapplicaties, toepassingen en onderliggende documentatie.
 
@@ -116,7 +92,7 @@ Doel: de bibliotheek wordt de centrale kennisbank voor alle brandveiligheidsappl
 - Centrale documentbibliotheek met documenttypes ETA's, classificatierapporten, productcertificaten, DoP's, verwerkingsvoorschriften (nu alleen `testrapporten`).
 - Veel-op-veel koppeling Document ↔ Applicatie (één ETA aan meerdere applicaties).
 - Versiebeheer/revisies: documenten nooit overschrijven; oude revisies bewaren; statusveld per document (actueel, controle nodig, vervangen, mogelijk verouderd, ingetrokken).
-- Historische bevriezing: definitieve opleverrapporten gekoppeld aan de documentversies die op dat moment geldig waren; nieuwe versies mogen definitieve rapporten nooit wijzigen.
+- Historische bevriezing voorbereiden: in V1.2 onveranderlijke documentrevisies; de daadwerkelijke koppeling definitief-rapport ↔ documentversie landt in V1.5 (Rapportenmodule), waar definitieve rapporten worden gepersisteerd.
 - AI-documentanalyse voor bibliotheekdocumenten: fabrikant, product, documenttype, EN-norm, revisie, datum herkennen + documentnaam voorstellen.
 - Documentcontrole (later): periodieke controle op leverancierswebsites, nieuwe versies als voorstel tonen.
 
@@ -131,9 +107,48 @@ Koppelingen: Document ↔ Applicatie is een veel-op-veel relatie (één ETA kan 
 
 Versiebeheer: documenten nooit overschrijven. Een nieuwe versie wordt als nieuwe revisie opgeslagen; oude revisies blijven bewaard. Status per document: actueel, controle nodig, vervangen, mogelijk verouderd, ingetrokken.
 
-Historische bevriezing: definitieve opleverrapporten blijven gekoppeld aan de documentversies die op dat moment geldig waren. Nieuwe documentversies mogen nieuwe rapporten en conceptrapporten beïnvloeden, maar NOOIT reeds definitieve rapporten wijzigen.
+Historische bevriezing: bereid in V1.2 onveranderlijke documentrevisies voor (documenten nooit overschrijven). De bevriezing zelf — definitieve opleverrapporten blijven gekoppeld aan de documentversies die op dat moment geldig waren, en nieuwe versies wijzigen reeds definitieve rapporten nooit — wordt voltooid in V1.5 (Rapportenmodule), zodra definitieve rapporten worden gepersisteerd.
 
 Documentcontrole (later): periodieke controle op leverancierswebsites, nieuwe versies als voorstel tonen; de beheerder beslist.
+
+### V1.4 — Opleverrapportage (vastgelegd)
+
+Bouwt voort op de bibliotheek (V1.2). Onderdelen: voorblad, rapportopmaak, e-mailselectie, bijlagenpakket en definitief maken van het rapport. De opleverrapportage wordt nu live gegenereerd in `print.tsx`; deze fase brengt de opmaak en het samenstellen op orde. Het gepersisteerd en onveranderlijk vastleggen van definitieve rapporten gebeurt in V1.5.
+
+### V1.5 — Rapportenmodule (nieuwe fase, vastgelegd)
+
+Doel: een centrale rapportenbibliotheek met definitieve, juridisch correcte opleverrapporten per gebouw. Bewust als kernonderdeel van het product behandeld (geen "extra wens") en met voorrang boven een bredere CRM-module: voor FPS is een juridisch correct dossier met definitieve rapporten waardevoller dan uitgebreide CRM-functionaliteit.
+
+Functies:
+- Definitieve rapporten per gebouw (gepersisteerd, niet meer live-gegenereerd zoals nu in `print.tsx`)
+- Centrale rapportenbibliotheek met zoek- en filterfuncties
+- Versiebeheer van rapporten
+- Bevriezing documenten: een definitief rapport blijft gekoppeld aan de documentversies die op het moment van vaststellen geldig waren; latere documentversies wijzigen definitieve rapporten nooit
+- Koppelingen naar CRM, onderhoud en klantportaal
+
+Afhankelijkheid: bevriezing vereist een gepersisteerde 'definitief opleverrapport'-entiteit. Nu genereert `print.tsx` het opleverrapport live uit actuele data; er is geen rapport-tabel. De volledige bevriezing landt daarom in deze fase (V1.5), bovenop de onveranderlijke documentrevisies uit V1.2.
+
+### V3.0 — Personeel / Medewerkerportaal (vastgelegd, NIET bouwen voor V2.0 afgerond)
+
+Consolideert de eerdere V2.1 (desktop) en V2.2 (mobiel). NIET bouwen voordat V2.0 (mobiele monteurflow) formeel akkoord is. Mogelijke vervanger van Apployed. De bevoegdheden-matrix in `lib/permissies` wordt uitgebreid met module-ID's `personeel` en `verlof` zodat toegang per gebruiker instelbaar blijft.
+
+Doelgroepen: hoofdbeheerder, beheerder-financien, HRM-adviseur.
+
+Desktop/webapp:
+- Medewerkersprofielen (persoonsgegevens, noodcontact, BSN/contractgegevens)
+- Contractbeheer (type, uren, looptijd, verlengingen)
+- Verlofsaldo en verlofopbouw (automatisch of handmatig)
+- Verlofaanvragen — aanvragen, goedkeuren/afwijzen, kalenderoverzicht
+- Ziekte en verzuim bijhouden
+- Urenoverzichten per medewerker of team
+- Documenten (arbeidsovereenkomsten, loonstroken, certificaten)
+- Opleidingen en cursussen (bijhouden voortgang en certificaten)
+- Gereedschap en materieel beheer per medewerker
+- Rapportages (verlofsaldo, verzuimpercentage, urenbezetting)
+
+Mobiel (optionele module in FPS Monteur-app): de app wordt modulair, modules per gebruiker aan- of uitzetten via de bevoegdheden-matrix.
+- **Monteurmodule** (V2.0): werk, route, plattegronden, spots, foto's, gereedmelden.
+- **Medewerkermodule** (V3.0): eigen profiel, verlof aanvragen, verlofsaldo bekijken, uren invullen, weekplanning inzien, eigen gereedschap bekijken, instructies/cursussen afronden.
 
 ## User preferences
 
