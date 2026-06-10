@@ -30,6 +30,7 @@ import { Switch } from "@/components/ui/switch";
 import {
   Mail, Phone, Building, Clock, Plus, UserPlus, Pencil, Trash2,
   RefreshCw, ShieldCheck, Eye, User, Crown, Upload, Palette, SendHorizonal, X,
+  Layers,
 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRol } from "@/context/rol-context";
@@ -70,6 +71,22 @@ const NIVEAUS = [
 
 function niveauLabel(n: number): string {
   return NIVEAUS.find((x) => x.waarde === n)?.label ?? "";
+}
+
+// Diepe gelijkheid van twee bevoegdheden-matrices, waarbij niveau 0 en een
+// ontbrekende sleutel als gelijk gelden (beide = geen toegang). Spiegelt de
+// vergelijking in de backend (profielen-route).
+function bevoegdhedenGelijk(
+  a: Record<string, number> | null | undefined,
+  b: Record<string, number> | null | undefined,
+): boolean {
+  const aa = a ?? {};
+  const bb = b ?? {};
+  const sleutels = new Set([...Object.keys(aa), ...Object.keys(bb)]);
+  for (const s of sleutels) {
+    if ((aa[s] ?? 0) !== (bb[s] ?? 0)) return false;
+  }
+  return true;
 }
 
 // Modules met een niveau > 0, in de vaste MODULES-volgorde.
@@ -247,6 +264,8 @@ export default function Gebruikers() {
   const magVerwijderen = isHoofd;
 
   const { data: gebruikers, isLoading, refetch, isFetching } = useListGebruikers();
+  const { data: profielen } = useListProfielen();
+  const profielMap = new Map((profielen ?? []).map((p) => [p.id, p]));
   const maakGebruiker      = useCreateGebruiker();
   const werkBijGebruiker   = useUpdateGebruiker();
   const verwijderGebruiker = useDeleteGebruiker();
@@ -641,6 +660,32 @@ export default function Gebruikers() {
                                 );
                               })()}
 
+                              {(() => {
+                                const profiel =
+                                  g.herkomst_profiel_id != null
+                                    ? profielMap.get(g.herkomst_profiel_id)
+                                    : undefined;
+                                if (!profiel) return null;
+                                const afwijkend = !bevoegdhedenGelijk(
+                                  g.bevoegdheden,
+                                  profiel.bevoegdheden,
+                                );
+                                return (
+                                  <div className="flex items-center gap-1.5 mt-2 text-xs text-muted-foreground">
+                                    <Layers className="h-3 w-3 flex-shrink-0" />
+                                    <span className="truncate">Van profiel: {profiel.naam}</span>
+                                    {afwijkend && (
+                                      <Badge
+                                        variant="outline"
+                                        className="text-xs h-5 px-1.5 bg-amber-50 text-amber-700 border-amber-200 flex-shrink-0"
+                                      >
+                                        Aangepast
+                                      </Badge>
+                                    )}
+                                  </div>
+                                );
+                              })()}
+
                               <div className="flex flex-wrap items-center gap-1.5 mt-2">
                                 {!g.actief && (
                                   <Badge variant="outline" className="text-xs bg-gray-100 text-gray-500 border-gray-200 h-5 px-1.5">
@@ -886,12 +931,34 @@ export default function Gebruikers() {
 
                 {(() => {
                   const actief = actieveBevoegdheden(bekijkGebruiker.bevoegdheden);
+                  const profiel =
+                    bekijkGebruiker.herkomst_profiel_id != null
+                      ? profielMap.get(bekijkGebruiker.herkomst_profiel_id)
+                      : undefined;
+                  const afwijkend = profiel
+                    ? !bevoegdhedenGelijk(bekijkGebruiker.bevoegdheden, profiel.bevoegdheden)
+                    : false;
                   return (
                     <div className="rounded-lg border bg-muted/30 p-4">
                       <div className="flex items-center gap-2 mb-2">
                         <ShieldCheck className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                         <div className="text-sm font-medium">Bevoegdheden</div>
                       </div>
+                      {profiel && (
+                        <div className="flex flex-wrap items-center gap-1.5 mb-3 text-xs">
+                          <Layers className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
+                          <span className="text-muted-foreground">Afgeleid van profiel</span>
+                          <span className="font-medium">{profiel.naam}</span>
+                          {afwijkend && (
+                            <Badge
+                              variant="outline"
+                              className="text-xs h-5 px-1.5 bg-amber-50 text-amber-700 border-amber-200"
+                            >
+                              Sindsdien aangepast
+                            </Badge>
+                          )}
+                        </div>
+                      )}
                       {actief.length === 0 ? (
                         <p className="text-sm text-muted-foreground">Geen bevoegdheden ingesteld.</p>
                       ) : (
