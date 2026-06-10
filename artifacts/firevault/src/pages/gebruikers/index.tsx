@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import {
   useListGebruikers,
@@ -71,6 +71,49 @@ const NIVEAUS = [
 
 function niveauLabel(n: number): string {
   return NIVEAUS.find((x) => x.waarde === n)?.label ?? "";
+}
+
+type SorteerOptie = "standaard" | "aantal_modules" | "hoogste_niveau";
+
+const VOORKEUR_KEY = "fps_gebruikers_voorkeuren";
+
+type Voorkeuren = {
+  filterModule: string;
+  filterNiveau: number;
+  sorteer: SorteerOptie;
+};
+
+const STANDAARD_VOORKEUREN: Voorkeuren = {
+  filterModule: "",
+  filterNiveau: 0,
+  sorteer: "standaard",
+};
+
+// Leest de bewaarde filter-/sorteervoorkeuren uit localStorage en valideert
+// elke waarde tegen de bekende opties; onbekende of corrupte waarden vallen
+// terug op de standaard.
+function leesVoorkeuren(): Voorkeuren {
+  if (typeof window === "undefined") return STANDAARD_VOORKEUREN;
+  try {
+    const raw = window.localStorage.getItem(VOORKEUR_KEY);
+    if (!raw) return STANDAARD_VOORKEUREN;
+    const parsed = JSON.parse(raw) as Partial<Voorkeuren>;
+    const filterModule =
+      typeof parsed.filterModule === "string" && MODULES.some((m) => m.id === parsed.filterModule)
+        ? parsed.filterModule
+        : "";
+    const filterNiveau =
+      typeof parsed.filterNiveau === "number" && NIVEAUS.some((n) => n.waarde === parsed.filterNiveau)
+        ? parsed.filterNiveau
+        : 0;
+    const sorteer: SorteerOptie =
+      parsed.sorteer === "aantal_modules" || parsed.sorteer === "hoogste_niveau" || parsed.sorteer === "standaard"
+        ? parsed.sorteer
+        : "standaard";
+    return { filterModule, filterNiveau, sorteer };
+  } catch {
+    return STANDAARD_VOORKEUREN;
+  }
 }
 
 // Diepe gelijkheid van twee bevoegdheden-matrices, waarbij niveau 0 en een
@@ -285,10 +328,25 @@ export default function Gebruikers() {
 
   const [uitnodigingBezig, setUitnodigingBezig] = useState<number | null>(null);
 
+  const [voorkeurInit] = useState<Voorkeuren>(leesVoorkeuren);
   const [zoek, setZoek]                   = useState<string>("");
-  const [filterModule, setFilterModule]   = useState<string>("");
-  const [filterNiveau, setFilterNiveau]   = useState<number>(0);
-  const [sorteer, setSorteer]             = useState<"standaard" | "aantal_modules" | "hoogste_niveau">("standaard");
+  const [filterModule, setFilterModule]   = useState<string>(voorkeurInit.filterModule);
+  const [filterNiveau, setFilterNiveau]   = useState<number>(voorkeurInit.filterNiveau);
+  const [sorteer, setSorteer]             = useState<SorteerOptie>(voorkeurInit.sorteer);
+
+  // Bewaar de filter-/sorteervoorkeuren (niet de zoekterm) per gebruiker in
+  // localStorage zodat het overzicht persistent blijft bij terugkeer.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      window.localStorage.setItem(
+        VOORKEUR_KEY,
+        JSON.stringify({ filterModule, filterNiveau, sorteer } satisfies Voorkeuren),
+      );
+    } catch {
+      // localStorage onbeschikbaar (privémodus / quota) — voorkeuren niet bewaren
+    }
+  }, [filterModule, filterNiveau, sorteer]);
 
   const filterActief = !!zoek.trim() || !!filterModule || filterNiveau > 0 || sorteer !== "standaard";
 
