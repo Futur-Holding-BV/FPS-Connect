@@ -1,5 +1,5 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Pressable, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { WebView } from "react-native-webview";
@@ -9,9 +9,13 @@ import { useColors } from "@/hooks/useColors";
 import { useAuth } from "@/context/auth";
 
 const DOMEIN = process.env.EXPO_PUBLIC_DOMAIN ?? "";
+const BEELD_EXT = ["jpg", "jpeg", "png", "webp", "gif", "bmp"];
 
-function bouwHtml(domein: string, token: string, url: string): string {
-  const cfg = { domein: `https://${domein}`, token, url };
+// De data wordt in React Native opgehaald (met de sessie-token) en als data-URL
+// aan de WebView doorgegeven. De token komt zo nooit in de WebView-HTML of bij
+// het externe pdf.js-script terecht.
+function bouwHtml(dataUrl: string, isBeeld: boolean): string {
+  const cfg = { dataUrl, isBeeld };
   return `<!DOCTYPE html>
 <html>
 <head>
@@ -36,44 +40,44 @@ function bouwHtml(domein: string, token: string, url: string): string {
   var msg = document.getElementById('msg');
   var pages = document.getElementById('pages');
   function post(o){ if(window.ReactNativeWebView) window.ReactNativeWebView.postMessage(JSON.stringify(o)); }
-  var ext = (String(CFG.url).split('?')[0].split('.').pop()||'').toLowerCase();
-  var isImg = ['jpg','jpeg','png','webp','gif','bmp'].indexOf(ext) >= 0;
+  function klaar(){ msg.style.display='none'; post({type:'ready'}); }
+  function fout(e){ msg.textContent='Document kon niet geladen worden.'; post({type:'error',message:String(e)}); }
 
-  function showImage(buf){
-    var url = URL.createObjectURL(new Blob([buf]));
+  function toonBeeld(){
     var img = document.createElement('img');
-    img.src = url;
+    img.onload = klaar;
+    img.onerror = function(){ fout('beeld'); };
+    img.src = CFG.dataUrl;
     pages.appendChild(img);
-    return Promise.resolve();
   }
-  function showPdf(buf){
-    if (typeof pdfjsLib === 'undefined') throw new Error('pdfjs niet geladen');
+
+  function toonPdf(){
+    if (typeof pdfjsLib === 'undefined') return fout('pdfjs niet geladen');
     pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-    return pdfjsLib.getDocument({data:new Uint8Array(buf)}).promise.then(function(pdf){
+    var b64 = (CFG.dataUrl.split(',')[1] || '');
+    var bin = atob(b64);
+    var bytes = new Uint8Array(bin.length);
+    for (var i=0; i<bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    pdfjsLib.getDocument({data:bytes}).promise.then(function(pdf){
       var chain = Promise.resolve();
-      for (var i=1; i<=pdf.numPages; i++){
-        (function(n){
+      for (var n=1; n<=pdf.numPages; n++){
+        (function(p){
           chain = chain.then(function(){
-            return pdf.getPage(n).then(function(page){
+            return pdf.getPage(p).then(function(page){
               var vp = page.getViewport({scale:2});
               var canvas = document.createElement('canvas');
               canvas.width = Math.ceil(vp.width); canvas.height = Math.ceil(vp.height);
               pages.appendChild(canvas);
-              var ctx = canvas.getContext('2d');
-              return page.render({canvasContext:ctx,viewport:vp,canvas:canvas}).promise;
+              return page.render({canvasContext:canvas.getContext('2d'),viewport:vp,canvas:canvas}).promise;
             });
           });
-        })(i);
+        })(n);
       }
       return chain;
-    });
+    }).then(klaar).catch(fout);
   }
 
-  fetch(CFG.domein+'/api/storage'+CFG.url, { headers:{ Authorization:'Bearer '+CFG.token } })
-    .then(function(r){ if(!r.ok) throw new Error('http '+r.status); return r.arrayBuffer(); })
-    .then(function(buf){ return isImg ? showImage(buf) : showPdf(buf); })
-    .then(function(){ msg.style.display='none'; post({type:'ready'}); })
-    .catch(function(e){ msg.textContent='Document kon niet geladen worden.'; post({type:'error',message:String(e)}); });
+  if (CFG.isBeeld) toonBeeld(); else toonPdf();
 })();
 </script>
 </body>
@@ -91,11 +95,45 @@ export default function DocumentViewer() {
     naam: string;
   }>();
 
-  const [bezig, setBezig] = useState(true);
+  const [dataUrl, setDataUrl] = useState<string | null>(null);
+  const [fout, setFout] = useState(false);
+
+  const isBeeld = useMemo(() => {
+    const ext = ((url ?? "").split("?")[0].split(".").pop() ?? "").toLowerCase();
+    return BEELD_EXT.includes(ext);
+  }, [url]);
+
+  useEffect(() => {
+    let actief = true;
+    setDataUrl(null);
+    setFout(false);
+    if (!url || !token) return;
+    void (async () => {
+      try {
+        const res = await fetch(`https://${DOMEIN}/api/storage${url}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) throw new Error(`http ${res.status}`);
+        const blob = await res.blob();
+        const d = await new Promise<string>((resolve, reject) => {
+          const fr = new FileReader();
+          fr.onload = () => resolve(String(fr.result));
+          fr.onerror = () => reject(new Error("lezen mislukt"));
+          fr.readAsDataURL(blob);
+        });
+        if (actief) setDataUrl(d);
+      } catch {
+        if (actief) setFout(true);
+      }
+    })();
+    return () => {
+      actief = false;
+    };
+  }, [url, token]);
 
   const html = useMemo(
-    () => bouwHtml(DOMEIN, token ?? "", url ?? ""),
-    [token, url],
+    () => (dataUrl ? bouwHtml(dataUrl, isBeeld) : null),
+    [dataUrl, isBeeld],
   );
 
   return (
@@ -128,30 +166,30 @@ export default function DocumentViewer() {
       </View>
 
       <View style={{ flex: 1 }}>
-        <WebView
-          originWhitelist={["*"]}
-          source={{ html }}
-          onMessage={() => setBezig(false)}
-          onLoadEnd={() => setBezig(false)}
-          javaScriptEnabled
-          domStorageEnabled
-          mixedContentMode="always"
-          style={{ flex: 1, backgroundColor: "#2b303b" }}
-        />
-        {bezig && (
-          <View
-            style={{
-              position: "absolute",
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-            pointerEvents="none"
-          >
-            <ActivityIndicator size="large" color={c.primary} />
+        {html ? (
+          <WebView
+            originWhitelist={["*"]}
+            source={{ html }}
+            javaScriptEnabled
+            domStorageEnabled
+            style={{ flex: 1, backgroundColor: "#2b303b" }}
+          />
+        ) : (
+          <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: 24 }}>
+            {fout ? (
+              <Text
+                style={{
+                  color: c.mutedForeground,
+                  fontSize: 15,
+                  textAlign: "center",
+                  fontFamily: "Inter_400Regular",
+                }}
+              >
+                Document kon niet geladen worden.
+              </Text>
+            ) : (
+              <ActivityIndicator size="large" color={c.primary} />
+            )}
           </View>
         )}
       </View>
