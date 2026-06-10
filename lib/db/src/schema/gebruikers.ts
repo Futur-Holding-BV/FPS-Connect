@@ -1,4 +1,4 @@
-import { pgTable, serial, text, boolean, timestamp, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, serial, integer, text, boolean, timestamp, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
@@ -30,6 +30,14 @@ export const gebruikersTable = pgTable("gebruikers", {
   // Bevoegdheden-matrix: module-id -> niveau (0-4). Bron van toegang voor de
   // basisrol "gebruiker". Zie @workspace/permissies voor het model.
   bevoegdheden: jsonb("bevoegdheden").$type<Record<string, number>>().notNull().default({}),
+  // Herkomst: het profiel (preset) dat als startpunt voor de bevoegdheden is
+  // toegepast. Alleen administratieve koppeling; latere handmatige wijzigingen
+  // aan de bevoegdheden veranderen dit veld niet. Wordt NULL bij verwijderen
+  // van het profiel.
+  herkomstProfielId: integer("herkomst_profiel_id").references(
+    (): any => profielenTable.id,
+    { onDelete: "set null" },
+  ),
 });
 
 // Standaardprofielen (presets) die de bevoegdheden-matrix als startpunt vullen.

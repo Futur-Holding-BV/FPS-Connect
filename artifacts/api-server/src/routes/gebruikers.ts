@@ -86,6 +86,7 @@ const mapGebruiker = (g: typeof gebruikersTable.$inferSelect) => ({
     : null,
   taal: g.taal ?? "nl",
   bevoegdheden: (g.bevoegdheden as Record<string, number>) ?? {},
+  herkomst_profiel_id: g.herkomstProfielId ?? null,
 });
 
 // Veilige projectie zonder PII voor niet-beheerders: namen/rol blijven zichtbaar
@@ -150,6 +151,7 @@ router.post("/gebruikers", alleenBeheerder, async (req, res) => {
     const {
       naam, email, rol, functietitels, telefoon, bedrijf, wachtwoord,
       avatar_url, bedrijfslogo_url, bedrijfskleuren, taal, bevoegdheden,
+      herkomst_profiel_id,
     } = req.body;
     if (!naam || !email || !rol) {
       return res.status(400).json({ error: "naam, email en rol zijn verplicht" });
@@ -179,6 +181,10 @@ router.post("/gebruikers", alleenBeheerder, async (req, res) => {
       }
       toegestaanBevoegdheden = bevoegdheden as Record<string, number>;
     }
+    const herkomstId =
+      typeof herkomst_profiel_id === "number" && Number.isInteger(herkomst_profiel_id)
+        ? herkomst_profiel_id
+        : null;
     const gehasht = wachtwoord ? await bcrypt.hash(String(wachtwoord), 10) : null;
     const [g] = await db
       .insert(gebruikersTable)
@@ -195,6 +201,7 @@ router.post("/gebruikers", alleenBeheerder, async (req, res) => {
         bedrijfskleuren,
         taal: taal || "nl",
         bevoegdheden: toegestaanBevoegdheden,
+        herkomstProfielId: herkomstId,
         uitnodigingStatus: "niet_uitgenodigd",
       })
       .returning();
@@ -230,6 +237,7 @@ router.patch("/gebruikers/:id", alleenBeheerder, async (req, res) => {
     const {
       naam, email, rol, functietitels, telefoon, bedrijf, actief, wachtwoord,
       avatar_url, bedrijfslogo_url, bedrijfskleuren, uitnodiging_status, taal, bevoegdheden,
+      herkomst_profiel_id,
     } = req.body;
     // Bestaande rol én functietitels ophalen: zo wist een partiële PATCH niets
     // onterecht, terwijl een expliciete rolwissel de oude functies wél opschoont.
@@ -298,6 +306,14 @@ router.patch("/gebruikers/:id", alleenBeheerder, async (req, res) => {
         }
       }
       wijziging.bevoegdheden = bevoegdheden as Record<string, number>;
+    }
+    // Herkomst (preset) alleen wijzigen wanneer expliciet meegestuurd: null wist
+    // de koppeling, een geldig id (her)koppelt. undefined laat het veld ongemoeid.
+    if (herkomst_profiel_id !== undefined) {
+      wijziging.herkomstProfielId =
+        typeof herkomst_profiel_id === "number" && Number.isInteger(herkomst_profiel_id)
+          ? herkomst_profiel_id
+          : null;
     }
     if (wachtwoord) {
       wijziging.wachtwoord = await bcrypt.hash(String(wachtwoord), 10);

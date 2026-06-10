@@ -1,27 +1,85 @@
 import { Router } from "express";
-import { db, profielenTable } from "@workspace/db";
+import { db, profielenTable, gebruikersTable } from "@workspace/db";
 import { asc, eq } from "drizzle-orm";
 import { requireBevoegdheid, requireRol } from "../middlewares/auth";
 
 const router = Router();
 
-function serialiseer(p: typeof profielenTable.$inferSelect) {
+type GekoppeldeGebruiker = {
+  id: number;
+  naam: string;
+  rol: string | null;
+  gelijk: boolean;
+};
+
+function serialiseer(
+  p: typeof profielenTable.$inferSelect,
+  gebruikers: GekoppeldeGebruiker[] = [],
+) {
   return {
     id: p.id,
     naam: p.naam,
     bevoegdheden: (p.bevoegdheden as Record<string, number>) ?? {},
     systeem: p.systeem,
     aangemaakt_op: p.aangemaaktOp.toISOString(),
+    gebruiker_aantal: gebruikers.length,
+    gebruikers,
   };
+}
+
+// Diepe gelijkheid van twee bevoegdheden-matrices, waarbij niveau 0 en een
+// ontbrekende sleutel als gelijk gelden (beide = geen toegang).
+function bevoegdhedenGelijk(
+  a: Record<string, number>,
+  b: Record<string, number>,
+): boolean {
+  const sleutels = new Set([...Object.keys(a), ...Object.keys(b)]);
+  for (const s of sleutels) {
+    if ((a[s] ?? 0) !== (b[s] ?? 0)) return false;
+  }
+  return true;
 }
 
 router.get("/profielen", requireBevoegdheid("gebruikers", 1), async (req, res) => {
   try {
-    const profielen = await db
-      .select()
-      .from(profielenTable)
-      .orderBy(asc(profielenTable.id));
-    res.json(profielen.map(serialiseer));
+    const [profielen, gebruikers] = await Promise.all([
+      db.select().from(profielenTable).orderBy(asc(profielenTable.id)),
+      db
+        .select({
+          id: gebruikersTable.id,
+          naam: gebruikersTable.naam,
+          rol: gebruikersTable.rol,
+          bevoegdheden: gebruikersTable.bevoegdheden,
+          herkomstProfielId: gebruikersTable.herkomstProfielId,
+        })
+        .from(gebruikersTable)
+        .orderBy(asc(gebruikersTable.naam)),
+    ]);
+
+    const perProfiel = new Map<number, GekoppeldeGebruiker[]>();
+    for (const g of gebruikers) {
+      if (g.herkomstProfielId == null) continue;
+      const lijst = perProfiel.get(g.herkomstProfielId) ?? [];
+      lijst.push({ id: g.id, naam: g.naam, rol: g.rol, gelijk: false });
+      perProfiel.set(g.herkomstProfielId, lijst);
+    }
+
+    const result = profielen.map((p) => {
+      const lijst = perProfiel.get(p.id) ?? [];
+      const presetBev = (p.bevoegdheden as Record<string, number>) ?? {};
+      const idx = new Map(
+        gebruikers.map((g) => [
+          g.id,
+          (g.bevoegdheden as Record<string, number> | null) ?? {},
+        ]),
+      );
+      const verrijkt = lijst.map((g) => ({
+        ...g,
+        gelijk: bevoegdhedenGelijk(presetBev, idx.get(g.id) ?? {}),
+      }));
+      return serialiseer(p, verrijkt);
+    });
+    res.json(result);
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Interne serverfout" });
@@ -117,6 +175,37 @@ router.delete("/profielen/:id", requireRol("hoofdbeheerder"), async (req, res) =
     }
     await db.delete(profielenTable).where(eq(profielenTable.id, id));
     res.status(204).end();
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// POST /profielen/:id/toepassen — preset opnieuw doorvoeren op alle gekoppelde
+// gebruikers (herkomstProfielId = id). Overschrijft hun bevoegdheden met de
+// huidige preset-waarden.
+router.post("/profielen/:id/toepassen", requireRol("hoofdbeheerder"), async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id)) {
+      res.status(400).json({ error: "Ongeldig id" });
+      return;
+    }
+    const [profiel] = await db
+      .select()
+      .from(profielenTable)
+      .where(eq(profielenTable.id, id));
+    if (!profiel) {
+      res.status(404).json({ error: "Profiel niet gevonden" });
+      return;
+    }
+    const bevoegdheden = (profiel.bevoegdheden as Record<string, number>) ?? {};
+    const bijgewerkt = await db
+      .update(gebruikersTable)
+      .set({ bevoegdheden })
+      .where(eq(gebruikersTable.herkomstProfielId, id))
+      .returning({ id: gebruikersTable.id });
+    res.json({ bijgewerkt: bijgewerkt.length });
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Interne serverfout" });

@@ -2100,7 +2100,8 @@ export const ListGebruikersResponseItem = zod.object({
   "uitnodiging_opnieuw_verstuurd_op": zod.string().nullish(),
   "uitnodiging_geaccepteerd_op": zod.string().nullish(),
   "taal": zod.enum(['nl', 'en', 'de', 'fr', 'ar', 'tr']).optional(),
-  "bevoegdheden": zod.record(zod.string(), zod.number())
+  "bevoegdheden": zod.record(zod.string(), zod.number()),
+  "herkomst_profiel_id": zod.number().nullish()
 })
 export const ListGebruikersResponse = zod.array(ListGebruikersResponseItem)
 
@@ -2121,7 +2122,8 @@ export const CreateGebruikerBody = zod.object({
   "bedrijfskleuren": zod.string().optional(),
   "uitnodiging_status": zod.string().optional(),
   "taal": zod.string().optional(),
-  "bevoegdheden": zod.record(zod.string(), zod.number()).optional()
+  "bevoegdheden": zod.record(zod.string(), zod.number()).optional(),
+  "herkomst_profiel_id": zod.number().nullish()
 })
 
 export const CreateGebruikerResponse = zod.void()
@@ -2155,7 +2157,8 @@ export const GetGebruikerResponse = zod.object({
   "uitnodiging_opnieuw_verstuurd_op": zod.string().nullish(),
   "uitnodiging_geaccepteerd_op": zod.string().nullish(),
   "taal": zod.enum(['nl', 'en', 'de', 'fr', 'ar', 'tr']).optional(),
-  "bevoegdheden": zod.record(zod.string(), zod.number())
+  "bevoegdheden": zod.record(zod.string(), zod.number()),
+  "herkomst_profiel_id": zod.number().nullish()
 })
 
 
@@ -2180,7 +2183,8 @@ export const UpdateGebruikerBody = zod.object({
   "bedrijfskleuren": zod.string().optional(),
   "uitnodiging_status": zod.string().optional(),
   "taal": zod.string().optional(),
-  "bevoegdheden": zod.record(zod.string(), zod.number()).optional()
+  "bevoegdheden": zod.record(zod.string(), zod.number()).optional(),
+  "herkomst_profiel_id": zod.number().nullish()
 })
 
 export const UpdateGebruikerResponse = zod.object({
@@ -2204,7 +2208,8 @@ export const UpdateGebruikerResponse = zod.object({
   "uitnodiging_opnieuw_verstuurd_op": zod.string().nullish(),
   "uitnodiging_geaccepteerd_op": zod.string().nullish(),
   "taal": zod.enum(['nl', 'en', 'de', 'fr', 'ar', 'tr']).optional(),
-  "bevoegdheden": zod.record(zod.string(), zod.number())
+  "bevoegdheden": zod.record(zod.string(), zod.number()),
+  "herkomst_profiel_id": zod.number().nullish()
 })
 
 
@@ -2246,7 +2251,8 @@ export const UitnodigingVersturenResponse = zod.object({
   "uitnodiging_opnieuw_verstuurd_op": zod.string().nullish(),
   "uitnodiging_geaccepteerd_op": zod.string().nullish(),
   "taal": zod.enum(['nl', 'en', 'de', 'fr', 'ar', 'tr']).optional(),
-  "bevoegdheden": zod.record(zod.string(), zod.number())
+  "bevoegdheden": zod.record(zod.string(), zod.number()),
+  "herkomst_profiel_id": zod.number().nullish()
 })
 
 
@@ -2278,7 +2284,8 @@ export const UitnodigingOpnieuwVersturenResponse = zod.object({
   "uitnodiging_opnieuw_verstuurd_op": zod.string().nullish(),
   "uitnodiging_geaccepteerd_op": zod.string().nullish(),
   "taal": zod.enum(['nl', 'en', 'de', 'fr', 'ar', 'tr']).optional(),
-  "bevoegdheden": zod.record(zod.string(), zod.number())
+  "bevoegdheden": zod.record(zod.string(), zod.number()),
+  "herkomst_profiel_id": zod.number().nullish()
 })
 
 
@@ -2290,7 +2297,14 @@ export const ListProfielenResponseItem = zod.object({
   "naam": zod.string(),
   "bevoegdheden": zod.record(zod.string(), zod.number()),
   "systeem": zod.boolean(),
-  "aangemaakt_op": zod.string()
+  "aangemaakt_op": zod.string(),
+  "gebruiker_aantal": zod.number().optional(),
+  "gebruikers": zod.array(zod.object({
+  "id": zod.number(),
+  "naam": zod.string(),
+  "rol": zod.string().nullish(),
+  "gelijk": zod.boolean().describe('Of de huidige bevoegdheden van de gebruiker nog exact gelijk zijn aan de preset (false = sindsdien handmatig aangepast).')
+})).optional()
 })
 export const ListProfielenResponse = zod.array(ListProfielenResponseItem)
 
@@ -2329,7 +2343,14 @@ export const UpdateProfielResponse = zod.object({
   "naam": zod.string(),
   "bevoegdheden": zod.record(zod.string(), zod.number()),
   "systeem": zod.boolean(),
-  "aangemaakt_op": zod.string()
+  "aangemaakt_op": zod.string(),
+  "gebruiker_aantal": zod.number().optional(),
+  "gebruikers": zod.array(zod.object({
+  "id": zod.number(),
+  "naam": zod.string(),
+  "rol": zod.string().nullish(),
+  "gelijk": zod.boolean().describe('Of de huidige bevoegdheden van de gebruiker nog exact gelijk zijn aan de preset (false = sindsdien handmatig aangepast).')
+})).optional()
 })
 
 
@@ -2341,6 +2362,18 @@ export const DeleteProfielParams = zod.object({
 })
 
 export const DeleteProfielResponse = zod.void()
+
+
+/**
+ * @summary Preset opnieuw toepassen op alle gekoppelde gebruikers (hoofdbeheerder)
+ */
+export const ProfielToepassenParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ProfielToepassenResponse = zod.object({
+  "bijgewerkt": zod.number()
+})
 
 
 /**

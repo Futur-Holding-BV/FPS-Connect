@@ -22,4 +22,6 @@ export interface GebruikerUpdate {
   uitnodiging_status?: string;
   taal?: string;
   bevoegdheden?: GebruikerUpdateBevoegdheden;
+  /** @nullable */
+  herkomst_profiel_id?: number | null;
 }

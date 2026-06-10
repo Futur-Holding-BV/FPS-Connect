@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { ProfielBevoegdheden } from './profielBevoegdheden';
+import type { ProfielGebruiker } from './profielGebruiker';
 
 export interface Profiel {
   id: number;
@@ -13,4 +14,6 @@ export interface Profiel {
   bevoegdheden: ProfielBevoegdheden;
   systeem: boolean;
   aangemaakt_op: string;
+  gebruiker_aantal?: number;
+  gebruikers?: ProfielGebruiker[];
 }

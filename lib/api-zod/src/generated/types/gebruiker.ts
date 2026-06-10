@@ -43,4 +43,6 @@ export interface Gebruiker {
   uitnodiging_geaccepteerd_op?: string | null;
   taal?: GebruikerTaal;
   bevoegdheden: GebruikerBevoegdheden;
+  /** @nullable */
+  herkomst_profiel_id?: number | null;
 }

@@ -102,6 +102,7 @@ import type {
   PlattegrondAiAnalyseResultaat,
   Profiel,
   ProfielInput,
+  ProfielToepassen200,
   Scheiding,
   ScheidingInput,
   ScheidingUpdate,
@@ -6964,6 +6965,76 @@ export const useDeleteProfiel = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getDeleteProfielMutationOptions(options));
+    }
+
+export const getProfielToepassenUrl = (id: number,) => {
+
+
+
+
+  return `/api/profielen/${id}/toepassen`
+}
+
+/**
+ * @summary Preset opnieuw toepassen op alle gekoppelde gebruikers (hoofdbeheerder)
+ */
+export const profielToepassen = async (id: number, options?: RequestInit): Promise<ProfielToepassen200> => {
+
+  return customFetch<ProfielToepassen200>(getProfielToepassenUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getProfielToepassenMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof profielToepassen>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof profielToepassen>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['profielToepassen'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof profielToepassen>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  profielToepassen(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ProfielToepassenMutationResult = NonNullable<Awaited<ReturnType<typeof profielToepassen>>>
+
+    export type ProfielToepassenMutationError = ErrorType<void>
+
+    /**
+ * @summary Preset opnieuw toepassen op alle gekoppelde gebruikers (hoofdbeheerder)
+ */
+export const useProfielToepassen = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof profielToepassen>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof profielToepassen>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getProfielToepassenMutationOptions(options));
     }
 
 export const getUitnodigingVerifieerUrl = (token: string,) => {

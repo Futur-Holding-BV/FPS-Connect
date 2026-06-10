@@ -221,6 +221,7 @@ const leegForm = {
   telefoon: "", bedrijf: "", wachtwoord: "", actief: true,
   avatar_url: "", bedrijfslogo_url: "", bedrijfskleuren: "",
   bevoegdheden: {} as Record<string, number>,
+  herkomst_profiel_id: null as number | null,
 };
 type GebruikerForm = typeof leegForm;
 
@@ -238,6 +239,7 @@ type Gebruiker = {
   bedrijfslogo_url?: string | null;
   bedrijfskleuren?: string | null;
   bevoegdheden?: Record<string, number> | null;
+  herkomst_profiel_id?: number | null;
   uitnodiging_status?: string | null;
   uitnodiging_verstuurd_op?: string | null;
   uitnodiging_verloopt_op?: string | null;
@@ -307,6 +309,7 @@ export default function Gebruikers() {
           bedrijfslogo_url: toevoegenForm.bedrijfslogo_url   || undefined,
           bedrijfskleuren: toevoegenForm.bedrijfskleuren     || undefined,
           bevoegdheden:    toevoegenForm.bevoegdheden,
+          herkomst_profiel_id: toevoegenForm.herkomst_profiel_id,
         },
       });
       await invalideer();
@@ -332,6 +335,7 @@ export default function Gebruikers() {
       bedrijfslogo_url: g.bedrijfslogo_url ?? "",
       bedrijfskleuren: g.bedrijfskleuren  ?? "",
       bevoegdheden:    g.bevoegdheden   ?? {},
+      herkomst_profiel_id: g.herkomst_profiel_id ?? null,
     });
     setBewerkFout(null);
   }
@@ -359,6 +363,7 @@ export default function Gebruikers() {
           bedrijfslogo_url: bewerkForm.bedrijfslogo_url  || undefined,
           bedrijfskleuren: bewerkForm.bedrijfskleuren    || undefined,
           bevoegdheden:    bewerkForm.bevoegdheden,
+          herkomst_profiel_id: bewerkForm.herkomst_profiel_id,
         },
       });
       await invalideer();
@@ -865,9 +870,11 @@ function VeldRij({ icon: Icon, label, waarde }: { icon: React.ElementType; label
 function BevoegdhedenEditor({
   bevoegdheden,
   onChange,
+  onPresetGekozen,
 }: {
   bevoegdheden: Record<string, number>;
   onChange: (b: Record<string, number>) => void;
+  onPresetGekozen?: (profielId: number) => void;
 }) {
   const { data: profielen } = useListProfielen();
 
@@ -884,7 +891,10 @@ function BevoegdhedenEditor({
             value=""
             onValueChange={(profielId) => {
               const profiel = profielen.find((p) => String(p.id) === profielId);
-              if (profiel) onChange({ ...profiel.bevoegdheden });
+              if (profiel) {
+                onChange({ ...profiel.bevoegdheden });
+                onPresetGekozen?.(profiel.id);
+              }
             }}
           >
             <SelectTrigger>
@@ -1051,6 +1061,9 @@ function GebruikerVelden({
         <BevoegdhedenEditor
           bevoegdheden={form.bevoegdheden}
           onChange={(b) => setForm((f) => ({ ...f, bevoegdheden: b }))}
+          onPresetGekozen={(profielId) =>
+            setForm((f) => ({ ...f, herkomst_profiel_id: profielId }))
+          }
         />
       )}
 

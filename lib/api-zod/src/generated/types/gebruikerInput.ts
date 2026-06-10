@@ -21,4 +21,6 @@ export interface GebruikerInput {
   uitnodiging_status?: string;
   taal?: string;
   bevoegdheden?: GebruikerInputBevoegdheden;
+  /** @nullable */
+  herkomst_profiel_id?: number | null;
 }

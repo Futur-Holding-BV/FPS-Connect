@@ -4,7 +4,9 @@ import {
   useCreateProfiel,
   useUpdateProfiel,
   useDeleteProfiel,
+  useProfielToepassen,
   getListProfielenQueryKey,
+  getListGebruikersQueryKey,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
@@ -23,7 +25,7 @@ import {
   AlertDialogContent, AlertDialogDescription, AlertDialogFooter,
   AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { ShieldCheck, Plus, Pencil, Trash2, Lock, Loader2 } from "lucide-react";
+import { ShieldCheck, Plus, Pencil, Trash2, Lock, Loader2, Users, RefreshCw, AlertTriangle } from "lucide-react";
 
 const MODULES: { id: string; label: string }[] = [
   { id: "gebouwen",      label: "Gebouwen" },
@@ -66,12 +68,16 @@ export default function ProfielenBeheer() {
   const maakProfiel = useCreateProfiel();
   const werkBijProfiel = useUpdateProfiel();
   const verwijderProfiel = useDeleteProfiel();
+  const pasProfielToe = useProfielToepassen();
 
   const [dialoogOpen, setDialoogOpen] = useState(false);
   const [form, setForm] = useState<ProfielForm>(LEEG_FORM);
   const [fout, setFout] = useState<string | null>(null);
   const [verwijderTarget, setVerwijderTarget] =
     useState<{ id: number; naam: string } | null>(null);
+  const [toepassenTarget, setToepassenTarget] =
+    useState<{ id: number; naam: string; aantal: number } | null>(null);
+  const [toepassenBezigId, setToepassenBezigId] = useState<number | null>(null);
 
   const invalideer = () =>
     queryClient.invalidateQueries({ queryKey: getListProfielenQueryKey() });
@@ -120,6 +126,19 @@ export default function ProfielenBeheer() {
       await invalideer();
     } finally {
       setVerwijderTarget(null);
+    }
+  }
+
+  async function bevestigToepassen() {
+    if (!toepassenTarget) return;
+    setToepassenBezigId(toepassenTarget.id);
+    try {
+      await pasProfielToe.mutateAsync({ id: toepassenTarget.id });
+      await invalideer();
+      await queryClient.invalidateQueries({ queryKey: getListGebruikersQueryKey() });
+    } finally {
+      setToepassenBezigId(null);
+      setToepassenTarget(null);
     }
   }
 
@@ -205,6 +224,19 @@ export default function ProfielenBeheer() {
                     ))
                   )}
                 </div>
+
+                <GekoppeldeGebruikers
+                  gebruikers={p.gebruikers ?? []}
+                  aantal={p.gebruiker_aantal ?? 0}
+                  onToepassen={() =>
+                    setToepassenTarget({
+                      id: p.id,
+                      naam: p.naam,
+                      aantal: p.gebruiker_aantal ?? 0,
+                    })
+                  }
+                  bezig={toepassenBezigId === p.id}
+                />
               </CardContent>
             </Card>
           ))}
@@ -296,6 +328,107 @@ export default function ProfielenBeheer() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <AlertDialog
+        open={toepassenTarget !== null}
+        onOpenChange={(open) => !open && setToepassenTarget(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Wijzigingen toepassen op gekoppelde gebruikers</AlertDialogTitle>
+            <AlertDialogDescription>
+              De huidige bevoegdheden van preset "{toepassenTarget?.naam}" worden
+              overgenomen door {toepassenTarget?.aantal}{" "}
+              {toepassenTarget?.aantal === 1 ? "gebruiker" : "gebruikers"} die dit
+              profiel als startpunt kregen. Eventuele handmatige aanpassingen bij die
+              gebruikers worden overschreven. Deze actie kan niet ongedaan worden gemaakt.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuleren</AlertDialogCancel>
+            <AlertDialogAction onClick={bevestigToepassen}>
+              Toepassen
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  );
+}
+
+type GekoppeldeGebruiker = {
+  id: number;
+  naam: string;
+  rol?: string | null;
+  gelijk: boolean;
+};
+
+function GekoppeldeGebruikers({
+  gebruikers,
+  aantal,
+  onToepassen,
+  bezig,
+}: {
+  gebruikers: GekoppeldeGebruiker[];
+  aantal: number;
+  onToepassen: () => void;
+  bezig: boolean;
+}) {
+  const afwijkend = gebruikers.filter((g) => !g.gelijk).length;
+
+  return (
+    <div className="border-t pt-3 space-y-2">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          <Users className="h-3.5 w-3.5" />
+          {aantal === 0
+            ? "Nog niet toegepast op gebruikers"
+            : `${aantal} ${aantal === 1 ? "gebruiker" : "gebruikers"} afgeleid`}
+        </div>
+        {aantal > 0 && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-7 text-xs gap-1.5"
+            onClick={onToepassen}
+            disabled={bezig}
+          >
+            {bezig ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <RefreshCw className="h-3.5 w-3.5" />
+            )}
+            Toepassen
+          </Button>
+        )}
+      </div>
+
+      {aantal > 0 && (
+        <div className="flex flex-wrap gap-1">
+          {gebruikers.map((g) => (
+            <Badge
+              key={g.id}
+              variant="secondary"
+              className="gap-1 font-normal text-muted-foreground"
+              title={
+                g.gelijk
+                  ? "Bevoegdheden gelijk aan preset"
+                  : "Bevoegdheden sindsdien handmatig aangepast"
+              }
+            >
+              {!g.gelijk && <AlertTriangle className="h-3 w-3 text-amber-600" />}
+              {g.naam}
+            </Badge>
+          ))}
+        </div>
+      )}
+
+      {afwijkend > 0 && (
+        <p className="text-xs text-amber-700">
+          {afwijkend}{" "}
+          {afwijkend === 1 ? "gebruiker wijkt" : "gebruikers wijken"} af van de preset.
+        </p>
+      )}
     </div>
   );
 }

@@ -1405,9 +1405,20 @@ export interface Gebruiker {
   uitnodiging_geaccepteerd_op?: string | null;
   taal?: GebruikerTaal;
   bevoegdheden: GebruikerBevoegdheden;
+  /** @nullable */
+  herkomst_profiel_id?: number | null;
 }
 
 export type ProfielBevoegdheden = {[key: string]: number};
+
+export interface ProfielGebruiker {
+  id: number;
+  naam: string;
+  /** @nullable */
+  rol?: string | null;
+  /** Of de huidige bevoegdheden van de gebruiker nog exact gelijk zijn aan de preset (false = sindsdien handmatig aangepast). */
+  gelijk: boolean;
+}
 
 export interface Profiel {
   id: number;
@@ -1415,6 +1426,8 @@ export interface Profiel {
   bevoegdheden: ProfielBevoegdheden;
   systeem: boolean;
   aangemaakt_op: string;
+  gebruiker_aantal?: number;
+  gebruikers?: ProfielGebruiker[];
 }
 
 export type ProfielInputBevoegdheden = {[key: string]: number};
@@ -1514,6 +1527,8 @@ export interface GebruikerInput {
   uitnodiging_status?: string;
   taal?: string;
   bevoegdheden?: GebruikerInputBevoegdheden;
+  /** @nullable */
+  herkomst_profiel_id?: number | null;
 }
 
 export type GebruikerUpdateBevoegdheden = {[key: string]: number};
@@ -1533,6 +1548,8 @@ export interface GebruikerUpdate {
   uitnodiging_status?: string;
   taal?: string;
   bevoegdheden?: GebruikerUpdateBevoegdheden;
+  /** @nullable */
+  herkomst_profiel_id?: number | null;
 }
 
 export interface WachtwoordWijzigen {
@@ -1854,6 +1871,10 @@ export type ListOnderhoudParams = {
 voorziening_id?: number;
 gebouw_id?: number;
 status?: string;
+};
+
+export type ProfielToepassen200 = {
+  bijgewerkt: number;
 };
 
 export type UitnodigingActiveren200 = {
