@@ -152,12 +152,12 @@ function StappenplanInhoud({
     },
     {
       nummer: 3,
-      titel: "Projectteam",
+      titel: "FPS Projectteam",
       stappen: [
         {
           id: "toewijzingen",
           icoon: <Users className="h-4 w-4" />,
-          titel: "Monteurs en projectteam toewijzen",
+          titel: "Monteurs en FPS Projectteam toewijzen",
           beschrijving:
             "Wijs monteurs, controleurs en een projectadministrateur toe via tabblad 'Beheer' (Teamleden). Toegewezen monteurs krijgen toegang tot dit gebouw in de monteur-app.",
           status: heeftToewijzing ? "gereed" : "ontbrekend",

@@ -1118,7 +1118,7 @@ export function Projectformulier({
         <div className="space-y-2.5">
           <SectieLabel
             icoon={<Wrench className="h-3.5 w-3.5" />}
-            titel="Projectteam"
+            titel="FPS Projectteam"
             extra={
               teamleden.length > 0 ? (
                 <span className="font-normal normal-case tracking-normal text-muted-foreground ml-1">

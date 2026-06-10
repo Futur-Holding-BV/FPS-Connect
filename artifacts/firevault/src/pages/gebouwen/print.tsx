@@ -1220,7 +1220,7 @@ export default function GebouwPrint() {
 
         {teamleden.length > 0 && (
           <section className="prt-sectie">
-            <h2 className="prt-sectie-titel">Projectteam</h2>
+            <h2 className="prt-sectie-titel">FPS Projectteam</h2>
             <table className="prt-tabel">
               <thead>
                 <tr><th>Naam</th><th>Rol</th><th>Projectfunctie</th></tr>
