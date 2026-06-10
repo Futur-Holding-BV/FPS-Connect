@@ -95,12 +95,12 @@ const ROL_CONFIG: Record<Rol, {
     beschrijving: "Volledige toegang",
   },
   monteur: {
-    label: "Monteurs",
+    label: "Monteurs & Timmermannen",
     icon: Wrench,
     kleur: "text-blue-600",
     badge: "bg-blue-100 text-blue-800 border-blue-200",
     rand: "border-t-blue-500",
-    beschrijving: "Onderhoud & werkorders",
+    beschrijving: "Projecten uitvoering",
   },
   controleur: {
     label: "Controleurs",
