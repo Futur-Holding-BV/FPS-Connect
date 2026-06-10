@@ -162,6 +162,30 @@ router.post("/gebruikers", alleenBeheerder, async (req, res) => {
       : rol === "monteur"
         ? schoonVeldFunctie(functietitels)
         : [];
+    // Zelf-escalatiebeveiliging: niemand mag hogere niveaus toekennen dan eigen matrix.
+    let toegestaanBevoegdheden: Record<string, number> = {};
+    if (typeof bevoegdheden === "object" && bevoegdheden !== null) {
+      const requesterId = req.session.userId!;
+      const [requester] = await db
+        .select({ rol: gebruikersTable.rol, bevoegdheden: gebruikersTable.bevoegdheden })
+        .from(gebruikersTable)
+        .where(eq(gebruikersTable.id, requesterId));
+      if (requester && requester.rol !== "hoofdbeheerder") {
+        const eigenBev: Record<string, number> =
+          requester.bevoegdheden &&
+          Object.keys(requester.bevoegdheden as Record<string, number>).length > 0
+            ? (requester.bevoegdheden as Record<string, number>)
+            : bevoegdhedenVoorLegacyRol(requester.rol);
+        for (const [mod, lvl] of Object.entries(bevoegdheden as Record<string, number>)) {
+          if (typeof lvl === "number" && lvl > (eigenBev[mod] ?? 0)) {
+            return res.status(403).json({
+              error: "Geen toegang: bevoegdheid kan niet hoger zijn dan uw eigen niveau",
+            });
+          }
+        }
+      }
+      toegestaanBevoegdheden = bevoegdheden as Record<string, number>;
+    }
     const gehasht = wachtwoord ? await bcrypt.hash(String(wachtwoord), 10) : null;
     const [g] = await db
       .insert(gebruikersTable)
@@ -177,8 +201,7 @@ router.post("/gebruikers", alleenBeheerder, async (req, res) => {
         bedrijfslogoUrl: bedrijfslogo_url,
         bedrijfskleuren,
         taal: taal || "nl",
-        bevoegdheden:
-          typeof bevoegdheden === "object" && bevoegdheden !== null ? bevoegdheden : {},
+        bevoegdheden: toegestaanBevoegdheden,
         uitnodigingStatus: "niet_uitgenodigd",
       })
       .returning();

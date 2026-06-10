@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useListHeatmapPaginas, useListMuisGebeurtenissen } from "@workspace/api-client-react";
+import { useListHeatmapPaginas, useListMuisGebeurtenissen, getListMuisGebeurtenissenQueryKey } from "@workspace/api-client-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Activity, Loader2, MousePointerClick } from "lucide-react";
@@ -10,9 +10,10 @@ export default function Heatmaps() {
   const [type, setType] = useState<string>("alle");
 
   const pagina = gekozen || paginas?.[0] || "";
+  const muisParams = { pagina: pagina || undefined };
   const { data: gebeurtenissen, isLoading } = useListMuisGebeurtenissen(
-    { pagina: pagina || undefined },
-    { query: { enabled: !!pagina } },
+    muisParams,
+    { query: { enabled: !!pagina, queryKey: getListMuisGebeurtenissenQueryKey(muisParams) } },
   );
 
   const punten = (gebeurtenissen ?? []).filter((g) => type === "alle" || g.type === type);

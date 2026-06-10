@@ -1,10 +1,11 @@
 import { Router } from "express";
 import { db, profielenTable } from "@workspace/db";
 import { asc } from "drizzle-orm";
+import { requireBevoegdheid } from "../middlewares/auth";
 
 const router = Router();
 
-router.get("/profielen", async (req, res) => {
+router.get("/profielen", requireBevoegdheid("gebruikers", 1), async (req, res) => {
   try {
     const profielen = await db
       .select()
