@@ -16,6 +16,9 @@ const FUNCTIETITELS_TOEGESTAAN = [
   "Projectleider",
   "Werkvoorbereider",
   "Project-admin",
+  "Calculator",
+  "Commercie",
+  "Financieel",
 ];
 
 // Veldfuncties: een monteur kan één specifiekere functienaam dragen. De rol

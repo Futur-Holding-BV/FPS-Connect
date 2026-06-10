@@ -7,9 +7,11 @@ description: Hoe rollen en projectfuncties (functietitels) zijn gemodelleerd en 
 
 `gebruikers.functietitels` is een `text[]` (NOT NULL DEFAULT '{}'), geen enkel-veld.
 Het veld is **gesplitst in twee disjuncte categorieën** afhankelijk van de rol:
-- **Office-functies (beheerder/hoofdbeheerder)** — meerdere toegestaan: Projectleider, Werkvoorbereider, Project-admin. Server-const `FUNCTIETITELS_TOEGESTAAN` / web-const `FUNCTIETITELS`.
+- **Office-functies (beheerder/hoofdbeheerder)** — meerdere toegestaan: Projectleider, Werkvoorbereider, Project-admin, Calculator, Commercie, Financieel (6). Server-const `FUNCTIETITELS_TOEGESTAAN` / web-const `FUNCTIETITELS`.
 - **Veldfuncties (monteur)** — hooguit ÉÉN: Timmerman, Uitvoerder. Server-const `VELD_FUNCTIES`.
 - controleur/klant: altijd `[]`.
+
+**Formeel V1.0-rollenmodel (gebruikersbeslissing):** exact 5 systeemrollen (hoofdbeheerder/beheerder/monteur/controleur/klant) + 8 projectfuncties (6 office + 2 veld hierboven). GEEN nieuwe systeemrollen — de projectfuncties krijgen GEEN eigen rechtenlaag; toegang blijft puur op systeemrol. "Commercie"/"Financieel" zijn hier label-strings in `functietitels`, los van de gelijknamige CRM-tabellen (niet aanraken).
 
 **Timmerman/Uitvoerder zijn GEEN aparte systeemrollen.** De 5 systeemrollen (hoofdbeheerder/beheerder/monteur/controleur/klant) bepalen toegang. In de gebruikers-UI verschijnen Timmerman/Uitvoerder als rol-keuzes (virtuele lowercase Select-values), maar worden opgeslagen als `rol="monteur"` + één veldfunctie — zelfde monteur-app/portaal, alleen een specifiekere naam. `functietitels` zit nergens in auth-middleware → een veldfunctie geeft NOOIT extra toegang.
 (Historisch was dit één whitelist van vijf/zes met o.a. Calculator/Commercieel/Project-administratie/Financieel; per V1.0 ingeperkt en daarna gesplitst in office vs veld. "Commercieel"/"Financieel" bestaan nog als losstaande CRM-tabellen — niet aanraken.)

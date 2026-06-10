@@ -41,6 +41,9 @@ const FUNCTIETITELS = [
   "Projectleider",
   "Werkvoorbereider",
   "Project-admin",
+  "Calculator",
+  "Commercie",
+  "Financieel",
 ] as const;
 
 // Veldfuncties: keuzes in de Rol-lijst die dezelfde toegang als een monteur
