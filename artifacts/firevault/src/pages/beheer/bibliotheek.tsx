@@ -31,6 +31,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
+import { TabDocumenten } from "./documenten-tab";
 import {
   Archive,
   ArchiveRestore,
@@ -720,6 +721,7 @@ export default function Bibliotheek() {
         <TabsList className="w-full sm:w-auto">
           <TabsTrigger value="applicaties">Applicaties</TabsTrigger>
           <TabsTrigger value="toepassingen">Toepassingen</TabsTrigger>
+          <TabsTrigger value="documenten">Documenten</TabsTrigger>
           <TabsTrigger value="fabrikanten">Fabrikanten</TabsTrigger>
           <TabsTrigger value="meetwaarden">Meetwaarden</TabsTrigger>
         </TabsList>
@@ -730,6 +732,10 @@ export default function Bibliotheek() {
 
         <TabsContent value="toepassingen" className="mt-5">
           <TabToepassingen />
+        </TabsContent>
+
+        <TabsContent value="documenten" className="mt-5">
+          <TabDocumenten />
         </TabsContent>
 
         <TabsContent value="fabrikanten" className="mt-5">

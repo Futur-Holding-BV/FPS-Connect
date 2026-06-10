@@ -1488,6 +1488,283 @@ export const UpdateTestrapportResponse = zod.object({
 
 
 /**
+ * @summary Centrale documentbibliotheek (ETA's, classificatierapporten, testrapporten, DoP's, certificaten, voorschriften)
+ */
+export const ListDocumentenQueryParams = zod.object({
+  "documenttype": zod.enum(['eta', 'classificatierapport', 'testrapport', 'productcertificaat', 'dop', 'verwerkingsvoorschrift']).optional(),
+  "status": zod.enum(['actueel', 'controle_nodig', 'vervangen', 'mogelijk_verouderd', 'ingetrokken']).optional(),
+  "fabrikant": zod.coerce.string().optional(),
+  "voorziening_type_code": zod.coerce.string().optional().describe('Filter op gekoppelde applicatie'),
+  "label_id": zod.coerce.number().optional().describe('Filter op gekoppelde toepassing'),
+  "alleen_actueel": zod.coerce.boolean().optional().describe('Alleen de actuele revisie per documentgroep'),
+  "inclusief_gearchiveerd": zod.coerce.boolean().optional()
+})
+
+export const ListDocumentenResponseItem = zod.object({
+  "id": zod.number(),
+  "naam": zod.string(),
+  "documenttype": zod.enum(['eta', 'classificatierapport', 'testrapport', 'productcertificaat', 'dop', 'verwerkingsvoorschrift']),
+  "fabrikant": zod.string().nullish(),
+  "product": zod.string().nullish(),
+  "en_norm": zod.string().nullish(),
+  "rapportnummer": zod.string().nullish(),
+  "revisie": zod.string().nullish(),
+  "datum": zod.string().nullish(),
+  "pdf_url": zod.string().nullish(),
+  "status": zod.enum(['actueel', 'controle_nodig', 'vervangen', 'mogelijk_verouderd', 'ingetrokken']),
+  "groep_id": zod.string(),
+  "revisie_nummer": zod.number(),
+  "ai_geanalyseerd": zod.boolean(),
+  "ai_metadata": zod.record(zod.string(), zod.unknown()).nullish(),
+  "gearchiveerd": zod.boolean(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string().optional(),
+  "toepassing_ids": zod.array(zod.number()),
+  "applicatie_codes": zod.array(zod.string())
+})
+export const ListDocumentenResponse = zod.array(ListDocumentenResponseItem)
+
+
+/**
+ * @summary Nieuw document toevoegen aan de bibliotheek (beheerder)
+ */
+export const CreateDocumentBody = zod.object({
+  "naam": zod.string(),
+  "documenttype": zod.enum(['eta', 'classificatierapport', 'testrapport', 'productcertificaat', 'dop', 'verwerkingsvoorschrift']).optional(),
+  "fabrikant": zod.string().optional(),
+  "product": zod.string().optional(),
+  "en_norm": zod.string().optional(),
+  "rapportnummer": zod.string().optional(),
+  "revisie": zod.string().optional(),
+  "datum": zod.string().optional(),
+  "pdf_url": zod.string().optional(),
+  "ai_geanalyseerd": zod.boolean().optional(),
+  "ai_metadata": zod.record(zod.string(), zod.unknown()).optional(),
+  "toepassing_ids": zod.array(zod.number()).optional(),
+  "applicatie_codes": zod.array(zod.string()).optional()
+})
+
+export const CreateDocumentResponse = zod.void()
+
+
+/**
+ * @summary Documentdetail
+ */
+export const GetDocumentParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetDocumentResponse = zod.object({
+  "id": zod.number(),
+  "naam": zod.string(),
+  "documenttype": zod.enum(['eta', 'classificatierapport', 'testrapport', 'productcertificaat', 'dop', 'verwerkingsvoorschrift']),
+  "fabrikant": zod.string().nullish(),
+  "product": zod.string().nullish(),
+  "en_norm": zod.string().nullish(),
+  "rapportnummer": zod.string().nullish(),
+  "revisie": zod.string().nullish(),
+  "datum": zod.string().nullish(),
+  "pdf_url": zod.string().nullish(),
+  "status": zod.enum(['actueel', 'controle_nodig', 'vervangen', 'mogelijk_verouderd', 'ingetrokken']),
+  "groep_id": zod.string(),
+  "revisie_nummer": zod.number(),
+  "ai_geanalyseerd": zod.boolean(),
+  "ai_metadata": zod.record(zod.string(), zod.unknown()).nullish(),
+  "gearchiveerd": zod.boolean(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string().optional(),
+  "toepassing_ids": zod.array(zod.number()),
+  "applicatie_codes": zod.array(zod.string())
+})
+
+
+/**
+ * @summary Documentstatus of archief wijzigen (beheerder). Inhoud is onveranderlijk; maak een nieuwe revisie voor inhoudelijke wijzigingen.
+ */
+export const UpdateDocumentParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateDocumentBody = zod.object({
+  "status": zod.enum(['actueel', 'controle_nodig', 'vervangen', 'mogelijk_verouderd', 'ingetrokken']).optional(),
+  "gearchiveerd": zod.boolean().optional()
+})
+
+export const UpdateDocumentResponse = zod.object({
+  "id": zod.number(),
+  "naam": zod.string(),
+  "documenttype": zod.enum(['eta', 'classificatierapport', 'testrapport', 'productcertificaat', 'dop', 'verwerkingsvoorschrift']),
+  "fabrikant": zod.string().nullish(),
+  "product": zod.string().nullish(),
+  "en_norm": zod.string().nullish(),
+  "rapportnummer": zod.string().nullish(),
+  "revisie": zod.string().nullish(),
+  "datum": zod.string().nullish(),
+  "pdf_url": zod.string().nullish(),
+  "status": zod.enum(['actueel', 'controle_nodig', 'vervangen', 'mogelijk_verouderd', 'ingetrokken']),
+  "groep_id": zod.string(),
+  "revisie_nummer": zod.number(),
+  "ai_geanalyseerd": zod.boolean(),
+  "ai_metadata": zod.record(zod.string(), zod.unknown()).nullish(),
+  "gearchiveerd": zod.boolean(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string().optional(),
+  "toepassing_ids": zod.array(zod.number()),
+  "applicatie_codes": zod.array(zod.string())
+})
+
+
+/**
+ * @summary Alle revisies van een documentgroep (revisiehistorie)
+ */
+export const ListDocumentRevisiesParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ListDocumentRevisiesResponseItem = zod.object({
+  "id": zod.number(),
+  "naam": zod.string(),
+  "documenttype": zod.enum(['eta', 'classificatierapport', 'testrapport', 'productcertificaat', 'dop', 'verwerkingsvoorschrift']),
+  "fabrikant": zod.string().nullish(),
+  "product": zod.string().nullish(),
+  "en_norm": zod.string().nullish(),
+  "rapportnummer": zod.string().nullish(),
+  "revisie": zod.string().nullish(),
+  "datum": zod.string().nullish(),
+  "pdf_url": zod.string().nullish(),
+  "status": zod.enum(['actueel', 'controle_nodig', 'vervangen', 'mogelijk_verouderd', 'ingetrokken']),
+  "groep_id": zod.string(),
+  "revisie_nummer": zod.number(),
+  "ai_geanalyseerd": zod.boolean(),
+  "ai_metadata": zod.record(zod.string(), zod.unknown()).nullish(),
+  "gearchiveerd": zod.boolean(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string().optional(),
+  "toepassing_ids": zod.array(zod.number()),
+  "applicatie_codes": zod.array(zod.string())
+})
+export const ListDocumentRevisiesResponse = zod.array(ListDocumentRevisiesResponseItem)
+
+
+/**
+ * @summary Nieuwe revisie aanmaken; de vorige revisie blijft bewaard en krijgt status vervangen (beheerder)
+ */
+export const CreateDocumentRevisieParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const CreateDocumentRevisieBody = zod.object({
+  "naam": zod.string(),
+  "documenttype": zod.enum(['eta', 'classificatierapport', 'testrapport', 'productcertificaat', 'dop', 'verwerkingsvoorschrift']).optional(),
+  "fabrikant": zod.string().optional(),
+  "product": zod.string().optional(),
+  "en_norm": zod.string().optional(),
+  "rapportnummer": zod.string().optional(),
+  "revisie": zod.string().optional(),
+  "datum": zod.string().optional(),
+  "pdf_url": zod.string().optional(),
+  "ai_geanalyseerd": zod.boolean().optional(),
+  "ai_metadata": zod.record(zod.string(), zod.unknown()).optional(),
+  "toepassing_ids": zod.array(zod.number()).optional(),
+  "applicatie_codes": zod.array(zod.string()).optional()
+})
+
+export const CreateDocumentRevisieResponse = zod.void()
+
+
+/**
+ * @summary Gekoppelde toepassingen (labels) van een document instellen (beheerder)
+ */
+export const SetDocumentToepassingenParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const SetDocumentToepassingenBody = zod.object({
+  "label_ids": zod.array(zod.number())
+})
+
+export const SetDocumentToepassingenResponse = zod.object({
+  "id": zod.number(),
+  "naam": zod.string(),
+  "documenttype": zod.enum(['eta', 'classificatierapport', 'testrapport', 'productcertificaat', 'dop', 'verwerkingsvoorschrift']),
+  "fabrikant": zod.string().nullish(),
+  "product": zod.string().nullish(),
+  "en_norm": zod.string().nullish(),
+  "rapportnummer": zod.string().nullish(),
+  "revisie": zod.string().nullish(),
+  "datum": zod.string().nullish(),
+  "pdf_url": zod.string().nullish(),
+  "status": zod.enum(['actueel', 'controle_nodig', 'vervangen', 'mogelijk_verouderd', 'ingetrokken']),
+  "groep_id": zod.string(),
+  "revisie_nummer": zod.number(),
+  "ai_geanalyseerd": zod.boolean(),
+  "ai_metadata": zod.record(zod.string(), zod.unknown()).nullish(),
+  "gearchiveerd": zod.boolean(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string().optional(),
+  "toepassing_ids": zod.array(zod.number()),
+  "applicatie_codes": zod.array(zod.string())
+})
+
+
+/**
+ * @summary Gekoppelde applicaties (voorziening-types) van een document instellen (beheerder)
+ */
+export const SetDocumentApplicatiesParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const SetDocumentApplicatiesBody = zod.object({
+  "voorziening_type_codes": zod.array(zod.string())
+})
+
+export const SetDocumentApplicatiesResponse = zod.object({
+  "id": zod.number(),
+  "naam": zod.string(),
+  "documenttype": zod.enum(['eta', 'classificatierapport', 'testrapport', 'productcertificaat', 'dop', 'verwerkingsvoorschrift']),
+  "fabrikant": zod.string().nullish(),
+  "product": zod.string().nullish(),
+  "en_norm": zod.string().nullish(),
+  "rapportnummer": zod.string().nullish(),
+  "revisie": zod.string().nullish(),
+  "datum": zod.string().nullish(),
+  "pdf_url": zod.string().nullish(),
+  "status": zod.enum(['actueel', 'controle_nodig', 'vervangen', 'mogelijk_verouderd', 'ingetrokken']),
+  "groep_id": zod.string(),
+  "revisie_nummer": zod.number(),
+  "ai_geanalyseerd": zod.boolean(),
+  "ai_metadata": zod.record(zod.string(), zod.unknown()).nullish(),
+  "gearchiveerd": zod.boolean(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string().optional(),
+  "toepassing_ids": zod.array(zod.number()),
+  "applicatie_codes": zod.array(zod.string())
+})
+
+
+/**
+ * @summary AI-voorstel voor documentmetadata (fabrikant, product, type, EN-norm, revisie, datum, naam) o.b.v. de tekst van een geüpload bibliotheekdocument (beheerder)
+ */
+export const AiAnalyseDocumentBody = zod.object({
+  "tekst": zod.string().describe('De (client-side via pdf.js geëxtraheerde) tekstinhoud van het document.'),
+  "bestandsnaam": zod.string().optional().describe('Optionele bestandsnaam om de documentnaam en het type beter te kunnen voorstellen.')
+})
+
+export const AiAnalyseDocumentResponse = zod.object({
+  "naam": zod.string().nullish(),
+  "fabrikant": zod.string().nullish(),
+  "product": zod.string().nullish(),
+  "documenttype": zod.union([zod.enum(['eta', 'classificatierapport', 'testrapport', 'productcertificaat', 'dop', 'verwerkingsvoorschrift']),zod.null()]).optional(),
+  "en_norm": zod.string().nullish(),
+  "rapportnummer": zod.string().nullish(),
+  "revisie": zod.string().nullish(),
+  "datum": zod.string().nullish(),
+  "toelichting": zod.string().nullish(),
+  "betrouwbaarheid": zod.string().nullable().describe('laag, midden of hoog')
+})
+
+
+/**
  * @summary Voorzieningen op een verdieping (voor plattegrond)
  */
 export const ListVoorzieningenOpVerdiepingParams = zod.object({

@@ -1,5 +1,12 @@
-import { db, testrapportenTable, labelsTable, voorzieningLabelsTable } from "@workspace/db";
-import { eq, inArray } from "drizzle-orm";
+import {
+  db,
+  testrapportenTable,
+  labelsTable,
+  voorzieningLabelsTable,
+  documentenTable,
+  documentToepassingenTable,
+} from "@workspace/db";
+import { eq, inArray, and } from "drizzle-orm";
 
 export function mapTestrapport(t: typeof testrapportenTable.$inferSelect) {
   return {
@@ -15,9 +22,46 @@ export function mapTestrapport(t: typeof testrapportenTable.$inferSelect) {
   };
 }
 
+// Een document (documenttype 'testrapport') in het testrapport-antwoordformaat,
+// zodat de monteur-app en het spotformulier het ingebedde testrapport blijven herkennen.
+function documentNaarTestrapport(d: typeof documentenTable.$inferSelect) {
+  return {
+    id: d.id,
+    naam: d.naam,
+    fabrikant: d.fabrikant,
+    norm: d.enNorm,
+    rapportnummer: d.rapportnummer,
+    pdf_url: d.pdfUrl,
+    gearchiveerd: d.gearchiveerd,
+    aangemaakt_op: d.aangemaaktOp.toISOString(),
+    bijgewerkt_op: d.bijgewerktOp.toISOString(),
+  };
+}
+
 export async function mapLabel(l: typeof labelsTable.$inferSelect) {
   let testrapport = null;
-  if (l.testrapportId != null) {
+  // 1) Afleiden uit de centrale documentbibliotheek (gekoppeld document, type 'testrapport').
+  const docs = await db
+    .select()
+    .from(documentenTable)
+    .innerJoin(
+      documentToepassingenTable,
+      eq(documentToepassingenTable.documentId, documentenTable.id),
+    )
+    .where(
+      and(
+        eq(documentToepassingenTable.labelId, l.id),
+        eq(documentenTable.documenttype, "testrapport"),
+      ),
+    );
+  if (docs.length > 0) {
+    const rijen = docs.map((r) => r.documenten);
+    const gekozen =
+      rijen.find((d) => d.status === "actueel") ??
+      [...rijen].sort((a, b) => b.revisieNummer - a.revisieNummer)[0];
+    testrapport = documentNaarTestrapport(gekozen);
+  } else if (l.testrapportId != null) {
+    // 2) Fallback op de legacy koppeling.
     const [t] = await db
       .select()
       .from(testrapportenTable)

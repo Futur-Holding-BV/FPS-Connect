@@ -1243,6 +1243,237 @@ paths:
         "404":
           description: Niet gevonden
 
+  /documenten:
+    get:
+      operationId: listDocumenten
+      tags: [bibliotheek]
+      summary: Centrale documentbibliotheek (ETA's, classificatierapporten, testrapporten, DoP's, certificaten, voorschriften)
+      parameters:
+        - in: query
+          name: documenttype
+          schema:
+            $ref: "#/components/schemas/DocumentType"
+        - in: query
+          name: status
+          schema:
+            $ref: "#/components/schemas/DocumentStatus"
+        - in: query
+          name: fabrikant
+          schema:
+            type: string
+        - in: query
+          name: voorziening_type_code
+          description: Filter op gekoppelde applicatie
+          schema:
+            type: string
+        - in: query
+          name: label_id
+          description: Filter op gekoppelde toepassing
+          schema:
+            type: integer
+        - in: query
+          name: alleen_actueel
+          description: Alleen de actuele revisie per documentgroep
+          schema:
+            type: boolean
+        - in: query
+          name: inclusief_gearchiveerd
+          schema:
+            type: boolean
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Document"
+    post:
+      operationId: createDocument
+      tags: [bibliotheek]
+      summary: Nieuw document toevoegen aan de bibliotheek (beheerder)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DocumentInput"
+      responses:
+        "201":
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Document"
+
+  /documenten/{id}:
+    get:
+      operationId: getDocument
+      tags: [bibliotheek]
+      summary: Documentdetail
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Document"
+        "404":
+          description: Niet gevonden
+    patch:
+      operationId: updateDocument
+      tags: [bibliotheek]
+      summary: Documentstatus of archief wijzigen (beheerder). Inhoud is onveranderlijk; maak een nieuwe revisie voor inhoudelijke wijzigingen.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DocumentUpdate"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Document"
+        "404":
+          description: Niet gevonden
+
+  /documenten/{id}/revisies:
+    get:
+      operationId: listDocumentRevisies
+      tags: [bibliotheek]
+      summary: Alle revisies van een documentgroep (revisiehistorie)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Document"
+        "404":
+          description: Niet gevonden
+    post:
+      operationId: createDocumentRevisie
+      tags: [bibliotheek]
+      summary: Nieuwe revisie aanmaken; de vorige revisie blijft bewaard en krijgt status vervangen (beheerder)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DocumentInput"
+      responses:
+        "201":
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Document"
+        "404":
+          description: Niet gevonden
+
+  /documenten/{id}/toepassingen:
+    put:
+      operationId: setDocumentToepassingen
+      tags: [bibliotheek]
+      summary: Gekoppelde toepassingen (labels) van een document instellen (beheerder)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DocumentToepassingenInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Document"
+        "404":
+          description: Niet gevonden
+
+  /documenten/{id}/applicaties:
+    put:
+      operationId: setDocumentApplicaties
+      tags: [bibliotheek]
+      summary: Gekoppelde applicaties (voorziening-types) van een document instellen (beheerder)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DocumentApplicatiesInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Document"
+        "404":
+          description: Niet gevonden
+
+  /documenten/ai-analyse:
+    post:
+      operationId: aiAnalyseDocument
+      tags: [bibliotheek]
+      summary: AI-voorstel voor documentmetadata (fabrikant, product, type, EN-norm, revisie, datum, naam) o.b.v. de tekst van een geüpload bibliotheekdocument (beheerder)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DocumentAiAnalyseInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DocumentAiAnalyseResultaat"
+
   /verdiepingen/{id}/voorzieningen:
     get:
       operationId: listVoorzieningenOpVerdieping
@@ -5539,3 +5770,162 @@ components:
           type: ["integer", "null"]
         gearchiveerd:
           type: boolean
+
+    DocumentType:
+      type: string
+      enum: [eta, classificatierapport, testrapport, productcertificaat, dop, verwerkingsvoorschrift]
+
+    DocumentStatus:
+      type: string
+      enum: [actueel, controle_nodig, vervangen, mogelijk_verouderd, ingetrokken]
+
+    Document:
+      type: object
+      required: [id, naam, documenttype, status, groep_id, revisie_nummer, ai_geanalyseerd, gearchiveerd, aangemaakt_op, toepassing_ids, applicatie_codes]
+      properties:
+        id:
+          type: integer
+        naam:
+          type: string
+        documenttype:
+          $ref: "#/components/schemas/DocumentType"
+        fabrikant:
+          type: ["string", "null"]
+        product:
+          type: ["string", "null"]
+        en_norm:
+          type: ["string", "null"]
+        rapportnummer:
+          type: ["string", "null"]
+        revisie:
+          type: ["string", "null"]
+        datum:
+          type: ["string", "null"]
+        pdf_url:
+          type: ["string", "null"]
+        status:
+          $ref: "#/components/schemas/DocumentStatus"
+        groep_id:
+          type: string
+        revisie_nummer:
+          type: integer
+        ai_geanalyseerd:
+          type: boolean
+        ai_metadata:
+          type: ["object", "null"]
+          additionalProperties: true
+        gearchiveerd:
+          type: boolean
+        aangemaakt_op:
+          type: string
+        bijgewerkt_op:
+          type: string
+        toepassing_ids:
+          type: array
+          items:
+            type: integer
+        applicatie_codes:
+          type: array
+          items:
+            type: string
+
+    DocumentInput:
+      type: object
+      required: [naam]
+      properties:
+        naam:
+          type: string
+        documenttype:
+          $ref: "#/components/schemas/DocumentType"
+        fabrikant:
+          type: string
+        product:
+          type: string
+        en_norm:
+          type: string
+        rapportnummer:
+          type: string
+        revisie:
+          type: string
+        datum:
+          type: string
+        pdf_url:
+          type: string
+        ai_geanalyseerd:
+          type: boolean
+        ai_metadata:
+          type: object
+          additionalProperties: true
+        toepassing_ids:
+          type: array
+          items:
+            type: integer
+        applicatie_codes:
+          type: array
+          items:
+            type: string
+
+    DocumentUpdate:
+      type: object
+      properties:
+        status:
+          $ref: "#/components/schemas/DocumentStatus"
+        gearchiveerd:
+          type: boolean
+
+    DocumentToepassingenInput:
+      type: object
+      required: [label_ids]
+      properties:
+        label_ids:
+          type: array
+          items:
+            type: integer
+
+    DocumentApplicatiesInput:
+      type: object
+      required: [voorziening_type_codes]
+      properties:
+        voorziening_type_codes:
+          type: array
+          items:
+            type: string
+
+    DocumentAiAnalyseInput:
+      type: object
+      required: [tekst]
+      properties:
+        tekst:
+          type: string
+          description: De (client-side via pdf.js geëxtraheerde) tekstinhoud van het document.
+        bestandsnaam:
+          type: string
+          description: Optionele bestandsnaam om de documentnaam en het type beter te kunnen voorstellen.
+
+    DocumentAiAnalyseResultaat:
+      type: object
+      required: [betrouwbaarheid]
+      properties:
+        naam:
+          type: ["string", "null"]
+        fabrikant:
+          type: ["string", "null"]
+        product:
+          type: ["string", "null"]
+        documenttype:
+          oneOf:
+            - $ref: "#/components/schemas/DocumentType"
+            - type: "null"
+        en_norm:
+          type: ["string", "null"]
+        rapportnummer:
+          type: ["string", "null"]
+        revisie:
+          type: ["string", "null"]
+        datum:
+          type: ["string", "null"]
+        toelichting:
+          type: ["string", "null"]
+        betrouwbaarheid:
+          type: ["string", "null"]
+          description: "laag, midden of hoog"

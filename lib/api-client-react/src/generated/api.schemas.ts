@@ -1797,6 +1797,128 @@ export interface LabelUpdate {
   gearchiveerd?: boolean;
 }
 
+export type DocumentType = typeof DocumentType[keyof typeof DocumentType];
+
+
+export const DocumentType = {
+  eta: 'eta',
+  classificatierapport: 'classificatierapport',
+  testrapport: 'testrapport',
+  productcertificaat: 'productcertificaat',
+  dop: 'dop',
+  verwerkingsvoorschrift: 'verwerkingsvoorschrift',
+} as const;
+
+export type DocumentStatus = typeof DocumentStatus[keyof typeof DocumentStatus];
+
+
+export const DocumentStatus = {
+  actueel: 'actueel',
+  controle_nodig: 'controle_nodig',
+  vervangen: 'vervangen',
+  mogelijk_verouderd: 'mogelijk_verouderd',
+  ingetrokken: 'ingetrokken',
+} as const;
+
+/**
+ * @nullable
+ */
+export type DocumentAiMetadata = { [key: string]: unknown } | null;
+
+export interface Document {
+  id: number;
+  naam: string;
+  documenttype: DocumentType;
+  /** @nullable */
+  fabrikant?: string | null;
+  /** @nullable */
+  product?: string | null;
+  /** @nullable */
+  en_norm?: string | null;
+  /** @nullable */
+  rapportnummer?: string | null;
+  /** @nullable */
+  revisie?: string | null;
+  /** @nullable */
+  datum?: string | null;
+  /** @nullable */
+  pdf_url?: string | null;
+  status: DocumentStatus;
+  groep_id: string;
+  revisie_nummer: number;
+  ai_geanalyseerd: boolean;
+  /** @nullable */
+  ai_metadata?: DocumentAiMetadata;
+  gearchiveerd: boolean;
+  aangemaakt_op: string;
+  bijgewerkt_op?: string;
+  toepassing_ids: number[];
+  applicatie_codes: string[];
+}
+
+export type DocumentInputAiMetadata = { [key: string]: unknown };
+
+export interface DocumentInput {
+  naam: string;
+  documenttype?: DocumentType;
+  fabrikant?: string;
+  product?: string;
+  en_norm?: string;
+  rapportnummer?: string;
+  revisie?: string;
+  datum?: string;
+  pdf_url?: string;
+  ai_geanalyseerd?: boolean;
+  ai_metadata?: DocumentInputAiMetadata;
+  toepassing_ids?: number[];
+  applicatie_codes?: string[];
+}
+
+export interface DocumentUpdate {
+  status?: DocumentStatus;
+  gearchiveerd?: boolean;
+}
+
+export interface DocumentToepassingenInput {
+  label_ids: number[];
+}
+
+export interface DocumentApplicatiesInput {
+  voorziening_type_codes: string[];
+}
+
+export interface DocumentAiAnalyseInput {
+  /** De (client-side via pdf.js geëxtraheerde) tekstinhoud van het document. */
+  tekst: string;
+  /** Optionele bestandsnaam om de documentnaam en het type beter te kunnen voorstellen. */
+  bestandsnaam?: string;
+}
+
+export interface DocumentAiAnalyseResultaat {
+  /** @nullable */
+  naam?: string | null;
+  /** @nullable */
+  fabrikant?: string | null;
+  /** @nullable */
+  product?: string | null;
+  documenttype?: DocumentType | null;
+  /** @nullable */
+  en_norm?: string | null;
+  /** @nullable */
+  rapportnummer?: string | null;
+  /** @nullable */
+  revisie?: string | null;
+  /** @nullable */
+  datum?: string | null;
+  /** @nullable */
+  toelichting?: string | null;
+  /**
+     * laag, midden of hoog
+     * @nullable
+     */
+  betrouwbaarheid: string | null;
+}
+
 export type GetRecenteActiviteitParams = {
 limit?: number;
 };
@@ -1853,6 +1975,25 @@ inclusief_gearchiveerd?: boolean;
 };
 
 export type ListTestrapportenParams = {
+inclusief_gearchiveerd?: boolean;
+};
+
+export type ListDocumentenParams = {
+documenttype?: DocumentType;
+status?: DocumentStatus;
+fabrikant?: string;
+/**
+ * Filter op gekoppelde applicatie
+ */
+voorziening_type_code?: string;
+/**
+ * Filter op gekoppelde toepassing
+ */
+label_id?: number;
+/**
+ * Alleen de actuele revisie per documentgroep
+ */
+alleen_actueel?: boolean;
 inclusief_gearchiveerd?: boolean;
 };
 

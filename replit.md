@@ -75,26 +75,32 @@ V1.0 ("Administratief gereed voor uitvoering" — een project volledig binnen de
 
 Volgorde-wijziging (vastgelegd, vervangt de eerdere ordening): Rollen & bevoegdheden is nu V1.1 (lopend). De bibliotheekherstructurering verschuift naar V1.2, gevolgd door Spots & uitvoering (V1.3) en Opleverrapportage (V1.4). Nieuw is V1.5 Rapportenmodule: een centrale, juridisch correcte rapportenbibliotheek met definitieve rapporten per gebouw, versiebeheer en documentbevriezing. Dit wordt bewust als kernonderdeel behandeld (geen "extra wens") en krijgt voorrang boven een bredere CRM. De eerdere V2.1 (Medewerkerportaal Desktop) en V2.2 (Medewerkermodule mobiel) zijn samengevoegd tot V3.0 (Personeel / Medewerkerportaal). De Ontwikkelstop blijft als principe gelden: per fase pas bouwen ná formeel akkoord.
 
-### V1.2 — Bibliotheek & documentstructuur (vastgelegde architectuur, ~90-95% definitief)
+### V1.2 — Bibliotheek & documentstructuur (gebouwd — definitief model)
 
-NIET bouwen voordat de voorgaande fasen formeel akkoord zijn. Volgt op V1.1 (Rollen & bevoegdheden) en gaat vóór V1.3 (Spots & uitvoering). Onderstaande architectuur is vastgelegd om verschuiven te voorkomen.
+Formeel akkoord en gebouwd. Volgt op V1.1 (Rollen & bevoegdheden) en gaat vóór V1.3 (Spots & uitvoering).
 
-Doel: de bibliotheek wordt de centrale kennisbank voor alle brandveiligheidsapplicaties, toepassingen en onderliggende documentatie.
+Doel: de bibliotheek is de centrale kennisbank voor alle brandveiligheidsapplicaties, toepassingen en onderliggende documentatie.
 
-**Status bestaande scaffold (reeds aanwezig — basis ~90% klaar):**
+**Status bestaande scaffold (reeds aanwezig vóór V1.2):**
 - Applicaties: tabel `voorziening_types` (code, naam, categorie, volgorde) + read-only catalogusweergave in `beheer/bibliotheek.tsx` (tab Applicaties).
 - Toepassingen: tabel `labels` (typeCode, naam, fabrikant, testnorm, testrapportId) + volledige CRUD + Excel-import (XLSX) in `beheer/bibliotheek.tsx` en `beheer/toepassingen.tsx`.
-- Testrapporten: tabel `testrapporten` (naam, fabrikant, norm, rapportnummer, pdfUrl, gearchiveerd) + CRUD via `routes/classificatie.ts`.
 - Koppeling spot ↔ toepassing: junctietabel `voorziening_labels` (many-to-many) + pickers in het spotformulier.
-- AI-analyse (deels): bestaande AI leest tekeningbestanden (nette naam, tekeningtype, verdieping) en gebouwbeelden — nog NIET voor bibliotheekdocumenten (ETA/DoP/classificatie).
+- AI-analyse (deels): bestaande AI leest tekeningbestanden (nette naam, tekeningtype, verdieping) en gebouwbeelden.
 
-**Nog te bouwen (gap t.o.v. specificatie):**
-- Centrale documentbibliotheek met documenttypes ETA's, classificatierapporten, productcertificaten, DoP's, verwerkingsvoorschriften (nu alleen `testrapporten`).
-- Veel-op-veel koppeling Document ↔ Applicatie (één ETA aan meerdere applicaties).
-- Versiebeheer/revisies: documenten nooit overschrijven; oude revisies bewaren; statusveld per document (actueel, controle nodig, vervangen, mogelijk verouderd, ingetrokken).
-- Historische bevriezing voorbereiden: in V1.2 onveranderlijke documentrevisies; de daadwerkelijke koppeling definitief-rapport ↔ documentversie landt in V1.5 (Rapportenmodule), waar definitieve rapporten worden gepersisteerd.
-- AI-documentanalyse voor bibliotheekdocumenten: fabrikant, product, documenttype, EN-norm, revisie, datum herkennen + documentnaam voorstellen.
-- Documentcontrole (later): periodieke controle op leverancierswebsites, nieuwe versies als voorstel tonen.
+**Gebouwd in V1.2 (definitief model):**
+- Centrale documentbibliotheek: tabel `documenten` met documenttypes ETA, classificatierapport, testrapport, productcertificaat, DoP, verwerkingsvoorschrift. Enum-velden als tekstkolommen (geen pgEnum — pgEnum breekt het SQL-DDL-workflow). Schema in `lib/db/src/schema/documenten.ts`.
+- Samenvoeging testrapporten: de oude `testrapporten`-tabel is opgegaan in `documenten` (documenttype 'testrapport') via een idempotente SQL-migratie (INSERT ... SELECT met NOT EXISTS-guard). `labels.testrapportId` blijft fysiek bestaan (deprecaten, niet droppen); `mapLabel` leidt het embedded `testrapport`-object af uit `document_toepassingen` met fallback op legacy `testrapportId`.
+- Twee veel-op-veel koppelingen: Document ↔ Applicatie via `document_applicaties` (voorziening_type_code) EN Document ↔ Toepassing via `document_toepassingen` (label_id). Eén ETA kan aan meerdere applicaties/toepassingen hangen.
+- Versiebeheer/revisies (onveranderlijk): documenten worden nooit overschreven. Een revisie is een transactie (copy-on-revision): nieuwe rij met zelfde `groep_id`, `revisie_nummer = max+1`, status 'actueel'; de oude rij krijgt status 'vervangen'; junctie-rijen worden gekopieerd. PATCH wijzigt uitsluitend status/gearchiveerd/koppelingen — nooit naam/pdfUrl/metadata.
+- Statusveld per document: actueel, controle nodig, vervangen, mogelijk verouderd, ingetrokken.
+- AI-documentanalyse: endpoint `POST /documenten/ai-analyse` leest geüploade PDF-tekst (client-side pdf.js-extractie) → fabrikant, product, documenttype, EN-norm, revisie, datum + documentnaam-voorstel met betrouwbaarheidsindicatie. Voorstellen zijn GEEL/bewerkbaar; gebruiker bevestigt (NEUTRAAL).
+- Frontend: tab "Documenten" in `beheer/bibliotheek.tsx` (`documenten-tab.tsx`): lijst + filters (type/status/fabrikant/alleen-actueel/incl-gearchiveerd), detail met revisiehistorie, upload + AI-voorstel, koppelen aan toepassing(en)/applicatie(s), statusbeheer en archiveren.
+- Bevoegdheden (module "bibliotheek"): lezen = ingelogd; aanmaken/revisie/AI-analyse = niveau ≥3; status/archief/koppelingen = niveau ≥2.
+
+**Bevriezing — voorbereid, niet voltooid in V1.2:** alleen onveranderlijke documentrevisies (nooit overschrijven). De daadwerkelijke koppeling definitief-rapport ↔ documentversie landt in V1.5 (Rapportenmodule), waar definitieve opleverrapporten worden gepersisteerd.
+
+**Nog te bouwen (later, NIET in V1.2-scope):**
+- Documentcontrole: periodieke controle op leverancierswebsites, nieuwe versies als voorstel tonen; de beheerder beslist.
 
 Structuur (hiërarchie):
 - **Applicaties** — genummerd (1.1, 1.2, 2.5, enz.). Een applicatie = situatie die op locatie voorkomt.

@@ -37,3 +37,4 @@
 - [Nav "In uitvoering"-badge](nav-in-uitvoering-badge.md) — geparkeerde modules krijgen outline-badge met nav.inUitvoering (klok-icoon); viel stil weg bij matrix-herschrijving; behouden bij elke sidebar-refactor.
 - [Bevoegdheden-matrix architectuur](bevoegdheden-matrix.md) — jsonb-kolom + profielen-tabel; requireBevoegdheid middleware; legacy-fallback; GebruikerInput heeft ook bevoegdheden nodig; viewer=uitgebannen.
 - [Preset herkomst-koppeling](preset-herkomst.md) — gebruikers.herkomst_profiel_id (FK set null) koppelt preset terug; GET /profielen verrijkt met gebruiker_aantal+gelijk-vlag; POST /profielen/:id/toepassen herdoorvoert.
+- [Documenten versiebeheer (V1.2)](documenten-versiebeheer.md) — single-'actueel'-per-groep afdwingen op PATCH én revisie; revisie erft bron pdf/metadata; testrapport afgeleid uit document_toepassingen + legacy fallback.

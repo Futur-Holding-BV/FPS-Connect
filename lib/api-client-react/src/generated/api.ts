@@ -42,6 +42,13 @@ import type {
   CrmOpdracht,
   CrmOpdrachtInput,
   DashboardStats,
+  Document,
+  DocumentAiAnalyseInput,
+  DocumentAiAnalyseResultaat,
+  DocumentApplicatiesInput,
+  DocumentInput,
+  DocumentToepassingenInput,
+  DocumentUpdate,
   ErrorEnvelope,
   Feedback,
   FeedbackInput,
@@ -81,6 +88,7 @@ import type {
   Label,
   LabelInput,
   LabelUpdate,
+  ListDocumentenParams,
   ListGebouwenParams,
   ListInspectiesParams,
   ListLabelsParams,
@@ -4163,6 +4171,668 @@ export const useUpdateTestrapport = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getUpdateTestrapportMutationOptions(options));
+    }
+
+export const getListDocumentenUrl = (params?: ListDocumentenParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/documenten?${stringifiedParams}` : `/api/documenten`
+}
+
+/**
+ * @summary Centrale documentbibliotheek (ETA's, classificatierapporten, testrapporten, DoP's, certificaten, voorschriften)
+ */
+export const listDocumenten = async (params?: ListDocumentenParams, options?: RequestInit): Promise<Document[]> => {
+
+  return customFetch<Document[]>(getListDocumentenUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListDocumentenQueryKey = (params?: ListDocumentenParams,) => {
+    return [
+    `/api/documenten`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListDocumentenQueryOptions = <TData = Awaited<ReturnType<typeof listDocumenten>>, TError = ErrorType<unknown>>(params?: ListDocumentenParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listDocumenten>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListDocumentenQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listDocumenten>>> = ({ signal }) => listDocumenten(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listDocumenten>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListDocumentenQueryResult = NonNullable<Awaited<ReturnType<typeof listDocumenten>>>
+export type ListDocumentenQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Centrale documentbibliotheek (ETA's, classificatierapporten, testrapporten, DoP's, certificaten, voorschriften)
+ */
+
+export function useListDocumenten<TData = Awaited<ReturnType<typeof listDocumenten>>, TError = ErrorType<unknown>>(
+ params?: ListDocumentenParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listDocumenten>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListDocumentenQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateDocumentUrl = () => {
+
+
+
+
+  return `/api/documenten`
+}
+
+/**
+ * @summary Nieuw document toevoegen aan de bibliotheek (beheerder)
+ */
+export const createDocument = async (documentInput: DocumentInput, options?: RequestInit): Promise<Document> => {
+
+  return customFetch<Document>(getCreateDocumentUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(documentInput)
+  }
+);}
+
+
+
+
+export const getCreateDocumentMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createDocument>>, TError,{data: BodyType<DocumentInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createDocument>>, TError,{data: BodyType<DocumentInput>}, TContext> => {
+
+const mutationKey = ['createDocument'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createDocument>>, {data: BodyType<DocumentInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createDocument(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateDocumentMutationResult = NonNullable<Awaited<ReturnType<typeof createDocument>>>
+    export type CreateDocumentMutationBody = BodyType<DocumentInput>
+    export type CreateDocumentMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Nieuw document toevoegen aan de bibliotheek (beheerder)
+ */
+export const useCreateDocument = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createDocument>>, TError,{data: BodyType<DocumentInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createDocument>>,
+        TError,
+        {data: BodyType<DocumentInput>},
+        TContext
+      > => {
+      return useMutation(getCreateDocumentMutationOptions(options));
+    }
+
+export const getGetDocumentUrl = (id: number,) => {
+
+
+
+
+  return `/api/documenten/${id}`
+}
+
+/**
+ * @summary Documentdetail
+ */
+export const getDocument = async (id: number, options?: RequestInit): Promise<Document> => {
+
+  return customFetch<Document>(getGetDocumentUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetDocumentQueryKey = (id: number,) => {
+    return [
+    `/api/documenten/${id}`
+    ] as const;
+    }
+
+
+export const getGetDocumentQueryOptions = <TData = Awaited<ReturnType<typeof getDocument>>, TError = ErrorType<void>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getDocument>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetDocumentQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getDocument>>> = ({ signal }) => getDocument(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getDocument>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetDocumentQueryResult = NonNullable<Awaited<ReturnType<typeof getDocument>>>
+export type GetDocumentQueryError = ErrorType<void>
+
+
+/**
+ * @summary Documentdetail
+ */
+
+export function useGetDocument<TData = Awaited<ReturnType<typeof getDocument>>, TError = ErrorType<void>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getDocument>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetDocumentQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getUpdateDocumentUrl = (id: number,) => {
+
+
+
+
+  return `/api/documenten/${id}`
+}
+
+/**
+ * @summary Documentstatus of archief wijzigen (beheerder). Inhoud is onveranderlijk; maak een nieuwe revisie voor inhoudelijke wijzigingen.
+ */
+export const updateDocument = async (id: number,
+    documentUpdate: DocumentUpdate, options?: RequestInit): Promise<Document> => {
+
+  return customFetch<Document>(getUpdateDocumentUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(documentUpdate)
+  }
+);}
+
+
+
+
+export const getUpdateDocumentMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateDocument>>, TError,{id: number;data: BodyType<DocumentUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateDocument>>, TError,{id: number;data: BodyType<DocumentUpdate>}, TContext> => {
+
+const mutationKey = ['updateDocument'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateDocument>>, {id: number;data: BodyType<DocumentUpdate>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateDocument(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateDocumentMutationResult = NonNullable<Awaited<ReturnType<typeof updateDocument>>>
+    export type UpdateDocumentMutationBody = BodyType<DocumentUpdate>
+    export type UpdateDocumentMutationError = ErrorType<void>
+
+    /**
+ * @summary Documentstatus of archief wijzigen (beheerder). Inhoud is onveranderlijk; maak een nieuwe revisie voor inhoudelijke wijzigingen.
+ */
+export const useUpdateDocument = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateDocument>>, TError,{id: number;data: BodyType<DocumentUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateDocument>>,
+        TError,
+        {id: number;data: BodyType<DocumentUpdate>},
+        TContext
+      > => {
+      return useMutation(getUpdateDocumentMutationOptions(options));
+    }
+
+export const getListDocumentRevisiesUrl = (id: number,) => {
+
+
+
+
+  return `/api/documenten/${id}/revisies`
+}
+
+/**
+ * @summary Alle revisies van een documentgroep (revisiehistorie)
+ */
+export const listDocumentRevisies = async (id: number, options?: RequestInit): Promise<Document[]> => {
+
+  return customFetch<Document[]>(getListDocumentRevisiesUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListDocumentRevisiesQueryKey = (id: number,) => {
+    return [
+    `/api/documenten/${id}/revisies`
+    ] as const;
+    }
+
+
+export const getListDocumentRevisiesQueryOptions = <TData = Awaited<ReturnType<typeof listDocumentRevisies>>, TError = ErrorType<void>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listDocumentRevisies>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListDocumentRevisiesQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listDocumentRevisies>>> = ({ signal }) => listDocumentRevisies(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listDocumentRevisies>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListDocumentRevisiesQueryResult = NonNullable<Awaited<ReturnType<typeof listDocumentRevisies>>>
+export type ListDocumentRevisiesQueryError = ErrorType<void>
+
+
+/**
+ * @summary Alle revisies van een documentgroep (revisiehistorie)
+ */
+
+export function useListDocumentRevisies<TData = Awaited<ReturnType<typeof listDocumentRevisies>>, TError = ErrorType<void>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listDocumentRevisies>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListDocumentRevisiesQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateDocumentRevisieUrl = (id: number,) => {
+
+
+
+
+  return `/api/documenten/${id}/revisies`
+}
+
+/**
+ * @summary Nieuwe revisie aanmaken; de vorige revisie blijft bewaard en krijgt status vervangen (beheerder)
+ */
+export const createDocumentRevisie = async (id: number,
+    documentInput: DocumentInput, options?: RequestInit): Promise<Document> => {
+
+  return customFetch<Document>(getCreateDocumentRevisieUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(documentInput)
+  }
+);}
+
+
+
+
+export const getCreateDocumentRevisieMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createDocumentRevisie>>, TError,{id: number;data: BodyType<DocumentInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createDocumentRevisie>>, TError,{id: number;data: BodyType<DocumentInput>}, TContext> => {
+
+const mutationKey = ['createDocumentRevisie'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createDocumentRevisie>>, {id: number;data: BodyType<DocumentInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  createDocumentRevisie(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateDocumentRevisieMutationResult = NonNullable<Awaited<ReturnType<typeof createDocumentRevisie>>>
+    export type CreateDocumentRevisieMutationBody = BodyType<DocumentInput>
+    export type CreateDocumentRevisieMutationError = ErrorType<void>
+
+    /**
+ * @summary Nieuwe revisie aanmaken; de vorige revisie blijft bewaard en krijgt status vervangen (beheerder)
+ */
+export const useCreateDocumentRevisie = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createDocumentRevisie>>, TError,{id: number;data: BodyType<DocumentInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createDocumentRevisie>>,
+        TError,
+        {id: number;data: BodyType<DocumentInput>},
+        TContext
+      > => {
+      return useMutation(getCreateDocumentRevisieMutationOptions(options));
+    }
+
+export const getSetDocumentToepassingenUrl = (id: number,) => {
+
+
+
+
+  return `/api/documenten/${id}/toepassingen`
+}
+
+/**
+ * @summary Gekoppelde toepassingen (labels) van een document instellen (beheerder)
+ */
+export const setDocumentToepassingen = async (id: number,
+    documentToepassingenInput: DocumentToepassingenInput, options?: RequestInit): Promise<Document> => {
+
+  return customFetch<Document>(getSetDocumentToepassingenUrl(id),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(documentToepassingenInput)
+  }
+);}
+
+
+
+
+export const getSetDocumentToepassingenMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof setDocumentToepassingen>>, TError,{id: number;data: BodyType<DocumentToepassingenInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof setDocumentToepassingen>>, TError,{id: number;data: BodyType<DocumentToepassingenInput>}, TContext> => {
+
+const mutationKey = ['setDocumentToepassingen'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof setDocumentToepassingen>>, {id: number;data: BodyType<DocumentToepassingenInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  setDocumentToepassingen(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SetDocumentToepassingenMutationResult = NonNullable<Awaited<ReturnType<typeof setDocumentToepassingen>>>
+    export type SetDocumentToepassingenMutationBody = BodyType<DocumentToepassingenInput>
+    export type SetDocumentToepassingenMutationError = ErrorType<void>
+
+    /**
+ * @summary Gekoppelde toepassingen (labels) van een document instellen (beheerder)
+ */
+export const useSetDocumentToepassingen = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof setDocumentToepassingen>>, TError,{id: number;data: BodyType<DocumentToepassingenInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof setDocumentToepassingen>>,
+        TError,
+        {id: number;data: BodyType<DocumentToepassingenInput>},
+        TContext
+      > => {
+      return useMutation(getSetDocumentToepassingenMutationOptions(options));
+    }
+
+export const getSetDocumentApplicatiesUrl = (id: number,) => {
+
+
+
+
+  return `/api/documenten/${id}/applicaties`
+}
+
+/**
+ * @summary Gekoppelde applicaties (voorziening-types) van een document instellen (beheerder)
+ */
+export const setDocumentApplicaties = async (id: number,
+    documentApplicatiesInput: DocumentApplicatiesInput, options?: RequestInit): Promise<Document> => {
+
+  return customFetch<Document>(getSetDocumentApplicatiesUrl(id),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(documentApplicatiesInput)
+  }
+);}
+
+
+
+
+export const getSetDocumentApplicatiesMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof setDocumentApplicaties>>, TError,{id: number;data: BodyType<DocumentApplicatiesInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof setDocumentApplicaties>>, TError,{id: number;data: BodyType<DocumentApplicatiesInput>}, TContext> => {
+
+const mutationKey = ['setDocumentApplicaties'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof setDocumentApplicaties>>, {id: number;data: BodyType<DocumentApplicatiesInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  setDocumentApplicaties(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SetDocumentApplicatiesMutationResult = NonNullable<Awaited<ReturnType<typeof setDocumentApplicaties>>>
+    export type SetDocumentApplicatiesMutationBody = BodyType<DocumentApplicatiesInput>
+    export type SetDocumentApplicatiesMutationError = ErrorType<void>
+
+    /**
+ * @summary Gekoppelde applicaties (voorziening-types) van een document instellen (beheerder)
+ */
+export const useSetDocumentApplicaties = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof setDocumentApplicaties>>, TError,{id: number;data: BodyType<DocumentApplicatiesInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof setDocumentApplicaties>>,
+        TError,
+        {id: number;data: BodyType<DocumentApplicatiesInput>},
+        TContext
+      > => {
+      return useMutation(getSetDocumentApplicatiesMutationOptions(options));
+    }
+
+export const getAiAnalyseDocumentUrl = () => {
+
+
+
+
+  return `/api/documenten/ai-analyse`
+}
+
+/**
+ * @summary AI-voorstel voor documentmetadata (fabrikant, product, type, EN-norm, revisie, datum, naam) o.b.v. de tekst van een geüpload bibliotheekdocument (beheerder)
+ */
+export const aiAnalyseDocument = async (documentAiAnalyseInput: DocumentAiAnalyseInput, options?: RequestInit): Promise<DocumentAiAnalyseResultaat> => {
+
+  return customFetch<DocumentAiAnalyseResultaat>(getAiAnalyseDocumentUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(documentAiAnalyseInput)
+  }
+);}
+
+
+
+
+export const getAiAnalyseDocumentMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof aiAnalyseDocument>>, TError,{data: BodyType<DocumentAiAnalyseInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof aiAnalyseDocument>>, TError,{data: BodyType<DocumentAiAnalyseInput>}, TContext> => {
+
+const mutationKey = ['aiAnalyseDocument'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof aiAnalyseDocument>>, {data: BodyType<DocumentAiAnalyseInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  aiAnalyseDocument(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AiAnalyseDocumentMutationResult = NonNullable<Awaited<ReturnType<typeof aiAnalyseDocument>>>
+    export type AiAnalyseDocumentMutationBody = BodyType<DocumentAiAnalyseInput>
+    export type AiAnalyseDocumentMutationError = ErrorType<unknown>
+
+    /**
+ * @summary AI-voorstel voor documentmetadata (fabrikant, product, type, EN-norm, revisie, datum, naam) o.b.v. de tekst van een geüpload bibliotheekdocument (beheerder)
+ */
+export const useAiAnalyseDocument = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof aiAnalyseDocument>>, TError,{data: BodyType<DocumentAiAnalyseInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof aiAnalyseDocument>>,
+        TError,
+        {data: BodyType<DocumentAiAnalyseInput>},
+        TContext
+      > => {
+      return useMutation(getAiAnalyseDocumentMutationOptions(options));
     }
 
 export const getListVoorzieningenOpVerdiepingUrl = (id: number,) => {
