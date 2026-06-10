@@ -70,6 +70,27 @@ Doel Versie 1.0: "Administratief gereed voor uitvoering" — een project moet vo
 - **V1.3** — Bibliotheek & Documenten
 - **V2.0** — Mobiele monteur-app
 
+### V1.3 — Bibliotheek & Documenten (vastgelegde architectuur, ~90-95% definitief)
+
+NIET bouwen tijdens V1.0. Pas bouwen na formeel akkoord, ná V1.2. Onderstaande architectuur is vastgelegd om verschuiven te voorkomen terwijl basis, uitvoering en rapportage worden afgerond.
+
+Doel: de bibliotheek wordt de centrale kennisbank voor alle brandveiligheidsapplicaties, toepassingen en onderliggende documentatie.
+
+Structuur (hiërarchie):
+- **Applicaties** — genummerd (1.1, 1.2, 2.5, enz.). Een applicatie = situatie die op locatie voorkomt.
+- **Toepassingen** — onder iedere applicatie (bv. Mulcol Multicollar Slim, Hilti CFS-C P, Rockwool systeem, Nullifire systeem). Een toepassing = gekozen oplossing.
+- **Documenten** — centrale documentbibliotheek: ETA's, classificatierapporten, testrapporten, productcertificaten, DoP's, verwerkingsvoorschriften.
+
+AI-documentanalyse (na upload): AI herkent fabrikant, product, documenttype, EN-norm, revisie en datum, en stelt een documentnaam voor.
+
+Koppelingen: Document ↔ Applicatie is een veel-op-veel relatie (één ETA kan aan meerdere applicaties gekoppeld zijn).
+
+Versiebeheer: documenten nooit overschrijven. Een nieuwe versie wordt als nieuwe revisie opgeslagen; oude revisies blijven bewaard. Status per document: actueel, controle nodig, vervangen, mogelijk verouderd, ingetrokken.
+
+Historische bevriezing: definitieve opleverrapporten blijven gekoppeld aan de documentversies die op dat moment geldig waren. Nieuwe documentversies mogen nieuwe rapporten en conceptrapporten beïnvloeden, maar NOOIT reeds definitieve rapporten wijzigen.
+
+Documentcontrole (later): periodieke controle op leverancierswebsites, nieuwe versies als voorstel tonen; de beheerder beslist.
+
 ## User preferences
 
 - Alle UI-tekst volledig in het Nederlands
