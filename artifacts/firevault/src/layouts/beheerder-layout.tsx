@@ -8,8 +8,9 @@ import {
 } from "@/components/ui/sidebar";
 import {
   ShieldCheck, Building, Wrench, Users, Search, Home, Receipt,
-  ShieldAlert, LifeBuoy, MessageSquarePlus, Activity, Contact, Info, BookOpen,
+  ShieldAlert, LifeBuoy, MessageSquarePlus, Activity, Contact, Info, BookOpen, Clock,
 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { GebruikerMenu } from "@/components/gebruiker-menu";
 import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
 
@@ -109,6 +110,13 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
                         <Link href="/inspecties">
                           <Search />
                           <span>{t("nav.inspecties")}</span>
+                          <Badge
+                            variant="outline"
+                            className="ml-auto text-[10px] px-1.5 py-0 leading-tight border-muted-foreground/40 text-muted-foreground group-data-[collapsible=icon]:hidden"
+                          >
+                            <Clock className="h-2.5 w-2.5 mr-0.5" />
+                            {t("nav.inUitvoering")}
+                          </Badge>
                         </Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
@@ -122,6 +130,13 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
                         <Link href="/onderhoud">
                           <Wrench />
                           <span>{t("nav.onderhoud")}</span>
+                          <Badge
+                            variant="outline"
+                            className="ml-auto text-[10px] px-1.5 py-0 leading-tight border-muted-foreground/40 text-muted-foreground group-data-[collapsible=icon]:hidden"
+                          >
+                            <Clock className="h-2.5 w-2.5 mr-0.5" />
+                            {t("nav.inUitvoering")}
+                          </Badge>
                         </Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
@@ -135,6 +150,13 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
                         <Link href="/crm">
                           <Contact />
                           <span>{t("nav.crm")}</span>
+                          <Badge
+                            variant="outline"
+                            className="ml-auto text-[10px] px-1.5 py-0 leading-tight border-muted-foreground/40 text-muted-foreground group-data-[collapsible=icon]:hidden"
+                          >
+                            <Clock className="h-2.5 w-2.5 mr-0.5" />
+                            {t("nav.inUitvoering")}
+                          </Badge>
                         </Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
@@ -148,6 +170,13 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
                         <Link href="/abonnementen">
                           <Receipt />
                           <span>{t("nav.abonnementen")}</span>
+                          <Badge
+                            variant="outline"
+                            className="ml-auto text-[10px] px-1.5 py-0 leading-tight border-muted-foreground/40 text-muted-foreground group-data-[collapsible=icon]:hidden"
+                          >
+                            <Clock className="h-2.5 w-2.5 mr-0.5" />
+                            {t("nav.inUitvoering")}
+                          </Badge>
                         </Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>

@@ -32,4 +32,5 @@
 - [Projectformulier edit leeg](projectformulier-edit-leeg.md) — lege edit-velden + niet opslaan = meestal api-server down/HMR-stale, geen UI-bug; check workflows draaien + hard refresh vóór codejacht.
 
 - [Betrokken contacten-kaart](betrokkenen-kaart.md) — projectformulier-kaart groepeert op partij (opdrachtgever boven); rol/org in groepskop, dus kale PersoonRegel buiten groep heeft toonContext nodig.
+- [Nav "In uitvoering"-badge](nav-in-uitvoering-badge.md) — geparkeerde modules krijgen outline-badge met nav.inUitvoering (klok-icoon); viel stil weg bij matrix-herschrijving; behouden bij elke sidebar-refactor.
 - [Bevoegdheden-matrix architectuur](bevoegdheden-matrix.md) — jsonb-kolom + profielen-tabel; requireBevoegdheid middleware; legacy-fallback; GebruikerInput heeft ook bevoegdheden nodig; viewer=uitgebannen.
