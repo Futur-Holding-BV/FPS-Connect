@@ -65,12 +65,14 @@ Doel Versie 1.0: "Administratief gereed voor uitvoering" — een project moet vo
 
 **Roadmap (volgorde, na formeel akkoord per fase):**
 - **V1.0** — Administratief gereed voor uitvoering (huidige focus)
-- **V1.1** — Spots & Uitvoering
-- **V1.2** — Opleverrapportage
-- **V1.3** — Bibliotheek & Documenten
+- **V1.1** — Bibliotheekherstructurering & Documenten (naar voren gehaald: eerstvolgende fase, vóór Spots & Uitvoering en vóór de mobiele monteur-app)
+- **V1.2** — Spots & Uitvoering
+- **V1.3** — Opleverrapportage
 - **V2.0** — Mobiele monteur-app (monteurflow: werk, route, plattegronden, spots, foto's, gereedmelden)
 - **V2.1** — Medewerkerportaal Desktop (HRM-module, mogelijke vervanger Apployed)
 - **V2.2** — Medewerkermodule mobiel (optionele module naast monteurmodule)
+
+Volgorde-wijziging (vastgelegd): de bibliotheekherstructurering is op verzoek naar voren gehaald naar V1.1. De opleverrapportage (V1.3) leunt op een betrouwbare, gestructureerde bibliotheek (toepassingen + gekoppelde ETA's/DoP's/classificatierapporten), dus de bibliotheek wordt eerst op orde gebracht. De Ontwikkelstop blijft gelden: bouwen pas ná formeel akkoord op V1.0.
 
 ### V2.1 — Medewerkerportaal Desktop (vastgelegd, NIET bouwen voor V2.0 afgerond)
 
@@ -97,11 +99,26 @@ De FPS Monteur-app wordt modulair: modules per gebruiker aan- of uitzetten via b
 - **Monteurmodule** (bestaand doel V2.0): werk, route, plattegronden, spots, foto's, gereedmelden.
 - **Medewerkermodule** (V2.2): eigen profiel, verlof aanvragen, verlofsaldo bekijken, uren invullen, weekplanning inzien, eigen gereedschap bekijken, instructies/cursussen afronden.
 
-### V1.3 — Bibliotheek & Documenten (vastgelegde architectuur, ~90-95% definitief)
+### V1.1 — Bibliotheekherstructurering & Documenten (vastgelegde architectuur, ~90-95% definitief)
 
-NIET bouwen tijdens V1.0. Pas bouwen na formeel akkoord, ná V1.2. Onderstaande architectuur is vastgelegd om verschuiven te voorkomen terwijl basis, uitvoering en rapportage worden afgerond.
+NIET bouwen tijdens V1.0. Pas bouwen na formeel akkoord op V1.0; dit is dan de eerstvolgende fase (vóór Spots & Uitvoering en vóór de mobiele monteur-app). Onderstaande architectuur is vastgelegd om verschuiven te voorkomen.
 
 Doel: de bibliotheek wordt de centrale kennisbank voor alle brandveiligheidsapplicaties, toepassingen en onderliggende documentatie.
+
+**Status bestaande scaffold (reeds aanwezig — basis ~90% klaar):**
+- Applicaties: tabel `voorziening_types` (code, naam, categorie, volgorde) + read-only catalogusweergave in `beheer/bibliotheek.tsx` (tab Applicaties).
+- Toepassingen: tabel `labels` (typeCode, naam, fabrikant, testnorm, testrapportId) + volledige CRUD + Excel-import (XLSX) in `beheer/bibliotheek.tsx` en `beheer/toepassingen.tsx`.
+- Testrapporten: tabel `testrapporten` (naam, fabrikant, norm, rapportnummer, pdfUrl, gearchiveerd) + CRUD via `routes/classificatie.ts`.
+- Koppeling spot ↔ toepassing: junctietabel `voorziening_labels` (many-to-many) + pickers in het spotformulier.
+- AI-analyse (deels): bestaande AI leest tekeningbestanden (nette naam, tekeningtype, verdieping) en gebouwbeelden — nog NIET voor bibliotheekdocumenten (ETA/DoP/classificatie).
+
+**Nog te bouwen (gap t.o.v. specificatie):**
+- Centrale documentbibliotheek met documenttypes ETA's, classificatierapporten, productcertificaten, DoP's, verwerkingsvoorschriften (nu alleen `testrapporten`).
+- Veel-op-veel koppeling Document ↔ Applicatie (één ETA aan meerdere applicaties).
+- Versiebeheer/revisies: documenten nooit overschrijven; oude revisies bewaren; statusveld per document (actueel, controle nodig, vervangen, mogelijk verouderd, ingetrokken).
+- Historische bevriezing: definitieve opleverrapporten gekoppeld aan de documentversies die op dat moment geldig waren; nieuwe versies mogen definitieve rapporten nooit wijzigen.
+- AI-documentanalyse voor bibliotheekdocumenten: fabrikant, product, documenttype, EN-norm, revisie, datum herkennen + documentnaam voorstellen.
+- Documentcontrole (later): periodieke controle op leverancierswebsites, nieuwe versies als voorstel tonen.
 
 Structuur (hiërarchie):
 - **Applicaties** — genummerd (1.1, 1.2, 2.5, enz.). Een applicatie = situatie die op locatie voorkomt.
