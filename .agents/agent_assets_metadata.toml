@@ -1,8 +1,13 @@
 uploads = []
-outputs = []
 
 [[generated]]
 id = "nsYzAiPpc4VCcDXa0nlDq"
 uri = "file://artifacts/monteur-app/assets/images/icon.png"
 type = "image"
 title = "fps monteur app icon"
+
+[[outputs]]
+id = "BMCkg8xUEe5_0LBWm7xwT"
+uri = "file://audit-v1.0.md"
+type = "text"
+title = "Functionele Audit — FPS Brandpreventie V1.0"

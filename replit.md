@@ -57,6 +57,19 @@ FPS Brandpreventie biedt:
 - **Gebruikersbeheer**: rollen beheerder, monteur, controleur en klant
 - **Abonnementen**: 3 pakketten (Basis €149, Beheer €349, Volledig €699/maand)
 
+## Ontwikkelstop & roadmap (Versie 1.0)
+
+Doel Versie 1.0: "Administratief gereed voor uitvoering" — een project moet volledig binnen de app voorbereid kunnen worden, zonder Excel, losse e-mails of externe documenten.
+
+**Ontwikkelstop (harde projectregel).** Tot Versie 1.0 formeel akkoord is: géén nieuwe modules of grote functionaliteiten starten. Geparkeerd blijven en NIET uitbouwen: mobiele monteur-app, CRM-module, onderhoudsmodule, klantportaal, abonnementen, afspraakplanner, bibliotheek/versiebeheer, documentbewaking, urenregistratie, verlofmodule, gereedschapbeheer. Bestaande scaffolds (o.a. `artifacts/firevault/src/pages/crm/`) niet verder uitbouwen.
+
+**Roadmap (volgorde, na formeel akkoord per fase):**
+- **V1.0** — Administratief gereed voor uitvoering (huidige focus)
+- **V1.1** — Spots & Uitvoering
+- **V1.2** — Opleverrapportage
+- **V1.3** — Bibliotheek & Documenten
+- **V2.0** — Mobiele monteur-app
+
 ## User preferences
 
 - Alle UI-tekst volledig in het Nederlands
