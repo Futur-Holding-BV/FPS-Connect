@@ -79,13 +79,11 @@ const PRIORITEIT_KLEUR: Record<string, string> = {
 };
 
 function SegmentKop({
-  nummer,
   icoon,
   titel,
   ondertitel,
   noodzakelijk,
 }: {
-  nummer: number;
   icoon: React.ReactNode;
   titel: string;
   ondertitel: string;
@@ -99,7 +97,7 @@ function SegmentKop({
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
           <h2 className="text-lg font-semibold tracking-tight">
-            Segment {nummer} · {titel}
+            {titel}
           </h2>
           {noodzakelijk ? (
             <Badge className="bg-primary/10 text-primary border-primary/20">
@@ -503,7 +501,6 @@ export default function GebouwDetail() {
 
       <TabsContent value="project" className="space-y-4 mt-6">
         <SegmentKop
-          nummer={1}
           icoon={<Building2 className="h-5 w-5" />}
           titel="Project- en gebouwgegevens"
           ondertitel="NAW-gegevens, contactpartijen, opdracht­omschrijving en open actiepunten"
@@ -647,7 +644,6 @@ export default function GebouwDetail() {
           ════════════════════════════════════════════════════ */}
       <TabsContent value="uitvoering" className="space-y-4 mt-6">
         <SegmentKop
-          nummer={2}
           icoon={<Wrench className="h-5 w-5" />}
           titel="Uitvoering op locatie"
           ondertitel="Bouwlagen, plattegronden, tekeningen en spot­registratie"
@@ -742,7 +738,6 @@ export default function GebouwDetail() {
           ════════════════════════════════════════════════════ */}
       <TabsContent value="beheer" className="space-y-4 mt-6">
         <SegmentKop
-          nummer={3}
           icoon={<Sparkles className="h-5 w-5" />}
           titel="Beheer en communicatie"
           ondertitel="E-mails, teamleden, 3D-weergave en projectactiviteit"
