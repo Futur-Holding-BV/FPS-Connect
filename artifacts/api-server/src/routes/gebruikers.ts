@@ -16,9 +16,11 @@ const FUNCTIETITELS_TOEGESTAAN = [
   "Projectleider",
   "Werkvoorbereider",
   "Project-admin",
-  "Uitvoerder",
-  "Timmerman",
 ];
+
+// Veldfuncties: een monteur kan één specifiekere functienaam dragen. De rol
+// (en daarmee de toegang) blijft "monteur"; dit is alleen een specifiekere naam.
+const VELD_FUNCTIES = ["Timmerman", "Uitvoerder"];
 
 const isBeheerderRol = (rol: unknown) =>
   rol === "beheerder" || rol === "hoofdbeheerder";
@@ -33,6 +35,16 @@ const schoonFunctietitels = (waarde: unknown): string[] => {
       .filter((f) => FUNCTIETITELS_TOEGESTAAN.includes(f)),
   );
   return [...uniek];
+};
+
+// Eén veldfunctie behouden (bv. Timmerman) voor een monteur.
+const schoonVeldFunctie = (waarde: unknown): string[] => {
+  if (!Array.isArray(waarde)) return [];
+  const eerste = waarde
+    .filter((f): f is string => typeof f === "string")
+    .map((f) => f.trim())
+    .find((f) => VELD_FUNCTIES.includes(f));
+  return eerste ? [eerste] : [];
 };
 
 const mapGebruiker = (g: typeof gebruikersTable.$inferSelect) => ({
@@ -130,7 +142,11 @@ router.post("/gebruikers", alleenBeheerder, async (req, res) => {
     if (!naam || !email || !rol) {
       return res.status(400).json({ error: "naam, email en rol zijn verplicht" });
     }
-    const functies = isBeheerderRol(rol) ? schoonFunctietitels(functietitels) : [];
+    const functies = isBeheerderRol(rol)
+      ? schoonFunctietitels(functietitels)
+      : rol === "monteur"
+        ? schoonVeldFunctie(functietitels)
+        : [];
     const gehasht = wachtwoord ? await bcrypt.hash(String(wachtwoord), 10) : null;
     const [g] = await db
       .insert(gebruikersTable)
@@ -182,25 +198,38 @@ router.patch("/gebruikers/:id", alleenBeheerder, async (req, res) => {
       naam, email, rol, functietitels, telefoon, bedrijf, actief, wachtwoord,
       avatar_url, bedrijfslogo_url, bedrijfskleuren, uitnodiging_status, taal,
     } = req.body;
-    // Effectieve rol: gebruik de bestaande rol wanneer 'rol' niet wordt
-    // meegestuurd, zodat een partiële PATCH de functietitels niet onterecht wist.
-    let effectieveRol: unknown = rol;
-    if (effectieveRol === undefined) {
-      const [bestaand] = await db
-        .select({ rol: gebruikersTable.rol })
-        .from(gebruikersTable)
-        .where(eq(gebruikersTable.id, id));
-      if (!bestaand) return res.status(404).json({ error: "Gebruiker niet gevonden" });
-      effectieveRol = bestaand.rol;
-    }
+    // Bestaande rol én functietitels ophalen: zo wist een partiële PATCH niets
+    // onterecht, terwijl een expliciete rolwissel de oude functies wél opschoont.
+    const [bestaand] = await db
+      .select({ rol: gebruikersTable.rol, functietitels: gebruikersTable.functietitels })
+      .from(gebruikersTable)
+      .where(eq(gebruikersTable.id, id));
+    if (!bestaand) return res.status(404).json({ error: "Gebruiker niet gevonden" });
+    const effectieveRol: unknown = rol !== undefined ? rol : bestaand.rol;
+    const rolGewijzigd = rol !== undefined && rol !== bestaand.rol;
+    const bestaandeFuncties = bestaand.functietitels ?? [];
     let functies: string[] | undefined;
-    if (!isBeheerderRol(effectieveRol)) {
-      // Niet-beheerder (ook bij rolwissel): nooit een projectfunctie.
-      functies = [];
-    } else if (functietitels !== undefined) {
-      functies = schoonFunctietitels(functietitels);
+    if (isBeheerderRol(effectieveRol)) {
+      // Beheerder: projectfuncties (kantoor). Niet meegestuurd: ongemoeid laten,
+      // behalve bij een rolwissel — dan oude veldfuncties opschonen.
+      functies =
+        functietitels !== undefined
+          ? schoonFunctietitels(functietitels)
+          : rolGewijzigd
+            ? schoonFunctietitels(bestaandeFuncties)
+            : undefined;
+    } else if (effectieveRol === "monteur") {
+      // Monteur: hooguit één veldfunctie (bv. Timmerman). Niet meegestuurd:
+      // ongemoeid laten, behalve bij een rolwissel — dan oude officefuncties opschonen.
+      functies =
+        functietitels !== undefined
+          ? schoonVeldFunctie(functietitels)
+          : rolGewijzigd
+            ? schoonVeldFunctie(bestaandeFuncties)
+            : undefined;
     } else {
-      functies = undefined; // beheerder, niet meegestuurd: ongemoeid laten
+      // Controleur/klant (ook bij rolwissel): nooit een functie.
+      functies = [];
     }
     const wijziging: Partial<typeof gebruikersTable.$inferInsert> = {
       naam,

@@ -6,14 +6,17 @@ description: Hoe rollen en projectfuncties (functietitels) zijn gemodelleerd en 
 # Projectfuncties (functietitels)
 
 `gebruikers.functietitels` is een `text[]` (NOT NULL DEFAULT '{}'), geen enkel-veld.
-Alleen een **beheerder/hoofdbeheerder** heeft projectfuncties in het profiel; monteur/controleur/klant niet.
+Het veld is **gesplitst in twee disjuncte categorieën** afhankelijk van de rol:
+- **Office-functies (beheerder/hoofdbeheerder)** — meerdere toegestaan: Projectleider, Werkvoorbereider, Project-admin. Server-const `FUNCTIETITELS_TOEGESTAAN` / web-const `FUNCTIETITELS`.
+- **Veldfuncties (monteur)** — hooguit ÉÉN: Timmerman, Uitvoerder. Server-const `VELD_FUNCTIES`.
+- controleur/klant: altijd `[]`.
 
-De vijf toegestane profielfuncties zijn vast: Projectleider, Werkvoorbereider, Project-admin, Uitvoerder, Timmerman.
-(Historisch waren dit er zes met o.a. Calculator/Commercieel/Project-administratie/Financieel; per V1.0 ingeperkt tot deze vijf. "Commercieel"/"Financieel" bestaan nog als losstaande CRM-tabellen — niet aanraken.)
+**Timmerman/Uitvoerder zijn GEEN aparte systeemrollen.** De 5 systeemrollen (hoofdbeheerder/beheerder/monteur/controleur/klant) bepalen toegang. In de gebruikers-UI verschijnen Timmerman/Uitvoerder als rol-keuzes (virtuele lowercase Select-values), maar worden opgeslagen als `rol="monteur"` + één veldfunctie — zelfde monteur-app/portaal, alleen een specifiekere naam. `functietitels` zit nergens in auth-middleware → een veldfunctie geeft NOOIT extra toegang.
+(Historisch was dit één whitelist van vijf/zes met o.a. Calculator/Commercieel/Project-administratie/Financieel; per V1.0 ingeperkt en daarna gesplitst in office vs veld. "Commercieel"/"Financieel" bestaan nog als losstaande CRM-tabellen — niet aanraken.)
 
 **Regel — handhaaf server-side, niet alleen in UI:**
-- Users POST/PATCH: filter functietitels tegen de whitelist + ontdubbel; forceer `[]` voor niet-beheerders.
-- PATCH moet de **effectieve rol** gebruiken (bestaande rol ophalen wanneer `rol` niet wordt meegestuurd), anders wist een partiële PATCH onterecht de functietitels, of behoudt een rolwissel naar monteur/controleur oude functies.
+- Users POST/PATCH: beheerder → `schoonFunctietitels` (office-whitelist, ontdubbeld); monteur → `schoonVeldFunctie` (max 1 uit `VELD_FUNCTIES`); controleur/klant → `[]`.
+- PATCH moet de **effectieve rol** gebruiken (bestaande rij ophalen wanneer `rol` niet wordt meegestuurd). `functietitels` weggelaten + GEEN rolwissel → ongemoeid laten. `functietitels` weggelaten + WEL rolwissel → bestaande functies door de schoonmaak-helper van de NIEUWE rol halen (zo verdwijnen office-titels bij wissel naar monteur en omgekeerd). Anders wist een partiële PATCH onterecht, of houdt een rolwissel verkeerde functies vast.
 - Projectteam (`POST /gebouwen/:id/toewijzingen`): een beheerder vereist een `project_rol` die in zijn eigen `functietitels` zit; monteur/controleur krijgen `project_rol = null` (genegeerd indien meegestuurd).
 
 **Why:** de architect-review wees uit dat UI-only afdwinging bypassbaar is via directe API-calls, en dat PATCH-edge-cases (rol weggelaten / rolwissel) data corrumperen.

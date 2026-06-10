@@ -36,13 +36,39 @@ import { useRol } from "@/context/rol-context";
 const ROLLEN = ["hoofdbeheerder", "beheerder", "monteur", "controleur", "klant"] as const;
 type Rol = typeof ROLLEN[number];
 
+// Projectfuncties (profiel) voor kantoor-/beheerprofielen — meerdere mogelijk.
 const FUNCTIETITELS = [
   "Projectleider",
   "Werkvoorbereider",
   "Project-admin",
-  "Uitvoerder",
-  "Timmerman",
 ] as const;
+
+// Veldfuncties: keuzes in de Rol-lijst die dezelfde toegang als een monteur
+// krijgen, alleen met een specifiekere naam. Opgeslagen als rol "monteur" met
+// de functie in functietitels.
+const VELD_FUNCTIES = ["Timmerman", "Uitvoerder"] as const;
+
+// Bepaalt de getoonde rol-keuze: een monteur met een veldfunctie toont die
+// functie als keuze (timmerman/uitvoerder); anders gewoon de systeemrol.
+function rolKeuzeVan(rol: string, functietitels: string[]): string {
+  if (rol === "monteur") {
+    const veld = functietitels.find((f) =>
+      (VELD_FUNCTIES as readonly string[]).includes(f),
+    );
+    if (veld) return veld.toLowerCase();
+  }
+  return rol;
+}
+
+// De veldfunctie-naam van een gebruiker (bv. "Timmerman"), of null.
+function veldFunctieVan(g: { rol?: string | null; functietitels?: string[] | null }): string | null {
+  if (g.rol !== "monteur") return null;
+  return (
+    (g.functietitels ?? []).find((f) =>
+      (VELD_FUNCTIES as readonly string[]).includes(f),
+    ) ?? null
+  );
+}
 
 const ROL_CONFIG: Record<Rol, {
   label: string;
@@ -459,6 +485,11 @@ export default function Gebruikers() {
                               </div>
 
                               <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                                {veldFunctieVan(g) && (
+                                  <Badge variant="outline" className="text-xs h-5 px-1.5 bg-blue-50 text-blue-700 border-blue-200">
+                                    {veldFunctieVan(g)}
+                                  </Badge>
+                                )}
                                 {!g.actief && (
                                   <Badge variant="outline" className="text-xs bg-gray-100 text-gray-500 border-gray-200 h-5 px-1.5">
                                     Inactief
@@ -637,7 +668,7 @@ export default function Gebruikers() {
                     <div className="flex flex-wrap gap-1.5 mt-1">
                       <Badge variant="outline" className={cfg?.badge ?? ""}>
                         <RolIcon className="h-3 w-3 mr-1" />
-                        {cfg?.label ?? bekijkGebruiker.rol}
+                        {veldFunctieVan(bekijkGebruiker) ?? cfg?.label ?? bekijkGebruiker.rol}
                       </Badge>
                       {status !== "geaccepteerd" && statusCfg.label && (
                         <Badge variant="outline" className={statusCfg.badge}>
@@ -657,7 +688,13 @@ export default function Gebruikers() {
 
                 <div className="space-y-3 rounded-lg border bg-muted/30 p-4">
                   <VeldRij icon={Mail} label="E-mailadres" waarde={bekijkGebruiker.email} />
-                  <VeldRij icon={User} label="Projectfunctie" waarde={(bekijkGebruiker.functietitels ?? []).join(", ")} />
+                  <VeldRij
+                    icon={User}
+                    label="Projectfunctie"
+                    waarde={(bekijkGebruiker.functietitels ?? [])
+                      .filter((f) => (FUNCTIETITELS as readonly string[]).includes(f))
+                      .join(", ")}
+                  />
                   <VeldRij icon={Phone} label="Telefoonnummer" waarde={bekijkGebruiker.telefoon} />
                   <VeldRij icon={Building} label="Bedrijf" waarde={bekijkGebruiker.bedrijf} />
                   <div className="flex items-start gap-3">
@@ -778,14 +815,26 @@ function GebruikerVelden({
         <div className="space-y-1.5">
           <Label htmlFor="g-rol">Rol <span className="text-destructive">*</span></Label>
           <Select
-            value={form.rol}
+            value={rolKeuzeVan(form.rol, form.functietitels)}
             onValueChange={(v) =>
-              setForm((f) => ({
-                ...f,
-                rol: v,
-                functietitels:
-                  v === "beheerder" || v === "hoofdbeheerder" ? f.functietitels : [],
-              }))
+              setForm((f) => {
+                if (v === "timmerman")
+                  return { ...f, rol: "monteur", functietitels: ["Timmerman"] };
+                if (v === "uitvoerder")
+                  return { ...f, rol: "monteur", functietitels: ["Uitvoerder"] };
+                if (v === "monteur")
+                  return { ...f, rol: "monteur", functietitels: [] };
+                const behoudt = v === "beheerder" || v === "hoofdbeheerder";
+                return {
+                  ...f,
+                  rol: v,
+                  functietitels: behoudt
+                    ? f.functietitels.filter((o) =>
+                        (FUNCTIETITELS as readonly string[]).includes(o),
+                      )
+                    : [],
+                };
+              })
             }
           >
             <SelectTrigger id="g-rol">
@@ -795,6 +844,8 @@ function GebruikerVelden({
               {toonHoofd && <SelectItem value="hoofdbeheerder">Hoofdbeheerder</SelectItem>}
               <SelectItem value="beheerder">Beheerder</SelectItem>
               <SelectItem value="monteur">Monteur</SelectItem>
+              <SelectItem value="timmerman">Timmerman</SelectItem>
+              <SelectItem value="uitvoerder">Uitvoerder</SelectItem>
               <SelectItem value="controleur">Controleur</SelectItem>
               <SelectItem value="klant">Klant</SelectItem>
             </SelectContent>
