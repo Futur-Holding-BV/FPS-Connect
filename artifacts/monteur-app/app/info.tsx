@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { bovenInset } from "@/components/ui";
 import { useColors } from "@/hooks/useColors";
+import { useResponsive } from "@/hooks/useResponsive";
 
 const APP_VERSIE = "1.0.0";
 const APP_UITGEBRACHT_OP = "2026-06-08";
@@ -57,6 +58,7 @@ export default function InfoScherm() {
   const c = useColors();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { inhoudMaxBreedte, leesMaxBreedte } = useResponsive();
   const { data: instellingen } = useGetInfoInstellingen();
 
   const heeftSupportInfo =
@@ -117,6 +119,7 @@ export default function InfoScherm() {
           paddingBottom: 18,
         }}
       >
+        <View style={{ width: "100%", maxWidth: inhoudMaxBreedte, alignSelf: "center" }}>
         <Pressable onPress={() => router.back()} style={{ marginBottom: 10 }}>
           <Text style={{ color: c.primary, fontSize: 16, fontFamily: "Inter_600SemiBold" }}>
             ‹ Terug
@@ -146,10 +149,11 @@ export default function InfoScherm() {
             </Text>
           </View>
         </View>
+        </View>
       </View>
 
       <ScrollView
-        contentContainerStyle={{ padding: 16, gap: 14, paddingBottom: insets.bottom + 32 }}
+        contentContainerStyle={{ padding: 16, gap: 14, paddingBottom: insets.bottom + 32, width: "100%", maxWidth: leesMaxBreedte, alignSelf: "center" }}
       >
         <Kaart titel="Over de applicatie">
           <View style={{ gap: 8 }}>

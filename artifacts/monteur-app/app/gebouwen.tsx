@@ -14,6 +14,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { TekstVeld, bovenInset } from "@/components/ui";
 import { SyncStatusBadge } from "@/components/SyncStatusBadge";
 import { useColors } from "@/hooks/useColors";
+import { useResponsive } from "@/hooks/useResponsive";
 import { useAuth } from "@/context/auth";
 import { useSync } from "@/context/sync";
 
@@ -21,6 +22,11 @@ export default function Gebouwen() {
   const c = useColors();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { kolommen, inhoudMaxBreedte, breedte } = useResponsive();
+  const RASTER_GAP = 12;
+  const beschikbareBreedte = Math.min(breedte, inhoudMaxBreedte ?? breedte) - 32;
+  const itemBreedte =
+    kolommen > 1 ? (beschikbareBreedte - RASTER_GAP * (kolommen - 1)) / kolommen : undefined;
   const { gebruiker, token, uitloggen } = useAuth();
   const { syncStatus, aantalWachtend, aantalMislukt, wisMislukte, forceerSync, isSyncing } =
     useSync();
@@ -55,6 +61,7 @@ export default function Gebouwen() {
           paddingBottom: 18,
         }}
       >
+        <View style={{ width: "100%", maxWidth: inhoudMaxBreedte, alignSelf: "center" }}>
         <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
           <View style={{ flex: 1 }}>
             <Text style={{ color: c.primary, fontSize: 11, fontFamily: "Inter_700Bold", letterSpacing: 1.5, textTransform: "uppercase" }}>
@@ -132,6 +139,7 @@ export default function Gebouwen() {
             style={{ backgroundColor: "rgba(255,255,255,0.10)", borderColor: "rgba(255,255,255,0.18)", color: "#fff" }}
           />
         </View>
+        </View>
       </View>
 
       {isLoading ? (
@@ -141,8 +149,11 @@ export default function Gebouwen() {
       ) : (
         <FlatList
           data={gebouwen}
+          key={`kol-${kolommen}`}
           keyExtractor={(g) => String(g.id)}
-          contentContainerStyle={{ padding: 16, gap: 12, paddingBottom: insets.bottom + 24 }}
+          numColumns={kolommen}
+          columnWrapperStyle={kolommen > 1 ? { gap: RASTER_GAP } : undefined}
+          contentContainerStyle={{ padding: 16, gap: 12, paddingBottom: insets.bottom + 24, width: "100%", maxWidth: inhoudMaxBreedte, alignSelf: "center" }}
           refreshControl={
             <RefreshControl
               refreshing={isRefetching || isSyncing}
@@ -164,6 +175,7 @@ export default function Gebouwen() {
                 borderWidth: 1,
                 borderColor: c.border,
                 padding: 18,
+                width: itemBreedte,
                 opacity: pressed ? 0.85 : 1,
               })}
             >

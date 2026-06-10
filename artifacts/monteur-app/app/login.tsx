@@ -12,12 +12,14 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Knop, TekstVeld, bovenInset } from "@/components/ui";
 import { useColors } from "@/hooks/useColors";
+import { useResponsive } from "@/hooks/useResponsive";
 import { useAuth } from "@/context/auth";
 
 export default function Login() {
   const c = useColors();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { isTablet } = useResponsive();
   const { token, inloggen } = useAuth();
 
   const [email, setEmail] = useState("");
@@ -54,7 +56,7 @@ export default function Login() {
         contentContainerStyle={{ flexGrow: 1, justifyContent: "center" }}
         keyboardShouldPersistTaps="handled"
       >
-        <View style={{ paddingTop: bovenInset(insets) + 40, paddingHorizontal: 24, paddingBottom: 40 }}>
+        <View style={{ paddingTop: bovenInset(insets) + 40, paddingHorizontal: 24, paddingBottom: 40, width: "100%", maxWidth: isTablet ? 460 : undefined, alignSelf: "center" }}>
           <View style={{ alignItems: "center", marginBottom: 36 }}>
             <View
               style={{

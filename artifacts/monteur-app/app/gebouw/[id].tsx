@@ -15,6 +15,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { bovenInset } from "@/components/ui";
 import { useColors } from "@/hooks/useColors";
+import { useResponsive } from "@/hooks/useResponsive";
 
 export default function GebouwDetail() {
   const c = useColors();
@@ -22,6 +23,11 @@ export default function GebouwDetail() {
   const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
   const gebouwId = Number(id);
+  const { kolommen, inhoudMaxBreedte, breedte } = useResponsive();
+  const RASTER_GAP = 12;
+  const beschikbareBreedte = Math.min(breedte, inhoudMaxBreedte ?? breedte) - 32;
+  const itemBreedte =
+    kolommen > 1 ? (beschikbareBreedte - RASTER_GAP * (kolommen - 1)) / kolommen : undefined;
 
   const { data: gebouw } = useGetGebouw(gebouwId);
   const { data: verdiepingen, isLoading } = useListVerdiepingen(gebouwId);
@@ -38,6 +44,7 @@ export default function GebouwDetail() {
           paddingBottom: 18,
         }}
       >
+        <View style={{ width: "100%", maxWidth: inhoudMaxBreedte, alignSelf: "center" }}>
         <Pressable onPress={() => router.back()} style={{ marginBottom: 10 }}>
           <Text style={{ color: c.primary, fontSize: 16, fontFamily: "Inter_600SemiBold" }}>
             ‹ Terug
@@ -49,6 +56,7 @@ export default function GebouwDetail() {
         <Text style={{ color: c.darkMuted, fontSize: 14, marginTop: 4, fontFamily: "Inter_400Regular" }}>
           Kies een verdieping om de plattegrond te openen
         </Text>
+        </View>
       </View>
 
       {isLoading ? (
@@ -58,8 +66,11 @@ export default function GebouwDetail() {
       ) : (
         <FlatList
           data={gesorteerd}
+          key={`kol-${kolommen}`}
           keyExtractor={(v) => String(v.id)}
-          contentContainerStyle={{ padding: 16, gap: 12, paddingBottom: insets.bottom + 24 }}
+          numColumns={kolommen}
+          columnWrapperStyle={kolommen > 1 ? { gap: RASTER_GAP } : undefined}
+          contentContainerStyle={{ padding: 16, gap: 12, paddingBottom: insets.bottom + 24, width: "100%", maxWidth: inhoudMaxBreedte, alignSelf: "center" }}
           ListEmptyComponent={
             <Text style={{ textAlign: "center", color: c.mutedForeground, marginTop: 48, fontFamily: "Inter_400Regular" }}>
               Dit gebouw heeft nog geen verdiepingen.
@@ -80,6 +91,7 @@ export default function GebouwDetail() {
                   borderWidth: 1,
                   borderColor: c.border,
                   padding: 18,
+                  width: itemBreedte,
                   flexDirection: "row",
                   alignItems: "center",
                   gap: 14,

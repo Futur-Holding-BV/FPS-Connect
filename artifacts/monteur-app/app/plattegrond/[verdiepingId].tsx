@@ -45,6 +45,7 @@ import {
   typeInfo,
 } from "@/constants/spots";
 import { useColors } from "@/hooks/useColors";
+import { useResponsive } from "@/hooks/useResponsive";
 import { useAuth } from "@/context/auth";
 import { useSync } from "@/context/sync";
 import { FabrikantSectie } from "@/components/FabrikantSectie";
@@ -67,6 +68,7 @@ export default function Plattegrond() {
   const c = useColors();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { isTablet, formMaxBreedte } = useResponsive();
   const { gebruiker, token } = useAuth();
   const { verdiepingId, gebouwId, naam } = useLocalSearchParams<{
     verdiepingId: string;
@@ -314,7 +316,7 @@ export default function Plattegrond() {
           </View>
 
           <ScrollView
-            contentContainerStyle={{ padding: 20, gap: 18, paddingBottom: 40 }}
+            contentContainerStyle={{ padding: 20, gap: 18, paddingBottom: 40, width: "100%", maxWidth: formMaxBreedte, alignSelf: "center" }}
             keyboardShouldPersistTaps="handled"
           >
             <TekstVeld
@@ -436,7 +438,7 @@ export default function Plattegrond() {
         onRequestClose={() => setDetailId(null)}
       >
         <Pressable
-          style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end" }}
+          style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end", alignItems: isTablet ? "center" : "stretch" }}
           onPress={() => setDetailId(null)}
         >
           <Pressable
@@ -446,6 +448,8 @@ export default function Plattegrond() {
               borderTopRightRadius: 24,
               paddingBottom: onderInset(insets) + 20,
               maxHeight: "82%",
+              width: "100%",
+              maxWidth: isTablet ? 560 : undefined,
             }}
             onPress={(e) => e.stopPropagation()}
           >
