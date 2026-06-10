@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import {
   useListGebouwEmails,
   useCreateGebouwEmail,
@@ -25,11 +25,15 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import {
   Mail, Upload, Loader2, Trash2, Paperclip, Sparkles, User, MapPin,
   Phone, FileText, ChevronRight, ListChecks, RefreshCw, Building2,
   ClipboardList, AlertTriangle, CheckSquare, Handshake, Users, UserPlus, Check,
+  ArrowDownUp,
 } from "lucide-react";
 
 const ROL_LABELS: Record<string, string> = {
@@ -285,6 +289,31 @@ export default function GebouwEmails({
 
   const [bezig, setBezig] = useState(false);
   const [actief, setActief] = useState<GebouwEmail | null>(null);
+  const [sortering, setSortering] = useState("datum_nieuw");
+
+  const gesorteerd = useMemo(() => {
+    const lijst = [...(emails ?? [])];
+    const tekst = (s: string | null | undefined) => (s ?? "").toLowerCase();
+    const tijd = (s: string | null | undefined) => {
+      const t = s ? new Date(s).getTime() : NaN;
+      return Number.isNaN(t) ? 0 : t;
+    };
+    switch (sortering) {
+      case "datum_oud":
+        lijst.sort((a, b) => tijd(a.datum) - tijd(b.datum));
+        break;
+      case "afzender":
+        lijst.sort((a, b) => tekst(a.afzender).localeCompare(tekst(b.afzender), "nl"));
+        break;
+      case "ontvanger":
+        lijst.sort((a, b) => tekst(a.ontvanger).localeCompare(tekst(b.ontvanger), "nl"));
+        break;
+      default:
+        lijst.sort((a, b) => tijd(b.datum) - tijd(a.datum));
+        break;
+    }
+    return lijst;
+  }, [emails, sortering]);
 
   const invalideer = () => {
     queryClient.invalidateQueries({ queryKey: getListGebouwEmailsQueryKey(gebouwId) });
@@ -361,8 +390,22 @@ export default function GebouwEmails({
         {/* E-maillijst */}
         <div>
           {(emails ?? []).length > 0 && (
-            <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">
-              Gearchiveerde e-mails
+            <div className="flex items-center justify-between gap-2 mb-3">
+              <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                Gearchiveerde e-mails
+              </div>
+              <Select value={sortering} onValueChange={setSortering}>
+                <SelectTrigger className="h-8 w-[210px] text-xs" aria-label="Sorteren">
+                  <ArrowDownUp className="h-3.5 w-3.5 text-muted-foreground" />
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="datum_nieuw">Datum (nieuwste eerst)</SelectItem>
+                  <SelectItem value="datum_oud">Datum (oudste eerst)</SelectItem>
+                  <SelectItem value="afzender">Afzender (A–Z)</SelectItem>
+                  <SelectItem value="ontvanger">Ontvanger (A–Z)</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           )}
           {isLoading ? (
@@ -372,17 +415,26 @@ export default function GebouwEmails({
               Nog geen e-mails gearchiveerd.
             </div>
           ) : (
-            <div className="divide-y">
-              {(emails ?? []).map((e) => (
+            <div className="space-y-2.5">
+              {gesorteerd.map((e) => (
                 <button
                   key={e.id}
                   onClick={() => setActief(e)}
-                  className="w-full flex items-center justify-between gap-3 py-3 text-left hover:bg-muted/50 -mx-2 px-2 rounded"
+                  className="w-full flex items-center justify-between gap-3 text-left rounded-lg border bg-card p-3.5 shadow-sm transition-colors hover:border-primary/40 hover:bg-muted/40"
                 >
                   <div className="min-w-0">
                     <div className="font-medium truncate">{e.onderwerp || e.bestandsnaam}</div>
-                    <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-muted-foreground mt-0.5">
-                      {e.afzender && <span className="truncate">{e.afzender}</span>}
+                    <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-muted-foreground mt-1">
+                      {e.afzender && (
+                        <span className="truncate">
+                          <span className="font-medium text-foreground/70">Van:</span> {e.afzender}
+                        </span>
+                      )}
+                      {e.ontvanger && (
+                        <span className="truncate">
+                          <span className="font-medium text-foreground/70">Aan:</span> {e.ontvanger}
+                        </span>
+                      )}
                       <span>{datum(e.datum)}</span>
                       {(e.bijlagen?.length ?? 0) > 0 && (
                         <span className="flex items-center gap-1">
