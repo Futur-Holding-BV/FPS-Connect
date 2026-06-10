@@ -115,6 +115,44 @@ function KlantPortal() {
   );
 }
 
+function PermissieDashboard() {
+  const { bevoegdheden } = useRol();
+  const isBeheerGericht = (bevoegdheden.gebouwen ?? 0) >= 1;
+  return isBeheerGericht ? <BeheerderDashboard /> : <MonteurDashboard />;
+}
+
+function PermissiePortal() {
+  return (
+    <BeheerderLayout>
+      <Switch>
+        <Route path="/" component={PermissieDashboard} />
+        <Route path="/gebouwen" component={Gebouwen} />
+        <Route path="/gebouwen/:id" component={GebouwDetail} />
+        <Route path="/gebouwen/:id/plattegrond/:verdiepingId" component={Plattegrond} />
+        <Route path="/voorzieningen" component={Voorzieningen} />
+        <Route path="/voorzieningen/nieuw" component={VoorzieningNieuw} />
+        <Route path="/voorzieningen/:id/qr" component={VoorzieningQr} />
+        <Route path="/voorzieningen/:id" component={VoorzieningDetail} />
+        <Route path="/inspecties" component={Inspecties} />
+        <Route path="/inspecties/:id" component={InspectieDetail} />
+        <Route path="/onderhoud" component={Onderhoud} />
+        <Route path="/gebruikers" component={Gebruikers} />
+        <Route path="/crm" component={CrmKlanten} />
+        <Route path="/crm/:id" component={CrmKlantDetail} />
+        <Route path="/abonnementen" component={Abonnementen} />
+        <Route path="/beheer/toepassingen" component={ToepassingenBeheer} />
+        <Route path="/beheer/bibliotheek" component={Bibliotheek} />
+        <Route path="/beheer/login-pogingen" component={LoginPogingen} />
+        <Route path="/beheer/helpdesk" component={HelpdeskBeheer} />
+        <Route path="/beheer/feedback" component={FeedbackBeheer} />
+        <Route path="/beheer/heatmaps" component={Heatmaps} />
+        <Route path="/info" component={InfoPagina} />
+        <Route component={NotFound} />
+      </Switch>
+    </BeheerderLayout>
+  );
+}
+
 function GeenToegang() {
   const { uitloggen } = useAuth();
   return (
@@ -137,11 +175,17 @@ function GeenToegang() {
 }
 
 function Portalen() {
-  const { rol } = useRol();
+  const { rol, bevoegdheden } = useRol();
 
-  if (rol === "beheerder" || rol === "hoofdbeheerder") return <BeheerderPortal />;
-  if (rol === "monteur" || rol === "controleur") return <MonteurPortal />;
+  if (rol === "hoofdbeheerder") return <BeheerderPortal />;
   if (rol === "klant") return <KlantPortal />;
+  if (rol === "gebruiker") {
+    const heeftToegang = Object.values(bevoegdheden).some((n) => n > 0);
+    return heeftToegang ? <PermissiePortal /> : <GeenToegang />;
+  }
+  // Legacy rollen — worden in T016 omgezet naar "gebruiker"
+  if (rol === "beheerder") return <BeheerderPortal />;
+  if (rol === "monteur" || rol === "controleur") return <MonteurPortal />;
   return <GeenToegang />;
 }
 

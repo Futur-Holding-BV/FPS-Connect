@@ -1,4 +1,4 @@
-import { pgTable, serial, text, boolean, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, boolean, timestamp, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
@@ -6,7 +6,7 @@ export const gebruikersTable = pgTable("gebruikers", {
   id: serial("id").primaryKey(),
   naam: text("naam").notNull(),
   email: text("email").notNull().unique(),
-  rol: text("rol").notNull().default("viewer"),
+  rol: text("rol").notNull().default("gebruiker"),
   telefoon: text("telefoon"),
   bedrijf: text("bedrijf"),
   wachtwoord: text("wachtwoord"),
@@ -27,8 +27,22 @@ export const gebruikersTable = pgTable("gebruikers", {
   uitnodigingGeaccepteerdOp: timestamp("uitnodiging_geaccepteerd_op"),
   taal: text("taal").notNull().default("nl"),
   functietitels: text("functietitels").array().notNull().default([]),
+  // Bevoegdheden-matrix: module-id -> niveau (0-4). Bron van toegang voor de
+  // basisrol "gebruiker". Zie @workspace/permissies voor het model.
+  bevoegdheden: jsonb("bevoegdheden").$type<Record<string, number>>().notNull().default({}),
+});
+
+// Standaardprofielen (presets) die de bevoegdheden-matrix als startpunt vullen.
+// systeem=true zijn de meegeleverde profielen; die blijven bestaan na een seed.
+export const profielenTable = pgTable("profielen", {
+  id: serial("id").primaryKey(),
+  naam: text("naam").notNull().unique(),
+  bevoegdheden: jsonb("bevoegdheden").$type<Record<string, number>>().notNull().default({}),
+  systeem: boolean("systeem").notNull().default(false),
+  aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
 });
 
 export const insertGebruikerSchema = createInsertSchema(gebruikersTable).omit({ id: true, aangemaaktOp: true });
 export type InsertGebruiker = z.infer<typeof insertGebruikerSchema>;
 export type Gebruiker = typeof gebruikersTable.$inferSelect;
+export type Profiel = typeof profielenTable.$inferSelect;

@@ -1342,7 +1342,7 @@ export const GebruikerRol = {
   monteur: 'monteur',
   controleur: 'controleur',
   klant: 'klant',
-  viewer: 'viewer',
+  gebruiker: 'gebruiker',
 } as const;
 
 export type GebruikerUitnodigingStatus = typeof GebruikerUitnodigingStatus[keyof typeof GebruikerUitnodigingStatus];
@@ -1365,6 +1365,8 @@ export const GebruikerTaal = {
   ar: 'ar',
   tr: 'tr',
 } as const;
+
+export type GebruikerBevoegdheden = {[key: string]: number};
 
 export interface Gebruiker {
   id: number;
@@ -1398,6 +1400,17 @@ export interface Gebruiker {
   /** @nullable */
   uitnodiging_geaccepteerd_op?: string | null;
   taal?: GebruikerTaal;
+  bevoegdheden: GebruikerBevoegdheden;
+}
+
+export type ProfielBevoegdheden = {[key: string]: number};
+
+export interface Profiel {
+  id: number;
+  naam: string;
+  bevoegdheden: ProfielBevoegdheden;
+  systeem: boolean;
+  aangemaakt_op: string;
 }
 
 export interface LoginPoging {
@@ -1473,6 +1486,8 @@ export interface MuisGebeurtenisBatch {
   gebeurtenissen: MuisGebeurtenis[];
 }
 
+export type GebruikerInputBevoegdheden = {[key: string]: number};
+
 export interface GebruikerInput {
   naam: string;
   email: string;
@@ -1486,7 +1501,10 @@ export interface GebruikerInput {
   bedrijfskleuren?: string;
   uitnodiging_status?: string;
   taal?: string;
+  bevoegdheden?: GebruikerInputBevoegdheden;
 }
+
+export type GebruikerUpdateBevoegdheden = {[key: string]: number};
 
 export interface GebruikerUpdate {
   naam?: string;
@@ -1502,6 +1520,7 @@ export interface GebruikerUpdate {
   bedrijfskleuren?: string;
   uitnodiging_status?: string;
   taal?: string;
+  bevoegdheden?: GebruikerUpdateBevoegdheden;
 }
 
 export interface WachtwoordWijzigen {
@@ -1584,7 +1603,7 @@ export const AuthGebruikerRol = {
   monteur: 'monteur',
   controleur: 'controleur',
   klant: 'klant',
-  viewer: 'viewer',
+  gebruiker: 'gebruiker',
 } as const;
 
 export type AuthGebruikerTaal = typeof AuthGebruikerTaal[keyof typeof AuthGebruikerTaal];
@@ -1599,6 +1618,8 @@ export const AuthGebruikerTaal = {
   tr: 'tr',
 } as const;
 
+export type AuthGebruikerBevoegdheden = {[key: string]: number};
+
 export interface AuthGebruiker {
   id: number;
   naam: string;
@@ -1612,6 +1633,7 @@ export interface AuthGebruiker {
   nieuw_apparaat?: boolean;
   nieuw_ip?: boolean;
   functietitels?: string[];
+  bevoegdheden: AuthGebruikerBevoegdheden;
 }
 
 export type AbonnementNiveau = typeof AbonnementNiveau[keyof typeof AbonnementNiveau];

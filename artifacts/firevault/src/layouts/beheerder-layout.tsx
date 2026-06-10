@@ -8,33 +8,27 @@ import {
 } from "@/components/ui/sidebar";
 import {
   ShieldCheck, Building, Wrench, Users, Search, Home, Receipt,
-  ShieldAlert, LifeBuoy, MessageSquarePlus, Activity, Contact, Info,
-  Clock, UserRound, BookOpen,
+  ShieldAlert, LifeBuoy, MessageSquarePlus, Activity, Contact, Info, BookOpen,
 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { GebruikerMenu } from "@/components/gebruiker-menu";
-import { useAuth } from "@/context/auth-context";
-import { useRol } from "@/context/rol-context";
+import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
 
 export default function BeheerderLayout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
   const { t } = useTranslation();
-  const { gebruiker } = useAuth();
-  const { echteRol } = useRol();
+  const { heeftNiveau } = useBevoegdheid();
 
-  const isHoofdBeheerder = echteRol === "hoofdbeheerder";
-  const heeftCommercieel = gebruiker?.functietitels?.includes("Commercieel") ?? false;
-  const toonAbonnementen = isHoofdBeheerder || (echteRol === "beheerder" && heeftCommercieel);
-  const toonKlantPortaal = isHoofdBeheerder || echteRol === "beheerder";
+  const toonGebouwen      = heeftNiveau("gebouwen", 1);
+  const toonVoorzieningen = heeftNiveau("voorzieningen", 1);
+  const toonInspecties    = heeftNiveau("inspecties", 1);
+  const toonOnderhoud     = heeftNiveau("onderhoud", 1);
+  const toonCrm           = heeftNiveau("crm", 1);
+  const toonAbonnementen  = heeftNiveau("abonnementen", 1);
+  const toonBibliotheek   = heeftNiveau("bibliotheek", 1);
+  const toonGebruikers    = heeftNiveau("gebruikers", 1);
+  const toonSysteem       = heeftNiveau("systeem", 1);
 
-  const beheerRoutes: { href: string; label: string; icoon: React.ElementType }[] = [
-    { href: "/gebruikers", label: t("nav.gebruikers"), icoon: Users },
-    { href: "/beheer/login-pogingen", label: "Login-pogingen", icoon: ShieldAlert },
-    { href: "/beheer/helpdesk", label: "Helpdesk", icoon: LifeBuoy },
-    { href: "/beheer/feedback", label: "Feedback", icoon: MessageSquarePlus },
-    { href: "/beheer/heatmaps", label: "Heatmaps", icoon: Activity },
-    { href: "/info", label: t("nav.info"), icoon: Info },
-  ];
+  const heeftDomein = toonInspecties || toonOnderhoud || toonCrm || toonAbonnementen;
 
   const projectenActief =
     location === "/gebouwen" || location.startsWith("/gebouwen/") ||
@@ -71,163 +65,196 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
                   </SidebarMenuButton>
                 </SidebarMenuItem>
 
-                <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={projectenActief}>
-                    <Link href="/gebouwen">
-                      <Building />
-                      <span>{t("nav.gebouwen")}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                  <SidebarMenuSub>
-                    <SidebarMenuSubItem>
-                      <SidebarMenuSubButton
-                        asChild
-                        isActive={location === "/voorzieningen" || location.startsWith("/voorzieningen/")}
-                      >
-                        <Link href="/voorzieningen">
-                          <ShieldCheck />
-                          <span>{t("nav.voorzieningen")}</span>
-                        </Link>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                  </SidebarMenuSub>
-                </SidebarMenuItem>
+                {toonGebouwen && (
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild isActive={projectenActief}>
+                      <Link href="/gebouwen">
+                        <Building />
+                        <span>{t("nav.gebouwen")}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                    {toonVoorzieningen && (
+                      <SidebarMenuSub>
+                        <SidebarMenuSubItem>
+                          <SidebarMenuSubButton
+                            asChild
+                            isActive={location === "/voorzieningen" || location.startsWith("/voorzieningen/")}
+                          >
+                            <Link href="/voorzieningen">
+                              <ShieldCheck />
+                              <span>{t("nav.voorzieningen")}</span>
+                            </Link>
+                          </SidebarMenuSubButton>
+                        </SidebarMenuSubItem>
+                      </SidebarMenuSub>
+                    )}
+                  </SidebarMenuItem>
+                )}
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
 
           {/* ── Domeinen ── */}
-          <SidebarGroup>
-            <SidebarGroupLabel>{t("nav.domeinen")}</SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                <SidebarMenuItem>
-                  <SidebarMenuButton className="opacity-60 cursor-default" disabled>
-                    <Search />
-                    <span>{t("nav.inspecties")}</span>
-                    <Badge
-                      variant="outline"
-                      className="ml-auto text-[10px] px-1.5 py-0 leading-tight border-muted-foreground/40 text-muted-foreground group-data-[collapsible=icon]:hidden"
-                    >
-                      <Clock className="h-2.5 w-2.5 mr-0.5" />
-                      {t("nav.inUitvoering")}
-                    </Badge>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-
-                <SidebarMenuItem>
-                  <SidebarMenuButton className="opacity-60 cursor-default" disabled>
-                    <Wrench />
-                    <span>{t("nav.onderhoud")}</span>
-                    <Badge
-                      variant="outline"
-                      className="ml-auto text-[10px] px-1.5 py-0 leading-tight border-muted-foreground/40 text-muted-foreground group-data-[collapsible=icon]:hidden"
-                    >
-                      <Clock className="h-2.5 w-2.5 mr-0.5" />
-                      {t("nav.inUitvoering")}
-                    </Badge>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-
-                <SidebarMenuItem>
-                  <SidebarMenuButton className="opacity-60 cursor-default" disabled>
-                    <Contact />
-                    <span>{t("nav.crm")}</span>
-                    <Badge
-                      variant="outline"
-                      className="ml-auto text-[10px] px-1.5 py-0 leading-tight border-muted-foreground/40 text-muted-foreground group-data-[collapsible=icon]:hidden"
-                    >
-                      <Clock className="h-2.5 w-2.5 mr-0.5" />
-                      {t("nav.inUitvoering")}
-                    </Badge>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-
-                {toonAbonnementen && (
-                  <SidebarMenuItem>
-                    <SidebarMenuButton className="opacity-60 cursor-default" disabled>
-                      <Receipt />
-                      <span>{t("nav.abonnementen")}</span>
-                      <Badge
-                        variant="outline"
-                        className="ml-auto text-[10px] px-1.5 py-0 leading-tight border-muted-foreground/40 text-muted-foreground group-data-[collapsible=icon]:hidden"
+          {heeftDomein && (
+            <SidebarGroup>
+              <SidebarGroupLabel>{t("nav.domeinen")}</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {toonInspecties && (
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={location === "/inspecties" || location.startsWith("/inspecties/")}
                       >
-                        <Clock className="h-2.5 w-2.5 mr-0.5" />
-                        {t("nav.inUitvoering")}
-                      </Badge>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                )}
-
-                {toonKlantPortaal && (
-                  <SidebarMenuItem>
-                    <SidebarMenuButton className="opacity-60 cursor-default" disabled>
-                      <UserRound />
-                      <span>{t("nav.klantportaal")}</span>
-                      <Badge
-                        variant="outline"
-                        className="ml-auto text-[10px] px-1.5 py-0 leading-tight border-muted-foreground/40 text-muted-foreground group-data-[collapsible=icon]:hidden"
+                        <Link href="/inspecties">
+                          <Search />
+                          <span>{t("nav.inspecties")}</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )}
+                  {toonOnderhoud && (
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={location === "/onderhoud" || location.startsWith("/onderhoud/")}
                       >
-                        <Clock className="h-2.5 w-2.5 mr-0.5" />
-                        {t("nav.inUitvoering")}
-                      </Badge>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                )}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
+                        <Link href="/onderhoud">
+                          <Wrench />
+                          <span>{t("nav.onderhoud")}</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )}
+                  {toonCrm && (
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={location === "/crm" || location.startsWith("/crm/")}
+                      >
+                        <Link href="/crm">
+                          <Contact />
+                          <span>{t("nav.crm")}</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )}
+                  {toonAbonnementen && (
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={location === "/abonnementen" || location.startsWith("/abonnementen/")}
+                      >
+                        <Link href="/abonnementen">
+                          <Receipt />
+                          <span>{t("nav.abonnementen")}</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          )}
 
           {/* ── Bibliotheek ── */}
-          <SidebarGroup>
-            <SidebarGroupLabel>Bibliotheek</SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                <SidebarMenuItem>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={location === "/beheer/bibliotheek" || location.startsWith("/beheer/bibliotheek/")}
-                  >
-                    <Link href="/beheer/bibliotheek">
-                      <BookOpen />
-                      <span>Bibliotheek</span>
-                    </Link>
-                  </SidebarMenuButton>
-                  <SidebarMenuSub>
-                    <SidebarMenuSubItem>
-                      <SidebarMenuSubButton
-                        asChild
-                        isActive={location === "/voorzieningen/nieuw"}
-                      >
-                        <Link href="/voorzieningen/nieuw">
-                          <span>Toepassing toevoegen</span>
-                        </Link>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                  </SidebarMenuSub>
-                </SidebarMenuItem>
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
+          {toonBibliotheek && (
+            <SidebarGroup>
+              <SidebarGroupLabel>Bibliotheek</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={location === "/beheer/bibliotheek" || location.startsWith("/beheer/bibliotheek/")}
+                    >
+                      <Link href="/beheer/bibliotheek">
+                        <BookOpen />
+                        <span>Bibliotheek</span>
+                      </Link>
+                    </SidebarMenuButton>
+                    {heeftNiveau("bibliotheek", 3) && (
+                      <SidebarMenuSub>
+                        <SidebarMenuSubItem>
+                          <SidebarMenuSubButton
+                            asChild
+                            isActive={location === "/voorzieningen/nieuw"}
+                          >
+                            <Link href="/voorzieningen/nieuw">
+                              <span>Toepassing toevoegen</span>
+                            </Link>
+                          </SidebarMenuSubButton>
+                        </SidebarMenuSubItem>
+                      </SidebarMenuSub>
+                    )}
+                  </SidebarMenuItem>
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          )}
 
           {/* ── Beheer ── */}
           <SidebarGroup>
             <SidebarGroupLabel>Beheer</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
-                {beheerRoutes.map((route) => (
-                  <SidebarMenuItem key={route.href}>
+                {toonGebruikers && (
+                  <SidebarMenuItem>
                     <SidebarMenuButton
                       asChild
-                      isActive={location === route.href || location.startsWith(route.href + "/")}
+                      isActive={location === "/gebruikers" || location.startsWith("/gebruikers/")}
                     >
-                      <Link href={route.href}>
-                        <route.icoon />
-                        <span>{route.label}</span>
+                      <Link href="/gebruikers">
+                        <Users />
+                        <span>{t("nav.gebruikers")}</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
-                ))}
+                )}
+                {toonSysteem && (
+                  <>
+                    <SidebarMenuItem>
+                      <SidebarMenuButton asChild isActive={location === "/beheer/login-pogingen"}>
+                        <Link href="/beheer/login-pogingen">
+                          <ShieldAlert />
+                          <span>Login-pogingen</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                    <SidebarMenuItem>
+                      <SidebarMenuButton asChild isActive={location === "/beheer/helpdesk"}>
+                        <Link href="/beheer/helpdesk">
+                          <LifeBuoy />
+                          <span>Helpdesk</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                    <SidebarMenuItem>
+                      <SidebarMenuButton asChild isActive={location === "/beheer/feedback"}>
+                        <Link href="/beheer/feedback">
+                          <MessageSquarePlus />
+                          <span>Feedback</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                    <SidebarMenuItem>
+                      <SidebarMenuButton asChild isActive={location === "/beheer/heatmaps"}>
+                        <Link href="/beheer/heatmaps">
+                          <Activity />
+                          <span>Heatmaps</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  </>
+                )}
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={location === "/info"}>
+                    <Link href="/info">
+                      <Info />
+                      <span>{t("nav.info")}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>

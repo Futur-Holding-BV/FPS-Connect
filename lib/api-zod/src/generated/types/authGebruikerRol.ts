@@ -15,5 +15,5 @@ export const AuthGebruikerRol = {
   monteur: 'monteur',
   controleur: 'controleur',
   klant: 'klant',
-  viewer: 'viewer',
+  gebruiker: 'gebruiker',
 } as const;

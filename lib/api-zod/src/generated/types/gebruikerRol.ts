@@ -15,5 +15,5 @@ export const GebruikerRol = {
   monteur: 'monteur',
   controleur: 'controleur',
   klant: 'klant',
-  viewer: 'viewer',
+  gebruiker: 'gebruiker',
 } as const;

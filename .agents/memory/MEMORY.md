@@ -32,3 +32,4 @@
 - [Projectformulier edit leeg](projectformulier-edit-leeg.md) — lege edit-velden + niet opslaan = meestal api-server down/HMR-stale, geen UI-bug; check workflows draaien + hard refresh vóór codejacht.
 
 - [Betrokken contacten-kaart](betrokkenen-kaart.md) — projectformulier-kaart groepeert op partij (opdrachtgever boven); rol/org in groepskop, dus kale PersoonRegel buiten groep heeft toonContext nodig.
+- [Bevoegdheden-matrix architectuur](bevoegdheden-matrix.md) — jsonb-kolom + profielen-tabel; requireBevoegdheid middleware; legacy-fallback; GebruikerInput heeft ook bevoegdheden nodig; viewer=uitgebannen.

@@ -5,6 +5,7 @@
  * FPS Brandpreventie - Platform voor brandpreventieve gebouwvoorzieningen
  * OpenAPI spec version: 0.1.0
  */
+import type { GebruikerInputBevoegdheden } from './gebruikerInputBevoegdheden';
 
 export interface GebruikerInput {
   naam: string;
@@ -19,4 +20,5 @@ export interface GebruikerInput {
   bedrijfskleuren?: string;
   uitnodiging_status?: string;
   taal?: string;
+  bevoegdheden?: GebruikerInputBevoegdheden;
 }

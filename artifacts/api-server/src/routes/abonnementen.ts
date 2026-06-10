@@ -2,7 +2,7 @@ import { Router } from "express";
 import { db } from "@workspace/db";
 import { abonnementenTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
-import { requireRol } from "../middlewares/auth";
+import { requireBevoegdheid } from "../middlewares/auth";
 
 const router = Router();
 
@@ -34,7 +34,7 @@ router.get("/abonnementen", async (req, res) => {
 });
 
 // POST /abonnementen
-router.post("/abonnementen", requireRol("beheerder"), async (req, res) => {
+router.post("/abonnementen", requireBevoegdheid("abonnementen", 3), async (req, res) => {
   try {
     const { naam, niveau, prijs_per_maand, max_gebouwen, max_gebruikers, functies, klant_naam, klant_email, start_datum, eind_datum } = req.body;
     if (!naam || !niveau) {
@@ -65,7 +65,7 @@ router.post("/abonnementen", requireRol("beheerder"), async (req, res) => {
 // GET /abonnementen/:id
 router.get("/abonnementen/:id", async (req, res) => {
   try {
-    const id = parseInt(req.params.id);
+    const id = parseInt(String(req.params.id));
     const [a] = await db.select().from(abonnementenTable).where(eq(abonnementenTable.id, id));
     if (!a) return res.status(404).json({ error: "Abonnement niet gevonden" });
     res.json(mapAbonnement(a));
@@ -76,9 +76,9 @@ router.get("/abonnementen/:id", async (req, res) => {
 });
 
 // PATCH /abonnementen/:id
-router.patch("/abonnementen/:id", requireRol("beheerder"), async (req, res) => {
+router.patch("/abonnementen/:id", requireBevoegdheid("abonnementen", 2), async (req, res) => {
   try {
-    const id = parseInt(req.params.id);
+    const id = parseInt(String(req.params.id));
     const { naam, niveau, prijs_per_maand, max_gebouwen, max_gebruikers, functies, klant_naam, klant_email, start_datum, eind_datum, actief } = req.body;
     const [a] = await db
       .update(abonnementenTable)

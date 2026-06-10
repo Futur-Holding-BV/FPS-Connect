@@ -15,6 +15,7 @@ import systeemRouter from "./systeem";
 import infoRouter from "./info";
 import crmRouter from "./crm";
 import emailsRouter from "./emails";
+import profielenRouter from "./profielen";
 import { requireAuth } from "../middlewares/auth";
 
 const router: IRouter = Router();
@@ -40,5 +41,6 @@ router.use(systeemRouter);
 router.use(infoRouter);
 router.use(crmRouter);
 router.use(emailsRouter);
+router.use(profielenRouter);
 
 export default router;

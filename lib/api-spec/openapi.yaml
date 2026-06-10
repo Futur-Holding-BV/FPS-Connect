@@ -1936,6 +1936,21 @@ paths:
               schema:
                 $ref: "#/components/schemas/Gebruiker"
 
+  /profielen:
+    get:
+      operationId: listProfielen
+      tags: [gebruikers]
+      summary: Standaardprofielen (bevoegdheidspresets) ophalen
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Profiel"
+
   /uitnodiging/{token}:
     get:
       operationId: uitnodigingVerifieer
@@ -4754,7 +4769,7 @@ components:
     # ── GEBRUIKER ────────────────────────────────────────────────────────
     Gebruiker:
       type: object
-      required: [id, naam, email, rol, actief, aangemaakt_op, uitnodiging_status]
+      required: [id, naam, email, rol, actief, aangemaakt_op, uitnodiging_status, bevoegdheden]
       properties:
         id:
           type: integer
@@ -4764,7 +4779,7 @@ components:
           type: string
         rol:
           type: string
-          enum: [hoofdbeheerder, beheerder, monteur, controleur, klant, viewer]
+          enum: [hoofdbeheerder, beheerder, monteur, controleur, klant, gebruiker]
         functietitels:
           type: array
           items:
@@ -4801,6 +4816,27 @@ components:
         taal:
           type: string
           enum: [nl, en, de, fr, ar, tr]
+        bevoegdheden:
+          type: object
+          additionalProperties:
+            type: integer
+
+    Profiel:
+      type: object
+      required: [id, naam, bevoegdheden, systeem, aangemaakt_op]
+      properties:
+        id:
+          type: integer
+        naam:
+          type: string
+        bevoegdheden:
+          type: object
+          additionalProperties:
+            type: integer
+        systeem:
+          type: boolean
+        aangemaakt_op:
+          type: string
 
     LoginPoging:
       type: object
@@ -4950,6 +4986,10 @@ components:
           type: string
         taal:
           type: string
+        bevoegdheden:
+          type: object
+          additionalProperties:
+            type: integer
 
     GebruikerUpdate:
       type: object
@@ -4982,6 +5022,10 @@ components:
           type: string
         taal:
           type: string
+        bevoegdheden:
+          type: object
+          additionalProperties:
+            type: integer
 
     WachtwoordWijzigen:
       type: object
@@ -5059,7 +5103,7 @@ components:
 
     AuthGebruiker:
       type: object
-      required: [id, naam, email, rol]
+      required: [id, naam, email, rol, bevoegdheden]
       properties:
         id:
           type: integer
@@ -5069,7 +5113,7 @@ components:
           type: string
         rol:
           type: string
-          enum: [hoofdbeheerder, beheerder, monteur, controleur, klant, viewer]
+          enum: [hoofdbeheerder, beheerder, monteur, controleur, klant, gebruiker]
         avatar_url:
           type: ["string", "null"]
         bedrijfskleuren:
@@ -5085,6 +5129,10 @@ components:
           type: array
           items:
             type: string
+        bevoegdheden:
+          type: object
+          additionalProperties:
+            type: integer
 
     # ── ABONNEMENT ───────────────────────────────────────────────────────
     Abonnement:

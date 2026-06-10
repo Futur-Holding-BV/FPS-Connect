@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { db, voorzieningTypesTable, labelsTable, testrapportenTable } from "@workspace/db";
 import { eq, asc } from "drizzle-orm";
-import { requireRol } from "../middlewares/auth";
+import { requireBevoegdheid } from "../middlewares/auth";
 import { mapLabel, mapTestrapport } from "../lib/classificatie";
 
 const router = Router();
@@ -47,7 +47,7 @@ router.get("/labels", async (req, res) => {
 });
 
 // POST /labels (beheerder)
-router.post("/labels", requireRol("beheerder"), async (req, res) => {
+router.post("/labels", requireBevoegdheid("bibliotheek", 3), async (req, res) => {
   try {
     const { type_code, naam, testrapport_id } = req.body;
     if (!type_code || !naam || !String(naam).trim()) {
@@ -76,7 +76,7 @@ router.post("/labels", requireRol("beheerder"), async (req, res) => {
 });
 
 // PATCH /labels/:id (beheerder)
-router.patch("/labels/:id", requireRol("beheerder"), async (req, res) => {
+router.patch("/labels/:id", requireBevoegdheid("bibliotheek", 2), async (req, res) => {
   try {
     const id = parseInt(String(req.params.id));
     const { naam, testrapport_id, gearchiveerd } = req.body;
@@ -116,7 +116,7 @@ router.get("/testrapporten", async (req, res) => {
 });
 
 // POST /testrapporten (beheerder)
-router.post("/testrapporten", requireRol("beheerder"), async (req, res) => {
+router.post("/testrapporten", requireBevoegdheid("bibliotheek", 3), async (req, res) => {
   try {
     const { naam, fabrikant, norm, rapportnummer, pdf_url } = req.body;
     if (!naam || !String(naam).trim()) {
@@ -140,7 +140,7 @@ router.post("/testrapporten", requireRol("beheerder"), async (req, res) => {
 });
 
 // PATCH /testrapporten/:id (beheerder)
-router.patch("/testrapporten/:id", requireRol("beheerder"), async (req, res) => {
+router.patch("/testrapporten/:id", requireBevoegdheid("bibliotheek", 2), async (req, res) => {
   try {
     const id = parseInt(String(req.params.id));
     const { naam, fabrikant, norm, rapportnummer, pdf_url, gearchiveerd } = req.body;

@@ -9,7 +9,7 @@ import {
   gebouwToewijzingenTable,
 } from "@workspace/db";
 import { eq } from "drizzle-orm";
-import { requireRol } from "../middlewares/auth";
+import { requireBevoegdheid } from "../middlewares/auth";
 import { effectieveContext } from "../utils/rol";
 
 const router = Router();
@@ -128,7 +128,7 @@ router.get("/onderhoud", async (req, res) => {
 });
 
 // POST /onderhoud
-router.post("/onderhoud", requireRol("monteur", "controleur", "beheerder", "hoofdbeheerder"), async (req, res) => {
+router.post("/onderhoud", requireBevoegdheid("onderhoud", 3), async (req, res) => {
   try {
     const { voorziening_id, gebouw_id, titel, omschrijving, prioriteit, toegewezen_aan_id, deadline } = req.body;
     if (!titel || !prioriteit) {
@@ -179,7 +179,7 @@ router.post("/onderhoud", requireRol("monteur", "controleur", "beheerder", "hoof
 // GET /onderhoud/:id
 router.get("/onderhoud/:id", async (req, res) => {
   try {
-    const id = parseInt(req.params.id);
+    const id = parseInt(String(req.params.id));
     const { userId, rol: effectiefRolDetail } = await effectieveContext(req);
 
     const [o] = await db.select().from(onderhoudTable).where(eq(onderhoudTable.id, id));
@@ -202,9 +202,9 @@ router.get("/onderhoud/:id", async (req, res) => {
 });
 
 // PATCH /onderhoud/:id
-router.patch("/onderhoud/:id", requireRol("monteur", "controleur", "beheerder", "hoofdbeheerder"), async (req, res) => {
+router.patch("/onderhoud/:id", requireBevoegdheid("onderhoud", 2), async (req, res) => {
   try {
-    const id = parseInt(req.params.id);
+    const id = parseInt(String(req.params.id));
     const {
       titel, omschrijving, prioriteit, status,
       toegewezen_aan_id, deadline, voltooid_datum, resultaat,
@@ -252,9 +252,9 @@ router.patch("/onderhoud/:id", requireRol("monteur", "controleur", "beheerder", 
 });
 
 // DELETE /onderhoud/:id
-router.delete("/onderhoud/:id", requireRol("beheerder", "hoofdbeheerder"), async (req, res) => {
+router.delete("/onderhoud/:id", requireBevoegdheid("onderhoud", 4), async (req, res) => {
   try {
-    const id = parseInt(req.params.id);
+    const id = parseInt(String(req.params.id));
     await db.delete(onderhoudTable).where(eq(onderhoudTable.id, id));
     res.status(204).send();
   } catch (err) {

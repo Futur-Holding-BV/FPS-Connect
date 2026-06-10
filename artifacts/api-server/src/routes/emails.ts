@@ -9,7 +9,7 @@ import {
 } from "@workspace/db";
 import type { EmailContactpersoon } from "@workspace/db";
 import { eq, and, desc } from "drizzle-orm";
-import { requireRol } from "../middlewares/auth";
+import { requireBevoegdheid } from "../middlewares/auth";
 import { ObjectStorageService, ObjectNotFoundError } from "../lib/objectStorage";
 import {
   parseEmailBestand,
@@ -21,7 +21,7 @@ import {
 
 const router = Router();
 const objectStorage = new ObjectStorageService();
-const beheerderPlus = requireRol("beheerder");
+const beheerderPlus = requireBevoegdheid("gebouwen", 2);
 
 const iso = (d: Date) => d.toISOString();
 

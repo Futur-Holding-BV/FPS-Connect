@@ -2071,7 +2071,7 @@ export const ListGebruikersResponseItem = zod.object({
   "id": zod.number(),
   "naam": zod.string(),
   "email": zod.string(),
-  "rol": zod.enum(['hoofdbeheerder', 'beheerder', 'monteur', 'controleur', 'klant', 'viewer']),
+  "rol": zod.enum(['hoofdbeheerder', 'beheerder', 'monteur', 'controleur', 'klant', 'gebruiker']),
   "functietitels": zod.array(zod.string()).optional(),
   "telefoon": zod.string().nullish(),
   "bedrijf": zod.string().nullish(),
@@ -2087,7 +2087,8 @@ export const ListGebruikersResponseItem = zod.object({
   "uitnodiging_geopend_op": zod.string().nullish(),
   "uitnodiging_opnieuw_verstuurd_op": zod.string().nullish(),
   "uitnodiging_geaccepteerd_op": zod.string().nullish(),
-  "taal": zod.enum(['nl', 'en', 'de', 'fr', 'ar', 'tr']).optional()
+  "taal": zod.enum(['nl', 'en', 'de', 'fr', 'ar', 'tr']).optional(),
+  "bevoegdheden": zod.record(zod.string(), zod.number())
 })
 export const ListGebruikersResponse = zod.array(ListGebruikersResponseItem)
 
@@ -2107,7 +2108,8 @@ export const CreateGebruikerBody = zod.object({
   "bedrijfslogo_url": zod.string().optional(),
   "bedrijfskleuren": zod.string().optional(),
   "uitnodiging_status": zod.string().optional(),
-  "taal": zod.string().optional()
+  "taal": zod.string().optional(),
+  "bevoegdheden": zod.record(zod.string(), zod.number()).optional()
 })
 
 export const CreateGebruikerResponse = zod.void()
@@ -2124,7 +2126,7 @@ export const GetGebruikerResponse = zod.object({
   "id": zod.number(),
   "naam": zod.string(),
   "email": zod.string(),
-  "rol": zod.enum(['hoofdbeheerder', 'beheerder', 'monteur', 'controleur', 'klant', 'viewer']),
+  "rol": zod.enum(['hoofdbeheerder', 'beheerder', 'monteur', 'controleur', 'klant', 'gebruiker']),
   "functietitels": zod.array(zod.string()).optional(),
   "telefoon": zod.string().nullish(),
   "bedrijf": zod.string().nullish(),
@@ -2140,7 +2142,8 @@ export const GetGebruikerResponse = zod.object({
   "uitnodiging_geopend_op": zod.string().nullish(),
   "uitnodiging_opnieuw_verstuurd_op": zod.string().nullish(),
   "uitnodiging_geaccepteerd_op": zod.string().nullish(),
-  "taal": zod.enum(['nl', 'en', 'de', 'fr', 'ar', 'tr']).optional()
+  "taal": zod.enum(['nl', 'en', 'de', 'fr', 'ar', 'tr']).optional(),
+  "bevoegdheden": zod.record(zod.string(), zod.number())
 })
 
 
@@ -2164,14 +2167,15 @@ export const UpdateGebruikerBody = zod.object({
   "bedrijfslogo_url": zod.string().optional(),
   "bedrijfskleuren": zod.string().optional(),
   "uitnodiging_status": zod.string().optional(),
-  "taal": zod.string().optional()
+  "taal": zod.string().optional(),
+  "bevoegdheden": zod.record(zod.string(), zod.number()).optional()
 })
 
 export const UpdateGebruikerResponse = zod.object({
   "id": zod.number(),
   "naam": zod.string(),
   "email": zod.string(),
-  "rol": zod.enum(['hoofdbeheerder', 'beheerder', 'monteur', 'controleur', 'klant', 'viewer']),
+  "rol": zod.enum(['hoofdbeheerder', 'beheerder', 'monteur', 'controleur', 'klant', 'gebruiker']),
   "functietitels": zod.array(zod.string()).optional(),
   "telefoon": zod.string().nullish(),
   "bedrijf": zod.string().nullish(),
@@ -2187,7 +2191,8 @@ export const UpdateGebruikerResponse = zod.object({
   "uitnodiging_geopend_op": zod.string().nullish(),
   "uitnodiging_opnieuw_verstuurd_op": zod.string().nullish(),
   "uitnodiging_geaccepteerd_op": zod.string().nullish(),
-  "taal": zod.enum(['nl', 'en', 'de', 'fr', 'ar', 'tr']).optional()
+  "taal": zod.enum(['nl', 'en', 'de', 'fr', 'ar', 'tr']).optional(),
+  "bevoegdheden": zod.record(zod.string(), zod.number())
 })
 
 
@@ -2212,7 +2217,7 @@ export const UitnodigingVersturenResponse = zod.object({
   "id": zod.number(),
   "naam": zod.string(),
   "email": zod.string(),
-  "rol": zod.enum(['hoofdbeheerder', 'beheerder', 'monteur', 'controleur', 'klant', 'viewer']),
+  "rol": zod.enum(['hoofdbeheerder', 'beheerder', 'monteur', 'controleur', 'klant', 'gebruiker']),
   "functietitels": zod.array(zod.string()).optional(),
   "telefoon": zod.string().nullish(),
   "bedrijf": zod.string().nullish(),
@@ -2228,7 +2233,8 @@ export const UitnodigingVersturenResponse = zod.object({
   "uitnodiging_geopend_op": zod.string().nullish(),
   "uitnodiging_opnieuw_verstuurd_op": zod.string().nullish(),
   "uitnodiging_geaccepteerd_op": zod.string().nullish(),
-  "taal": zod.enum(['nl', 'en', 'de', 'fr', 'ar', 'tr']).optional()
+  "taal": zod.enum(['nl', 'en', 'de', 'fr', 'ar', 'tr']).optional(),
+  "bevoegdheden": zod.record(zod.string(), zod.number())
 })
 
 
@@ -2243,7 +2249,7 @@ export const UitnodigingOpnieuwVersturenResponse = zod.object({
   "id": zod.number(),
   "naam": zod.string(),
   "email": zod.string(),
-  "rol": zod.enum(['hoofdbeheerder', 'beheerder', 'monteur', 'controleur', 'klant', 'viewer']),
+  "rol": zod.enum(['hoofdbeheerder', 'beheerder', 'monteur', 'controleur', 'klant', 'gebruiker']),
   "functietitels": zod.array(zod.string()).optional(),
   "telefoon": zod.string().nullish(),
   "bedrijf": zod.string().nullish(),
@@ -2259,8 +2265,22 @@ export const UitnodigingOpnieuwVersturenResponse = zod.object({
   "uitnodiging_geopend_op": zod.string().nullish(),
   "uitnodiging_opnieuw_verstuurd_op": zod.string().nullish(),
   "uitnodiging_geaccepteerd_op": zod.string().nullish(),
-  "taal": zod.enum(['nl', 'en', 'de', 'fr', 'ar', 'tr']).optional()
+  "taal": zod.enum(['nl', 'en', 'de', 'fr', 'ar', 'tr']).optional(),
+  "bevoegdheden": zod.record(zod.string(), zod.number())
 })
+
+
+/**
+ * @summary Standaardprofielen (bevoegdheidspresets) ophalen
+ */
+export const ListProfielenResponseItem = zod.object({
+  "id": zod.number(),
+  "naam": zod.string(),
+  "bevoegdheden": zod.record(zod.string(), zod.number()),
+  "systeem": zod.boolean(),
+  "aangemaakt_op": zod.string()
+})
+export const ListProfielenResponse = zod.array(ListProfielenResponseItem)
 
 
 /**
@@ -2316,13 +2336,14 @@ export const TaalWijzigenResponse = zod.object({
   "id": zod.number(),
   "naam": zod.string(),
   "email": zod.string(),
-  "rol": zod.enum(['hoofdbeheerder', 'beheerder', 'monteur', 'controleur', 'klant', 'viewer']),
+  "rol": zod.enum(['hoofdbeheerder', 'beheerder', 'monteur', 'controleur', 'klant', 'gebruiker']),
   "avatar_url": zod.string().nullish(),
   "bedrijfskleuren": zod.string().nullish(),
   "taal": zod.enum(['nl', 'en', 'de', 'fr', 'ar', 'tr']).optional(),
   "nieuw_apparaat": zod.boolean().optional(),
   "nieuw_ip": zod.boolean().optional(),
-  "functietitels": zod.array(zod.string()).optional()
+  "functietitels": zod.array(zod.string()).optional(),
+  "bevoegdheden": zod.record(zod.string(), zod.number())
 })
 
 
@@ -2462,13 +2483,14 @@ export const TweeFactorActiverenResponse = zod.object({
   "id": zod.number(),
   "naam": zod.string(),
   "email": zod.string(),
-  "rol": zod.enum(['hoofdbeheerder', 'beheerder', 'monteur', 'controleur', 'klant', 'viewer']),
+  "rol": zod.enum(['hoofdbeheerder', 'beheerder', 'monteur', 'controleur', 'klant', 'gebruiker']),
   "avatar_url": zod.string().nullish(),
   "bedrijfskleuren": zod.string().nullish(),
   "taal": zod.enum(['nl', 'en', 'de', 'fr', 'ar', 'tr']).optional(),
   "nieuw_apparaat": zod.boolean().optional(),
   "nieuw_ip": zod.boolean().optional(),
-  "functietitels": zod.array(zod.string()).optional()
+  "functietitels": zod.array(zod.string()).optional(),
+  "bevoegdheden": zod.record(zod.string(), zod.number())
 })
 
 
@@ -2483,13 +2505,14 @@ export const TweeFactorVerifyResponse = zod.object({
   "id": zod.number(),
   "naam": zod.string(),
   "email": zod.string(),
-  "rol": zod.enum(['hoofdbeheerder', 'beheerder', 'monteur', 'controleur', 'klant', 'viewer']),
+  "rol": zod.enum(['hoofdbeheerder', 'beheerder', 'monteur', 'controleur', 'klant', 'gebruiker']),
   "avatar_url": zod.string().nullish(),
   "bedrijfskleuren": zod.string().nullish(),
   "taal": zod.enum(['nl', 'en', 'de', 'fr', 'ar', 'tr']).optional(),
   "nieuw_apparaat": zod.boolean().optional(),
   "nieuw_ip": zod.boolean().optional(),
-  "functietitels": zod.array(zod.string()).optional()
+  "functietitels": zod.array(zod.string()).optional(),
+  "bevoegdheden": zod.record(zod.string(), zod.number())
 })
 
 
@@ -2506,13 +2529,14 @@ export const GetHuidigeGebruikerResponse = zod.object({
   "id": zod.number(),
   "naam": zod.string(),
   "email": zod.string(),
-  "rol": zod.enum(['hoofdbeheerder', 'beheerder', 'monteur', 'controleur', 'klant', 'viewer']),
+  "rol": zod.enum(['hoofdbeheerder', 'beheerder', 'monteur', 'controleur', 'klant', 'gebruiker']),
   "avatar_url": zod.string().nullish(),
   "bedrijfskleuren": zod.string().nullish(),
   "taal": zod.enum(['nl', 'en', 'de', 'fr', 'ar', 'tr']).optional(),
   "nieuw_apparaat": zod.boolean().optional(),
   "nieuw_ip": zod.boolean().optional(),
-  "functietitels": zod.array(zod.string()).optional()
+  "functietitels": zod.array(zod.string()).optional(),
+  "bevoegdheden": zod.record(zod.string(), zod.number())
 })
 
 

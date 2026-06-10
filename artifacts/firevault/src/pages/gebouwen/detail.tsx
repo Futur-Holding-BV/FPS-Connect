@@ -69,7 +69,7 @@ import GebouwActiviteit from "./gebouw-activiteit";
 import GebouwStappenplan from "./gebouw-stappenplan";
 
 const BEHEERDER_ROLLEN = ["beheerder", "hoofdbeheerder"];
-const TEAM_UITGESLOTEN_ROLLEN = ["hoofdbeheerder", "klant", "viewer"];
+const TEAM_UITGESLOTEN_ROLLEN = ["hoofdbeheerder", "klant"];
 
 // Veldfuncties tonen een monteur met een specifiekere naam (bv. Timmerman).
 const VELD_FUNCTIES = ["Timmerman", "Uitvoerder"];

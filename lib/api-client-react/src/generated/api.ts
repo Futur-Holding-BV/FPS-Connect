@@ -99,6 +99,7 @@ import type {
   Onderhoudstaak,
   PlattegrondAiAnalyseInput,
   PlattegrondAiAnalyseResultaat,
+  Profiel,
   Scheiding,
   ScheidingInput,
   ScheidingUpdate,
@@ -6597,6 +6598,83 @@ export const useUitnodigingOpnieuwVersturen = <TError = ErrorType<unknown>,
       > => {
       return useMutation(getUitnodigingOpnieuwVersturenMutationOptions(options));
     }
+
+export const getListProfielenUrl = () => {
+
+
+
+
+  return `/api/profielen`
+}
+
+/**
+ * @summary Standaardprofielen (bevoegdheidspresets) ophalen
+ */
+export const listProfielen = async ( options?: RequestInit): Promise<Profiel[]> => {
+
+  return customFetch<Profiel[]>(getListProfielenUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListProfielenQueryKey = () => {
+    return [
+    `/api/profielen`
+    ] as const;
+    }
+
+
+export const getListProfielenQueryOptions = <TData = Awaited<ReturnType<typeof listProfielen>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listProfielen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListProfielenQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listProfielen>>> = ({ signal }) => listProfielen({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listProfielen>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListProfielenQueryResult = NonNullable<Awaited<ReturnType<typeof listProfielen>>>
+export type ListProfielenQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Standaardprofielen (bevoegdheidspresets) ophalen
+ */
+
+export function useListProfielen<TData = Awaited<ReturnType<typeof listProfielen>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listProfielen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListProfielenQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
 
 export const getUitnodigingVerifieerUrl = (token: string,) => {
 

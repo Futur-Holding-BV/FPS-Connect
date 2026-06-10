@@ -8,10 +8,10 @@ import {
   gebruikersTable,
 } from "@workspace/db";
 import { eq, desc, and } from "drizzle-orm";
-import { requireRol } from "../middlewares/auth";
+import { requireBevoegdheid } from "../middlewares/auth";
 
 const router = Router();
-const alleenBeheerder = requireRol("beheerder");
+const alleenBeheerder = requireBevoegdheid("systeem", 1);
 
 async function huidigeGebruiker(req: { session: { userId?: number } }) {
   const id = req.session.userId;

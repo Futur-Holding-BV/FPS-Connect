@@ -5,11 +5,15 @@ import { db } from "@workspace/db";
 import { gebruikersTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { stuurUitnodigingsmail } from "../services/email";
-import { requireRol } from "../middlewares/auth";
+import { requireBevoegdheid } from "../middlewares/auth";
+import {
+  heeftNiveau,
+  bevoegdhedenVoorLegacyRol,
+} from "@workspace/permissies";
 
 const router = Router();
 
-const alleenBeheerder = requireRol("beheerder");
+const alleenBeheerder = requireBevoegdheid("gebruikers", 4);
 
 // De enige toegestane projectfuncties (profiel) voor een beheerder.
 const FUNCTIETITELS_TOEGESTAAN = [
@@ -81,6 +85,7 @@ const mapGebruiker = (g: typeof gebruikersTable.$inferSelect) => ({
     ? g.uitnodigingGeaccepteerdOp.toISOString()
     : null,
   taal: g.taal ?? "nl",
+  bevoegdheden: (g.bevoegdheden as Record<string, number>) ?? {},
 });
 
 // Veilige projectie zonder PII voor niet-beheerders: namen/rol blijven zichtbaar
@@ -107,15 +112,22 @@ const mapGebruikerPubliek = (g: typeof gebruikersTable.$inferSelect) => ({
   uitnodiging_opnieuw_verstuurd_op: null,
   uitnodiging_geaccepteerd_op: null,
   taal: g.taal ?? "nl",
+  bevoegdheden: {},
 });
 
 async function isBeheerder(userId: number | undefined): Promise<boolean> {
   if (!userId) return false;
   const [g] = await db
-    .select({ rol: gebruikersTable.rol })
+    .select({ rol: gebruikersTable.rol, bevoegdheden: gebruikersTable.bevoegdheden })
     .from(gebruikersTable)
     .where(eq(gebruikersTable.id, userId));
-  return g?.rol === "beheerder" || g?.rol === "hoofdbeheerder";
+  if (!g) return false;
+  if (g.rol === "hoofdbeheerder") return true;
+  const bev: Record<string, number> =
+    g.bevoegdheden && Object.keys(g.bevoegdheden as Record<string, number>).length > 0
+      ? (g.bevoegdheden as Record<string, number>)
+      : bevoegdhedenVoorLegacyRol(g.rol);
+  return heeftNiveau(bev, "gebruikers", 1);
 }
 
 function domein(): string {
@@ -140,7 +152,7 @@ router.post("/gebruikers", alleenBeheerder, async (req, res) => {
   try {
     const {
       naam, email, rol, functietitels, telefoon, bedrijf, wachtwoord,
-      avatar_url, bedrijfslogo_url, bedrijfskleuren, taal,
+      avatar_url, bedrijfslogo_url, bedrijfskleuren, taal, bevoegdheden,
     } = req.body;
     if (!naam || !email || !rol) {
       return res.status(400).json({ error: "naam, email en rol zijn verplicht" });
@@ -165,6 +177,8 @@ router.post("/gebruikers", alleenBeheerder, async (req, res) => {
         bedrijfslogoUrl: bedrijfslogo_url,
         bedrijfskleuren,
         taal: taal || "nl",
+        bevoegdheden:
+          typeof bevoegdheden === "object" && bevoegdheden !== null ? bevoegdheden : {},
         uitnodigingStatus: "niet_uitgenodigd",
       })
       .returning();
@@ -199,7 +213,7 @@ router.patch("/gebruikers/:id", alleenBeheerder, async (req, res) => {
     const id = parseInt(String(req.params.id), 10);
     const {
       naam, email, rol, functietitels, telefoon, bedrijf, actief, wachtwoord,
-      avatar_url, bedrijfslogo_url, bedrijfskleuren, uitnodiging_status, taal,
+      avatar_url, bedrijfslogo_url, bedrijfskleuren, uitnodiging_status, taal, bevoegdheden,
     } = req.body;
     // Bestaande rol én functietitels ophalen: zo wist een partiële PATCH niets
     // onterecht, terwijl een expliciete rolwissel de oude functies wél opschoont.
@@ -248,6 +262,31 @@ router.patch("/gebruikers/:id", alleenBeheerder, async (req, res) => {
       uitnodigingStatus: uitnodiging_status,
       taal,
     };
+    if (bevoegdheden !== undefined && typeof bevoegdheden === "object" && bevoegdheden !== null) {
+      // Zelf-escalatiebeveiliging: niemand mag hogere niveaus toekennen dan eigen matrix.
+      const requesterId = req.session.userId!;
+      const [requester] = await db
+        .select({ rol: gebruikersTable.rol, bevoegdheden: gebruikersTable.bevoegdheden })
+        .from(gebruikersTable)
+        .where(eq(gebruikersTable.id, requesterId));
+      if (requester && requester.rol !== "hoofdbeheerder") {
+        const eigenBev: Record<string, number> =
+          requester.bevoegdheden &&
+          Object.keys(requester.bevoegdheden as Record<string, number>).length > 0
+            ? (requester.bevoegdheden as Record<string, number>)
+            : bevoegdhedenVoorLegacyRol(requester.rol);
+        for (const [mod, lvl] of Object.entries(
+          bevoegdheden as Record<string, number>,
+        )) {
+          if (typeof lvl === "number" && lvl > (eigenBev[mod] ?? 0)) {
+            return res.status(403).json({
+              error: "Geen toegang: bevoegdheid kan niet hoger zijn dan uw eigen niveau",
+            });
+          }
+        }
+      }
+      wijziging.bevoegdheden = bevoegdheden as Record<string, number>;
+    }
     if (wachtwoord) {
       wijziging.wachtwoord = await bcrypt.hash(String(wachtwoord), 10);
     }

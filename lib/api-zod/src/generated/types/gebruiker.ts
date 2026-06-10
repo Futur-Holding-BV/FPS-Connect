@@ -5,6 +5,7 @@
  * FPS Brandpreventie - Platform voor brandpreventieve gebouwvoorzieningen
  * OpenAPI spec version: 0.1.0
  */
+import type { GebruikerBevoegdheden } from './gebruikerBevoegdheden';
 import type { GebruikerRol } from './gebruikerRol';
 import type { GebruikerTaal } from './gebruikerTaal';
 import type { GebruikerUitnodigingStatus } from './gebruikerUitnodigingStatus';
@@ -41,4 +42,5 @@ export interface Gebruiker {
   /** @nullable */
   uitnodiging_geaccepteerd_op?: string | null;
   taal?: GebruikerTaal;
+  bevoegdheden: GebruikerBevoegdheden;
 }

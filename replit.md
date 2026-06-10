@@ -68,7 +68,34 @@ Doel Versie 1.0: "Administratief gereed voor uitvoering" — een project moet vo
 - **V1.1** — Spots & Uitvoering
 - **V1.2** — Opleverrapportage
 - **V1.3** — Bibliotheek & Documenten
-- **V2.0** — Mobiele monteur-app
+- **V2.0** — Mobiele monteur-app (monteurflow: werk, route, plattegronden, spots, foto's, gereedmelden)
+- **V2.1** — Medewerkerportaal Desktop (HRM-module, mogelijke vervanger Apployed)
+- **V2.2** — Medewerkermodule mobiel (optionele module naast monteurmodule)
+
+### V2.1 — Medewerkerportaal Desktop (vastgelegd, NIET bouwen voor V2.0 afgerond)
+
+NIET bouwen voor V2.0 (mobiele monteurflow) formeel akkoord is. Mogelijke vervanger van Apployed. De bevoegdheden-matrix in `lib/permissies` wordt uitgebreid met module-ID's `personeel` en `verlof` zodat toegang per gebruiker instelbaar blijft.
+
+Doelgroepen: hoofdbeheerder, beheerder-financien, HRM-adviseur.
+
+Functies (desktop/webapp):
+- Medewerkersprofielen (persoonsgegevens, noodcontact, BSN/contractgegevens)
+- Contractbeheer (type, uren, looptijd, verlengingen)
+- Verlofsaldo en verlofopbouw (automatisch of handmatig)
+- Verlofaanvragen — aanvragen, goedkeuren/afwijzen, kalenderoverzicht
+- Ziekte en verzuim bijhouden
+- Urenoverzichten per medewerker of team
+- Documenten (arbeidsovereenkomsten, loonstroken, certificaten)
+- Opleidingen en cursussen (bijhouden voortgang en certificaten)
+- Gereedschap en materieel beheer per medewerker
+- Rapportages (verlofsaldo, verzuimpercentage, urenbezetting)
+
+### V2.2 — Medewerkermodule mobiel (optionele module in FPS Monteur-app, NIET bouwen voor V2.1)
+
+De FPS Monteur-app wordt modulair: modules per gebruiker aan- of uitzetten via bevoegdheden-matrix.
+
+- **Monteurmodule** (bestaand doel V2.0): werk, route, plattegronden, spots, foto's, gereedmelden.
+- **Medewerkermodule** (V2.2): eigen profiel, verlof aanvragen, verlofsaldo bekijken, uren invullen, weekplanning inzien, eigen gereedschap bekijken, instructies/cursussen afronden.
 
 ### V1.3 — Bibliotheek & Documenten (vastgelegde architectuur, ~90-95% definitief)
 

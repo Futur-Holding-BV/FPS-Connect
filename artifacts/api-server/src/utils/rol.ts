@@ -28,7 +28,7 @@ export type EffectieveContext = {
 export async function effectieveContext(req: Request): Promise<EffectieveContext> {
   const echteUserId = req.session.userId!;
   const echte = await gebruikerVan(echteUserId);
-  const echteRol = echte?.rol ?? "viewer";
+  const echteRol = echte?.rol ?? "gebruiker";
   if (echteRol !== "hoofdbeheerder") {
     return { userId: echteUserId, rol: echteRol, impersonatie: false };
   }
@@ -38,7 +38,7 @@ export async function effectieveContext(req: Request): Promise<EffectieveContext
     return { userId: echteUserId, rol: echteRol, impersonatie: false };
   }
   const imp = await gebruikerVan(impId);
-  if (!imp || !imp.actief || imp.rol === "viewer") {
+  if (!imp || !imp.actief) {
     return { userId: echteUserId, rol: echteRol, impersonatie: false };
   }
   return { userId: impId, rol: imp.rol, impersonatie: true };

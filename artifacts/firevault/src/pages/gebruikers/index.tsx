@@ -7,6 +7,7 @@ import {
   useDeleteGebruiker,
   useUitnodigingVersturen,
   useUitnodigingOpnieuwVersturen,
+  useListProfielen,
   getListGebruikersQueryKey,
 } from "@workspace/api-client-react";
 import { Card, CardContent } from "@/components/ui/card";
@@ -33,7 +34,7 @@ import {
 import { useQueryClient } from "@tanstack/react-query";
 import { useRol } from "@/context/rol-context";
 
-const ROLLEN = ["hoofdbeheerder", "beheerder", "monteur", "controleur", "klant"] as const;
+const ROLLEN = ["hoofdbeheerder", "gebruiker", "beheerder", "monteur", "controleur", "klant"] as const;
 type Rol = typeof ROLLEN[number];
 
 // Projectfuncties (profiel) voor kantoor-/beheerprofielen — meerdere mogelijk.
@@ -50,6 +51,27 @@ const FUNCTIETITELS = [
 // krijgen, alleen met een specifiekere naam. Opgeslagen als rol "monteur" met
 // de functie in functietitels.
 const VELD_FUNCTIES = ["Timmerman", "Uitvoerder"] as const;
+
+const MODULES: { id: string; label: string }[] = [
+  { id: "gebouwen",      label: "Gebouwen" },
+  { id: "voorzieningen", label: "Spots" },
+  { id: "inspecties",    label: "Inspecties" },
+  { id: "onderhoud",     label: "Onderhoud" },
+  { id: "rapportages",   label: "Rapportages" },
+  { id: "bibliotheek",   label: "Bibliotheek" },
+  { id: "gebruikers",    label: "Gebruikers" },
+  { id: "crm",           label: "CRM" },
+  { id: "abonnementen",  label: "Abonnementen" },
+  { id: "systeem",       label: "Systeembeheer" },
+];
+
+const NIVEAUS = [
+  { waarde: 0, label: "Geen" },
+  { waarde: 1, label: "Lezen" },
+  { waarde: 2, label: "Wijzigen" },
+  { waarde: 3, label: "Aanmaken" },
+  { waarde: 4, label: "Volledig" },
+];
 
 // Bepaalt de getoonde rol-keuze: een monteur met een veldfunctie toont die
 // functie als keuze (timmerman/uitvoerder); anders gewoon de systeemrol.
@@ -88,6 +110,14 @@ const ROL_CONFIG: Record<Rol, {
     badge: "bg-amber-100 text-amber-800 border-amber-200",
     rand: "border-t-amber-500",
     beschrijving: "Volledig beheer — alle rechten",
+  },
+  gebruiker: {
+    label: "Gebruikers",
+    icon: ShieldCheck,
+    kleur: "text-primary",
+    badge: "bg-primary/10 text-primary border-primary/20",
+    rand: "border-t-primary",
+    beschrijving: "Toegang via bevoegdheden-matrix",
   },
   beheerder: {
     label: "Beheerders",
@@ -173,9 +203,10 @@ function onlinKleur(iso: string | null | undefined): string {
 }
 
 const leegForm = {
-  naam: "", email: "", rol: "monteur", functietitels: [] as string[],
+  naam: "", email: "", rol: "gebruiker", functietitels: [] as string[],
   telefoon: "", bedrijf: "", wachtwoord: "", actief: true,
   avatar_url: "", bedrijfslogo_url: "", bedrijfskleuren: "",
+  bevoegdheden: {} as Record<string, number>,
 };
 type GebruikerForm = typeof leegForm;
 
@@ -192,6 +223,7 @@ type Gebruiker = {
   avatar_url?: string | null;
   bedrijfslogo_url?: string | null;
   bedrijfskleuren?: string | null;
+  bevoegdheden?: Record<string, number> | null;
   uitnodiging_status?: string | null;
   uitnodiging_verstuurd_op?: string | null;
   uitnodiging_verloopt_op?: string | null;
@@ -260,6 +292,7 @@ export default function Gebruikers() {
           avatar_url:      toevoegenForm.avatar_url          || undefined,
           bedrijfslogo_url: toevoegenForm.bedrijfslogo_url   || undefined,
           bedrijfskleuren: toevoegenForm.bedrijfskleuren     || undefined,
+          bevoegdheden:    toevoegenForm.bevoegdheden,
         },
       });
       await invalideer();
@@ -284,6 +317,7 @@ export default function Gebruikers() {
       avatar_url:      g.avatar_url     ?? "",
       bedrijfslogo_url: g.bedrijfslogo_url ?? "",
       bedrijfskleuren: g.bedrijfskleuren  ?? "",
+      bevoegdheden:    g.bevoegdheden   ?? {},
     });
     setBewerkFout(null);
   }
@@ -310,6 +344,7 @@ export default function Gebruikers() {
           avatar_url:      bewerkForm.avatar_url         || undefined,
           bedrijfslogo_url: bewerkForm.bedrijfslogo_url  || undefined,
           bedrijfskleuren: bewerkForm.bedrijfskleuren    || undefined,
+          bevoegdheden:    bewerkForm.bevoegdheden,
         },
       });
       await invalideer();
@@ -349,7 +384,9 @@ export default function Gebruikers() {
   }, {} as Record<string, Gebruiker[]>);
 
   const zichtbareRollen = ROLLEN.filter((rol) => isHoofd || rol !== "hoofdbeheerder");
-  const gridCols = zichtbareRollen.length === 5 ? "grid-cols-5" : "grid-cols-4";
+  const gridCols =
+    zichtbareRollen.length >= 6 ? "grid-cols-3 xl:grid-cols-6" :
+    zichtbareRollen.length === 5 ? "grid-cols-5" : "grid-cols-4";
 
   return (
     <div className="space-y-6 max-w-[1400px] mx-auto">
@@ -762,6 +799,76 @@ function VeldRij({ icon: Icon, label, waarde }: { icon: React.ElementType; label
   );
 }
 
+function BevoegdhedenEditor({
+  bevoegdheden,
+  onChange,
+}: {
+  bevoegdheden: Record<string, number>;
+  onChange: (b: Record<string, number>) => void;
+}) {
+  const { data: profielen } = useListProfielen();
+
+  return (
+    <div className="rounded-lg border p-3 space-y-3">
+      <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+        <ShieldCheck className="h-3.5 w-3.5" /> Bevoegdheden
+      </div>
+
+      {profielen && profielen.length > 0 && (
+        <div className="space-y-1.5">
+          <Label>Preset toepassen</Label>
+          <Select
+            value=""
+            onValueChange={(profielId) => {
+              const profiel = profielen.find((p) => String(p.id) === profielId);
+              if (profiel) onChange({ ...profiel.bevoegdheden });
+            }}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Kies een preset..." />
+            </SelectTrigger>
+            <SelectContent>
+              {profielen.map((p) => (
+                <SelectItem key={p.id} value={String(p.id)}>
+                  {p.naam}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-muted-foreground">
+            Preset overschrijft alle modulewaarden — daarna nog per module aanpasbaar.
+          </p>
+        </div>
+      )}
+
+      <div className="grid grid-cols-2 gap-2">
+        {MODULES.map((mod) => (
+          <div key={mod.id} className="space-y-0.5">
+            <Label className="text-xs">{mod.label}</Label>
+            <Select
+              value={String(bevoegdheden[mod.id] ?? 0)}
+              onValueChange={(v) =>
+                onChange({ ...bevoegdheden, [mod.id]: Number(v) })
+              }
+            >
+              <SelectTrigger className="h-8 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {NIVEAUS.map((n) => (
+                  <SelectItem key={n.waarde} value={String(n.waarde)} className="text-xs">
+                    {n.waarde} — {n.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function GebruikerVelden({
   form,
   setForm,
@@ -845,11 +952,12 @@ function GebruikerVelden({
             </SelectTrigger>
             <SelectContent>
               {toonHoofd && <SelectItem value="hoofdbeheerder">Hoofdbeheerder</SelectItem>}
-              <SelectItem value="beheerder">Beheerder</SelectItem>
-              <SelectItem value="monteur">Monteur</SelectItem>
-              <SelectItem value="timmerman">Timmerman</SelectItem>
-              <SelectItem value="uitvoerder">Uitvoerder</SelectItem>
-              <SelectItem value="controleur">Controleur</SelectItem>
+              <SelectItem value="gebruiker">Gebruiker (matrix)</SelectItem>
+              <SelectItem value="beheerder">Beheerder (legacy)</SelectItem>
+              <SelectItem value="monteur">Monteur (legacy)</SelectItem>
+              <SelectItem value="timmerman">Timmerman (legacy)</SelectItem>
+              <SelectItem value="uitvoerder">Uitvoerder (legacy)</SelectItem>
+              <SelectItem value="controleur">Controleur (legacy)</SelectItem>
               <SelectItem value="klant">Klant</SelectItem>
             </SelectContent>
           </Select>
@@ -887,6 +995,13 @@ function GebruikerVelden({
             })}
           </div>
         </div>
+      )}
+
+      {form.rol !== "klant" && form.rol !== "hoofdbeheerder" && (
+        <BevoegdhedenEditor
+          bevoegdheden={form.bevoegdheden}
+          onChange={(b) => setForm((f) => ({ ...f, bevoegdheden: b }))}
+        />
       )}
 
       <div className="grid grid-cols-2 gap-3">

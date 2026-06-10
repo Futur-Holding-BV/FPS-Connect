@@ -9,7 +9,7 @@ import {
   gebouwToewijzingenTable,
 } from "@workspace/db";
 import { eq, inArray } from "drizzle-orm";
-import { requireRol } from "../middlewares/auth";
+import { requireBevoegdheid } from "../middlewares/auth";
 import { effectieveContext } from "../utils/rol";
 
 const router = Router();
@@ -31,7 +31,7 @@ async function echteRol(userId: number): Promise<string> {
     .select({ rol: gebruikersTable.rol })
     .from(gebruikersTable)
     .where(eq(gebruikersTable.id, userId));
-  return g?.rol ?? "viewer";
+  return g?.rol ?? "gebruiker";
 }
 
 // Object-level guard: monteur/controleur mogen alleen muteren bij hun toegewezen
@@ -120,7 +120,7 @@ router.get("/inspecties", async (req, res) => {
 // Oplevering en projectinspecties zijn voorbehouden aan monteur en beheerder.
 const CONTROLEUR_INSPECTIE_TYPES = ["periodiek", "jaarlijks", "herstel"];
 
-router.post("/inspecties", requireRol("monteur", "controleur", "beheerder", "hoofdbeheerder"), async (req, res) => {
+router.post("/inspecties", requireBevoegdheid("inspecties", 3), async (req, res) => {
   try {
     const { type, gebouw_id, voorziening_id, inspecteur_id, geplande_datum, bevindingen } = req.body;
     if (!type || !gebouw_id) {
@@ -176,7 +176,7 @@ router.post("/inspecties", requireRol("monteur", "controleur", "beheerder", "hoo
 // GET /inspecties/:id
 router.get("/inspecties/:id", async (req, res) => {
   try {
-    const id = parseInt(req.params.id);
+    const id = parseInt(String(req.params.id));
     const { userId, rol: effectiefRolDetail } = await effectieveContext(req);
 
     const [i] = await db.select().from(inspectiesTable).where(eq(inspectiesTable.id, id));
@@ -214,9 +214,9 @@ router.get("/inspecties/:id", async (req, res) => {
 });
 
 // PATCH /inspecties/:id
-router.patch("/inspecties/:id", requireRol("monteur", "controleur", "beheerder", "hoofdbeheerder"), async (req, res) => {
+router.patch("/inspecties/:id", requireBevoegdheid("inspecties", 2), async (req, res) => {
   try {
-    const id = parseInt(req.params.id);
+    const id = parseInt(String(req.params.id));
     const {
       type, status, inspecteur_id, geplande_datum, uitgevoerd_datum,
       bevindingen, aanbevelingen, rapport_url,
@@ -254,9 +254,9 @@ router.patch("/inspecties/:id", requireRol("monteur", "controleur", "beheerder",
 });
 
 // DELETE /inspecties/:id
-router.delete("/inspecties/:id", requireRol("beheerder", "hoofdbeheerder"), async (req, res) => {
+router.delete("/inspecties/:id", requireBevoegdheid("inspecties", 4), async (req, res) => {
   try {
-    const id = parseInt(req.params.id);
+    const id = parseInt(String(req.params.id));
     await db.delete(inspectiesTable).where(eq(inspectiesTable.id, id));
     res.status(204).send();
   } catch (err) {

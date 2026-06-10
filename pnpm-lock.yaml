@@ -179,6 +179,9 @@ importers:
       '@workspace/db':
         specifier: workspace:*
         version: link:../../lib/db
+      '@workspace/permissies':
+        specifier: workspace:*
+        version: link:../../lib/permissies
       bcryptjs:
         specifier: ^3.0.3
         version: 3.0.3
@@ -412,6 +415,9 @@ importers:
       '@workspace/object-storage-web':
         specifier: workspace:*
         version: link:../../lib/object-storage-web
+      '@workspace/permissies':
+        specifier: workspace:*
+        version: link:../../lib/permissies
       class-variance-authority:
         specifier: 'catalog:'
         version: 0.7.1
@@ -865,6 +871,8 @@ importers:
       '@types/react':
         specifier: 'catalog:'
         version: 19.2.17
+
+  lib/permissies: {}
 
   scripts:
     dependencies:

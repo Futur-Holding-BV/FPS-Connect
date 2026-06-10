@@ -13,7 +13,8 @@ import {
   scheidingenTable,
 } from "@workspace/db";
 import { eq, and, ilike, sql } from "drizzle-orm";
-import { requireRol } from "../middlewares/auth";
+import { requireBevoegdheid } from "../middlewares/auth";
+import { heeftNiveau, bevoegdhedenVoorLegacyRol } from "@workspace/permissies";
 import { effectieveContext } from "../utils/rol";
 import { getLabelsVoorVoorziening, syncVoorzieningLabels } from "../lib/classificatie";
 
@@ -253,7 +254,7 @@ router.get("/gebouwen/:id/volgend-spotnummer", async (req, res) => {
 });
 
 // POST /voorzieningen
-router.post("/voorzieningen", requireRol("monteur", "controleur", "beheerder", "hoofdbeheerder"), async (req, res) => {
+router.post("/voorzieningen", requireBevoegdheid("voorzieningen", 3), async (req, res) => {
   try {
     const {
       objectnummer, qr_code, type, status, classificatie, gebouw_id,
@@ -345,7 +346,7 @@ router.post("/voorzieningen", requireRol("monteur", "controleur", "beheerder", "
 // GET /voorzieningen/:id
 router.get("/voorzieningen/:id", async (req, res) => {
   try {
-    const id = parseInt(req.params.id);
+    const id = parseInt(String(req.params.id));
     const [v] = await db.select().from(voorzieningenTable).where(eq(voorzieningenTable.id, id));
     if (!v) return res.status(404).json({ error: "Voorziening niet gevonden" });
     if (!(await magBijGebouw(req.session.userId!, v.gebouwId))) {
@@ -398,7 +399,7 @@ router.get("/voorzieningen/:id", async (req, res) => {
 });
 
 // PATCH /voorzieningen/:id
-router.patch("/voorzieningen/:id", requireRol("monteur", "controleur", "beheerder", "hoofdbeheerder"), async (req, res) => {
+router.patch("/voorzieningen/:id", requireBevoegdheid("voorzieningen", 2), async (req, res) => {
   try {
     const id = parseInt(String(req.params.id));
     if (!(await magBijGebouw(req.session.userId!, await gebouwIdVanVoorziening(id)))) {
@@ -450,7 +451,7 @@ router.patch("/voorzieningen/:id", requireRol("monteur", "controleur", "beheerde
 });
 
 // DELETE /voorzieningen/:id
-router.delete("/voorzieningen/:id", requireRol("beheerder", "hoofdbeheerder"), async (req, res) => {
+router.delete("/voorzieningen/:id", requireBevoegdheid("voorzieningen", 4), async (req, res) => {
   try {
     const id = parseInt(String(req.params.id));
     await db.delete(voorzieningenTable).where(eq(voorzieningenTable.id, id));
@@ -464,7 +465,7 @@ router.delete("/voorzieningen/:id", requireRol("beheerder", "hoofdbeheerder"), a
 // GET /voorzieningen/:id/fotos
 router.get("/voorzieningen/:id/fotos", async (req, res) => {
   try {
-    const id = parseInt(req.params.id);
+    const id = parseInt(String(req.params.id));
     if (!(await magBijGebouw(req.session.userId!, await gebouwIdVanVoorziening(id)))) {
       res.status(403).json({ error: "Geen toegang tot deze voorziening" });
       return;
@@ -487,7 +488,7 @@ router.get("/voorzieningen/:id/fotos", async (req, res) => {
 });
 
 // POST /voorzieningen/:id/fotos
-router.post("/voorzieningen/:id/fotos", requireRol("monteur", "controleur", "beheerder", "hoofdbeheerder"), async (req, res) => {
+router.post("/voorzieningen/:id/fotos", requireBevoegdheid("voorzieningen", 3), async (req, res) => {
   try {
     const voorzieningId = parseInt(String(req.params.id));
     if (!(await magBijGebouw(req.session.userId!, await gebouwIdVanVoorziening(voorzieningId)))) {
@@ -514,7 +515,7 @@ router.post("/voorzieningen/:id/fotos", requireRol("monteur", "controleur", "beh
 });
 
 // DELETE /voorzieningen/:id/fotos/:fotoId
-router.delete("/voorzieningen/:id/fotos/:fotoId", requireRol("monteur", "controleur", "beheerder", "hoofdbeheerder"), async (req, res) => {
+router.delete("/voorzieningen/:id/fotos/:fotoId", requireBevoegdheid("voorzieningen", 3), async (req, res) => {
   try {
     const fotoId = parseInt(String(req.params.fotoId));
     const voorzieningId = parseInt(String(req.params.id));
@@ -540,7 +541,7 @@ router.delete("/voorzieningen/:id/fotos/:fotoId", requireRol("monteur", "control
 });
 
 // PATCH /voorzieningen/:id/status
-router.patch("/voorzieningen/:id/status", requireRol("monteur", "controleur", "beheerder", "hoofdbeheerder"), async (req, res) => {
+router.patch("/voorzieningen/:id/status", requireBevoegdheid("voorzieningen", 2), async (req, res) => {
   try {
     const id = parseInt(String(req.params.id));
     if (!(await magBijGebouw(req.session.userId!, await gebouwIdVanVoorziening(id)))) {
@@ -570,7 +571,7 @@ router.patch("/voorzieningen/:id/status", requireRol("monteur", "controleur", "b
 });
 
 // PATCH /voorzieningen/:id/archief
-router.patch("/voorzieningen/:id/archief", requireRol("monteur", "controleur", "beheerder", "hoofdbeheerder"), async (req, res) => {
+router.patch("/voorzieningen/:id/archief", requireBevoegdheid("voorzieningen", 3), async (req, res) => {
   try {
     const id = parseInt(String(req.params.id));
     if (!(await magBijGebouw(req.session.userId!, await gebouwIdVanVoorziening(id)))) {
@@ -578,15 +579,24 @@ router.patch("/voorzieningen/:id/archief", requireRol("monteur", "controleur", "
     }
     const gearchiveerd = req.body?.gearchiveerd === true;
 
-    // Terug plaatsen (de-archiveren) is uitsluitend voorbehouden aan beheerders.
+    // Terug plaatsen (de-archiveren) vereist volledig beheer (niveau 4).
     if (!gearchiveerd) {
       const userId = req.session.userId;
       const [g] = await db
-        .select({ rol: gebruikersTable.rol })
+        .select({ rol: gebruikersTable.rol, bevoegdheden: gebruikersTable.bevoegdheden })
         .from(gebruikersTable)
         .where(eq(gebruikersTable.id, userId!));
-      if (!g || (g.rol !== "hoofdbeheerder" && g.rol !== "beheerder")) {
+      if (!g) {
         return res.status(403).json({ error: "Geen toegang" });
+      }
+      if (g.rol !== "hoofdbeheerder") {
+        const bev: Record<string, number> =
+          g.bevoegdheden && Object.keys(g.bevoegdheden as Record<string, number>).length > 0
+            ? (g.bevoegdheden as Record<string, number>)
+            : bevoegdhedenVoorLegacyRol(g.rol);
+        if (!heeftNiveau(bev, "voorzieningen", 4)) {
+          return res.status(403).json({ error: "Geen toegang" });
+        }
       }
     }
 
@@ -621,7 +631,7 @@ router.patch("/voorzieningen/:id/archief", requireRol("monteur", "controleur", "
 // GET /verdiepingen/:id/voorzieningen
 router.get("/verdiepingen/:id/voorzieningen", async (req, res) => {
   try {
-    const id = parseInt(req.params.id);
+    const id = parseInt(String(req.params.id));
 
     // Monteur/controleur mag alleen verdiepingen van toegewezen gebouwen zien.
     // effectieveContext zodat impersonatie (bekijken als) correct doorwerkt.
@@ -684,7 +694,7 @@ function scheidingRij(s: typeof scheidingenTable.$inferSelect) {
 // GET /verdiepingen/:id/scheidingen
 router.get("/verdiepingen/:id/scheidingen", async (req, res) => {
   try {
-    const id = parseInt(req.params.id);
+    const id = parseInt(String(req.params.id));
 
     // Monteur/controleur mag alleen verdiepingen van toegewezen gebouwen zien.
     // effectieveContext zodat impersonatie (bekijken als) correct doorwerkt.
@@ -710,7 +720,7 @@ router.get("/verdiepingen/:id/scheidingen", async (req, res) => {
 });
 
 // POST /verdiepingen/:id/scheidingen
-router.post("/verdiepingen/:id/scheidingen", requireRol("monteur", "controleur", "beheerder", "hoofdbeheerder"), async (req, res) => {
+router.post("/verdiepingen/:id/scheidingen", requireBevoegdheid("voorzieningen", 3), async (req, res) => {
   try {
     const id = parseInt(String(req.params.id));
     if (!(await magBijGebouw(req.session.userId!, await gebouwIdVanVerdieping(id)))) {
@@ -735,7 +745,7 @@ router.post("/verdiepingen/:id/scheidingen", requireRol("monteur", "controleur",
 });
 
 // PATCH /verdiepingen/scheidingen/:scheidingId
-router.patch("/verdiepingen/scheidingen/:scheidingId", requireRol("monteur", "controleur", "beheerder", "hoofdbeheerder"), async (req, res) => {
+router.patch("/verdiepingen/scheidingen/:scheidingId", requireBevoegdheid("voorzieningen", 2), async (req, res) => {
   try {
     const scheidingId = parseInt(String(req.params.scheidingId));
     if (!(await magBijGebouw(req.session.userId!, await gebouwIdVanScheiding(scheidingId)))) {
@@ -765,7 +775,7 @@ router.patch("/verdiepingen/scheidingen/:scheidingId", requireRol("monteur", "co
 });
 
 // DELETE /verdiepingen/scheidingen/:scheidingId
-router.delete("/verdiepingen/scheidingen/:scheidingId", requireRol("monteur", "controleur", "beheerder", "hoofdbeheerder"), async (req, res) => {
+router.delete("/verdiepingen/scheidingen/:scheidingId", requireBevoegdheid("voorzieningen", 3), async (req, res) => {
   try {
     const scheidingId = parseInt(String(req.params.scheidingId));
     if (!(await magBijGebouw(req.session.userId!, await gebouwIdVanScheiding(scheidingId)))) {

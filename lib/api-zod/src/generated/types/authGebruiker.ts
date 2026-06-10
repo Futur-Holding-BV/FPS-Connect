@@ -5,6 +5,7 @@
  * FPS Brandpreventie - Platform voor brandpreventieve gebouwvoorzieningen
  * OpenAPI spec version: 0.1.0
  */
+import type { AuthGebruikerBevoegdheden } from './authGebruikerBevoegdheden';
 import type { AuthGebruikerRol } from './authGebruikerRol';
 import type { AuthGebruikerTaal } from './authGebruikerTaal';
 
@@ -21,4 +22,5 @@ export interface AuthGebruiker {
   nieuw_apparaat?: boolean;
   nieuw_ip?: boolean;
   functietitels?: string[];
+  bevoegdheden: AuthGebruikerBevoegdheden;
 }

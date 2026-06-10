@@ -11,11 +11,11 @@ import {
   gebruikersTable,
 } from "@workspace/db";
 import { eq, desc } from "drizzle-orm";
-import { requireRol } from "../middlewares/auth";
+import { requireRol, requireBevoegdheid } from "../middlewares/auth";
 
 const router = Router();
 
-const beheerderPlus = requireRol("beheerder");
+const beheerderPlus = requireBevoegdheid("crm", 2);
 const alleenHoofdbeheerder = requireRol("hoofdbeheerder");
 
 const iso = (d: Date) => d.toISOString();

@@ -17,6 +17,7 @@ const OPSLAG_SLEUTEL = "fps.bekijkenAlsPersoon";
 type RolContextType = {
   rol: Rol;
   echteRol: Rol;
+  bevoegdheden: Record<string, number>;
   kanWisselen: boolean;
   persoon: GeimiteerdePersoon | null;
   zetPersoon: (persoon: GeimiteerdePersoon | null) => void;
@@ -25,6 +26,7 @@ type RolContextType = {
 const RolContext = createContext<RolContextType>({
   rol: "beheerder",
   echteRol: "beheerder",
+  bevoegdheden: {},
   kanWisselen: false,
   persoon: null,
   zetPersoon: () => {},
@@ -51,6 +53,7 @@ export function RolProvider({ children }: { children: React.ReactNode }) {
   // beheerder worden. We laten de waarde ongeldig zodat Portalen naar
   // GeenToegang valt in plaats van het beheerderportaal te tonen.
   const echteRol = (gebruiker?.rol as Rol) ?? ("" as Rol);
+  const bevoegdheden = (gebruiker?.bevoegdheden ?? {}) as Record<string, number>;
   const kanWisselen = echteRol === "hoofdbeheerder";
 
   const [persoon, setPersoon] = useState<GeimiteerdePersoon | null>(() =>
@@ -85,7 +88,7 @@ export function RolProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <RolContext.Provider
-      value={{ rol, echteRol, kanWisselen, persoon: actievePersoon, zetPersoon }}
+      value={{ rol, echteRol, bevoegdheden, kanWisselen, persoon: actievePersoon, zetPersoon }}
     >
       {children}
     </RolContext.Provider>

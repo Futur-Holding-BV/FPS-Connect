@@ -2,6 +2,11 @@ import type { Request, Response, NextFunction, RequestHandler } from "express";
 import { db, gebruikersTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { leesToken } from "../lib/token";
+import {
+  heeftNiveau,
+  bevoegdhedenVoorLegacyRol,
+  type ModuleId,
+} from "@workspace/permissies";
 
 declare module "express-session" {
   interface SessionData {
@@ -24,8 +29,6 @@ export async function requireAuth(
     const uid = leesToken(header.slice(7));
     if (uid) {
       try {
-        // Verifieer dat het account nog bestaat én actief is; een eerder
-        // uitgegeven token mag niet bruikbaar blijven na deactivatie.
         const [g] = await db
           .select({ actief: gebruikersTable.actief, rol: gebruikersTable.rol })
           .from(gebruikersTable)
@@ -62,8 +65,54 @@ export function requireRol(...toegestaneRollen: string[]): RequestHandler {
         .select({ rol: gebruikersTable.rol })
         .from(gebruikersTable)
         .where(eq(gebruikersTable.id, id));
-      // De hoofdbeheerder heeft volledige rechten en passeert elke rolcontrole.
       if (!g || (g.rol !== "hoofdbeheerder" && !toegestaneRollen.includes(g.rol))) {
+        res.status(403).json({ error: "Geen toegang" });
+        return;
+      }
+      next();
+    } catch (err) {
+      req.log.error(err);
+      res.status(500).json({ error: "Interne serverfout" });
+    }
+  };
+}
+
+export function requireBevoegdheid(module: ModuleId, minNiveau: number): RequestHandler {
+  return async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
+    const id = req.session.userId;
+    if (!id) {
+      res.status(401).json({ error: "Niet ingelogd" });
+      return;
+    }
+    try {
+      const [g] = await db
+        .select({ rol: gebruikersTable.rol, bevoegdheden: gebruikersTable.bevoegdheden })
+        .from(gebruikersTable)
+        .where(eq(gebruikersTable.id, id));
+      if (!g) {
+        res.status(403).json({ error: "Geen toegang" });
+        return;
+      }
+      // Hoofdbeheerder bypasses de matrix volledig.
+      if (g.rol === "hoofdbeheerder") {
+        next();
+        return;
+      }
+      // Klant heeft geen toegang tot interne modules.
+      if (g.rol === "klant") {
+        res.status(403).json({ error: "Geen toegang" });
+        return;
+      }
+      // Effectieve matrix: gebruik eigen matrix als ingesteld, anders legacy-rol fallback.
+      const bev: Record<string, number> =
+        g.bevoegdheden && Object.keys(g.bevoegdheden as Record<string, number>).length > 0
+          ? (g.bevoegdheden as Record<string, number>)
+          : bevoegdhedenVoorLegacyRol(g.rol);
+      if (!heeftNiveau(bev, module, minNiveau)) {
         res.status(403).json({ error: "Geen toegang" });
         return;
       }
