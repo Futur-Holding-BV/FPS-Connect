@@ -99,7 +99,6 @@ const PARTIJ_TYPELABEL: Record<string, string> = {
 const CANVAS_W = 1200;
 const CANVAS_H = 800;
 
-// Crop-grootte rondom een spot in SVG-coördinaten (ingezoomde detailweergave)
 const SPOT_CROP = 600;
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -266,7 +265,6 @@ function SpotDetailBlok({
     }
   }, [detail, onGereed]);
 
-  // Ingezoomde SVG-viewBox rondom de spot
   const half = SPOT_CROP / 2;
   const vbX = Math.max(0, spot.locatie_x - half);
   const vbY = Math.max(0, spot.locatie_y - half);
@@ -286,7 +284,6 @@ function SpotDetailBlok({
 
   return (
     <div className="prt-spot-detail">
-      {/* Koptekst */}
       <div className="prt-spot-kop">
         <div className="prt-spot-kop-links">
           <img src={logoSrc} alt="FPS Brandpreventie" className="prt-spot-logo" />
@@ -301,9 +298,7 @@ function SpotDetailBlok({
         </div>
       </div>
 
-      {/* Tekening + minimap */}
       <div className="prt-spot-body">
-        {/* Ingezoomd stuk tekening */}
         <div className="prt-spot-tekening">
           <svg
             viewBox={`${vbX} ${vbY} ${vbW} ${vbH}`}
@@ -314,9 +309,7 @@ function SpotDetailBlok({
               ? <image href={pdfBeeld} x={0} y={0} width={W} height={H} />
               : <GridAchtergrond w={W} h={H} />}
             {renderScheidingen(scheidingen, W, H)}
-            {/* Alle spots licht weergeven */}
             <SpotIcoon v={spot} />
-            {/* Uitlichtring rondom de geselecteerde spot */}
             <circle
               cx={spot.locatie_x}
               cy={spot.locatie_y}
@@ -330,7 +323,6 @@ function SpotDetailBlok({
           </svg>
         </div>
 
-        {/* Minimap rechtsboven */}
         <div style={{ display: "flex", flexDirection: "column", gap: 8, flexShrink: 0, width: 120 }}>
           <Minimap W={W} H={H} x={vbX} y={vbY} w={vbW} h={vbH} label={spot.objectnummer} />
           <div style={{ fontSize: 10, color: "#64748b", textAlign: "center", lineHeight: 1.4 }}>
@@ -339,7 +331,6 @@ function SpotDetailBlok({
         </div>
       </div>
 
-      {/* Spotinformatie */}
       <div className="prt-spot-info">
         <div className="prt-spot-info-rij">
           <span className="prt-spot-lbl">Applicatie</span>
@@ -390,7 +381,6 @@ function SpotDetailBlok({
         </div>
       </div>
 
-      {/* Testrapporten / fabrikantinfo — altijd tonen */}
       <div className="prt-spot-testinfo">
         <div className="prt-spot-testinfo-titel">Gekoppelde bibliotheekdocumenten</div>
         {heeftTestinfo ? (
@@ -408,7 +398,6 @@ function SpotDetailBlok({
         )}
       </div>
 
-      {/* Foto's */}
       {(voorFotos.length > 0 || naFotos.length > 0) && (
         <div className="prt-spot-fotos">
           {voorFotos.length > 0 && (
@@ -437,7 +426,6 @@ function SpotDetailBlok({
   );
 }
 
-// Rendert scheidingen als SVG-groepen
 function renderScheidingen(scheidingen: any[] | undefined, W: number, H: number): React.ReactNode {
   return (scheidingen ?? []).map((s: any) => {
     let punten: Punt[] = [];
@@ -568,7 +556,6 @@ function PrintVerdieping({
     }
   }, [beeldKlaar, dataKlaar, alleSpotsGereed, onGereed]);
 
-  // Logo-positie op overzichtsplattegrond
   const vd = verdieping as any;
   const logoPad = Math.max(W, H) * 0.015;
   const logoB   = vd.logo_breedte ?? Math.max(W, H) * 0.16;
@@ -586,7 +573,6 @@ function PrintVerdieping({
         </span>
       </h3>
 
-      {/* ── Overzichtsplattegrond ── */}
       {toonOverzicht && (
         <div className="prt-verdieping-blok">
           <div className="prt-tegel-koplabel">Overzichtsplattegrond — {verdieping.naam}</div>
@@ -606,7 +592,6 @@ function PrintVerdieping({
         </div>
       )}
 
-      {/* ── Spot-detailpagina's ── */}
       {toonSpotDetails && geplaatst.map(spot => (
         <SpotDetailBlok
           key={spot.id}
@@ -623,7 +608,6 @@ function PrintVerdieping({
         />
       ))}
 
-      {/* ── Voorzieningenlijst (compacte samenvatting) ── */}
       {!toonSpotDetails && alleVoorzieningen.length > 0 && (
         <table className="prt-tabel">
           <thead>
@@ -669,9 +653,8 @@ export default function GebouwPrint() {
   const [gereedFloors, setGereedFloors] = useState(0);
   const gedrukt = useRef(false);
 
-  // Moduskeuze
-  const [toonOverzicht,    setToonOverzicht]    = useState(true);
-  const [toonSpotDetails,  setToonSpotDetails]  = useState(true);
+  const [toonOverzicht,   setToonOverzicht]   = useState(true);
+  const [toonSpotDetails, setToonSpotDetails] = useState(true);
 
   const verdiepingen = [...((gebouw?.verdiepingen ?? []) as Verdieping[])].sort(
     (a, b) => (a.niveau ?? 0) - (b.niveau ?? 0),
@@ -725,7 +708,6 @@ export default function GebouwPrint() {
   const stats = gebouw.stats;
   const totaalSpots = stats?.totaal ?? 0;
 
-  // Voortgang per status
   const voortgangStatussen: Array<{ status: string; label: string; aantal: number; kleur: string }> = [
     { status: "goedgekeurd",   label: "Gereed",         aantal: stats?.goedgekeurd  ?? 0, kleur: "#22c55e" },
     { status: "in_uitvoering", label: "In uitvoering", aantal: stats?.in_bewerking ?? 0, kleur: "#3b82f6" },
@@ -744,30 +726,94 @@ export default function GebouwPrint() {
     <div className="prt-root bg-white text-slate-900">
       <style>{`
         .prt-root { font-family: Inter, ui-sans-serif, system-ui, sans-serif; }
-        .prt-doc { max-width: 960px; margin: 0 auto; padding: 24px; }
 
-        /* Koptekst */
-        .prt-kop { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; border-bottom: 3px solid hsl(12 90% 50%); padding-bottom: 16px; margin-bottom: 24px; }
-        .prt-kop img { height: 52px; width: auto; }
-        .prt-titel { font-size: 22px; font-weight: 800; line-height: 1.2; margin: 0; }
-        .prt-adres { color: #475569; font-size: 14px; margin-top: 2px; }
-        .prt-meta { text-align: right; font-size: 12px; color: #475569; line-height: 1.6; }
-        .prt-meta strong { color: #0f172a; }
+        /* ── Voorblad (pagina 1) ── */
+        .prt-voorblad {
+          min-height: 100vh;
+          display: flex;
+          flex-direction: column;
+          background: #fff;
+        }
+        .prt-cover-top { padding: 48px 56px 0; }
+        .prt-cover-logo { height: 48px; width: auto; }
+        .prt-cover-main {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+          padding: 56px;
+        }
+        .prt-cover-accentlijn {
+          width: 56px;
+          height: 4px;
+          background: #F23B0D;
+          border-radius: 2px;
+          margin-bottom: 20px;
+        }
+        .prt-cover-type {
+          font-size: 11px;
+          font-weight: 700;
+          color: #F23B0D;
+          text-transform: uppercase;
+          letter-spacing: .1em;
+          margin-bottom: 14px;
+        }
+        .prt-cover-naam {
+          font-size: 36px;
+          font-weight: 800;
+          color: #0f172a;
+          line-height: 1.1;
+          margin-bottom: 10px;
+        }
+        .prt-cover-adres {
+          font-size: 16px;
+          color: #475569;
+          margin-bottom: 40px;
+        }
+        .prt-cover-meta { display: flex; flex-direction: column; gap: 6px; }
+        .prt-cover-meta-rij { display: flex; gap: 12px; font-size: 13px; color: #475569; }
+        .prt-cover-meta-lbl { font-weight: 600; color: #334155; min-width: 148px; flex-shrink: 0; }
+        .prt-cover-voet {
+          background: #212631;
+          color: #fff;
+          padding: 28px 56px;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+        }
+        .prt-cover-voet-merk { font-size: 16px; font-weight: 700; }
+        .prt-cover-voet-tagline { font-size: 11px; color: #94a3b8; margin-top: 3px; }
+        .prt-cover-voet-rechts { text-align: right; font-size: 11px; color: #94a3b8; line-height: 1.8; }
+        .prt-cover-voet-waarde { color: #fff; font-weight: 600; }
 
-        /* Secties */
+        /* ── Pagina-container (pagina's 2+) ── */
+        .prt-pagina { max-width: 960px; margin: 0 auto; padding: 32px; }
+        .prt-pagina-kop {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          border-bottom: 2px solid #F23B0D;
+          padding-bottom: 12px;
+          margin-bottom: 28px;
+        }
+        .prt-pagina-kop img { height: 30px; width: auto; }
+        .prt-pagina-kop-info { text-align: right; font-size: 11px; color: #64748b; line-height: 1.6; }
+        .prt-pagina-kop-info strong { color: #0f172a; font-size: 12px; }
+
+        /* ── Secties ── */
         .prt-sectie { margin-bottom: 22px; break-inside: avoid; }
         .prt-sectie-titel { font-size: 15px; font-weight: 700; color: hsl(12 90% 45%); border-bottom: 1px solid #e2e8f0; padding-bottom: 5px; margin-bottom: 10px; }
         .prt-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px 18px; }
         .prt-grid .lbl { font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: .03em; }
         .prt-grid .val { font-size: 14px; font-weight: 600; }
 
-        /* Tabellen */
+        /* ── Tabellen ── */
         .prt-tabel { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 8px; }
         .prt-tabel th { text-align: left; background: #f1f5f9; color: #334155; font-weight: 600; padding: 6px 8px; border-bottom: 1px solid #e2e8f0; }
         .prt-tabel td { padding: 6px 8px; border-bottom: 1px solid #eef2f6; vertical-align: top; }
         .prt-stip { display: inline-block; width: 9px; height: 9px; border-radius: 9999px; margin-right: 6px; vertical-align: middle; }
 
-        /* Kaarten */
+        /* ── Kaarten ── */
         .prt-kaart { border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 12px; }
         .prt-kaart + .prt-kaart { margin-top: 8px; }
         .prt-kaart .naam { font-weight: 700; font-size: 13px; }
@@ -775,7 +821,7 @@ export default function GebouwPrint() {
         .prt-kaart .regel { font-size: 12px; color: #334155; margin-top: 2px; }
         .prt-badge { display: inline-block; font-size: 10px; font-weight: 600; padding: 1px 7px; border-radius: 9999px; background: hsl(12 90% 50% / .12); color: hsl(12 90% 40%); margin-left: 6px; }
 
-        /* Voortgangsbalk */
+        /* ── Voortgang ── */
         .prt-voortgang { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
         .prt-voortgang-rij { display: flex; align-items: center; gap: 8px; }
         .prt-voortgang-label { font-size: 11px; color: #475569; width: 110px; flex-shrink: 0; }
@@ -783,14 +829,21 @@ export default function GebouwPrint() {
         .prt-voortgang-balk { height: 100%; border-radius: 5px; }
         .prt-voortgang-getal { font-size: 11px; font-weight: 600; color: #0f172a; width: 28px; text-align: right; flex-shrink: 0; }
 
-        /* Verdiepingen */
+        /* ── Juridisch ── */
+        .prt-juridisch { line-height: 1.65; }
+        .prt-juridisch h3 { font-size: 12px; font-weight: 700; color: #334155; margin: 16px 0 5px; }
+        .prt-juridisch p { font-size: 12px; color: #475569; margin-bottom: 8px; }
+        .prt-juridisch ul { font-size: 12px; color: #475569; padding-left: 20px; margin-bottom: 8px; list-style: disc; }
+        .prt-juridisch li { margin-bottom: 4px; }
+
+        /* ── Verdiepingen ── */
         .prt-verdieping { margin-bottom: 18px; }
         .prt-verdieping-blok { break-inside: avoid; margin-bottom: 12px; }
         .prt-subtitel { font-size: 13px; font-weight: 700; margin: 0 0 6px; display: flex; align-items: baseline; gap: 8px; }
         .prt-subtitel-meta { font-size: 11px; font-weight: 500; color: #64748b; }
         .prt-plattegrond { border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; background: #f8fafc; }
 
-        /* Tegel koplabels (overzichtsplattegrond subtitel) */
+        /* ── Tegel ── */
         .prt-tegel-blok { break-before: page; break-inside: avoid; margin-bottom: 18px; }
         .prt-tegel-kop { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 6px; }
         .prt-tegel-kop-info { flex: 1; min-width: 0; }
@@ -800,7 +853,7 @@ export default function GebouwPrint() {
         .prt-tegel-legende { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 5px; }
         .prt-tegel-status { font-size: 10px; color: #475569; display: flex; align-items: center; gap: 3px; }
 
-        /* Spot-detailpagina */
+        /* ── Spot-detail ── */
         .prt-spot-detail { break-before: page; break-inside: avoid; margin-bottom: 0; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px; background: #fff; }
         .prt-spot-kop { display: flex; align-items: flex-start; justify-content: space-between; border-bottom: 2px solid #F23B0D; padding-bottom: 10px; margin-bottom: 12px; }
         .prt-spot-kop-links { display: flex; align-items: center; gap: 12px; }
@@ -827,7 +880,7 @@ export default function GebouwPrint() {
         .prt-spot-foto-rij { display: flex; flex-wrap: wrap; gap: 6px; }
         .prt-spot-foto { width: 96px; height: 72px; object-fit: cover; border-radius: 6px; border: 1px solid #e2e8f0; }
 
-        /* Toolbar */
+        /* ── Toolbar ── */
         .prt-toolbar { position: sticky; top: 0; z-index: 10; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; padding: 10px 24px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; }
         .prt-toolbar-links { display: flex; gap: 8px; align-items: center; }
         .prt-modus-label { font-size: 12px; font-weight: 600; color: #334155; margin-right: 4px; }
@@ -835,18 +888,20 @@ export default function GebouwPrint() {
         .prt-modus-opt { display: flex; align-items: center; gap: 5px; font-size: 12px; color: #334155; cursor: pointer; user-select: none; }
         .prt-modus-opt input { accent-color: hsl(12 90% 50%); width: 14px; height: 14px; cursor: pointer; }
 
-        /* Footer */
+        /* ── Footer ── */
         .prt-leeg { font-size: 13px; color: #64748b; }
         .prt-voet { margin-top: 24px; padding-top: 12px; border-top: 1px solid #e2e8f0; font-size: 11px; color: #94a3b8; display: flex; justify-content: space-between; }
 
         @media print {
           .no-print { display: none !important; }
-          .prt-doc { max-width: none; padding: 0; }
+          .prt-voorblad { break-after: page; min-height: 0; }
+          .prt-pagina { max-width: none; padding: 0; break-before: page; }
           @page { margin: 14mm; }
         }
         @media screen {
           .prt-root { background: #f1f5f9; min-height: 100vh; }
-          .prt-doc { background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.1); margin: 24px auto; }
+          .prt-voorblad { max-width: 960px; box-shadow: 0 1px 3px rgba(0,0,0,.1); margin: 24px auto; min-height: 860px; }
+          .prt-pagina { background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.1); margin: 24px auto; }
         }
       `}</style>
 
@@ -874,29 +929,75 @@ export default function GebouwPrint() {
         </Button>
       </div>
 
-      <div className="prt-doc">
+      {/* ════════════════════════════════════════════════════════════════
+          PAGINA 1 — VOORBLAD
+      ════════════════════════════════════════════════════════════════ */}
+      <div className="prt-voorblad">
+        <div className="prt-cover-top">
+          <img src={logoSrc} alt="FPS Brandpreventie" className="prt-cover-logo" />
+        </div>
 
-        {/* ── Pagina 1: Projectgegevens ── */}
-        <div className="prt-kop">
-          <div className="flex items-start gap-4">
-            <img src={logoSrc} alt="FPS Brandpreventie" />
-            <div>
-              <h1 className="prt-titel">{titel}</h1>
-              <p className="prt-adres">
-                {gebouw.adres}{gebouw.stad ? `, ${gebouw.stad}` : ""}
-              </p>
-              {gebouw.werknummer && <p className="prt-adres">Werknummer: {gebouw.werknummer}</p>}
+        <div className="prt-cover-main">
+          <div className="prt-cover-accentlijn" />
+          <div className="prt-cover-type">Brandpreventie rapport</div>
+          <div className="prt-cover-naam">{gebouw.naam}</div>
+          {(gebouw.adres || gebouw.stad) && (
+            <div className="prt-cover-adres">
+              {[gebouw.adres, gebouw.stad].filter(Boolean).join(", ")}
             </div>
-          </div>
-          <div className="prt-meta">
-            <div>FPS Brandpreventie</div>
-            <div>Geëxporteerd op <strong>{exportDatum}</strong></div>
-            <div>Door <strong>{gebruiker?.naam ?? "—"}</strong></div>
-            {gebouw.gereed_op && <div>Gereedgemeld op {datumNL(gebouw.gereed_op)}</div>}
+          )}
+          <div className="prt-cover-meta">
+            {gebouw.projectnummer && (
+              <div className="prt-cover-meta-rij">
+                <span className="prt-cover-meta-lbl">Projectnummer</span>
+                <span>{gebouw.projectnummer}</span>
+              </div>
+            )}
+            {gebouw.werknummer && (
+              <div className="prt-cover-meta-rij">
+                <span className="prt-cover-meta-lbl">Werknummer</span>
+                <span>{gebouw.werknummer}</span>
+              </div>
+            )}
+            {opdrachtgevers.length > 0 && (
+              <div className="prt-cover-meta-rij">
+                <span className="prt-cover-meta-lbl">Opdrachtgever</span>
+                <span>{opdrachtgevers[0].naam}</span>
+              </div>
+            )}
+            {gebouw.gereed_op && (
+              <div className="prt-cover-meta-rij">
+                <span className="prt-cover-meta-lbl">Gereedgemeld op</span>
+                <span>{datumNL(gebouw.gereed_op)}</span>
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Opdrachtgever (prominent, bovenaan) */}
+        <div className="prt-cover-voet">
+          <div>
+            <div className="prt-cover-voet-merk">FPS Brandpreventie</div>
+            <div className="prt-cover-voet-tagline">Brandveiligheid door vakmanschap</div>
+          </div>
+          <div className="prt-cover-voet-rechts">
+            <div>Geëxporteerd door <span className="prt-cover-voet-waarde">{gebruiker?.naam ?? "—"}</span></div>
+            <div>Exportdatum: <span className="prt-cover-voet-waarde">{exportDatum}</span></div>
+          </div>
+        </div>
+      </div>
+
+      {/* ════════════════════════════════════════════════════════════════
+          PAGINA 2 — PROJECTINFORMATIE
+      ════════════════════════════════════════════════════════════════ */}
+      <div className="prt-pagina">
+        <div className="prt-pagina-kop">
+          <img src={logoSrc} alt="FPS Brandpreventie" />
+          <div className="prt-pagina-kop-info">
+            <div><strong>{titel}</strong></div>
+            <div>Projectinformatie</div>
+          </div>
+        </div>
+
         {opdrachtgevers.length > 0 && (
           <section className="prt-sectie">
             <h2 className="prt-sectie-titel">Opdrachtgever</h2>
@@ -916,7 +1017,6 @@ export default function GebouwPrint() {
           </section>
         )}
 
-        {/* Gebouwgegevens */}
         {heeftGegevens && (
           <section className="prt-sectie">
             <h2 className="prt-sectie-titel">Gebouwgegevens</h2>
@@ -943,7 +1043,6 @@ export default function GebouwPrint() {
           </section>
         )}
 
-        {/* Samenvatting spots + voortgangsbalken */}
         {totaalSpots > 0 && (
           <section className="prt-sectie">
             <h2 className="prt-sectie-titel">Spotsamenvatting en voortgang</h2>
@@ -953,18 +1052,22 @@ export default function GebouwPrint() {
                 <div className="lbl">Gereed</div>
                 <div className="val" style={{ color: "#16a34a" }}>
                   {stats?.goedgekeurd ?? 0}
-                  {totaalSpots > 0 && <span style={{ fontSize: 11, fontWeight: 500, color: "#64748b", marginLeft: 5 }}>
-                    ({Math.round(((stats?.goedgekeurd ?? 0) / totaalSpots) * 100)}%)
-                  </span>}
+                  {totaalSpots > 0 && (
+                    <span style={{ fontSize: 11, fontWeight: 500, color: "#64748b", marginLeft: 5 }}>
+                      ({Math.round(((stats?.goedgekeurd ?? 0) / totaalSpots) * 100)}%)
+                    </span>
+                  )}
                 </div>
               </div>
               <div>
                 <div className="lbl">Afgekeurd</div>
                 <div className="val" style={{ color: "#dc2626" }}>
                   {stats?.afgekeurd ?? 0}
-                  {totaalSpots > 0 && (stats?.afgekeurd ?? 0) > 0 && <span style={{ fontSize: 11, fontWeight: 500, color: "#64748b", marginLeft: 5 }}>
-                    ({Math.round(((stats?.afgekeurd ?? 0) / totaalSpots) * 100)}%)
-                  </span>}
+                  {totaalSpots > 0 && (stats?.afgekeurd ?? 0) > 0 && (
+                    <span style={{ fontSize: 11, fontWeight: 500, color: "#64748b", marginLeft: 5 }}>
+                      ({Math.round(((stats?.afgekeurd ?? 0) / totaalSpots) * 100)}%)
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
@@ -988,7 +1091,6 @@ export default function GebouwPrint() {
           </section>
         )}
 
-        {/* Overige partijen */}
         {(partijen ?? []).filter(p => p.type !== "opdrachtgever" && p.type !== "eigenaar").length > 0 && (
           <section className="prt-sectie">
             <h2 className="prt-sectie-titel">Overige contacten</h2>
@@ -1003,7 +1105,6 @@ export default function GebouwPrint() {
           </section>
         )}
 
-        {/* Projectteam */}
         {teamleden.length > 0 && (
           <section className="prt-sectie">
             <h2 className="prt-sectie-titel">Projectteam</h2>
@@ -1023,8 +1124,149 @@ export default function GebouwPrint() {
             </table>
           </section>
         )}
+      </div>
 
-        {/* ── Plattegronden per verdieping ── */}
+      {/* ════════════════════════════════════════════════════════════════
+          PAGINA 3 — UITGANGSPUNTEN EN JURIDISCHE TOELICHTING
+      ════════════════════════════════════════════════════════════════ */}
+      <div className="prt-pagina">
+        <div className="prt-pagina-kop">
+          <img src={logoSrc} alt="FPS Brandpreventie" />
+          <div className="prt-pagina-kop-info">
+            <div><strong>{titel}</strong></div>
+            <div>Uitgangspunten en juridische toelichting</div>
+          </div>
+        </div>
+
+        <section className="prt-sectie">
+          <h2 className="prt-sectie-titel">Doel en reikwijdte</h2>
+          <div className="prt-juridisch">
+            <p>
+              Dit rapport beschrijft de status van de geregistreerde brandpreventieve voorzieningen
+              in het genoemde gebouw, samengesteld door FPS Brandpreventie op basis van de gegevens
+              die op de exportdatum beschikbaar waren in het digitale beheersysteem. Het rapport is
+              bestemd voor de opdrachtgever en de betrokken installerende, controlerende en
+              beherende partijen.
+            </p>
+            <p>
+              De inhoud omvat een overzicht van alle geregistreerde spots (brandwerende
+              voorzieningen), inclusief locatieaanduidingen op bouwlaagniveau, statusinformatie,
+              gekoppelde bibliotheekdocumenten en — indien van toepassing — foto-documentatie.
+            </p>
+          </div>
+        </section>
+
+        <section className="prt-sectie">
+          <h2 className="prt-sectie-titel">Toepasselijke normen en regelgeving</h2>
+          <div className="prt-juridisch">
+            <p>
+              De geregistreerde voorzieningen zijn, afhankelijk van het type, beoordeeld op basis
+              van de volgende normen en regelgeving:
+            </p>
+            <ul>
+              <li>
+                <strong>Bouwbesluit 2012</strong> (en latere wijzigingen) — wettelijke eisen voor
+                brandveiligheid in gebouwen, inclusief vereiste WBDBO en rookwerendheid per
+                gebruiksfunctie.
+              </li>
+              <li>
+                <strong>NEN 6068</strong> — bepalingsmethode voor de bijdrage tot branduitbreiding
+                via straling en vliegvuur.
+              </li>
+              <li>
+                <strong>NEN 6069</strong> — beproevingsmethode brandwerendheid van bouwdelen.
+              </li>
+              <li>
+                <strong>EN 1634-1</strong> — beproevingsmethode brandwerendheid van deuren, luiken
+                en openingen (integriteit en isolatie).
+              </li>
+              <li>
+                <strong>EN 1366-3</strong> — brandwerendheidsbeproeving van
+                installatieproducten — doorvoeringen.
+              </li>
+              <li>
+                <strong>EN 1366-4</strong> — brandwerendheidsbeproeving van
+                installatieproducten — brandkleppen en brandgaskleppen.
+              </li>
+              <li>
+                <strong>EN 13501-1</strong> — brandclassificatie van bouwproducten en bouwdelen
+                op basis van reactie op brand.
+              </li>
+              <li>
+                <strong>CPR-verordening (EU 305/2011)</strong> — verplichting tot opstellen van
+                een prestatieverklaring (DoP) en CE-markering voor bouwproducten die vallen onder
+                een geharmoniseerde Europese norm.
+              </li>
+            </ul>
+          </div>
+        </section>
+
+        <section className="prt-sectie">
+          <h2 className="prt-sectie-titel">Werkwijze en uitgangspunten</h2>
+          <div className="prt-juridisch">
+            <h3>Registratie en locatiebepaling</h3>
+            <p>
+              Alle voorzieningslocaties zijn digitaal vastgelegd op de beschikbare bouwkundige
+              plattegrond per bouwlaag. Coördinaten worden opgeslagen op een vaste
+              renderingsschaal zodat locaties consistent worden weergegeven in alle rapportages
+              en op de mobiele inspectiehulp.
+            </p>
+            <h3>Status en beoordeling</h3>
+            <p>
+              De status van een voorziening wordt beheerd door bevoegde monteurs en controleurs
+              en doorloopt een vaste cyclus:{" "}
+              <em>Concept &rarr; In uitvoering &rarr; Opgeleverd &rarr; Gereed</em>. Alleen
+              voorzieningen met de status Gereed zijn door een bevoegd controleur geaccordeerd.
+            </p>
+            <h3>Bibliotheekdocumenten en toepassingen</h3>
+            <p>
+              Aan elke spot kunnen toepassingen (labels) worden gekoppeld uit de centrale
+              productbibliotheek. Een toepassing verwijst naar een fabrikantspecifiek product
+              met bijbehorende testnorm en/of prestatieverklaring. De verantwoordelijkheid voor
+              de juistheid van de fabrikantdocumentatie berust bij de betreffende fabrikant.
+            </p>
+          </div>
+        </section>
+
+        <section className="prt-sectie">
+          <h2 className="prt-sectie-titel">Disclaimer en aansprakelijkheid</h2>
+          <div className="prt-juridisch">
+            <p>
+              Dit rapport is samengesteld op basis van de op het moment van export beschikbare
+              gegevens in het beheersysteem van FPS Brandpreventie. FPS Brandpreventie staat in
+              voor een zorgvuldige registratie, maar aanvaardt geen aansprakelijkheid voor
+              onjuistheden die het gevolg zijn van:
+            </p>
+            <ul>
+              <li>onvolledige of onjuiste aanlevering van informatie door opdrachtgever of derden;</li>
+              <li>wijzigingen in het gebouw of de installaties na de registratiedatum;</li>
+              <li>afwijkingen in de door de fabrikant verstrekte productdocumentatie.</li>
+            </ul>
+            <p>
+              Dit rapport vervangt niet het oordeel van een gecertificeerde
+              brandveiligheidsadviseur of een formele opleverings- of periodieke inspectie conform
+              de geldende wet- en regelgeving. Uitsluitend de meest recent bijgewerkte versie van
+              dit rapport, gegenereerd vanuit het beheersysteem, geldt als geldig document.
+            </p>
+            <p style={{ fontSize: 11, color: "#94a3b8", marginTop: 16, fontStyle: "italic" }}>
+              FPS Brandpreventie — Brandveiligheid door vakmanschap
+            </p>
+          </div>
+        </section>
+      </div>
+
+      {/* ════════════════════════════════════════════════════════════════
+          PAGINA 4+ — RAPPORTINHOUD
+      ════════════════════════════════════════════════════════════════ */}
+      <div className="prt-pagina">
+        <div className="prt-pagina-kop">
+          <img src={logoSrc} alt="FPS Brandpreventie" />
+          <div className="prt-pagina-kop-info">
+            <div><strong>{titel}</strong></div>
+            <div>Rapportinhoud — plattegronden en voorzieningen</div>
+          </div>
+        </div>
+
         <section className="prt-sectie">
           <h2 className="prt-sectie-titel">Plattegronden met spots</h2>
           {verdiepingen.length === 0 ? (
@@ -1045,7 +1287,6 @@ export default function GebouwPrint() {
           )}
         </section>
 
-        {/* ── Onderhoud ── */}
         {(onderhoud ?? []).length > 0 && (
           <section className="prt-sectie">
             <h2 className="prt-sectie-titel">Onderhoud</h2>
@@ -1068,7 +1309,6 @@ export default function GebouwPrint() {
           </section>
         )}
 
-        {/* ── Inspecties ── */}
         {(inspecties ?? []).length > 0 && (
           <section className="prt-sectie">
             <h2 className="prt-sectie-titel">Inspecties</h2>

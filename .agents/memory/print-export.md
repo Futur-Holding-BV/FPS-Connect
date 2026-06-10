@@ -12,6 +12,13 @@ De printpagina dupliceert bewust de plattegrond-render uit `gebouw-plattegrond-h
 **Why:** spotcoördinaten zijn opgeslagen op pdf.js scale:2 (web+mobiel+print moeten allemaal scale:2 gebruiken, anders staan markers verkeerd).
 **How to apply:** wijzig je TYPEN/STATUSKLEUREN/SpotIcoon/markerPosities of de scale in de hero, pas dan ook print.tsx aan (of overweeg extractie naar gedeelde module).
 
+## Paginastructuur (4 aparte divs, niet één prt-doc)
+Lay-out is opgesplitst in: `prt-voorblad` (pagina 1) + drie `prt-pagina`-divs (pagina's 2/3/4+).
+- `prt-voorblad`: `@media print { break-after: page; min-height: 0; }` + screen: shadow + min-height: 860px.
+- `prt-pagina`: `@media print { break-before: page; max-width: none; padding: 0; }`.
+**Why:** één `.prt-doc`-wrapper forceert geen paginabreuk tussen het voorblad en de volgende pagina.
+Elke sectie heeft een eigen mini-kop (logo + projectnaam + sectienaam) voor context op elke afgedrukte pagina.
+
 ## Auto-print readiness — twee valkuilen (fail bij review)
 1. `allesGereed` moet ALLE secties-queries meenemen (partijen, toewijzingen, onderhoud, inspecties via `isLoading`), niet alleen gebouw + floor-counter. Secties renderen conditioneel op `length > 0`, dus te vroeg `window.print()` laat verplichte secties weg.
 2. Per-verdieping readiness mag NIET afhangen van `pdfBeeld !== null` (deadlock bij kapotte plattegrond-URL: load faalt → blijft null → onGereed vuurt nooit → print permanent geblokkeerd). Gebruik een aparte `beeldKlaar`-state die op `true` gaat bij success ÉN bij catch ÉN als er geen URL is.
