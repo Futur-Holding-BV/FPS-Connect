@@ -26,5 +26,6 @@
 - [SnagStream classificatie](snagstream-classificatie.md) — Applicatie=genummerde typecatalogus (~62 types, code "N.MM"); Label/Toepassing heeft fabrikant+testnorm direct op de tabel (niet alleen via testrapport_id); FabrikantSectie is UI-only state (niet gepersisteerd), verwijderd uit spot-bewerken form.
 - [Spot bewerken formulier](spot-bewerken.md) — huisnummer veld toegevoegd (DB+OpenAPI+API); ruimte=dropdown 14 opties met localStorage-frequentie-sortering (fps_ruimte_gebruik); FabrikantSectie verwijderd; GebouwStats heeft GEEN opgeleverd/concept properties.
 - [Plattegrond-logo verslepen](plattegrond-logo.md) — logo_x/logo_y/logo_breedte op verdiepingen; beheerder sleept/schaalt logo in SVG-editor; window-listeners + logoBoxRef tegen stale closure; clamp x/y én resize aan canvas-grenzen; init-effect niet tijdens sleep.
+- [Projectformulier edit leeg](projectformulier-edit-leeg.md) — lege edit-velden + niet opslaan = meestal api-server down/HMR-stale, geen UI-bug; check workflows draaien + hard refresh vóór codejacht.
 
 - [Betrokken contacten-kaart](betrokkenen-kaart.md) — projectformulier-kaart groepeert op partij (opdrachtgever boven); rol/org in groepskop, dus kale PersoonRegel buiten groep heeft toonContext nodig.
