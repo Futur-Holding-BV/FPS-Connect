@@ -28,12 +28,13 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import {
   Mail, Upload, Loader2, Trash2, Paperclip, Sparkles, User, MapPin,
   Phone, FileText, ChevronRight, ListChecks, RefreshCw, Building2,
   ClipboardList, AlertTriangle, CheckSquare, Handshake, Users, UserPlus, Check,
-  ArrowDownUp,
+  ArrowDownUp, Search,
 } from "lucide-react";
 
 const ROL_LABELS: Record<string, string> = {
@@ -290,14 +291,24 @@ export default function GebouwEmails({
   const [bezig, setBezig] = useState(false);
   const [actief, setActief] = useState<GebouwEmail | null>(null);
   const [sortering, setSortering] = useState("datum_nieuw");
+  const [zoek, setZoek] = useState("");
+  const [toonAlles, setToonAlles] = useState(false);
 
   const gesorteerd = useMemo(() => {
-    const lijst = [...(emails ?? [])];
     const tekst = (s: string | null | undefined) => (s ?? "").toLowerCase();
     const tijd = (s: string | null | undefined) => {
       const t = s ? new Date(s).getTime() : NaN;
       return Number.isNaN(t) ? 0 : t;
     };
+    const q = zoek.trim().toLowerCase();
+    let lijst = [...(emails ?? [])];
+    if (q) {
+      lijst = lijst.filter((e) =>
+        [e.onderwerp, e.afzender, e.ontvanger, e.bestandsnaam].some((v) =>
+          tekst(v).includes(q),
+        ),
+      );
+    }
     switch (sortering) {
       case "datum_oud":
         lijst.sort((a, b) => tijd(a.datum) - tijd(b.datum));
@@ -313,7 +324,11 @@ export default function GebouwEmails({
         break;
     }
     return lijst;
-  }, [emails, sortering]);
+  }, [emails, sortering, zoek]);
+
+  const LIMIET = 5;
+  const aanZoeken = zoek.trim().length > 0;
+  const zichtbaar = aanZoeken || toonAlles ? gesorteerd : gesorteerd.slice(0, LIMIET);
 
   const invalideer = () => {
     queryClient.invalidateQueries({ queryKey: getListGebouwEmailsQueryKey(gebouwId) });
@@ -390,22 +405,41 @@ export default function GebouwEmails({
         {/* E-maillijst */}
         <div>
           {(emails ?? []).length > 0 && (
-            <div className="flex items-center justify-between gap-2 mb-3">
+            <div className="mb-3 space-y-2">
               <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                Gearchiveerde e-mails
+                Gearchiveerde e-mails (
+                {aanZoeken
+                  ? `${gesorteerd.length} van ${(emails ?? []).length}`
+                  : (emails ?? []).length}
+                )
               </div>
-              <Select value={sortering} onValueChange={setSortering}>
-                <SelectTrigger className="h-8 w-[210px] text-xs" aria-label="Sorteren">
-                  <ArrowDownUp className="h-3.5 w-3.5 text-muted-foreground" />
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="datum_nieuw">Datum (nieuwste eerst)</SelectItem>
-                  <SelectItem value="datum_oud">Datum (oudste eerst)</SelectItem>
-                  <SelectItem value="afzender">Afzender (A–Z)</SelectItem>
-                  <SelectItem value="ontvanger">Ontvanger (A–Z)</SelectItem>
-                </SelectContent>
-              </Select>
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <div className="relative flex-1">
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                  <Input
+                    value={zoek}
+                    onChange={(ev) => {
+                      const v = ev.target.value;
+                      setZoek(v);
+                      if (!v.trim()) setToonAlles(false);
+                    }}
+                    placeholder="Zoek op onderwerp, afzender of ontvanger…"
+                    className="h-8 pl-8 text-xs"
+                  />
+                </div>
+                <Select value={sortering} onValueChange={setSortering}>
+                  <SelectTrigger className="h-8 w-full text-xs sm:w-[210px]" aria-label="Sorteren">
+                    <ArrowDownUp className="h-3.5 w-3.5 text-muted-foreground" />
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="datum_nieuw">Datum (nieuwste eerst)</SelectItem>
+                    <SelectItem value="datum_oud">Datum (oudste eerst)</SelectItem>
+                    <SelectItem value="afzender">Afzender (A–Z)</SelectItem>
+                    <SelectItem value="ontvanger">Ontvanger (A–Z)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           )}
           {isLoading ? (
@@ -414,9 +448,13 @@ export default function GebouwEmails({
             <div className="py-6 text-center text-sm text-muted-foreground">
               Nog geen e-mails gearchiveerd.
             </div>
+          ) : gesorteerd.length === 0 ? (
+            <div className="py-6 text-center text-sm text-muted-foreground">
+              Geen e-mails gevonden voor "{zoek.trim()}".
+            </div>
           ) : (
             <div className="space-y-2.5">
-              {gesorteerd.map((e) => (
+              {zichtbaar.map((e) => (
                 <button
                   key={e.id}
                   onClick={() => setActief(e)}
@@ -453,6 +491,18 @@ export default function GebouwEmails({
                   </div>
                 </button>
               ))}
+              {!aanZoeken && gesorteerd.length > LIMIET && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="w-full text-xs text-muted-foreground"
+                  onClick={() => setToonAlles((v) => !v)}
+                >
+                  {toonAlles
+                    ? "Toon minder"
+                    : `Toon alle ${gesorteerd.length} e-mails`}
+                </Button>
+              )}
             </div>
           )}
         </div>
