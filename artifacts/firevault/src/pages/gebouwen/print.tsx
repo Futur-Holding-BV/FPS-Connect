@@ -11,6 +11,9 @@ import {
   useListVoorzieningenOpVerdieping,
   useListScheidingen,
   useGetVoorziening,
+  useListGebouwTekeningen,
+  useListGebouwEmails,
+  useGetGebouwEmailSamenvatting,
   type Verdieping,
 } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
@@ -95,6 +98,18 @@ const PARTIJ_TYPELABEL: Record<string, string> = {
   opdrachtgever:  "Opdrachtgever",
   aanvrager:      "Aanvrager",
 };
+
+const TEKENING_TYPELABEL: Record<string, string> = {
+  plattegrond:        "Plattegrond",
+  gevelaanzicht:      "Gevelaanzicht",
+  doorsnede:          "Doorsnede",
+  situatietekening:   "Situatietekening",
+  installatietekening:"Installatietekening",
+  detailtekening:     "Detailtekening",
+  overig:             "Overig",
+};
+
+const REPORT_TITEL = "Opleverrapport brandveiligheid";
 
 const CANVAS_W = 1200;
 const CANVAS_H = 800;
@@ -294,7 +309,7 @@ function SpotDetailBlok({
         </div>
         <div className="prt-spot-kop-rechts">
           <div className="prt-spot-nr">{spot.objectnummer}</div>
-          <div className="prt-spot-datum">Export: {exportDatum}</div>
+          <div className="prt-spot-datum">Rapportdatum: {exportDatum}</div>
         </div>
       </div>
 
@@ -333,8 +348,20 @@ function SpotDetailBlok({
 
       <div className="prt-spot-info">
         <div className="prt-spot-info-rij">
-          <span className="prt-spot-lbl">Applicatie</span>
+          <span className="prt-spot-lbl">Applicatiecode</span>
+          <span className="prt-spot-val">{spot.objectnummer}</span>
+        </div>
+        <div className="prt-spot-info-rij">
+          <span className="prt-spot-lbl">Applicatieomschrijving</span>
           <span className="prt-spot-val">{applicatieLabel}</span>
+        </div>
+        <div className="prt-spot-info-rij">
+          <span className="prt-spot-lbl">Toepassing</span>
+          <span className="prt-spot-val">
+            {labels.length > 0
+              ? labels.map((l: any) => l.naam).join(", ")
+              : <em style={{ color: "#94a3b8" }}>Geen toepassing</em>}
+          </span>
         </div>
         <div className="prt-spot-info-rij">
           <span className="prt-spot-lbl">Status</span>
@@ -371,18 +398,10 @@ function SpotDetailBlok({
             <span className="prt-spot-val">{d.opmerkingen}</span>
           </div>
         )}
-        <div className="prt-spot-info-rij">
-          <span className="prt-spot-lbl">Toepassing</span>
-          <span className="prt-spot-val">
-            {labels.length > 0
-              ? labels.map((l: any) => l.naam).join(", ")
-              : <em style={{ color: "#94a3b8" }}>Geen toepassing</em>}
-          </span>
-        </div>
       </div>
 
       <div className="prt-spot-testinfo">
-        <div className="prt-spot-testinfo-titel">Gekoppelde bibliotheekdocumenten</div>
+        <div className="prt-spot-testinfo-titel">Productcertificaten / ETA's</div>
         {heeftTestinfo ? (
           labels.filter((l: any) => l.testnorm || l.fabrikant).map((l: any) => (
             <div key={l.id} className="prt-spot-testitem">
@@ -574,8 +593,19 @@ function PrintVerdieping({
       </h3>
 
       {toonOverzicht && (
-        <div className="prt-verdieping-blok">
-          <div className="prt-tegel-koplabel">Overzichtsplattegrond — {verdieping.naam}</div>
+        <div className="prt-overzicht-blok">
+          <div className="prt-spot-kop">
+            <div className="prt-spot-kop-links">
+              <img src={logoSrc} alt="FPS Brandpreventie" className="prt-spot-logo" />
+              <div>
+                <div className="prt-spot-gebouw">{gebouwNaam}</div>
+                <div className="prt-spot-bouwlaag">Overzichtsplattegrond · {verdieping.naam}</div>
+              </div>
+            </div>
+            <div className="prt-spot-kop-rechts">
+              <div className="prt-spot-datum">Rapportdatum: {exportDatum}</div>
+            </div>
+          </div>
           <div className="prt-plattegrond">
             <svg width="100%" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="xMidYMid meet" style={{ display: "block" }}>
               {pdfBeeld
@@ -649,6 +679,9 @@ export default function GebouwPrint() {
   const { data: toewijzingen, isLoading: toewijzingenLaden }  = useListGebouwToewijzingen(gebouwId);
   const { data: onderhoud, isLoading: onderhoudLaden }        = useListOnderhoud({ gebouw_id: gebouwId });
   const { data: inspecties, isLoading: inspectiesLaden }      = useListInspecties({ gebouw_id: gebouwId });
+  const { data: tekeningen, isLoading: tekeningenLaden }      = useListGebouwTekeningen(gebouwId);
+  const { data: emails, isLoading: emailsLaden }              = useListGebouwEmails(gebouwId);
+  const { data: samenvatting }                                = useGetGebouwEmailSamenvatting(gebouwId);
 
   const [gereedFloors, setGereedFloors] = useState(0);
   const gedrukt = useRef(false);
@@ -664,6 +697,7 @@ export default function GebouwPrint() {
     !isLoading && !!gebouw &&
     !partijenLaden && !toewijzingenLaden &&
     !onderhoudLaden && !inspectiesLaden &&
+    !tekeningenLaden && !emailsLaden &&
     gereedFloors >= aantalFloors;
 
   useEffect(() => {
@@ -696,6 +730,18 @@ export default function GebouwPrint() {
   const exportDatum = `${nu.toLocaleDateString("nl-NL")} ${nu.toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit" })}`;
   const logoSrc = `${import.meta.env.BASE_URL}logo-fps.png`;
 
+  const rapportDatum   = nu.toLocaleDateString("nl-NL");
+  const rapportVersie  = "1.0";
+  const documentnummer = `OPL-${gebouw.projectnummer ?? gebouw.werknummer ?? gebouwId}`;
+  const opsteller      = gebruiker?.naam ?? "—";
+
+  const projectOmschrijving =
+    (samenvatting?.opdrachtomschrijving?.trim() || (gebouw as { omschrijving?: string | null }).omschrijving?.trim()) ?? "";
+
+  const projectTekeningen = (tekeningen ?? []);
+  const projectEmails     = (emails ?? []);
+  const heeftDocumenten   = projectTekeningen.length > 0 || projectEmails.length > 0;
+
   const teamleden = Object.values(
     (toewijzingen ?? []).reduce<Record<number, { id: number; naam: string; rol: string; rollen: string[] }>>((acc, t) => {
       if (!acc[t.gebruiker_id])
@@ -714,11 +760,6 @@ export default function GebouwPrint() {
     { status: "in_onderhoud",  label: "In onderhoud",  aantal: stats?.in_onderhoud ?? 0, kleur: "#f97316" },
     { status: "afgekeurd",     label: "Afgekeurd",     aantal: stats?.afgekeurd    ?? 0, kleur: "#ef4444" },
   ].filter(s => s.aantal > 0);
-
-  const heeftGegevens =
-    gebouw.gebouw_type != null || gebouw.aantal_verdiepingen != null ||
-    gebouw.hoogte != null || gebouw.oppervlakte != null ||
-    (gebouw.breedte != null && gebouw.diepte != null);
 
   const opdrachtgevers = (partijen ?? []).filter(p => p.type === "opdrachtgever" || p.type === "eigenaar");
 
@@ -837,8 +878,9 @@ export default function GebouwPrint() {
         .prt-juridisch li { margin-bottom: 4px; }
 
         /* ── Verdiepingen ── */
-        .prt-verdieping { margin-bottom: 18px; }
+        .prt-verdieping { break-before: page; margin-bottom: 18px; }
         .prt-verdieping-blok { break-inside: avoid; margin-bottom: 12px; }
+        .prt-overzicht-blok { break-inside: avoid; margin-bottom: 18px; }
         .prt-subtitel { font-size: 13px; font-weight: 700; margin: 0 0 6px; display: flex; align-items: baseline; gap: 8px; }
         .prt-subtitel-meta { font-size: 11px; font-weight: 500; color: #64748b; }
         .prt-plattegrond { border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; background: #f8fafc; }
@@ -864,7 +906,7 @@ export default function GebouwPrint() {
         .prt-spot-nr { font-size: 20px; font-weight: 800; color: #F23B0D; }
         .prt-spot-datum { font-size: 10px; color: #94a3b8; margin-top: 2px; }
         .prt-spot-body { display: flex; gap: 16px; margin-bottom: 12px; align-items: flex-start; }
-        .prt-spot-tekening { flex: 1; min-width: 0; height: 280px; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; background: #f8fafc; }
+        .prt-spot-tekening { flex: 1; min-width: 0; height: 210px; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; background: #f8fafc; }
         .prt-spot-info { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 16px; margin-bottom: 12px; }
         .prt-spot-info-rij { display: contents; }
         .prt-spot-lbl { font-size: 10px; font-weight: 600; color: #64748b; padding: 3px 0; }
@@ -878,7 +920,7 @@ export default function GebouwPrint() {
         .prt-spot-fotos > div { flex: 1; min-width: 0; }
         .prt-spot-foto-label { font-size: 10px; font-weight: 600; color: #64748b; margin-bottom: 6px; margin-top: 4px; }
         .prt-spot-foto-rij { display: flex; flex-wrap: wrap; gap: 6px; }
-        .prt-spot-foto { width: 96px; height: 72px; object-fit: cover; border-radius: 6px; border: 1px solid #e2e8f0; }
+        .prt-spot-foto { width: 150px; height: 112px; object-fit: cover; border-radius: 6px; border: 1px solid #e2e8f0; }
 
         /* ── Toolbar ── */
         .prt-toolbar { position: sticky; top: 0; z-index: 10; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; padding: 10px 24px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; }
@@ -939,7 +981,7 @@ export default function GebouwPrint() {
 
         <div className="prt-cover-main">
           <div className="prt-cover-accentlijn" />
-          <div className="prt-cover-type">Brandpreventie rapport</div>
+          <div className="prt-cover-type">{REPORT_TITEL}</div>
           <div className="prt-cover-naam">{gebouw.naam}</div>
           {(gebouw.adres || gebouw.stad) && (
             <div className="prt-cover-adres">
@@ -980,14 +1022,46 @@ export default function GebouwPrint() {
             <div className="prt-cover-voet-tagline">Brandveiligheid door vakmanschap</div>
           </div>
           <div className="prt-cover-voet-rechts">
-            <div>Geëxporteerd door <span className="prt-cover-voet-waarde">{gebruiker?.naam ?? "—"}</span></div>
-            <div>Exportdatum: <span className="prt-cover-voet-waarde">{exportDatum}</span></div>
+            <div>Documentnummer: <span className="prt-cover-voet-waarde">{documentnummer}</span></div>
+            <div>Rapportdatum: <span className="prt-cover-voet-waarde">{rapportDatum}</span></div>
           </div>
         </div>
       </div>
 
       {/* ════════════════════════════════════════════════════════════════
-          PAGINA 2 — PROJECTINFORMATIE
+          PAGINA 2 — RAPPORTGEGEVENS
+      ════════════════════════════════════════════════════════════════ */}
+      <div className="prt-pagina">
+        <div className="prt-pagina-kop">
+          <img src={logoSrc} alt="FPS Brandpreventie" />
+          <div className="prt-pagina-kop-info">
+            <div><strong>{titel}</strong></div>
+            <div>Rapportgegevens</div>
+          </div>
+        </div>
+
+        <section className="prt-sectie">
+          <h2 className="prt-sectie-titel">Rapportgegevens</h2>
+          <div className="prt-grid">
+            <div><div className="lbl">Rapporttitel</div><div className="val">{REPORT_TITEL}</div></div>
+            <div><div className="lbl">Project</div><div className="val">{titel}</div></div>
+            <div><div className="lbl">Documentnummer</div><div className="val">{documentnummer}</div></div>
+            <div><div className="lbl">Rapportversie</div><div className="val">{rapportVersie}</div></div>
+            <div><div className="lbl">Rapportdatum</div><div className="val">{rapportDatum}</div></div>
+            <div><div className="lbl">Opgesteld door</div><div className="val">{opsteller}</div></div>
+            <div><div className="lbl">Gegenereerd op</div><div className="val">{exportDatum}</div></div>
+            {gebouw.gereed_op && (
+              <div><div className="lbl">Gereedgemeld op</div><div className="val">{datumNL(gebouw.gereed_op)}</div></div>
+            )}
+            {gebouw.gereed_door && (
+              <div><div className="lbl">Gereedgemeld door</div><div className="val">{gebouw.gereed_door}</div></div>
+            )}
+          </div>
+        </section>
+      </div>
+
+      {/* ════════════════════════════════════════════════════════════════
+          PAGINA 3 — PROJECTINFORMATIE
       ════════════════════════════════════════════════════════════════ */}
       <div className="prt-pagina">
         <div className="prt-pagina-kop">
@@ -997,6 +1071,15 @@ export default function GebouwPrint() {
             <div>Projectinformatie</div>
           </div>
         </div>
+
+        {projectOmschrijving && (
+          <section className="prt-sectie">
+            <h2 className="prt-sectie-titel">Projectomschrijving</h2>
+            <p style={{ fontSize: 12, color: "#475569", lineHeight: 1.65, whiteSpace: "pre-line" }}>
+              {projectOmschrijving}
+            </p>
+          </section>
+        )}
 
         {opdrachtgevers.length > 0 && (
           <section className="prt-sectie">
@@ -1017,29 +1100,59 @@ export default function GebouwPrint() {
           </section>
         )}
 
-        {heeftGegevens && (
+        {heeftDocumenten && (
           <section className="prt-sectie">
-            <h2 className="prt-sectie-titel">Gebouwgegevens</h2>
-            <div className="prt-grid">
-              {gebouw.gebouw_type != null && (
-                <div><div className="lbl">Type</div><div className="val" style={{ textTransform: "capitalize" }}>{gebouw.gebouw_type}</div></div>
-              )}
-              {gebouw.aantal_verdiepingen != null && (
-                <div><div className="lbl">Verdiepingen</div><div className="val">{gebouw.aantal_verdiepingen}</div></div>
-              )}
-              {gebouw.hoogte != null && (
-                <div><div className="lbl">Hoogte</div><div className="val">{gebouw.hoogte} m</div></div>
-              )}
-              {gebouw.oppervlakte != null && (
-                <div><div className="lbl">Oppervlakte</div><div className="val">{gebouw.oppervlakte} m²</div></div>
-              )}
-              {gebouw.breedte != null && gebouw.diepte != null && (
-                <div><div className="lbl">Afmeting</div><div className="val">{gebouw.breedte} × {gebouw.diepte} m</div></div>
-              )}
-              {verdiepingen.length > 0 && (
-                <div><div className="lbl">Bouwlagen</div><div className="val">{verdiepingen.map(v => v.naam).join(", ")}</div></div>
-              )}
-            </div>
+            <h2 className="prt-sectie-titel">Projectkaders en documenten</h2>
+
+            {projectTekeningen.length > 0 && (
+              <>
+                <div className="prt-tegel-koplabel" style={{ marginTop: 4 }}>Tekeningen</div>
+                <table className="prt-tabel">
+                  <thead>
+                    <tr>
+                      <th>Naam</th>
+                      <th>Type</th>
+                      <th>Schaal</th>
+                      <th>Datum</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {projectTekeningen.map(t => (
+                      <tr key={t.id}>
+                        <td>{t.naam}</td>
+                        <td>{TEKENING_TYPELABEL[t.type] ?? t.type}</td>
+                        <td>{t.schaal || "—"}</td>
+                        <td>{datumNL(t.aangemaakt_op)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </>
+            )}
+
+            {projectEmails.length > 0 && (
+              <>
+                <div className="prt-tegel-koplabel" style={{ marginTop: 12 }}>Correspondentie en e-mails</div>
+                <table className="prt-tabel">
+                  <thead>
+                    <tr>
+                      <th>Onderwerp</th>
+                      <th>Afzender</th>
+                      <th>Datum</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {projectEmails.map(e => (
+                      <tr key={e.id}>
+                        <td>{e.onderwerp || e.bestandsnaam}</td>
+                        <td>{e.afzender || "—"}</td>
+                        <td>{e.datum ? datumNL(e.datum) : datumNL(e.aangemaakt_op)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </>
+            )}
           </section>
         )}
 
@@ -1144,14 +1257,14 @@ export default function GebouwPrint() {
             <p>
               Dit rapport beschrijft de status van de geregistreerde brandpreventieve voorzieningen
               in het genoemde gebouw, samengesteld door FPS Brandpreventie op basis van de gegevens
-              die op de exportdatum beschikbaar waren in het digitale beheersysteem. Het rapport is
+              die op de rapportdatum beschikbaar waren in het digitale beheersysteem. Het rapport is
               bestemd voor de opdrachtgever en de betrokken installerende, controlerende en
               beherende partijen.
             </p>
             <p>
               De inhoud omvat een overzicht van alle geregistreerde spots (brandwerende
               voorzieningen), inclusief locatieaanduidingen op bouwlaagniveau, statusinformatie,
-              gekoppelde bibliotheekdocumenten en — indien van toepassing — foto-documentatie.
+              gekoppelde productcertificaten en ETA's en — indien van toepassing — foto-documentatie.
             </p>
           </div>
         </section>
@@ -1165,8 +1278,9 @@ export default function GebouwPrint() {
             </p>
             <ul>
               <li>
-                <strong>Bouwbesluit 2012</strong> (en latere wijzigingen) — wettelijke eisen voor
-                brandveiligheid in gebouwen, inclusief vereiste WBDBO en rookwerendheid per
+                <strong>Besluit bouwwerken leefomgeving (Bbl)</strong> — wettelijke eisen voor
+                brandveiligheid in bouwwerken onder de Omgevingswet (sinds 1 januari 2024, als
+                opvolger van het Bouwbesluit 2012), inclusief vereiste WBDBO en rookwerendheid per
                 gebruiksfunctie.
               </li>
               <li>
@@ -1213,12 +1327,13 @@ export default function GebouwPrint() {
             </p>
             <h3>Status en beoordeling</h3>
             <p>
-              De status van een voorziening wordt beheerd door bevoegde monteurs en controleurs
+              De status van een voorziening wordt beheerd door monteurs en controleurs
               en doorloopt een vaste cyclus:{" "}
               <em>Concept &rarr; In uitvoering &rarr; Opgeleverd &rarr; Gereed</em>. Alleen
-              voorzieningen met de status Gereed zijn door een bevoegd controleur geaccordeerd.
+              voorzieningen met de status Gereed zijn definitief geaccordeerd binnen het
+              beheersysteem.
             </p>
-            <h3>Bibliotheekdocumenten en toepassingen</h3>
+            <h3>Productdocumentatie en toepassingen</h3>
             <p>
               Aan elke spot kunnen toepassingen (labels) worden gekoppeld uit de centrale
               productbibliotheek. Een toepassing verwijst naar een fabrikantspecifiek product
@@ -1229,10 +1344,32 @@ export default function GebouwPrint() {
         </section>
 
         <section className="prt-sectie">
+          <h2 className="prt-sectie-titel">Gereedmelding en oplevering</h2>
+          <div className="prt-juridisch">
+            <p>
+              Bij het ontbreken van een afzonderlijk proces-verbaal van oplevering geldt dit
+              opleverrapport als het opleverdocument van het project.
+            </p>
+            <p>
+              Indien de opdrachtgever niet binnen veertien (14) dagen na verzending van dit rapport
+              schriftelijk en gemotiveerd reageert, wordt de opdracht als juridisch gereedgemeld
+              beschouwd en geldt dit rapport als definitief.
+            </p>
+            <p>
+              Na het verstrijken van deze termijn wordt het definitieve rapport niet meer gewijzigd.
+              Opmerkingen of beoordelingen van externe partijen die na deze termijn worden ontvangen,
+              hebben geen invloed op de status van dit document, behoudens aantoonbaar onjuiste
+              uitvoering, verborgen gebreken of vergelijkbare uitzonderingen die op grond van de wet
+              of de overeenkomst voor rekening van FPS Brandpreventie komen.
+            </p>
+          </div>
+        </section>
+
+        <section className="prt-sectie">
           <h2 className="prt-sectie-titel">Disclaimer en aansprakelijkheid</h2>
           <div className="prt-juridisch">
             <p>
-              Dit rapport is samengesteld op basis van de op het moment van export beschikbare
+              Dit rapport is samengesteld op basis van de op het moment van opstellen beschikbare
               gegevens in het beheersysteem van FPS Brandpreventie. FPS Brandpreventie staat in
               voor een zorgvuldige registratie, maar aanvaardt geen aansprakelijkheid voor
               onjuistheden die het gevolg zijn van:
@@ -1243,10 +1380,9 @@ export default function GebouwPrint() {
               <li>afwijkingen in de door de fabrikant verstrekte productdocumentatie.</li>
             </ul>
             <p>
-              Dit rapport vervangt niet het oordeel van een gecertificeerde
-              brandveiligheidsadviseur of een formele opleverings- of periodieke inspectie conform
-              de geldende wet- en regelgeving. Uitsluitend de meest recent bijgewerkte versie van
-              dit rapport, gegenereerd vanuit het beheersysteem, geldt als geldig document.
+              Uitsluitend de meest recent bijgewerkte versie van dit rapport, gegenereerd vanuit het
+              beheersysteem, geldt als geldig document, met inachtneming van het bepaalde onder
+              &ldquo;Gereedmelding en oplevering&rdquo;.
             </p>
             <p style={{ fontSize: 11, color: "#94a3b8", marginTop: 16, fontStyle: "italic" }}>
               FPS Brandpreventie — Brandveiligheid door vakmanschap

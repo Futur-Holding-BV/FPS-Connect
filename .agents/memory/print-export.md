@@ -22,3 +22,9 @@ Elke sectie heeft een eigen mini-kop (logo + projectnaam + sectienaam) voor cont
 ## Auto-print readiness — twee valkuilen (fail bij review)
 1. `allesGereed` moet ALLE secties-queries meenemen (partijen, toewijzingen, onderhoud, inspecties via `isLoading`), niet alleen gebouw + floor-counter. Secties renderen conditioneel op `length > 0`, dus te vroeg `window.print()` laat verplichte secties weg.
 2. Per-verdieping readiness mag NIET afhangen van `pdfBeeld !== null` (deadlock bij kapotte plattegrond-URL: load faalt → blijft null → onGereed vuurt nooit → print permanent geblokkeerd). Gebruik een aparte `beeldKlaar`-state die op `true` gaat bij success ÉN bij catch ÉN als er geen URL is.
+3. `useGetGebouwEmailSamenvatting` mag NIET in `allesGereed` — geeft 404 als er geen samenvatting is en react-query default-retries vertragen dan de auto-print. Gate alleen tekeningen+emails; samenvatting puur best-effort (projectomschrijving valt terug op `gebouw.omschrijving`).
+
+## break-before:page hoort op de hele verdieping, niet op het binnen-blok
+Zet `break-before: page` op `.prt-verdieping` (de hele bouwlaag-wrapper met h3-titel + overzicht + spotdetails), NIET op het inner `.prt-overzicht-blok`.
+**Why:** met de breuk op het binnen-blok blijft de `<h3>` bouwlaag-titel verweesd onderaan de vorige pagina achter en ontstaat een bijna-lege sectiepagina.
+**How to apply:** elke nieuwe per-pagina-breuk in de verdiepingenloop op het buitenste blok plaatsen dat de titel + content samen omvat.
