@@ -99,11 +99,7 @@ function SegmentKop({
           <h2 className="text-lg font-semibold tracking-tight">
             {titel}
           </h2>
-          {noodzakelijk ? (
-            <Badge className="bg-primary/10 text-primary border-primary/20">
-              Noodzakelijk voor uitvoering
-            </Badge>
-          ) : (
+          {!noodzakelijk && (
             <Badge variant="outline" className="text-muted-foreground">
               Aanvullend · beheer
             </Badge>
