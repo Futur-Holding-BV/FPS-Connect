@@ -18,3 +18,6 @@ useGetVolgendSpotnummer(Number(gebouwId), {
 });
 ```
 Elke operation heeft een `getGet<OperationId>QueryKey(...)` export. Zo voeg je `enabled` toe zonder een nieuwe TS2741 te introduceren. **Why:** taakeis "geen nieuwe typecheck-fouten" terwijl je conditioneel moet fetchen.
+
+## Element-type afleiden van een list-hook
+Gebruik NIET `NonNullable<ReturnType<typeof useListXxx>["data"]>[number]` om het element-type te krijgen — dat lost op naar `{}` en geeft `TS2537: Type '{}' has no matching index signature for type 'number'`. Importeer in plaats daarvan het gegenereerde model-type rechtstreeks (bv. `import type { GebouwPartij } from "@workspace/api-client-react"`). De list-functies retourneren `Promise<Model[]>`, dus het model-type is altijd beschikbaar. **Why:** kostte 2 pogingen; de hook-returntype is te generiek om te indexeren op module-niveau.

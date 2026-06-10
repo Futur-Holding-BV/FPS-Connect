@@ -5,11 +5,12 @@ import {
   useGenerateGebouwEmailSamenvatting,
   useListGebouwToewijzingen,
   useCreateGebouwPartij,
+  useListGebouwPartijen,
   useUpdateGebouw,
   getGetGebouwEmailSamenvattingQueryKey,
   getListGebouwPartijenQueryKey,
 } from "@workspace/api-client-react";
-import type { EmailContactpersoon } from "@workspace/api-client-react";
+import type { EmailContactpersoon, GebouwPartij } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -24,7 +25,7 @@ import {
   Sparkles, ClipboardList, Building2, Phone, Handshake, ListChecks,
   CheckSquare, FileText, AlertTriangle, Users, ShieldCheck, Save,
   RefreshCw, Loader2, Pencil, Hash, Calendar, Mail, ChevronDown,
-  ChevronUp, Check, UserPlus, Wrench, X, Info, Ruler,
+  ChevronUp, Check, UserPlus, Wrench, X, Info, Ruler, Contact,
 } from "lucide-react";
 
 // ── Typen ────────────────────────────────────────────────────────────────────
@@ -65,6 +66,8 @@ type Afmetingen = {
   diepte: string;
   oppervlakte: string;
 };
+
+type Partij = GebouwPartij;
 
 // ── Hulpfuncties ─────────────────────────────────────────────────────────────
 
@@ -184,6 +187,49 @@ function AfmetingRij({
         {waarde != null ? `${waarde}${eenheid ? ` ${eenheid}` : ""}` : "—"}
       </dd>
     </div>
+  );
+}
+
+// Read-only weergave van een handmatig geregistreerde contactpartij
+// (opdrachtgever, eigenaar, enz.) binnen de sectie "Betrokken contacten".
+function PartijRij({ partij }: { partij: Partij }) {
+  return (
+    <li className="flex items-start justify-between gap-3 rounded-md border border-blue-200 bg-blue-50/40 px-3 py-2">
+      <div className="min-w-0 flex-1 text-sm">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="font-medium">{partij.naam}</span>
+          <Badge variant="secondary" className="text-xs font-normal px-1.5">
+            {rolLabel(partij.type)}
+          </Badge>
+        </div>
+        {partij.organisatie && (
+          <p className="text-xs text-muted-foreground">{partij.organisatie}</p>
+        )}
+        {(partij.email || partij.telefoon) && (
+          <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
+            {partij.email && (
+              <a
+                href={`mailto:${partij.email}`}
+                className="flex items-center gap-1 hover:underline"
+              >
+                <Mail className="h-3 w-3 shrink-0" /> {partij.email}
+              </a>
+            )}
+            {partij.telefoon && (
+              <a
+                href={`tel:${partij.telefoon}`}
+                className="flex items-center gap-1 hover:underline"
+              >
+                <Phone className="h-3 w-3 shrink-0" /> {partij.telefoon}
+              </a>
+            )}
+          </div>
+        )}
+      </div>
+      <Badge variant="outline" className="text-[10px] font-normal px-1.5 shrink-0">
+        Handmatig
+      </Badge>
+    </li>
   );
 }
 
@@ -429,6 +475,7 @@ export function Projectformulier({
   const update = useUpdateGebouwEmailSamenvatting();
   const genereer = useGenerateGebouwEmailSamenvatting();
   const wijzigGebouw = useUpdateGebouw();
+  const { data: partijen } = useListGebouwPartijen(gebouwId);
 
   const [form, setForm] = useState<FormState>(leegFormulier);
   const [afmetingen, setAfmetingen] = useState<Afmetingen>({
@@ -586,6 +633,7 @@ export function Projectformulier({
     (c) => contactStatus(c) === "voorstel" && contactRelevantie(c) === "ter_controle",
   );
   const afgewezenContacten = localContacten.filter((c) => contactStatus(c) === "afgewezen");
+  const partijLijst = partijen ?? [];
 
   const heeftSamenvatting = !!samenvatting;
   const geverifieerd = samenvatting?.geverifieerd ?? false;
@@ -626,7 +674,12 @@ export function Projectformulier({
       ] as const
     ).filter((v) => (samenvatting?.[v.s] ?? "").trim());
 
-    if (bevestigdeVelden.length === 0 && bevestigdeContacten.length === 0) return null;
+    if (
+      bevestigdeVelden.length === 0 &&
+      bevestigdeContacten.length === 0 &&
+      partijLijst.length === 0
+    )
+      return null;
 
     return (
       <Card>
@@ -651,12 +704,15 @@ export function Projectformulier({
               </p>
             </div>
           ))}
-          {bevestigdeContacten.length > 0 && (
+          {(partijLijst.length > 0 || bevestigdeContacten.length > 0) && (
             <div>
               <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground mb-1.5">
                 <Users className="h-4 w-4" /> Contactpersonen
               </div>
               <ul className="space-y-1.5">
+                {partijLijst.map((p) => (
+                  <PartijRij key={`partij-${p.id}`} partij={p} />
+                ))}
                 {bevestigdeContacten.map((c, i) => (
                   <ContactRij
                     key={`${c.naam}-${c.email ?? i}`}
@@ -887,7 +943,7 @@ export function Projectformulier({
             }
           />
 
-          {localContacten.length === 0 ? (
+          {localContacten.length === 0 && partijLijst.length === 0 ? (
             <p className="text-xs text-muted-foreground">
               {heeftSamenvatting
                 ? "Geen contactpersonen gevonden in de e-mails."
@@ -895,6 +951,19 @@ export function Projectformulier({
             </p>
           ) : (
             <div className="space-y-3">
+              {/* Contactpartijen (handmatig geregistreerd) */}
+              {partijLijst.length > 0 && (
+                <div className="space-y-1.5">
+                  <p className="text-xs text-blue-700 font-medium flex items-center gap-1">
+                    <Contact className="h-3 w-3" /> Contactpartijen ({partijLijst.length})
+                  </p>
+                  <ul className="space-y-1.5">
+                    {partijLijst.map((p) => (
+                      <PartijRij key={`partij-${p.id}`} partij={p} />
+                    ))}
+                  </ul>
+                </div>
+              )}
               {/* Bevestigde contacten */}
               {bevestigdeContacten.length > 0 && (
                 <div className="space-y-1.5">
