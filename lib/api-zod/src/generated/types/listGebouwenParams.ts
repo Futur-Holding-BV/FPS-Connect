@@ -21,4 +21,8 @@ partij_type?: string;
  * Filter op de naam van een partij. In combinatie met partij_type wordt alleen op partijen van dat type gematcht.
  */
 partij_naam?: string;
+/**
+ * Indien true: inclusief gearchiveerde gebouwen. Standaard worden gearchiveerde gebouwen niet getoond.
+ */
+inclusief_gearchiveerd?: boolean;
 };

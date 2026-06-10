@@ -24,7 +24,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Link, useLocation } from "wouter";
-import { Search, Building, X, ArrowDownUp, Calendar, BarChart3, Users, Printer } from "lucide-react";
+import { Search, Building, X, ArrowDownUp, Calendar, BarChart3, Users, Printer, Archive } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useAuth } from "@/context/auth-context";
 import { GebouwAanmakenDialog } from "./gebouw-aanmaken-dialog";
@@ -236,6 +236,7 @@ export default function Gebouwen() {
   const [partijType, setPartijType] = useState<string>(ALLE);
   const [partijNaam, setPartijNaam] = useState<string>(ALLE);
   const [sortering, setSortering] = useState<SorteerOptie>("alfabetisch");
+  const [inclusiefGearchiveerd, setInclusiefGearchiveerd] = useState(false);
 
   const { data: partijOpties } = useListGebouwPartijOpties();
 
@@ -258,6 +259,7 @@ export default function Gebouwen() {
     zoek: search,
     ...(partijType !== ALLE ? { partij_type: partijType } : {}),
     ...(partijNaam !== ALLE ? { partij_naam: partijNaam } : {}),
+    ...(inclusiefGearchiveerd ? { inclusief_gearchiveerd: true } : {}),
   });
   const isBeheerder =
     !!gebruiker?.rol && BEHEERDER_ROLLEN.includes(gebruiker.rol as string);
@@ -348,6 +350,17 @@ export default function Gebouwen() {
             <X className="h-4 w-4 mr-1" /> Filter wissen
           </Button>
         )}
+        {isBeheerder && (
+          <Button
+            variant={inclusiefGearchiveerd ? "secondary" : "ghost"}
+            size="sm"
+            onClick={() => setInclusiefGearchiveerd((v) => !v)}
+            title="Gearchiveerde projecten tonen"
+          >
+            <Archive className="h-4 w-4 mr-1" />
+            {inclusiefGearchiveerd ? "Archief verbergen" : "Toon archief"}
+          </Button>
+        )}
 
         <Select
           value={sortering}
@@ -377,14 +390,19 @@ export default function Gebouwen() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {gesorteerdeGebouwen.map((gebouw) => (
             <Link key={gebouw.id} href={`/gebouwen/${gebouw.id}`}>
-              <Card className={`hover:border-primary transition-colors cursor-pointer h-full flex flex-col ${(gebouw.totaal_voorzieningen ?? 0) > 0 ? "border-primary/40 bg-primary/5" : ""}`}>
+              <Card className={`hover:border-primary transition-colors cursor-pointer h-full flex flex-col ${gebouw.gearchiveerd ? "opacity-60 border-muted" : (gebouw.totaal_voorzieningen ?? 0) > 0 ? "border-primary/40 bg-primary/5" : ""}`}>
                 <CardHeader>
                   <div className="flex justify-between items-start">
                     <div className="bg-primary/10 p-2 rounded-md">
                       <Building className="h-6 w-6 text-primary" />
                     </div>
                     <div className="flex items-center gap-1">
-                      {(gebouw.totaal_voorzieningen ?? 0) > 0 && (
+                      {gebouw.gearchiveerd && (
+                        <Badge variant="outline" className="bg-background text-muted-foreground border-muted-foreground/40 shrink-0 text-xs">
+                          <Archive className="h-3 w-3 mr-1" /> Gearchiveerd
+                        </Badge>
+                      )}
+                      {!gebouw.gearchiveerd && (gebouw.totaal_voorzieningen ?? 0) > 0 && (
                         <SpotsInzichtKnop
                           gebouwId={gebouw.id}
                           gebouwNaam={

@@ -99,7 +99,8 @@ export const ListGebouwenQueryParams = zod.object({
   "organisatie_id": zod.coerce.number().optional(),
   "mijn": zod.coerce.boolean().optional().describe('Indien true: retourneer alleen gebouwen die aan de ingelogde gebruiker zijn toegewezen. Beheerders en hoofdbeheerders zien altijd alle gebouwen. Voor monteur\/controleur wordt dit automatisch geforceerd.\n'),
   "partij_type": zod.coerce.string().optional().describe('Filter op partijtype (eigenaar, gebruiker, opdrachtgever, aanvrager). Retourneer alleen gebouwen met minstens één partij van dit type.\n'),
-  "partij_naam": zod.coerce.string().optional().describe('Filter op de naam van een partij. In combinatie met partij_type wordt alleen op partijen van dat type gematcht.\n')
+  "partij_naam": zod.coerce.string().optional().describe('Filter op de naam van een partij. In combinatie met partij_type wordt alleen op partijen van dat type gematcht.\n'),
+  "inclusief_gearchiveerd": zod.coerce.boolean().optional().describe('Indien true: inclusief gearchiveerde gebouwen. Standaard worden gearchiveerde gebouwen niet getoond.\n')
 })
 
 export const ListGebouwenResponseItem = zod.object({
@@ -130,7 +131,9 @@ export const ListGebouwenResponseItem = zod.object({
   "bijgewerkt_op": zod.string().nullish(),
   "laatste_spot_op": zod.string().nullish(),
   "gereed_op": zod.string().nullish(),
-  "gereed_door": zod.string().nullish()
+  "gereed_door": zod.string().nullish(),
+  "gearchiveerd": zod.boolean().optional(),
+  "gearchiveerd_op": zod.string().nullish()
 })
 export const ListGebouwenResponse = zod.array(ListGebouwenResponseItem)
 
@@ -286,6 +289,8 @@ export const GetGebouwResponse = zod.object({
   "bijgewerkt_op": zod.string().nullish(),
   "gereed_op": zod.string().nullish(),
   "gereed_door": zod.string().nullish(),
+  "gearchiveerd": zod.boolean().optional(),
+  "gearchiveerd_op": zod.string().nullish(),
   "verdiepingen": zod.array(zod.object({
   "id": zod.number(),
   "gebouw_id": zod.number(),
@@ -363,7 +368,9 @@ export const UpdateGebouwResponse = zod.object({
   "bijgewerkt_op": zod.string().nullish(),
   "laatste_spot_op": zod.string().nullish(),
   "gereed_op": zod.string().nullish(),
-  "gereed_door": zod.string().nullish()
+  "gereed_door": zod.string().nullish(),
+  "gearchiveerd": zod.boolean().optional(),
+  "gearchiveerd_op": zod.string().nullish()
 })
 
 
@@ -416,7 +423,9 @@ export const MeldGebouwGereedResponse = zod.object({
   "bijgewerkt_op": zod.string().nullish(),
   "laatste_spot_op": zod.string().nullish(),
   "gereed_op": zod.string().nullish(),
-  "gereed_door": zod.string().nullish()
+  "gereed_door": zod.string().nullish(),
+  "gearchiveerd": zod.boolean().optional(),
+  "gearchiveerd_op": zod.string().nullish()
 })
 
 
@@ -455,7 +464,68 @@ export const HerstelGebouwActiefResponse = zod.object({
   "bijgewerkt_op": zod.string().nullish(),
   "laatste_spot_op": zod.string().nullish(),
   "gereed_op": zod.string().nullish(),
-  "gereed_door": zod.string().nullish()
+  "gereed_door": zod.string().nullish(),
+  "gearchiveerd": zod.boolean().optional(),
+  "gearchiveerd_op": zod.string().nullish()
+})
+
+
+/**
+ * @summary Gebouw archiveren of terugplaatsen
+ */
+export const ArchiveerGebouwParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ArchiveerGebouwBody = zod.object({
+  "gearchiveerd": zod.boolean()
+})
+
+export const ArchiveerGebouwResponse = zod.object({
+  "id": zod.number(),
+  "werknummer": zod.string().nullish(),
+  "projectnummer": zod.string().nullish(),
+  "naam": zod.string(),
+  "adres": zod.string(),
+  "stad": zod.string().nullish(),
+  "postcode": zod.string().nullish(),
+  "omschrijving": zod.string().nullish(),
+  "klant_id": zod.number().nullish(),
+  "klant_naam": zod.string().nullish(),
+  "aantal_verdiepingen": zod.number().nullish(),
+  "hoogte": zod.number().nullish(),
+  "breedte": zod.number().nullish(),
+  "diepte": zod.number().nullish(),
+  "oppervlakte": zod.number().nullish(),
+  "gebouw_type": zod.string().nullish(),
+  "latitude": zod.number().nullish(),
+  "longitude": zod.number().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string().nullish(),
+  "gereed_op": zod.string().nullish(),
+  "gereed_door": zod.string().nullish(),
+  "gearchiveerd": zod.boolean().optional(),
+  "gearchiveerd_op": zod.string().nullish(),
+  "verdiepingen": zod.array(zod.object({
+  "id": zod.number(),
+  "gebouw_id": zod.number(),
+  "naam": zod.string(),
+  "niveau": zod.number(),
+  "plattegrond_url": zod.string().nullish(),
+  "breedte": zod.number().nullish(),
+  "hoogte": zod.number().nullish(),
+  "logo_x": zod.number().nullish(),
+  "logo_y": zod.number().nullish(),
+  "logo_breedte": zod.number().nullish(),
+  "totaal_voorzieningen": zod.number().optional()
+})),
+  "stats": zod.object({
+  "totaal": zod.number(),
+  "goedgekeurd": zod.number(),
+  "afgekeurd": zod.number(),
+  "in_bewerking": zod.number(),
+  "in_onderhoud": zod.number().optional()
+}).optional()
 })
 
 

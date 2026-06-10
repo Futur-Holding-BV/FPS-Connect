@@ -1427,6 +1427,77 @@ export const useHerstelGebouwActief = <TError = ErrorType<void>,
       return useMutation(getHerstelGebouwActiefMutationOptions(options));
     }
 
+export const getArchiveerGebouwUrl = (id: number,) => {
+
+
+
+
+  return `/api/gebouwen/${id}/archief`
+}
+
+/**
+ * @summary Gebouw archiveren of terugplaatsen
+ */
+export const archiveerGebouw = async (id: number,
+    archiefUpdate: ArchiefUpdate, options?: RequestInit): Promise<GebouwDetail> => {
+
+  return customFetch<GebouwDetail>(getArchiveerGebouwUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(archiefUpdate)
+  }
+);}
+
+
+
+
+export const getArchiveerGebouwMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof archiveerGebouw>>, TError,{id: number;data: BodyType<ArchiefUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof archiveerGebouw>>, TError,{id: number;data: BodyType<ArchiefUpdate>}, TContext> => {
+
+const mutationKey = ['archiveerGebouw'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof archiveerGebouw>>, {id: number;data: BodyType<ArchiefUpdate>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  archiveerGebouw(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ArchiveerGebouwMutationResult = NonNullable<Awaited<ReturnType<typeof archiveerGebouw>>>
+    export type ArchiveerGebouwMutationBody = BodyType<ArchiefUpdate>
+    export type ArchiveerGebouwMutationError = ErrorType<void>
+
+    /**
+ * @summary Gebouw archiveren of terugplaatsen
+ */
+export const useArchiveerGebouw = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof archiveerGebouw>>, TError,{id: number;data: BodyType<ArchiefUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof archiveerGebouw>>,
+        TError,
+        {id: number;data: BodyType<ArchiefUpdate>},
+        TContext
+      > => {
+      return useMutation(getArchiveerGebouwMutationOptions(options));
+    }
+
 export const getListVerdiepingenUrl = (id: number,) => {
 
 

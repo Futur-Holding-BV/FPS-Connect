@@ -11,6 +11,7 @@ import {
   useHerstelGebouwActief,
   useListGebouwPartijen,
   useListOnderhoud,
+  useArchiveerGebouw,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -52,6 +53,7 @@ import {
   ListChecks,
   Lock,
   Sparkles,
+  Archive,
 } from "lucide-react";
 import { useAuth } from "@/context/auth-context";
 import { useRol } from "@/context/rol-context";
@@ -162,6 +164,7 @@ export default function GebouwDetail() {
   const verwijderToewijzing = useDeleteGebouwToewijzing();
   const gereedMelden = useMeldGebouwGereed();
   const herstelGereed = useHerstelGebouwActief();
+  const archiveerMutatie = useArchiveerGebouw();
 
   const [gekozenGebruikerId, setGekozenGebruikerId] = useState<string>("");
   const [gekozenProjectRol, setGekozenProjectRol] = useState<string>("");
@@ -169,6 +172,7 @@ export default function GebouwDetail() {
   const [bewerkenOpen, setBewerkenOpen] = useState(false);
   const [gereedBezig, setGereedBezig] = useState(false);
   const [herstelBezig, setHerstelBezig] = useState(false);
+  const [archiveerBezig, setArchiveerBezig] = useState(false);
 
   if (isLoading) return <div className="p-6 text-muted-foreground">Laden...</div>;
   if (!gebouw) return <div className="p-6">Gebouw niet gevonden.</div>;
@@ -270,6 +274,24 @@ export default function GebouwDetail() {
       queryClient.invalidateQueries();
     } finally {
       setHerstelBezig(false);
+    }
+  }
+
+  async function archiveer(gearchiveerd: boolean) {
+    if (
+      !confirm(
+        gearchiveerd
+          ? "Weet u zeker dat u dit project wilt archiveren? Het verdwijnt dan uit het actieve overzicht."
+          : "Weet u zeker dat u dit project wilt terugplaatsen naar het actieve overzicht?",
+      )
+    )
+      return;
+    setArchiveerBezig(true);
+    try {
+      await archiveerMutatie.mutateAsync({ id: gebouwId, data: { gearchiveerd } });
+      queryClient.invalidateQueries();
+    } finally {
+      setArchiveerBezig(false);
     }
   }
 
@@ -406,6 +428,26 @@ export default function GebouwDetail() {
                 Terugzetten
               </Button>
             )}
+            {isBeheerder && !gebouw.gearchiveerd && (
+              <Button variant="outline" onClick={() => archiveer(true)} disabled={archiveerBezig}>
+                {archiveerBezig ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Archive className="h-4 w-4" />
+                )}
+                Archiveren
+              </Button>
+            )}
+            {isBeheerder && gebouw.gearchiveerd && (
+              <Button variant="outline" onClick={() => archiveer(false)} disabled={archiveerBezig}>
+                {archiveerBezig ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <RotateCcw className="h-4 w-4" />
+                )}
+                Terugplaatsen
+              </Button>
+            )}
           </div>
           <div className="flex gap-2 flex-wrap justify-end">
             <Link href={`/gebouwen/${gebouwId}/print`}>
@@ -424,6 +466,19 @@ export default function GebouwDetail() {
           open={bewerkenOpen}
           onOpenChange={setBewerkenOpen}
         />
+      )}
+
+      {gebouw.gearchiveerd && (
+        <div className="flex items-center gap-3 rounded-lg border border-muted-foreground/30 bg-muted/50 p-4 text-sm">
+          <Archive className="h-5 w-5 shrink-0 text-muted-foreground" />
+          <div>
+            <p className="font-medium text-muted-foreground">Gearchiveerd project</p>
+            <p className="text-muted-foreground/80 mt-0.5">
+              Dit project is gearchiveerd{gebouw.gearchiveerd_op ? ` op ${new Date(gebouw.gearchiveerd_op).toLocaleDateString("nl-NL")}` : ""} en verschijnt niet meer in het actieve overzicht.
+              {isBeheerder && " Gebruik 'Terugplaatsen' om het weer actief te maken."}
+            </p>
+          </div>
+        </div>
       )}
 
       {/* ════════════════════════════════════════════════════

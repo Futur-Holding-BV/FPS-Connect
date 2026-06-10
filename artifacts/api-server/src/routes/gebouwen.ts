@@ -8,6 +8,7 @@ import {
   gebouwToewijzingenTable,
   gebouwPartijenTable,
   tekeningenTable,
+  activiteitenTable,
 } from "@workspace/db";
 import { eq, inArray, count, and, sql } from "drizzle-orm";
 import { requireRol } from "../middlewares/auth";
@@ -117,6 +118,8 @@ function gebouwRij(
     laatste_spot_op: laatsteSpotOp ? new Date(laatsteSpotOp).toISOString() : null,
     gereed_op: g.gereedOp ? g.gereedOp.toISOString() : null,
     gereed_door: g.gereedDoor ?? null,
+    gearchiveerd: g.gearchiveerd,
+    gearchiveerd_op: g.gearchiveerdOp ? g.gearchiveerdOp.toISOString() : null,
   };
 }
 
@@ -124,9 +127,14 @@ function gebouwRij(
 router.get("/gebouwen", async (req, res) => {
   try {
     const { userId, rol } = await effectieveContext(req);
-    const { zoek, partij_type, partij_naam } = req.query;
+    const { zoek, partij_type, partij_naam, inclusief_gearchiveerd } = req.query;
 
     let gebouwen = await db.select().from(gebouwenTable);
+
+    // Standaard gearchiveerde gebouwen verbergen
+    if (inclusief_gearchiveerd !== "true") {
+      gebouwen = gebouwen.filter((g) => !g.gearchiveerd);
+    }
 
     // Monteurs en controleurs zien alleen hun toegewezen gebouwen
     if (TOEGEWEZEN_ROLLEN.includes(rol)) {
@@ -479,6 +487,8 @@ router.get("/gebouwen/:id", async (req, res) => {
       bijgewerkt_op: gebouw.bijgewerktOp ? gebouw.bijgewerktOp.toISOString() : null,
       gereed_op: gebouw.gereedOp ? gebouw.gereedOp.toISOString() : null,
       gereed_door: gebouw.gereedDoor ?? null,
+      gearchiveerd: gebouw.gearchiveerd,
+      gearchiveerd_op: gebouw.gearchiveerdOp ? gebouw.gearchiveerdOp.toISOString() : null,
       verdiepingen: verdiepingenMet,
       stats,
     });
@@ -1231,5 +1241,86 @@ router.delete(
     }
   },
 );
+
+// PATCH /gebouwen/:id/archief — archiveren of terugplaatsen (alleen beheerder)
+router.patch("/gebouwen/:id/archief", requireRol("beheerder", "hoofdbeheerder"), async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const gearchiveerd = req.body?.gearchiveerd === true;
+
+    const [gebouw] = await db.select().from(gebouwenTable).where(eq(gebouwenTable.id, id));
+    if (!gebouw) return res.status(404).json({ error: "Gebouw niet gevonden" });
+
+    const [bijgewerkt] = await db
+      .update(gebouwenTable)
+      .set({
+        gearchiveerd,
+        gearchiveerdOp: gearchiveerd ? new Date() : null,
+        bijgewerktOp: new Date(),
+      })
+      .where(eq(gebouwenTable.id, id))
+      .returning();
+
+    await db.insert(activiteitenTable).values({
+      type: gearchiveerd ? "gebouw_gearchiveerd" : "gebouw_teruggeplaatst",
+      omschrijving: `Gebouw "${bijgewerkt!.naam}" ${gearchiveerd ? "gearchiveerd" : "teruggeplaatst"}`,
+      gebouwId: id,
+    });
+
+    const verdiepingen = await db.select().from(verdiepingenTable).where(eq(verdiepingenTable.gebouwId, id));
+    const alleVoorzieningen = await db
+      .select({ status: voorzieningenTable.status })
+      .from(voorzieningenTable)
+      .where(eq(voorzieningenTable.gebouwId, id));
+    const stats = {
+      totaal: alleVoorzieningen.length,
+      goedgekeurd: alleVoorzieningen.filter((v) => v.status === "goedgekeurd").length,
+      afgekeurd: alleVoorzieningen.filter((v) => v.status === "afgekeurd").length,
+      in_bewerking: alleVoorzieningen.filter((v) => v.status === "concept" || v.status === "in_uitvoering").length,
+      in_onderhoud: alleVoorzieningen.filter((v) => v.status === "in_onderhoud").length,
+    };
+
+    res.json({
+      id: bijgewerkt!.id,
+      werknummer: bijgewerkt!.werknummer,
+      projectnummer: bijgewerkt!.projectnummer,
+      naam: bijgewerkt!.naam,
+      adres: bijgewerkt!.adres,
+      stad: bijgewerkt!.stad,
+      postcode: bijgewerkt!.postcode,
+      omschrijving: bijgewerkt!.omschrijving,
+      klant_id: bijgewerkt!.klantId,
+      klant_naam: await klantNaam(bijgewerkt!.klantId),
+      aantal_verdiepingen: bijgewerkt!.aantalVerdiepingen,
+      hoogte: bijgewerkt!.hoogte,
+      breedte: bijgewerkt!.breedte,
+      diepte: bijgewerkt!.diepte,
+      oppervlakte: bijgewerkt!.oppervlakte,
+      gebouw_type: bijgewerkt!.gebouwType,
+      latitude: bijgewerkt!.latitude,
+      longitude: bijgewerkt!.longitude,
+      aangemaakt_op: bijgewerkt!.aangemaaktOp.toISOString(),
+      bijgewerkt_op: bijgewerkt!.bijgewerktOp ? bijgewerkt!.bijgewerktOp.toISOString() : null,
+      gereed_op: bijgewerkt!.gereedOp ? bijgewerkt!.gereedOp.toISOString() : null,
+      gereed_door: bijgewerkt!.gereedDoor ?? null,
+      gearchiveerd: bijgewerkt!.gearchiveerd,
+      gearchiveerd_op: bijgewerkt!.gearchiveerdOp ? bijgewerkt!.gearchiveerdOp.toISOString() : null,
+      verdiepingen: verdiepingen.map((v) => ({
+        id: v.id,
+        gebouw_id: v.gebouwId,
+        naam: v.naam,
+        niveau: v.niveau,
+        plattegrond_url: v.plattegrondUrl,
+        breedte: v.breedte,
+        hoogte: v.hoogte,
+        totaal_voorzieningen: 0,
+      })),
+      stats,
+    });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
 
 export default router;

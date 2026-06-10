@@ -52,4 +52,7 @@ export interface Gebouw {
   gereed_op?: string | null;
   /** @nullable */
   gereed_door?: string | null;
+  gearchiveerd?: boolean;
+  /** @nullable */
+  gearchiveerd_op?: string | null;
 }

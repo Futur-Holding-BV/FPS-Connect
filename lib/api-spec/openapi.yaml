@@ -150,6 +150,13 @@ paths:
           description: >
             Filter op de naam van een partij. In combinatie met partij_type wordt
             alleen op partijen van dat type gematcht.
+        - in: query
+          name: inclusief_gearchiveerd
+          schema:
+            type: boolean
+          description: >
+            Indien true: inclusief gearchiveerde gebouwen. Standaard worden
+            gearchiveerde gebouwen niet getoond.
       responses:
         "200":
           description: OK
@@ -390,6 +397,35 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Gebouw"
+        "404":
+          description: Niet gevonden
+
+  /gebouwen/{id}/archief:
+    patch:
+      operationId: archiveerGebouw
+      tags: [gebouwen]
+      summary: Gebouw archiveren of terugplaatsen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ArchiefUpdate"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GebouwDetail"
+        "403":
+          description: Geen toegang
         "404":
           description: Niet gevonden
 
@@ -3462,6 +3498,10 @@ components:
           type: ["string", "null"]
         gereed_door:
           type: ["string", "null"]
+        gearchiveerd:
+          type: boolean
+        gearchiveerd_op:
+          type: ["string", "null"]
 
     GebouwDetail:
       type: object
@@ -3510,6 +3550,10 @@ components:
         gereed_op:
           type: ["string", "null"]
         gereed_door:
+          type: ["string", "null"]
+        gearchiveerd:
+          type: boolean
+        gearchiveerd_op:
           type: ["string", "null"]
         verdiepingen:
           type: array

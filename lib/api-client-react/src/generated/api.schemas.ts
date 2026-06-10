@@ -435,6 +435,9 @@ export interface Gebouw {
   gereed_op?: string | null;
   /** @nullable */
   gereed_door?: string | null;
+  gearchiveerd?: boolean;
+  /** @nullable */
+  gearchiveerd_op?: string | null;
 }
 
 export interface Verdieping {
@@ -506,6 +509,9 @@ export interface GebouwDetail {
   gereed_op?: string | null;
   /** @nullable */
   gereed_door?: string | null;
+  gearchiveerd?: boolean;
+  /** @nullable */
+  gearchiveerd_op?: string | null;
   verdiepingen: Verdieping[];
   stats?: GebouwStats;
 }
@@ -1741,6 +1747,10 @@ partij_type?: string;
  * Filter op de naam van een partij. In combinatie met partij_type wordt alleen op partijen van dat type gematcht.
  */
 partij_naam?: string;
+/**
+ * Indien true: inclusief gearchiveerde gebouwen. Standaard worden gearchiveerde gebouwen niet getoond.
+ */
+inclusief_gearchiveerd?: boolean;
 };
 
 export type ListVoorzieningenParams = {
