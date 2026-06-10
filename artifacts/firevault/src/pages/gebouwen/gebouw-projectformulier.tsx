@@ -5,6 +5,7 @@ import {
   useGenerateGebouwEmailSamenvatting,
   useListGebouwToewijzingen,
   useCreateGebouwPartij,
+  useUpdateGebouw,
   getGetGebouwEmailSamenvattingQueryKey,
   getListGebouwPartijenQueryKey,
 } from "@workspace/api-client-react";
@@ -14,6 +15,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
@@ -22,7 +24,7 @@ import {
   Sparkles, ClipboardList, Building2, Phone, Handshake, ListChecks,
   CheckSquare, FileText, AlertTriangle, Users, ShieldCheck, Save,
   RefreshCw, Loader2, Pencil, Hash, Calendar, Mail, ChevronDown,
-  ChevronUp, Check, UserPlus, Wrench, X, Info,
+  ChevronUp, Check, UserPlus, Wrench, X, Info, Ruler,
 } from "lucide-react";
 
 // ── Typen ────────────────────────────────────────────────────────────────────
@@ -37,6 +39,11 @@ interface GebouwProp {
   gebouw_type?: string | null;
   aangemaakt_op?: string | null;
   gereed_op?: string | null;
+  aantal_verdiepingen?: number | null;
+  hoogte?: number | null;
+  breedte?: number | null;
+  diepte?: number | null;
+  oppervlakte?: number | null;
 }
 
 type VeldSleutel =
@@ -50,6 +57,14 @@ type VeldSleutel =
   | "risicos";
 
 type FormState = Record<VeldSleutel, string>;
+
+type Afmetingen = {
+  aantal_verdiepingen: string;
+  hoogte: string;
+  breedte: string;
+  diepte: string;
+  oppervlakte: string;
+};
 
 // ── Hulpfuncties ─────────────────────────────────────────────────────────────
 
@@ -97,6 +112,17 @@ function datum(s: string | null | undefined): string {
   return Number.isNaN(d.getTime()) ? s : d.toLocaleDateString("nl-NL");
 }
 
+function getalOfNull(v: string): number | null {
+  if (!v.trim()) return null;
+  const n = parseFloat(v.replace(",", "."));
+  return Number.isFinite(n) ? n : null;
+}
+
+function heelGetalOfNull(v: string): number | null {
+  const n = getalOfNull(v);
+  return n == null ? null : Math.round(n);
+}
+
 const leegFormulier = (): FormState => ({
   opdrachtomschrijving: "",
   opdrachtgever: "",
@@ -138,6 +164,25 @@ function KVRij({ label, waarde }: { label: string; waarde?: string | null }) {
     <div>
       <dt className="text-xs text-muted-foreground">{label}</dt>
       <dd className="text-sm font-medium">{waarde}</dd>
+    </div>
+  );
+}
+
+function AfmetingRij({
+  label,
+  waarde,
+  eenheid,
+}: {
+  label: string;
+  waarde?: number | null;
+  eenheid?: string;
+}) {
+  return (
+    <div>
+      <dt className="text-xs text-muted-foreground">{label}</dt>
+      <dd className="text-sm font-medium">
+        {waarde != null ? `${waarde}${eenheid ? ` ${eenheid}` : ""}` : "—"}
+      </dd>
     </div>
   );
 }
@@ -383,8 +428,16 @@ export function Projectformulier({
   const { data: toewijzingen } = useListGebouwToewijzingen(gebouwId);
   const update = useUpdateGebouwEmailSamenvatting();
   const genereer = useGenerateGebouwEmailSamenvatting();
+  const wijzigGebouw = useUpdateGebouw();
 
   const [form, setForm] = useState<FormState>(leegFormulier);
+  const [afmetingen, setAfmetingen] = useState<Afmetingen>({
+    aantal_verdiepingen: "",
+    hoogte: "",
+    breedte: "",
+    diepte: "",
+    oppervlakte: "",
+  });
   const [localContacten, setLocalContacten] = useState<EmailContactpersoon[]>([]);
   const [bewerken, setBewerken] = useState(false);
   const [versie, setVersie] = useState<string | null>(null);
@@ -437,13 +490,38 @@ export function Projectformulier({
     };
   }
 
+  // Vul de afmeting-invoervelden met de huidige gebouwwaarden en open de bewerkmode.
+  function startBewerken() {
+    setAfmetingen({
+      aantal_verdiepingen:
+        gebouw.aantal_verdiepingen != null ? String(gebouw.aantal_verdiepingen) : "",
+      hoogte: gebouw.hoogte != null ? String(gebouw.hoogte) : "",
+      breedte: gebouw.breedte != null ? String(gebouw.breedte) : "",
+      diepte: gebouw.diepte != null ? String(gebouw.diepte) : "",
+      oppervlakte: gebouw.oppervlakte != null ? String(gebouw.oppervlakte) : "",
+    });
+    setBewerken(true);
+  }
+
   async function bewaar(bevestigen: boolean) {
     try {
       await update.mutateAsync({
         id: gebouwId,
         data: bouwPayload(localContacten, bevestigen),
       });
+      // Afmetingen horen bij het gebouw zelf; partiële PATCH laat overige velden ongemoeid.
+      await wijzigGebouw.mutateAsync({
+        id: gebouwId,
+        data: {
+          aantal_verdiepingen: heelGetalOfNull(afmetingen.aantal_verdiepingen),
+          hoogte: getalOfNull(afmetingen.hoogte),
+          breedte: getalOfNull(afmetingen.breedte),
+          diepte: getalOfNull(afmetingen.diepte),
+          oppervlakte: getalOfNull(afmetingen.oppervlakte),
+        },
+      });
       await invalidate();
+      await queryClient.invalidateQueries();
       setBewerken(false);
       setVersie(null);
       toast({ title: bevestigen ? "Projectgegevens bevestigd" : "Projectgegevens opgeslagen" });
@@ -512,7 +590,7 @@ export function Projectformulier({
   const heeftSamenvatting = !!samenvatting;
   const geverifieerd = samenvatting?.geverifieerd ?? false;
   const aantalEmails = samenvatting?.aantal_emails ?? 0;
-  const bezig = update.isPending || genereer.isPending;
+  const bezig = update.isPending || genereer.isPending || wijzigGebouw.isPending;
 
   // Projectstatus
   const projectStatus = gebouw.gereed_op ? "Gereed" : "Actief";
@@ -634,7 +712,7 @@ export function Projectformulier({
           </div>
           <div className="flex items-center gap-2">
             {!bewerken && (
-              <Button size="sm" variant="outline" onClick={() => setBewerken(true)}>
+              <Button size="sm" variant="outline" onClick={startBewerken}>
                 <Pencil className="h-3.5 w-3.5" /> Bewerken
               </Button>
             )}
@@ -686,6 +764,63 @@ export function Projectformulier({
               </dd>
             </div>
           </dl>
+        </div>
+
+        <Separator />
+
+        {/* ── Sectie: Gebouwafmetingen ── */}
+        <div className="space-y-2.5">
+          <SectieLabel
+            icoon={<Ruler className="h-3.5 w-3.5" />}
+            titel="Gebouwafmetingen"
+          />
+          {bewerken ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {(
+                [
+                  { s: "aantal_verdiepingen", t: "Verdiepingen", stap: "1" },
+                  { s: "hoogte", t: "Hoogte (m)", stap: "0.1" },
+                  { s: "breedte", t: "Breedte (m)", stap: "0.1" },
+                  { s: "diepte", t: "Diepte (m)", stap: "0.1" },
+                  { s: "oppervlakte", t: "Oppervlakte (m²)", stap: "1" },
+                ] as const
+              ).map((v) => (
+                <div key={v.s} className="space-y-1">
+                  <Label className="text-xs">{v.t}</Label>
+                  <Input
+                    type="number"
+                    inputMode="decimal"
+                    min="0"
+                    step={v.stap}
+                    value={afmetingen[v.s]}
+                    onChange={(e) =>
+                      setAfmetingen((a) => ({ ...a, [v.s]: e.target.value }))
+                    }
+                    placeholder="—"
+                    className="text-sm"
+                  />
+                </div>
+              ))}
+            </div>
+          ) : gebouw.aantal_verdiepingen != null ||
+            gebouw.hoogte != null ||
+            gebouw.breedte != null ||
+            gebouw.diepte != null ||
+            gebouw.oppervlakte != null ? (
+            <dl className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-2">
+              <AfmetingRij label="Verdiepingen" waarde={gebouw.aantal_verdiepingen} />
+              <AfmetingRij label="Hoogte" waarde={gebouw.hoogte} eenheid="m" />
+              <AfmetingRij label="Breedte" waarde={gebouw.breedte} eenheid="m" />
+              <AfmetingRij label="Diepte" waarde={gebouw.diepte} eenheid="m" />
+              <AfmetingRij label="Oppervlakte" waarde={gebouw.oppervlakte} eenheid="m²" />
+            </dl>
+          ) : (
+            <p className="text-xs text-muted-foreground">
+              Nog geen afmetingen bekend. Klik op Bewerken om ze in te vullen — de
+              AI kan hoogte, breedte, diepte en oppervlakte ook schatten via de
+              gebouwpagina.
+            </p>
+          )}
         </div>
 
         <Separator />
