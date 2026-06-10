@@ -14,6 +14,7 @@ import {
 const router = Router();
 
 const alleenBeheerder = requireBevoegdheid("gebruikers", 4);
+const lezenGebruikers = requireBevoegdheid("gebruikers", 1);
 
 // De enige toegestane projectfuncties (profiel) voor een beheerder.
 const FUNCTIETITELS_TOEGESTAAN = [
@@ -135,7 +136,7 @@ function domein(): string {
 }
 
 // GET /gebruikers
-router.get("/gebruikers", async (req, res) => {
+router.get("/gebruikers", lezenGebruikers, async (req, res) => {
   try {
     const gebruikers = await db.select().from(gebruikersTable);
     const volledig = await isBeheerder(req.session.userId);

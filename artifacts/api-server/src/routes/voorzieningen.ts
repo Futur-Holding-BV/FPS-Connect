@@ -19,6 +19,7 @@ import { effectieveContext } from "../utils/rol";
 import { getLabelsVoorVoorziening, syncVoorzieningLabels } from "../lib/classificatie";
 
 const router = Router();
+const lezenVoorzieningen = requireBevoegdheid("voorzieningen", 1);
 
 // Rollen die uitsluitend hun toegewezen gebouwen mogen zien.
 const TOEGEWEZEN_ROLLEN = ["monteur", "controleur"];
@@ -184,7 +185,7 @@ async function mapVoorziening(v: typeof voorzieningenTable.$inferSelect) {
 }
 
 // GET /voorzieningen
-router.get("/voorzieningen", async (req, res) => {
+router.get("/voorzieningen", lezenVoorzieningen, async (req, res) => {
   try {
     const { gebouw_id, verdieping_id, type, status, gearchiveerd, classificatie, zoek, pagina, per_pagina } = req.query;
     let all = await db.select().from(voorzieningenTable);
@@ -231,7 +232,7 @@ router.get("/voorzieningen", async (req, res) => {
 });
 
 // GET /gebouwen/:id/volgend-spotnummer
-router.get("/gebouwen/:id/volgend-spotnummer", async (req, res) => {
+router.get("/gebouwen/:id/volgend-spotnummer", lezenVoorzieningen, async (req, res) => {
   try {
     const gebouwId = Number(req.params.id);
     const gebouw = await db
@@ -344,7 +345,7 @@ router.post("/voorzieningen", requireBevoegdheid("voorzieningen", 3), async (req
 });
 
 // GET /voorzieningen/:id
-router.get("/voorzieningen/:id", async (req, res) => {
+router.get("/voorzieningen/:id", lezenVoorzieningen, async (req, res) => {
   try {
     const id = parseInt(String(req.params.id));
     const [v] = await db.select().from(voorzieningenTable).where(eq(voorzieningenTable.id, id));
@@ -463,7 +464,7 @@ router.delete("/voorzieningen/:id", requireBevoegdheid("voorzieningen", 4), asyn
 });
 
 // GET /voorzieningen/:id/fotos
-router.get("/voorzieningen/:id/fotos", async (req, res) => {
+router.get("/voorzieningen/:id/fotos", lezenVoorzieningen, async (req, res) => {
   try {
     const id = parseInt(String(req.params.id));
     if (!(await magBijGebouw(req.session.userId!, await gebouwIdVanVoorziening(id)))) {
@@ -629,7 +630,7 @@ router.patch("/voorzieningen/:id/archief", requireBevoegdheid("voorzieningen", 3
 });
 
 // GET /verdiepingen/:id/voorzieningen
-router.get("/verdiepingen/:id/voorzieningen", async (req, res) => {
+router.get("/verdiepingen/:id/voorzieningen", lezenVoorzieningen, async (req, res) => {
   try {
     const id = parseInt(String(req.params.id));
 
@@ -692,7 +693,7 @@ function scheidingRij(s: typeof scheidingenTable.$inferSelect) {
 }
 
 // GET /verdiepingen/:id/scheidingen
-router.get("/verdiepingen/:id/scheidingen", async (req, res) => {
+router.get("/verdiepingen/:id/scheidingen", lezenVoorzieningen, async (req, res) => {
   try {
     const id = parseInt(String(req.params.id));
 

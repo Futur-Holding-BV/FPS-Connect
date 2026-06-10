@@ -13,6 +13,7 @@ import { requireBevoegdheid } from "../middlewares/auth";
 import { effectieveContext } from "../utils/rol";
 
 const router = Router();
+const lezenOnderhoud = requireBevoegdheid("onderhoud", 1);
 
 const TOEGEWEZEN_ROLLEN = ["monteur", "controleur"];
 
@@ -96,7 +97,7 @@ async function mapOnderhoud(o: typeof onderhoudTable.$inferSelect) {
 }
 
 // GET /onderhoud
-router.get("/onderhoud", async (req, res) => {
+router.get("/onderhoud", lezenOnderhoud, async (req, res) => {
   try {
     const { userId, rol: effectiefRol } = await effectieveContext(req);
     const { voorziening_id, gebouw_id, status } = req.query;
@@ -177,7 +178,7 @@ router.post("/onderhoud", requireBevoegdheid("onderhoud", 3), async (req, res) =
 });
 
 // GET /onderhoud/:id
-router.get("/onderhoud/:id", async (req, res) => {
+router.get("/onderhoud/:id", lezenOnderhoud, async (req, res) => {
   try {
     const id = parseInt(String(req.params.id));
     const { userId, rol: effectiefRolDetail } = await effectieveContext(req);

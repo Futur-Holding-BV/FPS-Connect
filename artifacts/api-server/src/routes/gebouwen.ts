@@ -20,6 +20,7 @@ import {
 } from "../services/gebouw-ai";
 
 const router = Router();
+const lezenGebouwen = requireBevoegdheid("gebouwen", 1);
 
 const BEHEERDER_ROLLEN = ["beheerder", "hoofdbeheerder"];
 const TOEGEWEZEN_ROLLEN = ["monteur", "controleur"];
@@ -124,7 +125,7 @@ function gebouwRij(
 }
 
 // GET /gebouwen
-router.get("/gebouwen", async (req, res) => {
+router.get("/gebouwen", lezenGebouwen, async (req, res) => {
   try {
     const { userId, rol } = await effectieveContext(req);
     const { zoek, partij_type, partij_naam, inclusief_gearchiveerd } = req.query;
@@ -350,7 +351,7 @@ router.post(
 );
 
 // GET /gebouwen/partij-opties — unieke partijen (type + naam) voor filteropties
-router.get("/gebouwen/partij-opties", async (req, res) => {
+router.get("/gebouwen/partij-opties", lezenGebouwen, async (req, res) => {
   try {
     const { userId, rol } = await effectieveContext(req);
 
@@ -382,7 +383,7 @@ router.get("/gebouwen/partij-opties", async (req, res) => {
 });
 
 // GET /gebouwen/:id/kaart
-router.get("/gebouwen/:id/kaart", async (req, res) => {
+router.get("/gebouwen/:id/kaart", lezenGebouwen, async (req, res) => {
   try {
     const id = parseInt(String(req.params.id));
     const { userId, rol } = await effectieveContext(req);
@@ -427,7 +428,7 @@ router.get("/gebouwen/:id/kaart", async (req, res) => {
 });
 
 // GET /gebouwen/:id
-router.get("/gebouwen/:id", async (req, res) => {
+router.get("/gebouwen/:id", lezenGebouwen, async (req, res) => {
   try {
     const id = parseInt(String(req.params.id));
     const { userId, rol } = await effectieveContext(req);
@@ -641,7 +642,7 @@ router.delete("/gebouwen/:id", requireBevoegdheid("gebouwen", 4), async (req, re
 });
 
 // GET /gebouwen/:id/verdiepingen
-router.get("/gebouwen/:id/verdiepingen", async (req, res) => {
+router.get("/gebouwen/:id/verdiepingen", lezenGebouwen, async (req, res) => {
   try {
     const id = parseInt(String(req.params.id));
 
@@ -707,7 +708,7 @@ router.post("/gebouwen/:id/verdiepingen", requireBevoegdheid("gebouwen", 3), asy
 });
 
 // GET /verdiepingen/:id
-router.get("/verdiepingen/:id", async (req, res) => {
+router.get("/verdiepingen/:id", lezenGebouwen, async (req, res) => {
   try {
     const id = parseInt(String(req.params.id));
     const [v] = await db.select().from(verdiepingenTable).where(eq(verdiepingenTable.id, id));
@@ -802,7 +803,7 @@ router.delete("/verdiepingen/:id", requireBevoegdheid("gebouwen", 4), async (req
 // ── TOEWIJZINGEN ──────────────────────────────────────────────────────────
 
 // GET /gebouwen/:id/toewijzingen
-router.get("/gebouwen/:id/toewijzingen", async (req, res) => {
+router.get("/gebouwen/:id/toewijzingen", lezenGebouwen, async (req, res) => {
   try {
     const gebouwId = parseInt(String(req.params.id));
     if (!(await magBijGebouw(req, gebouwId))) {
@@ -841,7 +842,7 @@ router.get("/gebouwen/:id/toewijzingen", async (req, res) => {
 });
 
 // GET /gebouwen/:id/spots-inzicht — spots per monteur per dag
-router.get("/gebouwen/:id/spots-inzicht", async (req, res) => {
+router.get("/gebouwen/:id/spots-inzicht", lezenGebouwen, async (req, res) => {
   try {
     const gebouwId = parseInt(String(req.params.id));
     if (!(await magBijGebouw(req, gebouwId))) {
@@ -1044,7 +1045,7 @@ function partijRij(p: typeof gebouwPartijenTable.$inferSelect) {
 }
 
 // GET /gebouwen/:id/partijen
-router.get("/gebouwen/:id/partijen", async (req, res) => {
+router.get("/gebouwen/:id/partijen", lezenGebouwen, async (req, res) => {
   try {
     const gebouwId = parseInt(String(req.params.id));
     if (!(await magBijGebouw(req, gebouwId))) {
@@ -1158,7 +1159,7 @@ function tekeningRij(t: typeof tekeningenTable.$inferSelect) {
 }
 
 // GET /gebouwen/:id/tekeningen
-router.get("/gebouwen/:id/tekeningen", async (req, res) => {
+router.get("/gebouwen/:id/tekeningen", lezenGebouwen, async (req, res) => {
   try {
     const gebouwId = parseInt(String(req.params.id));
     if (!(await magBijGebouw(req, gebouwId))) {

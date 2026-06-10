@@ -10,8 +10,10 @@ import {
 } from "@workspace/db";
 import { eq, count, desc, inArray } from "drizzle-orm";
 import { effectieveContext } from "../utils/rol";
+import { requireBevoegdheid } from "../middlewares/auth";
 
 const router = Router();
+const dashboardLezen = requireBevoegdheid("gebouwen", 1);
 
 const TOEGEWEZEN_ROLLEN = ["monteur", "controleur"];
 
@@ -34,7 +36,7 @@ async function gebouwScope(
 }
 
 // GET /dashboard/stats
-router.get("/dashboard/stats", async (req, res) => {
+router.get("/dashboard/stats", dashboardLezen, async (req, res) => {
   try {
     const { beperkt, ids } = await gebouwScope(req);
 
@@ -105,7 +107,7 @@ router.get("/dashboard/stats", async (req, res) => {
 });
 
 // GET /dashboard/recente-activiteit
-router.get("/dashboard/recente-activiteit", async (req, res) => {
+router.get("/dashboard/recente-activiteit", dashboardLezen, async (req, res) => {
   try {
     const { beperkt, ids } = await gebouwScope(req);
 
@@ -154,7 +156,7 @@ router.get("/dashboard/recente-activiteit", async (req, res) => {
 });
 
 // GET /dashboard/status-verdeling
-router.get("/dashboard/status-verdeling", async (req, res) => {
+router.get("/dashboard/status-verdeling", dashboardLezen, async (req, res) => {
   try {
     const { beperkt, ids } = await gebouwScope(req);
 
@@ -192,7 +194,7 @@ router.get("/dashboard/status-verdeling", async (req, res) => {
 });
 
 // GET /dashboard/vervaldagen
-router.get("/dashboard/vervaldagen", async (req, res) => {
+router.get("/dashboard/vervaldagen", dashboardLezen, async (req, res) => {
   try {
     const { beperkt, ids } = await gebouwScope(req);
 
