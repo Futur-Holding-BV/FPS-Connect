@@ -791,6 +791,114 @@ export function Projectformulier({
 
       <CardContent className="space-y-5 pt-0">
 
+        {/* ── Opdracht en inhoud (bovenaan) ── */}
+        <div className="space-y-3">
+          <SectieLabel
+            icoon={<ClipboardList className="h-3.5 w-3.5" />}
+            titel="Opdracht en inhoud"
+            extra={heeftSamenvatting && !geverifieerd ? (
+              <Badge className="bg-amber-100 text-amber-700 border-amber-200 text-xs font-normal normal-case tracking-normal ml-1">
+                <Sparkles className="h-2.5 w-2.5 mr-0.5" /> AI aangevuld
+              </Badge>
+            ) : geverifieerd ? (
+              <Badge className="bg-green-100 text-green-700 border-green-200 text-xs font-normal normal-case tracking-normal ml-1">
+                <ShieldCheck className="h-2.5 w-2.5 mr-0.5" /> Bevestigd
+              </Badge>
+            ) : undefined}
+          />
+
+          {bewerken ? (
+            /* Bewerkingsmodus */
+            <div className="space-y-3">
+              {(
+                [
+                  { s: "opdrachtomschrijving", t: "Opdrachtomschrijving", rijen: 3 },
+                  { s: "opdrachtgever", t: "Opdrachtgever / bedrijf", rijen: 2 },
+                  { s: "contactgegevens", t: "Contactgegevens (vrij veld)", rijen: 2 },
+                  { s: "afspraken", t: "Gemaakte afspraken", rijen: 3 },
+                  { s: "actiepunten", t: "Openstaande actiepunten", rijen: 3 },
+                  { s: "besluiten", t: "Besluiten", rijen: 2 },
+                  { s: "tekeningen", t: "Tekeningen en bijlagen", rijen: 2 },
+                  { s: "risicos", t: "Risico's en aandachtspunten", rijen: 2 },
+                ] as const
+              ).map((v) => (
+                <div key={v.s} className="space-y-1">
+                  <Label className="text-xs">{v.t}</Label>
+                  <Textarea
+                    rows={v.rijen}
+                    value={form[v.s]}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, [v.s]: e.target.value }))
+                    }
+                    placeholder="Niet ingevuld"
+                    className="text-sm resize-y"
+                  />
+                </div>
+              ))}
+
+              <div className="flex items-center justify-end gap-2 pt-1 border-t">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setBewerken(false);
+                    setVersie(null);
+                  }}
+                  disabled={bezig}
+                >
+                  Annuleren
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => bewaar(false)} disabled={bezig}>
+                  {update.isPending
+                    ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    : <Save className="h-3.5 w-3.5" />}
+                  Opslaan
+                </Button>
+                <Button size="sm" onClick={() => bewaar(true)} disabled={bezig}>
+                  <ShieldCheck className="h-3.5 w-3.5" /> Opslaan en bevestigen
+                </Button>
+              </div>
+            </div>
+          ) : (
+            /* Leesweergave */
+            <div className="space-y-3">
+              {(
+                [
+                  { s: "opdrachtomschrijving", t: "Opdrachtomschrijving", i: <ClipboardList className="h-3.5 w-3.5" /> },
+                  { s: "actiepunten", t: "Openstaande actiepunten", i: <ListChecks className="h-3.5 w-3.5" /> },
+                  { s: "opdrachtgever", t: "Opdrachtgever", i: <Building2 className="h-3.5 w-3.5" /> },
+                  { s: "contactgegevens", t: "Contactgegevens", i: <Phone className="h-3.5 w-3.5" /> },
+                  { s: "afspraken", t: "Gemaakte afspraken", i: <Handshake className="h-3.5 w-3.5" /> },
+                  { s: "besluiten", t: "Besluiten", i: <CheckSquare className="h-3.5 w-3.5" /> },
+                  { s: "tekeningen", t: "Tekeningen en bijlagen", i: <FileText className="h-3.5 w-3.5" /> },
+                  { s: "risicos", t: "Risico's en aandachtspunten", i: <AlertTriangle className="h-3.5 w-3.5" /> },
+                ] as const
+              )
+                .filter((v) => (samenvatting?.[v.s] ?? "").trim())
+                .map((v) => (
+                  <div key={v.s}>
+                    <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground mb-0.5">
+                      {v.i} {v.t}
+                    </div>
+                    <p className="text-sm whitespace-pre-wrap text-foreground/80">
+                      {samenvatting?.[v.s]}
+                    </p>
+                  </div>
+                ))}
+              {!heeftSamenvatting && (
+                <p className="text-sm text-muted-foreground">
+                  Nog geen inhoud. Klik op{" "}
+                  <span className="font-medium">Bewerken</span> om handmatig in te vullen of
+                  gebruik <span className="font-medium">AI-suggesties</span> nadat u e-mails hebt
+                  toegevoegd.
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+
+        <Separator />
+
         {/* ── Sectie 1: Projectidentiteit ── */}
         <div className="space-y-2.5">
           <SectieLabel icoon={<Hash className="h-3.5 w-3.5" />} titel="Projectidentiteit" />
@@ -1064,114 +1172,6 @@ export function Projectformulier({
                     </ul>
                   )}
                 </div>
-              )}
-            </div>
-          )}
-        </div>
-
-        <Separator />
-
-        {/* ── Sectie 4: Opdracht en inhoud ── */}
-        <div className="space-y-3">
-          <SectieLabel
-            icoon={<ClipboardList className="h-3.5 w-3.5" />}
-            titel="Opdracht en inhoud"
-            extra={heeftSamenvatting && !geverifieerd ? (
-              <Badge className="bg-amber-100 text-amber-700 border-amber-200 text-xs font-normal normal-case tracking-normal ml-1">
-                <Sparkles className="h-2.5 w-2.5 mr-0.5" /> AI aangevuld
-              </Badge>
-            ) : geverifieerd ? (
-              <Badge className="bg-green-100 text-green-700 border-green-200 text-xs font-normal normal-case tracking-normal ml-1">
-                <ShieldCheck className="h-2.5 w-2.5 mr-0.5" /> Bevestigd
-              </Badge>
-            ) : undefined}
-          />
-
-          {bewerken ? (
-            /* Bewerkingsmodus */
-            <div className="space-y-3">
-              {(
-                [
-                  { s: "opdrachtomschrijving", t: "Opdrachtomschrijving", rijen: 3 },
-                  { s: "opdrachtgever", t: "Opdrachtgever / bedrijf", rijen: 2 },
-                  { s: "contactgegevens", t: "Contactgegevens (vrij veld)", rijen: 2 },
-                  { s: "afspraken", t: "Gemaakte afspraken", rijen: 3 },
-                  { s: "actiepunten", t: "Openstaande actiepunten", rijen: 3 },
-                  { s: "besluiten", t: "Besluiten", rijen: 2 },
-                  { s: "tekeningen", t: "Tekeningen en bijlagen", rijen: 2 },
-                  { s: "risicos", t: "Risico's en aandachtspunten", rijen: 2 },
-                ] as const
-              ).map((v) => (
-                <div key={v.s} className="space-y-1">
-                  <Label className="text-xs">{v.t}</Label>
-                  <Textarea
-                    rows={v.rijen}
-                    value={form[v.s]}
-                    onChange={(e) =>
-                      setForm((f) => ({ ...f, [v.s]: e.target.value }))
-                    }
-                    placeholder="Niet ingevuld"
-                    className="text-sm resize-y"
-                  />
-                </div>
-              ))}
-
-              <div className="flex items-center justify-end gap-2 pt-1 border-t">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    setBewerken(false);
-                    setVersie(null);
-                  }}
-                  disabled={bezig}
-                >
-                  Annuleren
-                </Button>
-                <Button variant="outline" size="sm" onClick={() => bewaar(false)} disabled={bezig}>
-                  {update.isPending
-                    ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    : <Save className="h-3.5 w-3.5" />}
-                  Opslaan
-                </Button>
-                <Button size="sm" onClick={() => bewaar(true)} disabled={bezig}>
-                  <ShieldCheck className="h-3.5 w-3.5" /> Opslaan en bevestigen
-                </Button>
-              </div>
-            </div>
-          ) : (
-            /* Leesweergave */
-            <div className="space-y-3">
-              {(
-                [
-                  { s: "opdrachtomschrijving", t: "Opdrachtomschrijving", i: <ClipboardList className="h-3.5 w-3.5" /> },
-                  { s: "actiepunten", t: "Openstaande actiepunten", i: <ListChecks className="h-3.5 w-3.5" /> },
-                  { s: "opdrachtgever", t: "Opdrachtgever", i: <Building2 className="h-3.5 w-3.5" /> },
-                  { s: "contactgegevens", t: "Contactgegevens", i: <Phone className="h-3.5 w-3.5" /> },
-                  { s: "afspraken", t: "Gemaakte afspraken", i: <Handshake className="h-3.5 w-3.5" /> },
-                  { s: "besluiten", t: "Besluiten", i: <CheckSquare className="h-3.5 w-3.5" /> },
-                  { s: "tekeningen", t: "Tekeningen en bijlagen", i: <FileText className="h-3.5 w-3.5" /> },
-                  { s: "risicos", t: "Risico's en aandachtspunten", i: <AlertTriangle className="h-3.5 w-3.5" /> },
-                ] as const
-              )
-                .filter((v) => (samenvatting?.[v.s] ?? "").trim())
-                .map((v) => (
-                  <div key={v.s}>
-                    <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground mb-0.5">
-                      {v.i} {v.t}
-                    </div>
-                    <p className="text-sm whitespace-pre-wrap text-foreground/80">
-                      {samenvatting?.[v.s]}
-                    </p>
-                  </div>
-                ))}
-              {!heeftSamenvatting && (
-                <p className="text-sm text-muted-foreground">
-                  Nog geen inhoud. Klik op{" "}
-                  <span className="font-medium">Bewerken</span> om handmatig in te vullen of
-                  gebruik <span className="font-medium">AI-suggesties</span> nadat u e-mails hebt
-                  toegevoegd.
-                </p>
               )}
             </div>
           )}
