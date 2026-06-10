@@ -26,31 +26,16 @@ import {
   AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { ShieldCheck, Plus, Pencil, Trash2, Lock, Loader2, Users, RefreshCw, AlertTriangle } from "lucide-react";
-
-const MODULES: { id: string; label: string }[] = [
-  { id: "gebouwen",      label: "Gebouwen" },
-  { id: "voorzieningen", label: "Spots" },
-  { id: "inspecties",    label: "Inspecties" },
-  { id: "onderhoud",     label: "Onderhoud" },
-  { id: "rapportages",   label: "Rapportages" },
-  { id: "bibliotheek",   label: "Bibliotheek" },
-  { id: "gebruikers",    label: "Gebruikers" },
-  { id: "crm",           label: "CRM" },
-  { id: "abonnementen",  label: "Abonnementen" },
-  { id: "systeem",       label: "Systeembeheer" },
-];
-
-const NIVEAUS = [
-  { waarde: 0, label: "Geen" },
-  { waarde: 1, label: "Lezen" },
-  { waarde: 2, label: "Wijzigen" },
-  { waarde: 3, label: "Aanmaken" },
-  { waarde: 4, label: "Volledig" },
-];
+import { MODULES, NIVEAUS } from "@workspace/permissies";
 
 const NIVEAU_LABEL: Record<number, string> = Object.fromEntries(
-  NIVEAUS.map((n) => [n.waarde, n.label]),
+  NIVEAUS.map((n) => [n.waarde, n.kort]),
 );
+
+// Niveau waarop ontbrekende modules worden gezet bij "in één klik aanvullen".
+// Bewust "Geen toegang" (0): de sleutel wordt expliciet vastgelegd zodat de
+// module niet meer stil ontbreekt, zonder automatisch rechten te verlenen.
+const AANVUL_NIVEAU = 0;
 
 type ProfielForm = {
   id: number | null;
@@ -78,6 +63,7 @@ export default function ProfielenBeheer() {
   const [toepassenTarget, setToepassenTarget] =
     useState<{ id: number; naam: string; aantal: number } | null>(null);
   const [toepassenBezigId, setToepassenBezigId] = useState<number | null>(null);
+  const [aanvullenBezigId, setAanvullenBezigId] = useState<number | null>(null);
 
   const invalideer = () =>
     queryClient.invalidateQueries({ queryKey: getListProfielenQueryKey() });
@@ -142,6 +128,27 @@ export default function ProfielenBeheer() {
     }
   }
 
+  async function vulOntbrekendeAan(p: {
+    id: number;
+    naam: string;
+    bevoegdheden: Record<string, number>;
+  }) {
+    setAanvullenBezigId(p.id);
+    try {
+      const aangevuld: Record<string, number> = { ...p.bevoegdheden };
+      for (const m of MODULES) {
+        if (!(m.id in aangevuld)) aangevuld[m.id] = AANVUL_NIVEAU;
+      }
+      await werkBijProfiel.mutateAsync({
+        id: p.id,
+        data: { naam: p.naam, bevoegdheden: aangevuld },
+      });
+      await invalideer();
+    } finally {
+      setAanvullenBezigId(null);
+    }
+  }
+
   const bezig = maakProfiel.isPending || werkBijProfiel.isPending;
 
   return (
@@ -175,7 +182,9 @@ export default function ProfielenBeheer() {
         </Card>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {profielen.map((p) => (
+          {profielen.map((p) => {
+            const ontbrekend = MODULES.filter((m) => !(m.id in p.bevoegdheden));
+            return (
             <Card key={p.id}>
               <CardContent className="p-4 space-y-3">
                 <div className="flex items-start justify-between gap-2">
@@ -225,6 +234,44 @@ export default function ProfielenBeheer() {
                   )}
                 </div>
 
+                {ontbrekend.length > 0 && (
+                  <div className="rounded-md border border-amber-300 bg-amber-50 p-2.5 space-y-2">
+                    <div className="flex items-start gap-1.5 text-xs text-amber-800">
+                      <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0 text-amber-600" />
+                      <span>
+                        {ontbrekend.length === 1
+                          ? "1 module ontbreekt in dit profiel"
+                          : `${ontbrekend.length} modules ontbreken in dit profiel`}{" "}
+                        en valt stil terug op "Geen toegang":{" "}
+                        <span className="font-medium">
+                          {ontbrekend.map((m) => m.label).join(", ")}
+                        </span>
+                        .
+                      </span>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-7 w-full text-xs gap-1.5"
+                      onClick={() =>
+                        vulOntbrekendeAan({
+                          id: p.id,
+                          naam: p.naam,
+                          bevoegdheden: p.bevoegdheden,
+                        })
+                      }
+                      disabled={aanvullenBezigId === p.id}
+                    >
+                      {aanvullenBezigId === p.id ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <Plus className="h-3.5 w-3.5" />
+                      )}
+                      Ontbrekende modules vastleggen op "Geen toegang"
+                    </Button>
+                  </div>
+                )}
+
                 <GekoppeldeGebruikers
                   gebruikers={p.gebruikers ?? []}
                   aantal={p.gebruiker_aantal ?? 0}
@@ -239,7 +286,8 @@ export default function ProfielenBeheer() {
                 />
               </CardContent>
             </Card>
-          ))}
+            );
+          })}
         </div>
       )}
 
