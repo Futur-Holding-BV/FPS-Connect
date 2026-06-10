@@ -440,7 +440,7 @@ export default function GebouwEmails({
                 {actief.inhoud_tekst && (
                   <div>
                     <div className="font-medium mb-1 flex items-center gap-1.5"><User className="h-4 w-4" /> Berichttekst</div>
-                    <div className="text-xs text-muted-foreground whitespace-pre-wrap max-h-48 overflow-y-auto bg-muted/40 rounded p-3">
+                    <div className="text-sm text-foreground/80 whitespace-pre-wrap break-words max-h-72 overflow-y-auto bg-muted/40 rounded p-3 leading-relaxed">
                       {actief.inhoud_tekst}
                     </div>
                   </div>

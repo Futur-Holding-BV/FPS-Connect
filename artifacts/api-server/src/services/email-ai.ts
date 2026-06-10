@@ -75,6 +75,63 @@ function mimeUitBestandsnaam(bestandsnaam: string): string | null {
   return ext ? (MIME_PER_EXTENSIE[ext] ?? null) : null;
 }
 
+const HTML_ENTITEITEN: Record<string, string> = {
+  amp: "&",
+  lt: "<",
+  gt: ">",
+  quot: '"',
+  apos: "'",
+  nbsp: " ",
+  euro: "€",
+  copy: "©",
+  reg: "®",
+  trade: "™",
+  hellip: "…",
+  mdash: "—",
+  ndash: "–",
+  bull: "•",
+  middot: "·",
+  laquo: "«",
+  raquo: "»",
+  deg: "°",
+};
+
+function veiligeCodePoint(n: number): string {
+  return Number.isInteger(n) && n >= 0 && n <= 0x10ffff ? String.fromCodePoint(n) : "";
+}
+
+function decodeEntiteiten(s: string): string {
+  return s
+    .replace(/&#x([0-9a-fA-F]+);/g, (_, h) => veiligeCodePoint(parseInt(h, 16)))
+    .replace(/&#(\d+);/g, (_, d) => veiligeCodePoint(parseInt(d, 10)))
+    .replace(
+      /&([a-zA-Z][a-zA-Z0-9]*);/g,
+      (m, naam: string) => HTML_ENTITEITEN[naam] ?? HTML_ENTITEITEN[naam.toLowerCase()] ?? m,
+    );
+}
+
+// Zet HTML-e-mailinhoud om naar leesbare platte tekst. Verwijdert niet-zichtbare
+// blokken (style/script/head) volledig — anders lekt de CSS als onleesbare tekst
+// in de berichttekst — zet blokelementen om naar regeleindes en decodeert entiteiten.
+function htmlNaarTekst(html: string): string {
+  let t = html;
+  t = t.replace(/<!--[\s\S]*?-->/g, " ");
+  t = t.replace(/<(style|script|head|title)\b[^>]*>[\s\S]*?<\/\1>/gi, " ");
+  t = t.replace(/<br\s*\/?>/gi, "\n");
+  t = t.replace(/<\/td>/gi, "\t");
+  t = t.replace(
+    /<\/(p|div|tr|li|h[1-6]|table|ul|ol|blockquote|section|article|header|footer)>/gi,
+    "\n",
+  );
+  t = t.replace(/<[^>]+>/g, "");
+  t = decodeEntiteiten(t);
+  t = t.replace(/\r\n?/g, "\n");
+  t = t.replace(/[ \t\f\v]+/g, " ");
+  t = t.replace(/ *\n */g, "\n");
+  t = t.replace(/\n{3,}/g, "\n\n");
+  return t.trim();
+}
+
 async function parseEml(buffer: Buffer): Promise<GeparseerdeEmail> {
   const mail = await simpleParser(buffer);
   const afzender = mail.from?.text ?? null;
@@ -90,12 +147,16 @@ async function parseEml(buffer: Buffer): Promise<GeparseerdeEmail> {
         inhoud: a.content as Buffer,
       };
     });
+  let inhoudTekst: string | null = strOfNull(mail.text);
+  if (!inhoudTekst && mail.html) {
+    inhoudTekst = strOfNull(htmlNaarTekst(String(mail.html)));
+  }
   return {
     afzender,
     ontvanger,
     onderwerp: mail.subject ?? null,
     datum: mail.date ? mail.date.toISOString() : null,
-    inhoudTekst: mail.text ?? (mail.html ? String(mail.html).replace(/<[^>]+>/g, " ") : null),
+    inhoudTekst,
     bijlagen,
   };
 }
@@ -135,12 +196,17 @@ function parseMsg(buffer: Buffer): GeparseerdeEmail {
     }
   });
 
+  let inhoudTekst = strOfNull(data.body);
+  if (!inhoudTekst && typeof data.bodyHTML === "string") {
+    inhoudTekst = strOfNull(htmlNaarTekst(data.bodyHTML));
+  }
+
   return {
     afzender: strOfNull(afzender),
     ontvanger: strOfNull(ontvanger),
     onderwerp: strOfNull(data.subject),
     datum: strOfNull(data.messageDeliveryTime) ?? strOfNull(data.clientSubmitTime),
-    inhoudTekst: strOfNull(data.body),
+    inhoudTekst,
     bijlagen,
   };
 }
