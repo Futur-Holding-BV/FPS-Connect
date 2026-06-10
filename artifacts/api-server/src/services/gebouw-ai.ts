@@ -320,9 +320,9 @@ async function haalStreetViewBeeld(lat: number, lng: number): Promise<string | n
 }
 
 const SYSTEM_PROMPT = `Je bent een expert bouwkundig analist. Je analyseert beeldmateriaal van een gebouw en schat de fysieke eigenschappen.
-Je krijgt altijd een satellietbeeld (bovenaanzicht); het gebouw van belang staat in het MIDDEN van dat beeld. Soms krijg je daarnaast een tweede beeld: een Street View-foto (zijaanzicht/straatniveau) van hetzelfde gebouw.
-Gebruik het satellietbeeld voor de footprint-afmetingen (breedte, diepte, oppervlakte) en de opgegeven schaal.
-Gebruik de Street View-foto, indien aanwezig, om het aantal bouwlagen te BEPALEN door de rijen ramen/verdiepingen te tellen; dat is veel betrouwbaarder dan schatten. Ontbreekt de Street View-foto, schat het aantal dan o.b.v. gebouwtype/regio.
+Je krijgt een satellietbeeld (bovenaanzicht) en/of een Street View-foto (zijaanzicht/straatniveau) van hetzelfde gebouw; bij een satellietbeeld staat het gebouw van belang in het MIDDEN van dat beeld.
+Gebruik het satellietbeeld, indien aanwezig, voor de footprint-afmetingen (breedte, diepte, oppervlakte) en de opgegeven schaal. Ontbreekt het satellietbeeld, schat de footprint dan ruw o.b.v. de Street View-foto en het gebouwtype en houd de betrouwbaarheid voor die afmetingen laag.
+Gebruik de Street View-foto, indien aanwezig, om het gebouwtype te BEPALEN en het aantal bouwlagen te tellen door de rijen ramen/verdiepingen te tellen; dat is veel betrouwbaarder dan schatten. Ontbreekt de Street View-foto, leid type en aantal dan af uit het satellietbeeld of o.b.v. gebouwtype/regio.
 Zet betrouwbaarheid op "hoog" wanneer je de verdiepingen op een Street View-foto hebt kunnen tellen.
 Geef uitsluitend geldige JSON terug met deze velden:
 - aantal_verdiepingen (geheel getal): aantal bouwlagen; tel ze op de Street View-foto indien beschikbaar, schat anders
@@ -398,20 +398,29 @@ function standaardWaardenOpType(gebouwType: string | null): StandaardWaarden {
 }
 
 async function analyseerBeeld(
-  dataUrl: string,
-  grondBreedteMeter: number,
+  satellietUrl: string | null,
+  grondBreedteMeter: number | null,
   adres: string,
   straatbeeldUrl: string | null = null,
 ): Promise<VisionVelden | null> {
+  if (!satellietUrl && !straatbeeldUrl) return null;
   const client = maakOpenAiClient();
-  const userTekst = straatbeeldUrl
-    ? `Adres: ${adres}. Het EERSTE beeld is een satellietbeeld (bovenaanzicht), vierkant en ongeveer ${grondBreedteMeter} bij ${grondBreedteMeter} meter op de grond — gebruik dit voor de footprint-afmetingen. Het TWEEDE beeld is een Street View-foto (zijaanzicht) van hetzelfde gebouw — gebruik dit om het aantal bouwlagen te tellen aan de hand van de rijen ramen.`
-    : `Adres: ${adres}. Het satellietbeeld is vierkant en beslaat ongeveer ${grondBreedteMeter} bij ${grondBreedteMeter} meter op de grond. Analyseer het gebouw in het midden.`;
+
+  let userTekst: string;
+  if (satellietUrl && straatbeeldUrl) {
+    userTekst = `Adres: ${adres}. Het EERSTE beeld is een satellietbeeld (bovenaanzicht), vierkant en ongeveer ${grondBreedteMeter} bij ${grondBreedteMeter} meter op de grond — gebruik dit voor de footprint-afmetingen. Het TWEEDE beeld is een Street View-foto (zijaanzicht) van hetzelfde gebouw — gebruik dit om het gebouwtype te bepalen en het aantal bouwlagen te tellen aan de hand van de rijen ramen.`;
+  } else if (satellietUrl) {
+    userTekst = `Adres: ${adres}. Het satellietbeeld is vierkant en beslaat ongeveer ${grondBreedteMeter} bij ${grondBreedteMeter} meter op de grond. Analyseer het gebouw in het midden.`;
+  } else {
+    userTekst = `Adres: ${adres}. Het beeld is een Street View-foto (zijaanzicht/straatniveau) van het gebouw op dit adres. Bepaal het gebouwtype en tel het aantal bouwlagen aan de hand van de rijen ramen. Er is geen satellietbeeld beschikbaar, dus geef de footprint-afmetingen (breedte, diepte, oppervlakte) als ruwe schatting en houd de betrouwbaarheid daarvoor laag.`;
+  }
 
   const content: OpenAI.Chat.Completions.ChatCompletionContentPart[] = [
     { type: "text", text: userTekst },
-    { type: "image_url", image_url: { url: dataUrl } },
   ];
+  if (satellietUrl) {
+    content.push({ type: "image_url", image_url: { url: satellietUrl } });
+  }
   if (straatbeeldUrl) {
     content.push({ type: "image_url", image_url: { url: straatbeeldUrl } });
   }
@@ -882,31 +891,35 @@ export async function analyseerGebouwVrijeTekst(beschrijving: string): Promise<G
   ]);
   if (beeld) {
     result.satelliet_url = beeld.dataUrl;
-    if (HEEFT_OPENAI) {
-      try {
-        const velden = await analyseerBeeld(
-          beeld.dataUrl,
-          beeld.grondBreedteMeter,
-          geo.formatted,
-          straatbeeld,
-        );
-        if (velden) {
-          result.aantal_verdiepingen = result.aantal_verdiepingen ?? velden.aantal_verdiepingen;
-          result.hoogte = result.hoogte ?? velden.hoogte;
-          result.breedte = result.breedte ?? velden.breedte;
-          result.diepte = result.diepte ?? velden.diepte;
-          result.oppervlakte = result.oppervlakte ?? velden.oppervlakte;
-          result.gebouw_type = result.gebouw_type ?? velden.gebouw_type;
-          result.omschrijving = result.omschrijving ?? velden.omschrijving;
-          result.toelichting = velden.toelichting;
-          result.betrouwbaarheid = velden.betrouwbaarheid;
-        }
-      } catch (err) {
-        logger.warn({ err }, "analyseerBeeld mislukte; satellietanalyse overgeslagen");
-        result.toelichting =
-          "Adres gevonden, maar de satellietanalyse mislukte. " +
-          "De afmetingen zijn niet automatisch geschat.";
+  }
+  // Vision draait zodra er minstens één beeld beschikbaar is (satelliet en/of
+  // Street View). Street View alleen is voldoende om gebouwtype en bouwlagen te
+  // bepalen, ook wanneer het satellietbeeld ontbreekt (bv. wanneer de Static
+  // Maps API niet op de Google-sleutel is geautoriseerd).
+  if (HEEFT_OPENAI && (beeld || straatbeeld)) {
+    try {
+      const velden = await analyseerBeeld(
+        beeld?.dataUrl ?? null,
+        beeld?.grondBreedteMeter ?? null,
+        geo.formatted,
+        straatbeeld,
+      );
+      if (velden) {
+        result.aantal_verdiepingen = result.aantal_verdiepingen ?? velden.aantal_verdiepingen;
+        result.hoogte = result.hoogte ?? velden.hoogte;
+        result.breedte = result.breedte ?? velden.breedte;
+        result.diepte = result.diepte ?? velden.diepte;
+        result.oppervlakte = result.oppervlakte ?? velden.oppervlakte;
+        result.gebouw_type = result.gebouw_type ?? velden.gebouw_type;
+        result.omschrijving = result.omschrijving ?? velden.omschrijving;
+        result.toelichting = velden.toelichting;
+        result.betrouwbaarheid = velden.betrouwbaarheid;
       }
+    } catch (err) {
+      logger.warn({ err }, "analyseerBeeld mislukte; beeldanalyse overgeslagen");
+      result.toelichting =
+        "Adres gevonden, maar de beeldanalyse mislukte. " +
+        "De afmetingen zijn niet automatisch geschat.";
     }
   }
 
