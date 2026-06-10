@@ -754,8 +754,26 @@ export interface GebouwAiAnalyseInput {
   beschrijving: string;
 }
 
+export interface GebouwSuggestie {
+  /** Volledig adres zoals teruggegeven door geocoding; toon dit als keuze. */
+  label: string;
+  /** @nullable */
+  adres?: string | null;
+  /** @nullable */
+  stad?: string | null;
+  /** @nullable */
+  postcode?: string | null;
+  /** @nullable */
+  latitude?: number | null;
+  /** @nullable */
+  longitude?: number | null;
+}
+
 export interface GebouwAiAnalyseResultaat {
   gevonden: boolean;
+  /** True wanneer de invoer onduidelijk is en er meerdere locaties zijn gevonden; veldwaarden zijn dan leeg en suggesties bevat de keuzes. */
+  meerdere?: boolean;
+  suggesties?: GebouwSuggestie[];
   /** @nullable */
   naam?: string | null;
   /** @nullable */

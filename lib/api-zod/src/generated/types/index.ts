@@ -57,6 +57,7 @@ export * from './gebouwPartijInput';
 export * from './gebouwPartijOptie';
 export * from './gebouwPartijUpdate';
 export * from './gebouwStats';
+export * from './gebouwSuggestie';
 export * from './gebouwUpdate';
 export * from './gebruiker';
 export * from './gebruikerInput';

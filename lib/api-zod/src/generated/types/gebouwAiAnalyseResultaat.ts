@@ -5,9 +5,13 @@
  * FPS Brandpreventie - Platform voor brandpreventieve gebouwvoorzieningen
  * OpenAPI spec version: 0.1.0
  */
+import type { GebouwSuggestie } from './gebouwSuggestie';
 
 export interface GebouwAiAnalyseResultaat {
   gevonden: boolean;
+  /** True wanneer de invoer onduidelijk is en er meerdere locaties zijn gevonden; veldwaarden zijn dan leeg en suggesties bevat de keuzes. */
+  meerdere?: boolean;
+  suggesties?: GebouwSuggestie[];
   /** @nullable */
   naam?: string | null;
   /** @nullable */

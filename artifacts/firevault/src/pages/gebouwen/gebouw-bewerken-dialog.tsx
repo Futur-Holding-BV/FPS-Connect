@@ -1,9 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   useUpdateGebouw,
   useAiAnalyseGebouw,
 } from "@workspace/api-client-react";
-import type { Gebouw } from "@workspace/api-client-react";
+import type { Gebouw, GebouwSuggestie } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   Dialog,
@@ -19,7 +19,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Loader2, AlertCircle, Sparkles } from "lucide-react";
+import { Loader2, AlertCircle, Sparkles, TriangleAlert } from "lucide-react";
+import { GebouwAiSuggesties } from "./gebouw-ai-suggesties";
 
 interface Velden {
   projectnummer: string;
@@ -35,6 +36,22 @@ interface Velden {
   diepte: string;
   oppervlakte: string;
 }
+
+// Velden die door de AI mogen worden ingevuld (projectnummer nooit).
+type AiVeld = Exclude<keyof Velden, "projectnummer">;
+const AI_VELDEN: AiVeld[] = [
+  "naam",
+  "adres",
+  "stad",
+  "postcode",
+  "omschrijving",
+  "gebouw_type",
+  "aantal_verdiepingen",
+  "hoogte",
+  "breedte",
+  "diepte",
+  "oppervlakte",
+];
 
 function tekst(v: string | number | null | undefined): string {
   return v == null ? "" : String(v);
@@ -87,7 +104,14 @@ export function GebouwBewerkenDialog({ gebouw, open, onOpenChange }: Props) {
   const [velden, setVelden] = useState<Velden>(() => uitGebouw(gebouw));
   const [foutmelding, setFoutmelding] = useState<string | null>(null);
 
+  // Bestaande gebouwgegevens starten als door de gebruiker beheerd: de AI
+  // overschrijft ze niet, alleen lege of eerder door de AI ingevulde velden.
+  // Bewust een ref (niet in de render gebruikt): zo lezen we tijdens een lopend
+  // AI-verzoek altijd de actuele eigendomsstatus, ook als de gebruiker ondertussen typt.
+  const aiVeldenRef = useRef<Set<keyof Velden>>(new Set());
   const [aiTekst, setAiTekst] = useState("");
+  const [laatsteAiTekst, setLaatsteAiTekst] = useState<string | null>(null);
+  const [suggesties, setSuggesties] = useState<GebouwSuggestie[]>([]);
   const [satelliet, setSatelliet] = useState<string | null>(null);
   const [aiToelichting, setAiToelichting] = useState<string | null>(null);
   const [aiBetrouwbaarheid, setAiBetrouwbaarheid] = useState<string | null>(null);
@@ -95,31 +119,70 @@ export function GebouwBewerkenDialog({ gebouw, open, onOpenChange }: Props) {
   useEffect(() => {
     if (open) {
       setVelden(uitGebouw(gebouw));
+      aiVeldenRef.current = new Set();
       setFoutmelding(null);
       setAiTekst(standaardBeschrijving(gebouw));
+      setLaatsteAiTekst(null);
+      setSuggesties([]);
       setSatelliet(null);
       setAiToelichting(null);
       setAiBetrouwbaarheid(null);
     }
   }, [open, gebouw]);
 
+  // Door de gebruiker getypt: het veld wordt nu door de gebruiker beheerd.
   function zet<K extends keyof Velden>(key: K, waarde: string) {
     setVelden((v) => ({ ...v, [key]: waarde }));
+    aiVeldenRef.current.delete(key);
   }
 
-  async function voerAiUit() {
+  // Wis alle door de AI ingevulde velden (laat door de gebruiker beheerde velden staan).
+  function wisAiVelden() {
+    const teWissen = Array.from(aiVeldenRef.current);
+    setVelden((prev) => {
+      const next = { ...prev };
+      for (const key of teWissen) next[key] = "";
+      return next;
+    });
+    aiVeldenRef.current = new Set();
+  }
+
+  // De ingevoerde beschrijving wijkt af van wat het huidige resultaat opleverde.
+  const voorstellenVerouderd =
+    laatsteAiTekst !== null && aiTekst.trim() !== laatsteAiTekst.trim();
+
+  async function voerAiUit(overrideTekst?: string) {
     setFoutmelding(null);
-    if (!aiTekst.trim()) {
+    const invoer = overrideTekst ?? aiTekst;
+    if (!invoer.trim()) {
       setFoutmelding("Beschrijf eerst het gebouw of het adres voordat de AI kan invullen.");
       return;
     }
+    // Een nieuwe zoekopdracht: eerdere voorstellen en hulpinfo zijn niet langer geldig.
+    setSuggesties([]);
+    setSatelliet(null);
+    setAiToelichting(null);
+    setAiBetrouwbaarheid(null);
     try {
       const res = await aiAnalyse.mutateAsync({
-        data: { beschrijving: aiTekst },
+        data: { beschrijving: invoer },
       });
 
+      if (overrideTekst !== undefined) setAiTekst(overrideTekst);
+      setLaatsteAiTekst(invoer);
+
       if (!res.gevonden) {
+        wisAiVelden();
         setFoutmelding(res.toelichting ?? "De omschrijving kon niet worden verwerkt.");
+        return;
+      }
+
+      // Onduidelijke invoer: toon de keuzelijst en wis oude AI-velden. De gebruiker
+      // kiest eerst de juiste locatie voordat er iets wordt ingevuld.
+      if (res.meerdere && res.suggesties && res.suggesties.length > 0) {
+        wisAiVelden();
+        setSuggesties(res.suggesties);
+        setAiToelichting(res.toelichting ?? null);
         return;
       }
 
@@ -127,24 +190,48 @@ export function GebouwBewerkenDialog({ gebouw, open, onOpenChange }: Props) {
       setAiToelichting(res.toelichting ?? null);
       setAiBetrouwbaarheid(res.betrouwbaarheid ?? null);
 
-      setVelden((v) => ({
-        ...v,
-        naam: res.naam ?? v.naam,
-        adres: res.adres ?? v.adres,
-        stad: res.stad ?? (afleidStad(res.adres_gevonden) || v.stad),
-        postcode: res.postcode ?? v.postcode,
-        gebouw_type: res.gebouw_type ?? v.gebouw_type,
-        omschrijving: res.omschrijving ?? v.omschrijving,
-        aantal_verdiepingen:
-          res.aantal_verdiepingen != null ? String(res.aantal_verdiepingen) : v.aantal_verdiepingen,
-        hoogte: res.hoogte != null ? String(Math.round(res.hoogte * 10) / 10) : v.hoogte,
-        breedte: res.breedte != null ? String(Math.round(res.breedte * 10) / 10) : v.breedte,
-        diepte: res.diepte != null ? String(Math.round(res.diepte * 10) / 10) : v.diepte,
-        oppervlakte: res.oppervlakte != null ? String(Math.round(res.oppervlakte)) : v.oppervlakte,
-      }));
+      // Nieuwe AI-waarden per veld. Leeg ("") betekent: de AI heeft hiervoor niets gevonden.
+      const nieuw: Record<(typeof AI_VELDEN)[number], string> = {
+        naam: res.naam ?? "",
+        adres: res.adres ?? "",
+        stad: res.stad ?? (res.adres_gevonden ? afleidStad(res.adres_gevonden) : ""),
+        postcode: res.postcode ?? "",
+        gebouw_type: res.gebouw_type ?? "",
+        omschrijving: res.omschrijving ?? "",
+        aantal_verdiepingen: res.aantal_verdiepingen != null ? String(res.aantal_verdiepingen) : "",
+        hoogte: res.hoogte != null ? String(Math.round(res.hoogte * 10) / 10) : "",
+        breedte: res.breedte != null ? String(Math.round(res.breedte * 10) / 10) : "",
+        diepte: res.diepte != null ? String(Math.round(res.diepte * 10) / 10) : "",
+        oppervlakte: res.oppervlakte != null ? String(Math.round(res.oppervlakte)) : "",
+      };
+
+      // Overschrijfregel: een veld is vervangbaar als het door de AI is ingevuld
+      // (in aiVelden) of als het leeg is. Door de gebruiker beheerde velden blijven staan.
+      // We lezen de ref na de await, zodat tijdens het verzoek getypte invoer telt.
+      const huidigeAiVelden = aiVeldenRef.current;
+      const nieuwAiVelden = new Set(huidigeAiVelden);
+      setVelden((prev) => {
+        const bijgewerkt = { ...prev };
+        for (const key of AI_VELDEN) {
+          const vervangbaar = huidigeAiVelden.has(key) || !prev[key].trim();
+          if (!vervangbaar) continue;
+          bijgewerkt[key] = nieuw[key];
+          if (nieuw[key].trim()) nieuwAiVelden.add(key);
+          else nieuwAiVelden.delete(key);
+        }
+        return bijgewerkt;
+      });
+      aiVeldenRef.current = nieuwAiVelden;
     } catch {
       setFoutmelding("AI-analyse mislukte. Probeer het opnieuw of vul handmatig in.");
     }
+  }
+
+  // Een suggestie kiezen: opnieuw analyseren met het precieze adres, wat tot één
+  // resultaat leidt en de volledige analyse (satelliet/afmetingen) uitvoert.
+  function kiesSuggestie(s: GebouwSuggestie) {
+    setSuggesties([]);
+    void voerAiUit(s.label);
   }
 
   async function bewaar() {
@@ -211,18 +298,23 @@ export function GebouwBewerkenDialog({ gebouw, open, onOpenChange }: Props) {
               rows={2}
               placeholder="Beschrijf het gebouw of plak een adres. Bijv. 'Coolsingel 40 Rotterdam'."
               value={aiTekst}
-              onChange={(e) => setAiTekst(e.target.value)}
+              onChange={(e) => {
+                setAiTekst(e.target.value);
+                // Bij gewijzigde zoektekst zijn eerdere suggesties niet meer geldig.
+                if (suggesties.length > 0) setSuggesties([]);
+              }}
             />
             <p className="text-xs text-muted-foreground">
-              De AI schat o.a. hoogte, breedte, diepte en oppervlakte en vult de velden hieronder in.
-              Wat u zelf benoemt heeft voorrang; de rest wordt geschat via satellietbeeld.
+              De AI schat o.a. hoogte, breedte, diepte en oppervlakte en vult lege velden in.
+              Wat u zelf invult heeft voorrang en blijft staan; alleen eerder door de AI
+              ingevulde velden worden bij een nieuwe zoekopdracht vervangen.
             </p>
           </div>
           <Button
             type="button"
             variant="default"
             className="w-full sm:w-auto"
-            onClick={voerAiUit}
+            onClick={() => voerAiUit()}
             disabled={aiBezig}
           >
             {aiBezig ? (
@@ -231,10 +323,25 @@ export function GebouwBewerkenDialog({ gebouw, open, onOpenChange }: Props) {
               </>
             ) : (
               <>
-                <Sparkles className="h-4 w-4 mr-2" /> AI invullen
+                <Sparkles className="h-4 w-4 mr-2" />{" "}
+                {laatsteAiTekst !== null ? "Opnieuw zoeken" : "AI invullen"}
               </>
             )}
           </Button>
+
+          {voorstellenVerouderd && !aiBezig && (
+            <div className="flex items-start gap-2 rounded-md border border-amber-500/40 bg-amber-50/60 dark:bg-amber-950/20 px-3 py-2 text-xs text-amber-700 dark:text-amber-400">
+              <TriangleAlert className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+              <span>
+                De zoektekst is gewijzigd sinds de laatste analyse. De eerder ingevulde
+                gegevens kunnen verouderd zijn — klik op "Opnieuw zoeken" om bij te werken.
+              </span>
+            </div>
+          )}
+
+          {suggesties.length > 0 && (
+            <GebouwAiSuggesties suggesties={suggesties} onKies={kiesSuggestie} bezig={aiBezig} />
+          )}
 
           {satelliet && (
             <div className="flex gap-3 items-start pt-1">

@@ -12,8 +12,19 @@ const STATIC_ZOOM = 19;
 const STREET_SIZE = 640;
 const STREET_SCALE = 2;
 
+export interface GebouwSuggestie {
+  label: string;
+  adres: string | null;
+  stad: string | null;
+  postcode: string | null;
+  latitude: number | null;
+  longitude: number | null;
+}
+
 export interface GebouwAnalyse {
   gevonden: boolean;
+  meerdere: boolean;
+  suggesties: GebouwSuggestie[];
   naam: string | null;
   adres: string | null;
   stad: string | null;
@@ -36,6 +47,8 @@ export interface GebouwAnalyse {
 function leegResultaat(toelichting: string): GebouwAnalyse {
   return {
     gevonden: false,
+    meerdere: false,
+    suggesties: [],
     naam: null,
     adres: null,
     stad: null,
@@ -92,13 +105,19 @@ function parseComponents(components: AdresComponent[] | undefined): {
 }
 
 type GeocodeUitkomst =
-  | { ok: true; resultaat: GeocodeResultaat }
+  | { ok: true; resultaten: GeocodeResultaat[] }
   | { ok: false; reden: string };
 
 const MAPS_NIET_GEACTIVEERD =
   "De Google Maps API is niet geactiveerd voor de gebruikte API-sleutel. Activeer 'Geocoding API' en 'Maps Static API' in de Google Cloud Console om automatisch invullen te gebruiken.";
 
-async function geocode(adres: string): Promise<GeocodeUitkomst> {
+// Maximaal aantal suggesties dat bij onduidelijke invoer wordt teruggegeven.
+const MAX_SUGGESTIES = 5;
+
+// Haalt alle geocoding-kandidaten op voor de zoekterm. Resultaten worden ontdubbeld
+// op het volledige adres en afgekapt op MAX_SUGGESTIES. Geen reverse-geocode hier:
+// dat gebeurt alleen voor het uiteindelijk gekozen (enkelvoudige) resultaat.
+async function geocodeAlle(adres: string): Promise<GeocodeUitkomst> {
   const url = new URL("https://maps.googleapis.com/maps/api/geocode/json");
   url.searchParams.set("address", adres);
   url.searchParams.set("key", GOOGLE_KEY!);
@@ -137,30 +156,39 @@ async function geocode(adres: string): Promise<GeocodeUitkomst> {
       reden: "Geen adres gevonden voor de opgegeven omschrijving. Vul de velden eventueel handmatig in.",
     };
   }
-  const r = data.results[0];
-  const comp = parseComponents(r.address_components);
-  let gevondenAdres = comp.adres;
-  let gevondenPostcode = comp.postcode;
-  let gevondenStad = comp.stad;
-  // POI/locatie-zoekresultaten missen vaak een postcode; haal die via reverse-geocode op de coördinaten op.
-  if (!gevondenPostcode) {
-    const omgekeerd = await reverseGeocode(r.geometry.location.lat, r.geometry.location.lng);
-    if (omgekeerd) {
-      gevondenPostcode = gevondenPostcode ?? omgekeerd.postcode;
-      gevondenStad = gevondenStad ?? omgekeerd.stad;
-      gevondenAdres = gevondenAdres ?? omgekeerd.adres;
-    }
-  }
-  return {
-    ok: true,
-    resultaat: {
+
+  const gezien = new Set<string>();
+  const resultaten: GeocodeResultaat[] = [];
+  for (const r of data.results) {
+    const sleutel = r.formatted_address.trim().toLowerCase();
+    if (gezien.has(sleutel)) continue;
+    gezien.add(sleutel);
+    const comp = parseComponents(r.address_components);
+    resultaten.push({
       lat: r.geometry.location.lat,
       lng: r.geometry.location.lng,
       formatted: r.formatted_address,
-      adres: gevondenAdres,
-      postcode: gevondenPostcode,
-      stad: gevondenStad,
-    },
+      adres: comp.adres,
+      postcode: comp.postcode,
+      stad: comp.stad,
+    });
+    if (resultaten.length >= MAX_SUGGESTIES) break;
+  }
+
+  return { ok: true, resultaten };
+}
+
+// Vult een ontbrekende postcode (en eventueel stad/adres) aan via reverse-geocode op
+// de coördinaten. POI/locatie-zoekresultaten missen vaak een postcode.
+async function verrijkPostcode(geo: GeocodeResultaat): Promise<GeocodeResultaat> {
+  if (geo.postcode) return geo;
+  const omgekeerd = await reverseGeocode(geo.lat, geo.lng);
+  if (!omgekeerd) return geo;
+  return {
+    ...geo,
+    adres: geo.adres ?? omgekeerd.adres,
+    postcode: geo.postcode ?? omgekeerd.postcode,
+    stad: geo.stad ?? omgekeerd.stad,
   };
 }
 
@@ -758,6 +786,8 @@ export async function analyseerGebouwVrijeTekst(beschrijving: string): Promise<G
   // Bouw het resultaatobject op met wat de extractie opleverde (kan allemaal null zijn).
   const result: GebouwAnalyse = {
     gevonden: true,
+    meerdere: false,
+    suggesties: [],
     naam: extract?.naam ?? null,
     adres: extract?.adres ?? null,
     stad: extract?.stad ?? null,
@@ -799,7 +829,7 @@ export async function analyseerGebouwVrijeTekst(beschrijving: string): Promise<G
   }
 
   // Stap 3: geocoding.
-  const geoUitkomst = await geocode(zoek);
+  const geoUitkomst = await geocodeAlle(zoek);
   if (!geoUitkomst.ok) {
     // Geocoding mislukt. Als we via OpenAI al iets hebben gevonden, retourneer dat gedeeltelijk.
     result.toelichting = geoUitkomst.reden;
@@ -811,7 +841,29 @@ export async function analyseerGebouwVrijeTekst(beschrijving: string): Promise<G
     return result;
   }
 
-  const geo = geoUitkomst.resultaat;
+  // Stap 3a: onduidelijke invoer → meerdere locaties. Toon suggesties en sla de
+  // (dure) satelliet-/vision-analyse over. De velden blijven leeg zodat oude
+  // gegevens niet onterecht blijven staan; de gebruiker kiest eerst de juiste locatie.
+  if (geoUitkomst.resultaten.length > 1) {
+    return {
+      ...leegResultaat(
+        "Meerdere mogelijke locaties gevonden. Kies hieronder de juiste locatie om verder in te vullen.",
+      ),
+      gevonden: true,
+      meerdere: true,
+      suggesties: geoUitkomst.resultaten.map((r) => ({
+        label: r.formatted,
+        adres: r.adres,
+        stad: r.stad,
+        postcode: r.postcode,
+        latitude: r.lat,
+        longitude: r.lng,
+      })),
+    };
+  }
+
+  // Stap 3b: precies één locatie → verrijk de postcode en ga door met volledige analyse.
+  const geo = await verrijkPostcode(geoUitkomst.resultaten[0]!);
   result.adres_gevonden = geo.formatted;
   result.latitude = geo.lat;
   result.longitude = geo.lng;

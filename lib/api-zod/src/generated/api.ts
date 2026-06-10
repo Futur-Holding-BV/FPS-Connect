@@ -172,6 +172,15 @@ export const AiAnalyseGebouwBody = zod.object({
 
 export const AiAnalyseGebouwResponse = zod.object({
   "gevonden": zod.boolean(),
+  "meerdere": zod.boolean().optional().describe('True wanneer de invoer onduidelijk is en er meerdere locaties zijn gevonden; veldwaarden zijn dan leeg en suggesties bevat de keuzes.'),
+  "suggesties": zod.array(zod.object({
+  "label": zod.string().describe('Volledig adres zoals teruggegeven door geocoding; toon dit als keuze.'),
+  "adres": zod.string().nullish(),
+  "stad": zod.string().nullish(),
+  "postcode": zod.string().nullish(),
+  "latitude": zod.number().nullish(),
+  "longitude": zod.number().nullish()
+})).optional(),
   "naam": zod.string().nullish(),
   "adres": zod.string().nullish(),
   "stad": zod.string().nullish(),

@@ -3994,12 +3994,37 @@ components:
           type: string
           description: Vrije omschrijving van het gebouw en/of adres; de AI leidt hieruit de velden af.
 
+    GebouwSuggestie:
+      type: object
+      required: [label]
+      properties:
+        label:
+          type: string
+          description: Volledig adres zoals teruggegeven door geocoding; toon dit als keuze.
+        adres:
+          type: ["string", "null"]
+        stad:
+          type: ["string", "null"]
+        postcode:
+          type: ["string", "null"]
+        latitude:
+          type: ["number", "null"]
+        longitude:
+          type: ["number", "null"]
+
     GebouwAiAnalyseResultaat:
       type: object
       required: [gevonden]
       properties:
         gevonden:
           type: boolean
+        meerdere:
+          type: boolean
+          description: True wanneer de invoer onduidelijk is en er meerdere locaties zijn gevonden; veldwaarden zijn dan leeg en suggesties bevat de keuzes.
+        suggesties:
+          type: array
+          items:
+            $ref: "#/components/schemas/GebouwSuggestie"
         naam:
           type: ["string", "null"]
         adres:
