@@ -297,6 +297,29 @@ paths:
         "503":
           description: Kaartservice niet beschikbaar
 
+  /gebouwen/{id}/gevelbeeld:
+    get:
+      operationId: getGebouwGevelbeeld
+      tags: [gebouwen]
+      summary: Street View gevelafbeelding (base64 data-URL) voor het voorblad
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [beeld]
+                properties:
+                  beeld:
+                    type: ["string", "null"]
+
   /gebouwen/{id}:
     get:
       operationId: getGebouw
@@ -3293,6 +3316,10 @@ components:
         ai_tekeningen:
           type: ["string", "null"]
         ai_actiepunten:
+          type: ["string", "null"]
+        ai_relevant:
+          type: ["boolean", "null"]
+        ai_relevant_reden:
           type: ["string", "null"]
         status:
           type: string

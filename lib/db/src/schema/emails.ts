@@ -34,6 +34,8 @@ export const gebouwEmailsTable = pgTable("gebouw_emails", {
   aiContactinfo: text("ai_contactinfo"),
   aiTekeningen: text("ai_tekeningen"),
   aiActiepunten: text("ai_actiepunten"),
+  aiRelevant: boolean("ai_relevant"),
+  aiRelevantReden: text("ai_relevant_reden"),
   status: text("status").notNull().default("in_behandeling"),
   aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
 });

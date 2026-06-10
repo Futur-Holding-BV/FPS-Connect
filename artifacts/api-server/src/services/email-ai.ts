@@ -38,6 +38,8 @@ export interface EmailAiResultaat {
   contactinfo: string | null;
   tekeningen: string | null;
   actiepunten: string | null;
+  relevant: boolean | null;
+  relevantReden: string | null;
 }
 
 function strOfNull(v: unknown): string | null {
@@ -242,6 +244,8 @@ Geef uitsluitend geldige JSON terug met deze velden:
 - contactinfo (tekst of null): e-mailadressen en telefoonnummers die in de e-mail worden genoemd.
 - tekeningen (tekst of null): noem bijlagen of verwijzingen die bouwtekeningen, plattegronden of technische tekeningen lijken te zijn.
 - actiepunten (tekst of null): openstaande actiepunten, verzoeken of to-do's die uit de e-mail voortvloeien, als genummerde lijst. Null als er geen zijn.
+- relevant (true, false of null): is deze e-mail inhoudelijk relevant voor het opleverdossier? Kies true wanneer de e-mail opdracht-leidend, technisch, juridisch of randvoorwaardelijk is, of over revisies of goedkeuringen gaat. Kies false bij louter logistieke, sociale of niet ter zake doende correspondentie (ontvangstbevestigingen, automatische antwoorden, planning zonder inhoud). Null als je het niet kunt bepalen.
+- relevant_reden (korte Nederlandse tekst of null): in maximaal 1 zin waarom de e-mail wel of niet relevant is voor het dossier.
 Antwoord in het Nederlands. Alleen JSON, geen extra tekst.`;
 
 const SAMENVATTING_PROMPT = `Je analyseert de gecombineerde e-mailcorrespondentie van een brandpreventie-project (FPS Brandpreventie: passieve brandpreventie, branddoorvoering, branddeuren, brandkleppen etc.).
@@ -402,7 +406,7 @@ export async function genereerProjectSamenvatting(
 export async function extraheerEmailInzicht(
   email: GeparseerdeEmail,
 ): Promise<EmailAiResultaat> {
-  const leeg: EmailAiResultaat = { omschrijving: null, naw: null, contactinfo: null, tekeningen: null, actiepunten: null };
+  const leeg: EmailAiResultaat = { omschrijving: null, naw: null, contactinfo: null, tekeningen: null, actiepunten: null, relevant: null, relevantReden: null };
   if (!heeftOpenAi()) return leeg;
 
   const bijlageNamen = email.bijlagen.map((b) => b.bestandsnaam).join(", ") || "(geen)";
@@ -436,6 +440,8 @@ export async function extraheerEmailInzicht(
       contactinfo: strOfNull(parsed.contactinfo),
       tekeningen: strOfNull(parsed.tekeningen),
       actiepunten: strOfNull(parsed.actiepunten),
+      relevant: typeof parsed.relevant === "boolean" ? parsed.relevant : null,
+      relevantReden: strOfNull(parsed.relevant_reden),
     };
   } catch (err) {
     logger.error({ err }, "E-mail AI-extractie mislukte");

@@ -14,6 +14,8 @@ import {
   useListGebouwTekeningen,
   useListGebouwEmails,
   useGetGebouwEmailSamenvatting,
+  useGetGebouwGevelbeeld,
+  useListGebruikers,
   type Verdieping,
 } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
@@ -682,6 +684,8 @@ export default function GebouwPrint() {
   const { data: tekeningen, isLoading: tekeningenLaden }      = useListGebouwTekeningen(gebouwId);
   const { data: emails, isLoading: emailsLaden }              = useListGebouwEmails(gebouwId);
   const { data: samenvatting }                                = useGetGebouwEmailSamenvatting(gebouwId);
+  const { data: gevelbeeld, isLoading: gevelbeeldLaden }      = useGetGebouwGevelbeeld(gebouwId);
+  const { data: gebruikers, isLoading: gebruikersLaden }      = useListGebruikers();
 
   const [gereedFloors, setGereedFloors] = useState(0);
   const gedrukt = useRef(false);
@@ -697,7 +701,7 @@ export default function GebouwPrint() {
     !isLoading && !!gebouw &&
     !partijenLaden && !toewijzingenLaden &&
     !onderhoudLaden && !inspectiesLaden &&
-    !tekeningenLaden && !emailsLaden &&
+    !tekeningenLaden && !emailsLaden && !gevelbeeldLaden && !gebruikersLaden &&
     gereedFloors >= aantalFloors;
 
   useEffect(() => {
@@ -736,16 +740,26 @@ export default function GebouwPrint() {
   const opsteller      = gebruiker?.naam ?? "—";
 
   const projectOmschrijving =
-    (samenvatting?.opdrachtomschrijving?.trim() || (gebouw as { omschrijving?: string | null }).omschrijving?.trim()) ?? "";
+    (samenvatting?.geverifieerd ? samenvatting.opdrachtomschrijving?.trim() : undefined)
+    || (gebouw as { omschrijving?: string | null }).omschrijving?.trim()
+    || "";
 
   const projectTekeningen = (tekeningen ?? []).filter((t) => t.type !== "document");
-  const projectEmails     = (emails ?? []);
+  const projectEmails     = (emails ?? []).filter((e) => e.ai_relevant !== false);
   const heeftDocumenten   = projectTekeningen.length > 0 || projectEmails.length > 0;
 
+  const VELD_FUNCTIES = ["Timmerman", "Uitvoerder"];
+  const functietitelsMap = new Map<number, string[]>(
+    (gebruikers ?? []).map((g) => [g.id, g.functietitels ?? []]),
+  );
   const teamleden = Object.values(
-    (toewijzingen ?? []).reduce<Record<number, { id: number; naam: string; rol: string; rollen: string[] }>>((acc, t) => {
-      if (!acc[t.gebruiker_id])
-        acc[t.gebruiker_id] = { id: t.gebruiker_id, naam: t.naam, rol: t.rol ?? "", rollen: [] };
+    (toewijzingen ?? []).reduce<Record<number, { id: number; naam: string; rol: string; weergaveRol: string; rollen: string[] }>>((acc, t) => {
+      if (!acc[t.gebruiker_id]) {
+        const veld = (functietitelsMap.get(t.gebruiker_id) ?? []).find((f) =>
+          VELD_FUNCTIES.includes(f),
+        );
+        acc[t.gebruiker_id] = { id: t.gebruiker_id, naam: t.naam, rol: t.rol ?? "", weergaveRol: veld ?? (t.rol ?? ""), rollen: [] };
+      }
       if (t.project_rol) acc[t.gebruiker_id].rollen.push(t.project_rol);
       return acc;
     }, {}),
@@ -777,6 +791,29 @@ export default function GebouwPrint() {
         }
         .prt-cover-top { padding: 48px 56px 0; }
         .prt-cover-logo { height: 48px; width: auto; }
+        .prt-cover-beeld { padding: 28px 56px 0; }
+        .prt-cover-foto {
+          width: 100%;
+          height: 240px;
+          object-fit: cover;
+          border-radius: 8px;
+          border: 1px solid #e2e8f0;
+          display: block;
+        }
+        .prt-cover-beeld-leeg {
+          width: 100%;
+          height: 240px;
+          border-radius: 8px;
+          border: 1px dashed #cbd5e1;
+          background: #f8fafc;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: #94a3b8;
+          font-size: 13px;
+          letter-spacing: .02em;
+        }
+        .prt-email-ai { font-size: 11px; color: #64748b; margin-top: 3px; line-height: 1.35; }
         .prt-cover-main {
           flex: 1;
           display: flex;
@@ -815,17 +852,17 @@ export default function GebouwPrint() {
         .prt-cover-meta-rij { display: flex; gap: 12px; font-size: 13px; color: #475569; }
         .prt-cover-meta-lbl { font-weight: 600; color: #334155; min-width: 148px; flex-shrink: 0; }
         .prt-cover-voet {
-          background: #212631;
-          color: #fff;
-          padding: 28px 56px;
+          border-top: 1px solid #e2e8f0;
+          color: #94a3b8;
+          padding: 16px 56px 28px;
           display: flex;
           justify-content: space-between;
-          align-items: center;
+          align-items: flex-end;
         }
-        .prt-cover-voet-merk { font-size: 16px; font-weight: 700; }
-        .prt-cover-voet-tagline { font-size: 11px; color: #94a3b8; margin-top: 3px; }
-        .prt-cover-voet-rechts { text-align: right; font-size: 11px; color: #94a3b8; line-height: 1.8; }
-        .prt-cover-voet-waarde { color: #fff; font-weight: 600; }
+        .prt-cover-voet-merk { font-size: 12px; font-weight: 600; color: #475569; }
+        .prt-cover-voet-tagline { font-size: 10px; color: #94a3b8; margin-top: 2px; }
+        .prt-cover-voet-rechts { text-align: right; font-size: 10px; color: #94a3b8; line-height: 1.7; }
+        .prt-cover-voet-waarde { color: #475569; font-weight: 600; }
 
         /* ── Pagina-container (pagina's 2+) ── */
         .prt-pagina { max-width: 960px; margin: 0 auto; padding: 32px; }
@@ -871,11 +908,13 @@ export default function GebouwPrint() {
         .prt-voortgang-getal { font-size: 11px; font-weight: 600; color: #0f172a; width: 28px; text-align: right; flex-shrink: 0; }
 
         /* ── Juridisch ── */
-        .prt-juridisch { line-height: 1.65; }
-        .prt-juridisch h3 { font-size: 12px; font-weight: 700; color: #334155; margin: 16px 0 5px; }
-        .prt-juridisch p { font-size: 12px; color: #475569; margin-bottom: 8px; }
-        .prt-juridisch ul { font-size: 12px; color: #475569; padding-left: 20px; margin-bottom: 8px; list-style: disc; }
-        .prt-juridisch li { margin-bottom: 4px; }
+        .prt-juridisch { line-height: 1.75; }
+        .prt-juridisch h3 { font-size: 12px; font-weight: 700; color: #334155; margin: 22px 0 7px; }
+        .prt-juridisch p { font-size: 12.5px; color: #475569; margin-bottom: 12px; }
+        .prt-juridisch ul { font-size: 12.5px; color: #475569; padding-left: 20px; margin-bottom: 12px; list-style: disc; }
+        .prt-juridisch li { margin-bottom: 6px; }
+        .prt-juridisch-pagina .prt-sectie { margin-bottom: 34px; }
+        .prt-juridisch-pagina .prt-sectie:first-of-type { margin-top: 10px; }
 
         /* ── Verdiepingen ── */
         .prt-verdieping { break-before: page; margin-bottom: 18px; }
@@ -916,11 +955,11 @@ export default function GebouwPrint() {
         .prt-spot-testitem { display: flex; flex-wrap: wrap; gap: 8px; align-items: baseline; margin-bottom: 4px; }
         .prt-spot-testitem-naam { font-size: 11px; font-weight: 600; color: #0f172a; }
         .prt-spot-testitem-meta { font-size: 10px; color: #64748b; }
-        .prt-spot-fotos { margin-top: 4px; display: flex; gap: 16px; flex-wrap: wrap; }
-        .prt-spot-fotos > div { flex: 1; min-width: 0; }
+        .prt-spot-fotos { margin-top: 8px; display: flex; gap: 16px; flex-wrap: wrap; }
+        .prt-spot-fotos > div { flex: 1; min-width: 260px; }
         .prt-spot-foto-label { font-size: 10px; font-weight: 600; color: #64748b; margin-bottom: 6px; margin-top: 4px; }
-        .prt-spot-foto-rij { display: flex; flex-wrap: wrap; gap: 6px; }
-        .prt-spot-foto { width: 150px; height: 112px; object-fit: cover; border-radius: 6px; border: 1px solid #e2e8f0; }
+        .prt-spot-foto-rij { display: grid; grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: 6px; }
+        .prt-spot-foto { width: 100%; height: 88px; object-fit: cover; border-radius: 6px; border: 1px solid #e2e8f0; break-inside: avoid; }
 
         /* ── Toolbar ── */
         .prt-toolbar { position: sticky; top: 0; z-index: 10; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; padding: 10px 24px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; }
@@ -936,7 +975,7 @@ export default function GebouwPrint() {
 
         @media print {
           .no-print { display: none !important; }
-          .prt-voorblad { break-after: page; min-height: 0; }
+          .prt-voorblad { min-height: 0; }
           .prt-pagina { max-width: none; padding: 0; break-before: page; }
           @page { margin: 14mm; }
         }
@@ -977,6 +1016,16 @@ export default function GebouwPrint() {
       <div className="prt-voorblad">
         <div className="prt-cover-top">
           <img src={logoSrc} alt="FPS Brandpreventie" className="prt-cover-logo" />
+        </div>
+
+        <div className="prt-cover-beeld">
+          {gevelbeeld?.beeld ? (
+            <img src={gevelbeeld.beeld} alt={`Gevelaanzicht ${gebouw.naam}`} className="prt-cover-foto" />
+          ) : (
+            <div className="prt-cover-beeld-leeg">
+              <span>Geen gevelafbeelding beschikbaar</span>
+            </div>
+          )}
         </div>
 
         <div className="prt-cover-main">
@@ -1132,21 +1181,28 @@ export default function GebouwPrint() {
 
             {projectEmails.length > 0 && (
               <>
-                <div className="prt-tegel-koplabel" style={{ marginTop: 12 }}>Correspondentie en e-mails</div>
+                <div className="prt-tegel-koplabel" style={{ marginTop: 12 }}>Relevante correspondentie en e-mails</div>
                 <table className="prt-tabel">
                   <thead>
                     <tr>
+                      <th style={{ width: "13%" }}>Datum</th>
+                      <th style={{ width: "21%" }}>Afzender</th>
+                      <th style={{ width: "21%" }}>Ontvanger</th>
                       <th>Onderwerp</th>
-                      <th>Afzender</th>
-                      <th>Datum</th>
+                      <th style={{ width: "9%" }}>Bijlagen</th>
                     </tr>
                   </thead>
                   <tbody>
                     {projectEmails.map(e => (
                       <tr key={e.id}>
-                        <td>{e.onderwerp || e.bestandsnaam}</td>
-                        <td>{e.afzender || "—"}</td>
                         <td>{e.datum ? datumNL(e.datum) : datumNL(e.aangemaakt_op)}</td>
+                        <td>{e.afzender || "—"}</td>
+                        <td>{e.ontvanger || "—"}</td>
+                        <td>
+                          {e.onderwerp || e.bestandsnaam}
+                          {e.ai_omschrijving && <div className="prt-email-ai">{e.ai_omschrijving}</div>}
+                        </td>
+                        <td>{e.bijlagen?.length ?? 0}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -1229,7 +1285,7 @@ export default function GebouwPrint() {
                 {teamleden.map(t => (
                   <tr key={t.id}>
                     <td>{t.naam}</td>
-                    <td style={{ textTransform: "capitalize" }}>{t.rol}</td>
+                    <td style={{ textTransform: "capitalize" }}>{t.weergaveRol}</td>
                     <td>{t.rollen.length > 0 ? t.rollen.join(" | ") : "—"}</td>
                   </tr>
                 ))}
@@ -1242,7 +1298,7 @@ export default function GebouwPrint() {
       {/* ════════════════════════════════════════════════════════════════
           PAGINA 3 — UITGANGSPUNTEN EN JURIDISCHE TOELICHTING
       ════════════════════════════════════════════════════════════════ */}
-      <div className="prt-pagina">
+      <div className="prt-pagina prt-juridisch-pagina">
         <div className="prt-pagina-kop">
           <img src={logoSrc} alt="FPS Brandpreventie" />
           <div className="prt-pagina-kop-info">
@@ -1265,6 +1321,13 @@ export default function GebouwPrint() {
               De inhoud omvat een overzicht van alle geregistreerde spots (brandwerende
               voorzieningen), inclusief locatieaanduidingen op bouwlaagniveau, statusinformatie,
               gekoppelde productcertificaten en ETA's en — indien van toepassing — foto-documentatie.
+            </p>
+            <p>
+              Het document dient als gestructureerde en controleerbare vastlegging van de uitgevoerde
+              brandpreventieve werkzaamheden en vormt daarmee de administratieve basis voor de
+              oplevering. Het kan tevens worden gebruikt als naslagwerk bij periodiek onderhoud,
+              latere inspecties en eventuele uitbreidingen, doordat elke voorziening herleidbaar is
+              tot de toegepaste producten en de bijbehorende prestatie- en classificatiedocumentatie.
             </p>
           </div>
         </section>

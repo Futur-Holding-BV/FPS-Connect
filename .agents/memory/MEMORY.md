@@ -2,6 +2,7 @@
 - [Sync context patroon](sync-context.md) — SyncProvider + AbortSignal.timeout voor connectiviteitscheck; forceerSync direct aanroepen na bewaar().
 - [Toewijzingen API velden](toewijzingen-velden.md) — Toewijzing type heeft naam/rol, NIET gebruiker_naam/gebruiker_rol; ToewijzingInput heeft alleen gebruiker_id.
 - [Orval enabled-opties](orval-enabled.md) — { query: { enabled } } geeft TS2741 (queryKey ontbreekt) in hele codebase; pre-existing; Vite werkt gewoon; gate op UI-niveau ipv hook-niveau.
+- [Stale lib declarations na merge](stale-lib-declarations.md) — TS2305 "no exported member" op bestaande API-hook = stale composite lib-build; fix met codegen/typecheck:libs, niet code "repareren".
 - [Rol-filter backend](rol-filter.md) — TOEGEWEZEN_ROLLEN=["monteur","controleur"]; gebouwToewijzingenTable importeren voor toegewezenGebouwIds(); filter in listInspecties en listOnderhoud.
 - [Controleur rol — alleen onderhoud](controleur-rol.md) — controleur zit NIET in normale project-/opleverflow; alleen onderhoudsinspecties (periodiek/jaarlijks/herstel); server blokkeert oplevering-type voor controleur in POST én filtert GET.
 - [Voorziening archief](voorziening-archief.md) — terugplaatsen=beheerder-only (server-side afdwingen in archief-handler, niet alleen UI); archieflijst-hook in child-component mounten zodat niet-beheerders niet fetchen.

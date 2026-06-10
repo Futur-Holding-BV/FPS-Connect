@@ -17,6 +17,7 @@ import {
   analyseerGebouwVrijeTekst,
   analyseerTekening,
   analyseerPlattegrond,
+  haalStreetViewBeeld,
 } from "../services/gebouw-ai";
 
 const router = Router();
@@ -425,6 +426,45 @@ router.get("/gebouwen/:id/kaart", lezenGebouwen, async (req, res) => {
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// GET /gebouwen/:id/gevelbeeld — Street View gevelbeeld voor het opleverrapport-voorblad.
+// Geeft bij ontbrekend beeld bewust { beeld: null } met status 200 terug (geen 4xx/5xx),
+// zodat de print-readiness niet deadlockt op react-query retries.
+router.get("/gebouwen/:id/gevelbeeld", lezenGebouwen, async (req, res) => {
+  try {
+    const id = parseInt(String(req.params.id));
+    const { userId, rol } = await effectieveContext(req);
+
+    const [gebouw] = await db
+      .select({ lat: gebouwenTable.latitude, lng: gebouwenTable.longitude })
+      .from(gebouwenTable)
+      .where(eq(gebouwenTable.id, id));
+
+    if (!gebouw) return res.status(404).json({ error: "Gebouw niet gevonden" });
+
+    if (TOEGEWEZEN_ROLLEN.includes(rol)) {
+      const ids = await toegewezenGebouwIds(userId);
+      if (!ids.includes(id)) {
+        return res.status(403).json({ error: "Geen toegang tot dit gebouw" });
+      }
+    }
+
+    if (!process.env.GOOGLE_MAPS_API_KEY || gebouw.lat == null || gebouw.lng == null) {
+      return res.json({ beeld: null });
+    }
+
+    let beeld: string | null = null;
+    try {
+      beeld = await haalStreetViewBeeld(gebouw.lat, gebouw.lng);
+    } catch (err) {
+      req.log.warn({ err }, "Gevelbeeld ophalen mislukt");
+    }
+    res.json({ beeld });
+  } catch (err) {
+    req.log.error(err);
+    res.json({ beeld: null });
   }
 });
 

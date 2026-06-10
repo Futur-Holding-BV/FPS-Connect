@@ -235,6 +235,10 @@ export interface GebouwEmail {
   ai_tekeningen?: string | null;
   /** @nullable */
   ai_actiepunten?: string | null;
+  /** @nullable */
+  ai_relevant?: boolean | null;
+  /** @nullable */
+  ai_relevant_reden?: string | null;
   status: string;
   aangemaakt_op: string;
   bijlagen?: GebouwEmailBijlage[];
@@ -1803,6 +1807,11 @@ partij_naam?: string;
  * Indien true: inclusief gearchiveerde gebouwen. Standaard worden gearchiveerde gebouwen niet getoond.
  */
 inclusief_gearchiveerd?: boolean;
+};
+
+export type GetGebouwGevelbeeld200 = {
+  /** @nullable */
+  beeld: string | null;
 };
 
 export type ListVoorzieningenParams = {

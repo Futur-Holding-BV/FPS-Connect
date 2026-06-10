@@ -65,6 +65,7 @@ import type {
   Gebruiker,
   GebruikerInput,
   GebruikerUpdate,
+  GetGebouwGevelbeeld200,
   GetRecenteActiviteitParams,
   GetVervaldagenParams,
   HealthStatus,
@@ -1058,6 +1059,83 @@ export function useGetGebouwKaart<TData = Awaited<ReturnType<typeof getGebouwKaa
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetGebouwKaartQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetGebouwGevelbeeldUrl = (id: number,) => {
+
+
+
+
+  return `/api/gebouwen/${id}/gevelbeeld`
+}
+
+/**
+ * @summary Street View gevelafbeelding (base64 data-URL) voor het voorblad
+ */
+export const getGebouwGevelbeeld = async (id: number, options?: RequestInit): Promise<GetGebouwGevelbeeld200> => {
+
+  return customFetch<GetGebouwGevelbeeld200>(getGetGebouwGevelbeeldUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetGebouwGevelbeeldQueryKey = (id: number,) => {
+    return [
+    `/api/gebouwen/${id}/gevelbeeld`
+    ] as const;
+    }
+
+
+export const getGetGebouwGevelbeeldQueryOptions = <TData = Awaited<ReturnType<typeof getGebouwGevelbeeld>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getGebouwGevelbeeld>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetGebouwGevelbeeldQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getGebouwGevelbeeld>>> = ({ signal }) => getGebouwGevelbeeld(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getGebouwGevelbeeld>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetGebouwGevelbeeldQueryResult = NonNullable<Awaited<ReturnType<typeof getGebouwGevelbeeld>>>
+export type GetGebouwGevelbeeldQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Street View gevelafbeelding (base64 data-URL) voor het voorblad
+ */
+
+export function useGetGebouwGevelbeeld<TData = Awaited<ReturnType<typeof getGebouwGevelbeeld>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getGebouwGevelbeeld>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetGebouwGevelbeeldQueryOptions(id,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

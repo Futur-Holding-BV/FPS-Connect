@@ -262,7 +262,7 @@ function berekenHeading(lat1: number, lng1: number, lat2: number, lng2: number):
   return (((Math.atan2(y, x) * 180) / Math.PI) + 360) % 360;
 }
 
-async function haalStreetViewBeeld(lat: number, lng: number): Promise<string | null> {
+export async function haalStreetViewBeeld(lat: number, lng: number): Promise<string | null> {
   // Niet elke locatie heeft Street View-dekking; eerst de metadata controleren (gratis call).
   let panoLat: number | null = null;
   let panoLng: number | null = null;

@@ -44,6 +44,11 @@ export function GebruikerMenu() {
 
   const rol = gebruiker.rol as Rol;
   const rolLabel = ROL_INFO[rol]?.label ?? rol;
+  const VELD_FUNCTIES = ["Timmerman", "Uitvoerder"];
+  const veldFunctie = (gebruiker.functietitels ?? []).find((f) =>
+    VELD_FUNCTIES.includes(f),
+  );
+  const weergaveRol = veldFunctie ?? rolLabel;
   const huidigeTaal = TALEN.find((item) => item.code === taal);
   const initialen = gebruiker.naam
     .split(" ")
@@ -113,7 +118,7 @@ export function GebruikerMenu() {
           </Avatar>
           <div className="min-w-0 flex-1">
             <p className="text-sm font-medium truncate leading-tight">{gebruiker.naam}</p>
-            <p className="text-xs text-muted-foreground truncate">{rolLabel}</p>
+            <p className="text-xs text-muted-foreground truncate">{weergaveRol}</p>
           </div>
         </div>
 

@@ -269,6 +269,18 @@ export const GetGebouwKaartResponse = zod.object({
 
 
 /**
+ * @summary Street View gevelafbeelding (base64 data-URL) voor het voorblad
+ */
+export const GetGebouwGevelbeeldParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetGebouwGevelbeeldResponse = zod.object({
+  "beeld": zod.string().nullable()
+})
+
+
+/**
  * @summary Gebouwdetails ophalen
  */
 export const GetGebouwParams = zod.object({
@@ -3154,6 +3166,8 @@ export const ListGebouwEmailsResponseItem = zod.object({
   "ai_contactinfo": zod.string().nullish(),
   "ai_tekeningen": zod.string().nullish(),
   "ai_actiepunten": zod.string().nullish(),
+  "ai_relevant": zod.boolean().nullish(),
+  "ai_relevant_reden": zod.string().nullish(),
   "status": zod.string(),
   "aangemaakt_op": zod.string(),
   "bijlagen": zod.array(zod.object({
@@ -3344,6 +3358,8 @@ export const GetGebouwEmailResponse = zod.object({
   "ai_contactinfo": zod.string().nullish(),
   "ai_tekeningen": zod.string().nullish(),
   "ai_actiepunten": zod.string().nullish(),
+  "ai_relevant": zod.boolean().nullish(),
+  "ai_relevant_reden": zod.string().nullish(),
   "status": zod.string(),
   "aangemaakt_op": zod.string(),
   "bijlagen": zod.array(zod.object({
