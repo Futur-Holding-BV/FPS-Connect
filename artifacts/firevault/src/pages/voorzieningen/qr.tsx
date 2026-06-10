@@ -162,7 +162,7 @@ export default function VoorzieningQr() {
   if (!voorziening) {
     return (
       <div className="max-w-xl mx-auto py-12 text-center text-muted-foreground">
-        Voorziening niet gevonden.
+        Spot niet gevonden.
       </div>
     );
   }

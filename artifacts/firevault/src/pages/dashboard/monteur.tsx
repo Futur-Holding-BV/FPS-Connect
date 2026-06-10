@@ -180,7 +180,7 @@ export default function MonteurDashboard() {
             {!isControleur && (
               <Button variant="outline" className="justify-start h-12" asChild>
                 <Link href="/voorzieningen">
-                  <Clock className="h-4 w-4 mr-2 text-primary" /> Voorzieningen
+                  <Clock className="h-4 w-4 mr-2 text-primary" /> Spots
                 </Link>
               </Button>
             )}

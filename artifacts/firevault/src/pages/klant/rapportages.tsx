@@ -98,7 +98,7 @@ export default function KlantRapportages() {
                       <Badge variant="outline" className={`text-xs ${info.kleur}`}>{info.label}</Badge>
                     </div>
                     <div className="text-sm text-muted-foreground mt-0.5">
-                      Object: <span className="font-medium text-foreground">{i.voorziening_nummer ?? `Voorziening ${i.voorziening_id}`}</span>
+                      Object: <span className="font-medium text-foreground">{i.voorziening_nummer ?? `Spot ${i.voorziening_id}`}</span>
                       {i.gebouw_naam && <span> — {i.gebouw_naam}</span>}
                     </div>
                     {i.datum && (

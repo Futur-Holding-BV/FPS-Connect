@@ -169,7 +169,7 @@ export default function GebouwDetail() {
   const [archiveerBezig, setArchiveerBezig] = useState(false);
 
   if (isLoading) return <div className="p-6 text-muted-foreground">Laden...</div>;
-  if (!gebouw) return <div className="p-6">Gebouw niet gevonden.</div>;
+  if (!gebouw) return <div className="p-6">Project niet gevonden.</div>;
 
   const beschikbareGebruikers = (gebruikers ?? []).filter(
     (g) => !TEAM_UITGESLOTEN_ROLLEN.includes(g.rol ?? ""),
@@ -290,7 +290,7 @@ export default function GebouwDetail() {
   }
 
   const projectAdmin = (toewijzingen ?? []).find(
-    (t) => t.project_rol === "Project-administratie",
+    (t) => t.project_rol === "Project-admin",
   );
   const projectleider = (toewijzingen ?? []).find(
     (t) => t.project_rol === "Projectleider",
@@ -389,7 +389,7 @@ export default function GebouwDetail() {
             )}
             {projectAdmin && (
               <span className="flex items-center gap-1">
-                <ClipboardList className="h-3 w-3" /> Project-administratie:{" "}
+                <ClipboardList className="h-3 w-3" /> Project-admin:{" "}
                 {projectAdmin.naam}
               </span>
             )}
@@ -482,7 +482,7 @@ export default function GebouwDetail() {
         <TabsList className="grid w-full max-w-2xl grid-cols-3">
           <TabsTrigger value="project" className="gap-1.5">
             <Building2 className="h-4 w-4" />
-            <span className="hidden sm:inline">Project &amp; gegevens</span>
+            <span className="hidden sm:inline">Project &amp; Gebouwgegevens</span>
             <span className="sm:hidden">Project</span>
           </TabsTrigger>
           <TabsTrigger value="uitvoering" className="gap-1.5">
@@ -491,14 +491,14 @@ export default function GebouwDetail() {
           </TabsTrigger>
           <TabsTrigger value="beheer" className="gap-1.5">
             <Sparkles className="h-4 w-4" />
-            Beheer
+            Beheer &amp; Historie
           </TabsTrigger>
         </TabsList>
 
       <TabsContent value="project" className="space-y-4 mt-6">
         <SegmentKop
           icoon={<Building2 className="h-5 w-5" />}
-          titel="Project- en gebouwgegevens"
+          titel="Project & Gebouwgegevens"
           ondertitel="NAW-gegevens, contactpartijen, opdracht­omschrijving en open actiepunten"
           noodzakelijk
         />
@@ -641,7 +641,7 @@ export default function GebouwDetail() {
       <TabsContent value="uitvoering" className="space-y-4 mt-6">
         <SegmentKop
           icoon={<Wrench className="h-5 w-5" />}
-          titel="Uitvoering op locatie"
+          titel="Uitvoering"
           ondertitel="Bouwlagen, plattegronden, tekeningen en spot­registratie"
           noodzakelijk
         />
@@ -735,7 +735,7 @@ export default function GebouwDetail() {
       <TabsContent value="beheer" className="space-y-4 mt-6">
         <SegmentKop
           icoon={<Sparkles className="h-5 w-5" />}
-          titel="Beheer en communicatie"
+          titel="Beheer & Historie"
           ondertitel="E-mails, teamleden, 3D-weergave en projectactiviteit"
         />
         {isBeheerder ? (

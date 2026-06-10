@@ -587,7 +587,7 @@ function PrintVerdieping({
       <h3 className="prt-subtitel">
         {verdieping.naam}
         <span className="prt-subtitel-meta">
-          {alleVoorzieningen.length} {alleVoorzieningen.length === 1 ? "voorziening" : "voorzieningen"}
+          {alleVoorzieningen.length} {alleVoorzieningen.length === 1 ? "spot" : "spots"}
           {geplaatst.length > 0 ? ` · ${geplaatst.length} op plattegrond` : ""}
         </span>
       </h3>

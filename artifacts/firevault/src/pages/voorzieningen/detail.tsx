@@ -70,7 +70,7 @@ export default function VoorzieningDetail() {
         <Link href="/voorzieningen">
           <Button variant="outline" size="sm"><ArrowLeft className="h-4 w-4 mr-2" /> Terug</Button>
         </Link>
-        <div className="text-muted-foreground">Voorziening niet gevonden.</div>
+        <div className="text-muted-foreground">Spot niet gevonden.</div>
       </div>
     );
   }

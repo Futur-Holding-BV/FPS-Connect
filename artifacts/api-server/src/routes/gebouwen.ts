@@ -147,11 +147,24 @@ router.get("/gebouwen", async (req, res) => {
 
     if (zoek) {
       const q = (zoek as string).toLowerCase();
-      gebouwen = gebouwen.filter(
-        (g) =>
-          g.naam.toLowerCase().includes(q) ||
-          g.adres.toLowerCase().includes(q) ||
-          (g.stad ?? "").toLowerCase().includes(q),
+      // Opdrachtgever-/eigenaar-namen per gebouw t.b.v. zoeken
+      const zoekPartijen = await db.select().from(gebouwPartijenTable);
+      const opdrachtgeverPerGebouw = new Map<number, string>();
+      for (const p of zoekPartijen) {
+        if (p.type === "opdrachtgever" || p.type === "eigenaar") {
+          const huidig = opdrachtgeverPerGebouw.get(p.gebouwId) ?? "";
+          opdrachtgeverPerGebouw.set(p.gebouwId, `${huidig} ${p.naam}`);
+        }
+      }
+      gebouwen = gebouwen.filter((g) =>
+        [
+          g.naam,
+          g.projectnummer ?? "",
+          g.werknummer ?? "",
+          g.adres,
+          g.stad ?? "",
+          opdrachtgeverPerGebouw.get(g.id) ?? "",
+        ].some((veld) => veld.toLowerCase().includes(q)),
       );
     }
 

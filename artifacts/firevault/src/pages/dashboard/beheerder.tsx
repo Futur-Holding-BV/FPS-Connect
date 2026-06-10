@@ -53,8 +53,8 @@ export default function BeheerderDashboard() {
   const totaalVerdeling = verdelingRijen.reduce((s, r) => s + r.aantal, 0);
 
   const kpiKaarten: { label: string; waarde: number; icoon: typeof Building; kleur: string }[] = [
-    { label: "Gebouwen",            waarde: stats?.totaal_gebouwen ?? 0,      icoon: Building,      kleur: "text-primary" },
-    { label: "Voorzieningen",       waarde: stats?.totaal_voorzieningen ?? 0, icoon: ShieldCheck,   kleur: "text-blue-600" },
+    { label: "Projecten",           waarde: stats?.totaal_gebouwen ?? 0,      icoon: Building,      kleur: "text-primary" },
+    { label: "Spots",               waarde: stats?.totaal_voorzieningen ?? 0, icoon: ShieldCheck,   kleur: "text-blue-600" },
     { label: "Open onderhoud",      waarde: stats?.openstaande_onderhoud ?? 0,icoon: AlertTriangle, kleur: "text-orange-500" },
     { label: "Vervallen inspecties",waarde: stats?.vervallen_inspecties ?? 0, icoon: Calendar,      kleur: "text-destructive" },
   ];

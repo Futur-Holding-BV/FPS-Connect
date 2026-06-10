@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
   HelpCircle, CheckCircle2, AlertCircle, Minus,
-  Building2, Users, Mail, Layers, BookOpen, MapPin,
+  Building2, Users, Mail, Layers, MapPin,
 } from "lucide-react";
 
 type StapStatus = "gereed" | "ontbrekend" | "optioneel";
@@ -130,23 +130,15 @@ function StappenplanInhoud({
     },
     {
       nummer: 2,
-      titel: "Locatie en uitvoeringsbasis",
+      titel: "Locatie en plattegronden",
       stappen: [
         {
           id: "bouwlagen",
           icoon: <Layers className="h-4 w-4" />,
           titel: "Bouwlagen en plattegronden toevoegen",
           beschrijving:
-            "Maak bouwlagen aan en upload een PDF-plattegrond per verdieping via tabblad 'Uitvoering'. Zonder plattegrond kunnen monteurs geen voorzieningen intekenen.",
+            "Maak bouwlagen aan en upload een PDF-plattegrond per verdieping via tabblad 'Uitvoering'. Zonder plattegrond kunnen monteurs geen spots intekenen.",
           status: heeftBouwlagen ? "gereed" : "ontbrekend",
-        },
-        {
-          id: "bibliotheek",
-          icoon: <BookOpen className="h-4 w-4" />,
-          titel: "Applicaties/toepassingen in de bibliotheek beschikbaar maken",
-          beschrijving:
-            "Controleer in de Bibliotheek of de juiste applicaties, toepassingen en testdocumenten aanwezig zijn die de monteur nodig heeft voor dit project.",
-          status: "optioneel",
         },
       ],
     },

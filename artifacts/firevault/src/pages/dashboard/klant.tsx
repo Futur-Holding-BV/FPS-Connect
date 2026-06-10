@@ -81,7 +81,7 @@ export default function KlantDashboard() {
         <Card className="border-primary/20 bg-primary/5">
           <CardContent className="pt-4 pb-3 text-center">
             <div className="text-2xl font-bold text-primary">{gebouwen?.length ?? 0}</div>
-            <div className="text-xs text-primary/70 font-medium mt-0.5">Gebouwen</div>
+            <div className="text-xs text-primary/70 font-medium mt-0.5">Projecten</div>
           </CardContent>
         </Card>
         <Card className="border-green-200 bg-green-50">

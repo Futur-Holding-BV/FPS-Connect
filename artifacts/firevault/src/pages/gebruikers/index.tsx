@@ -39,10 +39,9 @@ type Rol = typeof ROLLEN[number];
 const FUNCTIETITELS = [
   "Projectleider",
   "Werkvoorbereider",
-  "Calculator",
-  "Commercieel",
-  "Project-administratie",
-  "Financieel",
+  "Project-admin",
+  "Uitvoerder",
+  "Timmerman",
 ] as const;
 
 const ROL_CONFIG: Record<Rol, {

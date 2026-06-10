@@ -15,10 +15,9 @@ const alleenBeheerder = requireRol("beheerder");
 const FUNCTIETITELS_TOEGESTAAN = [
   "Projectleider",
   "Werkvoorbereider",
-  "Calculator",
-  "Commercieel",
-  "Project-administratie",
-  "Financieel",
+  "Project-admin",
+  "Uitvoerder",
+  "Timmerman",
 ];
 
 const isBeheerderRol = (rol: unknown) =>
