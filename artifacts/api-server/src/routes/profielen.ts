@@ -1,9 +1,46 @@
 import { Router } from "express";
 import { db, profielenTable, gebruikersTable } from "@workspace/db";
 import { asc, eq } from "drizzle-orm";
+import { MODULE_IDS, MAX_NIVEAU } from "@workspace/permissies";
 import { requireBevoegdheid, requireRol } from "../middlewares/auth";
 
 const router = Router();
+
+const GELDIGE_MODULES = new Set<string>(MODULE_IDS);
+
+// Valideer een bevoegdheden-payload: alleen bekende module-sleutels en gehele
+// niveaus 0..MAX_NIVEAU. Retourneert een foutmelding bij ongeldige invoer, of
+// null wanneer de payload geldig is.
+function valideerBevoegdheden(invoer: unknown): {
+  bevoegdheden: Record<string, number>;
+  fout: string | null;
+} {
+  if (invoer == null) {
+    return { bevoegdheden: {}, fout: null };
+  }
+  if (typeof invoer !== "object" || Array.isArray(invoer)) {
+    return { bevoegdheden: {}, fout: "Bevoegdheden moet een object zijn" };
+  }
+  const bevoegdheden: Record<string, number> = {};
+  for (const [sleutel, waarde] of Object.entries(invoer as Record<string, unknown>)) {
+    if (!GELDIGE_MODULES.has(sleutel)) {
+      return { bevoegdheden: {}, fout: `Onbekende module: ${sleutel}` };
+    }
+    if (
+      typeof waarde !== "number" ||
+      !Number.isInteger(waarde) ||
+      waarde < 0 ||
+      waarde > MAX_NIVEAU
+    ) {
+      return {
+        bevoegdheden: {},
+        fout: `Ongeldig niveau voor module ${sleutel}: niveau moet een geheel getal 0 t/m ${MAX_NIVEAU} zijn`,
+      };
+    }
+    bevoegdheden[sleutel] = waarde;
+  }
+  return { bevoegdheden, fout: null };
+}
 
 type GekoppeldeGebruiker = {
   id: number;
@@ -93,7 +130,11 @@ router.post("/profielen", requireRol("hoofdbeheerder"), async (req, res) => {
       res.status(400).json({ error: "Naam is verplicht" });
       return;
     }
-    const bevoegdheden = (req.body?.bevoegdheden ?? {}) as Record<string, number>;
+    const { bevoegdheden, fout } = valideerBevoegdheden(req.body?.bevoegdheden);
+    if (fout) {
+      res.status(400).json({ error: fout });
+      return;
+    }
     const [bestaand] = await db
       .select({ id: profielenTable.id })
       .from(profielenTable)
@@ -133,7 +174,11 @@ router.patch("/profielen/:id", requireRol("hoofdbeheerder"), async (req, res) =>
       res.status(400).json({ error: "Naam is verplicht" });
       return;
     }
-    const bevoegdheden = (req.body?.bevoegdheden ?? {}) as Record<string, number>;
+    const { bevoegdheden, fout } = valideerBevoegdheden(req.body?.bevoegdheden);
+    if (fout) {
+      res.status(400).json({ error: fout });
+      return;
+    }
     const [naamConflict] = await db
       .select({ id: profielenTable.id })
       .from(profielenTable)
