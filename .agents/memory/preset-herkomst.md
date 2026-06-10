@@ -15,11 +15,20 @@ is onvoldoende: na een preset-wijziging matcht niemand meer, dus er is een
 expliciet herkomst-veld nodig dat handmatige wijzigingen overleeft.
 
 **How to apply:**
-- Het veld wordt alleen gezet wanneer in het gebruikersformulier een preset wordt
+- Het veld wordt gezet wanneer in het gebruikersformulier een preset wordt
   gekozen (BevoegdhedenEditor `onPresetGekozen`). Latere handmatige
-  bevoegdheden-wijzigingen veranderen `herkomst_profiel_id` NIET.
-- PATCH /gebruikers: `herkomst_profiel_id` undefined = ongemoeid, null = wissen,
-  id = (her)koppelen.
+  bevoegdheden-wijzigingen veranderen een BESTAANDE `herkomst_profiel_id` NIET.
+- Auto-herkomstdetectie (server): bij POST en PATCH /gebruikers wordt — als er
+  geen expliciete herkomst is meegestuurd — `herkomst_profiel_id` automatisch
+  gezet wanneer de bevoegdheden-matrix exact en als ENIGE overeenkomt met één
+  profiel (`vindUniekeHerkomstPreset` in gebruikers.ts). Guards tegen valse
+  koppeling: lege/rechtloze matrix (`heeftEnigeToegang`) → null; 0 of >1 match →
+  null. PATCH doet dit alleen wanneer bevoegdheden wijzigen én er nog geen
+  herkomst is (bestaand.herkomstProfielId == null).
+- `bevoegdhedenGelijk` is gedeeld in `@workspace/permissies` (niet meer
+  gedupliceerd in profielen.ts); niveau 0 == ontbrekende sleutel.
+- PATCH /gebruikers: `herkomst_profiel_id` undefined = ongemoeid (kan auto-gezet
+  worden), null = wissen, id = (her)koppelen.
 - GET /profielen verrijkt elk profiel met `gebruiker_aantal` + `gebruikers`
   ([{id, naam, rol, gelijk}]); `gelijk` = huidige bevoegdheden nog exact gelijk
   aan de preset (niveau 0 == ontbrekende sleutel). Afwijkende gebruikers krijgen

@@ -2,12 +2,14 @@ import crypto from "node:crypto";
 import { Router } from "express";
 import bcrypt from "bcryptjs";
 import { db } from "@workspace/db";
-import { gebruikersTable } from "@workspace/db";
+import { gebruikersTable, profielenTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { stuurUitnodigingsmail } from "../services/email";
 import { requireBevoegdheid } from "../middlewares/auth";
 import {
   heeftNiveau,
+  heeftEnigeToegang,
+  bevoegdhedenGelijk,
 } from "@workspace/permissies";
 
 const router = Router();
@@ -101,6 +103,26 @@ const mapGebruikerPubliek = (g: typeof gebruikersTable.$inferSelect) => ({
   bevoegdheden: {},
 });
 
+// Detecteer of een bevoegdheden-matrix exact overeenkomt met precies één
+// (preset)profiel. Dan kan dat profiel als herkomst worden gemarkeerd, ook
+// wanneer de bevoegdheden langs een andere weg dan de expliciete presetkeuze
+// gelijk aan dat profiel zijn gezet. Retourneert null bij:
+//   - een lege (geen-toegang) matrix — voorkomt koppeling van rechtloze accounts;
+//   - geen enkele match;
+//   - meerdere matches (toevallig identieke profielen) — voorkomt valse koppeling.
+async function vindUniekeHerkomstPreset(
+  bevoegdheden: Record<string, number>,
+): Promise<number | null> {
+  if (!heeftEnigeToegang(bevoegdheden)) return null;
+  const profielen = await db
+    .select({ id: profielenTable.id, bevoegdheden: profielenTable.bevoegdheden })
+    .from(profielenTable);
+  const matches = profielen.filter((p) =>
+    bevoegdhedenGelijk((p.bevoegdheden as Record<string, number>) ?? {}, bevoegdheden),
+  );
+  return matches.length === 1 ? matches[0]!.id : null;
+}
+
 async function isBeheerder(userId: number | undefined): Promise<boolean> {
   if (!userId) return false;
   const [g] = await db
@@ -164,10 +186,15 @@ router.post("/gebruikers", alleenBeheerder, async (req, res) => {
       }
       toegestaanBevoegdheden = bevoegdheden as Record<string, number>;
     }
-    const herkomstId =
+    let herkomstId =
       typeof herkomst_profiel_id === "number" && Number.isInteger(herkomst_profiel_id)
         ? herkomst_profiel_id
         : null;
+    // Geen expliciete preset gekozen, maar de meegestuurde matrix komt exact en
+    // als enige overeen met een profiel? Markeer dat profiel dan als herkomst.
+    if (herkomstId == null) {
+      herkomstId = await vindUniekeHerkomstPreset(toegestaanBevoegdheden);
+    }
     const gehasht = wachtwoord ? await bcrypt.hash(String(wachtwoord), 10) : null;
     const [g] = await db
       .insert(gebruikersTable)
@@ -225,7 +252,11 @@ router.patch("/gebruikers/:id", alleenBeheerder, async (req, res) => {
     // Bestaande rol én functietitels ophalen: zo wist een partiële PATCH niets
     // onterecht, terwijl een expliciete rolwissel de oude functies wél opschoont.
     const [bestaand] = await db
-      .select({ rol: gebruikersTable.rol, functietitels: gebruikersTable.functietitels })
+      .select({
+        rol: gebruikersTable.rol,
+        functietitels: gebruikersTable.functietitels,
+        herkomstProfielId: gebruikersTable.herkomstProfielId,
+      })
       .from(gebruikersTable)
       .where(eq(gebruikersTable.id, id));
     if (!bestaand) return res.status(404).json({ error: "Gebruiker niet gevonden" });
@@ -288,6 +319,11 @@ router.patch("/gebruikers/:id", alleenBeheerder, async (req, res) => {
         typeof herkomst_profiel_id === "number" && Number.isInteger(herkomst_profiel_id)
           ? herkomst_profiel_id
           : null;
+    } else if (wijziging.bevoegdheden !== undefined && bestaand.herkomstProfielId == null) {
+      // Geen expliciete herkomst meegestuurd, bevoegdheden wijzigen, en er is nog
+      // geen herkomst: koppel het profiel dat exact en als enige overeenkomt.
+      const auto = await vindUniekeHerkomstPreset(wijziging.bevoegdheden);
+      if (auto != null) wijziging.herkomstProfielId = auto;
     }
     if (wachtwoord) {
       wijziging.wachtwoord = await bcrypt.hash(String(wachtwoord), 10);

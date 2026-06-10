@@ -104,6 +104,22 @@ export function heeftEnigeToegang(
   return MODULE_IDS.some((m) => niveauVan(bevoegdheden, m) >= 1);
 }
 
+// Diepe gelijkheid van twee bevoegdheden-matrices, waarbij niveau 0 en een
+// ontbrekende sleutel als gelijk gelden (beide = geen toegang). Gedeeld door de
+// profielen- en gebruikers-routes voor preset-vergelijking en herkomstdetectie.
+export function bevoegdhedenGelijk(
+  a: Bevoegdheden | null | undefined,
+  b: Bevoegdheden | null | undefined,
+): boolean {
+  const aa = a ?? {};
+  const bb = b ?? {};
+  const sleutels = new Set([...Object.keys(aa), ...Object.keys(bb)]);
+  for (const s of sleutels) {
+    if ((aa[s] ?? 0) !== (bb[s] ?? 0)) return false;
+  }
+  return true;
+}
+
 // ── Basisrollen ──────────────────────────────────────────────────────────
 // hoofdbeheerder: omzeilt de matrix volledig.
 // gebruiker: toegang volledig bepaald door de matrix.

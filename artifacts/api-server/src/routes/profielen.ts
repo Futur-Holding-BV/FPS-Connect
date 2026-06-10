@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { db, profielenTable, gebruikersTable } from "@workspace/db";
 import { asc, eq } from "drizzle-orm";
-import { MODULE_IDS, MAX_NIVEAU } from "@workspace/permissies";
+import { MODULE_IDS, MAX_NIVEAU, bevoegdhedenGelijk } from "@workspace/permissies";
 import { requireBevoegdheid, requireRol } from "../middlewares/auth";
 
 const router = Router();
@@ -62,19 +62,6 @@ function serialiseer(
     gebruiker_aantal: gebruikers.length,
     gebruikers,
   };
-}
-
-// Diepe gelijkheid van twee bevoegdheden-matrices, waarbij niveau 0 en een
-// ontbrekende sleutel als gelijk gelden (beide = geen toegang).
-function bevoegdhedenGelijk(
-  a: Record<string, number>,
-  b: Record<string, number>,
-): boolean {
-  const sleutels = new Set([...Object.keys(a), ...Object.keys(b)]);
-  for (const s of sleutels) {
-    if ((a[s] ?? 0) !== (b[s] ?? 0)) return false;
-  }
-  return true;
 }
 
 router.get("/profielen", requireBevoegdheid("gebruikers", 1), async (req, res) => {
