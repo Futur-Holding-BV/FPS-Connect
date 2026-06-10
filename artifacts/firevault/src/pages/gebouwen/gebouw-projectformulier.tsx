@@ -312,7 +312,7 @@ function ContactRij({
   // Achtergrondkleur per status
   const achtergrond =
     status === "bevestigd"
-      ? "border-green-200 bg-green-50"
+      ? "border-muted bg-muted/40"
       : status === "afgewezen"
         ? "border-muted bg-muted/30 opacity-60"
         : relevantie === "ter_controle"
@@ -332,7 +332,7 @@ function ContactRij({
             {rolLabel(contact.rol)}
           </Badge>
           {status === "bevestigd" && (
-            <Badge className="bg-green-100 text-green-700 border-green-200 text-xs font-normal px-1.5">
+            <Badge variant="secondary" className="text-xs font-normal px-1.5 text-muted-foreground">
               <Check className="h-2.5 w-2.5 mr-0.5" /> Bevestigd
             </Badge>
           )}
@@ -687,7 +687,7 @@ export function Projectformulier({
           <CardTitle className="flex items-center gap-2 text-base">
             <ClipboardList className="h-4 w-4" /> Projectinformatie
             {geverifieerd && (
-              <Badge className="bg-green-100 text-green-700 border-green-200 text-xs font-normal">
+              <Badge variant="secondary" className="text-xs font-normal text-muted-foreground">
                 <ShieldCheck className="h-3 w-3 mr-1" /> Gecontroleerd
               </Badge>
             )}
@@ -748,7 +748,7 @@ export function Projectformulier({
               )}
             </CardTitle>
             {geverifieerd ? (
-              <p className="flex items-center gap-1.5 text-xs text-green-700">
+              <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
                 <ShieldCheck className="h-3.5 w-3.5" />
                 Gecontroleerd
                 {samenvatting?.gecontroleerd_door ? ` door ${samenvatting.gecontroleerd_door}` : ""}
@@ -801,7 +801,7 @@ export function Projectformulier({
                 <Sparkles className="h-2.5 w-2.5 mr-0.5" /> AI aangevuld
               </Badge>
             ) : geverifieerd ? (
-              <Badge className="bg-green-100 text-green-700 border-green-200 text-xs font-normal normal-case tracking-normal ml-1">
+              <Badge variant="secondary" className="text-xs font-normal normal-case tracking-normal ml-1 text-muted-foreground">
                 <ShieldCheck className="h-2.5 w-2.5 mr-0.5" /> Bevestigd
               </Badge>
             ) : undefined}
@@ -1075,7 +1075,7 @@ export function Projectformulier({
               {/* Bevestigde contacten */}
               {bevestigdeContacten.length > 0 && (
                 <div className="space-y-1.5">
-                  <p className="text-xs text-green-700 font-medium flex items-center gap-1">
+                  <p className="text-xs text-muted-foreground font-medium flex items-center gap-1">
                     <ShieldCheck className="h-3 w-3" /> Bevestigd ({bevestigdeContacten.length})
                   </p>
                   <ul className="space-y-1.5">

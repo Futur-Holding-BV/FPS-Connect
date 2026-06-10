@@ -29,3 +29,9 @@ env NIET; nooit secret-waarden printen):
   automatisch de proxy zodra `AI_INTEGRATIONS_OPENAI_BASE_URL` én `_API_KEY` gezet zijn
   (activeren via `setupReplitAIIntegrations({providerSlug:"openai", ...})`). Verbruik gaat op
   Replit-credits → eerst gebruiker om toestemming vragen (facturatie).
+
+**Status (resolved):** gebruiker gaf toestemming; Replit OpenAI-integratie is GEACTIVEERD en
+geverifieerd werkend (chat/completions HTTP 200 via de proxy, geen `insufficient_quota` meer;
+api-server logt "OpenAI-configuratie geladen"). De OpenAI-blokkade is dus weg — alleen project
+gebruikt nu de Replit-proxy ipv eigen `OPENAI_API_KEY`. Google Static Maps 403 kan los nog spelen.
+Na (her)activeren altijd de api-server herstarten zodat de nieuwe env-vars geladen worden.
