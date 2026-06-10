@@ -11,4 +11,8 @@ export default defineConfig({
   dbCredentials: {
     url: process.env.DATABASE_URL,
   },
+  // De session-tabel wordt beheerd door connect-pg-simple (express-session) en
+  // staat bewust niet in het drizzle-schema. Zonder deze filter wil drizzle hem
+  // bij elke push droppen, wat de post-merge push laat falen en sessies wist.
+  tablesFilter: ["!session"],
 });
