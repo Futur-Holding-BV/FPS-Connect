@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import {
   useListGebouwTekeningen,
   useCreateGebouwTekening,
+  useUpdateGebouwTekening,
   useDeleteGebouwTekening,
   useCreateVerdieping,
   useAiAnalyseTekening,
@@ -18,6 +19,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import {
   Select,
   SelectContent,
@@ -41,6 +43,7 @@ const TEKENING_TYPES = [
   { waarde: "situatietekening", label: "Situatietekening" },
   { waarde: "installatietekening", label: "Installatietekening" },
   { waarde: "detailtekening", label: "Detailtekening" },
+  { waarde: "document", label: "Document / rapport" },
   { waarde: "overig", label: "Overig" },
 ];
 
@@ -69,6 +72,7 @@ export default function GebouwTekeningen({
   const queryClient = useQueryClient();
   const { data: tekeningen, isLoading } = useListGebouwTekeningen(gebouwId);
   const maakTekening = useCreateGebouwTekening();
+  const wijzigTekening = useUpdateGebouwTekening();
   const verwijderTekening = useDeleteGebouwTekening();
   const maakVerdieping = useCreateVerdieping();
   const analyseTekening = useAiAnalyseTekening();
@@ -84,6 +88,7 @@ export default function GebouwTekeningen({
   const [nieuweBouwlaagNiveau, setNieuweBouwlaagNiveau] = useState("0");
   const [bestandsnaam, setBestandsnaam] = useState("");
   const [objectPath, setObjectPath] = useState("");
+  const [zichtbaarMonteur, setZichtbaarMonteur] = useState(false);
   const [aiVoorstel, setAiVoorstel] = useState<TekeningAiAnalyseResultaat | null>(
     null,
   );
@@ -148,6 +153,7 @@ export default function GebouwTekeningen({
     setNieuweBouwlaagNiveau("0");
     setBestandsnaam("");
     setObjectPath("");
+    setZichtbaarMonteur(false);
     setAiVoorstel(null);
     setFout("");
     setFormOpen(false);
@@ -182,12 +188,25 @@ export default function GebouwTekeningen({
           schaal: schaal || undefined,
           url: objectPath,
           verdieping_id,
+          zichtbaar_monteur: zichtbaarMonteur,
         },
       });
       reset();
       queryClient.invalidateQueries();
     } catch {
       setFout("Opslaan mislukt. Probeer het opnieuw.");
+    }
+  }
+
+  async function toggleZichtbaar(t: Tekening, zichtbaar: boolean) {
+    try {
+      await wijzigTekening.mutateAsync({
+        tekeningId: t.id,
+        data: { zichtbaar_monteur: zichtbaar },
+      });
+      queryClient.invalidateQueries();
+    } catch {
+      setFout("Bijwerken mislukt. Probeer het opnieuw.");
     }
   }
 
@@ -202,10 +221,13 @@ export default function GebouwTekeningen({
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <FileText className="h-5 w-5 text-primary" /> Overige tekeningen
+          <FileText className="h-5 w-5 text-primary" /> Overige tekeningen en
+          documenten
         </CardTitle>
         <p className="text-sm text-muted-foreground">
-          Gevelaanzichten, doorsnedes en andere bouwtekeningen. Plattegronden
+          Gevelaanzichten, doorsnedes, andere bouwtekeningen en documenten zoals
+          rapporten (PDF). Documenten kun je zichtbaar maken voor de monteur op de
+          mobiele app; ze maken geen deel uit van het opleverrapport. Plattegronden
           beheer je in de sectie Plattegronden.
         </p>
       </CardHeader>
@@ -243,18 +265,36 @@ export default function GebouwTekeningen({
                         schaal {t.schaal}
                       </span>
                     )}
+                    {t.zichtbaar_monteur && (
+                      <Badge
+                        variant="outline"
+                        className="text-xs shrink-0 border-green-600 text-green-700"
+                      >
+                        Zichtbaar in monteur-app
+                      </Badge>
+                    )}
                   </div>
                 </div>
                 {isBeheerder && (
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7 shrink-0 text-muted-foreground hover:text-destructive"
-                    onClick={() => verwijder(t.id)}
-                    disabled={verwijderTekening.isPending}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
+                  <div className="flex items-center gap-3 shrink-0">
+                    <label className="flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer">
+                      <Switch
+                        checked={t.zichtbaar_monteur}
+                        onCheckedChange={(v) => toggleZichtbaar(t, v)}
+                        disabled={wijzigTekening.isPending}
+                      />
+                      Monteur-app
+                    </label>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                      onClick={() => verwijder(t.id)}
+                      disabled={verwijderTekening.isPending}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
                 )}
               </li>
             ))}
@@ -403,6 +443,18 @@ export default function GebouwTekeningen({
                 </Button>
               </div>
             </div>
+            <label className="flex items-center gap-2 text-sm cursor-pointer">
+              <Switch
+                checked={zichtbaarMonteur}
+                onCheckedChange={setZichtbaarMonteur}
+              />
+              <span>Zichtbaar voor monteur op mobiele app</span>
+            </label>
+            <p className="text-xs text-muted-foreground">
+              Aangevinkt verschijnt dit bestand als leesbaar document voor de
+              monteur op de bouwplaats. Documenten maken geen deel uit van het
+              opleverrapport.
+            </p>
             {fout && <p className="text-sm text-destructive">{fout}</p>}
             <div className="flex gap-2">
               <Button

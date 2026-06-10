@@ -7,7 +7,15 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Map, Loader2, Upload, ExternalLink } from "lucide-react";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Map, Loader2, Upload, ExternalLink, Plus } from "lucide-react";
 
 export default function GebouwPlattegronden({
   gebouwId,
@@ -26,8 +34,14 @@ export default function GebouwPlattegronden({
   const doelId = useRef<number | null>(null);
   const [bezigId, setBezigId] = useState<number | null>(null);
   const [fout, setFout] = useState("");
+  const [formOpen, setFormOpen] = useState(false);
+  const [keuzeId, setKeuzeId] = useState<string>("");
+  const [bevestigVervangen, setBevestigVervangen] = useState(false);
 
   const gesorteerd = [...verdiepingen].sort((a, b) => a.niveau - b.niveau);
+  const gekozen = gesorteerd.find((v) => String(v.id) === keuzeId);
+  const heeftAl = Boolean(gekozen?.plattegrond_url);
+  const heeftSpots = (gekozen?.totaal_voorzieningen ?? 0) > 0;
 
   function kiesVoor(verdiepingId: number) {
     setFout("");
@@ -51,6 +65,9 @@ export default function GebouwPlattegronden({
         data: { plattegrond_url: upload.objectPath },
       });
       queryClient.invalidateQueries();
+      setFormOpen(false);
+      setBevestigVervangen(false);
+      setKeuzeId("");
     } catch {
       setFout("Uploaden mislukt. Probeer het opnieuw.");
     } finally {
@@ -150,6 +167,91 @@ export default function GebouwPlattegronden({
               );
             })}
           </ul>
+        )}
+
+        {isBeheerder && gesorteerd.length > 0 && !formOpen && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              setFormOpen(true);
+              setKeuzeId(String(gesorteerd[0]!.id));
+              setBevestigVervangen(false);
+              setFout("");
+            }}
+          >
+            <Plus className="h-4 w-4 mr-1" /> Tekening toevoegen
+          </Button>
+        )}
+
+        {isBeheerder && formOpen && (
+          <div className="space-y-3 rounded-md border p-3">
+            <div className="space-y-1">
+              <Label>Bouwlaag</Label>
+              <Select
+                value={keuzeId}
+                onValueChange={(v) => {
+                  setKeuzeId(v);
+                  setBevestigVervangen(false);
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Kies een bouwlaag" />
+                </SelectTrigger>
+                <SelectContent>
+                  {gesorteerd.map((v) => (
+                    <SelectItem key={v.id} value={String(v.id)}>
+                      {v.naam}
+                      {v.plattegrond_url ? " — plattegrond aanwezig" : ""}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            {heeftAl && (
+              <p className="text-xs text-amber-700">
+                Deze bouwlaag heeft al een plattegrond. Uploaden vervangt de
+                bestaande
+                {heeftSpots
+                  ? "; geplaatste spots kunnen daardoor verschuiven"
+                  : ""}
+                .
+              </p>
+            )}
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                disabled={!keuzeId || bezigId === Number(keuzeId)}
+                onClick={() => {
+                  if (!keuzeId) return;
+                  if (heeftAl && heeftSpots && !bevestigVervangen) {
+                    setBevestigVervangen(true);
+                    return;
+                  }
+                  setFout("");
+                  doelId.current = Number(keuzeId);
+                  inputRef.current?.click();
+                }}
+              >
+                {bezigId === Number(keuzeId) ? (
+                  <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                ) : (
+                  <Upload className="h-4 w-4 mr-1" />
+                )}
+                {bevestigVervangen ? "Toch vervangen" : "Bestand kiezen"}
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setFormOpen(false);
+                  setBevestigVervangen(false);
+                }}
+              >
+                Annuleren
+              </Button>
+            </div>
+          </div>
         )}
 
         {fout && <p className="text-sm text-destructive">{fout}</p>}

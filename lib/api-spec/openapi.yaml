@@ -3741,7 +3741,7 @@ components:
 
     Tekening:
       type: object
-      required: [id, gebouw_id, naam, type, url, aangemaakt_op]
+      required: [id, gebouw_id, naam, type, url, zichtbaar_monteur, aangemaakt_op]
       properties:
         id:
           type: integer
@@ -3759,6 +3759,9 @@ components:
           nullable: true
         url:
           type: string
+        zichtbaar_monteur:
+          type: boolean
+          description: Of dit document zichtbaar is voor de monteur in de mobiele app.
         aangemaakt_op:
           type: string
 
@@ -3777,6 +3780,8 @@ components:
         verdieping_id:
           type: integer
           nullable: true
+        zichtbaar_monteur:
+          type: boolean
 
     TekeningUpdate:
       type: object
@@ -3790,6 +3795,8 @@ components:
         verdieping_id:
           type: integer
           nullable: true
+        zichtbaar_monteur:
+          type: boolean
 
     TekeningAiAnalyseInput:
       type: object

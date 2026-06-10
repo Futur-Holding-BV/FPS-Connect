@@ -1152,6 +1152,7 @@ function tekeningRij(t: typeof tekeningenTable.$inferSelect) {
     type: t.type,
     schaal: t.schaal,
     url: t.url,
+    zichtbaar_monteur: t.zichtbaarMonteur,
     aangemaakt_op: t.aangemaaktOp.toISOString(),
   };
 }
@@ -1168,7 +1169,15 @@ router.get("/gebouwen/:id/tekeningen", async (req, res) => {
       .select()
       .from(tekeningenTable)
       .where(eq(tekeningenTable.gebouwId, gebouwId));
-    res.json(rows.map(tekeningRij));
+    // Documenten zijn intern: alleen beheerders zien ze altijd. Voor alle andere
+    // rollen zijn documenten enkel zichtbaar als ze expliciet zijn aangevinkt
+    // (zichtbaar_monteur). Overige tekeningtypen blijven gewoon zichtbaar.
+    const { rol } = await effectieveContext(req);
+    const isBeheerder = rol === "beheerder" || rol === "hoofdbeheerder";
+    const zichtbaar = isBeheerder
+      ? rows
+      : rows.filter((t) => t.type !== "document" || t.zichtbaarMonteur);
+    res.json(zichtbaar.map(tekeningRij));
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Interne serverfout" });
@@ -1182,7 +1191,7 @@ router.post(
   async (req, res) => {
     try {
       const gebouwId = parseInt(req.params.id);
-      const { naam, type, schaal, url, verdieping_id } = req.body ?? {};
+      const { naam, type, schaal, url, verdieping_id, zichtbaar_monteur } = req.body ?? {};
       if (!naam || typeof naam !== "string") {
         return res.status(400).json({ error: "naam is verplicht" });
       }
@@ -1201,6 +1210,7 @@ router.post(
           schaal: schaal ?? null,
           url,
           verdiepingId: verdieping_id ?? null,
+          zichtbaarMonteur: zichtbaar_monteur === true,
         })
         .returning();
       res.status(201).json(tekeningRij(tekening!));
@@ -1218,12 +1228,13 @@ router.patch(
   async (req, res) => {
     try {
       const tekeningId = parseInt(req.params.tekeningId);
-      const { naam, type, schaal, verdieping_id } = req.body ?? {};
+      const { naam, type, schaal, verdieping_id, zichtbaar_monteur } = req.body ?? {};
       const updates: Record<string, unknown> = { bijgewerktOp: new Date() };
       if (naam !== undefined) updates.naam = naam;
       if (type !== undefined) updates.type = type;
       if (schaal !== undefined) updates.schaal = schaal;
       if (verdieping_id !== undefined) updates.verdiepingId = verdieping_id;
+      if (zichtbaar_monteur !== undefined) updates.zichtbaarMonteur = zichtbaar_monteur === true;
 
       const [tekening] = await db
         .update(tekeningenTable)

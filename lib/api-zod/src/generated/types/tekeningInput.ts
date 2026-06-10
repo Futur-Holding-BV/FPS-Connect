@@ -12,4 +12,5 @@ export interface TekeningInput {
   schaal?: string;
   url: string;
   verdieping_id?: number | null;
+  zichtbaar_monteur?: boolean;
 }

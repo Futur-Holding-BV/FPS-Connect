@@ -32,6 +32,7 @@ function RootLayoutNav() {
       <Stack.Screen name="gebouwen" />
       <Stack.Screen name="gebouw/[id]" />
       <Stack.Screen name="plattegrond/[verdiepingId]" />
+      <Stack.Screen name="document/[tekeningId]" />
       <Stack.Screen name="info" />
     </Stack>
   );

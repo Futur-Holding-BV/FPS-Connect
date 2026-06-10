@@ -14,5 +14,7 @@ export interface Tekening {
   type: string;
   schaal?: string | null;
   url: string;
+  /** Of dit document zichtbaar is voor de monteur in de mobiele app. */
+  zichtbaar_monteur: boolean;
   aangemaakt_op: string;
 }

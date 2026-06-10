@@ -738,7 +738,7 @@ export default function GebouwPrint() {
   const projectOmschrijving =
     (samenvatting?.opdrachtomschrijving?.trim() || (gebouw as { omschrijving?: string | null }).omschrijving?.trim()) ?? "";
 
-  const projectTekeningen = (tekeningen ?? []);
+  const projectTekeningen = (tekeningen ?? []).filter((t) => t.type !== "document");
   const projectEmails     = (emails ?? []);
   const heeftDocumenten   = projectTekeningen.length > 0 || projectEmails.length > 0;
 

@@ -91,6 +91,7 @@ export const tekeningenTable = pgTable("tekeningen", {
   type: text("type").notNull(),
   schaal: text("schaal"),
   url: text("url").notNull(),
+  zichtbaarMonteur: boolean("zichtbaar_monteur").notNull().default(false),
   aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
   bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
 });

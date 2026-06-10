@@ -830,6 +830,7 @@ export const ListGebouwTekeningenResponseItem = zod.object({
   "type": zod.string(),
   "schaal": zod.string().nullish(),
   "url": zod.string(),
+  "zichtbaar_monteur": zod.boolean().describe('Of dit document zichtbaar is voor de monteur in de mobiele app.'),
   "aangemaakt_op": zod.string()
 })
 export const ListGebouwTekeningenResponse = zod.array(ListGebouwTekeningenResponseItem)
@@ -847,7 +848,8 @@ export const CreateGebouwTekeningBody = zod.object({
   "type": zod.string(),
   "schaal": zod.string().optional(),
   "url": zod.string(),
-  "verdieping_id": zod.number().nullish()
+  "verdieping_id": zod.number().nullish(),
+  "zichtbaar_monteur": zod.boolean().optional()
 })
 
 export const CreateGebouwTekeningResponse = zod.void()
@@ -864,7 +866,8 @@ export const UpdateGebouwTekeningBody = zod.object({
   "naam": zod.string().optional(),
   "type": zod.string().optional(),
   "schaal": zod.string().optional(),
-  "verdieping_id": zod.number().nullish()
+  "verdieping_id": zod.number().nullish(),
+  "zichtbaar_monteur": zod.boolean().optional()
 })
 
 export const UpdateGebouwTekeningResponse = zod.object({
@@ -875,6 +878,7 @@ export const UpdateGebouwTekeningResponse = zod.object({
   "type": zod.string(),
   "schaal": zod.string().nullish(),
   "url": zod.string(),
+  "zichtbaar_monteur": zod.boolean().describe('Of dit document zichtbaar is voor de monteur in de mobiele app.'),
   "aangemaakt_op": zod.string()
 })
 

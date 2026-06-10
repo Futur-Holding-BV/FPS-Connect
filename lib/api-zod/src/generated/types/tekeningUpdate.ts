@@ -11,4 +11,5 @@ export interface TekeningUpdate {
   type?: string;
   schaal?: string;
   verdieping_id?: number | null;
+  zichtbaar_monteur?: boolean;
 }

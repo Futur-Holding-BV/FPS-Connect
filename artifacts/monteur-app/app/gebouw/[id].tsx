@@ -1,5 +1,6 @@
 import {
   useGetGebouw,
+  useListGebouwTekeningen,
   useListVerdiepingen,
 } from "@workspace/api-client-react";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -31,8 +32,10 @@ export default function GebouwDetail() {
 
   const { data: gebouw } = useGetGebouw(gebouwId);
   const { data: verdiepingen, isLoading } = useListVerdiepingen(gebouwId);
+  const { data: tekeningen } = useListGebouwTekeningen(gebouwId);
 
   const gesorteerd = [...(verdiepingen ?? [])].sort((a, b) => a.niveau - b.niveau);
+  const documenten = (tekeningen ?? []).filter((t) => t.zichtbaar_monteur === true);
 
   return (
     <View style={{ flex: 1, backgroundColor: c.background }}>
@@ -75,6 +78,75 @@ export default function GebouwDetail() {
             <Text style={{ textAlign: "center", color: c.mutedForeground, marginTop: 48, fontFamily: "Inter_400Regular" }}>
               Dit gebouw heeft nog geen verdiepingen.
             </Text>
+          }
+          ListFooterComponent={
+            documenten.length > 0 ? (
+              <View style={{ marginTop: 12, gap: 10 }}>
+                <Text
+                  style={{
+                    color: c.mutedForeground,
+                    fontSize: 13,
+                    fontFamily: "Inter_600SemiBold",
+                    textTransform: "uppercase",
+                    letterSpacing: 0.5,
+                  }}
+                >
+                  Documenten
+                </Text>
+                {documenten.map((t) => {
+                  const ext = (t.url.split("?")[0].split(".").pop() ?? "")
+                    .toUpperCase()
+                    .slice(0, 4);
+                  return (
+                  <Pressable
+                    key={t.id}
+                    onPress={() =>
+                      router.push(
+                        `/document/${t.id}?url=${encodeURIComponent(t.url)}&naam=${encodeURIComponent(t.naam)}`,
+                      )
+                    }
+                    style={({ pressed }) => ({
+                      backgroundColor: c.card,
+                      borderRadius: c.radius,
+                      borderWidth: 1,
+                      borderColor: c.border,
+                      padding: 16,
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: 14,
+                      opacity: pressed ? 0.85 : 1,
+                    })}
+                  >
+                    <View
+                      style={{
+                        width: 44,
+                        height: 44,
+                        borderRadius: 10,
+                        backgroundColor: c.secondary,
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    >
+                      <Text style={{ color: c.mutedForeground, fontSize: 11, fontFamily: "Inter_700Bold" }}>
+                        {ext || "DOC"}
+                      </Text>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text
+                        style={{ fontSize: 16, color: c.foreground, fontFamily: "Inter_600SemiBold" }}
+                        numberOfLines={1}
+                      >
+                        {t.naam}
+                      </Text>
+                      <Text style={{ fontSize: 13, color: c.mutedForeground, marginTop: 2, fontFamily: "Inter_400Regular" }}>
+                        Tik om te openen
+                      </Text>
+                    </View>
+                  </Pressable>
+                  );
+                })}
+              </View>
+            ) : null
           }
           renderItem={({ item }) => {
             const heeftPlan = !!item.plattegrond_url;

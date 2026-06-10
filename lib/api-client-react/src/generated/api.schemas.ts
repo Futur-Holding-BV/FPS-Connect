@@ -607,6 +607,8 @@ export interface Tekening {
   type: string;
   schaal?: string | null;
   url: string;
+  /** Of dit document zichtbaar is voor de monteur in de mobiele app. */
+  zichtbaar_monteur: boolean;
   aangemaakt_op: string;
 }
 
@@ -616,6 +618,7 @@ export interface TekeningInput {
   schaal?: string;
   url: string;
   verdieping_id?: number | null;
+  zichtbaar_monteur?: boolean;
 }
 
 export interface TekeningUpdate {
@@ -623,6 +626,7 @@ export interface TekeningUpdate {
   type?: string;
   schaal?: string;
   verdieping_id?: number | null;
+  zichtbaar_monteur?: boolean;
 }
 
 export interface TekeningAiAnalyseInput {
