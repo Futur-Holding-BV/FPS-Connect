@@ -2,52 +2,55 @@
 
 **Doel Versie 1.0:** "Administratief gereed voor uitvoering" — een project moet volledig binnen de app kunnen worden voorbereid voor uitvoering, zonder Excel, losse e-mails of externe documenten.
 
-**Aard van dit document:** nulmeting. Het beschrijft per onderdeel wat af is, wat ontbreekt en wat afwijkt van het ontwerp. Er is in deze fase niets hersteld; herstel gebeurt in de vervolgtaak na formeel akkoord.
+**Aard van dit document:** functionele audit, oorspronkelijk opgesteld als nulmeting. De bevindingen per onderdeel zijn behouden als referentie. Een deel van het herstel is daarna — na akkoord van de gebruiker — in dezelfde taak uitgevoerd; per bevinding staat hieronder de **actuele herstelstatus**. De resterende punten (met name het rolmodel) volgen na formele bevestiging.
 
-**Datum:** 10 juni 2026
+**Datum nulmeting:** 10 juni 2026 · **Laatst bijgewerkt (herstelstatus):** 10 juni 2026
 
-**Statuslegenda:** Afgerond · Deels uitgevoerd · Ontbreekt · Wijkt af van ontwerp
-
----
-
-## Samenvatting per onderdeel
-
-| # | Onderdeel | Status |
-|---|-----------|--------|
-| 1 | Dashboard | Deels uitgevoerd |
-| 2 | Projecten (overzicht) | Deels uitgevoerd |
-| 3 | Projectformulier | Afgerond |
-| 4 | E-mailverwerking | Afgerond |
-| 5 | Gebouwgegevens | Afgerond |
-| 6 | Gebruikers & rechten | Wijkt af van ontwerp |
-| 7 | Stappenplan | Wijkt af van ontwerp |
-| 8 | Segmentindeling gebouwkaart | Wijkt af van ontwerp |
+**Statuslegenda (nulmeting):** Afgerond · Deels uitgevoerd · Ontbreekt · Wijkt af van ontwerp
+**Herstellegenda:** Hersteld · Deels hersteld · Open
 
 ---
 
-## 1. Dashboard — Deels uitgevoerd
+## Herstelstatus in het kort
 
-**Wat werkt.** Er zijn rolgebonden dashboards (beheerder, monteur, klant) met live statistieken voor gebouwen, voorzieningen, onderhoud en aankomende inspectiedatums. De cijfers worden server-side berekend en tonen correct.
+| # | Onderdeel | Nulmeting | Herstelstatus |
+|---|-----------|-----------|---------------|
+| 1 | Dashboard | Deels uitgevoerd | Deels hersteld (terminologie + "Afgekeurde inspecties" gedaan; legacy `dashboard.tsx` open) |
+| 2 | Gebouwen (overzicht) | Deels uitgevoerd | Hersteld (zoeken op projectnummer/werknummer toegevoegd) |
+| 3 | Projectformulier | Afgerond | n.v.t. |
+| 4 | E-mailverwerking | Afgerond | n.v.t. |
+| 5 | Gebouwgegevens | Afgerond | n.v.t. |
+| 6 | Gebruikers & rechten | Wijkt af van ontwerp | Deels hersteld (functietitel-whitelist web/server gesynchroniseerd; definitieve rolmodel-beslissing **open**) |
+| 7 | Stappenplan | Wijkt af van ontwerp | Hersteld (bibliotheekstap verwijderd) |
+| 8 | Segmentindeling gebouwkaart | Wijkt af van ontwerp | Hersteld (segmenten hernoemd) |
+
+> **Nog open vóór V1.0-akkoord:** (a) rolmodel-beslissing en -implementatie (onderdeel 6, P1) en (b) opruimen legacy `dashboard.tsx` (P3). V1.0 is pas formeel "gereed voor uitvoering" na functionele test door de gebruiker.
+
+---
+
+## 1. Dashboard — nulmeting: Deels uitgevoerd
+
+**Wat werkt.** Er zijn rolgebonden dashboards (beheerder, monteur, klant) met live statistieken voor gebouwen, spots, onderhoud en aankomende inspectiedatums. De cijfers worden server-side berekend en tonen correct.
 
 **Afwijkingen / aandachtspunten.**
-- **Dubbele/legacy variant.** Naast de geïnternationaliseerde dashboards (`pages/dashboard/beheerder.tsx` e.a.) bestaat nog een oudere `pages/dashboard.tsx`. Dit is verwarrend en kan tot afwijkende cijfers/teksten leiden; consolideren is gewenst.
-- **Terminologie inconsistent.** Door de app heen wordt door elkaar gesproken van "Spots" vs "voorzieningen" en "Projecten" vs "Gebouwen". Voor V1.0 ("administratief gereed") is één consistente term per begrip wenselijk.
-- **"Vervallen inspecties" semantiek.** Dit getal wordt afgeleid van inspecties met status *afgekeurd*. De term "vervallen" suggereert echter *verlopen/over datum*. Begrip en berekening lopen mogelijk niet gelijk; afstemmen welke betekenis bedoeld is.
+- **Dubbele/legacy variant.** Naast de geïnternationaliseerde dashboards (`pages/dashboard/beheerder.tsx` e.a.) bestaat nog een oudere `pages/dashboard.tsx`. Dit is verwarrend en kan tot afwijkende cijfers/teksten leiden; consolideren is gewenst. — **Status: Open** (P3; `dashboard.tsx` is niet geroutet/dead code, daarom laag risico).
+- **Terminologie inconsistent.** Door de app heen werd door elkaar gesproken van "Spots" vs "voorzieningen" en "Projecten" vs "Gebouwen". — **Status: Hersteld.** Entiteit geüniformeerd naar **Gebouwen** (navigatie, overzicht, dashboard, "niet gevonden"), objecten naar **Spots**. "Project" blijft bewust gereserveerd voor het administratieve dossier/lifecycle (gereed/archiveren, segment "Project & Gebouwgegevens", FPS Projectteam, projectnummer, projectfunctie, opleverrapport).
+- **"Vervallen inspecties" semantiek.** Dit getal wordt afgeleid van inspecties met status *afgekeurd*, terwijl "vervallen" *verlopen/over datum* suggereert. — **Status: Hersteld.** Tegel hernoemd naar **"Afgekeurde inspecties"** in alle talen; de tellingbron (afgekeurde inspecties) is ongewijzigd, het label dekt nu de berekening.
 
 ---
 
-## 2. Projecten (overzicht) — Deels uitgevoerd
+## 2. Gebouwen (overzicht) — nulmeting: Deels uitgevoerd
 
 **Wat werkt.**
-- Project-/gebouwkaartweergave met statistieken per project.
-- **Archiveren én terugplaatsen** (`PATCH /gebouwen/:id/archief`) met een archief-toggle in het overzicht; gearchiveerde projecten zijn standaard verborgen.
+- Gebouwkaartweergave met statistieken per gebouw.
+- **Archiveren én terugplaatsen** (`PATCH /gebouwen/:id/archief`) met een archief-toggle in het overzicht; gearchiveerde gebouwen zijn standaard verborgen.
 - **Gereedmelden én heropenen** (`PATCH` en `DELETE /gebouwen/:id/gereed`).
 - **Sorteren** op vier opties: alfabetisch, aangemaakt, bijgewerkt en laatste spot.
 - **Filteren** op opdrachtgevertype en op naam (partij).
 - **Zoeken** op naam, adres en stad.
 
 **Afwijkingen / aandachtspunten.**
-- **Zoeken op projectnummer/werknummer ontbreekt.** De zoekfunctie (backend `GET /gebouwen`, parameter `zoek`) filtert uitsluitend op naam, adres en stad. Projectnummer en werknummer — juist de identificatoren waarop gebruikers in de praktijk zoeken — worden niet meegenomen. Dit was een expliciet auditpunt en is daarom de belangrijkste functionele tekortkoming in dit onderdeel.
+- **Zoeken op projectnummer/werknummer ontbrak.** De zoekfunctie (`GET /gebouwen`, parameter `zoek`) filterde uitsluitend op naam, adres en stad. — **Status: Hersteld.** `zoek` doorzoekt nu ook **projectnummer** en **werknummer** (naast naam, adres, stad en partijnamen).
 
 ---
 
@@ -85,62 +88,61 @@ Geen blokkerende bevindingen.
 
 ---
 
-## 6. Gebruikers & rechten — Wijkt af van ontwerp
+## 6. Gebruikers & rechten — nulmeting: Wijkt af van ontwerp · herstel: Deels hersteld
 
-Dit is de grootste afwijking en vraagt een expliciete beslissing vóór herstel.
+Dit is de grootste afwijking en vraagt een expliciete beslissing vóór verder herstel.
 
 **Huidige situatie — 5 systeemrollen.** Het systeem kent exact vijf rollen met eigen rechtenlogica: **hoofdbeheerder, beheerder, monteur, controleur, klant** (`utils/rol.ts`, `context/rol-types.tsx`). De rechten worden afgedwongen via `requireRol(...)` en gebouwtoewijzingen.
 
-**Gewenst — 9 rollen.** Het ontwerp vraagt om: hoofdbeheerder, beheerder, **projectleider, werkvoorbereider, project-admin, uitvoerder**, monteur, **timmerman**, controleur.
+**Gewenst — meer rollen.** Het ontwerp vraagt om aanvullende functies: projectleider, werkvoorbereider, project-admin, uitvoerder, timmerman.
 
-**De kloof.** De vier ontbrekende rollen (projectleider, werkvoorbereider, project-admin, uitvoerder/timmerman) bestaan vandaag **uitsluitend als projectfunctie** (`gebruikers.functietitels` / projectteam `project_rol`) — een label binnen een project, **zonder eigen rechtenlogica** in de autorisatielaag. Een "projectleider" heeft systeemtechnisch dezelfde rechten als een beheerder; er is geen onderscheidende permissie.
+**De kloof.** Deze functies bestaan vandaag **als projectfunctie** (`gebruikers.functietitels` / projectteam `project_rol`) — een label binnen een project, **zonder eigen, onderscheidende rechtenlogica** in de autorisatielaag. Een "projectleider" heeft systeemtechnisch dezelfde rechten als een beheerder.
+
+**Reeds gedaan (deelherstel).** De whitelist van kantoor-functietitels is opgeschoond en **identiek gemaakt tussen web (`pages/gebruikers/index.tsx`) en server (`api-server/routes/gebruikers.ts`)**, zodat web en backend niet meer uiteenlopen. Er zijn **geen** nieuwe systeemrollen toegevoegd. Een read-only DB-controle bevestigde dat er geen verouderde functietitel-waarden in de database achterblijven.
 
 **Let op (legacy).** In de autorisatielaag bestaat nog een rest-rolwaarde `viewer` als fallback (o.a. in `effectieveContext`); deze is geen toewijsbare frontend-rol. Bij het herwerken van het rolmodel moet deze legacy-waarde worden meegenomen.
 
-**Beslissing nodig in herstel.** Twee aanpakken:
+**Beslissing nog open.** Twee aanpakken:
 1. **Promoveren tot systeemrol** — de gewenste rollen toevoegen aan het rolmodel met elk eigen rechten. Meeste werk, zuiverste rechtenmodel.
 2. **Projectfunctie + permissielaag** — rollen als projectfunctie houden, maar er een rechtenlaag aan koppelen. Minder ingrijpend, maar rechten worden projectspecifiek i.p.v. systeembreed.
 
-Aanbeveling: de gewenste functies/rollen en hun concrete rechten eerst met de gebruiker vastleggen, dán implementeren.
+Aanbeveling: de gewenste functies/rollen en hun concrete rechten eerst met de gebruiker vastleggen, dán implementeren. **Dit is het belangrijkste resterende punt vóór V1.0-akkoord.**
 
 ---
 
-## 7. Stappenplan — Wijkt af van ontwerp
+## 7. Stappenplan — nulmeting: Wijkt af van ontwerp · herstel: Hersteld
 
 **Wat werkt.** Het stappenplan (`gebouw-stappenplan.tsx`) toont per project de administratieve voortgang in fasen (project-/gebouwgegevens, opdrachtgever, e-mails, bouwlagen/plattegronden, FPS Projectteam) met een "administratief gereed"-indicatie. De statussen worden live berekend uit de aanwezige gegevens.
 
 **Afwijkingen / aandachtspunten.**
-- **Bibliotheekstap hoort er niet bij.** Fase 2 bevat een (optionele) stap "Applicaties/toepassingen in de bibliotheek beschikbaar maken". De bibliotheek is een **geparkeerde module** (ontwikkelstop) en valt niet onder "administratief gereed voor uitvoering". Deze stap hoort hier uit.
-- **Status wordt niet vastgelegd.** De voortgang is client-side afgeleid en niet gepersisteerd. Voor V1.0 acceptabel; benoemen als bewuste keuze.
+- **Bibliotheekstap hoorde er niet bij.** Fase 2 bevatte een (optionele) stap rond de bibliotheek (geparkeerde module). — **Status: Hersteld.** De bibliotheekstap is uit het stappenplan verwijderd; het plan richt zich nu uitsluitend op administratief gereedmaken.
+- **Status wordt niet vastgelegd.** De voortgang is client-side afgeleid en niet gepersisteerd. — **Status: Open (bewuste keuze).** Voor V1.0 acceptabel; benoemd als bewuste keuze.
 
 ---
 
-## 8. Segmentindeling gebouwkaart — Wijkt af van ontwerp
+## 8. Segmentindeling gebouwkaart — nulmeting: Wijkt af van ontwerp · herstel: Hersteld
 
-**Huidige situatie (`detail.tsx`).** Drie tabbladen:
-- Tab "Project & gegevens" — kop "Project- en gebouwgegevens"
-- Tab "Uitvoering" — kop "Uitvoering op locatie"
-- Tab "Beheer" — kop "Beheer en communicatie"
+**Nulmeting (`detail.tsx`).** Drie tabbladen waarvan segment 1 en 3 qua benaming afweken van het ontwerp (segment 3 heette "Beheer" i.p.v. "Beheer & Historie").
 
 **Gewenst.** Drie segmenten: **Project & Gebouwgegevens**, **Uitvoering**, **Beheer & Historie**.
 
-**Afwijking.** Segmenten 1 en 2 komen inhoudelijk overeen (alleen kleine benamingsverschillen). Segment 3 heet "Beheer" i.p.v. "Beheer & Historie". Het bevat al een activiteitenfeed (een vorm van historie), maar de benaming en het expliciet positioneren van "Historie" wijken af. Dit is grotendeels een **cosmetische/benamingscorrectie**.
+**Status: Hersteld.** De tabbladen heten nu **"Project & Gebouwgegevens"**, **"Uitvoering"** en **"Beheer & Historie"** (`detail.tsx`), conform het ontwerp. De activiteitenfeed (historie) zit in segment 3.
 
 ---
 
-## Prioriteitsvoorstel voor herstel (input vervolgtaak)
+## Prioriteitsvoorstel voor herstel — voortgang
 
-**P1 — Kern voor "administratief gereed" (eerst doen).**
-1. **Gebruikers & rechten** — rolmodel afstemmen en implementeren conform de met de gebruiker te bevestigen aanpak (zie onderdeel 6). Grootste post en vereist een beslissing.
-2. **Stappenplan opschonen** — bibliotheekstap verwijderen zodat het plan uitsluitend op administratief gereedmaken is gericht.
-3. **Dashboard** — terminologie consistent maken (Spots/voorzieningen, Projecten/Gebouwen) en de semantiek van "vervallen inspecties" afstemmen/corrigeren.
+**P1 — Kern voor "administratief gereed".**
+1. **Gebruikers & rechten** — rolmodel afstemmen en implementeren (zie onderdeel 6). — **Deels hersteld** (whitelist gesynchroniseerd); **beslissing + implementatie nog open.** Grootste resterende post.
+2. **Stappenplan opschonen** — bibliotheekstap verwijderen. — **Hersteld.**
+3. **Dashboard** — terminologie consistent maken (Spots/Gebouwen) en semantiek "vervallen inspecties" corrigeren. — **Hersteld.**
 
 **P2 — Functioneel afronden.**
-4. **Projecten zoeken** — zoeken op projectnummer/werknummer toevoegen aan `GET /gebouwen`.
-5. **Segmentindeling** — derde segment hernoemen naar "Beheer & Historie" (en eerste consistent naar "Project & Gebouwgegevens").
+4. **Gebouwen zoeken** — zoeken op projectnummer/werknummer toevoegen aan `GET /gebouwen`. — **Hersteld.**
+5. **Segmentindeling** — segmenten hernoemen conform ontwerp. — **Hersteld.**
 
 **P3 — Opruimen / consistentie.**
-6. **Legacy dashboard** — `pages/dashboard.tsx` consolideren met de rolgebonden dashboards en de dubbele variant verwijderen.
+6. **Legacy dashboard** — `pages/dashboard.tsx` consolideren met de rolgebonden dashboards en de dubbele variant verwijderen. — **Open** (dead code, laag risico; uit te voeren bij gelegenheid).
 
 ---
 
