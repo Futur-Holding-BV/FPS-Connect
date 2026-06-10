@@ -73,6 +73,20 @@ const NIVEAUS = [
   { waarde: 4, label: "Volledig" },
 ];
 
+function niveauLabel(n: number): string {
+  return NIVEAUS.find((x) => x.waarde === n)?.label ?? "";
+}
+
+// Modules met een niveau > 0, in de vaste MODULES-volgorde.
+function actieveBevoegdheden(
+  bevoegdheden: Record<string, number> | null | undefined,
+): { id: string; label: string; niveau: number }[] {
+  if (!bevoegdheden) return [];
+  return MODULES
+    .filter((m) => (bevoegdheden[m.id] ?? 0) > 0)
+    .map((m) => ({ id: m.id, label: m.label, niveau: bevoegdheden[m.id] }));
+}
+
 // Bepaalt de getoonde rol-keuze: een monteur met een veldfunctie toont die
 // functie als keuze (timmerman/uitvoerder); anders gewoon de systeemrol.
 function rolKeuzeVan(rol: string, functietitels: string[]): string {
@@ -524,6 +538,29 @@ export default function Gebruikers() {
                                 </div>
                               </div>
 
+                              {(() => {
+                                const actief = actieveBevoegdheden(g.bevoegdheden);
+                                if (actief.length === 0) return null;
+                                return (
+                                  <div className="flex flex-wrap items-center gap-1 mt-2">
+                                    {actief.slice(0, 3).map((b) => (
+                                      <Badge
+                                        key={b.id}
+                                        variant="secondary"
+                                        className="text-xs h-5 px-1.5 font-normal text-muted-foreground"
+                                      >
+                                        {b.label}: {niveauLabel(b.niveau).toLowerCase()}
+                                      </Badge>
+                                    ))}
+                                    {actief.length > 3 && (
+                                      <Badge variant="outline" className="text-xs h-5 px-1.5">
+                                        +{actief.length - 3}
+                                      </Badge>
+                                    )}
+                                  </div>
+                                );
+                              })()}
+
                               <div className="flex flex-wrap items-center gap-1.5 mt-2">
                                 {veldFunctieVan(g) && (
                                   <Badge variant="outline" className="text-xs h-5 px-1.5 bg-blue-50 text-blue-700 border-blue-200">
@@ -771,6 +808,32 @@ export default function Gebruikers() {
                     </div>
                   )}
                 </div>
+
+                {(() => {
+                  const actief = actieveBevoegdheden(bekijkGebruiker.bevoegdheden);
+                  return (
+                    <div className="rounded-lg border bg-muted/30 p-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <ShieldCheck className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                        <div className="text-sm font-medium">Bevoegdheden</div>
+                      </div>
+                      {actief.length === 0 ? (
+                        <p className="text-sm text-muted-foreground">Geen bevoegdheden ingesteld.</p>
+                      ) : (
+                        <div className="divide-y divide-border/50">
+                          {actief.map((b) => (
+                            <div key={b.id} className="flex items-center justify-between py-1.5">
+                              <span className="text-sm">{b.label}</span>
+                              <Badge variant="secondary" className="text-xs font-normal text-muted-foreground">
+                                {niveauLabel(b.niveau)}
+                              </Badge>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
 
                 <DialogFooter className="gap-2">
                   <Button variant="outline" onClick={() => { const g = bekijkGebruiker; setBekijkGebruiker(null); openBewerken(g); }}>
