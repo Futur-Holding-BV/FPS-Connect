@@ -71,6 +71,23 @@ import GebouwStappenplan from "./gebouw-stappenplan";
 const BEHEERDER_ROLLEN = ["beheerder", "hoofdbeheerder"];
 const TEAM_UITGESLOTEN_ROLLEN = ["hoofdbeheerder", "klant", "viewer"];
 
+// Veldfuncties tonen een monteur met een specifiekere naam (bv. Timmerman).
+const VELD_FUNCTIES = ["Timmerman", "Uitvoerder"];
+
+// Toon de veldfunctie (Timmerman/Uitvoerder) i.p.v. de kale rol "monteur".
+function rolLabelVan(g: {
+  rol?: string | null;
+  functietitels?: string[] | null;
+}): string {
+  if (g.rol === "monteur") {
+    const veld = (g.functietitels ?? []).find((f) =>
+      VELD_FUNCTIES.includes(f),
+    );
+    if (veld) return veld;
+  }
+  return g.rol ?? "";
+}
+
 const PRIORITEIT_KLEUR: Record<string, string> = {
   kritiek: "bg-destructive/10 text-destructive border-destructive/20",
   hoog: "bg-orange-500/10 text-orange-600 border-orange-500/20",
@@ -317,13 +334,17 @@ export default function GebouwDetail() {
 
   const gegroepeerdeTeamleden = Object.values(
     (toewijzingen ?? []).reduce<
-      Record<number, { gebruikerId: number; naam: string; rol: string; rollen: string[] }>
+      Record<number, { gebruikerId: number; naam: string; rol: string; functietitels: string[]; rollen: string[] }>
     >((acc, t) => {
       if (!acc[t.gebruiker_id]) {
+        const g = (gebruikers ?? []).find(
+          (u) => Number(u.id) === t.gebruiker_id,
+        );
         acc[t.gebruiker_id] = {
           gebruikerId: t.gebruiker_id,
           naam: t.naam,
           rol: t.rol ?? "",
+          functietitels: g?.functietitels ?? [],
           rollen: [],
         };
       }
@@ -774,7 +795,7 @@ export default function GebouwDetail() {
                             <div className="flex items-center gap-2 flex-wrap">
                               <span className="font-medium text-sm">{t.naam}</span>
                               <span className="text-muted-foreground text-xs">
-                                ({t.rol})
+                                ({rolLabelVan(t)})
                               </span>
                               {t.rollen.length > 0 && (
                                 <Badge className="text-xs shrink-0 bg-primary/10 text-primary border-primary/20">
@@ -813,7 +834,7 @@ export default function GebouwDetail() {
                             <SelectItem key={g.id} value={String(g.id)}>
                               {g.naam}{" "}
                               <span className="text-muted-foreground text-xs">
-                                ({g.rol})
+                                ({rolLabelVan(g)})
                               </span>
                             </SelectItem>
                           ))}
