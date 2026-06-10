@@ -35,18 +35,10 @@ export function isDocumentStatus(v: unknown): v is DocumentStatus {
   return typeof v === "string" && (DOCUMENT_STATUSSEN as readonly string[]).includes(v);
 }
 
-// Zet een document-rij om naar het snake_case API-antwoord, inclusief koppelingen.
-export async function mapDocument(d: typeof documentenTable.$inferSelect) {
-  const [toep, appl] = await Promise.all([
-    db
-      .select({ labelId: documentToepassingenTable.labelId })
-      .from(documentToepassingenTable)
-      .where(eq(documentToepassingenTable.documentId, d.id)),
-    db
-      .select({ code: documentApplicatiesTable.voorzieningTypeCode })
-      .from(documentApplicatiesTable)
-      .where(eq(documentApplicatiesTable.documentId, d.id)),
-  ]);
+type DocumentRow = typeof documentenTable.$inferSelect;
+
+// Scalaire velden van een document-rij naar het snake_case API-antwoord.
+function mapDocumentScalars(d: DocumentRow) {
   return {
     id: d.id,
     naam: d.naam,
@@ -66,9 +58,52 @@ export async function mapDocument(d: typeof documentenTable.$inferSelect) {
     gearchiveerd: d.gearchiveerd,
     aangemaakt_op: d.aangemaaktOp.toISOString(),
     bijgewerkt_op: d.bijgewerktOp.toISOString(),
-    toepassing_ids: toep.map((t) => t.labelId),
-    applicatie_codes: appl.map((a) => a.code),
   };
+}
+
+// Zet meerdere document-rijen in één keer om, inclusief koppelingen, met twee
+// gebundelde queries i.p.v. twee per rij (voorkomt N+1 bij lijst en revisiehistorie).
+export async function mapDocumenten(rows: DocumentRow[]) {
+  if (rows.length === 0) return [];
+  const ids = rows.map((d) => d.id);
+  const [toepRijen, applRijen] = await Promise.all([
+    db
+      .select({
+        documentId: documentToepassingenTable.documentId,
+        labelId: documentToepassingenTable.labelId,
+      })
+      .from(documentToepassingenTable)
+      .where(inArray(documentToepassingenTable.documentId, ids)),
+    db
+      .select({
+        documentId: documentApplicatiesTable.documentId,
+        code: documentApplicatiesTable.voorzieningTypeCode,
+      })
+      .from(documentApplicatiesTable)
+      .where(inArray(documentApplicatiesTable.documentId, ids)),
+  ]);
+  const toepPer = new Map<number, number[]>();
+  for (const r of toepRijen) {
+    const lijst = toepPer.get(r.documentId) ?? [];
+    lijst.push(r.labelId);
+    toepPer.set(r.documentId, lijst);
+  }
+  const applPer = new Map<number, string[]>();
+  for (const r of applRijen) {
+    const lijst = applPer.get(r.documentId) ?? [];
+    lijst.push(r.code);
+    applPer.set(r.documentId, lijst);
+  }
+  return rows.map((d) => ({
+    ...mapDocumentScalars(d),
+    toepassing_ids: toepPer.get(d.id) ?? [],
+    applicatie_codes: applPer.get(d.id) ?? [],
+  }));
+}
+
+// Zet één document-rij om naar het snake_case API-antwoord, inclusief koppelingen.
+export async function mapDocument(d: DocumentRow) {
+  return (await mapDocumenten([d]))[0];
 }
 
 // Vervangt de toepassing-koppelingen (labels) van een document door de opgegeven set.

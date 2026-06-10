@@ -11,6 +11,7 @@ import { eq, and, ne, asc, inArray, max } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
 import {
   mapDocument,
+  mapDocumenten,
   syncDocumentToepassingen,
   syncDocumentApplicaties,
   isDocumentType,
@@ -77,7 +78,7 @@ router.get("/documenten", async (req, res) => {
       rows = rows.filter((d) => ids.has(d.id));
     }
 
-    res.json(await Promise.all(rows.map(mapDocument)));
+    res.json(await mapDocumenten(rows));
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Interne serverfout" });
@@ -108,7 +109,7 @@ router.get("/documenten/:id/revisies", async (req, res) => {
       .from(documentenTable)
       .where(eq(documentenTable.groepId, d.groepId))
       .orderBy(asc(documentenTable.revisieNummer));
-    return res.json(await Promise.all(rows.map(mapDocument)));
+    return res.json(await mapDocumenten(rows));
   } catch (err) {
     req.log.error(err);
     return res.status(500).json({ error: "Interne serverfout" });

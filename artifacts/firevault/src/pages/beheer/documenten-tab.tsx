@@ -5,6 +5,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import {
   useListDocumenten,
   getListDocumentenQueryKey,
+  useGetDocument,
+  getGetDocumentQueryKey,
   useCreateDocument,
   useUpdateDocument,
   useListDocumentRevisies,
@@ -240,12 +242,29 @@ function DocumentFormulier({
   onBewaard: () => void;
 }) {
   const queryClient = useQueryClient();
-  const [form, setForm] = useState<FormState>(LEEG_FORM);
+  const [form, setForm] = useState<FormState>(() =>
+    mode === "revisie" && basisDocument
+      ? {
+          naam: basisDocument.naam,
+          documenttype: basisDocument.documenttype,
+          fabrikant: basisDocument.fabrikant ?? "",
+          product: basisDocument.product ?? "",
+          en_norm: basisDocument.en_norm ?? "",
+          rapportnummer: basisDocument.rapportnummer ?? "",
+          revisie: basisDocument.revisie ?? "",
+          datum: basisDocument.datum ?? "",
+          pdf_url: "",
+          toepassing_ids: basisDocument.toepassing_ids ?? [],
+          applicatie_codes: basisDocument.applicatie_codes ?? [],
+          ai_geanalyseerd: false,
+          ai_metadata: null,
+        }
+      : LEEG_FORM,
+  );
   const [aiVelden, setAiVelden] = useState<Set<AiVeld>>(new Set());
   const [aiBetrouwbaarheid, setAiBetrouwbaarheid] = useState<string | null>(null);
   const [aiBezig, setAiBezig] = useState(false);
   const [fout, setFout] = useState<string | null>(null);
-  const initRef = useRef(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const maakDocument = useCreateDocument();
@@ -254,34 +273,6 @@ function DocumentFormulier({
   const { uploadFile, isUploading } = useUpload({
     onSuccess: (res) => setForm((f) => ({ ...f, pdf_url: res.objectPath })),
   });
-
-  // Init bij openen
-  if (open && !initRef.current) {
-    initRef.current = true;
-    if (mode === "revisie" && basisDocument) {
-      setForm({
-        naam: basisDocument.naam,
-        documenttype: basisDocument.documenttype,
-        fabrikant: basisDocument.fabrikant ?? "",
-        product: basisDocument.product ?? "",
-        en_norm: basisDocument.en_norm ?? "",
-        rapportnummer: basisDocument.rapportnummer ?? "",
-        revisie: basisDocument.revisie ?? "",
-        datum: basisDocument.datum ?? "",
-        pdf_url: "",
-        toepassing_ids: basisDocument.toepassing_ids ?? [],
-        applicatie_codes: basisDocument.applicatie_codes ?? [],
-        ai_geanalyseerd: false,
-        ai_metadata: null,
-      });
-    } else {
-      setForm(LEEG_FORM);
-    }
-    setAiVelden(new Set());
-    setAiBetrouwbaarheid(null);
-    setFout(null);
-  }
-  if (!open && initRef.current) initRef.current = false;
 
   function zet<K extends keyof FormState>(key: K, waarde: FormState[K]) {
     setForm((f) => ({ ...f, [key]: waarde }));
@@ -384,6 +375,10 @@ function DocumentFormulier({
         await maakRevisie.mutateAsync({ id: basisDocument.id, data });
         await queryClient.invalidateQueries({
           queryKey: getListDocumentRevisiesQueryKey(basisDocument.id),
+        });
+        // Bronrevisie krijgt server-side status 'vervangen'; ververs zijn detail.
+        await queryClient.invalidateQueries({
+          queryKey: getGetDocumentQueryKey(basisDocument.id),
         });
       } else {
         await maakDocument.mutateAsync({ data });
@@ -635,6 +630,10 @@ function DocumentDetail({
   onNieuweRevisie: () => void;
 }) {
   const queryClient = useQueryClient();
+  // Live versie ophalen zodat de dialoog na een mutatie niet op een verouderde
+  // lijst-snapshot blijft hangen; de meegegeven snapshot dient als directe fallback.
+  const { data: liveDoc } = useGetDocument(document.id);
+  const doc = liveDoc ?? document;
   const { data: revisies = [] } = useListDocumentRevisies(document.id);
   const wijzigDocument = useUpdateDocument();
   const setToepassingen = useSetDocumentToepassingen();
@@ -645,9 +644,9 @@ function DocumentDetail({
 
   const koppelingenGewijzigd =
     JSON.stringify([...toep].sort()) !==
-      JSON.stringify([...(document.toepassing_ids ?? [])].sort()) ||
+      JSON.stringify([...(doc.toepassing_ids ?? [])].sort()) ||
     JSON.stringify([...appl].sort()) !==
-      JSON.stringify([...(document.applicatie_codes ?? [])].sort());
+      JSON.stringify([...(doc.applicatie_codes ?? [])].sort());
 
   async function bewaarStatus(status: string) {
     await wijzigDocument.mutateAsync({
@@ -656,6 +655,9 @@ function DocumentDetail({
     });
     await queryClient.invalidateQueries({ queryKey: getListDocumentenQueryKey() });
     await queryClient.invalidateQueries({
+      queryKey: getGetDocumentQueryKey(document.id),
+    });
+    await queryClient.invalidateQueries({
       queryKey: getListDocumentRevisiesQueryKey(document.id),
     });
   }
@@ -663,9 +665,12 @@ function DocumentDetail({
   async function toggleArchief() {
     await wijzigDocument.mutateAsync({
       id: document.id,
-      data: { gearchiveerd: !document.gearchiveerd },
+      data: { gearchiveerd: !doc.gearchiveerd },
     });
     await queryClient.invalidateQueries({ queryKey: getListDocumentenQueryKey() });
+    await queryClient.invalidateQueries({
+      queryKey: getGetDocumentQueryKey(document.id),
+    });
   }
 
   async function bewaarKoppelingen() {
@@ -675,6 +680,9 @@ function DocumentDetail({
       data: { voorziening_type_codes: appl },
     });
     await queryClient.invalidateQueries({ queryKey: getListDocumentenQueryKey() });
+    await queryClient.invalidateQueries({
+      queryKey: getGetDocumentQueryKey(document.id),
+    });
   }
 
   return (
@@ -683,28 +691,28 @@ function DocumentDetail({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <FileText className="h-4 w-4 text-primary" />
-            {document.naam}
+            {doc.naam}
           </DialogTitle>
           <DialogDescription>
-            {TYPE_LABELS[document.documenttype] ?? document.documenttype}
+            {TYPE_LABELS[doc.documenttype] ?? doc.documenttype}
             {" · revisie "}
-            {document.revisie_nummer}
+            {doc.revisie_nummer}
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-5">
           <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-            <Info label="Fabrikant" waarde={document.fabrikant} />
-            <Info label="Product" waarde={document.product} />
-            <Info label="EN-norm" waarde={document.en_norm} />
-            <Info label="Rapportnummer" waarde={document.rapportnummer} />
-            <Info label="Revisie" waarde={document.revisie} />
-            <Info label="Datum" waarde={document.datum} />
+            <Info label="Fabrikant" waarde={doc.fabrikant} />
+            <Info label="Product" waarde={doc.product} />
+            <Info label="EN-norm" waarde={doc.en_norm} />
+            <Info label="Rapportnummer" waarde={doc.rapportnummer} />
+            <Info label="Revisie" waarde={doc.revisie} />
+            <Info label="Datum" waarde={doc.datum} />
           </div>
 
-          {document.pdf_url && (
+          {doc.pdf_url && (
             <a
-              href={`/api/storage${document.pdf_url}`}
+              href={`/api/storage${doc.pdf_url}`}
               target="_blank"
               rel="noreferrer"
               className="inline-flex items-center gap-1.5 text-sm text-primary"
@@ -719,7 +727,7 @@ function DocumentDetail({
             <div className="min-w-48">
               <UiLabel>Status</UiLabel>
               <Select
-                value={document.status}
+                value={doc.status}
                 onValueChange={bewaarStatus}
                 disabled={!magBeheren || wijzigDocument.isPending}
               >
@@ -737,7 +745,7 @@ function DocumentDetail({
             </div>
             {magBeheren && (
               <Button variant="outline" size="sm" onClick={toggleArchief}>
-                {document.gearchiveerd ? "Herstellen uit archief" : "Archiveren"}
+                {doc.gearchiveerd ? "Herstellen uit archief" : "Archiveren"}
               </Button>
             )}
             {magCreeren && (
@@ -1047,6 +1055,7 @@ export function TabDocumenten() {
 
       {nieuwOpen && (
         <DocumentFormulier
+          key="nieuw-document"
           open={nieuwOpen}
           onOpenChange={setNieuwOpen}
           mode="nieuw"
@@ -1058,6 +1067,7 @@ export function TabDocumenten() {
 
       {revisieVoor && (
         <DocumentFormulier
+          key={`revisie-${revisieVoor.id}`}
           open={!!revisieVoor}
           onOpenChange={(o) => {
             if (!o) setRevisieVoor(null);
