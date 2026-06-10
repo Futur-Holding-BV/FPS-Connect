@@ -1950,6 +1950,65 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Profiel"
+    post:
+      operationId: createProfiel
+      tags: [gebruikers]
+      summary: Bevoegdheidsprofiel (preset) aanmaken (hoofdbeheerder)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProfielInput"
+      responses:
+        "201":
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Profiel"
+
+  /profielen/{id}:
+    patch:
+      operationId: updateProfiel
+      tags: [gebruikers]
+      summary: Bevoegdheidsprofiel bijwerken (hoofdbeheerder)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProfielInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Profiel"
+        "404":
+          description: Niet gevonden
+    delete:
+      operationId: deleteProfiel
+      tags: [gebruikers]
+      summary: Bevoegdheidsprofiel verwijderen (hoofdbeheerder, niet-systeem)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Verwijderd
+        "404":
+          description: Niet gevonden
 
   /uitnodiging/{token}:
     get:
@@ -4837,6 +4896,18 @@ components:
           type: boolean
         aangemaakt_op:
           type: string
+
+    ProfielInput:
+      type: object
+      required: [naam, bevoegdheden]
+      properties:
+        naam:
+          type: string
+          minLength: 1
+        bevoegdheden:
+          type: object
+          additionalProperties:
+            type: integer
 
     LoginPoging:
       type: object

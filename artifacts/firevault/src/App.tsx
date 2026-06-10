@@ -38,6 +38,7 @@ import LoginPogingen from "@/pages/beheer/login-pogingen";
 import HelpdeskBeheer from "@/pages/beheer/helpdesk";
 import FeedbackBeheer from "@/pages/beheer/feedback";
 import Heatmaps from "@/pages/beheer/heatmaps";
+import ProfielenBeheer from "@/pages/beheer/profielen";
 import ToepassingenBeheer from "@/pages/beheer/toepassingen";
 import Bibliotheek from "@/pages/beheer/bibliotheek";
 import InfoPagina from "@/pages/info/index";
@@ -71,6 +72,7 @@ function BeheerderPortal() {
         <Route path="/beheer/helpdesk" component={HelpdeskBeheer} />
         <Route path="/beheer/feedback" component={FeedbackBeheer} />
         <Route path="/beheer/heatmaps" component={Heatmaps} />
+        <Route path="/beheer/profielen" component={ProfielenBeheer} />
         <Route path="/info" component={InfoPagina} />
         <Route component={NotFound} />
       </Switch>
@@ -146,6 +148,7 @@ function PermissiePortal() {
         <Route path="/beheer/helpdesk" component={HelpdeskBeheer} />
         <Route path="/beheer/feedback" component={FeedbackBeheer} />
         <Route path="/beheer/heatmaps" component={Heatmaps} />
+        <Route path="/beheer/profielen" component={ProfielenBeheer} />
         <Route path="/info" component={InfoPagina} />
         <Route component={NotFound} />
       </Switch>

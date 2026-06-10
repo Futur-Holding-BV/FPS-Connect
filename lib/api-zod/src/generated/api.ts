@@ -2284,6 +2284,54 @@ export const ListProfielenResponse = zod.array(ListProfielenResponseItem)
 
 
 /**
+ * @summary Bevoegdheidsprofiel (preset) aanmaken (hoofdbeheerder)
+ */
+
+
+
+export const CreateProfielBody = zod.object({
+  "naam": zod.string().min(1),
+  "bevoegdheden": zod.record(zod.string(), zod.number())
+})
+
+export const CreateProfielResponse = zod.void()
+
+
+/**
+ * @summary Bevoegdheidsprofiel bijwerken (hoofdbeheerder)
+ */
+export const UpdateProfielParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+
+
+export const UpdateProfielBody = zod.object({
+  "naam": zod.string().min(1),
+  "bevoegdheden": zod.record(zod.string(), zod.number())
+})
+
+export const UpdateProfielResponse = zod.object({
+  "id": zod.number(),
+  "naam": zod.string(),
+  "bevoegdheden": zod.record(zod.string(), zod.number()),
+  "systeem": zod.boolean(),
+  "aangemaakt_op": zod.string()
+})
+
+
+/**
+ * @summary Bevoegdheidsprofiel verwijderen (hoofdbeheerder, niet-systeem)
+ */
+export const DeleteProfielParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteProfielResponse = zod.void()
+
+
+/**
  * @summary Uitnodigingstoken controleren en markeren als geopend (publiek)
  */
 export const UitnodigingVerifieerParams = zod.object({

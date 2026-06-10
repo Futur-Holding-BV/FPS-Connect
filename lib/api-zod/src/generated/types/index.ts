@@ -110,6 +110,8 @@ export * from './plattegrondAiAnalyseInput';
 export * from './plattegrondAiAnalyseResultaat';
 export * from './profiel';
 export * from './profielBevoegdheden';
+export * from './profielInput';
+export * from './profielInputBevoegdheden';
 export * from './scheiding';
 export * from './scheidingInput';
 export * from './scheidingUpdate';

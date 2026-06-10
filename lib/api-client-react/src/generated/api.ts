@@ -100,6 +100,7 @@ import type {
   PlattegrondAiAnalyseInput,
   PlattegrondAiAnalyseResultaat,
   Profiel,
+  ProfielInput,
   Scheiding,
   ScheidingInput,
   ScheidingUpdate,
@@ -6675,6 +6676,217 @@ export function useListProfielen<TData = Awaited<ReturnType<typeof listProfielen
 
 
 
+
+export const getCreateProfielUrl = () => {
+
+
+
+
+  return `/api/profielen`
+}
+
+/**
+ * @summary Bevoegdheidsprofiel (preset) aanmaken (hoofdbeheerder)
+ */
+export const createProfiel = async (profielInput: ProfielInput, options?: RequestInit): Promise<Profiel> => {
+
+  return customFetch<Profiel>(getCreateProfielUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(profielInput)
+  }
+);}
+
+
+
+
+export const getCreateProfielMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createProfiel>>, TError,{data: BodyType<ProfielInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createProfiel>>, TError,{data: BodyType<ProfielInput>}, TContext> => {
+
+const mutationKey = ['createProfiel'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createProfiel>>, {data: BodyType<ProfielInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createProfiel(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateProfielMutationResult = NonNullable<Awaited<ReturnType<typeof createProfiel>>>
+    export type CreateProfielMutationBody = BodyType<ProfielInput>
+    export type CreateProfielMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Bevoegdheidsprofiel (preset) aanmaken (hoofdbeheerder)
+ */
+export const useCreateProfiel = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createProfiel>>, TError,{data: BodyType<ProfielInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createProfiel>>,
+        TError,
+        {data: BodyType<ProfielInput>},
+        TContext
+      > => {
+      return useMutation(getCreateProfielMutationOptions(options));
+    }
+
+export const getUpdateProfielUrl = (id: number,) => {
+
+
+
+
+  return `/api/profielen/${id}`
+}
+
+/**
+ * @summary Bevoegdheidsprofiel bijwerken (hoofdbeheerder)
+ */
+export const updateProfiel = async (id: number,
+    profielInput: ProfielInput, options?: RequestInit): Promise<Profiel> => {
+
+  return customFetch<Profiel>(getUpdateProfielUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(profielInput)
+  }
+);}
+
+
+
+
+export const getUpdateProfielMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateProfiel>>, TError,{id: number;data: BodyType<ProfielInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateProfiel>>, TError,{id: number;data: BodyType<ProfielInput>}, TContext> => {
+
+const mutationKey = ['updateProfiel'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateProfiel>>, {id: number;data: BodyType<ProfielInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateProfiel(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateProfielMutationResult = NonNullable<Awaited<ReturnType<typeof updateProfiel>>>
+    export type UpdateProfielMutationBody = BodyType<ProfielInput>
+    export type UpdateProfielMutationError = ErrorType<void>
+
+    /**
+ * @summary Bevoegdheidsprofiel bijwerken (hoofdbeheerder)
+ */
+export const useUpdateProfiel = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateProfiel>>, TError,{id: number;data: BodyType<ProfielInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateProfiel>>,
+        TError,
+        {id: number;data: BodyType<ProfielInput>},
+        TContext
+      > => {
+      return useMutation(getUpdateProfielMutationOptions(options));
+    }
+
+export const getDeleteProfielUrl = (id: number,) => {
+
+
+
+
+  return `/api/profielen/${id}`
+}
+
+/**
+ * @summary Bevoegdheidsprofiel verwijderen (hoofdbeheerder, niet-systeem)
+ */
+export const deleteProfiel = async (id: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteProfielUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteProfielMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteProfiel>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteProfiel>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deleteProfiel'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteProfiel>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteProfiel(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteProfielMutationResult = NonNullable<Awaited<ReturnType<typeof deleteProfiel>>>
+
+    export type DeleteProfielMutationError = ErrorType<void>
+
+    /**
+ * @summary Bevoegdheidsprofiel verwijderen (hoofdbeheerder, niet-systeem)
+ */
+export const useDeleteProfiel = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteProfiel>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteProfiel>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeleteProfielMutationOptions(options));
+    }
 
 export const getUitnodigingVerifieerUrl = (token: string,) => {
 

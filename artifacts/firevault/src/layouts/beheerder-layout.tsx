@@ -13,11 +13,14 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { GebruikerMenu } from "@/components/gebruiker-menu";
 import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
+import { useRol } from "@/context/rol-context";
 
 export default function BeheerderLayout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
   const { t } = useTranslation();
   const { heeftNiveau } = useBevoegdheid();
+  const { echteRol } = useRol();
+  const isHoofdbeheerder = echteRol === "hoofdbeheerder";
 
   const toonGebouwen      = heeftNiveau("gebouwen", 1);
   const toonVoorzieningen = heeftNiveau("voorzieningen", 1);
@@ -274,6 +277,16 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
                         </Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
+                    {isHoofdbeheerder && (
+                      <SidebarMenuItem>
+                        <SidebarMenuButton asChild isActive={location === "/beheer/profielen"}>
+                          <Link href="/beheer/profielen">
+                            <ShieldCheck />
+                            <span>Profielen</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    )}
                   </>
                 )}
                 <SidebarMenuItem>

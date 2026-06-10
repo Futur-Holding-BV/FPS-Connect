@@ -28,6 +28,13 @@ description: Hoe het rechten-systeem gebouwd is — jsonb-matrix, requireBevoegd
 - `BevoegdhedenEditor` component in `gebruikers/index.tsx`: preset-picker via `useListProfielen` + per-module dropdown 0-4
 - Toon alleen voor niet-klant, niet-hoofdbeheerder rollen
 
+## Profielen-CRUD (presets)
+
+- `routes/profielen.ts`: GET = requireBevoegdheid("gebruikers",1); POST/PATCH/DELETE = requireRol("hoofdbeheerder")
+- DELETE blokkeert systeem=true (403); naam is unique → 409 bij conflict
+- Beheer-UI: `pages/beheer/profielen.tsx`, route `/beheer/profielen` (beide beheer-portalen in App.tsx), nav-item alleen voor echteRol==="hoofdbeheerder"
+- Preset-picker (gebruikers-pagina) deelt `listProfielen` query → invalideer na mutatie zodat nieuwe preset direct verschijnt
+
 ## Gotchas
 
 - `GebruikerInput` (POST) vereist ook `bevoegdheden` in de OpenAPI spec — niet alleen `GebruikerUpdate` (PATCH)

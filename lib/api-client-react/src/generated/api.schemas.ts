@@ -1413,6 +1413,14 @@ export interface Profiel {
   aangemaakt_op: string;
 }
 
+export type ProfielInputBevoegdheden = {[key: string]: number};
+
+export interface ProfielInput {
+  /** @minLength 1 */
+  naam: string;
+  bevoegdheden: ProfielInputBevoegdheden;
+}
+
 export interface LoginPoging {
   id: number;
   /** @nullable */
