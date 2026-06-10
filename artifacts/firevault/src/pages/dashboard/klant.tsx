@@ -81,7 +81,7 @@ export default function KlantDashboard() {
         <Card className="border-primary/20 bg-primary/5">
           <CardContent className="pt-4 pb-3 text-center">
             <div className="text-2xl font-bold text-primary">{gebouwen?.length ?? 0}</div>
-            <div className="text-xs text-primary/70 font-medium mt-0.5">Projecten</div>
+            <div className="text-xs text-primary/70 font-medium mt-0.5">Gebouwen</div>
           </CardContent>
         </Card>
         <Card className="border-green-200 bg-green-50">
@@ -153,7 +153,7 @@ export default function KlantDashboard() {
                     ? <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0" />
                     : <AlertTriangle className="h-4 w-4 text-orange-500 flex-shrink-0" />}
                   <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium">{i.type} — {i.voorziening_nummer ?? `V-${i.voorziening_id}`}</div>
+                    <div className="text-sm font-medium">{i.type} — {i.voorziening_nummer ?? `Spot ${i.voorziening_id}`}</div>
                     <div className="text-xs text-muted-foreground">
                       {i.gebouw_naam ?? "Onbekend"}
                       {i.datum && ` — ${new Date(i.datum).toLocaleDateString("nl-NL")}`}
@@ -177,7 +177,7 @@ export default function KlantDashboard() {
         {[
           { icoon: Map, titel: "3D weergave", tekst: "Bekijk alle brandpreventieve objecten per verdieping van uw gebouwen.", href: "/gebouwen", kleur: "text-primary" },
           { icoon: FileText, titel: "Rapportages", tekst: "Inzicht in alle inspectie- en opleveringsrapporten van uw pand.", href: "/klant/rapportages", kleur: "text-blue-600" },
-          { icoon: Plus, titel: "Melding indienen", tekst: "Meld een gebrek of vraag een nieuwe voorziening aan via een werkbon.", href: "#", kleur: "text-orange-500", onClick: () => setTicketDialoog(true) },
+          { icoon: Plus, titel: "Melding indienen", tekst: "Meld een gebrek of vraag een nieuwe spot aan via een werkbon.", href: "#", kleur: "text-orange-500", onClick: () => setTicketDialoog(true) },
         ].map(({ icoon: Icoon, titel, tekst, href, kleur, onClick }) => (
           <div
             key={titel}
@@ -214,7 +214,7 @@ export default function KlantDashboard() {
           ) : (
             <form onSubmit={verstuurTicket} className="space-y-4 pt-1">
               <p id="ticket-beschrijving" className="text-sm text-muted-foreground -mt-1">
-                Beschrijf het gebrek of de gewenste nieuwe voorziening. FPS Brandpreventie verwerkt uw melding.
+                Beschrijf het gebrek of de gewenste nieuwe spot. FPS Brandpreventie verwerkt uw melding.
               </p>
               <div className="space-y-3">
                 <div>
@@ -234,7 +234,7 @@ export default function KlantDashboard() {
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="melding">Gebrek / melding</SelectItem>
-                      <SelectItem value="nieuw">Nieuwe voorziening gewenst</SelectItem>
+                      <SelectItem value="nieuw">Nieuwe spot gewenst</SelectItem>
                       <SelectItem value="inspectie">Inspectie aanvragen</SelectItem>
                     </SelectContent>
                   </Select>

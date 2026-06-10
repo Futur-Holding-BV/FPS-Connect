@@ -186,7 +186,7 @@ export default function GebouwDetail() {
   const [archiveerBezig, setArchiveerBezig] = useState(false);
 
   if (isLoading) return <div className="p-6 text-muted-foreground">Laden...</div>;
-  if (!gebouw) return <div className="p-6">Project niet gevonden.</div>;
+  if (!gebouw) return <div className="p-6">Gebouw niet gevonden.</div>;
 
   const beschikbareGebruikers = (gebruikers ?? []).filter(
     (g) => !TEAM_UITGESLOTEN_ROLLEN.includes(g.rol ?? ""),

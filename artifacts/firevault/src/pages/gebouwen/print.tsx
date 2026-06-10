@@ -1399,7 +1399,7 @@ export default function GebouwPrint() {
           <img src={logoSrc} alt="FPS Brandpreventie" />
           <div className="prt-pagina-kop-info">
             <div><strong>{titel}</strong></div>
-            <div>Rapportinhoud — plattegronden en voorzieningen</div>
+            <div>Rapportinhoud — plattegronden en spots</div>
           </div>
         </div>
 

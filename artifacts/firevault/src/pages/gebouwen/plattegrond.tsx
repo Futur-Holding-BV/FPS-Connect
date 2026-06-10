@@ -853,7 +853,7 @@ export default function Plattegrond() {
       {/* Plaatsen hint */}
       {plaatsenModus && (
         <div className="bg-primary/10 border border-primary/30 rounded-md px-3 py-2 mb-2 text-sm text-primary font-medium flex-shrink-0">
-          Klik op de plattegrond om een nieuwe voorziening te plaatsen.
+          Klik op de plattegrond om een nieuwe spot te plaatsen.
         </div>
       )}
 
@@ -1080,7 +1080,7 @@ export default function Plattegrond() {
           {geplaatst.length === 0 && !plaatsenModus && (
             <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
               <Map className="h-10 w-10 text-muted-foreground mb-3" />
-              <p className="text-muted-foreground font-medium">Geen voorzieningen op kaart</p>
+              <p className="text-muted-foreground font-medium">Geen spots op kaart</p>
               <p className="text-xs text-muted-foreground mt-1">Klik op "Plaatsen" om objecten toe te voegen</p>
             </div>
           )}

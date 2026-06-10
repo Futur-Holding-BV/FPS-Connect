@@ -65,7 +65,7 @@ export default function Voorzieningen() {
                   ))
                 )}
                 {!isLoading && !voorzieningenLijst?.items?.length && (
-                  <tr><td colSpan={5} className="px-6 py-8 text-center text-muted-foreground">Geen voorzieningen gevonden.</td></tr>
+                  <tr><td colSpan={5} className="px-6 py-8 text-center text-muted-foreground">Geen spots gevonden.</td></tr>
                 )}
               </tbody>
             </table>

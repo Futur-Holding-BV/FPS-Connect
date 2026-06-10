@@ -331,7 +331,7 @@ function PlattegrondCanvas({
       {geplaatst.length === 0 && !pdfLaden && (
         <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
           <Map className="h-8 w-8 text-muted-foreground mb-2" />
-          <p className="text-sm text-muted-foreground">Geen voorzieningen op kaart</p>
+          <p className="text-sm text-muted-foreground">Geen spots op kaart</p>
         </div>
       )}
 

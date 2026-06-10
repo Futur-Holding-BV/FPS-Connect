@@ -226,7 +226,7 @@ export default function VoorzieningQr() {
           {[
             { stap: "1", titel: "Afdrukken", tekst: "Klik op Afdrukken of gebruik Ctrl+P. Kies 'Opslaan als PDF' voor digitale opslag." },
             { stap: "2", titel: "Uitknippen", tekst: "Knip het label bij langs de rand. Het formaat is geschikt voor standaard labelprinters." },
-            { stap: "3", titel: "Bevestigen", tekst: "Plak het label zichtbaar op of naast de voorziening. Gebruik een weersbestendige folie." },
+            { stap: "3", titel: "Bevestigen", tekst: "Plak het label zichtbaar op of naast de spot. Gebruik een weersbestendige folie." },
           ].map((item) => (
             <div key={item.stap} className="bg-muted/40 rounded-lg p-4">
               <div className="text-2xl font-bold text-primary mb-1">{item.stap}</div>

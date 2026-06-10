@@ -355,7 +355,7 @@ export default function Gebouwen() {
             variant={inclusiefGearchiveerd ? "secondary" : "ghost"}
             size="sm"
             onClick={() => setInclusiefGearchiveerd((v) => !v)}
-            title="Gearchiveerde projecten tonen"
+            title="Gearchiveerde gebouwen tonen"
           >
             <Archive className="h-4 w-4 mr-1" />
             {inclusiefGearchiveerd ? "Archief verbergen" : "Toon archief"}

@@ -307,12 +307,12 @@ export function GebouwAanmakenDialog() {
     >
       <DialogTrigger asChild>
         <Button>
-          <Plus className="h-4 w-4 mr-2" /> Nieuw project
+          <Plus className="h-4 w-4 mr-2" /> Nieuw gebouw
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Nieuw project aanmaken</DialogTitle>
+          <DialogTitle>Nieuw gebouw aanmaken</DialogTitle>
           <DialogDescription>
             Beschrijf het gebouw of het adres en laat de AI de gebouwgegevens schatten op basis van
             Google Maps en satellietbeeld, of vul alles handmatig in.
@@ -562,7 +562,7 @@ export function GebouwAanmakenDialog() {
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Opslaan...
               </>
             ) : (
-              "Project opslaan"
+              "Gebouw opslaan"
             )}
           </Button>
         </DialogFooter>

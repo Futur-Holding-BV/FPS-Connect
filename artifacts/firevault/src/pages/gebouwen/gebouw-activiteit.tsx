@@ -16,8 +16,8 @@ function tijdGeleden(iso: string): string {
 }
 
 const TYPE_LABELS: Record<string, string> = {
-  voorziening_aangemaakt: "Voorziening aangemaakt",
-  voorziening_bijgewerkt: "Voorziening bijgewerkt",
+  voorziening_aangemaakt: "Spot aangemaakt",
+  voorziening_bijgewerkt: "Spot bijgewerkt",
   status_gewijzigd:       "Status gewijzigd",
   inspectie_aangemaakt:   "Inspectie aangemaakt",
   inspectie_bijgewerkt:   "Inspectie bijgewerkt",
