@@ -29,7 +29,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
 import {
   Mail, Phone, Building, Clock, Plus, UserPlus, Pencil, Trash2,
-  RefreshCw, ShieldCheck, Wrench, Eye, User, Crown, Upload, Palette, SendHorizonal,
+  RefreshCw, ShieldCheck, Wrench, Eye, User, Crown, Upload, Palette, SendHorizonal, X,
 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRol } from "@/context/rol-context";
@@ -85,6 +85,37 @@ function actieveBevoegdheden(
   return MODULES
     .filter((m) => (bevoegdheden[m.id] ?? 0) > 0)
     .map((m) => ({ id: m.id, label: m.label, niveau: bevoegdheden[m.id] }));
+}
+
+// Aantal modules waarop de gebruiker een niveau > 0 heeft.
+function aantalActieveModules(
+  bevoegdheden: Record<string, number> | null | undefined,
+): number {
+  return actieveBevoegdheden(bevoegdheden).length;
+}
+
+// Hoogste toegekende niveau over alle modules (0 als geen).
+function hoogsteNiveau(
+  bevoegdheden: Record<string, number> | null | undefined,
+): number {
+  if (!bevoegdheden) return 0;
+  return MODULES.reduce((max, m) => Math.max(max, bevoegdheden[m.id] ?? 0), 0);
+}
+
+// Toetst of een gebruiker aan het module/niveau-filter voldoet.
+// - module leeg + niveau 0 → geen filter (alles).
+// - module gekozen → minimaal max(niveau, 1) op die module.
+// - alle modules + niveau >= 1 → minstens één module op dat niveau.
+function voldoetAanFilter(
+  bevoegdheden: Record<string, number> | null | undefined,
+  module: string,
+  niveau: number,
+): boolean {
+  if (!module && niveau <= 0) return true;
+  if (module) {
+    return (bevoegdheden?.[module] ?? 0) >= Math.max(niveau, 1);
+  }
+  return MODULES.some((m) => (bevoegdheden?.[m.id] ?? 0) >= niveau);
 }
 
 // Bepaalt de getoonde rol-keuze: een monteur met een veldfunctie toont die
@@ -286,6 +317,12 @@ export default function Gebruikers() {
 
   const [uitnodigingBezig, setUitnodigingBezig] = useState<number | null>(null);
 
+  const [filterModule, setFilterModule]   = useState<string>("");
+  const [filterNiveau, setFilterNiveau]   = useState<number>(0);
+  const [sorteer, setSorteer]             = useState<"standaard" | "aantal_modules" | "hoogste_niveau">("standaard");
+
+  const filterActief = !!filterModule || filterNiveau > 0 || sorteer !== "standaard";
+
   const invalideer = () => queryClient.invalidateQueries({ queryKey: getListGebruikersQueryKey() });
 
   async function verstuurToevoegen(e: React.FormEvent) {
@@ -397,10 +434,25 @@ export default function Gebruikers() {
     }
   }
 
+  const gefilterd = (gebruikers ?? []).filter((g) =>
+    voldoetAanFilter(g.bevoegdheden, filterModule, filterNiveau),
+  ) as Gebruiker[];
+
+  function sorteerLijst(lijst: Gebruiker[]): Gebruiker[] {
+    if (sorteer === "standaard") return lijst;
+    const score = (g: Gebruiker) =>
+      sorteer === "aantal_modules"
+        ? aantalActieveModules(g.bevoegdheden)
+        : hoogsteNiveau(g.bevoegdheden);
+    return [...lijst].sort((a, b) => score(b) - score(a));
+  }
+
   const perRol = ROLLEN.reduce<Record<string, Gebruiker[]>>((acc, rol) => {
-    acc[rol] = (gebruikers ?? []).filter((g) => g.rol === rol) as Gebruiker[];
+    acc[rol] = sorteerLijst(gefilterd.filter((g) => g.rol === rol));
     return acc;
   }, {} as Record<string, Gebruiker[]>);
+
+  const totaalGevonden = gefilterd.length;
 
   const zichtbareRollen = ROLLEN.filter((rol) => isHoofd || rol !== "hoofdbeheerder");
   const gridCols =
@@ -425,6 +477,77 @@ export default function Gebruikers() {
             <Plus className="h-4 w-4 mr-2" /> Gebruiker toevoegen
           </Button>
         </div>
+      </div>
+
+      {/* Filter- en sorteerbalk */}
+      <div className="flex flex-wrap items-end gap-3 rounded-xl border bg-muted/40 px-4 py-3">
+        <div className="flex flex-col gap-1">
+          <Label className="text-xs text-muted-foreground">Module</Label>
+          <Select
+            value={filterModule || "alle"}
+            onValueChange={(v) => setFilterModule(v === "alle" ? "" : v)}
+          >
+            <SelectTrigger className="h-9 w-[180px]">
+              <SelectValue placeholder="Alle modules" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="alle">Alle modules</SelectItem>
+              {MODULES.map((m) => (
+                <SelectItem key={m.id} value={m.id}>{m.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="flex flex-col gap-1">
+          <Label className="text-xs text-muted-foreground">Minimaal niveau</Label>
+          <Select
+            value={String(filterNiveau)}
+            onValueChange={(v) => setFilterNiveau(Number(v))}
+          >
+            <SelectTrigger className="h-9 w-[160px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="0">Elk niveau</SelectItem>
+              {NIVEAUS.filter((n) => n.waarde > 0).map((n) => (
+                <SelectItem key={n.waarde} value={String(n.waarde)}>
+                  {n.label} of hoger
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="flex flex-col gap-1">
+          <Label className="text-xs text-muted-foreground">Sorteren</Label>
+          <Select value={sorteer} onValueChange={(v) => setSorteer(v as typeof sorteer)}>
+            <SelectTrigger className="h-9 w-[200px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="standaard">Standaard</SelectItem>
+              <SelectItem value="aantal_modules">Aantal actieve modules</SelectItem>
+              <SelectItem value="hoogste_niveau">Hoogste niveau</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        {filterActief && (
+          <div className="flex items-center gap-3 ml-auto">
+            <span className="text-xs text-muted-foreground">
+              {totaalGevonden} {totaalGevonden === 1 ? "gebruiker" : "gebruikers"} gevonden
+            </span>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-9 gap-1.5 text-muted-foreground"
+              onClick={() => { setFilterModule(""); setFilterNiveau(0); setSorteer("standaard"); }}
+            >
+              <X className="h-3.5 w-3.5" /> Wissen
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* Kolommenraster */}
