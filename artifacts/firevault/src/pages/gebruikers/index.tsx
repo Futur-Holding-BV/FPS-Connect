@@ -29,12 +29,12 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
 import {
   Mail, Phone, Building, Clock, Plus, UserPlus, Pencil, Trash2,
-  RefreshCw, ShieldCheck, Wrench, Eye, User, Crown, Upload, Palette, SendHorizonal, X,
+  RefreshCw, ShieldCheck, Eye, User, Crown, Upload, Palette, SendHorizonal, X,
 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRol } from "@/context/rol-context";
 
-const ROLLEN = ["hoofdbeheerder", "gebruiker", "beheerder", "monteur", "controleur", "klant"] as const;
+const ROLLEN = ["hoofdbeheerder", "gebruiker", "klant"] as const;
 type Rol = typeof ROLLEN[number];
 
 // Projectfuncties (profiel) voor kantoor-/beheerprofielen — meerdere mogelijk.
@@ -46,11 +46,6 @@ const FUNCTIETITELS = [
   "Commercie",
   "Financieel",
 ] as const;
-
-// Veldfuncties: keuzes in de Rol-lijst die dezelfde toegang als een monteur
-// krijgen, alleen met een specifiekere naam. Opgeslagen als rol "monteur" met
-// de functie in functietitels.
-const VELD_FUNCTIES = ["Timmerman", "Uitvoerder"] as const;
 
 const MODULES: { id: string; label: string }[] = [
   { id: "gebouwen",      label: "Gebouwen" },
@@ -118,28 +113,6 @@ function voldoetAanFilter(
   return MODULES.some((m) => (bevoegdheden?.[m.id] ?? 0) >= niveau);
 }
 
-// Bepaalt de getoonde rol-keuze: een monteur met een veldfunctie toont die
-// functie als keuze (timmerman/uitvoerder); anders gewoon de systeemrol.
-function rolKeuzeVan(rol: string, functietitels: string[]): string {
-  if (rol === "monteur") {
-    const veld = functietitels.find((f) =>
-      (VELD_FUNCTIES as readonly string[]).includes(f),
-    );
-    if (veld) return veld.toLowerCase();
-  }
-  return rol;
-}
-
-// De veldfunctie-naam van een gebruiker (bv. "Timmerman"), of null.
-function veldFunctieVan(g: { rol?: string | null; functietitels?: string[] | null }): string | null {
-  if (g.rol !== "monteur") return null;
-  return (
-    (g.functietitels ?? []).find((f) =>
-      (VELD_FUNCTIES as readonly string[]).includes(f),
-    ) ?? null
-  );
-}
-
 const ROL_CONFIG: Record<Rol, {
   label: string;
   icon: React.ElementType;
@@ -163,30 +136,6 @@ const ROL_CONFIG: Record<Rol, {
     badge: "bg-primary/10 text-primary border-primary/20",
     rand: "border-t-primary",
     beschrijving: "Toegang via bevoegdheden-matrix",
-  },
-  beheerder: {
-    label: "Beheerders",
-    icon: ShieldCheck,
-    kleur: "text-primary",
-    badge: "bg-primary/10 text-primary border-primary/20",
-    rand: "border-t-primary",
-    beschrijving: "Volledige toegang",
-  },
-  monteur: {
-    label: "Monteurs & Timmermannen",
-    icon: Wrench,
-    kleur: "text-blue-600",
-    badge: "bg-blue-100 text-blue-800 border-blue-200",
-    rand: "border-t-blue-500",
-    beschrijving: "Projecten uitvoering",
-  },
-  controleur: {
-    label: "Controleurs",
-    icon: Eye,
-    kleur: "text-purple-600",
-    badge: "bg-purple-100 text-purple-800 border-purple-200",
-    rand: "border-t-purple-500",
-    beschrijving: "Periodieke controles bij onderhoudscontracten",
   },
   klant: {
     label: "Klanten",
@@ -362,7 +311,7 @@ export default function Gebruikers() {
     setBewerkForm({
       naam:            g.naam           ?? "",
       email:           g.email          ?? "",
-      rol:             g.rol            ?? "monteur",
+      rol:             g.rol            ?? "gebruiker",
       functietitels:   g.functietitels  ?? [],
       telefoon:        g.telefoon       ?? "",
       bedrijf:         g.bedrijf        ?? "",
@@ -457,7 +406,10 @@ export default function Gebruikers() {
   const zichtbareRollen = ROLLEN.filter((rol) => isHoofd || rol !== "hoofdbeheerder");
   const gridCols =
     zichtbareRollen.length >= 6 ? "grid-cols-3 xl:grid-cols-6" :
-    zichtbareRollen.length === 5 ? "grid-cols-5" : "grid-cols-4";
+    zichtbareRollen.length === 5 ? "grid-cols-5" :
+    zichtbareRollen.length === 4 ? "grid-cols-4" :
+    zichtbareRollen.length === 3 ? "grid-cols-3" :
+    "grid-cols-2";
 
   return (
     <div className="space-y-6 max-w-[1400px] mx-auto">
@@ -690,11 +642,6 @@ export default function Gebruikers() {
                               })()}
 
                               <div className="flex flex-wrap items-center gap-1.5 mt-2">
-                                {veldFunctieVan(g) && (
-                                  <Badge variant="outline" className="text-xs h-5 px-1.5 bg-blue-50 text-blue-700 border-blue-200">
-                                    {veldFunctieVan(g)}
-                                  </Badge>
-                                )}
                                 {!g.actief && (
                                   <Badge variant="outline" className="text-xs bg-gray-100 text-gray-500 border-gray-200 h-5 px-1.5">
                                     Inactief
@@ -873,7 +820,7 @@ export default function Gebruikers() {
                     <div className="flex flex-wrap gap-1.5 mt-1">
                       <Badge variant="outline" className={cfg?.badge ?? ""}>
                         <RolIcon className="h-3 w-3 mr-1" />
-                        {veldFunctieVan(bekijkGebruiker) ?? cfg?.label ?? bekijkGebruiker.rol}
+                        {cfg?.label ?? bekijkGebruiker.rol}
                       </Badge>
                       {status !== "geaccepteerd" && statusCfg.label && (
                         <Badge variant="outline" className={statusCfg.badge}>
@@ -1121,7 +1068,7 @@ function GebruikerVelden({
         <div className="space-y-1.5">
           <Label htmlFor="g-rol">Rol <span className="text-destructive">*</span></Label>
           <Select
-            value={rolKeuzeVan(form.rol, form.functietitels)}
+            value={form.rol}
             onValueChange={(v) =>
               setForm((f) => ({
                 ...f,
@@ -1151,7 +1098,7 @@ function GebruikerVelden({
         <div className="space-y-1.5">
           <Label>Projectfunctie</Label>
           <p className="text-xs text-muted-foreground">
-            Een beheerder kan één of meer projectfuncties hebben.
+            Een hoofdbeheerder kan één of meer projectfuncties hebben.
           </p>
           <div className="grid grid-cols-2 gap-2 rounded-md border p-3">
             {FUNCTIETITELS.map((ft) => {

@@ -25,12 +25,7 @@ const FUNCTIETITELS_TOEGESTAAN = [
   "Financieel",
 ];
 
-// Veldfuncties: een monteur kan één specifiekere functienaam dragen. De rol
-// (en daarmee de toegang) blijft "monteur"; dit is alleen een specifiekere naam.
-const VELD_FUNCTIES = ["Timmerman", "Uitvoerder"];
-
-const isBeheerderRol = (rol: unknown) =>
-  rol === "beheerder" || rol === "hoofdbeheerder";
+const isBeheerderRol = (rol: unknown) => rol === "hoofdbeheerder";
 
 // Normaliseer en valideer projectfuncties: alleen toegestane waarden, ontdubbeld.
 const schoonFunctietitels = (waarde: unknown): string[] => {
@@ -42,16 +37,6 @@ const schoonFunctietitels = (waarde: unknown): string[] => {
       .filter((f) => FUNCTIETITELS_TOEGESTAAN.includes(f)),
   );
   return [...uniek];
-};
-
-// Eén veldfunctie behouden (bv. Timmerman) voor een monteur.
-const schoonVeldFunctie = (waarde: unknown): string[] => {
-  if (!Array.isArray(waarde)) return [];
-  const eerste = waarde
-    .filter((f): f is string => typeof f === "string")
-    .map((f) => f.trim())
-    .find((f) => VELD_FUNCTIES.includes(f));
-  return eerste ? [eerste] : [];
 };
 
 const mapGebruiker = (g: typeof gebruikersTable.$inferSelect) => ({
@@ -158,9 +143,7 @@ router.post("/gebruikers", alleenBeheerder, async (req, res) => {
     }
     const functies = isBeheerderRol(rol)
       ? schoonFunctietitels(functietitels)
-      : rol === "monteur"
-        ? schoonVeldFunctie(functietitels)
-        : [];
+      : [];
     // Zelf-escalatiebeveiliging: niemand mag hogere niveaus toekennen dan eigen matrix.
     let toegestaanBevoegdheden: Record<string, number> = {};
     if (typeof bevoegdheden === "object" && bevoegdheden !== null) {
@@ -251,25 +234,16 @@ router.patch("/gebruikers/:id", alleenBeheerder, async (req, res) => {
     const bestaandeFuncties = bestaand.functietitels ?? [];
     let functies: string[] | undefined;
     if (isBeheerderRol(effectieveRol)) {
-      // Beheerder: projectfuncties (kantoor). Niet meegestuurd: ongemoeid laten,
-      // behalve bij een rolwissel — dan oude veldfuncties opschonen.
+      // Hoofdbeheerder: projectfuncties (kantoor). Niet meegestuurd: ongemoeid
+      // laten, behalve bij een rolwissel — dan oude functies opschonen.
       functies =
         functietitels !== undefined
           ? schoonFunctietitels(functietitels)
           : rolGewijzigd
             ? schoonFunctietitels(bestaandeFuncties)
             : undefined;
-    } else if (effectieveRol === "monteur") {
-      // Monteur: hooguit één veldfunctie (bv. Timmerman). Niet meegestuurd:
-      // ongemoeid laten, behalve bij een rolwissel — dan oude officefuncties opschonen.
-      functies =
-        functietitels !== undefined
-          ? schoonVeldFunctie(functietitels)
-          : rolGewijzigd
-            ? schoonVeldFunctie(bestaandeFuncties)
-            : undefined;
     } else {
-      // Controleur/klant (ook bij rolwissel): nooit een functie.
+      // Gebruiker/klant (ook bij rolwissel): nooit een functie.
       functies = [];
     }
     const wijziging: Partial<typeof gebruikersTable.$inferInsert> = {
