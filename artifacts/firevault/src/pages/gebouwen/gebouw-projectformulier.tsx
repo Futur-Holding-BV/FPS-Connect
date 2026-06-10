@@ -25,7 +25,7 @@ import {
   Sparkles, ClipboardList, Building2, Phone, Handshake, ListChecks,
   CheckSquare, FileText, AlertTriangle, Users, ShieldCheck, Save,
   RefreshCw, Loader2, Pencil, Hash, Calendar, Mail, ChevronDown,
-  ChevronUp, Check, UserPlus, Wrench, X, Info, Ruler, Contact,
+  ChevronUp, Check, UserPlus, Wrench, X, Info, Ruler,
 } from "lucide-react";
 
 // ── Typen ────────────────────────────────────────────────────────────────────
@@ -141,6 +141,90 @@ const PARTIJ_ROLLEN = new Set([
   "opdrachtgever", "gebruiker", "installateur", "aannemer", "eigenaar", "aanvrager",
 ]);
 
+// Eén betrokkene (persoon) binnen een partij — afkomstig van een AI-contact of
+// een handmatig geregistreerde partij.
+type Betrokkene = {
+  naam: string;
+  rol: string;
+  functie?: string | null;
+  organisatie?: string | null;
+  email?: string | null;
+  telefoon?: string | null;
+  bron: "contact" | "partij";
+  status: "voorstel" | "bevestigd" | "afgewezen";
+  bron_onderwerp?: string | null;
+  contact?: EmailContactpersoon;
+};
+
+// Een partij = unieke combinatie van rol + organisatie, met haar contactpersonen.
+type Partijgroep = {
+  rol: string;
+  organisatie: string | null;
+  personen: Betrokkene[];
+};
+
+// Sleutel om dezelfde persoon uit verschillende bronnen te ontdubbelen.
+function persoonKey(naam?: string | null, email?: string | null): string {
+  const e = (email ?? "").trim().toLowerCase();
+  return e ? `e:${e}` : `n:${(naam ?? "").trim().toLowerCase()}`;
+}
+
+const ROL_VOLGORDE = [
+  "opdrachtgever", "eigenaar", "gebruiker", "aanvrager", "installateur", "aannemer",
+];
+
+function rolIndex(rol: string): number {
+  const i = ROL_VOLGORDE.indexOf(rol);
+  return i < 0 ? ROL_VOLGORDE.length : i;
+}
+
+function contactNaarBetrokkene(c: EmailContactpersoon): Betrokkene {
+  return {
+    naam: c.naam,
+    rol: c.rol,
+    functie: c.functie ?? null,
+    organisatie: c.organisatie ?? null,
+    email: c.email ?? null,
+    telefoon: c.telefoon ?? null,
+    bron: "contact",
+    status: contactStatus(c),
+    bron_onderwerp: c.bron_onderwerp ?? null,
+    contact: c,
+  };
+}
+
+function partijNaarBetrokkene(p: Partij): Betrokkene {
+  return {
+    naam: p.naam,
+    rol: p.type,
+    functie: null,
+    organisatie: p.organisatie ?? null,
+    email: p.email ?? null,
+    telefoon: p.telefoon ?? null,
+    bron: "partij",
+    status: "bevestigd",
+  };
+}
+
+// Groepeer betrokkenen per partij (rol + organisatie) en sorteer op rol-volgorde.
+function groepeerPartijen(betrokkenen: Betrokkene[]): Partijgroep[] {
+  const map = new Map<string, Partijgroep>();
+  for (const b of betrokkenen) {
+    const orgNorm = (b.organisatie ?? "").trim().toLowerCase();
+    const key = `${b.rol}|${orgNorm}`;
+    let g = map.get(key);
+    if (!g) {
+      g = { rol: b.rol, organisatie: b.organisatie ?? null, personen: [] };
+      map.set(key, g);
+    }
+    g.personen.push(b);
+  }
+  return [...map.values()].sort((a, b) => {
+    const d = rolIndex(a.rol) - rolIndex(b.rol);
+    return d !== 0 ? d : (a.organisatie ?? "").localeCompare(b.organisatie ?? "", "nl");
+  });
+}
+
 // ── Sub-componenten ───────────────────────────────────────────────────────────
 
 function SectieLabel({
@@ -190,100 +274,143 @@ function AfmetingRij({
   );
 }
 
-// Read-only weergave van een handmatig geregistreerde contactpartij
-// (opdrachtgever, eigenaar, enz.) binnen de sectie "Betrokken contacten".
-function PartijRij({ partij }: { partij: Partij }) {
-  return (
-    <li className="flex items-start justify-between gap-3 rounded-md border border-blue-200 bg-blue-50/40 px-3 py-2">
-      <div className="min-w-0 flex-1 text-sm">
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="font-medium">{partij.naam}</span>
-          <Badge variant="secondary" className="text-xs font-normal px-1.5">
-            {rolLabel(partij.type)}
-          </Badge>
-        </div>
-        {partij.organisatie && (
-          <p className="text-xs text-muted-foreground">{partij.organisatie}</p>
-        )}
-        {(partij.email || partij.telefoon) && (
-          <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
-            {partij.email && (
-              <a
-                href={`mailto:${partij.email}`}
-                className="flex items-center gap-1 hover:underline"
-              >
-                <Mail className="h-3 w-3 shrink-0" /> {partij.email}
-              </a>
-            )}
-            {partij.telefoon && (
-              <a
-                href={`tel:${partij.telefoon}`}
-                className="flex items-center gap-1 hover:underline"
-              >
-                <Phone className="h-3 w-3 shrink-0" /> {partij.telefoon}
-              </a>
-            )}
-          </div>
-        )}
-      </div>
-      <Badge variant="outline" className="text-[10px] font-normal px-1.5 shrink-0">
-        Handmatig
-      </Badge>
-    </li>
-  );
-}
-
-function ContactRij({
-  contact,
+// Eén betrokken partij (opdrachtgever, installateur, …) met haar contactpersonen,
+// gegroepeerd onder de organisatienaam.
+function PartijBlok({
+  groep,
+  toonRol,
   toonActies,
   opslaan,
   alleContacten,
   gebouwId,
 }: {
-  contact: EmailContactpersoon;
+  groep: Partijgroep;
+  toonRol: boolean;
   toonActies: boolean;
   opslaan: (updated: EmailContactpersoon[]) => Promise<void>;
   alleContacten: EmailContactpersoon[];
   gebouwId: number;
 }) {
-  const status = contactStatus(contact);
-  const relevantie = contactRelevantie(contact);
+  const kop = groep.organisatie
+    ? toonRol
+      ? `${rolLabel(groep.rol)} · ${groep.organisatie}`
+      : groep.organisatie
+    : rolLabel(groep.rol);
+  return (
+    <div className="space-y-1.5">
+      <div className="text-sm font-semibold text-foreground">{kop}</div>
+      <div className="space-y-2 border-l-2 border-muted pl-3">
+        {groep.personen.map((b, i) => (
+          <PersoonRegel
+            key={`${persoonKey(b.naam, b.email)}-${i}`}
+            betrokkene={b}
+            toonActies={toonActies}
+            opslaan={opslaan}
+            alleContacten={alleContacten}
+            gebouwId={gebouwId}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// Volledige weergave van betrokken partijen: opdrachtgever bovenaan, daarna de
+// overige betrokken partijen (installateur, aannemer, …).
+function BetrokkenenWeergave({
+  groepen,
+  toonActies,
+  opslaan,
+  alleContacten,
+  gebouwId,
+}: {
+  groepen: Partijgroep[];
+  toonActies: boolean;
+  opslaan: (updated: EmailContactpersoon[]) => Promise<void>;
+  alleContacten: EmailContactpersoon[];
+  gebouwId: number;
+}) {
+  const opdrachtgever = groepen.filter((g) => g.rol === "opdrachtgever");
+  const overig = groepen.filter((g) => g.rol !== "opdrachtgever");
+  return (
+    <div className="space-y-4">
+      {opdrachtgever.length > 0 && (
+        <div className="space-y-2">
+          <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            <Building2 className="h-3.5 w-3.5" /> Opdrachtgever
+          </p>
+          {opdrachtgever.map((g, i) => (
+            <PartijBlok
+              key={`og-${i}`}
+              groep={g}
+              toonRol={false}
+              toonActies={toonActies}
+              opslaan={opslaan}
+              alleContacten={alleContacten}
+              gebouwId={gebouwId}
+            />
+          ))}
+        </div>
+      )}
+      {overig.length > 0 && (
+        <div className="space-y-2">
+          {opdrachtgever.length > 0 && (
+            <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              <Handshake className="h-3.5 w-3.5" /> Betrokken partijen
+            </p>
+          )}
+          {overig.map((g, i) => (
+            <PartijBlok
+              key={`bt-${i}`}
+              groep={g}
+              toonRol
+              toonActies={toonActies}
+              opslaan={opslaan}
+              alleContacten={alleContacten}
+              gebouwId={gebouwId}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Eén persoon binnen een partij. Rustige, formulierachtige regel: naam · functie
+// met contactgegevens eronder. AI-voorstellen krijgen een gele markering,
+// bevestigde betrokkenen blijven neutraal.
+function PersoonRegel({
+  betrokkene,
+  toonActies,
+  opslaan,
+  alleContacten,
+  gebouwId,
+  toonContext = false,
+}: {
+  betrokkene: Betrokkene;
+  toonActies: boolean;
+  opslaan: (updated: EmailContactpersoon[]) => Promise<void>;
+  alleContacten: EmailContactpersoon[];
+  gebouwId: number;
+  toonContext?: boolean;
+}) {
+  const contact = betrokkene.contact;
+  const status = betrokkene.status;
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const maakPartij = useCreateGebouwPartij();
   const [partijToegevoegd, setPartijToegevoegd] = useState(false);
   const [bezig, setBezig] = useState(false);
 
-  function bijgewerkteMet(nieuwStatus: "bevestigd" | "afgewezen"): EmailContactpersoon[] {
-    return alleContacten.map((c) =>
-      c === contact ? { ...c, status: nieuwStatus } : c,
-    );
+  function metStatus(nieuw: "voorstel" | "bevestigd" | "afgewezen"): EmailContactpersoon[] {
+    return alleContacten.map((c) => (c === contact ? { ...c, status: nieuw } : c));
   }
 
-  async function accepteer() {
+  async function muteer(nieuw: "voorstel" | "bevestigd" | "afgewezen") {
+    if (!contact) return;
     setBezig(true);
     try {
-      await opslaan(bijgewerkteMet("bevestigd"));
-    } finally {
-      setBezig(false);
-    }
-  }
-
-  async function afwijs() {
-    setBezig(true);
-    try {
-      await opslaan(bijgewerkteMet("afgewezen"));
-    } finally {
-      setBezig(false);
-    }
-  }
-
-  async function terugzetten() {
-    setBezig(true);
-    try {
-      await opslaan(
-        alleContacten.map((c) => (c === contact ? { ...c, status: "voorstel" } : c)),
-      );
+      await opslaan(metStatus(nieuw));
     } finally {
       setBezig(false);
     }
@@ -294,99 +421,78 @@ function ContactRij({
       await maakPartij.mutateAsync({
         id: gebouwId,
         data: {
-          type: contact.rol,
-          naam: contact.naam,
-          organisatie: contact.organisatie ?? undefined,
-          email: contact.email ?? undefined,
-          telefoon: contact.telefoon ?? undefined,
+          type: betrokkene.rol,
+          naam: betrokkene.naam,
+          organisatie: betrokkene.organisatie ?? undefined,
+          email: betrokkene.email ?? undefined,
+          telefoon: betrokkene.telefoon ?? undefined,
         },
       });
       queryClient.invalidateQueries({ queryKey: getListGebouwPartijenQueryKey(gebouwId) });
       setPartijToegevoegd(true);
-      toast({ title: "Toegevoegd als partij", description: `${contact.naam} (${rolLabel(contact.rol)})` });
+      toast({ title: "Toegevoegd als partij", description: `${betrokkene.naam} (${rolLabel(betrokkene.rol)})` });
     } catch {
       toast({ title: "Toevoegen mislukt", variant: "destructive" });
     }
   }
 
-  // Achtergrondkleur per status
-  const achtergrond =
-    status === "bevestigd"
-      ? "border-muted bg-muted/40"
-      : status === "afgewezen"
-        ? "border-muted bg-muted/30 opacity-60"
-        : relevantie === "ter_controle"
-          ? "border-muted bg-background"
-          : "border-amber-200 bg-amber-50/60";
-
   return (
-    <li className={`flex items-start justify-between gap-3 rounded-md border px-3 py-2 ${achtergrond}`}>
-      <div className="min-w-0 flex-1 text-sm">
-        <div className="flex items-center gap-2 flex-wrap">
-          {status === "afgewezen" ? (
-            <span className="font-medium line-through text-muted-foreground">{contact.naam}</span>
-          ) : (
-            <span className="font-medium">{contact.naam}</span>
+    <div className="flex items-start justify-between gap-2">
+      <div className="min-w-0 flex-1 text-sm leading-snug">
+        <div className="flex items-center gap-x-2 gap-y-0.5 flex-wrap">
+          <span className={status === "afgewezen" ? "font-medium line-through text-muted-foreground" : "font-medium"}>
+            {betrokkene.naam}
+          </span>
+          {betrokkene.functie && (
+            <span className="text-xs text-muted-foreground">{betrokkene.functie}</span>
           )}
-          <Badge variant="secondary" className="text-xs font-normal px-1.5">
-            {rolLabel(contact.rol)}
-          </Badge>
-          {status === "bevestigd" && (
-            <Badge variant="secondary" className="text-xs font-normal px-1.5 text-muted-foreground">
-              <Check className="h-2.5 w-2.5 mr-0.5" /> Bevestigd
-            </Badge>
-          )}
-          {status === "afgewezen" && (
-            <Badge variant="outline" className="text-xs font-normal text-muted-foreground px-1.5">
-              Afgewezen
-            </Badge>
-          )}
-          {status === "voorstel" && relevantie === "ter_controle" && (
-            <Badge variant="outline" className="text-xs font-normal px-1.5 text-muted-foreground">
-              <Info className="h-2.5 w-2.5 mr-0.5" /> Ter controle
-            </Badge>
-          )}
-          {status === "voorstel" && relevantie === "relevant" && (
-            <Badge className="bg-amber-100 text-amber-700 border-amber-200 text-xs font-normal px-1.5">
+          {status === "voorstel" && (
+            <Badge className="bg-amber-100 text-amber-700 border-amber-200 text-[10px] font-normal px-1.5 normal-case">
               <Sparkles className="h-2.5 w-2.5 mr-0.5" /> AI-voorstel
             </Badge>
           )}
-        </div>
-        {contact.functie && (
-          <div className="text-xs text-muted-foreground mt-0.5">{contact.functie}</div>
-        )}
-        {contact.organisatie && (
-          <div className="text-xs text-muted-foreground">{contact.organisatie}</div>
-        )}
-        <div className="mt-0.5 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
-          {contact.email && (
-            <a href={`mailto:${contact.email}`} className="flex items-center gap-1 hover:underline">
-              <Mail className="h-3 w-3" /> {contact.email}
-            </a>
-          )}
-          {contact.telefoon && (
-            <a href={`tel:${contact.telefoon}`} className="flex items-center gap-1 hover:underline">
-              <Phone className="h-3 w-3" /> {contact.telefoon}
-            </a>
+          {betrokkene.bron === "partij" && (
+            <Badge variant="outline" className="text-[10px] font-normal px-1.5 text-muted-foreground">
+              Handmatig
+            </Badge>
           )}
         </div>
-        {contact.bron_onderwerp && status !== "afgewezen" && (
+        {toonContext && (
+          <div className="mt-0.5 text-xs text-muted-foreground">
+            {rolLabel(betrokkene.rol)}
+            {betrokkene.organisatie ? ` · ${betrokkene.organisatie}` : ""}
+          </div>
+        )}
+        {(betrokkene.email || betrokkene.telefoon) && (
+          <div className="mt-0.5 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
+            {betrokkene.email && (
+              <a href={`mailto:${betrokkene.email}`} className="flex items-center gap-1 hover:underline">
+                <Mail className="h-3 w-3 shrink-0" /> {betrokkene.email}
+              </a>
+            )}
+            {betrokkene.telefoon && (
+              <a href={`tel:${betrokkene.telefoon}`} className="flex items-center gap-1 hover:underline">
+                <Phone className="h-3 w-3 shrink-0" /> {betrokkene.telefoon}
+              </a>
+            )}
+          </div>
+        )}
+        {betrokkene.bron_onderwerp && status === "voorstel" && (
           <div className="mt-0.5 text-xs text-muted-foreground/70 flex items-center gap-1">
-            <Mail className="h-2.5 w-2.5" />
-            Uit: {contact.bron_onderwerp}
+            <Mail className="h-2.5 w-2.5 shrink-0" /> Uit: {betrokkene.bron_onderwerp}
           </div>
         )}
       </div>
 
-      {toonActies && (
-        <div className="flex items-center gap-1 shrink-0">
+      {toonActies && contact && (
+        <div className="flex items-center gap-0.5 shrink-0">
           {status === "voorstel" && (
             <>
               <Button
                 size="sm"
                 variant="ghost"
-                className="h-7 px-2 text-xs text-green-700 hover:text-green-800 hover:bg-green-100"
-                onClick={accepteer}
+                className="h-7 px-2 text-xs text-green-700 hover:text-green-800 hover:bg-green-50"
+                onClick={() => muteer("bevestigd")}
                 disabled={bezig}
                 title="Bevestigen"
               >
@@ -397,32 +503,31 @@ function ContactRij({
                 size="sm"
                 variant="ghost"
                 className="h-7 px-2 text-xs text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                onClick={afwijs}
+                onClick={() => muteer("afgewezen")}
                 disabled={bezig}
                 title="Afwijzen"
               >
                 <X className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline ml-0.5">Afwijzen</span>
               </Button>
             </>
           )}
           {status === "bevestigd" && (
             <>
-              {PARTIJ_ROLLEN.has(contact.rol) && (
+              {PARTIJ_ROLLEN.has(betrokkene.rol) && (
                 <Button
                   size="sm"
                   variant="ghost"
-                  className="h-7 px-2 text-xs"
+                  className="h-7 px-2 text-xs text-muted-foreground"
                   onClick={toevoegenAlsPartij}
                   disabled={maakPartij.isPending || partijToegevoegd}
-                  title="Opslaan als contactpartij"
+                  title="Opslaan als vaste contactpartij"
                 >
                   {partijToegevoegd ? (
-                    <><Check className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Partij</span></>
+                    <Check className="h-3.5 w-3.5" />
                   ) : maakPartij.isPending ? (
                     <Loader2 className="h-3.5 w-3.5 animate-spin" />
                   ) : (
-                    <><UserPlus className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Partij</span></>
+                    <UserPlus className="h-3.5 w-3.5" />
                   )}
                 </Button>
               )}
@@ -430,7 +535,7 @@ function ContactRij({
                 size="sm"
                 variant="ghost"
                 className="h-7 px-2 text-xs text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                onClick={afwijs}
+                onClick={() => muteer("afgewezen")}
                 disabled={bezig}
                 title="Afwijzen"
               >
@@ -443,7 +548,7 @@ function ContactRij({
               size="sm"
               variant="ghost"
               className="h-7 px-2 text-xs text-muted-foreground"
-              onClick={terugzetten}
+              onClick={() => muteer("voorstel")}
               disabled={bezig}
               title="Terugzetten als voorstel"
             >
@@ -452,7 +557,7 @@ function ContactRij({
           )}
         </div>
       )}
-    </li>
+    </div>
   );
 }
 
@@ -635,6 +740,34 @@ export function Projectformulier({
   const afgewezenContacten = localContacten.filter((c) => contactStatus(c) === "afgewezen");
   const partijLijst = partijen ?? [];
 
+  // ── Betrokken partijen (gegroepeerd op rol + organisatie) ──
+  const bevestigdBetrokken = bevestigdeContacten.map(contactNaarBetrokkene);
+  const voorstelBetrokken = voorstelRelevant.map(contactNaarBetrokkene);
+
+  // Handmatige partijen die nog niet als (bevestigd/voorgesteld) contact bestaan,
+  // zodat dezelfde persoon niet dubbel verschijnt.
+  const handmatigeBetrokken = (bestaandeKeys: Set<string>) =>
+    partijLijst
+      .filter((p) => !bestaandeKeys.has(persoonKey(p.naam, p.email)))
+      .map(partijNaarBetrokkene);
+
+  const beheerKeys = new Set(
+    [...bevestigdBetrokken, ...voorstelBetrokken].map((b) => persoonKey(b.naam, b.email)),
+  );
+  const beheerGroepen = groepeerPartijen([
+    ...bevestigdBetrokken,
+    ...voorstelBetrokken,
+    ...handmatigeBetrokken(beheerKeys),
+  ]);
+
+  const leesKeys = new Set(bevestigdBetrokken.map((b) => persoonKey(b.naam, b.email)));
+  const leesGroepen = groepeerPartijen([
+    ...bevestigdBetrokken,
+    ...handmatigeBetrokken(leesKeys),
+  ]);
+
+  const aantalBetrokken = beheerGroepen.reduce((n, g) => n + g.personen.length, 0);
+
   const heeftSamenvatting = !!samenvatting;
   const geverifieerd = samenvatting?.geverifieerd ?? false;
   const aantalEmails = samenvatting?.aantal_emails ?? 0;
@@ -704,26 +837,18 @@ export function Projectformulier({
               </p>
             </div>
           ))}
-          {(partijLijst.length > 0 || bevestigdeContacten.length > 0) && (
+          {leesGroepen.length > 0 && (
             <div>
-              <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground mb-1.5">
-                <Users className="h-4 w-4" /> Contactpersonen
+              <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground mb-2">
+                <Users className="h-4 w-4" /> Betrokken partijen
               </div>
-              <ul className="space-y-1.5">
-                {partijLijst.map((p) => (
-                  <PartijRij key={`partij-${p.id}`} partij={p} />
-                ))}
-                {bevestigdeContacten.map((c, i) => (
-                  <ContactRij
-                    key={`${c.naam}-${c.email ?? i}`}
-                    contact={c}
-                    toonActies={false}
-                    opslaan={bewaarContacten}
-                    alleContacten={localContacten}
-                    gebouwId={gebouwId}
-                  />
-                ))}
-              </ul>
+              <BetrokkenenWeergave
+                groepen={leesGroepen}
+                toonActies={false}
+                opslaan={bewaarContacten}
+                alleContacten={localContacten}
+                gebouwId={gebouwId}
+              />
             </div>
           )}
         </CardContent>
@@ -1036,141 +1161,97 @@ export function Projectformulier({
 
         <Separator />
 
-        {/* ── Sectie 3: Contactpersonen ── */}
-        <div className="space-y-2.5">
+        {/* ── Sectie 3: Betrokken partijen ── */}
+        <div className="space-y-3">
           <SectieLabel
             icoon={<Users className="h-3.5 w-3.5" />}
-            titel="Betrokken contacten"
+            titel="Betrokken partijen"
             extra={
-              localContacten.length > 0 ? (
+              aantalBetrokken > 0 ? (
                 <span className="font-normal normal-case tracking-normal text-muted-foreground ml-1">
-                  — {bevestigdeContacten.length} bevestigd
-                  {voorstelRelevant.length > 0 && `, ${voorstelRelevant.length} ter beoordeling`}
+                  — {aantalBetrokken} {aantalBetrokken === 1 ? "persoon" : "personen"}
                 </span>
               ) : undefined
             }
           />
 
-          {localContacten.length === 0 && partijLijst.length === 0 ? (
-            <p className="text-xs text-muted-foreground">
-              {heeftSamenvatting
-                ? "Geen contactpersonen gevonden in de e-mails."
-                : "Nog geen e-mails verwerkt."}
-            </p>
-          ) : (
-            <div className="space-y-3">
-              {/* Contactpartijen (handmatig geregistreerd) */}
-              {partijLijst.length > 0 && (
-                <div className="space-y-1.5">
-                  <p className="text-xs text-blue-700 font-medium flex items-center gap-1">
-                    <Contact className="h-3 w-3" /> Contactpartijen ({partijLijst.length})
-                  </p>
-                  <ul className="space-y-1.5">
-                    {partijLijst.map((p) => (
-                      <PartijRij key={`partij-${p.id}`} partij={p} />
-                    ))}
-                  </ul>
-                </div>
-              )}
-              {/* Bevestigde contacten */}
-              {bevestigdeContacten.length > 0 && (
-                <div className="space-y-1.5">
-                  <p className="text-xs text-muted-foreground font-medium flex items-center gap-1">
-                    <ShieldCheck className="h-3 w-3" /> Bevestigd ({bevestigdeContacten.length})
-                  </p>
-                  <ul className="space-y-1.5">
-                    {bevestigdeContacten.map((c, i) => (
-                      <ContactRij
-                        key={`bevestigd-${c.naam}-${c.email ?? i}`}
-                        contact={c}
-                        toonActies
-                        opslaan={bewaarContacten}
-                        alleContacten={localContacten}
-                        gebouwId={gebouwId}
-                      />
-                    ))}
-                  </ul>
-                </div>
-              )}
+          {beheerGroepen.length > 0 && (
+            <BetrokkenenWeergave
+              groepen={beheerGroepen}
+              toonActies
+              opslaan={bewaarContacten}
+              alleContacten={localContacten}
+              gebouwId={gebouwId}
+            />
+          )}
 
-              {/* AI-voorstellen — relevant */}
-              {voorstelRelevant.length > 0 && (
-                <div className="space-y-1.5">
-                  <p className="text-xs text-amber-700 font-medium flex items-center gap-1">
-                    <Sparkles className="h-3 w-3" /> AI-voorstellen — actieve betrokkenen ({voorstelRelevant.length})
-                  </p>
-                  <ul className="space-y-1.5">
-                    {voorstelRelevant.map((c, i) => (
-                      <ContactRij
-                        key={`relevant-${c.naam}-${c.email ?? i}`}
-                        contact={c}
-                        toonActies
-                        opslaan={bewaarContacten}
-                        alleContacten={localContacten}
-                        gebouwId={gebouwId}
-                      />
-                    ))}
-                  </ul>
+          {beheerGroepen.length === 0 &&
+            voorstelTerControle.length === 0 &&
+            afgewezenContacten.length === 0 && (
+              <p className="text-xs text-muted-foreground">
+                {heeftSamenvatting
+                  ? "Geen contactpersonen gevonden in de e-mails."
+                  : "Nog geen e-mails verwerkt."}
+              </p>
+            )}
+
+          {/* Twijfelgevallen ter controle (inklapbaar) */}
+          {voorstelTerControle.length > 0 && (
+            <div className="space-y-1.5">
+              <button
+                type="button"
+                className="flex items-center gap-1 text-xs text-muted-foreground font-medium hover:text-foreground transition-colors"
+                onClick={() => setTerControleOpen((v) => !v)}
+              >
+                {terControleOpen
+                  ? <ChevronUp className="h-3 w-3" />
+                  : <ChevronDown className="h-3 w-3" />}
+                Twijfelgevallen ter controle ({voorstelTerControle.length})
+              </button>
+              {terControleOpen && (
+                <div className="space-y-2 border-l-2 border-muted pl-3">
+                  {voorstelTerControle.map((c, i) => (
+                    <PersoonRegel
+                      key={`controle-${persoonKey(c.naam, c.email)}-${i}`}
+                      betrokkene={contactNaarBetrokkene(c)}
+                      toonActies
+                      toonContext
+                      opslaan={bewaarContacten}
+                      alleContacten={localContacten}
+                      gebouwId={gebouwId}
+                    />
+                  ))}
                 </div>
               )}
+            </div>
+          )}
 
-              {/* AI-voorstellen — ter controle (inklapbaar) */}
-              {voorstelTerControle.length > 0 && (
-                <div className="space-y-1.5">
-                  <button
-                    type="button"
-                    className="flex items-center gap-1 text-xs text-muted-foreground font-medium hover:text-foreground transition-colors"
-                    onClick={() => setTerControleOpen((v) => !v)}
-                  >
-                    {terControleOpen
-                      ? <ChevronUp className="h-3 w-3" />
-                      : <ChevronDown className="h-3 w-3" />}
-                    Twijfelgevallen ter controle ({voorstelTerControle.length})
-                  </button>
-                  {terControleOpen && (
-                    <ul className="space-y-1.5">
-                      {voorstelTerControle.map((c, i) => (
-                        <ContactRij
-                          key={`controle-${c.naam}-${c.email ?? i}`}
-                          contact={c}
-                          toonActies
-                          opslaan={bewaarContacten}
-                          alleContacten={localContacten}
-                          gebouwId={gebouwId}
-                        />
-                      ))}
-                    </ul>
-                  )}
-                </div>
-              )}
-
-              {/* Afgewezen (inklapbaar, alleen zichtbaar voor beheerder) */}
-              {afgewezenContacten.length > 0 && (
-                <div className="space-y-1.5">
-                  <button
-                    type="button"
-                    className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
-                    onClick={() => setAfgewezenOpen((v) => !v)}
-                  >
-                    {afgewezenOpen
-                      ? <ChevronUp className="h-3 w-3" />
-                      : <ChevronDown className="h-3 w-3" />}
-                    Afgewezen ({afgewezenContacten.length})
-                  </button>
-                  {afgewezenOpen && (
-                    <ul className="space-y-1.5">
-                      {afgewezenContacten.map((c, i) => (
-                        <ContactRij
-                          key={`afgewezen-${c.naam}-${c.email ?? i}`}
-                          contact={c}
-                          toonActies
-                          opslaan={bewaarContacten}
-                          alleContacten={localContacten}
-                          gebouwId={gebouwId}
-                        />
-                      ))}
-                    </ul>
-                  )}
+          {/* Afgewezen (inklapbaar) */}
+          {afgewezenContacten.length > 0 && (
+            <div className="space-y-1.5">
+              <button
+                type="button"
+                className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                onClick={() => setAfgewezenOpen((v) => !v)}
+              >
+                {afgewezenOpen
+                  ? <ChevronUp className="h-3 w-3" />
+                  : <ChevronDown className="h-3 w-3" />}
+                Afgewezen ({afgewezenContacten.length})
+              </button>
+              {afgewezenOpen && (
+                <div className="space-y-2 border-l-2 border-muted pl-3">
+                  {afgewezenContacten.map((c, i) => (
+                    <PersoonRegel
+                      key={`afgewezen-${persoonKey(c.naam, c.email)}-${i}`}
+                      betrokkene={contactNaarBetrokkene(c)}
+                      toonActies
+                      toonContext
+                      opslaan={bewaarContacten}
+                      alleContacten={localContacten}
+                      gebouwId={gebouwId}
+                    />
+                  ))}
                 </div>
               )}
             </div>
