@@ -30,7 +30,7 @@ import { Switch } from "@/components/ui/switch";
 import {
   Mail, Phone, Building, Clock, Plus, UserPlus, Pencil, Trash2,
   RefreshCw, ShieldCheck, Eye, User, Crown, Upload, Palette, SendHorizonal, X,
-  Layers,
+  Layers, Search,
 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRol } from "@/context/rol-context";
@@ -285,11 +285,12 @@ export default function Gebruikers() {
 
   const [uitnodigingBezig, setUitnodigingBezig] = useState<number | null>(null);
 
+  const [zoek, setZoek]                   = useState<string>("");
   const [filterModule, setFilterModule]   = useState<string>("");
   const [filterNiveau, setFilterNiveau]   = useState<number>(0);
   const [sorteer, setSorteer]             = useState<"standaard" | "aantal_modules" | "hoogste_niveau">("standaard");
 
-  const filterActief = !!filterModule || filterNiveau > 0 || sorteer !== "standaard";
+  const filterActief = !!zoek.trim() || !!filterModule || filterNiveau > 0 || sorteer !== "standaard";
 
   const invalideer = () => queryClient.invalidateQueries({ queryKey: getListGebruikersQueryKey() });
 
@@ -402,8 +403,12 @@ export default function Gebruikers() {
     }
   }
 
+  const zoekTerm = zoek.trim().toLowerCase();
   const gefilterd = (gebruikers ?? []).filter((g) =>
-    voldoetAanFilter(g.bevoegdheden, filterModule, filterNiveau),
+    voldoetAanFilter(g.bevoegdheden, filterModule, filterNiveau) &&
+    (!zoekTerm ||
+      (g.naam ?? "").toLowerCase().includes(zoekTerm) ||
+      (g.email ?? "").toLowerCase().includes(zoekTerm)),
   ) as Gebruiker[];
 
   function sorteerLijst(lijst: Gebruiker[]): Gebruiker[] {
@@ -452,6 +457,19 @@ export default function Gebruikers() {
 
       {/* Filter- en sorteerbalk */}
       <div className="flex flex-wrap items-end gap-3 rounded-xl border bg-muted/40 px-4 py-3">
+        <div className="flex flex-col gap-1">
+          <Label className="text-xs text-muted-foreground">Zoeken</Label>
+          <div className="relative">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+            <Input
+              value={zoek}
+              onChange={(e) => setZoek(e.target.value)}
+              placeholder="Naam of e-mailadres"
+              className="h-9 w-[220px] pl-8"
+            />
+          </div>
+        </div>
+
         <div className="flex flex-col gap-1">
           <Label className="text-xs text-muted-foreground">Module</Label>
           <Select
@@ -513,7 +531,7 @@ export default function Gebruikers() {
               variant="ghost"
               size="sm"
               className="h-9 gap-1.5 text-muted-foreground"
-              onClick={() => { setFilterModule(""); setFilterNiveau(0); setSorteer("standaard"); }}
+              onClick={() => { setZoek(""); setFilterModule(""); setFilterNiveau(0); setSorteer("standaard"); }}
             >
               <X className="h-3.5 w-3.5" /> Wissen
             </Button>
