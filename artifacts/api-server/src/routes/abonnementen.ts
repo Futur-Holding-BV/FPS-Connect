@@ -5,6 +5,7 @@ import { eq } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
 
 const router = Router();
+const lezenAbonnementen = requireBevoegdheid("abonnementen", 1);
 
 const mapAbonnement = (a: typeof abonnementenTable.$inferSelect) => ({
   id: a.id,
@@ -23,7 +24,7 @@ const mapAbonnement = (a: typeof abonnementenTable.$inferSelect) => ({
 });
 
 // GET /abonnementen
-router.get("/abonnementen", async (req, res) => {
+router.get("/abonnementen", lezenAbonnementen, async (req, res) => {
   try {
     const abonnementen = await db.select().from(abonnementenTable);
     res.json(abonnementen.map(mapAbonnement));
@@ -63,7 +64,7 @@ router.post("/abonnementen", requireBevoegdheid("abonnementen", 3), async (req, 
 });
 
 // GET /abonnementen/:id
-router.get("/abonnementen/:id", async (req, res) => {
+router.get("/abonnementen/:id", lezenAbonnementen, async (req, res) => {
   try {
     const id = parseInt(String(req.params.id));
     const [a] = await db.select().from(abonnementenTable).where(eq(abonnementenTable.id, id));

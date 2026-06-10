@@ -10,12 +10,12 @@ import {
 } from "@workspace/db";
 import { eq, count, desc, inArray } from "drizzle-orm";
 import { effectieveContext } from "../utils/rol";
-import { requireBevoegdheid } from "../middlewares/auth";
+import { requireBevoegdheidOfKlant } from "../middlewares/auth";
 
 const router = Router();
-const dashboardLezen = requireBevoegdheid("gebouwen", 1);
+const dashboardLezen = requireBevoegdheidOfKlant("gebouwen", 1);
 
-const TOEGEWEZEN_ROLLEN = ["monteur", "controleur"];
+const TOEGEWEZEN_ROLLEN = ["monteur", "controleur", "klant"];
 
 async function toegewezenGebouwIds(userId: number): Promise<number[]> {
   const rows = await db

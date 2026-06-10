@@ -11,7 +11,7 @@ import {
   activiteitenTable,
 } from "@workspace/db";
 import { eq, inArray, count, and, sql } from "drizzle-orm";
-import { requireBevoegdheid } from "../middlewares/auth";
+import { requireBevoegdheid, requireBevoegdheidOfKlant } from "../middlewares/auth";
 import { effectieveContext } from "../utils/rol";
 import {
   analyseerGebouwVrijeTekst,
@@ -21,9 +21,10 @@ import {
 
 const router = Router();
 const lezenGebouwen = requireBevoegdheid("gebouwen", 1);
+const lezenGebouwenOfKlant = requireBevoegdheidOfKlant("gebouwen", 1);
 
 const BEHEERDER_ROLLEN = ["beheerder", "hoofdbeheerder"];
-const TOEGEWEZEN_ROLLEN = ["monteur", "controleur"];
+const TOEGEWEZEN_ROLLEN = ["monteur", "controleur", "klant"];
 
 function kapitaliseerWoorden(waarde: string): string {
   return waarde.replace(
@@ -125,7 +126,7 @@ function gebouwRij(
 }
 
 // GET /gebouwen
-router.get("/gebouwen", lezenGebouwen, async (req, res) => {
+router.get("/gebouwen", lezenGebouwenOfKlant, async (req, res) => {
   try {
     const { userId, rol } = await effectieveContext(req);
     const { zoek, partij_type, partij_naam, inclusief_gearchiveerd } = req.query;
@@ -428,7 +429,7 @@ router.get("/gebouwen/:id/kaart", lezenGebouwen, async (req, res) => {
 });
 
 // GET /gebouwen/:id
-router.get("/gebouwen/:id", lezenGebouwen, async (req, res) => {
+router.get("/gebouwen/:id", lezenGebouwenOfKlant, async (req, res) => {
   try {
     const id = parseInt(String(req.params.id));
     const { userId, rol } = await effectieveContext(req);

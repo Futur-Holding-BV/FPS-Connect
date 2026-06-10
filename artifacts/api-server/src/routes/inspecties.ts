@@ -9,13 +9,14 @@ import {
   gebouwToewijzingenTable,
 } from "@workspace/db";
 import { eq, inArray } from "drizzle-orm";
-import { requireBevoegdheid } from "../middlewares/auth";
+import { requireBevoegdheid, requireBevoegdheidOfKlant } from "../middlewares/auth";
 import { effectieveContext } from "../utils/rol";
 
 const router = Router();
 const lezenInspecties = requireBevoegdheid("inspecties", 1);
+const lezenInspectiesOfKlant = requireBevoegdheidOfKlant("inspecties", 1);
 
-const TOEGEWEZEN_ROLLEN = ["monteur", "controleur"];
+const TOEGEWEZEN_ROLLEN = ["monteur", "controleur", "klant"];
 
 async function toegewezenGebouwIds(userId: number): Promise<number[]> {
   const rows = await db
@@ -78,7 +79,7 @@ async function mapInspectie(i: typeof inspectiesTable.$inferSelect) {
 }
 
 // GET /inspecties
-router.get("/inspecties", lezenInspecties, async (req, res) => {
+router.get("/inspecties", lezenInspectiesOfKlant, async (req, res) => {
   try {
     const { userId, rol: effectiefRol } = await effectieveContext(req);
     const { gebouw_id, voorziening_id, type, status } = req.query;
@@ -175,7 +176,7 @@ router.post("/inspecties", requireBevoegdheid("inspecties", 3), async (req, res)
 });
 
 // GET /inspecties/:id
-router.get("/inspecties/:id", lezenInspecties, async (req, res) => {
+router.get("/inspecties/:id", lezenInspectiesOfKlant, async (req, res) => {
   try {
     const id = parseInt(String(req.params.id));
     const { userId, rol: effectiefRolDetail } = await effectieveContext(req);
