@@ -990,24 +990,16 @@ function GebruikerVelden({
           <Select
             value={rolKeuzeVan(form.rol, form.functietitels)}
             onValueChange={(v) =>
-              setForm((f) => {
-                if (v === "timmerman")
-                  return { ...f, rol: "monteur", functietitels: ["Timmerman"] };
-                if (v === "uitvoerder")
-                  return { ...f, rol: "monteur", functietitels: ["Uitvoerder"] };
-                if (v === "monteur")
-                  return { ...f, rol: "monteur", functietitels: [] };
-                const behoudt = v === "beheerder" || v === "hoofdbeheerder";
-                return {
-                  ...f,
-                  rol: v,
-                  functietitels: behoudt
+              setForm((f) => ({
+                ...f,
+                rol: v,
+                functietitels:
+                  v === "hoofdbeheerder"
                     ? f.functietitels.filter((o) =>
                         (FUNCTIETITELS as readonly string[]).includes(o),
                       )
                     : [],
-                };
-              })
+              }))
             }
           >
             <SelectTrigger id="g-rol">
@@ -1016,18 +1008,13 @@ function GebruikerVelden({
             <SelectContent>
               {toonHoofd && <SelectItem value="hoofdbeheerder">Hoofdbeheerder</SelectItem>}
               <SelectItem value="gebruiker">Gebruiker (matrix)</SelectItem>
-              <SelectItem value="beheerder">Beheerder (legacy)</SelectItem>
-              <SelectItem value="monteur">Monteur (legacy)</SelectItem>
-              <SelectItem value="timmerman">Timmerman (legacy)</SelectItem>
-              <SelectItem value="uitvoerder">Uitvoerder (legacy)</SelectItem>
-              <SelectItem value="controleur">Controleur (legacy)</SelectItem>
               <SelectItem value="klant">Klant</SelectItem>
             </SelectContent>
           </Select>
         </div>
       </div>
 
-      {(form.rol === "beheerder" || form.rol === "hoofdbeheerder") && (
+      {form.rol === "hoofdbeheerder" && (
         <div className="space-y-1.5">
           <Label>Projectfunctie</Label>
           <p className="text-xs text-muted-foreground">

@@ -8,7 +8,6 @@ import { stuurUitnodigingsmail } from "../services/email";
 import { requireBevoegdheid } from "../middlewares/auth";
 import {
   heeftNiveau,
-  bevoegdhedenVoorLegacyRol,
 } from "@workspace/permissies";
 
 const router = Router();
@@ -124,10 +123,7 @@ async function isBeheerder(userId: number | undefined): Promise<boolean> {
     .where(eq(gebruikersTable.id, userId));
   if (!g) return false;
   if (g.rol === "hoofdbeheerder") return true;
-  const bev: Record<string, number> =
-    g.bevoegdheden && Object.keys(g.bevoegdheden as Record<string, number>).length > 0
-      ? (g.bevoegdheden as Record<string, number>)
-      : bevoegdhedenVoorLegacyRol(g.rol);
+  const bev = (g.bevoegdheden as Record<string, number> | null) ?? {};
   return heeftNiveau(bev, "gebruikers", 1);
 }
 
@@ -172,11 +168,7 @@ router.post("/gebruikers", alleenBeheerder, async (req, res) => {
         .from(gebruikersTable)
         .where(eq(gebruikersTable.id, requesterId));
       if (requester && requester.rol !== "hoofdbeheerder") {
-        const eigenBev: Record<string, number> =
-          requester.bevoegdheden &&
-          Object.keys(requester.bevoegdheden as Record<string, number>).length > 0
-            ? (requester.bevoegdheden as Record<string, number>)
-            : bevoegdhedenVoorLegacyRol(requester.rol);
+        const eigenBev = (requester.bevoegdheden as Record<string, number> | null) ?? {};
         for (const [mod, lvl] of Object.entries(bevoegdheden as Record<string, number>)) {
           if (typeof lvl === "number" && lvl > (eigenBev[mod] ?? 0)) {
             return res.status(403).json({
@@ -294,11 +286,7 @@ router.patch("/gebruikers/:id", alleenBeheerder, async (req, res) => {
         .from(gebruikersTable)
         .where(eq(gebruikersTable.id, requesterId));
       if (requester && requester.rol !== "hoofdbeheerder") {
-        const eigenBev: Record<string, number> =
-          requester.bevoegdheden &&
-          Object.keys(requester.bevoegdheden as Record<string, number>).length > 0
-            ? (requester.bevoegdheden as Record<string, number>)
-            : bevoegdhedenVoorLegacyRol(requester.rol);
+        const eigenBev = (requester.bevoegdheden as Record<string, number> | null) ?? {};
         for (const [mod, lvl] of Object.entries(
           bevoegdheden as Record<string, number>,
         )) {

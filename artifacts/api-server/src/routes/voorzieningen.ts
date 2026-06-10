@@ -14,7 +14,7 @@ import {
 } from "@workspace/db";
 import { eq, and, ilike, sql } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
-import { heeftNiveau, bevoegdhedenVoorLegacyRol } from "@workspace/permissies";
+import { heeftNiveau } from "@workspace/permissies";
 import { effectieveContext } from "../utils/rol";
 import { getLabelsVoorVoorziening, syncVoorzieningLabels } from "../lib/classificatie";
 
@@ -591,10 +591,7 @@ router.patch("/voorzieningen/:id/archief", requireBevoegdheid("voorzieningen", 3
         return res.status(403).json({ error: "Geen toegang" });
       }
       if (g.rol !== "hoofdbeheerder") {
-        const bev: Record<string, number> =
-          g.bevoegdheden && Object.keys(g.bevoegdheden as Record<string, number>).length > 0
-            ? (g.bevoegdheden as Record<string, number>)
-            : bevoegdhedenVoorLegacyRol(g.rol);
+        const bev = (g.bevoegdheden as Record<string, number> | null) ?? {};
         if (!heeftNiveau(bev, "voorzieningen", 4)) {
           return res.status(403).json({ error: "Geen toegang" });
         }

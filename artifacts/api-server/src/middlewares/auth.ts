@@ -4,7 +4,6 @@ import { eq } from "drizzle-orm";
 import { leesToken } from "../lib/token";
 import {
   heeftNiveau,
-  bevoegdhedenVoorLegacyRol,
   type ModuleId,
 } from "@workspace/permissies";
 
@@ -107,11 +106,8 @@ export function requireBevoegdheid(module: ModuleId, minNiveau: number): Request
         res.status(403).json({ error: "Geen toegang" });
         return;
       }
-      // Effectieve matrix: gebruik eigen matrix als ingesteld, anders legacy-rol fallback.
-      const bev: Record<string, number> =
-        g.bevoegdheden && Object.keys(g.bevoegdheden as Record<string, number>).length > 0
-          ? (g.bevoegdheden as Record<string, number>)
-          : bevoegdhedenVoorLegacyRol(g.rol);
+      // Toegang komt puur uit de bevoegdheden-matrix.
+      const bev = (g.bevoegdheden as Record<string, number> | null) ?? {};
       if (!heeftNiveau(bev, module, minNiveau)) {
         res.status(403).json({ error: "Geen toegang" });
         return;
@@ -160,10 +156,8 @@ export function requireBevoegdheidOfKlant(module: ModuleId, minNiveau: number): 
         next();
         return;
       }
-      const bev: Record<string, number> =
-        g.bevoegdheden && Object.keys(g.bevoegdheden as Record<string, number>).length > 0
-          ? (g.bevoegdheden as Record<string, number>)
-          : bevoegdhedenVoorLegacyRol(g.rol);
+      // Toegang komt puur uit de bevoegdheden-matrix.
+      const bev = (g.bevoegdheden as Record<string, number> | null) ?? {};
       if (!heeftNiveau(bev, module, minNiveau)) {
         res.status(403).json({ error: "Geen toegang" });
         return;
