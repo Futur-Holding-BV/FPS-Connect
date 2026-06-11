@@ -2,6 +2,7 @@ import { Router } from "express";
 import { db, fabrikantenTable } from "@workspace/db";
 import { eq, asc } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
+import { herbenoemFabrikantOpToepassingen } from "../lib/classificatie";
 
 const router = Router();
 
@@ -76,6 +77,11 @@ router.patch("/fabrikanten/:id", requireBevoegdheid("bibliotheek", 2), async (re
       .where(eq(fabrikantenTable.id, id))
       .returning();
     if (!f) return res.status(404).json({ error: "Fabrikant niet gevonden" });
+    // Hernoemen werkt door naar gekoppelde toepassingen: de gedenormaliseerde
+    // fabrikant-naam op de labels wordt bijgewerkt.
+    if (set.naam !== undefined) {
+      await herbenoemFabrikantOpToepassingen(f.id, f.naam);
+    }
     return res.json(mapFabrikant(f));
   } catch (err) {
     if ((err as { code?: string })?.code === "23505") {

@@ -73,7 +73,12 @@ export const labelsTable = pgTable("labels", {
   id: serial("id").primaryKey(),
   typeCode: text("type_code").references(() => voorzieningTypesTable.code, { onDelete: "set null" }),
   naam: text("naam").notNull(),
+  // fabrikant = gedenormaliseerde naam (gevuld vanuit de gekoppelde fabrikant zodat
+  // bestaande lezers blijven werken); fabrikantId = bron van waarheid voor de koppeling
+  // naar de beheerde fabrikantenlijst. Bij hernoemen van een fabrikant wordt deze
+  // tekst voor alle gekoppelde toepassingen bijgewerkt.
   fabrikant: text("fabrikant"),
+  fabrikantId: integer("fabrikant_id").references(() => fabrikantenTable.id, { onDelete: "set null" }),
   testnorm: text("testnorm"),
   testrapportId: integer("testrapport_id").references(() => testrapportenTable.id, { onDelete: "set null" }),
   gearchiveerd: boolean("gearchiveerd").notNull().default(false),

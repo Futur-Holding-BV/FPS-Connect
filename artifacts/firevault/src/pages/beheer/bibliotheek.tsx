@@ -483,6 +483,7 @@ function TabToepassingen() {
   const [archiefResultaat, setArchiefResultaat] = useState<BulkResultaat | null>(null);
 
   const { data: typen = [] } = useListVoorzieningTypes();
+  const { data: fabrikanten = [] } = useListFabrikanten();
   const { data: alleLabels = [], isLoading } = useListLabels({
     type_code:
       typeFilter === GEEN_TYPE || typeFilter === ONGEKOPPELD ? undefined : typeFilter,
@@ -503,7 +504,7 @@ function TabToepassingen() {
   const [nieuw, setNieuw] = useState({
     applicatie_codes: [] as string[],
     naam: "",
-    fabrikant: "",
+    fabrikantId: null as number | null,
     testnorm: "",
   });
 
@@ -513,12 +514,12 @@ function TabToepassingen() {
       data: {
         applicatie_codes: nieuw.applicatie_codes,
         naam: nieuw.naam.trim(),
-        fabrikant: nieuw.fabrikant.trim() || undefined,
+        fabrikant_id: nieuw.fabrikantId,
         testnorm: nieuw.testnorm.trim() || undefined,
       },
     });
     await queryClient.invalidateQueries({ queryKey: getListLabelsQueryKey() });
-    setNieuw({ applicatie_codes: [], naam: "", fabrikant: "", testnorm: "" });
+    setNieuw({ applicatie_codes: [], naam: "", fabrikantId: null, testnorm: "" });
     setNieuwOpen(false);
   }
 
@@ -1230,13 +1231,25 @@ function TabToepassingen() {
               </Select>
             </div>
             <div>
-              <UiLabel htmlFor="nieuw-fabrikant">Fabrikant</UiLabel>
-              <Input
-                id="nieuw-fabrikant"
-                placeholder="Optioneel"
-                value={nieuw.fabrikant}
-                onChange={(e) => setNieuw((n) => ({ ...n, fabrikant: e.target.value }))}
-              />
+              <UiLabel>Fabrikant</UiLabel>
+              <Select
+                value={nieuw.fabrikantId == null ? "__geen__" : String(nieuw.fabrikantId)}
+                onValueChange={(v) =>
+                  setNieuw((n) => ({ ...n, fabrikantId: v === "__geen__" ? null : Number(v) }))
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Kies een fabrikant (optioneel)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__geen__">Geen fabrikant</SelectItem>
+                  {(fabrikanten as Fabrikant[]).map((f) => (
+                    <SelectItem key={f.id} value={String(f.id)}>
+                      {f.naam}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
           <DialogFooter>

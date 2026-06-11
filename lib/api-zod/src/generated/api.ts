@@ -1087,6 +1087,7 @@ export const GetVoorzieningResponse = zod.object({
   "type_code": zod.string().nullish(),
   "naam": zod.string(),
   "fabrikant": zod.string().nullish(),
+  "fabrikant_id": zod.number().nullish(),
   "testnorm": zod.string().nullish(),
   "testrapport_id": zod.number().nullish(),
   "testrapport": zod.union([zod.object({
@@ -1575,6 +1576,7 @@ export const ListLabelsResponseItem = zod.object({
   "type_code": zod.string().nullish(),
   "naam": zod.string(),
   "fabrikant": zod.string().nullish(),
+  "fabrikant_id": zod.number().nullish(),
   "testnorm": zod.string().nullish(),
   "testrapport_id": zod.number().nullish(),
   "testrapport": zod.union([zod.object({
@@ -1603,6 +1605,7 @@ export const CreateLabelBody = zod.object({
   "applicatie_codes": zod.array(zod.string()).optional(),
   "naam": zod.string(),
   "fabrikant": zod.string().optional(),
+  "fabrikant_id": zod.number().nullish(),
   "testnorm": zod.string().optional(),
   "testrapport_id": zod.number().optional()
 })
@@ -1620,6 +1623,7 @@ export const UpdateLabelParams = zod.object({
 export const UpdateLabelBody = zod.object({
   "naam": zod.string().optional(),
   "fabrikant": zod.string().nullish(),
+  "fabrikant_id": zod.number().nullish(),
   "testnorm": zod.string().nullish(),
   "testrapport_id": zod.number().nullish(),
   "gearchiveerd": zod.boolean().optional(),
@@ -1631,6 +1635,7 @@ export const UpdateLabelResponse = zod.object({
   "type_code": zod.string().nullish(),
   "naam": zod.string(),
   "fabrikant": zod.string().nullish(),
+  "fabrikant_id": zod.number().nullish(),
   "testnorm": zod.string().nullish(),
   "testrapport_id": zod.number().nullish(),
   "testrapport": zod.union([zod.object({
@@ -1667,6 +1672,7 @@ export const SetLabelDocumentenResponse = zod.object({
   "type_code": zod.string().nullish(),
   "naam": zod.string(),
   "fabrikant": zod.string().nullish(),
+  "fabrikant_id": zod.number().nullish(),
   "testnorm": zod.string().nullish(),
   "testrapport_id": zod.number().nullish(),
   "testrapport": zod.union([zod.object({

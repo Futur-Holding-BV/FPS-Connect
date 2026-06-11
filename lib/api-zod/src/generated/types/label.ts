@@ -15,6 +15,8 @@ export interface Label {
   /** @nullable */
   fabrikant?: string | null;
   /** @nullable */
+  fabrikant_id?: number | null;
+  /** @nullable */
   testnorm?: string | null;
   /** @nullable */
   testrapport_id?: number | null;

@@ -7,8 +7,9 @@ import {
   documentToepassingenTable,
   labelApplicatiesTable,
   voorzieningTypesTable,
+  fabrikantenTable,
 } from "@workspace/db";
-import { eq, inArray, and } from "drizzle-orm";
+import { eq, inArray, and, sql } from "drizzle-orm";
 
 export function mapTestrapport(t: typeof testrapportenTable.$inferSelect) {
   return {
@@ -80,6 +81,7 @@ export async function mapLabel(l: typeof labelsTable.$inferSelect) {
     type_code: l.typeCode,
     naam: l.naam,
     fabrikant: l.fabrikant,
+    fabrikant_id: l.fabrikantId,
     testnorm: l.testnorm,
     testrapport_id: l.testrapportId,
     testrapport,
@@ -88,6 +90,50 @@ export async function mapLabel(l: typeof labelsTable.$inferSelect) {
     bijgewerkt_op: l.bijgewerktOp.toISOString(),
     applicatie_codes: applRijen.map((r) => r.typeCode),
   };
+}
+
+// Resultaat van het bepalen van de fabrikant-koppeling voor een toepassing:
+// fabrikantId = bron van waarheid (FK), fabrikant = gedenormaliseerde naam.
+export interface FabrikantResultaat {
+  fabrikantId: number | null;
+  fabrikant: string | null;
+}
+
+// Bepaalt de fabrikant-koppeling op basis van de request-body. Voorkeur voor een
+// expliciete fabrikant_id (keuze uit de beheerde lijst). Wanneer alleen vrije tekst
+// is meegegeven (bv. Excel-import) wordt geprobeerd die te matchen op naam; lukt dat
+// niet, dan blijft het als losse tekst staan zonder koppeling.
+export async function bepaalFabrikant(
+  fabrikantId: unknown,
+  fabrikantTekst: unknown,
+): Promise<FabrikantResultaat> {
+  if (fabrikantId != null && Number.isInteger(Number(fabrikantId))) {
+    const id = Number(fabrikantId);
+    const [f] = await db
+      .select({ id: fabrikantenTable.id, naam: fabrikantenTable.naam })
+      .from(fabrikantenTable)
+      .where(eq(fabrikantenTable.id, id));
+    if (f) return { fabrikantId: f.id, fabrikant: f.naam };
+    return { fabrikantId: null, fabrikant: null };
+  }
+  const tekst = fabrikantTekst != null && String(fabrikantTekst).trim() ? String(fabrikantTekst).trim() : null;
+  if (tekst == null) return { fabrikantId: null, fabrikant: null };
+  // Match op naam (case-insensitief) tegen de beheerde lijst.
+  const [f] = await db
+    .select({ id: fabrikantenTable.id, naam: fabrikantenTable.naam })
+    .from(fabrikantenTable)
+    .where(sql`lower(${fabrikantenTable.naam}) = lower(${tekst})`);
+  if (f) return { fabrikantId: f.id, fabrikant: f.naam };
+  return { fabrikantId: null, fabrikant: tekst };
+}
+
+// Werkt de gedenormaliseerde fabrikant-naam bij voor alle toepassingen die aan de
+// opgegeven fabrikant gekoppeld zijn. Zo werkt hernoemen door naar de toepassingen.
+export async function herbenoemFabrikantOpToepassingen(fabrikantId: number, naam: string) {
+  await db
+    .update(labelsTable)
+    .set({ fabrikant: naam, bijgewerktOp: new Date() })
+    .where(eq(labelsTable.fabrikantId, fabrikantId));
 }
 
 // Geeft de opgegeven applicatie-codes terug die NIET in de catalogus bestaan.

@@ -4,10 +4,11 @@ import {
   useUpdateLabel,
   useSetLabelDocumenten,
   useListDocumenten,
+  useListFabrikanten,
   getListDocumentenQueryKey,
   getListLabelsQueryKey,
 } from "@workspace/api-client-react";
-import type { Label, VoorzieningType, Document } from "@workspace/api-client-react";
+import type { Label, VoorzieningType, Document, Fabrikant } from "@workspace/api-client-react";
 import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,6 +16,13 @@ import { Badge } from "@/components/ui/badge";
 import { Label as UiLabel } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -92,8 +100,10 @@ function ToepassingDetailInhoud({
   // revisies (geen vervangen of ingetrokken documenten).
   const { data: actueleDocs = [] } = useListDocumenten({ alleen_actueel: true });
 
+  const { data: fabrikanten = [] } = useListFabrikanten();
+
   const [naam, setNaam] = useState(toepassing.naam);
-  const [fabrikant, setFabrikant] = useState(toepassing.fabrikant ?? "");
+  const [fabrikantId, setFabrikantId] = useState<number | null>(toepassing.fabrikant_id ?? null);
   const [testnorm, setTestnorm] = useState(toepassing.testnorm ?? "");
   const [applCodes, setApplCodes] = useState<string[]>(toepassing.applicatie_codes ?? []);
 
@@ -150,7 +160,7 @@ function ToepassingDetailInhoud({
         id: toepassing.id,
         data: {
           naam: naam.trim(),
-          fabrikant: fabrikant.trim() || null,
+          fabrikant_id: fabrikantId,
           testnorm: testnorm.trim() || null,
           applicatie_codes: applCodes,
         },
@@ -191,14 +201,24 @@ function ToepassingDetailInhoud({
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <UiLabel htmlFor="toep-fabrikant">Fabrikant</UiLabel>
-              <Input
-                id="toep-fabrikant"
-                placeholder="Optioneel"
-                value={fabrikant}
+              <UiLabel>Fabrikant</UiLabel>
+              <Select
+                value={fabrikantId == null ? "__geen__" : String(fabrikantId)}
                 disabled={!magBewerken}
-                onChange={(e) => setFabrikant(e.target.value)}
-              />
+                onValueChange={(v) => setFabrikantId(v === "__geen__" ? null : Number(v))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Kies een fabrikant (optioneel)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__geen__">Geen fabrikant</SelectItem>
+                  {(fabrikanten as Fabrikant[]).map((f) => (
+                    <SelectItem key={f.id} value={String(f.id)}>
+                      {f.naam}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div>
               <UiLabel htmlFor="toep-testnorm">Brand- of rookwerendheid</UiLabel>

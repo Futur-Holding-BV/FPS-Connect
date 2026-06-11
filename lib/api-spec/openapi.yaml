@@ -6167,6 +6167,8 @@ components:
           type: string
         fabrikant:
           type: ["string", "null"]
+        fabrikant_id:
+          type: ["integer", "null"]
         testnorm:
           type: ["string", "null"]
         testrapport_id:
@@ -6198,6 +6200,8 @@ components:
           type: string
         fabrikant:
           type: string
+        fabrikant_id:
+          type: ["integer", "null"]
         testnorm:
           type: string
         testrapport_id:
@@ -6210,6 +6214,8 @@ components:
           type: string
         fabrikant:
           type: ["string", "null"]
+        fabrikant_id:
+          type: ["integer", "null"]
         testnorm:
           type: ["string", "null"]
         testrapport_id:

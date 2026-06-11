@@ -1062,6 +1062,8 @@ export interface Label {
   /** @nullable */
   fabrikant?: string | null;
   /** @nullable */
+  fabrikant_id?: number | null;
+  /** @nullable */
   testnorm?: string | null;
   /** @nullable */
   testrapport_id?: number | null;
@@ -1805,6 +1807,8 @@ export interface LabelInput {
   applicatie_codes?: string[];
   naam: string;
   fabrikant?: string;
+  /** @nullable */
+  fabrikant_id?: number | null;
   testnorm?: string;
   testrapport_id?: number;
 }
@@ -1813,6 +1817,8 @@ export interface LabelUpdate {
   naam?: string;
   /** @nullable */
   fabrikant?: string | null;
+  /** @nullable */
+  fabrikant_id?: number | null;
   /** @nullable */
   testnorm?: string | null;
   /** @nullable */

@@ -10,6 +10,8 @@ export interface LabelInput {
   applicatie_codes?: string[];
   naam: string;
   fabrikant?: string;
+  /** @nullable */
+  fabrikant_id?: number | null;
   testnorm?: string;
   testrapport_id?: number;
 }
