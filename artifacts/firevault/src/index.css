@@ -149,4 +149,14 @@
     height: 0;
     display: none;
   }
+  .overflow-auto:focus,
+  .overflow-auto:focus-visible,
+  .overflow-y-auto:focus,
+  .overflow-y-auto:focus-visible,
+  .overflow-x-auto:focus,
+  .overflow-x-auto:focus-visible,
+  [data-sidebar="content"]:focus,
+  [data-sidebar="content"]:focus-visible {
+    outline: none;
+  }
 }
