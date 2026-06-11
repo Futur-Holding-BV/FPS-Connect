@@ -955,6 +955,8 @@ export const ListVoorzieningenResponse = zod.object({
   "wbdbo": zod.string().nullish(),
   "wrd": zod.string().nullish(),
   "wand_of_plafond": zod.string().nullish(),
+  "cluster_id": zod.number().nullish(),
+  "cluster_naam": zod.string().nullish(),
   "maker_monteur_id": zod.number().nullish(),
   "maker_monteur_naam": zod.string().nullish(),
   "ai_te_controleren": zod.boolean().optional(),
@@ -995,6 +997,7 @@ export const CreateVoorzieningBody = zod.object({
   "wbdbo": zod.string().optional(),
   "wrd": zod.string().optional(),
   "wand_of_plafond": zod.string().optional(),
+  "cluster_id": zod.number().nullish(),
   "maker_monteur_id": zod.number().optional(),
   "label_ids": zod.array(zod.number()).optional()
 })
@@ -1036,6 +1039,8 @@ export const GetVoorzieningResponse = zod.object({
   "wbdbo": zod.string().nullish(),
   "wrd": zod.string().nullish(),
   "wand_of_plafond": zod.string().nullish(),
+  "cluster_id": zod.number().nullish(),
+  "cluster_naam": zod.string().nullish(),
   "maker_monteur_id": zod.number().nullish(),
   "maker_monteur_naam": zod.string().nullish(),
   "ai_te_controleren": zod.boolean().optional(),
@@ -1140,6 +1145,7 @@ export const UpdateVoorzieningBody = zod.object({
   "wbdbo": zod.string().optional(),
   "wrd": zod.string().optional(),
   "wand_of_plafond": zod.string().optional(),
+  "cluster_id": zod.number().nullish(),
   "maker_monteur_id": zod.number().optional(),
   "label_ids": zod.array(zod.number()).optional()
 })
@@ -1171,6 +1177,8 @@ export const UpdateVoorzieningResponse = zod.object({
   "wbdbo": zod.string().nullish(),
   "wrd": zod.string().nullish(),
   "wand_of_plafond": zod.string().nullish(),
+  "cluster_id": zod.number().nullish(),
+  "cluster_naam": zod.string().nullish(),
   "maker_monteur_id": zod.number().nullish(),
   "maker_monteur_naam": zod.string().nullish(),
   "ai_te_controleren": zod.boolean().optional(),
@@ -1276,6 +1284,8 @@ export const UpdateVoorzieningStatusResponse = zod.object({
   "wbdbo": zod.string().nullish(),
   "wrd": zod.string().nullish(),
   "wand_of_plafond": zod.string().nullish(),
+  "cluster_id": zod.number().nullish(),
+  "cluster_naam": zod.string().nullish(),
   "maker_monteur_id": zod.number().nullish(),
   "maker_monteur_naam": zod.string().nullish(),
   "ai_te_controleren": zod.boolean().optional(),
@@ -1325,6 +1335,8 @@ export const ArchiveerVoorzieningResponse = zod.object({
   "wbdbo": zod.string().nullish(),
   "wrd": zod.string().nullish(),
   "wand_of_plafond": zod.string().nullish(),
+  "cluster_id": zod.number().nullish(),
+  "cluster_naam": zod.string().nullish(),
   "maker_monteur_id": zod.number().nullish(),
   "maker_monteur_naam": zod.string().nullish(),
   "ai_te_controleren": zod.boolean().optional(),
@@ -2101,6 +2113,8 @@ export const ListVoorzieningenOpVerdiepingResponseItem = zod.object({
   "wbdbo": zod.string().nullish(),
   "wrd": zod.string().nullish(),
   "wand_of_plafond": zod.string().nullish(),
+  "cluster_id": zod.number().nullish(),
+  "cluster_naam": zod.string().nullish(),
   "ai_te_controleren": zod.boolean().optional(),
   "gearchiveerd": zod.boolean().optional()
 })
@@ -2176,6 +2190,81 @@ export const DeleteScheidingParams = zod.object({
 })
 
 export const DeleteScheidingResponse = zod.void()
+
+
+/**
+ * @summary Logische clusters van een gebouw
+ */
+export const ListClustersParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ListClustersResponseItem = zod.object({
+  "id": zod.number(),
+  "gebouw_id": zod.number(),
+  "verdieping_id": zod.number().nullish(),
+  "naam": zod.string(),
+  "type": zod.string().nullish(),
+  "kleur": zod.string().nullish(),
+  "voorziening_aantal": zod.number(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string().optional()
+})
+export const ListClustersResponse = zod.array(ListClustersResponseItem)
+
+
+/**
+ * @summary Cluster toevoegen aan gebouw
+ */
+export const CreateClusterParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const CreateClusterBody = zod.object({
+  "naam": zod.string(),
+  "verdieping_id": zod.number().nullish(),
+  "type": zod.string().nullish(),
+  "kleur": zod.string().nullish()
+})
+
+export const CreateClusterResponse = zod.void()
+
+
+/**
+ * @summary Cluster bijwerken
+ */
+export const UpdateClusterParams = zod.object({
+  "clusterId": zod.coerce.number()
+})
+
+export const UpdateClusterBody = zod.object({
+  "naam": zod.string().optional(),
+  "verdieping_id": zod.number().nullish(),
+  "type": zod.string().nullish(),
+  "kleur": zod.string().nullish()
+})
+
+export const UpdateClusterResponse = zod.object({
+  "id": zod.number(),
+  "gebouw_id": zod.number(),
+  "verdieping_id": zod.number().nullish(),
+  "naam": zod.string(),
+  "type": zod.string().nullish(),
+  "kleur": zod.string().nullish(),
+  "voorziening_aantal": zod.number(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string().optional()
+})
+
+
+/**
+ * @summary Cluster verwijderen
+ */
+export const DeleteClusterParams = zod.object({
+  "clusterId": zod.coerce.number()
+})
+
+export const DeleteClusterResponse = zod.void()
 
 
 /**
@@ -2456,6 +2545,8 @@ export const GetInspectieResponse = zod.object({
   "wbdbo": zod.string().nullish(),
   "wrd": zod.string().nullish(),
   "wand_of_plafond": zod.string().nullish(),
+  "cluster_id": zod.number().nullish(),
+  "cluster_naam": zod.string().nullish(),
   "maker_monteur_id": zod.number().nullish(),
   "maker_monteur_naam": zod.string().nullish(),
   "ai_te_controleren": zod.boolean().optional(),

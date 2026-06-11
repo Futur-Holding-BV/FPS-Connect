@@ -10,6 +10,7 @@ import {
   inspectiesTable,
   onderhoudTable,
   scheidingenTable,
+  clustersTable,
   spotAiVoorstellenTable,
   type SpotAiVoorstelSnapshot,
   type SpotAiGekozen,
@@ -140,6 +141,9 @@ async function mapVoorziening(v: typeof voorzieningenTable.$inferSelect) {
   const maker = v.makerMonteurId
     ? await db.select({ naam: gebruikersTable.naam }).from(gebruikersTable).where(eq(gebruikersTable.id, v.makerMonteurId)).then((r) => r[0])
     : null;
+  const cluster = v.clusterId
+    ? await db.select({ naam: clustersTable.naam }).from(clustersTable).where(eq(clustersTable.id, v.clusterId)).then((r) => r[0])
+    : null;
 
   return {
     id: v.id,
@@ -168,6 +172,8 @@ async function mapVoorziening(v: typeof voorzieningenTable.$inferSelect) {
     wbdbo: v.wbdbo,
     wrd: v.wrd,
     wand_of_plafond: v.wandOfPlafond,
+    cluster_id: v.clusterId,
+    cluster_naam: cluster?.naam ?? null,
     maker_monteur_id: v.makerMonteurId,
     maker_monteur_naam: maker?.naam ?? null,
     gearchiveerd: v.gearchiveerd,
@@ -255,7 +261,7 @@ router.post("/voorzieningen", requireBevoegdheid("voorzieningen", 3), async (req
       verdieping_id, ruimte, huisnummer, locatie_omschrijving, locatie_x, locatie_y,
       materialen, opmerkingen, monteur_id, controleur_id,
       installatie_datum, volgende_inspectie,
-      wbdbo, wrd, wand_of_plafond, label_ids,
+      wbdbo, wrd, wand_of_plafond, cluster_id, label_ids,
     } = req.body;
 
     // De aanmaker (maker) wordt altijd afgeleid uit de ingelogde sessie,
@@ -299,7 +305,9 @@ router.post("/voorzieningen", requireBevoegdheid("voorzieningen", 3), async (req
             locatieX: locatie_x, locatieY: locatie_y, materialen, opmerkingen,
             monteurId: monteur_id, controleurId: controleur_id,
             installatieDatum: installatie_datum, volgendeInspectie: volgende_inspectie,
-            wbdbo, wrd, wandOfPlafond: wand_of_plafond, makerMonteurId: maker_monteur_id,
+            wbdbo, wrd, wandOfPlafond: wand_of_plafond,
+            clusterId: cluster_id != null ? Number(cluster_id) : null,
+            makerMonteurId: maker_monteur_id,
           })
           .returning();
         break;
@@ -429,7 +437,7 @@ router.patch("/voorzieningen/:id", requireBevoegdheid("voorzieningen", 2), async
       verdieping_id, ruimte, huisnummer, locatie_omschrijving, locatie_x, locatie_y,
       materialen, opmerkingen, monteur_id, controleur_id,
       installatie_datum, volgende_inspectie,
-      wbdbo, wrd, wand_of_plafond, maker_monteur_id, label_ids,
+      wbdbo, wrd, wand_of_plafond, cluster_id, maker_monteur_id, label_ids,
     } = req.body;
 
     // Integriteit: een meegestuurde verdieping moet bij het gebouw van deze
@@ -450,7 +458,10 @@ router.patch("/voorzieningen/:id", requireBevoegdheid("voorzieningen", 2), async
         locatieX: locatie_x, locatieY: locatie_y, materialen, opmerkingen,
         monteurId: monteur_id, controleurId: controleur_id,
         installatieDatum: installatie_datum, volgendeInspectie: volgende_inspectie,
-        wbdbo, wrd, wandOfPlafond: wand_of_plafond, makerMonteurId: maker_monteur_id,
+        wbdbo, wrd, wandOfPlafond: wand_of_plafond,
+        // undefined = niet wijzigen; null = ontkoppelen; getal = koppelen aan cluster.
+        clusterId: cluster_id === undefined ? undefined : cluster_id === null ? null : Number(cluster_id),
+        makerMonteurId: maker_monteur_id,
         bijgewerktOp: new Date(),
       })
       .where(eq(voorzieningenTable.id, id))
@@ -805,6 +816,147 @@ router.delete("/verdiepingen/scheidingen/:scheidingId", requireBevoegdheid("voor
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// ── CLUSTERS (logische groepering van spots, bv. schacht of strook) ─────────
+
+// Geeft de gebouwId van een cluster terug, of null als die niet bestaat.
+async function gebouwIdVanCluster(clusterId: number): Promise<number | null> {
+  const [c] = await db
+    .select({ gebouwId: clustersTable.gebouwId })
+    .from(clustersTable)
+    .where(eq(clustersTable.id, clusterId));
+  return c?.gebouwId ?? null;
+}
+
+async function clusterRij(c: typeof clustersTable.$inferSelect) {
+  const [telling] = await db
+    .select({ aantal: sql<number>`count(*)::int` })
+    .from(voorzieningenTable)
+    .where(eq(voorzieningenTable.clusterId, c.id));
+  return {
+    id: c.id,
+    gebouw_id: c.gebouwId,
+    verdieping_id: c.verdiepingId,
+    naam: c.naam,
+    type: c.type,
+    kleur: c.kleur,
+    voorziening_aantal: telling?.aantal ?? 0,
+    aangemaakt_op: c.aangemaaktOp.toISOString(),
+    bijgewerkt_op: c.bijgewerktOp.toISOString(),
+  };
+}
+
+// GET /gebouwen/:id/clusters
+router.get("/gebouwen/:id/clusters", lezenVoorzieningen, async (req, res) => {
+  try {
+    const gebouwId = parseInt(String(req.params.id));
+    // Beperkte gebruikers mogen alleen clusters van toegewezen gebouwen zien;
+    // effectieveContext zodat impersonatie (bekijken als) correct doorwerkt.
+    const { userId: effectiefUserId, beperkt } = await effectieveContext(req);
+    if (beperkt) {
+      const ids = await toegewezenGebouwIds(effectiefUserId);
+      if (!ids.includes(gebouwId)) {
+        return res.status(403).json({ error: "Geen toegang tot dit gebouw" });
+      }
+    }
+    const rows = await db
+      .select()
+      .from(clustersTable)
+      .where(eq(clustersTable.gebouwId, gebouwId));
+    return res.json(await Promise.all(rows.map(clusterRij)));
+  } catch (err) {
+    req.log.error(err);
+    return res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// POST /gebouwen/:id/clusters
+router.post("/gebouwen/:id/clusters", requireBevoegdheid("voorzieningen", 2), async (req, res) => {
+  try {
+    const gebouwId = parseInt(String(req.params.id));
+    if (!(await magBijGebouw(req.session.userId!, gebouwId))) {
+      return res.status(403).json({ error: "Geen toegang tot dit gebouw" });
+    }
+    const { naam, verdieping_id, type, kleur } = req.body ?? {};
+    if (!naam || !String(naam).trim()) {
+      return res.status(400).json({ error: "naam is verplicht" });
+    }
+    // Integriteit: een meegestuurde verdieping moet bij dit gebouw horen.
+    if (verdieping_id != null) {
+      const verdiepingGebouwId = await gebouwIdVanVerdieping(Number(verdieping_id));
+      if (verdiepingGebouwId !== gebouwId) {
+        return res.status(400).json({ error: "verdieping_id hoort niet bij dit gebouw" });
+      }
+    }
+    const [cluster] = await db
+      .insert(clustersTable)
+      .values({
+        gebouwId,
+        verdiepingId: verdieping_id != null ? Number(verdieping_id) : null,
+        naam: String(naam).trim(),
+        type: type ?? null,
+        kleur: kleur ?? null,
+      })
+      .returning();
+    return res.status(201).json(await clusterRij(cluster!));
+  } catch (err) {
+    req.log.error(err);
+    return res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// PATCH /clusters/:clusterId
+router.patch("/clusters/:clusterId", requireBevoegdheid("voorzieningen", 2), async (req, res) => {
+  try {
+    const clusterId = parseInt(String(req.params.clusterId));
+    const gebouwId = await gebouwIdVanCluster(clusterId);
+    if (gebouwId == null) return res.status(404).json({ error: "Cluster niet gevonden" });
+    if (!(await magBijGebouw(req.session.userId!, gebouwId))) {
+      return res.status(403).json({ error: "Geen toegang tot dit cluster" });
+    }
+    const { naam, verdieping_id, type, kleur } = req.body ?? {};
+    if (verdieping_id != null) {
+      const verdiepingGebouwId = await gebouwIdVanVerdieping(Number(verdieping_id));
+      if (verdiepingGebouwId !== gebouwId) {
+        return res.status(400).json({ error: "verdieping_id hoort niet bij dit gebouw" });
+      }
+    }
+    const updates: Record<string, unknown> = { bijgewerktOp: new Date() };
+    if (naam !== undefined) updates.naam = String(naam).trim();
+    if (verdieping_id !== undefined) updates.verdiepingId = verdieping_id === null ? null : Number(verdieping_id);
+    if (type !== undefined) updates.type = type;
+    if (kleur !== undefined) updates.kleur = kleur;
+
+    const [cluster] = await db
+      .update(clustersTable)
+      .set(updates)
+      .where(eq(clustersTable.id, clusterId))
+      .returning();
+    if (!cluster) return res.status(404).json({ error: "Cluster niet gevonden" });
+    return res.json(await clusterRij(cluster));
+  } catch (err) {
+    req.log.error(err);
+    return res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// DELETE /clusters/:clusterId — koppelingen (voorzieningen.cluster_id) worden via
+// de FK ON DELETE SET NULL automatisch losgemaakt; spots blijven bestaan.
+router.delete("/clusters/:clusterId", requireBevoegdheid("voorzieningen", 2), async (req, res) => {
+  try {
+    const clusterId = parseInt(String(req.params.clusterId));
+    const gebouwId = await gebouwIdVanCluster(clusterId);
+    if (gebouwId == null) return res.status(404).json({ error: "Cluster niet gevonden" });
+    if (!(await magBijGebouw(req.session.userId!, gebouwId))) {
+      return res.status(403).json({ error: "Geen toegang tot dit cluster" });
+    }
+    await db.delete(clustersTable).where(eq(clustersTable.id, clusterId));
+    return res.status(204).send();
+  } catch (err) {
+    req.log.error(err);
+    return res.status(500).json({ error: "Interne serverfout" });
   }
 });
 

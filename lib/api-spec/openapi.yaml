@@ -1833,6 +1833,93 @@ paths:
         "204":
           description: Verwijderd
 
+  # ── CLUSTERS (logische groepering van spots) ──────────────────────────────
+  /gebouwen/{id}/clusters:
+    get:
+      operationId: listClusters
+      tags: [voorzieningen]
+      summary: Logische clusters van een gebouw
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Cluster"
+    post:
+      operationId: createCluster
+      tags: [voorzieningen]
+      summary: Cluster toevoegen aan gebouw
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ClusterInput"
+      responses:
+        "201":
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Cluster"
+        "400":
+          description: Ongeldige invoer
+
+  /clusters/{clusterId}:
+    patch:
+      operationId: updateCluster
+      tags: [voorzieningen]
+      summary: Cluster bijwerken
+      parameters:
+        - in: path
+          name: clusterId
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ClusterUpdate"
+      responses:
+        "200":
+          description: Bijgewerkt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Cluster"
+        "404":
+          description: Niet gevonden
+    delete:
+      operationId: deleteCluster
+      tags: [voorzieningen]
+      summary: Cluster verwijderen
+      parameters:
+        - in: path
+          name: clusterId
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Verwijderd
+
   # ── LOGIN-POGINGEN (risicosignalen) ───────────────────────────────────────
   /login-pogingen:
     get:
@@ -4958,6 +5045,10 @@ components:
           type: ["string", "null"]
         wand_of_plafond:
           type: ["string", "null"]
+        cluster_id:
+          type: ["integer", "null"]
+        cluster_naam:
+          type: ["string", "null"]
         maker_monteur_id:
           type: ["integer", "null"]
         maker_monteur_naam:
@@ -5041,6 +5132,10 @@ components:
           type: ["string", "null"]
         wand_of_plafond:
           type: ["string", "null"]
+        cluster_id:
+          type: ["integer", "null"]
+        cluster_naam:
+          type: ["string", "null"]
         maker_monteur_id:
           type: ["integer", "null"]
         maker_monteur_naam:
@@ -5110,6 +5205,10 @@ components:
         wrd:
           type: ["string", "null"]
         wand_of_plafond:
+          type: ["string", "null"]
+        cluster_id:
+          type: ["integer", "null"]
+        cluster_naam:
           type: ["string", "null"]
         ai_te_controleren:
           type: boolean
@@ -5183,6 +5282,8 @@ components:
           type: string
         wand_of_plafond:
           type: string
+        cluster_id:
+          type: ["integer", "null"]
         maker_monteur_id:
           type: integer
         label_ids:
@@ -5233,12 +5334,63 @@ components:
           type: string
         wand_of_plafond:
           type: string
+        cluster_id:
+          type: ["integer", "null"]
         maker_monteur_id:
           type: integer
         label_ids:
           type: array
           items:
             type: integer
+
+    # ── CLUSTER (logische groepering van spots) ──────────────────────────
+    Cluster:
+      type: object
+      required: [id, gebouw_id, naam, voorziening_aantal, aangemaakt_op]
+      properties:
+        id:
+          type: integer
+        gebouw_id:
+          type: integer
+        verdieping_id:
+          type: ["integer", "null"]
+        naam:
+          type: string
+        type:
+          type: ["string", "null"]
+        kleur:
+          type: ["string", "null"]
+        voorziening_aantal:
+          type: integer
+        aangemaakt_op:
+          type: string
+        bijgewerkt_op:
+          type: string
+
+    ClusterInput:
+      type: object
+      required: [naam]
+      properties:
+        naam:
+          type: string
+        verdieping_id:
+          type: ["integer", "null"]
+        type:
+          type: ["string", "null"]
+        kleur:
+          type: ["string", "null"]
+
+    ClusterUpdate:
+      type: object
+      properties:
+        naam:
+          type: string
+        verdieping_id:
+          type: ["integer", "null"]
+        type:
+          type: ["string", "null"]
+        kleur:
+          type: ["string", "null"]
 
     StatusUpdate:
       type: object

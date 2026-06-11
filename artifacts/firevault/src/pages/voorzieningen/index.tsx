@@ -109,13 +109,14 @@ export default function Voorzieningen() {
                   <th className="px-6 py-3">{t("voorzieningen.nummer")}</th>
                   <th className="px-6 py-3">{t("voorzieningen.type")}</th>
                   <th className="px-6 py-3">{t("voorzieningen.gebouw")}</th>
+                  <th className="px-6 py-3">Cluster</th>
                   <th className="px-6 py-3">Status</th>
                   <th className="px-6 py-3 text-right">Acties</th>
                 </tr>
               </thead>
               <tbody>
                 {isLoading ? (
-                  <tr><td colSpan={5} className="px-6 py-4 text-center">Laden...</td></tr>
+                  <tr><td colSpan={6} className="px-6 py-4 text-center">Laden...</td></tr>
                 ) : (
                   gefilterd.map(v => (
                     <tr key={v.id} className="border-b last:border-0 hover:bg-muted/50">
@@ -129,6 +130,13 @@ export default function Voorzieningen() {
                       </td>
                       <td className="px-6 py-4">{v.type}</td>
                       <td className="px-6 py-4">{v.gebouw_naam}</td>
+                      <td className="px-6 py-4">
+                        {(v as any).cluster_naam ? (
+                          <Badge variant="secondary">{(v as any).cluster_naam}</Badge>
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
+                      </td>
                       <td className="px-6 py-4">
                         <Badge
                           variant="outline"

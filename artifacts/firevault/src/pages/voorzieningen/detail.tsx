@@ -323,6 +323,10 @@ export default function VoorzieningDetail() {
                 <div className="text-muted-foreground">Locatieomschrijving</div>
                 <div className="font-medium">{voorziening.locatie_omschrijving ?? "—"}</div>
               </div>
+              <div>
+                <div className="text-muted-foreground">Cluster</div>
+                <div className="font-medium">{(voorziening as any).cluster_naam ?? "—"}</div>
+              </div>
               {(voorziening.locatie_x || voorziening.locatie_y) && (
                 <div className="col-span-2">
                   <div className="text-muted-foreground">Coördinaten (plattegrond)</div>

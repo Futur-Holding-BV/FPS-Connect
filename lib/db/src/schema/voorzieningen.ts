@@ -23,6 +23,8 @@ export const voorzieningenTable = pgTable("voorzieningen", {
   wbdbo: text("wbdbo"),
   wrd: text("wrd"),
   wandOfPlafond: text("wand_of_plafond"),
+  // Logisch cluster (bv. schacht of strook). Zet op null bij verwijderen cluster.
+  clusterId: integer("cluster_id"),
   monteurId: integer("monteur_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
   makerMonteurId: integer("maker_monteur_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
   controleurId: integer("controleur_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
@@ -175,3 +177,20 @@ export const spotAiVoorstellenTable = pgTable("spot_ai_voorstellen", {
 export const insertSpotAiVoorstelSchema = createInsertSchema(spotAiVoorstellenTable).omit({ id: true, aangemaaktOp: true, bijgewerktOp: true });
 export type InsertSpotAiVoorstel = z.infer<typeof insertSpotAiVoorstelSchema>;
 export type SpotAiVoorstel = typeof spotAiVoorstellenTable.$inferSelect;
+
+// ── CLUSTERS (logische groepering van spots, bv. schacht of strook) ──────────
+// Een beheerder maakt een benoemd cluster en koppelt spots eraan (voorzieningen.cluster_id).
+// verdiepingId optioneel: een cluster kan op één verdieping liggen of gebouwbreed zijn.
+export const clustersTable = pgTable("clusters", {
+  id: serial("id").primaryKey(),
+  gebouwId: integer("gebouw_id").notNull().references(() => gebouwenTable.id, { onDelete: "cascade" }),
+  verdiepingId: integer("verdieping_id").references(() => verdiepingenTable.id, { onDelete: "set null" }),
+  naam: text("naam").notNull(),
+  type: text("type"),
+  kleur: text("kleur"),
+  aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
+  bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
+});
+export const insertClusterSchema = createInsertSchema(clustersTable).omit({ id: true, aangemaaktOp: true, bijgewerktOp: true });
+export type InsertCluster = z.infer<typeof insertClusterSchema>;
+export type Cluster = typeof clustersTable.$inferSelect;

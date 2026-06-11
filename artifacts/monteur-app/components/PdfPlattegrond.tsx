@@ -12,6 +12,7 @@ export type PlattegrondSpot = {
   wand_of_plafond?: string | null;
   locatie_x: number | null;
   locatie_y: number | null;
+  cluster_id?: number | null;
 };
 
 export type PlattegrondScheiding = {
@@ -22,10 +23,17 @@ export type PlattegrondScheiding = {
   punten: string;
 };
 
+export type PlattegrondCluster = {
+  id: number;
+  naam: string;
+  kleur?: string | null;
+};
+
 type Props = {
   plattegrondUrl: string | null | undefined;
   spots: PlattegrondSpot[];
   scheidingen: PlattegrondScheiding[];
+  clusters?: PlattegrondCluster[];
   plaatsModus: boolean;
   token: string;
   domein: string;
@@ -37,6 +45,8 @@ const TYPE_KLEUREN: Record<string, { kleur: string }> = Object.fromEntries(
   Object.entries(TYPEN).map(([k, v]) => [k, { kleur: v.kleur }]),
 );
 
+const STANDAARD_CLUSTERKLEUR = "#6366f1";
+
 function bouwHtml(domein: string, token: string, url: string | null): string {
   const cfg = {
     domein: `https://${domein}`,
@@ -45,6 +55,8 @@ function bouwHtml(domein: string, token: string, url: string | null): string {
     typen: TYPE_KLEUREN,
     status: STATUSKLEUREN,
     scheidingTypen: { brand: { kleur: "#dc2626" }, rook: { kleur: "#2563eb" } },
+    standaardClusterKleur: STANDAARD_CLUSTERKLEUR,
+    visueelClusterPx: 42,
   };
   return `<!DOCTYPE html>
 <html>
@@ -61,6 +73,10 @@ function bouwHtml(domein: string, token: string, url: string | null): string {
         color:#fff; font-size:12px; font-weight:700; border:2.5px solid #fff; box-shadow:0 2px 6px rgba(0,0,0,.45);
         transform:translate(-50%,-50%) scale(var(--inv,1)); }
   .mk .ring { position:absolute; inset:-7px; border-radius:50%; opacity:.3; z-index:-1; }
+  .cb { position:absolute; width:40px; height:40px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+        color:#fff; font-size:15px; font-weight:800; background:#1e293b; border:2px solid #fff; box-shadow:0 2px 8px rgba(0,0,0,.5);
+        transform:translate(-50%,-50%) scale(var(--inv,1)); }
+  .env { position:absolute; pointer-events:none; }
   .mk .arrow { position:absolute; left:50%; top:50%; width:52px; height:52px; transform:translate(-50%,-50%); overflow:visible; pointer-events:none; z-index:1; }
   .mk span { position:relative; z-index:2; }
   .placing .mk { pointer-events:none; }
@@ -91,6 +107,7 @@ function bouwHtml(domein: string, token: string, url: string | null): string {
   var CFG = ${JSON.stringify(cfg)};
   var spots = [];
   var scheidingen = [];
+  var clusters = [];
   var placeMode = false;
   var stage = document.getElementById('stage');
   var wrap = document.getElementById('wrap');
@@ -103,35 +120,104 @@ function bouwHtml(domein: string, token: string, url: string | null): string {
   function post(o){ if (window.ReactNativeWebView) window.ReactNativeWebView.postMessage(JSON.stringify(o)); }
   function apply(){ wrap.style.transform = 'translate('+tx+'px,'+ty+'px) scale('+scale+')'; wrap.style.setProperty('--inv', 1/scale); }
 
-  function renderMarkers(){
-    var olds = wrap.querySelectorAll('.mk');
-    for (var i=0;i<olds.length;i++) olds[i].remove();
-    spots.forEach(function(s){
-      if (s.locatie_x==null||s.locatie_y==null) return;
-      var el=document.createElement('div');
-      el.className='mk';
-      var t=CFG.typen[s.type]||{kleur:'#94a3b8'};
-      el.style.background=CFG.status[s.status]||'#94a3b8';
-      if (s.status==='voorbereid'){ el.style.border='2.5px dashed #475569'; el.style.color='#1e293b'; }
-      el.style.left=s.locatie_x+'px';
-      el.style.top=s.locatie_y+'px';
-      var ring=document.createElement('div');
-      ring.className='ring';
-      ring.style.background=t.kleur;
-      el.appendChild(ring);
-      if ((s.wand_of_plafond||'')==='plafond'){
-        var arr=document.createElement('div');
-        arr.className='arrow';
-        arr.innerHTML='<svg width="52" height="52" viewBox="-26 -26 52 52" style="overflow:visible"><line x1="0" y1="-26" x2="0" y2="26" stroke="#fff" stroke-width="5" stroke-linecap="round"/><line x1="0" y1="-26" x2="0" y2="26" stroke="#1e293b" stroke-width="2.5" stroke-linecap="round"/><polygon points="0,-29 -6,-19 6,-19" fill="#1e293b" stroke="#fff" stroke-width="1.2" stroke-linejoin="round"/><polygon points="0,29 -6,19 6,19" fill="#1e293b" stroke="#fff" stroke-width="1.2" stroke-linejoin="round"/></svg>';
-        el.appendChild(arr);
+  function maakVisueleGroepen(lijst, drempel){
+    var groepen=[], gebruikt={}, i, j;
+    for (i=0;i<lijst.length;i++){
+      if (gebruikt[lijst[i].id]) continue;
+      var groep=[lijst[i]]; gebruikt[lijst[i].id]=1;
+      for (j=i+1;j<lijst.length;j++){
+        if (gebruikt[lijst[j].id]) continue;
+        var dichtbij=false;
+        for (var k=0;k<groep.length;k++){
+          if (Math.hypot(groep[k].locatie_x-lijst[j].locatie_x, groep[k].locatie_y-lijst[j].locatie_y)<=drempel){ dichtbij=true; break; }
+        }
+        if (dichtbij){ groep.push(lijst[j]); gebruikt[lijst[j].id]=1; }
       }
-      var lab=document.createElement('span');
-      var nr=String(s.objectnummer||'');
-      var m=nr.match(/(\d+)$/);
-      lab.textContent=m?m[1]:nr;
-      el.appendChild(lab);
-      (function(id){ el.addEventListener('click',function(ev){ ev.stopPropagation(); post({type:'spot',id:id}); }); })(s.id);
-      wrap.appendChild(el);
+      groepen.push(groep);
+    }
+    return groepen;
+  }
+
+  function groepCentroid(groep){
+    var sx=0, sy=0;
+    for (var i=0;i<groep.length;i++){ sx+=groep[i].locatie_x; sy+=groep[i].locatie_y; }
+    return {x:sx/groep.length, y:sy/groep.length};
+  }
+
+  function maakSpotEl(s){
+    var el=document.createElement('div');
+    el.className='mk';
+    var t=CFG.typen[s.type]||{kleur:'#94a3b8'};
+    el.style.background=CFG.status[s.status]||'#94a3b8';
+    if (s.status==='voorbereid'){ el.style.border='2.5px dashed #475569'; el.style.color='#1e293b'; }
+    el.style.left=s.locatie_x+'px';
+    el.style.top=s.locatie_y+'px';
+    var ring=document.createElement('div');
+    ring.className='ring';
+    ring.style.background=t.kleur;
+    el.appendChild(ring);
+    if ((s.wand_of_plafond||'')==='plafond'){
+      var arr=document.createElement('div');
+      arr.className='arrow';
+      arr.innerHTML='<svg width="52" height="52" viewBox="-26 -26 52 52" style="overflow:visible"><line x1="0" y1="-26" x2="0" y2="26" stroke="#fff" stroke-width="5" stroke-linecap="round"/><line x1="0" y1="-26" x2="0" y2="26" stroke="#1e293b" stroke-width="2.5" stroke-linecap="round"/><polygon points="0,-29 -6,-19 6,-19" fill="#1e293b" stroke="#fff" stroke-width="1.2" stroke-linejoin="round"/><polygon points="0,29 -6,19 6,19" fill="#1e293b" stroke="#fff" stroke-width="1.2" stroke-linejoin="round"/></svg>';
+      el.appendChild(arr);
+    }
+    var lab=document.createElement('span');
+    var nr=String(s.objectnummer||'');
+    var m=nr.match(/(\\d+)$/);
+    lab.textContent=m?m[1]:nr;
+    el.appendChild(lab);
+    (function(id){ el.addEventListener('click',function(ev){ ev.stopPropagation(); post({type:'spot',id:id}); }); })(s.id);
+    return el;
+  }
+
+  // Zoom in op een centroid zodat een visuele groep uiteenvalt.
+  function zoomNaarGroep(cx, cy){
+    var sw=stage.clientWidth, sh=stage.clientHeight;
+    var ns=Math.min(MAXS, scale*2.5);
+    scale=ns; tx=sw/2-cx*scale; ty=sh/2-cy*scale; apply();
+    renderMarkers();
+  }
+
+  function renderEnvelopes(){
+    var olds=wrap.querySelectorAll('.env');
+    for (var i=0;i<olds.length;i++) olds[i].remove();
+    if (!clusters.length) return;
+    clusters.forEach(function(c){
+      var leden=spots.filter(function(s){ return s.cluster_id===c.id && s.locatie_x!=null && s.locatie_y!=null; });
+      if (!leden.length) return;
+      var xs=leden.map(function(l){return l.locatie_x;});
+      var ys=leden.map(function(l){return l.locatie_y;});
+      var marge=26;
+      var minX=Math.min.apply(null,xs)-marge, minY=Math.min.apply(null,ys)-marge;
+      var maxX=Math.max.apply(null,xs)+marge, maxY=Math.max.apply(null,ys)+marge;
+      var kleur=veiligeKleur(c.kleur, CFG.standaardClusterKleur);
+      var env=document.createElement('div');
+      env.className='env';
+      env.style.left=minX+'px'; env.style.top=minY+'px';
+      env.style.width=(maxX-minX)+'px'; env.style.height=(maxY-minY)+'px';
+      env.style.border='2px dashed '+kleur; env.style.borderRadius='20px';
+      env.style.background=kleur+'14';
+      wrap.insertBefore(env, wrap.firstChild.nextSibling);
+    });
+  }
+
+  function renderMarkers(){
+    var olds = wrap.querySelectorAll('.mk, .cb');
+    for (var i=0;i<olds.length;i++) olds[i].remove();
+    renderEnvelopes();
+    var geplaatst = spots.filter(function(s){ return s.locatie_x!=null && s.locatie_y!=null; });
+    var drempel = scale>0 ? (CFG.visueelClusterPx/scale) : CFG.visueelClusterPx;
+    var groepen = maakVisueleGroepen(geplaatst, drempel);
+    groepen.forEach(function(groep){
+      if (groep.length===1){ wrap.appendChild(maakSpotEl(groep[0])); return; }
+      var c=groepCentroid(groep);
+      var b=document.createElement('div');
+      b.className='cb';
+      b.style.left=c.x+'px'; b.style.top=c.y+'px';
+      b.textContent=String(groep.length);
+      (function(cx,cy){ b.addEventListener('click',function(ev){ ev.stopPropagation(); zoomNaarGroep(cx,cy); }); })(c.x,c.y);
+      wrap.appendChild(b);
     });
   }
 
@@ -303,7 +389,11 @@ function bouwHtml(domein: string, token: string, url: string | null): string {
         }
       }
     }
-    if (e.touches.length===0){ panning=false; pinching=false; crosshair.style.display='none'; }
+    if (e.touches.length===0){
+      // Na een pinch opnieuw clusteren op de nieuwe schaal.
+      if (pinching && rendered) renderMarkers();
+      panning=false; pinching=false; crosshair.style.display='none';
+    }
     // Bij loslaten van 1 vinger tijdens pinch: geen tap triggeren
     if (e.touches.length===1&&pinching){ downT=0; }
   });
@@ -316,6 +406,7 @@ function bouwHtml(domein: string, token: string, url: string | null): string {
   };
   window.__setSpots=function(json){ try{spots=JSON.parse(json);}catch(e){spots=[];} if(rendered) renderMarkers(); };
   window.__setScheidingen=function(json){ try{scheidingen=JSON.parse(json);}catch(e){scheidingen=[];} if(rendered) renderScheidingen(); };
+  window.__setClusters=function(json){ try{clusters=JSON.parse(json);}catch(e){clusters=[];} if(rendered) renderMarkers(); };
   window.__fit=function(){ if(rendered) fit(); };
 
   loadPdf();
@@ -329,6 +420,7 @@ export function PdfPlattegrond({
   plattegrondUrl,
   spots,
   scheidingen,
+  clusters,
   plaatsModus,
   token,
   domein,
@@ -356,6 +448,13 @@ export function PdfPlattegrond({
       `window.__setScheidingen && window.__setScheidingen(${JSON.stringify(JSON.stringify(scheidingen))}); true;`,
     );
   }, [scheidingen, klaar]);
+
+  useEffect(() => {
+    if (!klaar) return;
+    webRef.current?.injectJavaScript(
+      `window.__setClusters && window.__setClusters(${JSON.stringify(JSON.stringify(clusters ?? []))}); true;`,
+    );
+  }, [clusters, klaar]);
 
   useEffect(() => {
     if (!klaar) return;

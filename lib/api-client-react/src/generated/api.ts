@@ -29,6 +29,9 @@ import type {
   ApplicatieLabelsInput,
   ArchiefUpdate,
   AuthGebruiker,
+  Cluster,
+  ClusterInput,
+  ClusterUpdate,
   CodeInput,
   CrmCommercieel,
   CrmCommercieelInput,
@@ -6012,6 +6015,295 @@ export const useDeleteScheiding = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getDeleteScheidingMutationOptions(options));
+    }
+
+export const getListClustersUrl = (id: number,) => {
+
+
+
+
+  return `/api/gebouwen/${id}/clusters`
+}
+
+/**
+ * @summary Logische clusters van een gebouw
+ */
+export const listClusters = async (id: number, options?: RequestInit): Promise<Cluster[]> => {
+
+  return customFetch<Cluster[]>(getListClustersUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListClustersQueryKey = (id: number,) => {
+    return [
+    `/api/gebouwen/${id}/clusters`
+    ] as const;
+    }
+
+
+export const getListClustersQueryOptions = <TData = Awaited<ReturnType<typeof listClusters>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listClusters>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListClustersQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listClusters>>> = ({ signal }) => listClusters(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listClusters>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListClustersQueryResult = NonNullable<Awaited<ReturnType<typeof listClusters>>>
+export type ListClustersQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Logische clusters van een gebouw
+ */
+
+export function useListClusters<TData = Awaited<ReturnType<typeof listClusters>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listClusters>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListClustersQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateClusterUrl = (id: number,) => {
+
+
+
+
+  return `/api/gebouwen/${id}/clusters`
+}
+
+/**
+ * @summary Cluster toevoegen aan gebouw
+ */
+export const createCluster = async (id: number,
+    clusterInput: ClusterInput, options?: RequestInit): Promise<Cluster> => {
+
+  return customFetch<Cluster>(getCreateClusterUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(clusterInput)
+  }
+);}
+
+
+
+
+export const getCreateClusterMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createCluster>>, TError,{id: number;data: BodyType<ClusterInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createCluster>>, TError,{id: number;data: BodyType<ClusterInput>}, TContext> => {
+
+const mutationKey = ['createCluster'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createCluster>>, {id: number;data: BodyType<ClusterInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  createCluster(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateClusterMutationResult = NonNullable<Awaited<ReturnType<typeof createCluster>>>
+    export type CreateClusterMutationBody = BodyType<ClusterInput>
+    export type CreateClusterMutationError = ErrorType<void>
+
+    /**
+ * @summary Cluster toevoegen aan gebouw
+ */
+export const useCreateCluster = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createCluster>>, TError,{id: number;data: BodyType<ClusterInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createCluster>>,
+        TError,
+        {id: number;data: BodyType<ClusterInput>},
+        TContext
+      > => {
+      return useMutation(getCreateClusterMutationOptions(options));
+    }
+
+export const getUpdateClusterUrl = (clusterId: number,) => {
+
+
+
+
+  return `/api/clusters/${clusterId}`
+}
+
+/**
+ * @summary Cluster bijwerken
+ */
+export const updateCluster = async (clusterId: number,
+    clusterUpdate: ClusterUpdate, options?: RequestInit): Promise<Cluster> => {
+
+  return customFetch<Cluster>(getUpdateClusterUrl(clusterId),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(clusterUpdate)
+  }
+);}
+
+
+
+
+export const getUpdateClusterMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateCluster>>, TError,{clusterId: number;data: BodyType<ClusterUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateCluster>>, TError,{clusterId: number;data: BodyType<ClusterUpdate>}, TContext> => {
+
+const mutationKey = ['updateCluster'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateCluster>>, {clusterId: number;data: BodyType<ClusterUpdate>}> = (props) => {
+          const {clusterId,data} = props ?? {};
+
+          return  updateCluster(clusterId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateClusterMutationResult = NonNullable<Awaited<ReturnType<typeof updateCluster>>>
+    export type UpdateClusterMutationBody = BodyType<ClusterUpdate>
+    export type UpdateClusterMutationError = ErrorType<void>
+
+    /**
+ * @summary Cluster bijwerken
+ */
+export const useUpdateCluster = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateCluster>>, TError,{clusterId: number;data: BodyType<ClusterUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateCluster>>,
+        TError,
+        {clusterId: number;data: BodyType<ClusterUpdate>},
+        TContext
+      > => {
+      return useMutation(getUpdateClusterMutationOptions(options));
+    }
+
+export const getDeleteClusterUrl = (clusterId: number,) => {
+
+
+
+
+  return `/api/clusters/${clusterId}`
+}
+
+/**
+ * @summary Cluster verwijderen
+ */
+export const deleteCluster = async (clusterId: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteClusterUrl(clusterId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteClusterMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteCluster>>, TError,{clusterId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteCluster>>, TError,{clusterId: number}, TContext> => {
+
+const mutationKey = ['deleteCluster'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteCluster>>, {clusterId: number}> = (props) => {
+          const {clusterId} = props ?? {};
+
+          return  deleteCluster(clusterId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteClusterMutationResult = NonNullable<Awaited<ReturnType<typeof deleteCluster>>>
+
+    export type DeleteClusterMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Cluster verwijderen
+ */
+export const useDeleteCluster = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteCluster>>, TError,{clusterId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteCluster>>,
+        TError,
+        {clusterId: number},
+        TContext
+      > => {
+      return useMutation(getDeleteClusterMutationOptions(options));
     }
 
 export const getListLoginPogingenUrl = () => {

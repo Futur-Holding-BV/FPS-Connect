@@ -914,6 +914,10 @@ export interface Voorziening {
   /** @nullable */
   wand_of_plafond?: string | null;
   /** @nullable */
+  cluster_id?: number | null;
+  /** @nullable */
+  cluster_naam?: string | null;
+  /** @nullable */
   maker_monteur_id?: number | null;
   /** @nullable */
   maker_monteur_naam?: string | null;
@@ -1125,6 +1129,10 @@ export interface VoorzieningDetail {
   /** @nullable */
   wand_of_plafond?: string | null;
   /** @nullable */
+  cluster_id?: number | null;
+  /** @nullable */
+  cluster_naam?: string | null;
+  /** @nullable */
   maker_monteur_id?: number | null;
   /** @nullable */
   maker_monteur_naam?: string | null;
@@ -1168,6 +1176,10 @@ export interface VoorzieningLocatie {
   wrd?: string | null;
   /** @nullable */
   wand_of_plafond?: string | null;
+  /** @nullable */
+  cluster_id?: number | null;
+  /** @nullable */
+  cluster_naam?: string | null;
   ai_te_controleren?: boolean;
   gearchiveerd?: boolean;
 }
@@ -1205,6 +1217,8 @@ export interface VoorzieningInput {
   wbdbo?: string;
   wrd?: string;
   wand_of_plafond?: string;
+  /** @nullable */
+  cluster_id?: number | null;
   maker_monteur_id?: number;
   label_ids?: number[];
 }
@@ -1230,8 +1244,45 @@ export interface VoorzieningUpdate {
   wbdbo?: string;
   wrd?: string;
   wand_of_plafond?: string;
+  /** @nullable */
+  cluster_id?: number | null;
   maker_monteur_id?: number;
   label_ids?: number[];
+}
+
+export interface Cluster {
+  id: number;
+  gebouw_id: number;
+  /** @nullable */
+  verdieping_id?: number | null;
+  naam: string;
+  /** @nullable */
+  type?: string | null;
+  /** @nullable */
+  kleur?: string | null;
+  voorziening_aantal: number;
+  aangemaakt_op: string;
+  bijgewerkt_op?: string;
+}
+
+export interface ClusterInput {
+  naam: string;
+  /** @nullable */
+  verdieping_id?: number | null;
+  /** @nullable */
+  type?: string | null;
+  /** @nullable */
+  kleur?: string | null;
+}
+
+export interface ClusterUpdate {
+  naam?: string;
+  /** @nullable */
+  verdieping_id?: number | null;
+  /** @nullable */
+  type?: string | null;
+  /** @nullable */
+  kleur?: string | null;
 }
 
 export interface StatusUpdate {

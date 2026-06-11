@@ -7,6 +7,7 @@ import {
   useGetVolgendSpotnummer,
   useListFotos,
   useListScheidingen,
+  useListClusters,
   useListVoorzieningenOpVerdieping,
   useArchiveerVoorziening,
   useUpdateVoorziening,
@@ -43,6 +44,7 @@ import {
   PdfPlattegrond,
   type PlattegrondSpot,
   type PlattegrondScheiding,
+  type PlattegrondCluster,
 } from "@/components/PdfPlattegrond";
 import {
   STATUS_VOLGORDE,
@@ -113,6 +115,7 @@ export default function Plattegrond() {
   const { data: verdieping } = useGetVerdieping(vId);
   const { data: voorzieningen, refetch } = useListVoorzieningenOpVerdieping(vId);
   const { data: scheidingenData } = useListScheidingen(vId);
+  const { data: clusterData } = useListClusters(gId);
   const { data: volgendSpot, refetch: refetchSpotnummer } = useGetVolgendSpotnummer(gId);
   const maakVoorziening = useCreateVoorziening();
   const voegFotoToe = useAddFoto();
@@ -153,6 +156,7 @@ export default function Plattegrond() {
     wand_of_plafond: v.wand_of_plafond,
     locatie_x: v.locatie_x,
     locatie_y: v.locatie_y,
+    cluster_id: (v as any).cluster_id ?? null,
   }));
 
   const scheidingen: PlattegrondScheiding[] = (scheidingenData ?? []).map((s) => ({
@@ -162,6 +166,10 @@ export default function Plattegrond() {
     kleur: s.kleur,
     punten: s.punten,
   }));
+
+  const clusters: PlattegrondCluster[] = (clusterData ?? [])
+    .filter((c: any) => c.verdieping_id == null || c.verdieping_id === vId)
+    .map((c: any) => ({ id: c.id, naam: c.naam, kleur: c.kleur }));
 
   const detailSpot = (voorzieningen ?? []).find((v) => v.id === detailId) ?? null;
 
@@ -333,6 +341,7 @@ export default function Plattegrond() {
         plattegrondUrl={verdieping?.plattegrond_url ?? null}
         spots={spots}
         scheidingen={scheidingen}
+        clusters={clusters}
         plaatsModus={plaatsModus}
         token={token ?? ""}
         domein={DOMEIN}

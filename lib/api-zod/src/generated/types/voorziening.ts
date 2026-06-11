@@ -56,6 +56,10 @@ export interface Voorziening {
   /** @nullable */
   wand_of_plafond?: string | null;
   /** @nullable */
+  cluster_id?: number | null;
+  /** @nullable */
+  cluster_naam?: string | null;
+  /** @nullable */
   maker_monteur_id?: number | null;
   /** @nullable */
   maker_monteur_naam?: string | null;

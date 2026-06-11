@@ -5,6 +5,7 @@ import pdfWorkerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 import {
   useListVoorzieningenOpVerdieping,
   useListScheidingen,
+  useListClusters,
 } from "@workspace/api-client-react";
 import type { Verdieping } from "@workspace/api-client-react";
 import { Badge } from "@/components/ui/badge";
@@ -59,6 +60,9 @@ const STATUSLABEL: Record<string, string> = {
 const CANVAS_W = 1200;
 const CANVAS_H = 800;
 
+const STANDAARD_CLUSTERKLEUR = "#6366f1";
+const VISUEEL_CLUSTER_PX = 42;
+
 type Punt = { x: number; y: number };
 
 type SVGVoorziening = {
@@ -69,7 +73,43 @@ type SVGVoorziening = {
   wand_of_plafond?: string;
   locatie_x: number;
   locatie_y: number;
+  cluster_id?: number | null;
 };
+
+type ClusterRij = {
+  id: number;
+  naam: string;
+  kleur?: string | null;
+};
+
+// Greedy afstandsgroepering: spots binnen drempelPx (in beeldcoördinaten) vormen één visuele groep.
+function maakVisueleGroepen(spots: SVGVoorziening[], drempel: number): SVGVoorziening[][] {
+  const groepen: SVGVoorziening[][] = [];
+  const gebruikt = new Set<number>();
+  for (let i = 0; i < spots.length; i++) {
+    if (gebruikt.has(spots[i]!.id)) continue;
+    const groep = [spots[i]!];
+    gebruikt.add(spots[i]!.id);
+    for (let j = i + 1; j < spots.length; j++) {
+      if (gebruikt.has(spots[j]!.id)) continue;
+      const dichtbij = groep.some(
+        (g) => Math.hypot(g.locatie_x - spots[j]!.locatie_x, g.locatie_y - spots[j]!.locatie_y) <= drempel,
+      );
+      if (dichtbij) {
+        groep.push(spots[j]!);
+        gebruikt.add(spots[j]!.id);
+      }
+    }
+    groepen.push(groep);
+  }
+  return groepen;
+}
+
+function groepCentroid(groep: SVGVoorziening[]): Punt {
+  const sx = groep.reduce((a, v) => a + v.locatie_x, 0);
+  const sy = groep.reduce((a, v) => a + v.locatie_y, 0);
+  return { x: sx / groep.length, y: sy / groep.length };
+}
 
 function spotVolgnummer(objectnummer: string): string {
   const m = objectnummer?.match(/(\d+)$/);
@@ -178,19 +218,72 @@ function SpotIcoon({ v }: { v: SVGVoorziening }) {
   );
 }
 
+// Omhulling rond de leden van een logisch cluster (read-only).
+function ClusterOmhulling({ leden, kleur }: { leden: SVGVoorziening[]; kleur: string }) {
+  if (leden.length === 0) return null;
+  const xs = leden.map((l) => l.locatie_x);
+  const ys = leden.map((l) => l.locatie_y);
+  const marge = 26;
+  const minX = Math.min(...xs) - marge;
+  const minY = Math.min(...ys) - marge;
+  const maxX = Math.max(...xs) + marge;
+  const maxY = Math.max(...ys) + marge;
+  return (
+    <g style={{ pointerEvents: "none" }}>
+      <rect
+        x={minX} y={minY} width={maxX - minX} height={maxY - minY}
+        rx={20} fill={kleur} fillOpacity={0.08}
+        stroke={kleur} strokeOpacity={0.55} strokeWidth={2} strokeDasharray="8 5"
+      />
+    </g>
+  );
+}
+
+// Telbubbel voor een visuele groep van dicht opeenliggende spots.
+function ClusterBubble({ centroid, aantal, schaal }: { centroid: Punt; aantal: number; schaal: number }) {
+  const r = Math.max(18, 22 / schaal);
+  return (
+    <g transform={`translate(${centroid.x}, ${centroid.y})`} style={{ pointerEvents: "none" }}>
+      <circle r={r + 4} fill="#1e293b" opacity={0.18} />
+      <circle r={r} fill="#1e293b" stroke="#fff" strokeWidth={2 / schaal} />
+      <text
+        textAnchor="middle" dominantBaseline="central"
+        fontSize={(aantal > 99 ? 13 : 15) / schaal} fontWeight={800} fill="#fff"
+        style={{ userSelect: "none" }}
+      >
+        {aantal}
+      </text>
+    </g>
+  );
+}
+
 function PlattegrondCanvas({
   plattegrondUrl,
   verdiepingId,
+  clusters,
 }: {
   plattegrondUrl?: string | null;
   verdiepingId: number;
+  clusters: ClusterRij[];
 }) {
   const [pdfBeeld, setPdfBeeld] = useState<string | null>(null);
   const [pdfDims, setPdfDims] = useState<{ w: number; h: number } | null>(null);
   const [pdfLaden, setPdfLaden] = useState(false);
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  const [containerDims, setContainerDims] = useState<{ w: number; h: number } | null>(null);
 
   const { data: voorzieningen } = useListVoorzieningenOpVerdieping(verdiepingId);
   const { data: scheidingen } = useListScheidingen(verdiepingId);
+
+  useEffect(() => {
+    const el = wrapperRef.current;
+    if (!el) return;
+    const meet = () => setContainerDims({ w: el.clientWidth, h: el.clientHeight });
+    meet();
+    const ro = new ResizeObserver(meet);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   useEffect(() => {
     if (!plattegrondUrl) {
@@ -265,10 +358,29 @@ function PlattegrondCanvas({
       wand_of_plafond: v.wand_of_plafond,
       locatie_x: Number(v.locatie_x),
       locatie_y: Number(v.locatie_y),
+      cluster_id: v.cluster_id ?? null,
     }));
 
+  // Fit-schaal: hoeveel rendered px per beeld-eenheid (preserveAspectRatio meet).
+  const fitSchaal = containerDims
+    ? Math.min(containerDims.w / W, containerDims.h / H)
+    : 1;
+
+  // Logische clusters: omhulling rond de leden per cluster_id.
+  const logischeOmhullingen = clusters
+    .map((c) => ({
+      cluster: c,
+      kleur: c.kleur || STANDAARD_CLUSTERKLEUR,
+      leden: geplaatst.filter((v) => v.cluster_id === c.id),
+    }))
+    .filter((o) => o.leden.length > 0);
+
+  // Visuele groepering op de actuele fit-schaal.
+  const drempel = fitSchaal > 0 ? VISUEEL_CLUSTER_PX / fitSchaal : VISUEEL_CLUSTER_PX;
+  const visueleGroepen = maakVisueleGroepen(geplaatst, drempel);
+
   return (
-    <div className="relative w-full h-full bg-slate-100 rounded-md overflow-hidden">
+    <div ref={wrapperRef} className="relative w-full h-full bg-slate-100 rounded-md overflow-hidden">
       <svg
         width="100%"
         height="100%"
@@ -281,6 +393,14 @@ function PlattegrondCanvas({
         ) : (
           <GridAchtergrond w={W} h={H} />
         )}
+
+        {logischeOmhullingen.map((o) => (
+          <ClusterOmhulling
+            key={`c${o.cluster.id}`}
+            leden={o.leden}
+            kleur={o.kleur}
+          />
+        ))}
 
         {(scheidingen ?? []).map((s: any) => {
           let punten: Punt[] = [];
@@ -320,9 +440,18 @@ function PlattegrondCanvas({
           );
         })}
 
-        {geplaatst.map((v) => (
-          <SpotIcoon key={v.id} v={v} />
-        ))}
+        {visueleGroepen.map((groep, gi) =>
+          groep.length === 1 ? (
+            <SpotIcoon key={groep[0]!.id} v={groep[0]!} />
+          ) : (
+            <ClusterBubble
+              key={`vg${gi}`}
+              centroid={groepCentroid(groep)}
+              aantal={groep.length}
+              schaal={fitSchaal}
+            />
+          ),
+        )}
       </svg>
 
       {pdfLaden && (
@@ -379,6 +508,11 @@ export default function GebouwPlattegrondHero({
 
   const { data: voorzieningen } = useListVoorzieningenOpVerdieping(
     geselecteerdId > 0 ? geselecteerdId : 0,
+  );
+
+  const { data: alleClusters } = useListClusters(gebouwId);
+  const clustersVoorVerdieping: ClusterRij[] = (alleClusters ?? []).filter(
+    (c: any) => c.verdieping_id == null || c.verdieping_id === geselecteerdId,
   );
 
   const statusCounts = (voorzieningen ?? []).reduce<Record<string, number>>((acc, v: any) => {
@@ -475,6 +609,7 @@ export default function GebouwPlattegrondHero({
               key={geselecteerdId}
               plattegrondUrl={geselecteerdeVerdieping?.plattegrond_url}
               verdiepingId={geselecteerdId}
+              clusters={clustersVoorVerdieping}
             />
           )}
         </div>

@@ -27,6 +27,8 @@ export interface VoorzieningUpdate {
   wbdbo?: string;
   wrd?: string;
   wand_of_plafond?: string;
+  /** @nullable */
+  cluster_id?: number | null;
   maker_monteur_id?: number;
   label_ids?: number[];
 }
