@@ -300,6 +300,7 @@ function SpotDetailBlok({
   const heeftTestinfo = labels.some((l: any) => l.testnorm || l.fabrikant);
 
   return (
+    <>
     <div className="prt-spot-detail">
       <div className="prt-spot-kop">
         <div className="prt-spot-kop-links">
@@ -418,8 +419,23 @@ function SpotDetailBlok({
           </div>
         )}
       </div>
+    </div>
 
-      {(voorFotos.length > 0 || naFotos.length > 0) && (
+    {(voorFotos.length > 0 || naFotos.length > 0) && (
+      <div className="prt-spot-fotopagina">
+        <div className="prt-spot-kop">
+          <div className="prt-spot-kop-links">
+            <img src={logoSrc} alt="FPS Brandpreventie" className="prt-spot-logo" />
+            <div>
+              <div className="prt-spot-gebouw">{gebouwNaam}</div>
+              <div className="prt-spot-bouwlaag">{bouwlaag} · Foto-documentatie</div>
+            </div>
+          </div>
+          <div className="prt-spot-kop-rechts">
+            <div className="prt-spot-nr">{spot.objectnummer}</div>
+            <div className="prt-spot-datum">Rapportdatum: {exportDatum}</div>
+          </div>
+        </div>
         <div className="prt-spot-fotos">
           {voorFotos.length > 0 && (
             <div>
@@ -442,8 +458,9 @@ function SpotDetailBlok({
             </div>
           )}
         </div>
-      )}
-    </div>
+      </div>
+    )}
+    </>
   );
 }
 
@@ -960,6 +977,7 @@ export default function GebouwPrint() {
         .prt-spot-foto-label { font-size: 10px; font-weight: 600; color: #64748b; margin-bottom: 6px; margin-top: 4px; }
         .prt-spot-foto-rij { display: grid; grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: 6px; }
         .prt-spot-foto { width: 100%; height: 88px; object-fit: cover; border-radius: 6px; border: 1px solid #e2e8f0; break-inside: avoid; }
+        .prt-spot-fotopagina { break-before: page; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px; background: #fff; }
 
         /* ── Toolbar ── */
         .prt-toolbar { position: sticky; top: 0; z-index: 10; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; padding: 10px 24px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; }
