@@ -80,6 +80,18 @@ const STATUS_LABELS: Record<string, string> = {
   ingetrokken: "Ingetrokken",
 };
 
+// Zet een API-fout om naar een begrijpelijke melding. Onderscheidt een echte
+// bevoegdheidsfout (403) van overige fouten en toont anders het serverbericht,
+// zodat een 500/400 niet langer misleidend als "bevoegdheid" wordt gemeld.
+function foutmelding(err: unknown, standaard: string): string {
+  const e = err as { status?: number; data?: { error?: string } } | null;
+  if (e?.status === 401) return "U bent niet meer ingelogd. Log opnieuw in en probeer het opnieuw.";
+  if (e?.status === 403)
+    return "U heeft geen bevoegdheid voor deze actie. Neem contact op met een beheerder.";
+  const serverbericht = typeof e?.data?.error === "string" ? e.data.error.trim() : "";
+  return serverbericht || standaard;
+}
+
 function statusBadge(status: string) {
   const label = STATUS_LABELS[status] ?? status;
   const cls: Record<string, string> = {
@@ -324,8 +336,8 @@ function DocumentFormulier({
       });
       setAiVelden(nieuweAi);
       setAiBetrouwbaarheid(res.betrouwbaarheid ?? null);
-    } catch {
-      setFout("Automatische analyse is mislukt. Vul de gegevens handmatig in.");
+    } catch (err) {
+      setFout(foutmelding(err, "Automatische analyse is mislukt. Vul de gegevens handmatig in."));
     } finally {
       setAiBezig(false);
     }
@@ -383,8 +395,8 @@ function DocumentFormulier({
       await queryClient.invalidateQueries({ queryKey: getListDocumentenQueryKey() });
       onBewaard();
       onOpenChange(false);
-    } catch {
-      setFout("Opslaan is mislukt. Controleer uw bevoegdheid en probeer opnieuw.");
+    } catch (err) {
+      setFout(foutmelding(err, "Opslaan is mislukt. Probeer het opnieuw."));
     }
   }
 
