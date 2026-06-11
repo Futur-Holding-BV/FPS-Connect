@@ -70,6 +70,7 @@ function foutmelding(err: unknown, standaard: string): string {
 }
 
 const GEEN_TYPE = "__alle__";
+const ONGEKOPPELD = "__ongekoppeld__";
 
 const WERENDHEID_OPTIES: { waarde: string; label: string; omschrijving: string }[] = [
   { waarde: "WRD30", label: "WRD 30", omschrijving: "Rookwerendheid 30 minuten (Weerstand Rookdoorgang)" },
@@ -227,10 +228,19 @@ function TabToepassingen() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { data: typen = [] } = useListVoorzieningTypes();
-  const { data: labels = [], isLoading } = useListLabels({
-    type_code: typeFilter === GEEN_TYPE ? undefined : typeFilter,
+  const { data: alleLabels = [], isLoading } = useListLabels({
+    type_code:
+      typeFilter === GEEN_TYPE || typeFilter === ONGEKOPPELD ? undefined : typeFilter,
     inclusief_gearchiveerd: inclGearchiveerd || undefined,
   });
+
+  // "Zonder applicatie" toont uitsluitend toepassingen zonder applicatie-koppeling
+  // (zoals net geimporteerde toepassingen). De server filtert alleen op een
+  // specifieke code, dus dit filteren we client-side.
+  const labels =
+    typeFilter === ONGEKOPPELD
+      ? (alleLabels as Label[]).filter((l) => (l.applicatie_codes ?? []).length === 0)
+      : (alleLabels as Label[]);
 
   const maakLabel = useCreateLabel();
   const wijzigLabel = useUpdateLabel();
@@ -498,6 +508,7 @@ function TabToepassingen() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value={GEEN_TYPE}>Alle types</SelectItem>
+                  <SelectItem value={ONGEKOPPELD}>Zonder applicatie</SelectItem>
                   {(typen as VoorzieningType[]).map((t) => (
                     <SelectItem key={t.code} value={t.code}>
                       <span className="font-mono text-xs mr-2 text-muted-foreground">{t.code}</span>
