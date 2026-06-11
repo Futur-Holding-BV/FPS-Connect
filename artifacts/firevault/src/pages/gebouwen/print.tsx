@@ -702,7 +702,7 @@ export default function GebouwPrint() {
   const { data: emails, isLoading: emailsLaden }              = useListGebouwEmails(gebouwId);
   const { data: samenvatting }                                = useGetGebouwEmailSamenvatting(gebouwId);
   const { data: gevelbeeld, isLoading: gevelbeeldLaden }      = useGetGebouwGevelbeeld(gebouwId);
-  const { data: gebruikers, isLoading: gebruikersLaden }      = useListGebruikers();
+  const { isLoading: gebruikersLaden }      = useListGebruikers();
 
   const [gereedFloors, setGereedFloors] = useState(0);
   const gedrukt = useRef(false);
@@ -765,17 +765,10 @@ export default function GebouwPrint() {
   const projectEmails     = (emails ?? []).filter((e) => e.ai_relevant !== false);
   const heeftDocumenten   = projectTekeningen.length > 0 || projectEmails.length > 0;
 
-  const VELD_FUNCTIES = ["Timmerman", "Uitvoerder"];
-  const functietitelsMap = new Map<number, string[]>(
-    (gebruikers ?? []).map((g) => [g.id, g.functietitels ?? []]),
-  );
   const teamleden = Object.values(
-    (toewijzingen ?? []).reduce<Record<number, { id: number; naam: string; rol: string; weergaveRol: string; rollen: string[] }>>((acc, t) => {
+    (toewijzingen ?? []).reduce<Record<number, { id: number; naam: string; rol: string; rollen: string[] }>>((acc, t) => {
       if (!acc[t.gebruiker_id]) {
-        const veld = (functietitelsMap.get(t.gebruiker_id) ?? []).find((f) =>
-          VELD_FUNCTIES.includes(f),
-        );
-        acc[t.gebruiker_id] = { id: t.gebruiker_id, naam: t.naam, rol: t.rol ?? "", weergaveRol: veld ?? (t.rol ?? ""), rollen: [] };
+        acc[t.gebruiker_id] = { id: t.gebruiker_id, naam: t.naam, rol: t.rol ?? "", rollen: [] };
       }
       if (t.project_rol) acc[t.gebruiker_id].rollen.push(t.project_rol);
       return acc;
@@ -1303,7 +1296,7 @@ export default function GebouwPrint() {
                 {teamleden.map(t => (
                   <tr key={t.id}>
                     <td>{t.naam}</td>
-                    <td style={{ textTransform: "capitalize" }}>{t.weergaveRol}</td>
+                    <td style={{ textTransform: "capitalize" }}>{t.rol}</td>
                     <td>{t.rollen.length > 0 ? t.rollen.join(" | ") : "—"}</td>
                   </tr>
                 ))}

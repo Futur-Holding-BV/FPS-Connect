@@ -71,20 +71,7 @@ import GebouwStappenplan from "./gebouw-stappenplan";
 const BEHEERDER_ROLLEN = ["beheerder", "hoofdbeheerder"];
 const TEAM_UITGESLOTEN_ROLLEN = ["hoofdbeheerder", "klant"];
 
-// Veldfuncties tonen een monteur met een specifiekere naam (bv. Timmerman).
-const VELD_FUNCTIES = ["Timmerman", "Uitvoerder"];
-
-// Toon de veldfunctie (Timmerman/Uitvoerder) i.p.v. de kale rol "monteur".
-function rolLabelVan(g: {
-  rol?: string | null;
-  functietitels?: string[] | null;
-}): string {
-  if (g.rol === "monteur") {
-    const veld = (g.functietitels ?? []).find((f) =>
-      VELD_FUNCTIES.includes(f),
-    );
-    if (veld) return veld;
-  }
+function rolLabelVan(g: { rol?: string | null }): string {
   return g.rol ?? "";
 }
 
