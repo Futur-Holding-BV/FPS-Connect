@@ -298,6 +298,33 @@ function SpotDetailBlok({
   const werendheidLabel = weergeefWerendheid(d?.wbdbo, d?.wrd, d?.classificatie);
 
   const heeftTestinfo = labels.some((l: any) => l.testnorm || l.fabrikant);
+  const heeftFotos = voorFotos.length > 0 || naFotos.length > 0;
+  const fotosPassenSamen = voorFotos.length <= 2 && naFotos.length <= 2;
+
+  const fotosInhoud = (
+    <div className="prt-spot-fotos">
+      {voorFotos.length > 0 && (
+        <div>
+          <div className="prt-spot-foto-label">Foto's voor</div>
+          <div className="prt-spot-foto-rij">
+            {voorFotos.map((f: any) => (
+              <img key={f.id} src={`/api/storage${f.url}`} alt="Foto voor" className="prt-spot-foto" />
+            ))}
+          </div>
+        </div>
+      )}
+      {naFotos.length > 0 && (
+        <div>
+          <div className="prt-spot-foto-label">Foto's na</div>
+          <div className="prt-spot-foto-rij">
+            {naFotos.map((f: any) => (
+              <img key={f.id} src={`/api/storage${f.url}`} alt="Foto na" className="prt-spot-foto" />
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
 
   return (
     <>
@@ -419,9 +446,11 @@ function SpotDetailBlok({
           </div>
         )}
       </div>
+
+      {fotosPassenSamen && heeftFotos && fotosInhoud}
     </div>
 
-    {(voorFotos.length > 0 || naFotos.length > 0) && (
+    {!fotosPassenSamen && heeftFotos && (
       <div className="prt-spot-fotopagina">
         <div className="prt-spot-kop">
           <div className="prt-spot-kop-links">
@@ -436,28 +465,7 @@ function SpotDetailBlok({
             <div className="prt-spot-datum">Rapportdatum: {exportDatum}</div>
           </div>
         </div>
-        <div className="prt-spot-fotos">
-          {voorFotos.length > 0 && (
-            <div>
-              <div className="prt-spot-foto-label">Foto's voor</div>
-              <div className="prt-spot-foto-rij">
-                {voorFotos.map((f: any) => (
-                  <img key={f.id} src={`/api/storage${f.url}`} alt="Foto voor" className="prt-spot-foto" />
-                ))}
-              </div>
-            </div>
-          )}
-          {naFotos.length > 0 && (
-            <div>
-              <div className="prt-spot-foto-label">Foto's na</div>
-              <div className="prt-spot-foto-rij">
-                {naFotos.map((f: any) => (
-                  <img key={f.id} src={`/api/storage${f.url}`} alt="Foto na" className="prt-spot-foto" />
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
+        {fotosInhoud}
       </div>
     )}
     </>
