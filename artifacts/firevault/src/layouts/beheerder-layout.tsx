@@ -205,20 +205,6 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
                         <span>Bibliotheek</span>
                       </Link>
                     </SidebarMenuButton>
-                    {heeftNiveau("bibliotheek", 3) && (
-                      <SidebarMenuSub>
-                        <SidebarMenuSubItem>
-                          <SidebarMenuSubButton
-                            asChild
-                            isActive={location === "/voorzieningen/nieuw"}
-                          >
-                            <Link href="/voorzieningen/nieuw">
-                              <span>Toepassing toevoegen</span>
-                            </Link>
-                          </SidebarMenuSubButton>
-                        </SidebarMenuSubItem>
-                      </SidebarMenuSub>
-                    )}
                   </SidebarMenuItem>
                 </SidebarMenu>
               </SidebarGroupContent>
