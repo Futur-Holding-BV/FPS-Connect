@@ -4,6 +4,7 @@ import {
   useGetVerdieping,
   useGetVolgendSpotnummer,
   useListFotos,
+  useListScheidingen,
   useListVoorzieningenOpVerdieping,
   useArchiveerVoorziening,
 } from "@workspace/api-client-react";
@@ -34,7 +35,11 @@ import {
   bovenInset,
   onderInset,
 } from "@/components/ui";
-import { PdfPlattegrond, type PlattegrondSpot } from "@/components/PdfPlattegrond";
+import {
+  PdfPlattegrond,
+  type PlattegrondSpot,
+  type PlattegrondScheiding,
+} from "@/components/PdfPlattegrond";
 import {
   STATUS_VOLGORDE,
   WAND_PLAFOND_OPTIES,
@@ -81,6 +86,7 @@ export default function Plattegrond() {
 
   const { data: verdieping } = useGetVerdieping(vId);
   const { data: voorzieningen, refetch } = useListVoorzieningenOpVerdieping(vId);
+  const { data: scheidingenData } = useListScheidingen(vId);
   const { data: volgendSpot, refetch: refetchSpotnummer } = useGetVolgendSpotnummer(gId);
   const maakVoorziening = useCreateVoorziening();
   const voegFotoToe = useAddFoto();
@@ -106,6 +112,14 @@ export default function Plattegrond() {
     wand_of_plafond: v.wand_of_plafond,
     locatie_x: v.locatie_x,
     locatie_y: v.locatie_y,
+  }));
+
+  const scheidingen: PlattegrondScheiding[] = (scheidingenData ?? []).map((s) => ({
+    id: s.id,
+    type: s.type,
+    waarde: s.waarde,
+    kleur: s.kleur,
+    punten: s.punten,
   }));
 
   const detailSpot = (voorzieningen ?? []).find((v) => v.id === detailId) ?? null;
@@ -199,6 +213,7 @@ export default function Plattegrond() {
       <PdfPlattegrond
         plattegrondUrl={verdieping?.plattegrond_url ?? null}
         spots={spots}
+        scheidingen={scheidingen}
         plaatsModus={plaatsModus}
         token={token ?? ""}
         domein={DOMEIN}

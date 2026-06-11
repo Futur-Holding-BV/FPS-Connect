@@ -14,9 +14,18 @@ export type PlattegrondSpot = {
   locatie_y: number | null;
 };
 
+export type PlattegrondScheiding = {
+  id: number;
+  type: string;
+  waarde?: string | null;
+  kleur?: string | null;
+  punten: string;
+};
+
 type Props = {
   plattegrondUrl: string | null | undefined;
   spots: PlattegrondSpot[];
+  scheidingen: PlattegrondScheiding[];
   plaatsModus: boolean;
   token: string;
   domein: string;
@@ -35,6 +44,7 @@ function bouwHtml(domein: string, token: string, url: string | null): string {
     url,
     typen: TYPE_KLEUREN,
     status: STATUSKLEUREN,
+    scheidingTypen: { brand: { kleur: "#dc2626" }, rook: { kleur: "#2563eb" } },
   };
   return `<!DOCTYPE html>
 <html>
@@ -80,12 +90,14 @@ function bouwHtml(domein: string, token: string, url: string | null): string {
 (function(){
   var CFG = ${JSON.stringify(cfg)};
   var spots = [];
+  var scheidingen = [];
   var placeMode = false;
   var stage = document.getElementById('stage');
   var wrap = document.getElementById('wrap');
   var crosshair = document.getElementById('crosshair');
   var msg = document.getElementById('msg');
   var pageW = 0, pageH = 0, scale = 1, tx = 0, ty = 0, rendered = false;
+  var linesEl = null;
   var MINS = 0.15, MAXS = 10;
 
   function post(o){ if (window.ReactNativeWebView) window.ReactNativeWebView.postMessage(JSON.stringify(o)); }
@@ -122,6 +134,67 @@ function bouwHtml(domein: string, token: string, url: string | null): string {
     });
   }
 
+  function esc(t){ return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function veiligeKleur(k, fallback){ return (typeof k==='string' && /^#[0-9a-fA-F]{3,8}$/.test(k)) ? k : fallback; }
+
+  function markerPosities(punten, stap){
+    if (punten.length<2) return punten.slice();
+    var segLengtes=[], totaal=0, i;
+    for (i=1;i<punten.length;i++){
+      var len=Math.hypot(punten[i].x-punten[i-1].x, punten[i].y-punten[i-1].y);
+      segLengtes.push(len); totaal+=len;
+    }
+    if (totaal===0) return [{x:punten[0].x,y:punten[0].y}];
+    var tussen=Math.min(8,Math.max(1,Math.round(totaal/stap)));
+    var afstanden=[0];
+    for (i=1;i<=tussen;i++) afstanden.push((totaal*i)/(tussen+1));
+    afstanden.push(totaal);
+    return afstanden.map(function(d){
+      var rest=d, j;
+      for (j=0;j<segLengtes.length;j++){
+        var l=segLengtes[j];
+        if (rest<=l || j===segLengtes.length-1){
+          var t=l===0?0:Math.min(1,rest/l);
+          var a=punten[j], b=punten[j+1];
+          return {x:a.x+(b.x-a.x)*t, y:a.y+(b.y-a.y)*t};
+        }
+        rest-=l;
+      }
+      var last=punten[punten.length-1];
+      return {x:last.x,y:last.y};
+    });
+  }
+
+  function renderScheidingen(){
+    if (!linesEl) return;
+    var parts=[];
+    scheidingen.forEach(function(s){
+      var ruw=[];
+      try { ruw=JSON.parse(s.punten); } catch(e){ ruw=[]; }
+      if (!ruw || !ruw.length) return;
+      var punten=[];
+      for (var pi=0;pi<ruw.length;pi++){
+        var px=Number(ruw[pi]&&ruw[pi].x), py=Number(ruw[pi]&&ruw[pi].y);
+        if (isFinite(px)&&isFinite(py)) punten.push({x:px,y:py});
+      }
+      if (punten.length<2) return;
+      var st=CFG.scheidingTypen[s.type];
+      var kleur=veiligeKleur(s.kleur, (st&&st.kleur) || '#dc2626');
+      var puntenStr=punten.map(function(p){ return p.x+','+p.y; }).join(' ');
+      var dash=s.type==='rook' ? ' stroke-dasharray="12 8"' : '';
+      parts.push('<polyline points="'+puntenStr+'" fill="none" stroke="'+kleur+'" stroke-width="4"'+dash+' stroke-linecap="round" stroke-linejoin="round" opacity="0.9" />');
+      if (s.waarde){
+        var markers=markerPosities(punten, Math.max(pageW,pageH)/4.6);
+        var wlen=String(s.waarde).length;
+        var fs=wlen>=6?8:(wlen>=5?9.5:11);
+        markers.forEach(function(m){
+          parts.push('<g transform="translate('+m.x+','+m.y+')"><circle r="18" fill="#fff" stroke="'+kleur+'" stroke-width="3" /><text x="0" y="0" text-anchor="middle" dominant-baseline="central" font-size="'+fs+'" font-weight="800" fill="'+kleur+'">'+esc(s.waarde)+'</text></g>');
+        });
+      }
+    });
+    linesEl.innerHTML='<svg width="'+pageW+'" height="'+pageH+'" viewBox="0 0 '+pageW+' '+pageH+'" style="position:absolute;top:0;left:0;overflow:visible">'+parts.join('')+'</svg>';
+  }
+
   function fit(){
     var sw=stage.clientWidth, sh=stage.clientHeight;
     var s=Math.min(sw/pageW,sh/pageH);
@@ -148,7 +221,14 @@ function bouwHtml(domein: string, token: string, url: string | null): string {
         return page.render({canvasContext:ctx,viewport:vp,canvas:canvas}).promise;
       })
       .then(function(){
-        rendered=true; msg.style.display='none'; renderMarkers(); fit();
+        rendered=true; msg.style.display='none';
+        if (!linesEl){
+          linesEl=document.createElement('div');
+          linesEl.style.position='absolute'; linesEl.style.top='0'; linesEl.style.left='0';
+          linesEl.style.width=pageW+'px'; linesEl.style.height=pageH+'px'; linesEl.style.pointerEvents='none';
+          wrap.appendChild(linesEl);
+        }
+        renderScheidingen(); renderMarkers(); fit();
         post({type:'ready',w:pageW,h:pageH});
       })
       .catch(function(e){
@@ -234,6 +314,7 @@ function bouwHtml(domein: string, token: string, url: string | null): string {
     wrap.classList.toggle('placing',!!v);
   };
   window.__setSpots=function(json){ try{spots=JSON.parse(json);}catch(e){spots=[];} if(rendered) renderMarkers(); };
+  window.__setScheidingen=function(json){ try{scheidingen=JSON.parse(json);}catch(e){scheidingen=[];} if(rendered) renderScheidingen(); };
   window.__fit=function(){ if(rendered) fit(); };
 
   loadPdf();
@@ -246,6 +327,7 @@ function bouwHtml(domein: string, token: string, url: string | null): string {
 export function PdfPlattegrond({
   plattegrondUrl,
   spots,
+  scheidingen,
   plaatsModus,
   token,
   domein,
@@ -266,6 +348,13 @@ export function PdfPlattegrond({
       `window.__setSpots && window.__setSpots(${JSON.stringify(JSON.stringify(spots))}); true;`,
     );
   }, [spots, klaar]);
+
+  useEffect(() => {
+    if (!klaar) return;
+    webRef.current?.injectJavaScript(
+      `window.__setScheidingen && window.__setScheidingen(${JSON.stringify(JSON.stringify(scheidingen))}); true;`,
+    );
+  }, [scheidingen, klaar]);
 
   useEffect(() => {
     if (!klaar) return;
