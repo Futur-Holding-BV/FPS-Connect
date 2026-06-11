@@ -97,6 +97,7 @@ import type {
   LabelInput,
   LabelUpdate,
   ListDocumentenParams,
+  ListFabrikantenParams,
   ListGebouwenParams,
   ListInspectiesParams,
   ListLabelsParams,
@@ -4536,20 +4537,27 @@ export const useSetLabelDocumenten = <TError = ErrorType<void>,
       return useMutation(getSetLabelDocumentenMutationOptions(options));
     }
 
-export const getListFabrikantenUrl = () => {
+export const getListFabrikantenUrl = (params?: ListFabrikantenParams,) => {
+  const normalizedParams = new URLSearchParams();
 
+  Object.entries(params || {}).forEach(([key, value]) => {
 
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
 
+  const stringifiedParams = normalizedParams.toString();
 
-  return `/api/fabrikanten`
+  return stringifiedParams.length > 0 ? `/api/fabrikanten?${stringifiedParams}` : `/api/fabrikanten`
 }
 
 /**
  * @summary Fabrikanten (erkende leveranciers van brandpreventieve producten)
  */
-export const listFabrikanten = async ( options?: RequestInit): Promise<Fabrikant[]> => {
+export const listFabrikanten = async (params?: ListFabrikantenParams, options?: RequestInit): Promise<Fabrikant[]> => {
 
-  return customFetch<Fabrikant[]>(getListFabrikantenUrl(),
+  return customFetch<Fabrikant[]>(getListFabrikantenUrl(params),
   {
     ...options,
     method: 'GET'
@@ -4562,23 +4570,23 @@ export const listFabrikanten = async ( options?: RequestInit): Promise<Fabrikant
 
 
 
-export const getListFabrikantenQueryKey = () => {
+export const getListFabrikantenQueryKey = (params?: ListFabrikantenParams,) => {
     return [
-    `/api/fabrikanten`
+    `/api/fabrikanten`, ...(params ? [params] : [])
     ] as const;
     }
 
 
-export const getListFabrikantenQueryOptions = <TData = Awaited<ReturnType<typeof listFabrikanten>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listFabrikanten>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export const getListFabrikantenQueryOptions = <TData = Awaited<ReturnType<typeof listFabrikanten>>, TError = ErrorType<unknown>>(params?: ListFabrikantenParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listFabrikanten>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getListFabrikantenQueryKey();
+  const queryKey =  queryOptions?.queryKey ?? getListFabrikantenQueryKey(params);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listFabrikanten>>> = ({ signal }) => listFabrikanten({ signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listFabrikanten>>> = ({ signal }) => listFabrikanten(params, { signal, ...requestOptions });
 
 
 
@@ -4596,11 +4604,11 @@ export type ListFabrikantenQueryError = ErrorType<unknown>
  */
 
 export function useListFabrikanten<TData = Awaited<ReturnType<typeof listFabrikanten>>, TError = ErrorType<unknown>>(
-  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listFabrikanten>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+ params?: ListFabrikantenParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listFabrikanten>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
-  const queryOptions = getListFabrikantenQueryOptions(options)
+  const queryOptions = getListFabrikantenQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

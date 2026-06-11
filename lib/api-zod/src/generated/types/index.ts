@@ -110,6 +110,7 @@ export * from './labelDocumentenInput';
 export * from './labelInput';
 export * from './labelUpdate';
 export * from './listDocumentenParams';
+export * from './listFabrikantenParams';
 export * from './listGebouwenParams';
 export * from './listInspectiesParams';
 export * from './listLabelsParams';

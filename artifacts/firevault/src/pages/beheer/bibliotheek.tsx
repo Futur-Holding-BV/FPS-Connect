@@ -1272,7 +1272,13 @@ function TabFabrikanten() {
   const magAanmaken = heeftNiveau("bibliotheek", 3);
   const magBewerken = heeftNiveau("bibliotheek", 2);
 
-  const { data: fabrikanten = [], isLoading } = useListFabrikanten();
+  const [inclGearchiveerd, setInclGearchiveerd] = useVoorkeur(
+    "bibliotheek_fabrikanten_incl_gearchiveerd",
+    false,
+  );
+  const { data: fabrikanten = [], isLoading } = useListFabrikanten({
+    inclusief_gearchiveerd: inclGearchiveerd || undefined,
+  });
   const maakFabrikant = useCreateFabrikant();
   const wijzigFabrikant = useUpdateFabrikant();
 
@@ -1319,6 +1325,18 @@ function TabFabrikanten() {
     }
   }
 
+  async function toggleArchief(f: Fabrikant) {
+    try {
+      await wijzigFabrikant.mutateAsync({
+        id: f.id,
+        data: { gearchiveerd: !f.gearchiveerd },
+      });
+      await queryClient.invalidateQueries({ queryKey: getListFabrikantenQueryKey() });
+    } catch {
+      /* fout wordt door de lijststatus opgevangen */
+    }
+  }
+
   const bezig = maakFabrikant.isPending || wijzigFabrikant.isPending;
 
   return (
@@ -1328,14 +1346,24 @@ function TabFabrikanten() {
         aanbod en de goedgekeurde productcombinaties raadplegen.
       </p>
 
-      {magAanmaken && (
-        <div className="flex justify-end">
-          <Button onClick={openNieuw}>
+      <div className="flex items-center gap-3 flex-wrap">
+        <div className="flex items-center gap-2">
+          <Switch
+            id="fabrikanten-incl-gearchiveerd"
+            checked={inclGearchiveerd}
+            onCheckedChange={setInclGearchiveerd}
+          />
+          <UiLabel htmlFor="fabrikanten-incl-gearchiveerd" className="text-sm cursor-pointer">
+            Inclusief gearchiveerd
+          </UiLabel>
+        </div>
+        {magAanmaken && (
+          <Button className="ml-auto" onClick={openNieuw}>
             <Plus className="h-4 w-4 mr-2" />
             Fabrikant toevoegen
           </Button>
-        </div>
-      )}
+        )}
+      </div>
 
       {isLoading ? (
         <p className="text-sm text-muted-foreground">Laden...</p>
@@ -1344,14 +1372,21 @@ function TabFabrikanten() {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {fabrikanten.map((f) => (
-            <Card key={f.id} className="flex flex-col">
+            <Card key={f.id} className={`flex flex-col ${f.gearchiveerd ? "opacity-60" : ""}`}>
               <CardContent className="pt-5 pb-4 flex flex-col gap-3 flex-1">
                 <div className="flex items-start gap-3">
                   <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
                     <Building2 className="h-4 w-4 text-primary" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-sm leading-tight">{f.naam}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="font-semibold text-sm leading-tight">{f.naam}</p>
+                      {f.gearchiveerd && (
+                        <Badge variant="outline" className="text-xs text-muted-foreground shrink-0">
+                          Gearchiveerd
+                        </Badge>
+                      )}
+                    </div>
                     {f.url ? (
                       <p className="text-xs text-muted-foreground truncate mt-0.5">{f.url.replace("https://", "")}</p>
                     ) : (
@@ -1381,6 +1416,27 @@ function TabFabrikanten() {
                       <ExternalLink className="h-3 w-3" />
                       Productcatalogus openen
                     </a>
+                  </Button>
+                )}
+                {magBewerken && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full text-xs gap-1.5"
+                    onClick={() => toggleArchief(f)}
+                    disabled={wijzigFabrikant.isPending}
+                  >
+                    {f.gearchiveerd ? (
+                      <>
+                        <ArchiveRestore className="h-3.5 w-3.5" />
+                        Herstellen
+                      </>
+                    ) : (
+                      <>
+                        <Archive className="h-3.5 w-3.5" />
+                        Archiveren
+                      </>
+                    )}
                   </Button>
                 )}
               </CardContent>

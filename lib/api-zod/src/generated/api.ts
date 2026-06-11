@@ -1690,10 +1690,15 @@ export const SetLabelDocumentenResponse = zod.object({
 /**
  * @summary Fabrikanten (erkende leveranciers van brandpreventieve producten)
  */
+export const ListFabrikantenQueryParams = zod.object({
+  "inclusief_gearchiveerd": zod.coerce.boolean().optional()
+})
+
 export const ListFabrikantenResponseItem = zod.object({
   "id": zod.number(),
   "naam": zod.string(),
   "url": zod.string().nullish(),
+  "gearchiveerd": zod.boolean(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string().optional()
 })
@@ -1720,13 +1725,15 @@ export const UpdateFabrikantParams = zod.object({
 
 export const UpdateFabrikantBody = zod.object({
   "naam": zod.string().optional(),
-  "url": zod.string().nullish()
+  "url": zod.string().nullish(),
+  "gearchiveerd": zod.boolean().optional()
 })
 
 export const UpdateFabrikantResponse = zod.object({
   "id": zod.number(),
   "naam": zod.string(),
   "url": zod.string().nullish(),
+  "gearchiveerd": zod.boolean(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string().optional()
 })

@@ -1826,6 +1826,7 @@ export interface Fabrikant {
   naam: string;
   /** @nullable */
   url?: string | null;
+  gearchiveerd: boolean;
   aangemaakt_op: string;
   bijgewerkt_op?: string;
 }
@@ -1839,6 +1840,7 @@ export interface FabrikantUpdate {
   naam?: string;
   /** @nullable */
   url?: string | null;
+  gearchiveerd?: boolean;
 }
 
 export type DocumentType = typeof DocumentType[keyof typeof DocumentType];
@@ -2172,6 +2174,10 @@ inclusief_inactief?: boolean;
 
 export type ListLabelsParams = {
 type_code?: string;
+inclusief_gearchiveerd?: boolean;
+};
+
+export type ListFabrikantenParams = {
 inclusief_gearchiveerd?: boolean;
 };
 

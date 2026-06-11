@@ -89,6 +89,7 @@ export const fabrikantenTable = pgTable("fabrikanten", {
   id: serial("id").primaryKey(),
   naam: text("naam").notNull().unique(),
   url: text("url"),
+  gearchiveerd: boolean("gearchiveerd").notNull().default(false),
   aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
   bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
 });

@@ -1384,6 +1384,11 @@ paths:
       operationId: listFabrikanten
       tags: [classificatie]
       summary: Fabrikanten (erkende leveranciers van brandpreventieve producten)
+      parameters:
+        - in: query
+          name: inclusief_gearchiveerd
+          schema:
+            type: boolean
       responses:
         "200":
           description: OK
@@ -6218,7 +6223,7 @@ components:
 
     Fabrikant:
       type: object
-      required: [id, naam, aangemaakt_op]
+      required: [id, naam, gearchiveerd, aangemaakt_op]
       properties:
         id:
           type: integer
@@ -6226,6 +6231,8 @@ components:
           type: string
         url:
           type: ["string", "null"]
+        gearchiveerd:
+          type: boolean
         aangemaakt_op:
           type: string
         bijgewerkt_op:
@@ -6247,6 +6254,8 @@ components:
           type: string
         url:
           type: ["string", "null"]
+        gearchiveerd:
+          type: boolean
 
     DocumentType:
       type: string

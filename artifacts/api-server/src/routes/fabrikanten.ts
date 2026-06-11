@@ -10,6 +10,7 @@ function mapFabrikant(f: typeof fabrikantenTable.$inferSelect) {
     id: f.id,
     naam: f.naam,
     url: f.url,
+    gearchiveerd: f.gearchiveerd,
     aangemaakt_op: f.aangemaaktOp.toISOString(),
     bijgewerkt_op: f.bijgewerktOp.toISOString(),
   };
@@ -22,10 +23,12 @@ function normaliseerUrl(url: unknown): string | null {
 // GET /fabrikanten
 router.get("/fabrikanten", async (req, res) => {
   try {
-    const rows = await db
+    const inclusiefGearchiveerd = req.query.inclusief_gearchiveerd === "true";
+    let rows = await db
       .select()
       .from(fabrikantenTable)
       .orderBy(asc(fabrikantenTable.naam));
+    if (!inclusiefGearchiveerd) rows = rows.filter((f) => !f.gearchiveerd);
     res.json(rows.map(mapFabrikant));
   } catch (err) {
     req.log.error(err);
@@ -58,13 +61,14 @@ router.post("/fabrikanten", requireBevoegdheid("bibliotheek", 3), async (req, re
 router.patch("/fabrikanten/:id", requireBevoegdheid("bibliotheek", 2), async (req, res) => {
   try {
     const id = parseInt(String(req.params.id));
-    const { naam, url } = req.body;
+    const { naam, url, gearchiveerd } = req.body;
     const set: Record<string, unknown> = { bijgewerktOp: new Date() };
     if (naam !== undefined) {
       if (!String(naam).trim()) return res.status(400).json({ error: "naam mag niet leeg zijn" });
       set.naam = String(naam).trim();
     }
     if (url !== undefined) set.url = normaliseerUrl(url);
+    if (gearchiveerd !== undefined) set.gearchiveerd = gearchiveerd === true;
 
     const [f] = await db
       .update(fabrikantenTable)

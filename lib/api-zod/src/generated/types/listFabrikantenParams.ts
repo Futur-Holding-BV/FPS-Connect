@@ -6,12 +6,6 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface Fabrikant {
-  id: number;
-  naam: string;
-  /** @nullable */
-  url?: string | null;
-  gearchiveerd: boolean;
-  aangemaakt_op: string;
-  bijgewerkt_op?: string;
-}
+export type ListFabrikantenParams = {
+inclusief_gearchiveerd?: boolean;
+};

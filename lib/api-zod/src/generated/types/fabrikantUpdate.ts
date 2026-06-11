@@ -10,4 +10,5 @@ export interface FabrikantUpdate {
   naam?: string;
   /** @nullable */
   url?: string | null;
+  gearchiveerd?: boolean;
 }
