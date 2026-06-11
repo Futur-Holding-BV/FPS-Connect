@@ -10,7 +10,7 @@ export type ListGebouwenParams = {
 zoek?: string;
 organisatie_id?: number;
 /**
- * Indien true: retourneer alleen gebouwen die aan de ingelogde gebruiker zijn toegewezen. Beheerders en hoofdbeheerders zien altijd alle gebouwen. Voor monteur/controleur wordt dit automatisch geforceerd.
+ * Indien true: retourneer alleen gebouwen die aan de ingelogde gebruiker zijn toegewezen. Gebruikers met gebouwbeheer (bevoegdheidsniveau 2 of hoger) en de hoofdbeheerder zien altijd alle gebouwen. Voor gebruikers die tot hun toegewezen gebouwen beperkt zijn, wordt dit automatisch geforceerd.
  */
 mijn?: boolean;
 /**

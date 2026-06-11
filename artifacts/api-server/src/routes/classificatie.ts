@@ -65,14 +65,16 @@ router.post("/labels", requireBevoegdheid("bibliotheek", 3), async (req, res) =>
     if (!naam || !String(naam).trim()) {
       return res.status(400).json({ error: "naam is verplicht" });
     }
-    if (!Array.isArray(applicatie_codes) || applicatie_codes.length === 0) {
-      return res.status(400).json({ error: "applicatie_codes zijn verplicht (minimaal 1)" });
-    }
-    const onbekend = await onbekendeApplicatieCodes(applicatie_codes);
-    if (onbekend.length > 0) {
-      return res
-        .status(400)
-        .json({ error: `Onbekende applicatie-code(s): ${onbekend.join(", ")}` });
+    // applicatie_codes is optioneel: een toepassing mag zonder applicatie-koppeling
+    // worden aangemaakt (bv. bulk-import zonder ingevulde codes) en later gekoppeld.
+    const codes: string[] = Array.isArray(applicatie_codes) ? applicatie_codes : [];
+    if (codes.length > 0) {
+      const onbekend = await onbekendeApplicatieCodes(codes);
+      if (onbekend.length > 0) {
+        return res
+          .status(400)
+          .json({ error: `Onbekende applicatie-code(s): ${onbekend.join(", ")}` });
+      }
     }
     const [l] = await db
       .insert(labelsTable)
@@ -83,7 +85,7 @@ router.post("/labels", requireBevoegdheid("bibliotheek", 3), async (req, res) =>
         testrapportId: testrapport_id ?? null,
       })
       .returning();
-    await syncLabelApplicaties(l.id, applicatie_codes);
+    await syncLabelApplicaties(l.id, codes);
     return res.status(201).json(await mapLabel(l));
   } catch (err) {
     req.log.error(err);

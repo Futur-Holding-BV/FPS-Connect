@@ -239,7 +239,10 @@ function TabToepassingen() {
           const r = rows[i] ?? [];
           const type_code = String(r[0] ?? "").trim();
           const naam = String(r[1] ?? "").trim();
-          if (!type_code || !naam) {
+          // De applicatie-code (kolom A) is optioneel: een toepassing zonder code
+          // wordt zonder applicatie-koppeling geimporteerd en kan later gekoppeld
+          // worden. Alleen de naam (kolom B) is verplicht.
+          if (!naam) {
             if (r.some((c) => String(c ?? "").trim())) overgeslagen++;
             continue;
           }
@@ -254,7 +257,7 @@ function TabToepassingen() {
         if (rijen.length === 0) {
           setImportFout(
             overgeslagen > 0
-              ? "Geen bruikbare rijen gevonden. Controleer dat kolom A de applicatie-code en kolom B de naam bevat (rij 1 is de koptekst)."
+              ? "Geen bruikbare rijen gevonden. Controleer dat kolom B de naam van de toepassing bevat (rij 1 is de koptekst). De applicatie-code in kolom A is optioneel."
               : "Het bestand bevat geen gegevensrijen onder de koptekst.",
           );
         }
@@ -278,7 +281,7 @@ function TabToepassingen() {
       try {
         await maakLabel.mutateAsync({
           data: {
-            applicatie_codes: [rij.type_code],
+            applicatie_codes: rij.type_code ? [rij.type_code] : [],
             naam: rij.naam,
             fabrikant: rij.fabrikant || undefined,
             testnorm: rij.testnorm || undefined,
@@ -384,7 +387,7 @@ function TabToepassingen() {
                       <tbody>
                         {importRijen.slice(0, 10).map((r, i) => (
                           <tr key={i} className="border-b last:border-0">
-                            <td className="p-2 font-mono">{r.type_code}</td>
+                            <td className="p-2 font-mono">{r.type_code || "—"}</td>
                             <td className="p-2">{r.naam}</td>
                             <td className="p-2 text-muted-foreground">{r.fabrikant ?? "—"}</td>
                             <td className="p-2 text-muted-foreground">{r.testnorm ?? "—"}</td>

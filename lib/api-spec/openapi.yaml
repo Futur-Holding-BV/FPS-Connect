@@ -5814,7 +5814,7 @@ components:
 
     LabelInput:
       type: object
-      required: [naam, applicatie_codes]
+      required: [naam]
       properties:
         applicatie_codes:
           type: array

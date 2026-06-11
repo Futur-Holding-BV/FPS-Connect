@@ -7,7 +7,7 @@
  */
 
 export interface LabelInput {
-  applicatie_codes: string[];
+  applicatie_codes?: string[];
   naam: string;
   fabrikant?: string;
   testnorm?: string;
