@@ -8,11 +8,11 @@ import {
   gebouwToewijzingenTable,
   gebouwPartijenTable,
   tekeningenTable,
-  activiteitenTable,
 } from "@workspace/db";
 import { eq, inArray, count, and, sql } from "drizzle-orm";
 import { requireBevoegdheid, requireBevoegdheidOfKlant } from "../middlewares/auth";
 import { effectieveContext } from "../utils/rol";
+import { logActiviteit } from "../lib/activiteit";
 import {
   analyseerGebouwVrijeTekst,
   analyseerTekening,
@@ -1327,10 +1327,11 @@ router.patch("/gebouwen/:id/archief", requireBevoegdheid("gebouwen", 4), async (
       .where(eq(gebouwenTable.id, id))
       .returning();
 
-    await db.insert(activiteitenTable).values({
+    await logActiviteit({
       type: gearchiveerd ? "gebouw_gearchiveerd" : "gebouw_teruggeplaatst",
       omschrijving: `Gebouw "${bijgewerkt!.naam}" ${gearchiveerd ? "gearchiveerd" : "teruggeplaatst"}`,
       gebouwId: id,
+      gebruikerId: req.session.userId,
     });
 
     const verdiepingen = await db.select().from(verdiepingenTable).where(eq(verdiepingenTable.gebouwId, id));

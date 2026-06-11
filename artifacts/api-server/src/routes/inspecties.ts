@@ -5,12 +5,12 @@ import {
   gebouwenTable,
   gebruikersTable,
   voorzieningenTable,
-  activiteitenTable,
   gebouwToewijzingenTable,
 } from "@workspace/db";
 import { eq, inArray } from "drizzle-orm";
 import { requireBevoegdheid, requireBevoegdheidOfKlant } from "../middlewares/auth";
 import { effectieveContext, isBeperktTotToegewezen } from "../utils/rol";
+import { logActiviteit } from "../lib/activiteit";
 
 const router = Router();
 const lezenInspecties = requireBevoegdheid("inspecties", 1);
@@ -135,10 +135,12 @@ router.post("/inspecties", requireBevoegdheid("inspecties", 3), async (req, res)
       })
       .returning();
 
-    await db.insert(activiteitenTable).values({
+    await logActiviteit({
       type: "inspectie_aangemaakt",
       omschrijving: `Nieuwe ${type} inspectie ingepland`,
       gebouwId: gebouw_id,
+      voorzieningId: voorziening_id,
+      gebruikerId: req.session.userId,
     });
 
     res.status(201).json(await mapInspectie(i));

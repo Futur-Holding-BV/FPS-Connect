@@ -5,12 +5,12 @@ import {
   gebouwenTable,
   voorzieningenTable,
   gebruikersTable,
-  activiteitenTable,
   gebouwToewijzingenTable,
 } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
 import { effectieveContext, isBeperktTotToegewezen } from "../utils/rol";
+import { logActiviteit } from "../lib/activiteit";
 
 const router = Router();
 const lezenOnderhoud = requireBevoegdheid("onderhoud", 1);
@@ -153,11 +153,12 @@ router.post("/onderhoud", requireBevoegdheid("onderhoud", 3), async (req, res) =
       })
       .returning();
 
-    await db.insert(activiteitenTable).values({
+    await logActiviteit({
       type: "onderhoud_aangemaakt",
       omschrijving: `Onderhoudstaak aangemaakt: ${titel}`,
       gebouwId: gebouw_id,
       voorzieningId: voorziening_id,
+      gebruikerId: req.session.userId,
     });
 
     res.status(201).json(await mapOnderhoud(o));
@@ -227,11 +228,12 @@ router.patch("/onderhoud/:id", requireBevoegdheid("onderhoud", 2), async (req, r
     if (!o) return res.status(404).json({ error: "Onderhoudstaak niet gevonden" });
 
     if (status === "voltooid") {
-      await db.insert(activiteitenTable).values({
+      await logActiviteit({
         type: "onderhoud_voltooid",
         omschrijving: `Onderhoudstaak voltooid: ${o.titel}`,
         gebouwId: o.gebouwId,
         voorzieningId: o.voorzieningId,
+        gebruikerId: req.session.userId,
       });
     }
 

@@ -9,7 +9,6 @@ import {
   gebouwToewijzingenTable,
   inspectiesTable,
   onderhoudTable,
-  activiteitenTable,
   scheidingenTable,
 } from "@workspace/db";
 import { eq, and, ilike, sql } from "drizzle-orm";
@@ -17,6 +16,7 @@ import { requireBevoegdheid } from "../middlewares/auth";
 import { heeftNiveau } from "@workspace/permissies";
 import { effectieveContext, isBeperktTotToegewezen } from "../utils/rol";
 import { getLabelsVoorVoorziening, syncVoorzieningLabels } from "../lib/classificatie";
+import { logActiviteit } from "../lib/activiteit";
 
 const router = Router();
 const lezenVoorzieningen = requireBevoegdheid("voorzieningen", 1);
@@ -318,12 +318,13 @@ router.post("/voorzieningen", requireBevoegdheid("voorzieningen", 3), async (req
       await syncVoorzieningLabels(v.id, label_ids.map((n: unknown) => Number(n)));
     }
 
-    await db.insert(activiteitenTable).values({
+    await logActiviteit({
       type: "voorziening_aangemaakt",
       omschrijving: `Voorziening ${nummer} aangemaakt`,
       gebouwId: gebouw_id,
       voorzieningId: v.id,
       voorzieningNummer: nummer,
+      gebruikerId: req.session.userId,
     });
 
     res.status(201).json(await mapVoorziening(v));
@@ -545,12 +546,13 @@ router.patch("/voorzieningen/:id/status", requireBevoegdheid("voorzieningen", 2)
       .returning();
     if (!v) return res.status(404).json({ error: "Voorziening niet gevonden" });
 
-    await db.insert(activiteitenTable).values({
+    await logActiviteit({
       type: "status_gewijzigd",
       omschrijving: `Status van ${v.objectnummer} gewijzigd naar ${status}`,
       gebouwId: v.gebouwId,
       voorzieningId: v.id,
       voorzieningNummer: v.objectnummer,
+      gebruikerId: req.session.userId,
     });
 
     res.json(await mapVoorziening(v));
@@ -598,7 +600,7 @@ router.patch("/voorzieningen/:id/archief", requireBevoegdheid("voorzieningen", 3
       .returning();
     if (!v) return res.status(404).json({ error: "Voorziening niet gevonden" });
 
-    await db.insert(activiteitenTable).values({
+    await logActiviteit({
       type: gearchiveerd ? "voorziening_gearchiveerd" : "voorziening_teruggeplaatst",
       omschrijving: gearchiveerd
         ? `Voorziening ${v.objectnummer} gearchiveerd`
@@ -606,6 +608,7 @@ router.patch("/voorzieningen/:id/archief", requireBevoegdheid("voorzieningen", 3
       gebouwId: v.gebouwId,
       voorzieningId: v.id,
       voorzieningNummer: v.objectnummer,
+      gebruikerId: req.session.userId,
     });
 
     res.json(await mapVoorziening(v));
