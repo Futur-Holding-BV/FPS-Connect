@@ -118,15 +118,7 @@ Structuur (hiërarchie):
 - **Toepassingen** — onder iedere applicatie (bv. Mulcol Multicollar Slim, Hilti CFS-C P, Rockwool systeem, Nullifire systeem). Een toepassing = gekozen oplossing.
 - **Documenten** — centrale documentbibliotheek: ETA's, classificatierapporten, testrapporten, productcertificaten, DoP's, verwerkingsvoorschriften.
 
-AI-documentanalyse (na upload): AI herkent fabrikant, product, documenttype, EN-norm, revisie en datum, en stelt een documentnaam voor.
-
-Koppelingen: Document ↔ Applicatie is een veel-op-veel relatie (één ETA kan aan meerdere applicaties gekoppeld zijn).
-
-Versiebeheer: documenten nooit overschrijven. Een nieuwe versie wordt als nieuwe revisie opgeslagen; oude revisies blijven bewaard. Status per document: actueel, controle nodig, vervangen, mogelijk verouderd, ingetrokken.
-
-Historische bevriezing: bereid in V1.2 onveranderlijke documentrevisies voor (documenten nooit overschrijven). De bevriezing zelf — definitieve opleverrapporten blijven gekoppeld aan de documentversies die op dat moment geldig waren, en nieuwe versies wijzigen reeds definitieve rapporten nooit — wordt voltooid in V1.5 (Rapportenmodule), zodra definitieve rapporten worden gepersisteerd.
-
-Documentcontrole (later): periodieke controle op leverancierswebsites, nieuwe versies als voorstel tonen; de beheerder beslist.
+(AI-documentanalyse, koppelingen, versiebeheer, historische bevriezing en documentcontrole staan hierboven onder "Gebouwd in V1.2" en "Nog te bouwen".)
 
 ### S.G. Constructies als aparte bibliotheeklaag (vastgelegd, geparkeerd — NIET vooruit bouwen)
 
@@ -196,7 +188,7 @@ Mobiel (optionele module in FPS Monteur-app): de app wordt modulair, modules per
 
 ### AI-fotoherkenning spotafwerking (gebouwd — eerste versie; vooruit op de roadmap op verzoek)
 
-**Status: gebouwd.** Op uitdrukkelijk verzoek vooruit op de roadmap gebouwd (de Ontwikkelstop blijft als principe gelden voor de overige geparkeerde fasen). De AI als hulpmiddel, nooit als beslisser: AI herkent en stelt voor, mens accepteert. AI keurt nooit zelfstandig juridisch goed.
+**Status: gebouwd.** Op uitdrukkelijk verzoek vooruit op de roadmap gebouwd (de Ontwikkelstop blijft als principe gelden voor de overige geparkeerde fasen). De AI als hulpmiddel, nooit als beslisser: AI herkent en stelt voor, mens accepteert. AI keurt nooit zelfstandig juridisch goed; de formele koppeling blijft gebaseerd op de bibliotheek en geaccepteerde rapporten.
 
 **Gebouwd (eerste versie):**
 - DB: tabel `spot_ai_voorstellen` (leerset; onveranderlijke jsonb-snapshot van AI-voorstel + monteurkeuze, foto-voor/na-url, afwijking-vlag, herkomst, bevestiger) + kolommen `ai_te_controleren` en `ai_voorstel_id` op `voorzieningen`. Additief via directe ALTER SQL.
@@ -211,8 +203,6 @@ Mobiel (optionele module in FPS Monteur-app): de app wordt modulair, modules per
 
 **Nog te doen (later):** confidence-drempel "controle nodig" bij lage zekerheid; periodieke documentcontrole; uitbreiden van de matcher naarmate de bibliotheek groeit.
 
-De oorspronkelijke specificatie (referentie): AI als hulpmiddel, nooit als beslisser. AI herkent en stelt voor; mens accepteert. AI mag een afwerking nooit zelfstandig juridisch goedkeuren of vaststellen dat iets voldoet — de formele koppeling blijft gebaseerd op de bibliotheek en geaccepteerde rapporten.
-
 Afhankelijkheid (harde randvoorwaarde): eerst moet de bibliotheekketen Applicatie -> Toepassing -> Document goed staan (V1.2) en de mobiele fotoflow met foto vóór/ná beschikbaar zijn (V2.0). Zonder een betrouwbare bibliotheek heeft de AI niets om aan te koppelen.
 
 Workflow:
@@ -224,16 +214,6 @@ Workflow:
 - Bij lage zekerheid: markeren als "controle nodig".
 - Beheerder kan later corrigeren.
 - Correcties worden opgeslagen als trainings-/leervoorbeelden (leerset).
-
-Samengevat (formulering voor later):
-- foto ná analyseren;
-- afwerking/producttype herkennen;
-- voorstel doen voor applicatie, toepassing en rapport;
-- confidence-score tonen;
-- monteur moet accepteren of aanpassen;
-- correcties opslaan als leerset;
-- beheerder kan AI-voorstellen controleren;
-- AI mag nooit definitief goedkeuren zonder menselijke bevestiging.
 
 Sluit aan op de bestaande AI-conventie in de app: AI-voorstellen zijn GEEL/bewerkbaar tot een mens bevestigt; geaccepteerd/bevestigd is NEUTRAAL (zie "AI-state kleurconventie").
 
