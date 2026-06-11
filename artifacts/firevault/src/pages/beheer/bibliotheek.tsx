@@ -44,6 +44,7 @@ import { TabDocumenten } from "./documenten-tab";
 import { ToepassingDetailDialog } from "./toepassing-detail";
 import { ApplicatieDetailDialog } from "./applicatie-detail";
 import { useVoorkeur } from "@/hooks/use-voorkeur";
+import { useToast } from "@/hooks/use-toast";
 import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
 import {
   Archive,
@@ -1281,6 +1282,7 @@ function TabToepassingen() {
 // ── Tab Fabrikanten ──────────────────────────────────────────────────────────
 function TabFabrikanten() {
   const queryClient = useQueryClient();
+  const { toast } = useToast();
   const { heeftNiveau } = useBevoegdheid();
   const magAanmaken = heeftNiveau("bibliotheek", 3);
   const magBewerken = heeftNiveau("bibliotheek", 2);
@@ -1339,14 +1341,23 @@ function TabFabrikanten() {
   }
 
   async function toggleArchief(f: Fabrikant) {
+    const archiveren = !f.gearchiveerd;
     try {
       await wijzigFabrikant.mutateAsync({
         id: f.id,
-        data: { gearchiveerd: !f.gearchiveerd },
+        data: { gearchiveerd: archiveren },
       });
       await queryClient.invalidateQueries({ queryKey: getListFabrikantenQueryKey() });
-    } catch {
-      /* fout wordt door de lijststatus opgevangen */
+      toast({
+        title: archiveren ? "Fabrikant gearchiveerd" : "Fabrikant hersteld",
+        description: `"${f.naam}" is ${archiveren ? "gearchiveerd" : "hersteld"}.`,
+      });
+    } catch (err) {
+      toast({
+        title: archiveren ? "Archiveren mislukt" : "Herstellen mislukt",
+        description: foutmelding(err, "Probeer het opnieuw."),
+        variant: "destructive",
+      });
     }
   }
 
