@@ -11,9 +11,6 @@ export type AuthGebruikerRol = typeof AuthGebruikerRol[keyof typeof AuthGebruike
 
 export const AuthGebruikerRol = {
   hoofdbeheerder: 'hoofdbeheerder',
-  beheerder: 'beheerder',
-  monteur: 'monteur',
-  controleur: 'controleur',
-  klant: 'klant',
   gebruiker: 'gebruiker',
+  klant: 'klant',
 } as const;
