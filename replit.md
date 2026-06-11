@@ -61,7 +61,7 @@ FPS Brandpreventie biedt:
 
 V1.0 ("Administratief gereed voor uitvoering" — een project volledig binnen de app voorbereiden, zonder Excel, losse e-mails of externe documenten) is afgerond. De huidige lopende fase is V1.1 (Rollen & bevoegdheden).
 
-**Ontwikkelstop (harde projectregel).** Blijft als principe gelden: per fase pas bouwen ná formeel akkoord op die fase; start geen latere fasen vooruit. Geparkeerd tot hun fase formeel akkoord is en NIET vooruit uitbouwen: bibliotheek/versiebeheer & documentbewaking (V1.2), spots & uitvoering (V1.3), opleverrapportage (V1.4), rapportenmodule (V1.5), mobiele monteur-app (V2.0), personeel/medewerkerportaal incl. verlof/uren/gereedschap (V3.0), en de CRM-module. (AI-fotoherkenning spotafwerking is op verzoek vooruit gebouwd; zie de eigen sectie.) Bestaande scaffolds (o.a. `artifacts/firevault/src/pages/crm/`) niet verder uitbouwen.
+**Ontwikkelstop (harde projectregel).** Blijft als principe gelden: per fase pas bouwen ná formeel akkoord op die fase; start geen latere fasen vooruit. Geparkeerd tot hun fase formeel akkoord is en NIET vooruit uitbouwen: bibliotheek/versiebeheer & documentbewaking (V1.2), spots & uitvoering (V1.3), opleverrapportage (V1.4), rapportenmodule (V1.5), mobiele monteur-app (V2.0), personeel/medewerkerportaal incl. verlof/uren/gereedschap (V3.0), de CRM-module, en de aparte bibliotheeklaag voor s.g.-constructies (deuren/opwaarderingen). (AI-fotoherkenning spotafwerking en AI-bibliotheekvalidatie zijn op verzoek vooruit gebouwd; zie de eigen secties.) Bestaande scaffolds (o.a. `artifacts/firevault/src/pages/crm/`) niet verder uitbouwen.
 
 **Roadmap (volgorde, per fase formeel akkoord vóór bouw):**
 - **V1.0** — Administratief gereed voor uitvoering — Afgerond
@@ -69,10 +69,11 @@ V1.0 ("Administratief gereed voor uitvoering" — een project volledig binnen de
 - **V1.2** — Bibliotheek & documentstructuur (applicaties, toepassingen, documenten, ETA's, koppelingen, versiebeheer)
 - **V1.3** — Spots & uitvoering (spotflow, plattegronden, toewijzingen, voorbereide spots, clustering)
 - **V1.4** — Opleverrapportage (voorblad, rapportopmaak, e-mailselectie, bijlagenpakket, definitief maken)
-- **V1.5** — Rapportenmodule (definitieve rapporten per gebouw, centrale rapportenbibliotheek, versiebeheer rapporten, bevriezing documenten, zoek- en filterfuncties, koppeling naar CRM/onderhoud/klantportaal)
+- **V1.5** — Rapportenmodule (definitieve rapporten per gebouw, centrale rapportenbibliotheek, versiebeheer rapporten, bevriezing documenten, zoek- en filterfuncties, koppeling naar CRM/onderhoud/klantportaal, formele opleverstatus incl. reactietermijn met automatische herstart bij een nieuwe rapportversie)
 - **V2.0** — Mobiele monteur-app (mijn werk, gebouwen, plattegronden, spots, foto's, offline synchronisatie, routeplanning)
 - **V3.0** — Personeel / Medewerkerportaal (verlof, uren, gereedschap, opleidingen, contracten, HRM)
-- **AI-fotoherkenning spotafwerking** (gebouwd — op verzoek vooruit op de roadmap) — foto-ná-analyse met AI-voorstel voor wand/plafond, applicatie, toepassing en gekoppeld document + leerset; monteur of beheerder accepteert of past aan; AI keurt nooit zelfstandig juridisch goed. Zie de eigen sectie verderop voor de bouwdetails
+- **AI Spotherkenning met zelflerende correcties** (AI-fotoherkenning spotafwerking; gebouwd — op verzoek vooruit op de roadmap) — foto-ná-analyse met AI-voorstel voor wand/plafond, applicatie, toepassing en gekoppeld document + zelflerende correcties (leerset); monteur of beheerder accepteert of past aan; AI keurt nooit zelfstandig juridisch goed. Zie de eigen sectie verderop voor de bouwdetails
+- **AI Bibliotheekvalidatie** (gebouwd — op verzoek vooruit op de roadmap) — AI-koppelvoorstellen in de bibliotheek (Documenten-tab): AI vergelijkt de actuele documenten met bestaande toepassingen en stelt ontbrekende koppelingen voor; de beheerder neemt ze over. Zie de bibliotheeksectie (V1.2) voor de bouwdetails
 
 Volgorde-wijziging (vastgelegd, vervangt de eerdere ordening): Rollen & bevoegdheden is nu V1.1 (lopend). De bibliotheekherstructurering verschuift naar V1.2, gevolgd door Spots & uitvoering (V1.3) en Opleverrapportage (V1.4). Nieuw is V1.5 Rapportenmodule: een centrale, juridisch correcte rapportenbibliotheek met definitieve rapporten per gebouw, versiebeheer en documentbevriezing. Dit wordt bewust als kernonderdeel behandeld (geen "extra wens") en krijgt voorrang boven een bredere CRM. De eerdere V2.1 (Medewerkerportaal Desktop) en V2.2 (Medewerkermodule mobiel) zijn samengevoegd tot V3.0 (Personeel / Medewerkerportaal). De Ontwikkelstop blijft als principe gelden: per fase pas bouwen ná formeel akkoord.
 
@@ -97,6 +98,7 @@ Doel: de bibliotheek is de centrale kennisbank voor alle brandveiligheidsapplica
 - AI-documentanalyse: endpoint `POST /documenten/ai-analyse` leest geüploade PDF-tekst (client-side pdf.js-extractie) → fabrikant, product, documenttype, EN-norm, revisie, datum + documentnaam-voorstel met betrouwbaarheidsindicatie. Voorstellen zijn GEEL/bewerkbaar; gebruiker bevestigt (NEUTRAAL).
 - Frontend: tab "Documenten" in `beheer/bibliotheek.tsx` (`documenten-tab.tsx`): lijst + filters (type/status/fabrikant/alleen-actueel/incl-gearchiveerd), detail met revisiehistorie, upload + AI-voorstel, koppelen aan toepassing(en)/applicatie(s), statusbeheer en archiveren.
 - Bevoegdheden (module "bibliotheek"): lezen = ingelogd; aanmaken/revisie/AI-analyse = niveau ≥3; status/archief/koppelingen = niveau ≥2.
+- AI Bibliotheekvalidatie (koppelvoorstellen; toegevoegd na V1.2, vooruit op verzoek): endpoint `POST /documenten/ai-koppelvoorstellen` (uitvoeren = bibliotheek niveau 3) vergelijkt de actuele documenten met bestaande toepassingen via de bestaande matcher (`stelToepassingenVoor` in `services/document-ai.ts`) en stelt ontbrekende Document↔Toepassing-koppelingen voor. Voorstellen zijn GEEL/over te nemen, overgenomen koppelingen NEUTRAAL (AI-state kleurconventie). Koppelingen opslaan = niveau ≥2 (`useSetDocumentToepassingen`). De beheerder neemt per voorstel of per document over; AI koppelt nooit zelfstandig.
 
 **Bevriezing — voorbereid, niet voltooid in V1.2:** alleen onveranderlijke documentrevisies (nooit overschrijven). De daadwerkelijke koppeling definitief-rapport ↔ documentversie landt in V1.5 (Rapportenmodule), waar definitieve opleverrapporten worden gepersisteerd.
 
@@ -117,6 +119,14 @@ Versiebeheer: documenten nooit overschrijven. Een nieuwe versie wordt als nieuwe
 Historische bevriezing: bereid in V1.2 onveranderlijke documentrevisies voor (documenten nooit overschrijven). De bevriezing zelf — definitieve opleverrapporten blijven gekoppeld aan de documentversies die op dat moment geldig waren, en nieuwe versies wijzigen reeds definitieve rapporten nooit — wordt voltooid in V1.5 (Rapportenmodule), zodra definitieve rapporten worden gepersisteerd.
 
 Documentcontrole (later): periodieke controle op leverancierswebsites, nieuwe versies als voorstel tonen; de beheerder beslist.
+
+### S.G. Constructies als aparte bibliotheeklaag (vastgelegd, geparkeerd — NIET vooruit bouwen)
+
+Nieuw vastgelegd onderdeel, geparkeerd onder de ontwikkelstop. Naast de bestaande keten Applicatie → Toepassing → Document komt een aparte bibliotheeklaag voor s.g.-constructies: scheidende/bouwkundige constructies, branddeuren en opwaarderingen (een bestaande constructie naar een hogere brandwerendheid brengen). Reden voor een eigen laag: een s.g.-constructie is geen spot-afwerking maar de onderliggende bouwkundige scheiding waarop afwerkingen rusten; de AI stelt deze bewust NIET vast (zie de AI-fotoherkenning-sectie). Datamodel, koppelingen (bv. s.g.-constructie ↔ document/toepassing) en UI worden uitgewerkt bij formeel akkoord op deze fase.
+
+### Meetwaarden uit spots verwijderen (vastgelegd, nog door te voeren)
+
+Vervolg op de vastgelegde beslissing dat brand-/rookwerendheid niet meer per spot wordt gekozen. Vastgelegd: spots tonen of bewaren geen losse meetwaarden (WRD/EW/EI-minuten) meer; de werendheid wordt uitsluitend afgeleid uit de testnorm van de gekoppelde toepassing (zie de afleiding in `voorzieningen/detail.tsx`). De legacy spotvelden (`wbdbo`, `wrd` en de afgeleide weergave uit `classificatie`) worden gedeprecateerd en uit de spot-UI verwijderd; fysiek droppen gebeurt niet vooruit (legacy fallback blijft bestaan). Door te voeren na formeel akkoord, conform de ontwikkelstop.
 
 ### V1.4 — Opleverrapportage (vastgelegd)
 
@@ -152,7 +162,7 @@ Afhankelijkheid: bevriezing vereist een gepersisteerde 'definitief opleverrappor
 **Formele opleverstatus & reactietermijn (vastgelegd, nog te bouwen in V1.5).** Een definitief rapport beheert ook de formele opleverstatus — een statusmachine per rapportversie:
 - **Definitief verzonden** — bij definitief maken/versturen krijgt het rapport deze status; verzenddatum wordt vastgelegd; de reactietermijn start automatisch (standaard 14 dagen, configureerbaar); einddatum wordt berekend → status **Reactietermijn loopt**.
 - **Juridisch gereedgemeld / Reactietermijn verstreken** — na het verstrijken van de termijn zonder reactie. Dit wordt gelogd bij zowel het gebouw als het rapport.
-- **Vervangen door nieuwe versie** — bij reactie van opdrachtgever of een aanpassing: oude versie blijft bewaard, nieuwe versie wordt aangemaakt met nieuwe verzenddatum en nieuwe termijn; de oude termijn wordt afgesloten met reden "vervangen door nieuwe versie".
+- **Vervangen door nieuwe versie** — bij reactie van opdrachtgever of een aanpassing: oude versie blijft bewaard, nieuwe versie wordt aangemaakt met nieuwe verzenddatum; de reactietermijn herstart daarbij automatisch (nieuwe termijn vanaf de nieuwe verzenddatum). De oude termijn wordt afgesloten met reden "vervangen door nieuwe versie".
 
 Weergave in gebouwkaart → rapporten-tab, per rapport: rapportversie, datum verzonden, reactietermijn tot, dagen resterend, status, eventuele reactie opdrachtgever, en "vervangen door versie x".
 
