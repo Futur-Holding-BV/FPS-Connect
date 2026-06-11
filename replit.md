@@ -61,7 +61,7 @@ FPS Brandpreventie biedt:
 
 V1.0 ("Administratief gereed voor uitvoering" — een project volledig binnen de app voorbereiden, zonder Excel, losse e-mails of externe documenten) is afgerond. De huidige lopende fase is V1.1 (Rollen & bevoegdheden).
 
-**Ontwikkelstop (harde projectregel).** Blijft als principe gelden: per fase pas bouwen ná formeel akkoord op die fase; start geen latere fasen vooruit. Geparkeerd tot hun fase formeel akkoord is en NIET vooruit uitbouwen: bibliotheek/versiebeheer & documentbewaking (V1.2), spots & uitvoering (V1.3), opleverrapportage (V1.4), rapportenmodule (V1.5), mobiele monteur-app (V2.0), personeel/medewerkerportaal incl. verlof/uren/gereedschap (V3.0), en de CRM-module. Bestaande scaffolds (o.a. `artifacts/firevault/src/pages/crm/`) niet verder uitbouwen.
+**Ontwikkelstop (harde projectregel).** Blijft als principe gelden: per fase pas bouwen ná formeel akkoord op die fase; start geen latere fasen vooruit. Geparkeerd tot hun fase formeel akkoord is en NIET vooruit uitbouwen: bibliotheek/versiebeheer & documentbewaking (V1.2), spots & uitvoering (V1.3), opleverrapportage (V1.4), rapportenmodule (V1.5), mobiele monteur-app (V2.0), AI-fotoherkenning spotafwerking (V2/V3), personeel/medewerkerportaal incl. verlof/uren/gereedschap (V3.0), en de CRM-module. Bestaande scaffolds (o.a. `artifacts/firevault/src/pages/crm/`) niet verder uitbouwen.
 
 **Roadmap (volgorde, per fase formeel akkoord vóór bouw):**
 - **V1.0** — Administratief gereed voor uitvoering — Afgerond
@@ -72,6 +72,7 @@ V1.0 ("Administratief gereed voor uitvoering" — een project volledig binnen de
 - **V1.5** — Rapportenmodule (definitieve rapporten per gebouw, centrale rapportenbibliotheek, versiebeheer rapporten, bevriezing documenten, zoek- en filterfuncties, koppeling naar CRM/onderhoud/klantportaal)
 - **V2.0** — Mobiele monteur-app (mijn werk, gebouwen, plattegronden, spots, foto's, offline synchronisatie, routeplanning)
 - **V3.0** — Personeel / Medewerkerportaal (verlof, uren, gereedschap, opleidingen, contracten, HRM)
+- **AI-fotoherkenning spotafwerking** (V2/V3, vastgelegd) — foto-ná-analyse met AI-voorstel voor applicatie/toepassing/product/brand- of rookwerendheid/rapport + confidence; monteur of beheerder accepteert of past aan; AI keurt nooit zelfstandig juridisch goed. Bouwt voort op de bibliotheekketen (V1.2) en de mobiele fotoflow (V2.0)
 
 Volgorde-wijziging (vastgelegd, vervangt de eerdere ordening): Rollen & bevoegdheden is nu V1.1 (lopend). De bibliotheekherstructurering verschuift naar V1.2, gevolgd door Spots & uitvoering (V1.3) en Opleverrapportage (V1.4). Nieuw is V1.5 Rapportenmodule: een centrale, juridisch correcte rapportenbibliotheek met definitieve rapporten per gebouw, versiebeheer en documentbevriezing. Dit wordt bewust als kernonderdeel behandeld (geen "extra wens") en krijgt voorrang boven een bredere CRM. De eerdere V2.1 (Medewerkerportaal Desktop) en V2.2 (Medewerkermodule mobiel) zijn samengevoegd tot V3.0 (Personeel / Medewerkerportaal). De Ontwikkelstop blijft als principe gelden: per fase pas bouwen ná formeel akkoord.
 
@@ -178,6 +179,34 @@ Desktop/webapp:
 Mobiel (optionele module in FPS Monteur-app): de app wordt modulair, modules per gebruiker aan- of uitzetten via de bevoegdheden-matrix.
 - **Monteurmodule** (V2.0): werk, route, plattegronden, spots, foto's, gereedmelden.
 - **Medewerkermodule** (V3.0): eigen profiel, verlof aanvragen, verlofsaldo bekijken, uren invullen, weekplanning inzien, eigen gereedschap bekijken, instructies/cursussen afronden.
+
+### AI-fotoherkenning spotafwerking (V2/V3, vastgelegd — NIET bouwen voor bibliotheekketen + V2.0 staan)
+
+AI als hulpmiddel, nooit als beslisser. AI herkent en stelt voor; mens accepteert. AI mag een afwerking nooit zelfstandig juridisch goedkeuren of vaststellen dat iets voldoet — de formele koppeling blijft gebaseerd op de bibliotheek en geaccepteerde rapporten.
+
+Afhankelijkheid (harde randvoorwaarde): eerst moet de bibliotheekketen Applicatie -> Toepassing -> Document goed staan (V1.2) en de mobiele fotoflow met foto vóór/ná beschikbaar zijn (V2.0). Zonder een betrouwbare bibliotheek heeft de AI niets om aan te koppelen.
+
+Workflow:
+- Foto vóór staat al bij de voorbereide spot of wordt eerder gemaakt.
+- Monteur maakt foto ná.
+- AI vergelijkt/inspecteert de foto ná.
+- AI doet een voorstel: applicatie, toepassing, product/fabrikant, brand- of rookwerendheid, waarschijnlijk rapport/ETA uit de bibliotheek, en mate van zekerheid (confidence-score).
+- Monteur accepteert of past aan.
+- Bij lage zekerheid: markeren als "controle nodig".
+- Beheerder kan later corrigeren.
+- Correcties worden opgeslagen als trainings-/leervoorbeelden (leerset).
+
+Samengevat (formulering voor later):
+- foto ná analyseren;
+- afwerking/producttype herkennen;
+- voorstel doen voor applicatie, toepassing en rapport;
+- confidence-score tonen;
+- monteur moet accepteren of aanpassen;
+- correcties opslaan als leerset;
+- beheerder kan AI-voorstellen controleren;
+- AI mag nooit definitief goedkeuren zonder menselijke bevestiging.
+
+Sluit aan op de bestaande AI-conventie in de app: AI-voorstellen zijn GEEL/bewerkbaar tot een mens bevestigt; geaccepteerd/bevestigd is NEUTRAAL (zie "AI-state kleurconventie").
 
 ## User preferences
 
