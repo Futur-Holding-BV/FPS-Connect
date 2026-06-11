@@ -59,23 +59,31 @@ FPS Brandpreventie biedt:
 
 ## Ontwikkelstop & roadmap
 
-V1.0 ("Administratief gereed voor uitvoering" — een project volledig binnen de app voorbereiden, zonder Excel, losse e-mails of externe documenten) is afgerond. De huidige lopende fase is V1.1 (Rollen & bevoegdheden).
+V1.0 ("Administratief gereed voor uitvoering" — een project volledig binnen de app voorbereiden, zonder Excel, losse e-mails of externe documenten) is afgerond. V1.0, V1.1 (Rollen & bevoegdheden) en V1.2 (Bibliotheek & documentstructuur) zijn gebouwd; de eerstvolgende actieve fase is V1.3 (Spots & uitvoering).
 
-**Ontwikkelstop (harde projectregel).** Blijft als principe gelden: per fase pas bouwen ná formeel akkoord op die fase; start geen latere fasen vooruit. Geparkeerd tot hun fase formeel akkoord is en NIET vooruit uitbouwen: bibliotheek/versiebeheer & documentbewaking (V1.2), spots & uitvoering (V1.3), opleverrapportage (V1.4), rapportenmodule (V1.5), mobiele monteur-app (V2.0), personeel/medewerkerportaal incl. verlof/uren/gereedschap (V3.0), de CRM-module, en de aparte bibliotheeklaag voor s.g.-constructies (deuren/opwaarderingen). (AI-fotoherkenning spotafwerking en AI-bibliotheekvalidatie zijn op verzoek vooruit gebouwd; zie de eigen secties.) Bestaande scaffolds (o.a. `artifacts/firevault/src/pages/crm/`) niet verder uitbouwen.
+**Ontwikkelstop (harde projectregel).** Blijft als principe gelden: per fase pas bouwen ná formeel akkoord op die fase; start geen latere fasen vooruit. De actieve fasen V1.3 (spots & uitvoering), V1.4 (opleverrapportage) en V1.5 (rapportenmodule) staan vast op de roadmap, maar worden elk pas gebouwd ná formeel akkoord op die fase. Geparkeerd (verder weg, NIET vooruit uitbouwen): mobiele monteur-app (V2.0), personeel/medewerkerportaal incl. verlof/uren/gereedschap (V3.0), de CRM-module, en de aparte bibliotheeklaag voor s.g.-constructies (deuren/opwaarderingen). (AI-fotoherkenning spotafwerking en AI-bibliotheekvalidatie zijn op verzoek vooruit gebouwd; zie de eigen secties.) Bestaande scaffolds (o.a. `artifacts/firevault/src/pages/crm/`) niet verder uitbouwen.
 
-**Roadmap (volgorde, per fase formeel akkoord vóór bouw):**
-- **V1.0** — Administratief gereed voor uitvoering — Afgerond
-- **V1.1** — Rollen & bevoegdheden — Lopend
+**Roadmap — drie sporen (per fase formeel akkoord vóór bouw):**
+
+_Gebouwd:_
+- **V1.0** — Administratief gereed voor uitvoering
+- **V1.1** — Rollen & bevoegdheden
 - **V1.2** — Bibliotheek & documentstructuur (applicaties, toepassingen, documenten, ETA's, koppelingen, versiebeheer)
+- **AI Spotherkenning met zelflerende correcties** en **AI Bibliotheekvalidatie** — op verzoek vooruit gebouwd; AI stelt voor, een mens bevestigt, AI keurt nooit zelfstandig juridisch goed. Zie de eigen secties voor de bouwdetails
+
+_Actief (vastgelegd; elk pas bouwen ná formeel akkoord op die fase):_
 - **V1.3** — Spots & uitvoering (spotflow, plattegronden, toewijzingen, voorbereide spots, clustering)
 - **V1.4** — Opleverrapportage (voorblad, rapportopmaak, e-mailselectie, bijlagenpakket, definitief maken)
 - **V1.5** — Rapportenmodule (definitieve rapporten per gebouw, centrale rapportenbibliotheek, versiebeheer rapporten, bevriezing documenten, zoek- en filterfuncties, koppeling naar CRM/onderhoud/klantportaal, formele opleverstatus incl. reactietermijn met automatische herstart bij een nieuwe rapportversie)
+
+_Geparkeerd (NIET vooruit bouwen):_
 - **V2.0** — Mobiele monteur-app (mijn werk, gebouwen, plattegronden, spots, foto's, offline synchronisatie, routeplanning)
 - **V3.0** — Personeel / Medewerkerportaal (verlof, uren, gereedschap, opleidingen, contracten, HRM)
-- **AI Spotherkenning met zelflerende correcties** (AI-fotoherkenning spotafwerking; gebouwd — op verzoek vooruit op de roadmap) — foto-ná-analyse met AI-voorstel voor wand/plafond, applicatie, toepassing en gekoppeld document + zelflerende correcties (leerset); monteur of beheerder accepteert of past aan; AI keurt nooit zelfstandig juridisch goed. Zie de eigen sectie verderop voor de bouwdetails
-- **AI Bibliotheekvalidatie** (gebouwd — op verzoek vooruit op de roadmap) — AI-koppelvoorstellen in de bibliotheek (Documenten-tab): AI vergelijkt de actuele documenten met bestaande toepassingen en stelt ontbrekende koppelingen voor; de beheerder neemt ze over. Zie de bibliotheeksectie (V1.2) voor de bouwdetails
+- **S.G. Constructies** — aparte bibliotheeklaag voor scheidende/bouwkundige constructies, branddeuren en opwaarderingen (zie de eigen sectie)
+- **CRM-module** — bredere CRM; bewust achtergesteld op V1.5 (bestaande scaffold niet verder uitbouwen)
+- **AI-uitbreidingen** — verdere AI-functionaliteit (confidence-drempel "controle nodig" bij lage zekerheid, periodieke documentcontrole, matcher uitbreiden); de reeds gebouwde AI-functies staan onder Gebouwd
 
-Volgorde-wijziging (vastgelegd, vervangt de eerdere ordening): Rollen & bevoegdheden is nu V1.1 (lopend). De bibliotheekherstructurering verschuift naar V1.2, gevolgd door Spots & uitvoering (V1.3) en Opleverrapportage (V1.4). Nieuw is V1.5 Rapportenmodule: een centrale, juridisch correcte rapportenbibliotheek met definitieve rapporten per gebouw, versiebeheer en documentbevriezing. Dit wordt bewust als kernonderdeel behandeld (geen "extra wens") en krijgt voorrang boven een bredere CRM. De eerdere V2.1 (Medewerkerportaal Desktop) en V2.2 (Medewerkermodule mobiel) zijn samengevoegd tot V3.0 (Personeel / Medewerkerportaal). De Ontwikkelstop blijft als principe gelden: per fase pas bouwen ná formeel akkoord.
+Volgorde-wijziging (vastgelegd, vervangt de eerdere ordening): Rollen & bevoegdheden is V1.1 (gebouwd). De bibliotheekherstructurering verschuift naar V1.2, gevolgd door Spots & uitvoering (V1.3) en Opleverrapportage (V1.4). Nieuw is V1.5 Rapportenmodule: een centrale, juridisch correcte rapportenbibliotheek met definitieve rapporten per gebouw, versiebeheer en documentbevriezing. Dit wordt bewust als kernonderdeel behandeld (geen "extra wens") en krijgt voorrang boven een bredere CRM. De eerdere V2.1 (Medewerkerportaal Desktop) en V2.2 (Medewerkermodule mobiel) zijn samengevoegd tot V3.0 (Personeel / Medewerkerportaal). De Ontwikkelstop blijft als principe gelden: per fase pas bouwen ná formeel akkoord.
 
 ### V1.2 — Bibliotheek & documentstructuur (gebouwd — definitief model)
 
@@ -123,10 +131,6 @@ Documentcontrole (later): periodieke controle op leverancierswebsites, nieuwe ve
 ### S.G. Constructies als aparte bibliotheeklaag (vastgelegd, geparkeerd — NIET vooruit bouwen)
 
 Nieuw vastgelegd onderdeel, geparkeerd onder de ontwikkelstop. Naast de bestaande keten Applicatie → Toepassing → Document komt een aparte bibliotheeklaag voor s.g.-constructies: scheidende/bouwkundige constructies, branddeuren en opwaarderingen (een bestaande constructie naar een hogere brandwerendheid brengen). Reden voor een eigen laag: een s.g.-constructie is geen spot-afwerking maar de onderliggende bouwkundige scheiding waarop afwerkingen rusten; de AI stelt deze bewust NIET vast (zie de AI-fotoherkenning-sectie). Datamodel, koppelingen (bv. s.g.-constructie ↔ document/toepassing) en UI worden uitgewerkt bij formeel akkoord op deze fase.
-
-### Meetwaarden uit spots verwijderen (doorgevoerd)
-
-Spots tonen of bewaren geen losse meetwaarden (WRD/EW/EI-minuten) meer; de werendheid wordt uitsluitend afgeleid uit de testnorm van de gekoppelde toepassing (zie `voorzieningen/detail.tsx`). De legacy spotvelden (`wbdbo`, `wrd`, afgeleide `classificatie`-weergave) zijn verwijderd uit de spot-UI in plattegrond (web + mobiel) en QR-pagina. DB-kolommen blijven voor legacy fallback — niet droppen.
 
 ### V1.4 — Opleverrapportage (vastgelegd)
 
@@ -232,6 +236,19 @@ Samengevat (formulering voor later):
 - AI mag nooit definitief goedkeuren zonder menselijke bevestiging.
 
 Sluit aan op de bestaande AI-conventie in de app: AI-voorstellen zijn GEEL/bewerkbaar tot een mens bevestigt; geaccepteerd/bevestigd is NEUTRAAL (zie "AI-state kleurconventie").
+
+## Openstaande correcties
+
+Afrondpunten / herstelacties — geen roadmapfasen, maar opschoonwerk dat nog blijft liggen. Bewust apart gehouden zodat ze niet tussen de grote roadmaponderdelen zweven.
+
+### Meetwaarden volledig uit spots verwijderen
+
+Spots tonen of bewaren geen losse meetwaarden (WRD/EW/EI-minuten) meer; de werendheid wordt uitsluitend afgeleid uit de testnorm van de gekoppelde toepassing (zie `voorzieningen/detail.tsx`). De invoervelden zijn al verwijderd en de afleiding via testnorm werkt grotendeels. DB-kolommen (`wbdbo`, `wrd`) blijven voor legacy fallback — niet droppen.
+
+Nog op te schonen — de legacy WBDBO/WRD/classificatie-weergave verwijderen uit:
+- web plattegrond zijpaneel;
+- mobiele spotdetailpagina;
+- QR-label.
 
 ## User preferences
 

@@ -29,6 +29,7 @@ import type {
 import { useUpload } from "@workspace/object-storage-web";
 import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
 import { useVoorkeur } from "@/hooks/use-voorkeur";
+import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -57,6 +58,7 @@ import {
   ExternalLink,
   FileText,
   History,
+  Info as InfoIcon,
   Plus,
   Sparkles,
   Upload,
@@ -916,6 +918,7 @@ function KoppelVoorstellenDialog({
   onOpenChange: (open: boolean) => void;
 }) {
   const queryClient = useQueryClient();
+  const { toast } = useToast();
   const setToepassingen = useSetDocumentToepassingen();
   // document_id -> in deze sessie reeds overgenomen label_ids
   const [overgenomen, setOvergenomen] = useState<Record<number, number[]>>({});
@@ -939,12 +942,25 @@ function KoppelVoorstellenDialog({
         [v.document_id]: Array.from(new Set([...reeds, ...labelIds])),
       }));
       await queryClient.invalidateQueries({ queryKey: getListDocumentenQueryKey() });
+      const namen = v.suggesties
+        .filter((s) => labelIds.includes(s.label_id))
+        .map((s) => s.naam);
+      toast({
+        title:
+          namen.length > 1 ? "Koppelingen overgenomen" : "Koppeling overgenomen",
+        description: `${namen.join(", ")} nu gekoppeld aan "${v.document_naam}". Terug te vinden in het document onder "Gekoppelde toepassingen".`,
+      });
     } catch (err) {
       setFout(foutmelding(err, "Koppeling overnemen mislukte."));
     } finally {
       setBezigDoc(null);
     }
   }
+
+  const totaalOvergenomen = Object.values(overgenomen).reduce(
+    (n, ids) => n + ids.length,
+    0,
+  );
 
   return (
     <Dialog open onOpenChange={onOpenChange}>
@@ -960,6 +976,17 @@ function KoppelVoorstellenDialog({
             zijn een hulpmiddel; u beslist welke u overneemt.
           </DialogDescription>
         </DialogHeader>
+
+        {voorstellen.length > 0 && (
+          <div className="flex items-start gap-2 rounded-md border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+            <InfoIcon className="h-4 w-4 shrink-0 mt-0.5" />
+            <span>
+              Wat u overneemt wordt meteen opgeslagen en verschijnt in het
+              betreffende document onder &quot;Gekoppelde toepassingen&quot;.
+              Sluit dit venster en open het document om de koppeling te bekijken.
+            </span>
+          </div>
+        )}
 
         {fout && (
           <div className="text-sm text-destructive border border-destructive/30 bg-destructive/5 rounded-md px-3 py-2">
@@ -978,6 +1005,9 @@ function KoppelVoorstellenDialog({
             {voorstellen.map((v) => {
               const reeds = new Set(overgenomen[v.document_id] ?? []);
               const openstaand = v.suggesties.filter((s) => !reeds.has(s.label_id));
+              const overgenomenNamen = v.suggesties
+                .filter((s) => reeds.has(s.label_id))
+                .map((s) => s.naam);
               return (
                 <div key={v.document_id} className="rounded-lg border p-3 space-y-2.5">
                   <div className="flex items-start gap-2">
@@ -1049,13 +1079,31 @@ function KoppelVoorstellenDialog({
                       );
                     })}
                   </div>
+                  {overgenomenNamen.length > 0 && (
+                    <div className="flex items-start gap-2 rounded-md bg-muted/40 px-2.5 py-1.5 text-xs text-muted-foreground">
+                      <CheckCircle2 className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+                      <span>
+                        Gekoppeld aan dit document: {overgenomenNamen.join(", ")}.
+                        Te vinden onder &quot;Gekoppelde toepassingen&quot; in het
+                        document.
+                      </span>
+                    </div>
+                  )}
                 </div>
               );
             })}
           </div>
         )}
 
-        <DialogFooter>
+        <DialogFooter className="sm:justify-between">
+          {totaalOvergenomen > 0 ? (
+            <p className="text-xs text-muted-foreground">
+              {totaalOvergenomen} koppeling{totaalOvergenomen === 1 ? "" : "en"}{" "}
+              overgenomen
+            </p>
+          ) : (
+            <span />
+          )}
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Sluiten
           </Button>
