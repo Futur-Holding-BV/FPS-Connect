@@ -159,6 +159,8 @@ import type {
   VoorzieningLijst,
   VoorzieningLocatie,
   VoorzieningType,
+  VoorzieningTypeInput,
+  VoorzieningTypeUpdate,
   VoorzieningUpdate,
   WachtwoordWijzigen
 } from './api.schemas';
@@ -4025,6 +4027,147 @@ export function useListVoorzieningTypes<TData = Awaited<ReturnType<typeof listVo
 
 
 
+
+export const getCreateVoorzieningTypeUrl = () => {
+
+
+
+
+  return `/api/voorziening-types`
+}
+
+/**
+ * @summary Nieuwe applicatie (voorziening-type) toevoegen (beheerder)
+ */
+export const createVoorzieningType = async (voorzieningTypeInput: VoorzieningTypeInput, options?: RequestInit): Promise<VoorzieningType> => {
+
+  return customFetch<VoorzieningType>(getCreateVoorzieningTypeUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(voorzieningTypeInput)
+  }
+);}
+
+
+
+
+export const getCreateVoorzieningTypeMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createVoorzieningType>>, TError,{data: BodyType<VoorzieningTypeInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createVoorzieningType>>, TError,{data: BodyType<VoorzieningTypeInput>}, TContext> => {
+
+const mutationKey = ['createVoorzieningType'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createVoorzieningType>>, {data: BodyType<VoorzieningTypeInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createVoorzieningType(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateVoorzieningTypeMutationResult = NonNullable<Awaited<ReturnType<typeof createVoorzieningType>>>
+    export type CreateVoorzieningTypeMutationBody = BodyType<VoorzieningTypeInput>
+    export type CreateVoorzieningTypeMutationError = ErrorType<void>
+
+    /**
+ * @summary Nieuwe applicatie (voorziening-type) toevoegen (beheerder)
+ */
+export const useCreateVoorzieningType = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createVoorzieningType>>, TError,{data: BodyType<VoorzieningTypeInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createVoorzieningType>>,
+        TError,
+        {data: BodyType<VoorzieningTypeInput>},
+        TContext
+      > => {
+      return useMutation(getCreateVoorzieningTypeMutationOptions(options));
+    }
+
+export const getUpdateVoorzieningTypeUrl = (code: string,) => {
+
+
+
+
+  return `/api/voorziening-types/${code}`
+}
+
+/**
+ * @summary Applicatie (voorziening-type) bewerken of archiveren (beheerder)
+ */
+export const updateVoorzieningType = async (code: string,
+    voorzieningTypeUpdate: VoorzieningTypeUpdate, options?: RequestInit): Promise<VoorzieningType> => {
+
+  return customFetch<VoorzieningType>(getUpdateVoorzieningTypeUrl(code),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(voorzieningTypeUpdate)
+  }
+);}
+
+
+
+
+export const getUpdateVoorzieningTypeMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateVoorzieningType>>, TError,{code: string;data: BodyType<VoorzieningTypeUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateVoorzieningType>>, TError,{code: string;data: BodyType<VoorzieningTypeUpdate>}, TContext> => {
+
+const mutationKey = ['updateVoorzieningType'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateVoorzieningType>>, {code: string;data: BodyType<VoorzieningTypeUpdate>}> = (props) => {
+          const {code,data} = props ?? {};
+
+          return  updateVoorzieningType(code,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateVoorzieningTypeMutationResult = NonNullable<Awaited<ReturnType<typeof updateVoorzieningType>>>
+    export type UpdateVoorzieningTypeMutationBody = BodyType<VoorzieningTypeUpdate>
+    export type UpdateVoorzieningTypeMutationError = ErrorType<void>
+
+    /**
+ * @summary Applicatie (voorziening-type) bewerken of archiveren (beheerder)
+ */
+export const useUpdateVoorzieningType = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateVoorzieningType>>, TError,{code: string;data: BodyType<VoorzieningTypeUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateVoorzieningType>>,
+        TError,
+        {code: string;data: BodyType<VoorzieningTypeUpdate>},
+        TContext
+      > => {
+      return useMutation(getUpdateVoorzieningTypeMutationOptions(options));
+    }
 
 export const getSetApplicatieLabelsUrl = (code: string,) => {
 

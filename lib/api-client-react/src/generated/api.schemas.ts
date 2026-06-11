@@ -1766,6 +1766,20 @@ export interface VoorzieningType {
   actief: boolean;
 }
 
+export interface VoorzieningTypeInput {
+  code: string;
+  naam: string;
+  categorie: string;
+  volgorde?: number;
+}
+
+export interface VoorzieningTypeUpdate {
+  naam?: string;
+  categorie?: string;
+  volgorde?: number;
+  actief?: boolean;
+}
+
 export interface TestrapportInput {
   naam: string;
   fabrikant?: string;

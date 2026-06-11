@@ -66,6 +66,83 @@ router.put(
   },
 );
 
+// POST /voorziening-types — nieuwe applicatie toevoegen (beheerder)
+router.post("/voorziening-types", requireBevoegdheid("bibliotheek", 3), async (req, res) => {
+  try {
+    const { code, naam, categorie, volgorde } = req.body;
+    if (!code || !String(code).trim()) {
+      return res.status(400).json({ error: "code is verplicht" });
+    }
+    if (!naam || !String(naam).trim()) {
+      return res.status(400).json({ error: "naam is verplicht" });
+    }
+    if (!categorie || !String(categorie).trim()) {
+      return res.status(400).json({ error: "categorie is verplicht" });
+    }
+    const [t] = await db
+      .insert(voorzieningTypesTable)
+      .values({
+        code: String(code).trim(),
+        naam: String(naam).trim(),
+        categorie: String(categorie).trim(),
+        volgorde: typeof volgorde === "number" ? volgorde : 0,
+      })
+      .returning();
+    return res.status(201).json({
+      code: t.code,
+      naam: t.naam,
+      categorie: t.categorie,
+      volgorde: t.volgorde,
+      actief: t.actief,
+    });
+  } catch (err) {
+    if ((err as { code?: string })?.code === "23505") {
+      return res.status(409).json({ error: "Er bestaat al een applicatie met deze code" });
+    }
+    req.log.error(err);
+    return res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// PATCH /voorziening-types/:code — applicatie bewerken of archiveren (beheerder)
+router.patch("/voorziening-types/:code", requireBevoegdheid("bibliotheek", 2), async (req, res) => {
+  try {
+    const code = String(req.params.code);
+    const { naam, categorie, volgorde, actief } = req.body;
+    const set: Record<string, unknown> = {};
+    if (naam !== undefined) {
+      if (!String(naam).trim()) return res.status(400).json({ error: "naam mag niet leeg zijn" });
+      set.naam = String(naam).trim();
+    }
+    if (categorie !== undefined) {
+      if (!String(categorie).trim())
+        return res.status(400).json({ error: "categorie mag niet leeg zijn" });
+      set.categorie = String(categorie).trim();
+    }
+    if (volgorde !== undefined && typeof volgorde === "number") set.volgorde = volgorde;
+    if (actief !== undefined) set.actief = actief === true;
+    if (Object.keys(set).length === 0) {
+      return res.status(400).json({ error: "Geen wijzigingen opgegeven" });
+    }
+    const [t] = await db
+      .update(voorzieningTypesTable)
+      .set(set)
+      .where(eq(voorzieningTypesTable.code, code))
+      .returning();
+    if (!t) return res.status(404).json({ error: "Applicatie niet gevonden" });
+    return res.json({
+      code: t.code,
+      naam: t.naam,
+      categorie: t.categorie,
+      volgorde: t.volgorde,
+      actief: t.actief,
+    });
+  } catch (err) {
+    req.log.error(err);
+    return res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
 // ── TOEPASSINGEN (labels) ───────────────────────────────────────────────────
 // GET /labels
 router.get("/labels", async (req, res) => {

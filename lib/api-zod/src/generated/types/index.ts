@@ -187,5 +187,7 @@ export * from './voorzieningLijst';
 export * from './voorzieningLocatie';
 export * from './voorzieningStatus';
 export * from './voorzieningType';
+export * from './voorzieningTypeInput';
+export * from './voorzieningTypeUpdate';
 export * from './voorzieningUpdate';
 export * from './wachtwoordWijzigen';

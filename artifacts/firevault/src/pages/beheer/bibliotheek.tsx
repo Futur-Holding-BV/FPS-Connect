@@ -2,6 +2,9 @@ import { useRef, useState } from "react";
 import * as XLSX from "xlsx";
 import {
   useListVoorzieningTypes,
+  useCreateVoorzieningType,
+  useUpdateVoorzieningType,
+  getListVoorzieningTypesQueryKey,
   useListLabels,
   useCreateLabel,
   useUpdateLabel,
@@ -92,12 +95,109 @@ const WERENDHEID_OPTIES: { waarde: string; label: string; omschrijving: string }
 
 // ── Tab Applicaties ──────────────────────────────────────────────────────────
 function TabApplicaties() {
-  const { data: typen = [], isLoading } = useListVoorzieningTypes();
+  const queryClient = useQueryClient();
+  const { heeftNiveau } = useBevoegdheid();
+  const magAanmaken = heeftNiveau("bibliotheek", 3);
+  const magBewerken = heeftNiveau("bibliotheek", 2);
+
+  const [inclGearchiveerd, setInclGearchiveerd] = useVoorkeur(
+    "bibliotheek_applicaties_incl_gearchiveerd",
+    false,
+  );
+  const { data: typen = [], isLoading } = useListVoorzieningTypes({
+    inclusief_inactief: inclGearchiveerd,
+  });
   // Eén lijst met alle niet-gearchiveerde toepassingen; client-side gegroepeerd
   // per applicatie-code zodat per applicatie de gekoppelde toepassingen tonen
   // zonder een query per rij.
   const { data: labels = [] } = useListLabels({});
   const [gekozen, setGekozen] = useState<VoorzieningType | null>(null);
+
+  const maakType = useCreateVoorzieningType();
+  const wijzigType = useUpdateVoorzieningType();
+
+  const [dialoogOpen, setDialoogOpen] = useState(false);
+  const [bewerkCode, setBewerkCode] = useState<string | null>(null);
+  const [form, setForm] = useState({ code: "", naam: "", categorie: "", volgorde: "" });
+  const [fout, setFout] = useState<string | null>(null);
+
+  const categorieOpties = Array.from(
+    new Set((typen as VoorzieningType[]).map((t) => t.categorie)),
+  ).sort();
+
+  function openNieuw() {
+    setBewerkCode(null);
+    const maxVolgorde = (typen as VoorzieningType[]).reduce((m, t) => Math.max(m, t.volgorde), 0);
+    setForm({ code: "", naam: "", categorie: "", volgorde: String(maxVolgorde + 1) });
+    setFout(null);
+    setDialoogOpen(true);
+  }
+
+  function openBewerk(t: VoorzieningType) {
+    setBewerkCode(t.code);
+    setForm({ code: t.code, naam: t.naam, categorie: t.categorie, volgorde: String(t.volgorde) });
+    setFout(null);
+    setDialoogOpen(true);
+  }
+
+  async function bewaar() {
+    if (bewerkCode == null && !form.code.trim()) {
+      setFout("Code is verplicht.");
+      return;
+    }
+    if (bewerkCode == null && form.code.includes("/")) {
+      setFout("Code mag geen schuine streep (/) bevatten.");
+      return;
+    }
+    if (!form.naam.trim()) {
+      setFout("Naam is verplicht.");
+      return;
+    }
+    if (!form.categorie.trim()) {
+      setFout("Categorie is verplicht.");
+      return;
+    }
+    const volgordeNum = form.volgorde.trim() === "" ? 0 : Number(form.volgorde);
+    if (Number.isNaN(volgordeNum)) {
+      setFout("Volgorde moet een getal zijn.");
+      return;
+    }
+    setFout(null);
+    try {
+      if (bewerkCode == null) {
+        await maakType.mutateAsync({
+          data: {
+            code: form.code.trim(),
+            naam: form.naam.trim(),
+            categorie: form.categorie.trim(),
+            volgorde: volgordeNum,
+          },
+        });
+      } else {
+        await wijzigType.mutateAsync({
+          code: bewerkCode,
+          data: {
+            naam: form.naam.trim(),
+            categorie: form.categorie.trim(),
+            volgorde: volgordeNum,
+          },
+        });
+      }
+      await queryClient.invalidateQueries({ queryKey: getListVoorzieningTypesQueryKey() });
+      setDialoogOpen(false);
+    } catch (err) {
+      setFout(foutmelding(err, "Opslaan mislukt. Probeer het opnieuw."));
+    }
+  }
+
+  async function zetArchief(t: VoorzieningType) {
+    try {
+      await wijzigType.mutateAsync({ code: t.code, data: { actief: !t.actief } });
+      await queryClient.invalidateQueries({ queryKey: getListVoorzieningTypesQueryKey() });
+    } catch {
+      // Bij een fout blijft de lijst ongewijzigd; gebruiker kan opnieuw proberen.
+    }
+  }
 
   const perCategorie: Record<string, VoorzieningType[]> = {};
   for (const t of typen as VoorzieningType[]) {
@@ -113,6 +213,8 @@ function TabApplicaties() {
     }
   }
 
+  const bezig = maakType.isPending || wijzigType.isPending;
+
   return (
     <div className="space-y-4">
       <p className="text-sm text-muted-foreground">
@@ -120,6 +222,20 @@ function TabApplicaties() {
         Bij het aanmaken van een concrete spot kiest de monteur een applicatie uit deze catalogus.
         Klik op een applicatie om de gekoppelde toepassingen te bekijken en te beheren.
       </p>
+
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer">
+          <Switch checked={inclGearchiveerd} onCheckedChange={setInclGearchiveerd} />
+          Toon gearchiveerde
+        </label>
+        {magAanmaken && (
+          <Button onClick={openNieuw}>
+            <Plus className="h-4 w-4 mr-2" />
+            Applicatie toevoegen
+          </Button>
+        )}
+      </div>
+
       {isLoading ? (
         <div className="space-y-2">
           {[...Array(5)].map((_, i) => (
@@ -173,11 +289,48 @@ function TabApplicaties() {
                           )}
                         </td>
                         <td className="px-4 py-2.5 text-right align-top whitespace-nowrap">
-                          {!t.actief && (
-                            <Badge variant="outline" className="text-xs text-muted-foreground">
-                              Inactief
-                            </Badge>
-                          )}
+                          <div className="flex items-center justify-end gap-1">
+                            {!t.actief && (
+                              <Badge variant="outline" className="text-xs text-muted-foreground">
+                                Gearchiveerd
+                              </Badge>
+                            )}
+                            {magBewerken && (
+                              <>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    openBewerk(t);
+                                  }}
+                                  aria-label={`${t.naam} bewerken`}
+                                >
+                                  <Pencil className="h-3.5 w-3.5" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7"
+                                  disabled={bezig}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    zetArchief(t);
+                                  }}
+                                  aria-label={
+                                    t.actief ? `${t.naam} archiveren` : `${t.naam} herstellen`
+                                  }
+                                >
+                                  {t.actief ? (
+                                    <Archive className="h-3.5 w-3.5" />
+                                  ) : (
+                                    <ArchiveRestore className="h-3.5 w-3.5" />
+                                  )}
+                                </Button>
+                              </>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     );
@@ -196,6 +349,79 @@ function TabApplicaties() {
           if (!o) setGekozen(null);
         }}
       />
+
+      <Dialog open={dialoogOpen} onOpenChange={setDialoogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {bewerkCode == null ? "Applicatie toevoegen" : "Applicatie bewerken"}
+            </DialogTitle>
+            <DialogDescription>
+              Leg de code (SnagStream-nummering), naam, categorie en volgorde van de applicatie vast.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <UiLabel htmlFor="applicatie-code">Code</UiLabel>
+              <Input
+                id="applicatie-code"
+                value={form.code}
+                onChange={(e) => setForm((s) => ({ ...s, code: e.target.value }))}
+                placeholder="Bijv. 1.1"
+                disabled={bewerkCode != null}
+              />
+              {bewerkCode != null && (
+                <p className="text-xs text-muted-foreground">
+                  De code kan na aanmaken niet worden gewijzigd.
+                </p>
+              )}
+            </div>
+            <div className="space-y-1.5">
+              <UiLabel htmlFor="applicatie-naam">Naam</UiLabel>
+              <Input
+                id="applicatie-naam"
+                value={form.naam}
+                onChange={(e) => setForm((s) => ({ ...s, naam: e.target.value }))}
+                placeholder="Bijv. Doorvoering kabels"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <UiLabel htmlFor="applicatie-categorie">Categorie</UiLabel>
+              <Input
+                id="applicatie-categorie"
+                list="applicatie-categorie-opties"
+                value={form.categorie}
+                onChange={(e) => setForm((s) => ({ ...s, categorie: e.target.value }))}
+                placeholder="Kies bestaande of typ een nieuwe categorie"
+              />
+              <datalist id="applicatie-categorie-opties">
+                {categorieOpties.map((c) => (
+                  <option key={c} value={c} />
+                ))}
+              </datalist>
+            </div>
+            <div className="space-y-1.5">
+              <UiLabel htmlFor="applicatie-volgorde">Volgorde</UiLabel>
+              <Input
+                id="applicatie-volgorde"
+                type="number"
+                value={form.volgorde}
+                onChange={(e) => setForm((s) => ({ ...s, volgorde: e.target.value }))}
+                placeholder="0"
+              />
+            </div>
+            {fout && <p className="text-sm text-destructive">{fout}</p>}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDialoogOpen(false)} disabled={bezig}>
+              Annuleren
+            </Button>
+            <Button onClick={bewaar} disabled={bezig}>
+              {bezig ? "Bezig..." : bewerkCode == null ? "Toevoegen" : "Opslaan"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

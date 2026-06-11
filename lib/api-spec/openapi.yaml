@@ -1206,6 +1206,56 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/VoorzieningType"
+    post:
+      operationId: createVoorzieningType
+      tags: [classificatie]
+      summary: Nieuwe applicatie (voorziening-type) toevoegen (beheerder)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VoorzieningTypeInput"
+      responses:
+        "201":
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VoorzieningType"
+        "400":
+          description: Ongeldige invoer
+        "409":
+          description: Code bestaat al
+
+  /voorziening-types/{code}:
+    patch:
+      operationId: updateVoorzieningType
+      tags: [classificatie]
+      summary: Applicatie (voorziening-type) bewerken of archiveren (beheerder)
+      parameters:
+        - in: path
+          name: code
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VoorzieningTypeUpdate"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VoorzieningType"
+        "400":
+          description: Ongeldige invoer
+        "404":
+          description: Niet gevonden
 
   /voorziening-types/{code}/labels:
     put:
@@ -6012,6 +6062,31 @@ components:
       properties:
         code:
           type: string
+        naam:
+          type: string
+        categorie:
+          type: string
+        volgorde:
+          type: integer
+        actief:
+          type: boolean
+
+    VoorzieningTypeInput:
+      type: object
+      required: [code, naam, categorie]
+      properties:
+        code:
+          type: string
+        naam:
+          type: string
+        categorie:
+          type: string
+        volgorde:
+          type: integer
+
+    VoorzieningTypeUpdate:
+      type: object
+      properties:
         naam:
           type: string
         categorie:

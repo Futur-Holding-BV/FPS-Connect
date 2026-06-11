@@ -1507,6 +1507,42 @@ export const ListVoorzieningTypesResponse = zod.array(ListVoorzieningTypesRespon
 
 
 /**
+ * @summary Nieuwe applicatie (voorziening-type) toevoegen (beheerder)
+ */
+export const CreateVoorzieningTypeBody = zod.object({
+  "code": zod.string(),
+  "naam": zod.string(),
+  "categorie": zod.string(),
+  "volgorde": zod.number().optional()
+})
+
+export const CreateVoorzieningTypeResponse = zod.void()
+
+
+/**
+ * @summary Applicatie (voorziening-type) bewerken of archiveren (beheerder)
+ */
+export const UpdateVoorzieningTypeParams = zod.object({
+  "code": zod.coerce.string()
+})
+
+export const UpdateVoorzieningTypeBody = zod.object({
+  "naam": zod.string().optional(),
+  "categorie": zod.string().optional(),
+  "volgorde": zod.number().optional(),
+  "actief": zod.boolean().optional()
+})
+
+export const UpdateVoorzieningTypeResponse = zod.object({
+  "code": zod.string(),
+  "naam": zod.string(),
+  "categorie": zod.string(),
+  "volgorde": zod.number(),
+  "actief": zod.boolean()
+})
+
+
+/**
  * @summary Gekoppelde toepassingen (labels) van een applicatie instellen (beheerder)
  */
 export const SetApplicatieLabelsParams = zod.object({
