@@ -5,7 +5,7 @@ import { db } from "@workspace/db";
 import { gebruikersTable, profielenTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { stuurUitnodigingsmail } from "../services/email";
-import { requireBevoegdheid } from "../middlewares/auth";
+import { requireBevoegdheid, requireRol } from "../middlewares/auth";
 import {
   heeftNiveau,
   heeftEnigeToegang,
@@ -441,6 +441,52 @@ router.post("/gebruikers/:id/uitnodigen/opnieuw", alleenBeheerder, async (req, r
     res.status(500).json({ error: "Interne serverfout" });
   }
 });
+
+// POST /gebruikers/:id/herkomst-toepassen — het herkomst-profiel van deze ene
+// gebruiker opnieuw doorvoeren (bevoegdheden terugzetten naar de preset).
+router.post(
+  "/gebruikers/:id/herkomst-toepassen",
+  requireRol("hoofdbeheerder"),
+  async (req, res) => {
+    try {
+      const id = parseInt(String(req.params.id), 10);
+      if (!Number.isInteger(id)) {
+        return res.status(400).json({ error: "Ongeldig id" });
+      }
+      const [bestaande] = await db
+        .select()
+        .from(gebruikersTable)
+        .where(eq(gebruikersTable.id, id));
+      if (!bestaande) {
+        return res.status(404).json({ error: "Gebruiker niet gevonden" });
+      }
+      if (bestaande.herkomstProfielId == null) {
+        return res
+          .status(400)
+          .json({ error: "Gebruiker heeft geen herkomst-profiel" });
+      }
+      const [profiel] = await db
+        .select({ bevoegdheden: profielenTable.bevoegdheden })
+        .from(profielenTable)
+        .where(eq(profielenTable.id, bestaande.herkomstProfielId));
+      if (!profiel) {
+        return res
+          .status(400)
+          .json({ error: "Herkomst-profiel bestaat niet meer" });
+      }
+      const bevoegdheden = (profiel.bevoegdheden as Record<string, number>) ?? {};
+      const [g] = await db
+        .update(gebruikersTable)
+        .set({ bevoegdheden })
+        .where(eq(gebruikersTable.id, id))
+        .returning();
+      res.json(mapGebruiker(g));
+    } catch (err) {
+      req.log.error(err);
+      res.status(500).json({ error: "Interne serverfout" });
+    }
+  },
+);
 
 // DELETE /gebruikers/:id
 router.delete("/gebruikers/:id", alleenBeheerder, async (req, res) => {

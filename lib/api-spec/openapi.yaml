@@ -2190,6 +2190,30 @@ paths:
               schema:
                 $ref: "#/components/schemas/Gebruiker"
 
+  /gebruikers/{id}/herkomst-toepassen:
+    post:
+      operationId: gebruikerHerkomstToepassen
+      tags: [gebruikers]
+      summary: >-
+        Herkomst-profiel opnieuw toepassen op deze ene gebruiker (hoofdbeheerder)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Gebruiker"
+        "400":
+          description: Gebruiker heeft geen herkomst-profiel
+        "404":
+          description: Niet gevonden
+
   /profielen:
     get:
       operationId: listProfielen

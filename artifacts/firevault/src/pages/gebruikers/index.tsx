@@ -7,6 +7,7 @@ import {
   useDeleteGebruiker,
   useUitnodigingVersturen,
   useUitnodigingOpnieuwVersturen,
+  useGebruikerHerkomstToepassen,
   useListProfielen,
   getListGebruikersQueryKey,
 } from "@workspace/api-client-react";
@@ -30,7 +31,7 @@ import { Switch } from "@/components/ui/switch";
 import {
   Mail, Phone, Building, Clock, Plus, UserPlus, Pencil, Trash2,
   RefreshCw, ShieldCheck, Eye, User, Crown, Upload, Palette, SendHorizonal, X,
-  Layers, Search,
+  Layers, Search, RotateCcw,
 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRol } from "@/context/rol-context";
@@ -314,6 +315,7 @@ export default function Gebruikers() {
   const verwijderGebruiker = useDeleteGebruiker();
   const uitnodigingVersturen = useUitnodigingVersturen();
   const uitnodigingOpnieuwVersturen = useUitnodigingOpnieuwVersturen();
+  const herkomstToepassen = useGebruikerHerkomstToepassen();
 
   const [toevoegenOpen, setToevoegenOpen]     = useState(false);
   const [toevoegenForm, setToevoegenForm]     = useState<GebruikerForm>(leegForm);
@@ -327,6 +329,7 @@ export default function Gebruikers() {
   const [bekijkGebruiker, setBekijkGebruiker] = useState<Gebruiker | null>(null);
 
   const [uitnodigingBezig, setUitnodigingBezig] = useState<number | null>(null);
+  const [herkomstBezig, setHerkomstBezig] = useState<number | null>(null);
 
   const [voorkeurInit] = useState<Voorkeuren>(leesVoorkeuren);
   const [zoek, setZoek]                   = useState<string>("");
@@ -351,6 +354,22 @@ export default function Gebruikers() {
   const filterActief = !!zoek.trim() || !!filterModule || filterNiveau > 0 || sorteer !== "standaard";
 
   const invalideer = () => queryClient.invalidateQueries({ queryKey: getListGebruikersQueryKey() });
+
+  async function pasHerkomstToe(g: Gebruiker) {
+    if (g.herkomst_profiel_id == null || herkomstBezig != null) return;
+    setHerkomstBezig(g.id);
+    try {
+      const bijgewerkt = await herkomstToepassen.mutateAsync({ id: g.id });
+      invalideer();
+      setBekijkGebruiker((huidig) =>
+        huidig && huidig.id === g.id ? (bijgewerkt as Gebruiker) : huidig,
+      );
+    } catch {
+      // fout wordt door de mutation-state opgevangen; UI blijft ongewijzigd
+    } finally {
+      setHerkomstBezig(null);
+    }
+  }
 
   async function verstuurToevoegen(e: React.FormEvent) {
     e.preventDefault();
@@ -758,6 +777,21 @@ export default function Gebruikers() {
                                         Aangepast
                                       </Badge>
                                     )}
+                                    {afwijkend && isHoofd && (
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="h-5 px-1.5 text-xs text-muted-foreground hover:text-foreground flex-shrink-0"
+                                        disabled={herkomstBezig === g.id}
+                                        onClick={() => pasHerkomstToe(g)}
+                                        title={`Profiel "${profiel.naam}" opnieuw toepassen`}
+                                      >
+                                        <RotateCcw
+                                          className={`h-3 w-3 mr-1 ${herkomstBezig === g.id ? "animate-spin" : ""}`}
+                                        />
+                                        Opnieuw toepassen
+                                      </Button>
+                                    )}
                                   </div>
                                 );
                               })()}
@@ -1032,6 +1066,20 @@ export default function Gebruikers() {
                             >
                               Sindsdien aangepast
                             </Badge>
+                          )}
+                          {afwijkend && isHoofd && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-6 px-2 text-xs ml-auto"
+                              disabled={herkomstBezig === bekijkGebruiker.id}
+                              onClick={() => pasHerkomstToe(bekijkGebruiker)}
+                            >
+                              <RotateCcw
+                                className={`h-3 w-3 mr-1 ${herkomstBezig === bekijkGebruiker.id ? "animate-spin" : ""}`}
+                              />
+                              Profiel opnieuw toepassen
+                            </Button>
                           )}
                         </div>
                       )}

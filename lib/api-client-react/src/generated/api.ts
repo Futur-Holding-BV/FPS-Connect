@@ -7349,6 +7349,76 @@ export const useUitnodigingOpnieuwVersturen = <TError = ErrorType<unknown>,
       return useMutation(getUitnodigingOpnieuwVersturenMutationOptions(options));
     }
 
+export const getGebruikerHerkomstToepassenUrl = (id: number,) => {
+
+
+
+
+  return `/api/gebruikers/${id}/herkomst-toepassen`
+}
+
+/**
+ * @summary Herkomst-profiel opnieuw toepassen op deze ene gebruiker (hoofdbeheerder)
+ */
+export const gebruikerHerkomstToepassen = async (id: number, options?: RequestInit): Promise<Gebruiker> => {
+
+  return customFetch<Gebruiker>(getGebruikerHerkomstToepassenUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getGebruikerHerkomstToepassenMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof gebruikerHerkomstToepassen>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof gebruikerHerkomstToepassen>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['gebruikerHerkomstToepassen'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof gebruikerHerkomstToepassen>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  gebruikerHerkomstToepassen(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type GebruikerHerkomstToepassenMutationResult = NonNullable<Awaited<ReturnType<typeof gebruikerHerkomstToepassen>>>
+
+    export type GebruikerHerkomstToepassenMutationError = ErrorType<void>
+
+    /**
+ * @summary Herkomst-profiel opnieuw toepassen op deze ene gebruiker (hoofdbeheerder)
+ */
+export const useGebruikerHerkomstToepassen = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof gebruikerHerkomstToepassen>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof gebruikerHerkomstToepassen>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getGebruikerHerkomstToepassenMutationOptions(options));
+    }
+
 export const getListProfielenUrl = () => {
 
 
