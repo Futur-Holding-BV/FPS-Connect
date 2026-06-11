@@ -112,6 +112,7 @@ function bouwHtml(domein: string, token: string, url: string | null): string {
       el.className='mk';
       var t=CFG.typen[s.type]||{kleur:'#94a3b8'};
       el.style.background=CFG.status[s.status]||'#94a3b8';
+      if (s.status==='voorbereid'){ el.style.border='2.5px dashed #475569'; el.style.color='#1e293b'; }
       el.style.left=s.locatie_x+'px';
       el.style.top=s.locatie_y+'px';
       var ring=document.createElement('div');

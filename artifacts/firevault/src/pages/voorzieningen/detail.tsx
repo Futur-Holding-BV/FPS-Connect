@@ -26,7 +26,9 @@ const BEWERK_ROLLEN = ["monteur", "beheerder", "hoofdbeheerder"];
 
 const statusKleur: Record<string, string> = {
   concept: "bg-gray-100 text-gray-700 border-gray-200",
+  voorbereid: "bg-slate-100 text-slate-700 border-slate-300 border-dashed",
   in_uitvoering: "bg-blue-100 text-blue-800 border-blue-200",
+  opgeleverd: "bg-teal-100 text-teal-800 border-teal-200",
   goedgekeurd: "bg-green-100 text-green-800 border-green-200",
   afgekeurd: "bg-red-100 text-red-800 border-red-200",
   in_onderhoud: "bg-orange-100 text-orange-800 border-orange-200",
@@ -34,7 +36,9 @@ const statusKleur: Record<string, string> = {
 
 const statusLabel: Record<string, string> = {
   concept: "Concept",
+  voorbereid: "Voorbereid",
   in_uitvoering: "In uitvoering",
+  opgeleverd: "Opgeleverd",
   goedgekeurd: "Gereed",
   afgekeurd: "Afgekeurd",
   in_onderhoud: "In onderhoud",

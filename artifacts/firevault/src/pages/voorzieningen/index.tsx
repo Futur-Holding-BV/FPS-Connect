@@ -9,6 +9,17 @@ import { Link } from "wouter";
 import { Badge } from "@/components/ui/badge";
 import { useVoorkeur } from "@/hooks/use-voorkeur";
 
+const STATUSLABEL: Record<string, string> = {
+  concept: "Concept",
+  voorbereid: "Voorbereid",
+  in_uitvoering: "In uitvoering",
+  opgeleverd: "Opgeleverd",
+  goedgekeurd: "Gereed",
+  afgekeurd: "Afgekeurd",
+  in_onderhoud: "In onderhoud",
+  vervallen: "Vervallen",
+};
+
 export default function Voorzieningen() {
   const { t } = useTranslation();
   const { data: voorzieningenLijst, isLoading } = useListVoorzieningen({});
@@ -17,9 +28,18 @@ export default function Voorzieningen() {
     "voorzieningen_alleen_te_controleren",
     false,
   );
+  const [alleenVoorbereid, setAlleenVoorbereid] = useVoorkeur(
+    "voorzieningen_alleen_voorbereid",
+    false,
+  );
 
   const teControlerenAantal = useMemo(
     () => (voorzieningenLijst?.items ?? []).filter((v) => (v as any).ai_te_controleren).length,
+    [voorzieningenLijst],
+  );
+
+  const voorbereidAantal = useMemo(
+    () => (voorzieningenLijst?.items ?? []).filter((v) => v.status === "voorbereid").length,
     [voorzieningenLijst],
   );
 
@@ -27,12 +47,13 @@ export default function Voorzieningen() {
     const term = zoek.trim().toLowerCase();
     let items = voorzieningenLijst?.items ?? [];
     if (alleenTeControleren) items = items.filter((v) => (v as any).ai_te_controleren);
+    if (alleenVoorbereid) items = items.filter((v) => v.status === "voorbereid");
     if (!term) return items;
     return items.filter((v) =>
       [v.objectnummer, v.type, v.gebouw_naam, v.status]
         .some((veld) => (veld ?? "").toLowerCase().includes(term)),
     );
-  }, [voorzieningenLijst, zoek, alleenTeControleren]);
+  }, [voorzieningenLijst, zoek, alleenTeControleren, alleenVoorbereid]);
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
@@ -52,6 +73,15 @@ export default function Voorzieningen() {
               onChange={(e) => setZoek(e.target.value)}
             />
           </div>
+          {voorbereidAantal > 0 && (
+            <Button
+              variant={alleenVoorbereid ? "default" : "outline"}
+              onClick={() => setAlleenVoorbereid((v) => !v)}
+              className={alleenVoorbereid ? "" : "border-slate-300 text-slate-700 hover:text-slate-800"}
+            >
+              Voorbereid ({voorbereidAantal})
+            </Button>
+          )}
           {teControlerenAantal > 0 && (
             <Button
               variant={alleenTeControleren ? "default" : "outline"}
@@ -100,7 +130,12 @@ export default function Voorzieningen() {
                       <td className="px-6 py-4">{v.type}</td>
                       <td className="px-6 py-4">{v.gebouw_naam}</td>
                       <td className="px-6 py-4">
-                        <Badge variant="outline">{v.status}</Badge>
+                        <Badge
+                          variant="outline"
+                          className={v.status === "voorbereid" ? "border-dashed border-slate-300 text-slate-700" : undefined}
+                        >
+                          {STATUSLABEL[v.status ?? "concept"] ?? v.status}
+                        </Badge>
                       </td>
                       <td className="px-6 py-4 text-right">
                         <Link href={`/voorzieningen/${v.id}`}>

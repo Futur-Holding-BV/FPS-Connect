@@ -177,6 +177,7 @@ router.get("/dashboard/status-verdeling", dashboardLezen, async (req, res) => {
           gebouw_id: g.id,
           gebouw_naam: g.naam,
           totaal: vv.length,
+          voorbereid: vv.filter((v) => v.status === "voorbereid").length,
           goedgekeurd: vv.filter((v) => v.status === "goedgekeurd").length,
           afgekeurd: vv.filter((v) => v.status === "afgekeurd").length,
           in_bewerking: vv.filter((v) => v.status === "concept" || v.status === "in_uitvoering").length,

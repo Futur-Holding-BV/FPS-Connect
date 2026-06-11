@@ -689,6 +689,14 @@ export default function GebouwDetail() {
                   <span className="text-muted-foreground">Totaal spots</span>
                   <span className="font-bold">{gebouw.stats?.totaal || 0}</span>
                 </div>
+                {(gebouw.stats?.voorbereid ?? 0) > 0 && (
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-muted-foreground">Voorbereid</span>
+                    <span className="font-bold text-slate-600">
+                      {gebouw.stats?.voorbereid || 0}
+                    </span>
+                  </div>
+                )}
                 <div className="flex justify-between items-center text-sm">
                   <span className="text-muted-foreground">Gereed</span>
                   <span className="font-bold text-green-600">

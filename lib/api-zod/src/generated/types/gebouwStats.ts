@@ -8,6 +8,7 @@
 
 export interface GebouwStats {
   totaal: number;
+  voorbereid?: number;
   goedgekeurd: number;
   afgekeurd: number;
   in_bewerking: number;

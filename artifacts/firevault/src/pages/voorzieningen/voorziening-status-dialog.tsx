@@ -23,7 +23,9 @@ import { AlertCircle } from "lucide-react";
 
 const STATUS_OPTIES = [
   { value: "concept", label: "Concept" },
+  { value: "voorbereid", label: "Voorbereid" },
   { value: "in_uitvoering", label: "In uitvoering" },
+  { value: "opgeleverd", label: "Opgeleverd" },
   { value: "goedgekeurd", label: "Gereed" },
   { value: "afgekeurd", label: "Afgekeurd" },
   { value: "in_onderhoud", label: "In onderhoud" },

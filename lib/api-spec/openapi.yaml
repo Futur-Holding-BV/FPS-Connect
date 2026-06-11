@@ -4151,6 +4151,8 @@ components:
           type: string
         totaal:
           type: integer
+        voorbereid:
+          type: integer
         goedgekeurd:
           type: integer
         afgekeurd:
@@ -4317,6 +4319,8 @@ components:
       required: [totaal, goedgekeurd, afgekeurd, in_bewerking]
       properties:
         totaal:
+          type: integer
+        voorbereid:
           type: integer
         goedgekeurd:
           type: integer
@@ -4904,6 +4908,7 @@ components:
           type: string
           enum:
             - concept
+            - voorbereid
             - in_uitvoering
             - opgeleverd
             - goedgekeurd

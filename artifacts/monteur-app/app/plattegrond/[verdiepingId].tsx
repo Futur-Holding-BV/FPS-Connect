@@ -9,8 +9,9 @@ import {
   useListScheidingen,
   useListVoorzieningenOpVerdieping,
   useArchiveerVoorziening,
+  useUpdateVoorziening,
 } from "@workspace/api-client-react";
-import type { SpotAiVoorstelResultaat } from "@workspace/api-client-react";
+import type { SpotAiVoorstelResultaat, Label } from "@workspace/api-client-react";
 import { ApplicatieKiezer } from "@/components/ApplicatieKiezer";
 import { ToepassingKiezer } from "@/components/ToepassingKiezer";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -691,11 +692,18 @@ export default function Plattegrond() {
               <SpotDetail
                 spot={detailSpot}
                 token={token ?? ""}
+                gId={gId}
+                gebruikerId={gebruiker?.id}
                 onSluit={() => setDetailId(null)}
                 onGearchiveerd={() => {
                   setDetailId(null);
                   refetch();
                   refetchSpotnummer();
+                  forceerSync();
+                }}
+                onAfgewerkt={() => {
+                  setDetailId(null);
+                  refetch();
                   forceerSync();
                 }}
               />
@@ -813,8 +821,11 @@ function FotoSectie({
 function SpotDetail({
   spot,
   token,
+  gId,
+  gebruikerId,
   onSluit,
   onGearchiveerd,
+  onAfgewerkt,
 }: {
   spot: {
     id: number;
@@ -827,14 +838,42 @@ function SpotDetail({
     wbdbo?: string | null;
     wrd?: string | null;
     wand_of_plafond?: string | null;
+    labels?: Label[];
   };
   token: string;
+  gId: number;
+  gebruikerId?: number;
   onSluit: () => void;
   onGearchiveerd: () => void;
+  onAfgewerkt: () => void;
 }) {
   const c = useColors();
   const { data: fotos } = useListFotos(spot.id);
   const archiveer = useArchiveerVoorziening();
+  const voegFotoToe = useAddFoto();
+  const aiSpotvoorstel = useAiSpotvoorstel();
+  const bewaarAiVoorstel = useBewaarSpotAiVoorstel();
+  const updateVoorziening = useUpdateVoorziening();
+
+  const isVoorbereid = spot.status === "voorbereid";
+  const verwachteLabelIds = (spot.labels ?? []).map((l) => l.id);
+
+  const [afwerken, setAfwerken] = useState(false);
+  const [naFotos, setNaFotos] = useState<string[]>([]);
+  const [fotoBezig, setFotoBezig] = useState(false);
+  const [labelIds, setLabelIds] = useState<number[]>(verwachteLabelIds);
+  const [aiVoorstel, setAiVoorstel] = useState<SpotAiVoorstelResultaat | null>(null);
+  const [aiBezig, setAiBezig] = useState(false);
+  const [aiLabelGevuld, setAiLabelGevuld] = useState(false);
+  const [opslaan, setOpslaan] = useState(false);
+
+  const amberVak = {
+    borderWidth: 1.5,
+    borderColor: AMBER_BORDER,
+    backgroundColor: AMBER_BG,
+    borderRadius: c.radius,
+    padding: 8,
+  } as const;
 
   function bevestigArchiveren() {
     Alert.alert(
@@ -857,9 +896,114 @@ function SpotDetail({
       ],
     );
   }
+
+  async function kiesNaFoto(bron: "camera" | "galerij") {
+    try {
+      const perm =
+        bron === "camera"
+          ? await ImagePicker.requestCameraPermissionsAsync()
+          : await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!perm.granted) {
+        Alert.alert(
+          "Toestemming nodig",
+          bron === "camera"
+            ? "Geef toegang tot de camera om foto's te maken."
+            : "Geef toegang tot je foto's.",
+        );
+        return;
+      }
+      const res =
+        bron === "camera"
+          ? await ImagePicker.launchCameraAsync({ quality: 0.6, mediaTypes: ["images"] })
+          : await ImagePicker.launchImageLibraryAsync({ quality: 0.6, mediaTypes: ["images"] });
+      if (res.canceled || !res.assets?.[0]) return;
+      setFotoBezig(true);
+      const objectPath = await uploadFoto(res.assets[0].uri);
+      setNaFotos((a) => [...a, objectPath]);
+    } catch (e) {
+      Alert.alert("Fout", e instanceof Error ? e.message : "Foto opslaan mislukt");
+    } finally {
+      setFotoBezig(false);
+    }
+  }
+
+  async function analyseerMetAi() {
+    if (naFotos.length === 0) {
+      Alert.alert("Foto ná ontbreekt", "Maak eerst een foto ná de afwerking voor de AI-analyse.");
+      return;
+    }
+    setAiBezig(true);
+    try {
+      const res = await aiSpotvoorstel.mutateAsync({
+        data: {
+          gebouw_id: gId,
+          foto_voor_url: null,
+          foto_na_url: naFotos[0],
+        },
+      });
+      setAiVoorstel(res);
+      const top = res.toepassing_suggesties?.[0];
+      if (top && top.score > 0) {
+        setLabelIds([top.label_id]);
+        setAiLabelGevuld(true);
+      }
+    } catch (e) {
+      Alert.alert("AI-analyse mislukt", e instanceof Error ? e.message : "Onbekende fout");
+    } finally {
+      setAiBezig(false);
+    }
+  }
+
+  async function lever() {
+    if (naFotos.length === 0) {
+      Alert.alert("Foto ná ontbreekt", "Maak eerst een foto ná de afwerking voordat je oplevert.");
+      return;
+    }
+    setOpslaan(true);
+    try {
+      await updateVoorziening.mutateAsync({
+        id: spot.id,
+        data: {
+          status: "opgeleverd",
+          label_ids: labelIds,
+          installatie_datum: new Date().toISOString().slice(0, 10),
+          ...(gebruikerId ? { monteur_id: gebruikerId } : {}),
+        },
+      });
+      for (const url of naFotos) {
+        await voegFotoToe.mutateAsync({ id: spot.id, data: { fase: "na", url } });
+      }
+      if (aiVoorstel) {
+        try {
+          await bewaarAiVoorstel.mutateAsync({
+            id: spot.id,
+            data: {
+              foto_voor_url: null,
+              foto_na_url: naFotos[0] ?? null,
+              voorstel: aiVoorstel,
+              gekozen: {
+                wand_of_plafond: spot.wand_of_plafond || null,
+                type_code: spot.type || null,
+                label_ids: labelIds,
+              },
+            },
+          });
+        } catch (e) {
+          console.warn("AI-leerset opslaan mislukt", e);
+        }
+      }
+      onAfgewerkt();
+    } catch (e) {
+      Alert.alert("Opslaan mislukt", e instanceof Error ? e.message : "Onbekende fout");
+    } finally {
+      setOpslaan(false);
+    }
+  }
+
   const ti = typeInfo(spot.type);
   const voor = (fotos ?? []).filter((f) => f.fase === "voor");
   const na = (fotos ?? []).filter((f) => f.fase === "na");
+  const badgeTekstKleur = isVoorbereid ? "#1e293b" : "#fff";
 
   const Rij = ({ label, waarde }: { label: string; waarde?: string | null }) =>
     waarde ? (
@@ -882,7 +1026,7 @@ function SpotDetail({
           </Text>
         </View>
         <View style={{ backgroundColor: statusKleur(spot.status), paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 }}>
-          <Text style={{ color: "#fff", fontSize: 13, fontFamily: "Inter_600SemiBold" }}>
+          <Text style={{ color: badgeTekstKleur, fontSize: 13, fontFamily: "Inter_600SemiBold" }}>
             {statusLabel(spot.status)}
           </Text>
         </View>
@@ -893,6 +1037,17 @@ function SpotDetail({
       <Rij label="Wand/plafond" waarde={spot.wand_of_plafond} />
       <Rij label="Ruimte" waarde={spot.ruimte} />
       <Rij label="Locatie" waarde={spot.locatie_omschrijving} />
+
+      {(spot.labels ?? []).length > 0 && (
+        <View style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: 8 }}>
+          <Text style={{ color: c.mutedForeground, fontSize: 15, fontFamily: "Inter_400Regular" }}>
+            {isVoorbereid ? "Verwachte toepassing" : "Toepassing"}
+          </Text>
+          <Text style={{ color: c.foreground, fontSize: 15, fontFamily: "Inter_600SemiBold", flex: 1, textAlign: "right" }}>
+            {(spot.labels ?? []).map((l) => l.naam).join(", ")}
+          </Text>
+        </View>
+      )}
 
       {voor.length > 0 && (
         <View style={{ marginTop: 12 }}>
@@ -924,15 +1079,93 @@ function SpotDetail({
         </View>
       )}
 
-      <View style={{ marginTop: 20, gap: 10 }}>
-        <Knop
-          titel={archiveer.isPending ? "Bezig met archiveren..." : "Archiveren"}
-          onPress={bevestigArchiveren}
-          variant="gevaar"
-          bezig={archiveer.isPending}
-        />
-        <Knop titel="Sluiten" onPress={onSluit} variant="secundair" />
-      </View>
+      {isVoorbereid && afwerken && (
+        <View style={{ marginTop: 16, gap: 12 }}>
+          <View style={{ height: 1, backgroundColor: c.border, marginBottom: 2 }} />
+          <SectieLabel>Spot afwerken</SectieLabel>
+
+          <View>
+            <Text style={{ color: c.mutedForeground, fontSize: 13, fontFamily: "Inter_400Regular", marginBottom: 6 }}>
+              Foto ná de afwerking
+            </Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10 }}>
+              {naFotos.map((url) => (
+                <Image
+                  key={url}
+                  source={{ uri: `https://${DOMEIN}/api/storage${url}`, headers: { Authorization: `Bearer ${token}` } }}
+                  style={{ width: 90, height: 90, borderRadius: 10, backgroundColor: c.muted }}
+                />
+              ))}
+              {fotoBezig && (
+                <View style={{ width: 90, height: 90, borderRadius: 10, backgroundColor: c.muted, alignItems: "center", justifyContent: "center" }}>
+                  <ActivityIndicator color={c.primary} />
+                </View>
+              )}
+            </ScrollView>
+            <View style={{ flexDirection: "row", gap: 10, marginTop: 10 }}>
+              <View style={{ flex: 1 }}>
+                <Knop titel="Camera" onPress={() => kiesNaFoto("camera")} variant="secundair" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Knop titel="Galerij" onPress={() => kiesNaFoto("galerij")} variant="secundair" />
+              </View>
+            </View>
+          </View>
+
+          <Knop
+            titel={aiBezig ? "AI analyseert..." : "AI-analyse"}
+            onPress={analyseerMetAi}
+            variant="secundair"
+            bezig={aiBezig}
+          />
+
+          {!!aiVoorstel?.toepassing_suggesties?.length && (
+            <Text style={{ color: AMBER_DONKER, fontSize: 13, fontFamily: "Inter_400Regular" }}>
+              AI stelt voor: {aiVoorstel.toepassing_suggesties.map((s) => s.naam).join(", ")}
+            </Text>
+          )}
+
+          <View>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 6 }}>
+              <SectieLabel>Toepassing bevestigen</SectieLabel>
+              {aiLabelGevuld && <AiBadge />}
+            </View>
+            <View style={aiLabelGevuld ? amberVak : undefined}>
+              <ToepassingKiezer
+                typeCode={spot.type}
+                geselecteerdeIds={labelIds}
+                onWijzig={(ids) => {
+                  setLabelIds(ids);
+                  setAiLabelGevuld(false);
+                }}
+              />
+            </View>
+          </View>
+
+          <Knop
+            titel={opslaan ? "Bezig met opleveren..." : "Spot opleveren"}
+            onPress={lever}
+            bezig={opslaan}
+            groot
+          />
+          <Knop titel="Annuleren" onPress={() => setAfwerken(false)} variant="secundair" />
+        </View>
+      )}
+
+      {!afwerken && (
+        <View style={{ marginTop: 20, gap: 10 }}>
+          {isVoorbereid && (
+            <Knop titel="Afwerken" onPress={() => setAfwerken(true)} groot />
+          )}
+          <Knop
+            titel={archiveer.isPending ? "Bezig met archiveren..." : "Archiveren"}
+            onPress={bevestigArchiveren}
+            variant="gevaar"
+            bezig={archiveer.isPending}
+          />
+          <Knop titel="Sluiten" onPress={onSluit} variant="secundair" />
+        </View>
+      )}
     </ScrollView>
   );
 }

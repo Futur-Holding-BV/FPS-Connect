@@ -552,6 +552,7 @@ router.get("/gebouwen/:id", lezenGebouwenOfKlant, async (req, res) => {
 
     const stats = {
       totaal: alleVoorzieningen.length,
+      voorbereid: alleVoorzieningen.filter((v) => v.status === "voorbereid").length,
       goedgekeurd: alleVoorzieningen.filter((v) => v.status === "goedgekeurd").length,
       afgekeurd: alleVoorzieningen.filter((v) => v.status === "afgekeurd").length,
       in_bewerking: alleVoorzieningen.filter((v) => v.status === "concept" || v.status === "in_uitvoering").length,
@@ -1380,6 +1381,7 @@ router.patch("/gebouwen/:id/archief", requireBevoegdheid("gebouwen", 4), async (
       .where(eq(voorzieningenTable.gebouwId, id));
     const stats = {
       totaal: alleVoorzieningen.length,
+      voorbereid: alleVoorzieningen.filter((v) => v.status === "voorbereid").length,
       goedgekeurd: alleVoorzieningen.filter((v) => v.status === "goedgekeurd").length,
       afgekeurd: alleVoorzieningen.filter((v) => v.status === "afgekeurd").length,
       in_bewerking: alleVoorzieningen.filter((v) => v.status === "concept" || v.status === "in_uitvoering").length,

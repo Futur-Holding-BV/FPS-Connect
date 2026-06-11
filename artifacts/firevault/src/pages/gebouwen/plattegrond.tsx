@@ -71,6 +71,7 @@ const SCHEIDING_TYPEN: Record<string, { kleur: string; label: string }> = {
 
 const STATUSKLEUREN: Record<string, string> = {
   concept:       "#94a3b8",
+  voorbereid:    "#cbd5e1",
   in_uitvoering: "#3b82f6",
   opgeleverd:    "#14b8a6",
   goedgekeurd:   "#22c55e",
@@ -81,6 +82,7 @@ const STATUSKLEUREN: Record<string, string> = {
 
 const STATUSLABEL: Record<string, string> = {
   concept:       "Concept",
+  voorbereid:    "Voorbereid",
   in_uitvoering: "In uitvoering",
   opgeleverd:    "Opgeleverd",
   goedgekeurd:   "Gereed",
@@ -187,6 +189,7 @@ function VoorzieningIcoon({
 }) {
   const stijl = TYPEN[v.type] ?? { kleur: "#94a3b8", ring: "#475569", label: v.type };
   const r = 16;
+  const isVoorbereid = v.status === "voorbereid";
   const volgnummer = spotVolgnummer(v.objectnummer);
   const isPlafond = v.wand_of_plafond === "plafond";
   return (
@@ -199,7 +202,13 @@ function VoorzieningIcoon({
       {v.ai_te_controleren && (
         <circle r={r + 8} fill="none" stroke="#dc2626" strokeWidth={2.5} strokeDasharray="4 2" />
       )}
-      <circle r={r} fill={STATUSKLEUREN[v.status] ?? "#94a3b8"} stroke={geselecteerd ? "#fff" : stijl.ring} strokeWidth={geselecteerd ? 3 : 1.5} />
+      <circle
+        r={r}
+        fill={STATUSKLEUREN[v.status] ?? "#94a3b8"}
+        stroke={geselecteerd ? "#fff" : isVoorbereid ? "#475569" : stijl.ring}
+        strokeWidth={geselecteerd ? 3 : isVoorbereid ? 2 : 1.5}
+        strokeDasharray={isVoorbereid && !geselecteerd ? "4 3" : undefined}
+      />
       {isPlafond && (
         <g style={{ pointerEvents: "none" }}>
           <path d="M 7,4 A 9,9 0 1,1 7,-4" fill="none" stroke="#fff" strokeWidth={3.5} strokeLinecap="round" />
@@ -212,7 +221,7 @@ function VoorzieningIcoon({
         dominantBaseline="central"
         fontSize={volgnummer.length > 2 ? 8 : 10}
         fontWeight="700"
-        fill="#fff"
+        fill={isVoorbereid ? "#1e293b" : "#fff"}
         style={{ pointerEvents: "none", userSelect: "none" }}
       >
         {volgnummer}

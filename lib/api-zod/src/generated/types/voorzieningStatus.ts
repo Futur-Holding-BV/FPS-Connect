@@ -11,6 +11,7 @@ export type VoorzieningStatus = typeof VoorzieningStatus[keyof typeof Voorzienin
 
 export const VoorzieningStatus = {
   concept: 'concept',
+  voorbereid: 'voorbereid',
   in_uitvoering: 'in_uitvoering',
   opgeleverd: 'opgeleverd',
   goedgekeurd: 'goedgekeurd',

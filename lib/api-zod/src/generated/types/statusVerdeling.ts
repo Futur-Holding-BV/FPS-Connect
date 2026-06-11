@@ -10,6 +10,7 @@ export interface StatusVerdeling {
   gebouw_id: number;
   gebouw_naam: string;
   totaal: number;
+  voorbereid?: number;
   goedgekeurd: number;
   afgekeurd: number;
   in_bewerking: number;

@@ -369,6 +369,7 @@ export interface StatusVerdeling {
   gebouw_id: number;
   gebouw_naam: string;
   totaal: number;
+  voorbereid?: number;
   goedgekeurd: number;
   afgekeurd: number;
   in_bewerking: number;
@@ -466,6 +467,7 @@ export interface Verdieping {
 
 export interface GebouwStats {
   totaal: number;
+  voorbereid?: number;
   goedgekeurd: number;
   afgekeurd: number;
   in_bewerking: number;
@@ -845,6 +847,7 @@ export type VoorzieningStatus = typeof VoorzieningStatus[keyof typeof Voorzienin
 
 export const VoorzieningStatus = {
   concept: 'concept',
+  voorbereid: 'voorbereid',
   in_uitvoering: 'in_uitvoering',
   opgeleverd: 'opgeleverd',
   goedgekeurd: 'goedgekeurd',
