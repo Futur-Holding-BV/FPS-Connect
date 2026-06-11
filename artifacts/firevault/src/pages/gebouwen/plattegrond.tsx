@@ -11,7 +11,7 @@ import {
   useListVerdiepingen,
   useCreateVoorziening,
   useGetVolgendSpotnummer,
-  useListGebruikers,
+  useListToewijsbareGebruikers,
   useGetVoorziening,
   useUpdateVoorziening,
   useUpdateVoorzieningStatus,
@@ -493,7 +493,7 @@ export default function Plattegrond() {
   const { data: gebouw } = useGetGebouw(Number(id));
   const { data: alleVerdiepingen } = useListVerdiepingen(Number(id));
   const { data: voorzieningen, refetch } = useListVoorzieningenOpVerdieping(Number(verdiepingId));
-  const { data: gebruikers } = useListGebruikers();
+  const { data: gebruikers } = useListToewijsbareGebruikers();
   const maakVoorziening = useCreateVoorziening();
   const updateVoorziening = useUpdateVoorziening();
   const updateVerdieping = useUpdateVerdieping();
@@ -511,7 +511,13 @@ export default function Plattegrond() {
   // Visuele clustering (telbubbels bij overlappende spots) — standaard aan.
   const [visueelClusterAan, setVisueelClusterAan] = useState(true);
 
-  const monteurs = (gebruikers ?? []).filter((g: any) => g.rol === "monteur");
+  // "Monteur uitvoering" = wie de spot daadwerkelijk uitvoert. De oude rol
+  // "monteur" bestaat niet meer (rollen zijn hoofdbeheerder/gebruiker/klant);
+  // toon daarom alle toewijsbare interne personen behalve de hoofdbeheerder.
+  // Klanten zijn al uitgesloten door het /toewijsbare-gebruikers-endpoint.
+  const monteurs = (gebruikers ?? []).filter(
+    (g: any) => g.rol !== "hoofdbeheerder",
+  );
 
   const { data: nieuwLabelData = [] } = useListLabels(
     nieuwForm.type ? { type_code: nieuwForm.type } : {},
@@ -767,9 +773,9 @@ export default function Plattegrond() {
     setNieuwLocatie({ x: Math.round(klemX), y: Math.round(klemY) });
     const nu = new Date();
     const vandaag = `${nu.getFullYear()}-${String(nu.getMonth() + 1).padStart(2, "0")}-${String(nu.getDate()).padStart(2, "0")}`;
-    const huidigeIsMonteur =
-      gebruiker?.rol === "monteur" ||
-      monteurs.some((m: any) => String(m.id) === String(gebruiker?.id));
+    const huidigeIsMonteur = monteurs.some(
+      (m: any) => String(m.id) === String(gebruiker?.id),
+    );
     setNieuwForm({
       ...LEEG_FORM,
       objectnummer: volgendSpot?.spotnummer ?? "",

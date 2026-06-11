@@ -5,7 +5,7 @@ import { db } from "@workspace/db";
 import { gebruikersTable, profielenTable } from "@workspace/db";
 import { eq, and, isNotNull, inArray } from "drizzle-orm";
 import { stuurUitnodigingsmail } from "../services/email";
-import { requireBevoegdheid, requireRol } from "../middlewares/auth";
+import { requireBevoegdheid, requireRol, requireEnigeBevoegdheid } from "../middlewares/auth";
 import { heeftNiveau, MODULE_IDS } from "@workspace/permissies";
 import {
   kiesUniekeHerkomstPreset,
@@ -16,6 +16,17 @@ const router = Router();
 
 const alleenBeheerder = requireBevoegdheid("gebruikers", 4);
 const lezenGebruikers = requireBevoegdheid("gebruikers", 1);
+
+// Minimale toewijsbare-personenlijst: leesbaar voor iedereen die ergens kan
+// toewijzen (gebouwteam, spot-uitvoering, onderhoud) of de gebruikersmodule
+// heeft. Bewust losgekoppeld van de gebruikers-module zodat gebouw-/
+// voorzieningenrechten volstaan om iemand toe te wijzen.
+const lezenToewijsbaar = requireEnigeBevoegdheid([
+  ["gebouwen", 1],
+  ["voorzieningen", 1],
+  ["onderhoud", 1],
+  ["gebruikers", 1],
+]);
 
 // De enige toegestane projectfuncties (profiel) voor een beheerder.
 const FUNCTIETITELS_TOEGESTAAN = [
@@ -149,6 +160,39 @@ router.get("/gebruikers", lezenGebruikers, async (req, res) => {
     const volledig = await isBeheerder(req.session.userId);
     const mapper = volledig ? mapGebruiker : mapGebruikerPubliek;
     res.json(gebruikers.map((g) => mapper(g)));
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// GET /toewijsbare-gebruikers
+// Minimale lijst (id, naam, rol, functietitels) van personen die aan een
+// gebouwteam, spot-uitvoering of onderhoudstaak toegewezen kunnen worden.
+// Klanten worden uitgesloten. Geen e-mail/telefoon/bevoegdheden: alleen het
+// minimum dat de toewijs-keuzelijsten nodig hebben.
+router.get("/toewijsbare-gebruikers", lezenToewijsbaar, async (req, res) => {
+  try {
+    const rijen = await db
+      .select({
+        id: gebruikersTable.id,
+        naam: gebruikersTable.naam,
+        rol: gebruikersTable.rol,
+        functietitels: gebruikersTable.functietitels,
+        actief: gebruikersTable.actief,
+      })
+      .from(gebruikersTable)
+      .orderBy(gebruikersTable.naam);
+    res.json(
+      rijen
+        .filter((g) => g.rol !== "klant" && g.actief)
+        .map((g) => ({
+          id: g.id,
+          naam: g.naam,
+          rol: g.rol,
+          functietitels: g.functietitels ?? [],
+        })),
+    );
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Interne serverfout" });

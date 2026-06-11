@@ -6,7 +6,7 @@ import {
   useListGebouwToewijzingen,
   useCreateGebouwToewijzing,
   useDeleteGebouwToewijzing,
-  useListGebruikers,
+  useListToewijsbareGebruikers,
   useMeldGebouwGereed,
   useHerstelGebouwActief,
   useListGebouwPartijen,
@@ -57,6 +57,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/context/auth-context";
 import { useRol } from "@/context/rol-context";
+import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
 import GebouwPartijen from "./gebouw-partijen";
 import GebouwTekeningen from "./gebouw-tekeningen";
 import GebouwPlattegronden from "./gebouw-plattegronden";
@@ -151,13 +152,14 @@ export default function GebouwDetail() {
   const { data: kaartData } = useGetGebouwKaart(gebouwId);
   const { data: toewijzingen, isLoading: toewijzingenLaden } =
     useListGebouwToewijzingen(gebouwId);
-  const { data: gebruikers } = useListGebruikers();
+  const { data: gebruikers } = useListToewijsbareGebruikers();
   const { data: partijen } = useListGebouwPartijen(gebouwId);
   const { data: openActiepunten } = useListOnderhoud({
     gebouw_id: gebouwId,
     status: "open",
   });
 
+  const { heeftNiveau } = useBevoegdheid();
   const maakToewijzing = useCreateGebouwToewijzing();
   const verwijderToewijzing = useDeleteGebouwToewijzing();
   const gereedMelden = useMeldGebouwGereed();
@@ -178,6 +180,11 @@ export default function GebouwDetail() {
   const beschikbareGebruikers = (gebruikers ?? []).filter(
     (g) => !TEAM_UITGESLOTEN_ROLLEN.includes(g.rol ?? ""),
   );
+
+  // Toewijzen vereist het wijzig-/aanmaakniveau op gebouwen (zelfde drempel als
+  // de POST /gebouwen/:id/toewijzingen op de server). Zo verschijnt de
+  // teamlid-keuzelijst niet voor lees-only gebruikers.
+  const magToewijzen = heeftNiveau("gebouwen", 3);
 
   const gekozenGebruiker = beschikbareGebruikers.find(
     (g) => String(g.id) === gekozenGebruikerId,
@@ -812,7 +819,7 @@ export default function GebouwDetail() {
                       ))}
                     </ul>
                   )}
-                  {beschikbareGebruikers.length > 0 && (
+                  {magToewijzen && beschikbareGebruikers.length > 0 && (
                     <div className="flex flex-col gap-2 pt-1">
                       <Select
                         value={gekozenGebruikerId}

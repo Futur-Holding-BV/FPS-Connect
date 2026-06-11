@@ -169,6 +169,7 @@ export * from './tekeningUpdate';
 export * from './testrapport';
 export * from './testrapportInput';
 export * from './testrapportUpdate';
+export * from './toewijsbareGebruiker';
 export * from './toewijzing';
 export * from './toewijzingInput';
 export * from './tweeFactorSetup';

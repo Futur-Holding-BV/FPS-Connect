@@ -2764,6 +2764,18 @@ export const VoltooiOnderhoudResponse = zod.object({
 
 
 /**
+ * @summary Minimale lijst van toewijsbare personen voor toewijzingen
+ */
+export const ListToewijsbareGebruikersResponseItem = zod.object({
+  "id": zod.number(),
+  "naam": zod.string(),
+  "rol": zod.string(),
+  "functietitels": zod.array(zod.string()).optional()
+})
+export const ListToewijsbareGebruikersResponse = zod.array(ListToewijsbareGebruikersResponseItem)
+
+
+/**
  * @summary Lijst van gebruikers
  */
 export const ListGebruikersResponseItem = zod.object({

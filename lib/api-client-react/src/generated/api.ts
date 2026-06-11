@@ -144,6 +144,7 @@ import type {
   Testrapport,
   TestrapportInput,
   TestrapportUpdate,
+  ToewijsbareGebruiker,
   Toewijzing,
   ToewijzingInput,
   TweeFactorSetup,
@@ -7948,6 +7949,83 @@ export const useVoltooiOnderhoud = <TError = ErrorType<unknown>,
       > => {
       return useMutation(getVoltooiOnderhoudMutationOptions(options));
     }
+
+export const getListToewijsbareGebruikersUrl = () => {
+
+
+
+
+  return `/api/toewijsbare-gebruikers`
+}
+
+/**
+ * @summary Minimale lijst van toewijsbare personen voor toewijzingen
+ */
+export const listToewijsbareGebruikers = async ( options?: RequestInit): Promise<ToewijsbareGebruiker[]> => {
+
+  return customFetch<ToewijsbareGebruiker[]>(getListToewijsbareGebruikersUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListToewijsbareGebruikersQueryKey = () => {
+    return [
+    `/api/toewijsbare-gebruikers`
+    ] as const;
+    }
+
+
+export const getListToewijsbareGebruikersQueryOptions = <TData = Awaited<ReturnType<typeof listToewijsbareGebruikers>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listToewijsbareGebruikers>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListToewijsbareGebruikersQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listToewijsbareGebruikers>>> = ({ signal }) => listToewijsbareGebruikers({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listToewijsbareGebruikers>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListToewijsbareGebruikersQueryResult = NonNullable<Awaited<ReturnType<typeof listToewijsbareGebruikers>>>
+export type ListToewijsbareGebruikersQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Minimale lijst van toewijsbare personen voor toewijzingen
+ */
+
+export function useListToewijsbareGebruikers<TData = Awaited<ReturnType<typeof listToewijsbareGebruikers>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listToewijsbareGebruikers>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListToewijsbareGebruikersQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
 
 export const getListGebruikersUrl = () => {
 

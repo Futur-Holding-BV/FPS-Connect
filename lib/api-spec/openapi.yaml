@@ -2404,6 +2404,21 @@ paths:
                 $ref: "#/components/schemas/Onderhoudstaak"
 
   # ── GEBRUIKERS ────────────────────────────────────────────────────────────
+  /toewijsbare-gebruikers:
+    get:
+      operationId: listToewijsbareGebruikers
+      tags: [gebruikers]
+      summary: Minimale lijst van toewijsbare personen voor toewijzingen
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ToewijsbareGebruiker"
+
   /gebruikers:
     get:
       operationId: listGebruikers
@@ -5726,6 +5741,21 @@ components:
           type: ["integer", "null"]
         herkomst_automatisch:
           type: boolean
+
+    ToewijsbareGebruiker:
+      type: object
+      required: [id, naam, rol]
+      properties:
+        id:
+          type: integer
+        naam:
+          type: string
+        rol:
+          type: string
+        functietitels:
+          type: array
+          items:
+            type: string
 
     Profiel:
       type: object

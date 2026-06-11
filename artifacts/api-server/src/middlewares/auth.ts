@@ -169,3 +169,55 @@ export function requireBevoegdheidOfKlant(module: ModuleId, minNiveau: number): 
     }
   };
 }
+
+/**
+ * Laat door zodra de gebruiker aan TEN MINSTE EEN van de opgegeven
+ * (module, niveau)-eisen voldoet. Voor endpoints die door meerdere modules
+ * worden gedeeld — bijvoorbeeld een minimale lijst met toewijsbare personen
+ * die zowel bij gebouwteams, spot-uitvoering als onderhoud nodig is — zodat een
+ * gebruiker met gebouw- of voorzieningenrechten kan toewijzen zonder de
+ * volledige gebruikersbevoegdheid te hebben. Hoofdbeheerder mag altijd; klant
+ * nooit.
+ */
+export function requireEnigeBevoegdheid(
+  eisen: Array<[ModuleId, number]>,
+): RequestHandler {
+  return async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
+    const id = req.session.userId;
+    if (!id) {
+      res.status(401).json({ error: "Niet ingelogd" });
+      return;
+    }
+    try {
+      const [g] = await db
+        .select({ rol: gebruikersTable.rol, bevoegdheden: gebruikersTable.bevoegdheden })
+        .from(gebruikersTable)
+        .where(eq(gebruikersTable.id, id));
+      if (!g) {
+        res.status(403).json({ error: "Geen toegang" });
+        return;
+      }
+      if (g.rol === "hoofdbeheerder") {
+        next();
+        return;
+      }
+      if (g.rol === "klant") {
+        res.status(403).json({ error: "Geen toegang" });
+        return;
+      }
+      const bev = (g.bevoegdheden as Record<string, number> | null) ?? {};
+      if (eisen.some(([module, minNiveau]) => heeftNiveau(bev, module, minNiveau))) {
+        next();
+        return;
+      }
+      res.status(403).json({ error: "Geen toegang" });
+    } catch (err) {
+      req.log.error(err);
+      res.status(500).json({ error: "Interne serverfout" });
+    }
+  };
+}

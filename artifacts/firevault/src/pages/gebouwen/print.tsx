@@ -17,7 +17,7 @@ import {
   useListGebouwEmails,
   useGetGebouwEmailSamenvatting,
   useGetGebouwGevelbeeld,
-  useListGebruikers,
+  useListToewijsbareGebruikers,
   type Verdieping,
   type VoorzieningType,
 } from "@workspace/api-client-react";
@@ -827,7 +827,7 @@ export default function GebouwPrint() {
   const { data: gevelbeeld, isLoading: gevelbeeldLaden }      = useGetGebouwGevelbeeld(gebouwId);
   const { data: documenten, isLoading: documentenLaden }      = useListDocumenten();
   const { data: typen, isLoading: typenLaden }                = useListVoorzieningTypes();
-  const { isLoading: gebruikersLaden }      = useListGebruikers();
+  const { isLoading: gebruikersLaden }      = useListToewijsbareGebruikers();
 
   const typeNaam = useMemo(
     () => Object.fromEntries(((typen ?? []) as VoorzieningType[]).map((t) => [t.code, t.naam])),

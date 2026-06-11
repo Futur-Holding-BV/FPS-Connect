@@ -1472,6 +1472,13 @@ export interface Gebruiker {
   herkomst_automatisch?: boolean;
 }
 
+export interface ToewijsbareGebruiker {
+  id: number;
+  naam: string;
+  rol: string;
+  functietitels?: string[];
+}
+
 export type ProfielBevoegdheden = {[key: string]: number};
 
 export interface ProfielGebruiker {
