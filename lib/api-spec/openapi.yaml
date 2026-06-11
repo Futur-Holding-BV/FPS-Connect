@@ -5851,6 +5851,10 @@ components:
       type: string
       enum: [actueel, controle_nodig, vervangen, mogelijk_verouderd, ingetrokken]
 
+    GetestVoor:
+      type: string
+      enum: [wand, plafond, beide]
+
     Document:
       type: object
       required: [id, naam, documenttype, status, groep_id, revisie_nummer, ai_geanalyseerd, gearchiveerd, aangemaakt_op, toepassing_ids, applicatie_codes]
@@ -5873,6 +5877,10 @@ components:
           type: ["string", "null"]
         datum:
           type: ["string", "null"]
+        getest_voor:
+          oneOf:
+            - $ref: "#/components/schemas/GetestVoor"
+            - type: "null"
         pdf_url:
           type: ["string", "null"]
         status:
@@ -5921,6 +5929,8 @@ components:
           type: string
         datum:
           type: string
+        getest_voor:
+          $ref: "#/components/schemas/GetestVoor"
         pdf_url:
           type: string
         ai_geanalyseerd:
@@ -5996,6 +6006,10 @@ components:
           type: ["string", "null"]
         datum:
           type: ["string", "null"]
+        getest_voor:
+          oneOf:
+            - $ref: "#/components/schemas/GetestVoor"
+            - type: "null"
         toelichting:
           type: ["string", "null"]
         betrouwbaarheid:

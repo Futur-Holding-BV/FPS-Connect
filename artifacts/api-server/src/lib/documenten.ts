@@ -35,6 +35,13 @@ export function isDocumentStatus(v: unknown): v is DocumentStatus {
   return typeof v === "string" && (DOCUMENT_STATUSSEN as readonly string[]).includes(v);
 }
 
+export const GETEST_VOOR_WAARDEN = ["wand", "plafond", "beide"] as const;
+export type GetestVoor = (typeof GETEST_VOOR_WAARDEN)[number];
+
+export function isGetestVoor(v: unknown): v is GetestVoor {
+  return typeof v === "string" && (GETEST_VOOR_WAARDEN as readonly string[]).includes(v);
+}
+
 type DocumentRow = typeof documentenTable.$inferSelect;
 
 // Scalaire velden van een document-rij naar het snake_case API-antwoord.
@@ -49,6 +56,7 @@ function mapDocumentScalars(d: DocumentRow) {
     rapportnummer: d.rapportnummer,
     revisie: d.revisie,
     datum: d.datum,
+    getest_voor: d.getestVoor,
     pdf_url: d.pdfUrl,
     status: d.status,
     groep_id: d.groepId,

@@ -7,6 +7,7 @@
  */
 import type { DocumentInputAiMetadata } from './documentInputAiMetadata';
 import type { DocumentType } from './documentType';
+import type { GetestVoor } from './getestVoor';
 
 export interface DocumentInput {
   naam: string;
@@ -17,6 +18,7 @@ export interface DocumentInput {
   rapportnummer?: string;
   revisie?: string;
   datum?: string;
+  getest_voor?: GetestVoor;
   pdf_url?: string;
   ai_geanalyseerd?: boolean;
   ai_metadata?: DocumentInputAiMetadata;

@@ -1815,6 +1815,15 @@ export const DocumentStatus = {
   ingetrokken: 'ingetrokken',
 } as const;
 
+export type GetestVoor = typeof GetestVoor[keyof typeof GetestVoor];
+
+
+export const GetestVoor = {
+  wand: 'wand',
+  plafond: 'plafond',
+  beide: 'beide',
+} as const;
+
 /**
  * @nullable
  */
@@ -1836,6 +1845,7 @@ export interface Document {
   revisie?: string | null;
   /** @nullable */
   datum?: string | null;
+  getest_voor?: GetestVoor | null;
   /** @nullable */
   pdf_url?: string | null;
   status: DocumentStatus;
@@ -1862,6 +1872,7 @@ export interface DocumentInput {
   rapportnummer?: string;
   revisie?: string;
   datum?: string;
+  getest_voor?: GetestVoor;
   pdf_url?: string;
   ai_geanalyseerd?: boolean;
   ai_metadata?: DocumentInputAiMetadata;
@@ -1905,6 +1916,7 @@ export interface DocumentAiAnalyseResultaat {
   revisie?: string | null;
   /** @nullable */
   datum?: string | null;
+  getest_voor?: GetestVoor | null;
   /** @nullable */
   toelichting?: string | null;
   /**

@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { DocumentType } from './documentType';
+import type { GetestVoor } from './getestVoor';
 
 export interface DocumentAiAnalyseResultaat {
   /** @nullable */
@@ -23,6 +24,7 @@ export interface DocumentAiAnalyseResultaat {
   revisie?: string | null;
   /** @nullable */
   datum?: string | null;
+  getest_voor?: GetestVoor | null;
   /** @nullable */
   toelichting?: string | null;
   /**

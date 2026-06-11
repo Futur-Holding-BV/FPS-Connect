@@ -23,6 +23,7 @@ import {
   useCreateScheiding,
   useDeleteScheiding,
   useListLabels,
+  useListDocumenten,
 } from "@workspace/api-client-react";
 import { useUpload } from "@workspace/object-storage-web";
 import { Button } from "@/components/ui/button";
@@ -403,6 +404,35 @@ export default function Plattegrond() {
     return [...new Set(geselecteerd.map((l) => l.fabrikant as string))];
   }, [nieuwLabelData, nieuwLabelIds]);
 
+  // Voorselectie wand/plafond uit de gekoppelde toepassing(en): wordt de keuze
+  // afgeleid uit het 'getest voor'-veld van de actuele documenten die aan de
+  // geselecteerde toepassingen hangen. Zodra de monteur zelf kiest, blijft die
+  // keuze staan (handmatige keuze wint).
+  const { data: alleDocumenten = [] } = useListDocumenten();
+  const wandPlafondHandmatigRef = useRef(false);
+
+  const afgeleidWandPlafond = useMemo(() => {
+    if (!nieuwLabelIds.length) return "";
+    const vlakken = new Set<string>();
+    for (const d of alleDocumenten as any[]) {
+      if (d.gearchiveerd || d.status !== "actueel") continue;
+      if (d.getest_voor !== "wand" && d.getest_voor !== "plafond") continue;
+      const toep = (d.toepassing_ids ?? []) as number[];
+      if (!toep.some((tid) => nieuwLabelIds.includes(tid))) continue;
+      vlakken.add(d.getest_voor);
+    }
+    return vlakken.size === 1 ? [...vlakken][0] : "";
+  }, [alleDocumenten, nieuwLabelIds]);
+
+  useEffect(() => {
+    if (wandPlafondHandmatigRef.current) return;
+    setNieuwForm((f) =>
+      f.wand_of_plafond === afgeleidWandPlafond
+        ? f
+        : { ...f, wand_of_plafond: afgeleidWandPlafond },
+    );
+  }, [afgeleidWandPlafond]);
+
   const W = pdfDims?.w ?? CANVAS_W;
   const H = pdfDims?.h ?? CANVAS_H;
 
@@ -753,6 +783,7 @@ export default function Plattegrond() {
     setNieuwLabelIds([]);
     setVoorFotos([]);
     setNaFotos([]);
+    wandPlafondHandmatigRef.current = false;
     refetch();
     refetchSpotnummer();
   }
@@ -764,6 +795,7 @@ export default function Plattegrond() {
       setNieuwLabelIds([]);
       setVoorFotos([]);
       setNaFotos([]);
+      wandPlafondHandmatigRef.current = false;
     }
   }
 
@@ -1216,7 +1248,10 @@ export default function Plattegrond() {
                 <Label>Wand of plafond</Label>
                 <Select
                   value={nieuwForm.wand_of_plafond || GEEN_WAND_PLAFOND_VAL}
-                  onValueChange={(v) => setNieuwForm((f) => ({ ...f, wand_of_plafond: v === GEEN_WAND_PLAFOND_VAL ? "" : v }))}
+                  onValueChange={(v) => {
+                    wandPlafondHandmatigRef.current = true;
+                    setNieuwForm((f) => ({ ...f, wand_of_plafond: v === GEEN_WAND_PLAFOND_VAL ? "" : v }));
+                  }}
                 >
                   <SelectTrigger><SelectValue placeholder="Kies plaatsing..." /></SelectTrigger>
                   <SelectContent>

@@ -20,6 +20,7 @@ export const documentenTable = pgTable("documenten", {
   rapportnummer: text("rapportnummer"),
   revisie: text("revisie"),
   datum: text("datum"),
+  getestVoor: text("getest_voor"),
   pdfUrl: text("pdf_url"),
   status: text("status").notNull().default("actueel"),
   groepId: text("groep_id").notNull().default(sql`gen_random_uuid()::text`),

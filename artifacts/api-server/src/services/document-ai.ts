@@ -1,6 +1,11 @@
 import { logger } from "../lib/logger";
 import { maakOpenAiClient } from "../lib/openai";
-import { isDocumentType, type DocumentType } from "../lib/documenten";
+import {
+  isDocumentType,
+  type DocumentType,
+  isGetestVoor,
+  type GetestVoor,
+} from "../lib/documenten";
 
 export interface DocumentAnalyse {
   naam: string | null;
@@ -11,6 +16,7 @@ export interface DocumentAnalyse {
   rapportnummer: string | null;
   revisie: string | null;
   datum: string | null;
+  getest_voor: GetestVoor | null;
   toelichting: string | null;
   betrouwbaarheid: string | null;
 }
@@ -29,6 +35,7 @@ function leegResultaat(toelichting: string): DocumentAnalyse {
     rapportnummer: null,
     revisie: null,
     datum: null,
+    getest_voor: null,
     toelichting,
     betrouwbaarheid: "laag",
   };
@@ -49,6 +56,7 @@ Geef uitsluitend geldige JSON terug met deze velden:
 - rapportnummer (tekst of null): het rapport-, certificaat- of ETA-nummer (bijv. "ETA-11/0429", "WFRGENT 21-001").
 - revisie (tekst of null): de revisie- of versieaanduiding indien vermeld.
 - datum (tekst of null): de uitgifte- of revisiedatum in formaat JJJJ-MM-DD indien af te leiden, anders zoals vermeld.
+- getest_voor (tekst of null): kies exact één uit: wand, plafond, beide. Geeft aan voor welke scheidingsconstructie het document is getest of gecertificeerd. Kies "wand" bij een wandopstelling (flexibele of rigide wand), "plafond" bij een vloer/plafond-opstelling, en "beide" als het document expliciet zowel wand als vloer/plafond dekt. Laat op null als dit niet uit de tekst blijkt.
 - toelichting (korte Nederlandse tekst): waar je de gegevens vandaan haalde.
 - betrouwbaarheid (tekst): "laag", "midden" of "hoog".
 Antwoord in het Nederlands. Alleen JSON, geen extra tekst.`;
@@ -100,6 +108,9 @@ export async function analyseerDocumentTekst(
   const ruwType = strOfNull(parsed.documenttype)?.toLowerCase() ?? null;
   const documenttype = ruwType && isDocumentType(ruwType) ? ruwType : null;
 
+  const ruwGetest = strOfNull(parsed.getest_voor)?.toLowerCase() ?? null;
+  const getestVoor = ruwGetest && isGetestVoor(ruwGetest) ? ruwGetest : null;
+
   return {
     naam: strOfNull(parsed.naam),
     fabrikant: strOfNull(parsed.fabrikant),
@@ -109,6 +120,7 @@ export async function analyseerDocumentTekst(
     rapportnummer: strOfNull(parsed.rapportnummer),
     revisie: strOfNull(parsed.revisie),
     datum: strOfNull(parsed.datum),
+    getest_voor: getestVoor,
     toelichting: strOfNull(parsed.toelichting),
     betrouwbaarheid: strOfNull(parsed.betrouwbaarheid) ?? "midden",
   };

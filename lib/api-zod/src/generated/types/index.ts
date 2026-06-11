@@ -80,6 +80,7 @@ export * from './gebruikerTaal';
 export * from './gebruikerUitnodigingStatus';
 export * from './gebruikerUpdate';
 export * from './gebruikerUpdateBevoegdheden';
+export * from './getestVoor';
 export * from './getGebouwGevelbeeld200';
 export * from './getRecenteActiviteitParams';
 export * from './getVervaldagenParams';

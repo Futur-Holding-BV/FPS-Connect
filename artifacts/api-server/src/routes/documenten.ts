@@ -16,6 +16,7 @@ import {
   syncDocumentApplicaties,
   isDocumentType,
   isDocumentStatus,
+  isGetestVoor,
 } from "../lib/documenten";
 import { analyseerDocumentTekst } from "../services/document-ai";
 
@@ -137,6 +138,7 @@ router.post("/documenten", requireBevoegdheid("bibliotheek", 3), async (req, res
         rapportnummer: b.rapportnummer ?? null,
         revisie: b.revisie ?? null,
         datum: b.datum ?? null,
+        getestVoor: isGetestVoor(b.getest_voor) ? b.getest_voor : null,
         pdfUrl: b.pdf_url ?? null,
         aiGeanalyseerd: b.ai_geanalyseerd === true,
         aiMetadata: b.ai_metadata ?? null,
@@ -230,6 +232,7 @@ router.post("/documenten/:id/revisies", requireBevoegdheid("bibliotheek", 3), as
           rapportnummer: b.rapportnummer ?? bron.rapportnummer,
           revisie: b.revisie ?? bron.revisie,
           datum: b.datum ?? bron.datum,
+          getestVoor: isGetestVoor(b.getest_voor) ? b.getest_voor : bron.getestVoor,
           pdfUrl: b.pdf_url ?? bron.pdfUrl,
           aiGeanalyseerd:
             b.ai_geanalyseerd === undefined

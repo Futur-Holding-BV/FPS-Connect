@@ -99,6 +99,13 @@ function statusBadge(status: string) {
   );
 }
 
+const GEEN_GETEST = "__geen__";
+const GETEST_VOOR_LABELS: Record<string, string> = {
+  wand: "Wand",
+  plafond: "Plafond",
+  beide: "Wand en plafond",
+};
+
 const AI_VELDEN = [
   "naam",
   "documenttype",
@@ -108,6 +115,7 @@ const AI_VELDEN = [
   "rapportnummer",
   "revisie",
   "datum",
+  "getest_voor",
 ] as const;
 type AiVeld = (typeof AI_VELDEN)[number];
 
@@ -120,6 +128,7 @@ interface FormState {
   rapportnummer: string;
   revisie: string;
   datum: string;
+  getest_voor: string;
   pdf_url: string;
   toepassing_ids: number[];
   applicatie_codes: string[];
@@ -136,6 +145,7 @@ const LEEG_FORM: FormState = {
   rapportnummer: "",
   revisie: "",
   datum: "",
+  getest_voor: "",
   pdf_url: "",
   toepassing_ids: [],
   applicatie_codes: [],
@@ -253,6 +263,7 @@ function DocumentFormulier({
           rapportnummer: basisDocument.rapportnummer ?? "",
           revisie: basisDocument.revisie ?? "",
           datum: basisDocument.datum ?? "",
+          getest_voor: basisDocument.getest_voor ?? "",
           pdf_url: "",
           toepassing_ids: basisDocument.toepassing_ids ?? [],
           applicatie_codes: basisDocument.applicatie_codes ?? [],
@@ -306,6 +317,7 @@ function DocumentFormulier({
           rapportnummer: res.rapportnummer,
           revisie: res.revisie,
           datum: res.datum,
+          getest_voor: res.getest_voor,
         };
         for (const veld of AI_VELDEN) {
           const waarde = map[veld];
@@ -364,6 +376,9 @@ function DocumentFormulier({
       rapportnummer: form.rapportnummer.trim() || undefined,
       revisie: form.revisie.trim() || undefined,
       datum: form.datum.trim() || undefined,
+      getest_voor: form.getest_voor
+        ? (form.getest_voor as DocumentInput["getest_voor"])
+        : undefined,
       pdf_url: form.pdf_url || undefined,
       ai_geanalyseerd: form.ai_geanalyseerd || undefined,
       ai_metadata: form.ai_metadata ?? undefined,
@@ -580,6 +595,25 @@ function DocumentFormulier({
                 placeholder="JJJJ-MM-DD"
               />
             </div>
+            <div>
+              <UiLabel>Getest voor</UiLabel>
+              <Select
+                value={form.getest_voor || GEEN_GETEST}
+                onValueChange={(v) => zet("getest_voor", v === GEEN_GETEST ? "" : v)}
+              >
+                <SelectTrigger className={amber("getest_voor")}>
+                  <SelectValue placeholder="Kies wand/plafond..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={GEEN_GETEST}>Niet opgegeven</SelectItem>
+                  {Object.entries(GETEST_VOOR_LABELS).map(([w, label]) => (
+                    <SelectItem key={w} value={w}>
+                      {label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -708,6 +742,10 @@ function DocumentDetail({
             <Info label="Rapportnummer" waarde={doc.rapportnummer} />
             <Info label="Revisie" waarde={doc.revisie} />
             <Info label="Datum" waarde={doc.datum} />
+            <Info
+              label="Getest voor"
+              waarde={doc.getest_voor ? GETEST_VOOR_LABELS[doc.getest_voor] : null}
+            />
           </div>
 
           {doc.pdf_url && (

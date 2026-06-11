@@ -8,6 +8,7 @@
 import type { DocumentAiMetadata } from './documentAiMetadata';
 import type { DocumentStatus } from './documentStatus';
 import type { DocumentType } from './documentType';
+import type { GetestVoor } from './getestVoor';
 
 export interface Document {
   id: number;
@@ -25,6 +26,7 @@ export interface Document {
   revisie?: string | null;
   /** @nullable */
   datum?: string | null;
+  getest_voor?: GetestVoor | null;
   /** @nullable */
   pdf_url?: string | null;
   status: DocumentStatus;
