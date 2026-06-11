@@ -15,22 +15,11 @@ import {
 import { eq, and, ilike, sql } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
 import { heeftNiveau } from "@workspace/permissies";
-import { effectieveContext } from "../utils/rol";
+import { effectieveContext, isBeperktTotToegewezen } from "../utils/rol";
 import { getLabelsVoorVoorziening, syncVoorzieningLabels } from "../lib/classificatie";
 
 const router = Router();
 const lezenVoorzieningen = requireBevoegdheid("voorzieningen", 1);
-
-// Rollen die uitsluitend hun toegewezen gebouwen mogen zien.
-const TOEGEWEZEN_ROLLEN = ["monteur", "controleur"];
-
-async function gebruikerRol(userId: number): Promise<string> {
-  const [g] = await db
-    .select({ rol: gebruikersTable.rol })
-    .from(gebruikersTable)
-    .where(eq(gebruikersTable.id, userId));
-  return g?.rol ?? "";
-}
 
 async function toegewezenGebouwIds(userId: number): Promise<number[]> {
   const rows = await db
@@ -68,12 +57,12 @@ async function gebouwIdVanScheiding(scheidingId: number): Promise<number | null>
   return gebouwIdVanVerdieping(s.verdiepingId);
 }
 
-// Centrale toewijzingsguard: monteur/controleur mogen alleen bij hun toegewezen
-// gebouwen. Andere rollen (beheerder/hoofdbeheerder/klant) worden hier niet
-// beperkt; rolafdwinging gebeurt via requireRol. Geeft true als toegestaan.
+// Centrale toewijzingsguard: gebruikers die tot hun toegewezen gebouwen beperkt
+// zijn (bepaald via de bevoegdheden-matrix) mogen alleen daar bij. Gebruikers met
+// gebouwbeheer en de hoofdbeheerder worden hier niet beperkt; rolafdwinging
+// gebeurt via requireBevoegdheid. Geeft true als toegestaan.
 async function magBijGebouw(userId: number, gebouwId: number | null): Promise<boolean> {
-  const rol = await gebruikerRol(userId);
-  if (!TOEGEWEZEN_ROLLEN.includes(rol)) return true;
+  if (!(await isBeperktTotToegewezen(userId))) return true;
   if (gebouwId == null) return false;
   const ids = await toegewezenGebouwIds(userId);
   return ids.includes(gebouwId);
@@ -190,10 +179,10 @@ router.get("/voorzieningen", lezenVoorzieningen, async (req, res) => {
     const { gebouw_id, verdieping_id, type, status, gearchiveerd, classificatie, zoek, pagina, per_pagina } = req.query;
     let all = await db.select().from(voorzieningenTable);
 
-    // Monteurs en controleurs zien alleen voorzieningen in hun toegewezen gebouwen.
+    // Beperkte gebruikers zien alleen voorzieningen in hun toegewezen gebouwen.
     // effectieveContext zodat impersonatie (bekijken als) correct doorwerkt.
-    const { userId: effectiefUserId, rol: effectiefRol } = await effectieveContext(req);
-    if (TOEGEWEZEN_ROLLEN.includes(effectiefRol)) {
+    const { userId: effectiefUserId, beperkt } = await effectieveContext(req);
+    if (beperkt) {
       const ids = await toegewezenGebouwIds(effectiefUserId);
       all = all.filter((v) => ids.includes(v.gebouwId));
     }
@@ -631,10 +620,10 @@ router.get("/verdiepingen/:id/voorzieningen", lezenVoorzieningen, async (req, re
   try {
     const id = parseInt(String(req.params.id));
 
-    // Monteur/controleur mag alleen verdiepingen van toegewezen gebouwen zien.
+    // Beperkte gebruikers mogen alleen verdiepingen van toegewezen gebouwen zien.
     // effectieveContext zodat impersonatie (bekijken als) correct doorwerkt.
-    const { userId: effectiefUserId, rol: effectiefRol } = await effectieveContext(req);
-    if (TOEGEWEZEN_ROLLEN.includes(effectiefRol)) {
+    const { userId: effectiefUserId, beperkt } = await effectieveContext(req);
+    if (beperkt) {
       const gebouwId = await gebouwIdVanVerdieping(id);
       const ids = await toegewezenGebouwIds(effectiefUserId);
       if (gebouwId == null || !ids.includes(gebouwId)) {
@@ -694,10 +683,10 @@ router.get("/verdiepingen/:id/scheidingen", lezenVoorzieningen, async (req, res)
   try {
     const id = parseInt(String(req.params.id));
 
-    // Monteur/controleur mag alleen verdiepingen van toegewezen gebouwen zien.
+    // Beperkte gebruikers mogen alleen verdiepingen van toegewezen gebouwen zien.
     // effectieveContext zodat impersonatie (bekijken als) correct doorwerkt.
-    const { userId: effectiefUserId, rol: effectiefRol } = await effectieveContext(req);
-    if (TOEGEWEZEN_ROLLEN.includes(effectiefRol)) {
+    const { userId: effectiefUserId, beperkt } = await effectieveContext(req);
+    if (beperkt) {
       const gebouwId = await gebouwIdVanVerdieping(id);
       const ids = await toegewezenGebouwIds(effectiefUserId);
       if (gebouwId == null || !ids.includes(gebouwId)) {

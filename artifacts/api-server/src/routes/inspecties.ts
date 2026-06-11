@@ -10,13 +10,11 @@ import {
 } from "@workspace/db";
 import { eq, inArray } from "drizzle-orm";
 import { requireBevoegdheid, requireBevoegdheidOfKlant } from "../middlewares/auth";
-import { effectieveContext } from "../utils/rol";
+import { effectieveContext, isBeperktTotToegewezen } from "../utils/rol";
 
 const router = Router();
 const lezenInspecties = requireBevoegdheid("inspecties", 1);
 const lezenInspectiesOfKlant = requireBevoegdheidOfKlant("inspecties", 1);
-
-const TOEGEWEZEN_ROLLEN = ["monteur", "controleur", "klant"];
 
 async function toegewezenGebouwIds(userId: number): Promise<number[]> {
   const rows = await db
@@ -26,20 +24,12 @@ async function toegewezenGebouwIds(userId: number): Promise<number[]> {
   return rows.map((r) => r.gebouwId);
 }
 
-// Echte sessie-rol (geen impersonatie): write-autorisatie blijft altijd op de
-// werkelijke gebruiker gebaseerd.
-async function echteRol(userId: number): Promise<string> {
-  const [g] = await db
-    .select({ rol: gebruikersTable.rol })
-    .from(gebruikersTable)
-    .where(eq(gebruikersTable.id, userId));
-  return g?.rol ?? "gebruiker";
-}
-
-// Object-level guard: monteur/controleur mogen alleen muteren bij hun toegewezen
-// gebouwen. Beheerder/hoofdbeheerder zijn niet beperkt (rolafdwinging via requireRol).
+// Object-level guard: gebruikers die tot hun toegewezen gebouwen beperkt zijn
+// (bepaald via de bevoegdheden-matrix) mogen alleen daar muteren. Gebruikers met
+// gebouwbeheer en de hoofdbeheerder zijn niet beperkt. De echte sessie-gebruiker
+// telt: write-autorisatie blijft altijd op de werkelijke gebruiker gebaseerd.
 async function magBijGebouw(userId: number, gebouwId: number | null): Promise<boolean> {
-  if (!TOEGEWEZEN_ROLLEN.includes(await echteRol(userId))) return true;
+  if (!(await isBeperktTotToegewezen(userId))) return true;
   if (gebouwId == null) return false;
   return (await toegewezenGebouwIds(userId)).includes(gebouwId);
 }
@@ -81,27 +71,21 @@ async function mapInspectie(i: typeof inspectiesTable.$inferSelect) {
 // GET /inspecties
 router.get("/inspecties", lezenInspectiesOfKlant, async (req, res) => {
   try {
-    const { userId, rol: effectiefRol } = await effectieveContext(req);
+    const { userId, beperkt } = await effectieveContext(req);
     const { gebouw_id, voorziening_id, type, status } = req.query;
 
     let all = await db.select().from(inspectiesTable);
 
-    // Monteur/controleur ziet alleen inspecties die:
+    // Beperkte gebruikers zien alleen inspecties die:
     //   (a) direct aan hen zijn toegewezen (inspecteur_id = userId), OF
     //   (b) horen bij een gebouw dat aan hen is toegewezen
-    if (TOEGEWEZEN_ROLLEN.includes(effectiefRol)) {
+    if (beperkt) {
       const gebouwIds = await toegewezenGebouwIds(userId);
       all = all.filter(
         (i) =>
           i.inspecteurId === userId ||
           (i.gebouwId != null && gebouwIds.includes(i.gebouwId)),
       );
-    }
-
-    // Controleur mag uitsluitend onderhoudsinspecties zien — oplevering en
-    // projectinspecties vallen buiten hun workflow.
-    if ((await echteRol(userId)) === "controleur") {
-      all = all.filter((i) => CONTROLEUR_INSPECTIE_TYPES.includes(i.type));
     }
 
     if (gebouw_id) all = all.filter((i) => i.gebouwId === parseInt(gebouw_id as string));
@@ -118,22 +102,11 @@ router.get("/inspecties", lezenInspectiesOfKlant, async (req, res) => {
 });
 
 // POST /inspecties
-// Controleur mag alleen onderhoudsinspecties aanmaken (periodiek/jaarlijks/herstel).
-// Oplevering en projectinspecties zijn voorbehouden aan monteur en beheerder.
-const CONTROLEUR_INSPECTIE_TYPES = ["periodiek", "jaarlijks", "herstel"];
-
 router.post("/inspecties", requireBevoegdheid("inspecties", 3), async (req, res) => {
   try {
     const { type, gebouw_id, voorziening_id, inspecteur_id, geplande_datum, bevindingen } = req.body;
     if (!type || !gebouw_id) {
       return res.status(400).json({ error: "type en gebouw_id zijn verplicht" });
-    }
-    // Controleur mag uitsluitend onderhoudsinspecties registreren
-    const rolAanvrager = await echteRol(req.session.userId!);
-    if (rolAanvrager === "controleur" && !CONTROLEUR_INSPECTIE_TYPES.includes(type)) {
-      return res.status(403).json({
-        error: "Controleurs mogen alleen periodieke, jaarlijkse of herstel-inspecties aanmaken.",
-      });
     }
     if (!(await magBijGebouw(req.session.userId!, gebouw_id))) {
       return res.status(403).json({ error: "Geen toegang tot dit gebouw" });
@@ -179,13 +152,13 @@ router.post("/inspecties", requireBevoegdheid("inspecties", 3), async (req, res)
 router.get("/inspecties/:id", lezenInspectiesOfKlant, async (req, res) => {
   try {
     const id = parseInt(String(req.params.id));
-    const { userId, rol: effectiefRolDetail } = await effectieveContext(req);
+    const { userId, beperkt } = await effectieveContext(req);
 
     const [i] = await db.select().from(inspectiesTable).where(eq(inspectiesTable.id, id));
     if (!i) return res.status(404).json({ error: "Inspectie niet gevonden" });
 
-    // Toegangscontrole voor monteur/controleur
-    if (TOEGEWEZEN_ROLLEN.includes(effectiefRolDetail)) {
+    // Toegangscontrole voor beperkte gebruikers
+    if (beperkt) {
       const gebouwIds = await toegewezenGebouwIds(userId);
       const toegang =
         i.inspecteurId === userId ||

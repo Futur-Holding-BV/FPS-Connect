@@ -1,38 +1,20 @@
 ---
-name: Controleur rol — alleen onderhoud
-description: Controleur zit niet in normale project-/opleverflow; uitsluitend voor onderhoudsinspecties bij onderhoudscontracten.
+name: Controleur/monteur rollen — gedecommissioneerd (contract)
+description: De rollen monteur/controleur bestaan niet meer in het API-contract; rol-enum = hoofdbeheerder/gebruiker/klant. Scoping en inspectietoegang zijn matrix-driven.
 ---
 
-## Regel
-Controleur werkt **alleen** binnen de onderhoudsfase van een onderhoudscontract. Hij is niet betrokken bij normale project-uitvoering (spots plaatsen, oplevering, uitvoeringsworkflow).
+## Huidige stand (rolmodel)
+Het API-contract kent nog maar drie rollen: **hoofdbeheerder, gebruiker, klant** (openapi rol-enums). De oude rollen **monteur** en **controleur** zijn gedecommissioneerd.
 
-**Why:** Vóór aanpassing stond controleur overal in BEWERKER_ROLLEN en kon hij projectinspecties aanmaken/zien — wat de rol semantisch onjuist maakte.
+**Why:** rolgebaseerde businesslogica is vervangen door de bevoegdheden-matrix. Een aparte monteur/controleur-rol is overbodig: toegang volgt uit module-niveaus, niet uit een rolnaam.
 
-## Hoe toegepast
+## Server — wat verdwenen is
+- `TOEGEWEZEN_ROLLEN = ["monteur","controleur"]` bestaat NIET meer. Gebouw-scoping (alleen toegewezen gebouwen zien) loopt nu via `effectieveContext(req).beperkt` (lees-/listfilters) en `isBeperktTotToegewezen(userId)` (write-guards) in `utils/rol.ts`.
+- "beperkt" = NIET hoofdbeheerder EN gebouwen-module niveau < 2 (GEBOUW_BEHEER_NIVEAU). hoofdbeheerder nooit beperkt; klant → lege matrix.
+- De controleur-inspectiebeperking (`CONTROLEUR_INSPECTIE_TYPES`, `=== "controleur"` in `inspecties.ts` GET-filter + POST-guard) is VERWIJDERD. Inspectietoegang is nu puur niveau-driven via `requireBevoegdheid("inspecties", n)`. Er is geen matrix-concept "alleen onderhoudsinspectietypes".
 
-### Server (`inspecties.ts`)
-- `CONTROLEUR_INSPECTIE_TYPES = ["periodiek", "jaarlijks", "herstel"]`
-- `POST /inspecties`: als `echteRol === "controleur"` en type niet in lijst → HTTP 403
-- `GET /inspecties`: server filtert resultaten voor controleur op `CONTROLEUR_INSPECTIE_TYPES`
+## Legacy migratiepad blijft
+`bevoegdhedenVoorLegacyRol(rol)` in `lib/permissies` vertaalt nog niet-gemigreerde accounts (waaronder rol "monteur"/"controleur" met lege matrix) naar een matrix. NIET aanraken — dit is het migratiepad, geen live rolbranch.
 
-### Server (`onderhoud.ts`, `gebouwen.ts`, `dashboard.ts`)
-- `TOEGEWEZEN_ROLLEN = ["monteur", "controleur"]` blijft intact voor gebouwtoewijzingsfilter
-
-### Web (`plattegrond.tsx`)
-- `BEWERKER_ROLLEN = ["monteur", "beheerder", "hoofdbeheerder"]` — controleur verwijderd
-- Controleur kan plattegrond inzien maar geen spots plaatsen/bewerken
-
-### Web (`voorzieningen/detail.tsx`)
-- `BEWERK_ROLLEN = ["monteur", "beheerder", "hoofdbeheerder"]` — controleur verwijderd
-- Veld-label `controleur_naam` hernoemd naar "Onderhoudscontroleur" (semantisch correct)
-
-### Web (dashboard/monteur.tsx)
-- Controleur-dashboard filtert inspecties client-side op `ONDERHOUD_TYPES`
-- Werkbonnen-sectie zichtbaar voor controleur (ze worden betrokken bij onderhoudswerkorders)
-- Snelkoppelingen: "Voorzieningen" verborgen voor controleur
-
-### Web (layouts/monteur-layout.tsx)
-- `ROUTES_CONTROLEUR` bevat `/onderhoud` (toegevoegd) maar niet `/voorzieningen` (verwijderd)
-
-### Rol-definitie (`rol-types.ts`, `gebruikers/index.tsx`)
-- Beschrijving: "Onderhoud — periodieke en jaarlijkse controles bij onderhoudscontracten"
+## Web (frontend) — mogelijk nog legacy
+Frontend kan nog "monteur"/"controleur" referenties bevatten (bv. plattegrond.tsx BEWERKER_ROLLEN, monteur-layout, dashboards). Dat viel buiten de server/contract-opschoning; controleer en saneer apart indien nodig.

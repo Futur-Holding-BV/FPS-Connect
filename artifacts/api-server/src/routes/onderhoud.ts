@@ -10,12 +10,10 @@ import {
 } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
-import { effectieveContext } from "../utils/rol";
+import { effectieveContext, isBeperktTotToegewezen } from "../utils/rol";
 
 const router = Router();
 const lezenOnderhoud = requireBevoegdheid("onderhoud", 1);
-
-const TOEGEWEZEN_ROLLEN = ["monteur", "controleur"];
 
 async function toegewezenGebouwIds(userId: number): Promise<number[]> {
   const rows = await db
@@ -23,16 +21,6 @@ async function toegewezenGebouwIds(userId: number): Promise<number[]> {
     .from(gebouwToewijzingenTable)
     .where(eq(gebouwToewijzingenTable.gebruikerId, userId));
   return rows.map((r) => r.gebouwId);
-}
-
-// Echte sessie-rol (geen impersonatie): write-autorisatie blijft altijd op de
-// werkelijke gebruiker gebaseerd.
-async function echteRol(userId: number): Promise<string> {
-  const [g] = await db
-    .select({ rol: gebruikersTable.rol })
-    .from(gebruikersTable)
-    .where(eq(gebruikersTable.id, userId));
-  return g?.rol ?? "viewer";
 }
 
 // Leidt het gebouw af uit een voorziening (onderhoud kan aan een voorziening
@@ -46,10 +34,12 @@ async function gebouwIdVanVoorziening(voorzieningId: number | null | undefined):
   return v?.gebouwId ?? null;
 }
 
-// Object-level guard: monteur/controleur mogen alleen muteren bij hun toegewezen
-// gebouwen. Beheerder/hoofdbeheerder zijn niet beperkt (rolafdwinging via requireRol).
+// Object-level guard: gebruikers die tot hun toegewezen gebouwen beperkt zijn
+// (bepaald via de bevoegdheden-matrix) mogen alleen daar muteren. Gebruikers met
+// gebouwbeheer en de hoofdbeheerder zijn niet beperkt. De echte sessie-gebruiker
+// telt: write-autorisatie blijft altijd op de werkelijke gebruiker gebaseerd.
 async function magBijGebouw(userId: number, gebouwId: number | null): Promise<boolean> {
-  if (!TOEGEWEZEN_ROLLEN.includes(await echteRol(userId))) return true;
+  if (!(await isBeperktTotToegewezen(userId))) return true;
   if (gebouwId == null) return false;
   return (await toegewezenGebouwIds(userId)).includes(gebouwId);
 }
@@ -99,15 +89,15 @@ async function mapOnderhoud(o: typeof onderhoudTable.$inferSelect) {
 // GET /onderhoud
 router.get("/onderhoud", lezenOnderhoud, async (req, res) => {
   try {
-    const { userId, rol: effectiefRol } = await effectieveContext(req);
+    const { userId, beperkt } = await effectieveContext(req);
     const { voorziening_id, gebouw_id, status } = req.query;
 
     let all = await db.select().from(onderhoudTable);
 
-    // Monteur/controleur ziet alleen onderhoud dat:
+    // Beperkte gebruikers zien alleen onderhoud dat:
     //   (a) direct aan hen is toegewezen (toegewezen_aan_id = userId), OF
     //   (b) hoort bij een gebouw dat aan hen is toegewezen
-    if (TOEGEWEZEN_ROLLEN.includes(effectiefRol)) {
+    if (beperkt) {
       const gebouwIds = await toegewezenGebouwIds(userId);
       all = all.filter(
         (o) =>
@@ -181,13 +171,13 @@ router.post("/onderhoud", requireBevoegdheid("onderhoud", 3), async (req, res) =
 router.get("/onderhoud/:id", lezenOnderhoud, async (req, res) => {
   try {
     const id = parseInt(String(req.params.id));
-    const { userId, rol: effectiefRolDetail } = await effectieveContext(req);
+    const { userId, beperkt } = await effectieveContext(req);
 
     const [o] = await db.select().from(onderhoudTable).where(eq(onderhoudTable.id, id));
     if (!o) return res.status(404).json({ error: "Onderhoudstaak niet gevonden" });
 
-    // Toegangscontrole voor monteur/controleur
-    if (TOEGEWEZEN_ROLLEN.includes(effectiefRolDetail)) {
+    // Toegangscontrole voor beperkte gebruikers
+    if (beperkt) {
       const gebouwIds = await toegewezenGebouwIds(userId);
       const toegang =
         o.toegewezenAanId === userId ||

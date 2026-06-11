@@ -25,7 +25,6 @@ const lezenGebouwen = requireBevoegdheid("gebouwen", 1);
 const lezenGebouwenOfKlant = requireBevoegdheidOfKlant("gebouwen", 1);
 
 const BEHEERDER_ROLLEN = ["beheerder", "hoofdbeheerder"];
-const TOEGEWEZEN_ROLLEN = ["monteur", "controleur", "klant"];
 
 function kapitaliseerWoorden(waarde: string): string {
   return waarde.replace(
@@ -77,12 +76,13 @@ async function toegewezenGebouwIds(userId: number): Promise<number[]> {
   return rows.map((r) => r.gebouwId);
 }
 
-// Centrale toewijzingsguard: monteur/controleur mogen alleen bij hun toegewezen
-// gebouwen. Andere rollen worden hier niet beperkt; rolafdwinging gebeurt via
-// requireRol. Geeft true als toegestaan.
+// Centrale toewijzingsguard: gebruikers die tot hun toegewezen gebouwen beperkt
+// zijn (bepaald via de bevoegdheden-matrix) mogen alleen daar bij. Gebruikers met
+// gebouwbeheer en de hoofdbeheerder worden hier niet beperkt; rolafdwinging
+// gebeurt via requireBevoegdheid. Geeft true als toegestaan.
 async function magBijGebouw(req: import("express").Request, gebouwId: number | null): Promise<boolean> {
-  const { userId, rol } = await effectieveContext(req);
-  if (!TOEGEWEZEN_ROLLEN.includes(rol)) return true;
+  const { userId, beperkt } = await effectieveContext(req);
+  if (!beperkt) return true;
   if (gebouwId == null) return false;
   const ids = await toegewezenGebouwIds(userId);
   return ids.includes(gebouwId);
@@ -129,7 +129,7 @@ function gebouwRij(
 // GET /gebouwen
 router.get("/gebouwen", lezenGebouwenOfKlant, async (req, res) => {
   try {
-    const { userId, rol } = await effectieveContext(req);
+    const { userId, beperkt } = await effectieveContext(req);
     const { zoek, partij_type, partij_naam, inclusief_gearchiveerd } = req.query;
 
     let gebouwen = await db.select().from(gebouwenTable);
@@ -139,8 +139,8 @@ router.get("/gebouwen", lezenGebouwenOfKlant, async (req, res) => {
       gebouwen = gebouwen.filter((g) => !g.gearchiveerd);
     }
 
-    // Monteurs en controleurs zien alleen hun toegewezen gebouwen
-    if (TOEGEWEZEN_ROLLEN.includes(rol)) {
+    // Beperkte gebruikers zien alleen hun toegewezen gebouwen
+    if (beperkt) {
       const ids = await toegewezenGebouwIds(userId);
       if (ids.length === 0) {
         return res.json([]);
@@ -355,10 +355,10 @@ router.post(
 // GET /gebouwen/partij-opties — unieke partijen (type + naam) voor filteropties
 router.get("/gebouwen/partij-opties", lezenGebouwen, async (req, res) => {
   try {
-    const { userId, rol } = await effectieveContext(req);
+    const { userId, beperkt } = await effectieveContext(req);
 
     let zichtbareGebouwIds: number[] | null = null;
-    if (TOEGEWEZEN_ROLLEN.includes(rol)) {
+    if (beperkt) {
       zichtbareGebouwIds = await toegewezenGebouwIds(userId);
       if (zichtbareGebouwIds.length === 0) {
         return res.json([]);
@@ -388,7 +388,7 @@ router.get("/gebouwen/partij-opties", lezenGebouwen, async (req, res) => {
 router.get("/gebouwen/:id/kaart", lezenGebouwen, async (req, res) => {
   try {
     const id = parseInt(String(req.params.id));
-    const { userId, rol } = await effectieveContext(req);
+    const { userId, beperkt } = await effectieveContext(req);
 
     const [gebouw] = await db
       .select({
@@ -402,7 +402,7 @@ router.get("/gebouwen/:id/kaart", lezenGebouwen, async (req, res) => {
 
     if (!gebouw) return res.status(404).json({ error: "Gebouw niet gevonden" });
 
-    if (TOEGEWEZEN_ROLLEN.includes(rol)) {
+    if (beperkt) {
       const ids = await toegewezenGebouwIds(userId);
       if (!ids.includes(id)) {
         return res.status(403).json({ error: "Geen toegang tot dit gebouw" });
@@ -435,7 +435,7 @@ router.get("/gebouwen/:id/kaart", lezenGebouwen, async (req, res) => {
 router.get("/gebouwen/:id/gevelbeeld", lezenGebouwen, async (req, res) => {
   try {
     const id = parseInt(String(req.params.id));
-    const { userId, rol } = await effectieveContext(req);
+    const { userId, beperkt } = await effectieveContext(req);
 
     const [gebouw] = await db
       .select({ lat: gebouwenTable.latitude, lng: gebouwenTable.longitude })
@@ -444,7 +444,7 @@ router.get("/gebouwen/:id/gevelbeeld", lezenGebouwen, async (req, res) => {
 
     if (!gebouw) return res.status(404).json({ error: "Gebouw niet gevonden" });
 
-    if (TOEGEWEZEN_ROLLEN.includes(rol)) {
+    if (beperkt) {
       const ids = await toegewezenGebouwIds(userId);
       if (!ids.includes(id)) {
         return res.status(403).json({ error: "Geen toegang tot dit gebouw" });
@@ -472,13 +472,13 @@ router.get("/gebouwen/:id/gevelbeeld", lezenGebouwen, async (req, res) => {
 router.get("/gebouwen/:id", lezenGebouwenOfKlant, async (req, res) => {
   try {
     const id = parseInt(String(req.params.id));
-    const { userId, rol } = await effectieveContext(req);
+    const { userId, beperkt } = await effectieveContext(req);
 
     const [gebouw] = await db.select().from(gebouwenTable).where(eq(gebouwenTable.id, id));
     if (!gebouw) return res.status(404).json({ error: "Gebouw niet gevonden" });
 
-    // Toegangscontrole: monteur/controleur mag alleen toegewezen gebouwen zien
-    if (TOEGEWEZEN_ROLLEN.includes(rol)) {
+    // Toegangscontrole: beperkte gebruikers mogen alleen toegewezen gebouwen zien
+    if (beperkt) {
       const ids = await toegewezenGebouwIds(userId);
       if (!ids.includes(id)) {
         return res.status(403).json({ error: "Geen toegang tot dit gebouw" });
@@ -687,9 +687,9 @@ router.get("/gebouwen/:id/verdiepingen", lezenGebouwen, async (req, res) => {
   try {
     const id = parseInt(String(req.params.id));
 
-    // Monteur/controleur mag alleen verdiepingen van toegewezen gebouwen zien.
-    const { userId, rol } = await effectieveContext(req);
-    if (TOEGEWEZEN_ROLLEN.includes(rol)) {
+    // Beperkte gebruikers mogen alleen verdiepingen van toegewezen gebouwen zien.
+    const { userId, beperkt } = await effectieveContext(req);
+    if (beperkt) {
       const ids = await toegewezenGebouwIds(userId);
       if (!ids.includes(id)) {
         res.status(403).json({ error: "Geen toegang tot dit gebouw" });
@@ -755,9 +755,9 @@ router.get("/verdiepingen/:id", lezenGebouwen, async (req, res) => {
     const [v] = await db.select().from(verdiepingenTable).where(eq(verdiepingenTable.id, id));
     if (!v) return res.status(404).json({ error: "Verdieping niet gevonden" });
 
-    // Monteur/controleur mag alleen verdiepingen van toegewezen gebouwen zien.
-    const { userId, rol } = await effectieveContext(req);
-    if (TOEGEWEZEN_ROLLEN.includes(rol)) {
+    // Beperkte gebruikers mogen alleen verdiepingen van toegewezen gebouwen zien.
+    const { userId, beperkt } = await effectieveContext(req);
+    if (beperkt) {
       const ids = await toegewezenGebouwIds(userId);
       if (!ids.includes(v.gebouwId)) {
         return res.status(403).json({ error: "Geen toegang tot deze verdieping" });

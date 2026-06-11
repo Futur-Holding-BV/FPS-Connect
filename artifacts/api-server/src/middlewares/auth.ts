@@ -123,7 +123,7 @@ export function requireBevoegdheid(module: ModuleId, minNiveau: number): Request
 /**
  * Variant van requireBevoegdheid die klanten doorlaat voor lees-endpoints.
  * Object-level scope (klant ziet alleen eigen gebouwen) wordt geregeld in de
- * handler via TOEGEWEZEN_ROLLEN + toegewezenGebouwIds.
+ * handler via de toewijzingsbeperking (beperkt) + toegewezenGebouwIds.
  * Gebruik voor GET-routes die zowel interne gebruikers als klanten nodig hebben.
  */
 export function requireBevoegdheidOfKlant(module: ModuleId, minNiveau: number): RequestHandler {
@@ -151,7 +151,7 @@ export function requireBevoegdheidOfKlant(module: ModuleId, minNiveau: number): 
         return;
       }
       // Klant heeft via het klantportaal leestoegang; scope-filtering vindt
-      // plaats in de handler (TOEGEWEZEN_ROLLEN / toegewezenGebouwIds).
+      // plaats in de handler (toewijzingsbeperking / toegewezenGebouwIds).
       if (g.rol === "klant") {
         next();
         return;

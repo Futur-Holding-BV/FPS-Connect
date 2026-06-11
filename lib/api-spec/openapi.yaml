@@ -134,8 +134,8 @@ paths:
             type: boolean
           description: >
             Indien true: retourneer alleen gebouwen die aan de ingelogde gebruiker zijn toegewezen.
-            Beheerders en hoofdbeheerders zien altijd alle gebouwen.
-            Voor monteur/controleur wordt dit automatisch geforceerd.
+            Gebruikers met gebouwbeheer (bevoegdheidsniveau 2 of hoger) en de hoofdbeheerder zien altijd alle gebouwen.
+            Voor gebruikers die tot hun toegewezen gebouwen beperkt zijn, wordt dit automatisch geforceerd.
         - in: query
           name: partij_type
           schema:

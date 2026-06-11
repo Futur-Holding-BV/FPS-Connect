@@ -15,8 +15,6 @@ import { requireBevoegdheidOfKlant } from "../middlewares/auth";
 const router = Router();
 const dashboardLezen = requireBevoegdheidOfKlant("gebouwen", 1);
 
-const TOEGEWEZEN_ROLLEN = ["monteur", "controleur", "klant"];
-
 async function toegewezenGebouwIds(userId: number): Promise<number[]> {
   const rows = await db
     .select({ gebouwId: gebouwToewijzingenTable.gebouwId })
@@ -25,13 +23,13 @@ async function toegewezenGebouwIds(userId: number): Promise<number[]> {
   return rows.map((r) => r.gebouwId);
 }
 
-// Bepaalt of de huidige gebruiker beperkt is tot toegewezen gebouwen
-// (monteur/controleur) en zo ja welke gebouw-id's zichtbaar zijn.
+// Bepaalt of de huidige gebruiker beperkt is tot toegewezen gebouwen (via de
+// bevoegdheden-matrix) en zo ja welke gebouw-id's zichtbaar zijn.
 async function gebouwScope(
   req: import("express").Request,
 ): Promise<{ beperkt: boolean; ids: number[] }> {
-  const { userId, rol } = await effectieveContext(req);
-  if (!TOEGEWEZEN_ROLLEN.includes(rol)) return { beperkt: false, ids: [] };
+  const { userId, beperkt } = await effectieveContext(req);
+  if (!beperkt) return { beperkt: false, ids: [] };
   return { beperkt: true, ids: await toegewezenGebouwIds(userId) };
 }
 
