@@ -2717,6 +2717,15 @@ export const CreateProfielResponse = zod.void()
 
 
 /**
+ * @summary Ontbrekende module-sleutels in alle profielen aanvullen op niveau 0 (Geen toegang) (hoofdbeheerder)
+ */
+export const ProfielenAanvullenResponse = zod.object({
+  "profielen_aangevuld": zod.number(),
+  "sleutels_toegevoegd": zod.number()
+})
+
+
+/**
  * @summary Bevoegdheidsprofiel bijwerken (hoofdbeheerder)
  */
 export const UpdateProfielParams = zod.object({

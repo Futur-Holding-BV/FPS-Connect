@@ -124,6 +124,7 @@ export * from './plattegrondAiAnalyseInput';
 export * from './plattegrondAiAnalyseResultaat';
 export * from './profiel';
 export * from './profielBevoegdheden';
+export * from './profielenAanvullen200';
 export * from './profielGebruiker';
 export * from './profielInput';
 export * from './profielInputBevoegdheden';

@@ -2021,6 +2021,11 @@ gebouw_id?: number;
 status?: string;
 };
 
+export type ProfielenAanvullen200 = {
+  profielen_aangevuld: number;
+  sleutels_toegevoegd: number;
+};
+
 export type ProfielToepassen200 = {
   bijgewerkt: number;
 };

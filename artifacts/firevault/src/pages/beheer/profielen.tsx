@@ -5,6 +5,7 @@ import {
   useUpdateProfiel,
   useDeleteProfiel,
   useProfielToepassen,
+  useProfielenAanvullen,
   getListProfielenQueryKey,
   getListGebruikersQueryKey,
 } from "@workspace/api-client-react";
@@ -25,7 +26,7 @@ import {
   AlertDialogContent, AlertDialogDescription, AlertDialogFooter,
   AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { ShieldCheck, Plus, Pencil, Trash2, Lock, Loader2, Users, RefreshCw, AlertTriangle } from "lucide-react";
+import { ShieldCheck, Plus, Pencil, Trash2, Lock, Loader2, Users, RefreshCw, AlertTriangle, ListChecks } from "lucide-react";
 import { MODULES, NIVEAUS } from "@workspace/permissies";
 
 const NIVEAU_LABEL: Record<number, string> = Object.fromEntries(
@@ -54,6 +55,7 @@ export default function ProfielenBeheer() {
   const werkBijProfiel = useUpdateProfiel();
   const verwijderProfiel = useDeleteProfiel();
   const pasProfielToe = useProfielToepassen();
+  const vulAllesAan = useProfielenAanvullen();
 
   const [dialoogOpen, setDialoogOpen] = useState(false);
   const [form, setForm] = useState<ProfielForm>(LEEG_FORM);
@@ -149,7 +151,19 @@ export default function ProfielenBeheer() {
     }
   }
 
+  async function vulAlleOntbrekendeAan() {
+    try {
+      await vulAllesAan.mutateAsync();
+      await invalideer();
+    } catch {
+      // fout wordt via de mutatie-status getoond
+    }
+  }
+
   const bezig = maakProfiel.isPending || werkBijProfiel.isPending;
+  const profielenMetOntbrekend = profielen.filter((p) =>
+    MODULES.some((m) => !(m.id in p.bevoegdheden)),
+  ).length;
 
   return (
     <div className="space-y-6">
@@ -165,10 +179,38 @@ export default function ProfielenBeheer() {
             </p>
           </div>
         </div>
-        <Button onClick={openNieuw}>
-          <Plus className="h-4 w-4" /> Nieuw profiel
-        </Button>
+        <div className="flex items-center gap-2 shrink-0">
+          {profielenMetOntbrekend > 0 && (
+            <Button
+              variant="outline"
+              onClick={vulAlleOntbrekendeAan}
+              disabled={vulAllesAan.isPending}
+              title="Vul ontbrekende modules in alle profielen aan op Geen toegang"
+            >
+              {vulAllesAan.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <ListChecks className="h-4 w-4" />
+              )}
+              Alle profielen aanvullen
+            </Button>
+          )}
+          <Button onClick={openNieuw}>
+            <Plus className="h-4 w-4" /> Nieuw profiel
+          </Button>
+        </div>
       </div>
+
+      {vulAllesAan.isError && (
+        <p className="text-sm text-destructive">
+          Aanvullen mislukt. Probeer het opnieuw.
+        </p>
+      )}
+      {vulAllesAan.isSuccess && profielenMetOntbrekend === 0 && (
+        <p className="text-sm text-muted-foreground">
+          Alle profielen bevatten nu alle modules.
+        </p>
+      )}
 
       {isLoading ? (
         <div className="flex items-center justify-center py-16">

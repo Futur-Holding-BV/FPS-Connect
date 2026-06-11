@@ -2292,6 +2292,27 @@ paths:
               schema:
                 $ref: "#/components/schemas/Profiel"
 
+  /profielen/aanvullen:
+    post:
+      operationId: profielenAanvullen
+      tags: [gebruikers]
+      summary: >-
+        Ontbrekende module-sleutels in alle profielen aanvullen op niveau 0
+        (Geen toegang) (hoofdbeheerder)
+      responses:
+        "200":
+          description: Aangevuld
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [profielen_aangevuld, sleutels_toegevoegd]
+                properties:
+                  profielen_aangevuld:
+                    type: integer
+                  sleutels_toegevoegd:
+                    type: integer
+
   /profielen/{id}:
     patch:
       operationId: updateProfiel

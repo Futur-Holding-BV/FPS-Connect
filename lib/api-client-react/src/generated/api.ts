@@ -111,6 +111,7 @@ import type {
   Profiel,
   ProfielInput,
   ProfielToepassen200,
+  ProfielenAanvullen200,
   Scheiding,
   ScheidingInput,
   ScheidingUpdate,
@@ -7704,6 +7705,76 @@ export const useCreateProfiel = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getCreateProfielMutationOptions(options));
+    }
+
+export const getProfielenAanvullenUrl = () => {
+
+
+
+
+  return `/api/profielen/aanvullen`
+}
+
+/**
+ * @summary Ontbrekende module-sleutels in alle profielen aanvullen op niveau 0 (Geen toegang) (hoofdbeheerder)
+ */
+export const profielenAanvullen = async ( options?: RequestInit): Promise<ProfielenAanvullen200> => {
+
+  return customFetch<ProfielenAanvullen200>(getProfielenAanvullenUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getProfielenAanvullenMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof profielenAanvullen>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof profielenAanvullen>>, TError,void, TContext> => {
+
+const mutationKey = ['profielenAanvullen'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof profielenAanvullen>>, void> = () => {
+
+
+          return  profielenAanvullen(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ProfielenAanvullenMutationResult = NonNullable<Awaited<ReturnType<typeof profielenAanvullen>>>
+
+    export type ProfielenAanvullenMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Ontbrekende module-sleutels in alle profielen aanvullen op niveau 0 (Geen toegang) (hoofdbeheerder)
+ */
+export const useProfielenAanvullen = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof profielenAanvullen>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof profielenAanvullen>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getProfielenAanvullenMutationOptions(options));
     }
 
 export const getUpdateProfielUrl = (id: number,) => {

@@ -141,6 +141,45 @@ router.post("/profielen", requireRol("hoofdbeheerder"), async (req, res) => {
   }
 });
 
+// POST /profielen/aanvullen — vul in alle profielen de ontbrekende
+// module-sleutels aan op niveau 0 (Geen toegang). Effectieve toegang verandert
+// niet (0 == ontbrekend); de sleutel wordt alleen expliciet vastgelegd zodat
+// nieuwe modules niet stil ontbreken. Moet vóór /profielen/:id staan zodat
+// "aanvullen" niet als id wordt geïnterpreteerd.
+router.post("/profielen/aanvullen", requireRol("hoofdbeheerder"), async (req, res) => {
+  try {
+    const profielen = await db.select().from(profielenTable);
+    let profielenAangevuld = 0;
+    let sleutelsToegevoegd = 0;
+    for (const p of profielen) {
+      const huidig = (p.bevoegdheden as Record<string, number>) ?? {};
+      const aangevuld: Record<string, number> = { ...huidig };
+      let toegevoegd = 0;
+      for (const m of MODULE_IDS) {
+        if (!(m in aangevuld)) {
+          aangevuld[m] = 0;
+          toegevoegd++;
+        }
+      }
+      if (toegevoegd > 0) {
+        await db
+          .update(profielenTable)
+          .set({ bevoegdheden: aangevuld })
+          .where(eq(profielenTable.id, p.id));
+        profielenAangevuld++;
+        sleutelsToegevoegd += toegevoegd;
+      }
+    }
+    res.json({
+      profielen_aangevuld: profielenAangevuld,
+      sleutels_toegevoegd: sleutelsToegevoegd,
+    });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
 router.patch("/profielen/:id", requireRol("hoofdbeheerder"), async (req, res) => {
   try {
     const id = Number(req.params.id);
