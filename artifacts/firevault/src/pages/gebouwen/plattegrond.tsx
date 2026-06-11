@@ -110,6 +110,7 @@ const RUIMTE_STANDAARD = [
 
 const GEEN_RUIMTE_VAL = "__geen__";
 const GEEN_WERENDHEID_VAL = "__geen__";
+const GEEN_WAND_PLAFOND_VAL = "__geen__";
 
 function getRuimteVolgorde(): string[] {
   try {
@@ -317,6 +318,7 @@ const LEEG_FORM = {
   objectnummer: "",
   type: "",
   werendheid: "",
+  wand_of_plafond: "",
   ruimte: "",
   huisnummer: "",
   opmerkingen: "",
@@ -720,6 +722,7 @@ export default function Plattegrond() {
         classificatie: wv.classificatie,
         wbdbo: wv.wbdbo,
         wrd: wv.wrd,
+        wand_of_plafond: nieuwForm.wand_of_plafond || undefined,
         ruimte: nieuwForm.ruimte && nieuwForm.ruimte !== GEEN_RUIMTE_VAL ? nieuwForm.ruimte : undefined,
         huisnummer: nieuwForm.huisnummer.trim() || undefined,
         opmerkingen: nieuwForm.opmerkingen.trim() || undefined,
@@ -1203,6 +1206,23 @@ export default function Plattegrond() {
                         <span className="font-mono text-xs mr-2">{w.waarde}</span>
                         {w.label.split(" — ")[1]}
                       </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Wand of plafond */}
+              <div>
+                <Label>Wand of plafond</Label>
+                <Select
+                  value={nieuwForm.wand_of_plafond || GEEN_WAND_PLAFOND_VAL}
+                  onValueChange={(v) => setNieuwForm((f) => ({ ...f, wand_of_plafond: v === GEEN_WAND_PLAFOND_VAL ? "" : v }))}
+                >
+                  <SelectTrigger><SelectValue placeholder="Kies plaatsing..." /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={GEEN_WAND_PLAFOND_VAL}>Niet opgegeven</SelectItem>
+                    {WAND_PLAFOND_OPTIES.map((w) => (
+                      <SelectItem key={w} value={w}>{w.charAt(0).toUpperCase() + w.slice(1)}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
