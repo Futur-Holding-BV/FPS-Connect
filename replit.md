@@ -124,9 +124,9 @@ Documentcontrole (later): periodieke controle op leverancierswebsites, nieuwe ve
 
 Nieuw vastgelegd onderdeel, geparkeerd onder de ontwikkelstop. Naast de bestaande keten Applicatie → Toepassing → Document komt een aparte bibliotheeklaag voor s.g.-constructies: scheidende/bouwkundige constructies, branddeuren en opwaarderingen (een bestaande constructie naar een hogere brandwerendheid brengen). Reden voor een eigen laag: een s.g.-constructie is geen spot-afwerking maar de onderliggende bouwkundige scheiding waarop afwerkingen rusten; de AI stelt deze bewust NIET vast (zie de AI-fotoherkenning-sectie). Datamodel, koppelingen (bv. s.g.-constructie ↔ document/toepassing) en UI worden uitgewerkt bij formeel akkoord op deze fase.
 
-### Meetwaarden uit spots verwijderen (vastgelegd, nog door te voeren)
+### Meetwaarden uit spots verwijderen (doorgevoerd)
 
-Vervolg op de vastgelegde beslissing dat brand-/rookwerendheid niet meer per spot wordt gekozen. Vastgelegd: spots tonen of bewaren geen losse meetwaarden (WRD/EW/EI-minuten) meer; de werendheid wordt uitsluitend afgeleid uit de testnorm van de gekoppelde toepassing (zie de afleiding in `voorzieningen/detail.tsx`). De legacy spotvelden (`wbdbo`, `wrd` en de afgeleide weergave uit `classificatie`) worden gedeprecateerd en uit de spot-UI verwijderd; fysiek droppen gebeurt niet vooruit (legacy fallback blijft bestaan). Door te voeren na formeel akkoord, conform de ontwikkelstop.
+Spots tonen of bewaren geen losse meetwaarden (WRD/EW/EI-minuten) meer; de werendheid wordt uitsluitend afgeleid uit de testnorm van de gekoppelde toepassing (zie `voorzieningen/detail.tsx`). De legacy spotvelden (`wbdbo`, `wrd`, afgeleide `classificatie`-weergave) zijn verwijderd uit de spot-UI in plattegrond (web + mobiel) en QR-pagina. DB-kolommen blijven voor legacy fallback — niet droppen.
 
 ### V1.4 — Opleverrapportage (vastgelegd)
 

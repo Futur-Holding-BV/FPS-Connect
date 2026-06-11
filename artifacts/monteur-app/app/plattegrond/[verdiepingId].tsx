@@ -890,9 +890,6 @@ function SpotDetail({
 
       <View style={{ height: 1, backgroundColor: c.border, marginVertical: 6 }} />
 
-      <Rij label="Classificatie" waarde={spot.classificatie && spot.classificatie !== "60" ? `EI ${spot.classificatie}` : null} />
-      <Rij label="WBDBO" waarde={spot.wbdbo} />
-      <Rij label="WRD" waarde={spot.wrd} />
       <Rij label="Wand/plafond" waarde={spot.wand_of_plafond} />
       <Rij label="Ruimte" waarde={spot.ruimte} />
       <Rij label="Locatie" waarde={spot.locatie_omschrijving} />

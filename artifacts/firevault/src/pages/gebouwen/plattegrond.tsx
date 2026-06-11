@@ -91,7 +91,6 @@ const STATUSLABEL: Record<string, string> = {
 
 const WBDBO_OPTIES = ["20", "30", "60", "90", "120"];
 const SCHEIDING_CLASSIFICATIES = ["WRD", "EW", "EI", "E", "R", "Sa"];
-const WRD_OPTIES = ["30"];
 const WAND_PLAFOND_OPTIES = ["wand", "plafond"];
 
 const RUIMTE_STANDAARD = [
@@ -1636,12 +1635,6 @@ function SpotDetail({
                 {STATUSLABEL[(v as any).status] ?? (v as any).status}
               </span>
             )}
-
-            <span className="text-muted-foreground">WBDBO</span>
-            <span className="font-medium">{(v as any).wbdbo ? `${(v as any).wbdbo} min` : "—"}</span>
-
-            <span className="text-muted-foreground">WRD</span>
-            <span className="font-medium">{(v as any).wrd ? `${(v as any).wrd} min` : "—"}</span>
 
             <span className="text-muted-foreground">Wand/plafond</span>
             <span className="font-medium capitalize">{(v as any).wand_of_plafond ?? "—"}</span>

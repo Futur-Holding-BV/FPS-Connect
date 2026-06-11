@@ -149,14 +149,29 @@
     height: 0;
     display: none;
   }
-  .overflow-auto:focus,
-  .overflow-auto:focus-visible,
-  .overflow-y-auto:focus,
-  .overflow-y-auto:focus-visible,
-  .overflow-x-auto:focus,
-  .overflow-x-auto:focus-visible,
-  [data-sidebar="content"]:focus,
-  [data-sidebar="content"]:focus-visible {
-    outline: none;
-  }
+}
+
+/* ── Sidebar & scroll-container outline-fix ──────────────────────────────────
+   Buiten elke @layer zodat deze regels de hoogste author-cascade-prioriteit
+   hebben en Chrome's UA keyboard-focusable-scroller outline altijd winnen.
+   !important voorkomt dat Tailwind-utilities of UA-stijlen dit terugdraaien.
+────────────────────────────────────────────────────────────────────────────── */
+.overflow-auto:focus,
+.overflow-auto:focus-visible,
+.overflow-y-auto:focus,
+.overflow-y-auto:focus-visible,
+.overflow-x-auto:focus,
+.overflow-x-auto:focus-visible,
+[data-sidebar]:focus,
+[data-sidebar]:focus-visible,
+[data-slot^="sidebar"]:focus,
+[data-slot^="sidebar"]:focus-visible {
+  outline: none !important;
+}
+
+/* Clip alle sidebar-inhoud (outlines, pseudo-elementen, absoluut gepositioneerde
+   hover-indicators) strikt tot de sidebar-container, zodat niets naar het
+   contentgebied rechts lekt. */
+[data-slot="sidebar-container"] {
+  overflow: hidden;
 }

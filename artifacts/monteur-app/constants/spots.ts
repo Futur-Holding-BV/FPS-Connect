@@ -60,10 +60,7 @@ export const STATUSLABEL: Record<string, string> = {
 
 export const STATUS_VOLGORDE = ["in_uitvoering", "goedgekeurd", "afgekeurd", "in_onderhoud", "concept"];
 
-// Behouden voor backward compatibiliteit
 export const CLASSIFICATIE_OPTIES = ["30", "60", "90", "120"];
-export const WBDBO_OPTIES = ["20", "30", "60"];
-export const WRD_OPTIES = ["30"];
 export const WAND_PLAFOND_OPTIES = ["wand", "plafond"];
 
 export function typeInfo(t: string): TypeInfo {

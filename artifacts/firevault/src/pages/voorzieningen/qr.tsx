@@ -29,9 +29,27 @@ const STATUSKLEUR: Record<string, { bg: string; text: string; label: string }> =
   concept:       { bg: "#f1f5f9", text: "#475569", label: "Concept" },
 };
 
+// Brand-/rookwerendheid wordt niet meer per spot gekozen. Leid de waarde af uit
+// de testnorm van een gekoppelde toepassing; val terug op legacy spot-velden.
+function werendheidVanVoorziening(v: any): string | null {
+  const toepassingen: any[] = Array.isArray(v?.labels) ? v.labels : [];
+  for (const l of toepassingen) {
+    const m = /^(WRD|EW|EI)\s?(\d+)/i.exec(String(l?.testnorm ?? "").trim());
+    if (m) {
+      const p = m[1].toUpperCase();
+      return p === "WRD" ? `WRD ${m[2]}` : p === "EW" ? `EW ${m[2]}` : `EI ${m[2]}`;
+    }
+  }
+  if (v?.wrd) return `WRD ${v.wrd}`;
+  if (v?.wbdbo) return `EW ${v.wbdbo}`;
+  if (v?.classificatie && v.classificatie !== "60") return `EI ${v.classificatie}`;
+  return null;
+}
+
 function QrLabel({ voorziening }: { voorziening: any }) {
   const qrUrl = `${window.location.origin}/voorzieningen/${voorziening.id}`;
   const status = STATUSKLEUR[voorziening.status ?? "concept"];
+  const werendheid = werendheidVanVoorziening(voorziening);
 
   return (
     <div
@@ -87,7 +105,7 @@ function QrLabel({ voorziening }: { voorziening: any }) {
           </div>
           <div style={{ fontSize: 12, color: "#475569", marginTop: 2, marginBottom: 8 }}>
             {TYPEN[voorziening.type] ?? voorziening.type}
-            {voorziening.classificatie && voorziening.classificatie !== "60" && ` • EI ${voorziening.classificatie}`}
+            {werendheid && ` • ${werendheid}`}
           </div>
 
           <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
