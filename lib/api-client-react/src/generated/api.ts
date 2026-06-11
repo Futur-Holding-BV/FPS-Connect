@@ -51,6 +51,9 @@ import type {
   DocumentToepassingenInput,
   DocumentUpdate,
   ErrorEnvelope,
+  Fabrikant,
+  FabrikantInput,
+  FabrikantUpdate,
   Feedback,
   FeedbackInput,
   Foto,
@@ -4388,6 +4391,224 @@ export const useSetLabelDocumenten = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getSetLabelDocumentenMutationOptions(options));
+    }
+
+export const getListFabrikantenUrl = () => {
+
+
+
+
+  return `/api/fabrikanten`
+}
+
+/**
+ * @summary Fabrikanten (erkende leveranciers van brandpreventieve producten)
+ */
+export const listFabrikanten = async ( options?: RequestInit): Promise<Fabrikant[]> => {
+
+  return customFetch<Fabrikant[]>(getListFabrikantenUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListFabrikantenQueryKey = () => {
+    return [
+    `/api/fabrikanten`
+    ] as const;
+    }
+
+
+export const getListFabrikantenQueryOptions = <TData = Awaited<ReturnType<typeof listFabrikanten>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listFabrikanten>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListFabrikantenQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listFabrikanten>>> = ({ signal }) => listFabrikanten({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listFabrikanten>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListFabrikantenQueryResult = NonNullable<Awaited<ReturnType<typeof listFabrikanten>>>
+export type ListFabrikantenQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Fabrikanten (erkende leveranciers van brandpreventieve producten)
+ */
+
+export function useListFabrikanten<TData = Awaited<ReturnType<typeof listFabrikanten>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listFabrikanten>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListFabrikantenQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateFabrikantUrl = () => {
+
+
+
+
+  return `/api/fabrikanten`
+}
+
+/**
+ * @summary Nieuwe fabrikant aanmaken (beheerder)
+ */
+export const createFabrikant = async (fabrikantInput: FabrikantInput, options?: RequestInit): Promise<Fabrikant> => {
+
+  return customFetch<Fabrikant>(getCreateFabrikantUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(fabrikantInput)
+  }
+);}
+
+
+
+
+export const getCreateFabrikantMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createFabrikant>>, TError,{data: BodyType<FabrikantInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createFabrikant>>, TError,{data: BodyType<FabrikantInput>}, TContext> => {
+
+const mutationKey = ['createFabrikant'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createFabrikant>>, {data: BodyType<FabrikantInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createFabrikant(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateFabrikantMutationResult = NonNullable<Awaited<ReturnType<typeof createFabrikant>>>
+    export type CreateFabrikantMutationBody = BodyType<FabrikantInput>
+    export type CreateFabrikantMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Nieuwe fabrikant aanmaken (beheerder)
+ */
+export const useCreateFabrikant = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createFabrikant>>, TError,{data: BodyType<FabrikantInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createFabrikant>>,
+        TError,
+        {data: BodyType<FabrikantInput>},
+        TContext
+      > => {
+      return useMutation(getCreateFabrikantMutationOptions(options));
+    }
+
+export const getUpdateFabrikantUrl = (id: number,) => {
+
+
+
+
+  return `/api/fabrikanten/${id}`
+}
+
+/**
+ * @summary Fabrikant bijwerken (beheerder)
+ */
+export const updateFabrikant = async (id: number,
+    fabrikantUpdate: FabrikantUpdate, options?: RequestInit): Promise<Fabrikant> => {
+
+  return customFetch<Fabrikant>(getUpdateFabrikantUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(fabrikantUpdate)
+  }
+);}
+
+
+
+
+export const getUpdateFabrikantMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateFabrikant>>, TError,{id: number;data: BodyType<FabrikantUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateFabrikant>>, TError,{id: number;data: BodyType<FabrikantUpdate>}, TContext> => {
+
+const mutationKey = ['updateFabrikant'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateFabrikant>>, {id: number;data: BodyType<FabrikantUpdate>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateFabrikant(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateFabrikantMutationResult = NonNullable<Awaited<ReturnType<typeof updateFabrikant>>>
+    export type UpdateFabrikantMutationBody = BodyType<FabrikantUpdate>
+    export type UpdateFabrikantMutationError = ErrorType<void>
+
+    /**
+ * @summary Fabrikant bijwerken (beheerder)
+ */
+export const useUpdateFabrikant = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateFabrikant>>, TError,{id: number;data: BodyType<FabrikantUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateFabrikant>>,
+        TError,
+        {id: number;data: BodyType<FabrikantUpdate>},
+        TContext
+      > => {
+      return useMutation(getUpdateFabrikantMutationOptions(options));
     }
 
 export const getListTestrapportenUrl = (params?: ListTestrapportenParams,) => {

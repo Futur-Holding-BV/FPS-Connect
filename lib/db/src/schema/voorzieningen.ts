@@ -84,6 +84,18 @@ export const insertLabelSchema = createInsertSchema(labelsTable).omit({ id: true
 export type InsertLabel = z.infer<typeof insertLabelSchema>;
 export type Label = typeof labelsTable.$inferSelect;
 
+// ── FABRIKANTEN (erkende leveranciers van brandpreventieve producten) ────────
+export const fabrikantenTable = pgTable("fabrikanten", {
+  id: serial("id").primaryKey(),
+  naam: text("naam").notNull().unique(),
+  url: text("url"),
+  aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
+  bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
+});
+export const insertFabrikantSchema = createInsertSchema(fabrikantenTable).omit({ id: true, aangemaaktOp: true, bijgewerktOp: true });
+export type InsertFabrikant = z.infer<typeof insertFabrikantSchema>;
+export type Fabrikant = typeof fabrikantenTable.$inferSelect;
+
 // ── KOPPELING toepassing ↔ applicatie (many-to-many) ─────────────────────────
 export const labelApplicatiesTable = pgTable("label_applicaties", {
   id: serial("id").primaryKey(),

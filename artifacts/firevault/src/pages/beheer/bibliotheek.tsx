@@ -6,8 +6,12 @@ import {
   useCreateLabel,
   useUpdateLabel,
   getListLabelsQueryKey,
+  useListFabrikanten,
+  useCreateFabrikant,
+  useUpdateFabrikant,
+  getListFabrikantenQueryKey,
 } from "@workspace/api-client-react";
-import type { VoorzieningType, Label } from "@workspace/api-client-react";
+import type { VoorzieningType, Label, Fabrikant } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -48,6 +52,7 @@ import {
   FileSpreadsheet,
   FlameKindling,
   Link2,
+  Pencil,
   Plus,
   ShieldCheck,
   Wind,
@@ -83,16 +88,6 @@ const WERENDHEID_OPTIES: { waarde: string; label: string; omschrijving: string }
   { waarde: "EW60", label: "EW 60", omschrijving: "Brandwerendheid WBDBO 60 minuten — stralingseis ≤ 15 kW/m²" },
   { waarde: "EI30", label: "EI 30", omschrijving: "Brandwerendheid 30 minuten — integriteit en isolatie" },
   { waarde: "EI60", label: "EI 60", omschrijving: "Brandwerendheid 60 minuten — integriteit en isolatie" },
-];
-
-const FABRIKANTEN: { naam: string; url: string | null }[] = [
-  { naam: "Mulcol", url: "https://www.mulcol.com/selector" },
-  { naam: "Hilti", url: "https://firestop.hilti.com/" },
-  { naam: "Promat", url: null },
-  { naam: "Rockwool", url: "https://www.rockwool.com/nl/producten/categorieen/fire-protection/" },
-  { naam: "Nullifire", url: "https://www.nullifire.com/nl-nl/" },
-  { naam: "Flamro", url: "https://flamro.nl/product-selector" },
-  { naam: "Red Profs", url: "https://redprofs.com/" },
 ];
 
 // ── Tab Applicaties ──────────────────────────────────────────────────────────
@@ -1046,46 +1041,167 @@ function TabToepassingen() {
 
 // ── Tab Fabrikanten ──────────────────────────────────────────────────────────
 function TabFabrikanten() {
+  const queryClient = useQueryClient();
+  const { heeftNiveau } = useBevoegdheid();
+  const magAanmaken = heeftNiveau("bibliotheek", 3);
+  const magBewerken = heeftNiveau("bibliotheek", 2);
+
+  const { data: fabrikanten = [], isLoading } = useListFabrikanten();
+  const maakFabrikant = useCreateFabrikant();
+  const wijzigFabrikant = useUpdateFabrikant();
+
+  const [dialoogOpen, setDialoogOpen] = useState(false);
+  const [bewerkId, setBewerkId] = useState<number | null>(null);
+  const [form, setForm] = useState({ naam: "", url: "" });
+  const [fout, setFout] = useState<string | null>(null);
+
+  function openNieuw() {
+    setBewerkId(null);
+    setForm({ naam: "", url: "" });
+    setFout(null);
+    setDialoogOpen(true);
+  }
+
+  function openBewerk(f: Fabrikant) {
+    setBewerkId(f.id);
+    setForm({ naam: f.naam, url: f.url ?? "" });
+    setFout(null);
+    setDialoogOpen(true);
+  }
+
+  async function bewaar() {
+    if (!form.naam.trim()) {
+      setFout("Naam is verplicht.");
+      return;
+    }
+    setFout(null);
+    try {
+      if (bewerkId == null) {
+        await maakFabrikant.mutateAsync({
+          data: { naam: form.naam.trim(), url: form.url.trim() || undefined },
+        });
+      } else {
+        await wijzigFabrikant.mutateAsync({
+          id: bewerkId,
+          data: { naam: form.naam.trim(), url: form.url.trim() ? form.url.trim() : null },
+        });
+      }
+      await queryClient.invalidateQueries({ queryKey: getListFabrikantenQueryKey() });
+      setDialoogOpen(false);
+    } catch (err) {
+      setFout(foutmelding(err, "Opslaan mislukt. Probeer het opnieuw."));
+    }
+  }
+
+  const bezig = maakFabrikant.isPending || wijzigFabrikant.isPending;
+
   return (
     <div className="space-y-4">
       <p className="text-sm text-muted-foreground">
         Erkende fabrikanten van brandpreventieve producten. Via de productlink kunt u het
         aanbod en de goedgekeurde productcombinaties raadplegen.
       </p>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {FABRIKANTEN.map((f) => (
-          <Card key={f.naam} className="flex flex-col">
-            <CardContent className="pt-5 pb-4 flex flex-col gap-3 flex-1">
-              <div className="flex items-start gap-3">
-                <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                  <Building2 className="h-4 w-4 text-primary" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-sm leading-tight">{f.naam}</p>
-                  {f.url ? (
-                    <p className="text-xs text-muted-foreground truncate mt-0.5">{f.url.replace("https://", "")}</p>
-                  ) : (
-                    <p className="text-xs text-muted-foreground mt-0.5">Geen website</p>
+
+      {magAanmaken && (
+        <div className="flex justify-end">
+          <Button onClick={openNieuw}>
+            <Plus className="h-4 w-4 mr-2" />
+            Fabrikant toevoegen
+          </Button>
+        </div>
+      )}
+
+      {isLoading ? (
+        <p className="text-sm text-muted-foreground">Laden...</p>
+      ) : fabrikanten.length === 0 ? (
+        <p className="text-sm text-muted-foreground">Nog geen fabrikanten vastgelegd.</p>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {fabrikanten.map((f) => (
+            <Card key={f.id} className="flex flex-col">
+              <CardContent className="pt-5 pb-4 flex flex-col gap-3 flex-1">
+                <div className="flex items-start gap-3">
+                  <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                    <Building2 className="h-4 w-4 text-primary" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-sm leading-tight">{f.naam}</p>
+                    {f.url ? (
+                      <p className="text-xs text-muted-foreground truncate mt-0.5">{f.url.replace("https://", "")}</p>
+                    ) : (
+                      <p className="text-xs text-muted-foreground mt-0.5">Geen website</p>
+                    )}
+                  </div>
+                  {magBewerken && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 shrink-0"
+                      onClick={() => openBewerk(f)}
+                      aria-label={`${f.naam} bewerken`}
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </Button>
                   )}
                 </div>
-              </div>
-              {f.url && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="w-full text-xs gap-1.5 mt-auto"
-                  asChild
-                >
-                  <a href={f.url} target="_blank" rel="noopener noreferrer">
-                    <ExternalLink className="h-3 w-3" />
-                    Productcatalogus openen
-                  </a>
-                </Button>
-              )}
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+                {f.url && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full text-xs gap-1.5 mt-auto"
+                    asChild
+                  >
+                    <a href={f.url} target="_blank" rel="noopener noreferrer">
+                      <ExternalLink className="h-3 w-3" />
+                      Productcatalogus openen
+                    </a>
+                  </Button>
+                )}
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      <Dialog open={dialoogOpen} onOpenChange={setDialoogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{bewerkId == null ? "Fabrikant toevoegen" : "Fabrikant bewerken"}</DialogTitle>
+            <DialogDescription>
+              Leg de naam en optioneel de website (productcatalogus) van de fabrikant vast.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <UiLabel htmlFor="fabrikant-naam">Naam</UiLabel>
+              <Input
+                id="fabrikant-naam"
+                value={form.naam}
+                onChange={(e) => setForm((s) => ({ ...s, naam: e.target.value }))}
+                placeholder="Bijv. Hilti"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <UiLabel htmlFor="fabrikant-url">Website / productcatalogus (optioneel)</UiLabel>
+              <Input
+                id="fabrikant-url"
+                value={form.url}
+                onChange={(e) => setForm((s) => ({ ...s, url: e.target.value }))}
+                placeholder="https://..."
+              />
+            </div>
+            {fout && <p className="text-sm text-destructive">{fout}</p>}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDialoogOpen(false)} disabled={bezig}>
+              Annuleren
+            </Button>
+            <Button onClick={bewaar} disabled={bezig || !form.naam.trim()}>
+              {bezig ? "Bezig..." : bewerkId == null ? "Toevoegen" : "Opslaan"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

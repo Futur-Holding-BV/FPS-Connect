@@ -1652,6 +1652,51 @@ export const SetLabelDocumentenResponse = zod.object({
 
 
 /**
+ * @summary Fabrikanten (erkende leveranciers van brandpreventieve producten)
+ */
+export const ListFabrikantenResponseItem = zod.object({
+  "id": zod.number(),
+  "naam": zod.string(),
+  "url": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string().optional()
+})
+export const ListFabrikantenResponse = zod.array(ListFabrikantenResponseItem)
+
+
+/**
+ * @summary Nieuwe fabrikant aanmaken (beheerder)
+ */
+export const CreateFabrikantBody = zod.object({
+  "naam": zod.string(),
+  "url": zod.string().optional()
+})
+
+export const CreateFabrikantResponse = zod.void()
+
+
+/**
+ * @summary Fabrikant bijwerken (beheerder)
+ */
+export const UpdateFabrikantParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateFabrikantBody = zod.object({
+  "naam": zod.string().optional(),
+  "url": zod.string().nullish()
+})
+
+export const UpdateFabrikantResponse = zod.object({
+  "id": zod.number(),
+  "naam": zod.string(),
+  "url": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string().optional()
+})
+
+
+/**
  * @summary Testrapporten-bibliotheek
  */
 export const ListTestrapportenQueryParams = zod.object({

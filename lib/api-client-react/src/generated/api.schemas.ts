@@ -1807,6 +1807,26 @@ export interface LabelUpdate {
   applicatie_codes?: string[];
 }
 
+export interface Fabrikant {
+  id: number;
+  naam: string;
+  /** @nullable */
+  url?: string | null;
+  aangemaakt_op: string;
+  bijgewerkt_op?: string;
+}
+
+export interface FabrikantInput {
+  naam: string;
+  url?: string;
+}
+
+export interface FabrikantUpdate {
+  naam?: string;
+  /** @nullable */
+  url?: string | null;
+}
+
 export type DocumentType = typeof DocumentType[keyof typeof DocumentType];
 
 
