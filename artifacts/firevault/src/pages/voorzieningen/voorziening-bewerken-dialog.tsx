@@ -32,17 +32,7 @@ import { ToepassingMultiSelect } from "@/components/toepassing-multi-select";
 import { useRol } from "@/context/rol-context";
 
 const GEEN_VERDIEPING = "__geen__";
-const GEEN_WERENDHEID = "__geen__";
 const GEEN_RUIMTE = "__geen__";
-
-const WERENDHEID_OPTIES = [
-  { waarde: "WRD30", label: "WRD 30 — rookwerend 30 min" },
-  { waarde: "EW20", label: "EW 20 — brandwerend WBDBO 20 min" },
-  { waarde: "EW30", label: "EW 30 — brandwerend WBDBO 30 min" },
-  { waarde: "EW60", label: "EW 60 — brandwerend WBDBO 60 min" },
-  { waarde: "EI30", label: "EI 30 — brandwerend 30 min" },
-  { waarde: "EI60", label: "EI 60 — brandwerend 60 min" },
-];
 
 const RUIMTE_STANDAARD = [
   "entree",
@@ -82,23 +72,8 @@ function registreerRuimteGebruik(ruimte: string) {
   } catch { /* ignore */ }
 }
 
-function toWerendheid(classificatie: string, wbdbo?: string | null, wrd?: string | null): string {
-  if (wrd) return `WRD${wrd}`;
-  if (wbdbo) return `EW${wbdbo}`;
-  if (classificatie) return `EI${classificatie}`;
-  return GEEN_WERENDHEID;
-}
-
-function fromWerendheid(w: string): { classificatie: string; wbdbo?: string; wrd?: string } {
-  if (w.startsWith("WRD")) return { classificatie: "60", wrd: w.slice(3) };
-  if (w.startsWith("EW")) return { classificatie: "60", wbdbo: w.slice(2) };
-  if (w.startsWith("EI")) return { classificatie: w.slice(2) };
-  return { classificatie: "60" };
-}
-
 interface Velden {
   type: string;
-  werendheid: string;
   verdieping_id: string;
   ruimte: string;
   huisnummer: string;
@@ -114,11 +89,6 @@ function tekst(v: string | number | null | undefined): string {
 function uitVoorziening(v: VoorzieningDetail): Velden {
   return {
     type: tekst(v.type) || "",
-    werendheid: toWerendheid(
-      tekst(v.classificatie),
-      (v as any).wbdbo,
-      (v as any).wrd,
-    ),
     verdieping_id: v.verdieping_id != null ? String(v.verdieping_id) : "",
     ruimte: tekst(v.ruimte),
     huisnummer: tekst((v as any).huisnummer),
@@ -197,14 +167,10 @@ export function VoorzieningBewerkenDialog({
       if (velden.ruimte && velden.ruimte !== GEEN_RUIMTE) {
         registreerRuimteGebruik(velden.ruimte);
       }
-      const werendheidVelden = fromWerendheid(velden.werendheid);
       await wijzigVoorziening.mutateAsync({
         id: voorziening.id,
         data: {
           type: velden.type || undefined,
-          classificatie: werendheidVelden.classificatie,
-          wbdbo: werendheidVelden.wbdbo,
-          wrd: werendheidVelden.wrd,
           verdieping_id: velden.verdieping_id
             ? Number(velden.verdieping_id)
             : undefined,
@@ -271,29 +237,6 @@ export function VoorzieningBewerkenDialog({
                 )}
               </div>
             )}
-
-            <div className="col-span-2">
-              <UiLabel>Brand- of rookwerendheid</UiLabel>
-              <Select
-                value={velden.werendheid || GEEN_WERENDHEID}
-                onValueChange={(v) =>
-                  setVelden((f) => ({ ...f, werendheid: v }))
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Kies brand- of rookwerendheid..." />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={GEEN_WERENDHEID}>Niet opgegeven</SelectItem>
-                  {WERENDHEID_OPTIES.map((w) => (
-                    <SelectItem key={w.waarde} value={w.waarde}>
-                      <span className="font-mono text-xs mr-2">{w.waarde}</span>
-                      {w.label.split(" — ")[1]}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
 
             <div>
               <UiLabel>Verdieping</UiLabel>

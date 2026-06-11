@@ -232,6 +232,26 @@ export default function VoorzieningDetail() {
     );
   }
 
+  // Brand-/rookwerendheid wordt niet meer per spot gekozen. Leid de waarde af uit
+  // de testnorm van een gekoppelde toepassing; val terug op legacy spot-velden.
+  const toepassingen: any[] = Array.isArray((voorziening as any).labels)
+    ? (voorziening as any).labels
+    : [];
+  const meetwaarde: string | null = (() => {
+    for (const l of toepassingen) {
+      const m = /^(WRD|EW|EI)\s?(\d+)/i.exec(String(l?.testnorm ?? "").trim());
+      if (m) {
+        const p = m[1].toUpperCase();
+        return p === "WRD" ? `WRD ${m[2]}` : p === "EW" ? `EW ${m[2]}` : `EI ${m[2]}`;
+      }
+    }
+    const v: any = voorziening;
+    if (v.wrd) return `WRD ${v.wrd}`;
+    if (v.wbdbo) return `EW ${v.wbdbo}`;
+    if (v.classificatie && v.classificatie !== "60") return `EI ${v.classificatie}`;
+    return null;
+  })();
+
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
       <div className="flex items-center gap-4">
@@ -248,7 +268,7 @@ export default function VoorzieningDetail() {
           </div>
           <p className="text-muted-foreground mt-0.5">
             {typeLabel[voorziening.type ?? ""] ?? voorziening.type}
-            {voorziening.classificatie && ` • EI ${voorziening.classificatie}`}
+            {meetwaarde && ` • ${meetwaarde}`}
           </p>
         </div>
         <div className="flex gap-2">
@@ -408,8 +428,8 @@ export default function VoorzieningDetail() {
                 </div>
               )}
               <div>
-                <div className="text-muted-foreground">Classificatie</div>
-                <div className="font-semibold">EI {voorziening.classificatie ?? "—"}</div>
+                <div className="text-muted-foreground">Brand-/rookwerendheid</div>
+                <div className="font-semibold">{meetwaarde ?? "—"}</div>
               </div>
             </CardContent>
           </Card>

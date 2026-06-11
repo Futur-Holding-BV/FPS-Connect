@@ -87,7 +87,7 @@ function QrLabel({ voorziening }: { voorziening: any }) {
           </div>
           <div style={{ fontSize: 12, color: "#475569", marginTop: 2, marginBottom: 8 }}>
             {TYPEN[voorziening.type] ?? voorziening.type}
-            {voorziening.classificatie && ` • EI ${voorziening.classificatie}`}
+            {voorziening.classificatie && voorziening.classificatie !== "60" && ` • EI ${voorziening.classificatie}`}
           </div>
 
           <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>

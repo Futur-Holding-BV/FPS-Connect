@@ -46,8 +46,6 @@ import {
 import {
   STATUS_VOLGORDE,
   WAND_PLAFOND_OPTIES,
-  WERENDHEID_OPTIES,
-  fromWerendheid,
   statusKleur,
   statusLabel,
   typeInfo,
@@ -64,7 +62,6 @@ const LEEG = {
   objectnummer: "",
   type: "",
   status: "in_uitvoering",
-  werendheid: "EI60",
   wand_of_plafond: "",
   ruimte: "",
   locatie_omschrijving: "",
@@ -271,7 +268,7 @@ export default function Plattegrond() {
           objectnummer: form.objectnummer.trim() || undefined,
           type: form.type || "overig",
           status: form.status,
-          ...fromWerendheid(form.werendheid),
+          classificatie: "60",
           gebouw_id: gId,
           verdieping_id: vId,
           locatie_x: locatie.x,
@@ -639,15 +636,6 @@ export default function Plattegrond() {
               />
             </View>
 
-            <View style={{ gap: 8 }}>
-              <SectieLabel>Brand- of rookwerendheid</SectieLabel>
-              <ChipRij
-                opties={WERENDHEID_OPTIES.map((v) => ({ waarde: v, label: v }))}
-                geselecteerd={form.werendheid}
-                onKies={(v) => setForm((f) => ({ ...f, werendheid: v }))}
-              />
-            </View>
-
             <TekstVeld
               label="Ruimte"
               value={form.ruimte}
@@ -902,7 +890,7 @@ function SpotDetail({
 
       <View style={{ height: 1, backgroundColor: c.border, marginVertical: 6 }} />
 
-      <Rij label="Classificatie" waarde={spot.classificatie ? `EI ${spot.classificatie}` : null} />
+      <Rij label="Classificatie" waarde={spot.classificatie && spot.classificatie !== "60" ? `EI ${spot.classificatie}` : null} />
       <Rij label="WBDBO" waarde={spot.wbdbo} />
       <Rij label="WRD" waarde={spot.wrd} />
       <Rij label="Wand/plafond" waarde={spot.wand_of_plafond} />

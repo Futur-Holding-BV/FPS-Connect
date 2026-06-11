@@ -94,15 +94,6 @@ const SCHEIDING_CLASSIFICATIES = ["WRD", "EW", "EI", "E", "R", "Sa"];
 const WRD_OPTIES = ["30"];
 const WAND_PLAFOND_OPTIES = ["wand", "plafond"];
 
-const WERENDHEID_OPTIES = [
-  { waarde: "WRD30", label: "WRD 30 — rookwerend 30 min" },
-  { waarde: "EW20",  label: "EW 20 — brandwerend WBDBO 20 min" },
-  { waarde: "EW30",  label: "EW 30 — brandwerend WBDBO 30 min" },
-  { waarde: "EW60",  label: "EW 60 — brandwerend WBDBO 60 min" },
-  { waarde: "EI30",  label: "EI 30 — brandwerend 30 min" },
-  { waarde: "EI60",  label: "EI 60 — brandwerend 60 min" },
-];
-
 const RUIMTE_STANDAARD = [
   "entree", "keuken", "badkamer", "toilet", "slaapkamer", "woonkamer",
   "trappenhuis", "gang", "meterkast", "zolder", "berging", "kelder",
@@ -110,7 +101,6 @@ const RUIMTE_STANDAARD = [
 ];
 
 const GEEN_RUIMTE_VAL = "__geen__";
-const GEEN_WERENDHEID_VAL = "__geen__";
 const GEEN_WAND_PLAFOND_VAL = "__geen__";
 
 function getRuimteVolgorde(): string[] {
@@ -130,14 +120,6 @@ function registreerRuimteGebruik(ruimte: string) {
     counts[ruimte] = (counts[ruimte] ?? 0) + 1;
     localStorage.setItem("fps_ruimte_gebruik", JSON.stringify(counts));
   } catch { /* ignore */ }
-}
-
-function fromWerendheid(w: string): { classificatie: string; wbdbo?: string; wrd?: string } {
-  if (!w || w === GEEN_WERENDHEID_VAL) return { classificatie: "60" };
-  if (w.startsWith("WRD")) return { classificatie: "60", wrd: w.slice(3) };
-  if (w.startsWith("EW"))  return { classificatie: "60", wbdbo: w.slice(2) };
-  if (w.startsWith("EI"))  return { classificatie: w.slice(2) };
-  return { classificatie: "60" };
 }
 
 const CANVAS_W = 1200;
@@ -322,7 +304,6 @@ function spotVolgnummer(objectnummer: string): string {
 const LEEG_FORM = {
   objectnummer: "",
   type: "",
-  werendheid: "",
   wand_of_plafond: "",
   ruimte: "",
   huisnummer: "",
@@ -747,16 +728,12 @@ export default function Plattegrond() {
     if (nieuwForm.ruimte && nieuwForm.ruimte !== GEEN_RUIMTE_VAL) {
       registreerRuimteGebruik(nieuwForm.ruimte);
     }
-    const wv = fromWerendheid(nieuwForm.werendheid);
-
     const aangemaakt: any = await maakVoorziening.mutateAsync({
       data: {
         objectnummer: nieuwForm.objectnummer,
         type: nieuwForm.type,
         status: nieuwForm.status || "in_uitvoering",
-        classificatie: wv.classificatie,
-        wbdbo: wv.wbdbo,
-        wrd: wv.wrd,
+        classificatie: "60",
         wand_of_plafond: nieuwForm.wand_of_plafond || undefined,
         ruimte: nieuwForm.ruimte && nieuwForm.ruimte !== GEEN_RUIMTE_VAL ? nieuwForm.ruimte : undefined,
         huisnummer: nieuwForm.huisnummer.trim() || undefined,
@@ -1228,26 +1205,6 @@ export default function Plattegrond() {
             )}
 
             <div className="grid grid-cols-2 gap-3">
-              {/* Brand- of rookwerendheid */}
-              <div className="col-span-2">
-                <Label>Brand- of rookwerendheid</Label>
-                <Select
-                  value={nieuwForm.werendheid || GEEN_WERENDHEID_VAL}
-                  onValueChange={(v) => setNieuwForm((f) => ({ ...f, werendheid: v }))}
-                >
-                  <SelectTrigger><SelectValue placeholder="Kies brand- of rookwerendheid..." /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value={GEEN_WERENDHEID_VAL}>Niet opgegeven</SelectItem>
-                    {WERENDHEID_OPTIES.map((w) => (
-                      <SelectItem key={w.waarde} value={w.waarde}>
-                        <span className="font-mono text-xs mr-2">{w.waarde}</span>
-                        {w.label.split(" — ")[1]}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
               {/* Wand of plafond */}
               <div>
                 <Label>Wand of plafond</Label>

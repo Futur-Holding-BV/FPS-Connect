@@ -153,6 +153,17 @@ function weergeefWerendheid(wbdbo?: string | null, wrd?: string | null, classifi
   return "—";
 }
 
+// Leidt de brand-/rookwerendheid af uit de testnorm van een gekoppelde toepassing
+// (bijv. "EI60", "EW30", "WRD30"). Een echte EN-norm levert geen match → null.
+function werendheidUitTestnorm(testnorm?: string | null): { classificatie?: string; wbdbo?: string; wrd?: string } | null {
+  const m = /^(WRD|EW|EI)\s?(\d+)/i.exec(String(testnorm ?? "").trim());
+  if (!m) return null;
+  const prefix = m[1].toUpperCase();
+  if (prefix === "WRD") return { wrd: m[2] };
+  if (prefix === "EW") return { wbdbo: m[2] };
+  return { classificatie: m[2] };
+}
+
 function spotVolgnummer(objectnummer: string): string {
   const m = objectnummer?.match(/(\d+)$/);
   return m ? m[1] : objectnummer ?? "";
@@ -314,7 +325,12 @@ function SpotDetailBlok({
   const applicatieLabel = catalogNaam
     ? `${spot.type} – ${catalogNaam}`
     : (TYPEN[spot.type]?.label ?? spot.type);
-  const werendheidLabel = weergeefWerendheid(d?.wbdbo, d?.wrd, d?.classificatie);
+  const werendheidUitToepassing = labels
+    .map((l: any) => werendheidUitTestnorm(l?.testnorm))
+    .find((w): w is { classificatie?: string; wbdbo?: string; wrd?: string } => w != null);
+  const werendheidLabel = werendheidUitToepassing
+    ? weergeefWerendheid(werendheidUitToepassing.wbdbo, werendheidUitToepassing.wrd, werendheidUitToepassing.classificatie)
+    : weergeefWerendheid(d?.wbdbo, d?.wrd, d?.classificatie);
 
   const spotLabelIds = new Set(labels.map((l: any) => l.id));
   const spotDocumenten = (documenten ?? []).filter((doc: any) =>
