@@ -46,7 +46,7 @@ export function ToepassingMultiSelect({
     if (!nieuwNaam.trim()) return;
     const l = await maakLabel.mutateAsync({
       data: {
-        type_code: typeCode,
+        applicatie_codes: [typeCode],
         naam: nieuwNaam.trim(),
         fabrikant: nieuwFabrikant.trim() || undefined,
         testnorm: nieuwTestnorm.trim() || undefined,

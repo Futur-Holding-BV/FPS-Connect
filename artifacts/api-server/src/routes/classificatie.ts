@@ -1,8 +1,8 @@
 import { Router } from "express";
-import { db, voorzieningTypesTable, labelsTable, testrapportenTable } from "@workspace/db";
+import { db, voorzieningTypesTable, labelsTable, testrapportenTable, labelApplicatiesTable } from "@workspace/db";
 import { eq, asc } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
-import { mapLabel, mapTestrapport } from "../lib/classificatie";
+import { mapLabel, mapTestrapport, syncLabelApplicaties } from "../lib/classificatie";
 
 const router = Router();
 
@@ -37,7 +37,14 @@ router.get("/labels", async (req, res) => {
   try {
     const { type_code, inclusief_gearchiveerd } = req.query;
     let rows = await db.select().from(labelsTable).orderBy(asc(labelsTable.naam));
-    if (type_code) rows = rows.filter((l) => l.typeCode === type_code);
+    if (type_code) {
+      const koppelingen = await db
+        .select({ labelId: labelApplicatiesTable.labelId })
+        .from(labelApplicatiesTable)
+        .where(eq(labelApplicatiesTable.typeCode, String(type_code)));
+      const labelIds = new Set(koppelingen.map((k) => k.labelId));
+      rows = rows.filter((l) => labelIds.has(l.id));
+    }
     if (inclusief_gearchiveerd !== "true") rows = rows.filter((l) => !l.gearchiveerd);
     res.json(await Promise.all(rows.map(mapLabel)));
   } catch (err) {
@@ -49,25 +56,21 @@ router.get("/labels", async (req, res) => {
 // POST /labels (beheerder)
 router.post("/labels", requireBevoegdheid("bibliotheek", 3), async (req, res) => {
   try {
-    const { type_code, naam, testrapport_id } = req.body;
-    if (!type_code || !naam || !String(naam).trim()) {
-      return res.status(400).json({ error: "type_code en naam zijn verplicht" });
+    const { applicatie_codes, naam, testrapport_id } = req.body;
+    if (!naam || !String(naam).trim()) {
+      return res.status(400).json({ error: "naam is verplicht" });
     }
-    // De applicatie (type) moet bestaan.
-    const [type] = await db
-      .select({ code: voorzieningTypesTable.code })
-      .from(voorzieningTypesTable)
-      .where(eq(voorzieningTypesTable.code, type_code));
-    if (!type) return res.status(400).json({ error: "Onbekende applicatie (type_code)" });
-
+    if (!Array.isArray(applicatie_codes) || applicatie_codes.length === 0) {
+      return res.status(400).json({ error: "applicatie_codes zijn verplicht (minimaal 1)" });
+    }
     const [l] = await db
       .insert(labelsTable)
       .values({
-        typeCode: type_code,
         naam: String(naam).trim(),
         testrapportId: testrapport_id ?? null,
       })
       .returning();
+    await syncLabelApplicaties(l.id, applicatie_codes);
     return res.status(201).json(await mapLabel(l));
   } catch (err) {
     req.log.error(err);
@@ -79,7 +82,7 @@ router.post("/labels", requireBevoegdheid("bibliotheek", 3), async (req, res) =>
 router.patch("/labels/:id", requireBevoegdheid("bibliotheek", 2), async (req, res) => {
   try {
     const id = parseInt(String(req.params.id));
-    const { naam, testrapport_id, gearchiveerd } = req.body;
+    const { naam, testrapport_id, gearchiveerd, applicatie_codes } = req.body;
     const set: Record<string, unknown> = { bijgewerktOp: new Date() };
     if (naam !== undefined) set.naam = String(naam).trim();
     if (testrapport_id !== undefined) set.testrapportId = testrapport_id;
@@ -91,6 +94,7 @@ router.patch("/labels/:id", requireBevoegdheid("bibliotheek", 2), async (req, re
       .where(eq(labelsTable.id, id))
       .returning();
     if (!l) return res.status(404).json({ error: "Toepassing niet gevonden" });
+    if (Array.isArray(applicatie_codes)) await syncLabelApplicaties(id, applicatie_codes);
     return res.json(await mapLabel(l));
   } catch (err) {
     req.log.error(err);

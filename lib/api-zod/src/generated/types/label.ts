@@ -9,7 +9,8 @@ import type { Testrapport } from './testrapport';
 
 export interface Label {
   id: number;
-  type_code: string;
+  /** @nullable */
+  type_code?: string | null;
   naam: string;
   /** @nullable */
   fabrikant?: string | null;
@@ -21,4 +22,5 @@ export interface Label {
   gearchiveerd: boolean;
   aangemaakt_op: string;
   bijgewerkt_op?: string;
+  applicatie_codes: string[];
 }

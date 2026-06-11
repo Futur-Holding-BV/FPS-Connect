@@ -23,5 +23,4 @@ export interface DocumentInput {
   ai_geanalyseerd?: boolean;
   ai_metadata?: DocumentInputAiMetadata;
   toepassing_ids?: number[];
-  applicatie_codes?: string[];
 }

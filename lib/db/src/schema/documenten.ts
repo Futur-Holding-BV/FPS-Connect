@@ -2,7 +2,7 @@ import { pgTable, serial, text, integer, timestamp, boolean, jsonb, unique } fro
 import { sql } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
-import { voorzieningTypesTable, labelsTable } from "./voorzieningen";
+import { labelsTable } from "./voorzieningen";
 
 // ── DOCUMENTEN (centrale documentbibliotheek met versiebeheer) ──────────────
 // Vervangt/absorbeert testrapporten: een testrapport is documenttype 'testrapport'.
@@ -37,16 +37,6 @@ export const documentenTable = pgTable("documenten", {
 export const insertDocumentSchema = createInsertSchema(documentenTable).omit({ id: true, aangemaaktOp: true, bijgewerktOp: true });
 export type InsertDocument = z.infer<typeof insertDocumentSchema>;
 export type Document = typeof documentenTable.$inferSelect;
-
-// ── KOPPELING document ↔ applicatie (voorziening_types, many-to-many) ────────
-export const documentApplicatiesTable = pgTable("document_applicaties", {
-  id: serial("id").primaryKey(),
-  documentId: integer("document_id").notNull().references(() => documentenTable.id, { onDelete: "cascade" }),
-  voorzieningTypeCode: text("voorziening_type_code").notNull().references(() => voorzieningTypesTable.code, { onDelete: "cascade" }),
-}, (t) => ({
-  uniekPaar: unique().on(t.documentId, t.voorzieningTypeCode),
-}));
-export type DocumentApplicatie = typeof documentApplicatiesTable.$inferSelect;
 
 // ── KOPPELING document ↔ toepassing (labels, many-to-many) ───────────────────
 export const documentToepassingenTable = pgTable("document_toepassingen", {

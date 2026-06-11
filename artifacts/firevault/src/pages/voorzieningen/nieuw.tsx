@@ -56,7 +56,7 @@ export default function VoorzieningNieuw() {
     if (!form.type_code || !form.naam.trim()) return;
     await maakLabel.mutateAsync({
       data: {
-        type_code: form.type_code,
+        applicatie_codes: [form.type_code],
         naam: form.naam.trim(),
         testnorm: form.werendheid !== GEEN_WERENDHEID ? form.werendheid : undefined,
         fabrikant: form.fabrikant.trim() || undefined,

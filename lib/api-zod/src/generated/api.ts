@@ -1079,7 +1079,7 @@ export const GetVoorzieningResponse = zod.object({
 })),
   "labels": zod.array(zod.object({
   "id": zod.number(),
-  "type_code": zod.string(),
+  "type_code": zod.string().nullish(),
   "naam": zod.string(),
   "fabrikant": zod.string().nullish(),
   "testnorm": zod.string().nullish(),
@@ -1097,7 +1097,8 @@ export const GetVoorzieningResponse = zod.object({
 }),zod.null()]).optional(),
   "gearchiveerd": zod.boolean(),
   "aangemaakt_op": zod.string(),
-  "bijgewerkt_op": zod.string().optional()
+  "bijgewerkt_op": zod.string().optional(),
+  "applicatie_codes": zod.array(zod.string())
 })).optional()
 })
 
@@ -1347,7 +1348,7 @@ export const ListLabelsQueryParams = zod.object({
 
 export const ListLabelsResponseItem = zod.object({
   "id": zod.number(),
-  "type_code": zod.string(),
+  "type_code": zod.string().nullish(),
   "naam": zod.string(),
   "fabrikant": zod.string().nullish(),
   "testnorm": zod.string().nullish(),
@@ -1365,7 +1366,8 @@ export const ListLabelsResponseItem = zod.object({
 }),zod.null()]).optional(),
   "gearchiveerd": zod.boolean(),
   "aangemaakt_op": zod.string(),
-  "bijgewerkt_op": zod.string().optional()
+  "bijgewerkt_op": zod.string().optional(),
+  "applicatie_codes": zod.array(zod.string())
 })
 export const ListLabelsResponse = zod.array(ListLabelsResponseItem)
 
@@ -1374,7 +1376,7 @@ export const ListLabelsResponse = zod.array(ListLabelsResponseItem)
  * @summary Nieuwe toepassing (label) aanmaken (beheerder)
  */
 export const CreateLabelBody = zod.object({
-  "type_code": zod.string(),
+  "applicatie_codes": zod.array(zod.string()),
   "naam": zod.string(),
   "fabrikant": zod.string().optional(),
   "testnorm": zod.string().optional(),
@@ -1396,12 +1398,13 @@ export const UpdateLabelBody = zod.object({
   "fabrikant": zod.string().nullish(),
   "testnorm": zod.string().nullish(),
   "testrapport_id": zod.number().nullish(),
-  "gearchiveerd": zod.boolean().optional()
+  "gearchiveerd": zod.boolean().optional(),
+  "applicatie_codes": zod.array(zod.string()).optional()
 })
 
 export const UpdateLabelResponse = zod.object({
   "id": zod.number(),
-  "type_code": zod.string(),
+  "type_code": zod.string().nullish(),
   "naam": zod.string(),
   "fabrikant": zod.string().nullish(),
   "testnorm": zod.string().nullish(),
@@ -1419,7 +1422,8 @@ export const UpdateLabelResponse = zod.object({
 }),zod.null()]).optional(),
   "gearchiveerd": zod.boolean(),
   "aangemaakt_op": zod.string(),
-  "bijgewerkt_op": zod.string().optional()
+  "bijgewerkt_op": zod.string().optional(),
+  "applicatie_codes": zod.array(zod.string())
 })
 
 
@@ -1520,8 +1524,7 @@ export const ListDocumentenResponseItem = zod.object({
   "gearchiveerd": zod.boolean(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string().optional(),
-  "toepassing_ids": zod.array(zod.number()),
-  "applicatie_codes": zod.array(zod.string())
+  "toepassing_ids": zod.array(zod.number())
 })
 export const ListDocumentenResponse = zod.array(ListDocumentenResponseItem)
 
@@ -1542,8 +1545,7 @@ export const CreateDocumentBody = zod.object({
   "pdf_url": zod.string().optional(),
   "ai_geanalyseerd": zod.boolean().optional(),
   "ai_metadata": zod.record(zod.string(), zod.unknown()).optional(),
-  "toepassing_ids": zod.array(zod.number()).optional(),
-  "applicatie_codes": zod.array(zod.string()).optional()
+  "toepassing_ids": zod.array(zod.number()).optional()
 })
 
 export const CreateDocumentResponse = zod.void()
@@ -1576,8 +1578,7 @@ export const GetDocumentResponse = zod.object({
   "gearchiveerd": zod.boolean(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string().optional(),
-  "toepassing_ids": zod.array(zod.number()),
-  "applicatie_codes": zod.array(zod.string())
+  "toepassing_ids": zod.array(zod.number())
 })
 
 
@@ -1613,8 +1614,7 @@ export const UpdateDocumentResponse = zod.object({
   "gearchiveerd": zod.boolean(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string().optional(),
-  "toepassing_ids": zod.array(zod.number()),
-  "applicatie_codes": zod.array(zod.string())
+  "toepassing_ids": zod.array(zod.number())
 })
 
 
@@ -1645,8 +1645,7 @@ export const ListDocumentRevisiesResponseItem = zod.object({
   "gearchiveerd": zod.boolean(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string().optional(),
-  "toepassing_ids": zod.array(zod.number()),
-  "applicatie_codes": zod.array(zod.string())
+  "toepassing_ids": zod.array(zod.number())
 })
 export const ListDocumentRevisiesResponse = zod.array(ListDocumentRevisiesResponseItem)
 
@@ -1671,8 +1670,7 @@ export const CreateDocumentRevisieBody = zod.object({
   "pdf_url": zod.string().optional(),
   "ai_geanalyseerd": zod.boolean().optional(),
   "ai_metadata": zod.record(zod.string(), zod.unknown()).optional(),
-  "toepassing_ids": zod.array(zod.number()).optional(),
-  "applicatie_codes": zod.array(zod.string()).optional()
+  "toepassing_ids": zod.array(zod.number()).optional()
 })
 
 export const CreateDocumentRevisieResponse = zod.void()
@@ -1709,44 +1707,7 @@ export const SetDocumentToepassingenResponse = zod.object({
   "gearchiveerd": zod.boolean(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string().optional(),
-  "toepassing_ids": zod.array(zod.number()),
-  "applicatie_codes": zod.array(zod.string())
-})
-
-
-/**
- * @summary Gekoppelde applicaties (voorziening-types) van een document instellen (beheerder)
- */
-export const SetDocumentApplicatiesParams = zod.object({
-  "id": zod.coerce.number()
-})
-
-export const SetDocumentApplicatiesBody = zod.object({
-  "voorziening_type_codes": zod.array(zod.string())
-})
-
-export const SetDocumentApplicatiesResponse = zod.object({
-  "id": zod.number(),
-  "naam": zod.string(),
-  "documenttype": zod.enum(['eta', 'classificatierapport', 'testrapport', 'productcertificaat', 'dop', 'verwerkingsvoorschrift']),
-  "fabrikant": zod.string().nullish(),
-  "product": zod.string().nullish(),
-  "en_norm": zod.string().nullish(),
-  "rapportnummer": zod.string().nullish(),
-  "revisie": zod.string().nullish(),
-  "datum": zod.string().nullish(),
-  "getest_voor": zod.union([zod.enum(['wand', 'plafond', 'beide']),zod.null()]).optional(),
-  "pdf_url": zod.string().nullish(),
-  "status": zod.enum(['actueel', 'controle_nodig', 'vervangen', 'mogelijk_verouderd', 'ingetrokken']),
-  "groep_id": zod.string(),
-  "revisie_nummer": zod.number(),
-  "ai_geanalyseerd": zod.boolean(),
-  "ai_metadata": zod.record(zod.string(), zod.unknown()).nullish(),
-  "gearchiveerd": zod.boolean(),
-  "aangemaakt_op": zod.string(),
-  "bijgewerkt_op": zod.string().optional(),
-  "toepassing_ids": zod.array(zod.number()),
-  "applicatie_codes": zod.array(zod.string())
+  "toepassing_ids": zod.array(zod.number())
 })
 
 

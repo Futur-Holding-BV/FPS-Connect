@@ -13,9 +13,7 @@ import {
   getListDocumentRevisiesQueryKey,
   useCreateDocumentRevisie,
   useSetDocumentToepassingen,
-  useSetDocumentApplicaties,
   useAiAnalyseDocument,
-  useListVoorzieningTypes,
   useListLabels,
   DocumentType,
   DocumentStatus,
@@ -23,7 +21,6 @@ import {
 import type {
   Document,
   DocumentInput,
-  VoorzieningType,
   Label,
   DocumentAiAnalyseResultaat,
 } from "@workspace/api-client-react";
@@ -131,7 +128,6 @@ interface FormState {
   getest_voor: string;
   pdf_url: string;
   toepassing_ids: number[];
-  applicatie_codes: string[];
   ai_geanalyseerd: boolean;
   ai_metadata: Record<string, unknown> | null;
 }
@@ -148,7 +144,6 @@ const LEEG_FORM: FormState = {
   getest_voor: "",
   pdf_url: "",
   toepassing_ids: [],
-  applicatie_codes: [],
   ai_geanalyseerd: false,
   ai_metadata: null,
 };
@@ -240,7 +235,6 @@ function DocumentFormulier({
   mode,
   basisDocument,
   toepassingOpties,
-  applicatieOpties,
   onBewaard,
 }: {
   open: boolean;
@@ -248,7 +242,6 @@ function DocumentFormulier({
   mode: "nieuw" | "revisie";
   basisDocument?: Document;
   toepassingOpties: { value: string; label: string; sub?: string }[];
-  applicatieOpties: { value: string; label: string; sub?: string }[];
   onBewaard: () => void;
 }) {
   const queryClient = useQueryClient();
@@ -266,7 +259,6 @@ function DocumentFormulier({
           getest_voor: basisDocument.getest_voor ?? "",
           pdf_url: "",
           toepassing_ids: basisDocument.toepassing_ids ?? [],
-          applicatie_codes: basisDocument.applicatie_codes ?? [],
           ai_geanalyseerd: false,
           ai_metadata: null,
         }
@@ -339,24 +331,15 @@ function DocumentFormulier({
     }
   }
 
-  function toggleLijst(key: "toepassing_ids" | "applicatie_codes", value: string) {
+  function toggleLijst(value: string) {
     setForm((f) => {
-      if (key === "toepassing_ids") {
-        const id = Number(value);
-        const has = f.toepassing_ids.includes(id);
-        return {
-          ...f,
-          toepassing_ids: has
-            ? f.toepassing_ids.filter((x) => x !== id)
-            : [...f.toepassing_ids, id],
-        };
-      }
-      const has = f.applicatie_codes.includes(value);
+      const id = Number(value);
+      const has = f.toepassing_ids.includes(id);
       return {
         ...f,
-        applicatie_codes: has
-          ? f.applicatie_codes.filter((x) => x !== value)
-          : [...f.applicatie_codes, value],
+        toepassing_ids: has
+          ? f.toepassing_ids.filter((x) => x !== id)
+          : [...f.toepassing_ids, id],
       };
     });
   }
@@ -383,7 +366,6 @@ function DocumentFormulier({
       ai_geanalyseerd: form.ai_geanalyseerd || undefined,
       ai_metadata: form.ai_metadata ?? undefined,
       toepassing_ids: form.toepassing_ids,
-      applicatie_codes: form.applicatie_codes,
     };
     try {
       if (mode === "revisie" && basisDocument) {
@@ -616,20 +598,12 @@ function DocumentFormulier({
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <KoppelingenKiezer
-              titel="Gekoppelde toepassingen"
-              opties={toepassingOpties}
-              geselecteerd={form.toepassing_ids.map(String)}
-              onToggle={(v) => toggleLijst("toepassing_ids", v)}
-            />
-            <KoppelingenKiezer
-              titel="Gekoppelde applicaties"
-              opties={applicatieOpties}
-              geselecteerd={form.applicatie_codes}
-              onToggle={(v) => toggleLijst("applicatie_codes", v)}
-            />
-          </div>
+          <KoppelingenKiezer
+            titel="Gekoppelde toepassingen"
+            opties={toepassingOpties}
+            geselecteerd={form.toepassing_ids.map(String)}
+            onToggle={(v) => toggleLijst(v)}
+          />
         </div>
 
         <DialogFooter>
@@ -650,7 +624,6 @@ function DocumentDetail({
   document,
   onOpenChange,
   toepassingOpties,
-  applicatieOpties,
   magBeheren,
   magCreeren,
   onNieuweRevisie,
@@ -658,7 +631,6 @@ function DocumentDetail({
   document: Document;
   onOpenChange: (open: boolean) => void;
   toepassingOpties: { value: string; label: string; sub?: string }[];
-  applicatieOpties: { value: string; label: string; sub?: string }[];
   magBeheren: boolean;
   magCreeren: boolean;
   onNieuweRevisie: () => void;
@@ -671,16 +643,11 @@ function DocumentDetail({
   const { data: revisies = [] } = useListDocumentRevisies(document.id);
   const wijzigDocument = useUpdateDocument();
   const setToepassingen = useSetDocumentToepassingen();
-  const setApplicaties = useSetDocumentApplicaties();
-
   const [toep, setToep] = useState<number[]>(document.toepassing_ids ?? []);
-  const [appl, setAppl] = useState<string[]>(document.applicatie_codes ?? []);
 
   const koppelingenGewijzigd =
     JSON.stringify([...toep].sort()) !==
-      JSON.stringify([...(doc.toepassing_ids ?? [])].sort()) ||
-    JSON.stringify([...appl].sort()) !==
-      JSON.stringify([...(doc.applicatie_codes ?? [])].sort());
+      JSON.stringify([...(doc.toepassing_ids ?? [])].sort());
 
   async function bewaarStatus(status: string) {
     await wijzigDocument.mutateAsync({
@@ -709,10 +676,6 @@ function DocumentDetail({
 
   async function bewaarKoppelingen() {
     await setToepassingen.mutateAsync({ id: document.id, data: { label_ids: toep } });
-    await setApplicaties.mutateAsync({
-      id: document.id,
-      data: { voorziening_type_codes: appl },
-    });
     await queryClient.invalidateQueries({ queryKey: getListDocumentenQueryKey() });
     await queryClient.invalidateQueries({
       queryKey: getGetDocumentQueryKey(document.id),
@@ -796,36 +759,23 @@ function DocumentDetail({
 
           {/* Koppelingen */}
           <div className="border-t pt-4 space-y-3">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <KoppelingenKiezer
-                titel="Toepassingen"
-                opties={toepassingOpties}
-                geselecteerd={toep.map(String)}
-                onToggle={(v) => {
-                  if (!magBeheren) return;
-                  const id = Number(v);
-                  setToep((s) =>
-                    s.includes(id) ? s.filter((x) => x !== id) : [...s, id],
-                  );
-                }}
-              />
-              <KoppelingenKiezer
-                titel="Applicaties"
-                opties={applicatieOpties}
-                geselecteerd={appl}
-                onToggle={(v) => {
-                  if (!magBeheren) return;
-                  setAppl((s) =>
-                    s.includes(v) ? s.filter((x) => x !== v) : [...s, v],
-                  );
-                }}
-              />
-            </div>
+            <KoppelingenKiezer
+              titel="Toepassingen"
+              opties={toepassingOpties}
+              geselecteerd={toep.map(String)}
+              onToggle={(v) => {
+                if (!magBeheren) return;
+                const id = Number(v);
+                setToep((s) =>
+                  s.includes(id) ? s.filter((x) => x !== id) : [...s, id],
+                );
+              }}
+            />
             {magBeheren && koppelingenGewijzigd && (
               <Button
                 size="sm"
                 onClick={bewaarKoppelingen}
-                disabled={setToepassingen.isPending || setApplicaties.isPending}
+                disabled={setToepassingen.isPending}
               >
                 Koppelingen opslaan
               </Button>
@@ -897,7 +847,6 @@ export function TabDocumenten() {
   const [detail, setDetail] = useState<Document | null>(null);
   const [revisieVoor, setRevisieVoor] = useState<Document | null>(null);
 
-  const { data: typen = [] } = useListVoorzieningTypes();
   const { data: labels = [] } = useListLabels({});
 
   const { data: documenten = [], isLoading } = useListDocumenten({
@@ -914,27 +863,14 @@ export function TabDocumenten() {
       (labels as Label[]).map((l) => ({
         value: String(l.id),
         label: l.naam,
-        sub: l.type_code,
+        sub: l.applicatie_codes.join(", "),
       })),
     [labels],
-  );
-  const applicatieOpties = useMemo(
-    () =>
-      (typen as VoorzieningType[]).map((t) => ({
-        value: t.code,
-        label: t.naam,
-        sub: t.code,
-      })),
-    [typen],
   );
 
   const labelNaam = useMemo(
     () => Object.fromEntries((labels as Label[]).map((l) => [l.id, l.naam])),
     [labels],
-  );
-  const typeNaam = useMemo(
-    () => Object.fromEntries((typen as VoorzieningType[]).map((t) => [t.code, t.naam])),
-    [typen],
   );
 
   const lijst = documenten as Document[];
@@ -1060,14 +996,8 @@ export function TabDocumenten() {
                     </td>
                     <td className="p-3 text-muted-foreground">{d.fabrikant || "—"}</td>
                     <td className="p-3 text-muted-foreground text-xs">
-                      {[
-                        ...(d.toepassing_ids ?? []).map((id) => labelNaam[id]).filter(Boolean),
-                        ...(d.applicatie_codes ?? []).map((c) => typeNaam[c]).filter(Boolean),
-                      ]
-                        .slice(0, 2)
-                        .join(", ") || "—"}
-                      {(d.toepassing_ids?.length ?? 0) + (d.applicatie_codes?.length ?? 0) >
-                        2 && " ..."}
+                      {(d.toepassing_ids ?? []).map((id) => labelNaam[id]).filter(Boolean).slice(0, 2).join(", ") || "—"}
+                      {(d.toepassing_ids?.length ?? 0) > 2 && " ..."}
                     </td>
                     <td className="p-3">{statusBadge(d.status)}</td>
                     <td className="p-3 text-right">
@@ -1098,7 +1028,6 @@ export function TabDocumenten() {
           onOpenChange={setNieuwOpen}
           mode="nieuw"
           toepassingOpties={toepassingOpties}
-          applicatieOpties={applicatieOpties}
           onBewaard={() => {}}
         />
       )}
@@ -1113,7 +1042,6 @@ export function TabDocumenten() {
           mode="revisie"
           basisDocument={revisieVoor}
           toepassingOpties={toepassingOpties}
-          applicatieOpties={applicatieOpties}
           onBewaard={() => {
             setRevisieVoor(null);
             setDetail(null);
@@ -1128,7 +1056,6 @@ export function TabDocumenten() {
             if (!o) setDetail(null);
           }}
           toepassingOpties={toepassingOpties}
-          applicatieOpties={applicatieOpties}
           magBeheren={magBeheren}
           magCreeren={magCreeren}
           onNieuweRevisie={() => setRevisieVoor(detail)}

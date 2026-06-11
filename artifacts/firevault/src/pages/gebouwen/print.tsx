@@ -319,8 +319,7 @@ function SpotDetailBlok({
   const spotLabelIds = new Set(labels.map((l: any) => l.id));
   const spotDocumenten = (documenten ?? []).filter((doc: any) =>
     doc.status === "actueel" && !doc.gearchiveerd &&
-    (((doc.toepassing_ids ?? []).some((tid: number) => spotLabelIds.has(tid))) ||
-     ((doc.applicatie_codes ?? []).includes(spot.type))),
+    (doc.toepassing_ids ?? []).some((tid: number) => spotLabelIds.has(tid)),
   );
 
   const heeftTestinfo = labels.some((l: any) => l.testnorm || l.fabrikant);
@@ -737,6 +736,63 @@ function PrintVerdieping({
   );
 }
 
+// ─── E-mail helpers ──────────────────────────────────────────────────────────
+
+const CATEGORIE_VOLGORDE = [
+  "Opdracht en akkoord",
+  "Technische kaders",
+  "Tekeningen en bijlagen",
+  "Planning en uitvoering",
+  "Overige relevante correspondentie",
+] as const;
+type EmailCategorie = typeof CATEGORIE_VOLGORDE[number];
+
+function afzenderKort(raw: string | null | undefined): string {
+  if (!raw) return "—";
+  const s = raw.trim();
+  if (/^\/O=/i.test(s)) {
+    const cn = s.match(/CN=([^/,]+)$/i);
+    return cn ? cn[1].replace(/\./g, " ") : "Intern";
+  }
+  const first = s.split(/[;\n]/)[0].trim();
+  if (first !== s) return afzenderKort(first);
+  const named = s.match(/^"?([^"<@\n]+?)"?\s*<([^>]+)>/);
+  if (named) {
+    const name = named[1].trim();
+    if (name) return name;
+    const domainOrg = named[2].split("@")[1]?.split(".").slice(-2, -1)[0] ?? "";
+    return domainOrg || named[2].slice(0, 30);
+  }
+  const emailOnly = s.match(/^([^@\s]+)@([^@\s]+)$/);
+  if (emailOnly) {
+    const org = emailOnly[2].split(".").slice(-2, -1)[0] ?? emailOnly[2];
+    return `${emailOnly[1]} (${org})`;
+  }
+  return s.length > 40 ? s.slice(0, 40) + "…" : s;
+}
+
+function ontvangerKort(raw: string | null | undefined): string {
+  if (!raw) return "—";
+  const parts = raw.split(/[;\n]/).map(p => p.trim()).filter(Boolean);
+  if (parts.length > 1) return `${afzenderKort(parts[0])} +${parts.length - 1}`;
+  return afzenderKort(parts[0]);
+}
+
+function emailCategorie(reden: string | null | undefined, omschrijving: string | null | undefined): EmailCategorie {
+  const tekst = `${reden ?? ""} ${omschrijving ?? ""}`.toLowerCase();
+  if (/opdracht|offerte|contract|akkoord|goedkeur|opdrachtgev|bevestig|aanvaarding|gunning/.test(tekst)) return "Opdracht en akkoord";
+  if (/tekening|plattegrond|bijlage.*tek|schema|schets|dwg|cad/.test(tekst)) return "Tekeningen en bijlagen";
+  if (/technisch|randvoorwaarde|norm|eis|specificat|klasse|product|materiaal|brand/.test(tekst)) return "Technische kaders";
+  if (/planning|uitvoering|termijn|datum|afspraak|oplevering|voortgang|wijziging|scope|start|klaar/.test(tekst)) return "Planning en uitvoering";
+  return "Overige relevante correspondentie";
+}
+
+function bijlagenKort(bijlagen: Array<{ bestandsnaam: string }> | null | undefined): string {
+  if (!bijlagen || bijlagen.length === 0) return "—";
+  if (bijlagen.length <= 2) return bijlagen.map(b => b.bestandsnaam).join(", ");
+  return `${bijlagen[0].bestandsnaam} +${bijlagen.length - 1}`;
+}
+
 // ─── GebouwPrint ─────────────────────────────────────────────────────────────
 
 export default function GebouwPrint() {
@@ -821,7 +877,10 @@ export default function GebouwPrint() {
 
   const projectTekeningen = (tekeningen ?? []).filter((t) => t.type !== "document");
   const projectEmails     = (emails ?? []).filter((e) => e.ai_relevant !== false);
-  const heeftDocumenten   = projectTekeningen.length > 0 || projectEmails.length > 0;
+  const emailGroepen      = CATEGORIE_VOLGORDE
+    .map(cat => ({ categorie: cat, emails: projectEmails.filter(e => emailCategorie(e.ai_relevant_reden, e.ai_omschrijving) === cat) }))
+    .filter(g => g.emails.length > 0);
+  const heeftDocumenten   = projectTekeningen.length > 0 || emailGroepen.length > 0;
 
   const teamleden = Object.values(
     (toewijzingen ?? []).reduce<Record<number, { id: number; naam: string; rol: string; rollen: string[] }>>((acc, t) => {
@@ -881,7 +940,8 @@ export default function GebouwPrint() {
           font-size: 13px;
           letter-spacing: .02em;
         }
-        .prt-email-ai { font-size: 11px; color: #64748b; margin-top: 3px; line-height: 1.35; }
+        .prt-email-cat td { font-size: 10.5px; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: .06em; padding: 5px 8px 4px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; }
+        .prt-email-ai-row td { font-size: 11px; color: #64748b; padding: 2px 8px 7px; font-style: italic; line-height: 1.35; border-bottom: 1px solid #eef2f6; }
         .prt-cover-main {
           flex: 1;
           display: flex;
@@ -1248,32 +1308,39 @@ export default function GebouwPrint() {
               </>
             )}
 
-            {projectEmails.length > 0 && (
+            {emailGroepen.length > 0 && (
               <>
                 <div className="prt-tegel-koplabel" style={{ marginTop: 12 }}>Relevante correspondentie en e-mails</div>
                 <table className="prt-tabel">
                   <thead>
                     <tr>
-                      <th style={{ width: "13%" }}>Datum</th>
-                      <th style={{ width: "21%" }}>Afzender</th>
-                      <th style={{ width: "21%" }}>Ontvanger</th>
+                      <th style={{ width: "11%" }}>Datum</th>
+                      <th style={{ width: "18%" }}>Afzender</th>
+                      <th style={{ width: "16%" }}>Partij/Ontvanger</th>
                       <th>Onderwerp</th>
-                      <th style={{ width: "9%" }}>Bijlagen</th>
+                      <th style={{ width: "18%" }}>Bijlagen</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {projectEmails.map(e => (
-                      <tr key={e.id}>
-                        <td>{e.datum ? datumNL(e.datum) : datumNL(e.aangemaakt_op)}</td>
-                        <td>{e.afzender || "—"}</td>
-                        <td>{e.ontvanger || "—"}</td>
-                        <td>
-                          {e.onderwerp || e.bestandsnaam}
-                          {e.ai_omschrijving && <div className="prt-email-ai">{e.ai_omschrijving}</div>}
-                        </td>
-                        <td>{e.bijlagen?.length ?? 0}</td>
-                      </tr>
-                    ))}
+                    {emailGroepen.flatMap(groep => [
+                      <tr key={`cat-${groep.categorie}`} className="prt-email-cat">
+                        <td colSpan={5}>{groep.categorie}</td>
+                      </tr>,
+                      ...groep.emails.flatMap(e => [
+                        <tr key={e.id}>
+                          <td>{e.datum ? datumNL(e.datum) : datumNL(e.aangemaakt_op)}</td>
+                          <td>{afzenderKort(e.afzender)}</td>
+                          <td>{ontvangerKort(e.ontvanger)}</td>
+                          <td>{e.onderwerp || e.bestandsnaam || "—"}</td>
+                          <td>{bijlagenKort(e.bijlagen)}</td>
+                        </tr>,
+                        ...(e.ai_omschrijving ? [
+                          <tr key={`${e.id}-ai`} className="prt-email-ai-row">
+                            <td colSpan={5}>{e.ai_omschrijving}</td>
+                          </tr>,
+                        ] : []),
+                      ]),
+                    ])}
                   </tbody>
                 </table>
               </>

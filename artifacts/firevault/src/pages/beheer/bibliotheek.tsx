@@ -31,6 +31,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { TabDocumenten } from "./documenten-tab";
 import {
   Archive,
@@ -167,24 +169,24 @@ function TabToepassingen() {
   const wijzigLabel = useUpdateLabel();
 
   const [nieuw, setNieuw] = useState({
-    type_code: "",
+    applicatie_codes: [] as string[],
     naam: "",
     fabrikant: "",
     testnorm: "",
   });
 
   async function bewaarNieuw() {
-    if (!nieuw.type_code || !nieuw.naam.trim()) return;
+    if (nieuw.applicatie_codes.length === 0 || !nieuw.naam.trim()) return;
     await maakLabel.mutateAsync({
       data: {
-        type_code: nieuw.type_code,
+        applicatie_codes: nieuw.applicatie_codes,
         naam: nieuw.naam.trim(),
         fabrikant: nieuw.fabrikant.trim() || undefined,
         testnorm: nieuw.testnorm.trim() || undefined,
       },
     });
     await queryClient.invalidateQueries({ queryKey: getListLabelsQueryKey() });
-    setNieuw({ type_code: "", naam: "", fabrikant: "", testnorm: "" });
+    setNieuw({ applicatie_codes: [], naam: "", fabrikant: "", testnorm: "" });
     setNieuwOpen(false);
   }
 
@@ -231,7 +233,7 @@ function TabToepassingen() {
       try {
         await maakLabel.mutateAsync({
           data: {
-            type_code: rij.type_code,
+            applicatie_codes: [rij.type_code],
             naam: rij.naam,
             fabrikant: rij.fabrikant || undefined,
             testnorm: rij.testnorm || undefined,
@@ -449,13 +451,9 @@ function TabToepassingen() {
                     }`}
                   >
                     <td className="p-3">
-                      {typeLookup[l.type_code] ? (
-                        <span className="font-mono text-xs bg-muted px-1.5 py-0.5 rounded">
-                          {l.type_code}
-                        </span>
-                      ) : (
-                        <span className="text-muted-foreground font-mono text-xs">{l.type_code}</span>
-                      )}
+                      <span className="font-mono text-xs text-muted-foreground">
+                        {l.applicatie_codes.join(", ") || "—"}
+                      </span>
                     </td>
                     <td className="p-3 font-medium">{l.naam}</td>
                     <td className="p-3 text-muted-foreground">{l.fabrikant ?? "—"}</td>
@@ -509,23 +507,31 @@ function TabToepassingen() {
           </DialogHeader>
           <div className="space-y-3">
             <div>
-              <UiLabel>Applicatie-type *</UiLabel>
-              <Select
-                value={nieuw.type_code}
-                onValueChange={(v) => setNieuw((n) => ({ ...n, type_code: v }))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Kies een type" />
-                </SelectTrigger>
-                <SelectContent>
+              <UiLabel>Applicatie-types *</UiLabel>
+              <ScrollArea className="h-40 rounded-md border mt-1">
+                <div className="p-2 space-y-1">
                   {(typen as VoorzieningType[]).filter((t) => t.actief).map((t) => (
-                    <SelectItem key={t.code} value={t.code}>
-                      <span className="font-mono text-xs mr-2 text-muted-foreground">{t.code}</span>
-                      {t.naam}
-                    </SelectItem>
+                    <div key={t.code} className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-muted/50">
+                      <Checkbox
+                        id={`appl-bib-${t.code}`}
+                        checked={nieuw.applicatie_codes.includes(t.code)}
+                        onCheckedChange={(checked) =>
+                          setNieuw((n) => ({
+                            ...n,
+                            applicatie_codes: checked
+                              ? [...n.applicatie_codes, t.code]
+                              : n.applicatie_codes.filter((c) => c !== t.code),
+                          }))
+                        }
+                      />
+                      <label htmlFor={`appl-bib-${t.code}`} className="cursor-pointer text-sm flex-1">
+                        <span className="font-mono text-xs text-muted-foreground mr-2">{t.code}</span>
+                        {t.naam}
+                      </label>
+                    </div>
                   ))}
-                </SelectContent>
-              </Select>
+                </div>
+              </ScrollArea>
             </div>
             <div>
               <UiLabel htmlFor="nieuw-naam">Naam / productsoort *</UiLabel>
@@ -572,7 +578,7 @@ function TabToepassingen() {
             </Button>
             <Button
               onClick={bewaarNieuw}
-              disabled={!nieuw.type_code || !nieuw.naam.trim() || maakLabel.isPending}
+              disabled={nieuw.applicatie_codes.length === 0 || !nieuw.naam.trim() || maakLabel.isPending}
             >
               {maakLabel.isPending ? "Opslaan..." : "Toevoegen"}
             </Button>

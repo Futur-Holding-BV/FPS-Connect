@@ -39,5 +39,4 @@ export interface Document {
   aangemaakt_op: string;
   bijgewerkt_op?: string;
   toepassing_ids: number[];
-  applicatie_codes: string[];
 }

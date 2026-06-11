@@ -69,7 +69,7 @@ export type Testrapport = typeof testrapportenTable.$inferSelect;
 // UI-benaming: "Toepassing". Optioneel gekoppeld aan één testrapport.
 export const labelsTable = pgTable("labels", {
   id: serial("id").primaryKey(),
-  typeCode: text("type_code").notNull().references(() => voorzieningTypesTable.code, { onDelete: "cascade" }),
+  typeCode: text("type_code").references(() => voorzieningTypesTable.code, { onDelete: "set null" }),
   naam: text("naam").notNull(),
   fabrikant: text("fabrikant"),
   testnorm: text("testnorm"),
@@ -81,6 +81,16 @@ export const labelsTable = pgTable("labels", {
 export const insertLabelSchema = createInsertSchema(labelsTable).omit({ id: true, aangemaaktOp: true, bijgewerktOp: true });
 export type InsertLabel = z.infer<typeof insertLabelSchema>;
 export type Label = typeof labelsTable.$inferSelect;
+
+// ── KOPPELING toepassing ↔ applicatie (many-to-many) ─────────────────────────
+export const labelApplicatiesTable = pgTable("label_applicaties", {
+  id: serial("id").primaryKey(),
+  labelId: integer("label_id").notNull().references(() => labelsTable.id, { onDelete: "cascade" }),
+  typeCode: text("type_code").notNull().references(() => voorzieningTypesTable.code, { onDelete: "cascade" }),
+}, (t) => ({
+  uniekPaar: unique().on(t.labelId, t.typeCode),
+}));
+export type LabelApplicatie = typeof labelApplicatiesTable.$inferSelect;
 
 // ── KOPPELING voorziening ↔ toepassingen (meerdere per voorziening) ──────────
 export const voorzieningLabelsTable = pgTable("voorziening_labels", {

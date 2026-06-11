@@ -5,6 +5,8 @@ import {
   voorzieningLabelsTable,
   documentenTable,
   documentToepassingenTable,
+  labelApplicatiesTable,
+  voorzieningTypesTable,
 } from "@workspace/db";
 import { eq, inArray, and } from "drizzle-orm";
 
@@ -68,6 +70,11 @@ export async function mapLabel(l: typeof labelsTable.$inferSelect) {
       .where(eq(testrapportenTable.id, l.testrapportId));
     testrapport = t ? mapTestrapport(t) : null;
   }
+  // Applicatie-koppelingen via junction (M:N).
+  const applRijen = await db
+    .select({ typeCode: labelApplicatiesTable.typeCode })
+    .from(labelApplicatiesTable)
+    .where(eq(labelApplicatiesTable.labelId, l.id));
   return {
     id: l.id,
     type_code: l.typeCode,
@@ -77,7 +84,25 @@ export async function mapLabel(l: typeof labelsTable.$inferSelect) {
     gearchiveerd: l.gearchiveerd,
     aangemaakt_op: l.aangemaaktOp.toISOString(),
     bijgewerkt_op: l.bijgewerktOp.toISOString(),
+    applicatie_codes: applRijen.map((r) => r.typeCode),
   };
+}
+
+// Vervangt de applicatie-koppelingen van een toepassing door de opgegeven set.
+export async function syncLabelApplicaties(labelId: number, codes: string[]) {
+  const schoon = Array.from(new Set(codes.filter((c) => typeof c === "string" && c.trim().length > 0)));
+  await db.delete(labelApplicatiesTable).where(eq(labelApplicatiesTable.labelId, labelId));
+  if (schoon.length === 0) return;
+  const bestaande = await db
+    .select({ code: voorzieningTypesTable.code })
+    .from(voorzieningTypesTable)
+    .where(inArray(voorzieningTypesTable.code, schoon));
+  const geldig = bestaande.map((b) => b.code);
+  if (geldig.length === 0) return;
+  await db
+    .insert(labelApplicatiesTable)
+    .values(geldig.map((typeCode) => ({ labelId, typeCode })))
+    .onConflictDoNothing();
 }
 
 // Alle (gekoppelde) toepassingen van een voorziening, inclusief testrapport.

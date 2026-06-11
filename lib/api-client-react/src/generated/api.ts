@@ -45,7 +45,6 @@ import type {
   Document,
   DocumentAiAnalyseInput,
   DocumentAiAnalyseResultaat,
-  DocumentApplicatiesInput,
   DocumentInput,
   DocumentToepassingenInput,
   DocumentUpdate,
@@ -4693,77 +4692,6 @@ export const useSetDocumentToepassingen = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getSetDocumentToepassingenMutationOptions(options));
-    }
-
-export const getSetDocumentApplicatiesUrl = (id: number,) => {
-
-
-
-
-  return `/api/documenten/${id}/applicaties`
-}
-
-/**
- * @summary Gekoppelde applicaties (voorziening-types) van een document instellen (beheerder)
- */
-export const setDocumentApplicaties = async (id: number,
-    documentApplicatiesInput: DocumentApplicatiesInput, options?: RequestInit): Promise<Document> => {
-
-  return customFetch<Document>(getSetDocumentApplicatiesUrl(id),
-  {
-    ...options,
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(documentApplicatiesInput)
-  }
-);}
-
-
-
-
-export const getSetDocumentApplicatiesMutationOptions = <TError = ErrorType<void>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof setDocumentApplicaties>>, TError,{id: number;data: BodyType<DocumentApplicatiesInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof setDocumentApplicaties>>, TError,{id: number;data: BodyType<DocumentApplicatiesInput>}, TContext> => {
-
-const mutationKey = ['setDocumentApplicaties'];
-const {mutation: mutationOptions, request: requestOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
-
-
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof setDocumentApplicaties>>, {id: number;data: BodyType<DocumentApplicatiesInput>}> = (props) => {
-          const {id,data} = props ?? {};
-
-          return  setDocumentApplicaties(id,data,requestOptions)
-        }
-
-
-
-
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type SetDocumentApplicatiesMutationResult = NonNullable<Awaited<ReturnType<typeof setDocumentApplicaties>>>
-    export type SetDocumentApplicatiesMutationBody = BodyType<DocumentApplicatiesInput>
-    export type SetDocumentApplicatiesMutationError = ErrorType<void>
-
-    /**
- * @summary Gekoppelde applicaties (voorziening-types) van een document instellen (beheerder)
- */
-export const useSetDocumentApplicaties = <TError = ErrorType<void>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof setDocumentApplicaties>>, TError,{id: number;data: BodyType<DocumentApplicatiesInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
- ): UseMutationResult<
-        Awaited<ReturnType<typeof setDocumentApplicaties>>,
-        TError,
-        {id: number;data: BodyType<DocumentApplicatiesInput>},
-        TContext
-      > => {
-      return useMutation(getSetDocumentApplicatiesMutationOptions(options));
     }
 
 export const getAiAnalyseDocumentUrl = () => {

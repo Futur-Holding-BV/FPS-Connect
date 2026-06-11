@@ -1428,33 +1428,6 @@ paths:
         "404":
           description: Niet gevonden
 
-  /documenten/{id}/applicaties:
-    put:
-      operationId: setDocumentApplicaties
-      tags: [bibliotheek]
-      summary: Gekoppelde applicaties (voorziening-types) van een document instellen (beheerder)
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema:
-            type: integer
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/DocumentApplicatiesInput"
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Document"
-        "404":
-          description: Niet gevonden
-
   /documenten/ai-analyse:
     post:
       operationId: aiAnalyseDocument
@@ -5810,12 +5783,12 @@ components:
 
     Label:
       type: object
-      required: [id, type_code, naam, gearchiveerd, aangemaakt_op]
+      required: [id, naam, gearchiveerd, aangemaakt_op, applicatie_codes]
       properties:
         id:
           type: integer
         type_code:
-          type: string
+          type: ["string", "null"]
         naam:
           type: string
         fabrikant:
@@ -5834,13 +5807,19 @@ components:
           type: string
         bijgewerkt_op:
           type: string
+        applicatie_codes:
+          type: array
+          items:
+            type: string
 
     LabelInput:
       type: object
-      required: [type_code, naam]
+      required: [naam, applicatie_codes]
       properties:
-        type_code:
-          type: string
+        applicatie_codes:
+          type: array
+          items:
+            type: string
         naam:
           type: string
         fabrikant:
@@ -5863,6 +5842,10 @@ components:
           type: ["integer", "null"]
         gearchiveerd:
           type: boolean
+        applicatie_codes:
+          type: array
+          items:
+            type: string
 
     DocumentType:
       type: string
@@ -5878,7 +5861,7 @@ components:
 
     Document:
       type: object
-      required: [id, naam, documenttype, status, groep_id, revisie_nummer, ai_geanalyseerd, gearchiveerd, aangemaakt_op, toepassing_ids, applicatie_codes]
+      required: [id, naam, documenttype, status, groep_id, revisie_nummer, ai_geanalyseerd, gearchiveerd, aangemaakt_op, toepassing_ids]
       properties:
         id:
           type: integer
@@ -5925,10 +5908,6 @@ components:
           type: array
           items:
             type: integer
-        applicatie_codes:
-          type: array
-          items:
-            type: string
 
     DocumentInput:
       type: object
@@ -5963,10 +5942,6 @@ components:
           type: array
           items:
             type: integer
-        applicatie_codes:
-          type: array
-          items:
-            type: string
 
     DocumentUpdate:
       type: object
@@ -5984,15 +5959,6 @@ components:
           type: array
           items:
             type: integer
-
-    DocumentApplicatiesInput:
-      type: object
-      required: [voorziening_type_codes]
-      properties:
-        voorziening_type_codes:
-          type: array
-          items:
-            type: string
 
     DocumentAiAnalyseInput:
       type: object

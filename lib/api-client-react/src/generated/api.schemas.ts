@@ -1053,7 +1053,8 @@ export interface Testrapport {
 
 export interface Label {
   id: number;
-  type_code: string;
+  /** @nullable */
+  type_code?: string | null;
   naam: string;
   /** @nullable */
   fabrikant?: string | null;
@@ -1065,6 +1066,7 @@ export interface Label {
   gearchiveerd: boolean;
   aangemaakt_op: string;
   bijgewerkt_op?: string;
+  applicatie_codes: string[];
 }
 
 export interface VoorzieningDetail {
@@ -1774,7 +1776,7 @@ export interface TestrapportUpdate {
 }
 
 export interface LabelInput {
-  type_code: string;
+  applicatie_codes: string[];
   naam: string;
   fabrikant?: string;
   testnorm?: string;
@@ -1790,6 +1792,7 @@ export interface LabelUpdate {
   /** @nullable */
   testrapport_id?: number | null;
   gearchiveerd?: boolean;
+  applicatie_codes?: string[];
 }
 
 export type DocumentType = typeof DocumentType[keyof typeof DocumentType];
@@ -1858,7 +1861,6 @@ export interface Document {
   aangemaakt_op: string;
   bijgewerkt_op?: string;
   toepassing_ids: number[];
-  applicatie_codes: string[];
 }
 
 export type DocumentInputAiMetadata = { [key: string]: unknown };
@@ -1877,7 +1879,6 @@ export interface DocumentInput {
   ai_geanalyseerd?: boolean;
   ai_metadata?: DocumentInputAiMetadata;
   toepassing_ids?: number[];
-  applicatie_codes?: string[];
 }
 
 export interface DocumentUpdate {
@@ -1887,10 +1888,6 @@ export interface DocumentUpdate {
 
 export interface DocumentToepassingenInput {
   label_ids: number[];
-}
-
-export interface DocumentApplicatiesInput {
-  voorziening_type_codes: string[];
 }
 
 export interface DocumentAiAnalyseInput {

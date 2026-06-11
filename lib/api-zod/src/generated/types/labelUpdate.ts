@@ -15,4 +15,5 @@ export interface LabelUpdate {
   /** @nullable */
   testrapport_id?: number | null;
   gearchiveerd?: boolean;
+  applicatie_codes?: string[];
 }

@@ -37,7 +37,6 @@ export * from './document';
 export * from './documentAiAnalyseInput';
 export * from './documentAiAnalyseResultaat';
 export * from './documentAiMetadata';
-export * from './documentApplicatiesInput';
 export * from './documentInput';
 export * from './documentInputAiMetadata';
 export * from './documentStatus';

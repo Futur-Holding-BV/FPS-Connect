@@ -3,9 +3,8 @@ import {
   db,
   documentenTable,
   documentToepassingenTable,
-  documentApplicatiesTable,
   labelsTable,
-  voorzieningTypesTable,
+  labelApplicatiesTable,
 } from "@workspace/db";
 import { eq, and, ne, asc, inArray, max } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
@@ -13,7 +12,6 @@ import {
   mapDocument,
   mapDocumenten,
   syncDocumentToepassingen,
-  syncDocumentApplicaties,
   isDocumentType,
   isDocumentStatus,
   isGetestVoor,
@@ -63,9 +61,10 @@ router.get("/documenten", async (req, res) => {
 
     if (voorziening_type_code) {
       const koppel = await db
-        .select({ documentId: documentApplicatiesTable.documentId })
-        .from(documentApplicatiesTable)
-        .where(eq(documentApplicatiesTable.voorzieningTypeCode, String(voorziening_type_code)));
+        .select({ documentId: documentToepassingenTable.documentId })
+        .from(documentToepassingenTable)
+        .innerJoin(labelApplicatiesTable, eq(labelApplicatiesTable.labelId, documentToepassingenTable.labelId))
+        .where(eq(labelApplicatiesTable.typeCode, String(voorziening_type_code)));
       const ids = new Set(koppel.map((k) => k.documentId));
       rows = rows.filter((d) => ids.has(d.id));
     }
@@ -146,7 +145,6 @@ router.post("/documenten", requireBevoegdheid("bibliotheek", 3), async (req, res
       .returning();
 
     if (Array.isArray(b.toepassing_ids)) await syncDocumentToepassingen(d.id, b.toepassing_ids);
-    if (Array.isArray(b.applicatie_codes)) await syncDocumentApplicaties(d.id, b.applicatie_codes);
 
     return res.status(201).json(await mapDocument(d));
   } catch (err) {
@@ -266,14 +264,6 @@ router.post("/documenten/:id/revisies", requireBevoegdheid("bibliotheek", 3), as
               .from(documentToepassingenTable)
               .where(eq(documentToepassingenTable.documentId, bron.id))
           ).map((r) => r.labelId);
-      const codes: string[] = Array.isArray(b.applicatie_codes)
-        ? b.applicatie_codes.filter((c: unknown) => typeof c === "string")
-        : (
-            await tx
-              .select({ code: documentApplicatiesTable.voorzieningTypeCode })
-              .from(documentApplicatiesTable)
-              .where(eq(documentApplicatiesTable.documentId, bron.id))
-          ).map((r) => r.code);
 
       if (labelIds.length) {
         const geldig = (
@@ -283,20 +273,6 @@ router.post("/documenten/:id/revisies", requireBevoegdheid("bibliotheek", 3), as
           await tx
             .insert(documentToepassingenTable)
             .values(geldig.map((labelId) => ({ documentId: row.id, labelId })))
-            .onConflictDoNothing();
-        }
-      }
-      if (codes.length) {
-        const geldig = (
-          await tx
-            .select({ code: voorzieningTypesTable.code })
-            .from(voorzieningTypesTable)
-            .where(inArray(voorzieningTypesTable.code, codes))
-        ).map((x) => x.code);
-        if (geldig.length) {
-          await tx
-            .insert(documentApplicatiesTable)
-            .values(geldig.map((voorzieningTypeCode) => ({ documentId: row.id, voorzieningTypeCode })))
             .onConflictDoNothing();
         }
       }
@@ -319,23 +295,6 @@ router.put("/documenten/:id/toepassingen", requireBevoegdheid("bibliotheek", 2),
     if (!d) return res.status(404).json({ error: "Document niet gevonden" });
     const ids = Array.isArray(req.body?.label_ids) ? req.body.label_ids : [];
     await syncDocumentToepassingen(id, ids);
-    return res.json(await mapDocument(d));
-  } catch (err) {
-    req.log.error(err);
-    return res.status(500).json({ error: "Interne serverfout" });
-  }
-});
-
-// PUT /documenten/:id/applicaties — gekoppelde applicaties instellen (beheerder)
-router.put("/documenten/:id/applicaties", requireBevoegdheid("bibliotheek", 2), async (req, res) => {
-  try {
-    const id = parseInt(String(req.params.id));
-    const [d] = await db.select().from(documentenTable).where(eq(documentenTable.id, id));
-    if (!d) return res.status(404).json({ error: "Document niet gevonden" });
-    const codes = Array.isArray(req.body?.voorziening_type_codes)
-      ? req.body.voorziening_type_codes
-      : [];
-    await syncDocumentApplicaties(id, codes);
     return res.json(await mapDocument(d));
   } catch (err) {
     req.log.error(err);
