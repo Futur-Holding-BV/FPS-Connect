@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useParams, Link } from "wouter";
 import * as pdfjsLib from "pdfjs-dist";
 import pdfWorkerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
@@ -12,12 +12,14 @@ import {
   useListScheidingen,
   useGetVoorziening,
   useListDocumenten,
+  useListVoorzieningTypes,
   useListGebouwTekeningen,
   useListGebouwEmails,
   useGetGebouwEmailSamenvatting,
   useGetGebouwGevelbeeld,
   useListGebruikers,
   type Verdieping,
+  type VoorzieningType,
 } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/auth-context";
@@ -270,6 +272,7 @@ function SpotDetailBlok({
   exportDatum,
   logoSrc,
   documenten,
+  typeNaam,
   onGereed,
 }: {
   spot: SVGVoorziening;
@@ -282,6 +285,7 @@ function SpotDetailBlok({
   exportDatum: string;
   logoSrc: string;
   documenten: any[] | undefined;
+  typeNaam: Record<string, string>;
   onGereed: () => void;
 }) {
   const { data: detail } = useGetVoorziening(spot.id);
@@ -306,7 +310,10 @@ function SpotDetailBlok({
   const naFotos   = fotos.filter((f: any) => f.fase === "na");
 
   const d = detail as any;
-  const applicatieLabel = TYPEN[spot.type]?.label ?? spot.type;
+  const catalogNaam = typeNaam[spot.type];
+  const applicatieLabel = catalogNaam
+    ? `${spot.type} – ${catalogNaam}`
+    : (TYPEN[spot.type]?.label ?? spot.type);
   const werendheidLabel = weergeefWerendheid(d?.wbdbo, d?.wrd, d?.classificatie);
 
   const spotLabelIds = new Set(labels.map((l: any) => l.id));
@@ -540,6 +547,7 @@ function PrintVerdieping({
   exportDatum,
   logoSrc,
   documenten,
+  typeNaam,
   toonOverzicht,
   toonSpotDetails,
 }: {
@@ -549,6 +557,7 @@ function PrintVerdieping({
   exportDatum: string;
   logoSrc: string;
   documenten: any[] | undefined;
+  typeNaam: Record<string, string>;
   toonOverzicht: boolean;
   toonSpotDetails: boolean;
 }) {
@@ -694,6 +703,7 @@ function PrintVerdieping({
           exportDatum={exportDatum}
           logoSrc={logoSrc}
           documenten={documenten}
+          typeNaam={typeNaam}
           onGereed={() => setSpotsGereed(n => n + 1)}
         />
       ))}
@@ -744,7 +754,13 @@ export default function GebouwPrint() {
   const { data: samenvatting }                                = useGetGebouwEmailSamenvatting(gebouwId);
   const { data: gevelbeeld, isLoading: gevelbeeldLaden }      = useGetGebouwGevelbeeld(gebouwId);
   const { data: documenten, isLoading: documentenLaden }      = useListDocumenten();
+  const { data: typen, isLoading: typenLaden }                = useListVoorzieningTypes();
   const { isLoading: gebruikersLaden }      = useListGebruikers();
+
+  const typeNaam = useMemo(
+    () => Object.fromEntries(((typen ?? []) as VoorzieningType[]).map((t) => [t.code, t.naam])),
+    [typen],
+  );
 
   const [gereedFloors, setGereedFloors] = useState(0);
   const gedrukt = useRef(false);
@@ -760,7 +776,7 @@ export default function GebouwPrint() {
     !isLoading && !!gebouw &&
     !partijenLaden && !toewijzingenLaden &&
     !onderhoudLaden && !inspectiesLaden &&
-    !tekeningenLaden && !emailsLaden && !gevelbeeldLaden && !documentenLaden && !gebruikersLaden &&
+    !tekeningenLaden && !emailsLaden && !gevelbeeldLaden && !documentenLaden && !typenLaden && !gebruikersLaden &&
     gereedFloors >= aantalFloors;
 
   useEffect(() => {
@@ -1533,6 +1549,7 @@ export default function GebouwPrint() {
                 exportDatum={exportDatum}
                 logoSrc={logoSrc}
                 documenten={documenten}
+                typeNaam={typeNaam}
                 toonOverzicht={toonOverzicht}
                 toonSpotDetails={toonSpotDetails}
               />
