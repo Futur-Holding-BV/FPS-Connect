@@ -1285,6 +1285,11 @@ export interface ClusterUpdate {
   kleur?: string | null;
 }
 
+export interface ClusterMonteurInput {
+  /** @nullable */
+  monteur_id: number | null;
+}
+
 export interface StatusUpdate {
   status: string;
   opmerkingen?: string;
@@ -2269,6 +2274,10 @@ label_id?: number;
  */
 alleen_actueel?: boolean;
 inclusief_gearchiveerd?: boolean;
+};
+
+export type AssignClusterMonteur200 = {
+  aantal: number;
 };
 
 export type ListMuisGebeurtenissenParams = {

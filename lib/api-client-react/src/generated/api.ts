@@ -28,9 +28,11 @@ import type {
   AppInstellingenInput,
   ApplicatieLabelsInput,
   ArchiefUpdate,
+  AssignClusterMonteur200,
   AuthGebruiker,
   Cluster,
   ClusterInput,
+  ClusterMonteurInput,
   ClusterUpdate,
   CodeInput,
   CrmCommercieel,
@@ -6305,6 +6307,77 @@ export const useDeleteCluster = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getDeleteClusterMutationOptions(options));
+    }
+
+export const getAssignClusterMonteurUrl = (clusterId: number,) => {
+
+
+
+
+  return `/api/clusters/${clusterId}/monteur`
+}
+
+/**
+ * @summary Monteur toewijzen aan alle spots in een cluster
+ */
+export const assignClusterMonteur = async (clusterId: number,
+    clusterMonteurInput: ClusterMonteurInput, options?: RequestInit): Promise<AssignClusterMonteur200> => {
+
+  return customFetch<AssignClusterMonteur200>(getAssignClusterMonteurUrl(clusterId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(clusterMonteurInput)
+  }
+);}
+
+
+
+
+export const getAssignClusterMonteurMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof assignClusterMonteur>>, TError,{clusterId: number;data: BodyType<ClusterMonteurInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof assignClusterMonteur>>, TError,{clusterId: number;data: BodyType<ClusterMonteurInput>}, TContext> => {
+
+const mutationKey = ['assignClusterMonteur'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof assignClusterMonteur>>, {clusterId: number;data: BodyType<ClusterMonteurInput>}> = (props) => {
+          const {clusterId,data} = props ?? {};
+
+          return  assignClusterMonteur(clusterId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AssignClusterMonteurMutationResult = NonNullable<Awaited<ReturnType<typeof assignClusterMonteur>>>
+    export type AssignClusterMonteurMutationBody = BodyType<ClusterMonteurInput>
+    export type AssignClusterMonteurMutationError = ErrorType<void>
+
+    /**
+ * @summary Monteur toewijzen aan alle spots in een cluster
+ */
+export const useAssignClusterMonteur = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof assignClusterMonteur>>, TError,{clusterId: number;data: BodyType<ClusterMonteurInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof assignClusterMonteur>>,
+        TError,
+        {clusterId: number;data: BodyType<ClusterMonteurInput>},
+        TContext
+      > => {
+      return useMutation(getAssignClusterMonteurMutationOptions(options));
     }
 
 export const getListLoginPogingenUrl = () => {

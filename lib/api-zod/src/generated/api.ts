@@ -2268,6 +2268,22 @@ export const DeleteClusterResponse = zod.void()
 
 
 /**
+ * @summary Monteur toewijzen aan alle spots in een cluster
+ */
+export const AssignClusterMonteurParams = zod.object({
+  "clusterId": zod.coerce.number()
+})
+
+export const AssignClusterMonteurBody = zod.object({
+  "monteur_id": zod.number().nullable()
+})
+
+export const AssignClusterMonteurResponse = zod.object({
+  "aantal": zod.number()
+})
+
+
+/**
  * @summary Loginpogingen met risicosignalen (beheerder)
  */
 export const ListLoginPogingenResponseItem = zod.object({

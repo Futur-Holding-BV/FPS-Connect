@@ -960,6 +960,33 @@ router.delete("/clusters/:clusterId", requireBevoegdheid("voorzieningen", 2), as
   }
 });
 
+// POST /clusters/:clusterId/monteur — wijst in één handeling dezelfde monteur
+// (of geen, bij null) toe aan alle spots van dit cluster. Bedoeld voor het
+// groepsgewijs toewijzen van voorbereide spots aan een uitvoerend monteur.
+router.post("/clusters/:clusterId/monteur", requireBevoegdheid("voorzieningen", 2), async (req, res) => {
+  try {
+    const clusterId = parseInt(String(req.params.clusterId));
+    const gebouwId = await gebouwIdVanCluster(clusterId);
+    if (gebouwId == null) return res.status(404).json({ error: "Cluster niet gevonden" });
+    if (!(await magBijGebouw(req.session.userId!, gebouwId))) {
+      return res.status(403).json({ error: "Geen toegang tot dit cluster" });
+    }
+    const { monteur_id } = req.body ?? {};
+    const monteurId = monteur_id == null ? null : Number(monteur_id);
+
+    const bijgewerkt = await db
+      .update(voorzieningenTable)
+      .set({ monteurId, bijgewerktOp: new Date() })
+      .where(eq(voorzieningenTable.clusterId, clusterId))
+      .returning({ id: voorzieningenTable.id });
+
+    return res.json({ aantal: bijgewerkt.length });
+  } catch (err) {
+    req.log.error(err);
+    return res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
 // ── AI-SPOTVOORSTELLEN (leerset + beheerder-review) ─────────────────────────
 
 async function mapSpotAiVoorstel(r: typeof spotAiVoorstellenTable.$inferSelect) {

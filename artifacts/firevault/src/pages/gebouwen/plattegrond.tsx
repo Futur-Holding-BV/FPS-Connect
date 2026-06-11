@@ -28,6 +28,7 @@ import {
   useCreateCluster,
   useUpdateCluster,
   useDeleteCluster,
+  useAssignClusterMonteur,
 } from "@workspace/api-client-react";
 import { useUpload } from "@workspace/object-storage-web";
 import { Button } from "@/components/ui/button";
@@ -36,7 +37,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Plus, X, ZoomIn, ZoomOut, RotateCcw, Map, FileText, Trash2, Image as ImageIcon, Loader2, Spline, Check, Move, Archive, ArchiveRestore, Boxes, Pencil } from "lucide-react";
+import { ArrowLeft, Plus, X, ZoomIn, ZoomOut, RotateCcw, Map, FileText, Trash2, Image as ImageIcon, Loader2, Spline, Check, Move, Archive, ArchiveRestore, Boxes, Pencil, Layers, UserCheck } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { ApplicatiePicker } from "@/components/applicatie-picker";
 import { ToepassingMultiSelect } from "@/components/toepassing-multi-select";
@@ -460,6 +461,25 @@ export default function Plattegrond() {
   const [naFotos, setNaFotos] = useState<string[]>([]);
   const [ruimteOpties] = useState(() => getRuimteVolgorde());
 
+  // ---- Serie plaatsen: meerdere voorbereide spots achter elkaar met hetzelfde
+  // sjabloon (applicatie/toepassing/ruimte/wand-plafond/status/monteur/cluster).
+  const [serieDialoog, setSerieDialoog] = useState(false);
+  const [serieModus, setSerieModus] = useState(false);
+  const [serieForm, setSerieForm] = useState({
+    type: "",
+    wand_of_plafond: "",
+    ruimte: "",
+    status: "voorbereid",
+    monteur_id: "",
+    cluster_id: "",
+  });
+  const [serieLabelIds, setSerieLabelIds] = useState<number[]>([]);
+  const [serieTeller, setSerieTeller] = useState(0);
+  const serieFormRef = useRef(serieForm);
+  const serieLabelIdsRef = useRef(serieLabelIds);
+  useEffect(() => { serieFormRef.current = serieForm; }, [serieForm]);
+  useEffect(() => { serieLabelIdsRef.current = serieLabelIds; }, [serieLabelIds]);
+
   const [pdfBeeld, setPdfBeeld] = useState<string | null>(null);
   const [pdfDims, setPdfDims] = useState<{ w: number; h: number } | null>(null);
   const [pdfLaden, setPdfLaden] = useState(false);
@@ -508,6 +528,16 @@ export default function Plattegrond() {
   // gebeurt impliciet doordat alleen spots van deze verdieping worden getekend).
   const { data: clusters, refetch: refetchClusters } = useListClusters(Number(id));
   const [clusterBeheerOpen, setClusterBeheerOpen] = useState(false);
+  // Verrijk clusters met de huidige monteur: als alle spots in het cluster
+  // dezelfde monteur hebben tonen we die, anders "niet toegewezen".
+  const clustersMetMonteur = useMemo(() => {
+    return (clusters ?? []).map((c: any) => {
+      const spots = (voorzieningen ?? []).filter((v: any) => v.cluster_id === c.id);
+      const monteurIds = Array.from(new Set(spots.map((v: any) => v.monteur_id ?? null)));
+      const monteurId = spots.length > 0 && monteurIds.length === 1 ? monteurIds[0] : null;
+      return { ...c, monteur_id: monteurId };
+    });
+  }, [clusters, voorzieningen]);
   // Visuele clustering (telbubbels bij overlappende spots) — standaard aan.
   const [visueelClusterAan, setVisueelClusterAan] = useState(true);
 
@@ -767,6 +797,12 @@ export default function Plattegrond() {
       void verplaatsSpot(geselecteerdId, Math.round(klemX), Math.round(klemY));
       return;
     }
+    if (serieModus) {
+      const klemX = Math.min(W, Math.max(0, svgX));
+      const klemY = Math.min(H, Math.max(0, svgY));
+      void plaatsSerieSpot(Math.round(klemX), Math.round(klemY));
+      return;
+    }
     if (!plaatsenModus) return;
     const klemX = Math.min(W, Math.max(0, svgX));
     const klemY = Math.min(H, Math.max(0, svgY));
@@ -783,7 +819,47 @@ export default function Plattegrond() {
       monteur_id: huidigeIsMonteur && gebruiker?.id != null ? String(gebruiker.id) : "",
     });
     setNieuwDialoog(true);
-  }, [plaatsenModus, tekenModus, verplaatsModus, geselecteerdId, view, W, H, volgendSpot, gebruiker, monteurs]);
+  }, [plaatsenModus, serieModus, tekenModus, verplaatsModus, geselecteerdId, view, W, H, volgendSpot, gebruiker, monteurs]);
+
+  // Plaatst direct (zonder dialoog) één spot uit het serie-sjabloon op de
+  // aangeklikte locatie. Spotnummer wordt server-side gegenereerd (leeg
+  // objectnummer) zodat snelle opeenvolgende klikken nooit botsen.
+  const plaatsSerieSpot = useCallback(async (x: number, y: number) => {
+    const sjabloon = serieFormRef.current;
+    const labels = serieLabelIdsRef.current;
+    if (!sjabloon.type) return;
+    const nu = new Date();
+    const vandaag = `${nu.getFullYear()}-${String(nu.getMonth() + 1).padStart(2, "0")}-${String(nu.getDate()).padStart(2, "0")}`;
+    if (sjabloon.ruimte && sjabloon.ruimte !== GEEN_RUIMTE_VAL) {
+      registreerRuimteGebruik(sjabloon.ruimte);
+    }
+    try {
+      await maakVoorziening.mutateAsync({
+        data: {
+          objectnummer: "",
+          type: sjabloon.type,
+          status: sjabloon.status || "voorbereid",
+          classificatie: "60",
+          wand_of_plafond: sjabloon.wand_of_plafond || undefined,
+          ruimte: sjabloon.ruimte && sjabloon.ruimte !== GEEN_RUIMTE_VAL ? sjabloon.ruimte : undefined,
+          installatie_datum: vandaag,
+          label_ids: labels,
+          monteur_id: sjabloon.monteur_id ? Number(sjabloon.monteur_id) : undefined,
+          cluster_id: sjabloon.cluster_id ? Number(sjabloon.cluster_id) : undefined,
+          maker_monteur_id: gebruiker?.id != null ? Number(gebruiker.id) : undefined,
+          locatie_x: x,
+          locatie_y: y,
+          gebouw_id: Number(id),
+          verdieping_id: Number(verdiepingId),
+        },
+      });
+      setSerieTeller((n) => n + 1);
+      refetch();
+      refetchClusters();
+    } catch {
+      /* fout wordt door de mutatie-status getoond; modus blijft actief */
+    }
+  }, [maakVoorziening, gebruiker, id, verdiepingId, refetch, refetchClusters]);
 
   const verplaatsSpot = useCallback(async (spotId: number, x: number, y: number) => {
     await updateVoorziening.mutateAsync({ id: spotId, data: { locatie_x: x, locatie_y: y } });
@@ -950,6 +1026,34 @@ export default function Plattegrond() {
     }
   }
 
+  // ---- Serie plaatsen ----
+  function openSerie() {
+    setPlaatsenModus(false);
+    setGeselecteerdId(null);
+    if (tekenModus) annuleerTekenen();
+    setSerieForm({
+      type: "",
+      wand_of_plafond: "",
+      ruimte: "",
+      status: "voorbereid",
+      monteur_id: "",
+      cluster_id: "",
+    });
+    setSerieLabelIds([]);
+    setSerieDialoog(true);
+  }
+
+  function startSerie() {
+    if (!serieForm.type) return;
+    setSerieTeller(0);
+    setSerieModus(true);
+    setSerieDialoog(false);
+  }
+
+  function stopSerie() {
+    setSerieModus(false);
+  }
+
   return (
     <div className="h-[calc(100vh-2rem)] flex flex-col gap-0">
       {/* Header */}
@@ -1016,10 +1120,20 @@ export default function Plattegrond() {
               <Button
                 variant={plaatsenModus ? "destructive" : "default"}
                 size="sm"
-                onClick={() => { setPlaatsenModus(!plaatsenModus); setGeselecteerdId(null); if (tekenModus) annuleerTekenen(); }}
+                onClick={() => { setPlaatsenModus(!plaatsenModus); setSerieModus(false); setGeselecteerdId(null); if (tekenModus) annuleerTekenen(); }}
               >
                 {plaatsenModus ? (<><X className="h-4 w-4 mr-1" />Annuleren</>) : (<><Plus className="h-4 w-4 mr-1" />Plaatsen</>)}
               </Button>
+
+              {serieModus ? (
+                <Button variant="destructive" size="sm" onClick={stopSerie}>
+                  <X className="h-4 w-4 mr-1" />Serie stoppen
+                </Button>
+              ) : (
+                <Button variant="outline" size="sm" onClick={openSerie}>
+                  <Layers className="h-4 w-4 mr-1" />Serie plaatsen
+                </Button>
+              )}
 
               {tekenModus ? (
                 <>
@@ -1057,6 +1171,22 @@ export default function Plattegrond() {
       {plaatsenModus && (
         <div className="bg-primary/10 border border-primary/30 rounded-md px-3 py-2 mb-2 text-sm text-primary font-medium flex-shrink-0">
           Klik op de plattegrond om een nieuwe spot te plaatsen.
+        </div>
+      )}
+
+      {/* Serie plaatsen hint */}
+      {serieModus && (
+        <div className="bg-primary/10 border border-primary/30 rounded-md px-3 py-2 mb-2 text-sm text-primary font-medium flex items-center justify-between flex-shrink-0">
+          <span>
+            Serie plaatsen actief — klik op de plattegrond om telkens een{" "}
+            {STATUSLABEL[serieForm.status]?.toLowerCase() ?? serieForm.status} spot
+            ({TYPEN[serieForm.type]?.label ?? serieForm.type}) toe te voegen.
+            {serieTeller > 0 && ` ${serieTeller} geplaatst.`}
+            {maakVoorziening.isPending && " Bezig met opslaan…"}
+          </span>
+          <Button size="sm" variant="default" onClick={stopSerie}>
+            <Check className="h-4 w-4 mr-1" />Klaar ({serieTeller})
+          </Button>
         </div>
       )}
 
@@ -1614,13 +1744,160 @@ export default function Plattegrond() {
         </DialogContent>
       </Dialog>
 
+      {/* Serie voorbereiden: sjabloon instellen voor snel achter elkaar plaatsen */}
+      <Dialog open={serieDialoog} onOpenChange={setSerieDialoog}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Serie voorbereiden</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-1">
+            <p className="text-sm text-muted-foreground">
+              Stel hier het sjabloon in. Daarna klikt u op de plattegrond om
+              telkens een spot met dezelfde gegevens te plaatsen — ideaal voor
+              een reeks voorbereide spots.
+            </p>
+
+            {/* Applicatie */}
+            <div>
+              <Label>Applicatie *</Label>
+              <ApplicatiePicker
+                value={serieForm.type}
+                onValueChange={(v) => {
+                  setSerieForm((f) => ({ ...f, type: v }));
+                  setSerieLabelIds([]);
+                }}
+              />
+            </div>
+
+            {/* Toepassing */}
+            {serieForm.type && (
+              <div className="border rounded-lg p-4 space-y-2">
+                <p className="text-sm font-medium">Toepassing</p>
+                <p className="text-xs text-muted-foreground">
+                  Selecteer de gebruikte producten of systemen voor deze reeks.
+                </p>
+                <ToepassingMultiSelect
+                  typeCode={serieForm.type}
+                  selectedIds={serieLabelIds}
+                  onSelectionChange={setSerieLabelIds}
+                  magLabelsAanmaken={isBeheerder}
+                />
+              </div>
+            )}
+
+            <div className="grid grid-cols-2 gap-3">
+              {/* Wand of plafond */}
+              <div>
+                <Label>Wand of plafond</Label>
+                <Select
+                  value={serieForm.wand_of_plafond || GEEN_WAND_PLAFOND_VAL}
+                  onValueChange={(v) => setSerieForm((f) => ({ ...f, wand_of_plafond: v === GEEN_WAND_PLAFOND_VAL ? "" : v }))}
+                >
+                  <SelectTrigger><SelectValue placeholder="Kies plaatsing..." /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={GEEN_WAND_PLAFOND_VAL}>Niet opgegeven</SelectItem>
+                    {WAND_PLAFOND_OPTIES.map((w) => (
+                      <SelectItem key={w} value={w}>{w.charAt(0).toUpperCase() + w.slice(1)}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Ruimte */}
+              <div>
+                <Label>Ruimte</Label>
+                <Select
+                  value={serieForm.ruimte || GEEN_RUIMTE_VAL}
+                  onValueChange={(v) => setSerieForm((f) => ({ ...f, ruimte: v === GEEN_RUIMTE_VAL ? "" : v }))}
+                >
+                  <SelectTrigger><SelectValue placeholder="Kies ruimte..." /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={GEEN_RUIMTE_VAL}>Niet opgegeven</SelectItem>
+                    {ruimteOpties.map((r) => (
+                      <SelectItem key={r} value={r}>{r.charAt(0).toUpperCase() + r.slice(1)}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Status */}
+              <div>
+                <Label>Status</Label>
+                <Select
+                  value={serieForm.status}
+                  onValueChange={(v) => setSerieForm((f) => ({ ...f, status: v }))}
+                >
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(STATUSLABEL).map(([k, label]) => (
+                      <SelectItem key={k} value={k}>{label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Monteur uitvoering */}
+              <div>
+                <Label>Monteur uitvoering</Label>
+                <Select
+                  value={serieForm.monteur_id || "geen"}
+                  onValueChange={(v) => setSerieForm((f) => ({ ...f, monteur_id: v === "geen" ? "" : v }))}
+                >
+                  <SelectTrigger><SelectValue placeholder="Kies monteur" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="geen">Niet ingevuld</SelectItem>
+                    {monteurs.map((m: any) => (
+                      <SelectItem key={m.id} value={String(m.id)}>{m.naam}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Cluster */}
+              <div className="col-span-2">
+                <Label>Cluster</Label>
+                <Select
+                  value={serieForm.cluster_id || "geen"}
+                  onValueChange={(v) => setSerieForm((f) => ({ ...f, cluster_id: v === "geen" ? "" : v }))}
+                >
+                  <SelectTrigger><SelectValue placeholder="Geen cluster" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="geen">Geen cluster</SelectItem>
+                    {(clusters ?? []).map((c: any) => (
+                      <SelectItem key={c.id} value={String(c.id)}>
+                        <span className="inline-flex items-center gap-1.5">
+                          <span className="h-2 w-2 rounded-full" style={{ backgroundColor: c.kleur || STANDAARD_CLUSTERKLEUR }} />
+                          {c.naam}
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Geplaatste spots worden meteen aan dit cluster gekoppeld.
+                </p>
+              </div>
+            </div>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button type="button" variant="outline" onClick={() => setSerieDialoog(false)}>
+              Annuleren
+            </Button>
+            <Button type="button" disabled={!serieForm.type} onClick={startSerie}>
+              <Layers className="h-4 w-4 mr-1" />Serie starten
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Clusters beheren */}
       <ClusterBeheerDialog
         open={clusterBeheerOpen}
         onOpenChange={setClusterBeheerOpen}
         gebouwId={Number(id)}
         verdiepingId={Number(verdiepingId)}
-        clusters={(clusters ?? []) as any[]}
+        clusters={clustersMetMonteur as any[]}
+        monteurs={monteurs as any[]}
         onWijziging={() => { refetchClusters(); refetch(); }}
       />
 
@@ -1635,6 +1912,7 @@ function ClusterBeheerDialog({
   gebouwId,
   verdiepingId,
   clusters,
+  monteurs,
   onWijziging,
 }: {
   open: boolean;
@@ -1642,16 +1920,32 @@ function ClusterBeheerDialog({
   gebouwId: number;
   verdiepingId: number;
   clusters: any[];
+  monteurs: any[];
   onWijziging: () => void;
 }) {
   const maakCluster = useCreateCluster();
   const wijzigCluster = useUpdateCluster();
   const verwijderCluster = useDeleteCluster();
+  const wijsClusterMonteurToe = useAssignClusterMonteur();
   const [nieuwNaam, setNieuwNaam] = useState("");
   const [nieuwType, setNieuwType] = useState("schacht");
   const [nieuwKleur, setNieuwKleur] = useState(STANDAARD_CLUSTERKLEUR);
   const [bewerkId, setBewerkId] = useState<number | null>(null);
   const [bewerkNaam, setBewerkNaam] = useState("");
+  const [bezigMonteurClusterId, setBezigMonteurClusterId] = useState<number | null>(null);
+
+  async function wijsMonteurToe(clusterId: number, waarde: string) {
+    setBezigMonteurClusterId(clusterId);
+    try {
+      await wijsClusterMonteurToe.mutateAsync({
+        clusterId,
+        data: { monteur_id: waarde === "geen" ? null : Number(waarde) },
+      });
+      onWijziging();
+    } finally {
+      setBezigMonteurClusterId(null);
+    }
+  }
 
   async function voegToe() {
     if (!nieuwNaam.trim()) return;
@@ -1723,6 +2017,22 @@ function ClusterBeheerDialog({
                 )}
                 <Badge variant="secondary" className="text-xs">{c.voorziening_aantal} spots</Badge>
                 {c.type && <Badge variant="outline" className="text-xs">{CLUSTER_TYPEN[c.type] ?? c.type}</Badge>}
+                <Select
+                  value={c.monteur_id != null ? String(c.monteur_id) : "geen"}
+                  onValueChange={(v) => wijsMonteurToe(c.id, v)}
+                  disabled={bezigMonteurClusterId === c.id}
+                >
+                  <SelectTrigger className="h-7 w-36 text-xs" title="Cluster aan monteur toewijzen">
+                    <UserCheck className="h-3.5 w-3.5 mr-1 shrink-0" />
+                    <SelectValue placeholder="Toewijzen" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="geen">Niet toegewezen</SelectItem>
+                    {monteurs.map((m) => (
+                      <SelectItem key={m.id} value={String(m.id)}>{m.naam}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 <Button
                   variant="ghost" size="icon" className="h-7 w-7"
                   onClick={() => { setBewerkId(c.id); setBewerkNaam(c.naam); }}

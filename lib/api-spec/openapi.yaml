@@ -1920,6 +1920,37 @@ paths:
         "204":
           description: Verwijderd
 
+  /clusters/{clusterId}/monteur:
+    post:
+      operationId: assignClusterMonteur
+      tags: [voorzieningen]
+      summary: Monteur toewijzen aan alle spots in een cluster
+      parameters:
+        - in: path
+          name: clusterId
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ClusterMonteurInput"
+      responses:
+        "200":
+          description: Toegewezen
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [aantal]
+                properties:
+                  aantal:
+                    type: integer
+        "404":
+          description: Niet gevonden
+
   # ── LOGIN-POGINGEN (risicosignalen) ───────────────────────────────────────
   /login-pogingen:
     get:
@@ -5406,6 +5437,13 @@ components:
           type: ["string", "null"]
         kleur:
           type: ["string", "null"]
+
+    ClusterMonteurInput:
+      type: object
+      required: [monteur_id]
+      properties:
+        monteur_id:
+          type: ["integer", "null"]
 
     StatusUpdate:
       type: object
