@@ -14,6 +14,7 @@ import {
   useCreateDocumentRevisie,
   useSetDocumentToepassingen,
   useAiAnalyseDocument,
+  useAiKoppelvoorstellenDocumenten,
   useListLabels,
   DocumentType,
   DocumentStatus,
@@ -23,6 +24,7 @@ import type {
   DocumentInput,
   Label,
   DocumentAiAnalyseResultaat,
+  DocumentKoppelVoorstel,
 } from "@workspace/api-client-react";
 import { useUpload } from "@workspace/object-storage-web";
 import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
@@ -902,6 +904,167 @@ function Info({ label, waarde }: { label: string; waarde?: string | null }) {
   );
 }
 
+// Reviewdialoog voor AI-koppelvoorstellen: de AI stelt voor welke toepassingen aan de
+// nieuwste documenten gekoppeld kunnen worden; de beheerder neemt per voorstel (of per
+// document in één keer) over. Voorstellen zijn GEEL (amber + Sparkles); overgenomen
+// koppelingen worden NEUTRAAL weergegeven, volgens de AI-state kleurconventie.
+function KoppelVoorstellenDialog({
+  voorstellen,
+  onOpenChange,
+}: {
+  voorstellen: DocumentKoppelVoorstel[];
+  onOpenChange: (open: boolean) => void;
+}) {
+  const queryClient = useQueryClient();
+  const setToepassingen = useSetDocumentToepassingen();
+  // document_id -> in deze sessie reeds overgenomen label_ids
+  const [overgenomen, setOvergenomen] = useState<Record<number, number[]>>({});
+  const [bezigDoc, setBezigDoc] = useState<number | null>(null);
+  const [fout, setFout] = useState<string | null>(null);
+
+  async function neemOver(v: DocumentKoppelVoorstel, labelIds: number[]) {
+    setBezigDoc(v.document_id);
+    setFout(null);
+    try {
+      const reeds = overgenomen[v.document_id] ?? [];
+      const nieuweSet = Array.from(
+        new Set([...v.huidige_toepassing_ids, ...reeds, ...labelIds]),
+      );
+      await setToepassingen.mutateAsync({
+        id: v.document_id,
+        data: { label_ids: nieuweSet },
+      });
+      setOvergenomen((s) => ({
+        ...s,
+        [v.document_id]: Array.from(new Set([...reeds, ...labelIds])),
+      }));
+      await queryClient.invalidateQueries({ queryKey: getListDocumentenQueryKey() });
+    } catch (err) {
+      setFout(foutmelding(err, "Koppeling overnemen mislukte."));
+    } finally {
+      setBezigDoc(null);
+    }
+  }
+
+  return (
+    <Dialog open onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl max-h-[88vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Sparkles className="h-4 w-4 text-primary" />
+            AI-koppelvoorstellen
+          </DialogTitle>
+          <DialogDescription>
+            De AI vergelijkt de fabrikant, het product en de norm van elk actueel document
+            met de bestaande toepassingen en stelt nieuwe koppelingen voor. De voorstellen
+            zijn een hulpmiddel; u beslist welke u overneemt.
+          </DialogDescription>
+        </DialogHeader>
+
+        {fout && (
+          <div className="text-sm text-destructive border border-destructive/30 bg-destructive/5 rounded-md px-3 py-2">
+            {fout}
+          </div>
+        )}
+
+        {voorstellen.length === 0 ? (
+          <div className="p-8 text-center text-muted-foreground text-sm">
+            Geen nieuwe koppelvoorstellen gevonden. De actuele documenten zijn al gekoppeld,
+            of er is geen passende toepassing herkend. Voeg eerst documenten toe of laat ze
+            analyseren.
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {voorstellen.map((v) => {
+              const reeds = new Set(overgenomen[v.document_id] ?? []);
+              const openstaand = v.suggesties.filter((s) => !reeds.has(s.label_id));
+              return (
+                <div key={v.document_id} className="rounded-lg border p-3 space-y-2.5">
+                  <div className="flex items-start gap-2">
+                    <FileText className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium truncate">{v.document_naam}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {TYPE_LABELS[v.documenttype] ?? v.documenttype}
+                        {v.fabrikant ? ` · ${v.fabrikant}` : ""}
+                      </p>
+                    </div>
+                    {openstaand.length > 1 && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={bezigDoc === v.document_id}
+                        onClick={() => neemOver(v, openstaand.map((s) => s.label_id))}
+                      >
+                        Alles overnemen
+                      </Button>
+                    )}
+                  </div>
+                  <div className="space-y-1.5">
+                    {v.suggesties.map((s) => {
+                      const isOvergenomen = reeds.has(s.label_id);
+                      return (
+                        <div
+                          key={s.label_id}
+                          className={`flex items-center gap-2 rounded-md border px-2.5 py-1.5 ${
+                            isOvergenomen
+                              ? "bg-muted/40"
+                              : "border-amber-300 bg-amber-50"
+                          }`}
+                        >
+                          {isOvergenomen ? (
+                            <CheckCircle2 className="h-4 w-4 shrink-0 text-muted-foreground" />
+                          ) : (
+                            <Sparkles className="h-4 w-4 shrink-0 text-amber-700" />
+                          )}
+                          <div className="min-w-0 flex-1">
+                            <p
+                              className={`truncate text-sm font-medium ${
+                                isOvergenomen ? "text-muted-foreground" : "text-amber-800"
+                              }`}
+                            >
+                              {s.naam}
+                            </p>
+                            {s.reden && (
+                              <p className="text-xs text-muted-foreground truncate">
+                                {s.reden} · score {Math.round(s.score)}
+                              </p>
+                            )}
+                          </div>
+                          {isOvergenomen ? (
+                            <Badge variant="secondary" className="text-muted-foreground">
+                              Overgenomen
+                            </Badge>
+                          ) : (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              disabled={bezigDoc === v.document_id}
+                              onClick={() => neemOver(v, [s.label_id])}
+                            >
+                              Overnemen
+                            </Button>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Sluiten
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 // ── Hoofd-tab ────────────────────────────────────────────────────────────────
 export function TabDocumenten() {
   const { heeftNiveau } = useBevoegdheid();
@@ -945,6 +1108,24 @@ export function TabDocumenten() {
   const [nieuwOpen, setNieuwOpen] = useState(false);
   const [detail, setDetail] = useState<Document | null>(null);
   const [revisieVoor, setRevisieVoor] = useState<Document | null>(null);
+  const [koppelVoorstellen, setKoppelVoorstellen] = useState<
+    DocumentKoppelVoorstel[] | null
+  >(null);
+  const [koppelFout, setKoppelFout] = useState<string | null>(null);
+
+  const koppelMutatie = useAiKoppelvoorstellenDocumenten();
+
+  async function laadKoppelVoorstellen() {
+    setKoppelFout(null);
+    try {
+      const resultaat = await koppelMutatie.mutateAsync();
+      setKoppelVoorstellen(resultaat);
+    } catch (err) {
+      setKoppelFout(
+        foutmelding(err, "AI-koppelvoorstellen ophalen is mislukt. Probeer het opnieuw."),
+      );
+    }
+  }
 
   const { data: labels = [] } = useListLabels({});
 
@@ -983,11 +1164,28 @@ export function TabDocumenten() {
       </p>
 
       {magCreeren && (
-        <div className="flex justify-end">
+        <div className="flex flex-wrap justify-end gap-2">
+          <Button
+            variant="outline"
+            onClick={laadKoppelVoorstellen}
+            disabled={koppelMutatie.isPending}
+            title="Laat de AI de nieuwste documenten koppelen aan passende toepassingen"
+          >
+            <Sparkles
+              className={`h-4 w-4 mr-2 ${koppelMutatie.isPending ? "animate-pulse" : ""}`}
+            />
+            {koppelMutatie.isPending ? "AI zoekt koppelingen..." : "AI-koppelvoorstellen"}
+          </Button>
           <Button onClick={() => setNieuwOpen(true)}>
             <Plus className="h-4 w-4 mr-2" />
             Nieuw document
           </Button>
+        </div>
+      )}
+
+      {koppelFout && (
+        <div className="text-sm text-destructive border border-destructive/30 bg-destructive/5 rounded-md px-3 py-2">
+          {koppelFout}
         </div>
       )}
 
@@ -1168,6 +1366,15 @@ export function TabDocumenten() {
           magBeheren={magBeheren}
           magCreeren={magCreeren}
           onNieuweRevisie={() => setRevisieVoor(detail)}
+        />
+      )}
+
+      {koppelVoorstellen !== null && (
+        <KoppelVoorstellenDialog
+          voorstellen={koppelVoorstellen}
+          onOpenChange={(o) => {
+            if (!o) setKoppelVoorstellen(null);
+          }}
         />
       )}
     </div>

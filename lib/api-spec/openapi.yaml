@@ -1597,6 +1597,21 @@ paths:
               schema:
                 $ref: "#/components/schemas/DocumentAiAnalyseResultaat"
 
+  /documenten/ai-koppelvoorstellen:
+    post:
+      operationId: aiKoppelvoorstellenDocumenten
+      tags: [bibliotheek]
+      summary: AI-voorstellen om bestaande bibliotheekdocumenten aan toepassingen te koppelen, op basis van de eerder herkende fabrikant, product en norm. Voorstellen; de beheerder neemt over (beheerder).
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DocumentKoppelVoorstel"
+
   /verdiepingen/{id}/voorzieningen:
     get:
       operationId: listVoorzieningenOpVerdieping
@@ -6245,6 +6260,37 @@ components:
           description: >-
             AI-voorstellen voor te koppelen toepassingen op basis van de herkende
             fabrikant, product en norm. Suggesties; een mens bevestigt of past aan.
+          items:
+            type: object
+            required: [label_id, naam, score]
+            properties:
+              label_id:
+                type: integer
+              naam:
+                type: string
+              score:
+                type: number
+              reden:
+                type: ["string", "null"]
+
+    DocumentKoppelVoorstel:
+      type: object
+      required: [document_id, document_naam, documenttype, huidige_toepassing_ids, suggesties]
+      properties:
+        document_id:
+          type: integer
+        document_naam:
+          type: string
+        documenttype:
+          $ref: "#/components/schemas/DocumentType"
+        fabrikant:
+          type: ["string", "null"]
+        huidige_toepassing_ids:
+          type: array
+          items:
+            type: integer
+        suggesties:
+          type: array
           items:
             type: object
             required: [label_id, naam, score]

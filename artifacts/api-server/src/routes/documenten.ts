@@ -42,6 +42,65 @@ router.post("/documenten/ai-analyse", requireBevoegdheid("bibliotheek", 3), asyn
   }
 });
 
+// POST /documenten/ai-koppelvoorstellen — AI-voorstellen om bestaande, reeds geanalyseerde
+// documenten aan toepassingen te koppelen. Herbruikt de deterministische matcher op de
+// opgeslagen documentvelden (geen nieuwe PDF-extractie of LLM-aanroep nodig). Voorstellen;
+// de beheerder neemt over. (beheerder)
+router.post(
+  "/documenten/ai-koppelvoorstellen",
+  requireBevoegdheid("bibliotheek", 3),
+  async (req, res) => {
+    try {
+      const documenten = await db
+        .select()
+        .from(documentenTable)
+        .orderBy(asc(documentenTable.naam));
+      const actueel = documenten.filter((d) => d.status === "actueel" && !d.gearchiveerd);
+
+      const labels = await db
+        .select()
+        .from(labelsTable)
+        .where(eq(labelsTable.gearchiveerd, false));
+
+      const koppelingen = await db
+        .select({
+          documentId: documentToepassingenTable.documentId,
+          labelId: documentToepassingenTable.labelId,
+        })
+        .from(documentToepassingenTable);
+      const reedsGekoppeld = new Map<number, Set<number>>();
+      for (const k of koppelingen) {
+        if (!reedsGekoppeld.has(k.documentId)) reedsGekoppeld.set(k.documentId, new Set());
+        reedsGekoppeld.get(k.documentId)!.add(k.labelId);
+      }
+
+      const voorstellen = [];
+      for (const d of actueel) {
+        const huidige = reedsGekoppeld.get(d.id) ?? new Set<number>();
+        const suggesties = stelToepassingenVoor(
+          { fabrikant: d.fabrikant, product: d.product, en_norm: d.enNorm, naam: d.naam },
+          labels,
+        ).filter((s) => !huidige.has(s.label_id));
+        if (suggesties.length > 0) {
+          voorstellen.push({
+            document_id: d.id,
+            document_naam: d.naam,
+            documenttype: d.documenttype,
+            fabrikant: d.fabrikant,
+            huidige_toepassing_ids: [...huidige],
+            suggesties,
+          });
+        }
+      }
+
+      return res.json(voorstellen);
+    } catch (err) {
+      req.log.error(err);
+      return res.status(500).json({ error: "AI-koppelvoorstellen mislukten" });
+    }
+  },
+);
+
 // ── CENTRALE DOCUMENTBIBLIOTHEEK ────────────────────────────────────────────
 // GET /documenten — lijst met filters
 router.get("/documenten", async (req, res) => {

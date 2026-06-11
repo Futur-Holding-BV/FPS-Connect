@@ -1953,6 +1953,24 @@ export interface DocumentAiAnalyseResultaat {
   toepassing_suggesties?: DocumentAiAnalyseResultaatToepassingSuggestiesItem[];
 }
 
+export type DocumentKoppelVoorstelSuggestiesItem = {
+  label_id: number;
+  naam: string;
+  score: number;
+  /** @nullable */
+  reden?: string | null;
+};
+
+export interface DocumentKoppelVoorstel {
+  document_id: number;
+  document_naam: string;
+  documenttype: DocumentType;
+  /** @nullable */
+  fabrikant?: string | null;
+  huidige_toepassing_ids: number[];
+  suggesties: DocumentKoppelVoorstelSuggestiesItem[];
+}
+
 export interface SpotAiVoorstelInput {
   gebouw_id: number;
   /**

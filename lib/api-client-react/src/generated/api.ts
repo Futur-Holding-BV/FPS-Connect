@@ -47,6 +47,7 @@ import type {
   DocumentAiAnalyseInput,
   DocumentAiAnalyseResultaat,
   DocumentInput,
+  DocumentKoppelVoorstel,
   DocumentToepassingenInput,
   DocumentUpdate,
   ErrorEnvelope,
@@ -5203,6 +5204,76 @@ export const useAiAnalyseDocument = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getAiAnalyseDocumentMutationOptions(options));
+    }
+
+export const getAiKoppelvoorstellenDocumentenUrl = () => {
+
+
+
+
+  return `/api/documenten/ai-koppelvoorstellen`
+}
+
+/**
+ * @summary AI-voorstellen om bestaande bibliotheekdocumenten aan toepassingen te koppelen, op basis van de eerder herkende fabrikant, product en norm. Voorstellen; de beheerder neemt over (beheerder).
+ */
+export const aiKoppelvoorstellenDocumenten = async ( options?: RequestInit): Promise<DocumentKoppelVoorstel[]> => {
+
+  return customFetch<DocumentKoppelVoorstel[]>(getAiKoppelvoorstellenDocumentenUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getAiKoppelvoorstellenDocumentenMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof aiKoppelvoorstellenDocumenten>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof aiKoppelvoorstellenDocumenten>>, TError,void, TContext> => {
+
+const mutationKey = ['aiKoppelvoorstellenDocumenten'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof aiKoppelvoorstellenDocumenten>>, void> = () => {
+
+
+          return  aiKoppelvoorstellenDocumenten(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AiKoppelvoorstellenDocumentenMutationResult = NonNullable<Awaited<ReturnType<typeof aiKoppelvoorstellenDocumenten>>>
+
+    export type AiKoppelvoorstellenDocumentenMutationError = ErrorType<unknown>
+
+    /**
+ * @summary AI-voorstellen om bestaande bibliotheekdocumenten aan toepassingen te koppelen, op basis van de eerder herkende fabrikant, product en norm. Voorstellen; de beheerder neemt over (beheerder).
+ */
+export const useAiKoppelvoorstellenDocumenten = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof aiKoppelvoorstellenDocumenten>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof aiKoppelvoorstellenDocumenten>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getAiKoppelvoorstellenDocumentenMutationOptions(options));
     }
 
 export const getListVoorzieningenOpVerdiepingUrl = (id: number,) => {

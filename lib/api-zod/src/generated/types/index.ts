@@ -41,6 +41,8 @@ export * from './documentAiAnalyseResultaatToepassingSuggestiesItem';
 export * from './documentAiMetadata';
 export * from './documentInput';
 export * from './documentInputAiMetadata';
+export * from './documentKoppelVoorstel';
+export * from './documentKoppelVoorstelSuggestiesItem';
 export * from './documentStatus';
 export * from './documentToepassingenInput';
 export * from './documentType';

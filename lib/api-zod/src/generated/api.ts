@@ -1965,6 +1965,25 @@ export const AiAnalyseDocumentResponse = zod.object({
 
 
 /**
+ * @summary AI-voorstellen om bestaande bibliotheekdocumenten aan toepassingen te koppelen, op basis van de eerder herkende fabrikant, product en norm. Voorstellen; de beheerder neemt over (beheerder).
+ */
+export const AiKoppelvoorstellenDocumentenResponseItem = zod.object({
+  "document_id": zod.number(),
+  "document_naam": zod.string(),
+  "documenttype": zod.enum(['eta', 'classificatierapport', 'testrapport', 'productcertificaat', 'dop', 'verwerkingsvoorschrift']),
+  "fabrikant": zod.string().nullish(),
+  "huidige_toepassing_ids": zod.array(zod.number()),
+  "suggesties": zod.array(zod.object({
+  "label_id": zod.number(),
+  "naam": zod.string(),
+  "score": zod.number(),
+  "reden": zod.string().nullish()
+}))
+})
+export const AiKoppelvoorstellenDocumentenResponse = zod.array(AiKoppelvoorstellenDocumentenResponseItem)
+
+
+/**
  * @summary Voorzieningen op een verdieping (voor plattegrond)
  */
 export const ListVoorzieningenOpVerdiepingParams = zod.object({
