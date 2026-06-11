@@ -6,7 +6,7 @@ import { gebruikersTable, profielenTable } from "@workspace/db";
 import { eq, and, isNotNull, inArray } from "drizzle-orm";
 import { stuurUitnodigingsmail } from "../services/email";
 import { requireBevoegdheid, requireRol } from "../middlewares/auth";
-import { heeftNiveau } from "@workspace/permissies";
+import { heeftNiveau, MODULE_IDS } from "@workspace/permissies";
 import {
   kiesUniekeHerkomstPreset,
   magAutomatischKoppelen,
@@ -618,6 +618,49 @@ router.post(
     } catch (err) {
       req.log.error(err);
       return res.status(500).json({ error: "Interne serverfout" });
+    }
+  },
+);
+
+// POST /gebruikers/aanvullen — vul in alle gebruikers-matrices de ontbrekende
+// module-sleutels aan op niveau 0 (Geen toegang). Effectieve toegang verandert
+// niet (0 == ontbrekend); de sleutel wordt alleen expliciet vastgelegd zodat
+// nieuwe modules niet stil ontbreken bij bestaande gebruikers. Moet vóór
+// /gebruikers/:id staan zodat "aanvullen" niet als id wordt geïnterpreteerd.
+router.post(
+  "/gebruikers/aanvullen",
+  requireRol("hoofdbeheerder"),
+  async (req, res) => {
+    try {
+      const gebruikers = await db.select().from(gebruikersTable);
+      let gebruikersAangevuld = 0;
+      let sleutelsToegevoegd = 0;
+      for (const g of gebruikers) {
+        const huidig = (g.bevoegdheden as Record<string, number>) ?? {};
+        const aangevuld: Record<string, number> = { ...huidig };
+        let toegevoegd = 0;
+        for (const m of MODULE_IDS) {
+          if (!(m in aangevuld)) {
+            aangevuld[m] = 0;
+            toegevoegd++;
+          }
+        }
+        if (toegevoegd > 0) {
+          await db
+            .update(gebruikersTable)
+            .set({ bevoegdheden: aangevuld })
+            .where(eq(gebruikersTable.id, g.id));
+          gebruikersAangevuld++;
+          sleutelsToegevoegd += toegevoegd;
+        }
+      }
+      res.json({
+        gebruikers_aangevuld: gebruikersAangevuld,
+        sleutels_toegevoegd: sleutelsToegevoegd,
+      });
+    } catch (err) {
+      req.log.error(err);
+      res.status(500).json({ error: "Interne serverfout" });
     }
   },
 );

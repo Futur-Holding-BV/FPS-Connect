@@ -77,6 +77,7 @@ export * from './gebruikerHerkomstBevestigenBulk200';
 export * from './gebruikerInput';
 export * from './gebruikerInputBevoegdheden';
 export * from './gebruikerRol';
+export * from './gebruikersAanvullen200';
 export * from './gebruikerTaal';
 export * from './gebruikerUitnodigingStatus';
 export * from './gebruikerUpdate';

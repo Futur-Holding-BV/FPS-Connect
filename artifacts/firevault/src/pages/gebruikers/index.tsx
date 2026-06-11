@@ -11,6 +11,7 @@ import {
   useGebruikerHerkomstBevestigen,
   useGebruikerHerkomstBevestigenBulk,
   useGebruikerHerkomstVerwijderen,
+  useGebruikersAanvullen,
   useListProfielen,
   getListGebruikersQueryKey,
 } from "@workspace/api-client-react";
@@ -36,6 +37,7 @@ import {
   Mail, Phone, Building, Clock, Plus, UserPlus, Pencil, Trash2,
   RefreshCw, ShieldCheck, Eye, User, Crown, Upload, Palette, SendHorizonal, X,
   Layers, Search, RotateCcw, Check, CheckCheck, Briefcase, Hammer, Wrench, TrendingUp,
+  ListChecks, Loader2,
 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRol } from "@/context/rol-context";
@@ -278,6 +280,7 @@ export default function Gebruikers() {
   const herkomstBevestigen  = useGebruikerHerkomstBevestigen();
   const herkomstBevestigenBulk = useGebruikerHerkomstBevestigenBulk();
   const herkomstVerwijderen = useGebruikerHerkomstVerwijderen();
+  const vulModulesAan        = useGebruikersAanvullen();
 
   const [toevoegenOpen, setToevoegenOpen] = useState(false);
   const [toevoegenStap, setToevoegenStap] = useState<1 | 2>(1);
@@ -505,6 +508,28 @@ export default function Gebruikers() {
     [gebruikers],
   );
 
+  // Gebruikers waarbij een of meer module-sleutels in de bevoegdheden-matrix
+  // ontbreken. De aanvulactie zet die ontbrekende sleutels op niveau 0; de
+  // effectieve toegang verandert niet (0 == ontbrekend), maar nieuwe modules
+  // staan dan expliciet in elke matrix.
+  const gebruikersMetOntbrekend = useMemo(
+    () =>
+      ((gebruikers ?? []) as any[]).filter((g) => {
+        const bev = (g.bevoegdheden as Record<string, number> | null) ?? {};
+        return MODULES.some((m) => !(m.id in bev));
+      }).length,
+    [gebruikers],
+  );
+
+  async function vulModulesBijGebruikersAan() {
+    try {
+      await vulModulesAan.mutateAsync();
+      await invalideer();
+    } catch {
+      // fout wordt via de mutatie-status getoond
+    }
+  }
+
   return (
     <div className="space-y-5 max-w-[1400px] mx-auto">
       {/* Header */}
@@ -517,6 +542,21 @@ export default function Gebruikers() {
           <Button variant="outline" size="icon" onClick={() => refetch()} disabled={isFetching} title="Vernieuwen">
             <RefreshCw className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`} />
           </Button>
+          {actieveTab === "gebruikers" && isHoofd && gebruikersMetOntbrekend > 0 && (
+            <Button
+              variant="outline"
+              onClick={vulModulesBijGebruikersAan}
+              disabled={vulModulesAan.isPending}
+              title="Vul ontbrekende modules bij alle gebruikers aan op Geen toegang"
+            >
+              {vulModulesAan.isPending ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <ListChecks className="h-4 w-4 mr-2" />
+              )}
+              Modules aanvullen
+            </Button>
+          )}
           {actieveTab === "gebruikers" && (
             <Button onClick={() => { setToevoegenStap(1); setToevoegenOpen(true); setToevoegenForm(leegForm); setToevoegenFout(null); }}>
               <Plus className="h-4 w-4 mr-2" /> Gebruiker toevoegen

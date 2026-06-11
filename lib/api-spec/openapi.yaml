@@ -2293,6 +2293,27 @@ paths:
         "400":
           description: Ongeldige invoer
 
+  /gebruikers/aanvullen:
+    post:
+      operationId: gebruikersAanvullen
+      tags: [gebruikers]
+      summary: >-
+        Ontbrekende module-sleutels in alle gebruikers-matrices aanvullen op
+        niveau 0 (Geen toegang) (hoofdbeheerder)
+      responses:
+        "200":
+          description: Aangevuld
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [gebruikers_aangevuld, sleutels_toegevoegd]
+                properties:
+                  gebruikers_aangevuld:
+                    type: integer
+                  sleutels_toegevoegd:
+                    type: integer
+
   /gebruikers/{id}/herkomst-verwijderen:
     post:
       operationId: gebruikerHerkomstVerwijderen

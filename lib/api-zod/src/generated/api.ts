@@ -2678,6 +2678,15 @@ export const GebruikerHerkomstBevestigenBulkResponse = zod.object({
 
 
 /**
+ * @summary Ontbrekende module-sleutels in alle gebruikers-matrices aanvullen op niveau 0 (Geen toegang) (hoofdbeheerder)
+ */
+export const GebruikersAanvullenResponse = zod.object({
+  "gebruikers_aangevuld": zod.number(),
+  "sleutels_toegevoegd": zod.number()
+})
+
+
+/**
  * @summary Herkomst-koppeling verwijderen, bevoegdheden blijven (hoofdbeheerder)
  */
 export const GebruikerHerkomstVerwijderenParams = zod.object({

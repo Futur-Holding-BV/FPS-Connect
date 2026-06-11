@@ -2036,6 +2036,11 @@ export type GebruikerHerkomstBevestigenBulk200 = {
   bevestigd: number;
 };
 
+export type GebruikersAanvullen200 = {
+  gebruikers_aangevuld: number;
+  sleutels_toegevoegd: number;
+};
+
 export type ProfielenAanvullen200 = {
   profielen_aangevuld: number;
   sleutels_toegevoegd: number;

@@ -73,6 +73,7 @@ import type {
   GebruikerHerkomstBevestigenBulk200,
   GebruikerInput,
   GebruikerUpdate,
+  GebruikersAanvullen200,
   GetGebouwGevelbeeld200,
   GetRecenteActiviteitParams,
   GetVervaldagenParams,
@@ -7632,6 +7633,76 @@ export const useGebruikerHerkomstBevestigenBulk = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getGebruikerHerkomstBevestigenBulkMutationOptions(options));
+    }
+
+export const getGebruikersAanvullenUrl = () => {
+
+
+
+
+  return `/api/gebruikers/aanvullen`
+}
+
+/**
+ * @summary Ontbrekende module-sleutels in alle gebruikers-matrices aanvullen op niveau 0 (Geen toegang) (hoofdbeheerder)
+ */
+export const gebruikersAanvullen = async ( options?: RequestInit): Promise<GebruikersAanvullen200> => {
+
+  return customFetch<GebruikersAanvullen200>(getGebruikersAanvullenUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getGebruikersAanvullenMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof gebruikersAanvullen>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof gebruikersAanvullen>>, TError,void, TContext> => {
+
+const mutationKey = ['gebruikersAanvullen'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof gebruikersAanvullen>>, void> = () => {
+
+
+          return  gebruikersAanvullen(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type GebruikersAanvullenMutationResult = NonNullable<Awaited<ReturnType<typeof gebruikersAanvullen>>>
+
+    export type GebruikersAanvullenMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Ontbrekende module-sleutels in alle gebruikers-matrices aanvullen op niveau 0 (Geen toegang) (hoofdbeheerder)
+ */
+export const useGebruikersAanvullen = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof gebruikersAanvullen>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof gebruikersAanvullen>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getGebruikersAanvullenMutationOptions(options));
     }
 
 export const getGebruikerHerkomstVerwijderenUrl = (id: number,) => {
