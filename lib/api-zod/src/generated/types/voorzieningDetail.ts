@@ -61,6 +61,9 @@ export interface VoorzieningDetail {
   maker_monteur_id?: number | null;
   /** @nullable */
   maker_monteur_naam?: string | null;
+  ai_te_controleren?: boolean;
+  /** @nullable */
+  ai_voorstel_id?: number | null;
   gearchiveerd?: boolean;
   /** @nullable */
   gearchiveerd_op?: string | null;

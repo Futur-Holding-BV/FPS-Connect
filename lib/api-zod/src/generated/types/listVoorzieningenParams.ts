@@ -13,6 +13,7 @@ type?: string;
 status?: string;
 gearchiveerd?: boolean;
 classificatie?: string;
+alleen_te_controleren?: boolean;
 zoek?: string;
 pagina?: number;
 per_pagina?: number;

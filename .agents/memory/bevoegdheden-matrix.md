@@ -37,6 +37,7 @@ description: Hoe het rechten-systeem gebouwd is — jsonb-matrix, requireBevoegd
 
 ## Gotchas
 
+- Gate UI/permissies NOOIT op rol-strings. `AuthGebruikerRol` kent runtime alleen `hoofdbeheerder | gebruiker | klant`; "beheerder"/"monteur"/"controleur" zijn legacy en matchen nooit (`gebruiker.rol === "beheerder"` is altijd false, vandaar de terugkerende TS2367 Rol-drift). Gebruik `useBevoegdheid().heeftNiveau(module, niveau)` (web) en `requireBevoegdheid(module, niveau)` (server). Niveaus: 3=aanmaken/wijzigen, 4=volledig beheer. Wil je de aanmaker (monteur=3) van een bevestig-/goedkeuractie uitsluiten, eis dan niveau 4.
 - `GebruikerInput` (POST) vereist ook `bevoegdheden` in de OpenAPI spec — niet alleen `GebruikerUpdate` (PATCH)
 - Na codegen: HMR faalt als Vite de gegenereerde bestanden tijdelijk kwijt is → restart firevault workflow
 - Rol "viewer" is uitgebannen: default DB is nu "gebruiker"; viewer-fallbacks vervangen door "gebruiker"

@@ -914,6 +914,9 @@ export interface Voorziening {
   maker_monteur_id?: number | null;
   /** @nullable */
   maker_monteur_naam?: string | null;
+  ai_te_controleren?: boolean;
+  /** @nullable */
+  ai_voorstel_id?: number | null;
   gearchiveerd?: boolean;
   /** @nullable */
   gearchiveerd_op?: string | null;
@@ -1120,6 +1123,9 @@ export interface VoorzieningDetail {
   maker_monteur_id?: number | null;
   /** @nullable */
   maker_monteur_naam?: string | null;
+  ai_te_controleren?: boolean;
+  /** @nullable */
+  ai_voorstel_id?: number | null;
   gearchiveerd?: boolean;
   /** @nullable */
   gearchiveerd_op?: string | null;
@@ -1157,6 +1163,7 @@ export interface VoorzieningLocatie {
   wrd?: string | null;
   /** @nullable */
   wand_of_plafond?: string | null;
+  ai_te_controleren?: boolean;
   gearchiveerd?: boolean;
 }
 
@@ -1946,6 +1953,120 @@ export interface DocumentAiAnalyseResultaat {
   toepassing_suggesties?: DocumentAiAnalyseResultaatToepassingSuggestiesItem[];
 }
 
+export interface SpotAiVoorstelInput {
+  gebouw_id: number;
+  /**
+     * objectPath van de foto vóór de afwerking (optioneel; geeft de AI context).
+     * @nullable
+     */
+  foto_voor_url?: string | null;
+  /** objectPath van de foto ná de afwerking; deze wordt geanalyseerd. */
+  foto_na_url: string;
+}
+
+export interface SpotAiToepassingSuggestie {
+  label_id: number;
+  naam: string;
+  /** @nullable */
+  fabrikant?: string | null;
+  score: number;
+  /** @nullable */
+  reden?: string | null;
+}
+
+export interface SpotAiVoorstelResultaat {
+  /**
+     * wand of plafond
+     * @nullable
+     */
+  wand_of_plafond?: string | null;
+  /**
+     * Voorgestelde applicatie-code (voorziening-type).
+     * @nullable
+     */
+  type_code?: string | null;
+  /** @nullable */
+  type_naam?: string | null;
+  /**
+     * Vrije AI-observaties over zichtbaar product/fabrikant op de foto.
+     * @nullable
+     */
+  observaties?: string | null;
+  /** @nullable */
+  toelichting?: string | null;
+  /**
+     * laag, midden of hoog
+     * @nullable
+     */
+  betrouwbaarheid: string | null;
+  toepassing_suggesties?: SpotAiToepassingSuggestie[];
+  /** @nullable */
+  document_id?: number | null;
+  /** @nullable */
+  document_naam?: string | null;
+}
+
+export interface SpotAiGekozenWaarden {
+  /** @nullable */
+  wand_of_plafond?: string | null;
+  /** @nullable */
+  type_code?: string | null;
+  label_ids?: number[];
+}
+
+export interface SpotAiVoorstelRecord {
+  id: number;
+  /** @nullable */
+  voorziening_id?: number | null;
+  /** @nullable */
+  gebouw_id?: number | null;
+  /** @nullable */
+  foto_voor_url?: string | null;
+  /** @nullable */
+  foto_na_url?: string | null;
+  voorstel?: SpotAiVoorstelResultaat | null;
+  gekozen?: SpotAiGekozenWaarden | null;
+  afwijking_toepassing: boolean;
+  /** @nullable */
+  beheerder_bevestigd_door_id?: number | null;
+  /** @nullable */
+  beheerder_bevestigd_door_naam?: string | null;
+  /** @nullable */
+  beheerder_bevestigd_op?: string | null;
+  /**
+     * gebouwspecifiek of generiek (null = nog niet beoordeeld)
+     * @nullable
+     */
+  herkomst?: string | null;
+  /** @nullable */
+  aangemaakt_op?: string | null;
+}
+
+/**
+ * Of de afwijkende toepassing gebouwspecifiek is of generiek toepasbaar.
+ */
+export type SpotAiControleInputHerkomst = typeof SpotAiControleInputHerkomst[keyof typeof SpotAiControleInputHerkomst];
+
+
+export const SpotAiControleInputHerkomst = {
+  gebouwspecifiek: 'gebouwspecifiek',
+  generiek: 'generiek',
+} as const;
+
+export interface SpotAiControleInput {
+  /** Of de afwijkende toepassing gebouwspecifiek is of generiek toepasbaar. */
+  herkomst: SpotAiControleInputHerkomst;
+}
+
+export interface SpotAiVoorstelPersistInput {
+  /** @nullable */
+  foto_voor_url?: string | null;
+  /** @nullable */
+  foto_na_url?: string | null;
+  voorstel?: SpotAiVoorstelResultaat | null;
+  gekozen: SpotAiGekozenWaarden;
+}
+
 export type GetRecenteActiviteitParams = {
 limit?: number;
 };
@@ -1987,6 +2108,7 @@ type?: string;
 status?: string;
 gearchiveerd?: boolean;
 classificatie?: string;
+alleen_te_controleren?: boolean;
 zoek?: string;
 pagina?: number;
 per_pagina?: number;

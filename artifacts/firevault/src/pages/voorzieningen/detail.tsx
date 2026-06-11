@@ -1,12 +1,22 @@
 import { useState } from "react";
 import { useParams, Link } from "wouter";
-import { useGetVoorziening, getGetVoorzieningQueryKey } from "@workspace/api-client-react";
+import { useQueryClient } from "@tanstack/react-query";
+import {
+  useGetVoorziening,
+  getGetVoorzieningQueryKey,
+  useGetSpotAiVoorstel,
+  getGetSpotAiVoorstelQueryKey,
+  useBevestigSpotAiControle,
+} from "@workspace/api-client-react";
 import type { Label } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Building, Calendar, User, Package, MapPin, QrCode, CheckCircle, AlertCircle, Clock, Pencil, Tag } from "lucide-react";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label as FormLabel } from "@/components/ui/label";
+import { ArrowLeft, Building, Calendar, User, Package, MapPin, QrCode, CheckCircle, AlertCircle, Clock, Pencil, Tag, Sparkles } from "lucide-react";
 import { useAuth } from "@/context/auth-context";
+import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
 import { VoorzieningStatusDialog } from "./voorziening-status-dialog";
 import { VoorzieningBewerkenDialog } from "./voorziening-bewerken-dialog";
 
@@ -45,15 +55,162 @@ const typeLabel: Record<string, string> = {
   dakdoorvoer: "Dakdoorvoer",
 };
 
+function AiControlePaneel({ voorzieningId, labels }: { voorzieningId: number; labels: Label[] }) {
+  const queryClient = useQueryClient();
+  const { data: record, isLoading } = useGetSpotAiVoorstel(voorzieningId, {
+    query: { queryKey: getGetSpotAiVoorstelQueryKey(voorzieningId) },
+  });
+  const [herkomst, setHerkomst] = useState<string>("");
+  const bevestig = useBevestigSpotAiControle();
+
+  if (isLoading) {
+    return (
+      <Card className="border-red-300">
+        <CardContent className="p-6 text-sm text-muted-foreground">AI-controle laden…</CardContent>
+      </Card>
+    );
+  }
+  if (!record) return null;
+
+  const voorstel = record.voorstel;
+  const suggesties = voorstel?.toepassing_suggesties ?? [];
+
+  const onBevestig = async () => {
+    if (herkomst !== "gebouwspecifiek" && herkomst !== "generiek") return;
+    await bevestig.mutateAsync({ id: voorzieningId, data: { herkomst } });
+    await queryClient.invalidateQueries({ queryKey: getGetVoorzieningQueryKey(voorzieningId) });
+    await queryClient.invalidateQueries({ queryKey: getGetSpotAiVoorstelQueryKey(voorzieningId) });
+  };
+
+  return (
+    <Card className="border-red-300 bg-red-50/40">
+      <CardHeader>
+        <CardTitle className="text-base flex items-center gap-2 text-red-800">
+          <AlertCircle className="h-4 w-4" /> AI-controle vereist — afwijkende toepassingskeuze
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-5">
+        <p className="text-sm text-muted-foreground">
+          De monteur koos een andere toepassing dan de AI voorstelde. Beoordeel de afwijking en leg vast of deze keuze
+          gebouwspecifiek of generiek toepasbaar is. De keuze wordt opgeslagen als leervoorbeeld; de AI keurt nooit zelf goed.
+        </p>
+
+        {(record.foto_voor_url || record.foto_na_url) && (
+          <div className="grid grid-cols-2 gap-4">
+            {record.foto_voor_url && (
+              <div>
+                <div className="text-xs text-muted-foreground mb-1">Foto vóór</div>
+                <img
+                  src={`/api/storage${record.foto_voor_url}`}
+                  alt="Foto vóór de afwerking"
+                  className="w-full rounded-md border object-cover aspect-video bg-muted"
+                />
+              </div>
+            )}
+            {record.foto_na_url && (
+              <div>
+                <div className="text-xs text-muted-foreground mb-1">Foto ná</div>
+                <img
+                  src={`/api/storage${record.foto_na_url}`}
+                  alt="Foto ná de afwerking"
+                  className="w-full rounded-md border object-cover aspect-video bg-muted"
+                />
+              </div>
+            )}
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="rounded-md border border-amber-300 bg-amber-100/70 p-3">
+            <div className="flex items-center gap-1.5 text-xs font-medium text-amber-700 mb-2">
+              <Sparkles className="h-3.5 w-3.5" /> AI stelde voor
+            </div>
+            {suggesties.length ? (
+              <ul className="space-y-1 text-sm">
+                {suggesties.slice(0, 3).map((s) => (
+                  <li key={s.label_id} className="font-medium">
+                    {s.naam}
+                    {s.fabrikant && <span className="text-muted-foreground font-normal"> · {s.fabrikant}</span>}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <div className="text-sm text-muted-foreground">Geen toepassingsvoorstel</div>
+            )}
+            {voorstel?.betrouwbaarheid && (
+              <div className="text-xs text-amber-700 mt-2">Betrouwbaarheid: {voorstel.betrouwbaarheid}</div>
+            )}
+          </div>
+          <div className="rounded-md border bg-background p-3">
+            <div className="text-xs font-medium text-muted-foreground mb-2">Monteur koos</div>
+            {labels.length ? (
+              <ul className="space-y-1 text-sm">
+                {labels.map((l) => (
+                  <li key={l.id} className="font-medium">
+                    {l.naam}
+                    {l.fabrikant && <span className="text-muted-foreground font-normal"> · {l.fabrikant}</span>}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <div className="text-sm text-muted-foreground">Geen toepassing gekozen</div>
+            )}
+          </div>
+        </div>
+
+        {voorstel?.observaties && (
+          <div className="text-sm">
+            <div className="text-xs text-muted-foreground">AI-observaties</div>
+            <div className="italic text-muted-foreground">{voorstel.observaties}</div>
+          </div>
+        )}
+
+        <div className="space-y-2">
+          <div className="text-sm font-medium">
+            Hoe moet deze keuze gelden? <span className="text-red-600">*</span>
+          </div>
+          <RadioGroup value={herkomst} onValueChange={setHerkomst} className="gap-2">
+            <div className="flex items-start gap-2">
+              <RadioGroupItem value="gebouwspecifiek" id="herkomst-gebouw" className="mt-0.5" />
+              <FormLabel htmlFor="herkomst-gebouw" className="font-normal leading-snug">
+                <span className="font-medium">Gebouwspecifiek</span> — geldt alleen voor dit gebouw
+              </FormLabel>
+            </div>
+            <div className="flex items-start gap-2">
+              <RadioGroupItem value="generiek" id="herkomst-generiek" className="mt-0.5" />
+              <FormLabel htmlFor="herkomst-generiek" className="font-normal leading-snug">
+                <span className="font-medium">Generiek</span> — algemeen toepasbaar (voedt de AI-leerset breed)
+              </FormLabel>
+            </div>
+          </RadioGroup>
+        </div>
+
+        <div className="flex items-center gap-3 flex-wrap">
+          <Button onClick={onBevestig} disabled={!herkomst || bevestig.isPending}>
+            {bevestig.isPending ? "Bevestigen…" : "Controle bevestigen"}
+          </Button>
+          <span className="text-xs text-muted-foreground">
+            Na bevestiging verdwijnt de markering en wordt de keuze opgeslagen als leervoorbeeld.
+          </span>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function VoorzieningDetail() {
   const { id } = useParams<{ id: string }>();
   const { gebruiker } = useAuth();
+  const { heeftNiveau } = useBevoegdheid();
   const { data: voorziening, isLoading } = useGetVoorziening(Number(id), {
     query: { enabled: !!id, queryKey: getGetVoorzieningQueryKey(Number(id)) },
   });
   const [statusOpen, setStatusOpen] = useState(false);
   const [bewerkenOpen, setBewerkenOpen] = useState(false);
   const magBewerken = !!gebruiker?.rol && BEWERK_ROLLEN.includes(gebruiker.rol as string);
+  // AI-controle bevestigen vereist volledig beheer (niveau 4) op de spots-module,
+  // zodat een monteur (niveau 3) zijn eigen afwijking niet zelf kan bevestigen.
+  const magControleren = heeftNiveau("voorzieningen", 4);
 
   if (isLoading) {
     return (
@@ -107,6 +264,13 @@ export default function VoorzieningDetail() {
           )}
         </div>
       </div>
+
+      {magControleren && (voorziening as any).ai_te_controleren && (
+        <AiControlePaneel
+          voorzieningId={voorziening.id}
+          labels={(Array.isArray((voorziening as any).labels) ? (voorziening as any).labels : []) as Label[]}
+        />
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">

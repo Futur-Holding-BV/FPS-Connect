@@ -188,6 +188,7 @@ type SVGVoorziening = {
   classificatie?: string;
   ruimte?: string;
   wand_of_plafond?: string;
+  ai_te_controleren?: boolean;
   locatie_x: number;
   locatie_y: number;
 };
@@ -214,6 +215,9 @@ function VoorzieningIcoon({
       style={{ cursor: "pointer" }}
     >
       <circle r={r + 5} fill={stijl.kleur} opacity={0.25} />
+      {v.ai_te_controleren && (
+        <circle r={r + 8} fill="none" stroke="#dc2626" strokeWidth={2.5} strokeDasharray="4 2" />
+      )}
       <circle r={r} fill={STATUSKLEUREN[v.status] ?? "#94a3b8"} stroke={geselecteerd ? "#fff" : stijl.ring} strokeWidth={geselecteerd ? 3 : 1.5} />
       {isPlafond && (
         <g style={{ pointerEvents: "none" }}>
@@ -591,6 +595,7 @@ export default function Plattegrond() {
       classificatie: v.classificatie,
       ruimte: v.ruimte,
       wand_of_plafond: v.wand_of_plafond,
+      ai_te_controleren: v.ai_te_controleren,
       locatie_x: Number(v.locatie_x),
       locatie_y: Number(v.locatie_y),
     }));

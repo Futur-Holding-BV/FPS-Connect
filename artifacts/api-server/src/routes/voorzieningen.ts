@@ -10,6 +10,9 @@ import {
   inspectiesTable,
   onderhoudTable,
   scheidingenTable,
+  spotAiVoorstellenTable,
+  type SpotAiVoorstelSnapshot,
+  type SpotAiGekozen,
 } from "@workspace/db";
 import { eq, and, ilike, sql } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
@@ -17,6 +20,7 @@ import { heeftNiveau } from "@workspace/permissies";
 import { effectieveContext, isBeperktTotToegewezen } from "../utils/rol";
 import { getLabelsVoorVoorziening, syncVoorzieningLabels } from "../lib/classificatie";
 import { logActiviteit } from "../lib/activiteit";
+import { analyseerSpot } from "../services/spot-ai";
 
 const router = Router();
 const lezenVoorzieningen = requireBevoegdheid("voorzieningen", 1);
@@ -331,6 +335,30 @@ router.post("/voorzieningen", requireBevoegdheid("voorzieningen", 3), async (req
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// POST /voorzieningen/ai-spotvoorstel — AI-voorstel o.b.v. foto vóór/ná, vóórdat
+// de spot bestaat. Geeft een voorstel terug (wand/plafond, applicatie,
+// toepassing-suggesties, gekoppeld document); de monteur bevestigt of past aan.
+router.post("/voorzieningen/ai-spotvoorstel", requireBevoegdheid("voorzieningen", 2), async (req, res) => {
+  try {
+    const { gebouw_id, foto_voor_url, foto_na_url } = req.body ?? {};
+    if (!gebouw_id || !foto_na_url) {
+      return res.status(400).json({ error: "gebouw_id en foto_na_url zijn verplicht" });
+    }
+    if (!(await magBijGebouw(req.session.userId!, Number(gebouw_id)))) {
+      return res.status(403).json({ error: "Geen toegang tot dit gebouw" });
+    }
+    const voorstel = await analyseerSpot({
+      gebouwId: Number(gebouw_id),
+      fotoVoorObjectPath: foto_voor_url ? String(foto_voor_url) : null,
+      fotoNaObjectPath: String(foto_na_url),
+    });
+    return res.json(voorstel);
+  } catch (err) {
+    req.log.error(err);
+    return res.status(500).json({ error: "Interne serverfout" });
   }
 });
 
@@ -777,6 +805,166 @@ router.delete("/verdiepingen/scheidingen/:scheidingId", requireBevoegdheid("voor
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// ── AI-SPOTVOORSTELLEN (leerset + beheerder-review) ─────────────────────────
+
+async function mapSpotAiVoorstel(r: typeof spotAiVoorstellenTable.$inferSelect) {
+  const bevestiger = r.beheerderBevestigdDoorId
+    ? await db
+        .select({ naam: gebruikersTable.naam })
+        .from(gebruikersTable)
+        .where(eq(gebruikersTable.id, r.beheerderBevestigdDoorId))
+        .then((x) => x[0])
+    : null;
+  return {
+    id: r.id,
+    voorziening_id: r.voorzieningId,
+    gebouw_id: r.gebouwId,
+    foto_voor_url: r.fotoVoorUrl,
+    foto_na_url: r.fotoNaUrl,
+    voorstel: r.voorstel,
+    gekozen: r.gekozen,
+    afwijking_toepassing: r.afwijkingToepassing,
+    beheerder_bevestigd_door_id: r.beheerderBevestigdDoorId,
+    beheerder_bevestigd_door_naam: bevestiger?.naam ?? null,
+    beheerder_bevestigd_op: r.beheerderBevestigdOp ? r.beheerderBevestigdOp.toISOString() : null,
+    herkomst: r.herkomst,
+    aangemaakt_op: r.aangemaaktOp.toISOString(),
+  };
+}
+
+// GET /voorzieningen/:id/ai-voorstel — het opgeslagen AI-voorstel + gekozen waarden.
+router.get("/voorzieningen/:id/ai-voorstel", lezenVoorzieningen, async (req, res) => {
+  try {
+    const id = parseInt(String(req.params.id));
+    if (!(await magBijGebouw(req.session.userId!, await gebouwIdVanVoorziening(id)))) {
+      return res.status(403).json({ error: "Geen toegang tot deze voorziening" });
+    }
+    const rijen = await db
+      .select()
+      .from(spotAiVoorstellenTable)
+      .where(eq(spotAiVoorstellenTable.voorzieningId, id));
+    if (rijen.length === 0) {
+      return res.status(404).json({ error: "Geen AI-voorstel voor deze spot" });
+    }
+    // Het meest recente voorstel telt (een spot kan opnieuw geanalyseerd zijn).
+    const laatste = [...rijen].sort((a, b) => b.id - a.id)[0];
+    return res.json(await mapSpotAiVoorstel(laatste));
+  } catch (err) {
+    req.log.error(err);
+    return res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// POST /voorzieningen/:id/ai-voorstel — bewaart voorstel + gekozen waarden als
+// leerset-rij. Berekent de afwijking (koos de monteur een andere toepassing dan
+// de AI's eerste suggestie?) en markeert de spot eventueel voor beheerder-controle.
+router.post("/voorzieningen/:id/ai-voorstel", requireBevoegdheid("voorzieningen", 3), async (req, res) => {
+  try {
+    const id = parseInt(String(req.params.id));
+    const [v] = await db.select().from(voorzieningenTable).where(eq(voorzieningenTable.id, id));
+    if (!v) return res.status(404).json({ error: "Voorziening niet gevonden" });
+    if (!(await magBijGebouw(req.session.userId!, v.gebouwId))) {
+      return res.status(403).json({ error: "Geen toegang tot deze voorziening" });
+    }
+
+    const { foto_voor_url, foto_na_url, voorstel, gekozen } = req.body ?? {};
+    const gekozenWaarden = (gekozen ?? {}) as SpotAiGekozen;
+    const gekozenLabelIds = Array.isArray(gekozenWaarden.label_ids)
+      ? gekozenWaarden.label_ids.map((n) => Number(n))
+      : [];
+
+    // Afwijking: de AI had een eerste toepassing-suggestie, maar die zit niet bij
+    // de uiteindelijk gekozen toepassingen. Geen suggestie => geen afwijking.
+    // Alleen een suggestie met score > 0 telt mee: een score-0 "hint" wordt mobiel
+    // niet voorinvuld, dus mag ook geen valse beheerder-controle veroorzaken.
+    const topSugg =
+      voorstel && Array.isArray(voorstel.toepassing_suggesties) && voorstel.toepassing_suggesties.length > 0
+        ? voorstel.toepassing_suggesties[0]
+        : null;
+    const topSuggestie =
+      topSugg && Number(topSugg.score) > 0 ? Number(topSugg.label_id) : null;
+    const afwijking =
+      topSuggestie != null && gekozenLabelIds.length > 0 && !gekozenLabelIds.includes(topSuggestie);
+
+    const [rij] = await db
+      .insert(spotAiVoorstellenTable)
+      .values({
+        voorzieningId: id,
+        gebouwId: v.gebouwId,
+        fotoVoorUrl: foto_voor_url ?? null,
+        fotoNaUrl: foto_na_url ?? null,
+        voorstel: (voorstel ?? null) as SpotAiVoorstelSnapshot | null,
+        gekozen: gekozenWaarden,
+        afwijkingToepassing: afwijking,
+      })
+      .returning();
+
+    await db
+      .update(voorzieningenTable)
+      .set({ aiVoorstelId: rij.id, aiTeControleren: afwijking, bijgewerktOp: new Date() })
+      .where(eq(voorzieningenTable.id, id));
+
+    return res.status(201).json(await mapSpotAiVoorstel(rij));
+  } catch (err) {
+    req.log.error(err);
+    return res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// POST /voorzieningen/:id/ai-controle — beheerder bevestigt de afwijkende
+// toepassingskeuze en legt vast of die gebouwspecifiek of generiek is (leerset).
+// Niveau 4 (volledig beheer): bewust hoger dan aanmaken/wijzigen (niveau 3) zodat
+// de monteur die de spot maakt zijn eigen afwijking niet zelf kan bevestigen.
+router.post("/voorzieningen/:id/ai-controle", requireBevoegdheid("voorzieningen", 4), async (req, res) => {
+  try {
+    const id = parseInt(String(req.params.id));
+    const [v] = await db.select().from(voorzieningenTable).where(eq(voorzieningenTable.id, id));
+    if (!v) return res.status(404).json({ error: "Voorziening niet gevonden" });
+    if (!(await magBijGebouw(req.session.userId!, v.gebouwId))) {
+      return res.status(403).json({ error: "Geen toegang tot deze voorziening" });
+    }
+
+    const herkomst = String(req.body?.herkomst ?? "");
+    if (herkomst !== "gebouwspecifiek" && herkomst !== "generiek") {
+      return res.status(400).json({ error: "herkomst moet 'gebouwspecifiek' of 'generiek' zijn" });
+    }
+    if (v.aiVoorstelId == null) {
+      return res.status(404).json({ error: "Geen AI-voorstel voor deze spot" });
+    }
+
+    const [rij] = await db
+      .update(spotAiVoorstellenTable)
+      .set({
+        herkomst,
+        beheerderBevestigdDoorId: req.session.userId,
+        beheerderBevestigdOp: new Date(),
+        bijgewerktOp: new Date(),
+      })
+      .where(eq(spotAiVoorstellenTable.id, v.aiVoorstelId))
+      .returning();
+    if (!rij) return res.status(404).json({ error: "AI-voorstel niet gevonden" });
+
+    await db
+      .update(voorzieningenTable)
+      .set({ aiTeControleren: false, bijgewerktOp: new Date() })
+      .where(eq(voorzieningenTable.id, id));
+
+    await logActiviteit({
+      type: "ai_voorstel_bevestigd",
+      omschrijving: `AI-toepassingskeuze van ${v.objectnummer} bevestigd (${herkomst})`,
+      gebouwId: v.gebouwId,
+      voorzieningId: v.id,
+      voorzieningNummer: v.objectnummer,
+      gebruikerId: req.session.userId,
+    });
+
+    return res.json(await mapSpotAiVoorstel(rij));
+  } catch (err) {
+    req.log.error(err);
+    return res.status(500).json({ error: "Interne serverfout" });
   }
 });
 

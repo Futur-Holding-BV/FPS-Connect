@@ -28,5 +28,6 @@ export interface VoorzieningLocatie {
   wrd?: string | null;
   /** @nullable */
   wand_of_plafond?: string | null;
+  ai_te_controleren?: boolean;
   gearchiveerd?: boolean;
 }

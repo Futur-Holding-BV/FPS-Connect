@@ -119,6 +119,11 @@ import type {
   Scheiding,
   ScheidingInput,
   ScheidingUpdate,
+  SpotAiControleInput,
+  SpotAiVoorstelInput,
+  SpotAiVoorstelPersistInput,
+  SpotAiVoorstelRecord,
+  SpotAiVoorstelResultaat,
   SpotsInzicht,
   StatusUpdate,
   StatusVerdeling,
@@ -3642,6 +3647,295 @@ export const useArchiveerVoorziening = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getArchiveerVoorzieningMutationOptions(options));
+    }
+
+export const getAiSpotvoorstelUrl = () => {
+
+
+
+
+  return `/api/voorzieningen/ai-spotvoorstel`
+}
+
+/**
+ * @summary AI-voorstel voor een spot o.b.v. de foto vóór en ná (wand/plafond, applicatie, toepassing, document). Voorstellen; de monteur bevestigt of past aan.
+ */
+export const aiSpotvoorstel = async (spotAiVoorstelInput: SpotAiVoorstelInput, options?: RequestInit): Promise<SpotAiVoorstelResultaat> => {
+
+  return customFetch<SpotAiVoorstelResultaat>(getAiSpotvoorstelUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(spotAiVoorstelInput)
+  }
+);}
+
+
+
+
+export const getAiSpotvoorstelMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof aiSpotvoorstel>>, TError,{data: BodyType<SpotAiVoorstelInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof aiSpotvoorstel>>, TError,{data: BodyType<SpotAiVoorstelInput>}, TContext> => {
+
+const mutationKey = ['aiSpotvoorstel'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof aiSpotvoorstel>>, {data: BodyType<SpotAiVoorstelInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  aiSpotvoorstel(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AiSpotvoorstelMutationResult = NonNullable<Awaited<ReturnType<typeof aiSpotvoorstel>>>
+    export type AiSpotvoorstelMutationBody = BodyType<SpotAiVoorstelInput>
+    export type AiSpotvoorstelMutationError = ErrorType<unknown>
+
+    /**
+ * @summary AI-voorstel voor een spot o.b.v. de foto vóór en ná (wand/plafond, applicatie, toepassing, document). Voorstellen; de monteur bevestigt of past aan.
+ */
+export const useAiSpotvoorstel = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof aiSpotvoorstel>>, TError,{data: BodyType<SpotAiVoorstelInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof aiSpotvoorstel>>,
+        TError,
+        {data: BodyType<SpotAiVoorstelInput>},
+        TContext
+      > => {
+      return useMutation(getAiSpotvoorstelMutationOptions(options));
+    }
+
+export const getGetSpotAiVoorstelUrl = (id: number,) => {
+
+
+
+
+  return `/api/voorzieningen/${id}/ai-voorstel`
+}
+
+/**
+ * @summary Het opgeslagen AI-voorstel en de gekozen waarden van een spot (voor de beheerder-review)
+ */
+export const getSpotAiVoorstel = async (id: number, options?: RequestInit): Promise<SpotAiVoorstelRecord> => {
+
+  return customFetch<SpotAiVoorstelRecord>(getGetSpotAiVoorstelUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetSpotAiVoorstelQueryKey = (id: number,) => {
+    return [
+    `/api/voorzieningen/${id}/ai-voorstel`
+    ] as const;
+    }
+
+
+export const getGetSpotAiVoorstelQueryOptions = <TData = Awaited<ReturnType<typeof getSpotAiVoorstel>>, TError = ErrorType<void>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSpotAiVoorstel>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetSpotAiVoorstelQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getSpotAiVoorstel>>> = ({ signal }) => getSpotAiVoorstel(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getSpotAiVoorstel>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetSpotAiVoorstelQueryResult = NonNullable<Awaited<ReturnType<typeof getSpotAiVoorstel>>>
+export type GetSpotAiVoorstelQueryError = ErrorType<void>
+
+
+/**
+ * @summary Het opgeslagen AI-voorstel en de gekozen waarden van een spot (voor de beheerder-review)
+ */
+
+export function useGetSpotAiVoorstel<TData = Awaited<ReturnType<typeof getSpotAiVoorstel>>, TError = ErrorType<void>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSpotAiVoorstel>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetSpotAiVoorstelQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getBewaarSpotAiVoorstelUrl = (id: number,) => {
+
+
+
+
+  return `/api/voorzieningen/${id}/ai-voorstel`
+}
+
+/**
+ * @summary Bewaart het AI-voorstel en de door de monteur gekozen waarden als leerset-rij bij een spot; berekent de afwijking en markeert de spot eventueel voor controle.
+ */
+export const bewaarSpotAiVoorstel = async (id: number,
+    spotAiVoorstelPersistInput: SpotAiVoorstelPersistInput, options?: RequestInit): Promise<SpotAiVoorstelRecord> => {
+
+  return customFetch<SpotAiVoorstelRecord>(getBewaarSpotAiVoorstelUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(spotAiVoorstelPersistInput)
+  }
+);}
+
+
+
+
+export const getBewaarSpotAiVoorstelMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof bewaarSpotAiVoorstel>>, TError,{id: number;data: BodyType<SpotAiVoorstelPersistInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof bewaarSpotAiVoorstel>>, TError,{id: number;data: BodyType<SpotAiVoorstelPersistInput>}, TContext> => {
+
+const mutationKey = ['bewaarSpotAiVoorstel'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof bewaarSpotAiVoorstel>>, {id: number;data: BodyType<SpotAiVoorstelPersistInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  bewaarSpotAiVoorstel(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type BewaarSpotAiVoorstelMutationResult = NonNullable<Awaited<ReturnType<typeof bewaarSpotAiVoorstel>>>
+    export type BewaarSpotAiVoorstelMutationBody = BodyType<SpotAiVoorstelPersistInput>
+    export type BewaarSpotAiVoorstelMutationError = ErrorType<void>
+
+    /**
+ * @summary Bewaart het AI-voorstel en de door de monteur gekozen waarden als leerset-rij bij een spot; berekent de afwijking en markeert de spot eventueel voor controle.
+ */
+export const useBewaarSpotAiVoorstel = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof bewaarSpotAiVoorstel>>, TError,{id: number;data: BodyType<SpotAiVoorstelPersistInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof bewaarSpotAiVoorstel>>,
+        TError,
+        {id: number;data: BodyType<SpotAiVoorstelPersistInput>},
+        TContext
+      > => {
+      return useMutation(getBewaarSpotAiVoorstelMutationOptions(options));
+    }
+
+export const getBevestigSpotAiControleUrl = (id: number,) => {
+
+
+
+
+  return `/api/voorzieningen/${id}/ai-controle`
+}
+
+/**
+ * @summary Beheerder bevestigt de afwijkende toepassingskeuze en legt vast of deze gebouwspecifiek of generiek is (voedt de leerset)
+ */
+export const bevestigSpotAiControle = async (id: number,
+    spotAiControleInput: SpotAiControleInput, options?: RequestInit): Promise<SpotAiVoorstelRecord> => {
+
+  return customFetch<SpotAiVoorstelRecord>(getBevestigSpotAiControleUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(spotAiControleInput)
+  }
+);}
+
+
+
+
+export const getBevestigSpotAiControleMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof bevestigSpotAiControle>>, TError,{id: number;data: BodyType<SpotAiControleInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof bevestigSpotAiControle>>, TError,{id: number;data: BodyType<SpotAiControleInput>}, TContext> => {
+
+const mutationKey = ['bevestigSpotAiControle'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof bevestigSpotAiControle>>, {id: number;data: BodyType<SpotAiControleInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  bevestigSpotAiControle(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type BevestigSpotAiControleMutationResult = NonNullable<Awaited<ReturnType<typeof bevestigSpotAiControle>>>
+    export type BevestigSpotAiControleMutationBody = BodyType<SpotAiControleInput>
+    export type BevestigSpotAiControleMutationError = ErrorType<void>
+
+    /**
+ * @summary Beheerder bevestigt de afwijkende toepassingskeuze en legt vast of deze gebouwspecifiek of generiek is (voedt de leerset)
+ */
+export const useBevestigSpotAiControle = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof bevestigSpotAiControle>>, TError,{id: number;data: BodyType<SpotAiControleInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof bevestigSpotAiControle>>,
+        TError,
+        {id: number;data: BodyType<SpotAiControleInput>},
+        TContext
+      > => {
+      return useMutation(getBevestigSpotAiControleMutationOptions(options));
     }
 
 export const getListVoorzieningTypesUrl = (params?: ListVoorzieningTypesParams,) => {

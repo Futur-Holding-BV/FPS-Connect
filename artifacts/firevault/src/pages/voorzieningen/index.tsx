@@ -1,10 +1,10 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useListVoorzieningen } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Plus, Search } from "lucide-react";
+import { Plus, Search, AlertCircle } from "lucide-react";
 import { Link } from "wouter";
 import { Badge } from "@/components/ui/badge";
 import { useVoorkeur } from "@/hooks/use-voorkeur";
@@ -13,16 +13,23 @@ export default function Voorzieningen() {
   const { t } = useTranslation();
   const { data: voorzieningenLijst, isLoading } = useListVoorzieningen({});
   const [zoek, setZoek] = useVoorkeur("voorzieningen_zoek", "");
+  const [alleenTeControleren, setAlleenTeControleren] = useState(false);
+
+  const teControlerenAantal = useMemo(
+    () => (voorzieningenLijst?.items ?? []).filter((v) => (v as any).ai_te_controleren).length,
+    [voorzieningenLijst],
+  );
 
   const gefilterd = useMemo(() => {
     const term = zoek.trim().toLowerCase();
-    const items = voorzieningenLijst?.items ?? [];
+    let items = voorzieningenLijst?.items ?? [];
+    if (alleenTeControleren) items = items.filter((v) => (v as any).ai_te_controleren);
     if (!term) return items;
     return items.filter((v) =>
       [v.objectnummer, v.type, v.gebouw_naam, v.status]
         .some((veld) => (veld ?? "").toLowerCase().includes(term)),
     );
-  }, [voorzieningenLijst, zoek]);
+  }, [voorzieningenLijst, zoek, alleenTeControleren]);
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
@@ -42,6 +49,16 @@ export default function Voorzieningen() {
               onChange={(e) => setZoek(e.target.value)}
             />
           </div>
+          {teControlerenAantal > 0 && (
+            <Button
+              variant={alleenTeControleren ? "default" : "outline"}
+              onClick={() => setAlleenTeControleren((v) => !v)}
+              className={alleenTeControleren ? "" : "border-red-300 text-red-700 hover:text-red-800"}
+            >
+              <AlertCircle className="h-4 w-4 mr-2" />
+              Te controleren ({teControlerenAantal})
+            </Button>
+          )}
           <Link href="/voorzieningen/nieuw">
             <Button variant="outline">
               <Plus className="h-4 w-4 mr-2" />Toepassing toevoegen
@@ -69,7 +86,14 @@ export default function Voorzieningen() {
                 ) : (
                   gefilterd.map(v => (
                     <tr key={v.id} className="border-b last:border-0 hover:bg-muted/50">
-                      <td className="px-6 py-4 font-medium">{v.objectnummer}</td>
+                      <td className="px-6 py-4 font-medium">
+                        <span className="inline-flex items-center gap-2">
+                          {(v as any).ai_te_controleren && (
+                            <span title="AI-controle vereist" className="inline-flex h-2.5 w-2.5 shrink-0 rounded-full bg-red-600" />
+                          )}
+                          {v.objectnummer}
+                        </span>
+                      </td>
                       <td className="px-6 py-4">{v.type}</td>
                       <td className="px-6 py-4">{v.gebouw_naam}</td>
                       <td className="px-6 py-4">

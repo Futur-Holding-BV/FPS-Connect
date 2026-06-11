@@ -880,6 +880,10 @@ paths:
           schema:
             type: string
         - in: query
+          name: alleen_te_controleren
+          schema:
+            type: boolean
+        - in: query
           name: zoek
           schema:
             type: string
@@ -1088,6 +1092,98 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Voorziening"
+        "404":
+          description: Niet gevonden
+
+  /voorzieningen/ai-spotvoorstel:
+    post:
+      operationId: aiSpotvoorstel
+      tags: [voorzieningen]
+      summary: AI-voorstel voor een spot o.b.v. de foto vóór en ná (wand/plafond, applicatie, toepassing, document). Voorstellen; de monteur bevestigt of past aan.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SpotAiVoorstelInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpotAiVoorstelResultaat"
+
+  /voorzieningen/{id}/ai-voorstel:
+    get:
+      operationId: getSpotAiVoorstel
+      tags: [voorzieningen]
+      summary: Het opgeslagen AI-voorstel en de gekozen waarden van een spot (voor de beheerder-review)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpotAiVoorstelRecord"
+        "404":
+          description: Geen AI-voorstel voor deze spot
+    post:
+      operationId: bewaarSpotAiVoorstel
+      tags: [voorzieningen]
+      summary: Bewaart het AI-voorstel en de door de monteur gekozen waarden als leerset-rij bij een spot; berekent de afwijking en markeert de spot eventueel voor controle.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SpotAiVoorstelPersistInput"
+      responses:
+        "201":
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpotAiVoorstelRecord"
+        "404":
+          description: Niet gevonden
+
+  /voorzieningen/{id}/ai-controle:
+    post:
+      operationId: bevestigSpotAiControle
+      tags: [voorzieningen]
+      summary: Beheerder bevestigt de afwijkende toepassingskeuze en legt vast of deze gebouwspecifiek of generiek is (voedt de leerset)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SpotAiControleInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpotAiVoorstelRecord"
         "404":
           description: Niet gevonden
 
@@ -4732,6 +4828,10 @@ components:
           type: ["integer", "null"]
         maker_monteur_naam:
           type: ["string", "null"]
+        ai_te_controleren:
+          type: boolean
+        ai_voorstel_id:
+          type: ["integer", "null"]
         gearchiveerd:
           type: boolean
         gearchiveerd_op:
@@ -4811,6 +4911,10 @@ components:
           type: ["integer", "null"]
         maker_monteur_naam:
           type: ["string", "null"]
+        ai_te_controleren:
+          type: boolean
+        ai_voorstel_id:
+          type: ["integer", "null"]
         gearchiveerd:
           type: boolean
         gearchiveerd_op:
@@ -4873,6 +4977,8 @@ components:
           type: ["string", "null"]
         wand_of_plafond:
           type: ["string", "null"]
+        ai_te_controleren:
+          type: boolean
         gearchiveerd:
           type: boolean
 
@@ -6151,3 +6257,132 @@ components:
                 type: number
               reden:
                 type: ["string", "null"]
+
+    SpotAiVoorstelInput:
+      type: object
+      required: [gebouw_id, foto_na_url]
+      properties:
+        gebouw_id:
+          type: integer
+        foto_voor_url:
+          type: ["string", "null"]
+          description: objectPath van de foto vóór de afwerking (optioneel; geeft de AI context).
+        foto_na_url:
+          type: string
+          description: objectPath van de foto ná de afwerking; deze wordt geanalyseerd.
+
+    SpotAiToepassingSuggestie:
+      type: object
+      required: [label_id, naam, score]
+      properties:
+        label_id:
+          type: integer
+        naam:
+          type: string
+        fabrikant:
+          type: ["string", "null"]
+        score:
+          type: number
+        reden:
+          type: ["string", "null"]
+
+    SpotAiVoorstelResultaat:
+      type: object
+      required: [betrouwbaarheid]
+      properties:
+        wand_of_plafond:
+          type: ["string", "null"]
+          description: "wand of plafond"
+        type_code:
+          type: ["string", "null"]
+          description: Voorgestelde applicatie-code (voorziening-type).
+        type_naam:
+          type: ["string", "null"]
+        observaties:
+          type: ["string", "null"]
+          description: Vrije AI-observaties over zichtbaar product/fabrikant op de foto.
+        toelichting:
+          type: ["string", "null"]
+        betrouwbaarheid:
+          type: ["string", "null"]
+          description: "laag, midden of hoog"
+        toepassing_suggesties:
+          type: array
+          items:
+            $ref: "#/components/schemas/SpotAiToepassingSuggestie"
+        document_id:
+          type: ["integer", "null"]
+        document_naam:
+          type: ["string", "null"]
+
+    SpotAiGekozenWaarden:
+      type: object
+      properties:
+        wand_of_plafond:
+          type: ["string", "null"]
+        type_code:
+          type: ["string", "null"]
+        label_ids:
+          type: array
+          items:
+            type: integer
+
+    SpotAiVoorstelRecord:
+      type: object
+      required: [id, afwijking_toepassing]
+      properties:
+        id:
+          type: integer
+        voorziening_id:
+          type: ["integer", "null"]
+        gebouw_id:
+          type: ["integer", "null"]
+        foto_voor_url:
+          type: ["string", "null"]
+        foto_na_url:
+          type: ["string", "null"]
+        voorstel:
+          oneOf:
+            - $ref: "#/components/schemas/SpotAiVoorstelResultaat"
+            - type: "null"
+        gekozen:
+          oneOf:
+            - $ref: "#/components/schemas/SpotAiGekozenWaarden"
+            - type: "null"
+        afwijking_toepassing:
+          type: boolean
+        beheerder_bevestigd_door_id:
+          type: ["integer", "null"]
+        beheerder_bevestigd_door_naam:
+          type: ["string", "null"]
+        beheerder_bevestigd_op:
+          type: ["string", "null"]
+        herkomst:
+          type: ["string", "null"]
+          description: "gebouwspecifiek of generiek (null = nog niet beoordeeld)"
+        aangemaakt_op:
+          type: ["string", "null"]
+
+    SpotAiControleInput:
+      type: object
+      required: [herkomst]
+      properties:
+        herkomst:
+          type: string
+          enum: [gebouwspecifiek, generiek]
+          description: Of de afwijkende toepassing gebouwspecifiek is of generiek toepasbaar.
+
+    SpotAiVoorstelPersistInput:
+      type: object
+      required: [gekozen]
+      properties:
+        foto_voor_url:
+          type: ["string", "null"]
+        foto_na_url:
+          type: ["string", "null"]
+        voorstel:
+          oneOf:
+            - $ref: "#/components/schemas/SpotAiVoorstelResultaat"
+            - type: "null"
+        gekozen:
+          $ref: "#/components/schemas/SpotAiGekozenWaarden"

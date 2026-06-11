@@ -1,4 +1,4 @@
-import { pgTable, serial, text, integer, timestamp, real, boolean, unique } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, integer, timestamp, real, boolean, unique, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { gebouwenTable, verdiepingenTable } from "./gebouwen";
@@ -28,6 +28,8 @@ export const voorzieningenTable = pgTable("voorzieningen", {
   controleurId: integer("controleur_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
   installatieDatum: text("installatie_datum"),
   volgendeInspectie: text("volgende_inspectie"),
+  aiTeControleren: boolean("ai_te_controleren").notNull().default(false),
+  aiVoorstelId: integer("ai_voorstel_id"),
   gearchiveerd: boolean("gearchiveerd").notNull().default(false),
   gearchiveerdOp: timestamp("gearchiveerd_op"),
   aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
@@ -114,3 +116,44 @@ export const fotosTable = pgTable("fotos", {
 export const insertFotoSchema = createInsertSchema(fotosTable).omit({ id: true, aangemaaktOp: true });
 export type InsertFoto = z.infer<typeof insertFotoSchema>;
 export type Foto = typeof fotosTable.$inferSelect;
+
+// ── AI-SPOTVOORSTELLEN (leerset + voorstel-snapshot per spot) ────────────────
+// Onveranderlijk historisch trainingsrecord: het AI-voorstel en de uiteindelijk
+// gekozen waarden worden als jsonb-snapshot bewaard (de catalogus evolueert).
+export interface SpotAiVoorstelSnapshot {
+  wand_of_plafond: string | null;
+  type_code: string | null;
+  type_naam: string | null;
+  toelichting: string | null;
+  betrouwbaarheid: string | null;
+  observaties: string | null;
+  toepassing_suggesties: { label_id: number; naam: string; fabrikant: string | null; score: number }[];
+  document_id: number | null;
+  document_naam: string | null;
+}
+
+export interface SpotAiGekozen {
+  wand_of_plafond: string | null;
+  type_code: string | null;
+  label_ids: number[];
+}
+
+export const spotAiVoorstellenTable = pgTable("spot_ai_voorstellen", {
+  id: serial("id").primaryKey(),
+  voorzieningId: integer("voorziening_id").references(() => voorzieningenTable.id, { onDelete: "set null" }),
+  gebouwId: integer("gebouw_id").references(() => gebouwenTable.id, { onDelete: "set null" }),
+  fotoVoorUrl: text("foto_voor_url"),
+  fotoNaUrl: text("foto_na_url"),
+  voorstel: jsonb("voorstel").$type<SpotAiVoorstelSnapshot>(),
+  gekozen: jsonb("gekozen").$type<SpotAiGekozen>(),
+  afwijkingToepassing: boolean("afwijking_toepassing").notNull().default(false),
+  beheerderBevestigdDoorId: integer("beheerder_bevestigd_door_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
+  beheerderBevestigdOp: timestamp("beheerder_bevestigd_op"),
+  // null = nog niet beoordeeld; 'gebouwspecifiek' of 'generiek' na bevestiging.
+  herkomst: text("herkomst"),
+  aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
+  bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
+});
+export const insertSpotAiVoorstelSchema = createInsertSchema(spotAiVoorstellenTable).omit({ id: true, aangemaaktOp: true, bijgewerktOp: true });
+export type InsertSpotAiVoorstel = z.infer<typeof insertSpotAiVoorstelSchema>;
+export type SpotAiVoorstel = typeof spotAiVoorstellenTable.$inferSelect;

@@ -1,5 +1,7 @@
 import {
   useAddFoto,
+  useAiSpotvoorstel,
+  useBewaarSpotAiVoorstel,
   useCreateVoorziening,
   useGetVerdieping,
   useGetVolgendSpotnummer,
@@ -8,6 +10,7 @@ import {
   useListVoorzieningenOpVerdieping,
   useArchiveerVoorziening,
 } from "@workspace/api-client-react";
+import type { SpotAiVoorstelResultaat } from "@workspace/api-client-react";
 import { ApplicatieKiezer } from "@/components/ApplicatieKiezer";
 import { ToepassingKiezer } from "@/components/ToepassingKiezer";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -69,6 +72,31 @@ const LEEG = {
 
 const DOMEIN = process.env.EXPO_PUBLIC_DOMAIN ?? "";
 
+// AI-voorstel kleurconventie (geel/amber tot bevestigd); web-equivalent amber-100/300/700.
+const AMBER_BG = "#FEF3C7";
+const AMBER_BORDER = "#FCD34D";
+const AMBER_TEXT = "#B45309";
+const AMBER_DONKER = "#7C4A03";
+
+function AiBadge() {
+  return (
+    <View
+      style={{
+        backgroundColor: AMBER_BG,
+        borderColor: AMBER_BORDER,
+        borderWidth: 1,
+        borderRadius: 6,
+        paddingHorizontal: 8,
+        paddingVertical: 2,
+      }}
+    >
+      <Text style={{ color: AMBER_TEXT, fontSize: 11, fontFamily: "Inter_600SemiBold" }}>
+        AI-voorstel
+      </Text>
+    </View>
+  );
+}
+
 export default function Plattegrond() {
   const c = useColors();
   const router = useRouter();
@@ -90,6 +118,8 @@ export default function Plattegrond() {
   const { data: volgendSpot, refetch: refetchSpotnummer } = useGetVolgendSpotnummer(gId);
   const maakVoorziening = useCreateVoorziening();
   const voegFotoToe = useAddFoto();
+  const aiSpotvoorstel = useAiSpotvoorstel();
+  const bewaarAiVoorstel = useBewaarSpotAiVoorstel();
 
   const { syncStatus, aantalWachtend, aantalMislukt, wisMislukte, forceerSync } = useSync();
 
@@ -103,6 +133,19 @@ export default function Plattegrond() {
   const [fotoBezig, setFotoBezig] = useState(false);
   const [opslaan, setOpslaan] = useState(false);
   const [detailId, setDetailId] = useState<number | null>(null);
+  const [aiVoorstel, setAiVoorstel] = useState<SpotAiVoorstelResultaat | null>(null);
+  const [aiBezig, setAiBezig] = useState(false);
+  const [aiVelden, setAiVelden] = useState<Set<string>>(new Set());
+
+  // Een veld is "AI" (amber) zolang het de AI-suggestie houdt en niet is aangeraakt.
+  const isAi = (veld: string) => aiVelden.has(veld);
+  const amberVak = {
+    borderWidth: 1.5,
+    borderColor: AMBER_BORDER,
+    backgroundColor: AMBER_BG,
+    borderRadius: c.radius,
+    padding: 8,
+  } as const;
 
   const spots: PlattegrondSpot[] = (voorzieningen ?? []).map((v) => ({
     id: v.id,
@@ -130,6 +173,8 @@ export default function Plattegrond() {
     setLabelIds([]);
     setVoorFotos([]);
     setNaFotos([]);
+    setAiVoorstel(null);
+    setAiVelden(new Set());
     setFormOpen(true);
   }
 
@@ -164,6 +209,60 @@ export default function Plattegrond() {
     }
   }
 
+  function raakAan(veld: string) {
+    setAiVelden((s) => {
+      if (!s.has(veld)) return s;
+      const n = new Set(s);
+      n.delete(veld);
+      return n;
+    });
+  }
+
+  async function analyseerMetAi() {
+    if (naFotos.length === 0) {
+      Alert.alert("Foto ná ontbreekt", "Maak eerst een foto ná de afwerking voor de AI-analyse.");
+      return;
+    }
+    setAiBezig(true);
+    try {
+      const res = await aiSpotvoorstel.mutateAsync({
+        data: {
+          gebouw_id: gId,
+          foto_voor_url: voorFotos[0] ?? null,
+          foto_na_url: naFotos[0],
+        },
+      });
+      setAiVoorstel(res);
+      const nieuw = new Set<string>();
+      setForm((f) => {
+        const next = { ...f };
+        if (res.type_code) {
+          next.type = res.type_code;
+          nieuw.add("type");
+        }
+        if (res.wand_of_plafond) {
+          next.wand_of_plafond = res.wand_of_plafond;
+          nieuw.add("wand_of_plafond");
+        }
+        return next;
+      });
+      // Toepassing alleen automatisch invullen bij een betrouwbare suggestie (score > 0);
+      // applicatie-gekoppelde opties (score 0) tonen we alleen als hint.
+      const top = res.toepassing_suggesties?.[0];
+      if (top && top.score > 0) {
+        setLabelIds([top.label_id]);
+        nieuw.add("toepassing");
+      } else {
+        setLabelIds([]);
+      }
+      setAiVelden(nieuw);
+    } catch (e) {
+      Alert.alert("AI-analyse mislukt", e instanceof Error ? e.message : "Onbekende fout");
+    } finally {
+      setAiBezig(false);
+    }
+  }
+
   async function bewaar() {
     setOpslaan(true);
     try {
@@ -193,6 +292,28 @@ export default function Plattegrond() {
         }
         for (const url of naFotos) {
           await voegFotoToe.mutateAsync({ id: nieuwId, data: { fase: "na", url } });
+        }
+        // Leerset: bewaar het AI-voorstel + de uiteindelijke keuze. De server
+        // berekent de afwijking en markeert de spot eventueel voor beheerder-controle.
+        if (aiVoorstel) {
+          try {
+            await bewaarAiVoorstel.mutateAsync({
+              id: nieuwId,
+              data: {
+                foto_voor_url: voorFotos[0] ?? null,
+                foto_na_url: naFotos[0] ?? null,
+                voorstel: aiVoorstel,
+                gekozen: {
+                  wand_of_plafond: form.wand_of_plafond || null,
+                  type_code: form.type || null,
+                  label_ids: labelIds,
+                },
+              },
+            });
+          } catch (e) {
+            // Het opslaan van de leerset is niet kritiek voor het aanmaken van de spot.
+            console.warn("AI-leerset opslaan mislukt", e);
+          }
         }
       }
       setFormOpen(false);
@@ -341,27 +462,169 @@ export default function Plattegrond() {
               placeholder="Wordt automatisch toegekend"
             />
 
-            <View style={{ gap: 8 }}>
-              <SectieLabel>Applicatie (type)</SectieLabel>
-              <ApplicatieKiezer
-                waarde={form.type}
-                onKies={(code) => {
-                  setForm((f) => ({ ...f, type: code }));
-                  setLabelIds([]);
+            <FotoSectie
+              titel="Foto's vóór"
+              fotos={voorFotos}
+              bezig={fotoBezig}
+              token={token ?? ""}
+              onCamera={() => kiesFoto("voor", "camera")}
+              onGalerij={() => kiesFoto("voor", "galerij")}
+              onVerwijder={(i) => setVoorFotos((a) => a.filter((_, idx) => idx !== i))}
+            />
+
+            <FotoSectie
+              titel="Foto's ná"
+              fotos={naFotos}
+              bezig={fotoBezig}
+              token={token ?? ""}
+              onCamera={() => kiesFoto("na", "camera")}
+              onGalerij={() => kiesFoto("na", "galerij")}
+              onVerwijder={(i) => setNaFotos((a) => a.filter((_, idx) => idx !== i))}
+            />
+
+            {/* AI-spotherkenning: vergelijkt foto ná met foto vóór en stelt voor. */}
+            <View style={{ gap: 10 }}>
+              <SectieLabel>AI-spotherkenning</SectieLabel>
+              <Pressable
+                onPress={analyseerMetAi}
+                disabled={aiBezig || naFotos.length === 0}
+                style={{
+                  backgroundColor: naFotos.length === 0 ? c.muted : AMBER_BG,
+                  borderColor: naFotos.length === 0 ? c.border : AMBER_BORDER,
+                  borderWidth: 1.5,
+                  borderRadius: c.radius,
+                  paddingVertical: 14,
+                  flexDirection: "row",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 10,
+                  opacity: aiBezig ? 0.7 : 1,
                 }}
-              />
+              >
+                {aiBezig && <ActivityIndicator color={AMBER_TEXT} />}
+                <Text
+                  style={{
+                    color: naFotos.length === 0 ? c.mutedForeground : AMBER_TEXT,
+                    fontFamily: "Inter_600SemiBold",
+                    fontSize: 15,
+                  }}
+                >
+                  {aiBezig
+                    ? "AI analyseert de foto..."
+                    : aiVoorstel
+                      ? "Opnieuw analyseren met AI"
+                      : "Analyseer foto met AI"}
+                </Text>
+              </Pressable>
+              {naFotos.length === 0 && (
+                <Text style={{ color: c.mutedForeground, fontSize: 12, fontFamily: "Inter_400Regular" }}>
+                  Maak eerst een foto ná de afwerking. De AI vergelijkt die met de foto vóór.
+                </Text>
+              )}
+              {aiVoorstel && (
+                <View
+                  style={{
+                    backgroundColor: AMBER_BG,
+                    borderColor: AMBER_BORDER,
+                    borderWidth: 1,
+                    borderRadius: c.radius,
+                    padding: 14,
+                    gap: 6,
+                  }}
+                >
+                  <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+                    <Text style={{ color: AMBER_TEXT, fontFamily: "Inter_700Bold", fontSize: 14 }}>
+                      AI-voorstel
+                    </Text>
+                    {!!aiVoorstel.betrouwbaarheid && (
+                      <Text style={{ color: AMBER_TEXT, fontSize: 12, fontFamily: "Inter_600SemiBold" }}>
+                        Betrouwbaarheid: {aiVoorstel.betrouwbaarheid}
+                      </Text>
+                    )}
+                  </View>
+                  {!!aiVoorstel.observaties && (
+                    <Text style={{ color: AMBER_DONKER, fontSize: 13, fontFamily: "Inter_400Regular" }}>
+                      {aiVoorstel.observaties}
+                    </Text>
+                  )}
+                  {!!aiVoorstel.toelichting && (
+                    <Text style={{ color: AMBER_DONKER, fontSize: 13, fontFamily: "Inter_400Regular" }}>
+                      {aiVoorstel.toelichting}
+                    </Text>
+                  )}
+                  {!!aiVoorstel.document_naam && (
+                    <Text style={{ color: AMBER_TEXT, fontSize: 13, fontFamily: "Inter_600SemiBold" }}>
+                      Gekoppeld document: {aiVoorstel.document_naam}
+                    </Text>
+                  )}
+                  <Text style={{ color: AMBER_DONKER, fontSize: 11, fontFamily: "Inter_400Regular", marginTop: 2 }}>
+                    Controleer en pas aan waar nodig. De AI keurt niets zelf goed.
+                  </Text>
+                </View>
+              )}
+            </View>
+
+            <View style={{ gap: 8 }}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                <SectieLabel>Applicatie (type)</SectieLabel>
+                {isAi("type") && <AiBadge />}
+              </View>
+              <View style={isAi("type") ? amberVak : undefined}>
+                <ApplicatieKiezer
+                  waarde={form.type}
+                  onKies={(code) => {
+                    setForm((f) => ({ ...f, type: code }));
+                    setLabelIds([]);
+                    raakAan("type");
+                    raakAan("toepassing");
+                  }}
+                />
+              </View>
             </View>
 
             {form.type !== "" && (
               <View style={{ gap: 8 }}>
-                <SectieLabel>Toepassing (optioneel)</SectieLabel>
-                <ToepassingKiezer
-                  typeCode={form.type}
-                  geselecteerdeIds={labelIds}
-                  onWijzig={setLabelIds}
-                />
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                  <SectieLabel>Toepassing (optioneel)</SectieLabel>
+                  {isAi("toepassing") && <AiBadge />}
+                </View>
+                {!!aiVoorstel?.toepassing_suggesties?.length && (
+                  <Text style={{ color: AMBER_TEXT, fontSize: 12, fontFamily: "Inter_400Regular" }}>
+                    AI stelt voor: {aiVoorstel.toepassing_suggesties.map((s) => s.naam).join(", ")}
+                  </Text>
+                )}
+                <View style={isAi("toepassing") ? amberVak : undefined}>
+                  <ToepassingKiezer
+                    typeCode={form.type}
+                    geselecteerdeIds={labelIds}
+                    onWijzig={(ids) => {
+                      setLabelIds(ids);
+                      raakAan("toepassing");
+                    }}
+                  />
+                </View>
               </View>
             )}
+
+            <View style={{ gap: 8 }}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                <SectieLabel>Wand of plafond</SectieLabel>
+                {isAi("wand_of_plafond") && <AiBadge />}
+              </View>
+              <View style={isAi("wand_of_plafond") ? amberVak : undefined}>
+                <ChipRij
+                  opties={[
+                    { waarde: "", label: "Niet opgegeven" },
+                    ...WAND_PLAFOND_OPTIES.map((v) => ({ waarde: v, label: v === "wand" ? "Wand" : "Plafond" })),
+                  ]}
+                  geselecteerd={form.wand_of_plafond}
+                  onKies={(v) => {
+                    setForm((f) => ({ ...f, wand_of_plafond: v }));
+                    raakAan("wand_of_plafond");
+                  }}
+                />
+              </View>
+            </View>
 
             <View style={{ gap: 8 }}>
               <SectieLabel>Status</SectieLabel>
@@ -385,18 +648,6 @@ export default function Plattegrond() {
               />
             </View>
 
-            <View style={{ gap: 8 }}>
-              <SectieLabel>Wand of plafond</SectieLabel>
-              <ChipRij
-                opties={[
-                  { waarde: "", label: "Niet opgegeven" },
-                  ...WAND_PLAFOND_OPTIES.map((v) => ({ waarde: v, label: v === "wand" ? "Wand" : "Plafond" })),
-                ]}
-                geselecteerd={form.wand_of_plafond}
-                onKies={(v) => setForm((f) => ({ ...f, wand_of_plafond: v }))}
-              />
-            </View>
-
             <TekstVeld
               label="Ruimte"
               value={form.ruimte}
@@ -417,26 +668,6 @@ export default function Plattegrond() {
               <SectieLabel>Fabrikant- en systeeminformatie (optioneel)</SectieLabel>
               <FabrikantSectie />
             </View>
-
-            <FotoSectie
-              titel="Foto's vóór"
-              fotos={voorFotos}
-              bezig={fotoBezig}
-              token={token ?? ""}
-              onCamera={() => kiesFoto("voor", "camera")}
-              onGalerij={() => kiesFoto("voor", "galerij")}
-              onVerwijder={(i) => setVoorFotos((a) => a.filter((_, idx) => idx !== i))}
-            />
-
-            <FotoSectie
-              titel="Foto's ná"
-              fotos={naFotos}
-              bezig={fotoBezig}
-              token={token ?? ""}
-              onCamera={() => kiesFoto("na", "camera")}
-              onGalerij={() => kiesFoto("na", "galerij")}
-              onVerwijder={(i) => setNaFotos((a) => a.filter((_, idx) => idx !== i))}
-            />
 
             <View style={{ marginTop: 8 }}>
               <Knop titel="Voorziening opslaan" onPress={bewaar} bezig={opslaan} groot />

@@ -918,6 +918,7 @@ export const ListVoorzieningenQueryParams = zod.object({
   "status": zod.coerce.string().optional(),
   "gearchiveerd": zod.coerce.boolean().optional(),
   "classificatie": zod.coerce.string().optional(),
+  "alleen_te_controleren": zod.coerce.boolean().optional(),
   "zoek": zod.coerce.string().optional(),
   "pagina": zod.coerce.number().default(listVoorzieningenQueryPaginaDefault),
   "per_pagina": zod.coerce.number().default(listVoorzieningenQueryPerPaginaDefault)
@@ -953,6 +954,8 @@ export const ListVoorzieningenResponse = zod.object({
   "wand_of_plafond": zod.string().nullish(),
   "maker_monteur_id": zod.number().nullish(),
   "maker_monteur_naam": zod.string().nullish(),
+  "ai_te_controleren": zod.boolean().optional(),
+  "ai_voorstel_id": zod.number().nullish(),
   "gearchiveerd": zod.boolean().optional(),
   "gearchiveerd_op": zod.string().nullish(),
   "aangemaakt_op": zod.string(),
@@ -1032,6 +1035,8 @@ export const GetVoorzieningResponse = zod.object({
   "wand_of_plafond": zod.string().nullish(),
   "maker_monteur_id": zod.number().nullish(),
   "maker_monteur_naam": zod.string().nullish(),
+  "ai_te_controleren": zod.boolean().optional(),
+  "ai_voorstel_id": zod.number().nullish(),
   "gearchiveerd": zod.boolean().optional(),
   "gearchiveerd_op": zod.string().nullish(),
   "aangemaakt_op": zod.string(),
@@ -1164,6 +1169,8 @@ export const UpdateVoorzieningResponse = zod.object({
   "wand_of_plafond": zod.string().nullish(),
   "maker_monteur_id": zod.number().nullish(),
   "maker_monteur_naam": zod.string().nullish(),
+  "ai_te_controleren": zod.boolean().optional(),
+  "ai_voorstel_id": zod.number().nullish(),
   "gearchiveerd": zod.boolean().optional(),
   "gearchiveerd_op": zod.string().nullish(),
   "aangemaakt_op": zod.string(),
@@ -1267,6 +1274,8 @@ export const UpdateVoorzieningStatusResponse = zod.object({
   "wand_of_plafond": zod.string().nullish(),
   "maker_monteur_id": zod.number().nullish(),
   "maker_monteur_naam": zod.string().nullish(),
+  "ai_te_controleren": zod.boolean().optional(),
+  "ai_voorstel_id": zod.number().nullish(),
   "gearchiveerd": zod.boolean().optional(),
   "gearchiveerd_op": zod.string().nullish(),
   "aangemaakt_op": zod.string(),
@@ -1314,10 +1323,169 @@ export const ArchiveerVoorzieningResponse = zod.object({
   "wand_of_plafond": zod.string().nullish(),
   "maker_monteur_id": zod.number().nullish(),
   "maker_monteur_naam": zod.string().nullish(),
+  "ai_te_controleren": zod.boolean().optional(),
+  "ai_voorstel_id": zod.number().nullish(),
   "gearchiveerd": zod.boolean().optional(),
   "gearchiveerd_op": zod.string().nullish(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string().optional()
+})
+
+
+/**
+ * @summary AI-voorstel voor een spot o.b.v. de foto vóór en ná (wand/plafond, applicatie, toepassing, document). Voorstellen; de monteur bevestigt of past aan.
+ */
+export const AiSpotvoorstelBody = zod.object({
+  "gebouw_id": zod.number(),
+  "foto_voor_url": zod.string().nullish().describe('objectPath van de foto vóór de afwerking (optioneel; geeft de AI context).'),
+  "foto_na_url": zod.string().describe('objectPath van de foto ná de afwerking; deze wordt geanalyseerd.')
+})
+
+export const AiSpotvoorstelResponse = zod.object({
+  "wand_of_plafond": zod.string().nullish().describe('wand of plafond'),
+  "type_code": zod.string().nullish().describe('Voorgestelde applicatie-code (voorziening-type).'),
+  "type_naam": zod.string().nullish(),
+  "observaties": zod.string().nullish().describe('Vrije AI-observaties over zichtbaar product\/fabrikant op de foto.'),
+  "toelichting": zod.string().nullish(),
+  "betrouwbaarheid": zod.string().nullable().describe('laag, midden of hoog'),
+  "toepassing_suggesties": zod.array(zod.object({
+  "label_id": zod.number(),
+  "naam": zod.string(),
+  "fabrikant": zod.string().nullish(),
+  "score": zod.number(),
+  "reden": zod.string().nullish()
+})).optional(),
+  "document_id": zod.number().nullish(),
+  "document_naam": zod.string().nullish()
+})
+
+
+/**
+ * @summary Het opgeslagen AI-voorstel en de gekozen waarden van een spot (voor de beheerder-review)
+ */
+export const GetSpotAiVoorstelParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetSpotAiVoorstelResponse = zod.object({
+  "id": zod.number(),
+  "voorziening_id": zod.number().nullish(),
+  "gebouw_id": zod.number().nullish(),
+  "foto_voor_url": zod.string().nullish(),
+  "foto_na_url": zod.string().nullish(),
+  "voorstel": zod.union([zod.object({
+  "wand_of_plafond": zod.string().nullish().describe('wand of plafond'),
+  "type_code": zod.string().nullish().describe('Voorgestelde applicatie-code (voorziening-type).'),
+  "type_naam": zod.string().nullish(),
+  "observaties": zod.string().nullish().describe('Vrije AI-observaties over zichtbaar product\/fabrikant op de foto.'),
+  "toelichting": zod.string().nullish(),
+  "betrouwbaarheid": zod.string().nullable().describe('laag, midden of hoog'),
+  "toepassing_suggesties": zod.array(zod.object({
+  "label_id": zod.number(),
+  "naam": zod.string(),
+  "fabrikant": zod.string().nullish(),
+  "score": zod.number(),
+  "reden": zod.string().nullish()
+})).optional(),
+  "document_id": zod.number().nullish(),
+  "document_naam": zod.string().nullish()
+}),zod.null()]).optional(),
+  "gekozen": zod.union([zod.object({
+  "wand_of_plafond": zod.string().nullish(),
+  "type_code": zod.string().nullish(),
+  "label_ids": zod.array(zod.number()).optional()
+}),zod.null()]).optional(),
+  "afwijking_toepassing": zod.boolean(),
+  "beheerder_bevestigd_door_id": zod.number().nullish(),
+  "beheerder_bevestigd_door_naam": zod.string().nullish(),
+  "beheerder_bevestigd_op": zod.string().nullish(),
+  "herkomst": zod.string().nullish().describe('gebouwspecifiek of generiek (null = nog niet beoordeeld)'),
+  "aangemaakt_op": zod.string().nullish()
+})
+
+
+/**
+ * @summary Bewaart het AI-voorstel en de door de monteur gekozen waarden als leerset-rij bij een spot; berekent de afwijking en markeert de spot eventueel voor controle.
+ */
+export const BewaarSpotAiVoorstelParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const BewaarSpotAiVoorstelBody = zod.object({
+  "foto_voor_url": zod.string().nullish(),
+  "foto_na_url": zod.string().nullish(),
+  "voorstel": zod.union([zod.object({
+  "wand_of_plafond": zod.string().nullish().describe('wand of plafond'),
+  "type_code": zod.string().nullish().describe('Voorgestelde applicatie-code (voorziening-type).'),
+  "type_naam": zod.string().nullish(),
+  "observaties": zod.string().nullish().describe('Vrije AI-observaties over zichtbaar product\/fabrikant op de foto.'),
+  "toelichting": zod.string().nullish(),
+  "betrouwbaarheid": zod.string().nullable().describe('laag, midden of hoog'),
+  "toepassing_suggesties": zod.array(zod.object({
+  "label_id": zod.number(),
+  "naam": zod.string(),
+  "fabrikant": zod.string().nullish(),
+  "score": zod.number(),
+  "reden": zod.string().nullish()
+})).optional(),
+  "document_id": zod.number().nullish(),
+  "document_naam": zod.string().nullish()
+}),zod.null()]).optional(),
+  "gekozen": zod.object({
+  "wand_of_plafond": zod.string().nullish(),
+  "type_code": zod.string().nullish(),
+  "label_ids": zod.array(zod.number()).optional()
+})
+})
+
+export const BewaarSpotAiVoorstelResponse = zod.void()
+
+
+/**
+ * @summary Beheerder bevestigt de afwijkende toepassingskeuze en legt vast of deze gebouwspecifiek of generiek is (voedt de leerset)
+ */
+export const BevestigSpotAiControleParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const BevestigSpotAiControleBody = zod.object({
+  "herkomst": zod.enum(['gebouwspecifiek', 'generiek']).describe('Of de afwijkende toepassing gebouwspecifiek is of generiek toepasbaar.')
+})
+
+export const BevestigSpotAiControleResponse = zod.object({
+  "id": zod.number(),
+  "voorziening_id": zod.number().nullish(),
+  "gebouw_id": zod.number().nullish(),
+  "foto_voor_url": zod.string().nullish(),
+  "foto_na_url": zod.string().nullish(),
+  "voorstel": zod.union([zod.object({
+  "wand_of_plafond": zod.string().nullish().describe('wand of plafond'),
+  "type_code": zod.string().nullish().describe('Voorgestelde applicatie-code (voorziening-type).'),
+  "type_naam": zod.string().nullish(),
+  "observaties": zod.string().nullish().describe('Vrije AI-observaties over zichtbaar product\/fabrikant op de foto.'),
+  "toelichting": zod.string().nullish(),
+  "betrouwbaarheid": zod.string().nullable().describe('laag, midden of hoog'),
+  "toepassing_suggesties": zod.array(zod.object({
+  "label_id": zod.number(),
+  "naam": zod.string(),
+  "fabrikant": zod.string().nullish(),
+  "score": zod.number(),
+  "reden": zod.string().nullish()
+})).optional(),
+  "document_id": zod.number().nullish(),
+  "document_naam": zod.string().nullish()
+}),zod.null()]).optional(),
+  "gekozen": zod.union([zod.object({
+  "wand_of_plafond": zod.string().nullish(),
+  "type_code": zod.string().nullish(),
+  "label_ids": zod.array(zod.number()).optional()
+}),zod.null()]).optional(),
+  "afwijking_toepassing": zod.boolean(),
+  "beheerder_bevestigd_door_id": zod.number().nullish(),
+  "beheerder_bevestigd_door_naam": zod.string().nullish(),
+  "beheerder_bevestigd_op": zod.string().nullish(),
+  "herkomst": zod.string().nullish().describe('gebouwspecifiek of generiek (null = nog niet beoordeeld)'),
+  "aangemaakt_op": zod.string().nullish()
 })
 
 
@@ -1817,6 +1985,7 @@ export const ListVoorzieningenOpVerdiepingResponseItem = zod.object({
   "wbdbo": zod.string().nullish(),
   "wrd": zod.string().nullish(),
   "wand_of_plafond": zod.string().nullish(),
+  "ai_te_controleren": zod.boolean().optional(),
   "gearchiveerd": zod.boolean().optional()
 })
 export const ListVoorzieningenOpVerdiepingResponse = zod.array(ListVoorzieningenOpVerdiepingResponseItem)
@@ -2173,6 +2342,8 @@ export const GetInspectieResponse = zod.object({
   "wand_of_plafond": zod.string().nullish(),
   "maker_monteur_id": zod.number().nullish(),
   "maker_monteur_naam": zod.string().nullish(),
+  "ai_te_controleren": zod.boolean().optional(),
+  "ai_voorstel_id": zod.number().nullish(),
   "gearchiveerd": zod.boolean().optional(),
   "gearchiveerd_op": zod.string().nullish(),
   "aangemaakt_op": zod.string(),
