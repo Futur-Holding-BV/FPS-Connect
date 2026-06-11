@@ -37,6 +37,7 @@ import { TabDocumenten } from "./documenten-tab";
 import { ToepassingDetailDialog } from "./toepassing-detail";
 import { ApplicatieDetailDialog } from "./applicatie-detail";
 import { useVoorkeur } from "@/hooks/use-voorkeur";
+import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
 import {
   Archive,
   ArchiveRestore,
@@ -46,9 +47,11 @@ import {
   ExternalLink,
   FileSpreadsheet,
   FlameKindling,
+  Link2,
   Plus,
   ShieldCheck,
   Wind,
+  X,
   XCircle,
 } from "lucide-react";
 
@@ -214,6 +217,12 @@ interface ImportResultaat {
   mislukt: Array<{ rij: number; reden: string }>;
 }
 
+interface BulkResultaat {
+  geslaagd: number;
+  ongewijzigd: number;
+  mislukt: Array<{ naam: string; reden: string }>;
+}
+
 // ── Tab Toepassingen ─────────────────────────────────────────────────────────
 function TabToepassingen() {
   const queryClient = useQueryClient();
@@ -236,6 +245,16 @@ function TabToepassingen() {
   const [importBezig, setImportBezig] = useState(false);
   const [importFout, setImportFout] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const { heeftNiveau } = useBevoegdheid();
+  const magKoppelen = heeftNiveau("bibliotheek", 2);
+
+  // Bulk-koppelen: geselecteerde toepassing-id's en de dialoog-state.
+  const [geselecteerd, setGeselecteerd] = useState<Set<number>>(new Set());
+  const [bulkOpen, setBulkOpen] = useState(false);
+  const [bulkCodes, setBulkCodes] = useState<string[]>([]);
+  const [bulkBezig, setBulkBezig] = useState(false);
+  const [bulkResultaat, setBulkResultaat] = useState<BulkResultaat | null>(null);
 
   const { data: typen = [] } = useListVoorzieningTypes();
   const { data: alleLabels = [], isLoading } = useListLabels({
@@ -280,6 +299,59 @@ function TabToepassingen() {
   async function toggleArchief(l: Label) {
     await wijzigLabel.mutateAsync({ id: l.id, data: { gearchiveerd: !l.gearchiveerd } });
     await queryClient.invalidateQueries({ queryKey: getListLabelsQueryKey() });
+  }
+
+  function toggleSelectie(id: number) {
+    setGeselecteerd((s) => {
+      const next = new Set(s);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function wisSelectie() {
+    setGeselecteerd(new Set());
+  }
+
+  function openBulk() {
+    setBulkCodes([]);
+    setBulkResultaat(null);
+    setBulkOpen(true);
+  }
+
+  function sluitBulk() {
+    setBulkOpen(false);
+    setBulkCodes([]);
+    setBulkResultaat(null);
+  }
+
+  // Koppelt de geselecteerde toepassingen aan de gekozen applicatie-types.
+  // Bestaande koppelingen blijven behouden: per toepassing wordt de unie van de
+  // huidige codes en de gekozen codes weggeschreven (toevoegen, niet overschrijven).
+  async function voerBulkKoppelingUit() {
+    if (bulkCodes.length === 0) return;
+    setBulkBezig(true);
+    const resultaat: BulkResultaat = { geslaagd: 0, ongewijzigd: 0, mislukt: [] };
+    const teKoppelen = (alleLabels as Label[]).filter((l) => geselecteerd.has(l.id));
+    for (const l of teKoppelen) {
+      const huidig = l.applicatie_codes ?? [];
+      const samen = Array.from(new Set([...huidig, ...bulkCodes]));
+      if (samen.length === huidig.length) {
+        resultaat.ongewijzigd++;
+        continue;
+      }
+      try {
+        await wijzigLabel.mutateAsync({ id: l.id, data: { applicatie_codes: samen } });
+        resultaat.geslaagd++;
+      } catch (err) {
+        resultaat.mislukt.push({ naam: l.naam, reden: foutmelding(err, "Koppelen mislukt") });
+      }
+    }
+    await queryClient.invalidateQueries({ queryKey: getListLabelsQueryKey() });
+    setBulkResultaat(resultaat);
+    setBulkBezig(false);
+    if (resultaat.mislukt.length === 0) wisSelectie();
   }
 
   function verwerkBestand(file: File) {
@@ -390,6 +462,106 @@ function TabToepassingen() {
           Nieuwe toepassing
         </Button>
       </div>
+
+      {magKoppelen && geselecteerd.size > 0 && (
+        <div className="flex flex-wrap items-center gap-3 rounded-md border bg-muted/40 px-4 py-3">
+          <span className="text-sm font-medium">
+            {geselecteerd.size} toepassing(en) geselecteerd
+          </span>
+          <div className="ml-auto flex items-center gap-2">
+            <Button variant="ghost" size="sm" onClick={wisSelectie}>
+              <X className="h-4 w-4 mr-1.5" />
+              Selectie wissen
+            </Button>
+            <Button size="sm" onClick={openBulk}>
+              <Link2 className="h-4 w-4 mr-1.5" />
+              Koppel aan applicatie
+            </Button>
+          </div>
+        </div>
+      )}
+
+      <Dialog open={bulkOpen} onOpenChange={(o) => { if (!o) sluitBulk(); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Toepassingen koppelen aan applicatie</DialogTitle>
+            <DialogDescription>
+              Kies een of meer applicatie-types. De {geselecteerd.size} geselecteerde
+              toepassing(en) worden hieraan gekoppeld. Bestaande koppelingen blijven behouden.
+            </DialogDescription>
+          </DialogHeader>
+
+          {!bulkResultaat ? (
+            <div className="space-y-3">
+              <div>
+                <UiLabel>Applicatie-types *</UiLabel>
+                <ScrollArea className="h-56 rounded-md border mt-1">
+                  <div className="p-2 space-y-1">
+                    {(typen as VoorzieningType[]).filter((t) => t.actief).map((t) => (
+                      <div key={t.code} className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-muted/50">
+                        <Checkbox
+                          id={`bulk-appl-${t.code}`}
+                          checked={bulkCodes.includes(t.code)}
+                          onCheckedChange={(checked) =>
+                            setBulkCodes((cs) =>
+                              checked ? [...cs, t.code] : cs.filter((c) => c !== t.code),
+                            )
+                          }
+                        />
+                        <label htmlFor={`bulk-appl-${t.code}`} className="cursor-pointer text-sm flex-1">
+                          <span className="font-mono text-xs text-muted-foreground mr-2">{t.code}</span>
+                          {t.naam}
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                </ScrollArea>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 text-green-700">
+                <CheckCircle2 className="h-5 w-5" />
+                <span className="font-medium">
+                  {bulkResultaat.geslaagd} toepassing(en) gekoppeld
+                </span>
+              </div>
+              {bulkResultaat.ongewijzigd > 0 && (
+                <p className="text-sm text-muted-foreground">
+                  {bulkResultaat.ongewijzigd} toepassing(en) waren al gekoppeld en bleven ongewijzigd.
+                </p>
+              )}
+              {bulkResultaat.mislukt.length > 0 && (
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-destructive flex items-center gap-1">
+                    <XCircle className="h-4 w-4" />
+                    {bulkResultaat.mislukt.length} toepassing(en) mislukt:
+                  </p>
+                  {bulkResultaat.mislukt.map((m, i) => (
+                    <p key={i} className="text-xs text-muted-foreground pl-5">
+                      {m.naam}: {m.reden}
+                    </p>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={sluitBulk}>
+              {bulkResultaat ? "Sluiten" : "Annuleren"}
+            </Button>
+            {!bulkResultaat && (
+              <Button
+                onClick={voerBulkKoppelingUit}
+                disabled={bulkCodes.length === 0 || bulkBezig}
+              >
+                {bulkBezig ? "Koppelen..." : "Koppelen"}
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={importOpen} onOpenChange={(o) => { if (!o) sluitImport(); }}>
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
@@ -565,6 +737,24 @@ function TabToepassingen() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b bg-muted/30">
+                  {magKoppelen && (
+                    <th className="w-10 p-3">
+                      <Checkbox
+                        aria-label="Alles selecteren"
+                        checked={
+                          (labels as Label[]).length > 0 &&
+                          (labels as Label[]).every((l) => geselecteerd.has(l.id))
+                        }
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setGeselecteerd(new Set((labels as Label[]).map((l) => l.id)));
+                          } else {
+                            wisSelectie();
+                          }
+                        }}
+                      />
+                    </th>
+                  )}
                   <th className="text-left p-3 font-medium text-muted-foreground">Naam / productsoort</th>
                   <th className="text-left p-3 font-medium text-muted-foreground">Fabrikant</th>
                   <th className="text-left p-3 font-medium text-muted-foreground">Brand- of rookwerendheid</th>
@@ -578,9 +768,18 @@ function TabToepassingen() {
                     key={l.id}
                     className={`border-b last:border-0 hover:bg-muted/20 transition-colors cursor-pointer ${
                       l.gearchiveerd ? "opacity-50" : ""
-                    }`}
+                    } ${geselecteerd.has(l.id) ? "bg-muted/30" : ""}`}
                     onClick={() => setDetail(l)}
                   >
+                    {magKoppelen && (
+                      <td className="w-10 p-3" onClick={(e) => e.stopPropagation()}>
+                        <Checkbox
+                          aria-label={`Selecteer ${l.naam}`}
+                          checked={geselecteerd.has(l.id)}
+                          onCheckedChange={() => toggleSelectie(l.id)}
+                        />
+                      </td>
+                    )}
                     <td className="p-3 font-medium">{l.naam}</td>
                     <td className="p-3 text-muted-foreground">{l.fabrikant ?? "—"}</td>
                     <td className="p-3">
