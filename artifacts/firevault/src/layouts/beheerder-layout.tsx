@@ -9,6 +9,7 @@ import {
 import {
   ShieldCheck, Building, Wrench, Users, Search, Home, Receipt,
   ShieldAlert, LifeBuoy, MessageSquarePlus, Activity, Contact, Info, BookOpen, Clock,
+  FolderOpen, FileText,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { GebruikerMenu } from "@/components/gebruiker-menu";
@@ -31,8 +32,12 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
   const toonBibliotheek   = heeftNiveau("bibliotheek", 1);
   const toonGebruikers    = heeftNiveau("gebruikers", 1);
   const toonSysteem       = heeftNiveau("systeem", 1);
+  const toonPersoneel     = heeftNiveau("personeel", 1);
+  const toonDossiers      = heeftNiveau("dossiers", 1);
+  const toonOffertes      = heeftNiveau("offertes", 1);
 
   const heeftDomein = toonInspecties || toonOnderhoud || toonCrm || toonAbonnementen;
+  const heeftOrganisatie = toonPersoneel || toonDossiers || toonOffertes;
 
   const projectenActief =
     location === "/gebouwen" || location.startsWith("/gebouwen/") ||
@@ -173,6 +178,77 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
                         <Link href="/abonnementen">
                           <Receipt />
                           <span>{t("nav.abonnementen")}</span>
+                          <Badge
+                            variant="outline"
+                            className="ml-auto text-[10px] px-1.5 py-0 leading-tight border-muted-foreground/40 text-muted-foreground group-data-[collapsible=icon]:hidden"
+                          >
+                            <Clock className="h-2.5 w-2.5 mr-0.5" />
+                            {t("nav.inUitvoering")}
+                          </Badge>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          )}
+
+          {/* ── Organisatie ── */}
+          {heeftOrganisatie && (
+            <SidebarGroup>
+              <SidebarGroupLabel>{t("nav.organisatie")}</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {toonPersoneel && (
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={location === "/personeel" || location.startsWith("/personeel/")}
+                      >
+                        <Link href="/personeel">
+                          <Users />
+                          <span>{t("nav.personeel")}</span>
+                          <Badge
+                            variant="outline"
+                            className="ml-auto text-[10px] px-1.5 py-0 leading-tight border-muted-foreground/40 text-muted-foreground group-data-[collapsible=icon]:hidden"
+                          >
+                            <Clock className="h-2.5 w-2.5 mr-0.5" />
+                            {t("nav.inUitvoering")}
+                          </Badge>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )}
+                  {toonDossiers && (
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={location === "/dossiers" || location.startsWith("/dossiers/")}
+                      >
+                        <Link href="/dossiers">
+                          <FolderOpen />
+                          <span>{t("nav.dossiers")}</span>
+                          <Badge
+                            variant="outline"
+                            className="ml-auto text-[10px] px-1.5 py-0 leading-tight border-muted-foreground/40 text-muted-foreground group-data-[collapsible=icon]:hidden"
+                          >
+                            <Clock className="h-2.5 w-2.5 mr-0.5" />
+                            {t("nav.inUitvoering")}
+                          </Badge>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )}
+                  {toonOffertes && (
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={location === "/offertes" || location.startsWith("/offertes/")}
+                      >
+                        <Link href="/offertes">
+                          <FileText />
+                          <span>{t("nav.offertes")}</span>
                           <Badge
                             variant="outline"
                             className="ml-auto text-[10px] px-1.5 py-0 leading-tight border-muted-foreground/40 text-muted-foreground group-data-[collapsible=icon]:hidden"

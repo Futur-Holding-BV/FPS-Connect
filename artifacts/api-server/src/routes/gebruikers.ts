@@ -18,14 +18,16 @@ const alleenBeheerder = requireBevoegdheid("gebruikers", 4);
 const lezenGebruikers = requireBevoegdheid("gebruikers", 1);
 
 // Minimale toewijsbare-personenlijst: leesbaar voor iedereen die ergens kan
-// toewijzen (gebouwteam, spot-uitvoering, onderhoud) of de gebruikersmodule
-// heeft. Bewust losgekoppeld van de gebruikers-module zodat gebouw-/
-// voorzieningenrechten volstaan om iemand toe te wijzen.
+// toewijzen (gebouwteam, spot-uitvoering, onderhoud), de gebruikersmodule
+// heeft of de personeelsmodule heeft (HRM-onboarding koppelt een gebruiker).
+// Bewust losgekoppeld van de gebruikers-module zodat gebouw-/voorzieningen-/
+// personeelsrechten volstaan om iemand te selecteren.
 const lezenToewijsbaar = requireEnigeBevoegdheid([
   ["gebouwen", 1],
   ["voorzieningen", 1],
   ["onderhoud", 1],
   ["gebruikers", 1],
+  ["personeel", 1],
 ]);
 
 // De enige toegestane projectfuncties (profiel) voor een beheerder.

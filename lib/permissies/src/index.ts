@@ -53,6 +53,21 @@ export const MODULES = [
     omschrijving: "Abonnementen en pakketten",
   },
   {
+    id: "personeel",
+    label: "Personeel (HRM)",
+    omschrijving: "Medewerkers, functiehuis, opleidingen, certificaten en bekwaamheidsmatrix",
+  },
+  {
+    id: "dossiers",
+    label: "Dossiers",
+    omschrijving: "Project- en gebouwdossiers, documentstatussen en archivering",
+  },
+  {
+    id: "offertes",
+    label: "Offertes",
+    omschrijving: "Offertestructuur, begroting en uitgangspunten (Offerte Intelligence)",
+  },
+  {
     id: "systeem",
     label: "Systeembeheer",
     omschrijving: "Systeeminstellingen, beveiliging en logboeken",
@@ -205,7 +220,20 @@ export const PRESETS: Preset[] = [
     naam: "Commercieel",
     bevoegdheden: matrix({
       gebouwen: 1, voorzieningen: 1, rapportages: 1, bibliotheek: 1,
-      crm: 4, abonnementen: 4,
+      crm: 4, abonnementen: 4, offertes: 3,
+    }),
+  },
+  {
+    naam: "HRM-adviseur",
+    bevoegdheden: matrix({
+      personeel: 4, dossiers: 1, rapportages: 1,
+    }),
+  },
+  {
+    naam: "Calculatie",
+    bevoegdheden: matrix({
+      gebouwen: 1, voorzieningen: 1, rapportages: 1, bibliotheek: 2,
+      offertes: 4, dossiers: 2, crm: 1,
     }),
   },
 ];

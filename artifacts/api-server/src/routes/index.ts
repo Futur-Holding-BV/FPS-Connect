@@ -18,6 +18,9 @@ import infoRouter from "./info";
 import crmRouter from "./crm";
 import emailsRouter from "./emails";
 import profielenRouter from "./profielen";
+import hrmRouter from "./hrm";
+import dossiersRouter from "./dossiers";
+import offertesRouter from "./offertes";
 import { requireAuth } from "../middlewares/auth";
 
 const router: IRouter = Router();
@@ -46,5 +49,8 @@ router.use(infoRouter);
 router.use(crmRouter);
 router.use(emailsRouter);
 router.use(profielenRouter);
+router.use(hrmRouter);
+router.use(dossiersRouter);
+router.use(offertesRouter);
 
 export default router;

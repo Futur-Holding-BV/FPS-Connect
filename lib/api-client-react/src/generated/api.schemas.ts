@@ -2193,6 +2193,558 @@ export interface SpotAiVoorstelPersistInput {
   gekozen: SpotAiGekozenWaarden;
 }
 
+export interface Functie {
+  id: number;
+  werkmaatschappij: string;
+  naam: string;
+  /** @nullable */
+  omschrijving?: string | null;
+  /** @nullable */
+  taken?: string | null;
+  /** @nullable */
+  verantwoordelijkheden?: string | null;
+  /** @nullable */
+  competenties?: string | null;
+  /** @nullable */
+  opleidingsvereisten?: string | null;
+  /** @nullable */
+  doorgroeipad?: string | null;
+  actief: boolean;
+  aangemaakt_op: string;
+  bijgewerkt_op: string;
+}
+
+export interface FunctieInput {
+  naam: string;
+  werkmaatschappij?: string;
+  omschrijving?: string;
+  taken?: string;
+  verantwoordelijkheden?: string;
+  competenties?: string;
+  opleidingsvereisten?: string;
+  doorgroeipad?: string;
+  actief?: boolean;
+}
+
+export interface Opleiding {
+  id: number;
+  naam: string;
+  categorie: string;
+  /** @nullable */
+  omschrijving?: string | null;
+  /** @nullable */
+  geldigheid_maanden?: number | null;
+  verplicht: boolean;
+  aangemaakt_op: string;
+  bijgewerkt_op: string;
+}
+
+export interface OpleidingInput {
+  naam: string;
+  categorie?: string;
+  omschrijving?: string;
+  /** @nullable */
+  geldigheid_maanden?: number | null;
+  verplicht?: boolean;
+}
+
+export interface Medewerker {
+  id: number;
+  /** @nullable */
+  gebruiker_id?: number | null;
+  naam: string;
+  /** @nullable */
+  email?: string | null;
+  /** @nullable */
+  telefoon?: string | null;
+  /** @nullable */
+  mobiel?: string | null;
+  werkmaatschappij: string;
+  /** @nullable */
+  functie_id?: number | null;
+  /** @nullable */
+  functie_naam?: string | null;
+  /** @nullable */
+  cao?: string | null;
+  dienstverband: string;
+  /** @nullable */
+  contracturen_per_week?: number | null;
+  /** @nullable */
+  in_dienst_sinds?: string | null;
+  /** @nullable */
+  uit_dienst_per?: string | null;
+  /** @nullable */
+  noodcontact_naam?: string | null;
+  /** @nullable */
+  noodcontact_telefoon?: string | null;
+  actief: boolean;
+  /** @nullable */
+  opmerkingen?: string | null;
+  aangemaakt_op: string;
+  bijgewerkt_op: string;
+}
+
+export interface MedewerkerInput {
+  naam: string;
+  /** @nullable */
+  gebruiker_id?: number | null;
+  email?: string;
+  telefoon?: string;
+  mobiel?: string;
+  werkmaatschappij?: string;
+  /** @nullable */
+  functie_id?: number | null;
+  cao?: string;
+  dienstverband?: string;
+  /** @nullable */
+  contracturen_per_week?: number | null;
+  in_dienst_sinds?: string;
+  uit_dienst_per?: string;
+  noodcontact_naam?: string;
+  noodcontact_telefoon?: string;
+  actief?: boolean;
+  opmerkingen?: string;
+}
+
+export interface MedewerkerOnboardingInput {
+  /** De gebruiker die als medewerker wordt aangemaakt. */
+  gebruiker_id: number;
+  functie_id: number;
+  werkmaatschappij: string;
+  /** Moet een bekende CAO zijn (zie /hrm/cao-opties). */
+  cao: string;
+  /** Groter dan 0 en niet meer dan 40. */
+  contracturen_per_week: number;
+  /** Geldige datum (YYYY-MM-DD), niet in de toekomst. */
+  in_dienst_sinds: string;
+  naam?: string;
+  email?: string;
+  telefoon?: string;
+  mobiel?: string;
+  dienstverband?: string;
+  noodcontact_naam?: string;
+  noodcontact_telefoon?: string;
+  /** Verlofsoorten waarvoor direct een beginsaldo wordt opgebouwd. */
+  verlofsoort_ids?: number[];
+  /** Jaar waarvoor het verlofsaldo wordt aangemaakt (standaard huidig jaar). */
+  jaar?: number;
+}
+
+export interface OnboardingFout {
+  error: string;
+  /** Namen van de velden die de controle niet doorstaan. */
+  velden?: string[];
+}
+
+export interface MedewerkerOpleiding {
+  id: number;
+  medewerker_id: number;
+  opleiding_id: number;
+  /** @nullable */
+  opleiding_naam?: string | null;
+  status: string;
+  /** @nullable */
+  behaald_op?: string | null;
+  /** @nullable */
+  verloopt_op?: string | null;
+  /** @nullable */
+  certificaat_document_id?: number | null;
+  /** @nullable */
+  opmerking?: string | null;
+  aangemaakt_op: string;
+  bijgewerkt_op: string;
+}
+
+export interface MedewerkerOpleidingInput {
+  opleiding_id: number;
+  status?: string;
+  /** @nullable */
+  behaald_op?: string | null;
+  /** @nullable */
+  verloopt_op?: string | null;
+  /** @nullable */
+  certificaat_document_id?: number | null;
+  opmerking?: string;
+}
+
+export interface Bekwaamheid {
+  id: number;
+  medewerker_id: number;
+  /** @nullable */
+  categorie?: string | null;
+  onderwerp: string;
+  niveau: string;
+  /** @nullable */
+  vastgesteld_door?: string | null;
+  /** @nullable */
+  vastgesteld_op?: string | null;
+  /** @nullable */
+  opmerking?: string | null;
+  aangemaakt_op: string;
+  bijgewerkt_op: string;
+}
+
+export interface BekwaamheidInput {
+  onderwerp: string;
+  categorie?: string;
+  niveau?: string;
+  vastgesteld_door?: string;
+  /** @nullable */
+  vastgesteld_op?: string | null;
+  opmerking?: string;
+}
+
+export interface Verlofsoort {
+  id: number;
+  naam: string;
+  categorie: string;
+  /** @nullable */
+  cao?: string | null;
+  /** @nullable */
+  werkmaatschappij?: string | null;
+  betaald: boolean;
+  collectief: boolean;
+  /** @nullable */
+  opbouw_uren_per_jaar?: number | null;
+  /** @nullable */
+  opbouw_regel?: string | null;
+  /** @nullable */
+  verval_regel?: string | null;
+  /** @nullable */
+  juridisch_kader?: string | null;
+  /** @nullable */
+  toelichting?: string | null;
+  actief: boolean;
+  aangemaakt_op: string;
+  bijgewerkt_op: string;
+}
+
+export interface VerlofsoortInput {
+  naam: string;
+  categorie?: string;
+  /** @nullable */
+  cao?: string | null;
+  /** @nullable */
+  werkmaatschappij?: string | null;
+  betaald?: boolean;
+  collectief?: boolean;
+  /** @nullable */
+  opbouw_uren_per_jaar?: number | null;
+  opbouw_regel?: string;
+  verval_regel?: string;
+  juridisch_kader?: string;
+  toelichting?: string;
+  actief?: boolean;
+}
+
+export interface VerlofSaldo {
+  id: number;
+  medewerker_id: number;
+  verlofsoort_id: number;
+  /** @nullable */
+  verlofsoort_naam?: string | null;
+  jaar: number;
+  beginsaldo_uren?: number;
+  opgebouwd_uren?: number;
+  opgenomen_uren?: number;
+  saldo_uren: number;
+  /** @nullable */
+  vervalt_op?: string | null;
+  aangemaakt_op: string;
+  bijgewerkt_op: string;
+}
+
+export interface VerlofSaldoInput {
+  verlofsoort_id: number;
+  jaar: number;
+  beginsaldo_uren?: number;
+  opgebouwd_uren?: number;
+  opgenomen_uren?: number;
+  saldo_uren?: number;
+  /** @nullable */
+  vervalt_op?: string | null;
+}
+
+export interface VerlofAanvraag {
+  id: number;
+  medewerker_id: number;
+  verlofsoort_id: number;
+  /** @nullable */
+  verlofsoort_naam?: string | null;
+  start_datum: string;
+  eind_datum: string;
+  aantal_uren?: number;
+  status: string;
+  /** @nullable */
+  reden?: string | null;
+  /** @nullable */
+  opmerking?: string | null;
+  /** @nullable */
+  beoordeeld_door_id?: number | null;
+  /** @nullable */
+  beoordeeld_op?: string | null;
+  aangemaakt_op: string;
+  bijgewerkt_op: string;
+}
+
+export interface VerlofAanvraagInput {
+  verlofsoort_id: number;
+  start_datum: string;
+  eind_datum: string;
+  aantal_uren?: number;
+  status?: string;
+  reden?: string;
+  opmerking?: string;
+}
+
+export interface HrmStats {
+  medewerkers: number;
+  actief: number;
+  functies: number;
+  certificaten_verlopen_binnenkort: number;
+  openstaande_verlofaanvragen: number;
+}
+
+export interface CaoOptie {
+  naam: string;
+  /** @nullable */
+  standaard_uren_per_week?: number | null;
+  /** @nullable */
+  adv_uren_per_week?: number | null;
+  /** @nullable */
+  toelichting?: string | null;
+}
+
+export interface Dossier {
+  id: number;
+  type: string;
+  /** @nullable */
+  gebouw_id?: number | null;
+  /** @nullable */
+  gebouw_naam?: string | null;
+  naam: string;
+  /** @nullable */
+  omschrijving?: string | null;
+  status: string;
+  /** @nullable */
+  definitief_op?: string | null;
+  /** @nullable */
+  gearchiveerd_op?: string | null;
+  /** @nullable */
+  aangemaakt_door_id?: number | null;
+  aangemaakt_op: string;
+  bijgewerkt_op: string;
+}
+
+export interface DossierInput {
+  naam: string;
+  type?: string;
+  /** @nullable */
+  gebouw_id?: number | null;
+  omschrijving?: string;
+  status?: string;
+}
+
+export interface DossierDocument {
+  id: number;
+  dossier_id: number;
+  /** @nullable */
+  document_id?: number | null;
+  naam: string;
+  /** @nullable */
+  bestand_url?: string | null;
+  /** @nullable */
+  categorie?: string | null;
+  status: string;
+  versie: number;
+  /** @nullable */
+  toegevoegd_door_id?: number | null;
+  aangemaakt_op: string;
+  bijgewerkt_op: string;
+}
+
+export interface DossierDocumentInput {
+  naam: string;
+  /** @nullable */
+  document_id?: number | null;
+  bestand_url?: string;
+  categorie?: string;
+  status?: string;
+  versie?: number;
+}
+
+export interface OfferteSjabloon {
+  id: number;
+  naam: string;
+  /** @nullable */
+  omschrijving?: string | null;
+  werkmaatschappij: string;
+  actief: boolean;
+  aangemaakt_op: string;
+  bijgewerkt_op: string;
+}
+
+export interface OfferteSjabloonInput {
+  naam: string;
+  omschrijving?: string;
+  werkmaatschappij?: string;
+  actief?: boolean;
+}
+
+export interface OfferteHoofdstuk {
+  id: number;
+  sjabloon_id: number;
+  titel: string;
+  volgorde: number;
+  type: string;
+  /** @nullable */
+  standaardtekst?: string | null;
+  ai_veld: boolean;
+  /** @nullable */
+  ai_hint?: string | null;
+  aangemaakt_op: string;
+  bijgewerkt_op: string;
+}
+
+export interface OfferteHoofdstukInput {
+  titel: string;
+  volgorde?: number;
+  type?: string;
+  standaardtekst?: string;
+  ai_veld?: boolean;
+  ai_hint?: string;
+}
+
+export interface Offerte {
+  id: number;
+  /** @nullable */
+  offertenummer?: string | null;
+  titel: string;
+  /** @nullable */
+  gebouw_id?: number | null;
+  /** @nullable */
+  gebouw_naam?: string | null;
+  /** @nullable */
+  klant_id?: number | null;
+  /** @nullable */
+  klant_naam?: string | null;
+  /** @nullable */
+  sjabloon_id?: number | null;
+  /** @nullable */
+  opdrachtgever?: string | null;
+  /** @nullable */
+  ons_kenmerk?: string | null;
+  /** @nullable */
+  uw_kenmerk?: string | null;
+  /** @nullable */
+  uw_brief_van?: string | null;
+  /** @nullable */
+  behandeld_door_id?: number | null;
+  /** @nullable */
+  behandeld_door_naam?: string | null;
+  /** @nullable */
+  datum?: string | null;
+  geldigheid_dagen: number;
+  /** @nullable */
+  voorwaarden?: string | null;
+  bedrag_excl_btw: number;
+  btw_percentage: number;
+  bedrag_incl_btw: number;
+  status: string;
+  /** @nullable */
+  aangemaakt_door_id?: number | null;
+  aangemaakt_op: string;
+  bijgewerkt_op: string;
+}
+
+export interface OfferteInput {
+  titel: string;
+  offertenummer?: string;
+  /** @nullable */
+  gebouw_id?: number | null;
+  /** @nullable */
+  klant_id?: number | null;
+  /** @nullable */
+  sjabloon_id?: number | null;
+  opdrachtgever?: string;
+  ons_kenmerk?: string;
+  uw_kenmerk?: string;
+  uw_brief_van?: string;
+  /** @nullable */
+  behandeld_door_id?: number | null;
+  datum?: string;
+  geldigheid_dagen?: number;
+  voorwaarden?: string;
+  bedrag_excl_btw?: number;
+  btw_percentage?: number;
+  bedrag_incl_btw?: number;
+  status?: string;
+}
+
+export interface OfferteRegel {
+  id: number;
+  offerte_id: number;
+  categorie: string;
+  /** @nullable */
+  snag_referentie?: string | null;
+  /** @nullable */
+  voorziening_id?: number | null;
+  maatregel: string;
+  /** @nullable */
+  ruimte?: string | null;
+  /** @nullable */
+  uitgangspunten?: string | null;
+  eenheid: string;
+  aantal: number;
+  prijs_per_eenheid: number;
+  kosten: number;
+  volgorde: number;
+  ai_voorstel: boolean;
+  aangemaakt_op: string;
+  bijgewerkt_op: string;
+}
+
+export interface OfferteRegelInput {
+  maatregel: string;
+  categorie?: string;
+  snag_referentie?: string;
+  /** @nullable */
+  voorziening_id?: number | null;
+  ruimte?: string;
+  uitgangspunten?: string;
+  eenheid?: string;
+  aantal?: number;
+  prijs_per_eenheid?: number;
+  kosten?: number;
+  volgorde?: number;
+  ai_voorstel?: boolean;
+}
+
+export interface OfferteUitgangspunt {
+  id: number;
+  offerte_id: number;
+  /** @nullable */
+  snag_referentie?: string | null;
+  /** @nullable */
+  voorziening_id?: number | null;
+  type: string;
+  tekst: string;
+  volgorde: number;
+  ai_voorstel: boolean;
+  aangemaakt_op: string;
+  bijgewerkt_op: string;
+}
+
+export interface OfferteUitgangspuntInput {
+  tekst: string;
+  type?: string;
+  snag_referentie?: string;
+  /** @nullable */
+  voorziening_id?: number | null;
+  volgorde?: number;
+  ai_voorstel?: boolean;
+}
+
 export type GetRecenteActiviteitParams = {
 limit?: number;
 };

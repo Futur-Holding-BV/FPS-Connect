@@ -27,6 +27,12 @@ tags:
     description: CRM - klanten, contactpersonen, opdrachten en commercieel
   - name: emails
     description: E-mailarchief per gebouw
+  - name: personeel
+    description: HRM - medewerkers, functiehuis, opleidingen, bekwaamheden en verlof
+  - name: dossiers
+    description: Project- en gebouwdossiers met documentstatussen en archivering
+  - name: offertes
+    description: Offertestructuur, begroting en uitgangspunten (Offerte Intelligence)
 
 paths:
   /healthz:
@@ -3751,6 +3757,1362 @@ paths:
         "204":
           description: Verwijderd
 
+  # ── HRM / Personeel ─────────────────────────────────────────────────────
+  /functies:
+    get:
+      operationId: listFuncties
+      tags: [personeel]
+      summary: Functiehuis ophalen
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Functie"
+    post:
+      operationId: createFunctie
+      tags: [personeel]
+      summary: Functie aanmaken
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FunctieInput"
+      responses:
+        "201":
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Functie"
+
+  /functies/{id}:
+    get:
+      operationId: getFunctie
+      tags: [personeel]
+      summary: Functie ophalen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Functie"
+        "404":
+          description: Niet gevonden
+    patch:
+      operationId: updateFunctie
+      tags: [personeel]
+      summary: Functie bijwerken
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FunctieInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Functie"
+    delete:
+      operationId: deleteFunctie
+      tags: [personeel]
+      summary: Functie verwijderen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Verwijderd
+
+  /opleidingen:
+    get:
+      operationId: listOpleidingen
+      tags: [personeel]
+      summary: Opleidingen/certificeringen ophalen
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Opleiding"
+    post:
+      operationId: createOpleiding
+      tags: [personeel]
+      summary: Opleiding aanmaken
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OpleidingInput"
+      responses:
+        "201":
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Opleiding"
+
+  /opleidingen/{id}:
+    patch:
+      operationId: updateOpleiding
+      tags: [personeel]
+      summary: Opleiding bijwerken
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OpleidingInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Opleiding"
+    delete:
+      operationId: deleteOpleiding
+      tags: [personeel]
+      summary: Opleiding verwijderen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Verwijderd
+
+  /medewerkers:
+    get:
+      operationId: listMedewerkers
+      tags: [personeel]
+      summary: Medewerkers ophalen
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Medewerker"
+    post:
+      operationId: createMedewerker
+      tags: [personeel]
+      summary: Medewerker aanmaken
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MedewerkerInput"
+      responses:
+        "201":
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Medewerker"
+
+  /medewerkers/onboarding:
+    post:
+      operationId: onboardMedewerker
+      tags: [personeel]
+      summary: Onboarding - medewerker koppelen aan gebruiker met CAO/verlofcontrole
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MedewerkerOnboardingInput"
+      responses:
+        "201":
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Medewerker"
+        "400":
+          description: Validatiefout
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OnboardingFout"
+
+  /medewerkers/{id}:
+    get:
+      operationId: getMedewerker
+      tags: [personeel]
+      summary: Medewerker ophalen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Medewerker"
+        "404":
+          description: Niet gevonden
+    patch:
+      operationId: updateMedewerker
+      tags: [personeel]
+      summary: Medewerker bijwerken
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MedewerkerInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Medewerker"
+    delete:
+      operationId: deleteMedewerker
+      tags: [personeel]
+      summary: Medewerker verwijderen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Verwijderd
+
+  /medewerkers/{id}/opleidingen:
+    get:
+      operationId: listMedewerkerOpleidingen
+      tags: [personeel]
+      summary: Behaalde opleidingen van een medewerker
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MedewerkerOpleiding"
+    post:
+      operationId: createMedewerkerOpleiding
+      tags: [personeel]
+      summary: Opleiding/certificaat toevoegen aan medewerker
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MedewerkerOpleidingInput"
+      responses:
+        "201":
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MedewerkerOpleiding"
+
+  /medewerker-opleidingen/{id}:
+    patch:
+      operationId: updateMedewerkerOpleiding
+      tags: [personeel]
+      summary: Medewerker-opleiding bijwerken
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MedewerkerOpleidingInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MedewerkerOpleiding"
+    delete:
+      operationId: deleteMedewerkerOpleiding
+      tags: [personeel]
+      summary: Medewerker-opleiding verwijderen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Verwijderd
+
+  /medewerkers/{id}/bekwaamheden:
+    get:
+      operationId: listBekwaamheden
+      tags: [personeel]
+      summary: Bekwaamheidsmatrix van een medewerker
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Bekwaamheid"
+    post:
+      operationId: createBekwaamheid
+      tags: [personeel]
+      summary: Bekwaamheid toevoegen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BekwaamheidInput"
+      responses:
+        "201":
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Bekwaamheid"
+
+  /bekwaamheden/{id}:
+    patch:
+      operationId: updateBekwaamheid
+      tags: [personeel]
+      summary: Bekwaamheid bijwerken
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BekwaamheidInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Bekwaamheid"
+    delete:
+      operationId: deleteBekwaamheid
+      tags: [personeel]
+      summary: Bekwaamheid verwijderen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Verwijderd
+
+  /verlofsoorten:
+    get:
+      operationId: listVerlofsoorten
+      tags: [personeel]
+      summary: Verlofsoorten ophalen (CAO + juridische kaders)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Verlofsoort"
+    post:
+      operationId: createVerlofsoort
+      tags: [personeel]
+      summary: Verlofsoort aanmaken
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VerlofsoortInput"
+      responses:
+        "201":
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Verlofsoort"
+
+  /verlofsoorten/{id}:
+    patch:
+      operationId: updateVerlofsoort
+      tags: [personeel]
+      summary: Verlofsoort bijwerken
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VerlofsoortInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Verlofsoort"
+    delete:
+      operationId: deleteVerlofsoort
+      tags: [personeel]
+      summary: Verlofsoort verwijderen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Verwijderd
+
+  /medewerkers/{id}/verlofsaldi:
+    get:
+      operationId: listVerlofSaldi
+      tags: [personeel]
+      summary: Verlofsaldo van een medewerker
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/VerlofSaldo"
+    post:
+      operationId: createVerlofSaldo
+      tags: [personeel]
+      summary: Verlofsaldo toevoegen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VerlofSaldoInput"
+      responses:
+        "201":
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VerlofSaldo"
+
+  /verlofsaldi/{id}:
+    patch:
+      operationId: updateVerlofSaldo
+      tags: [personeel]
+      summary: Verlofsaldo bijwerken
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VerlofSaldoInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VerlofSaldo"
+    delete:
+      operationId: deleteVerlofSaldo
+      tags: [personeel]
+      summary: Verlofsaldo verwijderen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Verwijderd
+
+  /medewerkers/{id}/verlofaanvragen:
+    get:
+      operationId: listVerlofAanvragen
+      tags: [personeel]
+      summary: Verlofaanvragen van een medewerker
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/VerlofAanvraag"
+    post:
+      operationId: createVerlofAanvraag
+      tags: [personeel]
+      summary: Verlofaanvraag indienen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VerlofAanvraagInput"
+      responses:
+        "201":
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VerlofAanvraag"
+
+  /verlofaanvragen/{id}:
+    patch:
+      operationId: updateVerlofAanvraag
+      tags: [personeel]
+      summary: Verlofaanvraag bijwerken/beoordelen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VerlofAanvraagInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VerlofAanvraag"
+    delete:
+      operationId: deleteVerlofAanvraag
+      tags: [personeel]
+      summary: Verlofaanvraag verwijderen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Verwijderd
+
+  /hrm/stats:
+    get:
+      operationId: getHrmStats
+      tags: [personeel]
+      summary: HRM-dashboardstatistieken
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HrmStats"
+
+  /hrm/cao-opties:
+    get:
+      operationId: listCaoOpties
+      tags: [personeel]
+      summary: Beschikbare CAO's met normuren (voor onboardingcontrole)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CaoOptie"
+
+  # ── Dossiers ────────────────────────────────────────────────────────────
+  /dossiers:
+    get:
+      operationId: listDossiers
+      tags: [dossiers]
+      summary: Dossiers ophalen
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Dossier"
+    post:
+      operationId: createDossier
+      tags: [dossiers]
+      summary: Dossier aanmaken
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DossierInput"
+      responses:
+        "201":
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Dossier"
+
+  /dossiers/{id}:
+    get:
+      operationId: getDossier
+      tags: [dossiers]
+      summary: Dossier ophalen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Dossier"
+        "404":
+          description: Niet gevonden
+    patch:
+      operationId: updateDossier
+      tags: [dossiers]
+      summary: Dossier bijwerken
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DossierInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Dossier"
+    delete:
+      operationId: deleteDossier
+      tags: [dossiers]
+      summary: Dossier verwijderen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Verwijderd
+
+  /dossiers/{id}/definitief:
+    post:
+      operationId: dossierDefinitiefMaken
+      tags: [dossiers]
+      summary: Dossier definitief maken (bevriezen)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Dossier"
+
+  /dossiers/{id}/archiveren:
+    post:
+      operationId: dossierArchiveren
+      tags: [dossiers]
+      summary: Dossier archiveren
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Dossier"
+
+  /dossiers/{id}/documenten:
+    get:
+      operationId: listDossierDocumenten
+      tags: [dossiers]
+      summary: Documenten van een dossier
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DossierDocument"
+    post:
+      operationId: createDossierDocument
+      tags: [dossiers]
+      summary: Document aan dossier toevoegen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DossierDocumentInput"
+      responses:
+        "201":
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DossierDocument"
+
+  /dossier-documenten/{id}:
+    patch:
+      operationId: updateDossierDocument
+      tags: [dossiers]
+      summary: Dossierdocument bijwerken
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DossierDocumentInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DossierDocument"
+    delete:
+      operationId: deleteDossierDocument
+      tags: [dossiers]
+      summary: Dossierdocument verwijderen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Verwijderd
+
+  # ── Offertes (Offerte Intelligence - prep) ───────────────────────────────
+  /offerte-sjablonen:
+    get:
+      operationId: listOfferteSjablonen
+      tags: [offertes]
+      summary: Offertesjablonen ophalen
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/OfferteSjabloon"
+    post:
+      operationId: createOfferteSjabloon
+      tags: [offertes]
+      summary: Offertesjabloon aanmaken
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OfferteSjabloonInput"
+      responses:
+        "201":
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OfferteSjabloon"
+
+  /offerte-sjablonen/{id}:
+    get:
+      operationId: getOfferteSjabloon
+      tags: [offertes]
+      summary: Offertesjabloon ophalen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OfferteSjabloon"
+        "404":
+          description: Niet gevonden
+    patch:
+      operationId: updateOfferteSjabloon
+      tags: [offertes]
+      summary: Offertesjabloon bijwerken
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OfferteSjabloonInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OfferteSjabloon"
+    delete:
+      operationId: deleteOfferteSjabloon
+      tags: [offertes]
+      summary: Offertesjabloon verwijderen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Verwijderd
+
+  /offerte-sjablonen/{id}/hoofdstukken:
+    get:
+      operationId: listOfferteHoofdstukken
+      tags: [offertes]
+      summary: Hoofdstukken van een sjabloon
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/OfferteHoofdstuk"
+    post:
+      operationId: createOfferteHoofdstuk
+      tags: [offertes]
+      summary: Hoofdstuk toevoegen aan sjabloon
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OfferteHoofdstukInput"
+      responses:
+        "201":
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OfferteHoofdstuk"
+
+  /offerte-hoofdstukken/{id}:
+    patch:
+      operationId: updateOfferteHoofdstuk
+      tags: [offertes]
+      summary: Hoofdstuk bijwerken
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OfferteHoofdstukInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OfferteHoofdstuk"
+    delete:
+      operationId: deleteOfferteHoofdstuk
+      tags: [offertes]
+      summary: Hoofdstuk verwijderen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Verwijderd
+
+  /offertes:
+    get:
+      operationId: listOffertes
+      tags: [offertes]
+      summary: Offertes ophalen
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Offerte"
+    post:
+      operationId: createOfferte
+      tags: [offertes]
+      summary: Offerte aanmaken
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OfferteInput"
+      responses:
+        "201":
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Offerte"
+
+  /offertes/{id}:
+    get:
+      operationId: getOfferte
+      tags: [offertes]
+      summary: Offerte ophalen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Offerte"
+        "404":
+          description: Niet gevonden
+    patch:
+      operationId: updateOfferte
+      tags: [offertes]
+      summary: Offerte bijwerken
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OfferteInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Offerte"
+    delete:
+      operationId: deleteOfferte
+      tags: [offertes]
+      summary: Offerte verwijderen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Verwijderd
+
+  /offertes/{id}/regels:
+    get:
+      operationId: listOfferteRegels
+      tags: [offertes]
+      summary: Begrotingsregels van een offerte
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/OfferteRegel"
+    post:
+      operationId: createOfferteRegel
+      tags: [offertes]
+      summary: Begrotingsregel toevoegen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OfferteRegelInput"
+      responses:
+        "201":
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OfferteRegel"
+
+  /offertes/{id}/uit-spots:
+    post:
+      operationId: offerteRegelsUitSpots
+      tags: [offertes]
+      summary: Begrotingsregels voorbereiden uit de spots van het gekoppelde gebouw
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "201":
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/OfferteRegel"
+
+  /offerte-regels/{id}:
+    patch:
+      operationId: updateOfferteRegel
+      tags: [offertes]
+      summary: Begrotingsregel bijwerken
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OfferteRegelInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OfferteRegel"
+    delete:
+      operationId: deleteOfferteRegel
+      tags: [offertes]
+      summary: Begrotingsregel verwijderen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Verwijderd
+
+  /offertes/{id}/uitgangspunten:
+    get:
+      operationId: listOfferteUitgangspunten
+      tags: [offertes]
+      summary: Uitgangspunten/voorbehouden van een offerte
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/OfferteUitgangspunt"
+    post:
+      operationId: createOfferteUitgangspunt
+      tags: [offertes]
+      summary: Uitgangspunt toevoegen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OfferteUitgangspuntInput"
+      responses:
+        "201":
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OfferteUitgangspunt"
+
+  /offerte-uitgangspunten/{id}:
+    patch:
+      operationId: updateOfferteUitgangspunt
+      tags: [offertes]
+      summary: Uitgangspunt bijwerken
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OfferteUitgangspuntInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OfferteUitgangspunt"
+    delete:
+      operationId: deleteOfferteUitgangspunt
+      tags: [offertes]
+      summary: Uitgangspunt verwijderen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Verwijderd
+
 components:
   schemas:
     HealthStatus:
@@ -6838,3 +8200,871 @@ components:
             - type: "null"
         gekozen:
           $ref: "#/components/schemas/SpotAiGekozenWaarden"
+
+    # ── HRM / Personeel ───────────────────────────────────────────────────
+    Functie:
+      type: object
+      required: [id, werkmaatschappij, naam, actief, aangemaakt_op, bijgewerkt_op]
+      properties:
+        id:
+          type: integer
+        werkmaatschappij:
+          type: string
+        naam:
+          type: string
+        omschrijving:
+          type: ["string", "null"]
+        taken:
+          type: ["string", "null"]
+        verantwoordelijkheden:
+          type: ["string", "null"]
+        competenties:
+          type: ["string", "null"]
+        opleidingsvereisten:
+          type: ["string", "null"]
+        doorgroeipad:
+          type: ["string", "null"]
+        actief:
+          type: boolean
+        aangemaakt_op:
+          type: string
+        bijgewerkt_op:
+          type: string
+
+    FunctieInput:
+      type: object
+      required: [naam]
+      properties:
+        naam:
+          type: string
+        werkmaatschappij:
+          type: string
+        omschrijving:
+          type: string
+        taken:
+          type: string
+        verantwoordelijkheden:
+          type: string
+        competenties:
+          type: string
+        opleidingsvereisten:
+          type: string
+        doorgroeipad:
+          type: string
+        actief:
+          type: boolean
+
+    Opleiding:
+      type: object
+      required: [id, naam, categorie, verplicht, aangemaakt_op, bijgewerkt_op]
+      properties:
+        id:
+          type: integer
+        naam:
+          type: string
+        categorie:
+          type: string
+        omschrijving:
+          type: ["string", "null"]
+        geldigheid_maanden:
+          type: ["integer", "null"]
+        verplicht:
+          type: boolean
+        aangemaakt_op:
+          type: string
+        bijgewerkt_op:
+          type: string
+
+    OpleidingInput:
+      type: object
+      required: [naam]
+      properties:
+        naam:
+          type: string
+        categorie:
+          type: string
+        omschrijving:
+          type: string
+        geldigheid_maanden:
+          type: ["integer", "null"]
+        verplicht:
+          type: boolean
+
+    Medewerker:
+      type: object
+      required: [id, naam, werkmaatschappij, dienstverband, actief, aangemaakt_op, bijgewerkt_op]
+      properties:
+        id:
+          type: integer
+        gebruiker_id:
+          type: ["integer", "null"]
+        naam:
+          type: string
+        email:
+          type: ["string", "null"]
+        telefoon:
+          type: ["string", "null"]
+        mobiel:
+          type: ["string", "null"]
+        werkmaatschappij:
+          type: string
+        functie_id:
+          type: ["integer", "null"]
+        functie_naam:
+          type: ["string", "null"]
+        cao:
+          type: ["string", "null"]
+        dienstverband:
+          type: string
+        contracturen_per_week:
+          type: ["number", "null"]
+        in_dienst_sinds:
+          type: ["string", "null"]
+        uit_dienst_per:
+          type: ["string", "null"]
+        noodcontact_naam:
+          type: ["string", "null"]
+        noodcontact_telefoon:
+          type: ["string", "null"]
+        actief:
+          type: boolean
+        opmerkingen:
+          type: ["string", "null"]
+        aangemaakt_op:
+          type: string
+        bijgewerkt_op:
+          type: string
+
+    MedewerkerInput:
+      type: object
+      required: [naam]
+      properties:
+        naam:
+          type: string
+        gebruiker_id:
+          type: ["integer", "null"]
+        email:
+          type: string
+        telefoon:
+          type: string
+        mobiel:
+          type: string
+        werkmaatschappij:
+          type: string
+        functie_id:
+          type: ["integer", "null"]
+        cao:
+          type: string
+        dienstverband:
+          type: string
+        contracturen_per_week:
+          type: ["number", "null"]
+        in_dienst_sinds:
+          type: string
+        uit_dienst_per:
+          type: string
+        noodcontact_naam:
+          type: string
+        noodcontact_telefoon:
+          type: string
+        actief:
+          type: boolean
+        opmerkingen:
+          type: string
+
+    MedewerkerOnboardingInput:
+      type: object
+      required: [gebruiker_id, functie_id, werkmaatschappij, cao, contracturen_per_week, in_dienst_sinds]
+      properties:
+        gebruiker_id:
+          type: integer
+          description: De gebruiker die als medewerker wordt aangemaakt.
+        functie_id:
+          type: integer
+        werkmaatschappij:
+          type: string
+        cao:
+          type: string
+          description: Moet een bekende CAO zijn (zie /hrm/cao-opties).
+        contracturen_per_week:
+          type: number
+          description: Groter dan 0 en niet meer dan 40.
+        in_dienst_sinds:
+          type: string
+          description: Geldige datum (YYYY-MM-DD), niet in de toekomst.
+        naam:
+          type: string
+        email:
+          type: string
+        telefoon:
+          type: string
+        mobiel:
+          type: string
+        dienstverband:
+          type: string
+        noodcontact_naam:
+          type: string
+        noodcontact_telefoon:
+          type: string
+        verlofsoort_ids:
+          type: array
+          items:
+            type: integer
+          description: Verlofsoorten waarvoor direct een beginsaldo wordt opgebouwd.
+        jaar:
+          type: integer
+          description: Jaar waarvoor het verlofsaldo wordt aangemaakt (standaard huidig jaar).
+
+    OnboardingFout:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+        velden:
+          type: array
+          items:
+            type: string
+          description: Namen van de velden die de controle niet doorstaan.
+
+    MedewerkerOpleiding:
+      type: object
+      required: [id, medewerker_id, opleiding_id, status, aangemaakt_op, bijgewerkt_op]
+      properties:
+        id:
+          type: integer
+        medewerker_id:
+          type: integer
+        opleiding_id:
+          type: integer
+        opleiding_naam:
+          type: ["string", "null"]
+        status:
+          type: string
+        behaald_op:
+          type: ["string", "null"]
+        verloopt_op:
+          type: ["string", "null"]
+        certificaat_document_id:
+          type: ["integer", "null"]
+        opmerking:
+          type: ["string", "null"]
+        aangemaakt_op:
+          type: string
+        bijgewerkt_op:
+          type: string
+
+    MedewerkerOpleidingInput:
+      type: object
+      required: [opleiding_id]
+      properties:
+        opleiding_id:
+          type: integer
+        status:
+          type: string
+        behaald_op:
+          type: ["string", "null"]
+        verloopt_op:
+          type: ["string", "null"]
+        certificaat_document_id:
+          type: ["integer", "null"]
+        opmerking:
+          type: string
+
+    Bekwaamheid:
+      type: object
+      required: [id, medewerker_id, onderwerp, niveau, aangemaakt_op, bijgewerkt_op]
+      properties:
+        id:
+          type: integer
+        medewerker_id:
+          type: integer
+        categorie:
+          type: ["string", "null"]
+        onderwerp:
+          type: string
+        niveau:
+          type: string
+        vastgesteld_door:
+          type: ["string", "null"]
+        vastgesteld_op:
+          type: ["string", "null"]
+        opmerking:
+          type: ["string", "null"]
+        aangemaakt_op:
+          type: string
+        bijgewerkt_op:
+          type: string
+
+    BekwaamheidInput:
+      type: object
+      required: [onderwerp]
+      properties:
+        onderwerp:
+          type: string
+        categorie:
+          type: string
+        niveau:
+          type: string
+        vastgesteld_door:
+          type: string
+        vastgesteld_op:
+          type: ["string", "null"]
+        opmerking:
+          type: string
+
+    Verlofsoort:
+      type: object
+      required: [id, naam, categorie, betaald, collectief, actief, aangemaakt_op, bijgewerkt_op]
+      properties:
+        id:
+          type: integer
+        naam:
+          type: string
+        categorie:
+          type: string
+        cao:
+          type: ["string", "null"]
+        werkmaatschappij:
+          type: ["string", "null"]
+        betaald:
+          type: boolean
+        collectief:
+          type: boolean
+        opbouw_uren_per_jaar:
+          type: ["number", "null"]
+        opbouw_regel:
+          type: ["string", "null"]
+        verval_regel:
+          type: ["string", "null"]
+        juridisch_kader:
+          type: ["string", "null"]
+        toelichting:
+          type: ["string", "null"]
+        actief:
+          type: boolean
+        aangemaakt_op:
+          type: string
+        bijgewerkt_op:
+          type: string
+
+    VerlofsoortInput:
+      type: object
+      required: [naam]
+      properties:
+        naam:
+          type: string
+        categorie:
+          type: string
+        cao:
+          type: ["string", "null"]
+        werkmaatschappij:
+          type: ["string", "null"]
+        betaald:
+          type: boolean
+        collectief:
+          type: boolean
+        opbouw_uren_per_jaar:
+          type: ["number", "null"]
+        opbouw_regel:
+          type: string
+        verval_regel:
+          type: string
+        juridisch_kader:
+          type: string
+        toelichting:
+          type: string
+        actief:
+          type: boolean
+
+    VerlofSaldo:
+      type: object
+      required: [id, medewerker_id, verlofsoort_id, jaar, saldo_uren, aangemaakt_op, bijgewerkt_op]
+      properties:
+        id:
+          type: integer
+        medewerker_id:
+          type: integer
+        verlofsoort_id:
+          type: integer
+        verlofsoort_naam:
+          type: ["string", "null"]
+        jaar:
+          type: integer
+        beginsaldo_uren:
+          type: number
+        opgebouwd_uren:
+          type: number
+        opgenomen_uren:
+          type: number
+        saldo_uren:
+          type: number
+        vervalt_op:
+          type: ["string", "null"]
+        aangemaakt_op:
+          type: string
+        bijgewerkt_op:
+          type: string
+
+    VerlofSaldoInput:
+      type: object
+      required: [verlofsoort_id, jaar]
+      properties:
+        verlofsoort_id:
+          type: integer
+        jaar:
+          type: integer
+        beginsaldo_uren:
+          type: number
+        opgebouwd_uren:
+          type: number
+        opgenomen_uren:
+          type: number
+        saldo_uren:
+          type: number
+        vervalt_op:
+          type: ["string", "null"]
+
+    VerlofAanvraag:
+      type: object
+      required: [id, medewerker_id, verlofsoort_id, start_datum, eind_datum, status, aangemaakt_op, bijgewerkt_op]
+      properties:
+        id:
+          type: integer
+        medewerker_id:
+          type: integer
+        verlofsoort_id:
+          type: integer
+        verlofsoort_naam:
+          type: ["string", "null"]
+        start_datum:
+          type: string
+        eind_datum:
+          type: string
+        aantal_uren:
+          type: number
+        status:
+          type: string
+        reden:
+          type: ["string", "null"]
+        opmerking:
+          type: ["string", "null"]
+        beoordeeld_door_id:
+          type: ["integer", "null"]
+        beoordeeld_op:
+          type: ["string", "null"]
+        aangemaakt_op:
+          type: string
+        bijgewerkt_op:
+          type: string
+
+    VerlofAanvraagInput:
+      type: object
+      required: [verlofsoort_id, start_datum, eind_datum]
+      properties:
+        verlofsoort_id:
+          type: integer
+        start_datum:
+          type: string
+        eind_datum:
+          type: string
+        aantal_uren:
+          type: number
+        status:
+          type: string
+        reden:
+          type: string
+        opmerking:
+          type: string
+
+    HrmStats:
+      type: object
+      required: [medewerkers, actief, functies, certificaten_verlopen_binnenkort, openstaande_verlofaanvragen]
+      properties:
+        medewerkers:
+          type: integer
+        actief:
+          type: integer
+        functies:
+          type: integer
+        certificaten_verlopen_binnenkort:
+          type: integer
+        openstaande_verlofaanvragen:
+          type: integer
+
+    CaoOptie:
+      type: object
+      required: [naam]
+      properties:
+        naam:
+          type: string
+        standaard_uren_per_week:
+          type: ["number", "null"]
+        adv_uren_per_week:
+          type: ["number", "null"]
+        toelichting:
+          type: ["string", "null"]
+
+    # ── Dossiers ──────────────────────────────────────────────────────────
+    Dossier:
+      type: object
+      required: [id, type, naam, status, aangemaakt_op, bijgewerkt_op]
+      properties:
+        id:
+          type: integer
+        type:
+          type: string
+        gebouw_id:
+          type: ["integer", "null"]
+        gebouw_naam:
+          type: ["string", "null"]
+        naam:
+          type: string
+        omschrijving:
+          type: ["string", "null"]
+        status:
+          type: string
+        definitief_op:
+          type: ["string", "null"]
+        gearchiveerd_op:
+          type: ["string", "null"]
+        aangemaakt_door_id:
+          type: ["integer", "null"]
+        aangemaakt_op:
+          type: string
+        bijgewerkt_op:
+          type: string
+
+    DossierInput:
+      type: object
+      required: [naam]
+      properties:
+        naam:
+          type: string
+        type:
+          type: string
+        gebouw_id:
+          type: ["integer", "null"]
+        omschrijving:
+          type: string
+        status:
+          type: string
+
+    DossierDocument:
+      type: object
+      required: [id, dossier_id, naam, status, versie, aangemaakt_op, bijgewerkt_op]
+      properties:
+        id:
+          type: integer
+        dossier_id:
+          type: integer
+        document_id:
+          type: ["integer", "null"]
+        naam:
+          type: string
+        bestand_url:
+          type: ["string", "null"]
+        categorie:
+          type: ["string", "null"]
+        status:
+          type: string
+        versie:
+          type: integer
+        toegevoegd_door_id:
+          type: ["integer", "null"]
+        aangemaakt_op:
+          type: string
+        bijgewerkt_op:
+          type: string
+
+    DossierDocumentInput:
+      type: object
+      required: [naam]
+      properties:
+        naam:
+          type: string
+        document_id:
+          type: ["integer", "null"]
+        bestand_url:
+          type: string
+        categorie:
+          type: string
+        status:
+          type: string
+        versie:
+          type: integer
+
+    # ── Offertes ──────────────────────────────────────────────────────────
+    OfferteSjabloon:
+      type: object
+      required: [id, naam, werkmaatschappij, actief, aangemaakt_op, bijgewerkt_op]
+      properties:
+        id:
+          type: integer
+        naam:
+          type: string
+        omschrijving:
+          type: ["string", "null"]
+        werkmaatschappij:
+          type: string
+        actief:
+          type: boolean
+        aangemaakt_op:
+          type: string
+        bijgewerkt_op:
+          type: string
+
+    OfferteSjabloonInput:
+      type: object
+      required: [naam]
+      properties:
+        naam:
+          type: string
+        omschrijving:
+          type: string
+        werkmaatschappij:
+          type: string
+        actief:
+          type: boolean
+
+    OfferteHoofdstuk:
+      type: object
+      required: [id, sjabloon_id, titel, volgorde, type, ai_veld, aangemaakt_op, bijgewerkt_op]
+      properties:
+        id:
+          type: integer
+        sjabloon_id:
+          type: integer
+        titel:
+          type: string
+        volgorde:
+          type: integer
+        type:
+          type: string
+        standaardtekst:
+          type: ["string", "null"]
+        ai_veld:
+          type: boolean
+        ai_hint:
+          type: ["string", "null"]
+        aangemaakt_op:
+          type: string
+        bijgewerkt_op:
+          type: string
+
+    OfferteHoofdstukInput:
+      type: object
+      required: [titel]
+      properties:
+        titel:
+          type: string
+        volgorde:
+          type: integer
+        type:
+          type: string
+        standaardtekst:
+          type: string
+        ai_veld:
+          type: boolean
+        ai_hint:
+          type: string
+
+    Offerte:
+      type: object
+      required: [id, titel, geldigheid_dagen, bedrag_excl_btw, btw_percentage, bedrag_incl_btw, status, aangemaakt_op, bijgewerkt_op]
+      properties:
+        id:
+          type: integer
+        offertenummer:
+          type: ["string", "null"]
+        titel:
+          type: string
+        gebouw_id:
+          type: ["integer", "null"]
+        gebouw_naam:
+          type: ["string", "null"]
+        klant_id:
+          type: ["integer", "null"]
+        klant_naam:
+          type: ["string", "null"]
+        sjabloon_id:
+          type: ["integer", "null"]
+        opdrachtgever:
+          type: ["string", "null"]
+        ons_kenmerk:
+          type: ["string", "null"]
+        uw_kenmerk:
+          type: ["string", "null"]
+        uw_brief_van:
+          type: ["string", "null"]
+        behandeld_door_id:
+          type: ["integer", "null"]
+        behandeld_door_naam:
+          type: ["string", "null"]
+        datum:
+          type: ["string", "null"]
+        geldigheid_dagen:
+          type: integer
+        voorwaarden:
+          type: ["string", "null"]
+        bedrag_excl_btw:
+          type: number
+        btw_percentage:
+          type: number
+        bedrag_incl_btw:
+          type: number
+        status:
+          type: string
+        aangemaakt_door_id:
+          type: ["integer", "null"]
+        aangemaakt_op:
+          type: string
+        bijgewerkt_op:
+          type: string
+
+    OfferteInput:
+      type: object
+      required: [titel]
+      properties:
+        titel:
+          type: string
+        offertenummer:
+          type: string
+        gebouw_id:
+          type: ["integer", "null"]
+        klant_id:
+          type: ["integer", "null"]
+        sjabloon_id:
+          type: ["integer", "null"]
+        opdrachtgever:
+          type: string
+        ons_kenmerk:
+          type: string
+        uw_kenmerk:
+          type: string
+        uw_brief_van:
+          type: string
+        behandeld_door_id:
+          type: ["integer", "null"]
+        datum:
+          type: string
+        geldigheid_dagen:
+          type: integer
+        voorwaarden:
+          type: string
+        bedrag_excl_btw:
+          type: number
+        btw_percentage:
+          type: number
+        bedrag_incl_btw:
+          type: number
+        status:
+          type: string
+
+    OfferteRegel:
+      type: object
+      required: [id, offerte_id, categorie, maatregel, eenheid, aantal, prijs_per_eenheid, kosten, volgorde, ai_voorstel, aangemaakt_op, bijgewerkt_op]
+      properties:
+        id:
+          type: integer
+        offerte_id:
+          type: integer
+        categorie:
+          type: string
+        snag_referentie:
+          type: ["string", "null"]
+        voorziening_id:
+          type: ["integer", "null"]
+        maatregel:
+          type: string
+        ruimte:
+          type: ["string", "null"]
+        uitgangspunten:
+          type: ["string", "null"]
+        eenheid:
+          type: string
+        aantal:
+          type: number
+        prijs_per_eenheid:
+          type: number
+        kosten:
+          type: number
+        volgorde:
+          type: integer
+        ai_voorstel:
+          type: boolean
+        aangemaakt_op:
+          type: string
+        bijgewerkt_op:
+          type: string
+
+    OfferteRegelInput:
+      type: object
+      required: [maatregel]
+      properties:
+        maatregel:
+          type: string
+        categorie:
+          type: string
+        snag_referentie:
+          type: string
+        voorziening_id:
+          type: ["integer", "null"]
+        ruimte:
+          type: string
+        uitgangspunten:
+          type: string
+        eenheid:
+          type: string
+        aantal:
+          type: number
+        prijs_per_eenheid:
+          type: number
+        kosten:
+          type: number
+        volgorde:
+          type: integer
+        ai_voorstel:
+          type: boolean
+
+    OfferteUitgangspunt:
+      type: object
+      required: [id, offerte_id, type, tekst, volgorde, ai_voorstel, aangemaakt_op, bijgewerkt_op]
+      properties:
+        id:
+          type: integer
+        offerte_id:
+          type: integer
+        snag_referentie:
+          type: ["string", "null"]
+        voorziening_id:
+          type: ["integer", "null"]
+        type:
+          type: string
+        tekst:
+          type: string
+        volgorde:
+          type: integer
+        ai_voorstel:
+          type: boolean
+        aangemaakt_op:
+          type: string
+        bijgewerkt_op:
+          type: string
+
+    OfferteUitgangspuntInput:
+      type: object
+      required: [tekst]
+      properties:
+        tekst:
+          type: string
+        type:
+          type: string
+        snag_referentie:
+          type: string
+        voorziening_id:
+          type: ["integer", "null"]
+        volgorde:
+          type: integer
+        ai_voorstel:
+          type: boolean

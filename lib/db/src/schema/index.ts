@@ -9,3 +9,6 @@ export * from "./activiteiten";
 export * from "./systeem";
 export * from "./crm";
 export * from "./emails";
+export * from "./hrm";
+export * from "./dossiers";
+export * from "./offertes";

@@ -1,0 +1,232 @@
+import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import {
+  useListOffertes,
+  useCreateOfferte,
+  useOfferteRegelsUitSpots,
+  useListGebouwen,
+  useListCrmKlanten,
+  getListOffertesQueryKey,
+} from "@workspace/api-client-react";
+import type { OfferteInput } from "@workspace/api-client-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useToast } from "@/hooks/use-toast";
+import { FileText, Plus, Search, Sparkles } from "lucide-react";
+
+const STATUS_KLEUR: Record<string, string> = {
+  concept: "bg-amber-100 text-amber-800 border-amber-200",
+  verzonden: "bg-blue-100 text-blue-800 border-blue-200",
+  geaccepteerd: "bg-emerald-100 text-emerald-800 border-emerald-200",
+  afgewezen: "bg-rose-100 text-rose-800 border-rose-200",
+  vervallen: "bg-muted text-muted-foreground border-border",
+};
+
+function euro(bedrag: number) {
+  return new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR" }).format(bedrag ?? 0);
+}
+
+const LEEG: OfferteInput = {
+  titel: "",
+  opdrachtgever: "",
+  geldigheid_dagen: 30,
+  btw_percentage: 21,
+};
+
+export default function OffertesPagina() {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const { data: offertes, isLoading } = useListOffertes();
+  const { data: gebouwen } = useListGebouwen();
+  const { data: klanten } = useListCrmKlanten();
+  const maakOfferte = useCreateOfferte();
+  const uitSpots = useOfferteRegelsUitSpots();
+
+  const [zoek, setZoek] = useState("");
+  const [open, setOpen] = useState(false);
+  const [form, setForm] = useState<OfferteInput>(LEEG);
+
+  const gefilterd = (offertes ?? []).filter((o) => {
+    const t = zoek.trim().toLowerCase();
+    if (!t) return true;
+    return (
+      o.titel.toLowerCase().includes(t) ||
+      (o.opdrachtgever ?? "").toLowerCase().includes(t) ||
+      (o.offertenummer ?? "").toLowerCase().includes(t)
+    );
+  });
+
+  async function herlaad() {
+    await queryClient.invalidateQueries({ queryKey: getListOffertesQueryKey() });
+  }
+
+  async function opslaan() {
+    if (!form.titel.trim()) {
+      toast({ title: "Titel is verplicht", variant: "destructive" });
+      return;
+    }
+    try {
+      const schoon: OfferteInput = {
+        titel: form.titel.trim(),
+        opdrachtgever: form.opdrachtgever?.trim() || undefined,
+        gebouw_id: form.gebouw_id ?? undefined,
+        klant_id: form.klant_id ?? undefined,
+        geldigheid_dagen: form.geldigheid_dagen,
+        btw_percentage: form.btw_percentage,
+        voorwaarden: form.voorwaarden?.trim() || undefined,
+      };
+      await maakOfferte.mutateAsync({ data: schoon });
+      await herlaad();
+      toast({ title: "Offerte aangemaakt" });
+      setForm(LEEG);
+      setOpen(false);
+    } catch {
+      toast({ title: "Opslaan mislukt", variant: "destructive" });
+    }
+  }
+
+  async function bereidVoorUitSpots(id: number) {
+    try {
+      await uitSpots.mutateAsync({ id });
+      await herlaad();
+      toast({ title: "Begrotingsregels voorbereid uit spots" });
+    } catch {
+      toast({ title: "Voorbereiden mislukt", description: "Koppel eerst een gebouw met spots.", variant: "destructive" });
+    }
+  }
+
+  return (
+    <div className="max-w-6xl mx-auto space-y-6">
+      <div className="flex items-center justify-between gap-4 flex-wrap">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">Offertes</h1>
+          <p className="text-sm text-muted-foreground">
+            Offertes voorbereiden — begrotingsregels uit spots, handmatig afronden. Geen automatische verzending.
+          </p>
+        </div>
+        <Button onClick={() => setOpen(true)}>
+          <Plus className="h-4 w-4" /> Nieuwe offerte
+        </Button>
+      </div>
+
+      <div className="relative max-w-sm">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input placeholder="Zoek op titel, opdrachtgever of nummer…" value={zoek} onChange={(e) => setZoek(e.target.value)} className="pl-9" />
+      </div>
+
+      {isLoading ? (
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-36 w-full" />)}
+        </div>
+      ) : gefilterd.length === 0 ? (
+        <Card><CardContent className="py-12 text-center text-muted-foreground">
+          <FileText className="h-10 w-10 mx-auto mb-3 opacity-40" />
+          <p>Geen offertes gevonden.</p>
+        </CardContent></Card>
+      ) : (
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {gefilterd.map((o) => (
+            <Card key={o.id} className="h-full">
+              <CardContent className="p-4 space-y-3">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <div className="font-semibold truncate">{o.titel}</div>
+                    {o.offertenummer && <div className="text-xs text-muted-foreground">{o.offertenummer}</div>}
+                  </div>
+                  <Badge variant="outline" className={STATUS_KLEUR[o.status] ?? ""}>{o.status}</Badge>
+                </div>
+                <div className="text-xs text-muted-foreground space-y-0.5">
+                  {o.opdrachtgever && <div>{o.opdrachtgever}</div>}
+                  {o.gebouw_naam && <div>Gebouw: {o.gebouw_naam}</div>}
+                </div>
+                <div className="text-sm font-medium">{euro(o.bedrag_excl_btw)} <span className="text-xs text-muted-foreground">excl. btw</span></div>
+                {o.gebouw_id && o.status === "concept" && (
+                  <Button size="sm" variant="outline" onClick={() => bereidVoorUitSpots(o.id)} disabled={uitSpots.isPending}>
+                    <Sparkles className="h-3.5 w-3.5" /> Uit spots voorbereiden
+                  </Button>
+                )}
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader><DialogTitle>Nieuwe offerte</DialogTitle></DialogHeader>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="sm:col-span-2 space-y-1.5">
+              <Label>Titel *</Label>
+              <Input value={form.titel} onChange={(e) => setForm({ ...form, titel: e.target.value })} />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Opdrachtgever</Label>
+              <Input value={form.opdrachtgever ?? ""} onChange={(e) => setForm({ ...form, opdrachtgever: e.target.value })} />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Klant</Label>
+              <Select
+                value={form.klant_id ? String(form.klant_id) : undefined}
+                onValueChange={(v) => setForm({ ...form, klant_id: Number(v) })}
+              >
+                <SelectTrigger><SelectValue placeholder="Geen koppeling" /></SelectTrigger>
+                <SelectContent>
+                  {(klanten ?? []).map((k) => <SelectItem key={k.id} value={String(k.id)}>{k.naam}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="sm:col-span-2 space-y-1.5">
+              <Label>Gebouw (voor voorbereiding uit spots)</Label>
+              <Select
+                value={form.gebouw_id ? String(form.gebouw_id) : undefined}
+                onValueChange={(v) => setForm({ ...form, gebouw_id: Number(v) })}
+              >
+                <SelectTrigger><SelectValue placeholder="Geen koppeling" /></SelectTrigger>
+                <SelectContent>
+                  {(gebouwen ?? []).map((g) => <SelectItem key={g.id} value={String(g.id)}>{g.naam}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Geldigheid (dagen)</Label>
+              <Input
+                type="number"
+                value={form.geldigheid_dagen ?? 30}
+                onChange={(e) => setForm({ ...form, geldigheid_dagen: Number(e.target.value) })}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Btw %</Label>
+              <Input
+                type="number"
+                value={form.btw_percentage ?? 21}
+                onChange={(e) => setForm({ ...form, btw_percentage: Number(e.target.value) })}
+              />
+            </div>
+            <div className="sm:col-span-2 space-y-1.5">
+              <Label>Voorwaarden</Label>
+              <Textarea value={form.voorwaarden ?? ""} onChange={(e) => setForm({ ...form, voorwaarden: e.target.value })} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setOpen(false)}>Annuleren</Button>
+            <Button onClick={opslaan} disabled={maakOfferte.isPending}>
+              {maakOfferte.isPending ? "Bezig…" : "Opslaan"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}

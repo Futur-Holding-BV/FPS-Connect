@@ -4269,3 +4269,1548 @@ export const DeleteGebouwEmailParams = zod.object({
 export const DeleteGebouwEmailResponse = zod.void()
 
 
+/**
+ * @summary Functiehuis ophalen
+ */
+export const ListFunctiesResponseItem = zod.object({
+  "id": zod.number(),
+  "werkmaatschappij": zod.string(),
+  "naam": zod.string(),
+  "omschrijving": zod.string().nullish(),
+  "taken": zod.string().nullish(),
+  "verantwoordelijkheden": zod.string().nullish(),
+  "competenties": zod.string().nullish(),
+  "opleidingsvereisten": zod.string().nullish(),
+  "doorgroeipad": zod.string().nullish(),
+  "actief": zod.boolean(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+export const ListFunctiesResponse = zod.array(ListFunctiesResponseItem)
+
+
+/**
+ * @summary Functie aanmaken
+ */
+export const CreateFunctieBody = zod.object({
+  "naam": zod.string(),
+  "werkmaatschappij": zod.string().optional(),
+  "omschrijving": zod.string().optional(),
+  "taken": zod.string().optional(),
+  "verantwoordelijkheden": zod.string().optional(),
+  "competenties": zod.string().optional(),
+  "opleidingsvereisten": zod.string().optional(),
+  "doorgroeipad": zod.string().optional(),
+  "actief": zod.boolean().optional()
+})
+
+export const CreateFunctieResponse = zod.void()
+
+
+/**
+ * @summary Functie ophalen
+ */
+export const GetFunctieParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetFunctieResponse = zod.object({
+  "id": zod.number(),
+  "werkmaatschappij": zod.string(),
+  "naam": zod.string(),
+  "omschrijving": zod.string().nullish(),
+  "taken": zod.string().nullish(),
+  "verantwoordelijkheden": zod.string().nullish(),
+  "competenties": zod.string().nullish(),
+  "opleidingsvereisten": zod.string().nullish(),
+  "doorgroeipad": zod.string().nullish(),
+  "actief": zod.boolean(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+
+
+/**
+ * @summary Functie bijwerken
+ */
+export const UpdateFunctieParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateFunctieBody = zod.object({
+  "naam": zod.string(),
+  "werkmaatschappij": zod.string().optional(),
+  "omschrijving": zod.string().optional(),
+  "taken": zod.string().optional(),
+  "verantwoordelijkheden": zod.string().optional(),
+  "competenties": zod.string().optional(),
+  "opleidingsvereisten": zod.string().optional(),
+  "doorgroeipad": zod.string().optional(),
+  "actief": zod.boolean().optional()
+})
+
+export const UpdateFunctieResponse = zod.object({
+  "id": zod.number(),
+  "werkmaatschappij": zod.string(),
+  "naam": zod.string(),
+  "omschrijving": zod.string().nullish(),
+  "taken": zod.string().nullish(),
+  "verantwoordelijkheden": zod.string().nullish(),
+  "competenties": zod.string().nullish(),
+  "opleidingsvereisten": zod.string().nullish(),
+  "doorgroeipad": zod.string().nullish(),
+  "actief": zod.boolean(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+
+
+/**
+ * @summary Functie verwijderen
+ */
+export const DeleteFunctieParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteFunctieResponse = zod.void()
+
+
+/**
+ * @summary Opleidingen/certificeringen ophalen
+ */
+export const ListOpleidingenResponseItem = zod.object({
+  "id": zod.number(),
+  "naam": zod.string(),
+  "categorie": zod.string(),
+  "omschrijving": zod.string().nullish(),
+  "geldigheid_maanden": zod.number().nullish(),
+  "verplicht": zod.boolean(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+export const ListOpleidingenResponse = zod.array(ListOpleidingenResponseItem)
+
+
+/**
+ * @summary Opleiding aanmaken
+ */
+export const CreateOpleidingBody = zod.object({
+  "naam": zod.string(),
+  "categorie": zod.string().optional(),
+  "omschrijving": zod.string().optional(),
+  "geldigheid_maanden": zod.number().nullish(),
+  "verplicht": zod.boolean().optional()
+})
+
+export const CreateOpleidingResponse = zod.void()
+
+
+/**
+ * @summary Opleiding bijwerken
+ */
+export const UpdateOpleidingParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateOpleidingBody = zod.object({
+  "naam": zod.string(),
+  "categorie": zod.string().optional(),
+  "omschrijving": zod.string().optional(),
+  "geldigheid_maanden": zod.number().nullish(),
+  "verplicht": zod.boolean().optional()
+})
+
+export const UpdateOpleidingResponse = zod.object({
+  "id": zod.number(),
+  "naam": zod.string(),
+  "categorie": zod.string(),
+  "omschrijving": zod.string().nullish(),
+  "geldigheid_maanden": zod.number().nullish(),
+  "verplicht": zod.boolean(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+
+
+/**
+ * @summary Opleiding verwijderen
+ */
+export const DeleteOpleidingParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteOpleidingResponse = zod.void()
+
+
+/**
+ * @summary Medewerkers ophalen
+ */
+export const ListMedewerkersResponseItem = zod.object({
+  "id": zod.number(),
+  "gebruiker_id": zod.number().nullish(),
+  "naam": zod.string(),
+  "email": zod.string().nullish(),
+  "telefoon": zod.string().nullish(),
+  "mobiel": zod.string().nullish(),
+  "werkmaatschappij": zod.string(),
+  "functie_id": zod.number().nullish(),
+  "functie_naam": zod.string().nullish(),
+  "cao": zod.string().nullish(),
+  "dienstverband": zod.string(),
+  "contracturen_per_week": zod.number().nullish(),
+  "in_dienst_sinds": zod.string().nullish(),
+  "uit_dienst_per": zod.string().nullish(),
+  "noodcontact_naam": zod.string().nullish(),
+  "noodcontact_telefoon": zod.string().nullish(),
+  "actief": zod.boolean(),
+  "opmerkingen": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+export const ListMedewerkersResponse = zod.array(ListMedewerkersResponseItem)
+
+
+/**
+ * @summary Medewerker aanmaken
+ */
+export const CreateMedewerkerBody = zod.object({
+  "naam": zod.string(),
+  "gebruiker_id": zod.number().nullish(),
+  "email": zod.string().optional(),
+  "telefoon": zod.string().optional(),
+  "mobiel": zod.string().optional(),
+  "werkmaatschappij": zod.string().optional(),
+  "functie_id": zod.number().nullish(),
+  "cao": zod.string().optional(),
+  "dienstverband": zod.string().optional(),
+  "contracturen_per_week": zod.number().nullish(),
+  "in_dienst_sinds": zod.string().optional(),
+  "uit_dienst_per": zod.string().optional(),
+  "noodcontact_naam": zod.string().optional(),
+  "noodcontact_telefoon": zod.string().optional(),
+  "actief": zod.boolean().optional(),
+  "opmerkingen": zod.string().optional()
+})
+
+export const CreateMedewerkerResponse = zod.void()
+
+
+/**
+ * @summary Onboarding - medewerker koppelen aan gebruiker met CAO/verlofcontrole
+ */
+export const OnboardMedewerkerBody = zod.object({
+  "gebruiker_id": zod.number().describe('De gebruiker die als medewerker wordt aangemaakt.'),
+  "functie_id": zod.number(),
+  "werkmaatschappij": zod.string(),
+  "cao": zod.string().describe('Moet een bekende CAO zijn (zie \/hrm\/cao-opties).'),
+  "contracturen_per_week": zod.number().describe('Groter dan 0 en niet meer dan 40.'),
+  "in_dienst_sinds": zod.string().describe('Geldige datum (YYYY-MM-DD), niet in de toekomst.'),
+  "naam": zod.string().optional(),
+  "email": zod.string().optional(),
+  "telefoon": zod.string().optional(),
+  "mobiel": zod.string().optional(),
+  "dienstverband": zod.string().optional(),
+  "noodcontact_naam": zod.string().optional(),
+  "noodcontact_telefoon": zod.string().optional(),
+  "verlofsoort_ids": zod.array(zod.number()).optional().describe('Verlofsoorten waarvoor direct een beginsaldo wordt opgebouwd.'),
+  "jaar": zod.number().optional().describe('Jaar waarvoor het verlofsaldo wordt aangemaakt (standaard huidig jaar).')
+})
+
+export const OnboardMedewerkerResponse = zod.void()
+
+
+/**
+ * @summary Medewerker ophalen
+ */
+export const GetMedewerkerParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetMedewerkerResponse = zod.object({
+  "id": zod.number(),
+  "gebruiker_id": zod.number().nullish(),
+  "naam": zod.string(),
+  "email": zod.string().nullish(),
+  "telefoon": zod.string().nullish(),
+  "mobiel": zod.string().nullish(),
+  "werkmaatschappij": zod.string(),
+  "functie_id": zod.number().nullish(),
+  "functie_naam": zod.string().nullish(),
+  "cao": zod.string().nullish(),
+  "dienstverband": zod.string(),
+  "contracturen_per_week": zod.number().nullish(),
+  "in_dienst_sinds": zod.string().nullish(),
+  "uit_dienst_per": zod.string().nullish(),
+  "noodcontact_naam": zod.string().nullish(),
+  "noodcontact_telefoon": zod.string().nullish(),
+  "actief": zod.boolean(),
+  "opmerkingen": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+
+
+/**
+ * @summary Medewerker bijwerken
+ */
+export const UpdateMedewerkerParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateMedewerkerBody = zod.object({
+  "naam": zod.string(),
+  "gebruiker_id": zod.number().nullish(),
+  "email": zod.string().optional(),
+  "telefoon": zod.string().optional(),
+  "mobiel": zod.string().optional(),
+  "werkmaatschappij": zod.string().optional(),
+  "functie_id": zod.number().nullish(),
+  "cao": zod.string().optional(),
+  "dienstverband": zod.string().optional(),
+  "contracturen_per_week": zod.number().nullish(),
+  "in_dienst_sinds": zod.string().optional(),
+  "uit_dienst_per": zod.string().optional(),
+  "noodcontact_naam": zod.string().optional(),
+  "noodcontact_telefoon": zod.string().optional(),
+  "actief": zod.boolean().optional(),
+  "opmerkingen": zod.string().optional()
+})
+
+export const UpdateMedewerkerResponse = zod.object({
+  "id": zod.number(),
+  "gebruiker_id": zod.number().nullish(),
+  "naam": zod.string(),
+  "email": zod.string().nullish(),
+  "telefoon": zod.string().nullish(),
+  "mobiel": zod.string().nullish(),
+  "werkmaatschappij": zod.string(),
+  "functie_id": zod.number().nullish(),
+  "functie_naam": zod.string().nullish(),
+  "cao": zod.string().nullish(),
+  "dienstverband": zod.string(),
+  "contracturen_per_week": zod.number().nullish(),
+  "in_dienst_sinds": zod.string().nullish(),
+  "uit_dienst_per": zod.string().nullish(),
+  "noodcontact_naam": zod.string().nullish(),
+  "noodcontact_telefoon": zod.string().nullish(),
+  "actief": zod.boolean(),
+  "opmerkingen": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+
+
+/**
+ * @summary Medewerker verwijderen
+ */
+export const DeleteMedewerkerParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteMedewerkerResponse = zod.void()
+
+
+/**
+ * @summary Behaalde opleidingen van een medewerker
+ */
+export const ListMedewerkerOpleidingenParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ListMedewerkerOpleidingenResponseItem = zod.object({
+  "id": zod.number(),
+  "medewerker_id": zod.number(),
+  "opleiding_id": zod.number(),
+  "opleiding_naam": zod.string().nullish(),
+  "status": zod.string(),
+  "behaald_op": zod.string().nullish(),
+  "verloopt_op": zod.string().nullish(),
+  "certificaat_document_id": zod.number().nullish(),
+  "opmerking": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+export const ListMedewerkerOpleidingenResponse = zod.array(ListMedewerkerOpleidingenResponseItem)
+
+
+/**
+ * @summary Opleiding/certificaat toevoegen aan medewerker
+ */
+export const CreateMedewerkerOpleidingParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const CreateMedewerkerOpleidingBody = zod.object({
+  "opleiding_id": zod.number(),
+  "status": zod.string().optional(),
+  "behaald_op": zod.string().nullish(),
+  "verloopt_op": zod.string().nullish(),
+  "certificaat_document_id": zod.number().nullish(),
+  "opmerking": zod.string().optional()
+})
+
+export const CreateMedewerkerOpleidingResponse = zod.void()
+
+
+/**
+ * @summary Medewerker-opleiding bijwerken
+ */
+export const UpdateMedewerkerOpleidingParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateMedewerkerOpleidingBody = zod.object({
+  "opleiding_id": zod.number(),
+  "status": zod.string().optional(),
+  "behaald_op": zod.string().nullish(),
+  "verloopt_op": zod.string().nullish(),
+  "certificaat_document_id": zod.number().nullish(),
+  "opmerking": zod.string().optional()
+})
+
+export const UpdateMedewerkerOpleidingResponse = zod.object({
+  "id": zod.number(),
+  "medewerker_id": zod.number(),
+  "opleiding_id": zod.number(),
+  "opleiding_naam": zod.string().nullish(),
+  "status": zod.string(),
+  "behaald_op": zod.string().nullish(),
+  "verloopt_op": zod.string().nullish(),
+  "certificaat_document_id": zod.number().nullish(),
+  "opmerking": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+
+
+/**
+ * @summary Medewerker-opleiding verwijderen
+ */
+export const DeleteMedewerkerOpleidingParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteMedewerkerOpleidingResponse = zod.void()
+
+
+/**
+ * @summary Bekwaamheidsmatrix van een medewerker
+ */
+export const ListBekwaamhedenParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ListBekwaamhedenResponseItem = zod.object({
+  "id": zod.number(),
+  "medewerker_id": zod.number(),
+  "categorie": zod.string().nullish(),
+  "onderwerp": zod.string(),
+  "niveau": zod.string(),
+  "vastgesteld_door": zod.string().nullish(),
+  "vastgesteld_op": zod.string().nullish(),
+  "opmerking": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+export const ListBekwaamhedenResponse = zod.array(ListBekwaamhedenResponseItem)
+
+
+/**
+ * @summary Bekwaamheid toevoegen
+ */
+export const CreateBekwaamheidParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const CreateBekwaamheidBody = zod.object({
+  "onderwerp": zod.string(),
+  "categorie": zod.string().optional(),
+  "niveau": zod.string().optional(),
+  "vastgesteld_door": zod.string().optional(),
+  "vastgesteld_op": zod.string().nullish(),
+  "opmerking": zod.string().optional()
+})
+
+export const CreateBekwaamheidResponse = zod.void()
+
+
+/**
+ * @summary Bekwaamheid bijwerken
+ */
+export const UpdateBekwaamheidParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateBekwaamheidBody = zod.object({
+  "onderwerp": zod.string(),
+  "categorie": zod.string().optional(),
+  "niveau": zod.string().optional(),
+  "vastgesteld_door": zod.string().optional(),
+  "vastgesteld_op": zod.string().nullish(),
+  "opmerking": zod.string().optional()
+})
+
+export const UpdateBekwaamheidResponse = zod.object({
+  "id": zod.number(),
+  "medewerker_id": zod.number(),
+  "categorie": zod.string().nullish(),
+  "onderwerp": zod.string(),
+  "niveau": zod.string(),
+  "vastgesteld_door": zod.string().nullish(),
+  "vastgesteld_op": zod.string().nullish(),
+  "opmerking": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+
+
+/**
+ * @summary Bekwaamheid verwijderen
+ */
+export const DeleteBekwaamheidParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteBekwaamheidResponse = zod.void()
+
+
+/**
+ * @summary Verlofsoorten ophalen (CAO + juridische kaders)
+ */
+export const ListVerlofsoortenResponseItem = zod.object({
+  "id": zod.number(),
+  "naam": zod.string(),
+  "categorie": zod.string(),
+  "cao": zod.string().nullish(),
+  "werkmaatschappij": zod.string().nullish(),
+  "betaald": zod.boolean(),
+  "collectief": zod.boolean(),
+  "opbouw_uren_per_jaar": zod.number().nullish(),
+  "opbouw_regel": zod.string().nullish(),
+  "verval_regel": zod.string().nullish(),
+  "juridisch_kader": zod.string().nullish(),
+  "toelichting": zod.string().nullish(),
+  "actief": zod.boolean(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+export const ListVerlofsoortenResponse = zod.array(ListVerlofsoortenResponseItem)
+
+
+/**
+ * @summary Verlofsoort aanmaken
+ */
+export const CreateVerlofsoortBody = zod.object({
+  "naam": zod.string(),
+  "categorie": zod.string().optional(),
+  "cao": zod.string().nullish(),
+  "werkmaatschappij": zod.string().nullish(),
+  "betaald": zod.boolean().optional(),
+  "collectief": zod.boolean().optional(),
+  "opbouw_uren_per_jaar": zod.number().nullish(),
+  "opbouw_regel": zod.string().optional(),
+  "verval_regel": zod.string().optional(),
+  "juridisch_kader": zod.string().optional(),
+  "toelichting": zod.string().optional(),
+  "actief": zod.boolean().optional()
+})
+
+export const CreateVerlofsoortResponse = zod.void()
+
+
+/**
+ * @summary Verlofsoort bijwerken
+ */
+export const UpdateVerlofsoortParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateVerlofsoortBody = zod.object({
+  "naam": zod.string(),
+  "categorie": zod.string().optional(),
+  "cao": zod.string().nullish(),
+  "werkmaatschappij": zod.string().nullish(),
+  "betaald": zod.boolean().optional(),
+  "collectief": zod.boolean().optional(),
+  "opbouw_uren_per_jaar": zod.number().nullish(),
+  "opbouw_regel": zod.string().optional(),
+  "verval_regel": zod.string().optional(),
+  "juridisch_kader": zod.string().optional(),
+  "toelichting": zod.string().optional(),
+  "actief": zod.boolean().optional()
+})
+
+export const UpdateVerlofsoortResponse = zod.object({
+  "id": zod.number(),
+  "naam": zod.string(),
+  "categorie": zod.string(),
+  "cao": zod.string().nullish(),
+  "werkmaatschappij": zod.string().nullish(),
+  "betaald": zod.boolean(),
+  "collectief": zod.boolean(),
+  "opbouw_uren_per_jaar": zod.number().nullish(),
+  "opbouw_regel": zod.string().nullish(),
+  "verval_regel": zod.string().nullish(),
+  "juridisch_kader": zod.string().nullish(),
+  "toelichting": zod.string().nullish(),
+  "actief": zod.boolean(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+
+
+/**
+ * @summary Verlofsoort verwijderen
+ */
+export const DeleteVerlofsoortParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteVerlofsoortResponse = zod.void()
+
+
+/**
+ * @summary Verlofsaldo van een medewerker
+ */
+export const ListVerlofSaldiParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ListVerlofSaldiResponseItem = zod.object({
+  "id": zod.number(),
+  "medewerker_id": zod.number(),
+  "verlofsoort_id": zod.number(),
+  "verlofsoort_naam": zod.string().nullish(),
+  "jaar": zod.number(),
+  "beginsaldo_uren": zod.number().optional(),
+  "opgebouwd_uren": zod.number().optional(),
+  "opgenomen_uren": zod.number().optional(),
+  "saldo_uren": zod.number(),
+  "vervalt_op": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+export const ListVerlofSaldiResponse = zod.array(ListVerlofSaldiResponseItem)
+
+
+/**
+ * @summary Verlofsaldo toevoegen
+ */
+export const CreateVerlofSaldoParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const CreateVerlofSaldoBody = zod.object({
+  "verlofsoort_id": zod.number(),
+  "jaar": zod.number(),
+  "beginsaldo_uren": zod.number().optional(),
+  "opgebouwd_uren": zod.number().optional(),
+  "opgenomen_uren": zod.number().optional(),
+  "saldo_uren": zod.number().optional(),
+  "vervalt_op": zod.string().nullish()
+})
+
+export const CreateVerlofSaldoResponse = zod.void()
+
+
+/**
+ * @summary Verlofsaldo bijwerken
+ */
+export const UpdateVerlofSaldoParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateVerlofSaldoBody = zod.object({
+  "verlofsoort_id": zod.number(),
+  "jaar": zod.number(),
+  "beginsaldo_uren": zod.number().optional(),
+  "opgebouwd_uren": zod.number().optional(),
+  "opgenomen_uren": zod.number().optional(),
+  "saldo_uren": zod.number().optional(),
+  "vervalt_op": zod.string().nullish()
+})
+
+export const UpdateVerlofSaldoResponse = zod.object({
+  "id": zod.number(),
+  "medewerker_id": zod.number(),
+  "verlofsoort_id": zod.number(),
+  "verlofsoort_naam": zod.string().nullish(),
+  "jaar": zod.number(),
+  "beginsaldo_uren": zod.number().optional(),
+  "opgebouwd_uren": zod.number().optional(),
+  "opgenomen_uren": zod.number().optional(),
+  "saldo_uren": zod.number(),
+  "vervalt_op": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+
+
+/**
+ * @summary Verlofsaldo verwijderen
+ */
+export const DeleteVerlofSaldoParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteVerlofSaldoResponse = zod.void()
+
+
+/**
+ * @summary Verlofaanvragen van een medewerker
+ */
+export const ListVerlofAanvragenParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ListVerlofAanvragenResponseItem = zod.object({
+  "id": zod.number(),
+  "medewerker_id": zod.number(),
+  "verlofsoort_id": zod.number(),
+  "verlofsoort_naam": zod.string().nullish(),
+  "start_datum": zod.string(),
+  "eind_datum": zod.string(),
+  "aantal_uren": zod.number().optional(),
+  "status": zod.string(),
+  "reden": zod.string().nullish(),
+  "opmerking": zod.string().nullish(),
+  "beoordeeld_door_id": zod.number().nullish(),
+  "beoordeeld_op": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+export const ListVerlofAanvragenResponse = zod.array(ListVerlofAanvragenResponseItem)
+
+
+/**
+ * @summary Verlofaanvraag indienen
+ */
+export const CreateVerlofAanvraagParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const CreateVerlofAanvraagBody = zod.object({
+  "verlofsoort_id": zod.number(),
+  "start_datum": zod.string(),
+  "eind_datum": zod.string(),
+  "aantal_uren": zod.number().optional(),
+  "status": zod.string().optional(),
+  "reden": zod.string().optional(),
+  "opmerking": zod.string().optional()
+})
+
+export const CreateVerlofAanvraagResponse = zod.void()
+
+
+/**
+ * @summary Verlofaanvraag bijwerken/beoordelen
+ */
+export const UpdateVerlofAanvraagParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateVerlofAanvraagBody = zod.object({
+  "verlofsoort_id": zod.number(),
+  "start_datum": zod.string(),
+  "eind_datum": zod.string(),
+  "aantal_uren": zod.number().optional(),
+  "status": zod.string().optional(),
+  "reden": zod.string().optional(),
+  "opmerking": zod.string().optional()
+})
+
+export const UpdateVerlofAanvraagResponse = zod.object({
+  "id": zod.number(),
+  "medewerker_id": zod.number(),
+  "verlofsoort_id": zod.number(),
+  "verlofsoort_naam": zod.string().nullish(),
+  "start_datum": zod.string(),
+  "eind_datum": zod.string(),
+  "aantal_uren": zod.number().optional(),
+  "status": zod.string(),
+  "reden": zod.string().nullish(),
+  "opmerking": zod.string().nullish(),
+  "beoordeeld_door_id": zod.number().nullish(),
+  "beoordeeld_op": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+
+
+/**
+ * @summary Verlofaanvraag verwijderen
+ */
+export const DeleteVerlofAanvraagParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteVerlofAanvraagResponse = zod.void()
+
+
+/**
+ * @summary HRM-dashboardstatistieken
+ */
+export const GetHrmStatsResponse = zod.object({
+  "medewerkers": zod.number(),
+  "actief": zod.number(),
+  "functies": zod.number(),
+  "certificaten_verlopen_binnenkort": zod.number(),
+  "openstaande_verlofaanvragen": zod.number()
+})
+
+
+/**
+ * @summary Beschikbare CAO's met normuren (voor onboardingcontrole)
+ */
+export const ListCaoOptiesResponseItem = zod.object({
+  "naam": zod.string(),
+  "standaard_uren_per_week": zod.number().nullish(),
+  "adv_uren_per_week": zod.number().nullish(),
+  "toelichting": zod.string().nullish()
+})
+export const ListCaoOptiesResponse = zod.array(ListCaoOptiesResponseItem)
+
+
+/**
+ * @summary Dossiers ophalen
+ */
+export const ListDossiersResponseItem = zod.object({
+  "id": zod.number(),
+  "type": zod.string(),
+  "gebouw_id": zod.number().nullish(),
+  "gebouw_naam": zod.string().nullish(),
+  "naam": zod.string(),
+  "omschrijving": zod.string().nullish(),
+  "status": zod.string(),
+  "definitief_op": zod.string().nullish(),
+  "gearchiveerd_op": zod.string().nullish(),
+  "aangemaakt_door_id": zod.number().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+export const ListDossiersResponse = zod.array(ListDossiersResponseItem)
+
+
+/**
+ * @summary Dossier aanmaken
+ */
+export const CreateDossierBody = zod.object({
+  "naam": zod.string(),
+  "type": zod.string().optional(),
+  "gebouw_id": zod.number().nullish(),
+  "omschrijving": zod.string().optional(),
+  "status": zod.string().optional()
+})
+
+export const CreateDossierResponse = zod.void()
+
+
+/**
+ * @summary Dossier ophalen
+ */
+export const GetDossierParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetDossierResponse = zod.object({
+  "id": zod.number(),
+  "type": zod.string(),
+  "gebouw_id": zod.number().nullish(),
+  "gebouw_naam": zod.string().nullish(),
+  "naam": zod.string(),
+  "omschrijving": zod.string().nullish(),
+  "status": zod.string(),
+  "definitief_op": zod.string().nullish(),
+  "gearchiveerd_op": zod.string().nullish(),
+  "aangemaakt_door_id": zod.number().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+
+
+/**
+ * @summary Dossier bijwerken
+ */
+export const UpdateDossierParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateDossierBody = zod.object({
+  "naam": zod.string(),
+  "type": zod.string().optional(),
+  "gebouw_id": zod.number().nullish(),
+  "omschrijving": zod.string().optional(),
+  "status": zod.string().optional()
+})
+
+export const UpdateDossierResponse = zod.object({
+  "id": zod.number(),
+  "type": zod.string(),
+  "gebouw_id": zod.number().nullish(),
+  "gebouw_naam": zod.string().nullish(),
+  "naam": zod.string(),
+  "omschrijving": zod.string().nullish(),
+  "status": zod.string(),
+  "definitief_op": zod.string().nullish(),
+  "gearchiveerd_op": zod.string().nullish(),
+  "aangemaakt_door_id": zod.number().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+
+
+/**
+ * @summary Dossier verwijderen
+ */
+export const DeleteDossierParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteDossierResponse = zod.void()
+
+
+/**
+ * @summary Dossier definitief maken (bevriezen)
+ */
+export const DossierDefinitiefMakenParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DossierDefinitiefMakenResponse = zod.object({
+  "id": zod.number(),
+  "type": zod.string(),
+  "gebouw_id": zod.number().nullish(),
+  "gebouw_naam": zod.string().nullish(),
+  "naam": zod.string(),
+  "omschrijving": zod.string().nullish(),
+  "status": zod.string(),
+  "definitief_op": zod.string().nullish(),
+  "gearchiveerd_op": zod.string().nullish(),
+  "aangemaakt_door_id": zod.number().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+
+
+/**
+ * @summary Dossier archiveren
+ */
+export const DossierArchiverenParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DossierArchiverenResponse = zod.object({
+  "id": zod.number(),
+  "type": zod.string(),
+  "gebouw_id": zod.number().nullish(),
+  "gebouw_naam": zod.string().nullish(),
+  "naam": zod.string(),
+  "omschrijving": zod.string().nullish(),
+  "status": zod.string(),
+  "definitief_op": zod.string().nullish(),
+  "gearchiveerd_op": zod.string().nullish(),
+  "aangemaakt_door_id": zod.number().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+
+
+/**
+ * @summary Documenten van een dossier
+ */
+export const ListDossierDocumentenParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ListDossierDocumentenResponseItem = zod.object({
+  "id": zod.number(),
+  "dossier_id": zod.number(),
+  "document_id": zod.number().nullish(),
+  "naam": zod.string(),
+  "bestand_url": zod.string().nullish(),
+  "categorie": zod.string().nullish(),
+  "status": zod.string(),
+  "versie": zod.number(),
+  "toegevoegd_door_id": zod.number().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+export const ListDossierDocumentenResponse = zod.array(ListDossierDocumentenResponseItem)
+
+
+/**
+ * @summary Document aan dossier toevoegen
+ */
+export const CreateDossierDocumentParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const CreateDossierDocumentBody = zod.object({
+  "naam": zod.string(),
+  "document_id": zod.number().nullish(),
+  "bestand_url": zod.string().optional(),
+  "categorie": zod.string().optional(),
+  "status": zod.string().optional(),
+  "versie": zod.number().optional()
+})
+
+export const CreateDossierDocumentResponse = zod.void()
+
+
+/**
+ * @summary Dossierdocument bijwerken
+ */
+export const UpdateDossierDocumentParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateDossierDocumentBody = zod.object({
+  "naam": zod.string(),
+  "document_id": zod.number().nullish(),
+  "bestand_url": zod.string().optional(),
+  "categorie": zod.string().optional(),
+  "status": zod.string().optional(),
+  "versie": zod.number().optional()
+})
+
+export const UpdateDossierDocumentResponse = zod.object({
+  "id": zod.number(),
+  "dossier_id": zod.number(),
+  "document_id": zod.number().nullish(),
+  "naam": zod.string(),
+  "bestand_url": zod.string().nullish(),
+  "categorie": zod.string().nullish(),
+  "status": zod.string(),
+  "versie": zod.number(),
+  "toegevoegd_door_id": zod.number().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+
+
+/**
+ * @summary Dossierdocument verwijderen
+ */
+export const DeleteDossierDocumentParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteDossierDocumentResponse = zod.void()
+
+
+/**
+ * @summary Offertesjablonen ophalen
+ */
+export const ListOfferteSjablonenResponseItem = zod.object({
+  "id": zod.number(),
+  "naam": zod.string(),
+  "omschrijving": zod.string().nullish(),
+  "werkmaatschappij": zod.string(),
+  "actief": zod.boolean(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+export const ListOfferteSjablonenResponse = zod.array(ListOfferteSjablonenResponseItem)
+
+
+/**
+ * @summary Offertesjabloon aanmaken
+ */
+export const CreateOfferteSjabloonBody = zod.object({
+  "naam": zod.string(),
+  "omschrijving": zod.string().optional(),
+  "werkmaatschappij": zod.string().optional(),
+  "actief": zod.boolean().optional()
+})
+
+export const CreateOfferteSjabloonResponse = zod.void()
+
+
+/**
+ * @summary Offertesjabloon ophalen
+ */
+export const GetOfferteSjabloonParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetOfferteSjabloonResponse = zod.object({
+  "id": zod.number(),
+  "naam": zod.string(),
+  "omschrijving": zod.string().nullish(),
+  "werkmaatschappij": zod.string(),
+  "actief": zod.boolean(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+
+
+/**
+ * @summary Offertesjabloon bijwerken
+ */
+export const UpdateOfferteSjabloonParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateOfferteSjabloonBody = zod.object({
+  "naam": zod.string(),
+  "omschrijving": zod.string().optional(),
+  "werkmaatschappij": zod.string().optional(),
+  "actief": zod.boolean().optional()
+})
+
+export const UpdateOfferteSjabloonResponse = zod.object({
+  "id": zod.number(),
+  "naam": zod.string(),
+  "omschrijving": zod.string().nullish(),
+  "werkmaatschappij": zod.string(),
+  "actief": zod.boolean(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+
+
+/**
+ * @summary Offertesjabloon verwijderen
+ */
+export const DeleteOfferteSjabloonParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteOfferteSjabloonResponse = zod.void()
+
+
+/**
+ * @summary Hoofdstukken van een sjabloon
+ */
+export const ListOfferteHoofdstukkenParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ListOfferteHoofdstukkenResponseItem = zod.object({
+  "id": zod.number(),
+  "sjabloon_id": zod.number(),
+  "titel": zod.string(),
+  "volgorde": zod.number(),
+  "type": zod.string(),
+  "standaardtekst": zod.string().nullish(),
+  "ai_veld": zod.boolean(),
+  "ai_hint": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+export const ListOfferteHoofdstukkenResponse = zod.array(ListOfferteHoofdstukkenResponseItem)
+
+
+/**
+ * @summary Hoofdstuk toevoegen aan sjabloon
+ */
+export const CreateOfferteHoofdstukParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const CreateOfferteHoofdstukBody = zod.object({
+  "titel": zod.string(),
+  "volgorde": zod.number().optional(),
+  "type": zod.string().optional(),
+  "standaardtekst": zod.string().optional(),
+  "ai_veld": zod.boolean().optional(),
+  "ai_hint": zod.string().optional()
+})
+
+export const CreateOfferteHoofdstukResponse = zod.void()
+
+
+/**
+ * @summary Hoofdstuk bijwerken
+ */
+export const UpdateOfferteHoofdstukParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateOfferteHoofdstukBody = zod.object({
+  "titel": zod.string(),
+  "volgorde": zod.number().optional(),
+  "type": zod.string().optional(),
+  "standaardtekst": zod.string().optional(),
+  "ai_veld": zod.boolean().optional(),
+  "ai_hint": zod.string().optional()
+})
+
+export const UpdateOfferteHoofdstukResponse = zod.object({
+  "id": zod.number(),
+  "sjabloon_id": zod.number(),
+  "titel": zod.string(),
+  "volgorde": zod.number(),
+  "type": zod.string(),
+  "standaardtekst": zod.string().nullish(),
+  "ai_veld": zod.boolean(),
+  "ai_hint": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+
+
+/**
+ * @summary Hoofdstuk verwijderen
+ */
+export const DeleteOfferteHoofdstukParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteOfferteHoofdstukResponse = zod.void()
+
+
+/**
+ * @summary Offertes ophalen
+ */
+export const ListOffertesResponseItem = zod.object({
+  "id": zod.number(),
+  "offertenummer": zod.string().nullish(),
+  "titel": zod.string(),
+  "gebouw_id": zod.number().nullish(),
+  "gebouw_naam": zod.string().nullish(),
+  "klant_id": zod.number().nullish(),
+  "klant_naam": zod.string().nullish(),
+  "sjabloon_id": zod.number().nullish(),
+  "opdrachtgever": zod.string().nullish(),
+  "ons_kenmerk": zod.string().nullish(),
+  "uw_kenmerk": zod.string().nullish(),
+  "uw_brief_van": zod.string().nullish(),
+  "behandeld_door_id": zod.number().nullish(),
+  "behandeld_door_naam": zod.string().nullish(),
+  "datum": zod.string().nullish(),
+  "geldigheid_dagen": zod.number(),
+  "voorwaarden": zod.string().nullish(),
+  "bedrag_excl_btw": zod.number(),
+  "btw_percentage": zod.number(),
+  "bedrag_incl_btw": zod.number(),
+  "status": zod.string(),
+  "aangemaakt_door_id": zod.number().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+export const ListOffertesResponse = zod.array(ListOffertesResponseItem)
+
+
+/**
+ * @summary Offerte aanmaken
+ */
+export const CreateOfferteBody = zod.object({
+  "titel": zod.string(),
+  "offertenummer": zod.string().optional(),
+  "gebouw_id": zod.number().nullish(),
+  "klant_id": zod.number().nullish(),
+  "sjabloon_id": zod.number().nullish(),
+  "opdrachtgever": zod.string().optional(),
+  "ons_kenmerk": zod.string().optional(),
+  "uw_kenmerk": zod.string().optional(),
+  "uw_brief_van": zod.string().optional(),
+  "behandeld_door_id": zod.number().nullish(),
+  "datum": zod.string().optional(),
+  "geldigheid_dagen": zod.number().optional(),
+  "voorwaarden": zod.string().optional(),
+  "bedrag_excl_btw": zod.number().optional(),
+  "btw_percentage": zod.number().optional(),
+  "bedrag_incl_btw": zod.number().optional(),
+  "status": zod.string().optional()
+})
+
+export const CreateOfferteResponse = zod.void()
+
+
+/**
+ * @summary Offerte ophalen
+ */
+export const GetOfferteParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetOfferteResponse = zod.object({
+  "id": zod.number(),
+  "offertenummer": zod.string().nullish(),
+  "titel": zod.string(),
+  "gebouw_id": zod.number().nullish(),
+  "gebouw_naam": zod.string().nullish(),
+  "klant_id": zod.number().nullish(),
+  "klant_naam": zod.string().nullish(),
+  "sjabloon_id": zod.number().nullish(),
+  "opdrachtgever": zod.string().nullish(),
+  "ons_kenmerk": zod.string().nullish(),
+  "uw_kenmerk": zod.string().nullish(),
+  "uw_brief_van": zod.string().nullish(),
+  "behandeld_door_id": zod.number().nullish(),
+  "behandeld_door_naam": zod.string().nullish(),
+  "datum": zod.string().nullish(),
+  "geldigheid_dagen": zod.number(),
+  "voorwaarden": zod.string().nullish(),
+  "bedrag_excl_btw": zod.number(),
+  "btw_percentage": zod.number(),
+  "bedrag_incl_btw": zod.number(),
+  "status": zod.string(),
+  "aangemaakt_door_id": zod.number().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+
+
+/**
+ * @summary Offerte bijwerken
+ */
+export const UpdateOfferteParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateOfferteBody = zod.object({
+  "titel": zod.string(),
+  "offertenummer": zod.string().optional(),
+  "gebouw_id": zod.number().nullish(),
+  "klant_id": zod.number().nullish(),
+  "sjabloon_id": zod.number().nullish(),
+  "opdrachtgever": zod.string().optional(),
+  "ons_kenmerk": zod.string().optional(),
+  "uw_kenmerk": zod.string().optional(),
+  "uw_brief_van": zod.string().optional(),
+  "behandeld_door_id": zod.number().nullish(),
+  "datum": zod.string().optional(),
+  "geldigheid_dagen": zod.number().optional(),
+  "voorwaarden": zod.string().optional(),
+  "bedrag_excl_btw": zod.number().optional(),
+  "btw_percentage": zod.number().optional(),
+  "bedrag_incl_btw": zod.number().optional(),
+  "status": zod.string().optional()
+})
+
+export const UpdateOfferteResponse = zod.object({
+  "id": zod.number(),
+  "offertenummer": zod.string().nullish(),
+  "titel": zod.string(),
+  "gebouw_id": zod.number().nullish(),
+  "gebouw_naam": zod.string().nullish(),
+  "klant_id": zod.number().nullish(),
+  "klant_naam": zod.string().nullish(),
+  "sjabloon_id": zod.number().nullish(),
+  "opdrachtgever": zod.string().nullish(),
+  "ons_kenmerk": zod.string().nullish(),
+  "uw_kenmerk": zod.string().nullish(),
+  "uw_brief_van": zod.string().nullish(),
+  "behandeld_door_id": zod.number().nullish(),
+  "behandeld_door_naam": zod.string().nullish(),
+  "datum": zod.string().nullish(),
+  "geldigheid_dagen": zod.number(),
+  "voorwaarden": zod.string().nullish(),
+  "bedrag_excl_btw": zod.number(),
+  "btw_percentage": zod.number(),
+  "bedrag_incl_btw": zod.number(),
+  "status": zod.string(),
+  "aangemaakt_door_id": zod.number().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+
+
+/**
+ * @summary Offerte verwijderen
+ */
+export const DeleteOfferteParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteOfferteResponse = zod.void()
+
+
+/**
+ * @summary Begrotingsregels van een offerte
+ */
+export const ListOfferteRegelsParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ListOfferteRegelsResponseItem = zod.object({
+  "id": zod.number(),
+  "offerte_id": zod.number(),
+  "categorie": zod.string(),
+  "snag_referentie": zod.string().nullish(),
+  "voorziening_id": zod.number().nullish(),
+  "maatregel": zod.string(),
+  "ruimte": zod.string().nullish(),
+  "uitgangspunten": zod.string().nullish(),
+  "eenheid": zod.string(),
+  "aantal": zod.number(),
+  "prijs_per_eenheid": zod.number(),
+  "kosten": zod.number(),
+  "volgorde": zod.number(),
+  "ai_voorstel": zod.boolean(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+export const ListOfferteRegelsResponse = zod.array(ListOfferteRegelsResponseItem)
+
+
+/**
+ * @summary Begrotingsregel toevoegen
+ */
+export const CreateOfferteRegelParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const CreateOfferteRegelBody = zod.object({
+  "maatregel": zod.string(),
+  "categorie": zod.string().optional(),
+  "snag_referentie": zod.string().optional(),
+  "voorziening_id": zod.number().nullish(),
+  "ruimte": zod.string().optional(),
+  "uitgangspunten": zod.string().optional(),
+  "eenheid": zod.string().optional(),
+  "aantal": zod.number().optional(),
+  "prijs_per_eenheid": zod.number().optional(),
+  "kosten": zod.number().optional(),
+  "volgorde": zod.number().optional(),
+  "ai_voorstel": zod.boolean().optional()
+})
+
+export const CreateOfferteRegelResponse = zod.void()
+
+
+/**
+ * @summary Begrotingsregels voorbereiden uit de spots van het gekoppelde gebouw
+ */
+export const OfferteRegelsUitSpotsParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const OfferteRegelsUitSpotsResponse = zod.void()
+
+
+/**
+ * @summary Begrotingsregel bijwerken
+ */
+export const UpdateOfferteRegelParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateOfferteRegelBody = zod.object({
+  "maatregel": zod.string(),
+  "categorie": zod.string().optional(),
+  "snag_referentie": zod.string().optional(),
+  "voorziening_id": zod.number().nullish(),
+  "ruimte": zod.string().optional(),
+  "uitgangspunten": zod.string().optional(),
+  "eenheid": zod.string().optional(),
+  "aantal": zod.number().optional(),
+  "prijs_per_eenheid": zod.number().optional(),
+  "kosten": zod.number().optional(),
+  "volgorde": zod.number().optional(),
+  "ai_voorstel": zod.boolean().optional()
+})
+
+export const UpdateOfferteRegelResponse = zod.object({
+  "id": zod.number(),
+  "offerte_id": zod.number(),
+  "categorie": zod.string(),
+  "snag_referentie": zod.string().nullish(),
+  "voorziening_id": zod.number().nullish(),
+  "maatregel": zod.string(),
+  "ruimte": zod.string().nullish(),
+  "uitgangspunten": zod.string().nullish(),
+  "eenheid": zod.string(),
+  "aantal": zod.number(),
+  "prijs_per_eenheid": zod.number(),
+  "kosten": zod.number(),
+  "volgorde": zod.number(),
+  "ai_voorstel": zod.boolean(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+
+
+/**
+ * @summary Begrotingsregel verwijderen
+ */
+export const DeleteOfferteRegelParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteOfferteRegelResponse = zod.void()
+
+
+/**
+ * @summary Uitgangspunten/voorbehouden van een offerte
+ */
+export const ListOfferteUitgangspuntenParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ListOfferteUitgangspuntenResponseItem = zod.object({
+  "id": zod.number(),
+  "offerte_id": zod.number(),
+  "snag_referentie": zod.string().nullish(),
+  "voorziening_id": zod.number().nullish(),
+  "type": zod.string(),
+  "tekst": zod.string(),
+  "volgorde": zod.number(),
+  "ai_voorstel": zod.boolean(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+export const ListOfferteUitgangspuntenResponse = zod.array(ListOfferteUitgangspuntenResponseItem)
+
+
+/**
+ * @summary Uitgangspunt toevoegen
+ */
+export const CreateOfferteUitgangspuntParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const CreateOfferteUitgangspuntBody = zod.object({
+  "tekst": zod.string(),
+  "type": zod.string().optional(),
+  "snag_referentie": zod.string().optional(),
+  "voorziening_id": zod.number().nullish(),
+  "volgorde": zod.number().optional(),
+  "ai_voorstel": zod.boolean().optional()
+})
+
+export const CreateOfferteUitgangspuntResponse = zod.void()
+
+
+/**
+ * @summary Uitgangspunt bijwerken
+ */
+export const UpdateOfferteUitgangspuntParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateOfferteUitgangspuntBody = zod.object({
+  "tekst": zod.string(),
+  "type": zod.string().optional(),
+  "snag_referentie": zod.string().optional(),
+  "voorziening_id": zod.number().nullish(),
+  "volgorde": zod.number().optional(),
+  "ai_voorstel": zod.boolean().optional()
+})
+
+export const UpdateOfferteUitgangspuntResponse = zod.object({
+  "id": zod.number(),
+  "offerte_id": zod.number(),
+  "snag_referentie": zod.string().nullish(),
+  "voorziening_id": zod.number().nullish(),
+  "type": zod.string(),
+  "tekst": zod.string(),
+  "volgorde": zod.number(),
+  "ai_voorstel": zod.boolean(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+
+
+/**
+ * @summary Uitgangspunt verwijderen
+ */
+export const DeleteOfferteUitgangspuntParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteOfferteUitgangspuntResponse = zod.void()
+
+

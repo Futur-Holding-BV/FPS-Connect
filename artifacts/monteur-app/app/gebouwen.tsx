@@ -76,6 +76,19 @@ export default function Gebouwen() {
           </View>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
             <Pressable
+              onPress={() => router.push("/hrm")}
+              style={{
+                paddingHorizontal: 14,
+                paddingVertical: 9,
+                borderRadius: 10,
+                backgroundColor: "rgba(255,255,255,0.12)",
+              }}
+            >
+              <Text style={{ color: c.darkForeground, fontFamily: "Inter_600SemiBold", fontSize: 14 }}>
+                Personeel
+              </Text>
+            </Pressable>
+            <Pressable
               onPress={() => router.push("/info")}
               style={{
                 paddingHorizontal: 14,

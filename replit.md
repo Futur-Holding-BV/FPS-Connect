@@ -59,13 +59,13 @@ FPS Brandpreventie biedt:
 
 ## Ontwikkelstop & roadmap
 
-> De volledige detailuitwerking per fase staat in [`docs/roadmap/`](docs/roadmap/README.md): [gebouwd](docs/roadmap/gebouwd.md), [actief](docs/roadmap/actief.md), [geparkeerd](docs/roadmap/geparkeerd.md). Hieronder staan alleen de harde Ontwikkelstop-regel en het overzicht (de drie sporen).
+> De volledige detailuitwerking per fase staat in [`docs/roadmap/`](docs/roadmap/README.md): [gebouwd](docs/roadmap/gebouwd.md), [actief](docs/roadmap/actief.md), [parallel spoor](docs/roadmap/parallel-spoor.md), [geparkeerd](docs/roadmap/geparkeerd.md). Hieronder staan alleen de harde Ontwikkelstop-regel en het overzicht (de sporen).
 
-V1.0 ("Administratief gereed voor uitvoering" — een project volledig binnen de app voorbereiden, zonder Excel, losse e-mails of externe documenten) is afgerond. V1.0, V1.1 (Rollen & bevoegdheden) en V1.2 (Bibliotheek & documentstructuur) zijn gebouwd; de eerstvolgende actieve fase is V1.3 (Spots & uitvoering).
+V1.0 ("Administratief gereed voor uitvoering" — een project volledig binnen de app voorbereiden, zonder Excel, losse e-mails of externe documenten) is afgerond. V1.0, V1.1 (Rollen & bevoegdheden) en V1.2 (Bibliotheek & documentstructuur) zijn gebouwd; de eerstvolgende actieve fase is V1.3 (Spots & uitvoering). Parallel hieraan is — met formeel akkoord van de gebruiker — de Fase 1-basis van drie modules gebouwd (HRM/Personeel, Dossiermodule, Offerte Intelligence); zie het parallelle spoor hieronder.
 
-**Ontwikkelstop (harde projectregel).** Blijft als principe gelden: per fase pas bouwen ná formeel akkoord op die fase; start geen latere fasen vooruit. De actieve fasen V1.3 (spots & uitvoering), V1.4 (opleverrapportage) en V1.5 (rapportenmodule) staan vast op de roadmap, maar worden elk pas gebouwd ná formeel akkoord op die fase. Geparkeerd (verder weg, NIET vooruit uitbouwen): mobiele monteur-app (V2.0), personeel/medewerkerportaal incl. verlof/uren/gereedschap (V3.0), de CRM-module, en de aparte bibliotheeklaag voor s.g.-constructies (deuren/opwaarderingen). (AI-fotoherkenning spotafwerking en AI-bibliotheekvalidatie zijn op verzoek vooruit gebouwd; zie [docs/roadmap/gebouwd.md](docs/roadmap/gebouwd.md).) Bestaande scaffolds (o.a. `artifacts/firevault/src/pages/crm/`) niet verder uitbouwen.
+**Ontwikkelstop (harde projectregel).** Blijft als principe gelden: per fase pas bouwen ná formeel akkoord op die fase; start geen latere fasen vooruit. De actieve fasen V1.3 (spots & uitvoering), V1.4 (opleverrapportage) en V1.5 (rapportenmodule) staan vast op de roadmap, maar worden elk pas gebouwd ná formeel akkoord op die fase. **Uitzondering met formeel akkoord:** de Fase 1-basis van het parallelle spoor (HRM/Personeel, Dossiermodule, Offerte Intelligence) is bewust vooruit gebouwd; de diepere uitwerking ervan blijft geparkeerd (geen AI-logica, geen automatische offerteverzending, geen salarisadministratie). Verlof (opname/opbouw/saldo's + CAO-kaders) is op expliciet verzoek van de gebruiker — als afwijking van de oorspronkelijke afbakening — wél meegenomen in de HRM Fase 1-basis; zie [docs/roadmap/parallel-spoor.md](docs/roadmap/parallel-spoor.md). Geparkeerd (verder weg, NIET vooruit uitbouwen): mobiele monteur-app (V2.0), de volledige HRM-module FPS Groep (V3.0) incl. verlof/uren/gereedschap, de CRM-module, en de aparte bibliotheeklaag voor s.g.-constructies (deuren/opwaarderingen). (AI-fotoherkenning spotafwerking en AI-bibliotheekvalidatie zijn op verzoek vooruit gebouwd; zie [docs/roadmap/gebouwd.md](docs/roadmap/gebouwd.md).) Bestaande scaffolds (o.a. `artifacts/firevault/src/pages/crm/`) niet verder uitbouwen.
 
-**Roadmap — drie sporen (per fase formeel akkoord vóór bouw):**
+**Roadmap — sporen (per fase formeel akkoord vóór bouw):**
 
 _Gebouwd:_
 - **V1.0** — Administratief gereed voor uitvoering
@@ -77,6 +77,11 @@ _Actief (vastgelegd; elk pas bouwen ná formeel akkoord op die fase) — detail 
 - **V1.3** — Spots & uitvoering (spotflow, plattegronden, toewijzingen, voorbereide spots, clustering)
 - **V1.4** — Opleverrapportage (voorblad, rapportopmaak, e-mailselectie, bijlagenpakket, definitief maken)
 - **V1.5** — Rapportenmodule (definitieve rapporten per gebouw, centrale rapportenbibliotheek, versiebeheer rapporten, bevriezing documenten, zoek- en filterfuncties, koppeling naar CRM/onderhoud/klantportaal, formele opleverstatus incl. reactietermijn met automatische herstart bij een nieuwe rapportversie)
+
+_Parallel spoor (Fase 1-basis gebouwd met formeel akkoord; diepere uitwerking blijft geparkeerd) — detail in [docs/roadmap/parallel-spoor.md](docs/roadmap/parallel-spoor.md):_
+- **HRM / Personeel** — Fase 1-basis: medewerkers, functiehuis, opleidingen/certificaten, bekwaamheidsmatrix, verlofsoorten (incl. bijzondere/CAO-naslag) en — op expliciet verzoek — verlofsaldo's (opbouw/opname) + verlofaanvragen + onboarding (CAO/verlofuren/aanvang dienstverband). Bewust GEEN salarisadministratie. Web-pagina + read-mostly mobiele schermen
+- **Dossiermodule** — Fase 1-basis: dossiers per gebouw met status concept → definitief → gearchiveerd. Het juridisch sluitende, bevroren opleverdossier blijft V1.5
+- **Offerte Intelligence** — Fase 1-basis: ALLEEN voorbereiding (regels uit spots, sjablonen). Bewust GEEN AI-calculatie en GEEN automatische verzending; een mens stelt op en verstuurt
 
 _Geparkeerd (NIET vooruit bouwen) — detail in [docs/roadmap/geparkeerd.md](docs/roadmap/geparkeerd.md):_
 - **V2.0** — Mobiele monteur-app (mijn werk, gebouwen, plattegronden, spots, foto's, offline synchronisatie, routeplanning)

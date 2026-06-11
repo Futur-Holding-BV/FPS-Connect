@@ -42,6 +42,9 @@ import ProfielenBeheer from "@/pages/beheer/profielen";
 import ToepassingenBeheer from "@/pages/beheer/toepassingen";
 import Bibliotheek from "@/pages/beheer/bibliotheek";
 import InfoPagina from "@/pages/info/index";
+import PersoneelPagina from "@/pages/personeel/index";
+import DossiersPagina from "@/pages/dossiers/index";
+import OffertesPagina from "@/pages/offertes/index";
 import { OndersteuningWidget } from "@/components/ondersteuning-widget";
 import { HeatmapTracker } from "@/components/heatmap-tracker";
 
@@ -65,6 +68,9 @@ function BeheerderPortal() {
         <Route path="/gebruikers" component={Gebruikers} />
         <Route path="/crm" component={CrmKlanten} />
         <Route path="/crm/:id" component={CrmKlantDetail} />
+        <Route path="/personeel" component={PersoneelPagina} />
+        <Route path="/dossiers" component={DossiersPagina} />
+        <Route path="/offertes" component={OffertesPagina} />
         <Route path="/abonnementen" component={Abonnementen} />
         <Route path="/beheer/toepassingen" component={ToepassingenBeheer} />
         <Route path="/beheer/bibliotheek" component={Bibliotheek} />
@@ -141,6 +147,9 @@ function PermissiePortal() {
         <Route path="/gebruikers" component={Gebruikers} />
         <Route path="/crm" component={CrmKlanten} />
         <Route path="/crm/:id" component={CrmKlantDetail} />
+        <Route path="/personeel" component={PersoneelPagina} />
+        <Route path="/dossiers" component={DossiersPagina} />
+        <Route path="/offertes" component={OffertesPagina} />
         <Route path="/abonnementen" component={Abonnementen} />
         <Route path="/beheer/toepassingen" component={ToepassingenBeheer} />
         <Route path="/beheer/bibliotheek" component={Bibliotheek} />
