@@ -305,10 +305,6 @@ function TabToepassingen() {
     if (fileInputRef.current) fileInputRef.current.value = "";
   }
 
-  const typeLookup = Object.fromEntries(
-    (typen as VoorzieningType[]).map((t) => [t.code, t])
-  );
-
   return (
     <div className="space-y-4">
       <p className="text-sm text-muted-foreground">
@@ -490,7 +486,6 @@ function TabToepassingen() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b bg-muted/30">
-                  <th className="text-left p-3 font-medium text-muted-foreground">Type</th>
                   <th className="text-left p-3 font-medium text-muted-foreground">Naam / productsoort</th>
                   <th className="text-left p-3 font-medium text-muted-foreground">Fabrikant</th>
                   <th className="text-left p-3 font-medium text-muted-foreground">Brand- of rookwerendheid</th>
@@ -506,11 +501,6 @@ function TabToepassingen() {
                       l.gearchiveerd ? "opacity-50" : ""
                     }`}
                   >
-                    <td className="p-3">
-                      <span className="font-mono text-xs text-muted-foreground">
-                        {l.applicatie_codes.join(", ") || "—"}
-                      </span>
-                    </td>
                     <td className="p-3 font-medium">{l.naam}</td>
                     <td className="p-3 text-muted-foreground">{l.fabrikant ?? "—"}</td>
                     <td className="p-3">
