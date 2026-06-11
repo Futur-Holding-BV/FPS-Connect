@@ -141,6 +141,17 @@ tolerated; esbuild bundles fine. Keep added branches consistent with the handler
 (value-return handlers → `return res.status(403)...`; void handlers → `res.status(403)...; return;`) so you
 don't flip a clean handler into TS7030.
 
+## api-server draait een esbuild-bundle (build && start) — geen watch/HMR
+De api-server-workflow doet `pnpm run build && pnpm run start`; de draaiende `dist/index.mjs` is een
+momentopname. Wijzigingen in `lib/*` of `routes/*` worden pas actief NA een workflow-herstart — anders
+blijft de oude bundle draaien.
+**Why:** na een DB-migratie (bv. `DROP TABLE document_applicaties`) plus de bijbehorende codewijziging
+bleef de oude bundle de gedropte tabel query'en → 500 op `GET /documenten` ("relation does not exist"),
+terwijl de broncode al correct was. Geen codebug, alleen een stale build.
+**How to apply:** na ELKE backend-bron- of DB-schemawijziging die de server raakt: herstart
+`artifacts/api-server: API Server`. Een 500 met "relation/column does not exist" terwijl de broncode
+schoon is = vrijwel altijd stale bundle → eerst herstarten vóór codejacht.
+
 ## `pnpm --filter @workspace/db run push` kan blokkeren op een interactieve TTY-prompt
 Bij bestaande schema-drift (bv. een al-bestaande unique-constraint die drizzle-kit wil toepassen) vraagt
 `drizzle-kit push` interactief "Do you want to truncate?" en faalt dan in de non-interactieve shell met
