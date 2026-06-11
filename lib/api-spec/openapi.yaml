@@ -6134,3 +6134,20 @@ components:
         betrouwbaarheid:
           type: ["string", "null"]
           description: "laag, midden of hoog"
+        toepassing_suggesties:
+          type: array
+          description: >-
+            AI-voorstellen voor te koppelen toepassingen op basis van de herkende
+            fabrikant, product en norm. Suggesties; een mens bevestigt of past aan.
+          items:
+            type: object
+            required: [label_id, naam, score]
+            properties:
+              label_id:
+                type: integer
+              naam:
+                type: string
+              score:
+                type: number
+              reden:
+                type: ["string", "null"]

@@ -16,7 +16,7 @@ import {
   isDocumentStatus,
   isGetestVoor,
 } from "../lib/documenten";
-import { analyseerDocumentTekst } from "../services/document-ai";
+import { analyseerDocumentTekst, stelToepassingenVoor } from "../services/document-ai";
 
 const router = Router();
 
@@ -27,7 +27,15 @@ router.post("/documenten/ai-analyse", requireBevoegdheid("bibliotheek", 3), asyn
     const bestandsnaam =
       typeof req.body?.bestandsnaam === "string" ? req.body.bestandsnaam : null;
     const resultaat = await analyseerDocumentTekst(tekst, bestandsnaam);
-    return res.json(resultaat);
+
+    // Stel passende toepassingen voor op basis van de herkende terminologie.
+    const labels = await db
+      .select()
+      .from(labelsTable)
+      .where(eq(labelsTable.gearchiveerd, false));
+    const toepassing_suggesties = stelToepassingenVoor(resultaat, labels);
+
+    return res.json({ ...resultaat, toepassing_suggesties });
   } catch (err) {
     req.log.error(err);
     return res.status(500).json({ error: "AI-analyse mislukte" });

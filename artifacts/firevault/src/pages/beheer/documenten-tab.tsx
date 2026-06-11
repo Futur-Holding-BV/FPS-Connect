@@ -186,18 +186,27 @@ function KoppelingenKiezer({
   opties,
   geselecteerd,
   onToggle,
+  aiVoorstellen,
 }: {
   titel: string;
   opties: { value: string; label: string; sub?: string }[];
   geselecteerd: string[];
   onToggle: (value: string) => void;
+  aiVoorstellen?: Set<string>;
 }) {
   const [zoek, setZoek] = useState("");
-  const gefilterd = opties.filter(
-    (o) =>
-      o.label.toLowerCase().includes(zoek.toLowerCase()) ||
-      (o.sub ?? "").toLowerCase().includes(zoek.toLowerCase()),
-  );
+  const gefilterd = opties
+    .filter(
+      (o) =>
+        o.label.toLowerCase().includes(zoek.toLowerCase()) ||
+        (o.sub ?? "").toLowerCase().includes(zoek.toLowerCase()),
+    )
+    // AI-voorstellen bovenaan zodat de gebruiker ze meteen ziet.
+    .sort(
+      (a, b) =>
+        Number(aiVoorstellen?.has(b.value) ?? false) -
+        Number(aiVoorstellen?.has(a.value) ?? false),
+    );
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
@@ -219,21 +228,34 @@ function KoppelingenKiezer({
           {gefilterd.length === 0 ? (
             <p className="text-xs text-muted-foreground p-2">Geen resultaten.</p>
           ) : (
-            gefilterd.map((o) => (
-              <label
-                key={o.value}
-                className="flex items-center gap-2 rounded px-2 py-1.5 hover:bg-muted/40 cursor-pointer"
-              >
-                <Checkbox
-                  checked={geselecteerd.includes(o.value)}
-                  onCheckedChange={() => onToggle(o.value)}
-                />
-                <span className="text-sm flex-1">{o.label}</span>
-                {o.sub && (
-                  <span className="text-xs text-muted-foreground">{o.sub}</span>
-                )}
-              </label>
-            ))
+            gefilterd.map((o) => {
+              const isAi = aiVoorstellen?.has(o.value) ?? false;
+              return (
+                <label
+                  key={o.value}
+                  className={`flex items-center gap-2 rounded px-2 py-1.5 cursor-pointer ${
+                    isAi
+                      ? "border border-amber-300 bg-amber-50 hover:bg-amber-100"
+                      : "hover:bg-muted/40"
+                  }`}
+                >
+                  <Checkbox
+                    checked={geselecteerd.includes(o.value)}
+                    onCheckedChange={() => onToggle(o.value)}
+                  />
+                  <span className="text-sm flex-1">{o.label}</span>
+                  {isAi && (
+                    <span className="flex items-center gap-1 text-xs text-amber-700">
+                      <Sparkles className="h-3 w-3" />
+                      AI-voorstel
+                    </span>
+                  )}
+                  {o.sub && (
+                    <span className="text-xs text-muted-foreground">{o.sub}</span>
+                  )}
+                </label>
+              );
+            })
           )}
         </div>
       </ScrollArea>
@@ -278,6 +300,7 @@ function DocumentFormulier({
       : LEEG_FORM,
   );
   const [aiVelden, setAiVelden] = useState<Set<AiVeld>>(new Set());
+  const [aiToepassingen, setAiToepassingen] = useState<Set<number>>(new Set());
   const [aiBetrouwbaarheid, setAiBetrouwbaarheid] = useState<string | null>(null);
   const [aiBezig, setAiBezig] = useState(false);
   const [fout, setFout] = useState<string | null>(null);
@@ -337,6 +360,18 @@ function DocumentFormulier({
       });
       setAiVelden(nieuweAi);
       setAiBetrouwbaarheid(res.betrouwbaarheid ?? null);
+
+      const suggesties = res.toepassing_suggesties ?? [];
+      if (suggesties.length > 0) {
+        const ids = suggesties.map((s) => s.label_id);
+        setForm((f) => ({
+          ...f,
+          toepassing_ids: Array.from(new Set([...f.toepassing_ids, ...ids])),
+        }));
+        setAiToepassingen(new Set(ids));
+      } else {
+        setAiToepassingen(new Set());
+      }
     } catch (err) {
       setFout(foutmelding(err, "Automatische analyse is mislukt. Vul de gegevens handmatig in."));
     } finally {
@@ -345,8 +380,8 @@ function DocumentFormulier({
   }
 
   function toggleLijst(value: string) {
+    const id = Number(value);
     setForm((f) => {
-      const id = Number(value);
       const has = f.toepassing_ids.includes(id);
       return {
         ...f,
@@ -354,6 +389,13 @@ function DocumentFormulier({
           ? f.toepassing_ids.filter((x) => x !== id)
           : [...f.toepassing_ids, id],
       };
+    });
+    // Zodra de gebruiker een AI-voorstel aan- of uitzet, is het bevestigd: niet langer geel.
+    setAiToepassingen((s) => {
+      if (!s.has(id)) return s;
+      const n = new Set(s);
+      n.delete(id);
+      return n;
     });
   }
 
@@ -611,12 +653,28 @@ function DocumentFormulier({
             </div>
           </div>
 
-          <KoppelingenKiezer
-            titel="Gekoppelde toepassingen"
-            opties={toepassingOpties}
-            geselecteerd={form.toepassing_ids.map(String)}
-            onToggle={(v) => toggleLijst(v)}
-          />
+          <div className="space-y-2">
+            {aiToepassingen.size > 0 && (
+              <div className="flex items-start gap-2 text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
+                <Sparkles className="h-4 w-4 shrink-0 mt-0.5" />
+                <span>
+                  De AI stelt {aiToepassingen.size}{" "}
+                  {aiToepassingen.size === 1 ? "toepassing" : "toepassingen"} voor op
+                  basis van de herkende fabrikant, product en norm. Controleer de
+                  selectie en pas zo nodig aan.
+                </span>
+              </div>
+            )}
+            <KoppelingenKiezer
+              titel="Gekoppelde toepassingen"
+              opties={toepassingOpties}
+              geselecteerd={form.toepassing_ids.map(String)}
+              onToggle={(v) => toggleLijst(v)}
+              aiVoorstellen={
+                new Set(Array.from(aiToepassingen).map(String))
+              }
+            />
+          </div>
         </div>
 
         <DialogFooter>

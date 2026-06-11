@@ -125,3 +125,124 @@ export async function analyseerDocumentTekst(
     betrouwbaarheid: strOfNull(parsed.betrouwbaarheid) ?? "midden",
   };
 }
+
+// ── Toepassing-suggesties op basis van herkende terminologie ─────────────────
+// Deterministische matcher: vergelijkt de door de AI herkende fabrikant, product
+// en norm met de bestaande toepassingen (labels). Geen extra LLM-aanroep, dus
+// voorspelbaar en uitlegbaar. De suggesties zijn voorstellen; een mens bevestigt.
+
+export interface ToepassingKandidaat {
+  id: number;
+  naam: string;
+  fabrikant: string | null;
+  testnorm: string | null;
+}
+
+export interface ToepassingSuggestie {
+  label_id: number;
+  naam: string;
+  score: number;
+  reden: string;
+}
+
+const STOPWOORDEN = new Set([
+  "voor",
+  "een",
+  "het",
+  "van",
+  "met",
+  "systeem",
+  "type",
+  "the",
+  "and",
+  "for",
+]);
+
+function normaliseerTekst(s: string): string {
+  return s
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[^a-z0-9\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function woordenVan(s: string | null | undefined): Set<string> {
+  if (!s) return new Set();
+  return new Set(
+    normaliseerTekst(s)
+      .split(" ")
+      .filter((t) => t.length >= 3 && !STOPWOORDEN.has(t)),
+  );
+}
+
+function normNorm(s: string | null | undefined): string {
+  return s ? s.toLowerCase().replace(/[^a-z0-9]/g, "") : "";
+}
+
+function fabrikantKomtOvereen(a: string | null, b: string | null): boolean {
+  const na = normaliseerTekst(a ?? "");
+  const nb = normaliseerTekst(b ?? "");
+  if (!na || !nb) return false;
+  if (na === nb || na.includes(nb) || nb.includes(na)) return true;
+  const wa = woordenVan(a);
+  for (const w of woordenVan(b)) if (wa.has(w)) return true;
+  return false;
+}
+
+export function stelToepassingenVoor(
+  analyse: Pick<DocumentAnalyse, "fabrikant" | "product" | "en_norm" | "naam">,
+  kandidaten: ToepassingKandidaat[],
+): ToepassingSuggestie[] {
+  // Productterminologie uit product + voorgestelde naam (naam bevat vaak fabrikant + product).
+  const docProductWoorden = new Set<string>([
+    ...woordenVan(analyse.product),
+    ...woordenVan(analyse.naam),
+  ]);
+  const docNorm = normNorm(analyse.en_norm);
+
+  const suggesties: ToepassingSuggestie[] = [];
+  for (const k of kandidaten) {
+    let score = 0;
+    const signalen: string[] = [];
+
+    if (fabrikantKomtOvereen(analyse.fabrikant, k.fabrikant)) {
+      score += 40;
+      signalen.push("fabrikant");
+    }
+
+    const fabWoorden = woordenVan(k.fabrikant);
+    const kandWoorden = woordenVan(k.naam);
+    let overlap = 0;
+    for (const w of docProductWoorden) {
+      if (kandWoorden.has(w) && !fabWoorden.has(w)) overlap++;
+    }
+    if (overlap > 0) {
+      score += Math.min(overlap * 25, 60);
+      signalen.push("productnaam");
+    }
+
+    if (docNorm && k.testnorm) {
+      const kNorm = normNorm(k.testnorm);
+      if (
+        kNorm &&
+        (kNorm.includes(docNorm) || docNorm.includes(kNorm)) &&
+        Math.min(kNorm.length, docNorm.length) >= 4
+      ) {
+        score += 20;
+        signalen.push("norm");
+      }
+    }
+
+    if (score >= 50 && signalen.length > 0) {
+      suggesties.push({
+        label_id: k.id,
+        naam: k.naam,
+        score,
+        reden: "Komt overeen op: " + signalen.join(", "),
+      });
+    }
+  }
+
+  return suggesties.sort((a, b) => b.score - a.score).slice(0, 5);
+}

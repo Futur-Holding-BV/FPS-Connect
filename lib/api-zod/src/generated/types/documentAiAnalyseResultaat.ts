@@ -5,6 +5,7 @@
  * FPS Brandpreventie - Platform voor brandpreventieve gebouwvoorzieningen
  * OpenAPI spec version: 0.1.0
  */
+import type { DocumentAiAnalyseResultaatToepassingSuggestiesItem } from './documentAiAnalyseResultaatToepassingSuggestiesItem';
 import type { DocumentType } from './documentType';
 import type { GetestVoor } from './getestVoor';
 
@@ -32,4 +33,6 @@ export interface DocumentAiAnalyseResultaat {
      * @nullable
      */
   betrouwbaarheid: string | null;
+  /** AI-voorstellen voor te koppelen toepassingen op basis van de herkende fabrikant, product en norm. Suggesties; een mens bevestigt of past aan. */
+  toepassing_suggesties?: DocumentAiAnalyseResultaatToepassingSuggestiesItem[];
 }

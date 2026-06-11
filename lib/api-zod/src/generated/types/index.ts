@@ -37,6 +37,7 @@ export * from './dashboardStatsVoorzieningenPerTypeItem';
 export * from './document';
 export * from './documentAiAnalyseInput';
 export * from './documentAiAnalyseResultaat';
+export * from './documentAiAnalyseResultaatToepassingSuggestiesItem';
 export * from './documentAiMetadata';
 export * from './documentInput';
 export * from './documentInputAiMetadata';

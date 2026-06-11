@@ -1786,7 +1786,13 @@ export const AiAnalyseDocumentResponse = zod.object({
   "datum": zod.string().nullish(),
   "getest_voor": zod.union([zod.enum(['wand', 'plafond', 'beide']),zod.null()]).optional(),
   "toelichting": zod.string().nullish(),
-  "betrouwbaarheid": zod.string().nullable().describe('laag, midden of hoog')
+  "betrouwbaarheid": zod.string().nullable().describe('laag, midden of hoog'),
+  "toepassing_suggesties": zod.array(zod.object({
+  "label_id": zod.number(),
+  "naam": zod.string(),
+  "score": zod.number(),
+  "reden": zod.string().nullish()
+})).optional().describe('AI-voorstellen voor te koppelen toepassingen op basis van de herkende fabrikant, product en norm. Suggesties; een mens bevestigt of past aan.')
 })
 
 

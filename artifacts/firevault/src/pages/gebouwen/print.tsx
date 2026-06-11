@@ -403,7 +403,7 @@ function SpotDetailBlok({
 
       <div className="prt-spot-info">
         <div className="prt-spot-info-rij">
-          <span className="prt-spot-lbl">Applicatiecode</span>
+          <span className="prt-spot-lbl">Spot-code</span>
           <span className="prt-spot-val">{spot.objectnummer}</span>
         </div>
         <div className="prt-spot-info-rij">
@@ -1076,7 +1076,7 @@ export default function GebouwPrint() {
         .prt-spot-tekening { flex: 1; min-width: 0; height: 210px; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; background: #f8fafc; }
         .prt-spot-info { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 16px; margin-bottom: 12px; }
         .prt-spot-info-rij { display: contents; }
-        .prt-spot-lbl { font-size: 10px; font-weight: 600; color: #64748b; padding: 3px 0; }
+        .prt-spot-lbl { font-size: 10px; font-weight: 600; color: #64748b; padding: 3px 0; display: flex; align-items: center; }
         .prt-spot-val { font-size: 11px; color: #0f172a; padding: 3px 0; display: flex; align-items: center; gap: 4px; }
         .prt-spot-testinfo { background: #f1f5f9; border-radius: 6px; padding: 10px 12px; margin-bottom: 12px; }
         .prt-spot-testinfo-titel { font-size: 11px; font-weight: 700; color: #334155; margin-bottom: 6px; }

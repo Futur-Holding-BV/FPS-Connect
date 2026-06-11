@@ -1910,6 +1910,14 @@ export interface DocumentAiAnalyseInput {
   bestandsnaam?: string;
 }
 
+export type DocumentAiAnalyseResultaatToepassingSuggestiesItem = {
+  label_id: number;
+  naam: string;
+  score: number;
+  /** @nullable */
+  reden?: string | null;
+};
+
 export interface DocumentAiAnalyseResultaat {
   /** @nullable */
   naam?: string | null;
@@ -1934,6 +1942,8 @@ export interface DocumentAiAnalyseResultaat {
      * @nullable
      */
   betrouwbaarheid: string | null;
+  /** AI-voorstellen voor te koppelen toepassingen op basis van de herkende fabrikant, product en norm. Suggesties; een mens bevestigt of past aan. */
+  toepassing_suggesties?: DocumentAiAnalyseResultaatToepassingSuggestiesItem[];
 }
 
 export type GetRecenteActiviteitParams = {
