@@ -235,11 +235,11 @@ Strategische roadmaplijn, vastgelegd als toekomstige richting; nog niet bouwen (
 - **Zelflerend** — AI leert van spots, oplossingen, uren, materialen, calculaties en offertes.
 - **AI-calculatie & offerte** — op basis van spots: voorzieningen voorstellen, risico's benoemen, een interne calculatie maken en later een conceptofferte genereren. Het bestaande FPS-offerteformat is het uitgangspunt voor de offertegenerator. AI mag voorlopig geen definitieve offertes zelfstandig versturen; altijd controle door een medewerker.
 
-**Voorgestelde strategische fasering (door de gebruiker aangedragen — OPEN BESLISSING):** deze fasering hergebruikt versienummers die in de bestaande, vastgelegde roadmap al iets anders betekenen (V1.3 = Spots & uitvoering — momenteel in aanbouw; V1.4 = Opleverrapportage; V1.5 = Rapportenmodule; V2.0 = Mobiele monteur-app). De definitieve inpassing/nummering is nog niet besloten en wordt pas vastgelegd na formeel akkoord; tot dan blijft de bestaande nummering leidend.
-- V1.3 — huidige inspectie-/documentfunctionaliteit afronden.
-- V1.4 — Document Management & Dossierbeheer.
-- V1.5 — Klantportaal en gebouwdossiers.
-- V2.0 — AI Calculator, AI Offertegenerator en AI Klantmanager.
+**Eigen fasering (losse strategische lijn — eigen labels om botsing met de bestaande roadmapnummering te vermijden).** De bestaande V1.3–V2.0 blijven ongewijzigd leidend. De oorspronkelijk aangedragen V-nummers zijn bewust NIET overgenomen, omdat V1.3 (Spots & uitvoering — momenteel in aanbouw), V1.4 (Opleverrapportage), V1.5 (Rapportenmodule) en V2.0 (Mobiele monteur-app) al iets anders betekenen. Onderstaande stappen verwijzen naar de bestaande fasen waarop ze aansluiten:
+- **Stap K1 — Fundament afronden**: huidige inspectie- en documentfunctionaliteit afronden; sluit aan op de bestaande V1.3 (Spots & uitvoering) en V1.4 (Opleverrapportage).
+- **Stap K2 — Document Management & Dossierbeheer**: bouwt voort op de bibliotheek (V1.2) en de Rapportenmodule (V1.5).
+- **Stap K3 — Klantportaal en gebouwdossiers**: bouwt voort op K2 (definitieve documenten, gebouwdossiers en communicatie).
+- **Stap K4 — AI Calculator, AI Offertegenerator en AI Klantmanager**: de AI-laag bovenop K1–K3; sluit aan ná de mobiele flow (V2.0).
 
 ### AI-fotoherkenning spotafwerking (gebouwd — eerste versie; vooruit op de roadmap op verzoek)
 
