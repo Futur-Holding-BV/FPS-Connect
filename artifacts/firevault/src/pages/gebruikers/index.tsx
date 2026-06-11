@@ -8,6 +8,8 @@ import {
   useUitnodigingVersturen,
   useUitnodigingOpnieuwVersturen,
   useGebruikerHerkomstToepassen,
+  useGebruikerHerkomstBevestigen,
+  useGebruikerHerkomstVerwijderen,
   useListProfielen,
   getListGebruikersQueryKey,
 } from "@workspace/api-client-react";
@@ -31,7 +33,7 @@ import { Switch } from "@/components/ui/switch";
 import {
   Mail, Phone, Building, Clock, Plus, UserPlus, Pencil, Trash2,
   RefreshCw, ShieldCheck, Eye, User, Crown, Upload, Palette, SendHorizonal, X,
-  Layers, Search, RotateCcw,
+  Layers, Search, RotateCcw, Check,
 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRol } from "@/context/rol-context";
@@ -316,6 +318,8 @@ export default function Gebruikers() {
   const uitnodigingVersturen = useUitnodigingVersturen();
   const uitnodigingOpnieuwVersturen = useUitnodigingOpnieuwVersturen();
   const herkomstToepassen = useGebruikerHerkomstToepassen();
+  const herkomstBevestigen = useGebruikerHerkomstBevestigen();
+  const herkomstVerwijderen = useGebruikerHerkomstVerwijderen();
 
   const [toevoegenOpen, setToevoegenOpen]     = useState(false);
   const [toevoegenForm, setToevoegenForm]     = useState<GebruikerForm>(leegForm);
@@ -360,6 +364,42 @@ export default function Gebruikers() {
     setHerkomstBezig(g.id);
     try {
       const bijgewerkt = await herkomstToepassen.mutateAsync({ id: g.id });
+      invalideer();
+      setBekijkGebruiker((huidig) =>
+        huidig && huidig.id === g.id ? (bijgewerkt as Gebruiker) : huidig,
+      );
+    } catch {
+      // fout wordt door de mutation-state opgevangen; UI blijft ongewijzigd
+    } finally {
+      setHerkomstBezig(null);
+    }
+  }
+
+  // Een automatisch afgeleide koppeling bevestigen: de koppeling blijft, maar
+  // wordt voortaan als handmatig (bevestigd) behandeld.
+  async function bevestigHerkomst(g: Gebruiker) {
+    if (g.herkomst_profiel_id == null || herkomstBezig != null) return;
+    setHerkomstBezig(g.id);
+    try {
+      const bijgewerkt = await herkomstBevestigen.mutateAsync({ id: g.id });
+      invalideer();
+      setBekijkGebruiker((huidig) =>
+        huidig && huidig.id === g.id ? (bijgewerkt as Gebruiker) : huidig,
+      );
+    } catch {
+      // fout wordt door de mutation-state opgevangen; UI blijft ongewijzigd
+    } finally {
+      setHerkomstBezig(null);
+    }
+  }
+
+  // Een automatisch afgeleide koppeling verwijderen: de bevoegdheden blijven,
+  // alleen de administratieve koppeling naar het profiel vervalt.
+  async function verwijderHerkomst(g: Gebruiker) {
+    if (g.herkomst_profiel_id == null || herkomstBezig != null) return;
+    setHerkomstBezig(g.id);
+    try {
+      const bijgewerkt = await herkomstVerwijderen.mutateAsync({ id: g.id });
       invalideer();
       setBekijkGebruiker((huidig) =>
         huidig && huidig.id === g.id ? (bijgewerkt as Gebruiker) : huidig,
@@ -765,32 +805,81 @@ export default function Gebruikers() {
                                   g.bevoegdheden,
                                   profiel.bevoegdheden,
                                 );
+                                const automatisch = g.herkomst_automatisch === true;
                                 return (
-                                  <div className="flex items-center gap-1.5 mt-2 text-xs text-muted-foreground">
-                                    <Layers className="h-3 w-3 flex-shrink-0" />
-                                    <span className="truncate">Van profiel: {profiel.naam}</span>
-                                    {afwijkend && (
-                                      <Badge
-                                        variant="outline"
-                                        className="text-xs h-5 px-1.5 bg-amber-50 text-amber-700 border-amber-200 flex-shrink-0"
-                                      >
-                                        Aangepast
-                                      </Badge>
-                                    )}
-                                    {afwijkend && isHoofd && (
-                                      <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        className="h-5 px-1.5 text-xs text-muted-foreground hover:text-foreground flex-shrink-0"
-                                        disabled={herkomstBezig === g.id}
-                                        onClick={() => pasHerkomstToe(g)}
-                                        title={`Profiel "${profiel.naam}" opnieuw toepassen`}
-                                      >
-                                        <RotateCcw
-                                          className={`h-3 w-3 mr-1 ${herkomstBezig === g.id ? "animate-spin" : ""}`}
-                                        />
-                                        Opnieuw toepassen
-                                      </Button>
+                                  <div className="flex flex-col gap-1 mt-2 text-xs text-muted-foreground">
+                                    <div className="flex items-center gap-1.5">
+                                      <Layers className="h-3 w-3 flex-shrink-0" />
+                                      <span className="truncate">Van profiel: {profiel.naam}</span>
+                                      {automatisch ? (
+                                        <Badge
+                                          variant="outline"
+                                          className="text-xs h-5 px-1.5 bg-amber-50 text-amber-700 border-amber-200 flex-shrink-0"
+                                          title="De bevoegdheden kwamen exact overeen met dit profiel; de koppeling is automatisch gelegd."
+                                        >
+                                          Automatisch gekoppeld
+                                        </Badge>
+                                      ) : (
+                                        <Badge
+                                          variant="secondary"
+                                          className="text-xs h-5 px-1.5 text-muted-foreground flex-shrink-0"
+                                        >
+                                          Handmatig gekoppeld
+                                        </Badge>
+                                      )}
+                                      {afwijkend && (
+                                        <Badge
+                                          variant="outline"
+                                          className="text-xs h-5 px-1.5 bg-amber-50 text-amber-700 border-amber-200 flex-shrink-0"
+                                        >
+                                          Aangepast
+                                        </Badge>
+                                      )}
+                                    </div>
+                                    {isHoofd && (automatisch || afwijkend) && (
+                                      <div className="flex flex-wrap items-center gap-1">
+                                        {automatisch && (
+                                          <>
+                                            <Button
+                                              variant="ghost"
+                                              size="sm"
+                                              className="h-5 px-1.5 text-xs text-muted-foreground hover:text-foreground flex-shrink-0"
+                                              disabled={herkomstBezig === g.id}
+                                              onClick={() => bevestigHerkomst(g)}
+                                              title="Automatische koppeling bevestigen"
+                                            >
+                                              <Check className="h-3 w-3 mr-1" />
+                                              Bevestigen
+                                            </Button>
+                                            <Button
+                                              variant="ghost"
+                                              size="sm"
+                                              className="h-5 px-1.5 text-xs text-muted-foreground hover:text-foreground flex-shrink-0"
+                                              disabled={herkomstBezig === g.id}
+                                              onClick={() => verwijderHerkomst(g)}
+                                              title="Koppeling verwijderen (bevoegdheden blijven)"
+                                            >
+                                              <X className="h-3 w-3 mr-1" />
+                                              Koppeling verwijderen
+                                            </Button>
+                                          </>
+                                        )}
+                                        {afwijkend && (
+                                          <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className="h-5 px-1.5 text-xs text-muted-foreground hover:text-foreground flex-shrink-0"
+                                            disabled={herkomstBezig === g.id}
+                                            onClick={() => pasHerkomstToe(g)}
+                                            title={`Profiel "${profiel.naam}" opnieuw toepassen`}
+                                          >
+                                            <RotateCcw
+                                              className={`h-3 w-3 mr-1 ${herkomstBezig === g.id ? "animate-spin" : ""}`}
+                                            />
+                                            Opnieuw toepassen
+                                          </Button>
+                                        )}
+                                      </div>
                                     )}
                                   </div>
                                 );
@@ -1054,35 +1143,91 @@ export default function Gebruikers() {
                         <ShieldCheck className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                         <div className="text-sm font-medium">Bevoegdheden</div>
                       </div>
-                      {profiel && (
-                        <div className="flex flex-wrap items-center gap-1.5 mb-3 text-xs">
-                          <Layers className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
-                          <span className="text-muted-foreground">Afgeleid van profiel</span>
-                          <span className="font-medium">{profiel.naam}</span>
-                          {afwijkend && (
-                            <Badge
-                              variant="outline"
-                              className="text-xs h-5 px-1.5 bg-amber-50 text-amber-700 border-amber-200"
-                            >
-                              Sindsdien aangepast
-                            </Badge>
-                          )}
-                          {afwijkend && isHoofd && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="h-6 px-2 text-xs ml-auto"
-                              disabled={herkomstBezig === bekijkGebruiker.id}
-                              onClick={() => pasHerkomstToe(bekijkGebruiker)}
-                            >
-                              <RotateCcw
-                                className={`h-3 w-3 mr-1 ${herkomstBezig === bekijkGebruiker.id ? "animate-spin" : ""}`}
-                              />
-                              Profiel opnieuw toepassen
-                            </Button>
-                          )}
-                        </div>
-                      )}
+                      {profiel && (() => {
+                        const automatisch = bekijkGebruiker.herkomst_automatisch === true;
+                        return (
+                          <div className="mb-3 space-y-2">
+                            <div className="flex flex-wrap items-center gap-1.5 text-xs">
+                              <Layers className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
+                              <span className="text-muted-foreground">
+                                {automatisch ? "Automatisch gekoppeld aan profiel" : "Gekoppeld aan profiel"}
+                              </span>
+                              <span className="font-medium">{profiel.naam}</span>
+                              {automatisch ? (
+                                <Badge
+                                  variant="outline"
+                                  className="text-xs h-5 px-1.5 bg-amber-50 text-amber-700 border-amber-200"
+                                >
+                                  Automatisch
+                                </Badge>
+                              ) : (
+                                <Badge
+                                  variant="secondary"
+                                  className="text-xs h-5 px-1.5 text-muted-foreground"
+                                >
+                                  Handmatig
+                                </Badge>
+                              )}
+                              {afwijkend && (
+                                <Badge
+                                  variant="outline"
+                                  className="text-xs h-5 px-1.5 bg-amber-50 text-amber-700 border-amber-200"
+                                >
+                                  Sindsdien aangepast
+                                </Badge>
+                              )}
+                            </div>
+                            {automatisch && (
+                              <p className="text-xs text-muted-foreground">
+                                De bevoegdheden van deze gebruiker kwamen exact en als enige overeen
+                                met dit profiel; de koppeling is daarom automatisch gelegd.
+                              </p>
+                            )}
+                            {isHoofd && (automatisch || afwijkend) && (
+                              <div className="flex flex-wrap items-center gap-2">
+                                {automatisch && (
+                                  <>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      className="h-6 px-2 text-xs"
+                                      disabled={herkomstBezig === bekijkGebruiker.id}
+                                      onClick={() => bevestigHerkomst(bekijkGebruiker)}
+                                    >
+                                      <Check className="h-3 w-3 mr-1" />
+                                      Koppeling bevestigen
+                                    </Button>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      className="h-6 px-2 text-xs"
+                                      disabled={herkomstBezig === bekijkGebruiker.id}
+                                      onClick={() => verwijderHerkomst(bekijkGebruiker)}
+                                    >
+                                      <X className="h-3 w-3 mr-1" />
+                                      Koppeling verwijderen
+                                    </Button>
+                                  </>
+                                )}
+                                {afwijkend && (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-6 px-2 text-xs ml-auto"
+                                    disabled={herkomstBezig === bekijkGebruiker.id}
+                                    onClick={() => pasHerkomstToe(bekijkGebruiker)}
+                                  >
+                                    <RotateCcw
+                                      className={`h-3 w-3 mr-1 ${herkomstBezig === bekijkGebruiker.id ? "animate-spin" : ""}`}
+                                    />
+                                    Profiel opnieuw toepassen
+                                  </Button>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })()}
                       {actief.length === 0 ? (
                         <p className="text-sm text-muted-foreground">Geen bevoegdheden ingesteld.</p>
                       ) : (

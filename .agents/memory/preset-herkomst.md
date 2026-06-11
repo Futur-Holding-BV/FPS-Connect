@@ -35,4 +35,10 @@ expliciet herkomst-veld nodig dat handmatige wijzigingen overleeft.
   een amber waarschuwing op de profielenpagina.
 - POST /profielen/:id/toepassen (hoofdbeheerder) overschrijft de bevoegdheden van
   ALLE gekoppelde gebruikers met de huidige preset-waarden; retourneert {bijgewerkt}.
+- Automatisch vs handmatig: `gebruikers.herkomst_automatisch` (boolean) markeert of
+  de koppeling via `vindUniekeHerkomstPreset` is afgeleid (true) of expliciet door
+  een beheerder gekozen/bevestigd (false). Expliciete `herkomst_profiel_id` in
+  POST/PATCH zet de vlag altijd op false. mapGebruiker geeft false als er geen
+  koppeling is. Hoofdbeheerder-only acties: POST /gebruikers/:id/herkomst-bevestigen
+  (vlag→false) en /herkomst-verwijderen (koppeling weg, bevoegdheden blijven).
 - DB push faalt op TTY → kolom toegevoegd via directe ALTER SQL.

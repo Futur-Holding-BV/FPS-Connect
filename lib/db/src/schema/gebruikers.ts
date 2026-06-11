@@ -38,6 +38,11 @@ export const gebruikersTable = pgTable("gebruikers", {
     (): any => profielenTable.id,
     { onDelete: "set null" },
   ),
+  // Geeft aan of de herkomst-koppeling automatisch is afgeleid (de bevoegdheden
+  // kwamen exact en als enige overeen met dit profiel) in plaats van expliciet
+  // door een beheerder gekozen. Een beheerder kan een automatische koppeling
+  // bevestigen (zet dit op false) of verwijderen.
+  herkomstAutomatisch: boolean("herkomst_automatisch").notNull().default(false),
 });
 
 // Standaardprofielen (presets) die de bevoegdheden-matrix als startpunt vullen.

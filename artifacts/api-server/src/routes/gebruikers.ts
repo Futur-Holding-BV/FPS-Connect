@@ -74,6 +74,7 @@ const mapGebruiker = (g: typeof gebruikersTable.$inferSelect) => ({
   taal: g.taal ?? "nl",
   bevoegdheden: (g.bevoegdheden as Record<string, number>) ?? {},
   herkomst_profiel_id: g.herkomstProfielId ?? null,
+  herkomst_automatisch: g.herkomstProfielId != null ? (g.herkomstAutomatisch ?? false) : false,
 });
 
 // Veilige projectie zonder PII voor niet-beheerders: namen/rol blijven zichtbaar
@@ -190,10 +191,14 @@ router.post("/gebruikers", alleenBeheerder, async (req, res) => {
       typeof herkomst_profiel_id === "number" && Number.isInteger(herkomst_profiel_id)
         ? herkomst_profiel_id
         : null;
+    // Een expliciet gekozen preset is een handmatige koppeling.
+    let herkomstAutomatisch = false;
     // Geen expliciete preset gekozen, maar de meegestuurde matrix komt exact en
-    // als enige overeen met een profiel? Markeer dat profiel dan als herkomst.
+    // als enige overeen met een profiel? Markeer dat profiel dan als herkomst
+    // (automatisch afgeleid).
     if (herkomstId == null) {
       herkomstId = await vindUniekeHerkomstPreset(toegestaanBevoegdheden);
+      herkomstAutomatisch = herkomstId != null;
     }
     const gehasht = wachtwoord ? await bcrypt.hash(String(wachtwoord), 10) : null;
     const [g] = await db
@@ -212,6 +217,7 @@ router.post("/gebruikers", alleenBeheerder, async (req, res) => {
         taal: taal || "nl",
         bevoegdheden: toegestaanBevoegdheden,
         herkomstProfielId: herkomstId,
+        herkomstAutomatisch,
         uitnodigingStatus: "niet_uitgenodigd",
       })
       .returning();
@@ -314,16 +320,24 @@ router.patch("/gebruikers/:id", alleenBeheerder, async (req, res) => {
     }
     // Herkomst (preset) alleen wijzigen wanneer expliciet meegestuurd: null wist
     // de koppeling, een geldig id (her)koppelt. undefined laat het veld ongemoeid.
+    // Een expliciet meegestuurde herkomst is altijd een handmatige (bevestigde)
+    // koppeling, dus automatisch-vlag op false.
     if (herkomst_profiel_id !== undefined) {
-      wijziging.herkomstProfielId =
+      const nieuweId =
         typeof herkomst_profiel_id === "number" && Number.isInteger(herkomst_profiel_id)
           ? herkomst_profiel_id
           : null;
+      wijziging.herkomstProfielId = nieuweId;
+      wijziging.herkomstAutomatisch = false;
     } else if (wijziging.bevoegdheden !== undefined && bestaand.herkomstProfielId == null) {
       // Geen expliciete herkomst meegestuurd, bevoegdheden wijzigen, en er is nog
-      // geen herkomst: koppel het profiel dat exact en als enige overeenkomt.
+      // geen herkomst: koppel het profiel dat exact en als enige overeenkomt
+      // (automatisch afgeleid).
       const auto = await vindUniekeHerkomstPreset(wijziging.bevoegdheden);
-      if (auto != null) wijziging.herkomstProfielId = auto;
+      if (auto != null) {
+        wijziging.herkomstProfielId = auto;
+        wijziging.herkomstAutomatisch = true;
+      }
     }
     if (wachtwoord) {
       wijziging.wachtwoord = await bcrypt.hash(String(wachtwoord), 10);
@@ -484,6 +498,75 @@ router.post(
     } catch (err) {
       req.log.error(err);
       res.status(500).json({ error: "Interne serverfout" });
+    }
+  },
+);
+
+// POST /gebruikers/:id/herkomst-bevestigen — een automatisch afgeleide
+// koppeling bevestigen: de koppeling blijft, maar wordt voortaan als handmatig
+// (bevestigd) behandeld.
+router.post(
+  "/gebruikers/:id/herkomst-bevestigen",
+  requireRol("hoofdbeheerder"),
+  async (req, res) => {
+    try {
+      const id = parseInt(String(req.params.id), 10);
+      if (!Number.isInteger(id)) {
+        return res.status(400).json({ error: "Ongeldig id" });
+      }
+      const [bestaande] = await db
+        .select()
+        .from(gebruikersTable)
+        .where(eq(gebruikersTable.id, id));
+      if (!bestaande) {
+        return res.status(404).json({ error: "Gebruiker niet gevonden" });
+      }
+      if (bestaande.herkomstProfielId == null) {
+        return res
+          .status(400)
+          .json({ error: "Gebruiker heeft geen herkomst-profiel" });
+      }
+      const [g] = await db
+        .update(gebruikersTable)
+        .set({ herkomstAutomatisch: false })
+        .where(eq(gebruikersTable.id, id))
+        .returning();
+      return res.json(mapGebruiker(g));
+    } catch (err) {
+      req.log.error(err);
+      return res.status(500).json({ error: "Interne serverfout" });
+    }
+  },
+);
+
+// POST /gebruikers/:id/herkomst-verwijderen — de herkomst-koppeling verwijderen.
+// De bevoegdheden van de gebruiker blijven ongewijzigd; alleen de administratieve
+// koppeling naar het profiel vervalt.
+router.post(
+  "/gebruikers/:id/herkomst-verwijderen",
+  requireRol("hoofdbeheerder"),
+  async (req, res) => {
+    try {
+      const id = parseInt(String(req.params.id), 10);
+      if (!Number.isInteger(id)) {
+        return res.status(400).json({ error: "Ongeldig id" });
+      }
+      const [bestaande] = await db
+        .select()
+        .from(gebruikersTable)
+        .where(eq(gebruikersTable.id, id));
+      if (!bestaande) {
+        return res.status(404).json({ error: "Gebruiker niet gevonden" });
+      }
+      const [g] = await db
+        .update(gebruikersTable)
+        .set({ herkomstProfielId: null, herkomstAutomatisch: false })
+        .where(eq(gebruikersTable.id, id))
+        .returning();
+      return res.json(mapGebruiker(g));
+    } catch (err) {
+      req.log.error(err);
+      return res.status(500).json({ error: "Interne serverfout" });
     }
   },
 );

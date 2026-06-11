@@ -2378,7 +2378,8 @@ export const ListGebruikersResponseItem = zod.object({
   "uitnodiging_geaccepteerd_op": zod.string().nullish(),
   "taal": zod.enum(['nl', 'en', 'de', 'fr', 'ar', 'tr']).optional(),
   "bevoegdheden": zod.record(zod.string(), zod.number()),
-  "herkomst_profiel_id": zod.number().nullish()
+  "herkomst_profiel_id": zod.number().nullish(),
+  "herkomst_automatisch": zod.boolean().optional()
 })
 export const ListGebruikersResponse = zod.array(ListGebruikersResponseItem)
 
@@ -2435,7 +2436,8 @@ export const GetGebruikerResponse = zod.object({
   "uitnodiging_geaccepteerd_op": zod.string().nullish(),
   "taal": zod.enum(['nl', 'en', 'de', 'fr', 'ar', 'tr']).optional(),
   "bevoegdheden": zod.record(zod.string(), zod.number()),
-  "herkomst_profiel_id": zod.number().nullish()
+  "herkomst_profiel_id": zod.number().nullish(),
+  "herkomst_automatisch": zod.boolean().optional()
 })
 
 
@@ -2486,7 +2488,8 @@ export const UpdateGebruikerResponse = zod.object({
   "uitnodiging_geaccepteerd_op": zod.string().nullish(),
   "taal": zod.enum(['nl', 'en', 'de', 'fr', 'ar', 'tr']).optional(),
   "bevoegdheden": zod.record(zod.string(), zod.number()),
-  "herkomst_profiel_id": zod.number().nullish()
+  "herkomst_profiel_id": zod.number().nullish(),
+  "herkomst_automatisch": zod.boolean().optional()
 })
 
 
@@ -2529,7 +2532,8 @@ export const UitnodigingVersturenResponse = zod.object({
   "uitnodiging_geaccepteerd_op": zod.string().nullish(),
   "taal": zod.enum(['nl', 'en', 'de', 'fr', 'ar', 'tr']).optional(),
   "bevoegdheden": zod.record(zod.string(), zod.number()),
-  "herkomst_profiel_id": zod.number().nullish()
+  "herkomst_profiel_id": zod.number().nullish(),
+  "herkomst_automatisch": zod.boolean().optional()
 })
 
 
@@ -2562,7 +2566,8 @@ export const UitnodigingOpnieuwVersturenResponse = zod.object({
   "uitnodiging_geaccepteerd_op": zod.string().nullish(),
   "taal": zod.enum(['nl', 'en', 'de', 'fr', 'ar', 'tr']).optional(),
   "bevoegdheden": zod.record(zod.string(), zod.number()),
-  "herkomst_profiel_id": zod.number().nullish()
+  "herkomst_profiel_id": zod.number().nullish(),
+  "herkomst_automatisch": zod.boolean().optional()
 })
 
 
@@ -2595,7 +2600,76 @@ export const GebruikerHerkomstToepassenResponse = zod.object({
   "uitnodiging_geaccepteerd_op": zod.string().nullish(),
   "taal": zod.enum(['nl', 'en', 'de', 'fr', 'ar', 'tr']).optional(),
   "bevoegdheden": zod.record(zod.string(), zod.number()),
-  "herkomst_profiel_id": zod.number().nullish()
+  "herkomst_profiel_id": zod.number().nullish(),
+  "herkomst_automatisch": zod.boolean().optional()
+})
+
+
+/**
+ * @summary Automatisch afgeleide herkomst-koppeling bevestigen (hoofdbeheerder)
+ */
+export const GebruikerHerkomstBevestigenParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GebruikerHerkomstBevestigenResponse = zod.object({
+  "id": zod.number(),
+  "naam": zod.string(),
+  "email": zod.string(),
+  "rol": zod.enum(['hoofdbeheerder', 'gebruiker', 'klant']),
+  "functietitels": zod.array(zod.string()).optional(),
+  "telefoon": zod.string().nullish(),
+  "bedrijf": zod.string().nullish(),
+  "actief": zod.boolean(),
+  "aangemaakt_op": zod.string(),
+  "laatste_online": zod.string().nullish(),
+  "avatar_url": zod.string().nullish(),
+  "bedrijfslogo_url": zod.string().nullish(),
+  "bedrijfskleuren": zod.string().nullish(),
+  "uitnodiging_status": zod.enum(['niet_uitgenodigd', 'uitgenodigd', 'geaccepteerd']),
+  "uitnodiging_verstuurd_op": zod.string().nullish(),
+  "uitnodiging_verloopt_op": zod.string().nullish(),
+  "uitnodiging_geopend_op": zod.string().nullish(),
+  "uitnodiging_opnieuw_verstuurd_op": zod.string().nullish(),
+  "uitnodiging_geaccepteerd_op": zod.string().nullish(),
+  "taal": zod.enum(['nl', 'en', 'de', 'fr', 'ar', 'tr']).optional(),
+  "bevoegdheden": zod.record(zod.string(), zod.number()),
+  "herkomst_profiel_id": zod.number().nullish(),
+  "herkomst_automatisch": zod.boolean().optional()
+})
+
+
+/**
+ * @summary Herkomst-koppeling verwijderen, bevoegdheden blijven (hoofdbeheerder)
+ */
+export const GebruikerHerkomstVerwijderenParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GebruikerHerkomstVerwijderenResponse = zod.object({
+  "id": zod.number(),
+  "naam": zod.string(),
+  "email": zod.string(),
+  "rol": zod.enum(['hoofdbeheerder', 'gebruiker', 'klant']),
+  "functietitels": zod.array(zod.string()).optional(),
+  "telefoon": zod.string().nullish(),
+  "bedrijf": zod.string().nullish(),
+  "actief": zod.boolean(),
+  "aangemaakt_op": zod.string(),
+  "laatste_online": zod.string().nullish(),
+  "avatar_url": zod.string().nullish(),
+  "bedrijfslogo_url": zod.string().nullish(),
+  "bedrijfskleuren": zod.string().nullish(),
+  "uitnodiging_status": zod.enum(['niet_uitgenodigd', 'uitgenodigd', 'geaccepteerd']),
+  "uitnodiging_verstuurd_op": zod.string().nullish(),
+  "uitnodiging_verloopt_op": zod.string().nullish(),
+  "uitnodiging_geopend_op": zod.string().nullish(),
+  "uitnodiging_opnieuw_verstuurd_op": zod.string().nullish(),
+  "uitnodiging_geaccepteerd_op": zod.string().nullish(),
+  "taal": zod.enum(['nl', 'en', 'de', 'fr', 'ar', 'tr']).optional(),
+  "bevoegdheden": zod.record(zod.string(), zod.number()),
+  "herkomst_profiel_id": zod.number().nullish(),
+  "herkomst_automatisch": zod.boolean().optional()
 })
 
 

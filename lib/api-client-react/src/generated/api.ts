@@ -7419,6 +7419,146 @@ export const useGebruikerHerkomstToepassen = <TError = ErrorType<void>,
       return useMutation(getGebruikerHerkomstToepassenMutationOptions(options));
     }
 
+export const getGebruikerHerkomstBevestigenUrl = (id: number,) => {
+
+
+
+
+  return `/api/gebruikers/${id}/herkomst-bevestigen`
+}
+
+/**
+ * @summary Automatisch afgeleide herkomst-koppeling bevestigen (hoofdbeheerder)
+ */
+export const gebruikerHerkomstBevestigen = async (id: number, options?: RequestInit): Promise<Gebruiker> => {
+
+  return customFetch<Gebruiker>(getGebruikerHerkomstBevestigenUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getGebruikerHerkomstBevestigenMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof gebruikerHerkomstBevestigen>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof gebruikerHerkomstBevestigen>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['gebruikerHerkomstBevestigen'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof gebruikerHerkomstBevestigen>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  gebruikerHerkomstBevestigen(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type GebruikerHerkomstBevestigenMutationResult = NonNullable<Awaited<ReturnType<typeof gebruikerHerkomstBevestigen>>>
+
+    export type GebruikerHerkomstBevestigenMutationError = ErrorType<void>
+
+    /**
+ * @summary Automatisch afgeleide herkomst-koppeling bevestigen (hoofdbeheerder)
+ */
+export const useGebruikerHerkomstBevestigen = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof gebruikerHerkomstBevestigen>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof gebruikerHerkomstBevestigen>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getGebruikerHerkomstBevestigenMutationOptions(options));
+    }
+
+export const getGebruikerHerkomstVerwijderenUrl = (id: number,) => {
+
+
+
+
+  return `/api/gebruikers/${id}/herkomst-verwijderen`
+}
+
+/**
+ * @summary Herkomst-koppeling verwijderen, bevoegdheden blijven (hoofdbeheerder)
+ */
+export const gebruikerHerkomstVerwijderen = async (id: number, options?: RequestInit): Promise<Gebruiker> => {
+
+  return customFetch<Gebruiker>(getGebruikerHerkomstVerwijderenUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getGebruikerHerkomstVerwijderenMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof gebruikerHerkomstVerwijderen>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof gebruikerHerkomstVerwijderen>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['gebruikerHerkomstVerwijderen'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof gebruikerHerkomstVerwijderen>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  gebruikerHerkomstVerwijderen(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type GebruikerHerkomstVerwijderenMutationResult = NonNullable<Awaited<ReturnType<typeof gebruikerHerkomstVerwijderen>>>
+
+    export type GebruikerHerkomstVerwijderenMutationError = ErrorType<void>
+
+    /**
+ * @summary Herkomst-koppeling verwijderen, bevoegdheden blijven (hoofdbeheerder)
+ */
+export const useGebruikerHerkomstVerwijderen = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof gebruikerHerkomstVerwijderen>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof gebruikerHerkomstVerwijderen>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getGebruikerHerkomstVerwijderenMutationOptions(options));
+    }
+
 export const getListProfielenUrl = () => {
 
 

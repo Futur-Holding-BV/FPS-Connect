@@ -2214,6 +2214,52 @@ paths:
         "404":
           description: Niet gevonden
 
+  /gebruikers/{id}/herkomst-bevestigen:
+    post:
+      operationId: gebruikerHerkomstBevestigen
+      tags: [gebruikers]
+      summary: >-
+        Automatisch afgeleide herkomst-koppeling bevestigen (hoofdbeheerder)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Gebruiker"
+        "400":
+          description: Gebruiker heeft geen herkomst-profiel
+        "404":
+          description: Niet gevonden
+
+  /gebruikers/{id}/herkomst-verwijderen:
+    post:
+      operationId: gebruikerHerkomstVerwijderen
+      tags: [gebruikers]
+      summary: >-
+        Herkomst-koppeling verwijderen, bevoegdheden blijven (hoofdbeheerder)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Gebruiker"
+        "404":
+          description: Niet gevonden
+
   /profielen:
     get:
       operationId: listProfielen
@@ -5189,6 +5235,8 @@ components:
             type: integer
         herkomst_profiel_id:
           type: ["integer", "null"]
+        herkomst_automatisch:
+          type: boolean
 
     Profiel:
       type: object
