@@ -23,3 +23,13 @@ De app roept server-side meerdere losse Google API's aan: **Geocoding** + **Maps
 - `GOOGLE_KEY` wordt op module-niveau gelezen in gebouw-ai.ts → na toevoegen/wijzigen van de secret is een **API-server-restart verplicht**.
 - Diagnose: roep de 3-4 endpoints direct aan met de sleutel via node fetch om per API status te zien (geen login nodig).
 - Street View: check eerst `streetview/metadata` (gratis, status !== "OK" → geen dekking → null, AI valt terug op schatting). Bereken `heading` uit pano-locatie → gebouw zodat de gevel in beeld komt.
+
+## Geocoding `region` is slechts een zachte voorkeur
+Zet bij geocoding altijd `components=country:NL`, niet alleen `region=nl`.
+
+**Why:** `region` is enkel een bias-hint; een vrij adres (bv. "Transistorstraat 55, Eindhoven") matchte zonder restrictie op een gelijknamige straat in België → fout gevelbeeld. `components=country:NL` is een harde restrictie. Dit is een NL-only platform, dus altijd toepassen.
+
+## Gevelbeeld op opleverrapport-voorblad vereist gebouw-coördinaten
+Het voorblad-gevelbeeld (`GET /gebouwen/:id/gevelbeeld` → Street View) heeft `latitude/longitude` op het gebouw nodig. Seed-/handmatig aangemaakte gebouwen misten die (coords worden normaal alleen bij AI-invullen gezet) → cover was altijd leeg.
+
+**How to apply:** het endpoint geocodet nu het adres op-aanvraag wanneer coords ontbreken en schrijft ze terug (best-effort, derived cache-fill, géén `bijgewerktOp`). Zelfhelend bij eerste rapport-view; bestaande gebouwen kunnen ook via een SQL-backfill worden voorzien.

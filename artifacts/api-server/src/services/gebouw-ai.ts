@@ -109,7 +109,7 @@ type GeocodeUitkomst =
   | { ok: false; reden: string };
 
 const MAPS_NIET_GEACTIVEERD =
-  "De Google Maps API is niet geactiveerd voor de gebruikte API-sleutel. Activeer 'Geocoding API' en 'Maps Static API' in de Google Cloud Console om automatisch invullen te gebruiken.";
+  "De Google Maps API is niet geactiveerd voor de gebruikte API-sleutel. Activeer 'Geocoding API', 'Maps Static API' en 'Street View Static API' in de Google Cloud Console om automatisch invullen en het gevelbeeld te gebruiken.";
 
 // Maximaal aantal suggesties dat bij onduidelijke invoer wordt teruggegeven.
 const MAX_SUGGESTIES = 5;
@@ -123,6 +123,10 @@ async function geocodeAlle(adres: string): Promise<GeocodeUitkomst> {
   url.searchParams.set("key", GOOGLE_KEY!);
   url.searchParams.set("language", "nl");
   url.searchParams.set("region", "nl");
+  // Beperk resultaten tot Nederland. `region` is slechts een zachte voorkeur; zonder deze
+  // harde restrictie matcht Google vrije adressen soms over de grens (bv. een gelijknamige
+  // straat in België), wat een verkeerd gevelbeeld zou opleveren.
+  url.searchParams.set("components", "country:NL");
 
   let res: Response;
   try {
@@ -260,6 +264,21 @@ function berekenHeading(lat1: number, lng1: number, lat2: number, lng2: number):
     Math.cos(toRad(lat1)) * Math.sin(toRad(lat2)) -
     Math.sin(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.cos(dLng);
   return (((Math.atan2(y, x) * 180) / Math.PI) + 360) % 360;
+}
+
+// Geocodeert een vrij adres naar coördinaten en geeft de beste (eerste) treffer terug,
+// of null wanneer er geen API-sleutel, geen invoer of geen resultaat is. Wordt gebruikt om
+// ontbrekende gebouwcoördinaten op-aanvraag aan te vullen (bv. voor het gevelbeeld op het
+// opleverrapport-voorblad), zodat dit ook werkt voor gebouwen die zonder automatisch
+// invullen zijn aangemaakt.
+export async function geocodeAdresNaarCoord(
+  zoekterm: string,
+): Promise<{ lat: number; lng: number } | null> {
+  if (!GOOGLE_KEY || !zoekterm.trim()) return null;
+  const uitkomst = await geocodeAlle(zoekterm.trim());
+  if (!uitkomst.ok || uitkomst.resultaten.length === 0) return null;
+  const beste = uitkomst.resultaten[0]!;
+  return { lat: beste.lat, lng: beste.lng };
 }
 
 export async function haalStreetViewBeeld(lat: number, lng: number): Promise<string | null> {

@@ -18,6 +18,7 @@ import {
   analyseerTekening,
   analyseerPlattegrond,
   haalStreetViewBeeld,
+  geocodeAdresNaarCoord,
 } from "../services/gebouw-ai";
 
 const router = Router();
@@ -438,7 +439,13 @@ router.get("/gebouwen/:id/gevelbeeld", lezenGebouwen, async (req, res) => {
     const { userId, beperkt } = await effectieveContext(req);
 
     const [gebouw] = await db
-      .select({ lat: gebouwenTable.latitude, lng: gebouwenTable.longitude })
+      .select({
+        lat: gebouwenTable.latitude,
+        lng: gebouwenTable.longitude,
+        adres: gebouwenTable.adres,
+        postcode: gebouwenTable.postcode,
+        stad: gebouwenTable.stad,
+      })
       .from(gebouwenTable)
       .where(eq(gebouwenTable.id, id));
 
@@ -451,13 +458,45 @@ router.get("/gebouwen/:id/gevelbeeld", lezenGebouwen, async (req, res) => {
       }
     }
 
-    if (!process.env.GOOGLE_MAPS_API_KEY || gebouw.lat == null || gebouw.lng == null) {
+    if (!process.env.GOOGLE_MAPS_API_KEY) {
+      return res.json({ beeld: null });
+    }
+
+    let lat = gebouw.lat;
+    let lng = gebouw.lng;
+
+    // Veel gebouwen hebben (nog) geen opgeslagen coördinaten — bv. seed-data of
+    // handmatig aangemaakte gebouwen waarbij het automatisch invullen niet is gebruikt.
+    // Vul de coördinaten dan op-aanvraag aan via geocoding van het adres en schrijf ze
+    // terug, zodat het gevelbeeld (en andere kaartfuncties) werken zonder het invullen
+    // opnieuw te hoeven draaien. Best-effort: faalt het terugschrijven, dan tonen we het
+    // beeld alsnog op basis van de zojuist gevonden coördinaten.
+    if ((lat == null || lng == null) && gebouw.adres) {
+      const zoekterm = [gebouw.adres, gebouw.postcode, gebouw.stad]
+        .filter(Boolean)
+        .join(", ");
+      const coord = await geocodeAdresNaarCoord(zoekterm);
+      if (coord) {
+        lat = coord.lat;
+        lng = coord.lng;
+        try {
+          await db
+            .update(gebouwenTable)
+            .set({ latitude: coord.lat, longitude: coord.lng })
+            .where(eq(gebouwenTable.id, id));
+        } catch (err) {
+          req.log.warn({ err }, "Coördinaten terugschrijven mislukt");
+        }
+      }
+    }
+
+    if (lat == null || lng == null) {
       return res.json({ beeld: null });
     }
 
     let beeld: string | null = null;
     try {
-      beeld = await haalStreetViewBeeld(gebouw.lat, gebouw.lng);
+      beeld = await haalStreetViewBeeld(lat, lng);
     } catch (err) {
       req.log.warn({ err }, "Gevelbeeld ophalen mislukt");
     }
