@@ -36,6 +36,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { TabDocumenten } from "./documenten-tab";
 import { ToepassingDetailDialog } from "./toepassing-detail";
 import { ApplicatieDetailDialog } from "./applicatie-detail";
+import { useVoorkeur } from "@/hooks/use-voorkeur";
 import {
   Archive,
   ArchiveRestore,
@@ -216,8 +217,17 @@ interface ImportResultaat {
 // ── Tab Toepassingen ─────────────────────────────────────────────────────────
 function TabToepassingen() {
   const queryClient = useQueryClient();
-  const [typeFilter, setTypeFilter] = useState(GEEN_TYPE);
-  const [inclGearchiveerd, setInclGearchiveerd] = useState(false);
+  const [typeFilter, setTypeFilter, wisTypeFilter] = useVoorkeur(
+    "bibliotheek_toepassingen_type",
+    GEEN_TYPE,
+  );
+  const [inclGearchiveerd, setInclGearchiveerd, wisInclGearchiveerd] =
+    useVoorkeur("bibliotheek_toepassingen_incl_gearchiveerd", false);
+  const filtersActief = typeFilter !== GEEN_TYPE || inclGearchiveerd;
+  function wisFilters() {
+    wisTypeFilter();
+    wisInclGearchiveerd();
+  }
   const [nieuwOpen, setNieuwOpen] = useState(false);
   const [detail, setDetail] = useState<Label | null>(null);
   const [importOpen, setImportOpen] = useState(false);
@@ -528,6 +538,16 @@ function TabToepassingen() {
                 Inclusief gearchiveerd
               </UiLabel>
             </div>
+            {filtersActief && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="ml-auto"
+                onClick={wisFilters}
+              >
+                Filters wissen
+              </Button>
+            )}
           </div>
         </CardHeader>
         <CardContent className="p-0">
@@ -828,6 +848,10 @@ function TabMeetwaarden() {
 
 // ── Hoofdpagina ──────────────────────────────────────────────────────────────
 export default function Bibliotheek() {
+  const [actieveTab, setActieveTab] = useVoorkeur(
+    "bibliotheek_tab",
+    "applicaties",
+  );
   return (
     <div className="max-w-5xl mx-auto space-y-6">
       <div className="flex items-start gap-3">
@@ -843,7 +867,7 @@ export default function Bibliotheek() {
         </div>
       </div>
 
-      <Tabs defaultValue="applicaties">
+      <Tabs value={actieveTab} onValueChange={setActieveTab}>
         <TabsList className="w-full sm:w-auto">
           <TabsTrigger value="applicaties">Applicaties</TabsTrigger>
           <TabsTrigger value="toepassingen">Toepassingen</TabsTrigger>

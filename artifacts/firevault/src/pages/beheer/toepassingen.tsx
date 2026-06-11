@@ -32,14 +32,24 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Archive, ArchiveRestore, Plus, Tag } from "lucide-react";
 import { ToepassingDetailDialog } from "./toepassing-detail";
+import { useVoorkeur } from "@/hooks/use-voorkeur";
 
 const GEEN_TYPE = "__alle__";
 
 export default function ToepassingenBeheer() {
   const queryClient = useQueryClient();
 
-  const [typeFilter, setTypeFilter] = useState(GEEN_TYPE);
-  const [inclGearchiveerd, setInclGearchiveerd] = useState(false);
+  const [typeFilter, setTypeFilter, wisTypeFilter] = useVoorkeur(
+    "toepassingen_type",
+    GEEN_TYPE,
+  );
+  const [inclGearchiveerd, setInclGearchiveerd, wisInclGearchiveerd] =
+    useVoorkeur("toepassingen_incl_gearchiveerd", false);
+  const filtersActief = typeFilter !== GEEN_TYPE || inclGearchiveerd;
+  function wisFilters() {
+    wisTypeFilter();
+    wisInclGearchiveerd();
+  }
   const [nieuwOpen, setNieuwOpen] = useState(false);
   const [detail, setDetail] = useState<Label | null>(null);
 
@@ -128,6 +138,16 @@ export default function ToepassingenBeheer() {
                 Inclusief gearchiveerd
               </UiLabel>
             </div>
+            {filtersActief && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="ml-auto"
+                onClick={wisFilters}
+              >
+                Filters wissen
+              </Button>
+            )}
           </div>
         </CardHeader>
         <CardContent className="p-0">
