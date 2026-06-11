@@ -643,14 +643,16 @@ function TabToepassingen() {
             <div>
               <UiLabel>Brand- of rookwerendheid</UiLabel>
               <Select
-                value={nieuw.testnorm}
-                onValueChange={(v) => setNieuw((n) => ({ ...n, testnorm: v }))}
+                value={nieuw.testnorm || "__geen__"}
+                onValueChange={(v) =>
+                  setNieuw((n) => ({ ...n, testnorm: v === "__geen__" ? "" : v }))
+                }
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Kies brand- of rookwerendheid (optioneel)" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Niet opgegeven</SelectItem>
+                  <SelectItem value="__geen__">Niet opgegeven</SelectItem>
                   {WERENDHEID_OPTIES.map((w) => (
                     <SelectItem key={w.waarde} value={w.waarde}>
                       <span className="font-mono text-xs mr-2">{w.label}</span>
