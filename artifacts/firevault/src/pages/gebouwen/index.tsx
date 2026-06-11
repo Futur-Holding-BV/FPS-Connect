@@ -233,7 +233,7 @@ function tijd(waarde: string | null | undefined): number {
 export default function Gebouwen() {
   const { t } = useTranslation();
   const { gebruiker } = useAuth();
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useVoorkeur<string>("gebouwen_zoek", "");
   const [partijType, setPartijType] = useVoorkeur<string>("gebouwen_partij_type", ALLE);
   const [partijNaam, setPartijNaam] = useVoorkeur<string>("gebouwen_partij_naam", ALLE);
   const [sortering, setSortering] = useVoorkeur<SorteerOptie>("gebouwen_sortering", "alfabetisch");

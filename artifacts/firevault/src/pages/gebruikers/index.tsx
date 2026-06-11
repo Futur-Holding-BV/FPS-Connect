@@ -41,6 +41,7 @@ import {
 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRol } from "@/context/rol-context";
+import { useVoorkeur } from "@/hooks/use-voorkeur";
 import { Link } from "wouter";
 
 const ROLLEN = ["hoofdbeheerder", "gebruiker", "klant"] as const;
@@ -297,8 +298,8 @@ export default function Gebruikers() {
   const [uitnodigingBezig, setUitnodigingBezig] = useState<number | null>(null);
   const [herkomstBezig, setHerkomstBezig]       = useState<number | null>(null);
 
-  const [zoek, setZoek]               = useState<string>("");
-  const [filterGroep, setFilterGroep] = useState<string | null>(null);
+  const [zoek, setZoek]               = useVoorkeur<string>("gebruikers_zoek", "");
+  const [filterGroep, setFilterGroep] = useVoorkeur<string | null>("gebruikers_filter_groep", null);
   const [actieveTab, setActieveTab]   = useState<"gebruikers" | "profielen">("gebruikers");
   const [alleenAuto, setAlleenAuto]   = useState<boolean>(false);
   const [bulkBevestigOpen, setBulkBevestigOpen] = useState<boolean>(false);

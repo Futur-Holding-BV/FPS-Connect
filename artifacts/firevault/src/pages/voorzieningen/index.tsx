@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { useListVoorzieningen } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,7 +13,10 @@ export default function Voorzieningen() {
   const { t } = useTranslation();
   const { data: voorzieningenLijst, isLoading } = useListVoorzieningen({});
   const [zoek, setZoek] = useVoorkeur("voorzieningen_zoek", "");
-  const [alleenTeControleren, setAlleenTeControleren] = useState(false);
+  const [alleenTeControleren, setAlleenTeControleren] = useVoorkeur(
+    "voorzieningen_alleen_te_controleren",
+    false,
+  );
 
   const teControlerenAantal = useMemo(
     () => (voorzieningenLijst?.items ?? []).filter((v) => (v as any).ai_te_controleren).length,
