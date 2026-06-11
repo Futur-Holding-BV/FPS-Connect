@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "wouter";
 import { useListOnderhoud } from "@workspace/api-client-react";
@@ -6,7 +5,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Wrench, Building, Calendar, AlertTriangle, CheckCircle, Clock } from "lucide-react";
+import { Wrench, Building, Calendar, AlertTriangle, CheckCircle, Clock, X } from "lucide-react";
+import { useVoorkeur } from "@/hooks/use-voorkeur";
 
 const prioriteitKleur: Record<string, string> = {
   laag: "bg-gray-100 text-gray-700 border-gray-200",
@@ -31,8 +31,9 @@ const statusIcon = (status: string) => {
 
 export default function Onderhoud() {
   const { t } = useTranslation();
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [prioriteitFilter, setPrioriteitFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useVoorkeur("onderhoud_status", "all");
+  const [prioriteitFilter, setPrioriteitFilter] = useVoorkeur("onderhoud_prioriteit", "all");
+  const filterActief = statusFilter !== "all" || prioriteitFilter !== "all";
 
   const { data: taken, isLoading } = useListOnderhoud({
     status: statusFilter !== "all" ? statusFilter : undefined,
@@ -93,6 +94,19 @@ export default function Onderhoud() {
             <SelectItem value="kritiek">Kritiek</SelectItem>
           </SelectContent>
         </Select>
+
+        {filterActief && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              setStatusFilter("all");
+              setPrioriteitFilter("all");
+            }}
+          >
+            <X className="h-4 w-4 mr-1" /> Filter wissen
+          </Button>
+        )}
       </div>
 
       {isLoading && (

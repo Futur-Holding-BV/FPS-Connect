@@ -27,6 +27,7 @@ import { Link, useLocation } from "wouter";
 import { Search, Building, X, ArrowDownUp, Calendar, BarChart3, Users, Printer, Archive } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useAuth } from "@/context/auth-context";
+import { useVoorkeur } from "@/hooks/use-voorkeur";
 import { GebouwAanmakenDialog } from "./gebouw-aanmaken-dialog";
 
 const BEHEERDER_ROLLEN = ["beheerder", "hoofdbeheerder"];
@@ -233,10 +234,10 @@ export default function Gebouwen() {
   const { t } = useTranslation();
   const { gebruiker } = useAuth();
   const [search, setSearch] = useState("");
-  const [partijType, setPartijType] = useState<string>(ALLE);
-  const [partijNaam, setPartijNaam] = useState<string>(ALLE);
-  const [sortering, setSortering] = useState<SorteerOptie>("alfabetisch");
-  const [inclusiefGearchiveerd, setInclusiefGearchiveerd] = useState(false);
+  const [partijType, setPartijType] = useVoorkeur<string>("gebouwen_partij_type", ALLE);
+  const [partijNaam, setPartijNaam] = useVoorkeur<string>("gebouwen_partij_naam", ALLE);
+  const [sortering, setSortering] = useVoorkeur<SorteerOptie>("gebouwen_sortering", "alfabetisch");
+  const [inclusiefGearchiveerd, setInclusiefGearchiveerd] = useVoorkeur<boolean>("gebouwen_incl_gearchiveerd", false);
 
   const { data: partijOpties } = useListGebouwPartijOpties();
 

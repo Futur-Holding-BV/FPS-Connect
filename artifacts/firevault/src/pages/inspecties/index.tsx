@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "wouter";
 import { useListInspecties } from "@workspace/api-client-react";
@@ -6,7 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Calendar, Building, CheckCircle, Clock, AlertCircle, FileText } from "lucide-react";
+import { Calendar, Building, CheckCircle, Clock, AlertCircle, FileText, X } from "lucide-react";
+import { useVoorkeur } from "@/hooks/use-voorkeur";
 
 const statusKleur: Record<string, string> = {
   gepland: "bg-blue-100 text-blue-800 border-blue-200",
@@ -31,8 +31,9 @@ const typeLabel: Record<string, string> = {
 
 export default function Inspecties() {
   const { t } = useTranslation();
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [typeFilter, setTypeFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useVoorkeur("inspecties_status", "all");
+  const [typeFilter, setTypeFilter] = useVoorkeur("inspecties_type", "all");
+  const filterActief = statusFilter !== "all" || typeFilter !== "all";
 
   const { data: inspecties, isLoading } = useListInspecties({
     status: statusFilter !== "all" ? statusFilter : undefined,
@@ -84,6 +85,19 @@ export default function Inspecties() {
             <SelectItem value="herstel">Herstel</SelectItem>
           </SelectContent>
         </Select>
+
+        {filterActief && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              setStatusFilter("all");
+              setTypeFilter("all");
+            }}
+          >
+            <X className="h-4 w-4 mr-1" /> Filter wissen
+          </Button>
+        )}
       </div>
 
       {isLoading && (
