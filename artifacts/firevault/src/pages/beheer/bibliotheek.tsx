@@ -97,6 +97,7 @@ const WERENDHEID_OPTIES: { waarde: string; label: string; omschrijving: string }
 // ── Tab Applicaties ──────────────────────────────────────────────────────────
 function TabApplicaties() {
   const queryClient = useQueryClient();
+  const { toast } = useToast();
   const { heeftNiveau } = useBevoegdheid();
   const magAanmaken = heeftNiveau("bibliotheek", 3);
   const magBewerken = heeftNiveau("bibliotheek", 2);
@@ -192,11 +193,20 @@ function TabApplicaties() {
   }
 
   async function zetArchief(t: VoorzieningType) {
+    const archiveren = t.actief;
     try {
       await wijzigType.mutateAsync({ code: t.code, data: { actief: !t.actief } });
       await queryClient.invalidateQueries({ queryKey: getListVoorzieningTypesQueryKey() });
-    } catch {
-      // Bij een fout blijft de lijst ongewijzigd; gebruiker kan opnieuw proberen.
+      toast({
+        title: archiveren ? "Applicatie gearchiveerd" : "Applicatie hersteld",
+        description: `"${t.naam}" is ${archiveren ? "gearchiveerd" : "hersteld"}.`,
+      });
+    } catch (err) {
+      toast({
+        title: archiveren ? "Archiveren mislukt" : "Herstellen mislukt",
+        description: foutmelding(err, "Probeer het opnieuw."),
+        variant: "destructive",
+      });
     }
   }
 
@@ -448,6 +458,7 @@ interface BulkResultaat {
 // ── Tab Toepassingen ─────────────────────────────────────────────────────────
 function TabToepassingen() {
   const queryClient = useQueryClient();
+  const { toast } = useToast();
   const [typeFilter, setTypeFilter, wisTypeFilter] = useVoorkeur(
     "bibliotheek_toepassingen_type",
     GEEN_TYPE,
@@ -525,8 +536,21 @@ function TabToepassingen() {
   }
 
   async function toggleArchief(l: Label) {
-    await wijzigLabel.mutateAsync({ id: l.id, data: { gearchiveerd: !l.gearchiveerd } });
-    await queryClient.invalidateQueries({ queryKey: getListLabelsQueryKey() });
+    const archiveren = !l.gearchiveerd;
+    try {
+      await wijzigLabel.mutateAsync({ id: l.id, data: { gearchiveerd: archiveren } });
+      await queryClient.invalidateQueries({ queryKey: getListLabelsQueryKey() });
+      toast({
+        title: archiveren ? "Toepassing gearchiveerd" : "Toepassing hersteld",
+        description: `"${l.naam}" is ${archiveren ? "gearchiveerd" : "hersteld"}.`,
+      });
+    } catch (err) {
+      toast({
+        title: archiveren ? "Archiveren mislukt" : "Herstellen mislukt",
+        description: foutmelding(err, "Probeer het opnieuw."),
+        variant: "destructive",
+      });
+    }
   }
 
   function toggleSelectie(id: number) {

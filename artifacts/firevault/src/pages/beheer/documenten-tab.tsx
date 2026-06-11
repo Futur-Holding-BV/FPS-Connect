@@ -711,6 +711,7 @@ function DocumentDetail({
   onNieuweRevisie: () => void;
 }) {
   const queryClient = useQueryClient();
+  const { toast } = useToast();
   // Live versie ophalen zodat de dialoog na een mutatie niet op een verouderde
   // lijst-snapshot blijft hangen; de meegegeven snapshot dient als directe fallback.
   const { data: liveDoc } = useGetDocument(document.id);
@@ -725,28 +726,53 @@ function DocumentDetail({
       JSON.stringify([...(doc.toepassing_ids ?? [])].sort());
 
   async function bewaarStatus(status: string) {
-    await wijzigDocument.mutateAsync({
-      id: document.id,
-      data: { status: status as Document["status"] },
-    });
-    await queryClient.invalidateQueries({ queryKey: getListDocumentenQueryKey() });
-    await queryClient.invalidateQueries({
-      queryKey: getGetDocumentQueryKey(document.id),
-    });
-    await queryClient.invalidateQueries({
-      queryKey: getListDocumentRevisiesQueryKey(document.id),
-    });
+    try {
+      await wijzigDocument.mutateAsync({
+        id: document.id,
+        data: { status: status as Document["status"] },
+      });
+      await queryClient.invalidateQueries({ queryKey: getListDocumentenQueryKey() });
+      await queryClient.invalidateQueries({
+        queryKey: getGetDocumentQueryKey(document.id),
+      });
+      await queryClient.invalidateQueries({
+        queryKey: getListDocumentRevisiesQueryKey(document.id),
+      });
+      toast({
+        title: "Status gewijzigd",
+        description: `"${doc.naam}" heeft nu de status "${STATUS_LABELS[status] ?? status}".`,
+      });
+    } catch (err) {
+      toast({
+        title: "Status wijzigen mislukt",
+        description: foutmelding(err, "Probeer het opnieuw."),
+        variant: "destructive",
+      });
+    }
   }
 
   async function toggleArchief() {
-    await wijzigDocument.mutateAsync({
-      id: document.id,
-      data: { gearchiveerd: !doc.gearchiveerd },
-    });
-    await queryClient.invalidateQueries({ queryKey: getListDocumentenQueryKey() });
-    await queryClient.invalidateQueries({
-      queryKey: getGetDocumentQueryKey(document.id),
-    });
+    const archiveren = !doc.gearchiveerd;
+    try {
+      await wijzigDocument.mutateAsync({
+        id: document.id,
+        data: { gearchiveerd: archiveren },
+      });
+      await queryClient.invalidateQueries({ queryKey: getListDocumentenQueryKey() });
+      await queryClient.invalidateQueries({
+        queryKey: getGetDocumentQueryKey(document.id),
+      });
+      toast({
+        title: archiveren ? "Document gearchiveerd" : "Document hersteld",
+        description: `"${doc.naam}" is ${archiveren ? "gearchiveerd" : "hersteld"}.`,
+      });
+    } catch (err) {
+      toast({
+        title: archiveren ? "Archiveren mislukt" : "Herstellen mislukt",
+        description: foutmelding(err, "Probeer het opnieuw."),
+        variant: "destructive",
+      });
+    }
   }
 
   async function bewaarKoppelingen() {
