@@ -220,6 +220,7 @@ const leegForm = {
   avatar_url: "", bedrijfslogo_url: "", bedrijfskleuren: "",
   bevoegdheden: {} as Record<string, number>,
   herkomst_profiel_id: null as number | null,
+  herkomst_automatisch: false,
 };
 type GebruikerForm = typeof leegForm;
 
@@ -379,6 +380,7 @@ export default function Gebruikers() {
       bedrijfskleuren:  g.bedrijfskleuren  ?? "",
       bevoegdheden:     g.bevoegdheden    ?? {},
       herkomst_profiel_id: g.herkomst_profiel_id ?? null,
+      herkomst_automatisch: (g as any).herkomst_automatisch === true,
     });
     setBewerkFout(null);
   }
@@ -1102,19 +1104,42 @@ function BevoegdhedenEditor({
   onChange,
   onPresetGekozen,
   herkomstProfielId,
+  herkomstAutomatisch,
 }: {
   bevoegdheden: Record<string, number>;
   onChange: (b: Record<string, number>) => void;
   onPresetGekozen?: (profielId: number) => void;
   herkomstProfielId?: number | null;
+  herkomstAutomatisch?: boolean;
 }) {
   const { data: profielen } = useListProfielen();
+  const gekoppeldProfiel =
+    herkomstProfielId != null ? profielen?.find((p) => p.id === herkomstProfielId) : undefined;
 
   return (
     <div className="rounded-lg border p-3 space-y-3">
       <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
         <ShieldCheck className="h-3.5 w-3.5" /> Bevoegdheden
       </div>
+
+      {gekoppeldProfiel && (
+        <div className="flex flex-wrap items-center gap-1.5 text-xs">
+          <Layers className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
+          <span className="text-muted-foreground">
+            {herkomstAutomatisch ? "Automatisch gekoppeld aan profiel" : "Gekoppeld aan profiel"}
+          </span>
+          <span className="font-medium">{gekoppeldProfiel.naam}</span>
+          {herkomstAutomatisch ? (
+            <Badge variant="outline" className="text-xs h-5 px-1.5 bg-amber-50 text-amber-700 border-amber-200">
+              Automatisch
+            </Badge>
+          ) : (
+            <Badge variant="secondary" className="text-xs h-5 px-1.5 text-muted-foreground">
+              Handmatig
+            </Badge>
+          )}
+        </div>
+      )}
 
       {profielen && profielen.length > 0 && (
         <div className="space-y-1.5">
@@ -1141,7 +1166,9 @@ function BevoegdhedenEditor({
             </SelectContent>
           </Select>
           <p className="text-xs text-muted-foreground">
-            Preset overschrijft alle modulewaarden — daarna nog per module aanpasbaar.
+            {herkomstAutomatisch
+              ? "Een preset kiezen legt een handmatige (bevestigde) koppeling. Preset overschrijft alle modulewaarden — daarna nog per module aanpasbaar."
+              : "Een preset kiezen legt een handmatige koppeling. Preset overschrijft alle modulewaarden — daarna nog per module aanpasbaar."}
           </p>
         </div>
       )}
@@ -1281,8 +1308,11 @@ function GebruikerVelden({
         <BevoegdhedenEditor
           bevoegdheden={form.bevoegdheden}
           herkomstProfielId={form.herkomst_profiel_id}
+          herkomstAutomatisch={form.herkomst_automatisch}
           onChange={(b) => setForm((f) => ({ ...f, bevoegdheden: b }))}
-          onPresetGekozen={(profielId) => setForm((f) => ({ ...f, herkomst_profiel_id: profielId }))}
+          onPresetGekozen={(profielId) =>
+            setForm((f) => ({ ...f, herkomst_profiel_id: profielId, herkomst_automatisch: false }))
+          }
         />
       )}
 
