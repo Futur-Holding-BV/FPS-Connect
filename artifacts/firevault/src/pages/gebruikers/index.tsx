@@ -1101,10 +1101,12 @@ function BevoegdhedenEditor({
   bevoegdheden,
   onChange,
   onPresetGekozen,
+  herkomstProfielId,
 }: {
   bevoegdheden: Record<string, number>;
   onChange: (b: Record<string, number>) => void;
   onPresetGekozen?: (profielId: number) => void;
+  herkomstProfielId?: number | null;
 }) {
   const { data: profielen } = useListProfielen();
 
@@ -1118,7 +1120,7 @@ function BevoegdhedenEditor({
         <div className="space-y-1.5">
           <Label>Preset toepassen</Label>
           <Select
-            value=""
+            value={herkomstProfielId != null ? String(herkomstProfielId) : ""}
             onValueChange={(profielId) => {
               const profiel = profielen.find((p) => String(p.id) === profielId);
               if (profiel) {
@@ -1278,6 +1280,7 @@ function GebruikerVelden({
       {form.rol !== "klant" && form.rol !== "hoofdbeheerder" && (
         <BevoegdhedenEditor
           bevoegdheden={form.bevoegdheden}
+          herkomstProfielId={form.herkomst_profiel_id}
           onChange={(b) => setForm((f) => ({ ...f, bevoegdheden: b }))}
           onPresetGekozen={(profielId) => setForm((f) => ({ ...f, herkomst_profiel_id: profielId }))}
         />
