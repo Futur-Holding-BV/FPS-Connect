@@ -1428,6 +1428,42 @@ export const UpdateLabelResponse = zod.object({
 
 
 /**
+ * @summary Gekoppelde documenten van een toepassing (label) instellen (beheerder)
+ */
+export const SetLabelDocumentenParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const SetLabelDocumentenBody = zod.object({
+  "document_ids": zod.array(zod.number())
+})
+
+export const SetLabelDocumentenResponse = zod.object({
+  "id": zod.number(),
+  "type_code": zod.string().nullish(),
+  "naam": zod.string(),
+  "fabrikant": zod.string().nullish(),
+  "testnorm": zod.string().nullish(),
+  "testrapport_id": zod.number().nullish(),
+  "testrapport": zod.union([zod.object({
+  "id": zod.number(),
+  "naam": zod.string(),
+  "fabrikant": zod.string().nullish(),
+  "norm": zod.string().nullish(),
+  "rapportnummer": zod.string().nullish(),
+  "pdf_url": zod.string().nullish(),
+  "gearchiveerd": zod.boolean(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string().optional()
+}),zod.null()]).optional(),
+  "gearchiveerd": zod.boolean(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string().optional(),
+  "applicatie_codes": zod.array(zod.string())
+})
+
+
+/**
  * @summary Testrapporten-bibliotheek
  */
 export const ListTestrapportenQueryParams = zod.object({

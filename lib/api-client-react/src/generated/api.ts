@@ -85,6 +85,7 @@ import type {
   InspectieUpdate,
   KaartEmbed,
   Label,
+  LabelDocumentenInput,
   LabelInput,
   LabelUpdate,
   ListDocumentenParams,
@@ -3946,6 +3947,77 @@ export const useUpdateLabel = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getUpdateLabelMutationOptions(options));
+    }
+
+export const getSetLabelDocumentenUrl = (id: number,) => {
+
+
+
+
+  return `/api/labels/${id}/documenten`
+}
+
+/**
+ * @summary Gekoppelde documenten van een toepassing (label) instellen (beheerder)
+ */
+export const setLabelDocumenten = async (id: number,
+    labelDocumentenInput: LabelDocumentenInput, options?: RequestInit): Promise<Label> => {
+
+  return customFetch<Label>(getSetLabelDocumentenUrl(id),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(labelDocumentenInput)
+  }
+);}
+
+
+
+
+export const getSetLabelDocumentenMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof setLabelDocumenten>>, TError,{id: number;data: BodyType<LabelDocumentenInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof setLabelDocumenten>>, TError,{id: number;data: BodyType<LabelDocumentenInput>}, TContext> => {
+
+const mutationKey = ['setLabelDocumenten'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof setLabelDocumenten>>, {id: number;data: BodyType<LabelDocumentenInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  setLabelDocumenten(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SetLabelDocumentenMutationResult = NonNullable<Awaited<ReturnType<typeof setLabelDocumenten>>>
+    export type SetLabelDocumentenMutationBody = BodyType<LabelDocumentenInput>
+    export type SetLabelDocumentenMutationError = ErrorType<void>
+
+    /**
+ * @summary Gekoppelde documenten van een toepassing (label) instellen (beheerder)
+ */
+export const useSetLabelDocumenten = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof setLabelDocumenten>>, TError,{id: number;data: BodyType<LabelDocumentenInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof setLabelDocumenten>>,
+        TError,
+        {id: number;data: BodyType<LabelDocumentenInput>},
+        TContext
+      > => {
+      return useMutation(getSetLabelDocumentenMutationOptions(options));
     }
 
 export const getListTestrapportenUrl = (params?: ListTestrapportenParams,) => {

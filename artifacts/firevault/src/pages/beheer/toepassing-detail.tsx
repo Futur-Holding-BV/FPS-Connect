@@ -1,0 +1,418 @@
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import {
+  useUpdateLabel,
+  useSetLabelDocumenten,
+  useListDocumenten,
+  getListDocumentenQueryKey,
+  getListLabelsQueryKey,
+} from "@workspace/api-client-react";
+import type { Label, VoorzieningType, Document } from "@workspace/api-client-react";
+import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Label as UiLabel } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { ExternalLink, FileText, Plus, X } from "lucide-react";
+import { TYPE_LABELS, foutmelding, statusBadge } from "./documenten-tab";
+
+// Gedeeld detail-/beheerscherm voor een toepassing (label). Toont en bewerkt de
+// basisvelden, de gekoppelde applicatie-types en de gekoppelde documenten. Wordt
+// gebruikt vanuit zowel de bibliotheek-tab als de losse toepassingen-pagina.
+export function ToepassingDetailDialog({
+  toepassing,
+  open,
+  onOpenChange,
+  typen,
+}: {
+  toepassing: Label | null;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  typen: VoorzieningType[];
+}) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl max-h-[88vh] overflow-y-auto">
+        {open && toepassing ? (
+          <ToepassingDetailInhoud
+            key={toepassing.id}
+            toepassing={toepassing}
+            typen={typen}
+            onSluit={() => onOpenChange(false)}
+          />
+        ) : (
+          <DialogHeader>
+            <DialogTitle>Toepassing</DialogTitle>
+          </DialogHeader>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function ToepassingDetailInhoud({
+  toepassing,
+  typen,
+  onSluit,
+}: {
+  toepassing: Label;
+  typen: VoorzieningType[];
+  onSluit: () => void;
+}) {
+  const queryClient = useQueryClient();
+  const { heeftNiveau } = useBevoegdheid();
+  const magBewerken = heeftNiveau("bibliotheek", 2);
+
+  const wijzigLabel = useUpdateLabel();
+  const zetDocumenten = useSetLabelDocumenten();
+
+  // De VOLLEDIGE huidige documentset van deze toepassing, inclusief gearchiveerde
+  // en vervangen revisies. Cruciaal: zo verdwijnt bij opslaan niet stilzwijgend
+  // een gekoppeld testrapport of een oudere revisie die nog rechtsgeldig is.
+  const {
+    data: gekoppeld = [],
+    isLoading: gekoppeldLaadt,
+    isError: gekoppeldFout,
+    isSuccess: gekoppeldGeladen,
+  } = useListDocumenten({
+    label_id: toepassing.id,
+    inclusief_gearchiveerd: true,
+  });
+  // Selecteerbare documenten om toe te voegen: alleen actuele, niet-gearchiveerde
+  // revisies (geen vervangen of ingetrokken documenten).
+  const { data: actueleDocs = [] } = useListDocumenten({ alleen_actueel: true });
+
+  const [naam, setNaam] = useState(toepassing.naam);
+  const [fabrikant, setFabrikant] = useState(toepassing.fabrikant ?? "");
+  const [testnorm, setTestnorm] = useState(toepassing.testnorm ?? "");
+  const [applCodes, setApplCodes] = useState<string[]>(toepassing.applicatie_codes ?? []);
+
+  // De te bewaren documentset. Geïnitialiseerd uit de volledige gekoppelde set
+  // zodra die is geladen; daarna alleen door bewuste acties van de gebruiker
+  // aangepast (toevoegen/verwijderen).
+  // docIdsKlaar = de gekoppelde set is daadwerkelijk geladen EN geïnitialiseerd.
+  // Pas dan mag opgeslagen worden: anders zou een nog-ladende of mislukte query
+  // (data valt terug op []) bij opslaan stilzwijgend alle koppelingen wissen.
+  const [docIds, setDocIds] = useState<number[]>([]);
+  const [docIdsKlaar, setDocIdsKlaar] = useState(false);
+  const geinitialiseerd = useRef(false);
+  useEffect(() => {
+    if (!geinitialiseerd.current && gekoppeldGeladen) {
+      setDocIds((gekoppeld as Document[]).map((d) => d.id));
+      geinitialiseerd.current = true;
+      setDocIdsKlaar(true);
+    }
+  }, [gekoppeldGeladen, gekoppeld]);
+
+  const [fout, setFout] = useState("");
+
+  // Opzoektabel met metadata voor elk document-id in de set. De gekoppelde set
+  // (incl. gearchiveerd) is leidend, aangevuld met de actuele documenten zodat
+  // net-toegevoegde documenten ook hun gegevens tonen.
+  const docMap = useMemo(() => {
+    const m = new Map<number, Document>();
+    for (const d of actueleDocs as Document[]) m.set(d.id, d);
+    for (const d of gekoppeld as Document[]) m.set(d.id, d);
+    return m;
+  }, [actueleDocs, gekoppeld]);
+
+  const gekoppeldeDocs = docIds
+    .map((id) => docMap.get(id))
+    .filter((d): d is Document => Boolean(d));
+  const koppelbaar = (actueleDocs as Document[]).filter((d) => !docIds.includes(d.id));
+
+  // Applicatie-opties: actieve types plus eventueel een al gekoppeld inactief type
+  // (zodat een bestaande koppeling niet onzichtbaar wordt).
+  const applOpties = useMemo(() => {
+    const actief = typen.filter((t) => t.actief);
+    const extra = typen.filter((t) => !t.actief && applCodes.includes(t.code));
+    return [...actief, ...extra];
+  }, [typen, applCodes]);
+
+  const geldig = naam.trim() !== "";
+  const bezig = wijzigLabel.isPending || zetDocumenten.isPending;
+
+  async function bewaar() {
+    if (!geldig || !docIdsKlaar) return;
+    setFout("");
+    try {
+      await wijzigLabel.mutateAsync({
+        id: toepassing.id,
+        data: {
+          naam: naam.trim(),
+          fabrikant: fabrikant.trim() || null,
+          testnorm: testnorm.trim() || null,
+          applicatie_codes: applCodes,
+        },
+      });
+      await zetDocumenten.mutateAsync({
+        id: toepassing.id,
+        data: { document_ids: docIds },
+      });
+      await queryClient.invalidateQueries({ queryKey: getListLabelsQueryKey() });
+      await queryClient.invalidateQueries({ queryKey: getListDocumentenQueryKey() });
+      onSluit();
+    } catch (err) {
+      setFout(foutmelding(err, "Opslaan is mislukt. Probeer het opnieuw."));
+    }
+  }
+
+  return (
+    <>
+      <DialogHeader>
+        <DialogTitle>{toepassing.naam}</DialogTitle>
+        <DialogDescription>
+          {magBewerken
+            ? "Beheer de basisgegevens, applicatie-types en gekoppelde documenten."
+            : "Bekijk de basisgegevens, applicatie-types en gekoppelde documenten."}
+        </DialogDescription>
+      </DialogHeader>
+
+      <div className="space-y-4">
+        <div className="grid gap-3">
+          <div>
+            <UiLabel htmlFor="toep-naam">Naam *</UiLabel>
+            <Input
+              id="toep-naam"
+              value={naam}
+              disabled={!magBewerken}
+              onChange={(e) => setNaam(e.target.value)}
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <UiLabel htmlFor="toep-fabrikant">Fabrikant</UiLabel>
+              <Input
+                id="toep-fabrikant"
+                placeholder="Optioneel"
+                value={fabrikant}
+                disabled={!magBewerken}
+                onChange={(e) => setFabrikant(e.target.value)}
+              />
+            </div>
+            <div>
+              <UiLabel htmlFor="toep-testnorm">Brand- of rookwerendheid</UiLabel>
+              <Input
+                id="toep-testnorm"
+                placeholder="Bijv. EN 1366-2"
+                value={testnorm}
+                disabled={!magBewerken}
+                onChange={(e) => setTestnorm(e.target.value)}
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <UiLabel>Applicatie-types</UiLabel>
+          <ScrollArea className="h-36 rounded-md border">
+            <div className="p-2 space-y-1">
+              {applOpties.length === 0 ? (
+                <p className="text-xs text-muted-foreground p-2">
+                  Geen applicatie-types beschikbaar.
+                </p>
+              ) : (
+                applOpties.map((t) => (
+                  <label
+                    key={t.code}
+                    className={`flex items-center gap-2 px-2 py-1.5 rounded hover:bg-muted/50 ${
+                      magBewerken ? "cursor-pointer" : ""
+                    }`}
+                  >
+                    <Checkbox
+                      checked={applCodes.includes(t.code)}
+                      disabled={!magBewerken}
+                      onCheckedChange={(checked) =>
+                        setApplCodes((cs) =>
+                          checked ? [...cs, t.code] : cs.filter((c) => c !== t.code),
+                        )
+                      }
+                    />
+                    <span className="text-sm flex-1">
+                      <span className="font-mono text-xs text-muted-foreground mr-2">
+                        {t.code}
+                      </span>
+                      {t.naam}
+                      {!t.actief && (
+                        <span className="text-xs text-muted-foreground ml-2">(inactief)</span>
+                      )}
+                    </span>
+                  </label>
+                ))
+              )}
+            </div>
+          </ScrollArea>
+        </div>
+
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <UiLabel>Gekoppelde documenten</UiLabel>
+            <span className="text-xs text-muted-foreground">{docIds.length} gekoppeld</span>
+          </div>
+
+          {gekoppeldLaadt ? (
+            <p className="text-xs text-muted-foreground p-2">Documenten laden…</p>
+          ) : gekoppeldFout ? (
+            <p className="text-xs text-destructive rounded-md border border-destructive/40 p-3 text-center">
+              De gekoppelde documenten konden niet worden geladen. Sluit dit venster
+              en probeer het opnieuw; opslaan is uitgeschakeld om te voorkomen dat
+              koppelingen verloren gaan.
+            </p>
+          ) : gekoppeldeDocs.length === 0 ? (
+            <p className="text-xs text-muted-foreground rounded-md border border-dashed p-3 text-center">
+              Nog geen documenten gekoppeld.
+            </p>
+          ) : (
+            <div className="rounded-md border divide-y">
+              {gekoppeldeDocs.map((d) => (
+                <div key={d.id} className="flex items-center gap-2 p-2">
+                  <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
+                  <div className="min-w-0 flex-1">
+                    <div className="text-sm truncate flex items-center gap-1.5">
+                      {d.naam}
+                      {d.pdf_url && (
+                        <a
+                          href={d.pdf_url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-muted-foreground hover:text-foreground"
+                        >
+                          <ExternalLink className="h-3 w-3" />
+                        </a>
+                      )}
+                    </div>
+                    <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
+                      <Badge variant="outline" className="text-xs font-normal">
+                        {TYPE_LABELS[d.documenttype] ?? d.documenttype}
+                      </Badge>
+                      {statusBadge(d.status)}
+                      {d.gearchiveerd && (
+                        <Badge variant="outline" className="text-xs text-muted-foreground">
+                          Gearchiveerd
+                        </Badge>
+                      )}
+                      {d.fabrikant && (
+                        <span className="text-xs text-muted-foreground">{d.fabrikant}</span>
+                      )}
+                    </div>
+                  </div>
+                  {magBewerken && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 shrink-0"
+                      title="Koppeling verwijderen"
+                      onClick={() => setDocIds((ids) => ids.filter((x) => x !== d.id))}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {magBewerken && (
+            <DocumentKoppelen
+              koppelbaar={koppelbaar}
+              onKoppel={(id) =>
+                setDocIds((ids) => (ids.includes(id) ? ids : [...ids, id]))
+              }
+            />
+          )}
+        </div>
+
+        {fout && <p className="text-sm text-destructive">{fout}</p>}
+      </div>
+
+      <DialogFooter>
+        <Button variant="outline" onClick={onSluit}>
+          {magBewerken ? "Annuleren" : "Sluiten"}
+        </Button>
+        {magBewerken && (
+          <Button onClick={bewaar} disabled={!geldig || bezig || !docIdsKlaar}>
+            {bezig ? "Opslaan…" : "Opslaan"}
+          </Button>
+        )}
+      </DialogFooter>
+    </>
+  );
+}
+
+// Inklapbare picker om een bestaand (actueel) document aan de toepassing te koppelen.
+function DocumentKoppelen({
+  koppelbaar,
+  onKoppel,
+}: {
+  koppelbaar: Document[];
+  onKoppel: (id: number) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [zoek, setZoek] = useState("");
+
+  if (!open) {
+    return (
+      <Button
+        variant="outline"
+        size="sm"
+        className="w-full"
+        onClick={() => setOpen(true)}
+      >
+        <Plus className="h-4 w-4 mr-1.5" />
+        Document koppelen
+      </Button>
+    );
+  }
+
+  const gefilterd = koppelbaar.filter(
+    (d) =>
+      d.naam.toLowerCase().includes(zoek.toLowerCase()) ||
+      (d.fabrikant ?? "").toLowerCase().includes(zoek.toLowerCase()),
+  );
+
+  return (
+    <div className="rounded-md border p-2 space-y-2">
+      <Input
+        placeholder="Zoek een document…"
+        value={zoek}
+        onChange={(e) => setZoek(e.target.value)}
+        className="h-8 text-sm"
+        autoFocus
+      />
+      <ScrollArea className="h-40">
+        <div className="space-y-1">
+          {gefilterd.length === 0 ? (
+            <p className="text-xs text-muted-foreground p-2">
+              Geen koppelbare documenten. Upload eerst een document in de tab Documenten.
+            </p>
+          ) : (
+            gefilterd.map((d) => (
+              <button
+                key={d.id}
+                type="button"
+                onClick={() => onKoppel(d.id)}
+                className="w-full flex items-center gap-2 rounded px-2 py-1.5 hover:bg-muted/40 text-left"
+              >
+                <Plus className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                <span className="text-sm flex-1 truncate">{d.naam}</span>
+                <Badge variant="outline" className="text-xs font-normal shrink-0">
+                  {TYPE_LABELS[d.documenttype] ?? d.documenttype}
+                </Badge>
+              </button>
+            ))
+          )}
+        </div>
+      </ScrollArea>
+    </div>
+  );
+}

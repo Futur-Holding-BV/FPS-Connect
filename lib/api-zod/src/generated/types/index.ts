@@ -96,6 +96,7 @@ export * from './inspectieType';
 export * from './inspectieUpdate';
 export * from './kaartEmbed';
 export * from './label';
+export * from './labelDocumentenInput';
 export * from './labelInput';
 export * from './labelUpdate';
 export * from './listDocumentenParams';

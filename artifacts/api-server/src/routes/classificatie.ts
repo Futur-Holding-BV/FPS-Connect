@@ -6,6 +6,7 @@ import {
   mapLabel,
   mapTestrapport,
   syncLabelApplicaties,
+  syncLabelDocumenten,
   onbekendeApplicatieCodes,
 } from "../lib/classificatie";
 
@@ -123,6 +124,25 @@ router.patch("/labels/:id", requireBevoegdheid("bibliotheek", 2), async (req, re
       .returning();
     if (!l) return res.status(404).json({ error: "Toepassing niet gevonden" });
     if (Array.isArray(applicatie_codes)) await syncLabelApplicaties(id, applicatie_codes);
+    return res.json(await mapLabel(l));
+  } catch (err) {
+    req.log.error(err);
+    return res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// PUT /labels/:id/documenten — gekoppelde documenten van een toepassing instellen (beheerder)
+router.put("/labels/:id/documenten", requireBevoegdheid("bibliotheek", 2), async (req, res) => {
+  try {
+    const id = parseInt(String(req.params.id));
+    const ids = Array.isArray(req.body?.document_ids) ? req.body.document_ids : [];
+    await syncLabelDocumenten(id, ids);
+    const [l] = await db
+      .update(labelsTable)
+      .set({ bijgewerktOp: new Date() })
+      .where(eq(labelsTable.id, id))
+      .returning();
+    if (!l) return res.status(404).json({ error: "Toepassing niet gevonden" });
     return res.json(await mapLabel(l));
   } catch (err) {
     req.log.error(err);

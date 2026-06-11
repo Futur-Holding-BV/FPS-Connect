@@ -1890,6 +1890,10 @@ export interface DocumentToepassingenInput {
   label_ids: number[];
 }
 
+export interface LabelDocumentenInput {
+  document_ids: number[];
+}
+
 export interface DocumentAiAnalyseInput {
   /** De (client-side via pdf.js geëxtraheerde) tekstinhoud van het document. */
   tekst: string;

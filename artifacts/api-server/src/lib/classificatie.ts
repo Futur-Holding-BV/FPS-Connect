@@ -123,6 +123,30 @@ export async function syncLabelApplicaties(labelId: number, codes: string[]) {
     .onConflictDoNothing();
 }
 
+// Vervangt de document-koppelingen van een toepassing (label) door de opgegeven set.
+// Verwijdert alleen de rijen van DEZE toepassing, zodat koppelingen van andere
+// toepassingen aan hetzelfde document ongemoeid blijven. Onbekende document-ids
+// worden genegeerd.
+export async function syncLabelDocumenten(labelId: number, documentIds: number[]) {
+  const schoon = Array.from(
+    new Set(documentIds.filter((n) => Number.isInteger(n) && n > 0)),
+  );
+  await db
+    .delete(documentToepassingenTable)
+    .where(eq(documentToepassingenTable.labelId, labelId));
+  if (schoon.length === 0) return;
+  const bestaande = await db
+    .select({ id: documentenTable.id })
+    .from(documentenTable)
+    .where(inArray(documentenTable.id, schoon));
+  const geldig = bestaande.map((b) => b.id);
+  if (geldig.length === 0) return;
+  await db
+    .insert(documentToepassingenTable)
+    .values(geldig.map((documentId) => ({ documentId, labelId })))
+    .onConflictDoNothing();
+}
+
 // Alle (gekoppelde) toepassingen van een voorziening, inclusief testrapport.
 export async function getLabelsVoorVoorziening(voorzieningId: number) {
   const koppelingen = await db

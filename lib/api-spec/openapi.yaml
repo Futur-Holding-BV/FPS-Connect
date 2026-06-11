@@ -1179,6 +1179,33 @@ paths:
         "404":
           description: Niet gevonden
 
+  /labels/{id}/documenten:
+    put:
+      operationId: setLabelDocumenten
+      tags: [classificatie]
+      summary: Gekoppelde documenten van een toepassing (label) instellen (beheerder)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LabelDocumentenInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Label"
+        "404":
+          description: Niet gevonden
+
   /testrapporten:
     get:
       operationId: listTestrapporten
@@ -5956,6 +5983,15 @@ components:
       required: [label_ids]
       properties:
         label_ids:
+          type: array
+          items:
+            type: integer
+
+    LabelDocumentenInput:
+      type: object
+      required: [document_ids]
+      properties:
+        document_ids:
           type: array
           items:
             type: integer

@@ -63,7 +63,7 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 
 const GEEN = "__alle__";
 
-const TYPE_LABELS: Record<string, string> = {
+export const TYPE_LABELS: Record<string, string> = {
   eta: "ETA",
   classificatierapport: "Classificatierapport",
   testrapport: "Testrapport",
@@ -72,7 +72,7 @@ const TYPE_LABELS: Record<string, string> = {
   verwerkingsvoorschrift: "Verwerkingsvoorschrift",
 };
 
-const STATUS_LABELS: Record<string, string> = {
+export const STATUS_LABELS: Record<string, string> = {
   actueel: "Actueel",
   controle_nodig: "Controle nodig",
   vervangen: "Vervangen",
@@ -83,7 +83,7 @@ const STATUS_LABELS: Record<string, string> = {
 // Zet een API-fout om naar een begrijpelijke melding. Onderscheidt een echte
 // bevoegdheidsfout (403) van overige fouten en toont anders het serverbericht,
 // zodat een 500/400 niet langer misleidend als "bevoegdheid" wordt gemeld.
-function foutmelding(err: unknown, standaard: string): string {
+export function foutmelding(err: unknown, standaard: string): string {
   const e = err as { status?: number; data?: { error?: string } } | null;
   if (e?.status === 401) return "U bent niet meer ingelogd. Log opnieuw in en probeer het opnieuw.";
   if (e?.status === 403)
@@ -92,7 +92,7 @@ function foutmelding(err: unknown, standaard: string): string {
   return serverbericht || standaard;
 }
 
-function statusBadge(status: string) {
+export function statusBadge(status: string) {
   const label = STATUS_LABELS[status] ?? status;
   const cls: Record<string, string> = {
     actueel: "text-green-700 border-green-300 bg-green-50",

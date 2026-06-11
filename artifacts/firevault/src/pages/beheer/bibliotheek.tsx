@@ -34,6 +34,7 @@ import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { TabDocumenten } from "./documenten-tab";
+import { ToepassingDetailDialog } from "./toepassing-detail";
 import {
   Archive,
   ArchiveRestore,
@@ -171,6 +172,7 @@ function TabToepassingen() {
   const [typeFilter, setTypeFilter] = useState(GEEN_TYPE);
   const [inclGearchiveerd, setInclGearchiveerd] = useState(false);
   const [nieuwOpen, setNieuwOpen] = useState(false);
+  const [detail, setDetail] = useState<Label | null>(null);
   const [importOpen, setImportOpen] = useState(false);
   const [importRijen, setImportRijen] = useState<ExcelRij[]>([]);
   const [importResultaat, setImportResultaat] = useState<ImportResultaat | null>(null);
@@ -497,9 +499,10 @@ function TabToepassingen() {
                 {(labels as Label[]).map((l) => (
                   <tr
                     key={l.id}
-                    className={`border-b last:border-0 hover:bg-muted/20 transition-colors ${
+                    className={`border-b last:border-0 hover:bg-muted/20 transition-colors cursor-pointer ${
                       l.gearchiveerd ? "opacity-50" : ""
                     }`}
+                    onClick={() => setDetail(l)}
                   >
                     <td className="p-3 font-medium">{l.naam}</td>
                     <td className="p-3 text-muted-foreground">{l.fabrikant ?? "—"}</td>
@@ -528,7 +531,10 @@ function TabToepassingen() {
                         variant="ghost"
                         size="sm"
                         className="h-7 text-xs gap-1"
-                        onClick={() => toggleArchief(l)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleArchief(l);
+                        }}
                         disabled={wijzigLabel.isPending}
                       >
                         {l.gearchiveerd ? (
@@ -631,6 +637,15 @@ function TabToepassingen() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ToepassingDetailDialog
+        toepassing={detail}
+        open={detail !== null}
+        onOpenChange={(o) => {
+          if (!o) setDetail(null);
+        }}
+        typen={typen as VoorzieningType[]}
+      />
     </div>
   );
 }
