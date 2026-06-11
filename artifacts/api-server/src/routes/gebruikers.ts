@@ -6,11 +6,11 @@ import { gebruikersTable, profielenTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { stuurUitnodigingsmail } from "../services/email";
 import { requireBevoegdheid, requireRol } from "../middlewares/auth";
+import { heeftNiveau } from "@workspace/permissies";
 import {
-  heeftNiveau,
-  heeftEnigeToegang,
-  bevoegdhedenGelijk,
-} from "@workspace/permissies";
+  kiesUniekeHerkomstPreset,
+  magAutomatischKoppelen,
+} from "../lib/herkomst";
 
 const router = Router();
 
@@ -114,14 +114,16 @@ const mapGebruikerPubliek = (g: typeof gebruikersTable.$inferSelect) => ({
 async function vindUniekeHerkomstPreset(
   bevoegdheden: Record<string, number>,
 ): Promise<number | null> {
-  if (!heeftEnigeToegang(bevoegdheden)) return null;
   const profielen = await db
     .select({ id: profielenTable.id, bevoegdheden: profielenTable.bevoegdheden })
     .from(profielenTable);
-  const matches = profielen.filter((p) =>
-    bevoegdhedenGelijk((p.bevoegdheden as Record<string, number>) ?? {}, bevoegdheden),
+  return kiesUniekeHerkomstPreset(
+    bevoegdheden,
+    profielen.map((p) => ({
+      id: p.id,
+      bevoegdheden: p.bevoegdheden as Record<string, number> | null,
+    })),
   );
-  return matches.length === 1 ? matches[0]!.id : null;
 }
 
 async function isBeheerder(userId: number | undefined): Promise<boolean> {
@@ -329,7 +331,12 @@ router.patch("/gebruikers/:id", alleenBeheerder, async (req, res) => {
           : null;
       wijziging.herkomstProfielId = nieuweId;
       wijziging.herkomstAutomatisch = false;
-    } else if (wijziging.bevoegdheden !== undefined && bestaand.herkomstProfielId == null) {
+    } else if (
+      magAutomatischKoppelen(
+        wijziging.bevoegdheden !== undefined,
+        bestaand.herkomstProfielId,
+      )
+    ) {
       // Geen expliciete herkomst meegestuurd, bevoegdheden wijzigen, en er is nog
       // geen herkomst: koppel het profiel dat exact en als enige overeenkomt
       // (automatisch afgeleid).
