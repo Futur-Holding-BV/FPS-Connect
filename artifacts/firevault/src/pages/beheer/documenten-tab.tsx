@@ -26,6 +26,7 @@ import type {
 } from "@workspace/api-client-react";
 import { useUpload } from "@workspace/object-storage-web";
 import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
+import { useVoorkeur } from "@/hooks/use-voorkeur";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -849,11 +850,39 @@ export function TabDocumenten() {
   const magCreeren = heeftNiveau("bibliotheek", 3);
   const magBeheren = heeftNiveau("bibliotheek", 2);
 
-  const [typeFilter, setTypeFilter] = useState(GEEN);
-  const [statusFilter, setStatusFilter] = useState(GEEN);
-  const [fabrikantFilter, setFabrikantFilter] = useState("");
-  const [alleenActueel, setAlleenActueel] = useState(true);
-  const [inclGearchiveerd, setInclGearchiveerd] = useState(false);
+  const [typeFilter, setTypeFilter, wisTypeFilter] = useVoorkeur(
+    "documenten_type",
+    GEEN,
+  );
+  const [statusFilter, setStatusFilter, wisStatusFilter] = useVoorkeur(
+    "documenten_status",
+    GEEN,
+  );
+  const [fabrikantFilter, setFabrikantFilter, wisFabrikantFilter] = useVoorkeur(
+    "documenten_fabrikant",
+    "",
+  );
+  const [alleenActueel, setAlleenActueel, wisAlleenActueel] = useVoorkeur(
+    "documenten_alleen_actueel",
+    true,
+  );
+  const [inclGearchiveerd, setInclGearchiveerd, wisInclGearchiveerd] =
+    useVoorkeur("documenten_incl_gearchiveerd", false);
+
+  const filtersActief =
+    typeFilter !== GEEN ||
+    statusFilter !== GEEN ||
+    fabrikantFilter.trim() !== "" ||
+    !alleenActueel ||
+    inclGearchiveerd;
+
+  function wisFilters() {
+    wisTypeFilter();
+    wisStatusFilter();
+    wisFabrikantFilter();
+    wisAlleenActueel();
+    wisInclGearchiveerd();
+  }
 
   const [nieuwOpen, setNieuwOpen] = useState(false);
   const [detail, setDetail] = useState<Document | null>(null);
@@ -959,6 +988,16 @@ export function TabDocumenten() {
                 Inclusief gearchiveerd
               </UiLabel>
             </div>
+            {filtersActief && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="ml-auto"
+                onClick={wisFilters}
+              >
+                Filters wissen
+              </Button>
+            )}
           </div>
         </CardHeader>
         <CardContent className="p-0">
