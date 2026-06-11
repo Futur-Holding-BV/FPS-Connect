@@ -15,7 +15,6 @@ gelukt is, en toon een expliciete foutstatus als de query faalt.
 succesvol is. Bij `isLoading=false` na een **fout** (of als de gebruiker opslaat vóórdat de
 query klaar is) wordt de werk-set dan `[]`, en de delete-all-then-insert wist stilzwijgend
 ALLE koppelingen — inclusief gearchiveerde/vervangen revisies die juridisch nog gelden.
-De architect ving dit als enige blokkerende defect in de bibliotheekketen-feature.
 
 **How to apply:**
 - Init met een ref-guard op `isSuccess` (eenmalig), niet op `!isLoading`.

@@ -7,6 +7,7 @@ import {
   mapTestrapport,
   syncLabelApplicaties,
   syncLabelDocumenten,
+  syncApplicatieLabels,
   onbekendeApplicatieCodes,
 } from "../lib/classificatie";
 
@@ -36,6 +37,34 @@ router.get("/voorziening-types", async (req, res) => {
     res.status(500).json({ error: "Interne serverfout" });
   }
 });
+
+// PUT /voorziening-types/:code/labels — gekoppelde toepassingen van een applicatie instellen (beheerder)
+router.put(
+  "/voorziening-types/:code/labels",
+  requireBevoegdheid("bibliotheek", 2),
+  async (req, res) => {
+    try {
+      const code = String(req.params.code);
+      const [type] = await db
+        .select()
+        .from(voorzieningTypesTable)
+        .where(eq(voorzieningTypesTable.code, code));
+      if (!type) return res.status(404).json({ error: "Applicatie niet gevonden" });
+      const ids = Array.isArray(req.body?.label_ids) ? req.body.label_ids : [];
+      await syncApplicatieLabels(code, ids);
+      return res.json({
+        code: type.code,
+        naam: type.naam,
+        categorie: type.categorie,
+        volgorde: type.volgorde,
+        actief: type.actief,
+      });
+    } catch (err) {
+      req.log.error(err);
+      return res.status(500).json({ error: "Interne serverfout" });
+    }
+  },
+);
 
 // ── TOEPASSINGEN (labels) ───────────────────────────────────────────────────
 // GET /labels

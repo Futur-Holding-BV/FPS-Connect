@@ -35,6 +35,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { TabDocumenten } from "./documenten-tab";
 import { ToepassingDetailDialog } from "./toepassing-detail";
+import { ApplicatieDetailDialog } from "./applicatie-detail";
 import {
   Archive,
   ArchiveRestore,
@@ -92,6 +93,11 @@ const FABRIKANTEN: { naam: string; url: string | null }[] = [
 // ── Tab Applicaties ──────────────────────────────────────────────────────────
 function TabApplicaties() {
   const { data: typen = [], isLoading } = useListVoorzieningTypes();
+  // Eén lijst met alle niet-gearchiveerde toepassingen; client-side gegroepeerd
+  // per applicatie-code zodat per applicatie de gekoppelde toepassingen tonen
+  // zonder een query per rij.
+  const { data: labels = [] } = useListLabels({});
+  const [gekozen, setGekozen] = useState<VoorzieningType | null>(null);
 
   const perCategorie: Record<string, VoorzieningType[]> = {};
   for (const t of typen as VoorzieningType[]) {
@@ -99,11 +105,20 @@ function TabApplicaties() {
     perCategorie[t.categorie].push(t);
   }
 
+  const toepassingenPerCode: Record<string, Label[]> = {};
+  for (const l of labels as Label[]) {
+    for (const code of l.applicatie_codes ?? []) {
+      if (!toepassingenPerCode[code]) toepassingenPerCode[code] = [];
+      toepassingenPerCode[code].push(l);
+    }
+  }
+
   return (
     <div className="space-y-4">
       <p className="text-sm text-muted-foreground">
         De applicatie-catalogus bevat alle genummerde voorzieningstypen (SnagStream-nummering).
         Bij het aanmaken van een concrete spot kiest de monteur een applicatie uit deze catalogus.
+        Klik op een applicatie om de gekoppelde toepassingen te bekijken en te beheren.
       </p>
       {isLoading ? (
         <div className="space-y-2">
@@ -122,34 +137,65 @@ function TabApplicaties() {
             <CardContent className="p-0">
               <table className="w-full text-sm">
                 <tbody>
-                  {items.map((t) => (
-                    <tr
-                      key={t.code}
-                      className={`border-b last:border-0 hover:bg-muted/20 transition-colors ${
-                        !t.actief ? "opacity-40" : ""
-                      }`}
-                    >
-                      <td className="px-4 py-2 w-20">
-                        <span className="font-mono text-xs bg-muted px-1.5 py-0.5 rounded">
-                          {t.code}
-                        </span>
-                      </td>
-                      <td className="px-4 py-2 font-medium">{t.naam}</td>
-                      <td className="px-4 py-2 text-right">
-                        {!t.actief && (
-                          <Badge variant="outline" className="text-xs text-muted-foreground">
-                            Inactief
-                          </Badge>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
+                  {items.map((t) => {
+                    const gekoppeld = toepassingenPerCode[t.code] ?? [];
+                    return (
+                      <tr
+                        key={t.code}
+                        onClick={() => setGekozen(t)}
+                        className={`border-b last:border-0 hover:bg-muted/30 transition-colors cursor-pointer ${
+                          !t.actief ? "opacity-40" : ""
+                        }`}
+                      >
+                        <td className="px-4 py-2.5 w-20 align-top">
+                          <span className="font-mono text-xs bg-muted px-1.5 py-0.5 rounded">
+                            {t.code}
+                          </span>
+                        </td>
+                        <td className="px-4 py-2.5">
+                          <div className="font-medium">{t.naam}</div>
+                          {gekoppeld.length > 0 ? (
+                            <div className="flex flex-wrap gap-1 mt-1.5">
+                              {gekoppeld.map((l) => (
+                                <Badge
+                                  key={l.id}
+                                  variant="secondary"
+                                  className="text-xs font-normal"
+                                >
+                                  {l.naam}
+                                </Badge>
+                              ))}
+                            </div>
+                          ) : (
+                            <div className="text-xs text-muted-foreground mt-0.5">
+                              Geen toepassingen gekoppeld
+                            </div>
+                          )}
+                        </td>
+                        <td className="px-4 py-2.5 text-right align-top whitespace-nowrap">
+                          {!t.actief && (
+                            <Badge variant="outline" className="text-xs text-muted-foreground">
+                              Inactief
+                            </Badge>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </CardContent>
           </Card>
         ))
       )}
+
+      <ApplicatieDetailDialog
+        applicatie={gekozen}
+        open={gekozen !== null}
+        onOpenChange={(o) => {
+          if (!o) setGekozen(null);
+        }}
+      />
     </div>
   );
 }

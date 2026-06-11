@@ -1111,6 +1111,33 @@ paths:
                 items:
                   $ref: "#/components/schemas/VoorzieningType"
 
+  /voorziening-types/{code}/labels:
+    put:
+      operationId: setApplicatieLabels
+      tags: [classificatie]
+      summary: Gekoppelde toepassingen (labels) van een applicatie instellen (beheerder)
+      parameters:
+        - in: path
+          name: code
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ApplicatieLabelsInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VoorzieningType"
+        "404":
+          description: Niet gevonden
+
   /labels:
     get:
       operationId: listLabels
@@ -6031,6 +6058,15 @@ components:
       required: [document_ids]
       properties:
         document_ids:
+          type: array
+          items:
+            type: integer
+
+    ApplicatieLabelsInput:
+      type: object
+      required: [label_ids]
+      properties:
+        label_ids:
           type: array
           items:
             type: integer

@@ -1339,6 +1339,26 @@ export const ListVoorzieningTypesResponse = zod.array(ListVoorzieningTypesRespon
 
 
 /**
+ * @summary Gekoppelde toepassingen (labels) van een applicatie instellen (beheerder)
+ */
+export const SetApplicatieLabelsParams = zod.object({
+  "code": zod.coerce.string()
+})
+
+export const SetApplicatieLabelsBody = zod.object({
+  "label_ids": zod.array(zod.number())
+})
+
+export const SetApplicatieLabelsResponse = zod.object({
+  "code": zod.string(),
+  "naam": zod.string(),
+  "categorie": zod.string(),
+  "volgorde": zod.number(),
+  "actief": zod.boolean()
+})
+
+
+/**
  * @summary Toepassingen (labels), optioneel gefilterd op applicatie
  */
 export const ListLabelsQueryParams = zod.object({

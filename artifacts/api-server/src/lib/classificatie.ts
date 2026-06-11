@@ -147,6 +147,28 @@ export async function syncLabelDocumenten(labelId: number, documentIds: number[]
     .onConflictDoNothing();
 }
 
+// Vervangt de toepassing-koppelingen van een applicatie (voorziening-type) door
+// de opgegeven set. Verwijdert alleen de rijen van DEZE applicatie-code, zodat
+// koppelingen van toepassingen aan andere applicaties ongemoeid blijven.
+// Onbekende of niet-bestaande label-ids worden genegeerd.
+export async function syncApplicatieLabels(typeCode: string, labelIds: number[]) {
+  const schoon = Array.from(
+    new Set(labelIds.filter((n) => Number.isInteger(n) && n > 0)),
+  );
+  await db.delete(labelApplicatiesTable).where(eq(labelApplicatiesTable.typeCode, typeCode));
+  if (schoon.length === 0) return;
+  const bestaande = await db
+    .select({ id: labelsTable.id })
+    .from(labelsTable)
+    .where(inArray(labelsTable.id, schoon));
+  const geldig = bestaande.map((b) => b.id);
+  if (geldig.length === 0) return;
+  await db
+    .insert(labelApplicatiesTable)
+    .values(geldig.map((labelId) => ({ labelId, typeCode })))
+    .onConflictDoNothing();
+}
+
 // Alle (gekoppelde) toepassingen van een voorziening, inclusief testrapport.
 export async function getLabelsVoorVoorziening(voorzieningId: number) {
   const koppelingen = await db

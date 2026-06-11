@@ -13,6 +13,7 @@ export * from './abonnementUpdate';
 export * from './activiteit';
 export * from './appInstellingen';
 export * from './appInstellingenInput';
+export * from './applicatieLabelsInput';
 export * from './archiefUpdate';
 export * from './authGebruiker';
 export * from './authGebruikerBevoegdheden';

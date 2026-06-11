@@ -26,6 +26,7 @@ import type {
   Activiteit,
   AppInstellingen,
   AppInstellingenInput,
+  ApplicatieLabelsInput,
   ArchiefUpdate,
   AuthGebruiker,
   CodeInput,
@@ -3725,6 +3726,77 @@ export function useListVoorzieningTypes<TData = Awaited<ReturnType<typeof listVo
 
 
 
+
+export const getSetApplicatieLabelsUrl = (code: string,) => {
+
+
+
+
+  return `/api/voorziening-types/${code}/labels`
+}
+
+/**
+ * @summary Gekoppelde toepassingen (labels) van een applicatie instellen (beheerder)
+ */
+export const setApplicatieLabels = async (code: string,
+    applicatieLabelsInput: ApplicatieLabelsInput, options?: RequestInit): Promise<VoorzieningType> => {
+
+  return customFetch<VoorzieningType>(getSetApplicatieLabelsUrl(code),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(applicatieLabelsInput)
+  }
+);}
+
+
+
+
+export const getSetApplicatieLabelsMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof setApplicatieLabels>>, TError,{code: string;data: BodyType<ApplicatieLabelsInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof setApplicatieLabels>>, TError,{code: string;data: BodyType<ApplicatieLabelsInput>}, TContext> => {
+
+const mutationKey = ['setApplicatieLabels'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof setApplicatieLabels>>, {code: string;data: BodyType<ApplicatieLabelsInput>}> = (props) => {
+          const {code,data} = props ?? {};
+
+          return  setApplicatieLabels(code,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SetApplicatieLabelsMutationResult = NonNullable<Awaited<ReturnType<typeof setApplicatieLabels>>>
+    export type SetApplicatieLabelsMutationBody = BodyType<ApplicatieLabelsInput>
+    export type SetApplicatieLabelsMutationError = ErrorType<void>
+
+    /**
+ * @summary Gekoppelde toepassingen (labels) van een applicatie instellen (beheerder)
+ */
+export const useSetApplicatieLabels = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof setApplicatieLabels>>, TError,{code: string;data: BodyType<ApplicatieLabelsInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof setApplicatieLabels>>,
+        TError,
+        {code: string;data: BodyType<ApplicatieLabelsInput>},
+        TContext
+      > => {
+      return useMutation(getSetApplicatieLabelsMutationOptions(options));
+    }
 
 export const getListLabelsUrl = (params?: ListLabelsParams,) => {
   const normalizedParams = new URLSearchParams();
