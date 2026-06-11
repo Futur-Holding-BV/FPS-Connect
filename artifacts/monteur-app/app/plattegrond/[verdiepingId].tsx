@@ -362,7 +362,7 @@ export default function Plattegrond() {
             </View>
 
             <View style={{ gap: 8 }}>
-              <SectieLabel>Werendheid</SectieLabel>
+              <SectieLabel>Brand- of rookwerendheid</SectieLabel>
               <ChipRij
                 opties={WERENDHEID_OPTIES.map((v) => ({ waarde: v, label: v }))}
                 geselecteerd={form.werendheid}

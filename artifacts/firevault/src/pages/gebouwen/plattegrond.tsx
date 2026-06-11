@@ -1230,7 +1230,7 @@ export default function Plattegrond() {
                   value={nieuwForm.werendheid || GEEN_WERENDHEID_VAL}
                   onValueChange={(v) => setNieuwForm((f) => ({ ...f, werendheid: v }))}
                 >
-                  <SelectTrigger><SelectValue placeholder="Kies werendheid..." /></SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder="Kies brand- of rookwerendheid..." /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value={GEEN_WERENDHEID_VAL}>Niet opgegeven</SelectItem>
                     {WERENDHEID_OPTIES.map((w) => (

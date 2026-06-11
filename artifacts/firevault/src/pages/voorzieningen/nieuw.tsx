@@ -179,13 +179,13 @@ export default function VoorzieningNieuw() {
             </div>
 
             <div>
-              <Label>Werendheid</Label>
+              <Label>Brand- of rookwerendheid</Label>
               <Select
                 value={form.werendheid}
                 onValueChange={(v) => setForm((f) => ({ ...f, werendheid: v }))}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Kies werendheid (optioneel)" />
+                  <SelectValue placeholder="Kies brand- of rookwerendheid (optioneel)" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value={GEEN_WERENDHEID}>Niet opgegeven</SelectItem>

@@ -329,7 +329,7 @@ function TabToepassingen() {
           <DialogHeader>
             <DialogTitle>Toepassingen importeren via Excel</DialogTitle>
             <DialogDescription>
-              Upload een Excel-bestand (.xlsx). Kolom A: applicatie-code, B: naam, C: fabrikant (optioneel), D: werendheid (optioneel).
+              Upload een Excel-bestand (.xlsx). Kolom A: applicatie-code, B: naam, C: fabrikant (optioneel), D: brand- of rookwerendheid (optioneel).
               Rij 1 is de koptekst en wordt overgeslagen.
             </DialogDescription>
           </DialogHeader>
@@ -378,7 +378,7 @@ function TabToepassingen() {
                           <th className="text-left p-2 font-medium">Type</th>
                           <th className="text-left p-2 font-medium">Naam</th>
                           <th className="text-left p-2 font-medium">Fabrikant</th>
-                          <th className="text-left p-2 font-medium">Werendheid</th>
+                          <th className="text-left p-2 font-medium">Brand- of rookwerendheid</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -490,7 +490,7 @@ function TabToepassingen() {
                   <th className="text-left p-3 font-medium text-muted-foreground">Type</th>
                   <th className="text-left p-3 font-medium text-muted-foreground">Naam / productsoort</th>
                   <th className="text-left p-3 font-medium text-muted-foreground">Fabrikant</th>
-                  <th className="text-left p-3 font-medium text-muted-foreground">Werendheid</th>
+                  <th className="text-left p-3 font-medium text-muted-foreground">Brand- of rookwerendheid</th>
                   <th className="text-left p-3 font-medium text-muted-foreground">Status</th>
                   <th className="p-3" />
                 </tr>
@@ -596,13 +596,13 @@ function TabToepassingen() {
               />
             </div>
             <div>
-              <UiLabel>Werendheid</UiLabel>
+              <UiLabel>Brand- of rookwerendheid</UiLabel>
               <Select
                 value={nieuw.testnorm}
                 onValueChange={(v) => setNieuw((n) => ({ ...n, testnorm: v }))}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Kies werendheid (optioneel)" />
+                  <SelectValue placeholder="Kies brand- of rookwerendheid (optioneel)" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="">Niet opgegeven</SelectItem>
@@ -717,7 +717,7 @@ function TabMeetwaarden() {
   return (
     <div className="space-y-5">
       <p className="text-sm text-muted-foreground">
-        Standaard werendheidsklassen die bij een concrete spot geselecteerd kunnen worden.
+        Standaard brand- en rookwerendheidsklassen die bij een concrete spot geselecteerd kunnen worden.
         WRD = rookwerendheid, EW = brandwerendheid met stralingseis (WBDBO),
         EI = brandwerendheid op integriteit en isolatie.
       </p>
@@ -770,7 +770,7 @@ export default function Bibliotheek() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Bibliotheek</h1>
           <p className="text-muted-foreground text-sm mt-0.5">
-            Centrale stamgegevens voor applicaties, productsoorten, fabrikanten en werendheidsklassen.
+            Centrale stamgegevens voor applicaties, productsoorten, fabrikanten en brand- en rookwerendheidsklassen.
             Items uit de bibliotheek zijn beschikbaar als keuzemenu bij het registreren van concrete spots in gebouwen.
           </p>
         </div>

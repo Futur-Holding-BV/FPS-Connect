@@ -281,7 +281,7 @@ export function VoorzieningBewerkenDialog({
                 }
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Kies werendheid..." />
+                  <SelectValue placeholder="Kies brand- of rookwerendheid..." />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value={GEEN_WERENDHEID}>Niet opgegeven</SelectItem>
