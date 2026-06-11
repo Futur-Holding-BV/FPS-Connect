@@ -148,6 +148,15 @@ Functies:
 
 Afhankelijkheid: bevriezing vereist een gepersisteerde 'definitief opleverrapport'-entiteit. Nu genereert `print.tsx` het opleverrapport live uit actuele data; er is geen rapport-tabel. De volledige bevriezing landt daarom in deze fase (V1.5), bovenop de onveranderlijke documentrevisies uit V1.2.
 
+**Formele opleverstatus & reactietermijn (vastgelegd, nog te bouwen in V1.5).** Een definitief rapport beheert ook de formele opleverstatus — een statusmachine per rapportversie:
+- **Definitief verzonden** — bij definitief maken/versturen krijgt het rapport deze status; verzenddatum wordt vastgelegd; de reactietermijn start automatisch (standaard 14 dagen, configureerbaar); einddatum wordt berekend → status **Reactietermijn loopt**.
+- **Juridisch gereedgemeld / Reactietermijn verstreken** — na het verstrijken van de termijn zonder reactie. Dit wordt gelogd bij zowel het gebouw als het rapport.
+- **Vervangen door nieuwe versie** — bij reactie van opdrachtgever of een aanpassing: oude versie blijft bewaard, nieuwe versie wordt aangemaakt met nieuwe verzenddatum en nieuwe termijn; de oude termijn wordt afgesloten met reden "vervangen door nieuwe versie".
+
+Weergave in gebouwkaart → rapporten-tab, per rapport: rapportversie, datum verzonden, reactietermijn tot, dagen resterend, status, eventuele reactie opdrachtgever, en "vervangen door versie x".
+
+Implementatienotitie (vastgelegd voor later): de overgang naar "verstreken" kan afgeleid worden bij lezen (verzenddatum + termijn) zodat geen achtergrondworker nodig is; de logregel bij gebouw/rapport mag lui of via een dagelijkse job worden weggeschreven. De termijn (14 dagen) wordt configureerbaar, niet hardgecodeerd.
+
 ### V3.0 — Personeel / Medewerkerportaal (vastgelegd, NIET bouwen voor V2.0 afgerond)
 
 Consolideert de eerdere V2.1 (desktop) en V2.2 (mobiel). NIET bouwen voordat V2.0 (mobiele monteurflow) formeel akkoord is. Mogelijke vervanger van Apployed. De bevoegdheden-matrix in `lib/permissies` wordt uitgebreid met module-ID's `personeel` en `verlof` zodat toegang per gebruiker instelbaar blijft.
