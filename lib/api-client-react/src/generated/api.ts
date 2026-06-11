@@ -69,6 +69,7 @@ import type {
   GebouwPartijUpdate,
   GebouwUpdate,
   Gebruiker,
+  GebruikerHerkomstBevestigenBulk200,
   GebruikerInput,
   GebruikerUpdate,
   GetGebouwGevelbeeld200,
@@ -78,6 +79,7 @@ import type {
   HelpdeskTicket,
   HelpdeskTicketInput,
   HelpdeskTicketUpdate,
+  HerkomstBevestigenBulkInput,
   Inspectie,
   InspectieAfronden,
   InspectieDetail,
@@ -7488,6 +7490,76 @@ export const useGebruikerHerkomstBevestigen = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getGebruikerHerkomstBevestigenMutationOptions(options));
+    }
+
+export const getGebruikerHerkomstBevestigenBulkUrl = () => {
+
+
+
+
+  return `/api/gebruikers/herkomst-bevestigen-bulk`
+}
+
+/**
+ * @summary Automatisch afgeleide herkomst-koppelingen in bulk bevestigen (hoofdbeheerder)
+ */
+export const gebruikerHerkomstBevestigenBulk = async (herkomstBevestigenBulkInput?: HerkomstBevestigenBulkInput, options?: RequestInit): Promise<GebruikerHerkomstBevestigenBulk200> => {
+
+  return customFetch<GebruikerHerkomstBevestigenBulk200>(getGebruikerHerkomstBevestigenBulkUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(herkomstBevestigenBulkInput)
+  }
+);}
+
+
+
+
+export const getGebruikerHerkomstBevestigenBulkMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof gebruikerHerkomstBevestigenBulk>>, TError,{data?: BodyType<HerkomstBevestigenBulkInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof gebruikerHerkomstBevestigenBulk>>, TError,{data?: BodyType<HerkomstBevestigenBulkInput>}, TContext> => {
+
+const mutationKey = ['gebruikerHerkomstBevestigenBulk'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof gebruikerHerkomstBevestigenBulk>>, {data?: BodyType<HerkomstBevestigenBulkInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  gebruikerHerkomstBevestigenBulk(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type GebruikerHerkomstBevestigenBulkMutationResult = NonNullable<Awaited<ReturnType<typeof gebruikerHerkomstBevestigenBulk>>>
+    export type GebruikerHerkomstBevestigenBulkMutationBody = BodyType<HerkomstBevestigenBulkInput> | undefined
+    export type GebruikerHerkomstBevestigenBulkMutationError = ErrorType<void>
+
+    /**
+ * @summary Automatisch afgeleide herkomst-koppelingen in bulk bevestigen (hoofdbeheerder)
+ */
+export const useGebruikerHerkomstBevestigenBulk = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof gebruikerHerkomstBevestigenBulk>>, TError,{data?: BodyType<HerkomstBevestigenBulkInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof gebruikerHerkomstBevestigenBulk>>,
+        TError,
+        {data?: BodyType<HerkomstBevestigenBulkInput>},
+        TContext
+      > => {
+      return useMutation(getGebruikerHerkomstBevestigenBulkMutationOptions(options));
     }
 
 export const getGebruikerHerkomstVerwijderenUrl = (id: number,) => {

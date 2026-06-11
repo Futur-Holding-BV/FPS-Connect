@@ -3,7 +3,7 @@ import { Router } from "express";
 import bcrypt from "bcryptjs";
 import { db } from "@workspace/db";
 import { gebruikersTable, profielenTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { eq, and, isNotNull, inArray } from "drizzle-orm";
 import { stuurUitnodigingsmail } from "../services/email";
 import { requireBevoegdheid, requireRol } from "../middlewares/auth";
 import { heeftNiveau } from "@workspace/permissies";
@@ -571,6 +571,50 @@ router.post(
         .where(eq(gebruikersTable.id, id))
         .returning();
       return res.json(mapGebruiker(g));
+    } catch (err) {
+      req.log.error(err);
+      return res.status(500).json({ error: "Interne serverfout" });
+    }
+  },
+);
+
+// POST /gebruikers/herkomst-bevestigen-bulk — bevestig in één handeling alle
+// (of een geselecteerde set) automatisch afgeleide herkomst-koppelingen. De
+// koppelingen blijven, maar worden voortaan als handmatig (bevestigd) behandeld.
+// Optionele body { ids: number[] } beperkt de actie tot die gebruikers; zonder
+// ids worden alle onbevestigde automatische koppelingen bevestigd.
+router.post(
+  "/gebruikers/herkomst-bevestigen-bulk",
+  requireRol("hoofdbeheerder"),
+  async (req, res) => {
+    try {
+      const ruweIds = (req.body as { ids?: unknown })?.ids;
+      let ids: number[] | null = null;
+      if (ruweIds !== undefined) {
+        if (!Array.isArray(ruweIds)) {
+          return res.status(400).json({ error: "ids moet een lijst zijn" });
+        }
+        ids = ruweIds
+          .map((v) => parseInt(String(v), 10))
+          .filter((n) => Number.isInteger(n));
+        if (ids.length === 0) {
+          return res.json({ bevestigd: 0 });
+        }
+      }
+
+      const voorwaarde = and(
+        isNotNull(gebruikersTable.herkomstProfielId),
+        eq(gebruikersTable.herkomstAutomatisch, true),
+        ids ? inArray(gebruikersTable.id, ids) : undefined,
+      );
+
+      const bijgewerkt = await db
+        .update(gebruikersTable)
+        .set({ herkomstAutomatisch: false })
+        .where(voorwaarde)
+        .returning({ id: gebruikersTable.id });
+
+      return res.json({ bevestigd: bijgewerkt.length });
     } catch (err) {
       req.log.error(err);
       return res.status(500).json({ error: "Interne serverfout" });

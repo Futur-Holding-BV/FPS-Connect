@@ -2238,6 +2238,34 @@ paths:
         "404":
           description: Niet gevonden
 
+  /gebruikers/herkomst-bevestigen-bulk:
+    post:
+      operationId: gebruikerHerkomstBevestigenBulk
+      tags: [gebruikers]
+      summary: >-
+        Automatisch afgeleide herkomst-koppelingen in bulk bevestigen
+        (hoofdbeheerder)
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/HerkomstBevestigenBulkInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [bevestigd]
+                properties:
+                  bevestigd:
+                    type: integer
+                    description: Aantal bevestigde koppelingen
+        "400":
+          description: Ongeldige invoer
+
   /gebruikers/{id}/herkomst-verwijderen:
     post:
       operationId: gebruikerHerkomstVerwijderen
@@ -5502,6 +5530,17 @@ components:
             type: integer
         herkomst_profiel_id:
           type: ["integer", "null"]
+
+    HerkomstBevestigenBulkInput:
+      type: object
+      properties:
+        ids:
+          type: array
+          description: >-
+            Optioneel: beperk de bevestiging tot deze gebruikers-id's. Zonder
+            ids worden alle onbevestigde automatische koppelingen bevestigd.
+          items:
+            type: integer
 
     WachtwoordWijzigen:
       type: object

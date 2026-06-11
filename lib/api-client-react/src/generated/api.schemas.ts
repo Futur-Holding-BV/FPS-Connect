@@ -1552,6 +1552,11 @@ export interface GebruikerUpdate {
   herkomst_profiel_id?: number | null;
 }
 
+export interface HerkomstBevestigenBulkInput {
+  /** Optioneel: beperk de bevestiging tot deze gebruikers-id's. Zonder ids worden alle onbevestigde automatische koppelingen bevestigd. */
+  ids?: number[];
+}
+
 export interface WachtwoordWijzigen {
   huidig_wachtwoord: string;
   nieuw_wachtwoord: string;
@@ -2020,6 +2025,11 @@ export type ListOnderhoudParams = {
 voorziening_id?: number;
 gebouw_id?: number;
 status?: string;
+};
+
+export type GebruikerHerkomstBevestigenBulk200 = {
+  /** Aantal bevestigde koppelingen */
+  bevestigd: number;
 };
 
 export type ProfielenAanvullen200 = {

@@ -2646,6 +2646,18 @@ export const GebruikerHerkomstBevestigenResponse = zod.object({
 
 
 /**
+ * @summary Automatisch afgeleide herkomst-koppelingen in bulk bevestigen (hoofdbeheerder)
+ */
+export const GebruikerHerkomstBevestigenBulkBody = zod.object({
+  "ids": zod.array(zod.number()).optional().describe('Optioneel: beperk de bevestiging tot deze gebruikers-id\'s. Zonder ids worden alle onbevestigde automatische koppelingen bevestigd.')
+})
+
+export const GebruikerHerkomstBevestigenBulkResponse = zod.object({
+  "bevestigd": zod.number().describe('Aantal bevestigde koppelingen')
+})
+
+
+/**
  * @summary Herkomst-koppeling verwijderen, bevoegdheden blijven (hoofdbeheerder)
  */
 export const GebruikerHerkomstVerwijderenParams = zod.object({

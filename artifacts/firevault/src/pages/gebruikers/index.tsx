@@ -9,6 +9,7 @@ import {
   useUitnodigingOpnieuwVersturen,
   useGebruikerHerkomstToepassen,
   useGebruikerHerkomstBevestigen,
+  useGebruikerHerkomstBevestigenBulk,
   useGebruikerHerkomstVerwijderen,
   useListProfielen,
   getListGebruikersQueryKey,
@@ -34,7 +35,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Mail, Phone, Building, Clock, Plus, UserPlus, Pencil, Trash2,
   RefreshCw, ShieldCheck, Eye, User, Crown, Upload, Palette, SendHorizonal, X,
-  Layers, Search, RotateCcw, Check, Briefcase, Hammer, Wrench, TrendingUp,
+  Layers, Search, RotateCcw, Check, CheckCheck, Briefcase, Hammer, Wrench, TrendingUp,
 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRol } from "@/context/rol-context";
@@ -275,6 +276,7 @@ export default function Gebruikers() {
   const uitnodigingOpnieuwVersturen = useUitnodigingOpnieuwVersturen();
   const herkomstToepassen   = useGebruikerHerkomstToepassen();
   const herkomstBevestigen  = useGebruikerHerkomstBevestigen();
+  const herkomstBevestigenBulk = useGebruikerHerkomstBevestigenBulk();
   const herkomstVerwijderen = useGebruikerHerkomstVerwijderen();
 
   const [toevoegenOpen, setToevoegenOpen] = useState(false);
@@ -295,6 +297,9 @@ export default function Gebruikers() {
   const [zoek, setZoek]               = useState<string>("");
   const [filterGroep, setFilterGroep] = useState<string | null>(null);
   const [actieveTab, setActieveTab]   = useState<"gebruikers" | "profielen">("gebruikers");
+  const [alleenAuto, setAlleenAuto]   = useState<boolean>(false);
+  const [bulkBevestigOpen, setBulkBevestigOpen] = useState<boolean>(false);
+  const [bulkResultaat, setBulkResultaat] = useState<string | null>(null);
 
   const invalideer = () => queryClient.invalidateQueries({ queryKey: getListGebruikersQueryKey() });
 
@@ -329,6 +334,25 @@ export default function Gebruikers() {
       setBekijkGebruiker((huidig) => huidig && huidig.id === g.id ? (bijgewerkt as Gebruiker) : huidig);
     } catch {
     } finally { setHerkomstBezig(null); }
+  }
+
+  async function bevestigHerkomstBulk(ids: number[]) {
+    if (ids.length === 0 || herkomstBevestigenBulk.isPending) return;
+    setBulkResultaat(null);
+    try {
+      const res: any = await herkomstBevestigenBulk.mutateAsync({ data: { ids } });
+      await invalideer();
+      const aantal = typeof res?.bevestigd === "number" ? res.bevestigd : ids.length;
+      setBulkResultaat(
+        aantal === 0
+          ? "Geen koppelingen bevestigd."
+          : `${aantal} ${aantal === 1 ? "koppeling" : "koppelingen"} bevestigd.`,
+      );
+    } catch {
+      setBulkResultaat("Bevestigen mislukt. Probeer het opnieuw.");
+    } finally {
+      setBulkBevestigOpen(false);
+    }
   }
 
   async function verstuurToevoegen(e: React.FormEvent) {
@@ -451,6 +475,7 @@ export default function Gebruikers() {
   const groepGefilterd = useMemo(() => {
     return (gebruikers ?? []).filter((g: any) => {
       if (filterGroep && groepVanGebruiker(g as Gebruiker) !== filterGroep) return false;
+      if (alleenAuto && !(g.herkomst_profiel_id != null && g.herkomst_automatisch === true)) return false;
       const term = zoek.trim().toLowerCase();
       if (!term) return true;
       return (
@@ -459,9 +484,26 @@ export default function Gebruikers() {
         (g.functietitels ?? []).some((f: string) => f.toLowerCase().includes(term))
       );
     }) as Gebruiker[];
-  }, [gebruikers, filterGroep, zoek]);
+  }, [gebruikers, filterGroep, zoek, alleenAuto]);
 
   const totaalGevonden = groepGefilterd.length;
+
+  // Gebruikers binnen de huidige filter met een onbevestigde automatische
+  // herkomst-koppeling. De bulkactie bevestigt precies deze set.
+  const autoOnbevestigd = useMemo(
+    () =>
+      groepGefilterd.filter(
+        (g: any) => g.herkomst_profiel_id != null && g.herkomst_automatisch === true,
+      ) as Gebruiker[],
+    [groepGefilterd],
+  );
+  const autoOnbevestigdTotaal = useMemo(
+    () =>
+      ((gebruikers ?? []) as any[]).filter(
+        (g) => g.herkomst_profiel_id != null && g.herkomst_automatisch === true,
+      ).length,
+    [gebruikers],
+  );
 
   return (
     <div className="space-y-5 max-w-[1400px] mx-auto">
@@ -519,6 +561,49 @@ export default function Gebruikers() {
               </span>
             )}
           </div>
+
+          {/* Automatische profielkoppelingen — overzicht en bulkbevestiging */}
+          {isHoofd && (autoOnbevestigdTotaal > 0 || alleenAuto || bulkResultaat) && (
+            <div className="flex flex-wrap items-center gap-2 rounded-lg border border-amber-200 bg-amber-50/60 px-3 py-2">
+              <Badge variant="outline" className="h-5 px-1.5 text-xs bg-amber-100 text-amber-800 border-amber-200 gap-1">
+                <Layers className="h-3 w-3" />
+                Auto
+              </Badge>
+              <span className="text-xs text-amber-900">
+                {autoOnbevestigdTotaal === 0
+                  ? "Geen onbevestigde automatische koppelingen"
+                  : `${autoOnbevestigdTotaal} ${autoOnbevestigdTotaal === 1 ? "gebruiker heeft" : "gebruikers hebben"} een onbevestigde automatische profielkoppeling`}
+              </span>
+              {bulkResultaat && (
+                <span className="text-xs font-medium text-green-700 flex items-center gap-1">
+                  <Check className="h-3 w-3" />
+                  {bulkResultaat}
+                </span>
+              )}
+              <div className="flex items-center gap-2 ml-auto">
+                <Button
+                  variant={alleenAuto ? "secondary" : "outline"}
+                  size="sm"
+                  className="h-8 text-xs"
+                  onClick={() => setAlleenAuto((v) => !v)}
+                  disabled={autoOnbevestigdTotaal === 0 && !alleenAuto}
+                >
+                  {alleenAuto ? "Toon alle gebruikers" : "Alleen automatische"}
+                </Button>
+                <Button
+                  size="sm"
+                  className="h-8 text-xs gap-1.5"
+                  disabled={autoOnbevestigd.length === 0 || herkomstBevestigenBulk.isPending}
+                  onClick={() => { setBulkResultaat(null); setBulkBevestigOpen(true); }}
+                >
+                  <CheckCheck className="h-3.5 w-3.5" />
+                  {herkomstBevestigenBulk.isPending
+                    ? "Bezig..."
+                    : `Bevestig ${autoOnbevestigd.length} ${autoOnbevestigd.length === 1 ? "koppeling" : "koppelingen"}`}
+                </Button>
+              </div>
+            </div>
+          )}
 
           {/* Functiegroep-tegels */}
           {!isLoading && (
@@ -868,6 +953,33 @@ export default function Gebruikers() {
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               {verwijderGebruiker.isPending ? "Verwijderen..." : "Definitief verwijderen"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* AlertDialog: automatische koppelingen in bulk bevestigen */}
+      <AlertDialog open={bulkBevestigOpen} onOpenChange={(o) => { if (!o) setBulkBevestigOpen(false); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Automatische koppelingen bevestigen?</AlertDialogTitle>
+            <AlertDialogDescription>
+              U staat op het punt {autoOnbevestigd.length} automatisch afgeleide
+              profielkoppeling{autoOnbevestigd.length === 1 ? "" : "en"} te bevestigen
+              {(filterGroep || alleenAuto || !!zoek.trim())
+                ? " (binnen de huidige selectie)"
+                : ""}.
+              De koppelingen blijven behouden en worden voortaan als handmatig
+              bevestigd behandeld. De bevoegdheden van de gebruikers wijzigen niet.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuleren</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => { e.preventDefault(); bevestigHerkomstBulk(autoOnbevestigd.map((g) => g.id)); }}
+              disabled={herkomstBevestigenBulk.isPending}
+            >
+              {herkomstBevestigenBulk.isPending ? "Bevestigen..." : "Bevestigen"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
