@@ -256,6 +256,11 @@ function TabToepassingen() {
   const [bulkBezig, setBulkBezig] = useState(false);
   const [bulkResultaat, setBulkResultaat] = useState<BulkResultaat | null>(null);
 
+  // Bulk-archiveren/herstellen: dezelfde selectie wordt hergebruikt.
+  const [archiefActie, setArchiefActie] = useState<"archiveren" | "herstellen" | null>(null);
+  const [archiefBezig, setArchiefBezig] = useState(false);
+  const [archiefResultaat, setArchiefResultaat] = useState<BulkResultaat | null>(null);
+
   const { data: typen = [] } = useListVoorzieningTypes();
   const { data: alleLabels = [], isLoading } = useListLabels({
     type_code:
@@ -351,6 +356,42 @@ function TabToepassingen() {
     await queryClient.invalidateQueries({ queryKey: getListLabelsQueryKey() });
     setBulkResultaat(resultaat);
     setBulkBezig(false);
+    if (resultaat.mislukt.length === 0) wisSelectie();
+  }
+
+  // Geselecteerde toepassingen die nog actief zijn (kunnen gearchiveerd worden)
+  // resp. al gearchiveerd zijn (kunnen hersteld worden).
+  const geselecteerdeLabels = (alleLabels as Label[]).filter((l) => geselecteerd.has(l.id));
+  const aantalArchiveerbaar = geselecteerdeLabels.filter((l) => !l.gearchiveerd).length;
+  const aantalHerstelbaar = geselecteerdeLabels.filter((l) => l.gearchiveerd).length;
+
+  function sluitArchief() {
+    setArchiefActie(null);
+    setArchiefResultaat(null);
+  }
+
+  // Archiveert of herstelt de relevante geselecteerde toepassingen via PATCH /labels/:id.
+  async function voerArchiefActieUit() {
+    if (!archiefActie) return;
+    const doelGearchiveerd = archiefActie === "archiveren";
+    const teVerwerken = geselecteerdeLabels.filter((l) => l.gearchiveerd !== doelGearchiveerd);
+    if (teVerwerken.length === 0) return;
+    setArchiefBezig(true);
+    const resultaat: BulkResultaat = { geslaagd: 0, ongewijzigd: 0, mislukt: [] };
+    for (const l of teVerwerken) {
+      try {
+        await wijzigLabel.mutateAsync({ id: l.id, data: { gearchiveerd: doelGearchiveerd } });
+        resultaat.geslaagd++;
+      } catch (err) {
+        resultaat.mislukt.push({
+          naam: l.naam,
+          reden: foutmelding(err, doelGearchiveerd ? "Archiveren mislukt" : "Herstellen mislukt"),
+        });
+      }
+    }
+    await queryClient.invalidateQueries({ queryKey: getListLabelsQueryKey() });
+    setArchiefResultaat(resultaat);
+    setArchiefBezig(false);
     if (resultaat.mislukt.length === 0) wisSelectie();
   }
 
@@ -468,7 +509,7 @@ function TabToepassingen() {
           <span className="text-sm font-medium">
             {geselecteerd.size} toepassing(en) geselecteerd
           </span>
-          <div className="ml-auto flex items-center gap-2">
+          <div className="ml-auto flex flex-wrap items-center gap-2">
             <Button variant="ghost" size="sm" onClick={wisSelectie}>
               <X className="h-4 w-4 mr-1.5" />
               Selectie wissen
@@ -477,9 +518,84 @@ function TabToepassingen() {
               <Link2 className="h-4 w-4 mr-1.5" />
               Koppel aan applicatie
             </Button>
+            {aantalArchiveerbaar > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => { setArchiefResultaat(null); setArchiefActie("archiveren"); }}
+              >
+                <Archive className="h-4 w-4 mr-1.5" />
+                Archiveren
+              </Button>
+            )}
+            {aantalHerstelbaar > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => { setArchiefResultaat(null); setArchiefActie("herstellen"); }}
+              >
+                <ArchiveRestore className="h-4 w-4 mr-1.5" />
+                Herstellen
+              </Button>
+            )}
           </div>
         </div>
       )}
+
+      <Dialog open={archiefActie !== null} onOpenChange={(o) => { if (!o) sluitArchief(); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              {archiefActie === "herstellen"
+                ? "Toepassingen herstellen"
+                : "Toepassingen archiveren"}
+            </DialogTitle>
+            <DialogDescription>
+              {archiefActie === "herstellen"
+                ? `${aantalHerstelbaar} gearchiveerde toepassing(en) uit de selectie worden hersteld en weer als actief getoond.`
+                : `${aantalArchiveerbaar} actieve toepassing(en) uit de selectie worden gearchiveerd. Ze blijven bewaard en kunnen later hersteld worden.`}
+            </DialogDescription>
+          </DialogHeader>
+
+          {archiefResultaat && (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 text-green-700">
+                <CheckCircle2 className="h-5 w-5" />
+                <span className="font-medium">
+                  {archiefResultaat.geslaagd} toepassing(en){" "}
+                  {archiefActie === "herstellen" ? "hersteld" : "gearchiveerd"}
+                </span>
+              </div>
+              {archiefResultaat.mislukt.length > 0 && (
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-destructive flex items-center gap-1">
+                    <XCircle className="h-4 w-4" />
+                    {archiefResultaat.mislukt.length} toepassing(en) mislukt:
+                  </p>
+                  {archiefResultaat.mislukt.map((m, i) => (
+                    <p key={i} className="text-xs text-muted-foreground pl-5">
+                      {m.naam}: {m.reden}
+                    </p>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={sluitArchief}>
+              {archiefResultaat ? "Sluiten" : "Annuleren"}
+            </Button>
+            {!archiefResultaat && (
+              <Button onClick={voerArchiefActieUit} disabled={archiefBezig}>
+                {archiefBezig
+                  ? archiefActie === "herstellen" ? "Herstellen..." : "Archiveren..."
+                  : archiefActie === "herstellen" ? "Herstellen" : "Archiveren"}
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={bulkOpen} onOpenChange={(o) => { if (!o) sluitBulk(); }}>
         <DialogContent className="max-w-md">
