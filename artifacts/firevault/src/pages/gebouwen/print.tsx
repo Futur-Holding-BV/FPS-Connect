@@ -18,8 +18,10 @@ import {
   useGetGebouwEmailSamenvatting,
   useGetGebouwGevelbeeld,
   useListToewijsbareGebruikers,
+  useListClusters,
   type Verdieping,
   type VoorzieningType,
+  type Cluster,
 } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/auth-context";
@@ -142,7 +144,11 @@ type SVGVoorziening = {
   wand_of_plafond?: string;
   locatie_x: number;
   locatie_y: number;
+  cluster_id?: number | null;
+  cluster_naam?: string | null;
 };
+
+const STANDAARD_CLUSTERKLEUR = "#6366f1";
 
 // ─── Hulpfuncties ────────────────────────────────────────────────────────────
 
@@ -565,6 +571,8 @@ function PrintVerdieping({
   typeNaam,
   toonOverzicht,
   toonSpotDetails,
+  groepeerOpCluster,
+  clusters,
 }: {
   verdieping: Verdieping;
   onGereed: () => void;
@@ -575,6 +583,8 @@ function PrintVerdieping({
   typeNaam: Record<string, string>;
   toonOverzicht: boolean;
   toonSpotDetails: boolean;
+  groepeerOpCluster: boolean;
+  clusters: Cluster[] | undefined;
 }) {
   const [pdfBeeld, setPdfBeeld]     = useState<string | null>(null);
   const [pdfDims, setPdfDims]       = useState<{ w: number; h: number } | null>(null);
@@ -645,6 +655,8 @@ function PrintVerdieping({
       wand_of_plafond: v.wand_of_plafond,
       locatie_x: Number(v.locatie_x),
       locatie_y: Number(v.locatie_y),
+      cluster_id: v.cluster_id ?? null,
+      cluster_naam: v.cluster_naam ?? null,
     }));
 
   const alleVoorzieningen = (voorzieningen ?? []) as any[];
@@ -664,6 +676,42 @@ function PrintVerdieping({
   const logoHH  = logoB / 2.59;
   const logoX   = vd.logo_x != null ? Number(vd.logo_x) : logoPad;
   const logoY   = vd.logo_y != null ? Number(vd.logo_y) : logoPad;
+
+  // Groepering van spotdetailpagina's per logisch cluster. De clustervolgorde
+  // volgt de API-volgorde (gelijk aan de plattegrond); spots zonder cluster
+  // komen als laatste groep, net als op het zijpaneel.
+  const clusterKleur = new Map<number, string>(
+    (clusters ?? []).map((c) => [c.id, c.kleur || STANDAARD_CLUSTERKLEUR]),
+  );
+  const spotGroepen: Array<{ sleutel: string; naam: string; kleur: string; spots: SVGVoorziening[] }> = [];
+  for (const c of clusters ?? []) {
+    const spots = geplaatst.filter((v) => v.cluster_id === c.id);
+    if (spots.length > 0) {
+      spotGroepen.push({ sleutel: `c${c.id}`, naam: c.naam, kleur: c.kleur || STANDAARD_CLUSTERKLEUR, spots });
+    }
+  }
+  const zonderCluster = geplaatst.filter((v) => v.cluster_id == null || !clusterKleur.has(v.cluster_id));
+  if (zonderCluster.length > 0) {
+    spotGroepen.push({ sleutel: "geen", naam: "Zonder cluster", kleur: "#94a3b8", spots: zonderCluster });
+  }
+
+  const renderSpotBlok = (spot: SVGVoorziening) => (
+    <SpotDetailBlok
+      key={spot.id}
+      spot={spot}
+      pdfBeeld={pdfBeeld}
+      W={W}
+      H={H}
+      scheidingen={scheidingen}
+      gebouwNaam={gebouwNaam}
+      bouwlaag={verdieping.naam}
+      exportDatum={exportDatum}
+      logoSrc={logoSrc}
+      documenten={documenten}
+      typeNaam={typeNaam}
+      onGereed={() => setSpotsGereed(n => n + 1)}
+    />
+  );
 
   return (
     <div className="prt-verdieping">
@@ -705,23 +753,22 @@ function PrintVerdieping({
         </div>
       )}
 
-      {toonSpotDetails && geplaatst.map(spot => (
-        <SpotDetailBlok
-          key={spot.id}
-          spot={spot}
-          pdfBeeld={pdfBeeld}
-          W={W}
-          H={H}
-          scheidingen={scheidingen}
-          gebouwNaam={gebouwNaam}
-          bouwlaag={verdieping.naam}
-          exportDatum={exportDatum}
-          logoSrc={logoSrc}
-          documenten={documenten}
-          typeNaam={typeNaam}
-          onGereed={() => setSpotsGereed(n => n + 1)}
-        />
-      ))}
+      {toonSpotDetails && (
+        groepeerOpCluster
+          ? spotGroepen.map((groep) => (
+              <div key={groep.sleutel} className="prt-cluster-groep">
+                <div className="prt-cluster-kop">
+                  <span className="prt-cluster-stip" style={{ backgroundColor: groep.kleur }} />
+                  <span className="prt-cluster-naam">{groep.naam}</span>
+                  <span className="prt-cluster-meta">
+                    {groep.spots.length} {groep.spots.length === 1 ? "spot" : "spots"}
+                  </span>
+                </div>
+                {groep.spots.map(spot => renderSpotBlok(spot))}
+              </div>
+            ))
+          : geplaatst.map(spot => renderSpotBlok(spot))
+      )}
 
       {!toonSpotDetails && alleVoorzieningen.length > 0 && (
         <table className="prt-tabel">
@@ -827,6 +874,7 @@ export default function GebouwPrint() {
   const { data: gevelbeeld, isLoading: gevelbeeldLaden }      = useGetGebouwGevelbeeld(gebouwId);
   const { data: documenten, isLoading: documentenLaden }      = useListDocumenten();
   const { data: typen, isLoading: typenLaden }                = useListVoorzieningTypes();
+  const { data: clusters, isLoading: clustersLaden }          = useListClusters(gebouwId);
   const { isLoading: gebruikersLaden }      = useListToewijsbareGebruikers();
 
   const typeNaam = useMemo(
@@ -839,6 +887,7 @@ export default function GebouwPrint() {
 
   const [toonOverzicht,   setToonOverzicht]   = useState(true);
   const [toonSpotDetails, setToonSpotDetails] = useState(true);
+  const [groepeerOpCluster, setGroepeerOpCluster] = useState(false);
 
   const verdiepingen = [...((gebouw?.verdiepingen ?? []) as Verdieping[])].sort(
     (a, b) => (a.niveau ?? 0) - (b.niveau ?? 0),
@@ -848,7 +897,7 @@ export default function GebouwPrint() {
     !isLoading && !!gebouw &&
     !partijenLaden && !toewijzingenLaden &&
     !onderhoudLaden && !inspectiesLaden &&
-    !tekeningenLaden && !emailsLaden && !gevelbeeldLaden && !documentenLaden && !typenLaden && !gebruikersLaden &&
+    !tekeningenLaden && !emailsLaden && !gevelbeeldLaden && !documentenLaden && !typenLaden && !clustersLaden && !gebruikersLaden &&
     gereedFloors >= aantalFloors;
 
   useEffect(() => {
@@ -1106,6 +1155,13 @@ export default function GebouwPrint() {
         .prt-spot-foto { width: 100%; height: 88px; object-fit: cover; border-radius: 6px; border: 1px solid #e2e8f0; break-inside: avoid; }
         .prt-spot-fotopagina { break-before: page; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px; background: #fff; }
 
+        /* ── Cluster-groepering ── */
+        .prt-cluster-kop { break-before: page; break-after: avoid; display: flex; align-items: center; gap: 8px; padding: 8px 12px; margin-bottom: 12px; background: #f1f5f9; border-left: 4px solid #6366f1; border-radius: 6px; }
+        .prt-cluster-stip { display: inline-block; width: 12px; height: 12px; border-radius: 9999px; flex-shrink: 0; }
+        .prt-cluster-naam { font-size: 14px; font-weight: 700; color: #0f172a; }
+        .prt-cluster-meta { font-size: 11px; font-weight: 500; color: #64748b; margin-left: auto; }
+        .prt-cluster-groep .prt-cluster-kop + .prt-spot-detail { break-before: avoid; }
+
         /* ── Toolbar ── */
         .prt-toolbar { position: sticky; top: 0; z-index: 10; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; padding: 10px 24px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; }
         .prt-toolbar-links { display: flex; gap: 8px; align-items: center; }
@@ -1146,6 +1202,15 @@ export default function GebouwPrint() {
             <label className="prt-modus-opt">
               <input type="checkbox" checked={toonSpotDetails} onChange={e => setToonSpotDetails(e.target.checked)} />
               Spot-detailpagina's
+            </label>
+            <label className="prt-modus-opt" style={{ opacity: toonSpotDetails && (clusters ?? []).length > 0 ? 1 : 0.5 }}>
+              <input
+                type="checkbox"
+                checked={groepeerOpCluster}
+                disabled={!toonSpotDetails || (clusters ?? []).length === 0}
+                onChange={e => setGroepeerOpCluster(e.target.checked)}
+              />
+              Groeperen op cluster
             </label>
           </div>
         </div>
@@ -1635,6 +1700,8 @@ export default function GebouwPrint() {
                 typeNaam={typeNaam}
                 toonOverzicht={toonOverzicht}
                 toonSpotDetails={toonSpotDetails}
+                groepeerOpCluster={groepeerOpCluster}
+                clusters={clusters}
               />
             ))
           )}

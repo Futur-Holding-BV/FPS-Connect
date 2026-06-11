@@ -15,7 +15,7 @@ import {
   type SpotAiVoorstelSnapshot,
   type SpotAiGekozen,
 } from "@workspace/db";
-import { eq, and, ilike, sql } from "drizzle-orm";
+import { eq, and, ilike, sql, inArray } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
 import { heeftNiveau } from "@workspace/permissies";
 import { effectieveContext, isBeperktTotToegewezen } from "../utils/rol";
@@ -681,6 +681,18 @@ router.get("/verdiepingen/:id/voorzieningen", lezenVoorzieningen, async (req, re
         .where(eq(voorzieningenTable.verdiepingId, id))
     ).filter((v) => !v.gearchiveerd);
 
+    const clusterIds = Array.from(
+      new Set(voorzieningen.map((v) => v.clusterId).filter((x): x is number => x != null)),
+    );
+    const clusterNamen = new Map<number, string>();
+    if (clusterIds.length > 0) {
+      const cs = await db
+        .select({ id: clustersTable.id, naam: clustersTable.naam })
+        .from(clustersTable)
+        .where(inArray(clustersTable.id, clusterIds));
+      for (const c of cs) clusterNamen.set(c.id, c.naam);
+    }
+
     res.json(
       voorzieningen.map((v) => ({
         id: v.id,
@@ -695,6 +707,8 @@ router.get("/verdiepingen/:id/voorzieningen", lezenVoorzieningen, async (req, re
         wbdbo: v.wbdbo,
         wrd: v.wrd,
         wand_of_plafond: v.wandOfPlafond,
+        cluster_id: v.clusterId,
+        cluster_naam: v.clusterId != null ? clusterNamen.get(v.clusterId) ?? null : null,
         gearchiveerd: v.gearchiveerd,
       }))
     );
