@@ -33,7 +33,7 @@
 - [Projectformulier edit leeg](projectformulier-edit-leeg.md) — lege edit-velden + niet opslaan = meestal api-server down/HMR-stale, geen UI-bug; check workflows draaien + hard refresh vóór codejacht.
 
 - [Betrokken contacten-kaart](betrokkenen-kaart.md) — projectformulier-kaart groepeert op partij (opdrachtgever boven); rol/org in groepskop, dus kale PersoonRegel buiten groep heeft toonContext nodig.
-- [Drizzle push & post-merge drift](drizzle-push-postmerge.md) — post-merge push faalt op additieve UNIQUE-prompts (toepassen via ALTER na dup-check) en op de connect-pg-simple session-tabel (uitsluiten via tablesFilter ["!session"]).
+- [Drizzle push & post-merge drift](drizzle-push-postmerge.md) — post-merge push faalt op additieve UNIQUE-prompts en de session-tabel; pas additief toe via ALTER en sluit session uit.
 - [Nav "In uitvoering"-badge](nav-in-uitvoering-badge.md) — geparkeerde modules krijgen outline-badge met nav.inUitvoering (klok-icoon); viel stil weg bij matrix-herschrijving; behouden bij elke sidebar-refactor.
 - [Bevoegdheden-matrix architectuur](bevoegdheden-matrix.md) — jsonb-kolom + profielen-tabel; requireBevoegdheid middleware; legacy-fallback; GebruikerInput heeft ook bevoegdheden nodig; viewer=uitgebannen.
 - [Preset herkomst-koppeling](preset-herkomst.md) — gebruikers.herkomst_profiel_id (FK set null) koppelt preset terug; GET /profielen verrijkt met gebruiker_aantal+gelijk-vlag; POST /profielen/:id/toepassen herdoorvoert.

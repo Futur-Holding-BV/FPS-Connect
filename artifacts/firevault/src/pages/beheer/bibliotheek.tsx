@@ -49,6 +49,24 @@ import {
   XCircle,
 } from "lucide-react";
 
+// Robuuste toegang tot de xlsx-API: afhankelijk van de module-interop kunnen de
+// functies onder de namespace of onder .default staan.
+const xlsxApi: typeof XLSX =
+  typeof (XLSX as { read?: unknown }).read === "function"
+    ? XLSX
+    : (((XLSX as { default?: typeof XLSX }).default ?? XLSX) as typeof XLSX);
+
+// Zet een API-fout om naar een begrijpelijke melding (toont het serverbericht
+// i.p.v. een misleidende standaardtekst).
+function foutmelding(err: unknown, standaard: string): string {
+  const e = err as { status?: number; data?: { error?: string } } | null;
+  if (e?.status === 401) return "U bent niet meer ingelogd. Log opnieuw in en probeer het opnieuw.";
+  if (e?.status === 403)
+    return "U heeft geen bevoegdheid voor deze actie. Neem contact op met een beheerder.";
+  const serverbericht = typeof e?.data?.error === "string" ? e.data.error.trim() : "";
+  return serverbericht || standaard;
+}
+
 const GEEN_TYPE = "__alle__";
 
 const WERENDHEID_OPTIES: { waarde: string; label: string; omschrijving: string }[] = [
@@ -157,6 +175,7 @@ function TabToepassingen() {
   const [importRijen, setImportRijen] = useState<ExcelRij[]>([]);
   const [importResultaat, setImportResultaat] = useState<ImportResultaat | null>(null);
   const [importBezig, setImportBezig] = useState(false);
+  const [importFout, setImportFout] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { data: typen = [] } = useListVoorzieningTypes();
@@ -196,19 +215,34 @@ function TabToepassingen() {
   }
 
   function verwerkBestand(file: File) {
+    setImportFout(null);
+    setImportResultaat(null);
     const reader = new FileReader();
+    reader.onerror = () => {
+      setImportRijen([]);
+      setImportFout("Het bestand kon niet worden gelezen. Probeer het opnieuw.");
+    };
     reader.onload = (e) => {
       try {
         const data = new Uint8Array(e.target!.result as ArrayBuffer);
-        const wb = XLSX.read(data, { type: "array" });
+        const wb = xlsxApi.read(data, { type: "array" });
+        if (wb.SheetNames.length === 0) {
+          setImportRijen([]);
+          setImportFout("Het Excel-bestand bevat geen werkbladen.");
+          return;
+        }
         const ws = wb.Sheets[wb.SheetNames[0]];
-        const rows: string[][] = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "" });
+        const rows: unknown[][] = xlsxApi.utils.sheet_to_json(ws, { header: 1, defval: "" });
         const rijen: ExcelRij[] = [];
+        let overgeslagen = 0;
         for (let i = 1; i < rows.length; i++) {
-          const r = rows[i];
+          const r = rows[i] ?? [];
           const type_code = String(r[0] ?? "").trim();
           const naam = String(r[1] ?? "").trim();
-          if (!type_code || !naam) continue;
+          if (!type_code || !naam) {
+            if (r.some((c) => String(c ?? "").trim())) overgeslagen++;
+            continue;
+          }
           rijen.push({
             type_code,
             naam,
@@ -217,9 +251,19 @@ function TabToepassingen() {
           });
         }
         setImportRijen(rijen);
-        setImportResultaat(null);
-      } catch {
+        if (rijen.length === 0) {
+          setImportFout(
+            overgeslagen > 0
+              ? "Geen bruikbare rijen gevonden. Controleer dat kolom A de applicatie-code en kolom B de naam bevat (rij 1 is de koptekst)."
+              : "Het bestand bevat geen gegevensrijen onder de koptekst.",
+          );
+        }
+      } catch (err) {
+        console.error("Excel-import: lezen mislukt", err);
         setImportRijen([]);
+        setImportFout(
+          "Het Excel-bestand kon niet worden gelezen. Controleer dat het een geldig .xlsx- of .xls-bestand is.",
+        );
       }
     };
     reader.readAsArrayBuffer(file);
@@ -227,6 +271,7 @@ function TabToepassingen() {
 
   async function voerImportUit() {
     setImportBezig(true);
+    setImportFout(null);
     const resultaat: ImportResultaat = { geslaagd: 0, mislukt: [] };
     for (let i = 0; i < importRijen.length; i++) {
       const rij = importRijen[i];
@@ -240,8 +285,8 @@ function TabToepassingen() {
           },
         });
         resultaat.geslaagd++;
-      } catch {
-        resultaat.mislukt.push({ rij: i + 2, reden: "Aanmaak mislukt (mogelijk duplicaat)" });
+      } catch (err) {
+        resultaat.mislukt.push({ rij: i + 2, reden: foutmelding(err, "Aanmaak mislukt") });
       }
     }
     await queryClient.invalidateQueries({ queryKey: getListLabelsQueryKey() });
@@ -253,6 +298,7 @@ function TabToepassingen() {
     setImportOpen(false);
     setImportRijen([]);
     setImportResultaat(null);
+    setImportFout(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
   }
 
@@ -312,6 +358,13 @@ function TabToepassingen() {
                   Bestand kiezen
                 </Button>
               </div>
+
+              {importFout && (
+                <div className="flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive">
+                  <XCircle className="h-4 w-4 mt-0.5 shrink-0" />
+                  <span>{importFout}</span>
+                </div>
+              )}
 
               {importRijen.length > 0 && (
                 <div className="space-y-2">

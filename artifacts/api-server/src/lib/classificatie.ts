@@ -79,6 +79,8 @@ export async function mapLabel(l: typeof labelsTable.$inferSelect) {
     id: l.id,
     type_code: l.typeCode,
     naam: l.naam,
+    fabrikant: l.fabrikant,
+    testnorm: l.testnorm,
     testrapport_id: l.testrapportId,
     testrapport,
     gearchiveerd: l.gearchiveerd,
@@ -86,6 +88,22 @@ export async function mapLabel(l: typeof labelsTable.$inferSelect) {
     bijgewerkt_op: l.bijgewerktOp.toISOString(),
     applicatie_codes: applRijen.map((r) => r.typeCode),
   };
+}
+
+// Geeft de opgegeven applicatie-codes terug die NIET in de catalogus bestaan.
+export async function onbekendeApplicatieCodes(codes: unknown[]): Promise<string[]> {
+  const schoon = Array.from(
+    new Set(
+      codes.map((c) => String(c ?? "").trim()).filter((c) => c.length > 0),
+    ),
+  );
+  if (schoon.length === 0) return [];
+  const bestaande = await db
+    .select({ code: voorzieningTypesTable.code })
+    .from(voorzieningTypesTable)
+    .where(inArray(voorzieningTypesTable.code, schoon));
+  const set = new Set(bestaande.map((b) => b.code));
+  return schoon.filter((c) => !set.has(c));
 }
 
 // Vervangt de applicatie-koppelingen van een toepassing door de opgegeven set.

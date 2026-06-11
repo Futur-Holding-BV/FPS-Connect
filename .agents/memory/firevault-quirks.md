@@ -161,3 +161,14 @@ truncate-prompt blokkeert de hele push.
 **How to apply:** voor puur additieve kolommen, pas ze direct toe via SQL
 (`ALTER TABLE ... ADD COLUMN IF NOT EXISTS ...`) i.p.v. de interactieve push — veilig en geen dataverlies.
 Gebruik de `executeSql`-callback in code_execution.
+
+## xlsx (SheetJS) import: interop-guard + zichtbare fouten
+`import * as XLSX from "xlsx"` kan afhankelijk van het bundler-pad de functies onder `.default`
+zetten i.p.v. op de namespace → `XLSX.read`/`XLSX.utils` is dan undefined en de parse faalt.
+Gebruik een interop-guard: `xlsxApi = typeof XLSX.read === "function" ? XLSX : (XLSX.default ?? XLSX)`.
+**Why:** de Toepassingen-import "deed niets" doordat parse-fouten in een lege `catch{}` verdwenen en
+een leeg resultaat eruit zag als "0 rijen"; daarnaast meldde elke POST-fout misleidend "mogelijk
+duplicaat".
+**How to apply:** bij elke Excel-import: lees via de interop-guard én toon parse-/0-rij-/serverfouten
+zichtbaar (eigen `importFout`-state + melding), nooit slikken. Per-rij API-fouten via een
+`foutmelding(err, standaard)`-helper (status 401/403 + `e.data.error`), niet een generieke tekst.

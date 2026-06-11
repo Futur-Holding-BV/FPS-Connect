@@ -2,7 +2,12 @@ import { Router } from "express";
 import { db, voorzieningTypesTable, labelsTable, testrapportenTable, labelApplicatiesTable } from "@workspace/db";
 import { eq, asc } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
-import { mapLabel, mapTestrapport, syncLabelApplicaties } from "../lib/classificatie";
+import {
+  mapLabel,
+  mapTestrapport,
+  syncLabelApplicaties,
+  onbekendeApplicatieCodes,
+} from "../lib/classificatie";
 
 const router = Router();
 
@@ -56,17 +61,25 @@ router.get("/labels", async (req, res) => {
 // POST /labels (beheerder)
 router.post("/labels", requireBevoegdheid("bibliotheek", 3), async (req, res) => {
   try {
-    const { applicatie_codes, naam, testrapport_id } = req.body;
+    const { applicatie_codes, naam, fabrikant, testnorm, testrapport_id } = req.body;
     if (!naam || !String(naam).trim()) {
       return res.status(400).json({ error: "naam is verplicht" });
     }
     if (!Array.isArray(applicatie_codes) || applicatie_codes.length === 0) {
       return res.status(400).json({ error: "applicatie_codes zijn verplicht (minimaal 1)" });
     }
+    const onbekend = await onbekendeApplicatieCodes(applicatie_codes);
+    if (onbekend.length > 0) {
+      return res
+        .status(400)
+        .json({ error: `Onbekende applicatie-code(s): ${onbekend.join(", ")}` });
+    }
     const [l] = await db
       .insert(labelsTable)
       .values({
         naam: String(naam).trim(),
+        fabrikant: fabrikant != null && String(fabrikant).trim() ? String(fabrikant).trim() : null,
+        testnorm: testnorm != null && String(testnorm).trim() ? String(testnorm).trim() : null,
         testrapportId: testrapport_id ?? null,
       })
       .returning();
@@ -82,11 +95,24 @@ router.post("/labels", requireBevoegdheid("bibliotheek", 3), async (req, res) =>
 router.patch("/labels/:id", requireBevoegdheid("bibliotheek", 2), async (req, res) => {
   try {
     const id = parseInt(String(req.params.id));
-    const { naam, testrapport_id, gearchiveerd, applicatie_codes } = req.body;
+    const { naam, fabrikant, testnorm, testrapport_id, gearchiveerd, applicatie_codes } = req.body;
     const set: Record<string, unknown> = { bijgewerktOp: new Date() };
     if (naam !== undefined) set.naam = String(naam).trim();
+    if (fabrikant !== undefined)
+      set.fabrikant = fabrikant != null && String(fabrikant).trim() ? String(fabrikant).trim() : null;
+    if (testnorm !== undefined)
+      set.testnorm = testnorm != null && String(testnorm).trim() ? String(testnorm).trim() : null;
     if (testrapport_id !== undefined) set.testrapportId = testrapport_id;
     if (gearchiveerd !== undefined) set.gearchiveerd = gearchiveerd === true;
+
+    if (Array.isArray(applicatie_codes)) {
+      const onbekend = await onbekendeApplicatieCodes(applicatie_codes);
+      if (onbekend.length > 0) {
+        return res
+          .status(400)
+          .json({ error: `Onbekende applicatie-code(s): ${onbekend.join(", ")}` });
+      }
+    }
 
     const [l] = await db
       .update(labelsTable)
