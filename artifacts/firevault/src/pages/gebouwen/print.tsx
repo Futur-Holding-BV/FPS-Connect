@@ -11,6 +11,7 @@ import {
   useListVoorzieningenOpVerdieping,
   useListScheidingen,
   useGetVoorziening,
+  useListDocumenten,
   useListGebouwTekeningen,
   useListGebouwEmails,
   useGetGebouwEmailSamenvatting,
@@ -109,6 +110,15 @@ const TEKENING_TYPELABEL: Record<string, string> = {
   installatietekening:"Installatietekening",
   detailtekening:     "Detailtekening",
   overig:             "Overig",
+};
+
+const DOCUMENTTYPE_LABEL: Record<string, string> = {
+  eta:                    "ETA",
+  classificatierapport:   "Classificatierapport",
+  testrapport:            "Testrapport",
+  productcertificaat:     "Productcertificaat",
+  dop:                    "DoP",
+  verwerkingsvoorschrift: "Verwerkingsvoorschrift",
 };
 
 const REPORT_TITEL = "Opleverrapport brandveiligheid";
@@ -259,6 +269,7 @@ function SpotDetailBlok({
   bouwlaag,
   exportDatum,
   logoSrc,
+  documenten,
   onGereed,
 }: {
   spot: SVGVoorziening;
@@ -270,6 +281,7 @@ function SpotDetailBlok({
   bouwlaag: string;
   exportDatum: string;
   logoSrc: string;
+  documenten: any[] | undefined;
   onGereed: () => void;
 }) {
   const { data: detail } = useGetVoorziening(spot.id);
@@ -296,6 +308,13 @@ function SpotDetailBlok({
   const d = detail as any;
   const applicatieLabel = TYPEN[spot.type]?.label ?? spot.type;
   const werendheidLabel = weergeefWerendheid(d?.wbdbo, d?.wrd, d?.classificatie);
+
+  const spotLabelIds = new Set(labels.map((l: any) => l.id));
+  const spotDocumenten = (documenten ?? []).filter((doc: any) =>
+    doc.status === "actueel" && !doc.gearchiveerd &&
+    (((doc.toepassing_ids ?? []).some((tid: number) => spotLabelIds.has(tid))) ||
+     ((doc.applicatie_codes ?? []).includes(spot.type))),
+  );
 
   const heeftTestinfo = labels.some((l: any) => l.testnorm || l.fabrikant);
   const heeftFotos = voorFotos.length > 0 || naFotos.length > 0;
@@ -432,7 +451,18 @@ function SpotDetailBlok({
 
       <div className="prt-spot-testinfo">
         <div className="prt-spot-testinfo-titel">Productcertificaten / ETA's</div>
-        {heeftTestinfo ? (
+        {spotDocumenten.length > 0 ? (
+          spotDocumenten.map((doc: any) => (
+            <div key={doc.id} className="prt-spot-testitem">
+              <span className="prt-spot-testitem-naam">
+                {DOCUMENTTYPE_LABEL[doc.documenttype] ?? doc.documenttype}: {doc.naam}
+              </span>
+              {doc.fabrikant && <span className="prt-spot-testitem-meta">Fabrikant: {doc.fabrikant}</span>}
+              {doc.en_norm   && <span className="prt-spot-testitem-meta">Norm: {doc.en_norm}</span>}
+              {doc.revisie   && <span className="prt-spot-testitem-meta">Revisie: {doc.revisie}</span>}
+            </div>
+          ))
+        ) : heeftTestinfo ? (
           labels.filter((l: any) => l.testnorm || l.fabrikant).map((l: any) => (
             <div key={l.id} className="prt-spot-testitem">
               <span className="prt-spot-testitem-naam">{l.naam}</span>
@@ -509,6 +539,7 @@ function PrintVerdieping({
   gebouwNaam,
   exportDatum,
   logoSrc,
+  documenten,
   toonOverzicht,
   toonSpotDetails,
 }: {
@@ -517,6 +548,7 @@ function PrintVerdieping({
   gebouwNaam: string;
   exportDatum: string;
   logoSrc: string;
+  documenten: any[] | undefined;
   toonOverzicht: boolean;
   toonSpotDetails: boolean;
 }) {
@@ -661,6 +693,7 @@ function PrintVerdieping({
           bouwlaag={verdieping.naam}
           exportDatum={exportDatum}
           logoSrc={logoSrc}
+          documenten={documenten}
           onGereed={() => setSpotsGereed(n => n + 1)}
         />
       ))}
@@ -710,6 +743,7 @@ export default function GebouwPrint() {
   const { data: emails, isLoading: emailsLaden }              = useListGebouwEmails(gebouwId);
   const { data: samenvatting }                                = useGetGebouwEmailSamenvatting(gebouwId);
   const { data: gevelbeeld, isLoading: gevelbeeldLaden }      = useGetGebouwGevelbeeld(gebouwId);
+  const { data: documenten, isLoading: documentenLaden }      = useListDocumenten();
   const { isLoading: gebruikersLaden }      = useListGebruikers();
 
   const [gereedFloors, setGereedFloors] = useState(0);
@@ -726,7 +760,7 @@ export default function GebouwPrint() {
     !isLoading && !!gebouw &&
     !partijenLaden && !toewijzingenLaden &&
     !onderhoudLaden && !inspectiesLaden &&
-    !tekeningenLaden && !emailsLaden && !gevelbeeldLaden && !gebruikersLaden &&
+    !tekeningenLaden && !emailsLaden && !gevelbeeldLaden && !documentenLaden && !gebruikersLaden &&
     gereedFloors >= aantalFloors;
 
   useEffect(() => {
@@ -1498,6 +1532,7 @@ export default function GebouwPrint() {
                 gebouwNaam={titel}
                 exportDatum={exportDatum}
                 logoSrc={logoSrc}
+                documenten={documenten}
                 toonOverzicht={toonOverzicht}
                 toonSpotDetails={toonSpotDetails}
               />
