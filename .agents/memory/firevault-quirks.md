@@ -77,6 +77,20 @@ The Expo app can't keep the `Secure; SameSite=None` session cookie in the Replit
 **How to apply:** mobile must send `Authorization: Bearer <token>`; the shared fetch layer wires this
 via `setAuthTokenGetter`. Token secret falls back to a dev default — set a real `SESSION_SECRET`.
 
+## Mobiele lijsten leeg/blijven-laden = HTTP 304 dat RN-fetch bereikt
+Express stuurt ETag-validators en geeft 304 Not Modified op conditionele GETs. De gedeelde
+`custom-fetch.ts` ziet 304 als niet-OK (`response.ok` is false buiten 200–299) en gooit dus een
+`ApiError` (304 staat ook in `NO_BODY_STATUS` → geen body). In een browser zie je dit NOOIT: de
+browser handelt 304 transparant af en geeft de gecachete body als 200 terug. React Native's fetch
+geeft de 304 wél rechtstreeks door → de hook faalt/retryt → lijst blijft leeg of laadt eindeloos.
+Puur mobiel, web werkt prima — daarom misleidend.
+**Why:** de gebouwenlijst (en elke RN-lijst) leek leeg terwijl `GET /api/gebouwen` server-side gewoon
+200 met 7 gebouwen teruggaf; het verschil zit in hoe RN vs. browser 304 afhandelt.
+**How to apply:** een middleware in `app.ts` str/ipt voor verzoeken met `Authorization: Bearer ` de
+conditionele headers (`if-none-match`, `if-modified-since`), zodat de server mobiel ALTIJD een
+volledige 200 met body stuurt. De web-app (sessie-cookies, geen Authorization-header) houdt zijn
+304-optimalisatie. Reproduceer met een gemunt HMAC-token + `If-None-Match` via `http://localhost:80`.
+
 ## Tekeningen openen via ingebouwde TekeningViewer, niet ruwe storage-link
 Tekening-links openden voorheen `/api/storage${url}` in een nieuw browser-tab → grote PDF/afbeelding
 startte linksboven (niet gecentreerd). Opgelost met herbruikbare `gebouwen/tekening-viewer.tsx`
