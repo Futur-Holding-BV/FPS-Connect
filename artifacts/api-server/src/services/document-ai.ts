@@ -81,9 +81,9 @@ export async function analyseerDocumentTekst(
   let completion;
   try {
     completion = await client.chat.completions.create({
-      model: "gpt-4o-mini",
+      model: "gpt-5-mini",
       response_format: { type: "json_object" },
-      max_tokens: 600,
+      max_completion_tokens: 4000,
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
         { role: "user", content: userTekst },

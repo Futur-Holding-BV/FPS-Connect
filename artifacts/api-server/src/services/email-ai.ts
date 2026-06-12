@@ -365,9 +365,9 @@ export async function genereerProjectSamenvatting(
   try {
     const client = maakOpenAiClient();
     const completion = await client.chat.completions.create({
-      model: "gpt-4o-mini",
+      model: "gpt-5-mini",
       response_format: { type: "json_object" },
-      max_tokens: 1800,
+      max_completion_tokens: 6000,
       messages: [
         { role: "system", content: SAMENVATTING_PROMPT },
         { role: "user", content: userTekst.slice(0, 20000) },
@@ -423,9 +423,9 @@ export async function extraheerEmailInzicht(
   try {
     const client = maakOpenAiClient();
     const completion = await client.chat.completions.create({
-      model: "gpt-4o-mini",
+      model: "gpt-5-mini",
       response_format: { type: "json_object" },
-      max_tokens: 700,
+      max_completion_tokens: 4000,
       messages: [
         { role: "system", content: AI_PROMPT },
         { role: "user", content: userTekst },

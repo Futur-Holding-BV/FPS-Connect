@@ -511,9 +511,9 @@ interface ExtractieVelden {
 async function extraheerUitTekst(beschrijving: string): Promise<ExtractieVelden | null> {
   const client = maakOpenAiClient();
   const completion = await client.chat.completions.create({
-    model: "gpt-4o-mini",
+    model: "gpt-5-mini",
     response_format: { type: "json_object" },
-    max_tokens: 600,
+    max_completion_tokens: 4000,
     messages: [
       { role: "system", content: EXTRACTIE_PROMPT },
       { role: "user", content: beschrijving },
@@ -640,9 +640,9 @@ export async function analyseerTekening(
   try {
     const client = maakOpenAiClient();
     const completion = await client.chat.completions.create({
-      model: "gpt-4o-mini",
+      model: "gpt-5-mini",
       response_format: { type: "json_object" },
-      max_tokens: 400,
+      max_completion_tokens: 3000,
       messages: [
         { role: "system", content: TEKENING_PROMPT },
         { role: "user", content: userTekst },
