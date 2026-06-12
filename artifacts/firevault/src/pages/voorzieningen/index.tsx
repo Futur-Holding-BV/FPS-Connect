@@ -1,13 +1,36 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useListVoorzieningen } from "@workspace/api-client-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  useListVoorzieningen,
+  useListClusters,
+  useCreateCluster,
+  useUpdateCluster,
+  useDeleteCluster,
+  useUpdateVoorziening,
+} from "@workspace/api-client-react";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Plus, Search, AlertCircle } from "lucide-react";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Plus, Search, AlertCircle, Boxes, Pencil, Trash2 } from "lucide-react";
 import { Link } from "wouter";
 import { Badge } from "@/components/ui/badge";
 import { useVoorkeur } from "@/hooks/use-voorkeur";
+import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
 
 const STATUSLABEL: Record<string, string> = {
   concept: "Concept",
@@ -20,10 +43,32 @@ const STATUSLABEL: Record<string, string> = {
   vervallen: "Vervallen",
 };
 
+// Standaard palet voor clusters; identiek aan de plattegrond-editor zodat de
+// kleuren consistent zijn tussen lijst en plattegrond.
+const CLUSTER_TYPEN: Record<string, string> = {
+  schacht: "Schacht",
+  strook: "Strook",
+  zone: "Zone",
+  overig: "Overig",
+};
+const CLUSTER_KLEUREN = ["#6366f1", "#0ea5e9", "#f59e0b", "#10b981", "#ec4899", "#8b5cf6", "#ef4444", "#14b8a6"];
+const STANDAARD_CLUSTERKLEUR = "#6366f1";
+
+type SpotVoorBeheer = {
+  id: number;
+  objectnummer: string;
+  gebouw_id: number;
+  gebouw_naam: string | null;
+  cluster_id: number | null;
+};
+
 export default function Voorzieningen() {
   const { t } = useTranslation();
-  const { data: voorzieningenLijst, isLoading } = useListVoorzieningen({});
+  const { data: voorzieningenLijst, isLoading, refetch } = useListVoorzieningen({});
+  const { heeftNiveau } = useBevoegdheid();
+  const magClustersBeheren = heeftNiveau("voorzieningen", 2);
   const [zoek, setZoek] = useVoorkeur("voorzieningen_zoek", "");
+  const [beheerSpot, setBeheerSpot] = useState<SpotVoorBeheer | null>(null);
   const [alleenTeControleren, setAlleenTeControleren] = useVoorkeur(
     "voorzieningen_alleen_te_controleren",
     false,
@@ -131,11 +176,32 @@ export default function Voorzieningen() {
                       <td className="px-6 py-4">{v.type}</td>
                       <td className="px-6 py-4">{v.gebouw_naam}</td>
                       <td className="px-6 py-4">
-                        {(v as any).cluster_naam ? (
-                          <Badge variant="secondary">{(v as any).cluster_naam}</Badge>
-                        ) : (
-                          <span className="text-muted-foreground">—</span>
-                        )}
+                        <div className="flex items-center gap-2">
+                          {(v as any).cluster_naam ? (
+                            <Badge variant="secondary">{(v as any).cluster_naam}</Badge>
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
+                          )}
+                          {magClustersBeheren && v.gebouw_id != null && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 text-muted-foreground"
+                              title="Clusters beheren"
+                              onClick={() =>
+                                setBeheerSpot({
+                                  id: v.id,
+                                  objectnummer: v.objectnummer,
+                                  gebouw_id: v.gebouw_id as number,
+                                  gebouw_naam: v.gebouw_naam ?? null,
+                                  cluster_id: (v as any).cluster_id ?? null,
+                                })
+                              }
+                            >
+                              <Boxes className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
                       </td>
                       <td className="px-6 py-4">
                         <Badge
@@ -154,13 +220,235 @@ export default function Voorzieningen() {
                   ))
                 )}
                 {!isLoading && !gefilterd.length && (
-                  <tr><td colSpan={5} className="px-6 py-8 text-center text-muted-foreground">Geen spots gevonden.</td></tr>
+                  <tr><td colSpan={6} className="px-6 py-8 text-center text-muted-foreground">Geen spots gevonden.</td></tr>
                 )}
               </tbody>
             </table>
           </div>
         </CardContent>
       </Card>
+
+      {beheerSpot && (
+        <SpotClusterDialog
+          spot={beheerSpot}
+          open={!!beheerSpot}
+          onOpenChange={(open) => { if (!open) setBeheerSpot(null); }}
+          onWijziging={() => refetch()}
+        />
+      )}
     </div>
+  );
+}
+
+// Clusters van het gebouw van een spot beheren (aanmaken, hernoemen, herkleuren,
+// verwijderen) en deze spot in/uit een cluster zetten. Vereist voorzieningen
+// niveau 2; de server dwingt dit ook af.
+function SpotClusterDialog({
+  spot,
+  open,
+  onOpenChange,
+  onWijziging,
+}: {
+  spot: SpotVoorBeheer;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onWijziging: () => void;
+}) {
+  const { data: clusters, refetch: refetchClusters } = useListClusters(spot.gebouw_id);
+  const maakCluster = useCreateCluster();
+  const wijzigCluster = useUpdateCluster();
+  const verwijderCluster = useDeleteCluster();
+  const updateVoorziening = useUpdateVoorziening();
+
+  const [nieuwNaam, setNieuwNaam] = useState("");
+  const [nieuwType, setNieuwType] = useState("schacht");
+  const [nieuwKleur, setNieuwKleur] = useState(STANDAARD_CLUSTERKLEUR);
+  const [bewerkId, setBewerkId] = useState<number | null>(null);
+  const [bewerkNaam, setBewerkNaam] = useState("");
+  const [huidigClusterId, setHuidigClusterId] = useState<number | null>(spot.cluster_id);
+  const [bezigKoppelen, setBezigKoppelen] = useState(false);
+
+  const GEEN_CLUSTER = "__geen__";
+  const lijst = (clusters ?? []) as any[];
+
+  async function koppelSpot(waarde: string) {
+    const cluster_id = waarde === GEEN_CLUSTER ? null : Number(waarde);
+    setBezigKoppelen(true);
+    try {
+      await updateVoorziening.mutateAsync({ id: spot.id, data: { cluster_id } });
+      setHuidigClusterId(cluster_id);
+      await refetchClusters();
+      onWijziging();
+    } finally {
+      setBezigKoppelen(false);
+    }
+  }
+
+  async function voegToe() {
+    if (!nieuwNaam.trim()) return;
+    await maakCluster.mutateAsync({
+      id: spot.gebouw_id,
+      data: { naam: nieuwNaam.trim(), type: nieuwType, kleur: nieuwKleur },
+    });
+    setNieuwNaam("");
+    setNieuwType("schacht");
+    setNieuwKleur(STANDAARD_CLUSTERKLEUR);
+    await refetchClusters();
+    onWijziging();
+  }
+
+  async function bewaarNaam(clusterId: number) {
+    if (!bewerkNaam.trim()) { setBewerkId(null); return; }
+    await wijzigCluster.mutateAsync({ clusterId, data: { naam: bewerkNaam.trim() } });
+    setBewerkId(null);
+    await refetchClusters();
+    onWijziging();
+  }
+
+  async function wijzigKleur(clusterId: number, kleur: string) {
+    await wijzigCluster.mutateAsync({ clusterId, data: { kleur } });
+    await refetchClusters();
+    onWijziging();
+  }
+
+  async function verwijder(clusterId: number) {
+    await verwijderCluster.mutateAsync({ clusterId });
+    if (huidigClusterId === clusterId) setHuidigClusterId(null);
+    await refetchClusters();
+    onWijziging();
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Clusters beheren — {spot.gebouw_naam ?? "Gebouw"}</DialogTitle>
+        </DialogHeader>
+
+        <div className="space-y-3">
+          {/* Cluster van deze spot */}
+          <div className="space-y-1.5">
+            <Label className="text-xs uppercase tracking-wide text-muted-foreground">
+              Cluster van spot {spot.objectnummer}
+            </Label>
+            <Select
+              value={huidigClusterId != null ? String(huidigClusterId) : GEEN_CLUSTER}
+              onValueChange={koppelSpot}
+              disabled={bezigKoppelen}
+            >
+              <SelectTrigger className="h-9">
+                <SelectValue placeholder="Geen cluster" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={GEEN_CLUSTER}>Geen cluster</SelectItem>
+                {lijst.map((c) => (
+                  <SelectItem key={c.id} value={String(c.id)}>{c.naam}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="border-t pt-3">
+            <p className="text-xs text-muted-foreground">
+              Een cluster groepeert bij elkaar horende spots (bijv. een schacht of strook).
+            </p>
+          </div>
+
+          {/* Bestaande clusters */}
+          <div className="space-y-2 max-h-64 overflow-y-auto">
+            {lijst.length === 0 && (
+              <p className="text-sm text-muted-foreground italic">Nog geen clusters in dit gebouw.</p>
+            )}
+            {lijst.map((c) => (
+              <div key={c.id} className="flex items-center gap-2 border rounded-md p-2">
+                <input
+                  type="color"
+                  value={c.kleur || STANDAARD_CLUSTERKLEUR}
+                  onChange={(e) => wijzigKleur(c.id, e.target.value)}
+                  className="h-6 w-6 rounded cursor-pointer border-0 bg-transparent p-0"
+                  title="Kleur"
+                />
+                {bewerkId === c.id ? (
+                  <Input
+                    autoFocus
+                    value={bewerkNaam}
+                    onChange={(e) => setBewerkNaam(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter") bewaarNaam(c.id); }}
+                    onBlur={() => bewaarNaam(c.id)}
+                    className="h-8 flex-1"
+                  />
+                ) : (
+                  <span className="flex-1 text-sm font-medium truncate">{c.naam}</span>
+                )}
+                <Badge variant="secondary" className="text-xs">{c.voorziening_aantal} spots</Badge>
+                {c.type && <Badge variant="outline" className="text-xs">{CLUSTER_TYPEN[c.type] ?? c.type}</Badge>}
+                <Button
+                  variant="ghost" size="icon" className="h-7 w-7"
+                  onClick={() => { setBewerkId(c.id); setBewerkNaam(c.naam); }}
+                  title="Hernoemen"
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                </Button>
+                <Button
+                  variant="ghost" size="icon" className="h-7 w-7 text-destructive"
+                  onClick={() => verwijder(c.id)}
+                  disabled={verwijderCluster.isPending}
+                  title="Verwijderen (spots blijven bestaan)"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            ))}
+          </div>
+
+          {/* Nieuw cluster */}
+          <div className="border-t pt-3 space-y-2">
+            <Label className="text-xs uppercase tracking-wide text-muted-foreground">Nieuw cluster</Label>
+            <div className="flex items-center gap-2">
+              <input
+                type="color"
+                value={nieuwKleur}
+                onChange={(e) => setNieuwKleur(e.target.value)}
+                className="h-9 w-9 rounded cursor-pointer border-0 bg-transparent p-0"
+                title="Kleur"
+              />
+              <Input
+                placeholder="Naam (bijv. Schacht A)"
+                value={nieuwNaam}
+                onChange={(e) => setNieuwNaam(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") voegToe(); }}
+                className="h-9 flex-1"
+              />
+              <Select value={nieuwType} onValueChange={setNieuwType}>
+                <SelectTrigger className="h-9 w-32"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {Object.entries(CLUSTER_TYPEN).map(([val, label]) => (
+                    <SelectItem key={val} value={val}>{label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex gap-1">
+              {CLUSTER_KLEUREN.map((k) => (
+                <button
+                  key={k}
+                  type="button"
+                  onClick={() => setNieuwKleur(k)}
+                  className="h-5 w-5 rounded-full border-2"
+                  style={{ backgroundColor: k, borderColor: nieuwKleur === k ? "#1e293b" : "transparent" }}
+                />
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Sluiten</Button>
+          <Button onClick={voegToe} disabled={!nieuwNaam.trim() || maakCluster.isPending}>
+            {maakCluster.isPending ? "Toevoegen..." : "Cluster toevoegen"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
