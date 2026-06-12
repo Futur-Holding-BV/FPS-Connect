@@ -135,6 +135,7 @@ export default function Plattegrond() {
   const [opslaan, setOpslaan] = useState(false);
   const [detailId, setDetailId] = useState<number | null>(null);
   const [clusterDetailId, setClusterDetailId] = useState<number | null>(null);
+  const [groepSpotIds, setGroepSpotIds] = useState<number[] | null>(null);
   const [aiVoorstel, setAiVoorstel] = useState<SpotAiVoorstelResultaat | null>(null);
   const [aiBezig, setAiBezig] = useState(false);
   const [aiVelden, setAiVelden] = useState<Set<string>>(new Set());
@@ -184,6 +185,9 @@ export default function Plattegrond() {
     (clusterData ?? []).find((cl: any) => cl.id === clusterDetailId) ?? null;
   const clusterSpots = (voorzieningen ?? []).filter(
     (v) => (v as any).cluster_id === clusterDetailId,
+  );
+  const groepSpots = (voorzieningen ?? []).filter((v) =>
+    groepSpotIds ? groepSpotIds.includes(v.id) : false,
   );
 
   function opTap(x: number, y: number) {
@@ -361,6 +365,7 @@ export default function Plattegrond() {
         onTap={opTap}
         onSpot={(id) => setDetailId(id)}
         onCluster={(id) => setClusterDetailId(id)}
+        onGroep={(ids) => setGroepSpotIds(ids)}
       />
 
       {/* Kopbalk over de WebView */}
@@ -772,6 +777,117 @@ export default function Plattegrond() {
           </Pressable>
         </Pressable>
       </Modal>
+
+      {/* ---- Overlappende spots (telbolletje) ---- */}
+      <Modal
+        visible={groepSpotIds != null}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setGroepSpotIds(null)}
+      >
+        <Pressable
+          style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end", alignItems: isTablet ? "center" : "stretch" }}
+          onPress={() => setGroepSpotIds(null)}
+        >
+          <Pressable
+            style={{
+              backgroundColor: c.background,
+              borderTopLeftRadius: 24,
+              borderTopRightRadius: 24,
+              paddingBottom: onderInset(insets) + 20,
+              maxHeight: "82%",
+              width: "100%",
+              maxWidth: isTablet ? 560 : undefined,
+            }}
+            onPress={(e) => e.stopPropagation()}
+          >
+            <OverlappendeSpots
+              spots={groepSpots}
+              onSpot={(id) => {
+                setGroepSpotIds(null);
+                setDetailId(id);
+              }}
+              onSluit={() => setGroepSpotIds(null)}
+            />
+          </Pressable>
+        </Pressable>
+      </Modal>
+    </View>
+  );
+}
+
+function OverlappendeSpots({
+  spots,
+  onSpot,
+  onSluit,
+}: {
+  spots: { id: number; objectnummer: string; type: string; status: string }[];
+  onSpot: (id: number) => void;
+  onSluit: () => void;
+}) {
+  const c = useColors();
+
+  return (
+    <View style={{ paddingTop: 4 }}>
+      <View style={{ paddingHorizontal: 22, paddingTop: 18, paddingBottom: 8 }}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+          <View style={{ flex: 1 }}>
+            <Text style={{ color: c.foreground, fontSize: 20, fontFamily: "Inter_700Bold" }}>
+              Overlappende spots
+            </Text>
+            <Text style={{ color: c.mutedForeground, fontSize: 14, fontFamily: "Inter_400Regular" }}>
+              {spots.length} spots op deze plek · kies er een om te openen
+            </Text>
+          </View>
+          <Pressable onPress={onSluit} hitSlop={10}>
+            <Text style={{ color: c.mutedForeground, fontSize: 22, fontFamily: "Inter_600SemiBold" }}>✕</Text>
+          </Pressable>
+        </View>
+      </View>
+
+      <View style={{ height: 1, backgroundColor: c.border }} />
+
+      <ScrollView contentContainerStyle={{ paddingHorizontal: 22, paddingVertical: 8 }}>
+        {spots.length === 0 ? (
+          <Text style={{ color: c.mutedForeground, fontSize: 15, fontFamily: "Inter_400Regular", paddingVertical: 20, textAlign: "center" }}>
+            Geen spots gevonden.
+          </Text>
+        ) : (
+          spots.map((s) => {
+            const ti = typeInfo(s.type);
+            const voorbereidSpot = s.status === "voorbereid";
+            return (
+              <Pressable
+                key={s.id}
+                onPress={() => onSpot(s.id)}
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: 12,
+                  paddingVertical: 12,
+                  borderBottomWidth: 1,
+                  borderBottomColor: c.border,
+                }}
+              >
+                <View style={{ width: 14, height: 14, borderRadius: 7, backgroundColor: ti.kleur }} />
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: c.foreground, fontSize: 16, fontFamily: "Inter_600SemiBold" }}>
+                    {s.objectnummer}
+                  </Text>
+                  <Text style={{ color: c.mutedForeground, fontSize: 13, fontFamily: "Inter_400Regular" }}>
+                    {ti.label}
+                  </Text>
+                </View>
+                <View style={{ backgroundColor: statusKleur(s.status), paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8 }}>
+                  <Text style={{ color: voorbereidSpot ? "#1e293b" : "#fff", fontSize: 12, fontFamily: "Inter_600SemiBold" }}>
+                    {statusLabel(s.status)}
+                  </Text>
+                </View>
+              </Pressable>
+            );
+          })
+        )}
+      </ScrollView>
     </View>
   );
 }

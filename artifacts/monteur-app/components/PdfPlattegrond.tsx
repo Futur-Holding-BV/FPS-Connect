@@ -42,6 +42,7 @@ type Props = {
   onTap: (x: number, y: number) => void;
   onSpot: (id: number) => void;
   onCluster: (id: number) => void;
+  onGroep: (ids: number[]) => void;
 };
 
 const TYPE_KLEUREN: Record<string, { kleur: string }> = Object.fromEntries(
@@ -180,14 +181,6 @@ function bouwHtml(domein: string, token: string, url: string | null): string {
     return el;
   }
 
-  // Zoom in op een centroid zodat een visuele groep uiteenvalt.
-  function zoomNaarGroep(cx, cy){
-    var sw=stage.clientWidth, sh=stage.clientHeight;
-    var ns=Math.min(MAXS, scale*2.5);
-    scale=ns; tx=sw/2-cx*scale; ty=sh/2-cy*scale; apply();
-    renderMarkers();
-  }
-
   function renderEnvelopes(){
     var olds=wrap.querySelectorAll('.env');
     for (var i=0;i<olds.length;i++) olds[i].remove();
@@ -241,7 +234,10 @@ function bouwHtml(domein: string, token: string, url: string | null): string {
       b.className='cb';
       b.style.left=c.x+'px'; b.style.top=c.y+'px';
       b.textContent=String(groep.length);
-      (function(cx,cy){ b.addEventListener('click',function(ev){ ev.stopPropagation(); zoomNaarGroep(cx,cy); }); })(c.x,c.y);
+      (function(groep){
+        var ids=groep.map(function(g){ return g.id; });
+        b.addEventListener('click',function(ev){ ev.stopPropagation(); post({type:'groep',ids:ids}); });
+      })(groep);
       wrap.appendChild(b);
     });
   }
@@ -452,6 +448,7 @@ export function PdfPlattegrond({
   onTap,
   onSpot,
   onCluster,
+  onGroep,
 }: Props) {
   const webRef = useRef<WebView>(null);
   const [klaar, setKlaar] = useState(false);
@@ -496,10 +493,12 @@ export function PdfPlattegrond({
         x?: number;
         y?: number;
         id?: number;
+        ids?: number[];
       };
       if (m.type === "tap" && m.x != null && m.y != null) onTap(m.x, m.y);
       else if (m.type === "spot" && m.id != null) onSpot(m.id);
       else if (m.type === "cluster" && m.id != null) onCluster(m.id);
+      else if (m.type === "groep" && Array.isArray(m.ids)) onGroep(m.ids);
     } catch {
       // negeren
     }
