@@ -22,6 +22,7 @@ const TYPE_LABELS: Record<DocumentType, string> = {
   [DocumentType.dop]: "DoP",
   [DocumentType.verwerkingsvoorschrift]: "Verwerkingsvoorschrift",
   [DocumentType.productblad]: "Productblad",
+  [DocumentType.opleverrapport]: "Opleverrapport",
 };
 
 const STATUS_LABELS: Record<DocumentStatus, string> = {

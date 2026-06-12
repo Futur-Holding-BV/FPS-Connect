@@ -28,7 +28,7 @@ export default function Login() {
   const [bezig, setBezig] = useState(false);
   const [fout, setFout] = useState<string | null>(null);
 
-  if (token) return <Redirect href="/gebouwen" />;
+  if (token) return <Redirect href="/menu" />;
 
   async function verstuur() {
     setFout(null);
@@ -39,7 +39,7 @@ export default function Login() {
     setBezig(true);
     try {
       await inloggen(email, wachtwoord, code);
-      router.replace("/gebouwen");
+      router.replace("/menu");
     } catch (e) {
       setFout(e instanceof Error ? e.message : "Inloggen mislukt");
     } finally {

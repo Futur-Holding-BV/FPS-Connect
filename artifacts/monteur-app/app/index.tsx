@@ -24,5 +24,5 @@ export default function Index() {
     );
   }
 
-  return <Redirect href={token ? "/gebouwen" : "/login"} />;
+  return <Redirect href={token ? "/menu" : "/login"} />;
 }

@@ -29,6 +29,9 @@ function RootLayoutNav() {
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="index" />
       <Stack.Screen name="login" />
+      <Stack.Screen name="menu" />
+      <Stack.Screen name="binnenkort" />
+      <Stack.Screen name="fabrikanten" />
       <Stack.Screen name="gebouwen" />
       <Stack.Screen name="documenten" />
       <Stack.Screen name="documenten/[id]" />
