@@ -479,6 +479,18 @@ export default function Plattegrond() {
   });
   const [serieLabelIds, setSerieLabelIds] = useState<number[]>([]);
   const [serieTeller, setSerieTeller] = useState(0);
+  // Plaatsmethode binnen de serie: "klik" = één spot per klik, "lijn" = een
+  // lijn trekken (twee klikken) waarna N spots gelijkmatig verdeeld worden,
+  // "rechthoek" = een strook/rechthoek trekken (twee klikken) waarna een
+  // raster van rijen x kolommen spots gelijkmatig verdeeld wordt geplaatst.
+  const [serieMethode, setSerieMethode] = useState<"klik" | "lijn" | "rechthoek">("klik");
+  const [serieAantal, setSerieAantal] = useState(5);
+  const [serieRijen, setSerieRijen] = useState(3);
+  const [serieKolommen, setSerieKolommen] = useState(3);
+  // Begin-punt van de getrokken lijn/rechthoek (eerste klik); null = nog geen begin.
+  const [serieLijnStart, setSerieLijnStart] = useState<{ x: number; y: number } | null>(null);
+  // Huidige muispositie in SVG-coördinaten voor de live preview.
+  const [serieMuis, setSerieMuis] = useState<{ x: number; y: number } | null>(null);
   const serieFormRef = useRef(serieForm);
   const serieLabelIdsRef = useRef(serieLabelIds);
   useEffect(() => { serieFormRef.current = serieForm; }, [serieForm]);
@@ -802,9 +814,29 @@ export default function Plattegrond() {
       return;
     }
     if (serieModus) {
-      const klemX = Math.min(W, Math.max(0, svgX));
-      const klemY = Math.min(H, Math.max(0, svgY));
-      void plaatsSerieSpot(Math.round(klemX), Math.round(klemY));
+      const klemX = Math.round(Math.min(W, Math.max(0, svgX)));
+      const klemY = Math.round(Math.min(H, Math.max(0, svgY)));
+      if (serieMethode === "lijn") {
+        if (!serieLijnStart) {
+          setSerieLijnStart({ x: klemX, y: klemY });
+        } else {
+          void plaatsSerieLijn(serieLijnStart, { x: klemX, y: klemY }, serieAantal);
+          setSerieLijnStart(null);
+          setSerieMuis(null);
+        }
+        return;
+      }
+      if (serieMethode === "rechthoek") {
+        if (!serieLijnStart) {
+          setSerieLijnStart({ x: klemX, y: klemY });
+        } else {
+          void plaatsSerieRechthoek(serieLijnStart, { x: klemX, y: klemY }, serieRijen, serieKolommen);
+          setSerieLijnStart(null);
+          setSerieMuis(null);
+        }
+        return;
+      }
+      void plaatsSerieSpot(klemX, klemY);
       return;
     }
     if (!plaatsenModus) return;
@@ -823,47 +855,150 @@ export default function Plattegrond() {
       monteur_id: huidigeIsMonteur && gebruiker?.id != null ? String(gebruiker.id) : "",
     });
     setNieuwDialoog(true);
-  }, [plaatsenModus, serieModus, tekenModus, verplaatsModus, geselecteerdId, view, W, H, volgendSpot, gebruiker, monteurs]);
+  }, [plaatsenModus, serieModus, serieMethode, serieLijnStart, serieAantal, serieRijen, serieKolommen, tekenModus, verplaatsModus, geselecteerdId, view, W, H, volgendSpot, gebruiker, monteurs]);
 
-  // Plaatst direct (zonder dialoog) één spot uit het serie-sjabloon op de
-  // aangeklikte locatie. Spotnummer wordt server-side gegenereerd (leeg
-  // objectnummer) zodat snelle opeenvolgende klikken nooit botsen.
-  const plaatsSerieSpot = useCallback(async (x: number, y: number) => {
+  // Bouwt de POST-payload voor één serie-spot uit het actuele sjabloon. Het
+  // objectnummer blijft leeg zodat de server het genereert (geen botsing bij
+  // snel opeenvolgende inserts).
+  const bouwSerieSpotData = useCallback((x: number, y: number) => {
     const sjabloon = serieFormRef.current;
     const labels = serieLabelIdsRef.current;
-    if (!sjabloon.type) return;
     const nu = new Date();
     const vandaag = `${nu.getFullYear()}-${String(nu.getMonth() + 1).padStart(2, "0")}-${String(nu.getDate()).padStart(2, "0")}`;
+    return {
+      objectnummer: "",
+      type: sjabloon.type,
+      status: sjabloon.status || "voorbereid",
+      classificatie: "60",
+      wand_of_plafond: sjabloon.wand_of_plafond || undefined,
+      ruimte: sjabloon.ruimte && sjabloon.ruimte !== GEEN_RUIMTE_VAL ? sjabloon.ruimte : undefined,
+      installatie_datum: vandaag,
+      label_ids: labels,
+      monteur_id: sjabloon.monteur_id ? Number(sjabloon.monteur_id) : undefined,
+      cluster_id: sjabloon.cluster_id ? Number(sjabloon.cluster_id) : undefined,
+      maker_monteur_id: gebruiker?.id != null ? Number(gebruiker.id) : undefined,
+      locatie_x: x,
+      locatie_y: y,
+      gebouw_id: Number(id),
+      verdieping_id: Number(verdiepingId),
+    };
+  }, [gebruiker, id, verdiepingId]);
+
+  const plaatsSerieSpot = useCallback(async (x: number, y: number) => {
+    const sjabloon = serieFormRef.current;
+    if (!sjabloon.type) return;
     if (sjabloon.ruimte && sjabloon.ruimte !== GEEN_RUIMTE_VAL) {
       registreerRuimteGebruik(sjabloon.ruimte);
     }
     try {
-      await maakVoorziening.mutateAsync({
-        data: {
-          objectnummer: "",
-          type: sjabloon.type,
-          status: sjabloon.status || "voorbereid",
-          classificatie: "60",
-          wand_of_plafond: sjabloon.wand_of_plafond || undefined,
-          ruimte: sjabloon.ruimte && sjabloon.ruimte !== GEEN_RUIMTE_VAL ? sjabloon.ruimte : undefined,
-          installatie_datum: vandaag,
-          label_ids: labels,
-          monteur_id: sjabloon.monteur_id ? Number(sjabloon.monteur_id) : undefined,
-          cluster_id: sjabloon.cluster_id ? Number(sjabloon.cluster_id) : undefined,
-          maker_monteur_id: gebruiker?.id != null ? Number(gebruiker.id) : undefined,
-          locatie_x: x,
-          locatie_y: y,
-          gebouw_id: Number(id),
-          verdieping_id: Number(verdiepingId),
-        },
-      });
+      await maakVoorziening.mutateAsync({ data: bouwSerieSpotData(x, y) });
       setSerieTeller((n) => n + 1);
       refetch();
       refetchClusters();
     } catch {
       /* fout wordt door de mutatie-status getoond; modus blijft actief */
     }
-  }, [maakVoorziening, gebruiker, id, verdiepingId, refetch, refetchClusters]);
+  }, [maakVoorziening, bouwSerieSpotData, refetch, refetchClusters]);
+
+  // Plaatst een hele serie spots gelijkmatig verdeeld op de lijn van A naar B.
+  // Bij N=1 komt de spot op het midden; bij N>=2 liggen begin en eind precies
+  // op de uiteinden. Inserts gaan serieel zodat de server-spotnummers oplopen
+  // zonder botsing.
+  const plaatsSerieLijn = useCallback(async (
+    start: { x: number; y: number },
+    eind: { x: number; y: number },
+    aantal: number,
+  ) => {
+    const sjabloon = serieFormRef.current;
+    if (!sjabloon.type) return;
+    const n = Math.max(1, Math.min(50, Math.round(aantal)));
+    if (sjabloon.ruimte && sjabloon.ruimte !== GEEN_RUIMTE_VAL) {
+      registreerRuimteGebruik(sjabloon.ruimte);
+    }
+    const posities: { x: number; y: number }[] = [];
+    for (let i = 0; i < n; i++) {
+      const t = n === 1 ? 0.5 : i / (n - 1);
+      posities.push({
+        x: Math.round(Math.min(W, Math.max(0, start.x + (eind.x - start.x) * t))),
+        y: Math.round(Math.min(H, Math.max(0, start.y + (eind.y - start.y) * t))),
+      });
+    }
+    let geplaatst = 0;
+    for (const p of posities) {
+      try {
+        await maakVoorziening.mutateAsync({ data: bouwSerieSpotData(p.x, p.y) });
+        geplaatst++;
+        setSerieTeller((t) => t + 1);
+      } catch {
+        /* fout wordt door de mutatie-status getoond; stop de reeks */
+        break;
+      }
+    }
+    if (geplaatst > 0) {
+      refetch();
+      refetchClusters();
+    }
+  }, [maakVoorziening, bouwSerieSpotData, refetch, refetchClusters, W, H]);
+
+  // Berekent een raster van rijen x kolommen posities binnen de rechthoek die
+  // wordt opgespannen door de twee hoekpunten. Begin- en eindkant liggen op de
+  // randen; bij 1 rij/kolom wordt die as op het midden geplaatst.
+  const rasterPosities = useCallback((
+    hoek1: { x: number; y: number },
+    hoek2: { x: number; y: number },
+    rijen: number,
+    kolommen: number,
+  ) => {
+    const r = Math.max(1, Math.min(20, Math.round(rijen)));
+    const k = Math.max(1, Math.min(20, Math.round(kolommen)));
+    const minX = Math.min(hoek1.x, hoek2.x);
+    const maxX = Math.max(hoek1.x, hoek2.x);
+    const minY = Math.min(hoek1.y, hoek2.y);
+    const maxY = Math.max(hoek1.y, hoek2.y);
+    const posities: { x: number; y: number }[] = [];
+    for (let ri = 0; ri < r; ri++) {
+      const ty = r === 1 ? 0.5 : ri / (r - 1);
+      for (let ci = 0; ci < k; ci++) {
+        const tx = k === 1 ? 0.5 : ci / (k - 1);
+        posities.push({
+          x: Math.round(Math.min(W, Math.max(0, minX + (maxX - minX) * tx))),
+          y: Math.round(Math.min(H, Math.max(0, minY + (maxY - minY) * ty))),
+        });
+      }
+    }
+    return posities;
+  }, [W, H]);
+
+  // Plaatst een raster van spots binnen de getrokken rechthoek/strook. Inserts
+  // gaan serieel zodat de server-spotnummers oplopen zonder botsing.
+  const plaatsSerieRechthoek = useCallback(async (
+    hoek1: { x: number; y: number },
+    hoek2: { x: number; y: number },
+    rijen: number,
+    kolommen: number,
+  ) => {
+    const sjabloon = serieFormRef.current;
+    if (!sjabloon.type) return;
+    if (sjabloon.ruimte && sjabloon.ruimte !== GEEN_RUIMTE_VAL) {
+      registreerRuimteGebruik(sjabloon.ruimte);
+    }
+    const posities = rasterPosities(hoek1, hoek2, rijen, kolommen);
+    let geplaatst = 0;
+    for (const p of posities) {
+      try {
+        await maakVoorziening.mutateAsync({ data: bouwSerieSpotData(p.x, p.y) });
+        geplaatst++;
+        setSerieTeller((t) => t + 1);
+      } catch {
+        /* fout wordt door de mutatie-status getoond; stop de reeks */
+        break;
+      }
+    }
+    if (geplaatst > 0) {
+      refetch();
+      refetchClusters();
+    }
+  }, [maakVoorziening, bouwSerieSpotData, rasterPosities, refetch, refetchClusters]);
 
   const verplaatsSpot = useCallback(async (spotId: number, x: number, y: number) => {
     await updateVoorziening.mutateAsync({ id: spotId, data: { locatie_x: x, locatie_y: y } });
@@ -918,13 +1053,25 @@ export default function Plattegrond() {
   }, [plaatsenModus, tekenModus, verplaatsModus, view.x, view.y]);
 
   const opMouseMove = useCallback((e: React.MouseEvent<SVGSVGElement>) => {
+    // Live preview: volg de muis zodra in serie-lijn-/rechthoekmodus een
+    // beginpunt is gezet, zodat de gebruiker ziet waar de spots komen voordat
+    // hij klikt.
+    if (serieModus && (serieMethode === "lijn" || serieMethode === "rechthoek") && serieLijnStart) {
+      const rect = svgRef.current!.getBoundingClientRect();
+      const svgX = (e.clientX - rect.left - view.x) / view.zoom;
+      const svgY = (e.clientY - rect.top - view.y) / view.zoom;
+      setSerieMuis({
+        x: Math.round(Math.min(W, Math.max(0, svgX))),
+        y: Math.round(Math.min(H, Math.max(0, svgY))),
+      });
+    }
     if (!panning) return;
     setView((v) => ({
       ...v,
       x: panStart.vx + (e.clientX - panStart.mx),
       y: panStart.vy + (e.clientY - panStart.my),
     }));
-  }, [panning, panStart]);
+  }, [panning, panStart, serieModus, serieMethode, serieLijnStart, view.x, view.y, view.zoom, W, H]);
 
   const opMouseUp = useCallback(() => setPanning(false), []);
 
@@ -1044,18 +1191,28 @@ export default function Plattegrond() {
       cluster_id: "",
     });
     setSerieLabelIds([]);
+    setSerieMethode("klik");
+    setSerieAantal(5);
+    setSerieRijen(3);
+    setSerieKolommen(3);
+    setSerieLijnStart(null);
+    setSerieMuis(null);
     setSerieDialoog(true);
   }
 
   function startSerie() {
     if (!serieForm.type) return;
     setSerieTeller(0);
+    setSerieLijnStart(null);
+    setSerieMuis(null);
     setSerieModus(true);
     setSerieDialoog(false);
   }
 
   function stopSerie() {
     setSerieModus(false);
+    setSerieLijnStart(null);
+    setSerieMuis(null);
   }
 
   return (
@@ -1182,9 +1339,27 @@ export default function Plattegrond() {
       {serieModus && (
         <div className="bg-primary/10 border border-primary/30 rounded-md px-3 py-2 mb-2 text-sm text-primary font-medium flex items-center justify-between flex-shrink-0">
           <span>
-            Serie plaatsen actief — klik op de plattegrond om telkens een{" "}
-            {STATUSLABEL[serieForm.status]?.toLowerCase() ?? serieForm.status} spot
-            ({TYPEN[serieForm.type]?.label ?? serieForm.type}) toe te voegen.
+            {serieMethode === "lijn" ? (
+              <>
+                Serie langs lijn actief —{" "}
+                {serieLijnStart
+                  ? `klik op het eindpunt; er komen ${serieAantal} ${STATUSLABEL[serieForm.status]?.toLowerCase() ?? serieForm.status} spots (${TYPEN[serieForm.type]?.label ?? serieForm.type}) gelijkmatig verdeeld.`
+                  : `klik op het beginpunt van de lijn (${serieAantal} spots per lijn).`}
+              </>
+            ) : serieMethode === "rechthoek" ? (
+              <>
+                Serie in rechthoek actief —{" "}
+                {serieLijnStart
+                  ? `klik op de tegenoverliggende hoek; er komen ${serieRijen * serieKolommen} ${STATUSLABEL[serieForm.status]?.toLowerCase() ?? serieForm.status} spots (${TYPEN[serieForm.type]?.label ?? serieForm.type}) in een raster van ${serieRijen} x ${serieKolommen}.`
+                  : `klik op de eerste hoek van de strook/rechthoek (${serieRijen} x ${serieKolommen} = ${serieRijen * serieKolommen} spots).`}
+              </>
+            ) : (
+              <>
+                Serie plaatsen actief — klik op de plattegrond om telkens een{" "}
+                {STATUSLABEL[serieForm.status]?.toLowerCase() ?? serieForm.status} spot
+                ({TYPEN[serieForm.type]?.label ?? serieForm.type}) toe te voegen.
+              </>
+            )}
             {serieTeller > 0 && ` ${serieTeller} geplaatst.`}
             {maakVoorziening.isPending && " Bezig met opslaan…"}
           </span>
@@ -1287,6 +1462,57 @@ export default function Plattegrond() {
                   ))}
                 </g>
               )}
+
+              {/* Serie-lijn preview: dunne lijn + voorbeeldspots op de plekken
+                  waar straks de echte spots komen. */}
+              {serieModus && serieMethode === "lijn" && serieLijnStart && serieMuis && (() => {
+                const n = Math.max(1, Math.min(50, Math.round(serieAantal)));
+                const punten: { x: number; y: number }[] = [];
+                for (let i = 0; i < n; i++) {
+                  const t = n === 1 ? 0.5 : i / (n - 1);
+                  punten.push({
+                    x: serieLijnStart.x + (serieMuis.x - serieLijnStart.x) * t,
+                    y: serieLijnStart.y + (serieMuis.y - serieLijnStart.y) * t,
+                  });
+                }
+                return (
+                  <g pointerEvents="none">
+                    <line
+                      x1={serieLijnStart.x} y1={serieLijnStart.y}
+                      x2={serieMuis.x} y2={serieMuis.y}
+                      stroke="hsl(12 90% 50%)" strokeWidth={3}
+                      strokeDasharray="8 6" strokeLinecap="round" />
+                    {punten.map((p, i) => (
+                      <circle key={i} cx={p.x} cy={p.y} r={9}
+                        fill="hsl(12 90% 50%)" fillOpacity={0.85}
+                        stroke="#fff" strokeWidth={2.5} />
+                    ))}
+                  </g>
+                );
+              })()}
+
+              {/* Serie-rechthoek preview: omtrek + voorbeeldspots in het raster. */}
+              {serieModus && serieMethode === "rechthoek" && serieLijnStart && serieMuis && (() => {
+                const punten = rasterPosities(serieLijnStart, serieMuis, serieRijen, serieKolommen);
+                const x = Math.min(serieLijnStart.x, serieMuis.x);
+                const y = Math.min(serieLijnStart.y, serieMuis.y);
+                const breedte = Math.abs(serieMuis.x - serieLijnStart.x);
+                const hoogte = Math.abs(serieMuis.y - serieLijnStart.y);
+                return (
+                  <g pointerEvents="none">
+                    <rect
+                      x={x} y={y} width={breedte} height={hoogte}
+                      fill="hsl(12 90% 50%)" fillOpacity={0.08}
+                      stroke="hsl(12 90% 50%)" strokeWidth={3}
+                      strokeDasharray="8 6" />
+                    {punten.map((p, i) => (
+                      <circle key={i} cx={p.x} cy={p.y} r={9}
+                        fill="hsl(12 90% 50%)" fillOpacity={0.85}
+                        stroke="#fff" strokeWidth={2.5} />
+                    ))}
+                  </g>
+                );
+              })()}
 
               {/* Logische cluster-omhullingen (achter de spots) */}
               {logischeOmhullingen.map((o: { cluster: any; spots: SVGVoorziening[] }) => (
@@ -1756,10 +1982,100 @@ export default function Plattegrond() {
           </DialogHeader>
           <div className="space-y-4 py-1">
             <p className="text-sm text-muted-foreground">
-              Stel hier het sjabloon in. Daarna klikt u op de plattegrond om
-              telkens een spot met dezelfde gegevens te plaatsen — ideaal voor
-              een reeks voorbereide spots.
+              Stel hier het sjabloon in. Daarna plaatst u op de plattegrond een
+              reeks spots met dezelfde gegevens — per klik, of in één keer
+              gelijkmatig verdeeld langs een getrokken lijn of in een rechthoek.
             </p>
+
+            {/* Plaatsmethode */}
+            <div className="border rounded-lg p-4 space-y-3">
+              <div className="grid grid-cols-3 gap-2">
+                <Button
+                  type="button"
+                  variant={serieMethode === "klik" ? "default" : "outline"}
+                  onClick={() => setSerieMethode("klik")}
+                >
+                  Per klik
+                </Button>
+                <Button
+                  type="button"
+                  variant={serieMethode === "lijn" ? "default" : "outline"}
+                  onClick={() => setSerieMethode("lijn")}
+                >
+                  <Spline className="h-4 w-4 mr-1" />Langs een lijn
+                </Button>
+                <Button
+                  type="button"
+                  variant={serieMethode === "rechthoek" ? "default" : "outline"}
+                  onClick={() => setSerieMethode("rechthoek")}
+                >
+                  <Layers className="h-4 w-4 mr-1" />Rechthoek
+                </Button>
+              </div>
+              {serieMethode === "lijn" ? (
+                <div>
+                  <Label htmlFor="serie-aantal">Aantal spots per lijn</Label>
+                  <Input
+                    id="serie-aantal"
+                    type="number"
+                    min={1}
+                    max={50}
+                    value={serieAantal}
+                    onChange={(e) => {
+                      const n = Number(e.target.value);
+                      setSerieAantal(Number.isFinite(n) ? Math.max(1, Math.min(50, Math.round(n))) : 1);
+                    }}
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Klik straks op het begin- en eindpunt; de spots worden
+                    gelijkmatig over de lijn verdeeld (begin en eind inbegrepen).
+                  </p>
+                </div>
+              ) : serieMethode === "rechthoek" ? (
+                <div className="space-y-2">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label htmlFor="serie-rijen">Rijen</Label>
+                      <Input
+                        id="serie-rijen"
+                        type="number"
+                        min={1}
+                        max={20}
+                        value={serieRijen}
+                        onChange={(e) => {
+                          const n = Number(e.target.value);
+                          setSerieRijen(Number.isFinite(n) ? Math.max(1, Math.min(20, Math.round(n))) : 1);
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="serie-kolommen">Kolommen</Label>
+                      <Input
+                        id="serie-kolommen"
+                        type="number"
+                        min={1}
+                        max={20}
+                        value={serieKolommen}
+                        onChange={(e) => {
+                          const n = Number(e.target.value);
+                          setSerieKolommen(Number.isFinite(n) ? Math.max(1, Math.min(20, Math.round(n))) : 1);
+                        }}
+                      />
+                    </div>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Klik straks op twee tegenoverliggende hoeken; er worden{" "}
+                    {serieRijen * serieKolommen} spots in een raster van{" "}
+                    {serieRijen} x {serieKolommen} gelijkmatig binnen de rechthoek
+                    geplaatst (randen inbegrepen).
+                  </p>
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground">
+                  Klik straks telkens op de plattegrond om één spot toe te voegen.
+                </p>
+              )}
+            </div>
 
             {/* Applicatie */}
             <div>
