@@ -1655,7 +1655,13 @@ function KoppelVoorstellenDialog({
         description: `${namen.join(", ")} nu gekoppeld aan "${v.document_naam}". Terug te vinden in het document onder "Gekoppelde toepassingen".`,
       });
     } catch (err) {
-      setFout(foutmelding(err, "Koppeling overnemen mislukte."));
+      const melding = foutmelding(err, "Koppeling overnemen mislukte.");
+      setFout(melding);
+      toast({
+        variant: "destructive",
+        title: "Koppeling overnemen mislukt",
+        description: melding,
+      });
     } finally {
       setBezigDoc(null);
     }
