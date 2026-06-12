@@ -1,4 +1,4 @@
-import { useState, useRef, useMemo } from "react";
+import { useState, useRef, useMemo, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import {
   useListGebruikers,
@@ -300,12 +300,19 @@ export default function Gebruikers() {
 
   const [zoek, setZoek]               = useVoorkeur<string>("gebruikers_zoek", "");
   const [filterGroep, setFilterGroep] = useVoorkeur<string | null>("gebruikers_filter_groep", null);
-  const [actieveTab, setActieveTab]   = useState<"gebruikers" | "profielen">("gebruikers");
+  const [actieveTab, setActieveTab]   = useState<"gebruikers" | "klanten" | "profielen">("gebruikers");
   const [alleenAuto, setAlleenAuto]   = useState<boolean>(false);
   const [bulkBevestigOpen, setBulkBevestigOpen] = useState<boolean>(false);
   const [bulkResultaat, setBulkResultaat] = useState<string | null>(null);
 
   const invalideer = () => queryClient.invalidateQueries({ queryKey: getListGebruikersQueryKey() });
+
+  // Migratie: "Klant" is geen interne functiegroep-filter meer. Reset een
+  // eventueel eerder bewaarde filterkeuze zodat het interne overzicht niet
+  // ten onrechte leeg lijkt.
+  useEffect(() => {
+    if (filterGroep === "Klant") setFilterGroep(null);
+  }, [filterGroep, setFilterGroep]);
 
   async function pasHerkomstToe(g: Gebruiker) {
     if (g.herkomst_profiel_id == null || herkomstBezig != null) return;
@@ -467,17 +474,29 @@ export default function Gebruikers() {
     } finally { setUitnodigingBezig(null); }
   }
 
+  // Interne FPS-gebruikers (staf) vs. klantaccounts. Klanten horen bij de
+  // klantomgeving (FPS One) en worden bewust apart getoond, niet tussen het
+  // interne gebruikersoverzicht.
+  const internBron = useMemo(
+    () => ((gebruikers ?? []) as Gebruiker[]).filter((g) => g.rol !== "klant"),
+    [gebruikers],
+  );
+  const klantBron = useMemo(
+    () => ((gebruikers ?? []) as Gebruiker[]).filter((g) => g.rol === "klant"),
+    [gebruikers],
+  );
+
   const groepCounts = useMemo(() => {
     const counts: Record<string, number> = {};
-    for (const g of (gebruikers ?? []) as Gebruiker[]) {
+    for (const g of internBron) {
       const naam = groepVanGebruiker(g);
       counts[naam] = (counts[naam] ?? 0) + 1;
     }
     return counts;
-  }, [gebruikers]);
+  }, [internBron]);
 
   const groepGefilterd = useMemo(() => {
-    return (gebruikers ?? []).filter((g: any) => {
+    return internBron.filter((g: any) => {
       if (filterGroep && groepVanGebruiker(g as Gebruiker) !== filterGroep) return false;
       if (alleenAuto && !(g.herkomst_profiel_id != null && g.herkomst_automatisch === true)) return false;
       const term = zoek.trim().toLowerCase();
@@ -488,7 +507,19 @@ export default function Gebruikers() {
         (g.functietitels ?? []).some((f: string) => f.toLowerCase().includes(term))
       );
     }) as Gebruiker[];
-  }, [gebruikers, filterGroep, zoek, alleenAuto]);
+  }, [internBron, filterGroep, zoek, alleenAuto]);
+
+  const klantGefilterd = useMemo(() => {
+    const term = zoek.trim().toLowerCase();
+    return klantBron.filter((g) => {
+      if (!term) return true;
+      return (
+        (g.naam ?? "").toLowerCase().includes(term) ||
+        (g.email ?? "").toLowerCase().includes(term) ||
+        (g.bedrijf ?? "").toLowerCase().includes(term)
+      );
+    });
+  }, [klantBron, zoek]);
 
   const totaalGevonden = groepGefilterd.length;
 
@@ -531,6 +562,132 @@ export default function Gebruikers() {
     }
   }
 
+  // Gedeelde gebruikerskaart — gebruikt voor zowel interne gebruikers als
+  // klantaccounts, zodat beide overzichten identiek werken (bekijken,
+  // bewerken, verwijderen, uitnodigen).
+  function gebruikerKaart(g: Gebruiker) {
+    const status = (g.uitnodiging_status ?? "niet_uitgenodigd") as keyof typeof UITNODIGING_STATUS_CONFIG;
+    const statusCfg = UITNODIGING_STATUS_CONFIG[status] ?? UITNODIGING_STATUS_CONFIG.niet_uitgenodigd;
+    const groep = groepVanGebruiker(g);
+    const groepCfg = FUNCTIE_GROEPEN.find((gr) => gr.naam === groep);
+    const GroepIcon = groepCfg?.icon ?? User;
+    const profiel = g.herkomst_profiel_id != null ? profielMap.get(g.herkomst_profiel_id) : undefined;
+    const afwijkend = profiel ? !bevoegdhedenGelijk(g.bevoegdheden, profiel.bevoegdheden) : false;
+    const automatisch = (g as any).herkomst_automatisch === true;
+
+    return (
+      <Card
+        key={g.id}
+        className={`hover:shadow-md transition-shadow ${statusCfg.balk}`}
+        style={statusCfg.kaartStyle}
+      >
+        <CardContent className="p-3">
+          <div className="flex items-start gap-2.5">
+            <Avatar className="h-8 w-8 text-xs border border-border/50 flex-shrink-0 mt-0.5">
+              {g.avatar_url && <AvatarImage src={g.avatar_url} alt={g.naam ?? ""} />}
+              <AvatarFallback className="bg-primary/10 text-primary font-semibold text-xs">
+                {initialen(g.naam ?? "")}
+              </AvatarFallback>
+            </Avatar>
+
+            <div className="flex-1 min-w-0">
+              <div className="flex items-start justify-between gap-1">
+                <span className="font-semibold text-sm leading-tight truncate">{g.naam}</span>
+                <div className="flex gap-0.5 flex-shrink-0">
+                  <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-primary" onClick={() => setBekijkGebruiker(g)} title="Bekijken">
+                    <Eye className="h-3 w-3" />
+                  </Button>
+                  <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-foreground" onClick={() => openBewerken(g)} title="Bewerken">
+                    <Pencil className="h-3 w-3" />
+                  </Button>
+                  {magVerwijderen && (
+                    <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-destructive" onClick={() => setVerwijderTarget(g)} title="Verwijderen">
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex items-center gap-1 mt-0.5">
+                <GroepIcon className={`h-3 w-3 flex-shrink-0 ${groepCfg?.kleur ?? "text-muted-foreground"}`} />
+                <span className={`text-xs font-medium ${groepCfg?.kleur ?? "text-muted-foreground"}`}>{groep}</span>
+              </div>
+
+              <div className="space-y-0.5 mt-1">
+                {g.email && (
+                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <Mail className="h-3 w-3 flex-shrink-0" />
+                    <span className="truncate">{g.email}</span>
+                  </div>
+                )}
+                {g.telefoon && (
+                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <Phone className="h-3 w-3 flex-shrink-0" />
+                    <span>{g.telefoon}</span>
+                  </div>
+                )}
+                <div className={`flex items-center gap-1.5 text-xs ${onlinKleur(g.laatste_online)}`}>
+                  <Clock className="h-3 w-3 flex-shrink-0" />
+                  <span>{relatiefTijdstip(g.laatste_online)}</span>
+                </div>
+              </div>
+
+              {profiel && (
+                <div className="flex items-center gap-1 mt-1.5 text-xs text-muted-foreground">
+                  <Layers className="h-3 w-3 flex-shrink-0" />
+                  <span className="truncate">{profiel.naam}</span>
+                  {afwijkend && (
+                    <Badge variant="outline" className="text-xs h-4 px-1 bg-amber-50 text-amber-700 border-amber-200 flex-shrink-0 ml-auto">
+                      Aangepast
+                    </Badge>
+                  )}
+                  {automatisch && !afwijkend && (
+                    <Badge variant="outline" className="text-xs h-4 px-1 bg-amber-50 text-amber-700 border-amber-200 flex-shrink-0 ml-auto">
+                      Auto
+                    </Badge>
+                  )}
+                </div>
+              )}
+
+              <div className="flex flex-wrap items-center gap-1 mt-1.5">
+                {!g.actief && (
+                  <Badge variant="outline" className="text-xs bg-gray-100 text-gray-500 border-gray-200 h-5 px-1.5">Inactief</Badge>
+                )}
+                {status !== "geaccepteerd" && statusCfg.label && (
+                  <Badge variant="outline" className={`text-xs h-5 px-1.5 ${statusCfg.badge}`}>{statusCfg.label}</Badge>
+                )}
+                {status === "uitgenodigd" && g.uitnodiging_verloopt_op &&
+                  new Date(g.uitnodiging_verloopt_op).getTime() < Date.now() && (
+                    <Badge variant="outline" className="text-xs h-5 px-1.5 bg-red-100 text-red-800 border-red-200">Verlopen</Badge>
+                )}
+              </div>
+
+              {status !== "geaccepteerd" && (
+                <button
+                  type="button"
+                  className={`mt-2 h-7 text-xs w-full gap-1.5 font-medium rounded-md flex items-center justify-center px-2 transition-colors ${
+                    status === "niet_uitgenodigd"
+                      ? "bg-amber-500 hover:bg-amber-600 text-white"
+                      : "bg-purple-500 hover:bg-purple-600 text-white"
+                  } disabled:opacity-60`}
+                  disabled={uitnodigingBezig === g.id}
+                  onClick={() => stuurUitnodiging(g)}
+                >
+                  <SendHorizonal className="h-3 w-3 mr-1 flex-shrink-0" />
+                  {uitnodigingBezig === g.id
+                    ? "Bezig..."
+                    : status === "uitgenodigd"
+                    ? "Opnieuw uitnodigen"
+                    : "Uitnodigen"}
+                </button>
+              )}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <div className="space-y-5 max-w-[1400px] mx-auto">
       {/* Header */}
@@ -563,12 +720,23 @@ export default function Gebruikers() {
               <Plus className="h-4 w-4 mr-2" /> Gebruiker toevoegen
             </Button>
           )}
+          {actieveTab === "klanten" && (
+            <Button onClick={() => { setToevoegenForm({ ...leegForm, rol: "klant" }); setToevoegenStap(2); setToevoegenOpen(true); setToevoegenFout(null); }}>
+              <Plus className="h-4 w-4 mr-2" /> Klant toevoegen
+            </Button>
+          )}
         </div>
       </div>
 
       <Tabs value={actieveTab} onValueChange={(v) => setActieveTab(v as typeof actieveTab)}>
         <TabsList className="h-9">
           <TabsTrigger value="gebruikers" className="text-sm">Gebruikers</TabsTrigger>
+          <TabsTrigger value="klanten" className="text-sm gap-1.5">
+            Klanten
+            {klantBron.length > 0 && (
+              <Badge variant="secondary" className="h-4 px-1 text-[10px]">{klantBron.length}</Badge>
+            )}
+          </TabsTrigger>
           <TabsTrigger value="profielen" className="text-sm">Profielen</TabsTrigger>
         </TabsList>
 
@@ -649,7 +817,7 @@ export default function Gebruikers() {
           {/* Functiegroep-tegels */}
           {!isLoading && (
             <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-2">
-              {FUNCTIE_GROEPEN.filter((gr) => isHoofd || gr.naam !== "Hoofdbeheerder").map((gr) => {
+              {FUNCTIE_GROEPEN.filter((gr) => (isHoofd || gr.naam !== "Hoofdbeheerder") && gr.naam !== "Klant").map((gr) => {
                 const Icon = gr.icon;
                 const aantal = groepCounts[gr.naam] ?? 0;
                 const actief = filterGroep === gr.naam;
@@ -703,128 +871,64 @@ export default function Gebruikers() {
             </div>
           ) : (
             <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-              {groepGefilterd.map((g) => {
-                const status = (g.uitnodiging_status ?? "niet_uitgenodigd") as keyof typeof UITNODIGING_STATUS_CONFIG;
-                const statusCfg = UITNODIGING_STATUS_CONFIG[status] ?? UITNODIGING_STATUS_CONFIG.niet_uitgenodigd;
-                const groep = groepVanGebruiker(g);
-                const groepCfg = FUNCTIE_GROEPEN.find((gr) => gr.naam === groep);
-                const GroepIcon = groepCfg?.icon ?? User;
-                const profiel = g.herkomst_profiel_id != null ? profielMap.get(g.herkomst_profiel_id) : undefined;
-                const afwijkend = profiel ? !bevoegdhedenGelijk(g.bevoegdheden, profiel.bevoegdheden) : false;
-                const automatisch = (g as any).herkomst_automatisch === true;
+              {groepGefilterd.map((g) => gebruikerKaart(g))}
+            </div>
+          )}
+        </TabsContent>
 
-                return (
-                  <Card
-                    key={g.id}
-                    className={`hover:shadow-md transition-shadow ${statusCfg.balk}`}
-                    style={statusCfg.kaartStyle}
-                  >
-                    <CardContent className="p-3">
-                      <div className="flex items-start gap-2.5">
-                        <Avatar className="h-8 w-8 text-xs border border-border/50 flex-shrink-0 mt-0.5">
-                          {g.avatar_url && <AvatarImage src={g.avatar_url} alt={g.naam ?? ""} />}
-                          <AvatarFallback className="bg-primary/10 text-primary font-semibold text-xs">
-                            {initialen(g.naam ?? "")}
-                          </AvatarFallback>
-                        </Avatar>
+        {/* Tab: Klanten */}
+        <TabsContent value="klanten" className="space-y-4 mt-4">
+          <div className="rounded-lg border border-border bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+            Klantaccounts horen bij de klantomgeving (FPS One) en staan los van de interne FPS-gebruikers. Hier beheer je hun toegang tot het klantportaal.
+          </div>
 
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-start justify-between gap-1">
-                            <span className="font-semibold text-sm leading-tight truncate">{g.naam}</span>
-                            <div className="flex gap-0.5 flex-shrink-0">
-                              <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-primary" onClick={() => setBekijkGebruiker(g)} title="Bekijken">
-                                <Eye className="h-3 w-3" />
-                              </Button>
-                              <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-foreground" onClick={() => openBewerken(g)} title="Bewerken">
-                                <Pencil className="h-3 w-3" />
-                              </Button>
-                              {magVerwijderen && (
-                                <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-destructive" onClick={() => setVerwijderTarget(g)} title="Verwijderen">
-                                  <Trash2 className="h-3 w-3" />
-                                </Button>
-                              )}
-                            </div>
-                          </div>
+          {/* Zoekbalk */}
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="relative flex-1 min-w-[200px] max-w-sm">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+              <Input
+                value={zoek}
+                onChange={(e) => setZoek(e.target.value)}
+                placeholder="Naam, e-mail of bedrijf..."
+                className="h-9 pl-8"
+              />
+            </div>
+            {!!zoek.trim() && (
+              <Button variant="ghost" size="sm" className="h-9 text-muted-foreground" onClick={() => setZoek("")}>
+                Wissen
+              </Button>
+            )}
+            <span className="text-xs text-muted-foreground ml-auto">
+              {klantGefilterd.length} {klantGefilterd.length === 1 ? "klant" : "klanten"}
+            </span>
+          </div>
 
-                          <div className="flex items-center gap-1 mt-0.5">
-                            <GroepIcon className={`h-3 w-3 flex-shrink-0 ${groepCfg?.kleur ?? "text-muted-foreground"}`} />
-                            <span className={`text-xs font-medium ${groepCfg?.kleur ?? "text-muted-foreground"}`}>{groep}</span>
-                          </div>
-
-                          <div className="space-y-0.5 mt-1">
-                            {g.email && (
-                              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                                <Mail className="h-3 w-3 flex-shrink-0" />
-                                <span className="truncate">{g.email}</span>
-                              </div>
-                            )}
-                            {g.telefoon && (
-                              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                                <Phone className="h-3 w-3 flex-shrink-0" />
-                                <span>{g.telefoon}</span>
-                              </div>
-                            )}
-                            <div className={`flex items-center gap-1.5 text-xs ${onlinKleur(g.laatste_online)}`}>
-                              <Clock className="h-3 w-3 flex-shrink-0" />
-                              <span>{relatiefTijdstip(g.laatste_online)}</span>
-                            </div>
-                          </div>
-
-                          {profiel && (
-                            <div className="flex items-center gap-1 mt-1.5 text-xs text-muted-foreground">
-                              <Layers className="h-3 w-3 flex-shrink-0" />
-                              <span className="truncate">{profiel.naam}</span>
-                              {afwijkend && (
-                                <Badge variant="outline" className="text-xs h-4 px-1 bg-amber-50 text-amber-700 border-amber-200 flex-shrink-0 ml-auto">
-                                  Aangepast
-                                </Badge>
-                              )}
-                              {automatisch && !afwijkend && (
-                                <Badge variant="outline" className="text-xs h-4 px-1 bg-amber-50 text-amber-700 border-amber-200 flex-shrink-0 ml-auto">
-                                  Auto
-                                </Badge>
-                              )}
-                            </div>
-                          )}
-
-                          <div className="flex flex-wrap items-center gap-1 mt-1.5">
-                            {!g.actief && (
-                              <Badge variant="outline" className="text-xs bg-gray-100 text-gray-500 border-gray-200 h-5 px-1.5">Inactief</Badge>
-                            )}
-                            {status !== "geaccepteerd" && statusCfg.label && (
-                              <Badge variant="outline" className={`text-xs h-5 px-1.5 ${statusCfg.badge}`}>{statusCfg.label}</Badge>
-                            )}
-                            {status === "uitgenodigd" && g.uitnodiging_verloopt_op &&
-                              new Date(g.uitnodiging_verloopt_op).getTime() < Date.now() && (
-                                <Badge variant="outline" className="text-xs h-5 px-1.5 bg-red-100 text-red-800 border-red-200">Verlopen</Badge>
-                            )}
-                          </div>
-
-                          {status !== "geaccepteerd" && (
-                            <button
-                              type="button"
-                              className={`mt-2 h-7 text-xs w-full gap-1.5 font-medium rounded-md flex items-center justify-center px-2 transition-colors ${
-                                status === "niet_uitgenodigd"
-                                  ? "bg-amber-500 hover:bg-amber-600 text-white"
-                                  : "bg-purple-500 hover:bg-purple-600 text-white"
-                              } disabled:opacity-60`}
-                              disabled={uitnodigingBezig === g.id}
-                              onClick={() => stuurUitnodiging(g)}
-                            >
-                              <SendHorizonal className="h-3 w-3 mr-1 flex-shrink-0" />
-                              {uitnodigingBezig === g.id
-                                ? "Bezig..."
-                                : status === "uitgenodigd"
-                                ? "Opnieuw uitnodigen"
-                                : "Uitnodigen"}
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
+          {/* Klantkaarten */}
+          {isLoading ? (
+            <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+              {[...Array(4)].map((_, i) => (
+                <div key={i} className="h-28 bg-muted animate-pulse rounded-lg" />
+              ))}
+            </div>
+          ) : klantGefilterd.length === 0 ? (
+            <div className="rounded-xl border border-dashed bg-muted/30 py-12 text-center">
+              <p className="text-muted-foreground text-sm">
+                {zoek.trim() ? "Geen klanten gevonden" : "Nog geen klantaccounts"}
+              </p>
+              {!!zoek.trim() && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="mt-2 text-muted-foreground"
+                  onClick={() => setZoek("")}
+                >
+                  Filters wissen
+                </Button>
+              )}
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+              {klantGefilterd.map((g) => gebruikerKaart(g))}
             </div>
           )}
         </TabsContent>
