@@ -1379,10 +1379,15 @@ function DocumentEntiteitKoppelingen({
     });
   }
 
-  async function verwijderKoppeling(koppelingId: number) {
+  async function verwijderKoppeling(koppeling: DocumentKoppeling) {
     try {
-      await verwijder.mutateAsync({ id: documentId, koppelingId });
+      await verwijder.mutateAsync({ id: documentId, koppelingId: koppeling.id });
       await ververs();
+      const doel = koppeling.doel_naam || `#${koppeling.doel_id}`;
+      toast({
+        title: "Koppeling verwijderd",
+        description: `De koppeling met ${doel} is losgekoppeld.`,
+      });
     } catch (err) {
       toast({
         title: "Koppeling verwijderen mislukt",
@@ -1433,7 +1438,7 @@ function DocumentEntiteitKoppelingen({
                 <button
                   type="button"
                   className="text-muted-foreground hover:text-destructive"
-                  onClick={() => verwijderKoppeling(k.id)}
+                  onClick={() => verwijderKoppeling(k)}
                   disabled={verwijder.isPending}
                   aria-label="Koppeling verwijderen"
                 >
@@ -1503,6 +1508,11 @@ function KoppelingToevoegen({
           doel_type: doelType as DocumentKoppeling["doel_type"],
           doel_id: Number(doelId),
         },
+      });
+      const doel = opties.find((o) => o.value === doelId)?.label ?? `#${doelId}`;
+      toast({
+        title: "Koppeling toegevoegd",
+        description: `Het document is gekoppeld aan ${doel}.`,
       });
       onGekoppeld();
     } catch (err) {
