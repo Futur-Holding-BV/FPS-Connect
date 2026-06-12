@@ -678,6 +678,13 @@ export default function MedewerkerDetailPagina() {
                     {(functies ?? []).map((f) => <SelectItem key={f.id} value={String(f.id)}>{f.naam}</SelectItem>)}
                   </SelectContent>
                 </Select>
+                {(functies ?? []).length === 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    Nog geen functies.{" "}
+                    <Link href="/personeel" className="font-medium text-primary hover:underline">Voeg ze toe</Link>{" "}
+                    in het functiehuis.
+                  </p>
+                )}
               </div>
               <div className="space-y-1.5">
                 <Label>Dienstverband</Label>
@@ -740,16 +747,24 @@ export default function MedewerkerDetailPagina() {
           <div className="space-y-3">
             <div className="space-y-1.5">
               <Label>Opleiding *</Label>
-              <Select
-                value={opleidingForm.opleiding_id ? String(opleidingForm.opleiding_id) : undefined}
-                onValueChange={(v) => setOpleidingForm({ ...opleidingForm, opleiding_id: Number(v) })}
-                disabled={!!opleidingBewerkId}
-              >
-                <SelectTrigger><SelectValue placeholder="Kies opleiding" /></SelectTrigger>
-                <SelectContent>
-                  {(opleidingCatalogus ?? []).map((o) => <SelectItem key={o.id} value={String(o.id)}>{o.naam}</SelectItem>)}
-                </SelectContent>
-              </Select>
+              {(opleidingCatalogus ?? []).length === 0 && !opleidingBewerkId ? (
+                <p className="rounded-md border border-dashed px-3 py-2 text-xs text-muted-foreground">
+                  Nog geen opleidingen in de catalogus.{" "}
+                  <Link href="/personeel" className="font-medium text-primary hover:underline">Voeg ze eerst toe</Link>{" "}
+                  bij Personeel → Opleidingen.
+                </p>
+              ) : (
+                <Select
+                  value={opleidingForm.opleiding_id ? String(opleidingForm.opleiding_id) : undefined}
+                  onValueChange={(v) => setOpleidingForm({ ...opleidingForm, opleiding_id: Number(v) })}
+                  disabled={!!opleidingBewerkId}
+                >
+                  <SelectTrigger><SelectValue placeholder="Kies opleiding" /></SelectTrigger>
+                  <SelectContent>
+                    {(opleidingCatalogus ?? []).map((o) => <SelectItem key={o.id} value={String(o.id)}>{o.naam}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
             <div className="space-y-1.5">
               <Label>Status</Label>

@@ -523,14 +523,25 @@ export default function PersoneelPagina() {
                 <div className="flex flex-wrap items-end gap-2">
                   <div className="space-y-1.5 min-w-56">
                     <Label>Functie</Label>
-                    <Select value={voorstelFunctieId} onValueChange={setVoorstelFunctieId}>
-                      <SelectTrigger><SelectValue placeholder="Kies een functie" /></SelectTrigger>
-                      <SelectContent>
-                        {(functies ?? []).map((f) => (
-                          <SelectItem key={f.id} value={String(f.id)}>{f.naam}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    {(functies ?? []).length === 0 ? (
+                      <div className="flex items-center gap-2">
+                        <p className="rounded-md border border-dashed px-3 py-2 text-xs text-muted-foreground">
+                          Nog geen functies in het functiehuis.
+                        </p>
+                        <Button type="button" variant="outline" size="sm" className="gap-1" onClick={() => setFunctieOpen(true)}>
+                          <Plus className="h-3 w-3" /> Nieuwe functie
+                        </Button>
+                      </div>
+                    ) : (
+                      <Select value={voorstelFunctieId} onValueChange={setVoorstelFunctieId}>
+                        <SelectTrigger><SelectValue placeholder="Kies een functie" /></SelectTrigger>
+                        <SelectContent>
+                          {(functies ?? []).map((f) => (
+                            <SelectItem key={f.id} value={String(f.id)}>{f.naam}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
                   </div>
                   <Button onClick={haalVoorstellen} disabled={voorstelMutatie.isPending || !voorstelFunctieId}>
                     {voorstelMutatie.isPending ? "AI denkt na…" : "Voorstellen ophalen"}
