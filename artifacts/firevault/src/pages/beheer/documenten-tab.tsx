@@ -972,11 +972,23 @@ function DocumentDetail({
   }
 
   async function bewaarKoppelingen() {
-    await setToepassingen.mutateAsync({ id: document.id, data: { label_ids: toep } });
-    await queryClient.invalidateQueries({ queryKey: getListDocumentenQueryKey() });
-    await queryClient.invalidateQueries({
-      queryKey: getGetDocumentQueryKey(document.id),
-    });
+    try {
+      await setToepassingen.mutateAsync({ id: document.id, data: { label_ids: toep } });
+      await queryClient.invalidateQueries({ queryKey: getListDocumentenQueryKey() });
+      await queryClient.invalidateQueries({
+        queryKey: getGetDocumentQueryKey(document.id),
+      });
+      toast({
+        title: "Koppelingen opgeslagen",
+        description: `De toepassingskoppelingen van "${doc.naam}" zijn bijgewerkt.`,
+      });
+    } catch (err) {
+      toast({
+        title: "Koppelingen opslaan mislukt",
+        description: foutmelding(err, "Probeer het opnieuw."),
+        variant: "destructive",
+      });
+    }
   }
 
   return (

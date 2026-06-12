@@ -10,6 +10,7 @@ import {
 } from "@workspace/api-client-react";
 import type { Label, VoorzieningType, Document, Fabrikant } from "@workspace/api-client-react";
 import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
+import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -78,6 +79,7 @@ function ToepassingDetailInhoud({
   onSluit: () => void;
 }) {
   const queryClient = useQueryClient();
+  const { toast } = useToast();
   const { heeftNiveau } = useBevoegdheid();
   const magBewerken = heeftNiveau("bibliotheek", 2);
 
@@ -171,9 +173,19 @@ function ToepassingDetailInhoud({
       });
       await queryClient.invalidateQueries({ queryKey: getListLabelsQueryKey() });
       await queryClient.invalidateQueries({ queryKey: getListDocumentenQueryKey() });
+      toast({
+        title: "Toepassing opgeslagen",
+        description: `De gegevens en koppelingen van "${naam.trim()}" zijn bijgewerkt.`,
+      });
       onSluit();
     } catch (err) {
-      setFout(foutmelding(err, "Opslaan is mislukt. Probeer het opnieuw."));
+      const melding = foutmelding(err, "Opslaan is mislukt. Probeer het opnieuw.");
+      setFout(melding);
+      toast({
+        title: "Opslaan mislukt",
+        description: melding,
+        variant: "destructive",
+      });
     }
   }
 
