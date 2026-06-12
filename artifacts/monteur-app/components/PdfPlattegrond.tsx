@@ -27,6 +27,8 @@ export type PlattegrondCluster = {
   id: number;
   naam: string;
   kleur?: string | null;
+  monteur_naam?: string | null;
+  voorbereid_aantal?: number | null;
 };
 
 type Props = {
@@ -77,6 +79,11 @@ function bouwHtml(domein: string, token: string, url: string | null): string {
         color:#fff; font-size:15px; font-weight:800; background:#1e293b; border:2px solid #fff; box-shadow:0 2px 8px rgba(0,0,0,.5);
         transform:translate(-50%,-50%) scale(var(--inv,1)); }
   .env { position:absolute; pointer-events:none; }
+  .clbl { transform-origin:left bottom; transform:translateY(-100%) scale(var(--inv,1)); }
+  .clbl-naam { display:inline-block; color:#fff; font-size:13px; font-weight:700;
+        padding:2px 8px; border-radius:11px; white-space:nowrap; box-shadow:0 1px 3px rgba(0,0,0,.4); }
+  .clbl-status { display:inline-block; margin-top:2px; background:#fff; font-size:11px; font-weight:600;
+        padding:2px 8px; border-radius:9px; white-space:nowrap; border:1px solid #94a3b8; box-shadow:0 1px 3px rgba(0,0,0,.3); }
   .mk .arrow { position:absolute; left:50%; top:50%; width:52px; height:52px; transform:translate(-50%,-50%); overflow:visible; pointer-events:none; z-index:1; }
   .mk span { position:relative; z-index:2; }
   .placing .mk { pointer-events:none; }
@@ -199,6 +206,20 @@ function bouwHtml(domein: string, token: string, url: string | null): string {
       env.style.border='2px dashed '+kleur; env.style.borderRadius='20px';
       env.style.background=kleur+'14';
       wrap.insertBefore(env, wrap.firstChild.nextSibling);
+
+      // Naamlabel + statusregel (toegewezen monteur / "n voorbereid"), gelijk aan
+      // de web-plattegrond zodat de planning dit direct in het veld ziet.
+      var voorbereid=Number(c.voorbereid_aantal)||0;
+      var monteurNaam=(typeof c.monteur_naam==='string'&&c.monteur_naam)?c.monteur_naam:null;
+      var monteurTekst=monteurNaam||'Niet toegewezen';
+      var statusTekst=voorbereid>0?(monteurTekst+' \u00b7 '+voorbereid+' voorbereid'):monteurTekst;
+      var lbl=document.createElement('div');
+      lbl.className='env clbl';
+      lbl.style.left=minX+'px'; lbl.style.top=minY+'px';
+      lbl.innerHTML=
+        '<div class="clbl-naam" style="background:'+kleur+'">'+esc(c.naam)+'</div>'+
+        '<div class="clbl-status" style="border-color:'+kleur+';color:'+(monteurNaam?'#1e293b':'#64748b')+'">'+esc(statusTekst)+'</div>';
+      wrap.insertBefore(lbl, wrap.firstChild.nextSibling);
     });
   }
 

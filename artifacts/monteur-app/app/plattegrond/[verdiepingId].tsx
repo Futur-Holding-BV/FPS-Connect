@@ -169,7 +169,13 @@ export default function Plattegrond() {
 
   const clusters: PlattegrondCluster[] = (clusterData ?? [])
     .filter((c: any) => c.verdieping_id == null || c.verdieping_id === vId)
-    .map((c: any) => ({ id: c.id, naam: c.naam, kleur: c.kleur }));
+    .map((c: any) => ({
+      id: c.id,
+      naam: c.naam,
+      kleur: c.kleur,
+      monteur_naam: c.monteur_naam ?? null,
+      voorbereid_aantal: c.voorbereid_aantal ?? 0,
+    }));
 
   const detailSpot = (voorzieningen ?? []).find((v) => v.id === detailId) ?? null;
 
