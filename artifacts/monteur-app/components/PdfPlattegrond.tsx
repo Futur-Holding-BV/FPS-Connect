@@ -41,6 +41,7 @@ type Props = {
   domein: string;
   onTap: (x: number, y: number) => void;
   onSpot: (id: number) => void;
+  onCluster: (id: number) => void;
 };
 
 const TYPE_KLEUREN: Record<string, { kleur: string }> = Object.fromEntries(
@@ -79,6 +80,7 @@ function bouwHtml(domein: string, token: string, url: string | null): string {
         color:#fff; font-size:15px; font-weight:800; background:#1e293b; border:2px solid #fff; box-shadow:0 2px 8px rgba(0,0,0,.5);
         transform:translate(-50%,-50%) scale(var(--inv,1)); }
   .env { position:absolute; pointer-events:none; }
+  .env.tapbaar { pointer-events:auto; cursor:pointer; }
   .clbl { transform-origin:left bottom; transform:translateY(-100%) scale(var(--inv,1)); }
   .clbl-naam { display:inline-block; color:#fff; font-size:13px; font-weight:700;
         padding:2px 8px; border-radius:11px; white-space:nowrap; box-shadow:0 1px 3px rgba(0,0,0,.4); }
@@ -200,11 +202,12 @@ function bouwHtml(domein: string, token: string, url: string | null): string {
       var maxX=Math.max.apply(null,xs)+marge, maxY=Math.max.apply(null,ys)+marge;
       var kleur=veiligeKleur(c.kleur, CFG.standaardClusterKleur);
       var env=document.createElement('div');
-      env.className='env';
+      env.className='env tapbaar';
       env.style.left=minX+'px'; env.style.top=minY+'px';
       env.style.width=(maxX-minX)+'px'; env.style.height=(maxY-minY)+'px';
       env.style.border='2px dashed '+kleur; env.style.borderRadius='20px';
       env.style.background=kleur+'14';
+      (function(id){ env.addEventListener('click',function(ev){ if(placeMode) return; ev.stopPropagation(); post({type:'cluster',id:id}); }); })(c.id);
       wrap.insertBefore(env, wrap.firstChild.nextSibling);
 
       // Naamlabel + statusregel (toegewezen monteur / "n voorbereid"), gelijk aan
@@ -214,11 +217,12 @@ function bouwHtml(domein: string, token: string, url: string | null): string {
       var monteurTekst=monteurNaam||'Niet toegewezen';
       var statusTekst=voorbereid>0?(monteurTekst+' \u00b7 '+voorbereid+' voorbereid'):monteurTekst;
       var lbl=document.createElement('div');
-      lbl.className='env clbl';
+      lbl.className='env clbl tapbaar';
       lbl.style.left=minX+'px'; lbl.style.top=minY+'px';
       lbl.innerHTML=
         '<div class="clbl-naam" style="background:'+kleur+'">'+esc(c.naam)+'</div>'+
         '<div class="clbl-status" style="border-color:'+kleur+';color:'+(monteurNaam?'#1e293b':'#64748b')+'">'+esc(statusTekst)+'</div>';
+      (function(id){ lbl.addEventListener('click',function(ev){ if(placeMode) return; ev.stopPropagation(); post({type:'cluster',id:id}); }); })(c.id);
       wrap.insertBefore(lbl, wrap.firstChild.nextSibling);
     });
   }
@@ -447,6 +451,7 @@ export function PdfPlattegrond({
   domein,
   onTap,
   onSpot,
+  onCluster,
 }: Props) {
   const webRef = useRef<WebView>(null);
   const [klaar, setKlaar] = useState(false);
@@ -494,6 +499,7 @@ export function PdfPlattegrond({
       };
       if (m.type === "tap" && m.x != null && m.y != null) onTap(m.x, m.y);
       else if (m.type === "spot" && m.id != null) onSpot(m.id);
+      else if (m.type === "cluster" && m.id != null) onCluster(m.id);
     } catch {
       // negeren
     }

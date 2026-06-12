@@ -134,6 +134,7 @@ export default function Plattegrond() {
   const [fotoBezig, setFotoBezig] = useState(false);
   const [opslaan, setOpslaan] = useState(false);
   const [detailId, setDetailId] = useState<number | null>(null);
+  const [clusterDetailId, setClusterDetailId] = useState<number | null>(null);
   const [aiVoorstel, setAiVoorstel] = useState<SpotAiVoorstelResultaat | null>(null);
   const [aiBezig, setAiBezig] = useState(false);
   const [aiVelden, setAiVelden] = useState<Set<string>>(new Set());
@@ -178,6 +179,12 @@ export default function Plattegrond() {
     }));
 
   const detailSpot = (voorzieningen ?? []).find((v) => v.id === detailId) ?? null;
+
+  const clusterDetail =
+    (clusterData ?? []).find((cl: any) => cl.id === clusterDetailId) ?? null;
+  const clusterSpots = (voorzieningen ?? []).filter(
+    (v) => (v as any).cluster_id === clusterDetailId,
+  );
 
   function opTap(x: number, y: number) {
     setLocatie({ x, y });
@@ -353,6 +360,7 @@ export default function Plattegrond() {
         domein={DOMEIN}
         onTap={opTap}
         onSpot={(id) => setDetailId(id)}
+        onCluster={(id) => setClusterDetailId(id)}
       />
 
       {/* Kopbalk over de WebView */}
@@ -726,6 +734,133 @@ export default function Plattegrond() {
           </Pressable>
         </Pressable>
       </Modal>
+
+      {/* ---- Spots in cluster ---- */}
+      <Modal
+        visible={clusterDetailId != null}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setClusterDetailId(null)}
+      >
+        <Pressable
+          style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end", alignItems: isTablet ? "center" : "stretch" }}
+          onPress={() => setClusterDetailId(null)}
+        >
+          <Pressable
+            style={{
+              backgroundColor: c.background,
+              borderTopLeftRadius: 24,
+              borderTopRightRadius: 24,
+              paddingBottom: onderInset(insets) + 20,
+              maxHeight: "82%",
+              width: "100%",
+              maxWidth: isTablet ? 560 : undefined,
+            }}
+            onPress={(e) => e.stopPropagation()}
+          >
+            {clusterDetail && (
+              <ClusterSpots
+                cluster={clusterDetail}
+                spots={clusterSpots}
+                onSpot={(id) => {
+                  setClusterDetailId(null);
+                  setDetailId(id);
+                }}
+                onSluit={() => setClusterDetailId(null)}
+              />
+            )}
+          </Pressable>
+        </Pressable>
+      </Modal>
+    </View>
+  );
+}
+
+function ClusterSpots({
+  cluster,
+  spots,
+  onSpot,
+  onSluit,
+}: {
+  cluster: any;
+  spots: { id: number; objectnummer: string; type: string; status: string }[];
+  onSpot: (id: number) => void;
+  onSluit: () => void;
+}) {
+  const c = useColors();
+  const kleur =
+    typeof cluster.kleur === "string" && /^#[0-9a-fA-F]{3,8}$/.test(cluster.kleur)
+      ? cluster.kleur
+      : "#6366f1";
+  const monteurNaam =
+    typeof cluster.monteur_naam === "string" && cluster.monteur_naam
+      ? cluster.monteur_naam
+      : null;
+  const voorbereid = Number(cluster.voorbereid_aantal) || 0;
+
+  return (
+    <View style={{ paddingTop: 4 }}>
+      <View style={{ paddingHorizontal: 22, paddingTop: 18, paddingBottom: 8 }}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+          <View style={{ width: 16, height: 16, borderRadius: 8, backgroundColor: kleur }} />
+          <View style={{ flex: 1 }}>
+            <Text style={{ color: c.foreground, fontSize: 20, fontFamily: "Inter_700Bold" }}>
+              {cluster.naam}
+            </Text>
+            <Text style={{ color: c.mutedForeground, fontSize: 14, fontFamily: "Inter_400Regular" }}>
+              {monteurNaam ? monteurNaam : "Niet toegewezen"}
+              {voorbereid > 0 ? ` · ${voorbereid} voorbereid` : ""}
+            </Text>
+          </View>
+          <Pressable onPress={onSluit} hitSlop={10}>
+            <Text style={{ color: c.mutedForeground, fontSize: 22, fontFamily: "Inter_600SemiBold" }}>✕</Text>
+          </Pressable>
+        </View>
+      </View>
+
+      <View style={{ height: 1, backgroundColor: c.border }} />
+
+      <ScrollView contentContainerStyle={{ paddingHorizontal: 22, paddingVertical: 8 }}>
+        {spots.length === 0 ? (
+          <Text style={{ color: c.mutedForeground, fontSize: 15, fontFamily: "Inter_400Regular", paddingVertical: 20, textAlign: "center" }}>
+            Geen spots in dit cluster.
+          </Text>
+        ) : (
+          spots.map((s) => {
+            const ti = typeInfo(s.type);
+            const voorbereidSpot = s.status === "voorbereid";
+            return (
+              <Pressable
+                key={s.id}
+                onPress={() => onSpot(s.id)}
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: 12,
+                  paddingVertical: 12,
+                  borderBottomWidth: 1,
+                  borderBottomColor: c.border,
+                }}
+              >
+                <View style={{ width: 14, height: 14, borderRadius: 7, backgroundColor: ti.kleur }} />
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: c.foreground, fontSize: 16, fontFamily: "Inter_600SemiBold" }}>
+                    {s.objectnummer}
+                  </Text>
+                  <Text style={{ color: c.mutedForeground, fontSize: 13, fontFamily: "Inter_400Regular" }}>
+                    {ti.label}
+                  </Text>
+                </View>
+                <View style={{ backgroundColor: statusKleur(s.status), paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8 }}>
+                  <Text style={{ color: voorbereidSpot ? "#1e293b" : "#fff", fontSize: 12, fontFamily: "Inter_600SemiBold" }}>
+                    {statusLabel(s.status)}
+                  </Text>
+                </View>
+              </Pressable>
+            );
+          })
+        )}
+      </ScrollView>
     </View>
   );
 }
