@@ -85,7 +85,7 @@ _Parallel spoor (Fase 1-basis gebouwd met formeel akkoord; diepere uitwerking bl
 - **Offerte Intelligence** — Fase 1-basis: ALLEEN voorbereiding (regels uit spots, sjablonen). Bewust GEEN AI-calculatie en GEEN automatische verzending; een mens stelt op en verstuurt
 
 _Geparkeerd (NIET vooruit bouwen) — detail in [docs/roadmap/geparkeerd.md](docs/roadmap/geparkeerd.md):_
-- **V2.0** — Mobiele monteur-app (mijn werk, gebouwen, plattegronden, spots, foto's, offline synchronisatie, routeplanning)
+- **V2.0** — Mobiele monteur-app (mijn werk, gebouwen, plattegronden, spots, foto's, offline synchronisatie, routeplanning); biometrisch inloggen (vingerafdruk/gezichtsherkenning) als optionele snelle ontgrendeling — op verzoek vastgelegd, geparkeerd
 - **V3.0** — Personeel / Medewerkerportaal, uitgebouwd tot een **HRM-module voor de volledige FPS Groep** (verlof, uren, gereedschap, opleidingen, contracten, bekwaamheidsmatrix, werving, mobiele medewerkersapp, AI-coaches); zie [docs/roadmap/geparkeerd.md](docs/roadmap/geparkeerd.md)
 - **AI Brandveiligheidsmanager / AI Calculator / Klantmodule** — strategische lijn: klantportaal, documentbeheer, continuïteitslaag project↔onderhoud en AI-calculatie/offerte/klantmanager; zie [docs/roadmap/geparkeerd.md](docs/roadmap/geparkeerd.md)
 - **S.G. Constructies** — aparte bibliotheeklaag voor scheidende/bouwkundige constructies, branddeuren en opwaarderingen (zie [docs/roadmap/geparkeerd.md](docs/roadmap/geparkeerd.md))

@@ -6,6 +6,16 @@ NIET vooruit bouwen. Vastgelegd als toekomstige richting onder de Ontwikkelstop.
 
 Nieuw vastgelegd onderdeel, geparkeerd onder de ontwikkelstop. Naast de bestaande keten Applicatie → Toepassing → Document komt een aparte bibliotheeklaag voor s.g.-constructies: scheidende/bouwkundige constructies, branddeuren en opwaarderingen (een bestaande constructie naar een hogere brandwerendheid brengen). Reden voor een eigen laag: een s.g.-constructie is geen spot-afwerking maar de onderliggende bouwkundige scheiding waarop afwerkingen rusten; de AI stelt deze bewust NIET vast (zie de AI-fotoherkenning-sectie in [`gebouwd.md`](./gebouwd.md)). Datamodel, koppelingen (bv. s.g.-constructie ↔ document/toepassing) en UI worden uitgewerkt bij formeel akkoord op deze fase.
 
+## Biometrisch inloggen mobiele app — vingerafdruk & gezichtsherkenning (vastgelegd, geparkeerd — NIET vooruit bouwen)
+
+Op verzoek van de gebruiker vastgelegd als nieuwe wens, geparkeerd onder de Ontwikkelstop. Biometrisch ontgrendelen (vingerafdruk en gezichtsherkenning) als snelle login in de FPS Monteur-app, bovenop de bestaande authenticatie. Sluit aan op de mobiele monteurflow (V2.0) en wordt pas uitgewerkt ná formeel akkoord en nadat V2.0 is opgepakt.
+
+Kaders/uitgangspunten (uit te werken bij akkoord):
+- Biometrie is een aanvulling, geen vervanging: het ontgrendelt een al ingerichte sessie/apparaatkoppeling. De eerste keer inloggen blijft via gebruikersnaam/wachtwoord + verplichte authenticator-app (TOTP).
+- Gebruikt het toestel-eigen biometrieslot (Face ID / Touch ID / Android biometrics) via `expo-local-authentication`; biometrische gegevens verlaten het toestel nooit en worden niet op de server opgeslagen.
+- Tokens/credentials worden achter het biometrieslot in veilige opslag bewaard (`expo-secure-store` / keychain / keystore), met wachtwoord + TOTP als terugvaloptie.
+- Per gebruiker in- en uitschakelbaar; optioneel afdwingbaar via de bevoegdheden-matrix.
+
 ## V3.0 — Personeel / Medewerkerportaal (vastgelegd, NIET bouwen voor V2.0 afgerond)
 
 Consolideert de eerdere V2.1 (desktop) en V2.2 (mobiel). NIET bouwen voordat V2.0 (mobiele monteurflow) formeel akkoord is. Mogelijke vervanger van Apployed. De bevoegdheden-matrix in `lib/permissies` wordt uitgebreid met module-ID's `personeel` en `verlof` zodat toegang per gebruiker instelbaar blijft.
