@@ -1,21 +1,31 @@
 import { Router } from "express";
+import type { Request, Response } from "express";
 import {
   db,
   documentenTable,
   documentToepassingenTable,
+  documentKoppelingenTable,
+  documentGoedkeuringenTable,
+  documentLogboekTable,
   labelsTable,
   labelApplicatiesTable,
 } from "@workspace/db";
-import { eq, and, ne, asc, inArray, max } from "drizzle-orm";
+import { eq, and, ne, asc, desc, inArray, max } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
 import {
   mapDocument,
   mapDocumenten,
+  mapKoppelingen,
+  mapGoedkeuringen,
+  mapLogboekRegel,
   syncDocumentToepassingen,
   isDocumentType,
   isDocumentStatus,
+  isGoedkeuringStatus,
+  isKoppelingDoelType,
   isGetestVoor,
 } from "../lib/documenten";
+import { logDocumentActie } from "../lib/document-logboek";
 import { analyseerDocumentTekst, stelToepassingenVoor } from "../services/document-ai";
 
 const router = Router();
@@ -106,8 +116,10 @@ router.post(
 router.get("/documenten", async (req, res) => {
   try {
     const {
+      zoek,
       documenttype,
       status,
+      goedkeuring_status,
       fabrikant,
       voorziening_type_code,
       label_id,
@@ -119,9 +131,20 @@ router.get("/documenten", async (req, res) => {
 
     if (documenttype) rows = rows.filter((d) => d.documenttype === documenttype);
     if (status) rows = rows.filter((d) => d.status === status);
+    if (goedkeuring_status) rows = rows.filter((d) => d.goedkeuringStatus === goedkeuring_status);
     if (fabrikant) {
       const q = String(fabrikant).toLowerCase();
       rows = rows.filter((d) => (d.fabrikant ?? "").toLowerCase().includes(q));
+    }
+    if (zoek) {
+      const q = String(zoek).toLowerCase().trim();
+      if (q) {
+        rows = rows.filter((d) =>
+          [d.naam, d.fabrikant, d.rapportnummer, d.enNorm, d.product].some((v) =>
+            (v ?? "").toLowerCase().includes(q),
+          ),
+        );
+      }
     }
     if (alleen_actueel === "true") rows = rows.filter((d) => d.status === "actueel");
     if (inclusief_gearchiveerd !== "true") rows = rows.filter((d) => !d.gearchiveerd);
@@ -149,6 +172,133 @@ router.get("/documenten", async (req, res) => {
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// POST /documenten/controleer-duplicaat — waarschuwt bij mogelijke duplicaten (beheerder)
+router.post(
+  "/documenten/controleer-duplicaat",
+  requireBevoegdheid("bibliotheek", 3),
+  async (req, res) => {
+    try {
+      const b = req.body ?? {};
+      const hash = typeof b.bestands_hash === "string" ? b.bestands_hash.trim() : "";
+      const naam = typeof b.naam === "string" ? b.naam.trim().toLowerCase() : "";
+      const rapportnummer =
+        typeof b.rapportnummer === "string" ? b.rapportnummer.trim().toLowerCase() : "";
+
+      const alle = await db
+        .select()
+        .from(documentenTable)
+        .where(eq(documentenTable.gearchiveerd, false));
+
+      const treffers: { row: (typeof alle)[number]; reden: string }[] = [];
+      for (const d of alle) {
+        let reden: string | null = null;
+        if (hash && d.bestandsHash && d.bestandsHash === hash) reden = "identiek_bestand";
+        else if (
+          rapportnummer &&
+          d.rapportnummer &&
+          d.rapportnummer.trim().toLowerCase() === rapportnummer
+        )
+          reden = "gelijk_rapportnummer";
+        else if (naam && d.naam.trim().toLowerCase() === naam) reden = "gelijke_naam";
+        if (reden) treffers.push({ row: d, reden });
+      }
+
+      const docs = await mapDocumenten(treffers.map((t) => t.row));
+      const mogelijke_duplicaten = treffers.map((t, i) => ({
+        document: docs[i],
+        reden: t.reden,
+      }));
+      return res.json({ mogelijke_duplicaten });
+    } catch (err) {
+      req.log.error(err);
+      return res.status(500).json({ error: "Interne serverfout" });
+    }
+  },
+);
+
+// GET /documenten/signaleringen — documenten die aandacht nodig hebben
+router.get("/documenten/signaleringen", async (req, res) => {
+  try {
+    const rows = await db
+      .select()
+      .from(documentenTable)
+      .where(eq(documentenTable.gearchiveerd, false));
+
+    const vandaag = new Date();
+    vandaag.setHours(0, 0, 0, 0);
+    const grens = new Date(vandaag);
+    grens.setDate(grens.getDate() + 90);
+
+    const verlopen: typeof rows = [];
+    const binnenkort: typeof rows = [];
+    for (const d of rows) {
+      if (d.status !== "actueel" || !d.geldigTot) continue;
+      const dt = new Date(d.geldigTot);
+      if (Number.isNaN(dt.getTime())) continue;
+      if (dt < vandaag) verlopen.push(d);
+      else if (dt <= grens) binnenkort.push(d);
+    }
+    const controle_nodig = rows.filter(
+      (d) => d.status === "controle_nodig" || d.status === "mogelijk_verouderd",
+    );
+    const ter_goedkeuring = rows.filter((d) => d.goedkeuringStatus === "ter_goedkeuring");
+
+    return res.json({
+      verlopen: await mapDocumenten(verlopen),
+      binnenkort: await mapDocumenten(binnenkort),
+      controle_nodig: await mapDocumenten(controle_nodig),
+      ter_goedkeuring: await mapDocumenten(ter_goedkeuring),
+    });
+  } catch (err) {
+    req.log.error(err);
+    return res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// GET /documenten/logboek — globaal audittrail (beheerder)
+router.get("/documenten/logboek", requireBevoegdheid("bibliotheek", 4), async (req, res) => {
+  try {
+    const ruw = parseInt(String(req.query.limiet ?? "100"));
+    const limiet = Math.min(Math.max(Number.isFinite(ruw) ? ruw : 100, 1), 500);
+    const rows = await db
+      .select()
+      .from(documentLogboekTable)
+      .orderBy(desc(documentLogboekTable.tijdstip))
+      .limit(limiet);
+    return res.json(rows.map(mapLogboekRegel));
+  } catch (err) {
+    req.log.error(err);
+    return res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// GET /documenten/gekoppeld — documenten gekoppeld aan een entiteit
+router.get("/documenten/gekoppeld", async (req, res) => {
+  try {
+    const doelType = String(req.query.doel_type ?? "");
+    const doelId = parseInt(String(req.query.doel_id ?? ""));
+    if (!isKoppelingDoelType(doelType) || !Number.isInteger(doelId)) {
+      return res.status(400).json({ error: "doel_type en doel_id zijn verplicht" });
+    }
+    const koppel = await db
+      .select({ documentId: documentKoppelingenTable.documentId })
+      .from(documentKoppelingenTable)
+      .where(
+        and(
+          eq(documentKoppelingenTable.doelType, doelType),
+          eq(documentKoppelingenTable.doelId, doelId),
+        ),
+      );
+    const ids = koppel.map((k) => k.documentId);
+    if (ids.length === 0) return res.json([]);
+    const rows = await db.select().from(documentenTable).where(inArray(documentenTable.id, ids));
+    return res.json(await mapDocumenten(rows));
+  } catch (err) {
+    req.log.error(err);
+    return res.status(500).json({ error: "Interne serverfout" });
   }
 });
 
@@ -206,12 +356,25 @@ router.post("/documenten", requireBevoegdheid("bibliotheek", 3), async (req, res
         datum: b.datum ?? null,
         getestVoor: isGetestVoor(b.getest_voor) ? b.getest_voor : null,
         pdfUrl: b.pdf_url ?? null,
+        bestandsHash: typeof b.bestands_hash === "string" ? b.bestands_hash : null,
+        bestandsgrootte: Number.isInteger(b.bestandsgrootte) ? b.bestandsgrootte : null,
+        geldigTot: typeof b.geldig_tot === "string" && b.geldig_tot ? b.geldig_tot : null,
+        goedkeuringStatus: isGoedkeuringStatus(b.goedkeuring_status)
+          ? b.goedkeuring_status
+          : "goedgekeurd",
         aiGeanalyseerd: b.ai_geanalyseerd === true,
         aiMetadata: b.ai_metadata ?? null,
       })
       .returning();
 
     if (Array.isArray(b.toepassing_ids)) await syncDocumentToepassingen(d.id, b.toepassing_ids);
+
+    await logDocumentActie({
+      documentId: d.id,
+      documentNaam: d.naam,
+      gebruikerId: req.session.userId ?? null,
+      actie: "geupload",
+    });
 
     return res.status(201).json(await mapDocument(d));
   } catch (err) {
@@ -224,7 +387,7 @@ router.post("/documenten", requireBevoegdheid("bibliotheek", 3), async (req, res
 router.patch("/documenten/:id", requireBevoegdheid("bibliotheek", 2), async (req, res) => {
   try {
     const id = parseInt(String(req.params.id));
-    const { status, gearchiveerd } = req.body ?? {};
+    const { status, gearchiveerd, geldig_tot } = req.body ?? {};
     if (status !== undefined && !isDocumentStatus(status)) {
       return res.status(400).json({ error: "Ongeldige status" });
     }
@@ -251,6 +414,8 @@ router.patch("/documenten/:id", requireBevoegdheid("bibliotheek", 2), async (req
     const set: Record<string, unknown> = { bijgewerktOp: new Date() };
     if (status !== undefined) set.status = status;
     if (gearchiveerd !== undefined) set.gearchiveerd = gearchiveerd === true;
+    if (geldig_tot !== undefined)
+      set.geldigTot = geldig_tot === null || geldig_tot === "" ? null : String(geldig_tot);
 
     const [d] = await db
       .update(documentenTable)
@@ -299,6 +464,15 @@ router.post("/documenten/:id/revisies", requireBevoegdheid("bibliotheek", 3), as
           datum: b.datum ?? bron.datum,
           getestVoor: isGetestVoor(b.getest_voor) ? b.getest_voor : bron.getestVoor,
           pdfUrl: b.pdf_url ?? bron.pdfUrl,
+          bestandsHash:
+            typeof b.bestands_hash === "string" ? b.bestands_hash : bron.bestandsHash,
+          bestandsgrootte: Number.isInteger(b.bestandsgrootte)
+            ? b.bestandsgrootte
+            : bron.bestandsgrootte,
+          geldigTot: b.geldig_tot !== undefined ? b.geldig_tot || null : bron.geldigTot,
+          goedkeuringStatus: isGoedkeuringStatus(b.goedkeuring_status)
+            ? b.goedkeuring_status
+            : "goedgekeurd",
           aiGeanalyseerd:
             b.ai_geanalyseerd === undefined
               ? bron.aiGeanalyseerd
@@ -347,6 +521,14 @@ router.post("/documenten/:id/revisies", requireBevoegdheid("bibliotheek", 3), as
       return row;
     });
 
+    await logDocumentActie({
+      documentId: nieuw.id,
+      documentNaam: nieuw.naam,
+      gebruikerId: req.session.userId ?? null,
+      actie: "revisie",
+      detail: `revisie ${nieuw.revisieNummer}`,
+    });
+
     return res.status(201).json(await mapDocument(nieuw));
   } catch (err) {
     req.log.error(err);
@@ -363,6 +545,240 @@ router.put("/documenten/:id/toepassingen", requireBevoegdheid("bibliotheek", 2),
     const ids = Array.isArray(req.body?.label_ids) ? req.body.label_ids : [];
     await syncDocumentToepassingen(id, ids);
     return res.json(await mapDocument(d));
+  } catch (err) {
+    req.log.error(err);
+    return res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// ── KOPPELINGEN (document ↔ entiteit) ───────────────────────────────────────
+// GET /documenten/:id/koppelingen
+router.get("/documenten/:id/koppelingen", async (req, res) => {
+  try {
+    const id = parseInt(String(req.params.id));
+    const rows = await db
+      .select()
+      .from(documentKoppelingenTable)
+      .where(eq(documentKoppelingenTable.documentId, id))
+      .orderBy(asc(documentKoppelingenTable.doelType));
+    return res.json(await mapKoppelingen(rows));
+  } catch (err) {
+    req.log.error(err);
+    return res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// POST /documenten/:id/koppelingen — koppel aan entiteit (beheerder)
+router.post(
+  "/documenten/:id/koppelingen",
+  requireBevoegdheid("bibliotheek", 2),
+  async (req, res) => {
+    try {
+      const id = parseInt(String(req.params.id));
+      const [d] = await db.select().from(documentenTable).where(eq(documentenTable.id, id));
+      if (!d) return res.status(404).json({ error: "Document niet gevonden" });
+      const doelType = String(req.body?.doel_type ?? "");
+      const doelId = parseInt(String(req.body?.doel_id ?? ""));
+      if (!isKoppelingDoelType(doelType) || !Number.isInteger(doelId)) {
+        return res.status(400).json({ error: "doel_type en doel_id zijn verplicht" });
+      }
+      await db
+        .insert(documentKoppelingenTable)
+        .values({
+          documentId: id,
+          doelType,
+          doelId,
+          aangemaaktDoorId: req.session.userId ?? null,
+        })
+        .onConflictDoNothing();
+      const [rij] = await db
+        .select()
+        .from(documentKoppelingenTable)
+        .where(
+          and(
+            eq(documentKoppelingenTable.documentId, id),
+            eq(documentKoppelingenTable.doelType, doelType),
+            eq(documentKoppelingenTable.doelId, doelId),
+          ),
+        );
+      await logDocumentActie({
+        documentId: id,
+        documentNaam: d.naam,
+        gebruikerId: req.session.userId ?? null,
+        actie: "gekoppeld",
+        detail: `${doelType} #${doelId}`,
+      });
+      const [mapped] = await mapKoppelingen([rij]);
+      return res.status(201).json(mapped);
+    } catch (err) {
+      req.log.error(err);
+      return res.status(500).json({ error: "Interne serverfout" });
+    }
+  },
+);
+
+// DELETE /documenten/:id/koppelingen/:koppelingId — ontkoppel (beheerder)
+router.delete(
+  "/documenten/:id/koppelingen/:koppelingId",
+  requireBevoegdheid("bibliotheek", 2),
+  async (req, res) => {
+    try {
+      const id = parseInt(String(req.params.id));
+      const koppelingId = parseInt(String(req.params.koppelingId));
+      const [bestaand] = await db
+        .select()
+        .from(documentKoppelingenTable)
+        .where(
+          and(
+            eq(documentKoppelingenTable.id, koppelingId),
+            eq(documentKoppelingenTable.documentId, id),
+          ),
+        );
+      if (!bestaand) return res.status(404).json({ error: "Koppeling niet gevonden" });
+      await db
+        .delete(documentKoppelingenTable)
+        .where(eq(documentKoppelingenTable.id, koppelingId));
+      await logDocumentActie({
+        documentId: id,
+        gebruikerId: req.session.userId ?? null,
+        actie: "ontkoppeld",
+        detail: `${bestaand.doelType} #${bestaand.doelId}`,
+      });
+      return res.status(204).send();
+    } catch (err) {
+      req.log.error(err);
+      return res.status(500).json({ error: "Interne serverfout" });
+    }
+  },
+);
+
+// ── GOEDKEURINGSFLOW ────────────────────────────────────────────────────────
+async function zetGoedkeuring(
+  req: Request,
+  res: Response,
+  nieuweStatus: "ter_goedkeuring" | "goedgekeurd" | "afgekeurd",
+  actie: string,
+) {
+  const id = parseInt(String(req.params.id));
+  const [d] = await db.select().from(documentenTable).where(eq(documentenTable.id, id));
+  if (!d) return res.status(404).json({ error: "Document niet gevonden" });
+  // Statusmachine: goedkeuren/afkeuren kan alleen vanuit "ter_goedkeuring".
+  if (
+    (nieuweStatus === "goedgekeurd" || nieuweStatus === "afgekeurd") &&
+    d.goedkeuringStatus !== "ter_goedkeuring"
+  ) {
+    return res
+      .status(409)
+      .json({ error: "Alleen een ingediend document (ter goedkeuring) kan worden goed- of afgekeurd." });
+  }
+  const opmerking =
+    typeof req.body?.opmerking === "string" ? req.body.opmerking.trim() || null : null;
+  const uid = req.session.userId ?? null;
+  const [bij] = await db
+    .update(documentenTable)
+    .set({ goedkeuringStatus: nieuweStatus, bijgewerktOp: new Date() })
+    .where(eq(documentenTable.id, id))
+    .returning();
+  await db
+    .insert(documentGoedkeuringenTable)
+    .values({ documentId: id, actie, doorId: uid, opmerking });
+  await logDocumentActie({
+    documentId: id,
+    documentNaam: d.naam,
+    gebruikerId: uid,
+    actie,
+    detail: opmerking,
+  });
+  return res.json(await mapDocument(bij));
+}
+
+// POST /documenten/:id/indienen — ter goedkeuring aanbieden
+router.post("/documenten/:id/indienen", requireBevoegdheid("bibliotheek", 3), async (req, res) => {
+  try {
+    return await zetGoedkeuring(req, res, "ter_goedkeuring", "ingediend");
+  } catch (err) {
+    req.log.error(err);
+    return res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// POST /documenten/:id/goedkeuren — goedkeuren (beheerder)
+router.post(
+  "/documenten/:id/goedkeuren",
+  requireBevoegdheid("bibliotheek", 4),
+  async (req, res) => {
+    try {
+      return await zetGoedkeuring(req, res, "goedgekeurd", "goedgekeurd");
+    } catch (err) {
+      req.log.error(err);
+      return res.status(500).json({ error: "Interne serverfout" });
+    }
+  },
+);
+
+// POST /documenten/:id/afkeuren — afkeuren (beheerder)
+router.post(
+  "/documenten/:id/afkeuren",
+  requireBevoegdheid("bibliotheek", 4),
+  async (req, res) => {
+    try {
+      return await zetGoedkeuring(req, res, "afgekeurd", "afgekeurd");
+    } catch (err) {
+      req.log.error(err);
+      return res.status(500).json({ error: "Interne serverfout" });
+    }
+  },
+);
+
+// GET /documenten/:id/goedkeuringen — goedkeuringshistorie
+router.get("/documenten/:id/goedkeuringen", async (req, res) => {
+  try {
+    const id = parseInt(String(req.params.id));
+    const rows = await db
+      .select()
+      .from(documentGoedkeuringenTable)
+      .where(eq(documentGoedkeuringenTable.documentId, id))
+      .orderBy(desc(documentGoedkeuringenTable.tijdstip));
+    return res.json(await mapGoedkeuringen(rows));
+  } catch (err) {
+    req.log.error(err);
+    return res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// GET /documenten/:id/logboek — audittrail van één document
+router.get("/documenten/:id/logboek", async (req, res) => {
+  try {
+    const id = parseInt(String(req.params.id));
+    const rows = await db
+      .select()
+      .from(documentLogboekTable)
+      .where(eq(documentLogboekTable.documentId, id))
+      .orderBy(desc(documentLogboekTable.tijdstip));
+    return res.json(rows.map(mapLogboekRegel));
+  } catch (err) {
+    req.log.error(err);
+    return res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// GET /documenten/:id/download — log de download en stuur door naar het bestand
+router.get("/documenten/:id/download", async (req, res) => {
+  try {
+    const id = parseInt(String(req.params.id));
+    const [d] = await db.select().from(documentenTable).where(eq(documentenTable.id, id));
+    if (!d) return res.status(404).json({ error: "Document niet gevonden" });
+    if (!d.pdfUrl) return res.status(404).json({ error: "Geen bestand gekoppeld" });
+    await logDocumentActie({
+      documentId: id,
+      documentNaam: d.naam,
+      gebruikerId: req.session.userId ?? null,
+      actie: "gedownload",
+    });
+    // pdfUrl is een objectPath (bv. /objects/<id>) die via /api/storage wordt
+    // geserveerd; absolute URL's worden ongewijzigd doorgestuurd.
+    const doel = /^https?:\/\//i.test(d.pdfUrl) ? d.pdfUrl : `/api/storage${d.pdfUrl}`;
+    return res.redirect(302, doel);
   } catch (err) {
     req.log.error(err);
     return res.status(500).json({ error: "Interne serverfout" });

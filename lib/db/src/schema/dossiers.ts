@@ -42,6 +42,13 @@ export const dossierDocumentenTable = pgTable("dossier_documenten", {
   status: text("status").notNull().default("concept"),
   versie: integer("versie").notNull().default(1),
   toegevoegdDoorId: integer("toegevoegd_door_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
+  // ── Opleverdossier-bevriezing (V1.5) ──
+  // Bij dossier 'definitief' wordt de actuele revisie + PDF van het gekoppelde
+  // bibliotheekdocument hier vastgelegd, zodat latere revisies het bevroren
+  // dossier niet meer wijzigen.
+  bevrorenRevisieNummer: integer("bevroren_revisie_nummer"),
+  bevrorenPdfUrl: text("bevroren_pdf_url"),
+  bevrorenOp: timestamp("bevroren_op"),
   aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
   bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
 });

@@ -1828,8 +1828,10 @@ export const UpdateTestrapportResponse = zod.object({
  * @summary Centrale documentbibliotheek (ETA's, classificatierapporten, testrapporten, DoP's, certificaten, voorschriften)
  */
 export const ListDocumentenQueryParams = zod.object({
-  "documenttype": zod.enum(['eta', 'classificatierapport', 'testrapport', 'productcertificaat', 'dop', 'verwerkingsvoorschrift']).optional(),
+  "zoek": zod.coerce.string().optional().describe('Vrije zoekterm (naam, fabrikant, rapportnummer, EN-norm, product)'),
+  "documenttype": zod.enum(['eta', 'classificatierapport', 'testrapport', 'productcertificaat', 'dop', 'verwerkingsvoorschrift', 'productblad']).optional(),
   "status": zod.enum(['actueel', 'controle_nodig', 'vervangen', 'mogelijk_verouderd', 'ingetrokken']).optional(),
+  "goedkeuring_status": zod.enum(['concept', 'ter_goedkeuring', 'goedgekeurd', 'afgekeurd']).optional(),
   "fabrikant": zod.coerce.string().optional(),
   "voorziening_type_code": zod.coerce.string().optional().describe('Filter op gekoppelde applicatie'),
   "label_id": zod.coerce.number().optional().describe('Filter op gekoppelde toepassing'),
@@ -1840,7 +1842,7 @@ export const ListDocumentenQueryParams = zod.object({
 export const ListDocumentenResponseItem = zod.object({
   "id": zod.number(),
   "naam": zod.string(),
-  "documenttype": zod.enum(['eta', 'classificatierapport', 'testrapport', 'productcertificaat', 'dop', 'verwerkingsvoorschrift']),
+  "documenttype": zod.enum(['eta', 'classificatierapport', 'testrapport', 'productcertificaat', 'dop', 'verwerkingsvoorschrift', 'productblad']),
   "fabrikant": zod.string().nullish(),
   "product": zod.string().nullish(),
   "en_norm": zod.string().nullish(),
@@ -1857,6 +1859,10 @@ export const ListDocumentenResponseItem = zod.object({
   "gearchiveerd": zod.boolean(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string().optional(),
+  "bestands_hash": zod.string().nullish(),
+  "bestandsgrootte": zod.number().nullish(),
+  "geldig_tot": zod.string().nullish().describe('Geldigheids-\/vervaldatum (YYYY-MM-DD)'),
+  "goedkeuring_status": zod.enum(['concept', 'ter_goedkeuring', 'goedgekeurd', 'afgekeurd']),
   "toepassing_ids": zod.array(zod.number())
 })
 export const ListDocumentenResponse = zod.array(ListDocumentenResponseItem)
@@ -1867,7 +1873,7 @@ export const ListDocumentenResponse = zod.array(ListDocumentenResponseItem)
  */
 export const CreateDocumentBody = zod.object({
   "naam": zod.string(),
-  "documenttype": zod.enum(['eta', 'classificatierapport', 'testrapport', 'productcertificaat', 'dop', 'verwerkingsvoorschrift']).optional(),
+  "documenttype": zod.enum(['eta', 'classificatierapport', 'testrapport', 'productcertificaat', 'dop', 'verwerkingsvoorschrift', 'productblad']).optional(),
   "fabrikant": zod.string().optional(),
   "product": zod.string().optional(),
   "en_norm": zod.string().optional(),
@@ -1878,6 +1884,10 @@ export const CreateDocumentBody = zod.object({
   "pdf_url": zod.string().optional(),
   "ai_geanalyseerd": zod.boolean().optional(),
   "ai_metadata": zod.record(zod.string(), zod.unknown()).optional(),
+  "bestands_hash": zod.string().optional(),
+  "bestandsgrootte": zod.number().optional(),
+  "geldig_tot": zod.string().optional(),
+  "goedkeuring_status": zod.enum(['concept', 'ter_goedkeuring', 'goedgekeurd', 'afgekeurd']).optional(),
   "toepassing_ids": zod.array(zod.number()).optional()
 })
 
@@ -1894,7 +1904,7 @@ export const GetDocumentParams = zod.object({
 export const GetDocumentResponse = zod.object({
   "id": zod.number(),
   "naam": zod.string(),
-  "documenttype": zod.enum(['eta', 'classificatierapport', 'testrapport', 'productcertificaat', 'dop', 'verwerkingsvoorschrift']),
+  "documenttype": zod.enum(['eta', 'classificatierapport', 'testrapport', 'productcertificaat', 'dop', 'verwerkingsvoorschrift', 'productblad']),
   "fabrikant": zod.string().nullish(),
   "product": zod.string().nullish(),
   "en_norm": zod.string().nullish(),
@@ -1911,6 +1921,10 @@ export const GetDocumentResponse = zod.object({
   "gearchiveerd": zod.boolean(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string().optional(),
+  "bestands_hash": zod.string().nullish(),
+  "bestandsgrootte": zod.number().nullish(),
+  "geldig_tot": zod.string().nullish().describe('Geldigheids-\/vervaldatum (YYYY-MM-DD)'),
+  "goedkeuring_status": zod.enum(['concept', 'ter_goedkeuring', 'goedgekeurd', 'afgekeurd']),
   "toepassing_ids": zod.array(zod.number())
 })
 
@@ -1924,13 +1938,14 @@ export const UpdateDocumentParams = zod.object({
 
 export const UpdateDocumentBody = zod.object({
   "status": zod.enum(['actueel', 'controle_nodig', 'vervangen', 'mogelijk_verouderd', 'ingetrokken']).optional(),
-  "gearchiveerd": zod.boolean().optional()
+  "gearchiveerd": zod.boolean().optional(),
+  "geldig_tot": zod.string().nullish()
 })
 
 export const UpdateDocumentResponse = zod.object({
   "id": zod.number(),
   "naam": zod.string(),
-  "documenttype": zod.enum(['eta', 'classificatierapport', 'testrapport', 'productcertificaat', 'dop', 'verwerkingsvoorschrift']),
+  "documenttype": zod.enum(['eta', 'classificatierapport', 'testrapport', 'productcertificaat', 'dop', 'verwerkingsvoorschrift', 'productblad']),
   "fabrikant": zod.string().nullish(),
   "product": zod.string().nullish(),
   "en_norm": zod.string().nullish(),
@@ -1947,6 +1962,10 @@ export const UpdateDocumentResponse = zod.object({
   "gearchiveerd": zod.boolean(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string().optional(),
+  "bestands_hash": zod.string().nullish(),
+  "bestandsgrootte": zod.number().nullish(),
+  "geldig_tot": zod.string().nullish().describe('Geldigheids-\/vervaldatum (YYYY-MM-DD)'),
+  "goedkeuring_status": zod.enum(['concept', 'ter_goedkeuring', 'goedgekeurd', 'afgekeurd']),
   "toepassing_ids": zod.array(zod.number())
 })
 
@@ -1961,7 +1980,7 @@ export const ListDocumentRevisiesParams = zod.object({
 export const ListDocumentRevisiesResponseItem = zod.object({
   "id": zod.number(),
   "naam": zod.string(),
-  "documenttype": zod.enum(['eta', 'classificatierapport', 'testrapport', 'productcertificaat', 'dop', 'verwerkingsvoorschrift']),
+  "documenttype": zod.enum(['eta', 'classificatierapport', 'testrapport', 'productcertificaat', 'dop', 'verwerkingsvoorschrift', 'productblad']),
   "fabrikant": zod.string().nullish(),
   "product": zod.string().nullish(),
   "en_norm": zod.string().nullish(),
@@ -1978,6 +1997,10 @@ export const ListDocumentRevisiesResponseItem = zod.object({
   "gearchiveerd": zod.boolean(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string().optional(),
+  "bestands_hash": zod.string().nullish(),
+  "bestandsgrootte": zod.number().nullish(),
+  "geldig_tot": zod.string().nullish().describe('Geldigheids-\/vervaldatum (YYYY-MM-DD)'),
+  "goedkeuring_status": zod.enum(['concept', 'ter_goedkeuring', 'goedgekeurd', 'afgekeurd']),
   "toepassing_ids": zod.array(zod.number())
 })
 export const ListDocumentRevisiesResponse = zod.array(ListDocumentRevisiesResponseItem)
@@ -1992,7 +2015,7 @@ export const CreateDocumentRevisieParams = zod.object({
 
 export const CreateDocumentRevisieBody = zod.object({
   "naam": zod.string(),
-  "documenttype": zod.enum(['eta', 'classificatierapport', 'testrapport', 'productcertificaat', 'dop', 'verwerkingsvoorschrift']).optional(),
+  "documenttype": zod.enum(['eta', 'classificatierapport', 'testrapport', 'productcertificaat', 'dop', 'verwerkingsvoorschrift', 'productblad']).optional(),
   "fabrikant": zod.string().optional(),
   "product": zod.string().optional(),
   "en_norm": zod.string().optional(),
@@ -2003,6 +2026,10 @@ export const CreateDocumentRevisieBody = zod.object({
   "pdf_url": zod.string().optional(),
   "ai_geanalyseerd": zod.boolean().optional(),
   "ai_metadata": zod.record(zod.string(), zod.unknown()).optional(),
+  "bestands_hash": zod.string().optional(),
+  "bestandsgrootte": zod.number().optional(),
+  "geldig_tot": zod.string().optional(),
+  "goedkeuring_status": zod.enum(['concept', 'ter_goedkeuring', 'goedgekeurd', 'afgekeurd']).optional(),
   "toepassing_ids": zod.array(zod.number()).optional()
 })
 
@@ -2023,7 +2050,7 @@ export const SetDocumentToepassingenBody = zod.object({
 export const SetDocumentToepassingenResponse = zod.object({
   "id": zod.number(),
   "naam": zod.string(),
-  "documenttype": zod.enum(['eta', 'classificatierapport', 'testrapport', 'productcertificaat', 'dop', 'verwerkingsvoorschrift']),
+  "documenttype": zod.enum(['eta', 'classificatierapport', 'testrapport', 'productcertificaat', 'dop', 'verwerkingsvoorschrift', 'productblad']),
   "fabrikant": zod.string().nullish(),
   "product": zod.string().nullish(),
   "en_norm": zod.string().nullish(),
@@ -2040,6 +2067,10 @@ export const SetDocumentToepassingenResponse = zod.object({
   "gearchiveerd": zod.boolean(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string().optional(),
+  "bestands_hash": zod.string().nullish(),
+  "bestandsgrootte": zod.number().nullish(),
+  "geldig_tot": zod.string().nullish().describe('Geldigheids-\/vervaldatum (YYYY-MM-DD)'),
+  "goedkeuring_status": zod.enum(['concept', 'ter_goedkeuring', 'goedgekeurd', 'afgekeurd']),
   "toepassing_ids": zod.array(zod.number())
 })
 
@@ -2056,7 +2087,7 @@ export const AiAnalyseDocumentResponse = zod.object({
   "naam": zod.string().nullish(),
   "fabrikant": zod.string().nullish(),
   "product": zod.string().nullish(),
-  "documenttype": zod.union([zod.enum(['eta', 'classificatierapport', 'testrapport', 'productcertificaat', 'dop', 'verwerkingsvoorschrift']),zod.null()]).optional(),
+  "documenttype": zod.union([zod.enum(['eta', 'classificatierapport', 'testrapport', 'productcertificaat', 'dop', 'verwerkingsvoorschrift', 'productblad']),zod.null()]).optional(),
   "en_norm": zod.string().nullish(),
   "rapportnummer": zod.string().nullish(),
   "revisie": zod.string().nullish(),
@@ -2079,7 +2110,7 @@ export const AiAnalyseDocumentResponse = zod.object({
 export const AiKoppelvoorstellenDocumentenResponseItem = zod.object({
   "document_id": zod.number(),
   "document_naam": zod.string(),
-  "documenttype": zod.enum(['eta', 'classificatierapport', 'testrapport', 'productcertificaat', 'dop', 'verwerkingsvoorschrift']),
+  "documenttype": zod.enum(['eta', 'classificatierapport', 'testrapport', 'productcertificaat', 'dop', 'verwerkingsvoorschrift', 'productblad']),
   "fabrikant": zod.string().nullish(),
   "huidige_toepassing_ids": zod.array(zod.number()),
   "suggesties": zod.array(zod.object({
@@ -2090,6 +2121,427 @@ export const AiKoppelvoorstellenDocumentenResponseItem = zod.object({
 }))
 })
 export const AiKoppelvoorstellenDocumentenResponse = zod.array(AiKoppelvoorstellenDocumentenResponseItem)
+
+
+/**
+ * @summary Controleer op mogelijke duplicaten (identiek bestand via hash, of gelijke naam/rapportnummer). Waarschuwt alleen.
+ */
+export const ControleerDocumentDuplicaatBody = zod.object({
+  "bestands_hash": zod.string().optional(),
+  "naam": zod.string().optional(),
+  "rapportnummer": zod.string().optional(),
+  "fabrikant": zod.string().optional()
+})
+
+export const ControleerDocumentDuplicaatResponse = zod.object({
+  "mogelijke_duplicaten": zod.array(zod.object({
+  "document": zod.object({
+  "id": zod.number(),
+  "naam": zod.string(),
+  "documenttype": zod.enum(['eta', 'classificatierapport', 'testrapport', 'productcertificaat', 'dop', 'verwerkingsvoorschrift', 'productblad']),
+  "fabrikant": zod.string().nullish(),
+  "product": zod.string().nullish(),
+  "en_norm": zod.string().nullish(),
+  "rapportnummer": zod.string().nullish(),
+  "revisie": zod.string().nullish(),
+  "datum": zod.string().nullish(),
+  "getest_voor": zod.union([zod.enum(['wand', 'plafond', 'beide']),zod.null()]).optional(),
+  "pdf_url": zod.string().nullish(),
+  "status": zod.enum(['actueel', 'controle_nodig', 'vervangen', 'mogelijk_verouderd', 'ingetrokken']),
+  "groep_id": zod.string(),
+  "revisie_nummer": zod.number(),
+  "ai_geanalyseerd": zod.boolean(),
+  "ai_metadata": zod.record(zod.string(), zod.unknown()).nullish(),
+  "gearchiveerd": zod.boolean(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string().optional(),
+  "bestands_hash": zod.string().nullish(),
+  "bestandsgrootte": zod.number().nullish(),
+  "geldig_tot": zod.string().nullish().describe('Geldigheids-\/vervaldatum (YYYY-MM-DD)'),
+  "goedkeuring_status": zod.enum(['concept', 'ter_goedkeuring', 'goedgekeurd', 'afgekeurd']),
+  "toepassing_ids": zod.array(zod.number())
+}),
+  "reden": zod.string().describe('identiek_bestand | gelijke_naam | gelijk_rapportnummer')
+}))
+})
+
+
+/**
+ * @summary Documenten die aandacht nodig hebben (verlopen, binnenkort verlopend, controle nodig, ter goedkeuring)
+ */
+export const ListDocumentSignaleringenResponse = zod.object({
+  "verlopen": zod.array(zod.object({
+  "id": zod.number(),
+  "naam": zod.string(),
+  "documenttype": zod.enum(['eta', 'classificatierapport', 'testrapport', 'productcertificaat', 'dop', 'verwerkingsvoorschrift', 'productblad']),
+  "fabrikant": zod.string().nullish(),
+  "product": zod.string().nullish(),
+  "en_norm": zod.string().nullish(),
+  "rapportnummer": zod.string().nullish(),
+  "revisie": zod.string().nullish(),
+  "datum": zod.string().nullish(),
+  "getest_voor": zod.union([zod.enum(['wand', 'plafond', 'beide']),zod.null()]).optional(),
+  "pdf_url": zod.string().nullish(),
+  "status": zod.enum(['actueel', 'controle_nodig', 'vervangen', 'mogelijk_verouderd', 'ingetrokken']),
+  "groep_id": zod.string(),
+  "revisie_nummer": zod.number(),
+  "ai_geanalyseerd": zod.boolean(),
+  "ai_metadata": zod.record(zod.string(), zod.unknown()).nullish(),
+  "gearchiveerd": zod.boolean(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string().optional(),
+  "bestands_hash": zod.string().nullish(),
+  "bestandsgrootte": zod.number().nullish(),
+  "geldig_tot": zod.string().nullish().describe('Geldigheids-\/vervaldatum (YYYY-MM-DD)'),
+  "goedkeuring_status": zod.enum(['concept', 'ter_goedkeuring', 'goedgekeurd', 'afgekeurd']),
+  "toepassing_ids": zod.array(zod.number())
+})),
+  "binnenkort": zod.array(zod.object({
+  "id": zod.number(),
+  "naam": zod.string(),
+  "documenttype": zod.enum(['eta', 'classificatierapport', 'testrapport', 'productcertificaat', 'dop', 'verwerkingsvoorschrift', 'productblad']),
+  "fabrikant": zod.string().nullish(),
+  "product": zod.string().nullish(),
+  "en_norm": zod.string().nullish(),
+  "rapportnummer": zod.string().nullish(),
+  "revisie": zod.string().nullish(),
+  "datum": zod.string().nullish(),
+  "getest_voor": zod.union([zod.enum(['wand', 'plafond', 'beide']),zod.null()]).optional(),
+  "pdf_url": zod.string().nullish(),
+  "status": zod.enum(['actueel', 'controle_nodig', 'vervangen', 'mogelijk_verouderd', 'ingetrokken']),
+  "groep_id": zod.string(),
+  "revisie_nummer": zod.number(),
+  "ai_geanalyseerd": zod.boolean(),
+  "ai_metadata": zod.record(zod.string(), zod.unknown()).nullish(),
+  "gearchiveerd": zod.boolean(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string().optional(),
+  "bestands_hash": zod.string().nullish(),
+  "bestandsgrootte": zod.number().nullish(),
+  "geldig_tot": zod.string().nullish().describe('Geldigheids-\/vervaldatum (YYYY-MM-DD)'),
+  "goedkeuring_status": zod.enum(['concept', 'ter_goedkeuring', 'goedgekeurd', 'afgekeurd']),
+  "toepassing_ids": zod.array(zod.number())
+})),
+  "controle_nodig": zod.array(zod.object({
+  "id": zod.number(),
+  "naam": zod.string(),
+  "documenttype": zod.enum(['eta', 'classificatierapport', 'testrapport', 'productcertificaat', 'dop', 'verwerkingsvoorschrift', 'productblad']),
+  "fabrikant": zod.string().nullish(),
+  "product": zod.string().nullish(),
+  "en_norm": zod.string().nullish(),
+  "rapportnummer": zod.string().nullish(),
+  "revisie": zod.string().nullish(),
+  "datum": zod.string().nullish(),
+  "getest_voor": zod.union([zod.enum(['wand', 'plafond', 'beide']),zod.null()]).optional(),
+  "pdf_url": zod.string().nullish(),
+  "status": zod.enum(['actueel', 'controle_nodig', 'vervangen', 'mogelijk_verouderd', 'ingetrokken']),
+  "groep_id": zod.string(),
+  "revisie_nummer": zod.number(),
+  "ai_geanalyseerd": zod.boolean(),
+  "ai_metadata": zod.record(zod.string(), zod.unknown()).nullish(),
+  "gearchiveerd": zod.boolean(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string().optional(),
+  "bestands_hash": zod.string().nullish(),
+  "bestandsgrootte": zod.number().nullish(),
+  "geldig_tot": zod.string().nullish().describe('Geldigheids-\/vervaldatum (YYYY-MM-DD)'),
+  "goedkeuring_status": zod.enum(['concept', 'ter_goedkeuring', 'goedgekeurd', 'afgekeurd']),
+  "toepassing_ids": zod.array(zod.number())
+})),
+  "ter_goedkeuring": zod.array(zod.object({
+  "id": zod.number(),
+  "naam": zod.string(),
+  "documenttype": zod.enum(['eta', 'classificatierapport', 'testrapport', 'productcertificaat', 'dop', 'verwerkingsvoorschrift', 'productblad']),
+  "fabrikant": zod.string().nullish(),
+  "product": zod.string().nullish(),
+  "en_norm": zod.string().nullish(),
+  "rapportnummer": zod.string().nullish(),
+  "revisie": zod.string().nullish(),
+  "datum": zod.string().nullish(),
+  "getest_voor": zod.union([zod.enum(['wand', 'plafond', 'beide']),zod.null()]).optional(),
+  "pdf_url": zod.string().nullish(),
+  "status": zod.enum(['actueel', 'controle_nodig', 'vervangen', 'mogelijk_verouderd', 'ingetrokken']),
+  "groep_id": zod.string(),
+  "revisie_nummer": zod.number(),
+  "ai_geanalyseerd": zod.boolean(),
+  "ai_metadata": zod.record(zod.string(), zod.unknown()).nullish(),
+  "gearchiveerd": zod.boolean(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string().optional(),
+  "bestands_hash": zod.string().nullish(),
+  "bestandsgrootte": zod.number().nullish(),
+  "geldig_tot": zod.string().nullish().describe('Geldigheids-\/vervaldatum (YYYY-MM-DD)'),
+  "goedkeuring_status": zod.enum(['concept', 'ter_goedkeuring', 'goedgekeurd', 'afgekeurd']),
+  "toepassing_ids": zod.array(zod.number())
+}))
+})
+
+
+/**
+ * @summary Globaal audittrail van documentacties (beheerder)
+ */
+export const ListDocumentLogboekQueryParams = zod.object({
+  "limiet": zod.coerce.number().optional()
+})
+
+export const ListDocumentLogboekResponseItem = zod.object({
+  "id": zod.number(),
+  "document_id": zod.number().nullish(),
+  "document_naam": zod.string().nullish(),
+  "gebruiker_id": zod.number().nullish(),
+  "gebruiker_naam": zod.string().nullish(),
+  "actie": zod.string(),
+  "detail": zod.string().nullish(),
+  "tijdstip": zod.string()
+})
+export const ListDocumentLogboekResponse = zod.array(ListDocumentLogboekResponseItem)
+
+
+/**
+ * @summary Documenten gekoppeld aan een entiteit (gebouw, klant, offerte, dossier, voorziening)
+ */
+export const ListGekoppeldeDocumentenQueryParams = zod.object({
+  "doel_type": zod.enum(['gebouw', 'klant', 'offerte', 'dossier', 'voorziening']),
+  "doel_id": zod.coerce.number()
+})
+
+export const ListGekoppeldeDocumentenResponseItem = zod.object({
+  "id": zod.number(),
+  "naam": zod.string(),
+  "documenttype": zod.enum(['eta', 'classificatierapport', 'testrapport', 'productcertificaat', 'dop', 'verwerkingsvoorschrift', 'productblad']),
+  "fabrikant": zod.string().nullish(),
+  "product": zod.string().nullish(),
+  "en_norm": zod.string().nullish(),
+  "rapportnummer": zod.string().nullish(),
+  "revisie": zod.string().nullish(),
+  "datum": zod.string().nullish(),
+  "getest_voor": zod.union([zod.enum(['wand', 'plafond', 'beide']),zod.null()]).optional(),
+  "pdf_url": zod.string().nullish(),
+  "status": zod.enum(['actueel', 'controle_nodig', 'vervangen', 'mogelijk_verouderd', 'ingetrokken']),
+  "groep_id": zod.string(),
+  "revisie_nummer": zod.number(),
+  "ai_geanalyseerd": zod.boolean(),
+  "ai_metadata": zod.record(zod.string(), zod.unknown()).nullish(),
+  "gearchiveerd": zod.boolean(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string().optional(),
+  "bestands_hash": zod.string().nullish(),
+  "bestandsgrootte": zod.number().nullish(),
+  "geldig_tot": zod.string().nullish().describe('Geldigheids-\/vervaldatum (YYYY-MM-DD)'),
+  "goedkeuring_status": zod.enum(['concept', 'ter_goedkeuring', 'goedgekeurd', 'afgekeurd']),
+  "toepassing_ids": zod.array(zod.number())
+})
+export const ListGekoppeldeDocumentenResponse = zod.array(ListGekoppeldeDocumentenResponseItem)
+
+
+/**
+ * @summary Koppelingen van een document naar entiteiten
+ */
+export const ListDocumentKoppelingenParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ListDocumentKoppelingenResponseItem = zod.object({
+  "id": zod.number(),
+  "document_id": zod.number(),
+  "doel_type": zod.enum(['gebouw', 'klant', 'offerte', 'dossier', 'voorziening']),
+  "doel_id": zod.number(),
+  "doel_naam": zod.string().nullish(),
+  "aangemaakt_op": zod.string()
+})
+export const ListDocumentKoppelingenResponse = zod.array(ListDocumentKoppelingenResponseItem)
+
+
+/**
+ * @summary Document aan een entiteit koppelen (beheerder)
+ */
+export const AddDocumentKoppelingParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const AddDocumentKoppelingBody = zod.object({
+  "doel_type": zod.enum(['gebouw', 'klant', 'offerte', 'dossier', 'voorziening']),
+  "doel_id": zod.number()
+})
+
+export const AddDocumentKoppelingResponse = zod.void()
+
+
+/**
+ * @summary Koppeling verwijderen (beheerder)
+ */
+export const RemoveDocumentKoppelingParams = zod.object({
+  "id": zod.coerce.number(),
+  "koppelingId": zod.coerce.number()
+})
+
+export const RemoveDocumentKoppelingResponse = zod.void()
+
+
+/**
+ * @summary Document indienen ter goedkeuring
+ */
+export const IndienenDocumentParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const IndienenDocumentBody = zod.object({
+  "opmerking": zod.string().optional()
+})
+
+export const IndienenDocumentResponse = zod.object({
+  "id": zod.number(),
+  "naam": zod.string(),
+  "documenttype": zod.enum(['eta', 'classificatierapport', 'testrapport', 'productcertificaat', 'dop', 'verwerkingsvoorschrift', 'productblad']),
+  "fabrikant": zod.string().nullish(),
+  "product": zod.string().nullish(),
+  "en_norm": zod.string().nullish(),
+  "rapportnummer": zod.string().nullish(),
+  "revisie": zod.string().nullish(),
+  "datum": zod.string().nullish(),
+  "getest_voor": zod.union([zod.enum(['wand', 'plafond', 'beide']),zod.null()]).optional(),
+  "pdf_url": zod.string().nullish(),
+  "status": zod.enum(['actueel', 'controle_nodig', 'vervangen', 'mogelijk_verouderd', 'ingetrokken']),
+  "groep_id": zod.string(),
+  "revisie_nummer": zod.number(),
+  "ai_geanalyseerd": zod.boolean(),
+  "ai_metadata": zod.record(zod.string(), zod.unknown()).nullish(),
+  "gearchiveerd": zod.boolean(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string().optional(),
+  "bestands_hash": zod.string().nullish(),
+  "bestandsgrootte": zod.number().nullish(),
+  "geldig_tot": zod.string().nullish().describe('Geldigheids-\/vervaldatum (YYYY-MM-DD)'),
+  "goedkeuring_status": zod.enum(['concept', 'ter_goedkeuring', 'goedgekeurd', 'afgekeurd']),
+  "toepassing_ids": zod.array(zod.number())
+})
+
+
+/**
+ * @summary Document goedkeuren (beheerder)
+ */
+export const GoedkeurenDocumentParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GoedkeurenDocumentBody = zod.object({
+  "opmerking": zod.string().optional()
+})
+
+export const GoedkeurenDocumentResponse = zod.object({
+  "id": zod.number(),
+  "naam": zod.string(),
+  "documenttype": zod.enum(['eta', 'classificatierapport', 'testrapport', 'productcertificaat', 'dop', 'verwerkingsvoorschrift', 'productblad']),
+  "fabrikant": zod.string().nullish(),
+  "product": zod.string().nullish(),
+  "en_norm": zod.string().nullish(),
+  "rapportnummer": zod.string().nullish(),
+  "revisie": zod.string().nullish(),
+  "datum": zod.string().nullish(),
+  "getest_voor": zod.union([zod.enum(['wand', 'plafond', 'beide']),zod.null()]).optional(),
+  "pdf_url": zod.string().nullish(),
+  "status": zod.enum(['actueel', 'controle_nodig', 'vervangen', 'mogelijk_verouderd', 'ingetrokken']),
+  "groep_id": zod.string(),
+  "revisie_nummer": zod.number(),
+  "ai_geanalyseerd": zod.boolean(),
+  "ai_metadata": zod.record(zod.string(), zod.unknown()).nullish(),
+  "gearchiveerd": zod.boolean(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string().optional(),
+  "bestands_hash": zod.string().nullish(),
+  "bestandsgrootte": zod.number().nullish(),
+  "geldig_tot": zod.string().nullish().describe('Geldigheids-\/vervaldatum (YYYY-MM-DD)'),
+  "goedkeuring_status": zod.enum(['concept', 'ter_goedkeuring', 'goedgekeurd', 'afgekeurd']),
+  "toepassing_ids": zod.array(zod.number())
+})
+
+
+/**
+ * @summary Document afkeuren (beheerder)
+ */
+export const AfkeurenDocumentParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const AfkeurenDocumentBody = zod.object({
+  "opmerking": zod.string().optional()
+})
+
+export const AfkeurenDocumentResponse = zod.object({
+  "id": zod.number(),
+  "naam": zod.string(),
+  "documenttype": zod.enum(['eta', 'classificatierapport', 'testrapport', 'productcertificaat', 'dop', 'verwerkingsvoorschrift', 'productblad']),
+  "fabrikant": zod.string().nullish(),
+  "product": zod.string().nullish(),
+  "en_norm": zod.string().nullish(),
+  "rapportnummer": zod.string().nullish(),
+  "revisie": zod.string().nullish(),
+  "datum": zod.string().nullish(),
+  "getest_voor": zod.union([zod.enum(['wand', 'plafond', 'beide']),zod.null()]).optional(),
+  "pdf_url": zod.string().nullish(),
+  "status": zod.enum(['actueel', 'controle_nodig', 'vervangen', 'mogelijk_verouderd', 'ingetrokken']),
+  "groep_id": zod.string(),
+  "revisie_nummer": zod.number(),
+  "ai_geanalyseerd": zod.boolean(),
+  "ai_metadata": zod.record(zod.string(), zod.unknown()).nullish(),
+  "gearchiveerd": zod.boolean(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string().optional(),
+  "bestands_hash": zod.string().nullish(),
+  "bestandsgrootte": zod.number().nullish(),
+  "geldig_tot": zod.string().nullish().describe('Geldigheids-\/vervaldatum (YYYY-MM-DD)'),
+  "goedkeuring_status": zod.enum(['concept', 'ter_goedkeuring', 'goedgekeurd', 'afgekeurd']),
+  "toepassing_ids": zod.array(zod.number())
+})
+
+
+/**
+ * @summary Goedkeuringshistorie van een document
+ */
+export const ListDocumentGoedkeuringenParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ListDocumentGoedkeuringenResponseItem = zod.object({
+  "id": zod.number(),
+  "document_id": zod.number(),
+  "actie": zod.string(),
+  "door_id": zod.number().nullish(),
+  "door_naam": zod.string().nullish(),
+  "opmerking": zod.string().nullish(),
+  "tijdstip": zod.string()
+})
+export const ListDocumentGoedkeuringenResponse = zod.array(ListDocumentGoedkeuringenResponseItem)
+
+
+/**
+ * @summary Audittrail van een specifiek document
+ */
+export const GetDocumentLogboekParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetDocumentLogboekResponseItem = zod.object({
+  "id": zod.number(),
+  "document_id": zod.number().nullish(),
+  "document_naam": zod.string().nullish(),
+  "gebruiker_id": zod.number().nullish(),
+  "gebruiker_naam": zod.string().nullish(),
+  "actie": zod.string(),
+  "detail": zod.string().nullish(),
+  "tijdstip": zod.string()
+})
+export const GetDocumentLogboekResponse = zod.array(GetDocumentLogboekResponseItem)
+
+
+/**
+ * @summary Document downloaden; registreert de download in het logboek en stuurt door naar het bestand
+ */
+export const DownloadDocumentParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DownloadDocumentResponse = zod.void()
 
 
 /**
@@ -5232,6 +5684,10 @@ export const ListDossierDocumentenResponseItem = zod.object({
   "status": zod.string(),
   "versie": zod.number(),
   "toegevoegd_door_id": zod.number().nullish(),
+  "bevroren_revisie_nummer": zod.number().nullish(),
+  "bevroren_pdf_url": zod.string().nullish(),
+  "bevroren_op": zod.string().nullish(),
+  "actuele_revisie_nummer": zod.number().nullish().describe('Hoogste revisienummer in de documentgroep (om \"nieuwere beschikbaar\" te tonen)'),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
 })
@@ -5283,6 +5739,10 @@ export const UpdateDossierDocumentResponse = zod.object({
   "status": zod.string(),
   "versie": zod.number(),
   "toegevoegd_door_id": zod.number().nullish(),
+  "bevroren_revisie_nummer": zod.number().nullish(),
+  "bevroren_pdf_url": zod.string().nullish(),
+  "bevroren_op": zod.string().nullish(),
+  "actuele_revisie_nummer": zod.number().nullish().describe('Hoogste revisienummer in de documentgroep (om \"nieuwere beschikbaar\" te tonen)'),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
 })

@@ -71,6 +71,7 @@ _Gebouwd:_
 - **V1.0** — Administratief gereed voor uitvoering
 - **V1.1** — Rollen & bevoegdheden
 - **V1.2** — Bibliotheek & documentstructuur (applicaties, toepassingen, documenten, ETA's, koppelingen, versiebeheer)
+- **DMS / Documentenbibliotheek** — uitbreiding op V1.2 + dossiers, met formeel akkoord gebouwd: detail/logboek, polymorfe koppelingen (gebouw/klant/offerte/dossier), duplicaatdetectie (sha256 + fuzzy), goedkeuringsflow, signaleringen (verlopen/binnenkort/controle/ter goedkeuring), DMS-dashboard, audittrail, downloadlogging en read-only mobiele documentenweergave. **Inclusief het V1.5-bevriezingsdeel op dossiers** (`POST /dossiers/:id/definitief` bevriest revisie + PDF per gekoppeld document; definitieve dossiers serveren de bevroren snapshot). Hergebruikt de bestaande document-AI; geen nieuwe/geparkeerde AI. Zie [docs/roadmap/gebouwd.md](docs/roadmap/gebouwd.md)
 - **AI Spotherkenning met zelflerende correcties** en **AI Bibliotheekvalidatie** — op verzoek vooruit gebouwd; AI stelt voor, een mens bevestigt, AI keurt nooit zelfstandig juridisch goed. Zie [docs/roadmap/gebouwd.md](docs/roadmap/gebouwd.md) voor de bouwdetails
 
 _Actief (vastgelegd; elk pas bouwen ná formeel akkoord op die fase) — detail in [docs/roadmap/actief.md](docs/roadmap/actief.md):_

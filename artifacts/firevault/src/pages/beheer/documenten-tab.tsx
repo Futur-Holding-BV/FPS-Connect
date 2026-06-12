@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState, type ReactNode } from "react";
 import * as pdfjsLib from "pdfjs-dist";
 import pdfWorkerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 import { useQueryClient } from "@tanstack/react-query";
@@ -15,13 +15,39 @@ import {
   useSetDocumentToepassingen,
   useAiAnalyseDocument,
   useAiKoppelvoorstellenDocumenten,
+  useControleerDocumentDuplicaat,
+  useListDocumentKoppelingen,
+  getListDocumentKoppelingenQueryKey,
+  useAddDocumentKoppeling,
+  useRemoveDocumentKoppeling,
+  useIndienenDocument,
+  useGoedkeurenDocument,
+  useAfkeurenDocument,
+  useListDocumentGoedkeuringen,
+  getListDocumentGoedkeuringenQueryKey,
+  useGetDocumentLogboek,
+  getGetDocumentLogboekQueryKey,
+  useListDocumentLogboek,
+  useListDocumentSignaleringen,
+  getListDocumentSignaleringenQueryKey,
+  useListGebouwen,
+  useListCrmKlanten,
+  useListOffertes,
+  useListDossiers,
   useListLabels,
   DocumentType,
   DocumentStatus,
+  GoedkeuringStatus,
+  KoppelingDoelType,
 } from "@workspace/api-client-react";
 import type {
   Document,
   DocumentInput,
+  DocumentDuplicaatMatch,
+  DocumentKoppeling,
+  DocumentGoedkeuring,
+  DocumentLogboekRegel,
+  DocumentSignaleringen,
   Label,
   DocumentAiAnalyseResultaat,
   DocumentKoppelVoorstel,
@@ -54,13 +80,23 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
+  AlertTriangle,
+  Calendar,
   CheckCircle2,
+  ClipboardList,
+  Clock,
+  Download,
   ExternalLink,
   FileText,
   History,
   Info as InfoIcon,
+  Link2,
   Plus,
+  Send,
+  ShieldCheck,
+  ShieldX,
   Sparkles,
+  Trash2,
   Upload,
 } from "lucide-react";
 
@@ -75,7 +111,70 @@ export const TYPE_LABELS: Record<string, string> = {
   productcertificaat: "Productcertificaat",
   dop: "DoP",
   verwerkingsvoorschrift: "Verwerkingsvoorschrift",
+  productblad: "Productblad",
 };
+
+export const GOEDKEURING_LABELS: Record<string, string> = {
+  concept: "Concept",
+  ter_goedkeuring: "Ter goedkeuring",
+  goedgekeurd: "Goedgekeurd",
+  afgekeurd: "Afgekeurd",
+};
+
+const KOPPELING_LABELS: Record<string, string> = {
+  gebouw: "Gebouw",
+  klant: "Klant",
+  offerte: "Offerte",
+  dossier: "Dossier",
+  voorziening: "Spot",
+};
+
+export function goedkeuringBadge(status: string) {
+  const label = GOEDKEURING_LABELS[status] ?? status;
+  const cls: Record<string, string> = {
+    concept: "text-muted-foreground",
+    ter_goedkeuring: "text-amber-700 border-amber-300 bg-amber-50",
+    goedgekeurd: "text-green-700 border-green-300 bg-green-50",
+    afgekeurd: "text-destructive border-destructive/40",
+  };
+  return (
+    <Badge variant="outline" className={`text-xs ${cls[status] ?? ""}`}>
+      {label}
+    </Badge>
+  );
+}
+
+// Bepaalt of een geldig_tot-datum verlopen of binnenkort (<90 dagen) is.
+function geldigheidStatus(geldigTot?: string | null): "verlopen" | "binnenkort" | "ok" | null {
+  if (!geldigTot) return null;
+  const eind = new Date(geldigTot);
+  if (Number.isNaN(eind.getTime())) return null;
+  const nu = new Date();
+  const dagen = Math.ceil((eind.getTime() - nu.getTime()) / (1000 * 60 * 60 * 24));
+  if (dagen < 0) return "verlopen";
+  if (dagen <= 90) return "binnenkort";
+  return "ok";
+}
+
+function formatTijdstip(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  return d.toLocaleString("nl-NL", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+// SHA-256 van het geuploade bestand, gebruikt voor duplicaatdetectie.
+async function sha256Hex(buf: ArrayBuffer): Promise<string> {
+  const digest = await crypto.subtle.digest("SHA-256", buf);
+  return Array.from(new Uint8Array(digest))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
 
 export const STATUS_LABELS: Record<string, string> = {
   actueel: "Actueel",
@@ -144,6 +243,8 @@ interface FormState {
   datum: string;
   getest_voor: string;
   pdf_url: string;
+  bestands_hash: string;
+  bestandsgrootte: number | null;
   toepassing_ids: number[];
   ai_geanalyseerd: boolean;
   ai_metadata: Record<string, unknown> | null;
@@ -160,6 +261,8 @@ const LEEG_FORM: FormState = {
   datum: "",
   getest_voor: "",
   pdf_url: "",
+  bestands_hash: "",
+  bestandsgrootte: null,
   toepassing_ids: [],
   ai_geanalyseerd: false,
   ai_metadata: null,
@@ -297,6 +400,8 @@ function DocumentFormulier({
           datum: basisDocument.datum ?? "",
           getest_voor: basisDocument.getest_voor ?? "",
           pdf_url: "",
+          bestands_hash: "",
+          bestandsgrootte: null,
           toepassing_ids: basisDocument.toepassing_ids ?? [],
           ai_geanalyseerd: false,
           ai_metadata: null,
@@ -313,6 +418,8 @@ function DocumentFormulier({
   const maakDocument = useCreateDocument();
   const maakRevisie = useCreateDocumentRevisie();
   const aiAnalyse = useAiAnalyseDocument();
+  const duplicaatCheck = useControleerDocumentDuplicaat();
+  const [duplicaten, setDuplicaten] = useState<DocumentDuplicaatMatch[]>([]);
   const { uploadFile, isUploading } = useUpload({
     onSuccess: (res) => setForm((f) => ({ ...f, pdf_url: res.objectPath })),
   });
@@ -330,7 +437,21 @@ function DocumentFormulier({
 
   async function verwerkBestand(file: File) {
     setFout(null);
+    setDuplicaten([]);
     void uploadFile(file);
+
+    // Bereken hash + grootte en controleer direct op een exact duplicaat (zelfde bestand).
+    let hash = "";
+    try {
+      const buf = await file.arrayBuffer();
+      hash = await sha256Hex(buf);
+      setForm((f) => ({ ...f, bestands_hash: hash, bestandsgrootte: file.size }));
+      const res = await duplicaatCheck.mutateAsync({ data: { bestands_hash: hash } });
+      if (res.mogelijke_duplicaten?.length) setDuplicaten(res.mogelijke_duplicaten);
+    } catch {
+      // Duplicaatcontrole is niet kritiek; blokkeer het uploaden niet.
+    }
+
     setAiBezig(true);
     try {
       const tekst = await extraheerPdfTekst(file);
@@ -364,6 +485,28 @@ function DocumentFormulier({
       });
       setAiVelden(nieuweAi);
       setAiBetrouwbaarheid(res.betrouwbaarheid ?? null);
+
+      // Aanvullende fuzzy-controle op naam/rapportnummer/fabrikant (naast de exacte hash-match).
+      try {
+        const fuzzy = await duplicaatCheck.mutateAsync({
+          data: {
+            naam: res.naam ?? undefined,
+            rapportnummer: res.rapportnummer ?? undefined,
+            fabrikant: res.fabrikant ?? undefined,
+          },
+        });
+        if (fuzzy.mogelijke_duplicaten?.length) {
+          setDuplicaten((prev) => {
+            const bestaand = new Set(prev.map((m) => m.document.id));
+            const extra = fuzzy.mogelijke_duplicaten.filter(
+              (m) => !bestaand.has(m.document.id),
+            );
+            return [...prev, ...extra];
+          });
+        }
+      } catch {
+        // niet kritiek
+      }
 
       const suggesties = res.toepassing_suggesties ?? [];
       if (suggesties.length > 0) {
@@ -422,6 +565,8 @@ function DocumentFormulier({
         ? (form.getest_voor as DocumentInput["getest_voor"])
         : undefined,
       pdf_url: form.pdf_url || undefined,
+      bestands_hash: form.bestands_hash || undefined,
+      bestandsgrootte: form.bestandsgrootte ?? undefined,
       ai_geanalyseerd: form.ai_geanalyseerd || undefined,
       ai_metadata: form.ai_metadata ?? undefined,
       toepassing_ids: form.toepassing_ids,
@@ -549,6 +694,27 @@ function DocumentFormulier({
 
           {fout && (
             <p className="text-sm text-destructive">{fout}</p>
+          )}
+
+          {duplicaten.length > 0 && (
+            <div className="text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-md px-3 py-2 space-y-1">
+              <p className="flex items-center gap-2 font-medium">
+                <AlertTriangle className="h-4 w-4 shrink-0" />
+                Mogelijk duplicaat gevonden
+              </p>
+              <p className="text-xs text-amber-700">
+                Dit document lijkt al in de bibliotheek te staan. Controleer of u
+                niet dubbel toevoegt; opslaan blijft mogelijk.
+              </p>
+              <ul className="text-xs space-y-0.5 mt-1">
+                {duplicaten.slice(0, 4).map((m) => (
+                  <li key={m.document.id} className="flex items-start gap-1">
+                    <span className="font-medium">{m.document.naam}</span>
+                    <span className="text-amber-700">— {m.reden}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
           )}
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -712,6 +878,8 @@ function DocumentDetail({
 }) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { heeftNiveau } = useBevoegdheid();
+  const magGoedkeuren = heeftNiveau("bibliotheek", 4);
   // Live versie ophalen zodat de dialoog na een mutatie niet op een verouderde
   // lijst-snapshot blijft hangen; de meegegeven snapshot dient als directe fallback.
   const { data: liveDoc } = useGetDocument(document.id);
@@ -720,6 +888,34 @@ function DocumentDetail({
   const wijzigDocument = useUpdateDocument();
   const setToepassingen = useSetDocumentToepassingen();
   const [toep, setToep] = useState<number[]>(document.toepassing_ids ?? []);
+  const [geldigTot, setGeldigTot] = useState<string>(doc.geldig_tot ?? "");
+
+  const geldigGewijzigd = (geldigTot || "") !== (doc.geldig_tot ?? "");
+
+  async function bewaarGeldigheid() {
+    try {
+      await wijzigDocument.mutateAsync({
+        id: document.id,
+        data: { geldig_tot: geldigTot.trim() === "" ? null : geldigTot },
+      });
+      await queryClient.invalidateQueries({ queryKey: getListDocumentenQueryKey() });
+      await queryClient.invalidateQueries({
+        queryKey: getGetDocumentQueryKey(document.id),
+      });
+      toast({
+        title: "Geldigheid opgeslagen",
+        description: geldigTot
+          ? `"${doc.naam}" is geldig tot ${geldigTot}.`
+          : `De geldigheidsdatum van "${doc.naam}" is verwijderd.`,
+      });
+    } catch (err) {
+      toast({
+        title: "Geldigheid opslaan mislukt",
+        description: foutmelding(err, "Probeer het opnieuw."),
+        variant: "destructive",
+      });
+    }
+  }
 
   const koppelingenGewijzigd =
     JSON.stringify([...toep].sort()) !==
@@ -814,15 +1010,77 @@ function DocumentDetail({
 
           {doc.pdf_url && (
             <a
-              href={`/api/storage${doc.pdf_url}`}
+              href={`/api/documenten/${doc.id}/download`}
               target="_blank"
               rel="noreferrer"
               className="inline-flex items-center gap-1.5 text-sm text-primary"
             >
-              <ExternalLink className="h-4 w-4" />
+              <Download className="h-4 w-4" />
               PDF openen
             </a>
           )}
+
+          {/* Goedkeuringsflow */}
+          <DocumentGoedkeuringSectie
+            doc={doc}
+            magIndienen={magCreeren}
+            magGoedkeuren={magGoedkeuren}
+          />
+
+          {/* Geldigheid */}
+          <div className="border-t pt-4 space-y-2">
+            <h4 className="text-sm font-medium flex items-center gap-1.5">
+              <Calendar className="h-4 w-4 text-muted-foreground" />
+              Geldigheid
+            </h4>
+            <div className="flex flex-wrap items-end gap-3">
+              <div className="min-w-48">
+                <UiLabel htmlFor="doc-geldig-tot">Geldig tot</UiLabel>
+                <Input
+                  id="doc-geldig-tot"
+                  type="date"
+                  value={geldigTot}
+                  onChange={(e) => setGeldigTot(e.target.value)}
+                  disabled={!magBeheren}
+                />
+              </div>
+              {(() => {
+                const gs = geldigheidStatus(doc.geldig_tot);
+                if (gs === "verlopen")
+                  return (
+                    <Badge variant="outline" className="text-destructive border-destructive/40">
+                      Verlopen
+                    </Badge>
+                  );
+                if (gs === "binnenkort")
+                  return (
+                    <Badge variant="outline" className="text-amber-700 border-amber-300 bg-amber-50">
+                      Verloopt binnenkort
+                    </Badge>
+                  );
+                if (gs === "ok")
+                  return (
+                    <Badge variant="outline" className="text-green-700 border-green-300 bg-green-50">
+                      Geldig
+                    </Badge>
+                  );
+                return (
+                  <span className="text-xs text-muted-foreground pb-2">
+                    Geen geldigheidsdatum ingesteld
+                  </span>
+                );
+              })()}
+              {magBeheren && geldigGewijzigd && (
+                <Button
+                  size="sm"
+                  onClick={bewaarGeldigheid}
+                  disabled={wijzigDocument.isPending}
+                >
+                  Geldigheid opslaan
+                </Button>
+              )}
+            </div>
+          </div>
 
           {/* Status + archief */}
           <div className="flex flex-wrap items-end gap-4 border-t pt-4">
@@ -883,6 +1141,9 @@ function DocumentDetail({
             )}
           </div>
 
+          {/* Gekoppelde entiteiten (gebouw/klant/offerte/dossier/spot) */}
+          <DocumentEntiteitKoppelingen documentId={document.id} magBeheren={magBeheren} />
+
           {/* Revisiehistorie */}
           <div className="border-t pt-4">
             <h4 className="text-sm font-medium flex items-center gap-1.5 mb-2">
@@ -917,9 +1178,404 @@ function DocumentDetail({
                 ))}
             </div>
           </div>
+
+          {/* Audittrail / logboek */}
+          <DocumentLogboekSectie documentId={document.id} />
         </div>
       </DialogContent>
     </Dialog>
+  );
+}
+
+// Goedkeuringsflow: concept -> ter goedkeuring (indienen, bibliotheek>=3) -> goedgekeurd/
+// afgekeurd (bibliotheek>=4). De statusbadge volgt de AI-state-kleurconventie niet (dit is
+// een lifecycle-status, geen AI-voorstel).
+function DocumentGoedkeuringSectie({
+  doc,
+  magIndienen,
+  magGoedkeuren,
+}: {
+  doc: Document;
+  magIndienen: boolean;
+  magGoedkeuren: boolean;
+}) {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const { data: goedkeuringen = [] } = useListDocumentGoedkeuringen(doc.id);
+  const indienen = useIndienenDocument();
+  const goedkeuren = useGoedkeurenDocument();
+  const afkeuren = useAfkeurenDocument();
+  const [opmerking, setOpmerking] = useState("");
+
+  const status = doc.goedkeuring_status;
+  const bezig = indienen.isPending || goedkeuren.isPending || afkeuren.isPending;
+
+  async function ververs() {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: getGetDocumentQueryKey(doc.id) }),
+      queryClient.invalidateQueries({ queryKey: getListDocumentenQueryKey() }),
+      queryClient.invalidateQueries({
+        queryKey: getListDocumentGoedkeuringenQueryKey(doc.id),
+      }),
+      queryClient.invalidateQueries({
+        queryKey: getGetDocumentLogboekQueryKey(doc.id),
+      }),
+      queryClient.invalidateQueries({
+        queryKey: getListDocumentSignaleringenQueryKey(),
+      }),
+    ]);
+  }
+
+  async function voer(
+    actie: "indienen" | "goedkeuren" | "afkeuren",
+    fn: () => Promise<unknown>,
+    titel: string,
+  ) {
+    try {
+      await fn();
+      await ververs();
+      setOpmerking("");
+      toast({ title: titel, description: `"${doc.naam}".` });
+    } catch (err) {
+      toast({
+        title: "Actie mislukt",
+        description: foutmelding(err, "Probeer het opnieuw."),
+        variant: "destructive",
+      });
+    }
+  }
+
+  return (
+    <div className="border-t pt-4 space-y-3">
+      <div className="flex items-center justify-between gap-2">
+        <h4 className="text-sm font-medium flex items-center gap-1.5">
+          <ShieldCheck className="h-4 w-4 text-muted-foreground" />
+          Goedkeuring
+        </h4>
+        {goedkeuringBadge(status)}
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2">
+        {status === "concept" && magIndienen && (
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={bezig}
+            onClick={() =>
+              voer(
+                "indienen",
+                () => indienen.mutateAsync({ id: doc.id }),
+                "Ingediend ter goedkeuring",
+              )
+            }
+          >
+            <Send className="h-4 w-4 mr-1" />
+            Indienen ter goedkeuring
+          </Button>
+        )}
+        {status === "ter_goedkeuring" && magGoedkeuren && (
+          <>
+            <Button
+              size="sm"
+              disabled={bezig}
+              onClick={() =>
+                voer(
+                  "goedkeuren",
+                  () =>
+                    goedkeuren.mutateAsync({
+                      id: doc.id,
+                      data: opmerking.trim() ? { opmerking: opmerking.trim() } : undefined,
+                    }),
+                  "Document goedgekeurd",
+                )
+              }
+            >
+              <ShieldCheck className="h-4 w-4 mr-1" />
+              Goedkeuren
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="text-destructive"
+              disabled={bezig}
+              onClick={() =>
+                voer(
+                  "afkeuren",
+                  () =>
+                    afkeuren.mutateAsync({
+                      id: doc.id,
+                      data: opmerking.trim() ? { opmerking: opmerking.trim() } : undefined,
+                    }),
+                  "Document afgekeurd",
+                )
+              }
+            >
+              <ShieldX className="h-4 w-4 mr-1" />
+              Afkeuren
+            </Button>
+          </>
+        )}
+      </div>
+
+      {status === "ter_goedkeuring" && magGoedkeuren && (
+        <Input
+          placeholder="Opmerking (optioneel)"
+          value={opmerking}
+          onChange={(e) => setOpmerking(e.target.value)}
+        />
+      )}
+
+      {(goedkeuringen as DocumentGoedkeuring[]).length > 0 && (
+        <ul className="text-xs text-muted-foreground space-y-1">
+          {(goedkeuringen as DocumentGoedkeuring[]).map((g) => (
+            <li key={g.id} className="flex flex-wrap items-center gap-1.5">
+              <span className="font-medium text-foreground">
+                {GOEDKEURING_LABELS[g.actie] ?? g.actie}
+              </span>
+              <span>door {g.door_naam || "onbekend"}</span>
+              <span>· {formatTijdstip(g.tijdstip)}</span>
+              {g.opmerking && <span className="italic">— {g.opmerking}</span>}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+// Polymorfe koppelingen aan gebouw/klant/offerte/dossier/spot. Het toevoeg-formulier
+// wordt pas gemount (en haalt pas entiteitenlijsten op) wanneer de gebruiker het opent.
+function DocumentEntiteitKoppelingen({
+  documentId,
+  magBeheren,
+}: {
+  documentId: number;
+  magBeheren: boolean;
+}) {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const { data: koppelingen = [] } = useListDocumentKoppelingen(documentId);
+  const verwijder = useRemoveDocumentKoppeling();
+  const [toevoegenOpen, setToevoegenOpen] = useState(false);
+
+  async function ververs() {
+    await queryClient.invalidateQueries({
+      queryKey: getListDocumentKoppelingenQueryKey(documentId),
+    });
+    await queryClient.invalidateQueries({
+      queryKey: getGetDocumentLogboekQueryKey(documentId),
+    });
+  }
+
+  async function verwijderKoppeling(koppelingId: number) {
+    try {
+      await verwijder.mutateAsync({ id: documentId, koppelingId });
+      await ververs();
+    } catch (err) {
+      toast({
+        title: "Koppeling verwijderen mislukt",
+        description: foutmelding(err, "Probeer het opnieuw."),
+        variant: "destructive",
+      });
+    }
+  }
+
+  const lijst = koppelingen as DocumentKoppeling[];
+
+  return (
+    <div className="border-t pt-4 space-y-3">
+      <div className="flex items-center justify-between gap-2">
+        <h4 className="text-sm font-medium flex items-center gap-1.5">
+          <Link2 className="h-4 w-4 text-muted-foreground" />
+          Gekoppeld aan
+        </h4>
+        {magBeheren && (
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-7 text-xs"
+            onClick={() => setToevoegenOpen((o) => !o)}
+          >
+            <Plus className="h-3.5 w-3.5 mr-1" />
+            Koppeling toevoegen
+          </Button>
+        )}
+      </div>
+
+      {lijst.length === 0 ? (
+        <p className="text-xs text-muted-foreground">
+          Nog niet gekoppeld aan een gebouw, klant, offerte, dossier of spot.
+        </p>
+      ) : (
+        <div className="flex flex-wrap gap-2">
+          {lijst.map((k) => (
+            <span
+              key={k.id}
+              className="inline-flex items-center gap-1.5 rounded-md border bg-muted/30 px-2 py-1 text-xs"
+            >
+              <Badge variant="outline" className="text-[10px]">
+                {KOPPELING_LABELS[k.doel_type] ?? k.doel_type}
+              </Badge>
+              <span className="font-medium">{k.doel_naam || `#${k.doel_id}`}</span>
+              {magBeheren && (
+                <button
+                  type="button"
+                  className="text-muted-foreground hover:text-destructive"
+                  onClick={() => verwijderKoppeling(k.id)}
+                  disabled={verwijder.isPending}
+                  aria-label="Koppeling verwijderen"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </span>
+          ))}
+        </div>
+      )}
+
+      {toevoegenOpen && magBeheren && (
+        <KoppelingToevoegen
+          documentId={documentId}
+          onGekoppeld={() => {
+            void ververs();
+            setToevoegenOpen(false);
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+const KOPPEL_TYPES: { value: string; label: string }[] = [
+  { value: KoppelingDoelType.gebouw, label: "Gebouw" },
+  { value: KoppelingDoelType.klant, label: "Klant" },
+  { value: KoppelingDoelType.offerte, label: "Offerte" },
+  { value: KoppelingDoelType.dossier, label: "Dossier" },
+];
+
+function KoppelingToevoegen({
+  documentId,
+  onGekoppeld,
+}: {
+  documentId: number;
+  onGekoppeld: () => void;
+}) {
+  const { toast } = useToast();
+  const toevoegen = useAddDocumentKoppeling();
+  const [doelType, setDoelType] = useState<string>(KoppelingDoelType.gebouw);
+  const [doelId, setDoelId] = useState<string>("");
+
+  const { data: gebouwen = [] } = useListGebouwen();
+  const { data: klanten = [] } = useListCrmKlanten();
+  const { data: offertes = [] } = useListOffertes();
+  const { data: dossiers = [] } = useListDossiers();
+
+  const opties = useMemo(() => {
+    if (doelType === KoppelingDoelType.gebouw)
+      return gebouwen.map((g) => ({ value: String(g.id), label: g.naam }));
+    if (doelType === KoppelingDoelType.klant)
+      return klanten.map((k) => ({ value: String(k.id), label: k.naam }));
+    if (doelType === KoppelingDoelType.offerte)
+      return offertes.map((o) => ({ value: String(o.id), label: o.titel }));
+    if (doelType === KoppelingDoelType.dossier)
+      return dossiers.map((d) => ({ value: String(d.id), label: d.naam }));
+    return [];
+  }, [doelType, gebouwen, klanten, offertes, dossiers]);
+
+  async function koppel() {
+    if (!doelId) return;
+    try {
+      await toevoegen.mutateAsync({
+        id: documentId,
+        data: {
+          doel_type: doelType as DocumentKoppeling["doel_type"],
+          doel_id: Number(doelId),
+        },
+      });
+      onGekoppeld();
+    } catch (err) {
+      toast({
+        title: "Koppelen mislukt",
+        description: foutmelding(err, "Probeer het opnieuw."),
+        variant: "destructive",
+      });
+    }
+  }
+
+  return (
+    <div className="flex flex-wrap items-end gap-2 rounded-md border bg-muted/20 p-3">
+      <div className="min-w-36">
+        <UiLabel>Type</UiLabel>
+        <Select
+          value={doelType}
+          onValueChange={(v) => {
+            setDoelType(v);
+            setDoelId("");
+          }}
+        >
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {KOPPEL_TYPES.map((t) => (
+              <SelectItem key={t.value} value={t.value}>
+                {t.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="min-w-48 flex-1">
+        <UiLabel>Doel</UiLabel>
+        <Select value={doelId} onValueChange={setDoelId}>
+          <SelectTrigger>
+            <SelectValue placeholder="Kies..." />
+          </SelectTrigger>
+          <SelectContent>
+            {opties.map((o) => (
+              <SelectItem key={o.value} value={o.value}>
+                {o.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      <Button size="sm" onClick={koppel} disabled={!doelId || toevoegen.isPending}>
+        Koppelen
+      </Button>
+    </div>
+  );
+}
+
+// Audittrail per document. Geen view-logging; alleen betekenisvolle acties.
+function DocumentLogboekSectie({ documentId }: { documentId: number }) {
+  const { data: regels = [] } = useGetDocumentLogboek(documentId);
+  const lijst = regels as DocumentLogboekRegel[];
+
+  return (
+    <div className="border-t pt-4">
+      <h4 className="text-sm font-medium flex items-center gap-1.5 mb-2">
+        <ClipboardList className="h-4 w-4 text-muted-foreground" />
+        Logboek
+      </h4>
+      {lijst.length === 0 ? (
+        <p className="text-xs text-muted-foreground">Nog geen acties geregistreerd.</p>
+      ) : (
+        <ul className="space-y-1.5 text-xs">
+          {lijst.map((r) => (
+            <li key={r.id} className="flex flex-wrap items-center gap-1.5">
+              <Clock className="h-3 w-3 text-muted-foreground shrink-0" />
+              <span className="text-muted-foreground">{formatTijdstip(r.tijdstip)}</span>
+              <span className="font-medium">{r.actie}</span>
+              {r.gebruiker_naam && (
+                <span className="text-muted-foreground">door {r.gebruiker_naam}</span>
+              )}
+              {r.detail && <span className="text-muted-foreground">— {r.detail}</span>}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }
 
@@ -1139,11 +1795,152 @@ function KoppelVoorstellenDialog({
   );
 }
 
+// Signaleringen-dashboard: actuele documenten die aandacht vragen. Verlopen is
+// kritiek (destructive), de overige buckets zijn aandachtspunten (amber/neutraal).
+function DocumentSignaleringenDashboard({
+  signaleringen,
+  onOpen,
+}: {
+  signaleringen: DocumentSignaleringen;
+  onOpen: (doc: Document) => void;
+}) {
+  const tegels: {
+    sleutel: keyof DocumentSignaleringen;
+    label: string;
+    docs: Document[];
+    klasse: string;
+    icon: ReactNode;
+  }[] = [
+    {
+      sleutel: "verlopen",
+      label: "Verlopen",
+      docs: signaleringen.verlopen,
+      klasse: "border-destructive/40 bg-destructive/5 text-destructive",
+      icon: <ShieldX className="h-4 w-4" />,
+    },
+    {
+      sleutel: "binnenkort",
+      label: "Verloopt binnenkort",
+      docs: signaleringen.binnenkort,
+      klasse: "border-amber-300 bg-amber-50 text-amber-700",
+      icon: <Clock className="h-4 w-4" />,
+    },
+    {
+      sleutel: "ter_goedkeuring",
+      label: "Ter goedkeuring",
+      docs: signaleringen.ter_goedkeuring,
+      klasse: "border-border bg-muted/40 text-foreground",
+      icon: <ShieldCheck className="h-4 w-4" />,
+    },
+    {
+      sleutel: "controle_nodig",
+      label: "Controle nodig",
+      docs: signaleringen.controle_nodig,
+      klasse: "border-amber-300 bg-amber-50 text-amber-700",
+      icon: <AlertTriangle className="h-4 w-4" />,
+    },
+  ];
+
+  const totaalSignalen = tegels.reduce((n, t) => n + t.docs.length, 0);
+
+  return (
+    <div className="space-y-3">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {tegels.map((t) => (
+          <div
+            key={t.sleutel}
+            className={`rounded-lg border p-3 ${t.klasse}`}
+          >
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-xs font-medium">{t.label}</span>
+              {t.icon}
+            </div>
+            <p className="text-2xl font-semibold mt-1">{t.docs.length}</p>
+          </div>
+        ))}
+      </div>
+
+      {totaalSignalen === 0 ? (
+        <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+          <CheckCircle2 className="h-3.5 w-3.5" />
+          Geen openstaande signaleringen.
+        </p>
+      ) : (
+        <div className="rounded-lg border divide-y">
+          {tegels
+            .filter((t) => t.docs.length > 0)
+            .map((t) =>
+              t.docs.slice(0, 8).map((d) => (
+                <button
+                  type="button"
+                  key={`${t.sleutel}-${d.id}`}
+                  onClick={() => onOpen(d)}
+                  className="flex w-full items-center gap-3 px-3 py-2 text-left text-sm hover:bg-muted/30"
+                >
+                  <Badge variant="outline" className="text-[10px] shrink-0">
+                    {t.label}
+                  </Badge>
+                  <span className="flex-1 truncate">{d.naam}</span>
+                  <span className="text-xs text-muted-foreground shrink-0">
+                    {d.geldig_tot ? `geldig tot ${d.geldig_tot}` : ""}
+                  </span>
+                </button>
+              )),
+            )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Globaal audittrail over alle documenten. Alleen gemount (en pas dan opgehaald)
+// wanneer de beheerder het paneel opent.
+function DocumentAudittrail() {
+  const { data: regels = [] } = useListDocumentLogboek({ limiet: 100 });
+  const lijst = regels as DocumentLogboekRegel[];
+
+  return (
+    <div className="rounded-lg border">
+      {lijst.length === 0 ? (
+        <p className="p-4 text-sm text-muted-foreground">
+          Nog geen acties geregistreerd.
+        </p>
+      ) : (
+        <ul className="divide-y">
+          {lijst.map((r) => (
+            <li
+              key={r.id}
+              className="flex flex-wrap items-center gap-1.5 px-3 py-2 text-xs"
+            >
+              <Clock className="h-3 w-3 text-muted-foreground shrink-0" />
+              <span className="text-muted-foreground">{formatTijdstip(r.tijdstip)}</span>
+              <span className="font-medium">{r.actie}</span>
+              {r.document_naam && (
+                <span className="text-muted-foreground">· {r.document_naam}</span>
+              )}
+              {r.gebruiker_naam && (
+                <span className="text-muted-foreground">door {r.gebruiker_naam}</span>
+              )}
+              {r.detail && <span className="text-muted-foreground">— {r.detail}</span>}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 // ── Hoofd-tab ────────────────────────────────────────────────────────────────
 export function TabDocumenten() {
   const { heeftNiveau } = useBevoegdheid();
   const magCreeren = heeftNiveau("bibliotheek", 3);
   const magBeheren = heeftNiveau("bibliotheek", 2);
+  const magAudittrail = heeftNiveau("bibliotheek", 4);
+
+  const [zoek, setZoek] = useState("");
+  const [auditOpen, setAuditOpen] = useState(false);
+
+  const { data: signaleringen } = useListDocumentSignaleringen();
 
   const [typeFilter, setTypeFilter, wisTypeFilter] = useVoorkeur(
     "documenten_type",
@@ -1165,6 +1962,7 @@ export function TabDocumenten() {
     useVoorkeur("documenten_incl_gearchiveerd", false);
 
   const filtersActief =
+    zoek.trim() !== "" ||
     typeFilter !== GEEN ||
     statusFilter !== GEEN ||
     fabrikantFilter.trim() !== "" ||
@@ -1172,6 +1970,7 @@ export function TabDocumenten() {
     inclGearchiveerd;
 
   function wisFilters() {
+    setZoek("");
     wisTypeFilter();
     wisStatusFilter();
     wisFabrikantFilter();
@@ -1204,6 +2003,7 @@ export function TabDocumenten() {
   const { data: labels = [] } = useListLabels({});
 
   const { data: documenten = [], isLoading } = useListDocumenten({
+    zoek: zoek.trim() || undefined,
     documenttype:
       typeFilter === GEEN ? undefined : (typeFilter as Document["documenttype"]),
     status: statusFilter === GEEN ? undefined : (statusFilter as Document["status"]),
@@ -1263,9 +2063,22 @@ export function TabDocumenten() {
         </div>
       )}
 
+      {signaleringen && (
+        <DocumentSignaleringenDashboard
+          signaleringen={signaleringen}
+          onOpen={setDetail}
+        />
+      )}
+
       <Card>
         <CardHeader className="pb-3">
           <div className="flex flex-wrap items-center gap-3">
+            <Input
+              placeholder="Zoek op naam, fabrikant, rapportnummer, EN-norm..."
+              value={zoek}
+              onChange={(e) => setZoek(e.target.value)}
+              className="w-72"
+            />
             <Select value={typeFilter} onValueChange={setTypeFilter}>
               <SelectTrigger className="w-44">
                 <SelectValue placeholder="Type" />
@@ -1401,6 +2214,20 @@ export function TabDocumenten() {
           )}
         </CardContent>
       </Card>
+
+      {magAudittrail && (
+        <div className="space-y-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setAuditOpen((o) => !o)}
+          >
+            <ClipboardList className="h-4 w-4 mr-2" />
+            {auditOpen ? "Audittrail verbergen" : "Audittrail tonen"}
+          </Button>
+          {auditOpen && <DocumentAudittrail />}
+        </div>
+      )}
 
       {nieuwOpen && (
         <DocumentFormulier

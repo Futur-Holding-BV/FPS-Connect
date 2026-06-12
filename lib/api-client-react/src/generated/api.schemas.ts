@@ -1925,6 +1925,7 @@ export const DocumentType = {
   productcertificaat: 'productcertificaat',
   dop: 'dop',
   verwerkingsvoorschrift: 'verwerkingsvoorschrift',
+  productblad: 'productblad',
 } as const;
 
 export type DocumentStatus = typeof DocumentStatus[keyof typeof DocumentStatus];
@@ -1951,6 +1952,16 @@ export const GetestVoor = {
  * @nullable
  */
 export type DocumentAiMetadata = { [key: string]: unknown } | null;
+
+export type GoedkeuringStatus = typeof GoedkeuringStatus[keyof typeof GoedkeuringStatus];
+
+
+export const GoedkeuringStatus = {
+  concept: 'concept',
+  ter_goedkeuring: 'ter_goedkeuring',
+  goedgekeurd: 'goedgekeurd',
+  afgekeurd: 'afgekeurd',
+} as const;
 
 export interface Document {
   id: number;
@@ -1980,6 +1991,16 @@ export interface Document {
   gearchiveerd: boolean;
   aangemaakt_op: string;
   bijgewerkt_op?: string;
+  /** @nullable */
+  bestands_hash?: string | null;
+  /** @nullable */
+  bestandsgrootte?: number | null;
+  /**
+     * Geldigheids-/vervaldatum (YYYY-MM-DD)
+     * @nullable
+     */
+  geldig_tot?: string | null;
+  goedkeuring_status: GoedkeuringStatus;
   toepassing_ids: number[];
 }
 
@@ -1998,16 +2019,105 @@ export interface DocumentInput {
   pdf_url?: string;
   ai_geanalyseerd?: boolean;
   ai_metadata?: DocumentInputAiMetadata;
+  bestands_hash?: string;
+  bestandsgrootte?: number;
+  geldig_tot?: string;
+  goedkeuring_status?: GoedkeuringStatus;
   toepassing_ids?: number[];
 }
 
 export interface DocumentUpdate {
   status?: DocumentStatus;
   gearchiveerd?: boolean;
+  /** @nullable */
+  geldig_tot?: string | null;
 }
 
 export interface DocumentToepassingenInput {
   label_ids: number[];
+}
+
+export type KoppelingDoelType = typeof KoppelingDoelType[keyof typeof KoppelingDoelType];
+
+
+export const KoppelingDoelType = {
+  gebouw: 'gebouw',
+  klant: 'klant',
+  offerte: 'offerte',
+  dossier: 'dossier',
+  voorziening: 'voorziening',
+} as const;
+
+export interface DocumentKoppeling {
+  id: number;
+  document_id: number;
+  doel_type: KoppelingDoelType;
+  doel_id: number;
+  /** @nullable */
+  doel_naam?: string | null;
+  aangemaakt_op: string;
+}
+
+export interface DocumentKoppelingInput {
+  doel_type: KoppelingDoelType;
+  doel_id: number;
+}
+
+export interface DocumentDuplicaatInput {
+  bestands_hash?: string;
+  naam?: string;
+  rapportnummer?: string;
+  fabrikant?: string;
+}
+
+export interface DocumentDuplicaatMatch {
+  document: Document;
+  /** identiek_bestand | gelijke_naam | gelijk_rapportnummer */
+  reden: string;
+}
+
+export interface DocumentDuplicaatResultaat {
+  mogelijke_duplicaten: DocumentDuplicaatMatch[];
+}
+
+export interface DocumentGoedkeuringInput {
+  opmerking?: string;
+}
+
+export interface DocumentGoedkeuring {
+  id: number;
+  document_id: number;
+  actie: string;
+  /** @nullable */
+  door_id?: number | null;
+  /** @nullable */
+  door_naam?: string | null;
+  /** @nullable */
+  opmerking?: string | null;
+  tijdstip: string;
+}
+
+export interface DocumentLogboekRegel {
+  id: number;
+  /** @nullable */
+  document_id?: number | null;
+  /** @nullable */
+  document_naam?: string | null;
+  /** @nullable */
+  gebruiker_id?: number | null;
+  /** @nullable */
+  gebruiker_naam?: string | null;
+  actie: string;
+  /** @nullable */
+  detail?: string | null;
+  tijdstip: string;
+}
+
+export interface DocumentSignaleringen {
+  verlopen: Document[];
+  binnenkort: Document[];
+  controle_nodig: Document[];
+  ter_goedkeuring: Document[];
 }
 
 export interface LabelDocumentenInput {
@@ -2559,6 +2669,17 @@ export interface DossierDocument {
   versie: number;
   /** @nullable */
   toegevoegd_door_id?: number | null;
+  /** @nullable */
+  bevroren_revisie_nummer?: number | null;
+  /** @nullable */
+  bevroren_pdf_url?: string | null;
+  /** @nullable */
+  bevroren_op?: string | null;
+  /**
+     * Hoogste revisienummer in de documentgroep (om "nieuwere beschikbaar" te tonen)
+     * @nullable
+     */
+  actuele_revisie_nummer?: number | null;
   aangemaakt_op: string;
   bijgewerkt_op: string;
 }
@@ -2810,8 +2931,13 @@ inclusief_gearchiveerd?: boolean;
 };
 
 export type ListDocumentenParams = {
+/**
+ * Vrije zoekterm (naam, fabrikant, rapportnummer, EN-norm, product)
+ */
+zoek?: string;
 documenttype?: DocumentType;
 status?: DocumentStatus;
+goedkeuring_status?: GoedkeuringStatus;
 fabrikant?: string;
 /**
  * Filter op gekoppelde applicatie
@@ -2826,6 +2952,15 @@ label_id?: number;
  */
 alleen_actueel?: boolean;
 inclusief_gearchiveerd?: boolean;
+};
+
+export type ListDocumentLogboekParams = {
+limiet?: number;
+};
+
+export type ListGekoppeldeDocumentenParams = {
+doel_type: KoppelingDoelType;
+doel_id: number;
 };
 
 export type AssignClusterMonteur200 = {

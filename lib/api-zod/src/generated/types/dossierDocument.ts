@@ -20,6 +20,17 @@ export interface DossierDocument {
   versie: number;
   /** @nullable */
   toegevoegd_door_id?: number | null;
+  /** @nullable */
+  bevroren_revisie_nummer?: number | null;
+  /** @nullable */
+  bevroren_pdf_url?: string | null;
+  /** @nullable */
+  bevroren_op?: string | null;
+  /**
+     * Hoogste revisienummer in de documentgroep (om "nieuwere beschikbaar" te tonen)
+     * @nullable
+     */
+  actuele_revisie_nummer?: number | null;
   aangemaakt_op: string;
   bijgewerkt_op: string;
 }

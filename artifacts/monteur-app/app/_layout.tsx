@@ -30,6 +30,8 @@ function RootLayoutNav() {
       <Stack.Screen name="index" />
       <Stack.Screen name="login" />
       <Stack.Screen name="gebouwen" />
+      <Stack.Screen name="documenten" />
+      <Stack.Screen name="documenten/[id]" />
       <Stack.Screen name="gebouw/[id]" />
       <Stack.Screen name="plattegrond/[verdiepingId]" />
       <Stack.Screen name="document/[tekeningId]" />

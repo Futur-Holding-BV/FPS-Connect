@@ -7,10 +7,16 @@
  */
 import type { DocumentStatus } from './documentStatus';
 import type { DocumentType } from './documentType';
+import type { GoedkeuringStatus } from './goedkeuringStatus';
 
 export type ListDocumentenParams = {
+/**
+ * Vrije zoekterm (naam, fabrikant, rapportnummer, EN-norm, product)
+ */
+zoek?: string;
 documenttype?: DocumentType;
 status?: DocumentStatus;
+goedkeuring_status?: GoedkeuringStatus;
 fabrikant?: string;
 /**
  * Filter op gekoppelde applicatie

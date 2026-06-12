@@ -8,6 +8,7 @@
 import type { DocumentInputAiMetadata } from './documentInputAiMetadata';
 import type { DocumentType } from './documentType';
 import type { GetestVoor } from './getestVoor';
+import type { GoedkeuringStatus } from './goedkeuringStatus';
 
 export interface DocumentInput {
   naam: string;
@@ -22,5 +23,9 @@ export interface DocumentInput {
   pdf_url?: string;
   ai_geanalyseerd?: boolean;
   ai_metadata?: DocumentInputAiMetadata;
+  bestands_hash?: string;
+  bestandsgrootte?: number;
+  geldig_tot?: string;
+  goedkeuring_status?: GoedkeuringStatus;
   toepassing_ids?: number[];
 }

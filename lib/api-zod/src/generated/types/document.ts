@@ -9,6 +9,7 @@ import type { DocumentAiMetadata } from './documentAiMetadata';
 import type { DocumentStatus } from './documentStatus';
 import type { DocumentType } from './documentType';
 import type { GetestVoor } from './getestVoor';
+import type { GoedkeuringStatus } from './goedkeuringStatus';
 
 export interface Document {
   id: number;
@@ -38,5 +39,15 @@ export interface Document {
   gearchiveerd: boolean;
   aangemaakt_op: string;
   bijgewerkt_op?: string;
+  /** @nullable */
+  bestands_hash?: string | null;
+  /** @nullable */
+  bestandsgrootte?: number | null;
+  /**
+     * Geldigheids-/vervaldatum (YYYY-MM-DD)
+     * @nullable
+     */
+  geldig_tot?: string | null;
+  goedkeuring_status: GoedkeuringStatus;
   toepassing_ids: number[];
 }

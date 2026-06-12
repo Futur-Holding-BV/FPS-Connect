@@ -54,8 +54,16 @@ import type {
   Document,
   DocumentAiAnalyseInput,
   DocumentAiAnalyseResultaat,
+  DocumentDuplicaatInput,
+  DocumentDuplicaatResultaat,
+  DocumentGoedkeuring,
+  DocumentGoedkeuringInput,
   DocumentInput,
   DocumentKoppelVoorstel,
+  DocumentKoppeling,
+  DocumentKoppelingInput,
+  DocumentLogboekRegel,
+  DocumentSignaleringen,
   DocumentToepassingenInput,
   DocumentUpdate,
   Dossier,
@@ -111,9 +119,11 @@ import type {
   LabelDocumentenInput,
   LabelInput,
   LabelUpdate,
+  ListDocumentLogboekParams,
   ListDocumentenParams,
   ListFabrikantenParams,
   ListGebouwenParams,
+  ListGekoppeldeDocumentenParams,
   ListInspectiesParams,
   ListLabelsParams,
   ListMuisGebeurtenissenParams,
@@ -5687,6 +5697,985 @@ export const useAiKoppelvoorstellenDocumenten = <TError = ErrorType<unknown>,
       > => {
       return useMutation(getAiKoppelvoorstellenDocumentenMutationOptions(options));
     }
+
+export const getControleerDocumentDuplicaatUrl = () => {
+
+
+
+
+  return `/api/documenten/controleer-duplicaat`
+}
+
+/**
+ * @summary Controleer op mogelijke duplicaten (identiek bestand via hash, of gelijke naam/rapportnummer). Waarschuwt alleen.
+ */
+export const controleerDocumentDuplicaat = async (documentDuplicaatInput: DocumentDuplicaatInput, options?: RequestInit): Promise<DocumentDuplicaatResultaat> => {
+
+  return customFetch<DocumentDuplicaatResultaat>(getControleerDocumentDuplicaatUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(documentDuplicaatInput)
+  }
+);}
+
+
+
+
+export const getControleerDocumentDuplicaatMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof controleerDocumentDuplicaat>>, TError,{data: BodyType<DocumentDuplicaatInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof controleerDocumentDuplicaat>>, TError,{data: BodyType<DocumentDuplicaatInput>}, TContext> => {
+
+const mutationKey = ['controleerDocumentDuplicaat'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof controleerDocumentDuplicaat>>, {data: BodyType<DocumentDuplicaatInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  controleerDocumentDuplicaat(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ControleerDocumentDuplicaatMutationResult = NonNullable<Awaited<ReturnType<typeof controleerDocumentDuplicaat>>>
+    export type ControleerDocumentDuplicaatMutationBody = BodyType<DocumentDuplicaatInput>
+    export type ControleerDocumentDuplicaatMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Controleer op mogelijke duplicaten (identiek bestand via hash, of gelijke naam/rapportnummer). Waarschuwt alleen.
+ */
+export const useControleerDocumentDuplicaat = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof controleerDocumentDuplicaat>>, TError,{data: BodyType<DocumentDuplicaatInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof controleerDocumentDuplicaat>>,
+        TError,
+        {data: BodyType<DocumentDuplicaatInput>},
+        TContext
+      > => {
+      return useMutation(getControleerDocumentDuplicaatMutationOptions(options));
+    }
+
+export const getListDocumentSignaleringenUrl = () => {
+
+
+
+
+  return `/api/documenten/signaleringen`
+}
+
+/**
+ * @summary Documenten die aandacht nodig hebben (verlopen, binnenkort verlopend, controle nodig, ter goedkeuring)
+ */
+export const listDocumentSignaleringen = async ( options?: RequestInit): Promise<DocumentSignaleringen> => {
+
+  return customFetch<DocumentSignaleringen>(getListDocumentSignaleringenUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListDocumentSignaleringenQueryKey = () => {
+    return [
+    `/api/documenten/signaleringen`
+    ] as const;
+    }
+
+
+export const getListDocumentSignaleringenQueryOptions = <TData = Awaited<ReturnType<typeof listDocumentSignaleringen>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listDocumentSignaleringen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListDocumentSignaleringenQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listDocumentSignaleringen>>> = ({ signal }) => listDocumentSignaleringen({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listDocumentSignaleringen>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListDocumentSignaleringenQueryResult = NonNullable<Awaited<ReturnType<typeof listDocumentSignaleringen>>>
+export type ListDocumentSignaleringenQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Documenten die aandacht nodig hebben (verlopen, binnenkort verlopend, controle nodig, ter goedkeuring)
+ */
+
+export function useListDocumentSignaleringen<TData = Awaited<ReturnType<typeof listDocumentSignaleringen>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listDocumentSignaleringen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListDocumentSignaleringenQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getListDocumentLogboekUrl = (params?: ListDocumentLogboekParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/documenten/logboek?${stringifiedParams}` : `/api/documenten/logboek`
+}
+
+/**
+ * @summary Globaal audittrail van documentacties (beheerder)
+ */
+export const listDocumentLogboek = async (params?: ListDocumentLogboekParams, options?: RequestInit): Promise<DocumentLogboekRegel[]> => {
+
+  return customFetch<DocumentLogboekRegel[]>(getListDocumentLogboekUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListDocumentLogboekQueryKey = (params?: ListDocumentLogboekParams,) => {
+    return [
+    `/api/documenten/logboek`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListDocumentLogboekQueryOptions = <TData = Awaited<ReturnType<typeof listDocumentLogboek>>, TError = ErrorType<unknown>>(params?: ListDocumentLogboekParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listDocumentLogboek>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListDocumentLogboekQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listDocumentLogboek>>> = ({ signal }) => listDocumentLogboek(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listDocumentLogboek>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListDocumentLogboekQueryResult = NonNullable<Awaited<ReturnType<typeof listDocumentLogboek>>>
+export type ListDocumentLogboekQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Globaal audittrail van documentacties (beheerder)
+ */
+
+export function useListDocumentLogboek<TData = Awaited<ReturnType<typeof listDocumentLogboek>>, TError = ErrorType<unknown>>(
+ params?: ListDocumentLogboekParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listDocumentLogboek>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListDocumentLogboekQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getListGekoppeldeDocumentenUrl = (params: ListGekoppeldeDocumentenParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/documenten/gekoppeld?${stringifiedParams}` : `/api/documenten/gekoppeld`
+}
+
+/**
+ * @summary Documenten gekoppeld aan een entiteit (gebouw, klant, offerte, dossier, voorziening)
+ */
+export const listGekoppeldeDocumenten = async (params: ListGekoppeldeDocumentenParams, options?: RequestInit): Promise<Document[]> => {
+
+  return customFetch<Document[]>(getListGekoppeldeDocumentenUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListGekoppeldeDocumentenQueryKey = (params?: ListGekoppeldeDocumentenParams,) => {
+    return [
+    `/api/documenten/gekoppeld`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListGekoppeldeDocumentenQueryOptions = <TData = Awaited<ReturnType<typeof listGekoppeldeDocumenten>>, TError = ErrorType<unknown>>(params: ListGekoppeldeDocumentenParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listGekoppeldeDocumenten>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListGekoppeldeDocumentenQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listGekoppeldeDocumenten>>> = ({ signal }) => listGekoppeldeDocumenten(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listGekoppeldeDocumenten>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListGekoppeldeDocumentenQueryResult = NonNullable<Awaited<ReturnType<typeof listGekoppeldeDocumenten>>>
+export type ListGekoppeldeDocumentenQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Documenten gekoppeld aan een entiteit (gebouw, klant, offerte, dossier, voorziening)
+ */
+
+export function useListGekoppeldeDocumenten<TData = Awaited<ReturnType<typeof listGekoppeldeDocumenten>>, TError = ErrorType<unknown>>(
+ params: ListGekoppeldeDocumentenParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listGekoppeldeDocumenten>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListGekoppeldeDocumentenQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getListDocumentKoppelingenUrl = (id: number,) => {
+
+
+
+
+  return `/api/documenten/${id}/koppelingen`
+}
+
+/**
+ * @summary Koppelingen van een document naar entiteiten
+ */
+export const listDocumentKoppelingen = async (id: number, options?: RequestInit): Promise<DocumentKoppeling[]> => {
+
+  return customFetch<DocumentKoppeling[]>(getListDocumentKoppelingenUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListDocumentKoppelingenQueryKey = (id: number,) => {
+    return [
+    `/api/documenten/${id}/koppelingen`
+    ] as const;
+    }
+
+
+export const getListDocumentKoppelingenQueryOptions = <TData = Awaited<ReturnType<typeof listDocumentKoppelingen>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listDocumentKoppelingen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListDocumentKoppelingenQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listDocumentKoppelingen>>> = ({ signal }) => listDocumentKoppelingen(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listDocumentKoppelingen>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListDocumentKoppelingenQueryResult = NonNullable<Awaited<ReturnType<typeof listDocumentKoppelingen>>>
+export type ListDocumentKoppelingenQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Koppelingen van een document naar entiteiten
+ */
+
+export function useListDocumentKoppelingen<TData = Awaited<ReturnType<typeof listDocumentKoppelingen>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listDocumentKoppelingen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListDocumentKoppelingenQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getAddDocumentKoppelingUrl = (id: number,) => {
+
+
+
+
+  return `/api/documenten/${id}/koppelingen`
+}
+
+/**
+ * @summary Document aan een entiteit koppelen (beheerder)
+ */
+export const addDocumentKoppeling = async (id: number,
+    documentKoppelingInput: DocumentKoppelingInput, options?: RequestInit): Promise<DocumentKoppeling> => {
+
+  return customFetch<DocumentKoppeling>(getAddDocumentKoppelingUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(documentKoppelingInput)
+  }
+);}
+
+
+
+
+export const getAddDocumentKoppelingMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof addDocumentKoppeling>>, TError,{id: number;data: BodyType<DocumentKoppelingInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof addDocumentKoppeling>>, TError,{id: number;data: BodyType<DocumentKoppelingInput>}, TContext> => {
+
+const mutationKey = ['addDocumentKoppeling'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof addDocumentKoppeling>>, {id: number;data: BodyType<DocumentKoppelingInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  addDocumentKoppeling(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AddDocumentKoppelingMutationResult = NonNullable<Awaited<ReturnType<typeof addDocumentKoppeling>>>
+    export type AddDocumentKoppelingMutationBody = BodyType<DocumentKoppelingInput>
+    export type AddDocumentKoppelingMutationError = ErrorType<void>
+
+    /**
+ * @summary Document aan een entiteit koppelen (beheerder)
+ */
+export const useAddDocumentKoppeling = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof addDocumentKoppeling>>, TError,{id: number;data: BodyType<DocumentKoppelingInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof addDocumentKoppeling>>,
+        TError,
+        {id: number;data: BodyType<DocumentKoppelingInput>},
+        TContext
+      > => {
+      return useMutation(getAddDocumentKoppelingMutationOptions(options));
+    }
+
+export const getRemoveDocumentKoppelingUrl = (id: number,
+    koppelingId: number,) => {
+
+
+
+
+  return `/api/documenten/${id}/koppelingen/${koppelingId}`
+}
+
+/**
+ * @summary Koppeling verwijderen (beheerder)
+ */
+export const removeDocumentKoppeling = async (id: number,
+    koppelingId: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getRemoveDocumentKoppelingUrl(id,koppelingId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getRemoveDocumentKoppelingMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof removeDocumentKoppeling>>, TError,{id: number;koppelingId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof removeDocumentKoppeling>>, TError,{id: number;koppelingId: number}, TContext> => {
+
+const mutationKey = ['removeDocumentKoppeling'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof removeDocumentKoppeling>>, {id: number;koppelingId: number}> = (props) => {
+          const {id,koppelingId} = props ?? {};
+
+          return  removeDocumentKoppeling(id,koppelingId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RemoveDocumentKoppelingMutationResult = NonNullable<Awaited<ReturnType<typeof removeDocumentKoppeling>>>
+
+    export type RemoveDocumentKoppelingMutationError = ErrorType<void>
+
+    /**
+ * @summary Koppeling verwijderen (beheerder)
+ */
+export const useRemoveDocumentKoppeling = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof removeDocumentKoppeling>>, TError,{id: number;koppelingId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof removeDocumentKoppeling>>,
+        TError,
+        {id: number;koppelingId: number},
+        TContext
+      > => {
+      return useMutation(getRemoveDocumentKoppelingMutationOptions(options));
+    }
+
+export const getIndienenDocumentUrl = (id: number,) => {
+
+
+
+
+  return `/api/documenten/${id}/indienen`
+}
+
+/**
+ * @summary Document indienen ter goedkeuring
+ */
+export const indienenDocument = async (id: number,
+    documentGoedkeuringInput?: DocumentGoedkeuringInput, options?: RequestInit): Promise<Document> => {
+
+  return customFetch<Document>(getIndienenDocumentUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(documentGoedkeuringInput)
+  }
+);}
+
+
+
+
+export const getIndienenDocumentMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof indienenDocument>>, TError,{id: number;data?: BodyType<DocumentGoedkeuringInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof indienenDocument>>, TError,{id: number;data?: BodyType<DocumentGoedkeuringInput>}, TContext> => {
+
+const mutationKey = ['indienenDocument'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof indienenDocument>>, {id: number;data?: BodyType<DocumentGoedkeuringInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  indienenDocument(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type IndienenDocumentMutationResult = NonNullable<Awaited<ReturnType<typeof indienenDocument>>>
+    export type IndienenDocumentMutationBody = BodyType<DocumentGoedkeuringInput> | undefined
+    export type IndienenDocumentMutationError = ErrorType<void>
+
+    /**
+ * @summary Document indienen ter goedkeuring
+ */
+export const useIndienenDocument = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof indienenDocument>>, TError,{id: number;data?: BodyType<DocumentGoedkeuringInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof indienenDocument>>,
+        TError,
+        {id: number;data?: BodyType<DocumentGoedkeuringInput>},
+        TContext
+      > => {
+      return useMutation(getIndienenDocumentMutationOptions(options));
+    }
+
+export const getGoedkeurenDocumentUrl = (id: number,) => {
+
+
+
+
+  return `/api/documenten/${id}/goedkeuren`
+}
+
+/**
+ * @summary Document goedkeuren (beheerder)
+ */
+export const goedkeurenDocument = async (id: number,
+    documentGoedkeuringInput?: DocumentGoedkeuringInput, options?: RequestInit): Promise<Document> => {
+
+  return customFetch<Document>(getGoedkeurenDocumentUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(documentGoedkeuringInput)
+  }
+);}
+
+
+
+
+export const getGoedkeurenDocumentMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof goedkeurenDocument>>, TError,{id: number;data?: BodyType<DocumentGoedkeuringInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof goedkeurenDocument>>, TError,{id: number;data?: BodyType<DocumentGoedkeuringInput>}, TContext> => {
+
+const mutationKey = ['goedkeurenDocument'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof goedkeurenDocument>>, {id: number;data?: BodyType<DocumentGoedkeuringInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  goedkeurenDocument(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type GoedkeurenDocumentMutationResult = NonNullable<Awaited<ReturnType<typeof goedkeurenDocument>>>
+    export type GoedkeurenDocumentMutationBody = BodyType<DocumentGoedkeuringInput> | undefined
+    export type GoedkeurenDocumentMutationError = ErrorType<void>
+
+    /**
+ * @summary Document goedkeuren (beheerder)
+ */
+export const useGoedkeurenDocument = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof goedkeurenDocument>>, TError,{id: number;data?: BodyType<DocumentGoedkeuringInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof goedkeurenDocument>>,
+        TError,
+        {id: number;data?: BodyType<DocumentGoedkeuringInput>},
+        TContext
+      > => {
+      return useMutation(getGoedkeurenDocumentMutationOptions(options));
+    }
+
+export const getAfkeurenDocumentUrl = (id: number,) => {
+
+
+
+
+  return `/api/documenten/${id}/afkeuren`
+}
+
+/**
+ * @summary Document afkeuren (beheerder)
+ */
+export const afkeurenDocument = async (id: number,
+    documentGoedkeuringInput?: DocumentGoedkeuringInput, options?: RequestInit): Promise<Document> => {
+
+  return customFetch<Document>(getAfkeurenDocumentUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(documentGoedkeuringInput)
+  }
+);}
+
+
+
+
+export const getAfkeurenDocumentMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof afkeurenDocument>>, TError,{id: number;data?: BodyType<DocumentGoedkeuringInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof afkeurenDocument>>, TError,{id: number;data?: BodyType<DocumentGoedkeuringInput>}, TContext> => {
+
+const mutationKey = ['afkeurenDocument'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof afkeurenDocument>>, {id: number;data?: BodyType<DocumentGoedkeuringInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  afkeurenDocument(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AfkeurenDocumentMutationResult = NonNullable<Awaited<ReturnType<typeof afkeurenDocument>>>
+    export type AfkeurenDocumentMutationBody = BodyType<DocumentGoedkeuringInput> | undefined
+    export type AfkeurenDocumentMutationError = ErrorType<void>
+
+    /**
+ * @summary Document afkeuren (beheerder)
+ */
+export const useAfkeurenDocument = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof afkeurenDocument>>, TError,{id: number;data?: BodyType<DocumentGoedkeuringInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof afkeurenDocument>>,
+        TError,
+        {id: number;data?: BodyType<DocumentGoedkeuringInput>},
+        TContext
+      > => {
+      return useMutation(getAfkeurenDocumentMutationOptions(options));
+    }
+
+export const getListDocumentGoedkeuringenUrl = (id: number,) => {
+
+
+
+
+  return `/api/documenten/${id}/goedkeuringen`
+}
+
+/**
+ * @summary Goedkeuringshistorie van een document
+ */
+export const listDocumentGoedkeuringen = async (id: number, options?: RequestInit): Promise<DocumentGoedkeuring[]> => {
+
+  return customFetch<DocumentGoedkeuring[]>(getListDocumentGoedkeuringenUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListDocumentGoedkeuringenQueryKey = (id: number,) => {
+    return [
+    `/api/documenten/${id}/goedkeuringen`
+    ] as const;
+    }
+
+
+export const getListDocumentGoedkeuringenQueryOptions = <TData = Awaited<ReturnType<typeof listDocumentGoedkeuringen>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listDocumentGoedkeuringen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListDocumentGoedkeuringenQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listDocumentGoedkeuringen>>> = ({ signal }) => listDocumentGoedkeuringen(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listDocumentGoedkeuringen>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListDocumentGoedkeuringenQueryResult = NonNullable<Awaited<ReturnType<typeof listDocumentGoedkeuringen>>>
+export type ListDocumentGoedkeuringenQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Goedkeuringshistorie van een document
+ */
+
+export function useListDocumentGoedkeuringen<TData = Awaited<ReturnType<typeof listDocumentGoedkeuringen>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listDocumentGoedkeuringen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListDocumentGoedkeuringenQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetDocumentLogboekUrl = (id: number,) => {
+
+
+
+
+  return `/api/documenten/${id}/logboek`
+}
+
+/**
+ * @summary Audittrail van een specifiek document
+ */
+export const getDocumentLogboek = async (id: number, options?: RequestInit): Promise<DocumentLogboekRegel[]> => {
+
+  return customFetch<DocumentLogboekRegel[]>(getGetDocumentLogboekUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetDocumentLogboekQueryKey = (id: number,) => {
+    return [
+    `/api/documenten/${id}/logboek`
+    ] as const;
+    }
+
+
+export const getGetDocumentLogboekQueryOptions = <TData = Awaited<ReturnType<typeof getDocumentLogboek>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getDocumentLogboek>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetDocumentLogboekQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getDocumentLogboek>>> = ({ signal }) => getDocumentLogboek(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getDocumentLogboek>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetDocumentLogboekQueryResult = NonNullable<Awaited<ReturnType<typeof getDocumentLogboek>>>
+export type GetDocumentLogboekQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Audittrail van een specifiek document
+ */
+
+export function useGetDocumentLogboek<TData = Awaited<ReturnType<typeof getDocumentLogboek>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getDocumentLogboek>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetDocumentLogboekQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getDownloadDocumentUrl = (id: number,) => {
+
+
+
+
+  return `/api/documenten/${id}/download`
+}
+
+/**
+ * @summary Document downloaden; registreert de download in het logboek en stuurt door naar het bestand
+ */
+export const downloadDocument = async (id: number, options?: RequestInit): Promise<unknown> => {
+
+  return customFetch<unknown>(getDownloadDocumentUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getDownloadDocumentQueryKey = (id: number,) => {
+    return [
+    `/api/documenten/${id}/download`
+    ] as const;
+    }
+
+
+export const getDownloadDocumentQueryOptions = <TData = Awaited<ReturnType<typeof downloadDocument>>, TError = ErrorType<void>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof downloadDocument>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getDownloadDocumentQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof downloadDocument>>> = ({ signal }) => downloadDocument(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof downloadDocument>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type DownloadDocumentQueryResult = NonNullable<Awaited<ReturnType<typeof downloadDocument>>>
+export type DownloadDocumentQueryError = ErrorType<void>
+
+
+/**
+ * @summary Document downloaden; registreert de download in het logboek en stuurt door naar het bestand
+ */
+
+export function useDownloadDocument<TData = Awaited<ReturnType<typeof downloadDocument>>, TError = ErrorType<void>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof downloadDocument>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getDownloadDocumentQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
 
 export const getListVoorzieningenOpVerdiepingUrl = (id: number,) => {
 

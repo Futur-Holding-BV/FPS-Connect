@@ -67,3 +67,24 @@ Workflow:
 - Correcties worden opgeslagen als trainings-/leervoorbeelden (leerset).
 
 Sluit aan op de bestaande AI-conventie in de app: AI-voorstellen zijn GEEL/bewerkbaar tot een mens bevestigt; geaccepteerd/bevestigd is NEUTRAAL (zie "AI-state kleurconventie").
+
+## DMS / Documentenbibliotheek (gebouwd — uitbreiding op V1.2 + dossiers; incl. V1.5-bevriezingsdeel)
+
+Formeel akkoord van de gebruiker, inclusief het V1.5-deel (opleverdossier-bevriezing). Gebouwd als uitbreiding op de V1.2-documentbibliotheek en de dossiermodule (parallel spoor). Geen nieuwe of geparkeerde AI: de bestaande document-AI (analyse + koppelvoorstellen uit V1.2) is hergebruikt; er is geen confidence-drempel en geen periodieke documentcontrole bijgebouwd. NL-only, geen emoji, primair #F23B0D. De V1.3-bestanden (`plattegrond.tsx`, `voorzieningen.ts`-route, clusters, `gebouwen/print.tsx`) zijn bewust niet aangeraakt.
+
+**Schema (additief, via directe SQL `lib/db/sql/dms-uitbreiding.sql`; db push faalt non-TTY):**
+- `documenten` uitgebreid: `bestands_hash`, `bestandsgrootte`, `geldig_tot` (date), `goedkeuring_status` (default 'goedgekeurd').
+- Nieuwe tabellen: `document_koppelingen` (polymorf `doel_type`/`doel_id`, unique + index + check), `document_goedkeuringen`, `document_logboek` (met gedenormaliseerde `document_naam`/`gebruiker_naam`).
+- `dossier_documenten` uitgebreid: `bevroren_revisie_nummer`, `bevroren_pdf_url`, `bevroren_op`.
+
+**Fase 1 — overzicht/detail + logboek:** documenttype 'productblad' toegevoegd; full-text zoek/filter uitgebreid (naam/fabrikant/rapportnummer/EN-norm). Gedeelde helper `logDocumentActie()` wordt aangeroepen bij upload/revisie/goedkeuring/koppeling/download (bewust GEEN view-logging). Documentdetailpagina toont metadata + revisiehistorie + logboek.
+
+**Fase 2 — koppelingen + duplicaatdetectie:** polymorfe koppelingen list/add/remove + GET documenten-per-doel (orphan-tolerant) naar gebouw/klant/offerte/dossier. Duplicaatdetectie: client-side sha256 (`crypto.subtle.digest` op de al ingelezen ArrayBuffer) → `bestands_hash`; `POST /documenten/controleer-duplicaat` (hash + fuzzy naam/rapportnummer/fabrikant). Waarschuwt, blokkeert niet.
+
+**Fase 3 — goedkeuringsflow + signaleringen:** `goedkeuring_status`-flow met indienen (bibliotheek ≥3), goedkeuren/afkeuren (bibliotheek ≥4); vastgelegd in `document_goedkeuringen` + logboek. `GET /documenten/signaleringen` levert buckets verlopen / binnenkort (<90d) / controle_nodig / ter_goedkeuring op basis van `geldig_tot`.
+
+**Fase 4 — opleverdossier-bevriezing (V1.5-deel, geautoriseerd en gebouwd):** `POST /dossiers/:id/definitief` bevriest in één transactie elk gekoppeld bibliotheekdocument → `bevroren_revisie_nummer`/`bevroren_pdf_url`/`bevroren_op` in `dossier_documenten` (losse uploads zonder `document_id` en reeds bevroren items blijven ongemoeid; orphan-tolerant). Reads van een definitief dossier serveren de bevroren snapshot; het hoogste revisienummer per groep wordt live geresolved zodat de UI "nieuwere revisie beschikbaar" toont. Een revisie ná definitief maakt een nieuwe documentrij in de groep en laat de bevroren dossierrij ongewijzigd — het definitieve dossier blijft de oude PDF serveren. Dit is het concrete bevriezingsdeel dat in de V1.5-planning stond; de bredere rapportenmodule (gepersisteerde definitieve opleverrapporten, opleverstatus + reactietermijn) blijft als V1.5 op de actieve roadmap staan.
+
+**Fase 5 — dashboard + audittrail + mobiel:** DMS-dashboard in `documenten-tab.tsx` met signaleringen + zoeken; per-document logboek + globaal audittrail (gated, bibliotheek ≥4). `GET /documenten/:id/download` logt de download en redirect (302) naar het bestand. monteur-app: read-only documentenlijst + detail + PDF openen (hergebruikt de bestaande tekening-viewer via `?url=&naam=`); navigatieknop in `gebouwen.tsx`.
+
+**Bevoegdheden:** lezen = ingelogd; goedkeuren/afkeuren + globaal audittrail = bibliotheek niveau ≥4; indienen = niveau ≥3; koppelingen/status = niveau ≥2 (sluit aan op de bestaande bevoegdheden-matrix).

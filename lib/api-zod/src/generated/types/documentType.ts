@@ -16,4 +16,5 @@ export const DocumentType = {
   productcertificaat: 'productcertificaat',
   dop: 'dop',
   verwerkingsvoorschrift: 'verwerkingsvoorschrift',
+  productblad: 'productblad',
 } as const;

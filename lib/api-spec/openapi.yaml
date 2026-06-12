@@ -1520,6 +1520,11 @@ paths:
       summary: Centrale documentbibliotheek (ETA's, classificatierapporten, testrapporten, DoP's, certificaten, voorschriften)
       parameters:
         - in: query
+          name: zoek
+          description: Vrije zoekterm (naam, fabrikant, rapportnummer, EN-norm, product)
+          schema:
+            type: string
+        - in: query
           name: documenttype
           schema:
             $ref: "#/components/schemas/DocumentType"
@@ -1527,6 +1532,10 @@ paths:
           name: status
           schema:
             $ref: "#/components/schemas/DocumentStatus"
+        - in: query
+          name: goedkeuring_status
+          schema:
+            $ref: "#/components/schemas/GoedkeuringStatus"
         - in: query
           name: fabrikant
           schema:
@@ -1731,6 +1740,292 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/DocumentKoppelVoorstel"
+
+  /documenten/controleer-duplicaat:
+    post:
+      operationId: controleerDocumentDuplicaat
+      tags: [bibliotheek]
+      summary: Controleer op mogelijke duplicaten (identiek bestand via hash, of gelijke naam/rapportnummer). Waarschuwt alleen.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DocumentDuplicaatInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DocumentDuplicaatResultaat"
+
+  /documenten/signaleringen:
+    get:
+      operationId: listDocumentSignaleringen
+      tags: [bibliotheek]
+      summary: Documenten die aandacht nodig hebben (verlopen, binnenkort verlopend, controle nodig, ter goedkeuring)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DocumentSignaleringen"
+
+  /documenten/logboek:
+    get:
+      operationId: listDocumentLogboek
+      tags: [bibliotheek]
+      summary: Globaal audittrail van documentacties (beheerder)
+      parameters:
+        - in: query
+          name: limiet
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DocumentLogboekRegel"
+
+  /documenten/gekoppeld:
+    get:
+      operationId: listGekoppeldeDocumenten
+      tags: [bibliotheek]
+      summary: Documenten gekoppeld aan een entiteit (gebouw, klant, offerte, dossier, voorziening)
+      parameters:
+        - in: query
+          name: doel_type
+          required: true
+          schema:
+            $ref: "#/components/schemas/KoppelingDoelType"
+        - in: query
+          name: doel_id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Document"
+
+  /documenten/{id}/koppelingen:
+    get:
+      operationId: listDocumentKoppelingen
+      tags: [bibliotheek]
+      summary: Koppelingen van een document naar entiteiten
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DocumentKoppeling"
+    post:
+      operationId: addDocumentKoppeling
+      tags: [bibliotheek]
+      summary: Document aan een entiteit koppelen (beheerder)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DocumentKoppelingInput"
+      responses:
+        "201":
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DocumentKoppeling"
+        "404":
+          description: Niet gevonden
+
+  /documenten/{id}/koppelingen/{koppelingId}:
+    delete:
+      operationId: removeDocumentKoppeling
+      tags: [bibliotheek]
+      summary: Koppeling verwijderen (beheerder)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+        - in: path
+          name: koppelingId
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Verwijderd
+        "404":
+          description: Niet gevonden
+
+  /documenten/{id}/indienen:
+    post:
+      operationId: indienenDocument
+      tags: [bibliotheek]
+      summary: Document indienen ter goedkeuring
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DocumentGoedkeuringInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Document"
+        "404":
+          description: Niet gevonden
+
+  /documenten/{id}/goedkeuren:
+    post:
+      operationId: goedkeurenDocument
+      tags: [bibliotheek]
+      summary: Document goedkeuren (beheerder)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DocumentGoedkeuringInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Document"
+        "404":
+          description: Niet gevonden
+
+  /documenten/{id}/afkeuren:
+    post:
+      operationId: afkeurenDocument
+      tags: [bibliotheek]
+      summary: Document afkeuren (beheerder)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DocumentGoedkeuringInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Document"
+        "404":
+          description: Niet gevonden
+
+  /documenten/{id}/goedkeuringen:
+    get:
+      operationId: listDocumentGoedkeuringen
+      tags: [bibliotheek]
+      summary: Goedkeuringshistorie van een document
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DocumentGoedkeuring"
+
+  /documenten/{id}/logboek:
+    get:
+      operationId: getDocumentLogboek
+      tags: [bibliotheek]
+      summary: Audittrail van een specifiek document
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DocumentLogboekRegel"
+
+  /documenten/{id}/download:
+    get:
+      operationId: downloadDocument
+      tags: [bibliotheek]
+      summary: Document downloaden; registreert de download in het logboek en stuurt door naar het bestand
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "302":
+          description: Doorverwijzing naar het bestand
+        "404":
+          description: Niet gevonden
 
   /verdiepingen/{id}/voorzieningen:
     get:
@@ -7852,7 +8147,7 @@ components:
 
     DocumentType:
       type: string
-      enum: [eta, classificatierapport, testrapport, productcertificaat, dop, verwerkingsvoorschrift]
+      enum: [eta, classificatierapport, testrapport, productcertificaat, dop, verwerkingsvoorschrift, productblad]
 
     DocumentStatus:
       type: string
@@ -7864,7 +8159,7 @@ components:
 
     Document:
       type: object
-      required: [id, naam, documenttype, status, groep_id, revisie_nummer, ai_geanalyseerd, gearchiveerd, aangemaakt_op, toepassing_ids]
+      required: [id, naam, documenttype, status, goedkeuring_status, groep_id, revisie_nummer, ai_geanalyseerd, gearchiveerd, aangemaakt_op, toepassing_ids]
       properties:
         id:
           type: integer
@@ -7907,6 +8202,15 @@ components:
           type: string
         bijgewerkt_op:
           type: string
+        bestands_hash:
+          type: ["string", "null"]
+        bestandsgrootte:
+          type: ["integer", "null"]
+        geldig_tot:
+          type: ["string", "null"]
+          description: Geldigheids-/vervaldatum (YYYY-MM-DD)
+        goedkeuring_status:
+          $ref: "#/components/schemas/GoedkeuringStatus"
         toepassing_ids:
           type: array
           items:
@@ -7941,6 +8245,14 @@ components:
         ai_metadata:
           type: object
           additionalProperties: true
+        bestands_hash:
+          type: string
+        bestandsgrootte:
+          type: integer
+        geldig_tot:
+          type: string
+        goedkeuring_status:
+          $ref: "#/components/schemas/GoedkeuringStatus"
         toepassing_ids:
           type: array
           items:
@@ -7953,6 +8265,8 @@ components:
           $ref: "#/components/schemas/DocumentStatus"
         gearchiveerd:
           type: boolean
+        geldig_tot:
+          type: ["string", "null"]
 
     DocumentToepassingenInput:
       type: object
@@ -7962,6 +8276,138 @@ components:
           type: array
           items:
             type: integer
+
+    GoedkeuringStatus:
+      type: string
+      enum: [concept, ter_goedkeuring, goedgekeurd, afgekeurd]
+
+    KoppelingDoelType:
+      type: string
+      enum: [gebouw, klant, offerte, dossier, voorziening]
+
+    DocumentKoppeling:
+      type: object
+      required: [id, document_id, doel_type, doel_id, aangemaakt_op]
+      properties:
+        id:
+          type: integer
+        document_id:
+          type: integer
+        doel_type:
+          $ref: "#/components/schemas/KoppelingDoelType"
+        doel_id:
+          type: integer
+        doel_naam:
+          type: ["string", "null"]
+        aangemaakt_op:
+          type: string
+
+    DocumentKoppelingInput:
+      type: object
+      required: [doel_type, doel_id]
+      properties:
+        doel_type:
+          $ref: "#/components/schemas/KoppelingDoelType"
+        doel_id:
+          type: integer
+
+    DocumentDuplicaatInput:
+      type: object
+      properties:
+        bestands_hash:
+          type: string
+        naam:
+          type: string
+        rapportnummer:
+          type: string
+        fabrikant:
+          type: string
+
+    DocumentDuplicaatMatch:
+      type: object
+      required: [document, reden]
+      properties:
+        document:
+          $ref: "#/components/schemas/Document"
+        reden:
+          type: string
+          description: identiek_bestand | gelijke_naam | gelijk_rapportnummer
+
+    DocumentDuplicaatResultaat:
+      type: object
+      required: [mogelijke_duplicaten]
+      properties:
+        mogelijke_duplicaten:
+          type: array
+          items:
+            $ref: "#/components/schemas/DocumentDuplicaatMatch"
+
+    DocumentGoedkeuringInput:
+      type: object
+      properties:
+        opmerking:
+          type: string
+
+    DocumentGoedkeuring:
+      type: object
+      required: [id, document_id, actie, tijdstip]
+      properties:
+        id:
+          type: integer
+        document_id:
+          type: integer
+        actie:
+          type: string
+        door_id:
+          type: ["integer", "null"]
+        door_naam:
+          type: ["string", "null"]
+        opmerking:
+          type: ["string", "null"]
+        tijdstip:
+          type: string
+
+    DocumentLogboekRegel:
+      type: object
+      required: [id, actie, tijdstip]
+      properties:
+        id:
+          type: integer
+        document_id:
+          type: ["integer", "null"]
+        document_naam:
+          type: ["string", "null"]
+        gebruiker_id:
+          type: ["integer", "null"]
+        gebruiker_naam:
+          type: ["string", "null"]
+        actie:
+          type: string
+        detail:
+          type: ["string", "null"]
+        tijdstip:
+          type: string
+
+    DocumentSignaleringen:
+      type: object
+      required: [verlopen, binnenkort, controle_nodig, ter_goedkeuring]
+      properties:
+        verlopen:
+          type: array
+          items:
+            $ref: "#/components/schemas/Document"
+        binnenkort:
+          type: array
+          items:
+            $ref: "#/components/schemas/Document"
+        controle_nodig:
+          type: array
+          items:
+            $ref: "#/components/schemas/Document"
+        ter_goedkeuring:
+          type: array
+          items:
+            $ref: "#/components/schemas/Document"
 
     LabelDocumentenInput:
       type: object
@@ -8772,6 +9218,15 @@ components:
           type: integer
         toegevoegd_door_id:
           type: ["integer", "null"]
+        bevroren_revisie_nummer:
+          type: ["integer", "null"]
+        bevroren_pdf_url:
+          type: ["string", "null"]
+        bevroren_op:
+          type: ["string", "null"]
+        actuele_revisie_nummer:
+          type: ["integer", "null"]
+          description: Hoogste revisienummer in de documentgroep (om "nieuwere beschikbaar" te tonen)
         aangemaakt_op:
           type: string
         bijgewerkt_op:

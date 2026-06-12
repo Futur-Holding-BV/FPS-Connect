@@ -10,10 +10,11 @@ import {
   db,
   dossiersTable,
   dossierDocumentenTable,
+  documentenTable,
   gebouwenTable,
   gebruikersTable,
 } from "@workspace/db";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, inArray } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
 import { logActiviteit } from "../lib/activiteit";
 
@@ -150,16 +151,55 @@ router.patch("/dossiers/:id", schrijven, async (req, res) => {
 
 router.post("/dossiers/:id/definitief", schrijven, async (req, res) => {
   try {
-    const [bestaand] = await db.select().from(dossiersTable).where(eq(dossiersTable.id, parseId(req.params.id)));
+    const id = parseId(req.params.id);
+    const [bestaand] = await db.select().from(dossiersTable).where(eq(dossiersTable.id, id));
     if (!bestaand) return res.status(404).json({ error: "Dossier niet gevonden" });
     if (bestaand.status === "gearchiveerd") {
       return res.status(409).json({ error: "Een gearchiveerd dossier kan niet definitief worden gemaakt." });
     }
-    const [d] = await db
-      .update(dossiersTable)
-      .set({ status: "definitief", definitiefOp: new Date(), bijgewerktOp: new Date() })
-      .where(eq(dossiersTable.id, parseId(req.params.id)))
-      .returning();
+    // Bevriezing (V1.5): leg in één transactie de actuele revisie + PDF van elk
+    // gekoppeld bibliotheekdocument vast, zodat latere revisies het definitieve
+    // dossier niet meer wijzigen. Losse uploads (zonder documentId) en reeds
+    // bevroren items blijven ongemoeid; ontbrekende documenten zijn orphan-tolerant.
+    const d = await db.transaction(async (tx) => {
+      const items = await tx
+        .select()
+        .from(dossierDocumentenTable)
+        .where(eq(dossierDocumentenTable.dossierId, id));
+      const teBevriezen = items.filter((it) => it.documentId != null && it.bevrorenOp == null);
+      if (teBevriezen.length > 0) {
+        const docIds = teBevriezen.map((it) => it.documentId as number);
+        const docs = await tx
+          .select({
+            id: documentenTable.id,
+            revisieNummer: documentenTable.revisieNummer,
+            pdfUrl: documentenTable.pdfUrl,
+          })
+          .from(documentenTable)
+          .where(inArray(documentenTable.id, docIds));
+        const docMap = new Map(docs.map((x) => [x.id, x]));
+        const nu = new Date();
+        for (const it of teBevriezen) {
+          const doc = docMap.get(it.documentId as number);
+          if (!doc) continue;
+          await tx
+            .update(dossierDocumentenTable)
+            .set({
+              bevrorenRevisieNummer: doc.revisieNummer,
+              bevrorenPdfUrl: doc.pdfUrl,
+              bevrorenOp: nu,
+              bijgewerktOp: nu,
+            })
+            .where(eq(dossierDocumentenTable.id, it.id));
+        }
+      }
+      const [bij] = await tx
+        .update(dossiersTable)
+        .set({ status: "definitief", definitiefOp: new Date(), bijgewerktOp: new Date() })
+        .where(eq(dossiersTable.id, id))
+        .returning();
+      return bij;
+    });
     await logActiviteit({
       type: "dossier_definitief",
       omschrijving: `Dossier "${d.naam}" definitief gemaakt`,
@@ -211,7 +251,10 @@ router.delete("/dossiers/:id", schrijven, async (req, res) => {
 });
 
 // ── Dossierdocumenten ───────────────────────────────────────────────────────
-const mapDossierDocument = (x: typeof dossierDocumentenTable.$inferSelect) => ({
+const mapDossierDocument = (
+  x: typeof dossierDocumentenTable.$inferSelect,
+  actueleRevisie: number | null = null,
+) => ({
   id: x.id,
   dossier_id: x.dossierId,
   document_id: x.documentId,
@@ -221,9 +264,49 @@ const mapDossierDocument = (x: typeof dossierDocumentenTable.$inferSelect) => ({
   status: x.status,
   versie: x.versie,
   toegevoegd_door_id: x.toegevoegdDoorId,
+  bevroren_revisie_nummer: x.bevrorenRevisieNummer ?? null,
+  bevroren_pdf_url: x.bevrorenPdfUrl ?? null,
+  bevroren_op: isoOf(x.bevrorenOp),
+  actuele_revisie_nummer: actueleRevisie,
   aangemaakt_op: iso(x.aangemaaktOp),
   bijgewerkt_op: iso(x.bijgewerktOp),
 });
+
+// Resolvet per gekoppeld bibliotheekdocument het hoogste revisienummer in zijn
+// groep, zodat de UI "nieuwere revisie beschikbaar" kan tonen bij een bevroren item.
+async function actueleRevisiePerDocument(
+  documentIds: (number | null)[],
+): Promise<Map<number, number>> {
+  const out = new Map<number, number>();
+  const uniek = Array.from(
+    new Set(documentIds.filter((n): n is number => Number.isInteger(n))),
+  );
+  if (uniek.length === 0) return out;
+  const docs = await db
+    .select({
+      id: documentenTable.id,
+      groepId: documentenTable.groepId,
+      revisieNummer: documentenTable.revisieNummer,
+    })
+    .from(documentenTable)
+    .where(inArray(documentenTable.id, uniek));
+  const groepIds = Array.from(new Set(docs.map((d) => d.groepId)));
+  if (groepIds.length === 0) return out;
+  const alle = await db
+    .select({
+      groepId: documentenTable.groepId,
+      revisieNummer: documentenTable.revisieNummer,
+    })
+    .from(documentenTable)
+    .where(inArray(documentenTable.groepId, groepIds));
+  const maxPerGroep = new Map<string, number>();
+  for (const r of alle) {
+    const huidig = maxPerGroep.get(r.groepId) ?? 0;
+    if (r.revisieNummer > huidig) maxPerGroep.set(r.groepId, r.revisieNummer);
+  }
+  for (const d of docs) out.set(d.id, maxPerGroep.get(d.groepId) ?? d.revisieNummer);
+  return out;
+}
 
 router.get("/dossiers/:id/documenten", lezen, async (req, res) => {
   try {
@@ -232,7 +315,15 @@ router.get("/dossiers/:id/documenten", lezen, async (req, res) => {
       .from(dossierDocumentenTable)
       .where(eq(dossierDocumentenTable.dossierId, parseId(req.params.id)))
       .orderBy(desc(dossierDocumentenTable.aangemaaktOp));
-    res.json(rijen.map(mapDossierDocument));
+    const actueel = await actueleRevisiePerDocument(rijen.map((r) => r.documentId));
+    res.json(
+      rijen.map((r) =>
+        mapDossierDocument(
+          r,
+          r.documentId != null ? (actueel.get(r.documentId) ?? null) : null,
+        ),
+      ),
+    );
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Interne serverfout" });
@@ -261,7 +352,10 @@ router.post("/dossiers/:id/documenten", schrijven, async (req, res) => {
         toegevoegdDoorId: req.session.userId ?? null,
       })
       .returning();
-    res.status(201).json(mapDossierDocument(x));
+    const actueel = await actueleRevisiePerDocument([x.documentId]);
+    res.status(201).json(
+      mapDossierDocument(x, x.documentId != null ? (actueel.get(x.documentId) ?? null) : null),
+    );
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Interne serverfout" });
@@ -270,14 +364,34 @@ router.post("/dossiers/:id/documenten", schrijven, async (req, res) => {
 
 router.patch("/dossier-documenten/:id", schrijven, async (req, res) => {
   try {
+    const ddId = parseId(req.params.id);
+    const [bestaand] = await db
+      .select()
+      .from(dossierDocumentenTable)
+      .where(eq(dossierDocumentenTable.id, ddId));
+    if (!bestaand) return res.status(404).json({ error: "Dossierdocument niet gevonden" });
+    // Bevriezing afdwingen: documenten van een definitief/gearchiveerd dossier
+    // mogen niet meer wijzigen (niet alleen in de UI, ook server-side).
+    const [dossier] = await db
+      .select({ status: dossiersTable.status })
+      .from(dossiersTable)
+      .where(eq(dossiersTable.id, bestaand.dossierId));
+    if (dossier && (dossier.status === "definitief" || dossier.status === "gearchiveerd")) {
+      return res.status(409).json({
+        error: "Documenten van een definitief of gearchiveerd dossier kunnen niet worden gewijzigd.",
+      });
+    }
     const { naam, document_id, bestand_url, categorie, status, versie } = req.body;
     const [x] = await db
       .update(dossierDocumentenTable)
       .set({ naam, documentId: document_id ?? null, bestandUrl: bestand_url, categorie, status, versie, bijgewerktOp: new Date() })
-      .where(eq(dossierDocumentenTable.id, parseId(req.params.id)))
+      .where(eq(dossierDocumentenTable.id, ddId))
       .returning();
     if (!x) return res.status(404).json({ error: "Dossierdocument niet gevonden" });
-    res.json(mapDossierDocument(x));
+    const actueel = await actueleRevisiePerDocument([x.documentId]);
+    res.json(
+      mapDossierDocument(x, x.documentId != null ? (actueel.get(x.documentId) ?? null) : null),
+    );
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Interne serverfout" });
@@ -286,7 +400,22 @@ router.patch("/dossier-documenten/:id", schrijven, async (req, res) => {
 
 router.delete("/dossier-documenten/:id", schrijven, async (req, res) => {
   try {
-    await db.delete(dossierDocumentenTable).where(eq(dossierDocumentenTable.id, parseId(req.params.id)));
+    const ddId = parseId(req.params.id);
+    const [bestaand] = await db
+      .select()
+      .from(dossierDocumentenTable)
+      .where(eq(dossierDocumentenTable.id, ddId));
+    if (!bestaand) return res.status(404).json({ error: "Dossierdocument niet gevonden" });
+    const [dossier] = await db
+      .select({ status: dossiersTable.status })
+      .from(dossiersTable)
+      .where(eq(dossiersTable.id, bestaand.dossierId));
+    if (dossier && (dossier.status === "definitief" || dossier.status === "gearchiveerd")) {
+      return res.status(409).json({
+        error: "Documenten van een definitief of gearchiveerd dossier kunnen niet worden verwijderd.",
+      });
+    }
+    await db.delete(dossierDocumentenTable).where(eq(dossierDocumentenTable.id, ddId));
     res.status(204).send();
   } catch (err) {
     req.log.error(err);

@@ -31,7 +31,9 @@ Functies:
 - Bevriezing documenten: een definitief rapport blijft gekoppeld aan de documentversies die op het moment van vaststellen geldig waren; latere documentversies wijzigen definitieve rapporten nooit
 - Koppelingen naar CRM, onderhoud en klantportaal
 
-Afhankelijkheid: bevriezing vereist een gepersisteerde 'definitief opleverrapport'-entiteit. Nu genereert `print.tsx` het opleverrapport live uit actuele data; er is geen rapport-tabel. De volledige bevriezing landt daarom in deze fase (V1.5), bovenop de onveranderlijke documentrevisies uit V1.2.
+> **Bevriezingsdeel gebouwd (geautoriseerd, vooruit op de DMS-module).** Het concrete bevriezingsmechanisme is met formeel akkoord al gebouwd op de **dossiers**-entiteit als onderdeel van de DMS / documentenbibliotheek: `POST /dossiers/:id/definitief` bevriest per gekoppeld bibliotheekdocument de revisie + PDF (`bevroren_revisie_nummer`/`bevroren_pdf_url`/`bevroren_op`), reads van een definitief dossier serveren de bevroren snapshot, en de UI toont "nieuwere revisie beschikbaar". Zie [`gebouwd.md`](./gebouwd.md) (sectie DMS / Documentenbibliotheek, Fase 4). Wat in V1.5 nog rest, is het toepassen van ditzelfde mechanisme op een gepersisteerde **opleverrapport**-entiteit (zie afhankelijkheid hieronder).
+
+Afhankelijkheid: rapportbevriezing vereist een gepersisteerde 'definitief opleverrapport'-entiteit. Nu genereert `print.tsx` het opleverrapport live uit actuele data; er is geen rapport-tabel. Het bevriezingsmechanisme zelf is bewezen op dossiers; in V1.5 wordt het op de rapport-entiteit toegepast, bovenop de onveranderlijke documentrevisies uit V1.2.
 
 **Formele opleverstatus & reactietermijn (vastgelegd, nog te bouwen in V1.5).** Een definitief rapport beheert ook de formele opleverstatus — een statusmachine per rapportversie:
 - **Definitief verzonden** — bij definitief maken/versturen krijgt het rapport deze status; verzenddatum wordt vastgelegd; de reactietermijn start automatisch (standaard 14 dagen, configureerbaar); einddatum wordt berekend → status **Reactietermijn loopt**.

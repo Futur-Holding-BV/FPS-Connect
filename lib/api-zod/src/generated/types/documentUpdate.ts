@@ -10,4 +10,6 @@ import type { DocumentStatus } from './documentStatus';
 export interface DocumentUpdate {
   status?: DocumentStatus;
   gearchiveerd?: boolean;
+  /** @nullable */
+  geldig_tot?: string | null;
 }

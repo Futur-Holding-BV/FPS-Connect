@@ -74,7 +74,20 @@ export default function Gebouwen() {
               {gebruiker?.naam ?? "Monteur"}
             </Text>
           </View>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+          <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "flex-end", alignItems: "center", gap: 8, flexShrink: 1 }}>
+            <Pressable
+              onPress={() => router.push("/documenten")}
+              style={{
+                paddingHorizontal: 14,
+                paddingVertical: 9,
+                borderRadius: 10,
+                backgroundColor: "rgba(255,255,255,0.12)",
+              }}
+            >
+              <Text style={{ color: c.darkForeground, fontFamily: "Inter_600SemiBold", fontSize: 14 }}>
+                Documenten
+              </Text>
+            </Pressable>
             <Pressable
               onPress={() => router.push("/hrm")}
               style={{
