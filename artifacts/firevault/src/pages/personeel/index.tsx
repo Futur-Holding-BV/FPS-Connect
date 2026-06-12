@@ -10,6 +10,7 @@ import {
   useCreateFunctie,
   useListOpleidingen,
   useCreateOpleiding,
+  useVoorstelOpleidingenVoorFunctie,
   useListVerlofsoorten,
   useListCaoOpties,
   useListToewijsbareGebruikers,
@@ -26,6 +27,7 @@ import type {
   MedewerkerInput,
   FunctieInput,
   OpleidingInput,
+  OpleidingVoorstel,
   MedewerkerOnboardingInput,
   VerlofAanvraag,
 } from "@workspace/api-client-react";
@@ -53,6 +55,22 @@ import {
 
 const WERKMAATSCHAPPIJ_STD = "FPS Brandpreventie";
 const DIENSTVERBANDEN = ["vast", "tijdelijk", "oproep", "stage", "inhuur"] as const;
+
+const SOORT_OPTIES = [
+  { value: "cursus", label: "Cursus" },
+  { value: "opleiding", label: "Opleiding" },
+] as const;
+const NIVEAU_OPTIES = ["MBO", "HBO", "WO/UT", "Anders"] as const;
+const LESVORM_OPTIES = ["klassikaal", "online", "zelfstudie", "blended", "praktijk"] as const;
+
+function soortLabel(s?: string | null) {
+  return s === "opleiding" ? "Opleiding" : "Cursus";
+}
+
+function kostenLabel(wg?: number | null, wn?: number | null) {
+  if (wg == null && wn == null) return null;
+  return `Werkgever ${wg ?? 0}% / werknemer ${wn ?? 0}%`;
+}
 
 const NIVEAU_LABEL: Record<string, string> = {
   niet_bevoegd: "Niet bevoegd",
@@ -159,7 +177,16 @@ export default function PersoneelPagina() {
   const [opleidingForm, setOpleidingForm] = useState<OpleidingInput>({
     naam: "",
     categorie: "vakopleiding",
+    soort: "cursus",
   });
+
+  const [voorstelFunctieId, setVoorstelFunctieId] = useState<string>("");
+  const [voorstellen, setVoorstellen] = useState<OpleidingVoorstel[]>([]);
+  const [voorstelToelichting, setVoorstelToelichting] = useState<string | null>(null);
+  const [voorstelBetrouwbaarheid, setVoorstelBetrouwbaarheid] = useState<string | null>(null);
+  const [gekozenVoorstellen, setGekozenVoorstellen] = useState<Set<number>>(new Set());
+  const [voorstelGedaan, setVoorstelGedaan] = useState(false);
+  const voorstelMutatie = useVoorstelOpleidingenVoorFunctie();
   const [onboardForm, setOnboardForm] = useState<MedewerkerOnboardingInput>({
     gebruiker_id: 0,
     functie_id: 0,
@@ -234,8 +261,87 @@ export default function PersoneelPagina() {
       await maakOpleiding.mutateAsync({ data: { ...opleidingForm, naam: opleidingForm.naam.trim() } });
       await queryClient.invalidateQueries({ queryKey: getListOpleidingenQueryKey() });
       toast({ title: "Opleiding toegevoegd" });
-      setOpleidingForm({ naam: "", categorie: "vakopleiding" });
+      setOpleidingForm({ naam: "", categorie: "vakopleiding", soort: "cursus" });
       setOpleidingOpen(false);
+    } catch {
+      toast({ title: "Opslaan mislukt", variant: "destructive" });
+    }
+  }
+
+  async function haalVoorstellen() {
+    const id = Number(voorstelFunctieId);
+    if (!id) {
+      toast({ title: "Kies eerst een functie", variant: "destructive" });
+      return;
+    }
+    try {
+      const res = await voorstelMutatie.mutateAsync({ id });
+      setVoorstellen(res.voorstellen);
+      setVoorstelToelichting(res.toelichting ?? null);
+      setVoorstelBetrouwbaarheid(res.betrouwbaarheid ?? null);
+      setGekozenVoorstellen(new Set(res.voorstellen.map((_, i) => i)));
+      setVoorstelGedaan(true);
+      if (res.voorstellen.length === 0) {
+        toast({ title: "Geen voorstellen", description: res.toelichting ?? "Probeer het later opnieuw." });
+      }
+    } catch {
+      toast({ title: "AI-voorstel mislukt", variant: "destructive" });
+    }
+  }
+
+  function toggleVoorstel(i: number) {
+    setGekozenVoorstellen((prev) => {
+      const next = new Set(prev);
+      if (next.has(i)) next.delete(i);
+      else next.add(i);
+      return next;
+    });
+  }
+
+  async function accepteerVoorstellen() {
+    const id = Number(voorstelFunctieId);
+    const gekozen = voorstellen.filter((_, i) => gekozenVoorstellen.has(i));
+    if (gekozen.length === 0) {
+      toast({ title: "Selecteer minstens één voorstel", variant: "destructive" });
+      return;
+    }
+    const bestaandeNamen = new Set((opleidingen ?? []).map((o) => o.naam.trim().toLowerCase()));
+    try {
+      let toegevoegd = 0;
+      let overgeslagen = 0;
+      for (const v of gekozen) {
+        if (bestaandeNamen.has(v.naam.trim().toLowerCase())) {
+          overgeslagen++;
+          continue;
+        }
+        await maakOpleiding.mutateAsync({
+          data: {
+            naam: v.naam.trim(),
+            categorie: v.categorie ?? "overig",
+            soort: v.soort,
+            omschrijving: v.omschrijving ?? null,
+            niveau: v.niveau ?? null,
+            opleider: v.opleider ?? null,
+            studieduur: v.studieduur ?? null,
+            studiebelasting: v.studiebelasting ?? null,
+            lesvorm: v.lesvorm ?? null,
+            kosten_indicatie: v.kosten_indicatie ?? null,
+            kosten_werkgever_pct: v.kosten_werkgever_pct ?? null,
+            kosten_werknemer_pct: v.kosten_werknemer_pct ?? null,
+            geldigheid_maanden: v.geldigheid_maanden ?? null,
+            verplicht: v.verplicht ?? false,
+            functie_ids: id ? [id] : [],
+          },
+        });
+        toegevoegd++;
+      }
+      await queryClient.invalidateQueries({ queryKey: getListOpleidingenQueryKey() });
+      toast({
+        title: `${toegevoegd} opgeslagen${overgeslagen ? `, ${overgeslagen} overgeslagen (bestaat al)` : ""}`,
+      });
+      setVoorstellen([]);
+      setVoorstelGedaan(false);
+      setGekozenVoorstellen(new Set());
     } catch {
       toast({ title: "Opslaan mislukt", variant: "destructive" });
     }
@@ -403,6 +509,96 @@ export default function PersoneelPagina() {
           <div className="flex items-center justify-end">
             <Button onClick={() => setOpleidingOpen(true)}><Plus className="h-4 w-4" /> Nieuwe opleiding</Button>
           </div>
+
+          {magSchrijven && (
+            <Card className="border-amber-200 bg-amber-50/40">
+              <CardContent className="p-4 space-y-3">
+                <div className="flex items-center gap-2">
+                  <GraduationCap className="h-4 w-4 text-amber-700" />
+                  <h2 className="text-sm font-semibold">AI stelt opleidingen en cursussen voor</h2>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Kies een functie; de AI stelt passende opleidingen en cursussen voor. Niets wordt automatisch opgeslagen — u kiest zelf welke voorstellen u toevoegt.
+                </p>
+                <div className="flex flex-wrap items-end gap-2">
+                  <div className="space-y-1.5 min-w-56">
+                    <Label>Functie</Label>
+                    <Select value={voorstelFunctieId} onValueChange={setVoorstelFunctieId}>
+                      <SelectTrigger><SelectValue placeholder="Kies een functie" /></SelectTrigger>
+                      <SelectContent>
+                        {(functies ?? []).map((f) => (
+                          <SelectItem key={f.id} value={String(f.id)}>{f.naam}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <Button onClick={haalVoorstellen} disabled={voorstelMutatie.isPending || !voorstelFunctieId}>
+                    {voorstelMutatie.isPending ? "AI denkt na…" : "Voorstellen ophalen"}
+                  </Button>
+                </div>
+
+                {voorstelGedaan && (
+                  <div className="space-y-3">
+                    {voorstelToelichting && (
+                      <p className="text-xs text-amber-800">
+                        {voorstelToelichting}
+                        {voorstelBetrouwbaarheid ? ` · betrouwbaarheid: ${voorstelBetrouwbaarheid}` : ""}
+                      </p>
+                    )}
+                    {voorstellen.length === 0 ? (
+                      <p className="text-sm text-muted-foreground">Geen voorstellen ontvangen.</p>
+                    ) : (
+                      <>
+                        <div className="grid gap-2 sm:grid-cols-2">
+                          {voorstellen.map((v, i) => (
+                            <label
+                              key={i}
+                              className="flex gap-2 rounded-md border bg-background p-3 text-sm cursor-pointer"
+                            >
+                              <Checkbox
+                                className="mt-0.5"
+                                checked={gekozenVoorstellen.has(i)}
+                                onCheckedChange={() => toggleVoorstel(i)}
+                              />
+                              <div className="min-w-0 space-y-1">
+                                <div className="flex flex-wrap items-center gap-1.5">
+                                  <span className="font-medium">{v.naam}</span>
+                                  <Badge variant="secondary">{soortLabel(v.soort)}</Badge>
+                                  {v.niveau && <Badge variant="outline">{v.niveau}</Badge>}
+                                  {v.verplicht && <Badge variant="outline" className="border-amber-200 text-amber-700">verplicht</Badge>}
+                                </div>
+                                {v.omschrijving && <p className="text-xs text-muted-foreground">{v.omschrijving}</p>}
+                                <div className="text-xs text-muted-foreground space-y-0.5">
+                                  {v.opleider && <div>Opleider: {v.opleider}</div>}
+                                  {(v.studieduur || v.studiebelasting) && (
+                                    <div>{[v.studieduur, v.studiebelasting].filter(Boolean).join(" · ")}</div>
+                                  )}
+                                  {v.lesvorm && <div>Lesvorm: {v.lesvorm}</div>}
+                                  {v.kosten_indicatie && <div>Kosten: {v.kosten_indicatie}</div>}
+                                  {kostenLabel(v.kosten_werkgever_pct, v.kosten_werknemer_pct) && (
+                                    <div>{kostenLabel(v.kosten_werkgever_pct, v.kosten_werknemer_pct)}</div>
+                                  )}
+                                </div>
+                              </div>
+                            </label>
+                          ))}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Button onClick={accepteerVoorstellen} disabled={maakOpleiding.isPending || gekozenVoorstellen.size === 0}>
+                            {maakOpleiding.isPending ? "Bezig…" : `${gekozenVoorstellen.size} toevoegen aan catalogus`}
+                          </Button>
+                          <Button variant="outline" onClick={() => { setVoorstellen([]); setVoorstelGedaan(false); setGekozenVoorstellen(new Set()); }}>
+                            Annuleren
+                          </Button>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
           {(opleidingen ?? []).length === 0 ? (
             <Card><CardContent className="py-12 text-center text-muted-foreground">
               <GraduationCap className="h-10 w-10 mx-auto mb-3 opacity-40" />
@@ -417,9 +613,28 @@ export default function PersoneelPagina() {
                       <div className="font-semibold">{o.naam}</div>
                       {o.verplicht && <Badge variant="outline" className="border-amber-200 text-amber-700">verplicht</Badge>}
                     </div>
-                    <div className="text-xs text-muted-foreground">{o.categorie}</div>
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <Badge variant="secondary">{soortLabel(o.soort)}</Badge>
+                      {o.niveau && <Badge variant="outline">{o.niveau}</Badge>}
+                      <span className="text-xs text-muted-foreground">{o.categorie}</span>
+                    </div>
+                    {o.opleider && <div className="text-xs text-muted-foreground">Opleider: {o.opleider}</div>}
+                    {(o.studieduur || o.studiebelasting) && (
+                      <div className="text-xs text-muted-foreground">{[o.studieduur, o.studiebelasting].filter(Boolean).join(" · ")}</div>
+                    )}
+                    {o.lesvorm && <div className="text-xs text-muted-foreground">Lesvorm: {o.lesvorm}</div>}
+                    {kostenLabel(o.kosten_werkgever_pct, o.kosten_werknemer_pct) && (
+                      <div className="text-xs text-muted-foreground">{kostenLabel(o.kosten_werkgever_pct, o.kosten_werknemer_pct)}</div>
+                    )}
                     {o.geldigheid_maanden != null && (
                       <div className="text-xs text-muted-foreground">Geldig {o.geldigheid_maanden} mnd</div>
+                    )}
+                    {(o.functie_namen ?? []).length > 0 && (
+                      <div className="flex flex-wrap gap-1 pt-1">
+                        {(o.functie_namen ?? []).map((n, i) => (
+                          <Badge key={i} variant="outline" className="font-normal">{n}</Badge>
+                        ))}
+                      </div>
                     )}
                   </CardContent>
                 </Card>
@@ -723,15 +938,133 @@ export default function PersoneelPagina() {
       {/* Nieuwe opleiding */}
       <Dialog open={opleidingOpen} onOpenChange={setOpleidingOpen}>
         <DialogContent className="max-w-lg">
-          <DialogHeader><DialogTitle>Nieuwe opleiding</DialogTitle></DialogHeader>
-          <div className="space-y-3">
+          <DialogHeader><DialogTitle>Nieuwe opleiding of cursus</DialogTitle></DialogHeader>
+          <div className="space-y-3 max-h-[70vh] overflow-y-auto pr-1">
             <div className="space-y-1.5">
               <Label>Naam *</Label>
               <Input value={opleidingForm.naam} onChange={(e) => setOpleidingForm({ ...opleidingForm, naam: e.target.value })} />
             </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label>Soort</Label>
+                <Select
+                  value={opleidingForm.soort ?? "cursus"}
+                  onValueChange={(v) => setOpleidingForm({ ...opleidingForm, soort: v as OpleidingInput["soort"] })}
+                >
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {SOORT_OPTIES.map((s) => (
+                      <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Niveau</Label>
+                <Select
+                  value={opleidingForm.niveau ?? ""}
+                  onValueChange={(v) => setOpleidingForm({ ...opleidingForm, niveau: v })}
+                >
+                  <SelectTrigger><SelectValue placeholder="Kies niveau" /></SelectTrigger>
+                  <SelectContent>
+                    {NIVEAU_OPTIES.map((n) => (
+                      <SelectItem key={n} value={n}>{n}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
             <div className="space-y-1.5">
               <Label>Categorie</Label>
               <Input value={opleidingForm.categorie ?? ""} onChange={(e) => setOpleidingForm({ ...opleidingForm, categorie: e.target.value })} />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Omschrijving</Label>
+              <Textarea
+                rows={2}
+                value={opleidingForm.omschrijving ?? ""}
+                onChange={(e) => setOpleidingForm({ ...opleidingForm, omschrijving: e.target.value || null })}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Opleider</Label>
+              <Input value={opleidingForm.opleider ?? ""} onChange={(e) => setOpleidingForm({ ...opleidingForm, opleider: e.target.value || null })} />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label>Studieduur</Label>
+                <Input
+                  placeholder="bijv. 3 jaar, 2 dagen"
+                  value={opleidingForm.studieduur ?? ""}
+                  onChange={(e) => setOpleidingForm({ ...opleidingForm, studieduur: e.target.value || null })}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Studiebelasting</Label>
+                <Input
+                  placeholder="bijv. 16 uur per week"
+                  value={opleidingForm.studiebelasting ?? ""}
+                  onChange={(e) => setOpleidingForm({ ...opleidingForm, studiebelasting: e.target.value || null })}
+                />
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Lesvorm</Label>
+              <Select
+                value={opleidingForm.lesvorm ?? ""}
+                onValueChange={(v) => setOpleidingForm({ ...opleidingForm, lesvorm: v })}
+              >
+                <SelectTrigger><SelectValue placeholder="Kies lesvorm" /></SelectTrigger>
+                <SelectContent>
+                  {LESVORM_OPTIES.map((l) => (
+                    <SelectItem key={l} value={l}>{l}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Kostenindicatie</Label>
+              <Input
+                placeholder="bijv. EUR 1.500"
+                value={opleidingForm.kosten_indicatie ?? ""}
+                onChange={(e) => setOpleidingForm({ ...opleidingForm, kosten_indicatie: e.target.value || null })}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label>Aandeel werkgever (%)</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  max={100}
+                  value={opleidingForm.kosten_werkgever_pct ?? ""}
+                  onChange={(e) => {
+                    const wg = e.target.value ? Number(e.target.value) : null;
+                    setOpleidingForm({
+                      ...opleidingForm,
+                      kosten_werkgever_pct: wg,
+                      kosten_werknemer_pct: wg == null ? null : Math.max(0, 100 - wg),
+                    });
+                  }}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Aandeel werknemer (%)</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  max={100}
+                  value={opleidingForm.kosten_werknemer_pct ?? ""}
+                  onChange={(e) => {
+                    const wn = e.target.value ? Number(e.target.value) : null;
+                    setOpleidingForm({
+                      ...opleidingForm,
+                      kosten_werknemer_pct: wn,
+                      kosten_werkgever_pct: wn == null ? null : Math.max(0, 100 - wn),
+                    });
+                  }}
+                />
+              </div>
             </div>
             <div className="space-y-1.5">
               <Label>Geldigheid (maanden)</Label>
@@ -741,12 +1074,38 @@ export default function PersoneelPagina() {
                 onChange={(e) => setOpleidingForm({ ...opleidingForm, geldigheid_maanden: e.target.value ? Number(e.target.value) : null })}
               />
             </div>
+            <div className="space-y-1.5">
+              <Label>Gekoppelde functies</Label>
+              <div className="flex flex-wrap gap-2 rounded-md border p-2">
+                {(functies ?? []).length === 0 ? (
+                  <span className="text-xs text-muted-foreground">Nog geen functies.</span>
+                ) : (
+                  (functies ?? []).map((f) => {
+                    const gekoppeld = (opleidingForm.functie_ids ?? []).includes(f.id);
+                    return (
+                      <label key={f.id} className="flex items-center gap-1.5 text-sm">
+                        <Checkbox
+                          checked={gekoppeld}
+                          onCheckedChange={(c) => {
+                            const huidig = new Set(opleidingForm.functie_ids ?? []);
+                            if (c === true) huidig.add(f.id);
+                            else huidig.delete(f.id);
+                            setOpleidingForm({ ...opleidingForm, functie_ids: [...huidig] });
+                          }}
+                        />
+                        {f.naam}
+                      </label>
+                    );
+                  })
+                )}
+              </div>
+            </div>
             <label className="flex items-center gap-2 text-sm">
               <Checkbox
                 checked={opleidingForm.verplicht ?? false}
                 onCheckedChange={(c) => setOpleidingForm({ ...opleidingForm, verplicht: c === true })}
               />
-              Verplichte opleiding
+              Verplicht voor de functie
             </label>
           </div>
           <DialogFooter>

@@ -159,6 +159,7 @@ import type {
   Onderhoudstaak,
   Opleiding,
   OpleidingInput,
+  OpleidingenVoorstelResultaat,
   PlattegrondAiAnalyseInput,
   PlattegrondAiAnalyseResultaat,
   Profiel,
@@ -14186,6 +14187,77 @@ export const useDeleteFunctie = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getDeleteFunctieMutationOptions(options));
+    }
+
+export const getVoorstelOpleidingenVoorFunctieUrl = (id: number,) => {
+
+
+
+
+  return `/api/functies/${id}/opleidingen-voorstel`
+}
+
+/**
+ * Genereert met AI een voorstel van passende opleidingen en cursussen voor een functie, met niveau, opleider, studieduur, studiebelasting, lesvorm en kostenverdeling. Slaat niets op; de gebruiker bevestigt en bewaart zelf.
+ * @summary AI stelt opleidingen/cursussen voor bij een functie (mens bevestigt)
+ */
+export const voorstelOpleidingenVoorFunctie = async (id: number, options?: RequestInit): Promise<OpleidingenVoorstelResultaat> => {
+
+  return customFetch<OpleidingenVoorstelResultaat>(getVoorstelOpleidingenVoorFunctieUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getVoorstelOpleidingenVoorFunctieMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof voorstelOpleidingenVoorFunctie>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof voorstelOpleidingenVoorFunctie>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['voorstelOpleidingenVoorFunctie'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof voorstelOpleidingenVoorFunctie>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  voorstelOpleidingenVoorFunctie(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type VoorstelOpleidingenVoorFunctieMutationResult = NonNullable<Awaited<ReturnType<typeof voorstelOpleidingenVoorFunctie>>>
+
+    export type VoorstelOpleidingenVoorFunctieMutationError = ErrorType<unknown>
+
+    /**
+ * @summary AI stelt opleidingen/cursussen voor bij een functie (mens bevestigt)
+ */
+export const useVoorstelOpleidingenVoorFunctie = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof voorstelOpleidingenVoorFunctie>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof voorstelOpleidingenVoorFunctie>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getVoorstelOpleidingenVoorFunctieMutationOptions(options));
     }
 
 export const getListOpleidingenUrl = () => {

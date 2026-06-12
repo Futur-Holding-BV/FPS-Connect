@@ -4834,15 +4834,56 @@ export const DeleteFunctieResponse = zod.void()
 
 
 /**
+ * Genereert met AI een voorstel van passende opleidingen en cursussen voor een functie, met niveau, opleider, studieduur, studiebelasting, lesvorm en kostenverdeling. Slaat niets op; de gebruiker bevestigt en bewaart zelf.
+ * @summary AI stelt opleidingen/cursussen voor bij een functie (mens bevestigt)
+ */
+export const VoorstelOpleidingenVoorFunctieParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const VoorstelOpleidingenVoorFunctieResponse = zod.object({
+  "voorstellen": zod.array(zod.object({
+  "naam": zod.string(),
+  "soort": zod.enum(['opleiding', 'cursus']),
+  "categorie": zod.string().nullish(),
+  "omschrijving": zod.string().nullish(),
+  "niveau": zod.string().nullish(),
+  "opleider": zod.string().nullish(),
+  "studieduur": zod.string().nullish(),
+  "studiebelasting": zod.string().nullish(),
+  "lesvorm": zod.string().nullish(),
+  "kosten_indicatie": zod.string().nullish(),
+  "kosten_werkgever_pct": zod.number().nullish(),
+  "kosten_werknemer_pct": zod.number().nullish(),
+  "geldigheid_maanden": zod.number().nullish(),
+  "verplicht": zod.boolean().optional()
+})),
+  "toelichting": zod.string().nullish(),
+  "betrouwbaarheid": zod.string().nullish()
+})
+
+
+/**
  * @summary Opleidingen/certificeringen ophalen
  */
 export const ListOpleidingenResponseItem = zod.object({
   "id": zod.number(),
   "naam": zod.string(),
   "categorie": zod.string(),
+  "soort": zod.enum(['opleiding', 'cursus']).describe('opleiding (diplomagericht) of cursus (korte training\/certificering)'),
   "omschrijving": zod.string().nullish(),
+  "niveau": zod.string().nullish().describe('MBO, HBO, WO\/UT of anders'),
+  "opleider": zod.string().nullish(),
+  "studieduur": zod.string().nullish(),
+  "studiebelasting": zod.string().nullish(),
+  "lesvorm": zod.string().nullish().describe('klassikaal, online, zelfstudie, blended of praktijk'),
+  "kosten_indicatie": zod.string().nullish(),
+  "kosten_werkgever_pct": zod.number().nullish(),
+  "kosten_werknemer_pct": zod.number().nullish(),
   "geldigheid_maanden": zod.number().nullish(),
   "verplicht": zod.boolean(),
+  "functie_ids": zod.array(zod.number()).optional(),
+  "functie_namen": zod.array(zod.string()).optional(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
 })
@@ -4855,9 +4896,19 @@ export const ListOpleidingenResponse = zod.array(ListOpleidingenResponseItem)
 export const CreateOpleidingBody = zod.object({
   "naam": zod.string(),
   "categorie": zod.string().optional(),
-  "omschrijving": zod.string().optional(),
+  "soort": zod.enum(['opleiding', 'cursus']).optional(),
+  "omschrijving": zod.string().nullish(),
+  "niveau": zod.string().nullish(),
+  "opleider": zod.string().nullish(),
+  "studieduur": zod.string().nullish(),
+  "studiebelasting": zod.string().nullish(),
+  "lesvorm": zod.string().nullish(),
+  "kosten_indicatie": zod.string().nullish(),
+  "kosten_werkgever_pct": zod.number().nullish(),
+  "kosten_werknemer_pct": zod.number().nullish(),
   "geldigheid_maanden": zod.number().nullish(),
-  "verplicht": zod.boolean().optional()
+  "verplicht": zod.boolean().optional(),
+  "functie_ids": zod.array(zod.number()).optional()
 })
 
 export const CreateOpleidingResponse = zod.void()
@@ -4873,18 +4924,39 @@ export const UpdateOpleidingParams = zod.object({
 export const UpdateOpleidingBody = zod.object({
   "naam": zod.string(),
   "categorie": zod.string().optional(),
-  "omschrijving": zod.string().optional(),
+  "soort": zod.enum(['opleiding', 'cursus']).optional(),
+  "omschrijving": zod.string().nullish(),
+  "niveau": zod.string().nullish(),
+  "opleider": zod.string().nullish(),
+  "studieduur": zod.string().nullish(),
+  "studiebelasting": zod.string().nullish(),
+  "lesvorm": zod.string().nullish(),
+  "kosten_indicatie": zod.string().nullish(),
+  "kosten_werkgever_pct": zod.number().nullish(),
+  "kosten_werknemer_pct": zod.number().nullish(),
   "geldigheid_maanden": zod.number().nullish(),
-  "verplicht": zod.boolean().optional()
+  "verplicht": zod.boolean().optional(),
+  "functie_ids": zod.array(zod.number()).optional()
 })
 
 export const UpdateOpleidingResponse = zod.object({
   "id": zod.number(),
   "naam": zod.string(),
   "categorie": zod.string(),
+  "soort": zod.enum(['opleiding', 'cursus']).describe('opleiding (diplomagericht) of cursus (korte training\/certificering)'),
   "omschrijving": zod.string().nullish(),
+  "niveau": zod.string().nullish().describe('MBO, HBO, WO\/UT of anders'),
+  "opleider": zod.string().nullish(),
+  "studieduur": zod.string().nullish(),
+  "studiebelasting": zod.string().nullish(),
+  "lesvorm": zod.string().nullish().describe('klassikaal, online, zelfstudie, blended of praktijk'),
+  "kosten_indicatie": zod.string().nullish(),
+  "kosten_werkgever_pct": zod.number().nullish(),
+  "kosten_werknemer_pct": zod.number().nullish(),
   "geldigheid_maanden": zod.number().nullish(),
   "verplicht": zod.boolean(),
+  "functie_ids": zod.array(zod.number()).optional(),
+  "functie_namen": zod.array(zod.string()).optional(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
 })

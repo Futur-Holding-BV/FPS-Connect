@@ -5,16 +5,43 @@
  * FPS Brandpreventie - Platform voor brandpreventieve gebouwvoorzieningen
  * OpenAPI spec version: 0.1.0
  */
+import type { OpleidingSoort } from './opleidingSoort';
 
 export interface Opleiding {
   id: number;
   naam: string;
   categorie: string;
+  /** opleiding (diplomagericht) of cursus (korte training/certificering) */
+  soort: OpleidingSoort;
   /** @nullable */
   omschrijving?: string | null;
+  /**
+     * MBO, HBO, WO/UT of anders
+     * @nullable
+     */
+  niveau?: string | null;
+  /** @nullable */
+  opleider?: string | null;
+  /** @nullable */
+  studieduur?: string | null;
+  /** @nullable */
+  studiebelasting?: string | null;
+  /**
+     * klassikaal, online, zelfstudie, blended of praktijk
+     * @nullable
+     */
+  lesvorm?: string | null;
+  /** @nullable */
+  kosten_indicatie?: string | null;
+  /** @nullable */
+  kosten_werkgever_pct?: number | null;
+  /** @nullable */
+  kosten_werknemer_pct?: number | null;
   /** @nullable */
   geldigheid_maanden?: number | null;
   verplicht: boolean;
+  functie_ids?: number[];
+  functie_namen?: string[];
   aangemaakt_op: string;
   bijgewerkt_op: string;
 }

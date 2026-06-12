@@ -4,13 +4,16 @@
 // verlof. Bevat ook de onboarding-flow: bij het koppelen van een gebruiker aan
 // HRM worden CAO, contracturen en aanvang dienstverband server-side
 // gecontroleerd en wordt direct verlofsaldo opgebouwd. Fase 1 bevat BEWUST GEEN
-// salarisadministratie en GEEN AI-logica.
+// salarisadministratie. Uitzondering (op expliciet verzoek vooruit gebouwd): AI
+// stelt opleidingen/cursussen voor per functie. Conform het projectprincipe stelt
+// de AI alleen voor; een mens bevestigt en bewaart (geen automatische opslag).
 import { Router } from "express";
 import {
   db,
   functiesTable,
   medewerkersTable,
   opleidingenTable,
+  functieOpleidingenTable,
   medewerkerOpleidingenTable,
   bekwaamhedenTable,
   verlofsoortenTable,
@@ -18,8 +21,9 @@ import {
   verlofAanvragenTable,
   gebruikersTable,
 } from "@workspace/db";
-import { eq, desc, and, ne } from "drizzle-orm";
+import { eq, desc, and, ne, inArray } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
+import { stelOpleidingenVoor } from "../services/opleiding-ai";
 
 const router = Router();
 
@@ -148,21 +152,76 @@ router.delete("/functies/:id", schrijven, async (req, res) => {
 });
 
 // ── Opleidingen-catalogus ───────────────────────────────────────────────────
-const mapOpleiding = (o: typeof opleidingenTable.$inferSelect) => ({
+type OpleidingRow = typeof opleidingenTable.$inferSelect;
+
+const mapOpleiding = (o: OpleidingRow, koppeling?: { ids: number[]; namen: string[] }) => ({
   id: o.id,
   naam: o.naam,
   categorie: o.categorie,
+  soort: o.soort,
   omschrijving: o.omschrijving,
+  niveau: o.niveau,
+  opleider: o.opleider,
+  studieduur: o.studieduur,
+  studiebelasting: o.studiebelasting,
+  lesvorm: o.lesvorm,
+  kosten_indicatie: o.kostenIndicatie,
+  kosten_werkgever_pct: o.kostenWerkgeverPct,
+  kosten_werknemer_pct: o.kostenWerknemerPct,
   geldigheid_maanden: o.geldigheidMaanden,
   verplicht: o.verplicht,
+  functie_ids: koppeling?.ids ?? [],
+  functie_namen: koppeling?.namen ?? [],
   aangemaakt_op: iso(o.aangemaaktOp),
   bijgewerkt_op: iso(o.bijgewerktOp),
 });
 
+// Functie-koppelingen voor een set opleidingen ophalen (id's + namen per opleiding).
+async function haalOpleidingKoppelingen(opleidingIds: number[]): Promise<Map<number, { ids: number[]; namen: string[] }>> {
+  const map = new Map<number, { ids: number[]; namen: string[] }>();
+  if (opleidingIds.length === 0) return map;
+  const rijen = await db
+    .select({
+      opleidingId: functieOpleidingenTable.opleidingId,
+      functieId: functieOpleidingenTable.functieId,
+      functieNaam: functiesTable.naam,
+    })
+    .from(functieOpleidingenTable)
+    .leftJoin(functiesTable, eq(functieOpleidingenTable.functieId, functiesTable.id))
+    .where(inArray(functieOpleidingenTable.opleidingId, opleidingIds));
+  for (const r of rijen) {
+    const entry = map.get(r.opleidingId) ?? { ids: [], namen: [] };
+    entry.ids.push(r.functieId);
+    if (r.functieNaam) entry.namen.push(r.functieNaam);
+    map.set(r.opleidingId, entry);
+  }
+  return map;
+}
+
+// Functie-koppelingen van één opleiding vervangen (alleen bestaande functies).
+async function syncOpleidingFuncties(opleidingId: number, functieIds: unknown): Promise<void> {
+  if (!Array.isArray(functieIds)) return;
+  const uniek = [...new Set(functieIds.map((n) => parseInt(String(n), 10)).filter((n) => Number.isInteger(n)))];
+  await db.delete(functieOpleidingenTable).where(eq(functieOpleidingenTable.opleidingId, opleidingId));
+  if (uniek.length === 0) return;
+  const bestaande = await db.select({ id: functiesTable.id }).from(functiesTable).where(inArray(functiesTable.id, uniek));
+  const geldig = bestaande.map((f) => f.id);
+  if (geldig.length > 0) {
+    await db
+      .insert(functieOpleidingenTable)
+      .values(geldig.map((functieId) => ({ functieId, opleidingId })))
+      .onConflictDoNothing();
+  }
+}
+
+const soortOf = (v: unknown): "opleiding" | "cursus" | undefined =>
+  v === "opleiding" ? "opleiding" : v === "cursus" ? "cursus" : undefined;
+
 router.get("/opleidingen", lezen, async (req, res) => {
   try {
     const rijen = await db.select().from(opleidingenTable).orderBy(opleidingenTable.naam);
-    res.json(rijen.map(mapOpleiding));
+    const kopMap = await haalOpleidingKoppelingen(rijen.map((r) => r.id));
+    res.json(rijen.map((r) => mapOpleiding(r, kopMap.get(r.id))));
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Interne serverfout" });
@@ -171,13 +230,34 @@ router.get("/opleidingen", lezen, async (req, res) => {
 
 router.post("/opleidingen", schrijven, async (req, res) => {
   try {
-    const { naam, categorie, omschrijving, geldigheid_maanden, verplicht } = req.body;
+    const {
+      naam, categorie, soort, omschrijving, niveau, opleider, studieduur, studiebelasting,
+      lesvorm, kosten_indicatie, kosten_werkgever_pct, kosten_werknemer_pct,
+      geldigheid_maanden, verplicht, functie_ids,
+    } = req.body;
     if (!naam) return res.status(400).json({ error: "naam is verplicht" });
     const [o] = await db
       .insert(opleidingenTable)
-      .values({ naam, categorie: categorie || "overig", omschrijving, geldigheidMaanden: geldigheid_maanden ?? null, verplicht: verplicht ?? false })
+      .values({
+        naam,
+        categorie: categorie || "overig",
+        soort: soortOf(soort) ?? "cursus",
+        omschrijving: omschrijving ?? null,
+        niveau: niveau ?? null,
+        opleider: opleider ?? null,
+        studieduur: studieduur ?? null,
+        studiebelasting: studiebelasting ?? null,
+        lesvorm: lesvorm ?? null,
+        kostenIndicatie: kosten_indicatie ?? null,
+        kostenWerkgeverPct: kosten_werkgever_pct ?? null,
+        kostenWerknemerPct: kosten_werknemer_pct ?? null,
+        geldigheidMaanden: geldigheid_maanden ?? null,
+        verplicht: verplicht ?? false,
+      })
       .returning();
-    res.status(201).json(mapOpleiding(o));
+    await syncOpleidingFuncties(o.id, functie_ids);
+    const kopMap = await haalOpleidingKoppelingen([o.id]);
+    res.status(201).json(mapOpleiding(o, kopMap.get(o.id)));
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Interne serverfout" });
@@ -186,14 +266,62 @@ router.post("/opleidingen", schrijven, async (req, res) => {
 
 router.patch("/opleidingen/:id", schrijven, async (req, res) => {
   try {
-    const { naam, categorie, omschrijving, geldigheid_maanden, verplicht } = req.body;
+    const {
+      naam, categorie, soort, omschrijving, niveau, opleider, studieduur, studiebelasting,
+      lesvorm, kosten_indicatie, kosten_werkgever_pct, kosten_werknemer_pct,
+      geldigheid_maanden, verplicht, functie_ids,
+    } = req.body;
+    const id = parseId(req.params.id);
+    // Partiele PATCH: alleen meegestuurde velden bijwerken. Drizzle .set() slaat
+    // undefined over, dus niet coalescen naar null (anders wist een partiele
+    // PATCH bestaande waarden).
     const [o] = await db
       .update(opleidingenTable)
-      .set({ naam, categorie, omschrijving, geldigheidMaanden: geldigheid_maanden ?? null, verplicht, bijgewerktOp: new Date() })
-      .where(eq(opleidingenTable.id, parseId(req.params.id)))
+      .set({
+        naam,
+        categorie,
+        soort: soortOf(soort),
+        omschrijving,
+        niveau,
+        opleider,
+        studieduur,
+        studiebelasting,
+        lesvorm,
+        kostenIndicatie: kosten_indicatie,
+        kostenWerkgeverPct: kosten_werkgever_pct,
+        kostenWerknemerPct: kosten_werknemer_pct,
+        geldigheidMaanden: geldigheid_maanden,
+        verplicht,
+        bijgewerktOp: new Date(),
+      })
+      .where(eq(opleidingenTable.id, id))
       .returning();
     if (!o) return res.status(404).json({ error: "Opleiding niet gevonden" });
-    res.json(mapOpleiding(o));
+    if (Array.isArray(functie_ids)) await syncOpleidingFuncties(id, functie_ids);
+    const kopMap = await haalOpleidingKoppelingen([id]);
+    res.json(mapOpleiding(o, kopMap.get(id)));
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// AI stelt opleidingen/cursussen voor bij een functie. Slaat NIETS op; de gebruiker
+// beoordeelt het voorstel in de UI en bewaart de gekozen items zelf.
+router.post("/functies/:id/opleidingen-voorstel", schrijven, async (req, res) => {
+  try {
+    const [f] = await db.select().from(functiesTable).where(eq(functiesTable.id, parseId(req.params.id)));
+    if (!f) return res.status(404).json({ error: "Functie niet gevonden" });
+    const resultaat = await stelOpleidingenVoor({
+      naam: f.naam,
+      werkmaatschappij: f.werkmaatschappij,
+      omschrijving: f.omschrijving,
+      taken: f.taken,
+      verantwoordelijkheden: f.verantwoordelijkheden,
+      competenties: f.competenties,
+      opleidingsvereisten: f.opleidingsvereisten,
+    });
+    res.json(resultaat);
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Interne serverfout" });

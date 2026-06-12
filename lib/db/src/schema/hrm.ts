@@ -55,15 +55,39 @@ export const medewerkersTable = pgTable("medewerkers", {
 
 // Opleidingen/certificeringen-catalogus. geldigheidMaanden = null betekent geen
 // verloop; verplicht markeert opleidingen waarop het systeem moet signaleren.
+//
+// soort onderscheidt een volledige 'opleiding' (diplomagericht) van een 'cursus'
+// (korte training/certificering). niveau/opleider/studieduur/studiebelasting/
+// lesvorm en de kostenverdeling werkgever/werknemer zijn velden die de AI per
+// functie kan voorstellen (een mens bevestigt; AI slaat nooit zelfstandig op).
 export const opleidingenTable = pgTable("opleidingen", {
   id: serial("id").primaryKey(),
   naam: text("naam").notNull(),
   categorie: text("categorie").notNull().default("overig"),
+  soort: text("soort").notNull().default("cursus"),
   omschrijving: text("omschrijving"),
+  niveau: text("niveau"),
+  opleider: text("opleider"),
+  studieduur: text("studieduur"),
+  studiebelasting: text("studiebelasting"),
+  lesvorm: text("lesvorm"),
+  kostenIndicatie: text("kosten_indicatie"),
+  kostenWerkgeverPct: integer("kosten_werkgever_pct"),
+  kostenWerknemerPct: integer("kosten_werknemer_pct"),
   geldigheidMaanden: integer("geldigheid_maanden"),
   verplicht: boolean("verplicht").notNull().default(false),
   aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
   bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
+});
+
+// Koppeling functie <-> opleiding (veel-op-veel). Eén opleiding/cursus (bijv. VCA,
+// BHV) kan bij meerdere functies horen; AI-voorstellen worden hier per functie
+// vastgelegd zonder de catalogus te dupliceren.
+export const functieOpleidingenTable = pgTable("functie_opleidingen", {
+  id: serial("id").primaryKey(),
+  functieId: integer("functie_id").notNull().references(() => functiesTable.id, { onDelete: "cascade" }),
+  opleidingId: integer("opleiding_id").notNull().references(() => opleidingenTable.id, { onDelete: "cascade" }),
+  aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
 });
 
 // Behaalde opleidingen/certificaten per medewerker. Optionele koppeling naar het
@@ -156,6 +180,7 @@ export const verlofAanvragenTable = pgTable("verlofaanvragen", {
 export const insertFunctieSchema = createInsertSchema(functiesTable).omit({ id: true, aangemaaktOp: true, bijgewerktOp: true });
 export const insertMedewerkerSchema = createInsertSchema(medewerkersTable).omit({ id: true, aangemaaktOp: true, bijgewerktOp: true });
 export const insertOpleidingSchema = createInsertSchema(opleidingenTable).omit({ id: true, aangemaaktOp: true, bijgewerktOp: true });
+export const insertFunctieOpleidingSchema = createInsertSchema(functieOpleidingenTable).omit({ id: true, aangemaaktOp: true });
 export const insertMedewerkerOpleidingSchema = createInsertSchema(medewerkerOpleidingenTable).omit({ id: true, aangemaaktOp: true, bijgewerktOp: true });
 export const insertBekwaamheidSchema = createInsertSchema(bekwaamhedenTable).omit({ id: true, aangemaaktOp: true, bijgewerktOp: true });
 export const insertVerlofsoortSchema = createInsertSchema(verlofsoortenTable).omit({ id: true, aangemaaktOp: true, bijgewerktOp: true });
@@ -165,6 +190,7 @@ export const insertVerlofAanvraagSchema = createInsertSchema(verlofAanvragenTabl
 export type InsertFunctie = z.infer<typeof insertFunctieSchema>;
 export type InsertMedewerker = z.infer<typeof insertMedewerkerSchema>;
 export type InsertOpleiding = z.infer<typeof insertOpleidingSchema>;
+export type InsertFunctieOpleiding = z.infer<typeof insertFunctieOpleidingSchema>;
 export type InsertMedewerkerOpleiding = z.infer<typeof insertMedewerkerOpleidingSchema>;
 export type InsertBekwaamheid = z.infer<typeof insertBekwaamheidSchema>;
 export type InsertVerlofsoort = z.infer<typeof insertVerlofsoortSchema>;
@@ -174,6 +200,7 @@ export type InsertVerlofAanvraag = z.infer<typeof insertVerlofAanvraagSchema>;
 export type Functie = typeof functiesTable.$inferSelect;
 export type Medewerker = typeof medewerkersTable.$inferSelect;
 export type Opleiding = typeof opleidingenTable.$inferSelect;
+export type FunctieOpleiding = typeof functieOpleidingenTable.$inferSelect;
 export type MedewerkerOpleiding = typeof medewerkerOpleidingenTable.$inferSelect;
 export type Bekwaamheid = typeof bekwaamhedenTable.$inferSelect;
 export type Verlofsoort = typeof verlofsoortenTable.$inferSelect;

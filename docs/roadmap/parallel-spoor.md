@@ -5,7 +5,7 @@ Apart spoor naast de hoofdroadmap (V1.x). De gebruiker heeft de Ontwikkelstop **
 **Reikwijdte van het akkoord.** Het formele akkoord geldt uitsluitend voor de hieronder beschreven Fase 1-basis (gedeeld datamodel, rechten, navigatie en basisschermen + een MVP per module). De diepere uitwerking blijft onder de Ontwikkelstop: de volledige HRM-module FPS Groep (V3.0) en de strategische AI-lijn (AI Calculator / AI Offertegenerator / Klantmodule) staan onverkort [geparkeerd](./geparkeerd.md) en worden NIET vooruit gebouwd.
 
 **Harde uitsluitingen Fase 1 (vastgelegd):**
-- GEEN AI-logica in deze modules (geen AI-calculatie, geen AI-offerte, geen AI-personeelsadvies).
+- GEEN AI-logica in deze modules (geen AI-calculatie, geen AI-offerte, geen AI-personeelsadvies). **Uitzondering met expliciet akkoord:** AI die per functie passende opleidingen/cursussen *voorstelt* in de HRM-opleidingenmodule (zie de uitbreidingsnotitie hieronder). De AI keurt nooit zelfstandig goed — AI stelt voor, een mens bevestigt en slaat op. Dit is geen AI-personeelsadvies/-coaching (geparkeerd, V3.0).
 - GEEN automatische offerteverzending — Offerte Intelligence bereidt uitsluitend voor; een mens stelt op en verstuurt.
 - GEEN salarisadministratie.
 
@@ -17,12 +17,14 @@ MVP-basis voor personeelsbeheer, bewust los van salarisadministratie. Verlof (op
 
 **Gebouwd (Fase 1-basis):**
 - Datamodel `lib/db/src/schema/hrm.ts`: medewerkers, functiehuis (functies, kantoor vs. veld), opleidingen/certificaten, bekwaamheidsmatrix, verlofsoorten (incl. bijzondere verlofsoorten/CAO-naslag) en — op verzoek — verlofsaldo's (beginsaldo/opbouw/opname/saldo per jaar) en verlofaanvragen.
-- Rechten: module-ID `personeel` in `lib/permissies`, gegate via de bevoegdheden-matrix (niet via rol-strings).
+- Opleidingencatalogus uitgebreid: onderscheid **opleiding vs. cursus** (`soort`) plus rijke velden — niveau (MBO/HBO/WO-UT/anders), opleider, studieduur, studiebelasting, lesvorm (klassikaal/online/zelfstudie/blended), kostenindicatie en kostenverdeling werkgever/werknemer (`kostenWerkgeverPct`/`kostenWerknemerPct`). Koppeling aan functies via M2M-tabel `functie_opleidingen` (unieke functie/opleiding-paren, cascade).
+- AI-opleidingsvoorstel (met expliciet akkoord, zie harde uitsluitingen): `POST /functies/:id/opleidingen-voorstel` laat AI per functie passende opleidingen/cursussen met alle bovenstaande velden *voorstellen* (service `opleiding-ai.ts`, gpt-5, json_object, `heeftOpenAi`-guard). De AI slaat niets op — een mens kiest voorstellen aan en accepteert; pas dan worden ze als opleiding/cursus aangemaakt en aan de functie gekoppeld. AI stelt voor, een mens bevestigt.
+- Rechten: module-ID `personeel` in `lib/permissies`, gegate via de bevoegdheden-matrix (niet via rol-strings). Het AI-voorstel-endpoint vereist schrijfrecht (niveau 2).
 - Backend: routes in `artifacts/api-server/src/routes/hrm.ts` (medewerkers, functies, opleidingen, verlofsoorten, verlofsaldo's, verlofaanvragen, HRM-stats, CAO-opties), achter `requireBevoegdheid`. Onboarding bouwt het verlofsaldo server-side pro rata op uit de CAO-norm.
-- Web (firevault): pagina `pages/personeel/index.tsx` met statistieken en tabs Medewerkers, Functiehuis, Opleidingen en Verlof, inclusief aanmaakdialogen en een onboarding-dialoog (CAO, verlofuren, aanvang dienstverband met controlemechanismen).
+- Web (firevault): pagina `pages/personeel/index.tsx` met statistieken en tabs Medewerkers, Functiehuis, Opleidingen en Verlof, inclusief aanmaakdialogen en een onboarding-dialoog (CAO, verlofuren, aanvang dienstverband met controlemechanismen). De Opleidingen-tab heeft een AI-voorstelpaneel (functie kiezen → voorstellen in amber met checkboxes → accepteren).
 - Mobiel (monteur-app): read-mostly schermen `app/hrm/index.tsx` (dashboard), `app/hrm/opleidingen.tsx` en `app/hrm/kennisbank.tsx`.
 
-**Bewust NIET in Fase 1:** salarisadministratie, beoordeling & ontwikkeling, werving & selectie, planning/inzetbaarheid en AI-coaches — dit hoort bij de geparkeerde V3.0 HRM-module FPS Groep.
+**Bewust NIET in Fase 1:** salarisadministratie, beoordeling & ontwikkeling, werving & selectie, planning/inzetbaarheid en AI-coaches/AI-personeelsadvies — dit hoort bij de geparkeerde V3.0 HRM-module FPS Groep. Het AI-opleidingsvoorstel hierboven is een afgebakende uitzondering (alleen voorstellen, mens bevestigt) en geen personeelsadvies.
 
 ## Module 2 — Dossiermodule (Fase 1-basis gebouwd)
 

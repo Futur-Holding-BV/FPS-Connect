@@ -4142,6 +4142,29 @@ paths:
         "204":
           description: Verwijderd
 
+  /functies/{id}/opleidingen-voorstel:
+    post:
+      operationId: voorstelOpleidingenVoorFunctie
+      tags: [personeel]
+      summary: AI stelt opleidingen/cursussen voor bij een functie (mens bevestigt)
+      description: >
+        Genereert met AI een voorstel van passende opleidingen en cursussen voor
+        een functie, met niveau, opleider, studieduur, studiebelasting, lesvorm en
+        kostenverdeling. Slaat niets op; de gebruiker bevestigt en bewaart zelf.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OpleidingenVoorstelResultaat"
+
   /opleidingen:
     get:
       operationId: listOpleidingen
@@ -8748,7 +8771,7 @@ components:
 
     Opleiding:
       type: object
-      required: [id, naam, categorie, verplicht, aangemaakt_op, bijgewerkt_op]
+      required: [id, naam, categorie, soort, verplicht, aangemaakt_op, bijgewerkt_op]
       properties:
         id:
           type: integer
@@ -8756,12 +8779,42 @@ components:
           type: string
         categorie:
           type: string
+        soort:
+          type: string
+          description: "opleiding (diplomagericht) of cursus (korte training/certificering)"
+          enum: [opleiding, cursus]
         omschrijving:
           type: ["string", "null"]
+        niveau:
+          type: ["string", "null"]
+          description: "MBO, HBO, WO/UT of anders"
+        opleider:
+          type: ["string", "null"]
+        studieduur:
+          type: ["string", "null"]
+        studiebelasting:
+          type: ["string", "null"]
+        lesvorm:
+          type: ["string", "null"]
+          description: "klassikaal, online, zelfstudie, blended of praktijk"
+        kosten_indicatie:
+          type: ["string", "null"]
+        kosten_werkgever_pct:
+          type: ["integer", "null"]
+        kosten_werknemer_pct:
+          type: ["integer", "null"]
         geldigheid_maanden:
           type: ["integer", "null"]
         verplicht:
           type: boolean
+        functie_ids:
+          type: array
+          items:
+            type: integer
+        functie_namen:
+          type: array
+          items:
+            type: string
         aangemaakt_op:
           type: string
         bijgewerkt_op:
@@ -8775,12 +8828,82 @@ components:
           type: string
         categorie:
           type: string
-        omschrijving:
+        soort:
           type: string
+          enum: [opleiding, cursus]
+        omschrijving:
+          type: ["string", "null"]
+        niveau:
+          type: ["string", "null"]
+        opleider:
+          type: ["string", "null"]
+        studieduur:
+          type: ["string", "null"]
+        studiebelasting:
+          type: ["string", "null"]
+        lesvorm:
+          type: ["string", "null"]
+        kosten_indicatie:
+          type: ["string", "null"]
+        kosten_werkgever_pct:
+          type: ["integer", "null"]
+        kosten_werknemer_pct:
+          type: ["integer", "null"]
         geldigheid_maanden:
           type: ["integer", "null"]
         verplicht:
           type: boolean
+        functie_ids:
+          type: array
+          items:
+            type: integer
+
+    OpleidingVoorstel:
+      type: object
+      required: [naam, soort]
+      properties:
+        naam:
+          type: string
+        soort:
+          type: string
+          enum: [opleiding, cursus]
+        categorie:
+          type: ["string", "null"]
+        omschrijving:
+          type: ["string", "null"]
+        niveau:
+          type: ["string", "null"]
+        opleider:
+          type: ["string", "null"]
+        studieduur:
+          type: ["string", "null"]
+        studiebelasting:
+          type: ["string", "null"]
+        lesvorm:
+          type: ["string", "null"]
+        kosten_indicatie:
+          type: ["string", "null"]
+        kosten_werkgever_pct:
+          type: ["integer", "null"]
+        kosten_werknemer_pct:
+          type: ["integer", "null"]
+        geldigheid_maanden:
+          type: ["integer", "null"]
+        verplicht:
+          type: boolean
+
+    OpleidingenVoorstelResultaat:
+      type: object
+      required: [voorstellen]
+      properties:
+        voorstellen:
+          type: array
+          items:
+            $ref: "#/components/schemas/OpleidingVoorstel"
+        toelichting:
+          type: ["string", "null"]
+        betrouwbaarheid:
+          type: ["string", "null"]
 
     Medewerker:
       type: object

@@ -2347,26 +2347,134 @@ export interface FunctieInput {
   actief?: boolean;
 }
 
+/**
+ * opleiding (diplomagericht) of cursus (korte training/certificering)
+ */
+export type OpleidingSoort = typeof OpleidingSoort[keyof typeof OpleidingSoort];
+
+
+export const OpleidingSoort = {
+  opleiding: 'opleiding',
+  cursus: 'cursus',
+} as const;
+
 export interface Opleiding {
   id: number;
   naam: string;
   categorie: string;
+  /** opleiding (diplomagericht) of cursus (korte training/certificering) */
+  soort: OpleidingSoort;
   /** @nullable */
   omschrijving?: string | null;
+  /**
+     * MBO, HBO, WO/UT of anders
+     * @nullable
+     */
+  niveau?: string | null;
+  /** @nullable */
+  opleider?: string | null;
+  /** @nullable */
+  studieduur?: string | null;
+  /** @nullable */
+  studiebelasting?: string | null;
+  /**
+     * klassikaal, online, zelfstudie, blended of praktijk
+     * @nullable
+     */
+  lesvorm?: string | null;
+  /** @nullable */
+  kosten_indicatie?: string | null;
+  /** @nullable */
+  kosten_werkgever_pct?: number | null;
+  /** @nullable */
+  kosten_werknemer_pct?: number | null;
   /** @nullable */
   geldigheid_maanden?: number | null;
   verplicht: boolean;
+  functie_ids?: number[];
+  functie_namen?: string[];
   aangemaakt_op: string;
   bijgewerkt_op: string;
 }
 
+export type OpleidingInputSoort = typeof OpleidingInputSoort[keyof typeof OpleidingInputSoort];
+
+
+export const OpleidingInputSoort = {
+  opleiding: 'opleiding',
+  cursus: 'cursus',
+} as const;
+
 export interface OpleidingInput {
   naam: string;
   categorie?: string;
-  omschrijving?: string;
+  soort?: OpleidingInputSoort;
+  /** @nullable */
+  omschrijving?: string | null;
+  /** @nullable */
+  niveau?: string | null;
+  /** @nullable */
+  opleider?: string | null;
+  /** @nullable */
+  studieduur?: string | null;
+  /** @nullable */
+  studiebelasting?: string | null;
+  /** @nullable */
+  lesvorm?: string | null;
+  /** @nullable */
+  kosten_indicatie?: string | null;
+  /** @nullable */
+  kosten_werkgever_pct?: number | null;
+  /** @nullable */
+  kosten_werknemer_pct?: number | null;
   /** @nullable */
   geldigheid_maanden?: number | null;
   verplicht?: boolean;
+  functie_ids?: number[];
+}
+
+export type OpleidingVoorstelSoort = typeof OpleidingVoorstelSoort[keyof typeof OpleidingVoorstelSoort];
+
+
+export const OpleidingVoorstelSoort = {
+  opleiding: 'opleiding',
+  cursus: 'cursus',
+} as const;
+
+export interface OpleidingVoorstel {
+  naam: string;
+  soort: OpleidingVoorstelSoort;
+  /** @nullable */
+  categorie?: string | null;
+  /** @nullable */
+  omschrijving?: string | null;
+  /** @nullable */
+  niveau?: string | null;
+  /** @nullable */
+  opleider?: string | null;
+  /** @nullable */
+  studieduur?: string | null;
+  /** @nullable */
+  studiebelasting?: string | null;
+  /** @nullable */
+  lesvorm?: string | null;
+  /** @nullable */
+  kosten_indicatie?: string | null;
+  /** @nullable */
+  kosten_werkgever_pct?: number | null;
+  /** @nullable */
+  kosten_werknemer_pct?: number | null;
+  /** @nullable */
+  geldigheid_maanden?: number | null;
+  verplicht?: boolean;
+}
+
+export interface OpleidingenVoorstelResultaat {
+  voorstellen: OpleidingVoorstel[];
+  /** @nullable */
+  toelichting?: string | null;
+  /** @nullable */
+  betrouwbaarheid?: string | null;
 }
 
 export interface Medewerker {
