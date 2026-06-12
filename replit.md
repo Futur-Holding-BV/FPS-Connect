@@ -2,6 +2,14 @@
 
 FPS Brandpreventie is een Nederlands platform voor het registreren, beheren en inspecteren van brandpreventieve gebouwvoorzieningen (branddeur, doorvoering, brandklep, manchet, coating, etc.).
 
+## Naamgeving (platform)
+
+Het platform heeft twee namen, afhankelijk van de doelgroep:
+- **FPS Connect** — interne naam. Gebruik voor interne schermen, de beheeromgeving, interne navigatie, documentatie en beheerdersrollen.
+- **FPS One** — klantnaam. Gebruik uitsluitend richting klanten: klantportaal, klantlogin, e-mails/notificaties aan klanten, opleverrapporten en klantgerichte teksten.
+
+Bestaande termen (klantomgeving, klantenportaal, gebruikersomgeving, appnaam) worden consequent volgens deze tweedeling vervangen. De rename raakt veel schermen en wordt daarom stapsgewijs en zichtbaar doorgevoerd (kleine increments, telkens beoordeelbaar in de preview).
+
 ## Run & Operate
 
 - `pnpm --filter @workspace/api-server run dev` — API server starten (poort 8080)

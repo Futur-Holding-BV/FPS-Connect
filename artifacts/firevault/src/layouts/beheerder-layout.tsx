@@ -9,7 +9,7 @@ import {
 import {
   ShieldCheck, Building, Wrench, Users, Search, Home, Receipt,
   ShieldAlert, LifeBuoy, MessageSquarePlus, Activity, Contact, Info, BookOpen, Clock,
-  FolderOpen, FileText,
+  FolderOpen, FileText, ListChecks,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { GebruikerMenu } from "@/components/gebruiker-menu";
@@ -349,6 +349,14 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
                         </SidebarMenuButton>
                       </SidebarMenuItem>
                     )}
+                    <SidebarMenuItem>
+                      <SidebarMenuButton asChild isActive={location === "/beheer/ontwikkelstatus"}>
+                        <Link href="/beheer/ontwikkelstatus">
+                          <ListChecks />
+                          <span>Ontwikkelstatus</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
                   </>
                 )}
                 <SidebarMenuItem>
