@@ -1667,6 +1667,47 @@ function KoppelVoorstellenDialog({
     }
   }
 
+  async function trekIn(v: DocumentKoppelVoorstel, labelIds: number[]) {
+    setBezigDoc(v.document_id);
+    setFout(null);
+    try {
+      const reeds = overgenomen[v.document_id] ?? [];
+      const huidig = Array.from(
+        new Set([...v.huidige_toepassing_ids, ...reeds]),
+      );
+      const nieuweSet = huidig.filter((id) => !labelIds.includes(id));
+      await setToepassingen.mutateAsync({
+        id: v.document_id,
+        data: { label_ids: nieuweSet },
+      });
+      setOvergenomen((s) => ({
+        ...s,
+        [v.document_id]: reeds.filter((id) => !labelIds.includes(id)),
+      }));
+      await queryClient.invalidateQueries({ queryKey: getListDocumentenQueryKey() });
+      const namen = v.suggesties
+        .filter((s) => labelIds.includes(s.label_id))
+        .map((s) => s.naam);
+      toast({
+        title:
+          namen.length > 1
+            ? "Koppelingen teruggedraaid"
+            : "Koppeling teruggedraaid",
+        description: `${namen.join(", ")} niet langer gekoppeld aan "${v.document_naam}".`,
+      });
+    } catch (err) {
+      const melding = foutmelding(err, "Koppeling terugdraaien mislukte.");
+      setFout(melding);
+      toast({
+        variant: "destructive",
+        title: "Koppeling terugdraaien mislukt",
+        description: melding,
+      });
+    } finally {
+      setBezigDoc(null);
+    }
+  }
+
   const totaalOvergenomen = Object.values(overgenomen).reduce(
     (n, ids) => n + ids.length,
     0,
@@ -1772,9 +1813,20 @@ function KoppelVoorstellenDialog({
                             )}
                           </div>
                           {isOvergenomen ? (
-                            <Badge variant="secondary" className="text-muted-foreground">
-                              Overgenomen
-                            </Badge>
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              <Badge variant="secondary" className="text-muted-foreground">
+                                Overgenomen
+                              </Badge>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-7 px-2 text-xs"
+                                disabled={bezigDoc === v.document_id}
+                                onClick={() => trekIn(v, [s.label_id])}
+                              >
+                                Terugdraaien
+                              </Button>
+                            </div>
                           ) : (
                             <Button
                               size="sm"
