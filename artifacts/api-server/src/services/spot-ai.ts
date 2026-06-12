@@ -258,9 +258,9 @@ export async function analyseerSpot(opts: {
   try {
     const client = maakOpenAiClient();
     const completion = await client.chat.completions.create({
-      model: "gpt-4o",
+      model: "gpt-5",
       response_format: { type: "json_object" },
-      max_tokens: 700,
+      max_completion_tokens: 4000,
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
         { role: "user", content: userInhoud },

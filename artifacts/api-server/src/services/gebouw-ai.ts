@@ -445,9 +445,9 @@ async function analyseerBeeld(
   }
 
   const completion = await client.chat.completions.create({
-    model: "gpt-4o",
+    model: "gpt-5",
     response_format: { type: "json_object" },
-    max_tokens: 800,
+    max_completion_tokens: 4000,
     messages: [
       { role: "system", content: SYSTEM_PROMPT },
       { role: "user", content },
@@ -718,9 +718,9 @@ export async function analyseerPlattegrond(
   try {
     const client = maakOpenAiClient();
     const completion = await client.chat.completions.create({
-      model: "gpt-4o",
+      model: "gpt-5",
       response_format: { type: "json_object" },
-      max_tokens: 400,
+      max_completion_tokens: 3000,
       messages: [
         { role: "system", content: PLATTEGROND_PROMPT },
         {
