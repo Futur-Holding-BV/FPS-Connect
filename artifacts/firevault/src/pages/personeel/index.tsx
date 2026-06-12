@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "wouter";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   useGetHrmStats,
@@ -12,17 +13,23 @@ import {
   useListVerlofsoorten,
   useListCaoOpties,
   useListToewijsbareGebruikers,
+  useListAlleVerlofAanvragen,
+  useUpdateVerlofAanvraag,
+  useListAlleBekwaamheden,
   getGetHrmStatsQueryKey,
   getListMedewerkersQueryKey,
   getListFunctiesQueryKey,
   getListOpleidingenQueryKey,
+  getListAlleVerlofAanvragenQueryKey,
 } from "@workspace/api-client-react";
 import type {
   MedewerkerInput,
   FunctieInput,
   OpleidingInput,
   MedewerkerOnboardingInput,
+  VerlofAanvraag,
 } from "@workspace/api-client-react";
+import { useRol } from "@/context/rol-context";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -41,10 +48,30 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import {
   Users, Plus, UserPlus, Briefcase, GraduationCap, CalendarClock, AlertTriangle,
+  Award, Check, X, ChevronRight,
 } from "lucide-react";
 
 const WERKMAATSCHAPPIJ_STD = "FPS Brandpreventie";
 const DIENSTVERBANDEN = ["vast", "tijdelijk", "oproep", "stage", "inhuur"] as const;
+
+const NIVEAU_LABEL: Record<string, string> = {
+  niet_bevoegd: "Niet bevoegd",
+  onder_begeleiding: "Onder begeleiding",
+  zelfstandig: "Zelfstandig",
+  specialist: "Specialist",
+  trainer: "Trainer / instructeur",
+};
+
+function niveauBadgeClass(n: string) {
+  return n === "niet_bevoegd" || n === "onder_begeleiding" ? "border-amber-200 text-amber-700" : "";
+}
+
+function fmtDatum(datum?: string | null) {
+  if (!datum) return "—";
+  const d = new Date(datum);
+  if (Number.isNaN(d.getTime())) return datum;
+  return d.toLocaleDateString("nl-NL", { day: "2-digit", month: "short", year: "numeric" });
+}
 
 function huidigJaar() {
   return new Date().getFullYear();
@@ -54,6 +81,10 @@ export default function PersoneelPagina() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  const { echteRol, bevoegdheden } = useRol();
+  const magSchrijven =
+    echteRol === "hoofdbeheerder" || (bevoegdheden.personeel ?? 0) >= 2;
+
   const { data: stats } = useGetHrmStats();
   const { data: medewerkers, isLoading: medewerkersLaden } = useListMedewerkers();
   const { data: functies } = useListFuncties();
@@ -61,11 +92,55 @@ export default function PersoneelPagina() {
   const { data: verlofsoorten } = useListVerlofsoorten();
   const { data: caoOpties } = useListCaoOpties();
   const { data: gebruikers } = useListToewijsbareGebruikers();
+  const { data: openAanvragen } = useListAlleVerlofAanvragen({ status: "aangevraagd" });
+  const { data: alleBekwaamheden } = useListAlleBekwaamheden();
 
   const maakMedewerker = useCreateMedewerker();
   const onboard = useOnboardMedewerker();
   const maakFunctie = useCreateFunctie();
   const maakOpleiding = useCreateOpleiding();
+  const beoordeelMutatie = useUpdateVerlofAanvraag();
+
+  const gekoppeldeIds = new Set(
+    (medewerkers ?? []).map((m) => m.gebruiker_id).filter((x): x is number => x != null),
+  );
+  const ongekoppeld = (gebruikers ?? []).filter((g) => !gekoppeldeIds.has(g.id));
+
+  const bekwaamhedenPerCategorie = (alleBekwaamheden ?? []).reduce<Record<string, typeof alleBekwaamheden>>(
+    (acc, b) => {
+      const cat = b.categorie?.trim() || "Overig";
+      (acc[cat] ??= []).push(b);
+      return acc;
+    },
+    {},
+  );
+
+  async function beoordeelAanvraag(a: VerlofAanvraag, status: "goedgekeurd" | "afgewezen") {
+    try {
+      await beoordeelMutatie.mutateAsync({
+        id: a.id,
+        data: {
+          verlofsoort_id: a.verlofsoort_id,
+          start_datum: a.start_datum,
+          eind_datum: a.eind_datum,
+          aantal_uren: a.aantal_uren,
+          status,
+          reden: a.reden ?? undefined,
+          opmerking: a.opmerking ?? undefined,
+        },
+      });
+      await queryClient.invalidateQueries({ queryKey: getListAlleVerlofAanvragenQueryKey() });
+      await queryClient.invalidateQueries({ queryKey: getGetHrmStatsQueryKey() });
+      toast({ title: status === "goedgekeurd" ? "Aanvraag goedgekeurd" : "Aanvraag afgewezen" });
+    } catch {
+      toast({ title: "Beoordelen mislukt", variant: "destructive" });
+    }
+  }
+
+  function startOnboard(gebruikerId: number) {
+    setOnboardForm((f) => ({ ...f, gebruiker_id: gebruikerId }));
+    setOnboardOpen(true);
+  }
 
   const [medewerkerOpen, setMedewerkerOpen] = useState(false);
   const [onboardOpen, setOnboardOpen] = useState(false);
@@ -208,18 +283,50 @@ export default function PersoneelPagina() {
           <TabsTrigger value="medewerkers">Medewerkers</TabsTrigger>
           <TabsTrigger value="functies">Functiehuis</TabsTrigger>
           <TabsTrigger value="opleidingen">Opleidingen</TabsTrigger>
+          <TabsTrigger value="bekwaamheden">Bekwaamheden</TabsTrigger>
           <TabsTrigger value="verlof">Verlof</TabsTrigger>
         </TabsList>
 
         <TabsContent value="medewerkers" className="space-y-4">
-          <div className="flex items-center justify-end gap-2">
-            <Button variant="outline" onClick={() => setOnboardOpen(true)}>
-              <UserPlus className="h-4 w-4" /> Onboarden
-            </Button>
-            <Button onClick={() => setMedewerkerOpen(true)}>
-              <Plus className="h-4 w-4" /> Nieuwe medewerker
-            </Button>
-          </div>
+          {magSchrijven && (
+            <div className="flex items-center justify-end gap-2">
+              <Button variant="outline" onClick={() => setOnboardOpen(true)}>
+                <UserPlus className="h-4 w-4" /> Onboarden
+              </Button>
+              <Button onClick={() => setMedewerkerOpen(true)}>
+                <Plus className="h-4 w-4" /> Nieuwe medewerker
+              </Button>
+            </div>
+          )}
+
+          {magSchrijven && ongekoppeld.length > 0 && (
+            <Card>
+              <CardContent className="p-4 space-y-3">
+                <div className="flex items-center gap-2">
+                  <UserPlus className="h-4 w-4 text-primary" />
+                  <h2 className="text-sm font-semibold">Gebruikers zonder medewerkerprofiel</h2>
+                  <Badge variant="secondary">{ongekoppeld.length}</Badge>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Deze accounts bestaan al maar zijn nog niet als medewerker geregistreerd. Onboard ze
+                  in één klik; naam en e-mail worden uit het account overgenomen.
+                </p>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {ongekoppeld.map((g) => (
+                    <div key={g.id} className="flex items-center justify-between gap-2 rounded-md border p-2">
+                      <div className="min-w-0">
+                        <div className="text-sm font-medium truncate">{g.naam}</div>
+                        <div className="text-xs text-muted-foreground">{g.rol}</div>
+                      </div>
+                      <Button size="sm" variant="outline" onClick={() => startOnboard(g.id)}>
+                        <UserPlus className="h-4 w-4" /> Onboarden
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
           {medewerkersLaden ? (
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-28 w-full" />)}
@@ -232,22 +339,34 @@ export default function PersoneelPagina() {
           ) : (
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {(medewerkers ?? []).map((m) => (
-                <Card key={m.id}>
-                  <CardContent className="p-4 space-y-2">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="font-semibold truncate">{m.naam}</div>
-                      <Badge variant={m.actief ? "outline" : "secondary"} className={m.actief ? "border-emerald-200 text-emerald-700" : ""}>
-                        {m.actief ? "actief" : "inactief"}
-                      </Badge>
-                    </div>
-                    <div className="text-xs text-muted-foreground space-y-0.5">
-                      {m.functie_naam && <div>{m.functie_naam}</div>}
-                      <div>{m.werkmaatschappij}</div>
-                      {m.cao && <div>CAO: {m.cao}</div>}
-                      {m.contracturen_per_week != null && <div>{m.contracturen_per_week} uur/week</div>}
-                    </div>
-                  </CardContent>
-                </Card>
+                <Link key={m.id} href={`/personeel/${m.id}`}>
+                  <Card className="cursor-pointer transition-colors hover:border-primary/40 hover:bg-accent/40">
+                    <CardContent className="p-4 space-y-2">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="font-semibold truncate">{m.naam}</div>
+                        <Badge variant={m.actief ? "outline" : "secondary"} className={m.actief ? "border-emerald-200 text-emerald-700" : ""}>
+                          {m.actief ? "actief" : "inactief"}
+                        </Badge>
+                      </div>
+                      <div className="text-xs text-muted-foreground space-y-0.5">
+                        {m.functie_naam && <div>{m.functie_naam}</div>}
+                        <div>{m.werkmaatschappij}</div>
+                        {m.cao && <div>CAO: {m.cao}</div>}
+                        {m.contracturen_per_week != null && <div>{m.contracturen_per_week} uur/week</div>}
+                      </div>
+                      <div className="flex items-center gap-2 pt-1">
+                        {m.gebruiker_id ? (
+                          <Badge variant="secondary" className="text-[11px]">
+                            Account{m.gebruiker_rol ? `: ${m.gebruiker_rol}` : ""}
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="text-[11px] border-amber-200 text-amber-700">Geen account</Badge>
+                        )}
+                        <ChevronRight className="h-4 w-4 text-muted-foreground ml-auto" />
+                      </div>
+                    </CardContent>
+                  </Card>
+                </Link>
               ))}
             </div>
           )}
@@ -308,6 +427,42 @@ export default function PersoneelPagina() {
 
         <TabsContent value="verlof" className="space-y-4">
           <div>
+            <div className="flex items-center gap-2 mb-2">
+              <CalendarClock className="h-4 w-4 text-primary" />
+              <h2 className="text-sm font-semibold">Openstaande verlofaanvragen</h2>
+              {(openAanvragen ?? []).length > 0 && <Badge variant="secondary">{(openAanvragen ?? []).length}</Badge>}
+            </div>
+            {(openAanvragen ?? []).length === 0 ? (
+              <p className="text-sm text-muted-foreground">Geen openstaande aanvragen.</p>
+            ) : (
+              <div className="space-y-2">
+                {(openAanvragen ?? []).map((a) => (
+                  <Card key={a.id}>
+                    <CardContent className="p-4 flex items-center justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="font-medium truncate">
+                          <Link href={`/personeel/${a.medewerker_id}`} className="hover:underline">
+                            {a.medewerker_naam ?? `Medewerker #${a.medewerker_id}`}
+                          </Link>
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {a.verlofsoort_naam ?? `Soort #${a.verlofsoort_id}`} · {fmtDatum(a.start_datum)} – {fmtDatum(a.eind_datum)} · {a.aantal_uren ?? 0} uur
+                        </div>
+                        {a.reden && <div className="text-xs text-muted-foreground mt-1">{a.reden}</div>}
+                      </div>
+                      {magSchrijven && (
+                        <div className="flex items-center gap-2 shrink-0">
+                          <Button variant="outline" size="sm" onClick={() => beoordeelAanvraag(a, "goedgekeurd")}><Check className="h-4 w-4" /> Goedkeuren</Button>
+                          <Button variant="outline" size="sm" className="text-destructive hover:text-destructive" onClick={() => beoordeelAanvraag(a, "afgewezen")}><X className="h-4 w-4" /> Afwijzen</Button>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </div>
+          <div>
             <h2 className="text-sm font-semibold mb-2">Verlofsoorten (CAO)</h2>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {(verlofsoorten ?? []).map((v) => (
@@ -327,9 +482,48 @@ export default function PersoneelPagina() {
             </div>
           </div>
           <p className="text-xs text-muted-foreground">
-            Verlofaanvragen en -saldo zijn per medewerker zichtbaar op het medewerkerdetail. Het aantal
-            openstaande aanvragen staat in de statistiek bovenaan.
+            Verlofsaldo per medewerker en het indienen van aanvragen staan op het medewerkerdetail.
           </p>
+        </TabsContent>
+
+        <TabsContent value="bekwaamheden" className="space-y-4">
+          <p className="text-xs text-muted-foreground">
+            Bekwaamheidsmatrix over alle medewerkers, gegroepeerd per categorie. Bewerken kan op het
+            medewerkerdetail.
+          </p>
+          {(alleBekwaamheden ?? []).length === 0 ? (
+            <Card><CardContent className="py-12 text-center text-muted-foreground">
+              <Award className="h-10 w-10 mx-auto mb-3 opacity-40" />
+              <p>Nog geen bekwaamheden vastgelegd.</p>
+            </CardContent></Card>
+          ) : (
+            <div className="space-y-4">
+              {Object.entries(bekwaamhedenPerCategorie).map(([categorie, items]) => (
+                <div key={categorie}>
+                  <h2 className="text-sm font-semibold mb-2">{categorie}</h2>
+                  <div className="space-y-2">
+                    {(items ?? []).map((b) => (
+                      <Card key={b.id}>
+                        <CardContent className="p-3 flex items-center justify-between gap-3">
+                          <div className="min-w-0">
+                            <div className="font-medium truncate">{b.onderwerp}</div>
+                            <div className="text-xs text-muted-foreground truncate">
+                              <Link href={`/personeel/${b.medewerker_id}`} className="hover:underline">
+                                {b.medewerker_naam ?? `Medewerker #${b.medewerker_id}`}
+                              </Link>
+                            </div>
+                          </div>
+                          <Badge variant="outline" className={niveauBadgeClass(b.niveau)}>
+                            {NIVEAU_LABEL[b.niveau] ?? b.niveau}
+                          </Badge>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </TabsContent>
       </Tabs>
 

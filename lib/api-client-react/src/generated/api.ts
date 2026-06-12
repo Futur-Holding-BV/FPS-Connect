@@ -119,6 +119,7 @@ import type {
   LabelDocumentenInput,
   LabelInput,
   LabelUpdate,
+  ListAlleVerlofAanvragenParams,
   ListDocumentLogboekParams,
   ListDocumentenParams,
   ListFabrikantenParams,
@@ -15347,6 +15348,83 @@ export const useCreateBekwaamheid = <TError = ErrorType<unknown>,
       return useMutation(getCreateBekwaamheidMutationOptions(options));
     }
 
+export const getListAlleBekwaamhedenUrl = () => {
+
+
+
+
+  return `/api/bekwaamheden`
+}
+
+/**
+ * @summary Volledige bekwaamheidsmatrix (alle medewerkers)
+ */
+export const listAlleBekwaamheden = async ( options?: RequestInit): Promise<Bekwaamheid[]> => {
+
+  return customFetch<Bekwaamheid[]>(getListAlleBekwaamhedenUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListAlleBekwaamhedenQueryKey = () => {
+    return [
+    `/api/bekwaamheden`
+    ] as const;
+    }
+
+
+export const getListAlleBekwaamhedenQueryOptions = <TData = Awaited<ReturnType<typeof listAlleBekwaamheden>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAlleBekwaamheden>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListAlleBekwaamhedenQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listAlleBekwaamheden>>> = ({ signal }) => listAlleBekwaamheden({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listAlleBekwaamheden>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListAlleBekwaamhedenQueryResult = NonNullable<Awaited<ReturnType<typeof listAlleBekwaamheden>>>
+export type ListAlleBekwaamhedenQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Volledige bekwaamheidsmatrix (alle medewerkers)
+ */
+
+export function useListAlleBekwaamheden<TData = Awaited<ReturnType<typeof listAlleBekwaamheden>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAlleBekwaamheden>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListAlleBekwaamhedenQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
 export const getUpdateBekwaamheidUrl = (id: number,) => {
 
 
@@ -16212,6 +16290,90 @@ export const useCreateVerlofAanvraag = <TError = ErrorType<unknown>,
       > => {
       return useMutation(getCreateVerlofAanvraagMutationOptions(options));
     }
+
+export const getListAlleVerlofAanvragenUrl = (params?: ListAlleVerlofAanvragenParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/verlofaanvragen?${stringifiedParams}` : `/api/verlofaanvragen`
+}
+
+/**
+ * @summary Alle verlofaanvragen (centrale beoordelingslijst)
+ */
+export const listAlleVerlofAanvragen = async (params?: ListAlleVerlofAanvragenParams, options?: RequestInit): Promise<VerlofAanvraag[]> => {
+
+  return customFetch<VerlofAanvraag[]>(getListAlleVerlofAanvragenUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListAlleVerlofAanvragenQueryKey = (params?: ListAlleVerlofAanvragenParams,) => {
+    return [
+    `/api/verlofaanvragen`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListAlleVerlofAanvragenQueryOptions = <TData = Awaited<ReturnType<typeof listAlleVerlofAanvragen>>, TError = ErrorType<unknown>>(params?: ListAlleVerlofAanvragenParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAlleVerlofAanvragen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListAlleVerlofAanvragenQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listAlleVerlofAanvragen>>> = ({ signal }) => listAlleVerlofAanvragen(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listAlleVerlofAanvragen>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListAlleVerlofAanvragenQueryResult = NonNullable<Awaited<ReturnType<typeof listAlleVerlofAanvragen>>>
+export type ListAlleVerlofAanvragenQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Alle verlofaanvragen (centrale beoordelingslijst)
+ */
+
+export function useListAlleVerlofAanvragen<TData = Awaited<ReturnType<typeof listAlleVerlofAanvragen>>, TError = ErrorType<unknown>>(
+ params?: ListAlleVerlofAanvragenParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAlleVerlofAanvragen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListAlleVerlofAanvragenQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
 
 export const getUpdateVerlofAanvraagUrl = (id: number,) => {
 

@@ -10,6 +10,8 @@ export interface Bekwaamheid {
   id: number;
   medewerker_id: number;
   /** @nullable */
+  medewerker_naam?: string | null;
+  /** @nullable */
   categorie?: string | null;
   onderwerp: string;
   niveau: string;

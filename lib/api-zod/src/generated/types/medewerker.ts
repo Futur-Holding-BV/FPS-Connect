@@ -10,6 +10,8 @@ export interface Medewerker {
   id: number;
   /** @nullable */
   gebruiker_id?: number | null;
+  /** @nullable */
+  gebruiker_rol?: string | null;
   naam: string;
   /** @nullable */
   email?: string | null;

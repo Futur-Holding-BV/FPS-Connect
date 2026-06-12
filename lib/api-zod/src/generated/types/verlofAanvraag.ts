@@ -9,6 +9,8 @@
 export interface VerlofAanvraag {
   id: number;
   medewerker_id: number;
+  /** @nullable */
+  medewerker_naam?: string | null;
   verlofsoort_id: number;
   /** @nullable */
   verlofsoort_naam?: string | null;

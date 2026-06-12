@@ -18,7 +18,7 @@ import {
   verlofAanvragenTable,
   gebruikersTable,
 } from "@workspace/db";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, and, ne } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
 
 const router = Router();
@@ -217,9 +217,15 @@ async function medewerkerNaarJson(m: typeof medewerkersTable.$inferSelect) {
     const [f] = await db.select({ naam: functiesTable.naam }).from(functiesTable).where(eq(functiesTable.id, m.functieId));
     functieNaam = f?.naam ?? null;
   }
+  let gebruikerRol: string | null = null;
+  if (m.gebruikerId != null) {
+    const [g] = await db.select({ rol: gebruikersTable.rol }).from(gebruikersTable).where(eq(gebruikersTable.id, m.gebruikerId));
+    gebruikerRol = g?.rol ?? null;
+  }
   return {
     id: m.id,
     gebruiker_id: m.gebruikerId,
+    gebruiker_rol: gebruikerRol,
     naam: m.naam,
     email: m.email,
     telefoon: m.telefoon,
@@ -244,14 +250,16 @@ async function medewerkerNaarJson(m: typeof medewerkersTable.$inferSelect) {
 router.get("/medewerkers", lezen, async (req, res) => {
   try {
     const rijen = await db
-      .select({ m: medewerkersTable, functieNaam: functiesTable.naam })
+      .select({ m: medewerkersTable, functieNaam: functiesTable.naam, gebruikerRol: gebruikersTable.rol })
       .from(medewerkersTable)
       .leftJoin(functiesTable, eq(medewerkersTable.functieId, functiesTable.id))
+      .leftJoin(gebruikersTable, eq(medewerkersTable.gebruikerId, gebruikersTable.id))
       .orderBy(medewerkersTable.naam);
     res.json(
       rijen.map((r) => ({
         id: r.m.id,
         gebruiker_id: r.m.gebruikerId,
+        gebruiker_rol: r.gebruikerRol ?? null,
         naam: r.m.naam,
         email: r.m.email,
         telefoon: r.m.telefoon,
@@ -459,19 +467,30 @@ router.get("/medewerkers/:id", lezen, async (req, res) => {
 router.patch("/medewerkers/:id", schrijven, async (req, res) => {
   try {
     const { naam, gebruiker_id, email, telefoon, mobiel, werkmaatschappij, functie_id, cao, dienstverband, contracturen_per_week, in_dienst_sinds, uit_dienst_per, noodcontact_naam, noodcontact_telefoon, actief, opmerkingen } = req.body;
+    // Voorkom dat één account aan twee medewerkers gekoppeld raakt (onboarding blokkeert
+    // dit al; hier ook bij profielwijziging, want er is geen unieke DB-constraint).
+    if (gebruiker_id != null) {
+      const [bestaand] = await db
+        .select({ id: medewerkersTable.id })
+        .from(medewerkersTable)
+        .where(and(eq(medewerkersTable.gebruikerId, parseId(gebruiker_id)), ne(medewerkersTable.id, parseId(req.params.id))));
+      if (bestaand) {
+        return res.status(400).json({ error: "Deze gebruiker is al als medewerker geregistreerd.", velden: ["gebruiker_id"] });
+      }
+    }
     const [m] = await db
       .update(medewerkersTable)
       .set({
         naam,
-        gebruikerId: gebruiker_id ?? null,
+        gebruikerId: gebruiker_id !== undefined ? gebruiker_id : undefined,
         email,
         telefoon,
         mobiel,
         werkmaatschappij,
-        functieId: functie_id ?? null,
+        functieId: functie_id !== undefined ? functie_id : undefined,
         cao,
         dienstverband,
-        contracturenPerWeek: contracturen_per_week ?? null,
+        contracturenPerWeek: contracturen_per_week !== undefined ? contracturen_per_week : undefined,
         inDienstSinds: in_dienst_sinds,
         uitDienstPer: uit_dienst_per,
         noodcontactNaam: noodcontact_naam,
@@ -662,6 +681,35 @@ router.post("/medewerkers/:id/bekwaamheden", schrijven, async (req, res) => {
       })
       .returning();
     res.status(201).json(mapBekwaamheid(b));
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// Centrale bekwaamheidsmatrix: alle bekwaamheden over alle medewerkers.
+router.get("/bekwaamheden", lezen, async (req, res) => {
+  try {
+    const rijen = await db
+      .select({ b: bekwaamhedenTable, medewerkerNaam: medewerkersTable.naam })
+      .from(bekwaamhedenTable)
+      .leftJoin(medewerkersTable, eq(bekwaamhedenTable.medewerkerId, medewerkersTable.id))
+      .orderBy(bekwaamhedenTable.categorie, bekwaamhedenTable.onderwerp);
+    res.json(
+      rijen.map((r) => ({
+        id: r.b.id,
+        medewerker_id: r.b.medewerkerId,
+        medewerker_naam: r.medewerkerNaam ?? null,
+        categorie: r.b.categorie,
+        onderwerp: r.b.onderwerp,
+        niveau: r.b.niveau,
+        vastgesteld_door: r.b.vastgesteldDoor,
+        vastgesteld_op: r.b.vastgesteldOp,
+        opmerking: r.b.opmerking,
+        aangemaakt_op: iso(r.b.aangemaaktOp),
+        bijgewerkt_op: iso(r.b.bijgewerktOp),
+      })),
+    );
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Interne serverfout" });
@@ -979,27 +1027,120 @@ router.post("/medewerkers/:id/verlofaanvragen", schrijven, async (req, res) => {
   }
 });
 
+// Past het opgenomen verlof en het resterend saldo aan voor (medewerker, soort, jaar).
+// Gebruikt bij het goedkeuren of terugdraaien van een verlofaanvraag.
+type SaldoUitvoerder = Parameters<Parameters<typeof db.transaction>[0]>[0];
+async function pasVerlofSaldoAan(uitvoerder: SaldoUitvoerder, medewerkerId: number, verlofsoortId: number, jaar: number, deltaUren: number) {
+  if (!deltaUren || !Number.isFinite(deltaUren)) return;
+  const [s] = await uitvoerder
+    .select()
+    .from(verlofSaldiTable)
+    .where(
+      and(
+        eq(verlofSaldiTable.medewerkerId, medewerkerId),
+        eq(verlofSaldiTable.verlofsoortId, verlofsoortId),
+        eq(verlofSaldiTable.jaar, jaar),
+      ),
+    )
+    .for("update");
+  if (!s) return;
+  const opgenomen = Math.round((s.opgenomenUren + deltaUren) * 10) / 10;
+  const saldo = Math.round((s.beginsaldoUren + s.opgebouwdUren - opgenomen) * 10) / 10;
+  await uitvoerder
+    .update(verlofSaldiTable)
+    .set({ opgenomenUren: opgenomen, saldoUren: saldo, bijgewerktOp: new Date() })
+    .where(eq(verlofSaldiTable.id, s.id));
+}
+
+const jaarVanDatum = (d: string) => {
+  const y = new Date(d).getFullYear();
+  return Number.isFinite(y) ? y : new Date().getFullYear();
+};
+
+// Centrale beoordelingslijst: alle verlofaanvragen, optioneel gefilterd op status.
+router.get("/verlofaanvragen", lezen, async (req, res) => {
+  try {
+    const statusFilter = typeof req.query.status === "string" ? req.query.status : null;
+    const rijen = await db
+      .select({ a: verlofAanvragenTable, verlofsoortNaam: verlofsoortenTable.naam, medewerkerNaam: medewerkersTable.naam })
+      .from(verlofAanvragenTable)
+      .leftJoin(verlofsoortenTable, eq(verlofAanvragenTable.verlofsoortId, verlofsoortenTable.id))
+      .leftJoin(medewerkersTable, eq(verlofAanvragenTable.medewerkerId, medewerkersTable.id))
+      .orderBy(desc(verlofAanvragenTable.startDatum));
+    res.json(
+      rijen
+        .filter((r) => !statusFilter || r.a.status === statusFilter)
+        .map((r) => ({
+          id: r.a.id,
+          medewerker_id: r.a.medewerkerId,
+          medewerker_naam: r.medewerkerNaam ?? null,
+          verlofsoort_id: r.a.verlofsoortId,
+          verlofsoort_naam: r.verlofsoortNaam ?? null,
+          start_datum: r.a.startDatum,
+          eind_datum: r.a.eindDatum,
+          aantal_uren: r.a.aantalUren,
+          status: r.a.status,
+          reden: r.a.reden,
+          opmerking: r.a.opmerking,
+          beoordeeld_door_id: r.a.beoordeeldDoorId,
+          beoordeeld_op: isoOf(r.a.beoordeeldOp),
+          aangemaakt_op: iso(r.a.aangemaaktOp),
+          bijgewerkt_op: iso(r.a.bijgewerktOp),
+        })),
+    );
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
 router.patch("/verlofaanvragen/:id", schrijven, async (req, res) => {
   try {
     const { verlofsoort_id, start_datum, eind_datum, aantal_uren, status, reden, opmerking } = req.body;
+    // Status mag alleen een bekende waarde zijn.
+    const GELDIGE_STATUS = ["aangevraagd", "goedgekeurd", "afgewezen"];
+    if (status !== undefined && !GELDIGE_STATUS.includes(status)) {
+      return res.status(400).json({ error: "Ongeldige status.", velden: ["status"] });
+    }
     // Bij beoordeling (goedkeuren/afwijzen) de beoordelaar en het tijdstip vastleggen.
     const beoordeeld = status === "goedgekeurd" || status === "afgewezen";
-    const [a] = await db
-      .update(verlofAanvragenTable)
-      .set({
-        verlofsoortId: verlofsoort_id != null ? parseId(verlofsoort_id) : undefined,
-        startDatum: start_datum,
-        eindDatum: eind_datum,
-        aantalUren: aantal_uren,
-        status,
-        reden,
-        opmerking,
-        beoordeeldDoorId: beoordeeld ? (req.session.userId ?? null) : undefined,
-        beoordeeldOp: beoordeeld ? new Date() : undefined,
-        bijgewerktOp: new Date(),
-      })
-      .where(eq(verlofAanvragenTable.id, parseId(req.params.id)))
-      .returning();
+    const aanvraagId = parseId(req.params.id);
+    // In één transactie met row-lock: voorkomt dat gelijktijdige goedkeuringen de
+    // verlofuren dubbel toepassen. Reverse-then-apply blijft idempotent.
+    const a = await db.transaction(async (tx) => {
+      const [vorige] = await tx
+        .select()
+        .from(verlofAanvragenTable)
+        .where(eq(verlofAanvragenTable.id, aanvraagId))
+        .for("update");
+      if (!vorige) return null;
+      const [bijgewerkt] = await tx
+        .update(verlofAanvragenTable)
+        .set({
+          verlofsoortId: verlofsoort_id != null ? parseId(verlofsoort_id) : undefined,
+          startDatum: start_datum,
+          eindDatum: eind_datum,
+          aantalUren: aantal_uren,
+          status,
+          reden,
+          opmerking,
+          beoordeeldDoorId: beoordeeld ? (req.session.userId ?? null) : undefined,
+          beoordeeldOp: beoordeeld ? new Date() : undefined,
+          bijgewerktOp: new Date(),
+        })
+        .where(eq(verlofAanvragenTable.id, aanvraagId))
+        .returning();
+      if (!bijgewerkt) return null;
+      // Saldo bijwerken: draai een eerdere goedkeuring terug en pas de nieuwe toe.
+      // Idempotent en bestand tegen wijziging van soort/uren/jaar in dezelfde PATCH.
+      if (vorige.status === "goedgekeurd") {
+        await pasVerlofSaldoAan(tx, vorige.medewerkerId, vorige.verlofsoortId, jaarVanDatum(vorige.startDatum), -vorige.aantalUren);
+      }
+      if (bijgewerkt.status === "goedgekeurd") {
+        await pasVerlofSaldoAan(tx, bijgewerkt.medewerkerId, bijgewerkt.verlofsoortId, jaarVanDatum(bijgewerkt.startDatum), bijgewerkt.aantalUren);
+      }
+      return bijgewerkt;
+    });
     if (!a) return res.status(404).json({ error: "Verlofaanvraag niet gevonden" });
     res.json({
       id: a.id,

@@ -4452,6 +4452,21 @@ paths:
               schema:
                 $ref: "#/components/schemas/Bekwaamheid"
 
+  /bekwaamheden:
+    get:
+      operationId: listAlleBekwaamheden
+      tags: [personeel]
+      summary: Volledige bekwaamheidsmatrix (alle medewerkers)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Bekwaamheid"
+
   /bekwaamheden/{id}:
     patch:
       operationId: updateBekwaamheid
@@ -4685,6 +4700,27 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/VerlofAanvraag"
+
+  /verlofaanvragen:
+    get:
+      operationId: listAlleVerlofAanvragen
+      tags: [personeel]
+      summary: Alle verlofaanvragen (centrale beoordelingslijst)
+      parameters:
+        - in: query
+          name: status
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/VerlofAanvraag"
 
   /verlofaanvragen/{id}:
     patch:
@@ -8754,6 +8790,8 @@ components:
           type: integer
         gebruiker_id:
           type: ["integer", "null"]
+        gebruiker_rol:
+          type: ["string", "null"]
         naam:
           type: string
         email:
@@ -8935,6 +8973,8 @@ components:
           type: integer
         medewerker_id:
           type: integer
+        medewerker_naam:
+          type: ["string", "null"]
         categorie:
           type: ["string", "null"]
         onderwerp:
@@ -9089,6 +9129,8 @@ components:
           type: integer
         medewerker_id:
           type: integer
+        medewerker_naam:
+          type: ["string", "null"]
         verlofsoort_id:
           type: integer
         verlofsoort_naam:

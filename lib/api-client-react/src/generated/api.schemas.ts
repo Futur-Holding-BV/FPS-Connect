@@ -2373,6 +2373,8 @@ export interface Medewerker {
   id: number;
   /** @nullable */
   gebruiker_id?: number | null;
+  /** @nullable */
+  gebruiker_rol?: string | null;
   naam: string;
   /** @nullable */
   email?: string | null;
@@ -2492,6 +2494,8 @@ export interface Bekwaamheid {
   id: number;
   medewerker_id: number;
   /** @nullable */
+  medewerker_naam?: string | null;
+  /** @nullable */
   categorie?: string | null;
   onderwerp: string;
   niveau: string;
@@ -2589,6 +2593,8 @@ export interface VerlofSaldoInput {
 export interface VerlofAanvraag {
   id: number;
   medewerker_id: number;
+  /** @nullable */
+  medewerker_naam?: string | null;
   verlofsoort_id: number;
   /** @nullable */
   verlofsoort_naam?: string | null;
@@ -3016,5 +3022,9 @@ export type ProfielToepassen200 = {
 
 export type UitnodigingActiveren200 = {
   status?: string;
+};
+
+export type ListAlleVerlofAanvragenParams = {
+status?: string;
 };
 

@@ -4906,6 +4906,7 @@ export const DeleteOpleidingResponse = zod.void()
 export const ListMedewerkersResponseItem = zod.object({
   "id": zod.number(),
   "gebruiker_id": zod.number().nullish(),
+  "gebruiker_rol": zod.string().nullish(),
   "naam": zod.string(),
   "email": zod.string().nullish(),
   "telefoon": zod.string().nullish(),
@@ -4987,6 +4988,7 @@ export const GetMedewerkerParams = zod.object({
 export const GetMedewerkerResponse = zod.object({
   "id": zod.number(),
   "gebruiker_id": zod.number().nullish(),
+  "gebruiker_rol": zod.string().nullish(),
   "naam": zod.string(),
   "email": zod.string().nullish(),
   "telefoon": zod.string().nullish(),
@@ -5037,6 +5039,7 @@ export const UpdateMedewerkerBody = zod.object({
 export const UpdateMedewerkerResponse = zod.object({
   "id": zod.number(),
   "gebruiker_id": zod.number().nullish(),
+  "gebruiker_rol": zod.string().nullish(),
   "naam": zod.string(),
   "email": zod.string().nullish(),
   "telefoon": zod.string().nullish(),
@@ -5161,6 +5164,7 @@ export const ListBekwaamhedenParams = zod.object({
 export const ListBekwaamhedenResponseItem = zod.object({
   "id": zod.number(),
   "medewerker_id": zod.number(),
+  "medewerker_naam": zod.string().nullish(),
   "categorie": zod.string().nullish(),
   "onderwerp": zod.string(),
   "niveau": zod.string(),
@@ -5193,6 +5197,25 @@ export const CreateBekwaamheidResponse = zod.void()
 
 
 /**
+ * @summary Volledige bekwaamheidsmatrix (alle medewerkers)
+ */
+export const ListAlleBekwaamhedenResponseItem = zod.object({
+  "id": zod.number(),
+  "medewerker_id": zod.number(),
+  "medewerker_naam": zod.string().nullish(),
+  "categorie": zod.string().nullish(),
+  "onderwerp": zod.string(),
+  "niveau": zod.string(),
+  "vastgesteld_door": zod.string().nullish(),
+  "vastgesteld_op": zod.string().nullish(),
+  "opmerking": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+export const ListAlleBekwaamhedenResponse = zod.array(ListAlleBekwaamhedenResponseItem)
+
+
+/**
  * @summary Bekwaamheid bijwerken
  */
 export const UpdateBekwaamheidParams = zod.object({
@@ -5211,6 +5234,7 @@ export const UpdateBekwaamheidBody = zod.object({
 export const UpdateBekwaamheidResponse = zod.object({
   "id": zod.number(),
   "medewerker_id": zod.number(),
+  "medewerker_naam": zod.string().nullish(),
   "categorie": zod.string().nullish(),
   "onderwerp": zod.string(),
   "niveau": zod.string(),
@@ -5424,6 +5448,7 @@ export const ListVerlofAanvragenParams = zod.object({
 export const ListVerlofAanvragenResponseItem = zod.object({
   "id": zod.number(),
   "medewerker_id": zod.number(),
+  "medewerker_naam": zod.string().nullish(),
   "verlofsoort_id": zod.number(),
   "verlofsoort_naam": zod.string().nullish(),
   "start_datum": zod.string(),
@@ -5461,6 +5486,33 @@ export const CreateVerlofAanvraagResponse = zod.void()
 
 
 /**
+ * @summary Alle verlofaanvragen (centrale beoordelingslijst)
+ */
+export const ListAlleVerlofAanvragenQueryParams = zod.object({
+  "status": zod.coerce.string().optional()
+})
+
+export const ListAlleVerlofAanvragenResponseItem = zod.object({
+  "id": zod.number(),
+  "medewerker_id": zod.number(),
+  "medewerker_naam": zod.string().nullish(),
+  "verlofsoort_id": zod.number(),
+  "verlofsoort_naam": zod.string().nullish(),
+  "start_datum": zod.string(),
+  "eind_datum": zod.string(),
+  "aantal_uren": zod.number().optional(),
+  "status": zod.string(),
+  "reden": zod.string().nullish(),
+  "opmerking": zod.string().nullish(),
+  "beoordeeld_door_id": zod.number().nullish(),
+  "beoordeeld_op": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+export const ListAlleVerlofAanvragenResponse = zod.array(ListAlleVerlofAanvragenResponseItem)
+
+
+/**
  * @summary Verlofaanvraag bijwerken/beoordelen
  */
 export const UpdateVerlofAanvraagParams = zod.object({
@@ -5480,6 +5532,7 @@ export const UpdateVerlofAanvraagBody = zod.object({
 export const UpdateVerlofAanvraagResponse = zod.object({
   "id": zod.number(),
   "medewerker_id": zod.number(),
+  "medewerker_naam": zod.string().nullish(),
   "verlofsoort_id": zod.number(),
   "verlofsoort_naam": zod.string().nullish(),
   "start_datum": zod.string(),

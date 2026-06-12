@@ -135,6 +135,7 @@ export * from './label';
 export * from './labelDocumentenInput';
 export * from './labelInput';
 export * from './labelUpdate';
+export * from './listAlleVerlofAanvragenParams';
 export * from './listDocumentenParams';
 export * from './listDocumentLogboekParams';
 export * from './listFabrikantenParams';
