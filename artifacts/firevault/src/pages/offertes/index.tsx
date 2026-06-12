@@ -57,6 +57,9 @@ export default function OffertesPagina() {
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState<OfferteInput>(LEEG);
 
+  const geselecteerdeKlant = (klanten ?? []).find((k) => k.id === form.klant_id) ?? null;
+  const geselecteerdGebouw = (gebouwen ?? []).find((g) => g.id === form.gebouw_id) ?? null;
+
   const gefilterd = (offertes ?? []).filter((o) => {
     const t = zoek.trim().toLowerCase();
     if (!t) return true;
@@ -178,7 +181,15 @@ export default function OffertesPagina() {
               <Label>Klant</Label>
               <Select
                 value={form.klant_id ? String(form.klant_id) : undefined}
-                onValueChange={(v) => setForm({ ...form, klant_id: Number(v) })}
+                onValueChange={(v) => {
+                  const id = Number(v);
+                  const k = (klanten ?? []).find((x) => x.id === id);
+                  setForm((f) => ({
+                    ...f,
+                    klant_id: id,
+                    opdrachtgever: f.opdrachtgever?.trim() ? f.opdrachtgever : (k?.naam ?? f.opdrachtgever),
+                  }));
+                }}
               >
                 <SelectTrigger><SelectValue placeholder="Geen koppeling" /></SelectTrigger>
                 <SelectContent>
@@ -186,11 +197,33 @@ export default function OffertesPagina() {
                 </SelectContent>
               </Select>
             </div>
+            {geselecteerdeKlant && (
+              <div className="sm:col-span-2 rounded-md border bg-muted/40 p-3 text-xs text-muted-foreground space-y-0.5">
+                <div className="font-medium text-foreground">Gegevens klant — {geselecteerdeKlant.naam}</div>
+                {geselecteerdeKlant.adres && <div>{geselecteerdeKlant.adres}</div>}
+                {(geselecteerdeKlant.postcode || geselecteerdeKlant.stad) && (
+                  <div>{[geselecteerdeKlant.postcode, geselecteerdeKlant.stad].filter(Boolean).join("  ")}</div>
+                )}
+                {geselecteerdeKlant.telefoon && <div>Tel: {geselecteerdeKlant.telefoon}</div>}
+                {geselecteerdeKlant.email && <div>{geselecteerdeKlant.email}</div>}
+                {!geselecteerdeKlant.adres && !geselecteerdeKlant.stad && !geselecteerdeKlant.telefoon && !geselecteerdeKlant.email && (
+                  <div>Geen adres- of contactgegevens vastgelegd bij deze klant.</div>
+                )}
+              </div>
+            )}
             <div className="sm:col-span-2 space-y-1.5">
               <Label>Gebouw (voor voorbereiding uit spots)</Label>
               <Select
                 value={form.gebouw_id ? String(form.gebouw_id) : undefined}
-                onValueChange={(v) => setForm({ ...form, gebouw_id: Number(v) })}
+                onValueChange={(v) => {
+                  const id = Number(v);
+                  const g = (gebouwen ?? []).find((x) => x.id === id);
+                  setForm((f) => ({
+                    ...f,
+                    gebouw_id: id,
+                    titel: f.titel.trim() ? f.titel : (g ? `Offerte ${g.naam}` : f.titel),
+                  }));
+                }}
               >
                 <SelectTrigger><SelectValue placeholder="Geen koppeling" /></SelectTrigger>
                 <SelectContent>
@@ -198,6 +231,16 @@ export default function OffertesPagina() {
                 </SelectContent>
               </Select>
             </div>
+            {geselecteerdGebouw && (
+              <div className="sm:col-span-2 rounded-md border bg-muted/40 p-3 text-xs text-muted-foreground space-y-0.5">
+                <div className="font-medium text-foreground">Gegevens gebouw — {geselecteerdGebouw.naam}</div>
+                {geselecteerdGebouw.adres && <div>{geselecteerdGebouw.adres}</div>}
+                {(geselecteerdGebouw.postcode || geselecteerdGebouw.stad) && (
+                  <div>{[geselecteerdGebouw.postcode, geselecteerdGebouw.stad].filter(Boolean).join("  ")}</div>
+                )}
+                {geselecteerdGebouw.klant_naam && <div>Klant van gebouw: {geselecteerdGebouw.klant_naam}</div>}
+              </div>
+            )}
             <div className="space-y-1.5">
               <Label>Geldigheid (dagen)</Label>
               <Input
