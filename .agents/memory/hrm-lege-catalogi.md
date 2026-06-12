@@ -10,6 +10,6 @@ De HRM-catalogi `functies` en `opleidingen` worden door de gebruiker zelf beheer
 - waar dat niet bestaat (medewerker-detail): toon een melding met een `Link` naar `/personeel` (functiehuis / opleidingen-catalogus).
 Selects met een altijd-geldige fallback-optie (bv. "Geen functie") werken wel; voeg daar hooguit een hint toe.
 
-**Why:** dit is geen interactiebug in Radix/shadcn maar ontbrekende data; het kwam terug op meerdere plekken nadat alleen het onboard-formulier was gefixt (commit ac871f2). Niet "oplossen" door nepfuncties/-opleidingen te seeden — de catalogi zijn bewust gebruikersbeheerd.
+**Why:** dit is geen interactiebug in Radix/shadcn maar ontbrekende data; het kwam terug op meerdere plekken nadat alleen het onboard-formulier was gefixt. Niet "oplossen" door nepfuncties/-opleidingen te seeden — de catalogi zijn bewust gebruikersbeheerd.
 
 **How to apply:** bij elke nieuwe functie/opleiding-Select (web of mobiel) eerst `(data ?? []).length === 0` afvangen met een empty-state voordat je de Select rendert.

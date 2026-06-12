@@ -4,7 +4,7 @@ import { Image, Pressable, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { RadiaalMenu, type RadiaalActie } from "@/components/RadiaalMenu";
-import { bovenInset, onderInset } from "@/components/ui";
+import { bovenInset } from "@/components/ui";
 import { useAuth } from "@/context/auth";
 import { useColors } from "@/hooks/useColors";
 
@@ -116,12 +116,6 @@ export default function MenuScherm() {
       </View>
 
       <RadiaalMenu acties={acties} />
-
-      <View style={{ paddingBottom: onderInset(insets) + 18, alignItems: "center" }}>
-        <Text style={{ color: c.darkMuted, fontSize: 13, fontFamily: "Inter_400Regular" }}>
-          Tik op FPS voor het menu
-        </Text>
-      </View>
     </View>
   );
 }
