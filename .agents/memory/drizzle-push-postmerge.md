@@ -27,4 +27,15 @@ Downstream this does NOT look like a DB problem. Real case: spots stopped render
 
 **Why:** select-all couples list endpoints to the *entire* current schema, so one missing column silently breaks unrelated UI and tempts you to refactor the renderer.
 
-**How to apply:** when data vanishes across multiple clients, curl the underlying list endpoint first — a 500 (not 401/empty) points at schema drift, not the UI. Reconcile the DB additively (CREATE TABLE / ALTER ADD COLUMN to match the schema source of truth) and restart the API (fresh process clears stale prepared statements) before touching frontend code.
+**How to apply:** when data vanishes across multiple clients, curl the underlying list endpoint first — a 500 (not 401/empty) points at schema drift, not the UI. Reconcile the DB additively (CREATE TABLE / ALTER ADD COLUMN to match the schema source of truth) and restart the API (fresh process clears stale prepared statements) before touching frontend code. NB: requireAuth makes an unauthenticated curl return 401 *before* the handler runs, so 401 does NOT prove the query is fine — verify by mimicking the handler's exact `SELECT <all cols>` against the DB instead.
+
+## The UNIQUE-prompt is usually a name mismatch, not a missing constraint
+
+The "do you want to truncate <table>?" prompt that aborts post-merge almost always means the constraint already EXISTS under Postgres' default name `<table>_<cols>_key`, but the drizzle schema's `.unique()` expects `<table>_<cols>_unique`. Drizzle doesn't recognize the `_key` one and tries to add its own → truncate-confirm prompt → TTY abort.
+
+- Fix: `ALTER TABLE <t> RENAME CONSTRAINT <t>_<cols>_key TO <t>_<cols>_unique;` (rename, do NOT add a second redundant unique). Find them all at once: `SELECT conrelid::regclass, conname FROM pg_constraint WHERE contype='u' AND connamespace='public'::regnamespace AND conname LIKE '%\_key';` then rename each. Beats whack-a-mole (push only reports one prompt per run).
+- Composite name = columns joined by `_` in `unique().on(a,b)` order, e.g. `label_applicaties_label_id_type_code_unique`.
+
+## Benign "[✓] Changes applied" churn — do not chase, do not --force
+
+After all prompts are resolved, `push` may still print "[✓] Changes applied" on every run without prompting. Run `drizzle-kit push --verbose` to see the SQL: it's harmless idempotent churn — a Postgres 63-char identifier truncation on a long FK name (drizzle drops `..._gebruikers_id_f` and re-adds `..._gebruikers_id_fk`, which Postgres re-truncates, forever), plus repeated `ALTER COLUMN ... SET DEFAULT`. These are non-destructive and post-merge still exits success. Leave them. **Never** switch post-merge to `push --force` to silence it — `--force` would also apply destructive diffs (drops/truncates) without asking.
