@@ -47,6 +47,8 @@ export const STATUSKLEUREN: Record<string, string> = {
   afgekeurd: "#ef4444",
   in_onderhoud: "#f97316",
   opgeleverd: "#14b8a6",
+  meerwerk_financieel: "#8b5cf6",
+  wacht_op_akkoord: "#f59e0b",
   in_uitvoering: "#3b82f6",
   voorbereid: "#cbd5e1",
   concept: "#94a3b8",
@@ -57,12 +59,14 @@ export const STATUSLABEL: Record<string, string> = {
   afgekeurd: "Afgekeurd",
   in_onderhoud: "In onderhoud",
   opgeleverd: "Opgeleverd",
+  meerwerk_financieel: "Meerwerk - financieel afronden",
+  wacht_op_akkoord: "Niet gereed - wachten op akkoord",
   in_uitvoering: "In uitvoering",
   voorbereid: "Voorbereid",
   concept: "Concept",
 };
 
-export const STATUS_VOLGORDE = ["voorbereid", "in_uitvoering", "opgeleverd", "goedgekeurd", "afgekeurd", "in_onderhoud", "concept"];
+export const STATUS_VOLGORDE = ["voorbereid", "in_uitvoering", "wacht_op_akkoord", "meerwerk_financieel", "opgeleverd", "goedgekeurd", "afgekeurd", "in_onderhoud", "concept"];
 
 export const CLASSIFICATIE_OPTIES = ["30", "60", "90", "120"];
 export const WAND_PLAFOND_OPTIES = ["wand", "plafond"];

@@ -25,6 +25,8 @@ const STATUS_OPTIES = [
   { value: "concept", label: "Concept" },
   { value: "voorbereid", label: "Voorbereid" },
   { value: "in_uitvoering", label: "In uitvoering" },
+  { value: "wacht_op_akkoord", label: "Niet gereed - wachten op akkoord" },
+  { value: "meerwerk_financieel", label: "Meerwerk - financieel afronden" },
   { value: "opgeleverd", label: "Opgeleverd" },
   { value: "goedgekeurd", label: "Gereed" },
   { value: "afgekeurd", label: "Afgekeurd" },

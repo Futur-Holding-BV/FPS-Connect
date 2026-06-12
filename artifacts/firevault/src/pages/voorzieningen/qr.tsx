@@ -26,6 +26,8 @@ const STATUSKLEUR: Record<string, { bg: string; text: string; label: string }> =
   afgekeurd:     { bg: "#fee2e2", text: "#991b1b", label: "Afgekeurd" },
   in_onderhoud:  { bg: "#ffedd5", text: "#9a3412", label: "In onderhoud" },
   in_uitvoering: { bg: "#dbeafe", text: "#1e40af", label: "In uitvoering" },
+  wacht_op_akkoord:    { bg: "#fef3c7", text: "#92400e", label: "Niet gereed - wachten op akkoord" },
+  meerwerk_financieel: { bg: "#ede9fe", text: "#5b21b6", label: "Meerwerk - financieel afronden" },
   concept:       { bg: "#f1f5f9", text: "#475569", label: "Concept" },
 };
 

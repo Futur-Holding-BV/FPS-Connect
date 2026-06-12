@@ -849,6 +849,8 @@ export const VoorzieningStatus = {
   concept: 'concept',
   voorbereid: 'voorbereid',
   in_uitvoering: 'in_uitvoering',
+  wacht_op_akkoord: 'wacht_op_akkoord',
+  meerwerk_financieel: 'meerwerk_financieel',
   opgeleverd: 'opgeleverd',
   goedgekeurd: 'goedgekeurd',
   afgekeurd: 'afgekeurd',

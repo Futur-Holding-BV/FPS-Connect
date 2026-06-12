@@ -36,6 +36,8 @@ const STATUSLABEL: Record<string, string> = {
   concept: "Concept",
   voorbereid: "Voorbereid",
   in_uitvoering: "In uitvoering",
+  wacht_op_akkoord: "Niet gereed - wachten op akkoord",
+  meerwerk_financieel: "Meerwerk - financieel afronden",
   opgeleverd: "Opgeleverd",
   goedgekeurd: "Gereed",
   afgekeurd: "Afgekeurd",

@@ -6700,6 +6700,8 @@ components:
             - concept
             - voorbereid
             - in_uitvoering
+            - wacht_op_akkoord
+            - meerwerk_financieel
             - opgeleverd
             - goedgekeurd
             - afgekeurd

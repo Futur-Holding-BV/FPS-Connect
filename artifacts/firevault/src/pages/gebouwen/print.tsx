@@ -54,6 +54,8 @@ const SCHEIDING_TYPEN: Record<string, { kleur: string; label: string }> = {
 const STATUSKLEUREN: Record<string, string> = {
   concept:       "#94a3b8",
   in_uitvoering: "#3b82f6",
+  wacht_op_akkoord:    "#f59e0b",
+  meerwerk_financieel: "#8b5cf6",
   opgeleverd:    "#14b8a6",
   goedgekeurd:   "#22c55e",
   afgekeurd:     "#ef4444",
@@ -64,6 +66,8 @@ const STATUSKLEUREN: Record<string, string> = {
 const STATUSLABEL: Record<string, string> = {
   concept:       "Concept",
   in_uitvoering: "In uitvoering",
+  wacht_op_akkoord:    "Niet gereed - wachten op akkoord",
+  meerwerk_financieel: "Meerwerk - financieel afronden",
   opgeleverd:    "Opgeleverd",
   goedgekeurd:   "Gereed",
   afgekeurd:     "Afgekeurd",
