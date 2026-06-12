@@ -120,7 +120,7 @@ export default function LoginPagina() {
       <div className="w-full max-w-md">
         <div className="flex flex-col items-center mb-6 text-center">
           <div className="bg-white rounded-2xl shadow-lg px-6 py-3 mb-4">
-            <img src="/logo-fps.png" alt="FPS Brandpreventie" className="h-12 w-auto object-contain" />
+            <img src="/logo-fps-one.png" alt="FPS One" className="h-16 w-auto object-contain" />
           </div>
           <p className="text-sm text-slate-400">{t("auth.ondertitel")}</p>
         </div>
