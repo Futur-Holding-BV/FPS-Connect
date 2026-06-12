@@ -845,10 +845,25 @@ async function gebouwIdVanCluster(clusterId: number): Promise<number | null> {
 }
 
 async function clusterRij(c: typeof clustersTable.$inferSelect) {
-  const [telling] = await db
-    .select({ aantal: sql<number>`count(*)::int` })
+  // Spots van dit cluster ophalen (alleen niet-gearchiveerde) om naast het totaal
+  // ook het aantal "voorbereid" en de (eventueel uniforme) toegewezen monteur te
+  // bepalen. De cluster-monteur wordt afgeleid: als alle spots dezelfde monteur
+  // hebben tonen we die, anders "niet toegewezen".
+  const spots = await db
+    .select({ status: voorzieningenTable.status, monteurId: voorzieningenTable.monteurId })
     .from(voorzieningenTable)
-    .where(eq(voorzieningenTable.clusterId, c.id));
+    .where(and(eq(voorzieningenTable.clusterId, c.id), eq(voorzieningenTable.gearchiveerd, false)));
+  const voorbereidAantal = spots.filter((s) => s.status === "voorbereid").length;
+  const monteurIds = Array.from(new Set(spots.map((s) => s.monteurId ?? null)));
+  const monteurId = spots.length > 0 && monteurIds.length === 1 ? monteurIds[0] : null;
+  let monteurNaam: string | null = null;
+  if (monteurId != null) {
+    const [m] = await db
+      .select({ naam: gebruikersTable.naam })
+      .from(gebruikersTable)
+      .where(eq(gebruikersTable.id, monteurId));
+    monteurNaam = m?.naam ?? null;
+  }
   return {
     id: c.id,
     gebouw_id: c.gebouwId,
@@ -856,7 +871,10 @@ async function clusterRij(c: typeof clustersTable.$inferSelect) {
     naam: c.naam,
     type: c.type,
     kleur: c.kleur,
-    voorziening_aantal: telling?.aantal ?? 0,
+    voorziening_aantal: spots.length,
+    voorbereid_aantal: voorbereidAantal,
+    monteur_id: monteurId,
+    monteur_naam: monteurNaam,
     aangemaakt_op: c.aangemaaktOp.toISOString(),
     bijgewerkt_op: c.bijgewerktOp.toISOString(),
   };

@@ -2659,6 +2659,9 @@ export const ListClustersResponseItem = zod.object({
   "type": zod.string().nullish(),
   "kleur": zod.string().nullish(),
   "voorziening_aantal": zod.number(),
+  "voorbereid_aantal": zod.number().optional().describe('Aantal spots in het cluster met status \"voorbereid\".'),
+  "monteur_id": zod.number().nullish().describe('Toegewezen monteur als alle spots dezelfde monteur hebben, anders null.'),
+  "monteur_naam": zod.string().nullish(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string().optional()
 })
@@ -2704,6 +2707,9 @@ export const UpdateClusterResponse = zod.object({
   "type": zod.string().nullish(),
   "kleur": zod.string().nullish(),
   "voorziening_aantal": zod.number(),
+  "voorbereid_aantal": zod.number().optional().describe('Aantal spots in het cluster met status \"voorbereid\".'),
+  "monteur_id": zod.number().nullish().describe('Toegewezen monteur als alle spots dezelfde monteur hebben, anders null.'),
+  "monteur_naam": zod.string().nullish(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string().optional()
 })

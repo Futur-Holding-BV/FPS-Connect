@@ -265,15 +265,21 @@ function ClusterBubble({
 }
 
 // Omhullende (bounding box) achter de spots van een logisch cluster + naamlabel.
+// Onder het naamlabel staat een statusregel met de toegewezen monteur en het
+// aantal nog "voorbereide" spots, zodat de planning dit direct op de plattegrond ziet.
 function ClusterOmhulling({
   spots,
   naam,
   kleur,
+  monteurNaam,
+  voorbereidAantal,
   zoom,
 }: {
   spots: SVGVoorziening[];
   naam: string;
   kleur: string;
+  monteurNaam: string | null;
+  voorbereidAantal: number;
   zoom: number;
 }) {
   if (spots.length === 0) return null;
@@ -290,15 +296,28 @@ function ClusterOmhulling({
   const fontSize = 13 / zoom;
   const padX = 8 / zoom;
   const labelW = Math.max(naam.length * fontSize * 0.62 + padX * 2, 40 / zoom);
+  // Statusregel: "monteurnaam" of "Niet toegewezen", plus "n voorbereid".
+  const monteurTekst = monteurNaam ?? "Niet toegewezen";
+  const statusTekst =
+    voorbereidAantal > 0 ? `${monteurTekst} · ${voorbereidAantal} voorbereid` : monteurTekst;
+  const statusH = 18 / zoom;
+  const statusFont = 11 / zoom;
+  const statusW = Math.max(statusTekst.length * statusFont * 0.58 + padX * 2, 40 / zoom);
   return (
     <g style={{ pointerEvents: "none" }}>
       <rect x={minX} y={minY} width={w} height={h} rx={16}
         fill={kleur} fillOpacity={0.07}
         stroke={kleur} strokeWidth={2 / zoom} strokeDasharray={`${8 / zoom} ${5 / zoom}`} />
-      <g transform={`translate(${minX}, ${minY - labelH - 3 / zoom})`}>
+      <g transform={`translate(${minX}, ${minY - labelH - statusH - 5 / zoom})`}>
         <rect x={0} y={0} width={labelW} height={labelH} rx={labelH / 2} fill={kleur} />
         <text x={padX} y={labelH / 2} dominantBaseline="central" fontSize={fontSize}
           fontWeight="700" fill="#fff">{naam}</text>
+        <g transform={`translate(0, ${labelH + 2 / zoom})`}>
+          <rect x={0} y={0} width={statusW} height={statusH} rx={statusH / 2}
+            fill="#fff" stroke={kleur} strokeWidth={1 / zoom} />
+          <text x={padX} y={statusH / 2} dominantBaseline="central" fontSize={statusFont}
+            fontWeight="600" fill={monteurNaam ? "#1e293b" : "#64748b"}>{statusTekst}</text>
+        </g>
       </g>
     </g>
   );
@@ -544,16 +563,10 @@ export default function Plattegrond() {
   // gebeurt impliciet doordat alleen spots van deze verdieping worden getekend).
   const { data: clusters, refetch: refetchClusters } = useListClusters(Number(id));
   const [clusterBeheerOpen, setClusterBeheerOpen] = useState(false);
-  // Verrijk clusters met de huidige monteur: als alle spots in het cluster
-  // dezelfde monteur hebben tonen we die, anders "niet toegewezen".
-  const clustersMetMonteur = useMemo(() => {
-    return (clusters ?? []).map((c: any) => {
-      const spots = (voorzieningen ?? []).filter((v: any) => v.cluster_id === c.id);
-      const monteurIds = Array.from(new Set(spots.map((v: any) => v.monteur_id ?? null)));
-      const monteurId = spots.length > 0 && monteurIds.length === 1 ? monteurIds[0] : null;
-      return { ...c, monteur_id: monteurId };
-    });
-  }, [clusters, voorzieningen]);
+  // De toegewezen monteur (monteur_id/monteur_naam) en het voorbereid-aantal komen
+  // server-side mee in de cluster-respons (afgeleid over alle verdiepingen). De
+  // GET /gebouwen/:id/clusters-route gebruikt effectieveContext, dus dit werkt
+  // consistent met de "Bekijken als"-impersonatie.
   // Visuele clustering (telbubbels bij overlappende spots) — standaard aan.
   const [visueelClusterAan, setVisueelClusterAan] = useState(true);
 
@@ -780,7 +793,9 @@ export default function Plattegrond() {
     : geplaatst.map((v) => [v]);
 
   // Logische omhullingen: per cluster de spots op deze verdieping (alleen tonen
-  // als er minstens één spot van dit cluster op de huidige verdieping staat).
+  // als er minstens één spot van dit cluster op de huidige verdieping staat). De
+  // toegewezen monteur en het voorbereid-aantal komen uit de cluster-respons
+  // (server-side afgeleid over alle verdiepingen), zodat dit gebouwbreed klopt.
   const logischeOmhullingen = (clusters ?? [])
     .map((c: any) => ({ cluster: c, spots: geplaatst.filter((v) => v.cluster_id === c.id) }))
     .filter((o: { spots: SVGVoorziening[] }) => o.spots.length > 0);
@@ -1521,6 +1536,8 @@ export default function Plattegrond() {
                   spots={o.spots}
                   naam={o.cluster.naam}
                   kleur={o.cluster.kleur || STANDAARD_CLUSTERKLEUR}
+                  monteurNaam={o.cluster.monteur_naam ?? null}
+                  voorbereidAantal={o.cluster.voorbereid_aantal ?? 0}
                   zoom={view.zoom}
                 />
               ))}
@@ -2216,7 +2233,7 @@ export default function Plattegrond() {
         onOpenChange={setClusterBeheerOpen}
         gebouwId={Number(id)}
         verdiepingId={Number(verdiepingId)}
-        clusters={clustersMetMonteur as any[]}
+        clusters={(clusters ?? []) as any[]}
         monteurs={monteurs as any[]}
         onWijziging={() => { refetchClusters(); refetch(); }}
       />
@@ -2336,6 +2353,9 @@ function ClusterBeheerDialog({
                   <span className="flex-1 text-sm font-medium truncate">{c.naam}</span>
                 )}
                 <Badge variant="secondary" className="text-xs">{c.voorziening_aantal} spots</Badge>
+                {(c.voorbereid_aantal ?? 0) > 0 && (
+                  <Badge variant="outline" className="text-xs">{c.voorbereid_aantal} voorbereid</Badge>
+                )}
                 {c.type && <Badge variant="outline" className="text-xs">{CLUSTER_TYPEN[c.type] ?? c.type}</Badge>}
                 <Select
                   value={c.monteur_id != null ? String(c.monteur_id) : "geen"}

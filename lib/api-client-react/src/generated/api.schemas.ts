@@ -1263,6 +1263,15 @@ export interface Cluster {
   /** @nullable */
   kleur?: string | null;
   voorziening_aantal: number;
+  /** Aantal spots in het cluster met status "voorbereid". */
+  voorbereid_aantal?: number;
+  /**
+     * Toegewezen monteur als alle spots dezelfde monteur hebben, anders null.
+     * @nullable
+     */
+  monteur_id?: number | null;
+  /** @nullable */
+  monteur_naam?: string | null;
   aangemaakt_op: string;
   bijgewerkt_op?: string;
 }

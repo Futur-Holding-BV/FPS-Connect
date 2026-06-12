@@ -7067,6 +7067,14 @@ components:
           type: ["string", "null"]
         voorziening_aantal:
           type: integer
+        voorbereid_aantal:
+          type: integer
+          description: Aantal spots in het cluster met status "voorbereid".
+        monteur_id:
+          type: ["integer", "null"]
+          description: Toegewezen monteur als alle spots dezelfde monteur hebben, anders null.
+        monteur_naam:
+          type: ["string", "null"]
         aangemaakt_op:
           type: string
         bijgewerkt_op:
