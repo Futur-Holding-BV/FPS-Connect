@@ -211,9 +211,12 @@ export default function PersoneelPagina() {
       return;
     }
     try {
-      await maakFunctie.mutateAsync({ data: { ...functieForm, naam: functieForm.naam.trim() } });
+      const nieuw = await maakFunctie.mutateAsync({ data: { ...functieForm, naam: functieForm.naam.trim() } });
       await queryClient.invalidateQueries({ queryKey: getListFunctiesQueryKey() });
       await queryClient.invalidateQueries({ queryKey: getGetHrmStatsQueryKey() });
+      if (onboardOpen && nieuw?.id) {
+        setOnboardForm((f) => ({ ...f, functie_id: nieuw.id }));
+      }
       toast({ title: "Functie toegevoegd" });
       setFunctieForm({ naam: "", werkmaatschappij: WERKMAATSCHAPPIJ_STD });
       setFunctieOpen(false);
@@ -617,16 +620,33 @@ export default function PersoneelPagina() {
               </Select>
             </div>
             <div className="space-y-1.5">
-              <Label>Functie *</Label>
-              <Select
-                value={onboardForm.functie_id ? String(onboardForm.functie_id) : undefined}
-                onValueChange={(v) => setOnboardForm({ ...onboardForm, functie_id: Number(v) })}
-              >
-                <SelectTrigger><SelectValue placeholder="Kies functie" /></SelectTrigger>
-                <SelectContent>
-                  {(functies ?? []).map((f) => <SelectItem key={f.id} value={String(f.id)}>{f.naam}</SelectItem>)}
-                </SelectContent>
-              </Select>
+              <div className="flex items-center justify-between">
+                <Label>Functie *</Label>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 gap-1 px-2 text-xs"
+                  onClick={() => setFunctieOpen(true)}
+                >
+                  <Plus className="h-3 w-3" /> Nieuwe functie
+                </Button>
+              </div>
+              {(functies ?? []).length === 0 ? (
+                <p className="rounded-md border border-dashed px-3 py-2 text-xs text-muted-foreground">
+                  Nog geen functies in het functiehuis. Maak er eerst een aan met "Nieuwe functie".
+                </p>
+              ) : (
+                <Select
+                  value={onboardForm.functie_id ? String(onboardForm.functie_id) : undefined}
+                  onValueChange={(v) => setOnboardForm({ ...onboardForm, functie_id: Number(v) })}
+                >
+                  <SelectTrigger><SelectValue placeholder="Kies functie" /></SelectTrigger>
+                  <SelectContent>
+                    {(functies ?? []).map((f) => <SelectItem key={f.id} value={String(f.id)}>{f.naam}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
             <div className="space-y-1.5">
               <Label>CAO *</Label>
