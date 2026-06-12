@@ -19,13 +19,17 @@ import {
   useGetGebouwGevelbeeld,
   useListToewijsbareGebruikers,
   useListClusters,
+  useBewaarOpleverrapport,
   type Verdieping,
   type VoorzieningType,
   type Cluster,
 } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/auth-context";
-import { ArrowLeft, Printer, Loader2 } from "lucide-react";
+import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
+import { useToast } from "@/hooks/use-toast";
+import { useUpload } from "@workspace/object-storage-web";
+import { ArrowLeft, Printer, Loader2, Save } from "lucide-react";
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 
@@ -860,12 +864,25 @@ function bijlagenKort(bijlagen: Array<{ bestandsnaam: string }> | null | undefin
   return `${bijlagen[0].bestandsnaam} +${bijlagen.length - 1}`;
 }
 
+// SHA-256 van het gegenereerde PDF-bestand (duplicaatdetectie in het DMS).
+async function sha256Hex(buf: ArrayBuffer): Promise<string> {
+  const digest = await crypto.subtle.digest("SHA-256", buf);
+  return Array.from(new Uint8Array(digest))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
 // ─── GebouwPrint ─────────────────────────────────────────────────────────────
 
 export default function GebouwPrint() {
   const { id } = useParams<{ id: string }>();
   const gebouwId = Number(id);
   const { gebruiker } = useAuth();
+  const { heeftNiveau } = useBevoegdheid();
+  const { toast } = useToast();
+  const { uploadFile } = useUpload();
+  const bewaarRapport = useBewaarOpleverrapport();
+  const [bezigOpslaan, setBezigOpslaan] = useState(false);
 
   const { data: gebouw, isLoading }      = useGetGebouw(gebouwId);
   const { data: partijen, isLoading: partijenLaden }          = useListGebouwPartijen(gebouwId);
@@ -938,6 +955,78 @@ export default function GebouwPrint() {
   const rapportVersie  = "1.0";
   const documentnummer = `OPL-${gebouw.projectnummer ?? gebouw.werknummer ?? gebouwId}`;
   const opsteller      = gebruiker?.naam ?? "—";
+  const magOpslaanInDms = heeftNiveau("bibliotheek", 3);
+
+  async function slaOpInDms() {
+    if (bezigOpslaan) return;
+    setBezigOpslaan(true);
+    try {
+      const [{ jsPDF }, html2canvasModule] = await Promise.all([
+        import("jspdf"),
+        import("html2canvas-pro"),
+      ]);
+      const html2canvas = html2canvasModule.default;
+      const paginas = Array.from(
+        document.querySelectorAll<HTMLElement>(".prt-voorblad, .prt-pagina"),
+      );
+      if (paginas.length === 0) {
+        throw new Error("Geen rapportpagina's gevonden om op te slaan.");
+      }
+      const pdf = new jsPDF("p", "mm", "a4");
+      const pageW = pdf.internal.pageSize.getWidth();
+      const pageH = pdf.internal.pageSize.getHeight();
+      for (let i = 0; i < paginas.length; i++) {
+        const canvas = await html2canvas(paginas[i], {
+          scale: 2,
+          useCORS: true,
+          backgroundColor: "#ffffff",
+          logging: false,
+        });
+        const imgData = canvas.toDataURL("image/jpeg", 0.85);
+        let renderW = pageW;
+        let renderH = (canvas.height * renderW) / canvas.width;
+        if (renderH > pageH) {
+          renderH = pageH;
+          renderW = (canvas.width * renderH) / canvas.height;
+        }
+        if (i > 0) pdf.addPage();
+        const x = (pageW - renderW) / 2;
+        pdf.addImage(imgData, "JPEG", x, 0, renderW, renderH);
+      }
+      const blob = pdf.output("blob");
+      const hash = await sha256Hex(await blob.arrayBuffer());
+      const bestand = new File([blob], `${documentnummer}.pdf`, {
+        type: "application/pdf",
+      });
+      const upload = await uploadFile(bestand);
+      if (!upload) {
+        throw new Error("Uploaden van het PDF-bestand is mislukt.");
+      }
+      const doc = await bewaarRapport.mutateAsync({
+        id: gebouwId,
+        data: {
+          pdf_url: upload.objectPath,
+          bestandsgrootte: blob.size,
+          bestands_hash: hash,
+        },
+      });
+      toast({
+        title: "Opgeslagen in DMS",
+        description: `${doc.naam} (revisie ${doc.revisie_nummer}) staat nu in de documentenbibliotheek.`,
+      });
+    } catch (err) {
+      toast({
+        variant: "destructive",
+        title: "Opslaan mislukt",
+        description:
+          err instanceof Error
+            ? err.message
+            : "Onbekende fout bij het opslaan in het DMS.",
+      });
+    } finally {
+      setBezigOpslaan(false);
+    }
+  }
 
   const projectOmschrijving =
     (samenvatting?.geverifieerd ? samenvatting.opdrachtomschrijving?.trim() : undefined)
@@ -1218,10 +1307,23 @@ export default function GebouwPrint() {
             </label>
           </div>
         </div>
-        <Button size="sm" onClick={() => window.print()} disabled={!allesGereed}>
-          {allesGereed ? <Printer className="h-4 w-4" /> : <Loader2 className="h-4 w-4 animate-spin" />}
-          {allesGereed ? "Afdrukken / Opslaan als PDF" : "Voorbereiden…"}
-        </Button>
+        <div style={{ display: "flex", gap: "0.5rem" }}>
+          {magOpslaanInDms && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={slaOpInDms}
+              disabled={!allesGereed || bezigOpslaan}
+            >
+              {bezigOpslaan ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+              {bezigOpslaan ? "Opslaan in DMS…" : "Opslaan in DMS"}
+            </Button>
+          )}
+          <Button size="sm" onClick={() => window.print()} disabled={!allesGereed}>
+            {allesGereed ? <Printer className="h-4 w-4" /> : <Loader2 className="h-4 w-4 animate-spin" />}
+            {allesGereed ? "Afdrukken / Opslaan als PDF" : "Voorbereiden…"}
+          </Button>
+        </div>
       </div>
 
       {/* ════════════════════════════════════════════════════════════════

@@ -183,6 +183,7 @@ export * from './opleidingInputSoort';
 export * from './opleidingSoort';
 export * from './opleidingVoorstel';
 export * from './opleidingVoorstelSoort';
+export * from './opleverrapportNaarDmsInput';
 export * from './plattegrondAiAnalyseInput';
 export * from './plattegrondAiAnalyseResultaat';
 export * from './profiel';

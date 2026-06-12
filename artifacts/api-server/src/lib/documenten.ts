@@ -23,6 +23,7 @@ export const DOCUMENT_TYPES = [
   "dop",
   "verwerkingsvoorschrift",
   "productblad",
+  "opleverrapport",
 ] as const;
 
 export const DOCUMENT_STATUSSEN = [

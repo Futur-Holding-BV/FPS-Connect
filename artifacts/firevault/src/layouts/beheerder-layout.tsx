@@ -9,7 +9,7 @@ import {
 import {
   ShieldCheck, Building, Wrench, Users, Search, Home, Receipt,
   ShieldAlert, LifeBuoy, MessageSquarePlus, Activity, Contact, Info, BookOpen, Clock,
-  FolderOpen, FileText, ListChecks,
+  FolderOpen, FileText, ListChecks, Files,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { GebruikerMenu } from "@/components/gebruiker-menu";
@@ -279,6 +279,17 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
                       <Link href="/beheer/bibliotheek">
                         <BookOpen />
                         <span>Bibliotheek</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={location === "/documenten" || location.startsWith("/documenten/")}
+                    >
+                      <Link href="/documenten">
+                        <Files />
+                        <span>Documenten</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>

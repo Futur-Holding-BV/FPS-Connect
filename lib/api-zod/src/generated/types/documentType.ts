@@ -17,4 +17,5 @@ export const DocumentType = {
   dop: 'dop',
   verwerkingsvoorschrift: 'verwerkingsvoorschrift',
   productblad: 'productblad',
+  opleverrapport: 'opleverrapport',
 } as const;

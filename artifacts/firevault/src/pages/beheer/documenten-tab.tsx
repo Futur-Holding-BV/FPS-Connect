@@ -99,20 +99,13 @@ import {
   Trash2,
   Upload,
 } from "lucide-react";
+import { TYPE_LABELS, STATUS_LABELS } from "@/lib/documenten-labels";
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 
 const GEEN = "__alle__";
 
-export const TYPE_LABELS: Record<string, string> = {
-  eta: "ETA",
-  classificatierapport: "Classificatierapport",
-  testrapport: "Testrapport",
-  productcertificaat: "Productcertificaat",
-  dop: "DoP",
-  verwerkingsvoorschrift: "Verwerkingsvoorschrift",
-  productblad: "Productblad",
-};
+export { TYPE_LABELS, STATUS_LABELS };
 
 export const GOEDKEURING_LABELS: Record<string, string> = {
   concept: "Concept",
@@ -175,14 +168,6 @@ async function sha256Hex(buf: ArrayBuffer): Promise<string> {
     .map((b) => b.toString(16).padStart(2, "0"))
     .join("");
 }
-
-export const STATUS_LABELS: Record<string, string> = {
-  actueel: "Actueel",
-  controle_nodig: "Controle nodig",
-  vervangen: "Vervangen",
-  mogelijk_verouderd: "Mogelijk verouderd",
-  ingetrokken: "Ingetrokken",
-};
 
 // Zet een API-fout om naar een begrijpelijke melding. Onderscheidt een echte
 // bevoegdheidsfout (403) van overige fouten en toont anders het serverbericht,
@@ -1178,7 +1163,7 @@ function DocumentDetail({
                     {statusBadge(r.status)}
                     {r.pdf_url && (
                       <a
-                        href={`/api/storage${r.pdf_url}`}
+                        href={`/api/documenten/${r.id}/download`}
                         target="_blank"
                         rel="noreferrer"
                         className="text-primary"

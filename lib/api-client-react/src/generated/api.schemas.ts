@@ -1937,6 +1937,7 @@ export const DocumentType = {
   dop: 'dop',
   verwerkingsvoorschrift: 'verwerkingsvoorschrift',
   productblad: 'productblad',
+  opleverrapport: 'opleverrapport',
 } as const;
 
 export type DocumentStatus = typeof DocumentStatus[keyof typeof DocumentStatus];
@@ -2013,6 +2014,13 @@ export interface Document {
   geldig_tot?: string | null;
   goedkeuring_status: GoedkeuringStatus;
   toepassing_ids: number[];
+}
+
+export interface OpleverrapportNaarDmsInput {
+  /** objectPath van het geüploade PDF-bestand (bv. /objects/uploads/<uuid>) */
+  pdf_url: string;
+  bestandsgrootte?: number;
+  bestands_hash?: string;
 }
 
 export type DocumentInputAiMetadata = { [key: string]: unknown };

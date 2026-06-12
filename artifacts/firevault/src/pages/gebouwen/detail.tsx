@@ -12,6 +12,8 @@ import {
   useListGebouwPartijen,
   useListOnderhoud,
   useArchiveerGebouw,
+  useListGekoppeldeDocumenten,
+  type Document,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -54,10 +56,12 @@ import {
   Lock,
   Sparkles,
   Archive,
+  Download,
 } from "lucide-react";
 import { useAuth } from "@/context/auth-context";
 import { useRol } from "@/context/rol-context";
 import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
+import { TYPE_LABELS } from "@/lib/documenten-labels";
 import GebouwPartijen from "./gebouw-partijen";
 import GebouwTekeningen from "./gebouw-tekeningen";
 import GebouwPlattegronden from "./gebouw-plattegronden";
@@ -137,6 +141,76 @@ function DataWaarschuwing({ punten }: { punten: string[] }) {
         </p>
       </div>
     </div>
+  );
+}
+
+function GebouwDocumenten({ gebouwId }: { gebouwId: number }) {
+  const { heeftNiveau } = useBevoegdheid();
+  const magLezen = heeftNiveau("bibliotheek", 1);
+  const { data, isLoading } = useListGekoppeldeDocumenten({
+    doel_type: "gebouw",
+    doel_id: gebouwId,
+  });
+  if (!magLezen) return null;
+  const documenten = ((data ?? []) as Document[]).filter((d) => !d.gearchiveerd);
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle className="flex items-center gap-2 text-base">
+          <FileText className="h-4 w-4" /> Documenten
+          {documenten.length > 0 && (
+            <Badge variant="secondary">{documenten.length}</Badge>
+          )}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {isLoading ? (
+          <div className="flex justify-center py-4">
+            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+          </div>
+        ) : documenten.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            Nog geen documenten aan dit gebouw gekoppeld.
+          </p>
+        ) : (
+          <ul className="space-y-2">
+            {documenten.map((d) => (
+              <li
+                key={d.id}
+                className="flex items-center gap-3 rounded-md border p-2.5 text-sm"
+              >
+                <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
+                <div className="flex-1 min-w-0">
+                  <div className="font-medium truncate">{d.naam}</div>
+                  <div className="flex flex-wrap gap-x-2 gap-y-1 mt-1 text-xs text-muted-foreground">
+                    <Badge variant="outline" className="text-xs">
+                      {TYPE_LABELS[d.documenttype] ?? d.documenttype}
+                    </Badge>
+                    {typeof d.revisie_nummer === "number" && d.revisie_nummer > 1 && (
+                      <span>Revisie {d.revisie_nummer}</span>
+                    )}
+                    {d.datum && (
+                      <span>{new Date(d.datum).toLocaleDateString("nl-NL")}</span>
+                    )}
+                  </div>
+                </div>
+                {d.pdf_url && (
+                  <Button asChild variant="outline" size="sm">
+                    <a
+                      href={`/api/documenten/${d.id}/download`}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      <Download className="h-4 w-4" /> Openen
+                    </a>
+                  </Button>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 
@@ -567,6 +641,8 @@ export default function GebouwDetail() {
                 </CardContent>
               </Card>
             )}
+
+            <GebouwDocumenten gebouwId={gebouwId} />
           </div>
 
           <div className="space-y-6">

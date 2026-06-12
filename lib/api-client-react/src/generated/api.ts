@@ -160,6 +160,7 @@ import type {
   Opleiding,
   OpleidingInput,
   OpleidingenVoorstelResultaat,
+  OpleverrapportNaarDmsInput,
   PlattegrondAiAnalyseInput,
   PlattegrondAiAnalyseResultaat,
   Profiel,
@@ -1583,6 +1584,77 @@ export const useHerstelGebouwActief = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getHerstelGebouwActiefMutationOptions(options));
+    }
+
+export const getBewaarOpleverrapportUrl = (id: number,) => {
+
+
+
+
+  return `/api/gebouwen/${id}/opleverrapport`
+}
+
+/**
+ * @summary Opleverrapport-PDF als document opslaan en aan het gebouw koppelen
+ */
+export const bewaarOpleverrapport = async (id: number,
+    opleverrapportNaarDmsInput: OpleverrapportNaarDmsInput, options?: RequestInit): Promise<Document> => {
+
+  return customFetch<Document>(getBewaarOpleverrapportUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(opleverrapportNaarDmsInput)
+  }
+);}
+
+
+
+
+export const getBewaarOpleverrapportMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof bewaarOpleverrapport>>, TError,{id: number;data: BodyType<OpleverrapportNaarDmsInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof bewaarOpleverrapport>>, TError,{id: number;data: BodyType<OpleverrapportNaarDmsInput>}, TContext> => {
+
+const mutationKey = ['bewaarOpleverrapport'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof bewaarOpleverrapport>>, {id: number;data: BodyType<OpleverrapportNaarDmsInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  bewaarOpleverrapport(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type BewaarOpleverrapportMutationResult = NonNullable<Awaited<ReturnType<typeof bewaarOpleverrapport>>>
+    export type BewaarOpleverrapportMutationBody = BodyType<OpleverrapportNaarDmsInput>
+    export type BewaarOpleverrapportMutationError = ErrorType<void>
+
+    /**
+ * @summary Opleverrapport-PDF als document opslaan en aan het gebouw koppelen
+ */
+export const useBewaarOpleverrapport = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof bewaarOpleverrapport>>, TError,{id: number;data: BodyType<OpleverrapportNaarDmsInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof bewaarOpleverrapport>>,
+        TError,
+        {id: number;data: BodyType<OpleverrapportNaarDmsInput>},
+        TContext
+      > => {
+      return useMutation(getBewaarOpleverrapportMutationOptions(options));
     }
 
 export const getArchiveerGebouwUrl = (id: number,) => {

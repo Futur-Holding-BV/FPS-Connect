@@ -429,6 +429,37 @@ paths:
         "404":
           description: Niet gevonden
 
+  /gebouwen/{id}/opleverrapport:
+    post:
+      operationId: bewaarOpleverrapport
+      tags: [gebouwen]
+      summary: Opleverrapport-PDF als document opslaan en aan het gebouw koppelen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OpleverrapportNaarDmsInput"
+      responses:
+        "201":
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Document"
+        "400":
+          description: Ongeldige invoer
+        "403":
+          description: Geen toegang
+        "404":
+          description: Niet gevonden
+
   /gebouwen/{id}/archief:
     patch:
       operationId: archiveerGebouw
@@ -8216,7 +8247,7 @@ components:
 
     DocumentType:
       type: string
-      enum: [eta, classificatierapport, testrapport, productcertificaat, dop, verwerkingsvoorschrift, productblad]
+      enum: [eta, classificatierapport, testrapport, productcertificaat, dop, verwerkingsvoorschrift, productblad, opleverrapport]
 
     DocumentStatus:
       type: string
@@ -8284,6 +8315,18 @@ components:
           type: array
           items:
             type: integer
+
+    OpleverrapportNaarDmsInput:
+      type: object
+      required: [pdf_url]
+      properties:
+        pdf_url:
+          type: string
+          description: objectPath van het geüploade PDF-bestand (bv. /objects/uploads/<uuid>)
+        bestandsgrootte:
+          type: integer
+        bestands_hash:
+          type: string
 
     DocumentInput:
       type: object

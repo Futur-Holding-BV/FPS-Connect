@@ -494,6 +494,22 @@ export const HerstelGebouwActiefResponse = zod.object({
 
 
 /**
+ * @summary Opleverrapport-PDF als document opslaan en aan het gebouw koppelen
+ */
+export const BewaarOpleverrapportParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const BewaarOpleverrapportBody = zod.object({
+  "pdf_url": zod.string().describe('objectPath van het geüploade PDF-bestand (bv. \/objects\/uploads\/<uuid>)'),
+  "bestandsgrootte": zod.number().optional(),
+  "bestands_hash": zod.string().optional()
+})
+
+export const BewaarOpleverrapportResponse = zod.void()
+
+
+/**
  * @summary Gebouw archiveren of terugplaatsen
  */
 export const ArchiveerGebouwParams = zod.object({
@@ -1829,7 +1845,7 @@ export const UpdateTestrapportResponse = zod.object({
  */
 export const ListDocumentenQueryParams = zod.object({
   "zoek": zod.coerce.string().optional().describe('Vrije zoekterm (naam, fabrikant, rapportnummer, EN-norm, product)'),
-  "documenttype": zod.enum(['eta', 'classificatierapport', 'testrapport', 'productcertificaat', 'dop', 'verwerkingsvoorschrift', 'productblad']).optional(),
+  "documenttype": zod.enum(['eta', 'classificatierapport', 'testrapport', 'productcertificaat', 'dop', 'verwerkingsvoorschrift', 'productblad', 'opleverrapport']).optional(),
   "status": zod.enum(['actueel', 'controle_nodig', 'vervangen', 'mogelijk_verouderd', 'ingetrokken']).optional(),
   "goedkeuring_status": zod.enum(['concept', 'ter_goedkeuring', 'goedgekeurd', 'afgekeurd']).optional(),
   "fabrikant": zod.coerce.string().optional(),
@@ -1842,7 +1858,7 @@ export const ListDocumentenQueryParams = zod.object({
 export const ListDocumentenResponseItem = zod.object({
   "id": zod.number(),
   "naam": zod.string(),
-  "documenttype": zod.enum(['eta', 'classificatierapport', 'testrapport', 'productcertificaat', 'dop', 'verwerkingsvoorschrift', 'productblad']),
+  "documenttype": zod.enum(['eta', 'classificatierapport', 'testrapport', 'productcertificaat', 'dop', 'verwerkingsvoorschrift', 'productblad', 'opleverrapport']),
   "fabrikant": zod.string().nullish(),
   "product": zod.string().nullish(),
   "en_norm": zod.string().nullish(),
@@ -1873,7 +1889,7 @@ export const ListDocumentenResponse = zod.array(ListDocumentenResponseItem)
  */
 export const CreateDocumentBody = zod.object({
   "naam": zod.string(),
-  "documenttype": zod.enum(['eta', 'classificatierapport', 'testrapport', 'productcertificaat', 'dop', 'verwerkingsvoorschrift', 'productblad']).optional(),
+  "documenttype": zod.enum(['eta', 'classificatierapport', 'testrapport', 'productcertificaat', 'dop', 'verwerkingsvoorschrift', 'productblad', 'opleverrapport']).optional(),
   "fabrikant": zod.string().optional(),
   "product": zod.string().optional(),
   "en_norm": zod.string().optional(),
@@ -1904,7 +1920,7 @@ export const GetDocumentParams = zod.object({
 export const GetDocumentResponse = zod.object({
   "id": zod.number(),
   "naam": zod.string(),
-  "documenttype": zod.enum(['eta', 'classificatierapport', 'testrapport', 'productcertificaat', 'dop', 'verwerkingsvoorschrift', 'productblad']),
+  "documenttype": zod.enum(['eta', 'classificatierapport', 'testrapport', 'productcertificaat', 'dop', 'verwerkingsvoorschrift', 'productblad', 'opleverrapport']),
   "fabrikant": zod.string().nullish(),
   "product": zod.string().nullish(),
   "en_norm": zod.string().nullish(),
@@ -1945,7 +1961,7 @@ export const UpdateDocumentBody = zod.object({
 export const UpdateDocumentResponse = zod.object({
   "id": zod.number(),
   "naam": zod.string(),
-  "documenttype": zod.enum(['eta', 'classificatierapport', 'testrapport', 'productcertificaat', 'dop', 'verwerkingsvoorschrift', 'productblad']),
+  "documenttype": zod.enum(['eta', 'classificatierapport', 'testrapport', 'productcertificaat', 'dop', 'verwerkingsvoorschrift', 'productblad', 'opleverrapport']),
   "fabrikant": zod.string().nullish(),
   "product": zod.string().nullish(),
   "en_norm": zod.string().nullish(),
@@ -1980,7 +1996,7 @@ export const ListDocumentRevisiesParams = zod.object({
 export const ListDocumentRevisiesResponseItem = zod.object({
   "id": zod.number(),
   "naam": zod.string(),
-  "documenttype": zod.enum(['eta', 'classificatierapport', 'testrapport', 'productcertificaat', 'dop', 'verwerkingsvoorschrift', 'productblad']),
+  "documenttype": zod.enum(['eta', 'classificatierapport', 'testrapport', 'productcertificaat', 'dop', 'verwerkingsvoorschrift', 'productblad', 'opleverrapport']),
   "fabrikant": zod.string().nullish(),
   "product": zod.string().nullish(),
   "en_norm": zod.string().nullish(),
@@ -2015,7 +2031,7 @@ export const CreateDocumentRevisieParams = zod.object({
 
 export const CreateDocumentRevisieBody = zod.object({
   "naam": zod.string(),
-  "documenttype": zod.enum(['eta', 'classificatierapport', 'testrapport', 'productcertificaat', 'dop', 'verwerkingsvoorschrift', 'productblad']).optional(),
+  "documenttype": zod.enum(['eta', 'classificatierapport', 'testrapport', 'productcertificaat', 'dop', 'verwerkingsvoorschrift', 'productblad', 'opleverrapport']).optional(),
   "fabrikant": zod.string().optional(),
   "product": zod.string().optional(),
   "en_norm": zod.string().optional(),
@@ -2050,7 +2066,7 @@ export const SetDocumentToepassingenBody = zod.object({
 export const SetDocumentToepassingenResponse = zod.object({
   "id": zod.number(),
   "naam": zod.string(),
-  "documenttype": zod.enum(['eta', 'classificatierapport', 'testrapport', 'productcertificaat', 'dop', 'verwerkingsvoorschrift', 'productblad']),
+  "documenttype": zod.enum(['eta', 'classificatierapport', 'testrapport', 'productcertificaat', 'dop', 'verwerkingsvoorschrift', 'productblad', 'opleverrapport']),
   "fabrikant": zod.string().nullish(),
   "product": zod.string().nullish(),
   "en_norm": zod.string().nullish(),
@@ -2087,7 +2103,7 @@ export const AiAnalyseDocumentResponse = zod.object({
   "naam": zod.string().nullish(),
   "fabrikant": zod.string().nullish(),
   "product": zod.string().nullish(),
-  "documenttype": zod.union([zod.enum(['eta', 'classificatierapport', 'testrapport', 'productcertificaat', 'dop', 'verwerkingsvoorschrift', 'productblad']),zod.null()]).optional(),
+  "documenttype": zod.union([zod.enum(['eta', 'classificatierapport', 'testrapport', 'productcertificaat', 'dop', 'verwerkingsvoorschrift', 'productblad', 'opleverrapport']),zod.null()]).optional(),
   "en_norm": zod.string().nullish(),
   "rapportnummer": zod.string().nullish(),
   "revisie": zod.string().nullish(),
@@ -2110,7 +2126,7 @@ export const AiAnalyseDocumentResponse = zod.object({
 export const AiKoppelvoorstellenDocumentenResponseItem = zod.object({
   "document_id": zod.number(),
   "document_naam": zod.string(),
-  "documenttype": zod.enum(['eta', 'classificatierapport', 'testrapport', 'productcertificaat', 'dop', 'verwerkingsvoorschrift', 'productblad']),
+  "documenttype": zod.enum(['eta', 'classificatierapport', 'testrapport', 'productcertificaat', 'dop', 'verwerkingsvoorschrift', 'productblad', 'opleverrapport']),
   "fabrikant": zod.string().nullish(),
   "huidige_toepassing_ids": zod.array(zod.number()),
   "suggesties": zod.array(zod.object({
@@ -2138,7 +2154,7 @@ export const ControleerDocumentDuplicaatResponse = zod.object({
   "document": zod.object({
   "id": zod.number(),
   "naam": zod.string(),
-  "documenttype": zod.enum(['eta', 'classificatierapport', 'testrapport', 'productcertificaat', 'dop', 'verwerkingsvoorschrift', 'productblad']),
+  "documenttype": zod.enum(['eta', 'classificatierapport', 'testrapport', 'productcertificaat', 'dop', 'verwerkingsvoorschrift', 'productblad', 'opleverrapport']),
   "fabrikant": zod.string().nullish(),
   "product": zod.string().nullish(),
   "en_norm": zod.string().nullish(),
@@ -2173,7 +2189,7 @@ export const ListDocumentSignaleringenResponse = zod.object({
   "verlopen": zod.array(zod.object({
   "id": zod.number(),
   "naam": zod.string(),
-  "documenttype": zod.enum(['eta', 'classificatierapport', 'testrapport', 'productcertificaat', 'dop', 'verwerkingsvoorschrift', 'productblad']),
+  "documenttype": zod.enum(['eta', 'classificatierapport', 'testrapport', 'productcertificaat', 'dop', 'verwerkingsvoorschrift', 'productblad', 'opleverrapport']),
   "fabrikant": zod.string().nullish(),
   "product": zod.string().nullish(),
   "en_norm": zod.string().nullish(),
@@ -2199,7 +2215,7 @@ export const ListDocumentSignaleringenResponse = zod.object({
   "binnenkort": zod.array(zod.object({
   "id": zod.number(),
   "naam": zod.string(),
-  "documenttype": zod.enum(['eta', 'classificatierapport', 'testrapport', 'productcertificaat', 'dop', 'verwerkingsvoorschrift', 'productblad']),
+  "documenttype": zod.enum(['eta', 'classificatierapport', 'testrapport', 'productcertificaat', 'dop', 'verwerkingsvoorschrift', 'productblad', 'opleverrapport']),
   "fabrikant": zod.string().nullish(),
   "product": zod.string().nullish(),
   "en_norm": zod.string().nullish(),
@@ -2225,7 +2241,7 @@ export const ListDocumentSignaleringenResponse = zod.object({
   "controle_nodig": zod.array(zod.object({
   "id": zod.number(),
   "naam": zod.string(),
-  "documenttype": zod.enum(['eta', 'classificatierapport', 'testrapport', 'productcertificaat', 'dop', 'verwerkingsvoorschrift', 'productblad']),
+  "documenttype": zod.enum(['eta', 'classificatierapport', 'testrapport', 'productcertificaat', 'dop', 'verwerkingsvoorschrift', 'productblad', 'opleverrapport']),
   "fabrikant": zod.string().nullish(),
   "product": zod.string().nullish(),
   "en_norm": zod.string().nullish(),
@@ -2251,7 +2267,7 @@ export const ListDocumentSignaleringenResponse = zod.object({
   "ter_goedkeuring": zod.array(zod.object({
   "id": zod.number(),
   "naam": zod.string(),
-  "documenttype": zod.enum(['eta', 'classificatierapport', 'testrapport', 'productcertificaat', 'dop', 'verwerkingsvoorschrift', 'productblad']),
+  "documenttype": zod.enum(['eta', 'classificatierapport', 'testrapport', 'productcertificaat', 'dop', 'verwerkingsvoorschrift', 'productblad', 'opleverrapport']),
   "fabrikant": zod.string().nullish(),
   "product": zod.string().nullish(),
   "en_norm": zod.string().nullish(),
@@ -2308,7 +2324,7 @@ export const ListGekoppeldeDocumentenQueryParams = zod.object({
 export const ListGekoppeldeDocumentenResponseItem = zod.object({
   "id": zod.number(),
   "naam": zod.string(),
-  "documenttype": zod.enum(['eta', 'classificatierapport', 'testrapport', 'productcertificaat', 'dop', 'verwerkingsvoorschrift', 'productblad']),
+  "documenttype": zod.enum(['eta', 'classificatierapport', 'testrapport', 'productcertificaat', 'dop', 'verwerkingsvoorschrift', 'productblad', 'opleverrapport']),
   "fabrikant": zod.string().nullish(),
   "product": zod.string().nullish(),
   "en_norm": zod.string().nullish(),
@@ -2392,7 +2408,7 @@ export const IndienenDocumentBody = zod.object({
 export const IndienenDocumentResponse = zod.object({
   "id": zod.number(),
   "naam": zod.string(),
-  "documenttype": zod.enum(['eta', 'classificatierapport', 'testrapport', 'productcertificaat', 'dop', 'verwerkingsvoorschrift', 'productblad']),
+  "documenttype": zod.enum(['eta', 'classificatierapport', 'testrapport', 'productcertificaat', 'dop', 'verwerkingsvoorschrift', 'productblad', 'opleverrapport']),
   "fabrikant": zod.string().nullish(),
   "product": zod.string().nullish(),
   "en_norm": zod.string().nullish(),
@@ -2431,7 +2447,7 @@ export const GoedkeurenDocumentBody = zod.object({
 export const GoedkeurenDocumentResponse = zod.object({
   "id": zod.number(),
   "naam": zod.string(),
-  "documenttype": zod.enum(['eta', 'classificatierapport', 'testrapport', 'productcertificaat', 'dop', 'verwerkingsvoorschrift', 'productblad']),
+  "documenttype": zod.enum(['eta', 'classificatierapport', 'testrapport', 'productcertificaat', 'dop', 'verwerkingsvoorschrift', 'productblad', 'opleverrapport']),
   "fabrikant": zod.string().nullish(),
   "product": zod.string().nullish(),
   "en_norm": zod.string().nullish(),
@@ -2470,7 +2486,7 @@ export const AfkeurenDocumentBody = zod.object({
 export const AfkeurenDocumentResponse = zod.object({
   "id": zod.number(),
   "naam": zod.string(),
-  "documenttype": zod.enum(['eta', 'classificatierapport', 'testrapport', 'productcertificaat', 'dop', 'verwerkingsvoorschrift', 'productblad']),
+  "documenttype": zod.enum(['eta', 'classificatierapport', 'testrapport', 'productcertificaat', 'dop', 'verwerkingsvoorschrift', 'productblad', 'opleverrapport']),
   "fabrikant": zod.string().nullish(),
   "product": zod.string().nullish(),
   "en_norm": zod.string().nullish(),

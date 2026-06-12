@@ -8,11 +8,15 @@ import {
   gebouwToewijzingenTable,
   gebouwPartijenTable,
   tekeningenTable,
+  documentenTable,
+  documentKoppelingenTable,
 } from "@workspace/db";
-import { eq, inArray, count, and, sql } from "drizzle-orm";
+import { eq, inArray, count, and, sql, max, ne } from "drizzle-orm";
 import { requireBevoegdheid, requireBevoegdheidOfKlant } from "../middlewares/auth";
 import { effectieveContext } from "../utils/rol";
 import { logActiviteit } from "../lib/activiteit";
+import { mapDocument } from "../lib/documenten";
+import { logDocumentActie } from "../lib/document-logboek";
 import {
   analyseerGebouwVrijeTekst,
   analyseerTekening,
@@ -1430,5 +1434,178 @@ router.patch("/gebouwen/:id/archief", requireBevoegdheid("gebouwen", 4), async (
     res.status(500).json({ error: "Interne serverfout" });
   }
 });
+
+// POST /gebouwen/:id/opleverrapport — opleverrapport-PDF als document opslaan + koppelen
+// Revisiebewust: bestaat er al een opleverrapport gekoppeld aan dit gebouw, dan maken we
+// een nieuwe revisie in dezelfde groep (oude actuele -> "vervangen") en verhuizen we de
+// gebouwkoppeling naar de nieuwe revisie. Anders nieuw document + koppeling.
+router.post(
+  "/gebouwen/:id/opleverrapport",
+  requireBevoegdheid("bibliotheek", 3),
+  async (req, res) => {
+    try {
+      const id = parseInt(String(req.params.id));
+      if (!Number.isInteger(id)) {
+        return res.status(400).json({ error: "Ongeldig gebouw-id" });
+      }
+      const [gebouw] = await db
+        .select()
+        .from(gebouwenTable)
+        .where(eq(gebouwenTable.id, id));
+      if (!gebouw) {
+        return res.status(404).json({ error: "Gebouw niet gevonden" });
+      }
+
+      const pdfUrl =
+        typeof req.body?.pdf_url === "string" ? req.body.pdf_url.trim() : "";
+      if (!pdfUrl) {
+        return res.status(400).json({ error: "pdf_url is verplicht" });
+      }
+      const bestandsgrootte = Number.isInteger(req.body?.bestandsgrootte)
+        ? (req.body.bestandsgrootte as number)
+        : null;
+      const bestandsHash =
+        typeof req.body?.bestands_hash === "string"
+          ? req.body.bestands_hash
+          : null;
+
+      const naam = gebouw.projectnummer
+        ? `Opleverrapport ${gebouw.projectnummer} - ${gebouw.naam}`
+        : `Opleverrapport ${gebouw.naam}`;
+      const vandaag = new Date().toISOString().slice(0, 10);
+      const { userId } = await effectieveContext(req);
+
+      const doc = await db.transaction(async (tx) => {
+        // Bestaand opleverrapport dat aan dit gebouw is gekoppeld?
+        const gekoppeld = await tx
+          .select({ doc: documentenTable })
+          .from(documentKoppelingenTable)
+          .innerJoin(
+            documentenTable,
+            eq(documentKoppelingenTable.documentId, documentenTable.id),
+          )
+          .where(
+            and(
+              eq(documentKoppelingenTable.doelType, "gebouw"),
+              eq(documentKoppelingenTable.doelId, id),
+              eq(documentenTable.documenttype, "opleverrapport"),
+              eq(documentenTable.gearchiveerd, false),
+            ),
+          );
+        const bron =
+          gekoppeld.find((r) => r.doc.status === "actueel")?.doc ??
+          gekoppeld
+            .map((r) => r.doc)
+            .sort((a, b) => b.revisieNummer - a.revisieNummer)[0];
+
+        if (bron) {
+          const [{ maxNum }] = await tx
+            .select({ maxNum: max(documentenTable.revisieNummer) })
+            .from(documentenTable)
+            .where(eq(documentenTable.groepId, bron.groepId));
+          const volgend = (maxNum ?? bron.revisieNummer) + 1;
+          const [row] = await tx
+            .insert(documentenTable)
+            .values({
+              naam,
+              documenttype: "opleverrapport",
+              datum: vandaag,
+              pdfUrl,
+              bestandsHash,
+              bestandsgrootte,
+              status: "actueel",
+              goedkeuringStatus: "goedgekeurd",
+              groepId: bron.groepId,
+              revisieNummer: volgend,
+            })
+            .returning();
+          // Oude actuele revisie(s) in deze groep markeren als vervangen.
+          await tx
+            .update(documentenTable)
+            .set({ status: "vervangen", bijgewerktOp: new Date() })
+            .where(
+              and(
+                eq(documentenTable.groepId, bron.groepId),
+                eq(documentenTable.status, "actueel"),
+                ne(documentenTable.id, row.id),
+              ),
+            );
+          // Gebouwkoppeling verhuizen naar de nieuwe revisie: oude koppelingen van
+          // documenten uit deze groep aan dit gebouw verwijderen, dan nieuwe koppelen.
+          const groepDocs = await tx
+            .select({ id: documentenTable.id })
+            .from(documentenTable)
+            .where(eq(documentenTable.groepId, bron.groepId));
+          const groepIds = groepDocs.map((d) => d.id);
+          if (groepIds.length > 0) {
+            await tx
+              .delete(documentKoppelingenTable)
+              .where(
+                and(
+                  eq(documentKoppelingenTable.doelType, "gebouw"),
+                  eq(documentKoppelingenTable.doelId, id),
+                  inArray(documentKoppelingenTable.documentId, groepIds),
+                ),
+              );
+          }
+          await tx
+            .insert(documentKoppelingenTable)
+            .values({
+              documentId: row.id,
+              doelType: "gebouw",
+              doelId: id,
+              aangemaaktDoorId: userId,
+            })
+            .onConflictDoNothing();
+          return row;
+        }
+
+        // Geen bestaand opleverrapport: nieuw document + koppeling.
+        const [row] = await tx
+          .insert(documentenTable)
+          .values({
+            naam,
+            documenttype: "opleverrapport",
+            datum: vandaag,
+            pdfUrl,
+            bestandsHash,
+            bestandsgrootte,
+            status: "actueel",
+            goedkeuringStatus: "goedgekeurd",
+          })
+          .returning();
+        await tx
+          .insert(documentKoppelingenTable)
+          .values({
+            documentId: row.id,
+            doelType: "gebouw",
+            doelId: id,
+            aangemaaktDoorId: userId,
+          })
+          .onConflictDoNothing();
+        return row;
+      });
+
+      await logDocumentActie({
+        documentId: doc.id,
+        documentNaam: doc.naam,
+        gebruikerId: userId,
+        actie: doc.revisieNummer > 1 ? "revisie" : "geupload",
+        detail: `opleverrapport gebouw #${id}`,
+      });
+
+      return res.status(201).json(await mapDocument(doc));
+    } catch (err) {
+      if ((err as { code?: string })?.code === "23505") {
+        return res.status(409).json({
+          error:
+            "Er werd net een andere revisie opgeslagen. Probeer het opnieuw.",
+        });
+      }
+      req.log.error(err);
+      return res.status(500).json({ error: "Interne serverfout" });
+    }
+  },
+);
 
 export default router;
