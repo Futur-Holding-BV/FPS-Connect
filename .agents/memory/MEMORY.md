@@ -49,3 +49,4 @@
 - [Toewijsbare-gebruikers picker-endpoint](toewijsbare-gebruikers.md) — toewijs-keuzelijsten (team/monteur/onderhoud) gebruiken GET /toewijsbare-gebruikers (requireEnigeBevoegdheid), NIET /gebruikers (403 bij gebruikers:0).
 - [Cluster-monteur & serie plaatsen](cluster-monteur-serie.md) — cluster→monteur = bulk-update voorzieningen.monteurId (geen cluster-kolom), client-side afgeleid; serie plaatst per klik POST /voorzieningen met leeg objectnummer; sjabloon in refs.
 - [GPT-5 model params](gpt5-model-params.md) — gpt-5* chat-completions need max_completion_tokens (not max_tokens) + bigger budget (reasoning tokens share it); no custom temperature; gpt-4o vision calls keep max_tokens.
+- [Bearer = stateless, geen session-store](bearer-stateless-session.md) — mobiel bearer-pad mag NOOIT door sessionMiddleware (connect-pg-simple schrijft dan per request een sessie-rij, onbeperkte groei); gebruik niet-persisterende stub-sessie.
