@@ -52,8 +52,9 @@ import {
   Users, Plus, UserPlus, Briefcase, GraduationCap, CalendarClock, AlertTriangle,
   Award, Check, X, ChevronRight,
 } from "lucide-react";
+import { WERKMAATSCHAPPIJEN, caoVoorWerkmaatschappij } from "@/lib/werkmaatschappijen";
 
-const WERKMAATSCHAPPIJ_STD = "FPS Brandpreventie";
+const WERKMAATSCHAPPIJ_STD = WERKMAATSCHAPPIJEN[0];
 const DIENSTVERBANDEN = ["vast", "tijdelijk", "oproep", "stage", "inhuur"] as const;
 
 const SOORT_OPTIES = [
@@ -191,7 +192,7 @@ export default function PersoneelPagina() {
     gebruiker_id: 0,
     functie_id: 0,
     werkmaatschappij: WERKMAATSCHAPPIJ_STD,
-    cao: "",
+    cao: caoVoorWerkmaatschappij(WERKMAATSCHAPPIJ_STD) ?? "",
     contracturen_per_week: 38,
     in_dienst_sinds: new Date().toISOString().slice(0, 10),
     jaar: huidigJaar(),
@@ -775,7 +776,15 @@ export default function PersoneelPagina() {
             </div>
             <div className="space-y-1.5">
               <Label>Werkmaatschappij</Label>
-              <Input value={medewerkerForm.werkmaatschappij ?? ""} onChange={(e) => setMedewerkerForm({ ...medewerkerForm, werkmaatschappij: e.target.value })} />
+              <Select
+                value={medewerkerForm.werkmaatschappij || undefined}
+                onValueChange={(v) => setMedewerkerForm({ ...medewerkerForm, werkmaatschappij: v })}
+              >
+                <SelectTrigger><SelectValue placeholder="Kies werkmaatschappij" /></SelectTrigger>
+                <SelectContent>
+                  {WERKMAATSCHAPPIJEN.map((w) => <SelectItem key={w} value={w}>{w}</SelectItem>)}
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-1.5">
               <Label>Functie</Label>
@@ -875,6 +884,24 @@ export default function PersoneelPagina() {
               )}
             </div>
             <div className="space-y-1.5">
+              <Label>Werkmaatschappij *</Label>
+              <Select
+                value={onboardForm.werkmaatschappij || undefined}
+                onValueChange={(v) =>
+                  setOnboardForm({
+                    ...onboardForm,
+                    werkmaatschappij: v,
+                    cao: caoVoorWerkmaatschappij(v) ?? onboardForm.cao,
+                  })
+                }
+              >
+                <SelectTrigger><SelectValue placeholder="Kies werkmaatschappij" /></SelectTrigger>
+                <SelectContent>
+                  {WERKMAATSCHAPPIJEN.map((w) => <SelectItem key={w} value={w}>{w}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
               <Label>CAO *</Label>
               <Select value={onboardForm.cao || undefined} onValueChange={(v) => setOnboardForm({ ...onboardForm, cao: v })}>
                 <SelectTrigger><SelectValue placeholder="Kies CAO" /></SelectTrigger>
@@ -930,7 +957,15 @@ export default function PersoneelPagina() {
             </div>
             <div className="space-y-1.5">
               <Label>Werkmaatschappij</Label>
-              <Input value={functieForm.werkmaatschappij ?? ""} onChange={(e) => setFunctieForm({ ...functieForm, werkmaatschappij: e.target.value })} />
+              <Select
+                value={functieForm.werkmaatschappij || undefined}
+                onValueChange={(v) => setFunctieForm({ ...functieForm, werkmaatschappij: v })}
+              >
+                <SelectTrigger><SelectValue placeholder="Kies werkmaatschappij" /></SelectTrigger>
+                <SelectContent>
+                  {WERKMAATSCHAPPIJEN.map((w) => <SelectItem key={w} value={w}>{w}</SelectItem>)}
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-1.5">
               <Label>Omschrijving</Label>

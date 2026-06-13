@@ -55,6 +55,7 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
+import { caoVoorWerkmaatschappij, werkmaatschappijOpties } from "@/lib/werkmaatschappijen";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
@@ -665,6 +666,24 @@ export default function MedewerkerDetailPagina() {
               <div className="space-y-1.5">
                 <Label>Telefoon</Label>
                 <Input value={profielForm.telefoon ?? ""} onChange={(e) => setProfielForm({ ...profielForm, telefoon: e.target.value })} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Werkmaatschappij</Label>
+                <Select
+                  value={profielForm.werkmaatschappij || undefined}
+                  onValueChange={(v) =>
+                    setProfielForm({
+                      ...profielForm,
+                      werkmaatschappij: v,
+                      cao: caoVoorWerkmaatschappij(v) ?? profielForm.cao,
+                    })
+                  }
+                >
+                  <SelectTrigger><SelectValue placeholder="Kies werkmaatschappij" /></SelectTrigger>
+                  <SelectContent>
+                    {werkmaatschappijOpties(profielForm.werkmaatschappij).map((w) => <SelectItem key={w} value={w}>{w}</SelectItem>)}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-1.5">
                 <Label>Functie</Label>
