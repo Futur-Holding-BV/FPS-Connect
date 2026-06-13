@@ -9,6 +9,7 @@
     "seed-applicaties": "tsx ./src/seed-applicaties.ts",
     "migreer-bevoegdheden": "tsx ./src/migreer-bevoegdheden.ts",
     "e2e-monteur-testaccount": "tsx ./src/e2e-monteur-testaccount.ts",
+    "e2e-monteur": "playwright test",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
@@ -19,6 +20,7 @@
     "otplib": "^12.0.1"
   },
   "devDependencies": {
+    "@playwright/test": "^1.60.0",
     "@types/node": "catalog:",
     "tsx": "catalog:"
   }

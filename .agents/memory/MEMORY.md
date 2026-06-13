@@ -59,3 +59,4 @@
 - [html2canvas + Tailwind v4 oklch](html2canvas-oklch.md) — firevault DOM->PDF/canvas capture moet html2canvas-pro; klassieke html2canvas 1.4.1 kan oklch()-kleuren niet parsen.
 - [HRM lege catalogi dropdowns](hrm-lege-catalogi.md) — functies/opleidingen zijn user-managed, bewust niet geseed; data-gedreven Selects zijn dan leeg en lijken kapot; geef empty-state, geen nepdata.
 - [E2E TOTP login timing](e2e-totp-timing.md) — runTest cold-load verloopt TOTP-code; genereer next-window code (Date.now()+30000) na vensgrens voor ~90s; vast e2e-account via scripts/e2e-monteur-testaccount; Expo buiten /api-proxy.
+- [Playwright op NixOS](playwright-nixos.md) — meegeleverde Playwright-chromium draait niet op NixOS (prebuilt binary, ontbrekende libs); gebruik Nix-chromium via executablePath (which chromium).

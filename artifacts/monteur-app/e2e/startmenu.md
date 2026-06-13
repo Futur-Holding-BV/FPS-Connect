@@ -1,8 +1,31 @@
 # E2E: radiaal startmenu (login + waaier + doorlinken)
 
 Geautomatiseerde controle dat het FPS-startmenu achter de verplichte TOTP-login
-opent en correct doorlinkt. Draait tegen de **draaiende Expo monteur-app** via de
-Playwright-gebaseerde `runTest`-testagent (de UI-testvoorziening van het platform).
+opent en correct doorlinkt. Draait tegen de **draaiende Expo monteur-app**.
+
+## Met één klik (aanbevolen)
+
+Er is een gecommitte, zelfstandig draaiende Playwright-spec die dit hele plan
+uitvoert (login + TOTP + alle zes menuroutes). Vereist lopende workflows
+`api-server` + `expo monteur-app` en de env-variabelen `DATABASE_URL` en
+`REPLIT_EXPO_DEV_DOMAIN`.
+
+```
+pnpm --filter @workspace/scripts run e2e-monteur
+```
+
+- Spec: `scripts/e2e/startmenu.spec.ts`, config: `scripts/playwright.config.ts`
+- De spec roept zelf `setupE2eAccount()` aan (beforeAll) en genereert een verse
+  TOTP-code via `genereerVersTotp()`; bij een mislukte poging wordt in een nieuw
+  30s-venster opnieuw geprobeerd (max 3 pogingen) — geen handmatige stappen meer.
+- Op NixOS gebruikt de config de Nix-chromium (de meegeleverde Playwright-binary
+  draait daar niet); dynamisch opgezocht via `which chromium`, overschrijfbaar
+  met `PLAYWRIGHT_CHROMIUM_EXECUTABLE`.
+
+## Handmatig via de runTest-testagent (alternatief)
+
+Het onderstaande plan kan ook via de Playwright-gebaseerde `runTest`-testagent
+(de UI-testvoorziening van het platform) gedraaid worden.
 
 ## Voorbereiding (eenmalig per omgeving)
 
