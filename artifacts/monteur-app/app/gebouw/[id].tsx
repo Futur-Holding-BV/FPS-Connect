@@ -14,7 +14,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { bovenInset } from "@/components/ui";
+import { LijstFout, bovenInset } from "@/components/ui";
 import { useColors } from "@/hooks/useColors";
 import { useResponsive } from "@/hooks/useResponsive";
 
@@ -31,7 +31,7 @@ export default function GebouwDetail() {
     kolommen > 1 ? (beschikbareBreedte - RASTER_GAP * (kolommen - 1)) / kolommen : undefined;
 
   const { data: gebouw } = useGetGebouw(gebouwId);
-  const { data: verdiepingen, isLoading } = useListVerdiepingen(gebouwId);
+  const { data: verdiepingen, isLoading, isError, refetch } = useListVerdiepingen(gebouwId);
   const { data: tekeningen } = useListGebouwTekeningen(gebouwId);
 
   const gesorteerd = [...(verdiepingen ?? [])].sort((a, b) => a.niveau - b.niveau);
@@ -66,6 +66,11 @@ export default function GebouwDetail() {
         <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
           <ActivityIndicator size="large" color={c.primary} />
         </View>
+      ) : isError ? (
+        <LijstFout
+          beschrijving="De verdiepingen konden niet worden geladen. Controleer je verbinding en probeer het opnieuw."
+          onOpnieuw={() => refetch()}
+        />
       ) : (
         <FlatList
           data={gesorteerd}

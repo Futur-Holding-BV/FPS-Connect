@@ -15,7 +15,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { TekstVeld, bovenInset } from "@/components/ui";
+import { LijstFout, TekstVeld, bovenInset } from "@/components/ui";
 import { useColors } from "@/hooks/useColors";
 import { useResponsive } from "@/hooks/useResponsive";
 import { useAuth } from "@/context/auth";
@@ -54,6 +54,7 @@ export default function Documenten() {
   const {
     data: documenten = [],
     isLoading,
+    isError,
     isRefetching,
     refetch,
   } = useListDocumenten({ alleen_actueel: true });
@@ -110,6 +111,11 @@ export default function Documenten() {
         <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
           <ActivityIndicator size="large" color={c.primary} />
         </View>
+      ) : isError ? (
+        <LijstFout
+          beschrijving="De documenten konden niet worden geladen. Controleer je verbinding en probeer het opnieuw."
+          onOpnieuw={() => refetch()}
+        />
       ) : (
         <FlatList
           data={gefilterd}

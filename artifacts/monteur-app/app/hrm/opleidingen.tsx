@@ -4,7 +4,7 @@ import React from "react";
 import { ActivityIndicator, FlatList, Pressable, RefreshControl, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { bovenInset } from "@/components/ui";
+import { LijstFout, bovenInset } from "@/components/ui";
 import { useAuth } from "@/context/auth";
 import { useColors } from "@/hooks/useColors";
 import { useResponsive } from "@/hooks/useResponsive";
@@ -15,7 +15,7 @@ export default function OpleidingenScherm() {
   const insets = useSafeAreaInsets();
   const { inhoudMaxBreedte } = useResponsive();
   const { token } = useAuth();
-  const { data, isLoading, refetch, isRefetching } = useListOpleidingen();
+  const { data, isLoading, isError, refetch, isRefetching } = useListOpleidingen();
 
   if (!token) return <Redirect href="/login" />;
 
@@ -39,6 +39,11 @@ export default function OpleidingenScherm() {
         <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
           <ActivityIndicator size="large" color={c.primary} />
         </View>
+      ) : isError ? (
+        <LijstFout
+          beschrijving="De opleidingen konden niet worden geladen. Controleer je verbinding en probeer het opnieuw."
+          onOpnieuw={() => refetch()}
+        />
       ) : (
         <FlatList
           data={opleidingen}

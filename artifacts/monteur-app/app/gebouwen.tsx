@@ -11,7 +11,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { TekstVeld, bovenInset } from "@/components/ui";
+import { LijstFout, TekstVeld, bovenInset } from "@/components/ui";
 import { SyncStatusBadge } from "@/components/SyncStatusBadge";
 import { useColors } from "@/hooks/useColors";
 import { useResponsive } from "@/hooks/useResponsive";
@@ -32,7 +32,7 @@ export default function Gebouwen() {
     useSync();
   const [zoek, setZoek] = useState("");
 
-  const { data, isLoading, refetch, isRefetching } = useListGebouwen();
+  const { data, isLoading, isError, refetch, isRefetching } = useListGebouwen();
 
   if (!token) return <Redirect href="/login" />;
 
@@ -172,6 +172,11 @@ export default function Gebouwen() {
         <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
           <ActivityIndicator size="large" color={c.primary} />
         </View>
+      ) : isError ? (
+        <LijstFout
+          beschrijving="De gebouwen konden niet worden geladen. Controleer je verbinding en probeer het opnieuw."
+          onOpnieuw={() => refetch()}
+        />
       ) : (
         <FlatList
           data={gebouwen}

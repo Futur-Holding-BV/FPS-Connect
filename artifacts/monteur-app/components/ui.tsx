@@ -92,6 +92,52 @@ export function Knop({
   );
 }
 
+export function LijstFout({
+  titel = "Laden mislukt",
+  beschrijving = "De gegevens konden niet worden geladen. Controleer je verbinding en probeer het opnieuw.",
+  onOpnieuw,
+}: {
+  titel?: string;
+  beschrijving?: string;
+  onOpnieuw: () => void;
+}) {
+  const c = useColors();
+  return (
+    <View
+      style={{
+        marginTop: 48,
+        marginHorizontal: 24,
+        alignItems: "center",
+        gap: 12,
+      }}
+    >
+      <Text
+        style={{
+          color: c.destructive,
+          fontSize: 17,
+          fontFamily: "Inter_700Bold",
+          textAlign: "center",
+        }}
+      >
+        {titel}
+      </Text>
+      <Text
+        style={{
+          color: c.mutedForeground,
+          fontSize: 15,
+          fontFamily: "Inter_400Regular",
+          textAlign: "center",
+        }}
+      >
+        {beschrijving}
+      </Text>
+      <View style={{ marginTop: 4, alignSelf: "stretch" }}>
+        <Knop titel="Opnieuw proberen" onPress={onOpnieuw} variant="omlijnd" />
+      </View>
+    </View>
+  );
+}
+
 type TekstVeldProps = TextInputProps & {
   label: string;
 };
