@@ -1,10 +1,13 @@
 import React from "react";
-import { Pressable, ScrollView, Text, View } from "react-native";
+import { Image, Pressable, ScrollView, Text, View } from "react-native";
 import {
   useListLabels,
 } from "@workspace/api-client-react";
 import type { Label } from "@workspace/api-client-react";
 import { useColors } from "@/hooks/useColors";
+import { useAuth } from "@/context/auth";
+
+const DOMEIN = process.env.EXPO_PUBLIC_DOMAIN ?? "";
 
 interface Props {
   typeCode: string;
@@ -18,6 +21,7 @@ export function ToepassingKiezer({
   onWijzig,
 }: Props) {
   const c = useColors();
+  const { token } = useAuth();
   const { data: labels = [] } = useListLabels({ type_code: typeCode });
 
   const actief = (labels as Label[]).filter((l) => !l.gearchiveerd);
@@ -96,6 +100,21 @@ export function ToepassingKiezer({
                   </Text>
                 )}
               </View>
+              {l.product_foto_url && l.product_foto_geverifieerd ? (
+                <Image
+                  source={{
+                    uri: `https://${DOMEIN}/api/storage${l.product_foto_url}`,
+                    headers: { Authorization: `Bearer ${token}` },
+                  }}
+                  style={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: 6,
+                    backgroundColor: c.secondary,
+                  }}
+                  resizeMode="cover"
+                />
+              ) : null}
               <View style={{ flex: 1 }}>
                 <Text
                   style={{

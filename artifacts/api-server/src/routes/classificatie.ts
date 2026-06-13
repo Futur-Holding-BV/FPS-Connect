@@ -207,7 +207,20 @@ router.post("/labels", requireBevoegdheid("bibliotheek", 3), async (req, res) =>
 router.patch("/labels/:id", requireBevoegdheid("bibliotheek", 2), async (req, res) => {
   try {
     const id = parseInt(String(req.params.id));
-    const { naam, fabrikant, fabrikant_id, testnorm, testrapport_id, gearchiveerd, applicatie_codes } = req.body;
+    const {
+      naam,
+      fabrikant,
+      fabrikant_id,
+      testnorm,
+      testrapport_id,
+      gearchiveerd,
+      applicatie_codes,
+      product_foto_url,
+      product_foto_bron,
+      product_foto_geverifieerd,
+      product_foto_zekerheid,
+      product_foto_uitleg,
+    } = req.body;
     const set: Record<string, unknown> = { bijgewerktOp: new Date() };
     if (naam !== undefined) set.naam = String(naam).trim();
     // fabrikant_id heeft voorrang op vrije tekst; beide worden via bepaalFabrikant
@@ -221,6 +234,24 @@ router.patch("/labels/:id", requireBevoegdheid("bibliotheek", 2), async (req, re
       set.testnorm = testnorm != null && String(testnorm).trim() ? String(testnorm).trim() : null;
     if (testrapport_id !== undefined) set.testrapportId = testrapport_id;
     if (gearchiveerd !== undefined) set.gearchiveerd = gearchiveerd === true;
+    // Productfoto: url leegmaken wist meteen bron/zekerheid/uitleg en zet geverifieerd uit.
+    if (product_foto_url !== undefined) {
+      const url = product_foto_url != null && String(product_foto_url).trim() ? String(product_foto_url).trim() : null;
+      set.productFotoUrl = url;
+      if (url == null) {
+        set.productFotoBron = null;
+        set.productFotoZekerheid = null;
+        set.productFotoUitleg = null;
+        set.productFotoGeverifieerd = false;
+      }
+    }
+    if (product_foto_bron !== undefined)
+      set.productFotoBron = product_foto_bron != null && String(product_foto_bron).trim() ? String(product_foto_bron).trim() : null;
+    if (product_foto_geverifieerd !== undefined) set.productFotoGeverifieerd = product_foto_geverifieerd === true;
+    if (product_foto_zekerheid !== undefined)
+      set.productFotoZekerheid = product_foto_zekerheid != null && String(product_foto_zekerheid).trim() ? String(product_foto_zekerheid).trim() : null;
+    if (product_foto_uitleg !== undefined)
+      set.productFotoUitleg = product_foto_uitleg != null && String(product_foto_uitleg).trim() ? String(product_foto_uitleg).trim() : null;
 
     if (Array.isArray(applicatie_codes)) {
       const onbekend = await onbekendeApplicatieCodes(applicatie_codes);

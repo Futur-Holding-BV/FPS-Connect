@@ -32,7 +32,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { ExternalLink, FileText, Plus, X } from "lucide-react";
+import { ExternalLink, FileText, Plus, X, Sparkles, Check, Trash2, Upload } from "lucide-react";
+import { useUpload } from "@workspace/object-storage-web";
 import { TYPE_LABELS, foutmelding, statusBadge } from "./documenten-tab";
 
 // Gedeeld detail-/beheerscherm voor een toepassing (label). Toont en bewerkt de
@@ -127,6 +128,93 @@ function ToepassingDetailInhoud({
   }, [gekoppeldGeladen, gekoppeld]);
 
   const [fout, setFout] = useState("");
+
+  // Productfoto: lokale spiegel van de serverwaarden zodat upload/bevestigen/verwijderen
+  // direct zichtbaar zijn (eigen mutaties, los van de Opslaan-knop voor de basisvelden).
+  const fotoInputRef = useRef<HTMLInputElement>(null);
+  const { uploadFile, isUploading } = useUpload();
+  const [fotoUrl, setFotoUrl] = useState<string | null>(toepassing.product_foto_url ?? null);
+  const [fotoBron, setFotoBron] = useState<string | null>(toepassing.product_foto_bron ?? null);
+  const [fotoGeverifieerd, setFotoGeverifieerd] = useState<boolean>(
+    toepassing.product_foto_geverifieerd,
+  );
+  const [fotoZekerheid, setFotoZekerheid] = useState<string | null>(
+    toepassing.product_foto_zekerheid ?? null,
+  );
+  const [fotoUitleg, setFotoUitleg] = useState<string | null>(
+    toepassing.product_foto_uitleg ?? null,
+  );
+  const fotoBezig = wijzigLabel.isPending || isUploading;
+
+  function pasFotoToe(l: Label) {
+    setFotoUrl(l.product_foto_url ?? null);
+    setFotoBron(l.product_foto_bron ?? null);
+    setFotoGeverifieerd(l.product_foto_geverifieerd);
+    setFotoZekerheid(l.product_foto_zekerheid ?? null);
+    setFotoUitleg(l.product_foto_uitleg ?? null);
+  }
+
+  async function vernieuwLijst() {
+    await queryClient.invalidateQueries({ queryKey: getListLabelsQueryKey() });
+  }
+
+  // Handmatige upload door een beheerder telt als bevestigd (mens kiest de foto zelf).
+  async function uploadFoto(file: File) {
+    setFout("");
+    try {
+      const res = await uploadFile(file);
+      if (!res) throw new Error("Upload mislukt");
+      const l = await wijzigLabel.mutateAsync({
+        id: toepassing.id,
+        data: {
+          product_foto_url: res.objectPath,
+          product_foto_bron: "handmatig",
+          product_foto_geverifieerd: true,
+        },
+      });
+      pasFotoToe(l);
+      await vernieuwLijst();
+      toast({ title: "Productfoto bijgewerkt" });
+    } catch (err) {
+      const m = foutmelding(err, "Uploaden van de productfoto is mislukt.");
+      setFout(m);
+      toast({ title: "Upload mislukt", description: m, variant: "destructive" });
+    }
+  }
+
+  async function bevestigFoto() {
+    setFout("");
+    try {
+      const l = await wijzigLabel.mutateAsync({
+        id: toepassing.id,
+        data: { product_foto_geverifieerd: true },
+      });
+      pasFotoToe(l);
+      await vernieuwLijst();
+      toast({ title: "Productfoto bevestigd" });
+    } catch (err) {
+      const m = foutmelding(err, "Bevestigen van de productfoto is mislukt.");
+      setFout(m);
+      toast({ title: "Bevestigen mislukt", description: m, variant: "destructive" });
+    }
+  }
+
+  async function verwijderFoto() {
+    setFout("");
+    try {
+      const l = await wijzigLabel.mutateAsync({
+        id: toepassing.id,
+        data: { product_foto_url: null },
+      });
+      pasFotoToe(l);
+      await vernieuwLijst();
+      toast({ title: "Productfoto verwijderd" });
+    } catch (err) {
+      const m = foutmelding(err, "Verwijderen van de productfoto is mislukt.");
+      setFout(m);
+      toast({ title: "Verwijderen mislukt", description: m, variant: "destructive" });
+    }
+  }
 
   // Opzoektabel met metadata voor elk document-id in de set. De gekoppelde set
   // (incl. gearchiveerd) is leidend, aangevuld met de actuele documenten zodat
@@ -243,6 +331,104 @@ function ToepassingDetailInhoud({
               />
             </div>
           </div>
+        </div>
+
+        <div className="space-y-2">
+          <UiLabel>Productfoto</UiLabel>
+          <p className="text-xs text-muted-foreground">
+            Een echte foto van het product helpt een monteur het materiaal te herkennen.
+          </p>
+          {fotoUrl ? (
+            <div className="rounded-md border p-3 space-y-3">
+              <div className="flex gap-3">
+                <img
+                  src={`/api/storage${fotoUrl}`}
+                  alt={`Productfoto van ${toepassing.naam}`}
+                  className="h-24 w-24 shrink-0 rounded border object-cover bg-muted"
+                />
+                <div className="min-w-0 flex-1 space-y-1.5">
+                  {fotoBron === "ai" && !fotoGeverifieerd ? (
+                    <Badge className="bg-amber-100 text-amber-700 border-amber-200 hover:bg-amber-100">
+                      <Sparkles className="h-3 w-3 mr-1" />
+                      AI-voorstel — controleer
+                    </Badge>
+                  ) : (
+                    <Badge variant="secondary" className="text-muted-foreground">
+                      {fotoBron === "handmatig" ? "Handmatig toegevoegd" : "Bevestigd"}
+                    </Badge>
+                  )}
+                  {fotoBron === "ai" && fotoZekerheid && (
+                    <p className="text-xs text-muted-foreground">
+                      AI-zekerheid: {fotoZekerheid}
+                    </p>
+                  )}
+                  {fotoBron === "ai" && !fotoGeverifieerd && fotoUitleg && (
+                    <p className="text-xs text-muted-foreground">{fotoUitleg}</p>
+                  )}
+                </div>
+              </div>
+              {magBewerken && (
+                <div className="flex flex-wrap gap-2">
+                  {fotoBron === "ai" && !fotoGeverifieerd && (
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={bevestigFoto}
+                      disabled={fotoBezig}
+                    >
+                      <Check className="h-4 w-4 mr-1.5" />
+                      Bevestigen
+                    </Button>
+                  )}
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => fotoInputRef.current?.click()}
+                    disabled={fotoBezig}
+                  >
+                    <Upload className="h-4 w-4 mr-1.5" />
+                    {fotoBezig ? "Bezig…" : "Vervangen"}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="text-destructive hover:text-destructive"
+                    onClick={verwijderFoto}
+                    disabled={fotoBezig}
+                  >
+                    <Trash2 className="h-4 w-4 mr-1.5" />
+                    Verwijderen
+                  </Button>
+                </div>
+              )}
+            </div>
+          ) : magBewerken ? (
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full"
+              onClick={() => fotoInputRef.current?.click()}
+              disabled={fotoBezig}
+            >
+              <Upload className="h-4 w-4 mr-1.5" />
+              {fotoBezig ? "Uploaden…" : "Productfoto uploaden"}
+            </Button>
+          ) : (
+            <p className="text-xs text-muted-foreground rounded-md border border-dashed p-3 text-center">
+              Nog geen productfoto.
+            </p>
+          )}
+          <input
+            ref={fotoInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) void uploadFoto(f);
+              e.target.value = "";
+            }}
+          />
         </div>
 
         <div className="space-y-2">

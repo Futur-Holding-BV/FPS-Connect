@@ -1075,6 +1075,15 @@ export interface Label {
   /** @nullable */
   fabrikant_url?: string | null;
   /** @nullable */
+  product_foto_url?: string | null;
+  /** @nullable */
+  product_foto_bron?: string | null;
+  product_foto_geverifieerd: boolean;
+  /** @nullable */
+  product_foto_zekerheid?: string | null;
+  /** @nullable */
+  product_foto_uitleg?: string | null;
+  /** @nullable */
   testnorm?: string | null;
   /** @nullable */
   testrapport_id?: number | null;
@@ -1927,6 +1936,15 @@ export interface LabelUpdate {
   testrapport_id?: number | null;
   gearchiveerd?: boolean;
   applicatie_codes?: string[];
+  /** @nullable */
+  product_foto_url?: string | null;
+  /** @nullable */
+  product_foto_bron?: string | null;
+  product_foto_geverifieerd?: boolean;
+  /** @nullable */
+  product_foto_zekerheid?: string | null;
+  /** @nullable */
+  product_foto_uitleg?: string | null;
 }
 
 export interface Fabrikant {

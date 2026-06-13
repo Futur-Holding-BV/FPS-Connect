@@ -8294,7 +8294,7 @@ components:
 
     Label:
       type: object
-      required: [id, naam, gearchiveerd, aangemaakt_op, applicatie_codes]
+      required: [id, naam, gearchiveerd, product_foto_geverifieerd, aangemaakt_op, applicatie_codes]
       properties:
         id:
           type: integer
@@ -8307,6 +8307,16 @@ components:
         fabrikant_id:
           type: ["integer", "null"]
         fabrikant_url:
+          type: ["string", "null"]
+        product_foto_url:
+          type: ["string", "null"]
+        product_foto_bron:
+          type: ["string", "null"]
+        product_foto_geverifieerd:
+          type: boolean
+        product_foto_zekerheid:
+          type: ["string", "null"]
+        product_foto_uitleg:
           type: ["string", "null"]
         testnorm:
           type: ["string", "null"]
@@ -8365,6 +8375,16 @@ components:
           type: array
           items:
             type: string
+        product_foto_url:
+          type: ["string", "null"]
+        product_foto_bron:
+          type: ["string", "null"]
+        product_foto_geverifieerd:
+          type: boolean
+        product_foto_zekerheid:
+          type: ["string", "null"]
+        product_foto_uitleg:
+          type: ["string", "null"]
 
     Fabrikant:
       type: object

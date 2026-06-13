@@ -1113,6 +1113,11 @@ export const GetVoorzieningResponse = zod.object({
   "fabrikant": zod.string().nullish(),
   "fabrikant_id": zod.number().nullish(),
   "fabrikant_url": zod.string().nullish(),
+  "product_foto_url": zod.string().nullish(),
+  "product_foto_bron": zod.string().nullish(),
+  "product_foto_geverifieerd": zod.boolean(),
+  "product_foto_zekerheid": zod.string().nullish(),
+  "product_foto_uitleg": zod.string().nullish(),
   "testnorm": zod.string().nullish(),
   "testrapport_id": zod.number().nullish(),
   "testrapport": zod.union([zod.object({
@@ -1610,6 +1615,11 @@ export const ListLabelsResponseItem = zod.object({
   "fabrikant": zod.string().nullish(),
   "fabrikant_id": zod.number().nullish(),
   "fabrikant_url": zod.string().nullish(),
+  "product_foto_url": zod.string().nullish(),
+  "product_foto_bron": zod.string().nullish(),
+  "product_foto_geverifieerd": zod.boolean(),
+  "product_foto_zekerheid": zod.string().nullish(),
+  "product_foto_uitleg": zod.string().nullish(),
   "testnorm": zod.string().nullish(),
   "testrapport_id": zod.number().nullish(),
   "testrapport": zod.union([zod.object({
@@ -1660,7 +1670,12 @@ export const UpdateLabelBody = zod.object({
   "testnorm": zod.string().nullish(),
   "testrapport_id": zod.number().nullish(),
   "gearchiveerd": zod.boolean().optional(),
-  "applicatie_codes": zod.array(zod.string()).optional()
+  "applicatie_codes": zod.array(zod.string()).optional(),
+  "product_foto_url": zod.string().nullish(),
+  "product_foto_bron": zod.string().nullish(),
+  "product_foto_geverifieerd": zod.boolean().optional(),
+  "product_foto_zekerheid": zod.string().nullish(),
+  "product_foto_uitleg": zod.string().nullish()
 })
 
 export const UpdateLabelResponse = zod.object({
@@ -1670,6 +1685,11 @@ export const UpdateLabelResponse = zod.object({
   "fabrikant": zod.string().nullish(),
   "fabrikant_id": zod.number().nullish(),
   "fabrikant_url": zod.string().nullish(),
+  "product_foto_url": zod.string().nullish(),
+  "product_foto_bron": zod.string().nullish(),
+  "product_foto_geverifieerd": zod.boolean(),
+  "product_foto_zekerheid": zod.string().nullish(),
+  "product_foto_uitleg": zod.string().nullish(),
   "testnorm": zod.string().nullish(),
   "testrapport_id": zod.number().nullish(),
   "testrapport": zod.union([zod.object({
@@ -1708,6 +1728,11 @@ export const SetLabelDocumentenResponse = zod.object({
   "fabrikant": zod.string().nullish(),
   "fabrikant_id": zod.number().nullish(),
   "fabrikant_url": zod.string().nullish(),
+  "product_foto_url": zod.string().nullish(),
+  "product_foto_bron": zod.string().nullish(),
+  "product_foto_geverifieerd": zod.boolean(),
+  "product_foto_zekerheid": zod.string().nullish(),
+  "product_foto_uitleg": zod.string().nullish(),
   "testnorm": zod.string().nullish(),
   "testrapport_id": zod.number().nullish(),
   "testrapport": zod.union([zod.object({

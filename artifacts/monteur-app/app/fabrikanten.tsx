@@ -1,12 +1,14 @@
 import { useListLabels } from "@workspace/api-client-react";
 import { Redirect, useRouter } from "expo-router";
 import React, { useState } from "react";
-import { ActivityIndicator, FlatList, Linking, Pressable, Text, View } from "react-native";
+import { ActivityIndicator, FlatList, Image, Linking, Pressable, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { ChipRij, TekstVeld, bovenInset, onderInset } from "@/components/ui";
 import { useAuth } from "@/context/auth";
 import { useColors } from "@/hooks/useColors";
+
+const DOMEIN = process.env.EXPO_PUBLIC_DOMAIN ?? "";
 
 function Badge({ tekst, kleur, achtergrond }: { tekst: string; kleur: string; achtergrond: string }) {
   return (
@@ -151,20 +153,41 @@ export default function FabrikantenScherm() {
                 gap: 10,
               }}
             >
-              <Text style={{ color: c.foreground, fontSize: 16, fontFamily: "Inter_600SemiBold" }}>
-                {item.naam}
-              </Text>
-              {item.fabrikant ? (
-                <Text
-                  style={{
-                    color: c.mutedForeground,
-                    fontSize: 14,
-                    fontFamily: "Inter_400Regular",
-                  }}
-                >
-                  {item.fabrikant}
-                </Text>
-              ) : null}
+              <View style={{ flexDirection: "row", gap: 12 }}>
+                {item.product_foto_url && item.product_foto_geverifieerd ? (
+                  <Image
+                    source={{
+                      uri: `https://${DOMEIN}/api/storage${item.product_foto_url}`,
+                      headers: { Authorization: `Bearer ${token}` },
+                    }}
+                    style={{
+                      width: 56,
+                      height: 56,
+                      borderRadius: 8,
+                      backgroundColor: c.secondary,
+                    }}
+                    resizeMode="cover"
+                  />
+                ) : null}
+                <View style={{ flex: 1, gap: 4 }}>
+                  <Text
+                    style={{ color: c.foreground, fontSize: 16, fontFamily: "Inter_600SemiBold" }}
+                  >
+                    {item.naam}
+                  </Text>
+                  {item.fabrikant ? (
+                    <Text
+                      style={{
+                        color: c.mutedForeground,
+                        fontSize: 14,
+                        fontFamily: "Inter_400Regular",
+                      }}
+                    >
+                      {item.fabrikant}
+                    </Text>
+                  ) : null}
+                </View>
+              </View>
               <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
                 {item.type_code ? (
                   <Badge tekst={item.type_code} kleur={c.accentForeground} achtergrond={c.accent} />

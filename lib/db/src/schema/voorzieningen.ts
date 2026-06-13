@@ -83,6 +83,15 @@ export const labelsTable = pgTable("labels", {
   fabrikantId: integer("fabrikant_id").references(() => fabrikantenTable.id, { onDelete: "set null" }),
   testnorm: text("testnorm"),
   testrapportId: integer("testrapport_id").references(() => testrapportenTable.id, { onDelete: "set null" }),
+  // Productfoto: een echte foto van het product om (beginnende) monteurs te helpen het
+  // materiaal te herkennen. bron = 'ai' (door AI voorgesteld, nog te bevestigen) of
+  // 'handmatig' (door beheerder geupload). geverifieerd = door een mens bevestigd.
+  // zekerheid/uitleg leggen de AI-redenering vast voor de bevestig-stap.
+  productFotoUrl: text("product_foto_url"),
+  productFotoBron: text("product_foto_bron"),
+  productFotoGeverifieerd: boolean("product_foto_geverifieerd").notNull().default(false),
+  productFotoZekerheid: text("product_foto_zekerheid"),
+  productFotoUitleg: text("product_foto_uitleg"),
   gearchiveerd: boolean("gearchiveerd").notNull().default(false),
   aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
   bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
