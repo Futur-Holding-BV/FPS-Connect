@@ -2442,6 +2442,60 @@ paths:
                 items:
                   type: string
 
+  # ── MODULE-BEOORDELINGEN (sign-off ontwikkelstatus) ───────────────────────
+  /module-beoordelingen:
+    get:
+      operationId: listModuleBeoordelingen
+      tags: [systeem]
+      summary: Beoordelingen per module (gereed / niet akkoord)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ModuleBeoordeling"
+
+  /module-beoordelingen/{sleutel}:
+    put:
+      operationId: upsertModuleBeoordeling
+      tags: [systeem]
+      summary: Modulebeoordeling vastleggen of bijwerken (beheerder)
+      parameters:
+        - in: path
+          name: sleutel
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ModuleBeoordelingInput"
+      responses:
+        "200":
+          description: Vastgelegd
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ModuleBeoordeling"
+    delete:
+      operationId: deleteModuleBeoordeling
+      tags: [systeem]
+      summary: Modulebeoordeling wissen (beheerder)
+      parameters:
+        - in: path
+          name: sleutel
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Gewist
+
   # ── STORAGE ───────────────────────────────────────────────────────────────
   /storage/uploads/request-url:
     post:
@@ -7697,6 +7751,31 @@ components:
         bericht:
           type: string
         pagina:
+          type: string
+
+    ModuleBeoordeling:
+      type: object
+      required: [sleutel, status, bijgewerkt_op]
+      properties:
+        sleutel:
+          type: string
+        status:
+          type: string
+        opmerking:
+          type: ["string", "null"]
+        beoordeeld_door_naam:
+          type: ["string", "null"]
+        bijgewerkt_op:
+          type: string
+
+    ModuleBeoordelingInput:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [gereed, niet_akkoord]
+        opmerking:
           type: string
 
     MuisGebeurtenis:

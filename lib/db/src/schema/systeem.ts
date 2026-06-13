@@ -82,3 +82,23 @@ export const appInstellingenTable = pgTable("app_instellingen", {
 export const insertAppInstellingSchema = createInsertSchema(appInstellingenTable).omit({ id: true, bijgewerktOp: true });
 export type InsertAppInstelling = z.infer<typeof insertAppInstellingSchema>;
 export type AppInstelling = typeof appInstellingenTable.$inferSelect;
+
+// ── Module-beoordelingen (sign-off per module op de ontwikkelstatus) ─────────
+export const moduleBeoordelingenTable = pgTable("module_beoordelingen", {
+  id: serial("id").primaryKey(),
+  moduleSleutel: text("module_sleutel").notNull().unique(),
+  status: text("status").notNull(), // 'gereed' | 'niet_akkoord'
+  opmerking: text("opmerking"),
+  beoordeeldDoorId: integer("beoordeeld_door_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
+  beoordeeldDoorNaam: text("beoordeeld_door_naam"),
+  aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
+  bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
+});
+
+export const insertModuleBeoordelingSchema = createInsertSchema(moduleBeoordelingenTable).omit({
+  id: true,
+  aangemaaktOp: true,
+  bijgewerktOp: true,
+});
+export type InsertModuleBeoordeling = z.infer<typeof insertModuleBeoordelingSchema>;
+export type ModuleBeoordeling = typeof moduleBeoordelingenTable.$inferSelect;

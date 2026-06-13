@@ -140,6 +140,8 @@ import type {
   MedewerkerOnboardingInput,
   MedewerkerOpleiding,
   MedewerkerOpleidingInput,
+  ModuleBeoordeling,
+  ModuleBeoordelingInput,
   MuisGebeurtenis,
   MuisGebeurtenisBatch,
   Offerte,
@@ -8149,6 +8151,224 @@ export function useListHeatmapPaginas<TData = Awaited<ReturnType<typeof listHeat
 
 
 
+
+export const getListModuleBeoordelingenUrl = () => {
+
+
+
+
+  return `/api/module-beoordelingen`
+}
+
+/**
+ * @summary Beoordelingen per module (gereed / niet akkoord)
+ */
+export const listModuleBeoordelingen = async ( options?: RequestInit): Promise<ModuleBeoordeling[]> => {
+
+  return customFetch<ModuleBeoordeling[]>(getListModuleBeoordelingenUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListModuleBeoordelingenQueryKey = () => {
+    return [
+    `/api/module-beoordelingen`
+    ] as const;
+    }
+
+
+export const getListModuleBeoordelingenQueryOptions = <TData = Awaited<ReturnType<typeof listModuleBeoordelingen>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listModuleBeoordelingen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListModuleBeoordelingenQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listModuleBeoordelingen>>> = ({ signal }) => listModuleBeoordelingen({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listModuleBeoordelingen>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListModuleBeoordelingenQueryResult = NonNullable<Awaited<ReturnType<typeof listModuleBeoordelingen>>>
+export type ListModuleBeoordelingenQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Beoordelingen per module (gereed / niet akkoord)
+ */
+
+export function useListModuleBeoordelingen<TData = Awaited<ReturnType<typeof listModuleBeoordelingen>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listModuleBeoordelingen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListModuleBeoordelingenQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getUpsertModuleBeoordelingUrl = (sleutel: string,) => {
+
+
+
+
+  return `/api/module-beoordelingen/${sleutel}`
+}
+
+/**
+ * @summary Modulebeoordeling vastleggen of bijwerken (beheerder)
+ */
+export const upsertModuleBeoordeling = async (sleutel: string,
+    moduleBeoordelingInput: ModuleBeoordelingInput, options?: RequestInit): Promise<ModuleBeoordeling> => {
+
+  return customFetch<ModuleBeoordeling>(getUpsertModuleBeoordelingUrl(sleutel),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(moduleBeoordelingInput)
+  }
+);}
+
+
+
+
+export const getUpsertModuleBeoordelingMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof upsertModuleBeoordeling>>, TError,{sleutel: string;data: BodyType<ModuleBeoordelingInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof upsertModuleBeoordeling>>, TError,{sleutel: string;data: BodyType<ModuleBeoordelingInput>}, TContext> => {
+
+const mutationKey = ['upsertModuleBeoordeling'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof upsertModuleBeoordeling>>, {sleutel: string;data: BodyType<ModuleBeoordelingInput>}> = (props) => {
+          const {sleutel,data} = props ?? {};
+
+          return  upsertModuleBeoordeling(sleutel,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpsertModuleBeoordelingMutationResult = NonNullable<Awaited<ReturnType<typeof upsertModuleBeoordeling>>>
+    export type UpsertModuleBeoordelingMutationBody = BodyType<ModuleBeoordelingInput>
+    export type UpsertModuleBeoordelingMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Modulebeoordeling vastleggen of bijwerken (beheerder)
+ */
+export const useUpsertModuleBeoordeling = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof upsertModuleBeoordeling>>, TError,{sleutel: string;data: BodyType<ModuleBeoordelingInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof upsertModuleBeoordeling>>,
+        TError,
+        {sleutel: string;data: BodyType<ModuleBeoordelingInput>},
+        TContext
+      > => {
+      return useMutation(getUpsertModuleBeoordelingMutationOptions(options));
+    }
+
+export const getDeleteModuleBeoordelingUrl = (sleutel: string,) => {
+
+
+
+
+  return `/api/module-beoordelingen/${sleutel}`
+}
+
+/**
+ * @summary Modulebeoordeling wissen (beheerder)
+ */
+export const deleteModuleBeoordeling = async (sleutel: string, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteModuleBeoordelingUrl(sleutel),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteModuleBeoordelingMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteModuleBeoordeling>>, TError,{sleutel: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteModuleBeoordeling>>, TError,{sleutel: string}, TContext> => {
+
+const mutationKey = ['deleteModuleBeoordeling'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteModuleBeoordeling>>, {sleutel: string}> = (props) => {
+          const {sleutel} = props ?? {};
+
+          return  deleteModuleBeoordeling(sleutel,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteModuleBeoordelingMutationResult = NonNullable<Awaited<ReturnType<typeof deleteModuleBeoordeling>>>
+
+    export type DeleteModuleBeoordelingMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Modulebeoordeling wissen (beheerder)
+ */
+export const useDeleteModuleBeoordeling = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteModuleBeoordeling>>, TError,{sleutel: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteModuleBeoordeling>>,
+        TError,
+        {sleutel: string},
+        TContext
+      > => {
+      return useMutation(getDeleteModuleBeoordelingMutationOptions(options));
+    }
 
 export const getRequestUploadUrlUrl = () => {
 

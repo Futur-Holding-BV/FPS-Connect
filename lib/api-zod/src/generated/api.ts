@@ -2893,6 +2893,50 @@ export const ListHeatmapPaginasResponse = zod.array(ListHeatmapPaginasResponseIt
 
 
 /**
+ * @summary Beoordelingen per module (gereed / niet akkoord)
+ */
+export const ListModuleBeoordelingenResponseItem = zod.object({
+  "sleutel": zod.string(),
+  "status": zod.string(),
+  "opmerking": zod.string().nullish(),
+  "beoordeeld_door_naam": zod.string().nullish(),
+  "bijgewerkt_op": zod.string()
+})
+export const ListModuleBeoordelingenResponse = zod.array(ListModuleBeoordelingenResponseItem)
+
+
+/**
+ * @summary Modulebeoordeling vastleggen of bijwerken (beheerder)
+ */
+export const UpsertModuleBeoordelingParams = zod.object({
+  "sleutel": zod.coerce.string()
+})
+
+export const UpsertModuleBeoordelingBody = zod.object({
+  "status": zod.enum(['gereed', 'niet_akkoord']),
+  "opmerking": zod.string().optional()
+})
+
+export const UpsertModuleBeoordelingResponse = zod.object({
+  "sleutel": zod.string(),
+  "status": zod.string(),
+  "opmerking": zod.string().nullish(),
+  "beoordeeld_door_naam": zod.string().nullish(),
+  "bijgewerkt_op": zod.string()
+})
+
+
+/**
+ * @summary Modulebeoordeling wissen (beheerder)
+ */
+export const DeleteModuleBeoordelingParams = zod.object({
+  "sleutel": zod.coerce.string()
+})
+
+export const DeleteModuleBeoordelingResponse = zod.void()
+
+
+/**
  * @summary Vraag een presigned URL aan voor bestandsupload
  */
 

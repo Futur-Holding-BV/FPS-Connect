@@ -1586,6 +1586,29 @@ export interface FeedbackInput {
   pagina?: string;
 }
 
+export interface ModuleBeoordeling {
+  sleutel: string;
+  status: string;
+  /** @nullable */
+  opmerking?: string | null;
+  /** @nullable */
+  beoordeeld_door_naam?: string | null;
+  bijgewerkt_op: string;
+}
+
+export type ModuleBeoordelingInputStatus = typeof ModuleBeoordelingInputStatus[keyof typeof ModuleBeoordelingInputStatus];
+
+
+export const ModuleBeoordelingInputStatus = {
+  gereed: 'gereed',
+  niet_akkoord: 'niet_akkoord',
+} as const;
+
+export interface ModuleBeoordelingInput {
+  status: ModuleBeoordelingInputStatus;
+  opmerking?: string;
+}
+
 export interface MuisGebeurtenis {
   pagina: string;
   type: string;

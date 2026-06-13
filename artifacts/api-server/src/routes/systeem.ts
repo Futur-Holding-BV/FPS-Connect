@@ -5,6 +5,7 @@ import {
   helpdeskTicketsTable,
   feedbackTable,
   muisGebeurtenissenTable,
+  moduleBeoordelingenTable,
   gebruikersTable,
 } from "@workspace/db";
 import { eq, desc, and } from "drizzle-orm";
@@ -265,5 +266,78 @@ export async function legLoginPogingVast(opts: {
   });
   return { nieuwApparaat, nieuwIp };
 }
+
+// ── MODULE-BEOORDELINGEN (sign-off ontwikkelstatus) ──────────────────────────
+function moduleBeoordelingRij(b: typeof moduleBeoordelingenTable.$inferSelect) {
+  return {
+    sleutel: b.moduleSleutel,
+    status: b.status,
+    opmerking: b.opmerking,
+    beoordeeld_door_naam: b.beoordeeldDoorNaam,
+    bijgewerkt_op: b.bijgewerktOp.toISOString(),
+  };
+}
+
+// Lezen mag elke ingelogde gebruiker; schrijven is beheerder-only.
+router.get("/module-beoordelingen", async (req, res) => {
+  try {
+    const rows = await db
+      .select()
+      .from(moduleBeoordelingenTable)
+      .orderBy(desc(moduleBeoordelingenTable.bijgewerktOp));
+    return res.json(rows.map(moduleBeoordelingRij));
+  } catch (err) {
+    req.log.error(err);
+    return res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+router.put("/module-beoordelingen/:sleutel", alleenBeheerder, async (req, res) => {
+  try {
+    const sleutel = String(req.params.sleutel).trim();
+    if (!sleutel) return res.status(400).json({ error: "Sleutel is verplicht" });
+    const { status, opmerking } = req.body ?? {};
+    if (status !== "gereed" && status !== "niet_akkoord") {
+      return res.status(400).json({ error: "Status moet 'gereed' of 'niet_akkoord' zijn" });
+    }
+    const opm = opmerking ? String(opmerking) : null;
+    const g = await huidigeGebruiker(req);
+    const [rij] = await db
+      .insert(moduleBeoordelingenTable)
+      .values({
+        moduleSleutel: sleutel,
+        status,
+        opmerking: opm,
+        beoordeeldDoorId: g?.id ?? null,
+        beoordeeldDoorNaam: g?.naam ?? null,
+      })
+      .onConflictDoUpdate({
+        target: moduleBeoordelingenTable.moduleSleutel,
+        set: {
+          status,
+          opmerking: opm,
+          beoordeeldDoorId: g?.id ?? null,
+          beoordeeldDoorNaam: g?.naam ?? null,
+          bijgewerktOp: new Date(),
+        },
+      })
+      .returning();
+    return res.json(moduleBeoordelingRij(rij!));
+  } catch (err) {
+    req.log.error(err);
+    return res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+router.delete("/module-beoordelingen/:sleutel", alleenBeheerder, async (req, res) => {
+  try {
+    const sleutel = String(req.params.sleutel).trim();
+    await db.delete(moduleBeoordelingenTable).where(eq(moduleBeoordelingenTable.moduleSleutel, sleutel));
+    return res.status(204).send();
+  } catch (err) {
+    req.log.error(err);
+    return res.status(500).json({ error: "Interne serverfout" });
+  }
+});
 
 export default router;
