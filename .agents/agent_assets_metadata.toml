@@ -23,3 +23,15 @@ id = "JGYzjGpmrUOzN4OFgCcPJ"
 uri = "file://attached_assets/fps-logo-familie.png"
 type = "image"
 title = "FPS One vs FPS Connect (familie)"
+
+[[outputs]]
+id = "BM5okGqojYjcazf_LO5gE"
+uri = "file://.local/testdag/qr-monteur.png"
+type = "image"
+title = "QR Tester 1 - Monteur (monteur@fps-test.nl)"
+
+[[outputs]]
+id = "7tMYDCrwPchL7pteZ4QFy"
+uri = "file://.local/testdag/qr-beheer.png"
+type = "image"
+title = "QR Tester 2 - Beheer (beheer@fps-test.nl)"
