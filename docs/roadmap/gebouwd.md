@@ -37,6 +37,24 @@ Structuur (hiërarchie):
 
 (AI-documentanalyse, koppelingen, versiebeheer, historische bevriezing en documentcontrole staan hierboven onder "Gebouwd in V1.2" en "Nog te bouwen".)
 
+## V1.3 — Spots & uitvoering (gebouwd — feitelijke status, geactualiseerd juni 2026)
+
+Geactualiseerd op feitelijke status (niet op oude versienummering): de kern van Spots & uitvoering is gebouwd en in gebruik. Er zijn geen essentiële ontbrekende onderdelen; de restpunten hieronder zijn verfijning/gebruiksvriendelijkheid, geen nieuwe kernfunctionaliteit. Conform afspraak met de gebruiker wordt hier niet verder aan nieuwe Spots-functionaliteit gebouwd.
+
+**Gebouwd:**
+- Spot/voorziening aanmaken + bewerken (web `voorzieningen/nieuw.tsx` + de plattegrond-editor; mobiel `app/plattegrond/[verdiepingId].tsx`), gekoppeld aan gebouw + verdieping via de Applicatie/Toepassing-catalogus. Auto-objectnummer (`GET /gebouwen/:id/volgend-spotnummer`, server-retry bij collision). Statuslevenscyclus: concept, voorbereid, in_uitvoering, wacht_op_akkoord, meerwerk_financieel, opgeleverd, goedgekeurd, afgekeurd, in_onderhoud, vervallen. QR per spot. AI-spotvoorstel uit foto voor/na (zie AI-fotoherkenning hieronder).
+- Plattegronden: SVG-editor (`gebouwen/plattegrond.tsx`) voor plaatsen/verplaatsen spots, scheidingen tekenen (brand/rook + classificatie op de lijn), clusters, visuele clustering (telbubbel), zoom/pan; mobiele WebView-renderer (`monteur-app/components/PdfPlattegrond.tsx`); `pdfjs-dist` rendert de PDF-plattegrond naar beeld (scale:2, web en mobiel gelijk).
+- Toewijzingen: gebouw → teamlid met projectrol (`GET/POST /gebouwen/:id/toewijzingen`, `gebouwToewijzingenTable`); backend-scoping zodat beperkte gebruikers alleen toegewezen gebouwen zien (matrix-driven).
+- Voorbereide spots: status 'voorbereid', visueel onderscheiden (gestreept), te clusteren als werkpakket voor een monteur.
+- Clustering + serie plaatsen: logische clusters (schacht/strook/zone) met monteurtoewijzing (`GET /gebouwen/:id/clusters`, `POST /clusters`, `clustersTable`); serie plaatsen via klik/lijn/rechthoek (web).
+
+**Restpunten (technisch af; verfijning/gebruiksvriendelijkheid — geen kernfunctionaliteit):**
+- Serie plaatsen is web-only; mobiel plaatst één-voor-één (bewust, monteur-uitvoeringsflow).
+- AI-amber voorinvulling blijft staan tot een veld handmatig wordt aangeraakt/gewijzigd.
+- `pdfjs`-render kan kwaliteitsverlies geven bij sterk inzoomen op detailrijke architectentekeningen.
+- Spotnummer-collisions worden opgevangen met server-retry (kan bij veel gelijktijdige sync voorkomen).
+- De legacy WBDBO/WRD/classificatie-weergave is nog niet overal opgeschoond (zie "Openstaande correcties" in `replit.md`).
+
 ## AI-fotoherkenning spotafwerking (gebouwd — eerste versie; vooruit op de roadmap op verzoek)
 
 **Status: gebouwd.** Op uitdrukkelijk verzoek vooruit op de roadmap gebouwd (de Ontwikkelstop blijft als principe gelden voor de overige geparkeerde fasen). De AI als hulpmiddel, nooit als beslisser: AI herkent en stelt voor, mens accepteert. AI keurt nooit zelfstandig juridisch goed; de formele koppeling blijft gebaseerd op de bibliotheek en geaccepteerde rapporten.

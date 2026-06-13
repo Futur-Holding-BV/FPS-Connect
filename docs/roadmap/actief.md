@@ -2,9 +2,21 @@
 
 Vastgelegde fasen; elk pas bouwen ná formeel akkoord op die fase. Zie [`README.md`](./README.md) voor het overzicht en [`replit.md`](../../replit.md) voor de Ontwikkelstop-regel en de drie sporen.
 
-## V1.4 — Opleverrapportage (vastgelegd)
+## V1.4 — Opleverrapportage (in aanbouw — met formeel akkoord)
 
 Bouwt voort op de bibliotheek (V1.2). Onderdelen: voorblad, rapportopmaak, e-mailselectie, bijlagenpakket en definitief maken van het rapport. De opleverrapportage wordt nu live gegenereerd in `print.tsx`; deze fase brengt de opmaak en het samenstellen op orde. Het gepersisteerd en onveranderlijk vastleggen van definitieve rapporten gebeurt in V1.5.
+
+**Feitelijke status (startpunt, juni 2026).** Een werkend live-rapport bestaat al: `artifacts/firevault/src/pages/gebouwen/print.tsx` op route `/gebouwen/:id/print`, met voorblad, projectgegevens, contactpersonen/team, plattegrond-overzicht, spot-detailpagina's, e-mailsectie (auto-filter op AI-relevantie) en PDF via `window.print()`. Het rapport kan al als document (`documenttype 'opleverrapport'`, met revisie) in de DMS worden bewaard via `POST /gebouwen/:id/opleverrapport`. Secties zijn aan/uit te zetten met `toonOverzicht`, `toonSpotDetails` en `groepeerOpCluster`. V1.4 bouwt hierop voort; het rapport wordt niet opnieuw vanaf nul gebouwd.
+
+**Restscope V1.4 (boven op het bestaande live-rapport):**
+- Spotselectie: nu alles-of-niets; toevoegen van selectie per verdieping/cluster/individuele spot.
+- Rapporttypes (4) als sectie-presets (zie hieronder), met per-rapport afvinkbare secties.
+- Handmatige e-mailselectie naast de huidige AI-relevantie-filter.
+- Bijlagenpakket samenstellen (ETA's, classificatierapporten, certificaten, tekeningen).
+- Voorblad/opmaak verfijnen.
+- "Definitief maken" als overgang naar de gepersisteerde rapport-entiteit (kern in V1.5).
+
+**Bouwvolgorde (afgesproken met de gebruiker):** eerst het functionele basisproces — opleverrapport aanmaken, projectgegevens, spots selecteren, foto's toevoegen, PDF genereren — daarna pas de uitbreidingen: AI-samenvattingen, handtekeningen, geavanceerde rapportopmaak en automatische documentbijlagen. In kleine, in de preview beoordeelbare stappen.
 
 **Rapporttypes (vastgelegd, nog te bouwen in V1.4/V1.5).** Het rapportsamenstellen wordt typegestuurd met vier vaste rapporttypes; elk type is een voorinstelling van de secties (checkboxen) hieronder:
 1. **Werkpakket monteur** (voor uitvoering) — projectgegevens, contactpersonen, relevante e-mails, plattegronden, spots, toegewezen werkzaamheden. Bewust GEEN ETA's of certificaten. (Leunt aan tegen de mobiele monteur-app V2.0.)

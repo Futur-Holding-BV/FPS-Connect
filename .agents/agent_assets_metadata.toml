@@ -41,3 +41,15 @@ id = "gzD-rkNuF_liGoxxXOCte"
 uri = "file://.local/testdag/qr-tessa.png"
 type = "image"
 title = "QR Tester 3 - Tessa / commercieel (tessa@fps-test.nl)"
+
+[[outputs]]
+id = "plQQbEk39xpGjsjxbu6p6"
+uri = "file://.local/testkit/qr-monteur.png"
+type = "image"
+title = "QR 2FA — Tester Monteur (monteur@fps-test.nl)"
+
+[[outputs]]
+id = "MpenkjP39Cfjq5dFE9IXJ"
+uri = "file://.local/testkit/qr-beheer.png"
+type = "image"
+title = "QR 2FA — Tester Beheer (beheer@fps-test.nl)"
