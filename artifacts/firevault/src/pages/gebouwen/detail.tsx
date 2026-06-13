@@ -33,6 +33,11 @@ import {
   TabsContent,
 } from "@/components/ui/tabs";
 import {
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+} from "@/components/ui/tooltip";
+import {
   ArrowLeft,
   Layers,
   Users,
@@ -86,6 +91,50 @@ const PRIORITEIT_KLEUR: Record<string, string> = {
   normaal: "bg-amber-500/10 text-amber-600 border-amber-500/20",
   laag: "bg-muted text-muted-foreground",
 };
+
+function RailKnop({
+  icon,
+  label,
+  onClick,
+  disabled,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  onClick: () => void;
+  disabled?: boolean;
+}) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={onClick}
+          disabled={disabled}
+          aria-label={label}
+        >
+          {icon}
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent side="left">{label}</TooltipContent>
+    </Tooltip>
+  );
+}
+
+function PdfRailKnop({ gebouwId }: { gebouwId: number }) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Link href={`/gebouwen/${gebouwId}/print`}>
+          <Button variant="outline" size="icon" aria-label="PDF / afdrukken">
+            <Printer className="h-4 w-4" />
+          </Button>
+        </Link>
+      </TooltipTrigger>
+      <TooltipContent side="left">PDF / afdrukken</TooltipContent>
+    </Tooltip>
+  );
+}
 
 function SegmentKop({
   icoon,
@@ -244,6 +293,7 @@ export default function GebouwDetail() {
   const [gekozenProjectRol, setGekozenProjectRol] = useState<string>("");
   const [bezig, setBezig] = useState(false);
   const [bewerkenOpen, setBewerkenOpen] = useState(false);
+  const [segment, setSegment] = useState("project");
   const [gereedBezig, setGereedBezig] = useState(false);
   const [herstelBezig, setHerstelBezig] = useState(false);
   const [archiveerBezig, setArchiveerBezig] = useState(false);
@@ -484,63 +534,6 @@ export default function GebouwDetail() {
             )}
           </div>
         </div>
-        <div className="flex flex-col items-end gap-2 shrink-0">
-          <div className="flex gap-2 flex-wrap justify-end">
-            {isBeheerder && (
-              <Button variant="outline" onClick={() => setBewerkenOpen(true)}>
-                <Pencil className="h-4 w-4" /> Bewerken
-              </Button>
-            )}
-            {isBeheerder && !gebouw.gereed_op && (
-              <Button variant="outline" onClick={meldGereed} disabled={gereedBezig}>
-                {gereedBezig ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <CheckCircle className="h-4 w-4" />
-                )}
-                Gereedmelden
-              </Button>
-            )}
-            {isBeheerder && gebouw.gereed_op && (
-              <Button variant="outline" onClick={herstelActief} disabled={herstelBezig}>
-                {herstelBezig ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <RotateCcw className="h-4 w-4" />
-                )}
-                Terugzetten
-              </Button>
-            )}
-            {isBeheerder && !gebouw.gearchiveerd && (
-              <Button variant="outline" onClick={() => archiveer(true)} disabled={archiveerBezig}>
-                {archiveerBezig ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Archive className="h-4 w-4" />
-                )}
-                Archiveren
-              </Button>
-            )}
-            {isBeheerder && gebouw.gearchiveerd && (
-              <Button variant="outline" onClick={() => archiveer(false)} disabled={archiveerBezig}>
-                {archiveerBezig ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <RotateCcw className="h-4 w-4" />
-                )}
-                Terugplaatsen
-              </Button>
-            )}
-          </div>
-          <div className="flex gap-2 flex-wrap justify-end">
-            <Link href={`/gebouwen/${gebouwId}/print`}>
-              <Button variant="outline" size="sm">
-                <Printer className="h-4 w-4" /> PDF / afdrukken
-              </Button>
-            </Link>
-            <GebouwStappenplan gebouwId={gebouwId} gebouw={gebouw} />
-          </div>
-        </div>
       </div>
 
       {isBeheerder && (
@@ -567,22 +560,109 @@ export default function GebouwDetail() {
       {/* ════════════════════════════════════════════════════
           SEGMENT 1 — Project- en gebouwgegevens
           ════════════════════════════════════════════════════ */}
-      <Tabs defaultValue="project" className="w-full">
-        <TabsList className="grid w-full max-w-2xl grid-cols-3">
-          <TabsTrigger value="project" className="gap-1.5">
-            <Building2 className="h-4 w-4" />
-            <span className="hidden sm:inline">Project &amp; Gebouwgegevens</span>
-            <span className="sm:hidden">Project</span>
-          </TabsTrigger>
-          <TabsTrigger value="uitvoering" className="gap-1.5">
-            <Wrench className="h-4 w-4" />
-            Uitvoering
-          </TabsTrigger>
-          <TabsTrigger value="beheer" className="gap-1.5">
-            <Sparkles className="h-4 w-4" />
-            Beheer &amp; Historie
-          </TabsTrigger>
-        </TabsList>
+      <Tabs value={segment} onValueChange={setSegment} className="w-full">
+        <div className="flex items-start justify-between gap-4">
+          <TabsList className="grid w-full max-w-2xl min-w-0 grid-cols-3">
+            <TabsTrigger value="project" className="gap-1.5">
+              <Building2 className="h-4 w-4 shrink-0" />
+              <span className="hidden sm:inline">Project &amp; Gebouwgegevens</span>
+              <span className="sm:hidden">Project</span>
+            </TabsTrigger>
+            <TabsTrigger value="uitvoering" className="gap-1.5">
+              <Wrench className="h-4 w-4 shrink-0" />
+              <span className="hidden sm:inline">Uitvoering</span>
+            </TabsTrigger>
+            <TabsTrigger value="beheer" className="gap-1.5">
+              <Sparkles className="h-4 w-4 shrink-0" />
+              <span className="hidden sm:inline">Beheer &amp; Historie</span>
+              <span className="sm:hidden">Beheer</span>
+            </TabsTrigger>
+          </TabsList>
+
+          {/* Tab-gebonden actieknoppen: icoon-only, verticaal, rechts in lijn met de tabbladen */}
+          <div className="flex flex-col gap-2 shrink-0">
+            {segment === "project" && (
+              <>
+                {isBeheerder && (
+                  <RailKnop
+                    icon={<Pencil className="h-4 w-4" />}
+                    label="Bewerken"
+                    onClick={() => setBewerkenOpen(true)}
+                  />
+                )}
+                <GebouwStappenplan gebouwId={gebouwId} gebouw={gebouw} compact />
+                <PdfRailKnop gebouwId={gebouwId} />
+              </>
+            )}
+            {segment === "uitvoering" && (
+              <>
+                <GebouwStappenplan gebouwId={gebouwId} gebouw={gebouw} compact />
+                <PdfRailKnop gebouwId={gebouwId} />
+              </>
+            )}
+            {segment === "beheer" && (
+              <>
+                {isBeheerder && !gebouw.gereed_op && (
+                  <RailKnop
+                    icon={
+                      gereedBezig ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <CheckCircle className="h-4 w-4" />
+                      )
+                    }
+                    label="Gereedmelden"
+                    onClick={meldGereed}
+                    disabled={gereedBezig}
+                  />
+                )}
+                {isBeheerder && gebouw.gereed_op && (
+                  <RailKnop
+                    icon={
+                      herstelBezig ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <RotateCcw className="h-4 w-4" />
+                      )
+                    }
+                    label="Terugzetten naar actief"
+                    onClick={herstelActief}
+                    disabled={herstelBezig}
+                  />
+                )}
+                {isBeheerder && !gebouw.gearchiveerd && (
+                  <RailKnop
+                    icon={
+                      archiveerBezig ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Archive className="h-4 w-4" />
+                      )
+                    }
+                    label="Archiveren"
+                    onClick={() => archiveer(true)}
+                    disabled={archiveerBezig}
+                  />
+                )}
+                {isBeheerder && gebouw.gearchiveerd && (
+                  <RailKnop
+                    icon={
+                      archiveerBezig ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <RotateCcw className="h-4 w-4" />
+                      )
+                    }
+                    label="Terugplaatsen"
+                    onClick={() => archiveer(false)}
+                    disabled={archiveerBezig}
+                  />
+                )}
+                <PdfRailKnop gebouwId={gebouwId} />
+              </>
+            )}
+          </div>
+        </div>
 
       <TabsContent value="project" className="space-y-4 mt-6">
         <SegmentKop
@@ -811,19 +891,6 @@ export default function GebouwDetail() {
               </CardContent>
             </Card>
 
-            {/* PDF-snelkoppeling */}
-            <Card className="border-dashed">
-              <CardContent className="pt-5 pb-4">
-                <Link href={`/gebouwen/${gebouwId}/print`}>
-                  <Button variant="outline" className="w-full gap-2">
-                    <Printer className="h-4 w-4" /> PDF / afdrukken
-                  </Button>
-                </Link>
-                <p className="text-xs text-muted-foreground mt-2 text-center">
-                  Exporteer een volledig overzicht van dit project
-                </p>
-              </CardContent>
-            </Card>
           </div>
         </div>
       </TabsContent>

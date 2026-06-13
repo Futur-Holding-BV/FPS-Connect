@@ -6,6 +6,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
+  Tooltip, TooltipTrigger, TooltipContent,
+} from "@/components/ui/tooltip";
+import {
   HelpCircle, CheckCircle2, AlertCircle, Minus,
   Building2, Users, Mail, Layers, MapPin,
 } from "lucide-react";
@@ -240,17 +243,35 @@ function StappenplanInhoud({
 export default function GebouwStappenplan({
   gebouwId,
   gebouw,
+  compact,
 }: {
   gebouwId: number;
   gebouw: any;
+  compact?: boolean;
 }) {
   const [open, setOpen] = useState(false);
 
   return (
     <>
-      <Button variant="outline" size="sm" onClick={() => setOpen(true)}>
-        <HelpCircle className="h-4 w-4" /> Stappenplan
-      </Button>
+      {compact ? (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => setOpen(true)}
+              aria-label="Stappenplan"
+            >
+              <HelpCircle className="h-4 w-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="left">Stappenplan</TooltipContent>
+        </Tooltip>
+      ) : (
+        <Button variant="outline" size="sm" onClick={() => setOpen(true)}>
+          <HelpCircle className="h-4 w-4" /> Stappenplan
+        </Button>
+      )}
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-xl">
