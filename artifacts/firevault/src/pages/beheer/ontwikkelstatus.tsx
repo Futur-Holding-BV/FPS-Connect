@@ -71,6 +71,16 @@ const MODULES: ModuleItem[] = [
     route: "/voorzieningen",
   },
   {
+    sleutel: "v13-spots-uitvoering",
+    naam: "Spots & uitvoering",
+    omschrijving: "Spotflow, plattegronden, toewijzingen, voorbereide spots en clustering",
+    status: "af",
+    versie: "V1.3",
+    testbaar: true,
+    route: "/gebouwen",
+    opmerking: "Gebouwd; resterende punten zijn verfijning en gebruiksvriendelijkheid",
+  },
+  {
     sleutel: "inspecties",
     naam: "Inspecties",
     omschrijving: "Oplevering, periodiek, jaarlijks en herstelinspecties bijhouden",
@@ -240,24 +250,16 @@ const MODULES: ModuleItem[] = [
       "Intern heet het platform FPS Connect, de klantomgeving FPS One. Wordt stapsgewijs en zichtbaar doorgevoerd",
     status: "in-ontwikkeling",
   },
-
-  // ── Gepland (vastgelegd op de roadmap, nog niet gebouwd) ────────────────
-  {
-    sleutel: "v13-spots-uitvoering",
-    naam: "Spots & uitvoering",
-    omschrijving: "Spotflow, plattegronden, toewijzingen, voorbereide spots en clustering",
-    status: "gepland",
-    versie: "V1.3",
-    opmerking: "Wacht op formeel akkoord (Ontwikkelstop)",
-  },
   {
     sleutel: "v14-opleverrapportage",
     naam: "Opleverrapportage",
     omschrijving: "Voorblad, rapportopmaak, e-mailselectie, bijlagenpakket en definitief maken",
-    status: "gepland",
+    status: "in-ontwikkeling",
     versie: "V1.4",
-    opmerking: "Wacht op formeel akkoord (Ontwikkelstop)",
+    opmerking: "In aanbouw met formeel akkoord; bouwt voort op de bestaande live-rapportage",
   },
+
+  // ── Gepland (vastgelegd op de roadmap, nog niet gebouwd) ────────────────
   {
     sleutel: "v15-rapportenmodule",
     naam: "Rapportenmodule",
