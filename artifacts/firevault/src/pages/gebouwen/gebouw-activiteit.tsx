@@ -66,7 +66,7 @@ export default function GebouwActiviteit({
   ].slice(0, 6);
 
   return (
-    <Card className="flex flex-col h-full">
+    <Card className="flex flex-col h-[32rem]">
       <CardHeader className="pb-3 flex-shrink-0">
         <div className="flex items-center gap-2">
           <Activity className="h-5 w-5 text-primary" />
@@ -106,7 +106,7 @@ export default function GebouwActiviteit({
 
       <CardContent className="flex-1 overflow-y-auto px-4 pb-4">
         {activiteit.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-32 text-center">
+          <div className="flex flex-col items-center justify-center h-full text-center">
             <Clock className="h-8 w-8 text-muted-foreground mb-2" />
             <p className="text-sm text-muted-foreground">
               Nog geen recente activiteit voor dit project.
