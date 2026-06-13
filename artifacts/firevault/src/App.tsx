@@ -42,6 +42,7 @@ import ProfielenBeheer from "@/pages/beheer/profielen";
 import ToepassingenBeheer from "@/pages/beheer/toepassingen";
 import Bibliotheek from "@/pages/beheer/bibliotheek";
 import Ontwikkelstatus from "@/pages/beheer/ontwikkelstatus";
+import DocumentopmaakBeheer from "@/pages/beheer/documentopmaak";
 import InfoPagina from "@/pages/info/index";
 import PersoneelPagina from "@/pages/personeel/index";
 import MedewerkerDetailPagina from "@/pages/personeel/detail";
@@ -84,6 +85,7 @@ function BeheerderPortal() {
         <Route path="/beheer/heatmaps" component={Heatmaps} />
         <Route path="/beheer/profielen" component={ProfielenBeheer} />
         <Route path="/beheer/ontwikkelstatus" component={Ontwikkelstatus} />
+        <Route path="/beheer/documentopmaak" component={DocumentopmaakBeheer} />
         <Route path="/documenten" component={DocumentenPagina} />
         <Route path="/info" component={InfoPagina} />
         <Route component={NotFound} />
@@ -166,6 +168,7 @@ function PermissiePortal() {
         <Route path="/beheer/heatmaps" component={Heatmaps} />
         <Route path="/beheer/profielen" component={ProfielenBeheer} />
         <Route path="/beheer/ontwikkelstatus" component={Ontwikkelstatus} />
+        <Route path="/beheer/documentopmaak" component={DocumentopmaakBeheer} />
         <Route path="/documenten" component={DocumentenPagina} />
         <Route path="/info" component={InfoPagina} />
         <Route component={NotFound} />

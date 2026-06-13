@@ -1,4 +1,4 @@
-# Roadmap — Document Design System (vastgelegd, nog te bouwen)
+# Roadmap — Document Design System (visuele basis gebouwd; verdieping nog te bouwen)
 
 Strategische, modulebrede fundering. **Vastgelegd, NIET vooruit bouwen:** pas bouwen ná formeel akkoord (Ontwikkelstop blijft leidend). Zie [`README.md`](./README.md) voor het overzicht en [`replit.md`](../../replit.md) voor de Ontwikkelstop-regel en de drie sporen.
 
@@ -59,6 +59,8 @@ Eerst alleen de **visuele basis en voorbeeldtemplates** met dummy-inhoud, om de 
 4. HRM/juridisch document — vervolgpagina (familie B)
 5. Operationeel document — checklistpagina (familie C)
 
+**Status: gebouwd (web preview, 13 juni 2026).** Herbruikbare documentcomponenten in `artifacts/firevault/src/components/documentopmaak/` (DocumentFrame met A4/print-opmaak, Familie A/B/C, gedeelde `resolveAssetUrl`) plus een previewpagina onder **Beheer › Documentopmaak** (`/beheer/documentopmaak`, gated op de systeem-bevoegdheid) waarin per werkmaatschappij én per template gewisseld kan worden. Nog dummy-content; geen DB/OpenAPI-wijziging. De branding-velden (`logoUrl`, `briefpapierUrl`, `klantLogoUrl`, `heroImageUrl`) zijn URL-veilig opgezet zodat ze later uit de Werkgever-entiteit gevoed kunnen worden zonder herschrijven. `DocumentFrame` clipt alleen full-bleed pagina's (`bleed`) en kan het pagina-einde per pagina uitzetten (`paginaEinde`) om een lege slotpagina te voorkomen.
+
 ## Afhankelijkheden & raakvlakken
 
 - **V1.4 Opleverrapportage / V1.5 Rapportenmodule** — opleverrapporten vallen onder familie A; de documentmotor wordt de gedeelde opmaaklaag voor de live `print.tsx`-rapportage en de latere gepersisteerde rapporten. De documentmotor is daarmee een logische fundering vóór of samen met V1.4/V1.5.
@@ -66,6 +68,6 @@ Eerst alleen de **visuele basis en voorbeeldtemplates** met dummy-inhoud, om de 
 - **HRM / Personeel (parallel spoor)** — familie B levert de juridische/HRM-documenten; bouwt op de Werkgever-entiteit.
 - **Digitale ondertekening** — bewust als latere uitbreiding belegd (familie B is daar qua opmaak op voorbereid), niet in de eerste oplevering.
 
-## Ontwikkelstop
+## Ontwikkelstop — opgeheven (13 juni 2026)
 
-Vastgelegd als planning; per dit onderdeel pas bouwen ná formeel akkoord. De eerste oplevering (visuele basis + vijf voorbeeldtemplates met dummy-content) is de voorgestelde eerste, beoordeelbare increment.
+De Ontwikkelstop is opgeheven; per-fase formeel akkoord vooraf is niet meer vereist (zie [`replit.md`](../../replit.md)). De eerste oplevering (visuele basis + vijf voorbeeldtemplates met dummy-content) is als eerste increment **gebouwd** en is beoordeelbaar in de preview. De verdieping — versiebeheer, PDF-generatie, latere digitale ondertekening en per-werkmaatschappij centraal beheer bovenop de Werkgever-entiteit — volgt in latere increments.

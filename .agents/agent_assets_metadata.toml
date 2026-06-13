@@ -53,3 +53,9 @@ id = "MpenkjP39Cfjq5dFE9IXJ"
 uri = "file://.local/testkit/qr-beheer.png"
 type = "image"
 title = "QR 2FA — Tester Beheer (beheer@fps-test.nl)"
+
+[[outputs]]
+id = "_TE_6L7TPhy0Fjn51meJY"
+uri = "file://artifacts/firevault/public/project-foto.jpg"
+type = "image"
+title = "modern construction site building project clean professional architecture"

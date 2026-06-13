@@ -31,8 +31,9 @@ const STATUSKLEUR: Record<string, { bg: string; text: string; label: string }> =
   concept:       { bg: "#f1f5f9", text: "#475569", label: "Concept" },
 };
 
-// Brand-/rookwerendheid wordt niet meer per spot gekozen. Leid de waarde af uit
-// de testnorm van een gekoppelde toepassing; val terug op legacy spot-velden.
+// Brand-/rookwerendheid wordt niet meer per spot gekozen of uit losse
+// meetwaarden getoond. Leid de waarde uitsluitend af uit de testnorm van een
+// gekoppelde toepassing; zonder testnorm tonen we geen werendheid.
 function werendheidVanVoorziening(v: any): string | null {
   const toepassingen: any[] = Array.isArray(v?.labels) ? v.labels : [];
   for (const l of toepassingen) {
@@ -42,9 +43,6 @@ function werendheidVanVoorziening(v: any): string | null {
       return p === "WRD" ? `WRD ${m[2]}` : p === "EW" ? `EW ${m[2]}` : `EI ${m[2]}`;
     }
   }
-  if (v?.wrd) return `WRD ${v.wrd}`;
-  if (v?.wbdbo) return `EW ${v.wbdbo}`;
-  if (v?.classificatie && v.classificatie !== "60") return `EI ${v.classificatie}`;
   return null;
 }
 
