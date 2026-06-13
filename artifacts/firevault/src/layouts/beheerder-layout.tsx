@@ -4,7 +4,6 @@ import {
   SidebarProvider, Sidebar, SidebarHeader, SidebarContent, SidebarFooter,
   SidebarGroup, SidebarGroupLabel, SidebarGroupContent,
   SidebarMenu, SidebarMenuItem, SidebarMenuButton,
-  SidebarMenuSub, SidebarMenuSubItem, SidebarMenuSubButton,
 } from "@/components/ui/sidebar";
 import {
   ShieldCheck, Building, Wrench, Users, Search, Home, Receipt,
@@ -24,7 +23,6 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
   const isHoofdbeheerder = echteRol === "hoofdbeheerder";
 
   const toonGebouwen      = heeftNiveau("gebouwen", 1);
-  const toonVoorzieningen = heeftNiveau("voorzieningen", 1);
   const toonInspecties    = heeftNiveau("inspecties", 1);
   const toonOnderhoud     = heeftNiveau("onderhoud", 1);
   const toonCrm           = heeftNiveau("crm", 1);
@@ -82,21 +80,6 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
                         <span>{t("nav.gebouwen")}</span>
                       </Link>
                     </SidebarMenuButton>
-                    {toonVoorzieningen && (
-                      <SidebarMenuSub>
-                        <SidebarMenuSubItem>
-                          <SidebarMenuSubButton
-                            asChild
-                            isActive={location === "/voorzieningen" || location.startsWith("/voorzieningen/")}
-                          >
-                            <Link href="/voorzieningen">
-                              <ShieldCheck />
-                              <span>{t("nav.voorzieningen")}</span>
-                            </Link>
-                          </SidebarMenuSubButton>
-                        </SidebarMenuSubItem>
-                      </SidebarMenuSub>
-                    )}
                   </SidebarMenuItem>
                 )}
               </SidebarMenu>
