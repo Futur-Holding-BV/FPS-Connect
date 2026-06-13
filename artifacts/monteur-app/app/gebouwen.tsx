@@ -1,3 +1,4 @@
+import { Ionicons } from "@expo/vector-icons";
 import { useListGebouwen } from "@workspace/api-client-react";
 import { Redirect, useRouter } from "expo-router";
 import React, { useState } from "react";
@@ -75,6 +76,24 @@ export default function Gebouwen() {
             </Text>
           </View>
           <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "flex-end", alignItems: "center", gap: 8, flexShrink: 1 }}>
+            <Pressable
+              onPress={() => router.push("/menu")}
+              accessibilityLabel="Naar hoofdmenu"
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 6,
+                paddingHorizontal: 14,
+                paddingVertical: 9,
+                borderRadius: 10,
+                backgroundColor: "rgba(255,255,255,0.12)",
+              }}
+            >
+              <Ionicons name="grid" size={15} color={c.darkForeground} />
+              <Text style={{ color: c.darkForeground, fontFamily: "Inter_600SemiBold", fontSize: 14 }}>
+                Menu
+              </Text>
+            </Pressable>
             <Pressable
               onPress={() => router.push("/documenten")}
               style={{
