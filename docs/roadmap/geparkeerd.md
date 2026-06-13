@@ -16,6 +16,19 @@ Kaders/uitgangspunten (uit te werken bij akkoord):
 - Tokens/credentials worden achter het biometrieslot in veilige opslag bewaard (`expo-secure-store` / keychain / keystore), met wachtwoord + TOTP als terugvaloptie.
 - Per gebruiker in- en uitschakelbaar; optioneel afdwingbaar via de bevoegdheden-matrix.
 
+## Toolbox & berichten met leesbevestiging (mobiel) — vastgelegd, geparkeerd — NIET vooruit bouwen
+
+Op verzoek van de gebruiker vastgelegd als nieuwe wens, geparkeerd onder de Ontwikkelstop. Een berichten-/communicatiekanaal tussen kantoor en de werkvloer: een projectleider of directeur plaatst (uploadt) toolbox-onderwerpen en berichten in FPS Connect, en de monteur/het personeel leest ze in de FPS Monteur-app en bevestigt actief "gelezen en begrepen". Bedoeld voor toolboxen en soortgelijke eenrichtings-instructies met verplichte bevestiging, en breder voor interacties tussen projectleider/directeur en monteur/personeel.
+
+Sluit aan op de mobiele monteurflow (V2.0) en op de "digitale toolboxen" + "berichten" uit de V3.0 medewerkerapp-visie (zie hieronder). Wordt pas uitgewerkt ná formeel akkoord en nadat V2.0 is opgepakt.
+
+Kaders/uitgangspunten (uit te werken bij akkoord):
+- **Beheerzijde (FPS Connect / web):** toolbox-onderwerp of bericht aanmaken met titel, tekst en bijlagen (pdf/foto/video); doelgroep kiezen (individu, functie, project, of iedereen); publiceren.
+- **Mobiele zijde (FPS Monteur-app):** de medewerker ziet openstaande toolboxen/berichten, opent en leest ze, en bevestigt expliciet "gelezen en begrepen" (leesbevestiging). De bevestiging legt wie + tijdstempel vast (audittrail); optioneel een digitale handtekening of een korte controlevraag (sluit aan op de V3.0 digitale toolboxen met quizvragen/ondertekening).
+- **Opvolging voor management:** overzicht wie wel/niet heeft bevestigd, met signalering en eventueel herinnering; bevestigingen zijn herleidbaar en bewaard.
+- **Toegang:** gating via de bevoegdheden-matrix (`lib/permissies`), niet via rol-strings; lezen vs. plaatsen/beheren als aparte bevoegdheid.
+- **Afbakening:** start als eenrichtingscommunicatie met verplichte bevestiging; vrije tweerichtings-chat is bewust buiten de eerste opzet en kan later worden afgewogen.
+
 ## V3.0 — Personeel / Medewerkerportaal (vastgelegd, NIET bouwen voor V2.0 afgerond)
 
 Consolideert de eerdere V2.1 (desktop) en V2.2 (mobiel). NIET bouwen voordat V2.0 (mobiele monteurflow) formeel akkoord is. Mogelijke vervanger van Apployed. De bevoegdheden-matrix in `lib/permissies` wordt uitgebreid met module-ID's `personeel` en `verlof` zodat toegang per gebruiker instelbaar blijft.

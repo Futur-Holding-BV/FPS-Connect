@@ -94,6 +94,7 @@ _Parallel spoor (Fase 1-basis gebouwd met formeel akkoord; diepere uitwerking bl
 
 _Geparkeerd (NIET vooruit bouwen) — detail in [docs/roadmap/geparkeerd.md](docs/roadmap/geparkeerd.md):_
 - **V2.0** — Mobiele monteur-app (mijn werk, gebouwen, plattegronden, spots, foto's, offline synchronisatie, routeplanning); biometrisch inloggen (vingerafdruk/gezichtsherkenning) als optionele snelle ontgrendeling — op verzoek vastgelegd, geparkeerd
+- **Toolbox & berichten met leesbevestiging (mobiel)** — projectleider/directeur plaatst toolbox-onderwerpen en berichten in FPS Connect; monteur/personeel leest ze in de FPS Monteur-app en bevestigt "gelezen en begrepen" (leesbevestiging met audittrail). Leunt op V2.0/V3.0 — op verzoek vastgelegd, geparkeerd
 - **V3.0** — Personeel / Medewerkerportaal, uitgebouwd tot een **HRM-module voor de volledige FPS Groep** (verlof, uren, gereedschap, opleidingen, contracten, bekwaamheidsmatrix, werving, mobiele medewerkersapp, AI-coaches); zie [docs/roadmap/geparkeerd.md](docs/roadmap/geparkeerd.md)
 - **AI Brandveiligheidsmanager / AI Calculator / Klantmodule** — strategische lijn: klantportaal, documentbeheer, continuïteitslaag project↔onderhoud en AI-calculatie/offerte/klantmanager; zie [docs/roadmap/geparkeerd.md](docs/roadmap/geparkeerd.md)
 - **S.G. Constructies** — aparte bibliotheeklaag voor scheidende/bouwkundige constructies, branddeuren en opwaarderingen (zie [docs/roadmap/geparkeerd.md](docs/roadmap/geparkeerd.md))
