@@ -59,3 +59,9 @@ id = "_TE_6L7TPhy0Fjn51meJY"
 uri = "file://artifacts/firevault/public/project-foto.jpg"
 type = "image"
 title = "modern construction site building project clean professional architecture"
+
+[[outputs]]
+id = "Kyn8XbvktAs2UOSYm9cpf"
+uri = "file://exports/FPS-taken-overzicht.txt"
+type = "text"
+title = "FPS — Overzicht van taken (13 juni 2026)"

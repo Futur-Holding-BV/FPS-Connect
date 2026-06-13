@@ -1,0 +1,293 @@
+==============================================================================
+FPS BRANDPREVENTIE — OVERZICHT VAN TAKEN
+Gegenereerd: 13 juni 2026
+==============================================================================
+
+Dit zijn alle taken die in het project bij jou zijn neergelegd, gegroepeerd
+op status. 'Concepten' en 'Actief' vragen nog jouw aandacht of lopen nu;
+'Afgerond' en 'Gearchiveerd' staan als naslag onderaan.
+
+Samenvatting:
+  Concepten (wachten op je beslissing):  14
+  Actief (loopt / wacht op uitvoering):   2
+  Afgerond:                                62
+  Gearchiveerd:                            14
+
+==============================================================================
+CONCEPTEN — wachten op jouw beslissing (14)
+==============================================================================
+
+#4  |  Documenten echt afschermen, niet alleen verbergen
+Hangt af van: #2
+------------------------------------------------------------------------------
+# Documenten echt afschermen, niet alleen verbergen
+
+  ## What & Why
+  De zichtbaarheid van documenten (tekeningen met type "document" en de vlag `zichtbaar_monteur`) wordt nu alleen op lijst-niveau gefilterd in GET `/gebouwen/:id/tekeningen`. Het onderliggende bestand wordt geserveerd via `/api/storage/objects/*` zonder per-object toegangscontrole (de ACL-check staat uitgecommentarieerd). Gevolg: een ingelogde gebruiker (bv. monteur of klant) die de bestands-URL kent of raadt, kan een niet-aang…(truncated)
+
+
+#27  |  Vraag om bevestiging voordat een gewijzigd profiel wordt teruggezet
+Hangt af van: #20
+------------------------------------------------------------------------------
+# Vraag om bevestiging voordat een gewijzigd profiel wordt teruggezet
+
+  ## What & Why
+  De knop "Opnieuw toepassen" / "Profiel opnieuw toepassen" op de gebruikerspagina overschrijft direct de handmatig aangepaste bevoegdheden van een gebruiker met de preset-waarden, zonder waarschuwing. Dat is een destructieve actie (handwerk gaat verloren). De profielenpagina (`artifacts/firevault/src/pages/beheer/profielen.tsx`) gebruikt hiervoor al een AlertDialog ter bevestiging; de per-gebruiker actie zou …(truncated)
+
+
+#28  |  Toon een melding wanneer opnieuw toepassen mislukt of slaagt
+Hangt af van: #20
+------------------------------------------------------------------------------
+# Toon een melding wanneer opnieuw toepassen mislukt of slaagt
+
+  ## What & Why
+  De per-gebruiker actie "Profiel opnieuw toepassen" vangt fouten nu stil op (de catch in pasHerkomstToe doet niets) en geeft geen succesbevestiging. Bij een serverfout (bv. profiel verwijderd, 400/500) krijgt de hoofdbeheerder geen feedback. Een toast of inline-melding maakt de uitkomst duidelijk.
+
+  ## Done looks like
+  - Bij succes verschijnt een korte bevestiging (bv. toast "Profiel opnieuw toegepast")
+  - Bij ee…(truncated)
+
+
+#38  |  Markeer aangepaste profielkoppelingen ook in het bewerkscherm
+Hangt af van: #29
+------------------------------------------------------------------------------
+# Markeer aangepaste profielkoppelingen ook in het bewerkscherm
+
+  ## What & Why
+  De detaildialoog toont een badge "Sindsdien aangepast" wanneer de bevoegdheden van een gebruiker afwijken van het gekoppelde profiel. Het bewerkscherm toont nu wel automatisch/handmatig, maar nog niet of de huidige modulewaarden afwijken van de preset. Een beheerder die in het formulier modulewaarden aanpast ziet niet dat de koppeling daarmee afwijkt van het profiel.
+
+  ## Done looks like
+  - In het bewerken-/aanm…(truncated)
+
+
+#45  |  Onthoud ook de gekozen sortering en filters op het inspectie-overzicht
+Hangt af van: #43
+------------------------------------------------------------------------------
+# Onthoud ook de gekozen sortering en filters op het inspectie-overzicht
+
+  ## What & Why
+  Met deze taak onthouden gebouwen, voorzieningen, gebruikers en onderhoud nu hun zoek- en filterkeuzes via useVoorkeur. Het inspectie-overzicht (`artifacts/firevault/src/pages/inspecties/index.tsx`) gebruikt useVoorkeur al deels, maar het is niet geverifieerd of álle daar aanwezige filters/sorteringen meegenomen worden. Volledige consistentie maakt het platform overal voorspelbaar.
+
+  ## Done looks like
+  …(truncated)
+
+
+#58  |  Voorbereide spots zichtbaar maken in de monteur-werklijst
+Hangt af van: #53
+------------------------------------------------------------------------------
+# Voorbereide spots zichtbaar maken in de monteur-werklijst
+
+  ## What & Why
+  De monteur kan nu een voorbereide spot afwerken via de plattegrond, maar er is geen overzicht "mijn voor te bereiden / af te werken spots" in de mobiele app. Een werklijst die voorbereide spots toont (per gebouw/verdieping) maakt het veldwerk efficiënter en sluit aan op de V2.0 monteurflow.
+
+  ## Done looks like
+  - Mobiele app toont een lijst van voorbereide spots toegewezen aan de ingelogde monteur
+  - Vanuit de lij…(truncated)
+
+
+#65  |  Wijs vanuit de spotlijst een monteur toe aan een cluster
+Hangt af van: #60
+------------------------------------------------------------------------------
+# Wijs vanuit de spotlijst een monteur toe aan een cluster
+
+  ## What & Why
+  De cluster-beheerdialoog in de spotlijst (`artifacts/firevault/src/pages/voorzieningen/index.tsx`, component `SpotClusterDialog`) laat beheerders clusters aanmaken, hernoemen, herkleuren en verwijderen, maar nog GEEN monteur toewijzen aan een cluster. De plattegrond-editor (`artifacts/firevault/src/pages/gebouwen/plattegrond.tsx`, component `ClusterBeheerDialog`) kan dat wel via `useAssignClusterMonteur` + `useListToew…(truncated)
+
+
+#66  |  Filter de spotlijst op cluster
+Hangt af van: #60
+------------------------------------------------------------------------------
+# Filter de spotlijst op cluster
+
+  ## What & Why
+  Nu clusters vanuit de spotlijst beheerd kunnen worden (`artifacts/firevault/src/pages/voorzieningen/index.tsx`), is de logische vervolgstap dat gebruikers de lijst ook op cluster kunnen filteren. De Cluster-kolom toont al `cluster_naam`, maar er is geen manier om snel alle spots van één cluster te zien.
+
+  ## Done looks like
+  - Een filterknop of dropdown waarmee de lijst op cluster (of "geen cluster") gefilterd kan worden
+  - De keuze wordt on…(truncated)
+
+
+#75  |  Laat gebruikers meerdere overgenomen koppelingen in één keer terugdraaien
+Hangt af van: #73
+------------------------------------------------------------------------------
+# Laat gebruikers meerdere overgenomen koppelingen in één keer terugdraaien
+
+  ## What & Why
+  In de AI-koppelvoorstellen-dialoog kan een gebruiker met "Alles overnemen" meerdere suggesties tegelijk overnemen, maar terugdraaien kan alleen nog per losse koppeling. Een "Alles terugdraaien"-knop maakt het symmetrisch en sneller wanneer iemand een hele set per ongeluk overneemt.
+
+  ## Done looks like
+  - Een "Alles terugdraaien"-knop verschijnt zodra er voor een document meerdere koppelingen in deze…(truncated)
+
+
+#76  |  Herstel verdwenen toepassingen en fabrikanten
+------------------------------------------------------------------------------
+# Herstel verdwenen toepassingen en fabrikanten
+
+## What & Why
+De lijsten met toepassingen en fabrikanten in de Bibliotheek zijn weer leeg. De gegevens zijn niet weg uit de database (er staan nog 100 toepassingen en 8 fabrikanten), maar de ontwikkeldatabase is afgedreven van het vastgelegde Drizzle-schema: een aantal kolommen en een tabel ontbreken. De lijst-queries selecteren kolommen die niet meer bestaan, waardoor de verzoeken crashen (HTTP 500) en de schermen leeg renderen.
+
+Concreet ontbrek…(truncated)
+
+
+#78  |  Snel inzoomen op een groep overlappende spots
+Hangt af van: #74
+------------------------------------------------------------------------------
+# Snel inzoomen op een groep overlappende spots
+
+  ## What & Why
+  Tikken op een telbolletje van overlappende spots toont nu een lijst (taak #74). De vorige zoom-actie is verwijderd. Sommige monteurs willen op de plattegrond zelf kunnen inzoomen om de spots ruimtelijk uit elkaar te zien (bijv. om de juiste fysieke locatie te bepalen). Een "Inzoomen op dit gebied"-knop in de bottom-sheet zou beide gedragingen combineren.
+
+  ## Done looks like
+  - In de OverlappendeSpots-bottom-sheet staat een kno…(truncated)
+
+
+#85  |  Koppel een al-bestaande voorgestelde opleiding alsnog aan de functie
+Hangt af van: #82
+------------------------------------------------------------------------------
+# Koppel een al-bestaande voorgestelde opleiding alsnog aan de functie
+
+  ## What & Why
+  Wanneer de AI per functie een opleiding/cursus voorstelt die al in de catalogus staat (zelfde naam), wordt die nu bij accepteren stilzwijgend overgeslagen en NIET aan de gekozen functie gekoppeld. De gebruiker verwacht dat "VCA toevoegen aan deze functie" ook werkt als VCA al bestaat.
+
+  ## Done looks like
+  - Bij accepteren van een voorstel dat al bestaat (dedupe op kleine letters naam), wordt de bestaande…(truncated)
+
+
+#86  |  Toon de nieuwe opleiding/cursus-details ook in de monteur-app
+Hangt af van: #82
+------------------------------------------------------------------------------
+# Toon de nieuwe opleiding/cursus-details ook in de monteur-app
+
+  ## What & Why
+  De web-opleidingencatalogus toont nu het onderscheid opleiding vs. cursus plus rijke velden (niveau, opleider, studieduur, studiebelasting, lesvorm, kostenverdeling werkgever/werknemer). Het read-only opleidingenscherm in de monteur-app toont deze nieuwe velden nog niet, waardoor mobiel een onvolledig beeld geeft.
+
+  ## Done looks like
+  - Het mobiele opleidingenscherm toont soort (opleiding/cursus) en de relevant…(truncated)
+
+
+#87  |  Borg dat de kostenverdeling werkgever/werknemer altijd op 100% uitkomt
+Hangt af van: #82
+------------------------------------------------------------------------------
+# Borg dat de kostenverdeling werkgever/werknemer altijd op 100% uitkomt
+
+  ## What & Why
+  De percentages voor het werkgevers- en werknemersaandeel van de opleidingskosten worden nu alleen in de UI aangevuld. Er is geen server-side controle: een directe API-call kan bijv. werkgever=120 opslaan, waardoor de som niet op 100% uitkomt en rapportages scheef lopen.
+
+  ## Done looks like
+  - De backend valideert dat elk percentage tussen 0 en 100 ligt en dat de som klopt (of vult het complement server…(truncated)
+
+
+==============================================================================
+ACTIEF — loopt nu of wacht op uitvoering (2)
+==============================================================================
+
+#91  |  Laat de menu-test automatisch meedraaien als kwaliteitscontrole
+Hangt af van: #90
+------------------------------------------------------------------------------
+# Laat de menu-test automatisch meedraaien als kwaliteitscontrole
+
+  ## What & Why
+  De nieuwe Playwright-menu-test draait nu via een npm-script (`pnpm --filter @workspace/scripts run e2e-monteur`), maar is nog niet geregistreerd als een benoemde validatiestap. Door hem te registreren wordt de controle automatisch uitgevoerd en vangt hij regressies in login/2FA en het startmenu zonder dat iemand er handmatig aan hoeft te denken.
+
+  ## Done looks like
+  - Een geregistreerde validatiestap die de e…(truncated)
+
+
+#92  |  Controleer dat elk menuscherm ook echt zijn inhoud toont
+Hangt af van: #90
+------------------------------------------------------------------------------
+# Controleer dat elk menuscherm ook echt zijn inhoud toont
+
+  ## What & Why
+  De huidige e2e-test verifieert dat elke menukeuze naar de juiste route navigeert, maar niet dat het doelscherm zijn gegevens daadwerkelijk laadt (bijv. de gebouwenlijst, fabrikantenlijst, HRM-overzicht). Een diepere controle vangt regressies waarbij de route klopt maar het scherm leeg blijft of crasht door een API-fout.
+
+  ## Done looks like
+  - Per route een lichte inhoudscontrole (bijv. een lijstitem of kop verschijn…(truncated)
+
+
+==============================================================================
+AFGEROND — naslag (62)
+==============================================================================
+
+#1  |  Upgrade from gpt-4o-mini to gpt-5-mini
+#2  |  V1.0 Functionele audit & rapportage
+#3  |  V1.0 Herstel & administratief gereed
+#5  |  Bestaande accounts omzetten naar de nieuwe bevoegdheden-matrix
+#6  |  Bevoegdheidspresets beheren — maak, bewerk en verwijder profielen
+#7  |  Bevoegdheden zichtbaar maken op de gebruikerskaart
+#8  |  Oude rol-opties opruimen nu iedereen op de matrix zit
+#9  |  Toon bij elke preset welke gebruikers hem gebruiken
+#10  |  Voorkom dat een ongeldige preset wordt opgeslagen
+#11  |  Filter en sorteer gebruikers op toegangsniveau
+#12  |  Restcode van de oude rollen helemaal opruimen
+#13  |  Toon op de gebruikerspagina van welk profiel iemand is afgeleid
+#14  |  Behoud de herkomst-koppeling ook bij het uitnodigen van gebruikers via een preset
+#15  |  Waarschuw beheerders als een profiel een module mist
+#16  |  Zoek gebruikers snel op naam of e-mailadres
+#17  |  Onthoud gekozen filter- en sorteervoorkeuren
+#18  |  Maak de rollenlijst eenduidig in het API-contract en gedeelde types
+#19  |  Verwijder de overgebleven dode monteur/veldfunctie-weergave buiten gebruikersbeheer
+#20  |  Voer een gewijzigd profiel met één klik opnieuw door vanaf de gebruikerspagina
+#21  |  Toon op de gebruikerspagina waarom een gebruiker aan een profiel is gekoppeld
+#22  |  Controleer de automatische profielkoppeling met geautomatiseerde tests
+#23  |  Vul ontbrekende modules automatisch aan bij nieuwe modules
+#24  |  Onthoud filtervoorkeuren ook op andere overzichtspagina's
+#25  |  Verwijder de laatste verwijzingen naar oude rollen in de server en het API-contract
+#29  |  Toon ook in het bewerkscherm waarom een profiel gekoppeld is
+#30  |  Bevestig automatische profielkoppelingen in bulk
+#33  |  Vul ontbrekende modules ook bij bestaande gebruikers aan
+#34  |  Onthoud ook de filters in de bibliotheek/documenten
+#35  |  Corrigeer de term 'werendheid' overal naar brand-/rookwerendheid
+#37  |  Geimporteerde toepassingen koppelen aan applicaties
+#41  |  Onthoud ook de zoek- en filterkeuzes in de andere bibliotheektabs
+#42  |  Koppel meerdere geimporteerde toepassingen in een keer aan een applicatie
+#43  |  Onthoud filterkeuzes ook op de overige overzichtspagina's
+#44  |  Archiveer of herstel meerdere toepassingen tegelijk
+#46  |  Roadmap aanvullen met ontbrekende onderdelen
+#48  |  Fabrikanten kunnen archiveren of verwijderen
+#49  |  Toepassingen koppelen aan de beheerde fabrikantenlijst
+#50  |  Laat zien of het archiveren van een fabrikant is gelukt of mislukt
+#53  |  V1.3 Voorbereide spots
+#54  |  V1.3 Clustering van spots
+#55  |  Toon een melding bij archiveren/herstellen van toepassingen en applicaties
+#56  |  Upgrade from gpt-4o to gpt-5
+#57  |  Voorbereide spots groepsgewijs plaatsen en clusteren
+#59  |  Show spot clusters in the building delivery report
+#60  |  Let admins recolor and re-label clusters from the spot list
+#61  |  Toon een melding bij koppelen van toepassingen en documenten in de bibliotheek
+#62  |  Plaats een hele serie voorbereide spots in één keer langs een lijn
+#63  |  Toon per cluster welke monteur is toegewezen en hoeveel voorbereide spots open staan
+#67  |  Toon ook een melding bij het loskoppelen van losse documenten
+#70  |  Toon de monteur en voorbereide spots ook in de mobiele app
+#71  |  Toon een melding bij het overnemen of intrekken van AI-koppelvoorstellen op één lijn met de rest
+#72  |  Open de spotlijst van een cluster door erop te tikken in de mobiele plattegrond
+#73  |  Toon ook een melding bij het terugdraaien van een overgenomen AI-koppeling
+#74  |  Toon ook een spotlijst bij overlappende spots, niet alleen inzoomen
+#77  |  Spots niet zichtbaar op plattegrond herstellen
+#79  |  Toon op mobiel het verschil tussen 'geen gegevens' en 'laden mislukt'
+#80  |  Voorkom dat de mobiele app onnodig veel sessie-rijen aanmaakt
+#82  |  HRM uitbreiden + koppelen aan gebruikers
+#83  |  DMS breder + gebouwrapport naar DMS
+#88  |  Snelle terugkeer naar het hoofdmenu vanuit elk scherm
+#89  |  Automatische controle dat het startmenu opent en correct doorlinkt
+#90  |  Maak de menu-test met één klik herhaalbaar in de testsuite
+
+
+==============================================================================
+GEARCHIVEERD — niet uitgevoerd (14)
+==============================================================================
+
+#26  |  Ruim verouderde veldfuncties (Timmerman/Uitvoerder) op bij bestaande accounts
+#31  |  Test ook de zelf-escalatiebeveiliging bij gebruikersbeheer
+#32  |  Maak de geautomatiseerde tests onderdeel van de kwaliteitscontrole
+#36  |  Verwijder oude rollen (monteur/controleur) ook uit de webinterface
+#39  |  Verwijder automatische profielkoppelingen ook in bulk
+#40  |  Toon een melding hoeveel gebruikers zijn aangevuld
+#47  |  Archiveer of herstel meerdere documenten tegelijk
+#51  |  Dubbele fabrikanten samenvoegen tot één
+#52  |  Toon en filter de fabrikant op het toepassingenoverzicht
+#64  |  Zorg dat database-aanpassingen automatisch doorkomen na een update
+#68  |  Trek een rechthoek om in één keer een raster spots te plaatsen
+#69  |  Plaats series spots sneller met één batch-opslag
+#81  |  Laat de mobiele app ook profiel, taal en wachtwoord beheren
+#84  |  Toon ook foutmeldingen op het plattegrond- en personeelsdashboard van de app
