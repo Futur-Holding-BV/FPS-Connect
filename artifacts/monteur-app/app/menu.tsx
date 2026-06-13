@@ -25,7 +25,7 @@ export default function MenuScherm() {
     },
     {
       sleutel: "personeel",
-      label: "Personeel",
+      label: "Personeel & Organisatie",
       icoon: "people",
       onPress: () => router.push("/hrm"),
     },
