@@ -16,3 +16,5 @@ Spot-AANMAAK- en spot-BEWERKformulieren (web `plattegrond.tsx` + `voorziening-be
 **How to apply:** Bij werk aan spotformulieren of -weergaves: voeg geen werendheid/meetwaarde-selector toe; leid af uit toepassing.testnorm. Meetwaarden in bibliotheek/toepassingen/documenten blijven ongemoeid.
 
 **Caveat:** Legacy spots waar ooit echt EI 60 gekozen is, zijn niet te onderscheiden van "niet gespecificeerd" en tonen nu "—". Geaccepteerd.
+
+**Caveat (misleidend pad):** `artifacts/firevault/src/pages/voorzieningen/nieuw.tsx` is ONDANKS het `voorzieningen/`-pad GEEN spotformulier maar het bibliotheek-toepassingformulier (titel "Nieuwe toepassing", `useCreateLabel`, schrijft naar de bibliotheek). Het werendheid→`testnorm` veld daar moet BLIJVEN (bron van waarheid = bibliotheek). Niet weghalen als ware het een spot-veld. De echte spotformulieren zijn "Spot plaatsen" (`gebouwen/plattegrond.tsx`) en "Spot bewerken" (`voorziening-bewerken-dialog.tsx`); beide hebben al geen werendheidskeuze.
