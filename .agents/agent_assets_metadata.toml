@@ -35,3 +35,9 @@ id = "7tMYDCrwPchL7pteZ4QFy"
 uri = "file://.local/testdag/qr-beheer.png"
 type = "image"
 title = "QR Tester 2 - Beheer (beheer@fps-test.nl)"
+
+[[outputs]]
+id = "gzD-rkNuF_liGoxxXOCte"
+uri = "file://.local/testdag/qr-tessa.png"
+type = "image"
+title = "QR Tester 3 - Tessa / commercieel (tessa@fps-test.nl)"
