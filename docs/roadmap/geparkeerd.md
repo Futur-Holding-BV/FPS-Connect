@@ -2,9 +2,29 @@
 
 NIET vooruit bouwen. Vastgelegd als toekomstige richting onder de Ontwikkelstop. Zie [`README.md`](./README.md) voor het overzicht en [`replit.md`](../../replit.md) voor de Ontwikkelstop-regel en de drie sporen.
 
-## S.G. Constructies als aparte bibliotheeklaag (vastgelegd, geparkeerd — NIET vooruit bouwen)
+## S.G. Constructies — samengestelde constructie als spottype + constructietemplates (herzien; vastgelegd, geparkeerd — NIET vooruit bouwen)
 
-Nieuw vastgelegd onderdeel, geparkeerd onder de ontwikkelstop. Naast de bestaande keten Applicatie → Toepassing → Document komt een aparte bibliotheeklaag voor s.g.-constructies: scheidende/bouwkundige constructies, branddeuren en opwaarderingen (een bestaande constructie naar een hogere brandwerendheid brengen). Reden voor een eigen laag: een s.g.-constructie is geen spot-afwerking maar de onderliggende bouwkundige scheiding waarop afwerkingen rusten; de AI stelt deze bewust NIET vast (zie de AI-fotoherkenning-sectie in [`gebouwd.md`](./gebouwd.md)). Datamodel, koppelingen (bv. s.g.-constructie ↔ document/toepassing) en UI worden uitgewerkt bij formeel akkoord op deze fase.
+Herzien op verzoek van de gebruiker: NIET bouwen als aparte bibliotheeklaag/module, maar onderbrengen bij Spots en de bestaande Bibliotheek. Doel: timmermannen kunnen samengestelde bouwkundige brandveiligheidsconstructies vastleggen als één spot met meerdere onderdelen/toepassingen, zonder zelf de technische werendheidskeuze te hoeven maken. Blijft onder de Ontwikkelstop: pas bouwen ná formeel akkoord; sluit aan op V1.2 (Bibliotheek), V1.3 (Spots & uitvoering) en de rapportages (V1.4/V1.5).
+
+**Spot aanmaken (uitbreiding op de bestaande spotflow):**
+- Keuze bij aanmaken: **Enkelvoudige toepassing** (huidige flow) of **Samengestelde constructie** (nieuw spottype).
+- Bij een samengestelde constructie: eerst een **constructietype** kiezen.
+- Meerdere **onderdelen/toepassingen** aan één spot toevoegen.
+- Per onderdeel: toepassing, foto, opmerking en documentkoppeling.
+- **Geen handmatige meetwaarde/brandwerendheid**: de werendheid wordt afgeleid uit de gekoppelde constructie, de toepassingen of de documenten (in lijn met de bestaande regel "werendheid uit testnorm afleiden", niet per spot kiezen).
+
+**In de Bibliotheek (uitbreiding op V1.2):**
+- **Constructietemplates** vastleggen, bv. schachtwand 60 min, brandwerend plafond, sparing dichtzetten.
+- Een template bevat standaard onderdelen/toepassingen/documenten.
+- Bij het plaatsen kiest de monteur een template en kan onderdelen afvinken of aanvullen.
+
+**In rapportages (V1.4/V1.5):**
+- Een samengestelde constructie verschijnt als één **hoofditem**.
+- De onderdelen worden daaronder overzichtelijk getoond.
+- Foto's en opmerkingen per onderdeel worden meegenomen.
+- De afgeleide brandwerendheid wordt getoond indien beschikbaar.
+
+**Afbakening / behouden uit de eerdere vastlegging:** de AI stelt een samengestelde/bouwkundige constructie bewust NIET zelfstandig vast (zie de AI-fotoherkenning-sectie in [`gebouwd.md`](./gebouwd.md)). De eerder vastgelegde losse onderdelen branddeuren en opwaarderingen (een bestaande constructie naar een hogere brandwerendheid brengen) vallen onder ditzelfde samengestelde-constructie-concept; er komt géén aparte bibliotheeklaag meer.
 
 ## Biometrisch inloggen mobiele app — vingerafdruk & gezichtsherkenning (vastgelegd, geparkeerd — NIET vooruit bouwen)
 
