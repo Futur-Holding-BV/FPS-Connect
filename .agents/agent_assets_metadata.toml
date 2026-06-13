@@ -11,3 +11,15 @@ id = "BMCkg8xUEe5_0LBWm7xwT"
 uri = "file://audit-v1.0.md"
 type = "text"
 title = "Functionele Audit — FPS Brandpreventie V1.0"
+
+[[outputs]]
+id = "MkdsbMmM8xHUbn4fhkz1z"
+uri = "file://artifacts/firevault/public/logo-fps-connect.png"
+type = "image"
+title = "FPS Connect logo"
+
+[[outputs]]
+id = "JGYzjGpmrUOzN4OFgCcPJ"
+uri = "file://attached_assets/fps-logo-familie.png"
+type = "image"
+title = "FPS One vs FPS Connect (familie)"
