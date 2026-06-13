@@ -6,7 +6,7 @@ import { useColors } from "@/hooks/useColors";
 import { useAuth } from "@/context/auth";
 
 export default function Index() {
-  const { token, bezigLaden } = useAuth();
+  const { token, bezigLaden, vergrendeld } = useAuth();
   const c = useColors();
 
   if (bezigLaden) {
@@ -23,6 +23,8 @@ export default function Index() {
       </View>
     );
   }
+
+  if (vergrendeld) return <Redirect href="/vergrendeld" />;
 
   return <Redirect href={token ? "/menu" : "/login"} />;
 }

@@ -7,14 +7,14 @@ import {
 } from "@expo-google-fonts/inter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { setAuthTokenGetter, setBaseUrl } from "@workspace/api-client-react";
-import { Stack } from "expo-router";
+import { Stack, usePathname, useRouter } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import React, { useEffect } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { ErrorBoundary } from "@/components/ErrorBoundary";
-import { AuthProvider, getHuidigToken } from "@/context/auth";
+import { AuthProvider, getHuidigToken, useAuth } from "@/context/auth";
 import { SyncProvider } from "@/context/sync";
 
 setBaseUrl(`https://${process.env.EXPO_PUBLIC_DOMAIN}`);
@@ -25,10 +25,34 @@ SplashScreen.preventAutoHideAsync();
 const queryClient = new QueryClient();
 
 function RootLayoutNav() {
+  const { bezigLaden, vergrendeld, token } = useAuth();
+  const pathname = usePathname();
+  const router = useRouter();
+
+  // Centrale toegangspoort: voorkomt dat een vergrendelde sessie via een
+  // diepe link of herstelde route langs het slotscherm komt. De per-scherm
+  // redirects blijven als extra vangnet bestaan.
+  useEffect(() => {
+    if (bezigLaden) return;
+    if (vergrendeld) {
+      if (pathname !== "/vergrendeld") router.replace("/vergrendeld");
+      return;
+    }
+    if (pathname === "/vergrendeld") {
+      router.replace(token ? "/menu" : "/login");
+      return;
+    }
+    const openbaar = pathname === "/login" || pathname === "/";
+    if (!token && !openbaar) {
+      router.replace("/login");
+    }
+  }, [bezigLaden, vergrendeld, token, pathname, router]);
+
   return (
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="index" />
       <Stack.Screen name="login" />
+      <Stack.Screen name="vergrendeld" />
       <Stack.Screen name="menu" />
       <Stack.Screen name="binnenkort" />
       <Stack.Screen name="fabrikanten" />

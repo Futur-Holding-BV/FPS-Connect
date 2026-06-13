@@ -1,10 +1,11 @@
 import { useGetInfoInstellingen } from "@workspace/api-client-react";
 import { useRouter } from "expo-router";
-import React from "react";
-import { Image, Linking, Pressable, ScrollView, Text, View } from "react-native";
+import React, { useState } from "react";
+import { Image, Linking, Pressable, ScrollView, Switch, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { bovenInset } from "@/components/ui";
+import { useAuth } from "@/context/auth";
 import { useColors } from "@/hooks/useColors";
 import { useResponsive } from "@/hooks/useResponsive";
 
@@ -60,6 +61,18 @@ export default function InfoScherm() {
   const insets = useSafeAreaInsets();
   const { inhoudMaxBreedte, leesMaxBreedte } = useResponsive();
   const { data: instellingen } = useGetInfoInstellingen();
+  const { biometrieAan, biometrieBeschikbaar, biometrieType, zetBiometrie } = useAuth();
+  const [bezigBio, setBezigBio] = useState(false);
+
+  async function wisselBiometrie(aan: boolean) {
+    if (bezigBio) return;
+    setBezigBio(true);
+    try {
+      await zetBiometrie(aan);
+    } finally {
+      setBezigBio(false);
+    }
+  }
 
   const heeftSupportInfo =
     instellingen &&
@@ -155,6 +168,43 @@ export default function InfoScherm() {
       <ScrollView
         contentContainerStyle={{ padding: 16, gap: 14, paddingBottom: insets.bottom + 32, width: "100%", maxWidth: leesMaxBreedte, alignSelf: "center" }}
       >
+        <Kaart titel="Beveiliging">
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 12,
+            }}
+          >
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: c.foreground, fontSize: 15, fontFamily: "Inter_600SemiBold" }}>
+                Snel ontgrendelen
+              </Text>
+              <Text
+                style={{
+                  color: c.mutedForeground,
+                  fontSize: 13,
+                  lineHeight: 19,
+                  fontFamily: "Inter_400Regular",
+                  marginTop: 2,
+                }}
+              >
+                {biometrieBeschikbaar
+                  ? `Open de app voortaan met ${biometrieType} in plaats van opnieuw inloggen. Je sessie blijft veilig opgeslagen op dit toestel.`
+                  : "Stel eerst een vingerafdruk of gezichtsherkenning in op dit toestel om snel ontgrendelen te kunnen gebruiken."}
+              </Text>
+            </View>
+            <Switch
+              value={biometrieAan}
+              onValueChange={wisselBiometrie}
+              disabled={!biometrieBeschikbaar || bezigBio}
+              trackColor={{ false: c.border, true: c.primary }}
+              thumbColor="#fff"
+            />
+          </View>
+        </Kaart>
+
         <Kaart titel="Over de applicatie">
           <View style={{ gap: 8 }}>
             <View style={{ flexDirection: "row", justifyContent: "space-between" }}>

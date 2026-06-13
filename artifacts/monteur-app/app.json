@@ -33,7 +33,14 @@
         }
       ],
       "expo-font",
-      "expo-web-browser"
+      "expo-web-browser",
+      "expo-secure-store",
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "Gebruik Face ID om de FPS Monteur-app snel te ontgrendelen."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

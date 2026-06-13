@@ -55,6 +55,8 @@
     "zod-validation-error": "^3.4.0"
   },
   "dependencies": {
+    "expo-local-authentication": "~17.0.8",
+    "expo-secure-store": "~15.0.8",
     "react-native-webview": "13.15.0"
   }
 }

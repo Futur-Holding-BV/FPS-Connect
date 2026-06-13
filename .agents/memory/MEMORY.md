@@ -50,6 +50,7 @@
 - [Cluster-monteur & serie plaatsen](cluster-monteur-serie.md) — cluster→monteur = bulk-update voorzieningen.monteurId (geen cluster-kolom), client-side afgeleid; serie plaatst per klik POST /voorzieningen met leeg objectnummer; sjabloon in refs.
 - [GPT-5 model params](gpt5-model-params.md) — gpt-5* chat-completions need max_completion_tokens (not max_tokens) + bigger budget (reasoning tokens share it); no custom temperature; gpt-4o vision calls keep max_tokens.
 - [Bearer = stateless, geen session-store](bearer-stateless-session.md) — mobiel bearer-pad mag NOOIT door sessionMiddleware (connect-pg-simple schrijft dan per request een sessie-rij, onbeperkte groei); gebruik niet-persisterende stub-sessie.
+- [Mobiele biometrische app-lock](mobiele-app-lock.md) — slot rond bearer-sessie; publieke token=null gate't fetch-laag ÉN SyncProvider; centrale gate in _layout (per-scherm redirects omzeilen slot); web vergrendelt nooit; v1 alleen bij opstart.
 - [Radiaal dial rotatie](radiaal-dial-rotatie.md) — Garmin-stijl draaiknop monteur-app; minDistance(8) houdt tap-select naast drag-rotate; Sluiten-knop nodig want gesture-vierkant dekt backdrop; markering clampen [0,1].
 - [html2canvas + Tailwind v4 oklch](html2canvas-oklch.md) — firevault DOM->PDF/canvas capture moet html2canvas-pro; klassieke html2canvas 1.4.1 kan oklch()-kleuren niet parsen.
 - [HRM lege catalogi dropdowns](hrm-lege-catalogi.md) — functies/opleidingen zijn user-managed, bewust niet geseed; data-gedreven Selects zijn dan leeg en lijken kapot; geef empty-state, geen nepdata.
