@@ -1,4 +1,4 @@
-import { useListFabrikanten, useListLabels } from "@workspace/api-client-react";
+import { useListLabels } from "@workspace/api-client-react";
 import { Redirect, useRouter } from "expo-router";
 import React, { useState } from "react";
 import { ActivityIndicator, FlatList, Pressable, Text, View } from "react-native";
@@ -28,19 +28,25 @@ export default function FabrikantenScherm() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { token } = useAuth();
-  const { data: fabrikanten, isLoading: laadFab } = useListFabrikanten();
   const { data: labels, isLoading: laadLabels } = useListLabels();
 
   const [zoek, setZoek] = useState("");
-  const [fabId, setFabId] = useState<number | null>(null);
+  const [fabNaam, setFabNaam] = useState<string | null>(null);
 
   if (!token) return <Redirect href="/login" />;
 
-  const actieveFabrikanten = (fabrikanten ?? []).filter((f) => !f.gearchiveerd);
+  const actieveLabels = (labels ?? []).filter((l) => !l.gearchiveerd);
 
-  const producten = (labels ?? []).filter((l) => {
-    if (l.gearchiveerd) return false;
-    if (fabId != null && l.fabrikant_id !== fabId) return false;
+  // De fabrikantfilter leiden we af uit de fabrikantnamen die daadwerkelijk op de
+  // producten staan, zodat elke getoonde fabrikant ook producten bevat.
+  const fabrikantNamen = Array.from(
+    new Set(
+      actieveLabels.map((l) => (l.fabrikant ?? "").trim()).filter((naam) => naam.length > 0),
+    ),
+  ).sort((a, b) => a.localeCompare(b, "nl"));
+
+  const producten = actieveLabels.filter((l) => {
+    if (fabNaam != null && (l.fabrikant ?? "").trim() !== fabNaam) return false;
     if (!zoek.trim()) return true;
     const q = zoek.toLowerCase();
     return (
@@ -53,10 +59,10 @@ export default function FabrikantenScherm() {
 
   const chipOpties = [
     { waarde: "", label: "Alle" },
-    ...actieveFabrikanten.map((f) => ({ waarde: String(f.id), label: f.naam })),
+    ...fabrikantNamen.map((naam) => ({ waarde: naam, label: naam })),
   ];
 
-  const bezig = laadFab || laadLabels;
+  const bezig = laadLabels;
 
   return (
     <View style={{ flex: 1, backgroundColor: c.background }}>
@@ -98,8 +104,8 @@ export default function FabrikantenScherm() {
         />
         <ChipRij
           opties={chipOpties}
-          geselecteerd={fabId == null ? "" : String(fabId)}
-          onKies={(w) => setFabId(w === "" ? null : Number(w))}
+          geselecteerd={fabNaam ?? ""}
+          onKies={(w) => setFabNaam(w === "" ? null : w)}
         />
       </View>
 
