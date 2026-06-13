@@ -171,11 +171,11 @@ export function RadiaalMenu({ acties }: { acties: RadiaalActie[] }) {
   const c = useColors();
   const insets = useSafeAreaInsets();
   const { width, height } = useWindowDimensions();
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(true);
   const [selectie, setSelectie] = useState(0);
   const [vlak, setVlak] = useState({ w: width, h: height });
 
-  const voortgang = useSharedValue(0);
+  const voortgang = useSharedValue(1);
   const rotatie = useSharedValue(0);
   const vorigeHoek = useSharedValue(0);
 
