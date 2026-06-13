@@ -1073,6 +1073,8 @@ export interface Label {
   /** @nullable */
   fabrikant_id?: number | null;
   /** @nullable */
+  fabrikant_url?: string | null;
+  /** @nullable */
   testnorm?: string | null;
   /** @nullable */
   testrapport_id?: number | null;

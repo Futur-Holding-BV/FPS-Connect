@@ -8306,6 +8306,8 @@ components:
           type: ["string", "null"]
         fabrikant_id:
           type: ["integer", "null"]
+        fabrikant_url:
+          type: ["string", "null"]
         testnorm:
           type: ["string", "null"]
         testrapport_id:

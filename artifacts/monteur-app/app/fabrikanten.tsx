@@ -1,7 +1,7 @@
 import { useListLabels } from "@workspace/api-client-react";
 import { Redirect, useRouter } from "expo-router";
 import React, { useState } from "react";
-import { ActivityIndicator, FlatList, Pressable, Text, View } from "react-native";
+import { ActivityIndicator, FlatList, Linking, Pressable, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { ChipRij, TekstVeld, bovenInset, onderInset } from "@/components/ui";
@@ -177,6 +177,28 @@ export default function FabrikantenScherm() {
                   />
                 ) : null}
               </View>
+              {item.fabrikant_url ? (
+                <Pressable
+                  onPress={() => {
+                    const ruw = (item.fabrikant_url ?? "").trim();
+                    if (!ruw) return;
+                    const adres = /^https?:\/\//i.test(ruw) ? ruw : `https://${ruw}`;
+                    Linking.openURL(adres).catch(() => {});
+                  }}
+                  hitSlop={8}
+                  style={{ flexDirection: "row", alignItems: "center", paddingTop: 2 }}
+                >
+                  <Text
+                    style={{
+                      color: c.primary,
+                      fontSize: 14,
+                      fontFamily: "Inter_600SemiBold",
+                    }}
+                  >
+                    Website leverancier ›
+                  </Text>
+                </Pressable>
+              ) : null}
             </View>
           )}
         />

@@ -76,12 +76,30 @@ export async function mapLabel(l: typeof labelsTable.$inferSelect) {
     .select({ typeCode: labelApplicatiesTable.typeCode })
     .from(labelApplicatiesTable)
     .where(eq(labelApplicatiesTable.labelId, l.id));
+  // Website van de leverancier: voorkeur voor de gekoppelde fabrikant (FK),
+  // anders een hoofdletterongevoelige naam-match op de fabrikantentabel.
+  let fabrikantUrl: string | null = null;
+  if (l.fabrikantId != null) {
+    const [f] = await db
+      .select({ url: fabrikantenTable.url })
+      .from(fabrikantenTable)
+      .where(eq(fabrikantenTable.id, l.fabrikantId));
+    fabrikantUrl = f?.url ?? null;
+  }
+  if (fabrikantUrl == null && l.fabrikant != null && l.fabrikant.trim() !== "") {
+    const [f] = await db
+      .select({ url: fabrikantenTable.url })
+      .from(fabrikantenTable)
+      .where(sql`lower(${fabrikantenTable.naam}) = lower(${l.fabrikant.trim()})`);
+    fabrikantUrl = f?.url ?? null;
+  }
   return {
     id: l.id,
     type_code: l.typeCode,
     naam: l.naam,
     fabrikant: l.fabrikant,
     fabrikant_id: l.fabrikantId,
+    fabrikant_url: fabrikantUrl,
     testnorm: l.testnorm,
     testrapport_id: l.testrapportId,
     testrapport,

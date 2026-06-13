@@ -1112,6 +1112,7 @@ export const GetVoorzieningResponse = zod.object({
   "naam": zod.string(),
   "fabrikant": zod.string().nullish(),
   "fabrikant_id": zod.number().nullish(),
+  "fabrikant_url": zod.string().nullish(),
   "testnorm": zod.string().nullish(),
   "testrapport_id": zod.number().nullish(),
   "testrapport": zod.union([zod.object({
@@ -1608,6 +1609,7 @@ export const ListLabelsResponseItem = zod.object({
   "naam": zod.string(),
   "fabrikant": zod.string().nullish(),
   "fabrikant_id": zod.number().nullish(),
+  "fabrikant_url": zod.string().nullish(),
   "testnorm": zod.string().nullish(),
   "testrapport_id": zod.number().nullish(),
   "testrapport": zod.union([zod.object({
@@ -1667,6 +1669,7 @@ export const UpdateLabelResponse = zod.object({
   "naam": zod.string(),
   "fabrikant": zod.string().nullish(),
   "fabrikant_id": zod.number().nullish(),
+  "fabrikant_url": zod.string().nullish(),
   "testnorm": zod.string().nullish(),
   "testrapport_id": zod.number().nullish(),
   "testrapport": zod.union([zod.object({
@@ -1704,6 +1707,7 @@ export const SetLabelDocumentenResponse = zod.object({
   "naam": zod.string(),
   "fabrikant": zod.string().nullish(),
   "fabrikant_id": zod.number().nullish(),
+  "fabrikant_url": zod.string().nullish(),
   "testnorm": zod.string().nullish(),
   "testrapport_id": zod.number().nullish(),
   "testrapport": zod.union([zod.object({
