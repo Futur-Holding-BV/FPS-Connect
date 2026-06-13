@@ -255,3 +255,5 @@ export * from './voorzieningTypeInput';
 export * from './voorzieningTypeUpdate';
 export * from './voorzieningUpdate';
 export * from './wachtwoordWijzigen';
+export * from './werkgever';
+export * from './werkgeverInput';

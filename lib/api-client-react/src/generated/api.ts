@@ -218,7 +218,9 @@ import type {
   VoorzieningTypeInput,
   VoorzieningTypeUpdate,
   VoorzieningUpdate,
-  WachtwoordWijzigen
+  WachtwoordWijzigen,
+  Werkgever,
+  WerkgeverInput
 } from './api.schemas';
 
 import { customFetch } from '../custom-fetch';
@@ -14114,6 +14116,301 @@ export const useDeleteGebouwEmail = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getDeleteGebouwEmailMutationOptions(options));
+    }
+
+export const getListWerkgeversUrl = () => {
+
+
+
+
+  return `/api/werkgevers`
+}
+
+/**
+ * @summary Werkgevers (FPS-werkmaatschappijen) ophalen
+ */
+export const listWerkgevers = async ( options?: RequestInit): Promise<Werkgever[]> => {
+
+  return customFetch<Werkgever[]>(getListWerkgeversUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListWerkgeversQueryKey = () => {
+    return [
+    `/api/werkgevers`
+    ] as const;
+    }
+
+
+export const getListWerkgeversQueryOptions = <TData = Awaited<ReturnType<typeof listWerkgevers>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listWerkgevers>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListWerkgeversQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listWerkgevers>>> = ({ signal }) => listWerkgevers({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listWerkgevers>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListWerkgeversQueryResult = NonNullable<Awaited<ReturnType<typeof listWerkgevers>>>
+export type ListWerkgeversQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Werkgevers (FPS-werkmaatschappijen) ophalen
+ */
+
+export function useListWerkgevers<TData = Awaited<ReturnType<typeof listWerkgevers>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listWerkgevers>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListWerkgeversQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateWerkgeverUrl = () => {
+
+
+
+
+  return `/api/werkgevers`
+}
+
+/**
+ * @summary Werkgever aanmaken
+ */
+export const createWerkgever = async (werkgeverInput: WerkgeverInput, options?: RequestInit): Promise<Werkgever> => {
+
+  return customFetch<Werkgever>(getCreateWerkgeverUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(werkgeverInput)
+  }
+);}
+
+
+
+
+export const getCreateWerkgeverMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createWerkgever>>, TError,{data: BodyType<WerkgeverInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createWerkgever>>, TError,{data: BodyType<WerkgeverInput>}, TContext> => {
+
+const mutationKey = ['createWerkgever'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createWerkgever>>, {data: BodyType<WerkgeverInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createWerkgever(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateWerkgeverMutationResult = NonNullable<Awaited<ReturnType<typeof createWerkgever>>>
+    export type CreateWerkgeverMutationBody = BodyType<WerkgeverInput>
+    export type CreateWerkgeverMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Werkgever aanmaken
+ */
+export const useCreateWerkgever = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createWerkgever>>, TError,{data: BodyType<WerkgeverInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createWerkgever>>,
+        TError,
+        {data: BodyType<WerkgeverInput>},
+        TContext
+      > => {
+      return useMutation(getCreateWerkgeverMutationOptions(options));
+    }
+
+export const getGetWerkgeverUrl = (id: number,) => {
+
+
+
+
+  return `/api/werkgevers/${id}`
+}
+
+/**
+ * @summary Werkgever ophalen
+ */
+export const getWerkgever = async (id: number, options?: RequestInit): Promise<Werkgever> => {
+
+  return customFetch<Werkgever>(getGetWerkgeverUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetWerkgeverQueryKey = (id: number,) => {
+    return [
+    `/api/werkgevers/${id}`
+    ] as const;
+    }
+
+
+export const getGetWerkgeverQueryOptions = <TData = Awaited<ReturnType<typeof getWerkgever>>, TError = ErrorType<void>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getWerkgever>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetWerkgeverQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getWerkgever>>> = ({ signal }) => getWerkgever(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getWerkgever>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetWerkgeverQueryResult = NonNullable<Awaited<ReturnType<typeof getWerkgever>>>
+export type GetWerkgeverQueryError = ErrorType<void>
+
+
+/**
+ * @summary Werkgever ophalen
+ */
+
+export function useGetWerkgever<TData = Awaited<ReturnType<typeof getWerkgever>>, TError = ErrorType<void>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getWerkgever>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetWerkgeverQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getUpdateWerkgeverUrl = (id: number,) => {
+
+
+
+
+  return `/api/werkgevers/${id}`
+}
+
+/**
+ * @summary Werkgever bijwerken
+ */
+export const updateWerkgever = async (id: number,
+    werkgeverInput: WerkgeverInput, options?: RequestInit): Promise<Werkgever> => {
+
+  return customFetch<Werkgever>(getUpdateWerkgeverUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(werkgeverInput)
+  }
+);}
+
+
+
+
+export const getUpdateWerkgeverMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateWerkgever>>, TError,{id: number;data: BodyType<WerkgeverInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateWerkgever>>, TError,{id: number;data: BodyType<WerkgeverInput>}, TContext> => {
+
+const mutationKey = ['updateWerkgever'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateWerkgever>>, {id: number;data: BodyType<WerkgeverInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateWerkgever(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateWerkgeverMutationResult = NonNullable<Awaited<ReturnType<typeof updateWerkgever>>>
+    export type UpdateWerkgeverMutationBody = BodyType<WerkgeverInput>
+    export type UpdateWerkgeverMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Werkgever bijwerken
+ */
+export const useUpdateWerkgever = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateWerkgever>>, TError,{id: number;data: BodyType<WerkgeverInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateWerkgever>>,
+        TError,
+        {id: number;data: BodyType<WerkgeverInput>},
+        TContext
+      > => {
+      return useMutation(getUpdateWerkgeverMutationOptions(options));
     }
 
 export const getListFunctiesUrl = () => {

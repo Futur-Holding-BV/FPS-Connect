@@ -4788,6 +4788,87 @@ export const DeleteGebouwEmailResponse = zod.void()
 
 
 /**
+ * @summary Werkgevers (FPS-werkmaatschappijen) ophalen
+ */
+export const ListWerkgeversResponseItem = zod.object({
+  "id": zod.number(),
+  "naam": zod.string(),
+  "cao": zod.string().describe('Standaard-CAO voor deze werkgever (zie \/hrm\/cao-opties).'),
+  "logo_document_id": zod.number().nullish(),
+  "briefpapier_document_id": zod.number().nullish(),
+  "personeelsbeleid": zod.string().nullish(),
+  "actief": zod.boolean(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+export const ListWerkgeversResponse = zod.array(ListWerkgeversResponseItem)
+
+
+/**
+ * @summary Werkgever aanmaken
+ */
+export const CreateWerkgeverBody = zod.object({
+  "naam": zod.string(),
+  "cao": zod.string().optional(),
+  "logo_document_id": zod.number().nullish(),
+  "briefpapier_document_id": zod.number().nullish(),
+  "personeelsbeleid": zod.string().nullish(),
+  "actief": zod.boolean().optional()
+})
+
+export const CreateWerkgeverResponse = zod.void()
+
+
+/**
+ * @summary Werkgever ophalen
+ */
+export const GetWerkgeverParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetWerkgeverResponse = zod.object({
+  "id": zod.number(),
+  "naam": zod.string(),
+  "cao": zod.string().describe('Standaard-CAO voor deze werkgever (zie \/hrm\/cao-opties).'),
+  "logo_document_id": zod.number().nullish(),
+  "briefpapier_document_id": zod.number().nullish(),
+  "personeelsbeleid": zod.string().nullish(),
+  "actief": zod.boolean(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+
+
+/**
+ * @summary Werkgever bijwerken
+ */
+export const UpdateWerkgeverParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateWerkgeverBody = zod.object({
+  "naam": zod.string(),
+  "cao": zod.string().optional(),
+  "logo_document_id": zod.number().nullish(),
+  "briefpapier_document_id": zod.number().nullish(),
+  "personeelsbeleid": zod.string().nullish(),
+  "actief": zod.boolean().optional()
+})
+
+export const UpdateWerkgeverResponse = zod.object({
+  "id": zod.number(),
+  "naam": zod.string(),
+  "cao": zod.string().describe('Standaard-CAO voor deze werkgever (zie \/hrm\/cao-opties).'),
+  "logo_document_id": zod.number().nullish(),
+  "briefpapier_document_id": zod.number().nullish(),
+  "personeelsbeleid": zod.string().nullish(),
+  "actief": zod.boolean(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+
+
+/**
  * @summary Functiehuis ophalen
  */
 export const ListFunctiesResponseItem = zod.object({

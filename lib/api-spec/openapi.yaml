@@ -4138,6 +4138,82 @@ paths:
           description: Verwijderd
 
   # ── HRM / Personeel ─────────────────────────────────────────────────────
+  /werkgevers:
+    get:
+      operationId: listWerkgevers
+      tags: [personeel]
+      summary: Werkgevers (FPS-werkmaatschappijen) ophalen
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Werkgever"
+    post:
+      operationId: createWerkgever
+      tags: [personeel]
+      summary: Werkgever aanmaken
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WerkgeverInput"
+      responses:
+        "201":
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Werkgever"
+
+  /werkgevers/{id}:
+    get:
+      operationId: getWerkgever
+      tags: [personeel]
+      summary: Werkgever ophalen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Werkgever"
+        "404":
+          description: Niet gevonden
+    patch:
+      operationId: updateWerkgever
+      tags: [personeel]
+      summary: Werkgever bijwerken
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WerkgeverInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Werkgever"
+
   /functies:
     get:
       operationId: listFuncties
@@ -8839,6 +8915,47 @@ components:
           $ref: "#/components/schemas/SpotAiGekozenWaarden"
 
     # ── HRM / Personeel ───────────────────────────────────────────────────
+    Werkgever:
+      type: object
+      required: [id, naam, cao, actief, aangemaakt_op, bijgewerkt_op]
+      properties:
+        id:
+          type: integer
+        naam:
+          type: string
+        cao:
+          type: string
+          description: Standaard-CAO voor deze werkgever (zie /hrm/cao-opties).
+        logo_document_id:
+          type: ["integer", "null"]
+        briefpapier_document_id:
+          type: ["integer", "null"]
+        personeelsbeleid:
+          type: ["string", "null"]
+        actief:
+          type: boolean
+        aangemaakt_op:
+          type: string
+        bijgewerkt_op:
+          type: string
+
+    WerkgeverInput:
+      type: object
+      required: [naam]
+      properties:
+        naam:
+          type: string
+        cao:
+          type: string
+        logo_document_id:
+          type: ["integer", "null"]
+        briefpapier_document_id:
+          type: ["integer", "null"]
+        personeelsbeleid:
+          type: ["string", "null"]
+        actief:
+          type: boolean
+
     Functie:
       type: object
       required: [id, werkmaatschappij, naam, actief, aangemaakt_op, bijgewerkt_op]

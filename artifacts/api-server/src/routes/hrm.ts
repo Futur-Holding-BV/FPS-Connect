@@ -10,6 +10,7 @@
 import { Router } from "express";
 import {
   db,
+  werkgeversTable,
   functiesTable,
   medewerkersTable,
   opleidingenTable,
@@ -63,6 +64,121 @@ const CAO_OPTIES = [
   },
 ] as const;
 
+// ── Werkgevers (FPS-werkmaatschappijen als hoofdentiteit) ────────────────────
+// De werkgever is leidend voor CAO, briefpapier/logo en personeelsbeleid. Het
+// tekstveld `werkmaatschappij` op functies/medewerkers/verlofsoorten blijft als
+// legacy cache bestaan; bij elke schrijfactie leiden we hieruit de werkgever_id af.
+const mapWerkgever = (w: typeof werkgeversTable.$inferSelect) => ({
+  id: w.id,
+  naam: w.naam,
+  cao: w.cao,
+  logo_document_id: w.logoDocumentId,
+  briefpapier_document_id: w.briefpapierDocumentId,
+  personeelsbeleid: w.personeelsbeleid,
+  actief: w.actief,
+  aangemaakt_op: iso(w.aangemaaktOp),
+  bijgewerkt_op: iso(w.bijgewerktOp),
+});
+
+// Zoekt de werkgever_id bij een werkmaatschappij-naam. Retourneert null als de
+// naam leeg is of (nog) geen geregistreerde werkgever is.
+async function werkgeverIdVoor(werkmaatschappij: unknown): Promise<number | null> {
+  if (typeof werkmaatschappij !== "string" || !werkmaatschappij.trim()) return null;
+  const [w] = await db
+    .select({ id: werkgeversTable.id })
+    .from(werkgeversTable)
+    .where(eq(werkgeversTable.naam, werkmaatschappij.trim()));
+  return w?.id ?? null;
+}
+
+router.get("/werkgevers", lezen, async (req, res) => {
+  try {
+    const rijen = await db.select().from(werkgeversTable).orderBy(werkgeversTable.naam);
+    res.json(rijen.map(mapWerkgever));
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+router.post("/werkgevers", schrijven, async (req, res) => {
+  try {
+    const { naam, cao, logo_document_id, briefpapier_document_id, personeelsbeleid, actief } = req.body;
+    if (!naam || typeof naam !== "string" || !naam.trim()) {
+      return res.status(400).json({ error: "naam is verplicht" });
+    }
+    const [w] = await db
+      .insert(werkgeversTable)
+      .values({
+        naam: naam.trim(),
+        cao: cao || "Metaal & Techniek",
+        logoDocumentId: logo_document_id ?? null,
+        briefpapierDocumentId: briefpapier_document_id ?? null,
+        personeelsbeleid: personeelsbeleid ?? null,
+        actief: actief ?? true,
+      })
+      .returning();
+    res.status(201).json(mapWerkgever(w));
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+router.get("/werkgevers/:id", lezen, async (req, res) => {
+  try {
+    const [w] = await db.select().from(werkgeversTable).where(eq(werkgeversTable.id, parseId(req.params.id)));
+    if (!w) return res.status(404).json({ error: "Werkgever niet gevonden" });
+    res.json(mapWerkgever(w));
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+router.patch("/werkgevers/:id", schrijven, async (req, res) => {
+  try {
+    const id = parseId(req.params.id);
+    const { naam, cao, logo_document_id, briefpapier_document_id, personeelsbeleid, actief } = req.body;
+    const nieuweNaam = typeof naam === "string" && naam.trim() ? naam.trim() : undefined;
+
+    const w = await db.transaction(async (tx) => {
+      const [huidig] = await tx.select().from(werkgeversTable).where(eq(werkgeversTable.id, id));
+      if (!huidig) return null;
+
+      const [bijgewerkt] = await tx
+        .update(werkgeversTable)
+        .set({
+          naam: nieuweNaam,
+          cao,
+          logoDocumentId: logo_document_id !== undefined ? logo_document_id : undefined,
+          briefpapierDocumentId: briefpapier_document_id !== undefined ? briefpapier_document_id : undefined,
+          personeelsbeleid,
+          actief,
+          bijgewerktOp: new Date(),
+        })
+        .where(eq(werkgeversTable.id, id))
+        .returning();
+
+      // Bij hernoemen de legacy werkmaatschappij-cache op gekoppelde kinderen
+      // meeschrijven, zodat naam-afgeleide logica (werkgeverIdVoor) en weergave
+      // niet uit elkaar lopen.
+      if (nieuweNaam && nieuweNaam !== huidig.naam) {
+        await tx.update(functiesTable).set({ werkmaatschappij: nieuweNaam, bijgewerktOp: new Date() }).where(eq(functiesTable.werkgeverId, id));
+        await tx.update(medewerkersTable).set({ werkmaatschappij: nieuweNaam, bijgewerktOp: new Date() }).where(eq(medewerkersTable.werkgeverId, id));
+        await tx.update(verlofsoortenTable).set({ werkmaatschappij: nieuweNaam, bijgewerktOp: new Date() }).where(eq(verlofsoortenTable.werkgeverId, id));
+      }
+      return bijgewerkt;
+    });
+
+    if (!w) return res.status(404).json({ error: "Werkgever niet gevonden" });
+    res.json(mapWerkgever(w));
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
 // ── Functiehuis ─────────────────────────────────────────────────────────────
 const mapFunctie = (f: typeof functiesTable.$inferSelect) => ({
   id: f.id,
@@ -93,11 +209,13 @@ router.post("/functies", schrijven, async (req, res) => {
   try {
     const { naam, werkmaatschappij, omschrijving, taken, verantwoordelijkheden, competenties, opleidingsvereisten, doorgroeipad, actief } = req.body;
     if (!naam) return res.status(400).json({ error: "naam is verplicht" });
+    const wm = werkmaatschappij || "FPS Brandpreventie";
     const [f] = await db
       .insert(functiesTable)
       .values({
         naam,
-        werkmaatschappij: werkmaatschappij || "FPS Brandpreventie",
+        werkmaatschappij: wm,
+        werkgeverId: await werkgeverIdVoor(wm),
         omschrijving,
         taken,
         verantwoordelijkheden,
@@ -128,9 +246,10 @@ router.get("/functies/:id", lezen, async (req, res) => {
 router.patch("/functies/:id", schrijven, async (req, res) => {
   try {
     const { naam, werkmaatschappij, omschrijving, taken, verantwoordelijkheden, competenties, opleidingsvereisten, doorgroeipad, actief } = req.body;
+    const werkgeverId = werkmaatschappij !== undefined ? await werkgeverIdVoor(werkmaatschappij) : undefined;
     const [f] = await db
       .update(functiesTable)
-      .set({ naam, werkmaatschappij, omschrijving, taken, verantwoordelijkheden, competenties, opleidingsvereisten, doorgroeipad, actief, bijgewerktOp: new Date() })
+      .set({ naam, werkmaatschappij, werkgeverId, omschrijving, taken, verantwoordelijkheden, competenties, opleidingsvereisten, doorgroeipad, actief, bijgewerktOp: new Date() })
       .where(eq(functiesTable.id, parseId(req.params.id)))
       .returning();
     if (!f) return res.status(404).json({ error: "Functie niet gevonden" });
@@ -418,6 +537,7 @@ router.post("/medewerkers", schrijven, async (req, res) => {
   try {
     const { naam, gebruiker_id, email, telefoon, mobiel, werkmaatschappij, functie_id, cao, dienstverband, contracturen_per_week, in_dienst_sinds, uit_dienst_per, noodcontact_naam, noodcontact_telefoon, actief, opmerkingen } = req.body;
     if (!naam) return res.status(400).json({ error: "naam is verplicht" });
+    const wm = werkmaatschappij || "FPS Brandpreventie";
     const [m] = await db
       .insert(medewerkersTable)
       .values({
@@ -426,7 +546,8 @@ router.post("/medewerkers", schrijven, async (req, res) => {
         email,
         telefoon,
         mobiel,
-        werkmaatschappij: werkmaatschappij || "FPS Brandpreventie",
+        werkmaatschappij: wm,
+        werkgeverId: await werkgeverIdVoor(wm),
         functieId: functie_id ?? null,
         cao,
         dienstverband: dienstverband || "vast",
@@ -542,6 +663,7 @@ router.post("/medewerkers/onboarding", schrijven, async (req, res) => {
         telefoon,
         mobiel,
         werkmaatschappij,
+        werkgeverId: await werkgeverIdVoor(werkmaatschappij),
         functieId: parseId(functie_id),
         cao,
         dienstverband: dienstverband || "vast",
@@ -606,6 +728,7 @@ router.patch("/medewerkers/:id", schrijven, async (req, res) => {
         return res.status(400).json({ error: "Deze gebruiker is al als medewerker geregistreerd.", velden: ["gebruiker_id"] });
       }
     }
+    const werkgeverId = werkmaatschappij !== undefined ? await werkgeverIdVoor(werkmaatschappij) : undefined;
     const [m] = await db
       .update(medewerkersTable)
       .set({
@@ -615,6 +738,7 @@ router.patch("/medewerkers/:id", schrijven, async (req, res) => {
         telefoon,
         mobiel,
         werkmaatschappij,
+        werkgeverId,
         functieId: functie_id !== undefined ? functie_id : undefined,
         cao,
         dienstverband,
@@ -910,6 +1034,7 @@ router.post("/verlofsoorten", schrijven, async (req, res) => {
         categorie: categorie || "wettelijk",
         cao: cao ?? null,
         werkmaatschappij: werkmaatschappij ?? null,
+        werkgeverId: await werkgeverIdVoor(werkmaatschappij),
         betaald: betaald ?? true,
         collectief: collectief ?? false,
         opbouwUrenPerJaar: opbouw_uren_per_jaar ?? null,
@@ -937,6 +1062,7 @@ router.patch("/verlofsoorten/:id", schrijven, async (req, res) => {
         categorie,
         cao: cao ?? null,
         werkmaatschappij: werkmaatschappij ?? null,
+        werkgeverId: werkmaatschappij !== undefined ? await werkgeverIdVoor(werkmaatschappij) : undefined,
         betaald,
         collectief,
         opbouwUrenPerJaar: opbouw_uren_per_jaar ?? null,

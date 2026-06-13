@@ -2345,6 +2345,34 @@ export interface SpotAiVoorstelPersistInput {
   gekozen: SpotAiGekozenWaarden;
 }
 
+export interface Werkgever {
+  id: number;
+  naam: string;
+  /** Standaard-CAO voor deze werkgever (zie /hrm/cao-opties). */
+  cao: string;
+  /** @nullable */
+  logo_document_id?: number | null;
+  /** @nullable */
+  briefpapier_document_id?: number | null;
+  /** @nullable */
+  personeelsbeleid?: string | null;
+  actief: boolean;
+  aangemaakt_op: string;
+  bijgewerkt_op: string;
+}
+
+export interface WerkgeverInput {
+  naam: string;
+  cao?: string;
+  /** @nullable */
+  logo_document_id?: number | null;
+  /** @nullable */
+  briefpapier_document_id?: number | null;
+  /** @nullable */
+  personeelsbeleid?: string | null;
+  actief?: boolean;
+}
+
 export interface Functie {
   id: number;
   werkmaatschappij: string;

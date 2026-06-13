@@ -17,11 +17,15 @@ import {
   useListAlleVerlofAanvragen,
   useUpdateVerlofAanvraag,
   useListAlleBekwaamheden,
+  useListWerkgevers,
+  useCreateWerkgever,
+  useUpdateWerkgever,
   getGetHrmStatsQueryKey,
   getListMedewerkersQueryKey,
   getListFunctiesQueryKey,
   getListOpleidingenQueryKey,
   getListAlleVerlofAanvragenQueryKey,
+  getListWerkgeversQueryKey,
 } from "@workspace/api-client-react";
 import type {
   MedewerkerInput,
@@ -30,6 +34,8 @@ import type {
   OpleidingVoorstel,
   MedewerkerOnboardingInput,
   VerlofAanvraag,
+  Werkgever,
+  WerkgeverInput,
 } from "@workspace/api-client-react";
 import { useRol } from "@/context/rol-context";
 import { Card, CardContent } from "@/components/ui/card";
@@ -50,7 +56,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import {
   Users, Plus, UserPlus, Briefcase, GraduationCap, CalendarClock, AlertTriangle,
-  Award, Check, X, ChevronRight,
+  Award, Check, X, ChevronRight, Building2, Pencil,
 } from "lucide-react";
 import { WERKMAATSCHAPPIJEN, caoVoorWerkmaatschappij } from "@/lib/werkmaatschappijen";
 
@@ -113,12 +119,15 @@ export default function PersoneelPagina() {
   const { data: gebruikers } = useListToewijsbareGebruikers();
   const { data: openAanvragen } = useListAlleVerlofAanvragen({ status: "aangevraagd" });
   const { data: alleBekwaamheden } = useListAlleBekwaamheden();
+  const { data: werkgevers } = useListWerkgevers();
 
   const maakMedewerker = useCreateMedewerker();
   const onboard = useOnboardMedewerker();
   const maakFunctie = useCreateFunctie();
   const maakOpleiding = useCreateOpleiding();
   const beoordeelMutatie = useUpdateVerlofAanvraag();
+  const maakWerkgever = useCreateWerkgever();
+  const wijzigWerkgever = useUpdateWerkgever();
 
   const gekoppeldeIds = new Set(
     (medewerkers ?? []).map((m) => m.gebruiker_id).filter((x): x is number => x != null),
@@ -165,6 +174,14 @@ export default function PersoneelPagina() {
   const [onboardOpen, setOnboardOpen] = useState(false);
   const [functieOpen, setFunctieOpen] = useState(false);
   const [opleidingOpen, setOpleidingOpen] = useState(false);
+  const [werkgeverOpen, setWerkgeverOpen] = useState(false);
+  const [werkgeverEditId, setWerkgeverEditId] = useState<number | null>(null);
+  const [werkgeverForm, setWerkgeverForm] = useState<WerkgeverInput>({
+    naam: "",
+    cao: "",
+    personeelsbeleid: null,
+    actief: true,
+  });
 
   const [medewerkerForm, setMedewerkerForm] = useState<MedewerkerInput>({
     naam: "",
@@ -264,6 +281,47 @@ export default function PersoneelPagina() {
       toast({ title: "Opleiding toegevoegd" });
       setOpleidingForm({ naam: "", categorie: "vakopleiding", soort: "cursus" });
       setOpleidingOpen(false);
+    } catch {
+      toast({ title: "Opslaan mislukt", variant: "destructive" });
+    }
+  }
+
+  function startWerkgeverNieuw() {
+    setWerkgeverEditId(null);
+    setWerkgeverForm({ naam: "", cao: "", personeelsbeleid: null, actief: true });
+    setWerkgeverOpen(true);
+  }
+
+  function startWerkgeverBewerken(w: Werkgever) {
+    setWerkgeverEditId(w.id);
+    setWerkgeverForm({
+      naam: w.naam,
+      cao: w.cao,
+      personeelsbeleid: w.personeelsbeleid ?? null,
+      actief: w.actief,
+    });
+    setWerkgeverOpen(true);
+  }
+
+  async function opslaanWerkgever() {
+    if (!werkgeverForm.naam.trim()) {
+      toast({ title: "Naam is verplicht", variant: "destructive" });
+      return;
+    }
+    if (!werkgeverForm.cao) {
+      toast({ title: "CAO is verplicht", variant: "destructive" });
+      return;
+    }
+    const data: WerkgeverInput = { ...werkgeverForm, naam: werkgeverForm.naam.trim() };
+    try {
+      if (werkgeverEditId != null) {
+        await wijzigWerkgever.mutateAsync({ id: werkgeverEditId, data });
+      } else {
+        await maakWerkgever.mutateAsync({ data });
+      }
+      await queryClient.invalidateQueries({ queryKey: getListWerkgeversQueryKey() });
+      toast({ title: werkgeverEditId != null ? "Werkgever bijgewerkt" : "Werkgever toegevoegd" });
+      setWerkgeverOpen(false);
     } catch {
       toast({ title: "Opslaan mislukt", variant: "destructive" });
     }
@@ -391,6 +449,7 @@ export default function PersoneelPagina() {
       <Tabs defaultValue="medewerkers">
         <TabsList>
           <TabsTrigger value="medewerkers">Medewerkers</TabsTrigger>
+          <TabsTrigger value="werkgevers">Werkgevers</TabsTrigger>
           <TabsTrigger value="functies">Functiehuis</TabsTrigger>
           <TabsTrigger value="opleidingen">Opleidingen</TabsTrigger>
           <TabsTrigger value="bekwaamheden">Bekwaamheden</TabsTrigger>
@@ -477,6 +536,52 @@ export default function PersoneelPagina() {
                     </CardContent>
                   </Card>
                 </Link>
+              ))}
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="werkgevers" className="space-y-4">
+          <div className="flex items-center justify-between">
+            <p className="text-xs text-muted-foreground">
+              Werkgevers (werkmaatschappijen) binnen de FPS Groep. Medewerkers, functies en
+              verlofsoorten worden aan een werkgever gekoppeld.
+            </p>
+            {magSchrijven && (
+              <Button onClick={startWerkgeverNieuw}><Plus className="h-4 w-4" /> Nieuwe werkgever</Button>
+            )}
+          </div>
+          {(werkgevers ?? []).length === 0 ? (
+            <Card><CardContent className="py-12 text-center text-muted-foreground">
+              <Building2 className="h-10 w-10 mx-auto mb-3 opacity-40" />
+              <p>Nog geen werkgevers.</p>
+            </CardContent></Card>
+          ) : (
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {(werkgevers ?? []).map((w) => (
+                <Card key={w.id}>
+                  <CardContent className="p-4 space-y-2">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <div className="font-semibold truncate">{w.naam}</div>
+                        {w.cao && <div className="text-xs text-muted-foreground">CAO: {w.cao}</div>}
+                      </div>
+                      <Badge variant={w.actief ? "outline" : "secondary"} className={w.actief ? "border-emerald-200 text-emerald-700" : ""}>
+                        {w.actief ? "actief" : "inactief"}
+                      </Badge>
+                    </div>
+                    {w.personeelsbeleid && (
+                      <p className="text-xs text-muted-foreground line-clamp-3">{w.personeelsbeleid}</p>
+                    )}
+                    {magSchrijven && (
+                      <div className="flex justify-end pt-1">
+                        <Button size="sm" variant="outline" onClick={() => startWerkgeverBewerken(w)}>
+                          <Pencil className="h-4 w-4" /> Bewerken
+                        </Button>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
               ))}
             </div>
           )}
@@ -1158,6 +1263,58 @@ export default function PersoneelPagina() {
             <Button variant="outline" onClick={() => setOpleidingOpen(false)}>Annuleren</Button>
             <Button onClick={opslaanOpleiding} disabled={maakOpleiding.isPending}>
               {maakOpleiding.isPending ? "Bezig…" : "Opslaan"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Werkgever toevoegen / bewerken */}
+      <Dialog open={werkgeverOpen} onOpenChange={setWerkgeverOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{werkgeverEditId != null ? "Werkgever bewerken" : "Nieuwe werkgever"}</DialogTitle>
+            <DialogDescription>
+              Een werkgever is een werkmaatschappij binnen de FPS Groep met een eigen CAO en
+              personeelsbeleid.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-1.5">
+              <Label>Naam *</Label>
+              <Input value={werkgeverForm.naam} onChange={(e) => setWerkgeverForm({ ...werkgeverForm, naam: e.target.value })} />
+            </div>
+            <div className="space-y-1.5">
+              <Label>CAO *</Label>
+              <Select
+                value={werkgeverForm.cao || undefined}
+                onValueChange={(v) => setWerkgeverForm({ ...werkgeverForm, cao: v })}
+              >
+                <SelectTrigger><SelectValue placeholder="Kies CAO" /></SelectTrigger>
+                <SelectContent>
+                  {(caoOpties ?? []).map((c) => <SelectItem key={c.naam} value={c.naam}>{c.naam}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Personeelsbeleid</Label>
+              <Textarea
+                rows={3}
+                value={werkgeverForm.personeelsbeleid ?? ""}
+                onChange={(e) => setWerkgeverForm({ ...werkgeverForm, personeelsbeleid: e.target.value || null })}
+              />
+            </div>
+            <label className="flex items-center gap-2 text-sm">
+              <Checkbox
+                checked={werkgeverForm.actief ?? true}
+                onCheckedChange={(c) => setWerkgeverForm({ ...werkgeverForm, actief: c === true })}
+              />
+              Actief
+            </label>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setWerkgeverOpen(false)}>Annuleren</Button>
+            <Button onClick={opslaanWerkgever} disabled={maakWerkgever.isPending || wijzigWerkgever.isPending}>
+              {maakWerkgever.isPending || wijzigWerkgever.isPending ? "Bezig…" : "Opslaan"}
             </Button>
           </DialogFooter>
         </DialogContent>

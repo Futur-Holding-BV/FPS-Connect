@@ -11,12 +11,30 @@ import { z } from "zod/v4";
 import { gebruikersTable } from "./gebruikers";
 import { documentenTable } from "./documenten";
 
+// Werkgever — hoofdentiteit binnen de FPS Groep. Elke werkmaatschappij is een
+// eigen werkgever met eigen CAO, huisstijl (logo/briefpapier), personeelsbeleid,
+// contractsjablonen en ondertekenaars. medewerkers/functies/verlofsoorten
+// verwijzen hiernaar via werkgever_id; het bestaande tekstveld werkmaatschappij
+// blijft als legacy/weergave-cache bestaan tot alle aanroepers zijn omgezet.
+export const werkgeversTable = pgTable("werkgevers", {
+  id: serial("id").primaryKey(),
+  naam: text("naam").notNull().unique(),
+  cao: text("cao").notNull().default("Metaal & Techniek"),
+  logoDocumentId: integer("logo_document_id").references(() => documentenTable.id, { onDelete: "set null" }),
+  briefpapierDocumentId: integer("briefpapier_document_id").references(() => documentenTable.id, { onDelete: "set null" }),
+  personeelsbeleid: text("personeelsbeleid"),
+  actief: boolean("actief").notNull().default(true),
+  aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
+  bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
+});
+
 // Functiehuis — per werkmaatschappij. Taken, verantwoordelijkheden, competenties,
 // opleidingsvereisten en doorgroeipad. Staat los van rol/bevoegdheden: de functie
 // beschrijft het werk, de bevoegdheden-matrix bepaalt de toegang.
 export const functiesTable = pgTable("functies", {
   id: serial("id").primaryKey(),
   werkmaatschappij: text("werkmaatschappij").notNull().default("FPS Brandpreventie"),
+  werkgeverId: integer("werkgever_id").references(() => werkgeversTable.id, { onDelete: "set null" }),
   naam: text("naam").notNull(),
   omschrijving: text("omschrijving"),
   taken: text("taken"),
@@ -39,6 +57,7 @@ export const medewerkersTable = pgTable("medewerkers", {
   telefoon: text("telefoon"),
   mobiel: text("mobiel"),
   werkmaatschappij: text("werkmaatschappij").notNull().default("FPS Brandpreventie"),
+  werkgeverId: integer("werkgever_id").references(() => werkgeversTable.id, { onDelete: "set null" }),
   functieId: integer("functie_id").references(() => functiesTable.id, { onDelete: "set null" }),
   cao: text("cao"),
   dienstverband: text("dienstverband").notNull().default("vast"),
@@ -133,6 +152,7 @@ export const verlofsoortenTable = pgTable("verlofsoorten", {
   categorie: text("categorie").notNull().default("wettelijk"),
   cao: text("cao"),
   werkmaatschappij: text("werkmaatschappij"),
+  werkgeverId: integer("werkgever_id").references(() => werkgeversTable.id, { onDelete: "set null" }),
   betaald: boolean("betaald").notNull().default(true),
   collectief: boolean("collectief").notNull().default(false),
   opbouwUrenPerJaar: real("opbouw_uren_per_jaar"),
@@ -177,6 +197,7 @@ export const verlofAanvragenTable = pgTable("verlofaanvragen", {
   bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
 });
 
+export const insertWerkgeverSchema = createInsertSchema(werkgeversTable).omit({ id: true, aangemaaktOp: true, bijgewerktOp: true });
 export const insertFunctieSchema = createInsertSchema(functiesTable).omit({ id: true, aangemaaktOp: true, bijgewerktOp: true });
 export const insertMedewerkerSchema = createInsertSchema(medewerkersTable).omit({ id: true, aangemaaktOp: true, bijgewerktOp: true });
 export const insertOpleidingSchema = createInsertSchema(opleidingenTable).omit({ id: true, aangemaaktOp: true, bijgewerktOp: true });
@@ -187,6 +208,7 @@ export const insertVerlofsoortSchema = createInsertSchema(verlofsoortenTable).om
 export const insertVerlofSaldoSchema = createInsertSchema(verlofSaldiTable).omit({ id: true, aangemaaktOp: true, bijgewerktOp: true });
 export const insertVerlofAanvraagSchema = createInsertSchema(verlofAanvragenTable).omit({ id: true, aangemaaktOp: true, bijgewerktOp: true });
 
+export type InsertWerkgever = z.infer<typeof insertWerkgeverSchema>;
 export type InsertFunctie = z.infer<typeof insertFunctieSchema>;
 export type InsertMedewerker = z.infer<typeof insertMedewerkerSchema>;
 export type InsertOpleiding = z.infer<typeof insertOpleidingSchema>;
@@ -197,6 +219,7 @@ export type InsertVerlofsoort = z.infer<typeof insertVerlofsoortSchema>;
 export type InsertVerlofSaldo = z.infer<typeof insertVerlofSaldoSchema>;
 export type InsertVerlofAanvraag = z.infer<typeof insertVerlofAanvraagSchema>;
 
+export type Werkgever = typeof werkgeversTable.$inferSelect;
 export type Functie = typeof functiesTable.$inferSelect;
 export type Medewerker = typeof medewerkersTable.$inferSelect;
 export type Opleiding = typeof opleidingenTable.$inferSelect;
