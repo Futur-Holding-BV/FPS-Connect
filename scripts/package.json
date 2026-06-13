@@ -8,12 +8,15 @@
     "security-scan": "tsx ./src/security-scan.ts",
     "seed-applicaties": "tsx ./src/seed-applicaties.ts",
     "migreer-bevoegdheden": "tsx ./src/migreer-bevoegdheden.ts",
+    "e2e-monteur-testaccount": "tsx ./src/e2e-monteur-testaccount.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
     "@workspace/db": "workspace:*",
     "@workspace/permissies": "workspace:*",
-    "drizzle-orm": "catalog:"
+    "bcryptjs": "^3.0.3",
+    "drizzle-orm": "catalog:",
+    "otplib": "^12.0.1"
   },
   "devDependencies": {
     "@types/node": "catalog:",
