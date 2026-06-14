@@ -39,3 +39,11 @@ The "do you want to truncate <table>?" prompt that aborts post-merge almost alwa
 ## Benign "[✓] Changes applied" churn — do not chase, do not --force
 
 After all prompts are resolved, `push` may still print "[✓] Changes applied" on every run without prompting. Run `drizzle-kit push --verbose` to see the SQL: it's harmless idempotent churn — a Postgres 63-char identifier truncation on a long FK name (drizzle drops `..._gebruikers_id_f` and re-adds `..._gebruikers_id_fk`, which Postgres re-truncates, forever), plus repeated `ALTER COLUMN ... SET DEFAULT`. These are non-destructive and post-merge still exits success. Leave them. **Never** switch post-merge to `push --force` to silence it — `--force` would also apply destructive diffs (drops/truncates) without asking.
+
+## Now auto-reconciled: `_key`→`_unique` rename runs before push
+
+`scripts/post-merge.sh` now runs `pnpm --filter @workspace/db run reconcile` (a small idempotent node script, `lib/db/scripts/reconcile-unique.mjs`) **before** push. It renames every `public` `%_key` unique constraint (except `session`) to drizzle's `<table>_<cols>_unique` convention, so the name-mismatch prompt no longer recurs by itself. It is best-effort (exits 0 on error) so it never blocks push.
+
+**Why:** the `_key`/`_unique` mismatch is the dominant recurring cause of the non-TTY abort; automating the rename removes the whack-a-mole without the dangerous `--force`.
+
+**Still manual:** adding a NEW `.unique()` to an existing, populated column that has *no* constraint yet — reconcile only renames constraints that already exist. That case still needs a dup-check + direct `ALTER TABLE … ADD CONSTRAINT …_unique UNIQUE(...)`. Also watch 63-char identifier truncation on very long/composite unique names: it can leave a residual mismatch (monitor if push prompts again; never `--force`).
