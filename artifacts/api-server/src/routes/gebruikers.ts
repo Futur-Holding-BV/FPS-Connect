@@ -432,6 +432,7 @@ router.post("/gebruikers/:id/uitnodigen", alleenBeheerder, async (req, res) => {
         naarEmail: bestaande.email,
         naarNaam: bestaande.naam,
         activatieLink,
+        verstuurdDoorId: req.session.userId ?? null,
       });
     } catch (mailErr) {
       req.log.error(mailErr, "Uitnodigingsmail mislukt");
@@ -483,6 +484,7 @@ router.post("/gebruikers/:id/uitnodigen/opnieuw", alleenBeheerder, async (req, r
         naarNaam: bestaande.naam,
         activatieLink,
         isOpnieuw: true,
+        verstuurdDoorId: req.session.userId ?? null,
       });
     } catch (mailErr) {
       req.log.error(mailErr, "Uitnodigingsmail (opnieuw) mislukt");

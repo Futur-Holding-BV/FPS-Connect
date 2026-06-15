@@ -33,6 +33,8 @@ tags:
     description: Project- en gebouwdossiers met documentstatussen en archivering
   - name: offertes
     description: Offertestructuur, begroting en uitgangspunten (Offerte Intelligence)
+  - name: mail
+    description: Mailkoppeling (Microsoft 365) — status, verbindingstest, testmail en logboek
 
 paths:
   /healthz:
@@ -5628,8 +5630,133 @@ paths:
         "204":
           description: Verwijderd
 
+  # ── MAIL ──────────────────────────────────────────────────────────────────
+  /mail/status:
+    get:
+      operationId: getMailStatus
+      tags: [mail]
+      summary: Configuratiestatus van de mailkoppeling
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MailStatus"
+
+  /mail/verbindingstest:
+    post:
+      operationId: testMailVerbinding
+      tags: [mail]
+      summary: Verbinding met Microsoft 365 testen
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MailActieResultaat"
+
+  /mail/testmail:
+    post:
+      operationId: sendTestmail
+      tags: [mail]
+      summary: Testbericht versturen
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MailTestmailInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MailActieResultaat"
+        "400":
+          description: Ongeldig e-mailadres
+
+  /mail/logboek:
+    get:
+      operationId: getMailLogboek
+      tags: [mail]
+      summary: Laatste 100 verzendpogingen
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MailLogregel"
+
 components:
   schemas:
+    MailStatus:
+      type: object
+      required: [geconfigureerd, afzender, postbus, ontbrekende_secrets]
+      properties:
+        geconfigureerd:
+          type: boolean
+        afzender:
+          type: string
+        postbus:
+          type: string
+        ontbrekende_secrets:
+          type: array
+          items:
+            type: string
+    MailActieResultaat:
+      type: object
+      required: [ok]
+      properties:
+        ok:
+          type: boolean
+        melding:
+          type: string
+        fout_categorie:
+          type: string
+          nullable: true
+        detail:
+          type: string
+          nullable: true
+    MailTestmailInput:
+      type: object
+      required: [naar_email]
+      properties:
+        naar_email:
+          type: string
+    MailLogregel:
+      type: object
+      required: [id, naar_email, onderwerp, soort, status, aangemaakt_op]
+      properties:
+        id:
+          type: integer
+        naar_email:
+          type: string
+        naar_naam:
+          type: string
+          nullable: true
+        onderwerp:
+          type: string
+        soort:
+          type: string
+        status:
+          type: string
+        fout_categorie:
+          type: string
+          nullable: true
+        foutdetail:
+          type: string
+          nullable: true
+        verstuurd_door_id:
+          type: integer
+          nullable: true
+        aangemaakt_op:
+          type: string
     HealthStatus:
       type: object
       required: [status]

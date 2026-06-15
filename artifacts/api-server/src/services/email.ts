@@ -1,14 +1,107 @@
 import { logger } from "../lib/logger";
+import { db, mailLogboekTable } from "@workspace/db";
 
+// ── Configuratie ────────────────────────────────────────────────────────────
+// Microsoft 365 via Azure App Registration (OAuth2 client-credentials, Graph
+// sendMail). Geen gebruikerswachtwoorden. De Azure-gegevens staan uitsluitend
+// in Replit Secrets en worden nooit gelogd of teruggegeven.
 const TENANT_ID = process.env.AZURE_TENANT_ID;
 const CLIENT_ID = process.env.AZURE_CLIENT_ID;
 const CLIENT_SECRET = process.env.AZURE_CLIENT_SECRET;
-const MAIL_FROM = process.env.MAIL_FROM ?? "noreply@fpsbrandpreventie.nl";
 
-function isGeconfigureerd(): boolean {
+// Zichtbare afzender — alle uitgaande mail komt hiervandaan.
+const MAIL_FROM = process.env.MAIL_FROM ?? "noreply@fpsbrandpreventie.nl";
+// De feitelijke gedeelde postbus waartegen via Graph wordt verzonden. De
+// noreply-afzender is een alias van deze postbus.
+const MAIL_MAILBOX = process.env.MAIL_MAILBOX ?? "app@fpsbrandpreventie.nl";
+
+const AFZENDER_NAAM = "FPS Brandpreventie";
+
+// ── Foutmodel ────────────────────────────────────────────────────────────────
+export type MailFoutCategorie =
+  | "niet_geconfigureerd"
+  | "token_verlopen"
+  | "mailbox_onbereikbaar"
+  | "rate_limit"
+  | "verzendfout";
+
+export const MAIL_FOUT_OMSCHRIJVING: Record<MailFoutCategorie, string> = {
+  niet_geconfigureerd:
+    "De mailkoppeling is niet geconfigureerd (Azure-gegevens ontbreken).",
+  token_verlopen:
+    "Aanmelden bij Microsoft 365 is mislukt — token verlopen of ongeldige gegevens.",
+  mailbox_onbereikbaar:
+    "De postbus is niet bereikbaar of bestaat niet in Microsoft 365.",
+  rate_limit:
+    "Microsoft 365 heeft het verzoek tijdelijk geblokkeerd (rate limit).",
+  verzendfout: "Versturen via Microsoft 365 is mislukt (SMTP/Graph-fout).",
+};
+
+export class MailFout extends Error {
+  categorie: MailFoutCategorie;
+  detail: string | null;
+  constructor(categorie: MailFoutCategorie, detail?: string | null) {
+    super(MAIL_FOUT_OMSCHRIJVING[categorie]);
+    this.name = "MailFout";
+    this.categorie = categorie;
+    this.detail = detail ?? null;
+  }
+}
+
+export type MailSoort = "test" | "uitnodiging" | "wachtwoord_reset";
+
+// ── Configuratie-helpers ─────────────────────────────────────────────────────
+export function isGeconfigureerd(): boolean {
   return !!(TENANT_ID && CLIENT_ID && CLIENT_SECRET);
 }
 
+export function ontbrekendeConfiguratie(): string[] {
+  const ontbreekt: string[] = [];
+  if (!TENANT_ID) ontbreekt.push("AZURE_TENANT_ID");
+  if (!CLIENT_ID) ontbreekt.push("AZURE_CLIENT_ID");
+  if (!CLIENT_SECRET) ontbreekt.push("AZURE_CLIENT_SECRET");
+  return ontbreekt;
+}
+
+export function mailConfiguratie() {
+  return {
+    geconfigureerd: isGeconfigureerd(),
+    afzender: MAIL_FROM,
+    postbus: MAIL_MAILBOX,
+    ontbrekend: ontbrekendeConfiguratie(),
+  };
+}
+
+function knip(tekst: string, max = 500): string {
+  return tekst.length > max ? `${tekst.slice(0, max)}…` : tekst;
+}
+
+// Defensief: Microsoft echoot normaliter geen geheimen terug, maar upstream
+// foutteksten worden opgeslagen (mail_logboek), teruggegeven en gelogd. Daarom
+// strippen we hier preventief alles wat op een token/secret lijkt, zodat er
+// nooit een geheim in de DB, een API-respons of de logs belandt.
+const GEVOELIGE_PATRONEN: RegExp[] = [
+  // JWT-achtige strings (header.payload.signature)
+  /eyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}/g,
+  // "Bearer <token>"
+  /\bBearer\s+[A-Za-z0-9._\-]+/gi,
+  // key=value vormen voor bekende geheime velden
+  /\b(client_secret|access_token|refresh_token|id_token|password|assertion|code)\s*[=:]\s*[^&\s"']+/gi,
+];
+
+function veiligFoutdetail(tekst: string | null | undefined, max = 500): string | null {
+  if (!tekst) return null;
+  let schoon = tekst;
+  for (const patroon of GEVOELIGE_PATRONEN) schoon = schoon.replace(patroon, "$1[verborgen]");
+  // Tweede pass voor patronen zonder capture-groep (JWT/Bearer): vervang restanten.
+  schoon = schoon
+    .replace(/eyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}/g, "[verborgen]")
+    .replace(/\bBearer\s+[A-Za-z0-9._\-]+/gi, "Bearer [verborgen]");
+  const bijgesneden = knip(schoon.trim(), max);
+  return bijgesneden.length > 0 ? bijgesneden : null;
+}
+
+// ── Microsoft Graph ──────────────────────────────────────────────────────────
 async function haalAccessToken(): Promise<string> {
   const url = `https://login.microsoftonline.com/${TENANT_ID}/oauth2/v2.0/token`;
   const body = new URLSearchParams({
@@ -17,47 +110,246 @@ async function haalAccessToken(): Promise<string> {
     client_secret: CLIENT_SECRET!,
     scope: "https://graph.microsoft.com/.default",
   });
-  const res = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: body.toString(),
-  });
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: body.toString(),
+    });
+  } catch {
+    throw new MailFout("token_verlopen", "Microsoft 365 niet bereikbaar voor aanmelden");
+  }
   if (!res.ok) {
-    const tekst = await res.text();
-    throw new Error(`Azure token fout (${res.status}): ${tekst}`);
+    let detail: string | null = `HTTP ${res.status}`;
+    try {
+      const data = (await res.json()) as { error?: string; error_description?: string };
+      const samengesteld = veiligFoutdetail(
+        `${data.error ?? res.status}: ${data.error_description ?? ""}`.trim(),
+      );
+      if (samengesteld) detail = samengesteld;
+    } catch {
+      /* responsbody niet leesbaar */
+    }
+    if (res.status === 429) throw new MailFout("rate_limit", detail);
+    if (res.status >= 500) throw new MailFout("verzendfout", detail);
+    throw new MailFout("token_verlopen", detail);
   }
   const data = (await res.json()) as { access_token: string };
   return data.access_token;
 }
 
-export async function stuurUitnodigingsmail(opties: {
-  naarEmail: string;
-  naarNaam: string;
-  activatieLink: string;
-  isOpnieuw?: boolean;
-}): Promise<boolean> {
-  const { naarEmail, naarNaam, activatieLink, isOpnieuw = false } = opties;
-
-  if (!isGeconfigureerd()) {
-    logger.warn(
-      { email: naarEmail },
-      "E-mailservice niet geconfigureerd — uitnodiging niet verstuurd " +
-        "(stel AZURE_TENANT_ID, AZURE_CLIENT_ID, AZURE_CLIENT_SECRET en MAIL_FROM in)"
-    );
-    return false;
+function classificeerGraphFout(
+  status: number,
+  code: string | null,
+  bericht: string | null,
+): MailFout {
+  const c = (code ?? "").toLowerCase();
+  const veiligBericht = veiligFoutdetail(bericht);
+  if (status === 429 || c.includes("throttl")) {
+    return new MailFout("rate_limit", veiligBericht);
   }
+  if (status === 401) {
+    return new MailFout("token_verlopen", veiligBericht);
+  }
+  if (
+    status === 404 ||
+    c.includes("mailboxnotenabled") ||
+    c.includes("invaliduser") ||
+    c.includes("resourcenotfound") ||
+    c.includes("itemnotfound")
+  ) {
+    return new MailFout("mailbox_onbereikbaar", veiligBericht);
+  }
+  return new MailFout(
+    "verzendfout",
+    veiligBericht ? knip(`HTTP ${status}: ${veiligBericht}`) : `HTTP ${status}`,
+  );
+}
 
-  const onderwerp = isOpnieuw
-    ? "Uw uitnodiging voor FPS Brandpreventie (herinnering)"
-    : "U bent uitgenodigd voor FPS Brandpreventie";
+async function leesGraphFout(res: Response): Promise<MailFout> {
+  let code: string | null = null;
+  let bericht: string | null = null;
+  try {
+    const data = (await res.json()) as { error?: { code?: string; message?: string } };
+    code = data.error?.code ?? null;
+    bericht = data.error?.message ?? null;
+  } catch {
+    /* responsbody niet leesbaar */
+  }
+  return classificeerGraphFout(res.status, code, bericht);
+}
 
-  const htmlInhoud = `
+async function verstuurViaGraph(opties: {
+  naarEmail: string;
+  naarNaam?: string | null;
+  onderwerp: string;
+  html: string;
+}): Promise<void> {
+  const token = await haalAccessToken();
+  const graphUrl = `https://graph.microsoft.com/v1.0/users/${encodeURIComponent(
+    MAIL_MAILBOX,
+  )}/sendMail`;
+  const bericht = {
+    message: {
+      subject: opties.onderwerp,
+      body: { contentType: "HTML", content: opties.html },
+      toRecipients: [
+        { emailAddress: { address: opties.naarEmail, name: opties.naarNaam ?? opties.naarEmail } },
+      ],
+      from: { emailAddress: { address: MAIL_FROM, name: AFZENDER_NAAM } },
+    },
+    saveToSentItems: false,
+  };
+  let res: Response;
+  try {
+    res = await fetch(graphUrl, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify(bericht),
+    });
+  } catch {
+    throw new MailFout("verzendfout", "Microsoft Graph niet bereikbaar");
+  }
+  if (!res.ok) {
+    throw await leesGraphFout(res);
+  }
+}
+
+/**
+ * Controleert de volledige keten: aanmelden (token) én postbus bereikbaar.
+ * Gooit een MailFout met de juiste categorie als iets faalt.
+ */
+export async function testVerbinding(): Promise<void> {
+  if (!isGeconfigureerd()) {
+    throw new MailFout("niet_geconfigureerd");
+  }
+  const token = await haalAccessToken();
+  const url = `https://graph.microsoft.com/v1.0/users/${encodeURIComponent(
+    MAIL_MAILBOX,
+  )}?$select=id,mail,userPrincipalName`;
+  let res: Response;
+  try {
+    res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+  } catch {
+    throw new MailFout("mailbox_onbereikbaar", "Microsoft Graph niet bereikbaar");
+  }
+  if (!res.ok) {
+    throw await leesGraphFout(res);
+  }
+}
+
+// ── Logboek ──────────────────────────────────────────────────────────────────
+async function logMail(opties: {
+  naarEmail: string;
+  naarNaam?: string | null;
+  onderwerp: string;
+  soort: MailSoort;
+  status: "verzonden" | "mislukt";
+  foutCategorie?: MailFoutCategorie | null;
+  foutdetail?: string | null;
+  verstuurdDoorId?: number | null;
+}): Promise<void> {
+  try {
+    await db.insert(mailLogboekTable).values({
+      naarEmail: opties.naarEmail,
+      naarNaam: opties.naarNaam ?? null,
+      onderwerp: opties.onderwerp,
+      soort: opties.soort,
+      status: opties.status,
+      foutCategorie: opties.foutCategorie ?? null,
+      foutdetail: opties.foutdetail ?? null,
+      verstuurdDoorId: opties.verstuurdDoorId ?? null,
+    });
+  } catch (err) {
+    logger.error(err, "Mail-logboek schrijven mislukt");
+  }
+}
+
+/**
+ * Kern: verstuurt één bericht via Graph en legt de uitkomst (verzonden of
+ * mislukt + foutcategorie) vast in het mail-logboek. Gooit een MailFout bij
+ * mislukken zodat de aanroeper kan reageren.
+ */
+export async function verstuurMail(opties: {
+  naarEmail: string;
+  naarNaam?: string | null;
+  onderwerp: string;
+  html: string;
+  soort: MailSoort;
+  verstuurdDoorId?: number | null;
+}): Promise<void> {
+  const basis = {
+    naarEmail: opties.naarEmail,
+    naarNaam: opties.naarNaam ?? null,
+    onderwerp: opties.onderwerp,
+    soort: opties.soort,
+    verstuurdDoorId: opties.verstuurdDoorId ?? null,
+  };
+  if (!isGeconfigureerd()) {
+    await logMail({ ...basis, status: "mislukt", foutCategorie: "niet_geconfigureerd" });
+    throw new MailFout("niet_geconfigureerd");
+  }
+  try {
+    await verstuurViaGraph(opties);
+  } catch (err) {
+    const fout =
+      err instanceof MailFout
+        ? err
+        : new MailFout("verzendfout", err instanceof Error ? veiligFoutdetail(err.message) : null);
+    await logMail({
+      ...basis,
+      status: "mislukt",
+      foutCategorie: fout.categorie,
+      foutdetail: fout.detail,
+    });
+    throw fout;
+  }
+  await logMail({ ...basis, status: "verzonden" });
+  logger.info({ naar: opties.naarEmail, soort: opties.soort }, "Mail verstuurd");
+}
+
+// ── Berichtsjablonen ─────────────────────────────────────────────────────────
+function mailShell(opties: {
+  titel: string;
+  kopje: string;
+  paragrafen: string[];
+  knop?: { label: string; link: string };
+  voettekst?: string;
+}): string {
+  const knopHtml = opties.knop
+    ? `
+              <table cellpadding="0" cellspacing="0" style="margin:0 auto 32px;">
+                <tr>
+                  <td style="background:#F23B0D;border-radius:6px;">
+                    <a href="${opties.knop.link}"
+                      style="display:inline-block;padding:14px 32px;color:#ffffff;font-size:15px;font-weight:600;text-decoration:none;letter-spacing:.3px;">
+                      ${opties.knop.label}
+                    </a>
+                  </td>
+                </tr>
+              </table>
+              <p style="margin:0 0 8px;font-size:12px;color:#71717a;">
+                Werkt de knop niet? Kopieer dan onderstaande link in uw browser:
+              </p>
+              <p style="margin:0;font-size:11px;color:#a1a1aa;word-break:break-all;">${opties.knop.link}</p>`
+    : "";
+  const paras = opties.paragrafen
+    .map(
+      (p) =>
+        `<p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#3f3f46;">${p}</p>`,
+    )
+    .join("\n              ");
+  const voet =
+    opties.voettekst ??
+    "Dit bericht is verstuurd door FPS Brandpreventie &bull; Niet aangevraagd? Neem contact op met uw beheerder.";
+  return `
 <!DOCTYPE html>
 <html lang="nl">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>${onderwerp}</title>
+  <title>${opties.titel}</title>
 </head>
 <body style="margin:0;padding:0;background:#f4f4f5;font-family:system-ui,-apple-system,sans-serif;">
   <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f5;padding:40px 0;">
@@ -78,41 +370,16 @@ export async function stuurUitnodigingsmail(opties: {
           <tr>
             <td style="padding:40px;">
               <h1 style="margin:0 0 16px;font-size:22px;font-weight:700;color:#18181b;">
-                ${isOpnieuw ? "Herinnering:" : "Welkom,"} ${naarNaam}
+                ${opties.kopje}
               </h1>
-              <p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#3f3f46;">
-                ${
-                  isOpnieuw
-                    ? "U heeft eerder een uitnodiging ontvangen voor het FPS Brandpreventie-platform. " +
-                      "Gebruik onderstaande knop om uw account te activeren."
-                    : "U bent uitgenodigd voor het FPS Brandpreventie-platform. " +
-                      "Activeer hieronder uw account, stel uw wachtwoord in en koppel de authenticator-app."
-                }
-              </p>
-              <p style="margin:0 0 32px;font-size:15px;line-height:1.6;color:#3f3f46;">
-                De activatielink is <strong>7 dagen geldig</strong>.
-              </p>
-              <table cellpadding="0" cellspacing="0" style="margin:0 auto 32px;">
-                <tr>
-                  <td style="background:#F23B0D;border-radius:6px;">
-                    <a href="${activatieLink}"
-                      style="display:inline-block;padding:14px 32px;color:#ffffff;font-size:15px;font-weight:600;text-decoration:none;letter-spacing:.3px;">
-                      Account activeren
-                    </a>
-                  </td>
-                </tr>
-              </table>
-              <p style="margin:0 0 8px;font-size:12px;color:#71717a;">
-                Werkt de knop niet? Kopieer dan onderstaande link in uw browser:
-              </p>
-              <p style="margin:0;font-size:11px;color:#a1a1aa;word-break:break-all;">${activatieLink}</p>
+              ${paras}
+              ${knopHtml}
             </td>
           </tr>
           <tr>
             <td style="background:#f4f4f5;padding:24px 40px;border-top:1px solid #e4e4e7;">
               <p style="margin:0;font-size:12px;color:#71717a;text-align:center;">
-                Dit bericht is verstuurd door FPS Brandpreventie &bull;
-                Niet aangevraagd? Neem contact op met uw beheerder.
+                ${voet}
               </p>
             </td>
           </tr>
@@ -122,34 +389,89 @@ export async function stuurUitnodigingsmail(opties: {
   </table>
 </body>
 </html>`;
+}
 
-  const token = await haalAccessToken();
-  const graphUrl = `https://graph.microsoft.com/v1.0/users/${encodeURIComponent(MAIL_FROM)}/sendMail`;
+export async function stuurUitnodigingsmail(opties: {
+  naarEmail: string;
+  naarNaam: string;
+  activatieLink: string;
+  isOpnieuw?: boolean;
+  verstuurdDoorId?: number | null;
+}): Promise<boolean> {
+  const { naarEmail, naarNaam, activatieLink, isOpnieuw = false, verstuurdDoorId } = opties;
 
-  const bericht = {
-    message: {
-      subject: onderwerp,
-      body: { contentType: "HTML", content: htmlInhoud },
-      toRecipients: [{ emailAddress: { address: naarEmail, name: naarNaam } }],
-      from: { emailAddress: { address: MAIL_FROM, name: "FPS Brandpreventie" } },
-    },
-    saveToSentItems: false,
-  };
+  const onderwerp = isOpnieuw
+    ? "Uw uitnodiging voor FPS Brandpreventie (herinnering)"
+    : "U bent uitgenodigd voor FPS Brandpreventie";
 
-  const res = await fetch(graphUrl, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(bericht),
-  });
-
-  if (!res.ok) {
-    const tekst = await res.text();
-    throw new Error(`Graph API fout (${res.status}): ${tekst}`);
+  // Behoud bestaand gedrag: zonder configuratie wordt er niet verstuurd, maar
+  // de uitnodiging kan in de ontwikkelomgeving wel worden aangemaakt.
+  if (!isGeconfigureerd()) {
+    logger.warn(
+      { email: naarEmail },
+      "E-mailservice niet geconfigureerd — uitnodiging niet verstuurd " +
+        "(stel AZURE_TENANT_ID, AZURE_CLIENT_ID en AZURE_CLIENT_SECRET in)",
+    );
+    await logMail({
+      naarEmail,
+      naarNaam,
+      onderwerp,
+      soort: "uitnodiging",
+      status: "mislukt",
+      foutCategorie: "niet_geconfigureerd",
+      verstuurdDoorId,
+    });
+    return false;
   }
 
-  logger.info({ email: naarEmail, opnieuw: isOpnieuw }, "Uitnodigingsmail verstuurd");
+  const html = mailShell({
+    titel: onderwerp,
+    kopje: `${isOpnieuw ? "Herinnering:" : "Welkom,"} ${naarNaam}`,
+    paragrafen: [
+      isOpnieuw
+        ? "U heeft eerder een uitnodiging ontvangen voor het FPS Brandpreventie-platform. " +
+          "Gebruik onderstaande knop om uw account te activeren."
+        : "U bent uitgenodigd voor het FPS Brandpreventie-platform. " +
+          "Activeer hieronder uw account, stel uw wachtwoord in en koppel de authenticator-app.",
+      "De activatielink is <strong>7 dagen geldig</strong>.",
+    ],
+    knop: { label: "Account activeren", link: activatieLink },
+  });
+
+  await verstuurMail({
+    naarEmail,
+    naarNaam,
+    onderwerp,
+    html,
+    soort: "uitnodiging",
+    verstuurdDoorId,
+  });
   return true;
+}
+
+/**
+ * Verstuurt een testbericht om de mailkoppeling te controleren.
+ */
+export async function stuurTestmail(opties: {
+  naarEmail: string;
+  verstuurdDoorId?: number | null;
+}): Promise<void> {
+  const onderwerp = "Testbericht van FPS Brandpreventie";
+  const html = mailShell({
+    titel: onderwerp,
+    kopje: "Testbericht",
+    paragrafen: [
+      "Dit is een testbericht om de mailkoppeling van FPS Brandpreventie te controleren.",
+      "Ontvangt u dit bericht? Dan werkt de verbinding met Microsoft 365 correct.",
+    ],
+    voettekst:
+      "Dit bericht is automatisch gegenereerd vanuit de mailinstellingen van FPS Brandpreventie.",
+  });
+  await verstuurMail({
+    naarEmail: opties.naarEmail,
+    onderwerp,
+    html,
+    soort: "test",
+    verstuurdDoorId: opties.verstuurdDoorId,
+  });
 }

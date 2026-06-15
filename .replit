@@ -45,3 +45,9 @@ externalPort = 80
 
 [nix]
 channel = "stable-25_05"
+
+[userenv]
+
+[userenv.shared]
+MAIL_MAILBOX = "app@fpsbrandpreventie.nl"
+MAIL_FROM = "noreply@fpsbrandpreventie.nl"

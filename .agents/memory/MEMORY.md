@@ -60,3 +60,4 @@
 - [HRM lege catalogi dropdowns](hrm-lege-catalogi.md) — functies/opleidingen zijn user-managed, bewust niet geseed; data-gedreven Selects zijn dan leeg en lijken kapot; geef empty-state, geen nepdata.
 - [E2E TOTP login timing](e2e-totp-timing.md) — runTest cold-load verloopt TOTP-code; genereer next-window code (Date.now()+30000) na vensgrens voor ~90s; vast e2e-account via scripts/e2e-monteur-testaccount; Expo buiten /api-proxy.
 - [Playwright op NixOS](playwright-nixos.md) — meegeleverde Playwright-chromium draait niet op NixOS (prebuilt binary, ontbrekende libs); gebruik Nix-chromium via executablePath (which chromium).
+- [Mail via Microsoft 365](mail-microsoft365.md) — MAIL_FROM=zichtbare afzender (alias) vs MAIL_MAILBOX=gedeelde postbus die via Graph verzendt; Azure send-as/Mail.Send vereist; redacteer upstream foutteksten vóór DB/log/respons.

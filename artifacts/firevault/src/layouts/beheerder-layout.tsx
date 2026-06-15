@@ -8,7 +8,7 @@ import {
 import {
   ShieldCheck, Building, Wrench, Users, Search, Home, Receipt,
   ShieldAlert, LifeBuoy, MessageSquarePlus, Activity, Contact, Info, BookOpen, Clock,
-  FolderOpen, FileText, ListChecks, Files, LayoutTemplate,
+  FolderOpen, FileText, ListChecks, Files, LayoutTemplate, Mail,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { GebruikerMenu } from "@/components/gebruiker-menu";
@@ -356,6 +356,14 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
                         <Link href="/beheer/documentopmaak">
                           <LayoutTemplate />
                           <span>Documentopmaak</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                    <SidebarMenuItem>
+                      <SidebarMenuButton asChild isActive={location === "/beheer/mail"}>
+                        <Link href="/beheer/mail">
+                          <Mail />
+                          <span>Mailinstellingen</span>
                         </Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>

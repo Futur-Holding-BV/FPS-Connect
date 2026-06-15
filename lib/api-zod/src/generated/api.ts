@@ -6575,3 +6575,58 @@ export const DeleteOfferteUitgangspuntParams = zod.object({
 export const DeleteOfferteUitgangspuntResponse = zod.void()
 
 
+/**
+ * @summary Configuratiestatus van de mailkoppeling
+ */
+export const GetMailStatusResponse = zod.object({
+  "geconfigureerd": zod.boolean(),
+  "afzender": zod.string(),
+  "postbus": zod.string(),
+  "ontbrekende_secrets": zod.array(zod.string())
+})
+
+
+/**
+ * @summary Verbinding met Microsoft 365 testen
+ */
+export const TestMailVerbindingResponse = zod.object({
+  "ok": zod.boolean(),
+  "melding": zod.string().optional(),
+  "fout_categorie": zod.string().nullish(),
+  "detail": zod.string().nullish()
+})
+
+
+/**
+ * @summary Testbericht versturen
+ */
+export const SendTestmailBody = zod.object({
+  "naar_email": zod.string()
+})
+
+export const SendTestmailResponse = zod.object({
+  "ok": zod.boolean(),
+  "melding": zod.string().optional(),
+  "fout_categorie": zod.string().nullish(),
+  "detail": zod.string().nullish()
+})
+
+
+/**
+ * @summary Laatste 100 verzendpogingen
+ */
+export const GetMailLogboekResponseItem = zod.object({
+  "id": zod.number(),
+  "naar_email": zod.string(),
+  "naar_naam": zod.string().nullish(),
+  "onderwerp": zod.string(),
+  "soort": zod.string(),
+  "status": zod.string(),
+  "fout_categorie": zod.string().nullish(),
+  "foutdetail": zod.string().nullish(),
+  "verstuurd_door_id": zod.number().nullish(),
+  "aangemaakt_op": zod.string()
+})
+export const GetMailLogboekResponse = zod.array(GetMailLogboekResponseItem)
+
+

@@ -135,6 +135,10 @@ import type {
   LoginInput,
   LoginPoging,
   LoginResultaat,
+  MailActieResultaat,
+  MailLogregel,
+  MailStatus,
+  MailTestmailInput,
   Medewerker,
   MedewerkerInput,
   MedewerkerOnboardingInput,
@@ -19791,4 +19795,298 @@ export const useDeleteOfferteUitgangspunt = <TError = ErrorType<unknown>,
       > => {
       return useMutation(getDeleteOfferteUitgangspuntMutationOptions(options));
     }
+
+export const getGetMailStatusUrl = () => {
+
+
+
+
+  return `/api/mail/status`
+}
+
+/**
+ * @summary Configuratiestatus van de mailkoppeling
+ */
+export const getMailStatus = async ( options?: RequestInit): Promise<MailStatus> => {
+
+  return customFetch<MailStatus>(getGetMailStatusUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetMailStatusQueryKey = () => {
+    return [
+    `/api/mail/status`
+    ] as const;
+    }
+
+
+export const getGetMailStatusQueryOptions = <TData = Awaited<ReturnType<typeof getMailStatus>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMailStatus>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetMailStatusQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getMailStatus>>> = ({ signal }) => getMailStatus({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getMailStatus>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetMailStatusQueryResult = NonNullable<Awaited<ReturnType<typeof getMailStatus>>>
+export type GetMailStatusQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Configuratiestatus van de mailkoppeling
+ */
+
+export function useGetMailStatus<TData = Awaited<ReturnType<typeof getMailStatus>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMailStatus>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetMailStatusQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getTestMailVerbindingUrl = () => {
+
+
+
+
+  return `/api/mail/verbindingstest`
+}
+
+/**
+ * @summary Verbinding met Microsoft 365 testen
+ */
+export const testMailVerbinding = async ( options?: RequestInit): Promise<MailActieResultaat> => {
+
+  return customFetch<MailActieResultaat>(getTestMailVerbindingUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getTestMailVerbindingMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof testMailVerbinding>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof testMailVerbinding>>, TError,void, TContext> => {
+
+const mutationKey = ['testMailVerbinding'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof testMailVerbinding>>, void> = () => {
+
+
+          return  testMailVerbinding(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type TestMailVerbindingMutationResult = NonNullable<Awaited<ReturnType<typeof testMailVerbinding>>>
+
+    export type TestMailVerbindingMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Verbinding met Microsoft 365 testen
+ */
+export const useTestMailVerbinding = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof testMailVerbinding>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof testMailVerbinding>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getTestMailVerbindingMutationOptions(options));
+    }
+
+export const getSendTestmailUrl = () => {
+
+
+
+
+  return `/api/mail/testmail`
+}
+
+/**
+ * @summary Testbericht versturen
+ */
+export const sendTestmail = async (mailTestmailInput: MailTestmailInput, options?: RequestInit): Promise<MailActieResultaat> => {
+
+  return customFetch<MailActieResultaat>(getSendTestmailUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(mailTestmailInput)
+  }
+);}
+
+
+
+
+export const getSendTestmailMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof sendTestmail>>, TError,{data: BodyType<MailTestmailInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof sendTestmail>>, TError,{data: BodyType<MailTestmailInput>}, TContext> => {
+
+const mutationKey = ['sendTestmail'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof sendTestmail>>, {data: BodyType<MailTestmailInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  sendTestmail(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SendTestmailMutationResult = NonNullable<Awaited<ReturnType<typeof sendTestmail>>>
+    export type SendTestmailMutationBody = BodyType<MailTestmailInput>
+    export type SendTestmailMutationError = ErrorType<void>
+
+    /**
+ * @summary Testbericht versturen
+ */
+export const useSendTestmail = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof sendTestmail>>, TError,{data: BodyType<MailTestmailInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof sendTestmail>>,
+        TError,
+        {data: BodyType<MailTestmailInput>},
+        TContext
+      > => {
+      return useMutation(getSendTestmailMutationOptions(options));
+    }
+
+export const getGetMailLogboekUrl = () => {
+
+
+
+
+  return `/api/mail/logboek`
+}
+
+/**
+ * @summary Laatste 100 verzendpogingen
+ */
+export const getMailLogboek = async ( options?: RequestInit): Promise<MailLogregel[]> => {
+
+  return customFetch<MailLogregel[]>(getGetMailLogboekUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetMailLogboekQueryKey = () => {
+    return [
+    `/api/mail/logboek`
+    ] as const;
+    }
+
+
+export const getGetMailLogboekQueryOptions = <TData = Awaited<ReturnType<typeof getMailLogboek>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMailLogboek>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetMailLogboekQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getMailLogboek>>> = ({ signal }) => getMailLogboek({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getMailLogboek>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetMailLogboekQueryResult = NonNullable<Awaited<ReturnType<typeof getMailLogboek>>>
+export type GetMailLogboekQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Laatste 100 verzendpogingen
+ */
+
+export function useGetMailLogboek<TData = Awaited<ReturnType<typeof getMailLogboek>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMailLogboek>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetMailLogboekQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
 
