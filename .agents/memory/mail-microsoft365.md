@@ -36,6 +36,26 @@ mailbox_onbereikbaar, rest → verzendfout. Niet-geconfigureerd geeft een aparte
 categorie; `stuurUitnodigingsmail` houdt bewust het oude gedrag (false i.p.v.
 throw) zodat een uitnodiging in dev ook zonder mailkoppeling aangemaakt wordt.
 
+## Server-side testen zonder TOTP (diagnose-techniek)
+De mail-endpoints staan achter requireAuth + bevoegdheden-matrix; een agent kan
+niet inloggen (verplichte TOTP). Toch de ECHTE endpoints testen (en het
+mail_logboek vullen): munt een bearer-token volgens het mobiele schema —
+`base64url(JSON{uid,exp})` + HMAC-SHA256 met `SESSION_SECRET`, gescheiden door
+een punt (zie lib/token.ts) — voor een hoofdbeheerder-uid, en curl via
+`localhost:80/api/mail/...` met `Authorization: Bearer <token>`. Bearer-auth
+slaat de sessie-cookie over, dus de Secure-cookie/HTTPS-eis geldt hier NIET
+(localhost werkt). Hoofdbeheerder bypass't de matrix volledig. Token nooit naar
+de chat/log printen.
+
+## AADSTS-codes (config vs codebug)
+`/mail/verbindingstest` mapt zowel foute credentials als een foute tenant op
+`fout_categorie: token_verlopen`. De `detail` (geredigeerd) bevat de echte AADSTS:
+- `AADSTS90002 Tenant '...' not found` = `AZURE_TENANT_ID` is fout (bestaat niet /
+  verkeerde cloud / verkeerd veld gekopieerd, bv. app Object-ID i.p.v. Directory
+  (tenant) ID). Login komt dan niet eens toe aan client-id/secret.
+- Tenant-ID is een niet-geheime identifier (mag in detail staan); client_secret/
+  tokens worden wél geredigeerd.
+
 ## Env-var/secret-collisie (gotcha)
 Een sleutel als shared env var zetten EN dezelfde sleutel door de gebruiker als
 secret laten aanleveren botst: `viewEnvVars` kan na een delete op nul uitkomen
