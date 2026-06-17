@@ -7522,3 +7522,575 @@ export const AiCalculatieRegelsResponse = zod.object({
 })
 
 
+/**
+ * @summary Medewerkers ophalen voor planning
+ */
+export const ListPlanningMedewerkersResponseItem = zod.object({
+  "id": zod.number(),
+  "naam": zod.string(),
+  "functie": zod.string().nullish(),
+  "contracturenPerWeek": zod.number().nullish(),
+  "telefoon": zod.string().nullish(),
+  "email": zod.string().nullish(),
+  "actief": zod.boolean().optional()
+})
+export const ListPlanningMedewerkersResponse = zod.array(ListPlanningMedewerkersResponseItem)
+
+
+/**
+ * @summary Planningitems ophalen
+ */
+export const ListPlanningItemsQueryParams = zod.object({
+  "van": zod.coerce.string().optional(),
+  "tot": zod.coerce.string().optional(),
+  "medewerker_id": zod.coerce.number().optional()
+})
+
+export const ListPlanningItemsResponseItem = zod.object({
+  "id": zod.number(),
+  "titel": zod.string(),
+  "omschrijving": zod.string().nullish(),
+  "medewerker_id": zod.number().nullish(),
+  "medewerker_naam": zod.string().nullish(),
+  "gebouw_id": zod.number().nullish(),
+  "gebouw_naam": zod.string().nullish(),
+  "project_naam": zod.string().nullish(),
+  "datum_start": zod.string(),
+  "datum_eind": zod.string(),
+  "tijd_start": zod.string().nullish(),
+  "tijd_eind": zod.string().nullish(),
+  "uren": zod.number(),
+  "status": zod.string(),
+  "type": zod.string(),
+  "notities": zod.string().nullish(),
+  "aangemaakt_op": zod.string().optional()
+})
+export const ListPlanningItemsResponse = zod.array(ListPlanningItemsResponseItem)
+
+
+/**
+ * @summary Planningitem aanmaken
+ */
+export const CreatePlanningItemBody = zod.object({
+  "titel": zod.string(),
+  "omschrijving": zod.string().nullish(),
+  "medewerker_id": zod.number().nullish(),
+  "gebouw_id": zod.number().nullish(),
+  "project_naam": zod.string().nullish(),
+  "datum_start": zod.string(),
+  "datum_eind": zod.string(),
+  "tijd_start": zod.string().nullish(),
+  "tijd_eind": zod.string().nullish(),
+  "uren": zod.number(),
+  "status": zod.string(),
+  "type": zod.string(),
+  "notities": zod.string().nullish()
+})
+
+export const CreatePlanningItemResponse = zod.void()
+
+
+/**
+ * @summary Planningitem ophalen
+ */
+export const GetPlanningItemParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetPlanningItemResponse = zod.object({
+  "id": zod.number(),
+  "titel": zod.string(),
+  "omschrijving": zod.string().nullish(),
+  "medewerker_id": zod.number().nullish(),
+  "medewerker_naam": zod.string().nullish(),
+  "gebouw_id": zod.number().nullish(),
+  "gebouw_naam": zod.string().nullish(),
+  "project_naam": zod.string().nullish(),
+  "datum_start": zod.string(),
+  "datum_eind": zod.string(),
+  "tijd_start": zod.string().nullish(),
+  "tijd_eind": zod.string().nullish(),
+  "uren": zod.number(),
+  "status": zod.string(),
+  "type": zod.string(),
+  "notities": zod.string().nullish(),
+  "aangemaakt_op": zod.string().optional()
+})
+
+
+/**
+ * @summary Planningitem bijwerken
+ */
+export const UpdatePlanningItemParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdatePlanningItemBody = zod.object({
+  "titel": zod.string(),
+  "omschrijving": zod.string().nullish(),
+  "medewerker_id": zod.number().nullish(),
+  "gebouw_id": zod.number().nullish(),
+  "project_naam": zod.string().nullish(),
+  "datum_start": zod.string(),
+  "datum_eind": zod.string(),
+  "tijd_start": zod.string().nullish(),
+  "tijd_eind": zod.string().nullish(),
+  "uren": zod.number(),
+  "status": zod.string(),
+  "type": zod.string(),
+  "notities": zod.string().nullish()
+})
+
+export const UpdatePlanningItemResponse = zod.object({
+  "id": zod.number(),
+  "titel": zod.string(),
+  "omschrijving": zod.string().nullish(),
+  "medewerker_id": zod.number().nullish(),
+  "medewerker_naam": zod.string().nullish(),
+  "gebouw_id": zod.number().nullish(),
+  "gebouw_naam": zod.string().nullish(),
+  "project_naam": zod.string().nullish(),
+  "datum_start": zod.string(),
+  "datum_eind": zod.string(),
+  "tijd_start": zod.string().nullish(),
+  "tijd_eind": zod.string().nullish(),
+  "uren": zod.number(),
+  "status": zod.string(),
+  "type": zod.string(),
+  "notities": zod.string().nullish(),
+  "aangemaakt_op": zod.string().optional()
+})
+
+
+/**
+ * @summary Planningitem verwijderen
+ */
+export const DeletePlanningItemParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeletePlanningItemResponse = zod.void()
+
+
+/**
+ * @summary Afwezigheid ophalen
+ */
+export const ListPlanningAfwezigheidQueryParams = zod.object({
+  "medewerker_id": zod.coerce.number().optional()
+})
+
+export const ListPlanningAfwezigheidResponseItem = zod.object({
+  "id": zod.number(),
+  "medewerker_id": zod.number(),
+  "medewerker_naam": zod.string().nullish(),
+  "type": zod.string(),
+  "datum_start": zod.string(),
+  "datum_eind": zod.string(),
+  "omschrijving": zod.string().nullish(),
+  "status": zod.string(),
+  "aangemaakt_op": zod.string().optional()
+})
+export const ListPlanningAfwezigheidResponse = zod.array(ListPlanningAfwezigheidResponseItem)
+
+
+/**
+ * @summary Afwezigheid aanmaken
+ */
+export const CreatePlanningAfwezigheidBody = zod.object({
+  "medewerker_id": zod.number(),
+  "type": zod.string(),
+  "datum_start": zod.string(),
+  "datum_eind": zod.string(),
+  "omschrijving": zod.string().nullish(),
+  "status": zod.string().optional()
+})
+
+export const CreatePlanningAfwezigheidResponse = zod.void()
+
+
+/**
+ * @summary Afwezigheid bijwerken
+ */
+export const UpdatePlanningAfwezigheidParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdatePlanningAfwezigheidBody = zod.object({
+  "medewerker_id": zod.number(),
+  "type": zod.string(),
+  "datum_start": zod.string(),
+  "datum_eind": zod.string(),
+  "omschrijving": zod.string().nullish(),
+  "status": zod.string().optional()
+})
+
+export const UpdatePlanningAfwezigheidResponse = zod.object({
+  "id": zod.number(),
+  "medewerker_id": zod.number(),
+  "medewerker_naam": zod.string().nullish(),
+  "type": zod.string(),
+  "datum_start": zod.string(),
+  "datum_eind": zod.string(),
+  "omschrijving": zod.string().nullish(),
+  "status": zod.string(),
+  "aangemaakt_op": zod.string().optional()
+})
+
+
+/**
+ * @summary Afwezigheid verwijderen
+ */
+export const DeletePlanningAfwezigheidParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeletePlanningAfwezigheidResponse = zod.void()
+
+
+/**
+ * @summary Calculaties ophalen
+ */
+export const ListModCalculatiesQueryParams = zod.object({
+  "status": zod.coerce.string().optional(),
+  "zoek": zod.coerce.string().optional()
+})
+
+export const ListModCalculatiesResponseItem = zod.object({
+  "id": zod.number(),
+  "naam": zod.string(),
+  "referentie": zod.string().nullish(),
+  "klant_naam": zod.string().nullish(),
+  "gebouw_id": zod.number().nullish(),
+  "gebouw_naam": zod.string().nullish(),
+  "project_naam": zod.string().nullish(),
+  "status": zod.string(),
+  "omschrijving": zod.string().nullish(),
+  "opmerkingen": zod.string().nullish(),
+  "opslag_ak": zod.number(),
+  "opslag_risico": zod.number(),
+  "opslag_winst": zod.number(),
+  "korting": zod.number(),
+  "subtotaal": zod.number().nullish(),
+  "totaal_na_opslagen": zod.number().nullish(),
+  "aangemaakt_door_naam": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string().optional()
+})
+export const ListModCalculatiesResponse = zod.array(ListModCalculatiesResponseItem)
+
+
+/**
+ * @summary Calculatie aanmaken
+ */
+export const CreateModCalculatieBody = zod.object({
+  "naam": zod.string(),
+  "referentie": zod.string().nullish(),
+  "klant_naam": zod.string().nullish(),
+  "gebouw_id": zod.number().nullish(),
+  "project_naam": zod.string().nullish(),
+  "status": zod.string().optional(),
+  "omschrijving": zod.string().nullish(),
+  "opmerkingen": zod.string().nullish(),
+  "opslag_ak": zod.number().optional(),
+  "opslag_risico": zod.number().optional(),
+  "opslag_winst": zod.number().optional(),
+  "korting": zod.number().optional()
+})
+
+export const CreateModCalculatieResponse = zod.void()
+
+
+/**
+ * @summary Tarieven ophalen
+ */
+export const ListModCalcTarievenResponseItem = zod.object({
+  "id": zod.number(),
+  "naam": zod.string(),
+  "tarief": zod.number(),
+  "eenheid": zod.string(),
+  "categorie": zod.string(),
+  "actief": zod.boolean()
+})
+export const ListModCalcTarievenResponse = zod.array(ListModCalcTarievenResponseItem)
+
+
+/**
+ * @summary Tarief aanmaken
+ */
+export const CreateModCalcTariefBody = zod.object({
+  "naam": zod.string(),
+  "tarief": zod.number(),
+  "eenheid": zod.string(),
+  "categorie": zod.string(),
+  "actief": zod.boolean().optional()
+})
+
+export const CreateModCalcTariefResponse = zod.void()
+
+
+/**
+ * @summary Tarief bijwerken
+ */
+export const UpdateModCalcTariefParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateModCalcTariefBody = zod.object({
+  "naam": zod.string(),
+  "tarief": zod.number(),
+  "eenheid": zod.string(),
+  "categorie": zod.string(),
+  "actief": zod.boolean().optional()
+})
+
+export const UpdateModCalcTariefResponse = zod.object({
+  "id": zod.number(),
+  "naam": zod.string(),
+  "tarief": zod.number(),
+  "eenheid": zod.string(),
+  "categorie": zod.string(),
+  "actief": zod.boolean()
+})
+
+
+/**
+ * @summary Tarief verwijderen
+ */
+export const DeleteModCalcTariefParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteModCalcTariefResponse = zod.void()
+
+
+/**
+ * @summary Normtijden ophalen
+ */
+export const ListModCalcNormtijdenResponseItem = zod.object({
+  "id": zod.number(),
+  "code": zod.string(),
+  "omschrijving": zod.string(),
+  "categorie": zod.string(),
+  "eenheid": zod.string(),
+  "uren_per_eenheid": zod.number(),
+  "actief": zod.boolean()
+})
+export const ListModCalcNormtijdenResponse = zod.array(ListModCalcNormtijdenResponseItem)
+
+
+/**
+ * @summary Normtijd aanmaken
+ */
+export const CreateModCalcNormtijdBody = zod.object({
+  "code": zod.string(),
+  "omschrijving": zod.string(),
+  "categorie": zod.string(),
+  "eenheid": zod.string(),
+  "uren_per_eenheid": zod.number(),
+  "actief": zod.boolean().optional()
+})
+
+export const CreateModCalcNormtijdResponse = zod.void()
+
+
+/**
+ * @summary Calculatie ophalen
+ */
+export const GetModCalculatieParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetModCalculatieResponse = zod.object({
+  "id": zod.number(),
+  "naam": zod.string(),
+  "referentie": zod.string().nullish(),
+  "klant_naam": zod.string().nullish(),
+  "gebouw_id": zod.number().nullish(),
+  "gebouw_naam": zod.string().nullish(),
+  "project_naam": zod.string().nullish(),
+  "status": zod.string(),
+  "omschrijving": zod.string().nullish(),
+  "opmerkingen": zod.string().nullish(),
+  "opslag_ak": zod.number(),
+  "opslag_risico": zod.number(),
+  "opslag_winst": zod.number(),
+  "korting": zod.number(),
+  "subtotaal": zod.number().nullish(),
+  "totaal_na_opslagen": zod.number().nullish(),
+  "aangemaakt_door_naam": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string().optional()
+}).and(zod.object({
+  "regels": zod.array(zod.object({
+  "id": zod.number(),
+  "calculatie_id": zod.number(),
+  "categorie": zod.string(),
+  "omschrijving": zod.string(),
+  "normtijd_id": zod.number().nullish(),
+  "normtijd_code": zod.string().nullish(),
+  "eenheid": zod.string(),
+  "hoeveelheid": zod.number(),
+  "tarief": zod.number(),
+  "totaal": zod.number(),
+  "volgorde": zod.number(),
+  "opmerkingen": zod.string().nullish()
+})).optional()
+}))
+
+
+/**
+ * @summary Calculatie bijwerken
+ */
+export const UpdateModCalculatieParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateModCalculatieBody = zod.object({
+  "naam": zod.string(),
+  "referentie": zod.string().nullish(),
+  "klant_naam": zod.string().nullish(),
+  "gebouw_id": zod.number().nullish(),
+  "project_naam": zod.string().nullish(),
+  "status": zod.string().optional(),
+  "omschrijving": zod.string().nullish(),
+  "opmerkingen": zod.string().nullish(),
+  "opslag_ak": zod.number().optional(),
+  "opslag_risico": zod.number().optional(),
+  "opslag_winst": zod.number().optional(),
+  "korting": zod.number().optional()
+})
+
+export const UpdateModCalculatieResponse = zod.object({
+  "id": zod.number(),
+  "naam": zod.string(),
+  "referentie": zod.string().nullish(),
+  "klant_naam": zod.string().nullish(),
+  "gebouw_id": zod.number().nullish(),
+  "gebouw_naam": zod.string().nullish(),
+  "project_naam": zod.string().nullish(),
+  "status": zod.string(),
+  "omschrijving": zod.string().nullish(),
+  "opmerkingen": zod.string().nullish(),
+  "opslag_ak": zod.number(),
+  "opslag_risico": zod.number(),
+  "opslag_winst": zod.number(),
+  "korting": zod.number(),
+  "subtotaal": zod.number().nullish(),
+  "totaal_na_opslagen": zod.number().nullish(),
+  "aangemaakt_door_naam": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string().optional()
+})
+
+
+/**
+ * @summary Calculatie verwijderen
+ */
+export const DeleteModCalculatieParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteModCalculatieResponse = zod.void()
+
+
+/**
+ * @summary Calculatie dupliceren
+ */
+export const DupliceerModCalculatieParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DupliceerModCalculatieResponse = zod.void()
+
+
+/**
+ * @summary Calculatieregels ophalen
+ */
+export const ListModCalcRegelsParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ListModCalcRegelsResponseItem = zod.object({
+  "id": zod.number(),
+  "calculatie_id": zod.number(),
+  "categorie": zod.string(),
+  "omschrijving": zod.string(),
+  "normtijd_id": zod.number().nullish(),
+  "normtijd_code": zod.string().nullish(),
+  "eenheid": zod.string(),
+  "hoeveelheid": zod.number(),
+  "tarief": zod.number(),
+  "totaal": zod.number(),
+  "volgorde": zod.number(),
+  "opmerkingen": zod.string().nullish()
+})
+export const ListModCalcRegelsResponse = zod.array(ListModCalcRegelsResponseItem)
+
+
+/**
+ * @summary Calculatieregel aanmaken
+ */
+export const CreateModCalcRegelParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const CreateModCalcRegelBody = zod.object({
+  "categorie": zod.string(),
+  "omschrijving": zod.string(),
+  "normtijd_id": zod.number().nullish(),
+  "eenheid": zod.string(),
+  "hoeveelheid": zod.number(),
+  "tarief": zod.number(),
+  "volgorde": zod.number().optional(),
+  "opmerkingen": zod.string().nullish()
+})
+
+export const CreateModCalcRegelResponse = zod.void()
+
+
+/**
+ * @summary Calculatieregel bijwerken
+ */
+export const UpdateModCalcRegelParams = zod.object({
+  "id": zod.coerce.number(),
+  "regelId": zod.coerce.number()
+})
+
+export const UpdateModCalcRegelBody = zod.object({
+  "categorie": zod.string(),
+  "omschrijving": zod.string(),
+  "normtijd_id": zod.number().nullish(),
+  "eenheid": zod.string(),
+  "hoeveelheid": zod.number(),
+  "tarief": zod.number(),
+  "volgorde": zod.number().optional(),
+  "opmerkingen": zod.string().nullish()
+})
+
+export const UpdateModCalcRegelResponse = zod.object({
+  "id": zod.number(),
+  "calculatie_id": zod.number(),
+  "categorie": zod.string(),
+  "omschrijving": zod.string(),
+  "normtijd_id": zod.number().nullish(),
+  "normtijd_code": zod.string().nullish(),
+  "eenheid": zod.string(),
+  "hoeveelheid": zod.number(),
+  "tarief": zod.number(),
+  "totaal": zod.number(),
+  "volgorde": zod.number(),
+  "opmerkingen": zod.string().nullish()
+})
+
+
+/**
+ * @summary Calculatieregel verwijderen
+ */
+export const DeleteModCalcRegelParams = zod.object({
+  "id": zod.coerce.number(),
+  "regelId": zod.coerce.number()
+})
+
+export const DeleteModCalcRegelResponse = zod.void()
+
+

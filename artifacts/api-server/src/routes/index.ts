@@ -28,6 +28,8 @@ import constructieTemplatesRouter from "./constructie-templates";
 import mijnWerkRouter from "./mijn-werk";
 import toolboxRouter from "./toolbox";
 import testToegangRouter from "./test-toegang";
+import planningModuleRouter from "./planning-module";
+import modCalculatieRouter from "./mod-calculatie";
 import { requireAuth } from "../middlewares/auth";
 
 const router: IRouter = Router();
@@ -67,5 +69,7 @@ router.use(rapportenRouter);
 router.use(constructieTemplatesRouter);
 router.use(mijnWerkRouter);
 router.use(toolboxRouter);
+router.use(planningModuleRouter);
+router.use(modCalculatieRouter);
 
 export default router;

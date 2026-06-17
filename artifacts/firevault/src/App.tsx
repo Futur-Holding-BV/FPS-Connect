@@ -57,6 +57,12 @@ import ConnectPlanning from "@/pages/connect/planning";
 import ConnectCalculatie from "@/pages/connect/calculatie";
 import ConnectCalculatieDetail from "@/pages/connect/calculatie-detail";
 import ConnectHrm from "@/pages/connect/hrm";
+import ModulesCalculatie from "@/pages/modules/calculatie/index";
+import ModulesCalculatieNieuw from "@/pages/modules/calculatie/nieuw";
+import ModulesCalculatieDetail from "@/pages/modules/calculatie/detail";
+import ModulesPlanning from "@/pages/modules/planning/index";
+import ModulesPlanningMedewerkers from "@/pages/modules/planning/medewerkers";
+import ModulesPlanningAfwezigheid from "@/pages/modules/planning/afwezigheid";
 import OneDashboard from "@/pages/one/dashboard";
 import OneGebouwen from "@/pages/one/gebouwen";
 import OneDocumenten from "@/pages/one/documenten";
@@ -106,6 +112,12 @@ function BeheerderPortal() {
         <Route path="/connect/calculatie/:id" component={ConnectCalculatieDetail} />
         <Route path="/connect/calculatie" component={ConnectCalculatie} />
         <Route path="/connect/hrm" component={ConnectHrm} />
+        <Route path="/modules/calculatie/nieuw" component={ModulesCalculatieNieuw} />
+        <Route path="/modules/calculatie/:id" component={ModulesCalculatieDetail} />
+        <Route path="/modules/calculatie" component={ModulesCalculatie} />
+        <Route path="/modules/planning/medewerkers" component={ModulesPlanningMedewerkers} />
+        <Route path="/modules/planning/afwezigheid" component={ModulesPlanningAfwezigheid} />
+        <Route path="/modules/planning" component={ModulesPlanning} />
         <Route path="/one/dashboard" component={OneDashboard} />
         <Route path="/one/gebouwen" component={OneGebouwen} />
         <Route path="/one/documenten" component={OneDocumenten} />
@@ -201,6 +213,12 @@ function PermissiePortal() {
         <Route path="/connect/calculatie/:id" component={ConnectCalculatieDetail} />
         <Route path="/connect/calculatie" component={ConnectCalculatie} />
         <Route path="/connect/hrm" component={ConnectHrm} />
+        <Route path="/modules/calculatie/nieuw" component={ModulesCalculatieNieuw} />
+        <Route path="/modules/calculatie/:id" component={ModulesCalculatieDetail} />
+        <Route path="/modules/calculatie" component={ModulesCalculatie} />
+        <Route path="/modules/planning/medewerkers" component={ModulesPlanningMedewerkers} />
+        <Route path="/modules/planning/afwezigheid" component={ModulesPlanningAfwezigheid} />
+        <Route path="/modules/planning" component={ModulesPlanning} />
         <Route path="/one/dashboard" component={OneDashboard} />
         <Route path="/one/gebouwen" component={OneGebouwen} />
         <Route path="/one/documenten" component={OneDocumenten} />

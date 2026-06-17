@@ -136,8 +136,11 @@ import type {
   ListGekoppeldeDocumentenParams,
   ListInspectiesParams,
   ListLabelsParams,
+  ListModCalculatiesParams,
   ListMuisGebeurtenissenParams,
   ListOnderhoudParams,
+  ListPlanningAfwezigheidParams,
+  ListPlanningItemsParams,
   ListRapportenParams,
   ListTestrapportenParams,
   ListToolboxBerichtenParams,
@@ -156,6 +159,15 @@ import type {
   MedewerkerOpleiding,
   MedewerkerOpleidingInput,
   MijnWerkGebouw,
+  ModCalcHeader,
+  ModCalcHeaderDetail,
+  ModCalcHeaderInput,
+  ModCalcNormtijd,
+  ModCalcNormtijdInput,
+  ModCalcRegel,
+  ModCalcRegelInput,
+  ModCalcTarief,
+  ModCalcTariefInput,
   ModuleBeoordeling,
   ModuleBeoordelingInput,
   MuisGebeurtenis,
@@ -179,6 +191,11 @@ import type {
   OpleidingInput,
   OpleidingenVoorstelResultaat,
   OpleverrapportNaarDmsInput,
+  PlanningAfwezigheid,
+  PlanningAfwezigheidInput,
+  PlanningItem,
+  PlanningItemInput,
+  PlanningMedewerker,
   PlattegrondAiAnalyseInput,
   PlattegrondAiAnalyseResultaat,
   Profiel,
@@ -22398,5 +22415,1919 @@ export const useAiCalculatieRegels = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getAiCalculatieRegelsMutationOptions(options));
+    }
+
+export const getListPlanningMedewerkersUrl = () => {
+
+
+
+
+  return `/api/modules/planning/medewerkers`
+}
+
+/**
+ * @summary Medewerkers ophalen voor planning
+ */
+export const listPlanningMedewerkers = async ( options?: RequestInit): Promise<PlanningMedewerker[]> => {
+
+  return customFetch<PlanningMedewerker[]>(getListPlanningMedewerkersUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListPlanningMedewerkersQueryKey = () => {
+    return [
+    `/api/modules/planning/medewerkers`
+    ] as const;
+    }
+
+
+export const getListPlanningMedewerkersQueryOptions = <TData = Awaited<ReturnType<typeof listPlanningMedewerkers>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listPlanningMedewerkers>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListPlanningMedewerkersQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listPlanningMedewerkers>>> = ({ signal }) => listPlanningMedewerkers({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listPlanningMedewerkers>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListPlanningMedewerkersQueryResult = NonNullable<Awaited<ReturnType<typeof listPlanningMedewerkers>>>
+export type ListPlanningMedewerkersQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Medewerkers ophalen voor planning
+ */
+
+export function useListPlanningMedewerkers<TData = Awaited<ReturnType<typeof listPlanningMedewerkers>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listPlanningMedewerkers>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListPlanningMedewerkersQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getListPlanningItemsUrl = (params?: ListPlanningItemsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/modules/planning/items?${stringifiedParams}` : `/api/modules/planning/items`
+}
+
+/**
+ * @summary Planningitems ophalen
+ */
+export const listPlanningItems = async (params?: ListPlanningItemsParams, options?: RequestInit): Promise<PlanningItem[]> => {
+
+  return customFetch<PlanningItem[]>(getListPlanningItemsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListPlanningItemsQueryKey = (params?: ListPlanningItemsParams,) => {
+    return [
+    `/api/modules/planning/items`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListPlanningItemsQueryOptions = <TData = Awaited<ReturnType<typeof listPlanningItems>>, TError = ErrorType<unknown>>(params?: ListPlanningItemsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listPlanningItems>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListPlanningItemsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listPlanningItems>>> = ({ signal }) => listPlanningItems(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listPlanningItems>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListPlanningItemsQueryResult = NonNullable<Awaited<ReturnType<typeof listPlanningItems>>>
+export type ListPlanningItemsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Planningitems ophalen
+ */
+
+export function useListPlanningItems<TData = Awaited<ReturnType<typeof listPlanningItems>>, TError = ErrorType<unknown>>(
+ params?: ListPlanningItemsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listPlanningItems>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListPlanningItemsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreatePlanningItemUrl = () => {
+
+
+
+
+  return `/api/modules/planning/items`
+}
+
+/**
+ * @summary Planningitem aanmaken
+ */
+export const createPlanningItem = async (planningItemInput: PlanningItemInput, options?: RequestInit): Promise<PlanningItem> => {
+
+  return customFetch<PlanningItem>(getCreatePlanningItemUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(planningItemInput)
+  }
+);}
+
+
+
+
+export const getCreatePlanningItemMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createPlanningItem>>, TError,{data: BodyType<PlanningItemInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createPlanningItem>>, TError,{data: BodyType<PlanningItemInput>}, TContext> => {
+
+const mutationKey = ['createPlanningItem'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createPlanningItem>>, {data: BodyType<PlanningItemInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createPlanningItem(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreatePlanningItemMutationResult = NonNullable<Awaited<ReturnType<typeof createPlanningItem>>>
+    export type CreatePlanningItemMutationBody = BodyType<PlanningItemInput>
+    export type CreatePlanningItemMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Planningitem aanmaken
+ */
+export const useCreatePlanningItem = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createPlanningItem>>, TError,{data: BodyType<PlanningItemInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createPlanningItem>>,
+        TError,
+        {data: BodyType<PlanningItemInput>},
+        TContext
+      > => {
+      return useMutation(getCreatePlanningItemMutationOptions(options));
+    }
+
+export const getGetPlanningItemUrl = (id: number,) => {
+
+
+
+
+  return `/api/modules/planning/items/${id}`
+}
+
+/**
+ * @summary Planningitem ophalen
+ */
+export const getPlanningItem = async (id: number, options?: RequestInit): Promise<PlanningItem> => {
+
+  return customFetch<PlanningItem>(getGetPlanningItemUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetPlanningItemQueryKey = (id: number,) => {
+    return [
+    `/api/modules/planning/items/${id}`
+    ] as const;
+    }
+
+
+export const getGetPlanningItemQueryOptions = <TData = Awaited<ReturnType<typeof getPlanningItem>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPlanningItem>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetPlanningItemQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getPlanningItem>>> = ({ signal }) => getPlanningItem(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getPlanningItem>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetPlanningItemQueryResult = NonNullable<Awaited<ReturnType<typeof getPlanningItem>>>
+export type GetPlanningItemQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Planningitem ophalen
+ */
+
+export function useGetPlanningItem<TData = Awaited<ReturnType<typeof getPlanningItem>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPlanningItem>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetPlanningItemQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getUpdatePlanningItemUrl = (id: number,) => {
+
+
+
+
+  return `/api/modules/planning/items/${id}`
+}
+
+/**
+ * @summary Planningitem bijwerken
+ */
+export const updatePlanningItem = async (id: number,
+    planningItemInput: PlanningItemInput, options?: RequestInit): Promise<PlanningItem> => {
+
+  return customFetch<PlanningItem>(getUpdatePlanningItemUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(planningItemInput)
+  }
+);}
+
+
+
+
+export const getUpdatePlanningItemMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updatePlanningItem>>, TError,{id: number;data: BodyType<PlanningItemInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updatePlanningItem>>, TError,{id: number;data: BodyType<PlanningItemInput>}, TContext> => {
+
+const mutationKey = ['updatePlanningItem'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updatePlanningItem>>, {id: number;data: BodyType<PlanningItemInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updatePlanningItem(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdatePlanningItemMutationResult = NonNullable<Awaited<ReturnType<typeof updatePlanningItem>>>
+    export type UpdatePlanningItemMutationBody = BodyType<PlanningItemInput>
+    export type UpdatePlanningItemMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Planningitem bijwerken
+ */
+export const useUpdatePlanningItem = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updatePlanningItem>>, TError,{id: number;data: BodyType<PlanningItemInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updatePlanningItem>>,
+        TError,
+        {id: number;data: BodyType<PlanningItemInput>},
+        TContext
+      > => {
+      return useMutation(getUpdatePlanningItemMutationOptions(options));
+    }
+
+export const getDeletePlanningItemUrl = (id: number,) => {
+
+
+
+
+  return `/api/modules/planning/items/${id}`
+}
+
+/**
+ * @summary Planningitem verwijderen
+ */
+export const deletePlanningItem = async (id: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeletePlanningItemUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeletePlanningItemMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deletePlanningItem>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deletePlanningItem>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deletePlanningItem'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deletePlanningItem>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deletePlanningItem(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeletePlanningItemMutationResult = NonNullable<Awaited<ReturnType<typeof deletePlanningItem>>>
+
+    export type DeletePlanningItemMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Planningitem verwijderen
+ */
+export const useDeletePlanningItem = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deletePlanningItem>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deletePlanningItem>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeletePlanningItemMutationOptions(options));
+    }
+
+export const getListPlanningAfwezigheidUrl = (params?: ListPlanningAfwezigheidParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/modules/planning/afwezigheid?${stringifiedParams}` : `/api/modules/planning/afwezigheid`
+}
+
+/**
+ * @summary Afwezigheid ophalen
+ */
+export const listPlanningAfwezigheid = async (params?: ListPlanningAfwezigheidParams, options?: RequestInit): Promise<PlanningAfwezigheid[]> => {
+
+  return customFetch<PlanningAfwezigheid[]>(getListPlanningAfwezigheidUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListPlanningAfwezigheidQueryKey = (params?: ListPlanningAfwezigheidParams,) => {
+    return [
+    `/api/modules/planning/afwezigheid`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListPlanningAfwezigheidQueryOptions = <TData = Awaited<ReturnType<typeof listPlanningAfwezigheid>>, TError = ErrorType<unknown>>(params?: ListPlanningAfwezigheidParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listPlanningAfwezigheid>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListPlanningAfwezigheidQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listPlanningAfwezigheid>>> = ({ signal }) => listPlanningAfwezigheid(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listPlanningAfwezigheid>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListPlanningAfwezigheidQueryResult = NonNullable<Awaited<ReturnType<typeof listPlanningAfwezigheid>>>
+export type ListPlanningAfwezigheidQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Afwezigheid ophalen
+ */
+
+export function useListPlanningAfwezigheid<TData = Awaited<ReturnType<typeof listPlanningAfwezigheid>>, TError = ErrorType<unknown>>(
+ params?: ListPlanningAfwezigheidParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listPlanningAfwezigheid>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListPlanningAfwezigheidQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreatePlanningAfwezigheidUrl = () => {
+
+
+
+
+  return `/api/modules/planning/afwezigheid`
+}
+
+/**
+ * @summary Afwezigheid aanmaken
+ */
+export const createPlanningAfwezigheid = async (planningAfwezigheidInput: PlanningAfwezigheidInput, options?: RequestInit): Promise<PlanningAfwezigheid> => {
+
+  return customFetch<PlanningAfwezigheid>(getCreatePlanningAfwezigheidUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(planningAfwezigheidInput)
+  }
+);}
+
+
+
+
+export const getCreatePlanningAfwezigheidMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createPlanningAfwezigheid>>, TError,{data: BodyType<PlanningAfwezigheidInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createPlanningAfwezigheid>>, TError,{data: BodyType<PlanningAfwezigheidInput>}, TContext> => {
+
+const mutationKey = ['createPlanningAfwezigheid'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createPlanningAfwezigheid>>, {data: BodyType<PlanningAfwezigheidInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createPlanningAfwezigheid(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreatePlanningAfwezigheidMutationResult = NonNullable<Awaited<ReturnType<typeof createPlanningAfwezigheid>>>
+    export type CreatePlanningAfwezigheidMutationBody = BodyType<PlanningAfwezigheidInput>
+    export type CreatePlanningAfwezigheidMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Afwezigheid aanmaken
+ */
+export const useCreatePlanningAfwezigheid = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createPlanningAfwezigheid>>, TError,{data: BodyType<PlanningAfwezigheidInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createPlanningAfwezigheid>>,
+        TError,
+        {data: BodyType<PlanningAfwezigheidInput>},
+        TContext
+      > => {
+      return useMutation(getCreatePlanningAfwezigheidMutationOptions(options));
+    }
+
+export const getUpdatePlanningAfwezigheidUrl = (id: number,) => {
+
+
+
+
+  return `/api/modules/planning/afwezigheid/${id}`
+}
+
+/**
+ * @summary Afwezigheid bijwerken
+ */
+export const updatePlanningAfwezigheid = async (id: number,
+    planningAfwezigheidInput: PlanningAfwezigheidInput, options?: RequestInit): Promise<PlanningAfwezigheid> => {
+
+  return customFetch<PlanningAfwezigheid>(getUpdatePlanningAfwezigheidUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(planningAfwezigheidInput)
+  }
+);}
+
+
+
+
+export const getUpdatePlanningAfwezigheidMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updatePlanningAfwezigheid>>, TError,{id: number;data: BodyType<PlanningAfwezigheidInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updatePlanningAfwezigheid>>, TError,{id: number;data: BodyType<PlanningAfwezigheidInput>}, TContext> => {
+
+const mutationKey = ['updatePlanningAfwezigheid'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updatePlanningAfwezigheid>>, {id: number;data: BodyType<PlanningAfwezigheidInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updatePlanningAfwezigheid(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdatePlanningAfwezigheidMutationResult = NonNullable<Awaited<ReturnType<typeof updatePlanningAfwezigheid>>>
+    export type UpdatePlanningAfwezigheidMutationBody = BodyType<PlanningAfwezigheidInput>
+    export type UpdatePlanningAfwezigheidMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Afwezigheid bijwerken
+ */
+export const useUpdatePlanningAfwezigheid = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updatePlanningAfwezigheid>>, TError,{id: number;data: BodyType<PlanningAfwezigheidInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updatePlanningAfwezigheid>>,
+        TError,
+        {id: number;data: BodyType<PlanningAfwezigheidInput>},
+        TContext
+      > => {
+      return useMutation(getUpdatePlanningAfwezigheidMutationOptions(options));
+    }
+
+export const getDeletePlanningAfwezigheidUrl = (id: number,) => {
+
+
+
+
+  return `/api/modules/planning/afwezigheid/${id}`
+}
+
+/**
+ * @summary Afwezigheid verwijderen
+ */
+export const deletePlanningAfwezigheid = async (id: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeletePlanningAfwezigheidUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeletePlanningAfwezigheidMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deletePlanningAfwezigheid>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deletePlanningAfwezigheid>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deletePlanningAfwezigheid'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deletePlanningAfwezigheid>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deletePlanningAfwezigheid(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeletePlanningAfwezigheidMutationResult = NonNullable<Awaited<ReturnType<typeof deletePlanningAfwezigheid>>>
+
+    export type DeletePlanningAfwezigheidMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Afwezigheid verwijderen
+ */
+export const useDeletePlanningAfwezigheid = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deletePlanningAfwezigheid>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deletePlanningAfwezigheid>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeletePlanningAfwezigheidMutationOptions(options));
+    }
+
+export const getListModCalculatiesUrl = (params?: ListModCalculatiesParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/modules/calculaties?${stringifiedParams}` : `/api/modules/calculaties`
+}
+
+/**
+ * @summary Calculaties ophalen
+ */
+export const listModCalculaties = async (params?: ListModCalculatiesParams, options?: RequestInit): Promise<ModCalcHeader[]> => {
+
+  return customFetch<ModCalcHeader[]>(getListModCalculatiesUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListModCalculatiesQueryKey = (params?: ListModCalculatiesParams,) => {
+    return [
+    `/api/modules/calculaties`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListModCalculatiesQueryOptions = <TData = Awaited<ReturnType<typeof listModCalculaties>>, TError = ErrorType<unknown>>(params?: ListModCalculatiesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listModCalculaties>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListModCalculatiesQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listModCalculaties>>> = ({ signal }) => listModCalculaties(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listModCalculaties>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListModCalculatiesQueryResult = NonNullable<Awaited<ReturnType<typeof listModCalculaties>>>
+export type ListModCalculatiesQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Calculaties ophalen
+ */
+
+export function useListModCalculaties<TData = Awaited<ReturnType<typeof listModCalculaties>>, TError = ErrorType<unknown>>(
+ params?: ListModCalculatiesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listModCalculaties>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListModCalculatiesQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateModCalculatieUrl = () => {
+
+
+
+
+  return `/api/modules/calculaties`
+}
+
+/**
+ * @summary Calculatie aanmaken
+ */
+export const createModCalculatie = async (modCalcHeaderInput: ModCalcHeaderInput, options?: RequestInit): Promise<ModCalcHeader> => {
+
+  return customFetch<ModCalcHeader>(getCreateModCalculatieUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(modCalcHeaderInput)
+  }
+);}
+
+
+
+
+export const getCreateModCalculatieMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createModCalculatie>>, TError,{data: BodyType<ModCalcHeaderInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createModCalculatie>>, TError,{data: BodyType<ModCalcHeaderInput>}, TContext> => {
+
+const mutationKey = ['createModCalculatie'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createModCalculatie>>, {data: BodyType<ModCalcHeaderInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createModCalculatie(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateModCalculatieMutationResult = NonNullable<Awaited<ReturnType<typeof createModCalculatie>>>
+    export type CreateModCalculatieMutationBody = BodyType<ModCalcHeaderInput>
+    export type CreateModCalculatieMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Calculatie aanmaken
+ */
+export const useCreateModCalculatie = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createModCalculatie>>, TError,{data: BodyType<ModCalcHeaderInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createModCalculatie>>,
+        TError,
+        {data: BodyType<ModCalcHeaderInput>},
+        TContext
+      > => {
+      return useMutation(getCreateModCalculatieMutationOptions(options));
+    }
+
+export const getListModCalcTarievenUrl = () => {
+
+
+
+
+  return `/api/modules/calculaties/tarieven`
+}
+
+/**
+ * @summary Tarieven ophalen
+ */
+export const listModCalcTarieven = async ( options?: RequestInit): Promise<ModCalcTarief[]> => {
+
+  return customFetch<ModCalcTarief[]>(getListModCalcTarievenUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListModCalcTarievenQueryKey = () => {
+    return [
+    `/api/modules/calculaties/tarieven`
+    ] as const;
+    }
+
+
+export const getListModCalcTarievenQueryOptions = <TData = Awaited<ReturnType<typeof listModCalcTarieven>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listModCalcTarieven>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListModCalcTarievenQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listModCalcTarieven>>> = ({ signal }) => listModCalcTarieven({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listModCalcTarieven>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListModCalcTarievenQueryResult = NonNullable<Awaited<ReturnType<typeof listModCalcTarieven>>>
+export type ListModCalcTarievenQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Tarieven ophalen
+ */
+
+export function useListModCalcTarieven<TData = Awaited<ReturnType<typeof listModCalcTarieven>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listModCalcTarieven>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListModCalcTarievenQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateModCalcTariefUrl = () => {
+
+
+
+
+  return `/api/modules/calculaties/tarieven`
+}
+
+/**
+ * @summary Tarief aanmaken
+ */
+export const createModCalcTarief = async (modCalcTariefInput: ModCalcTariefInput, options?: RequestInit): Promise<ModCalcTarief> => {
+
+  return customFetch<ModCalcTarief>(getCreateModCalcTariefUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(modCalcTariefInput)
+  }
+);}
+
+
+
+
+export const getCreateModCalcTariefMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createModCalcTarief>>, TError,{data: BodyType<ModCalcTariefInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createModCalcTarief>>, TError,{data: BodyType<ModCalcTariefInput>}, TContext> => {
+
+const mutationKey = ['createModCalcTarief'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createModCalcTarief>>, {data: BodyType<ModCalcTariefInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createModCalcTarief(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateModCalcTariefMutationResult = NonNullable<Awaited<ReturnType<typeof createModCalcTarief>>>
+    export type CreateModCalcTariefMutationBody = BodyType<ModCalcTariefInput>
+    export type CreateModCalcTariefMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Tarief aanmaken
+ */
+export const useCreateModCalcTarief = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createModCalcTarief>>, TError,{data: BodyType<ModCalcTariefInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createModCalcTarief>>,
+        TError,
+        {data: BodyType<ModCalcTariefInput>},
+        TContext
+      > => {
+      return useMutation(getCreateModCalcTariefMutationOptions(options));
+    }
+
+export const getUpdateModCalcTariefUrl = (id: number,) => {
+
+
+
+
+  return `/api/modules/calculaties/tarieven/${id}`
+}
+
+/**
+ * @summary Tarief bijwerken
+ */
+export const updateModCalcTarief = async (id: number,
+    modCalcTariefInput: ModCalcTariefInput, options?: RequestInit): Promise<ModCalcTarief> => {
+
+  return customFetch<ModCalcTarief>(getUpdateModCalcTariefUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(modCalcTariefInput)
+  }
+);}
+
+
+
+
+export const getUpdateModCalcTariefMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateModCalcTarief>>, TError,{id: number;data: BodyType<ModCalcTariefInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateModCalcTarief>>, TError,{id: number;data: BodyType<ModCalcTariefInput>}, TContext> => {
+
+const mutationKey = ['updateModCalcTarief'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateModCalcTarief>>, {id: number;data: BodyType<ModCalcTariefInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateModCalcTarief(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateModCalcTariefMutationResult = NonNullable<Awaited<ReturnType<typeof updateModCalcTarief>>>
+    export type UpdateModCalcTariefMutationBody = BodyType<ModCalcTariefInput>
+    export type UpdateModCalcTariefMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Tarief bijwerken
+ */
+export const useUpdateModCalcTarief = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateModCalcTarief>>, TError,{id: number;data: BodyType<ModCalcTariefInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateModCalcTarief>>,
+        TError,
+        {id: number;data: BodyType<ModCalcTariefInput>},
+        TContext
+      > => {
+      return useMutation(getUpdateModCalcTariefMutationOptions(options));
+    }
+
+export const getDeleteModCalcTariefUrl = (id: number,) => {
+
+
+
+
+  return `/api/modules/calculaties/tarieven/${id}`
+}
+
+/**
+ * @summary Tarief verwijderen
+ */
+export const deleteModCalcTarief = async (id: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteModCalcTariefUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteModCalcTariefMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteModCalcTarief>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteModCalcTarief>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deleteModCalcTarief'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteModCalcTarief>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteModCalcTarief(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteModCalcTariefMutationResult = NonNullable<Awaited<ReturnType<typeof deleteModCalcTarief>>>
+
+    export type DeleteModCalcTariefMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Tarief verwijderen
+ */
+export const useDeleteModCalcTarief = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteModCalcTarief>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteModCalcTarief>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeleteModCalcTariefMutationOptions(options));
+    }
+
+export const getListModCalcNormtijdenUrl = () => {
+
+
+
+
+  return `/api/modules/calculaties/normtijden`
+}
+
+/**
+ * @summary Normtijden ophalen
+ */
+export const listModCalcNormtijden = async ( options?: RequestInit): Promise<ModCalcNormtijd[]> => {
+
+  return customFetch<ModCalcNormtijd[]>(getListModCalcNormtijdenUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListModCalcNormtijdenQueryKey = () => {
+    return [
+    `/api/modules/calculaties/normtijden`
+    ] as const;
+    }
+
+
+export const getListModCalcNormtijdenQueryOptions = <TData = Awaited<ReturnType<typeof listModCalcNormtijden>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listModCalcNormtijden>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListModCalcNormtijdenQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listModCalcNormtijden>>> = ({ signal }) => listModCalcNormtijden({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listModCalcNormtijden>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListModCalcNormtijdenQueryResult = NonNullable<Awaited<ReturnType<typeof listModCalcNormtijden>>>
+export type ListModCalcNormtijdenQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Normtijden ophalen
+ */
+
+export function useListModCalcNormtijden<TData = Awaited<ReturnType<typeof listModCalcNormtijden>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listModCalcNormtijden>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListModCalcNormtijdenQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateModCalcNormtijdUrl = () => {
+
+
+
+
+  return `/api/modules/calculaties/normtijden`
+}
+
+/**
+ * @summary Normtijd aanmaken
+ */
+export const createModCalcNormtijd = async (modCalcNormtijdInput: ModCalcNormtijdInput, options?: RequestInit): Promise<ModCalcNormtijd> => {
+
+  return customFetch<ModCalcNormtijd>(getCreateModCalcNormtijdUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(modCalcNormtijdInput)
+  }
+);}
+
+
+
+
+export const getCreateModCalcNormtijdMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createModCalcNormtijd>>, TError,{data: BodyType<ModCalcNormtijdInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createModCalcNormtijd>>, TError,{data: BodyType<ModCalcNormtijdInput>}, TContext> => {
+
+const mutationKey = ['createModCalcNormtijd'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createModCalcNormtijd>>, {data: BodyType<ModCalcNormtijdInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createModCalcNormtijd(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateModCalcNormtijdMutationResult = NonNullable<Awaited<ReturnType<typeof createModCalcNormtijd>>>
+    export type CreateModCalcNormtijdMutationBody = BodyType<ModCalcNormtijdInput>
+    export type CreateModCalcNormtijdMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Normtijd aanmaken
+ */
+export const useCreateModCalcNormtijd = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createModCalcNormtijd>>, TError,{data: BodyType<ModCalcNormtijdInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createModCalcNormtijd>>,
+        TError,
+        {data: BodyType<ModCalcNormtijdInput>},
+        TContext
+      > => {
+      return useMutation(getCreateModCalcNormtijdMutationOptions(options));
+    }
+
+export const getGetModCalculatieUrl = (id: number,) => {
+
+
+
+
+  return `/api/modules/calculaties/${id}`
+}
+
+/**
+ * @summary Calculatie ophalen
+ */
+export const getModCalculatie = async (id: number, options?: RequestInit): Promise<ModCalcHeaderDetail> => {
+
+  return customFetch<ModCalcHeaderDetail>(getGetModCalculatieUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetModCalculatieQueryKey = (id: number,) => {
+    return [
+    `/api/modules/calculaties/${id}`
+    ] as const;
+    }
+
+
+export const getGetModCalculatieQueryOptions = <TData = Awaited<ReturnType<typeof getModCalculatie>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getModCalculatie>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetModCalculatieQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getModCalculatie>>> = ({ signal }) => getModCalculatie(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getModCalculatie>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetModCalculatieQueryResult = NonNullable<Awaited<ReturnType<typeof getModCalculatie>>>
+export type GetModCalculatieQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Calculatie ophalen
+ */
+
+export function useGetModCalculatie<TData = Awaited<ReturnType<typeof getModCalculatie>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getModCalculatie>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetModCalculatieQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getUpdateModCalculatieUrl = (id: number,) => {
+
+
+
+
+  return `/api/modules/calculaties/${id}`
+}
+
+/**
+ * @summary Calculatie bijwerken
+ */
+export const updateModCalculatie = async (id: number,
+    modCalcHeaderInput: ModCalcHeaderInput, options?: RequestInit): Promise<ModCalcHeader> => {
+
+  return customFetch<ModCalcHeader>(getUpdateModCalculatieUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(modCalcHeaderInput)
+  }
+);}
+
+
+
+
+export const getUpdateModCalculatieMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateModCalculatie>>, TError,{id: number;data: BodyType<ModCalcHeaderInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateModCalculatie>>, TError,{id: number;data: BodyType<ModCalcHeaderInput>}, TContext> => {
+
+const mutationKey = ['updateModCalculatie'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateModCalculatie>>, {id: number;data: BodyType<ModCalcHeaderInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateModCalculatie(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateModCalculatieMutationResult = NonNullable<Awaited<ReturnType<typeof updateModCalculatie>>>
+    export type UpdateModCalculatieMutationBody = BodyType<ModCalcHeaderInput>
+    export type UpdateModCalculatieMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Calculatie bijwerken
+ */
+export const useUpdateModCalculatie = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateModCalculatie>>, TError,{id: number;data: BodyType<ModCalcHeaderInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateModCalculatie>>,
+        TError,
+        {id: number;data: BodyType<ModCalcHeaderInput>},
+        TContext
+      > => {
+      return useMutation(getUpdateModCalculatieMutationOptions(options));
+    }
+
+export const getDeleteModCalculatieUrl = (id: number,) => {
+
+
+
+
+  return `/api/modules/calculaties/${id}`
+}
+
+/**
+ * @summary Calculatie verwijderen
+ */
+export const deleteModCalculatie = async (id: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteModCalculatieUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteModCalculatieMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteModCalculatie>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteModCalculatie>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deleteModCalculatie'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteModCalculatie>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteModCalculatie(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteModCalculatieMutationResult = NonNullable<Awaited<ReturnType<typeof deleteModCalculatie>>>
+
+    export type DeleteModCalculatieMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Calculatie verwijderen
+ */
+export const useDeleteModCalculatie = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteModCalculatie>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteModCalculatie>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeleteModCalculatieMutationOptions(options));
+    }
+
+export const getDupliceerModCalculatieUrl = (id: number,) => {
+
+
+
+
+  return `/api/modules/calculaties/${id}/dupliceer`
+}
+
+/**
+ * @summary Calculatie dupliceren
+ */
+export const dupliceerModCalculatie = async (id: number, options?: RequestInit): Promise<ModCalcHeader> => {
+
+  return customFetch<ModCalcHeader>(getDupliceerModCalculatieUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getDupliceerModCalculatieMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof dupliceerModCalculatie>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof dupliceerModCalculatie>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['dupliceerModCalculatie'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof dupliceerModCalculatie>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  dupliceerModCalculatie(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DupliceerModCalculatieMutationResult = NonNullable<Awaited<ReturnType<typeof dupliceerModCalculatie>>>
+
+    export type DupliceerModCalculatieMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Calculatie dupliceren
+ */
+export const useDupliceerModCalculatie = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof dupliceerModCalculatie>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof dupliceerModCalculatie>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDupliceerModCalculatieMutationOptions(options));
+    }
+
+export const getListModCalcRegelsUrl = (id: number,) => {
+
+
+
+
+  return `/api/modules/calculaties/${id}/regels`
+}
+
+/**
+ * @summary Calculatieregels ophalen
+ */
+export const listModCalcRegels = async (id: number, options?: RequestInit): Promise<ModCalcRegel[]> => {
+
+  return customFetch<ModCalcRegel[]>(getListModCalcRegelsUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListModCalcRegelsQueryKey = (id: number,) => {
+    return [
+    `/api/modules/calculaties/${id}/regels`
+    ] as const;
+    }
+
+
+export const getListModCalcRegelsQueryOptions = <TData = Awaited<ReturnType<typeof listModCalcRegels>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listModCalcRegels>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListModCalcRegelsQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listModCalcRegels>>> = ({ signal }) => listModCalcRegels(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listModCalcRegels>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListModCalcRegelsQueryResult = NonNullable<Awaited<ReturnType<typeof listModCalcRegels>>>
+export type ListModCalcRegelsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Calculatieregels ophalen
+ */
+
+export function useListModCalcRegels<TData = Awaited<ReturnType<typeof listModCalcRegels>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listModCalcRegels>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListModCalcRegelsQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateModCalcRegelUrl = (id: number,) => {
+
+
+
+
+  return `/api/modules/calculaties/${id}/regels`
+}
+
+/**
+ * @summary Calculatieregel aanmaken
+ */
+export const createModCalcRegel = async (id: number,
+    modCalcRegelInput: ModCalcRegelInput, options?: RequestInit): Promise<ModCalcRegel> => {
+
+  return customFetch<ModCalcRegel>(getCreateModCalcRegelUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(modCalcRegelInput)
+  }
+);}
+
+
+
+
+export const getCreateModCalcRegelMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createModCalcRegel>>, TError,{id: number;data: BodyType<ModCalcRegelInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createModCalcRegel>>, TError,{id: number;data: BodyType<ModCalcRegelInput>}, TContext> => {
+
+const mutationKey = ['createModCalcRegel'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createModCalcRegel>>, {id: number;data: BodyType<ModCalcRegelInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  createModCalcRegel(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateModCalcRegelMutationResult = NonNullable<Awaited<ReturnType<typeof createModCalcRegel>>>
+    export type CreateModCalcRegelMutationBody = BodyType<ModCalcRegelInput>
+    export type CreateModCalcRegelMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Calculatieregel aanmaken
+ */
+export const useCreateModCalcRegel = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createModCalcRegel>>, TError,{id: number;data: BodyType<ModCalcRegelInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createModCalcRegel>>,
+        TError,
+        {id: number;data: BodyType<ModCalcRegelInput>},
+        TContext
+      > => {
+      return useMutation(getCreateModCalcRegelMutationOptions(options));
+    }
+
+export const getUpdateModCalcRegelUrl = (id: number,
+    regelId: number,) => {
+
+
+
+
+  return `/api/modules/calculaties/${id}/regels/${regelId}`
+}
+
+/**
+ * @summary Calculatieregel bijwerken
+ */
+export const updateModCalcRegel = async (id: number,
+    regelId: number,
+    modCalcRegelInput: ModCalcRegelInput, options?: RequestInit): Promise<ModCalcRegel> => {
+
+  return customFetch<ModCalcRegel>(getUpdateModCalcRegelUrl(id,regelId),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(modCalcRegelInput)
+  }
+);}
+
+
+
+
+export const getUpdateModCalcRegelMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateModCalcRegel>>, TError,{id: number;regelId: number;data: BodyType<ModCalcRegelInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateModCalcRegel>>, TError,{id: number;regelId: number;data: BodyType<ModCalcRegelInput>}, TContext> => {
+
+const mutationKey = ['updateModCalcRegel'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateModCalcRegel>>, {id: number;regelId: number;data: BodyType<ModCalcRegelInput>}> = (props) => {
+          const {id,regelId,data} = props ?? {};
+
+          return  updateModCalcRegel(id,regelId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateModCalcRegelMutationResult = NonNullable<Awaited<ReturnType<typeof updateModCalcRegel>>>
+    export type UpdateModCalcRegelMutationBody = BodyType<ModCalcRegelInput>
+    export type UpdateModCalcRegelMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Calculatieregel bijwerken
+ */
+export const useUpdateModCalcRegel = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateModCalcRegel>>, TError,{id: number;regelId: number;data: BodyType<ModCalcRegelInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateModCalcRegel>>,
+        TError,
+        {id: number;regelId: number;data: BodyType<ModCalcRegelInput>},
+        TContext
+      > => {
+      return useMutation(getUpdateModCalcRegelMutationOptions(options));
+    }
+
+export const getDeleteModCalcRegelUrl = (id: number,
+    regelId: number,) => {
+
+
+
+
+  return `/api/modules/calculaties/${id}/regels/${regelId}`
+}
+
+/**
+ * @summary Calculatieregel verwijderen
+ */
+export const deleteModCalcRegel = async (id: number,
+    regelId: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteModCalcRegelUrl(id,regelId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteModCalcRegelMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteModCalcRegel>>, TError,{id: number;regelId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteModCalcRegel>>, TError,{id: number;regelId: number}, TContext> => {
+
+const mutationKey = ['deleteModCalcRegel'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteModCalcRegel>>, {id: number;regelId: number}> = (props) => {
+          const {id,regelId} = props ?? {};
+
+          return  deleteModCalcRegel(id,regelId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteModCalcRegelMutationResult = NonNullable<Awaited<ReturnType<typeof deleteModCalcRegel>>>
+
+    export type DeleteModCalcRegelMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Calculatieregel verwijderen
+ */
+export const useDeleteModCalcRegel = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteModCalcRegel>>, TError,{id: number;regelId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteModCalcRegel>>,
+        TError,
+        {id: number;regelId: number},
+        TContext
+      > => {
+      return useMutation(getDeleteModCalcRegelMutationOptions(options));
     }
 

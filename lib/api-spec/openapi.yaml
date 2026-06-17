@@ -6372,6 +6372,506 @@ paths:
         "503":
           description: OpenAI niet beschikbaar
 
+  /modules/planning/medewerkers:
+    get:
+      operationId: listPlanningMedewerkers
+      summary: Medewerkers ophalen voor planning
+      tags: [PlanningModule]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PlanningMedewerker'
+
+  /modules/planning/items:
+    get:
+      operationId: listPlanningItems
+      summary: Planningitems ophalen
+      tags: [PlanningModule]
+      parameters:
+        - in: query
+          name: van
+          schema:
+            type: string
+        - in: query
+          name: tot
+          schema:
+            type: string
+        - in: query
+          name: medewerker_id
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PlanningItem'
+    post:
+      operationId: createPlanningItem
+      summary: Planningitem aanmaken
+      tags: [PlanningModule]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PlanningItemInput'
+      responses:
+        '201':
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlanningItem'
+
+  /modules/planning/items/{id}:
+    get:
+      operationId: getPlanningItem
+      summary: Planningitem ophalen
+      tags: [PlanningModule]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlanningItem'
+    patch:
+      operationId: updatePlanningItem
+      summary: Planningitem bijwerken
+      tags: [PlanningModule]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PlanningItemInput'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlanningItem'
+    delete:
+      operationId: deletePlanningItem
+      summary: Planningitem verwijderen
+      tags: [PlanningModule]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Verwijderd
+
+  /modules/planning/afwezigheid:
+    get:
+      operationId: listPlanningAfwezigheid
+      summary: Afwezigheid ophalen
+      tags: [PlanningModule]
+      parameters:
+        - in: query
+          name: medewerker_id
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PlanningAfwezigheid'
+    post:
+      operationId: createPlanningAfwezigheid
+      summary: Afwezigheid aanmaken
+      tags: [PlanningModule]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PlanningAfwezigheidInput'
+      responses:
+        '201':
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlanningAfwezigheid'
+
+  /modules/planning/afwezigheid/{id}:
+    patch:
+      operationId: updatePlanningAfwezigheid
+      summary: Afwezigheid bijwerken
+      tags: [PlanningModule]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PlanningAfwezigheidInput'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlanningAfwezigheid'
+    delete:
+      operationId: deletePlanningAfwezigheid
+      summary: Afwezigheid verwijderen
+      tags: [PlanningModule]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Verwijderd
+
+  /modules/calculaties:
+    get:
+      operationId: listModCalculaties
+      summary: Calculaties ophalen
+      tags: [CalulatieModule]
+      parameters:
+        - in: query
+          name: status
+          schema:
+            type: string
+        - in: query
+          name: zoek
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ModCalcHeader'
+    post:
+      operationId: createModCalculatie
+      summary: Calculatie aanmaken
+      tags: [CalulatieModule]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ModCalcHeaderInput'
+      responses:
+        '201':
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModCalcHeader'
+
+  /modules/calculaties/tarieven:
+    get:
+      operationId: listModCalcTarieven
+      summary: Tarieven ophalen
+      tags: [CalulatieModule]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ModCalcTarief'
+    post:
+      operationId: createModCalcTarief
+      summary: Tarief aanmaken
+      tags: [CalulatieModule]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ModCalcTariefInput'
+      responses:
+        '201':
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModCalcTarief'
+
+  /modules/calculaties/tarieven/{id}:
+    patch:
+      operationId: updateModCalcTarief
+      summary: Tarief bijwerken
+      tags: [CalulatieModule]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ModCalcTariefInput'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModCalcTarief'
+    delete:
+      operationId: deleteModCalcTarief
+      summary: Tarief verwijderen
+      tags: [CalulatieModule]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Verwijderd
+
+  /modules/calculaties/normtijden:
+    get:
+      operationId: listModCalcNormtijden
+      summary: Normtijden ophalen
+      tags: [CalulatieModule]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ModCalcNormtijd'
+    post:
+      operationId: createModCalcNormtijd
+      summary: Normtijd aanmaken
+      tags: [CalulatieModule]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ModCalcNormtijdInput'
+      responses:
+        '201':
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModCalcNormtijd'
+
+  /modules/calculaties/{id}:
+    get:
+      operationId: getModCalculatie
+      summary: Calculatie ophalen
+      tags: [CalulatieModule]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModCalcHeaderDetail'
+    patch:
+      operationId: updateModCalculatie
+      summary: Calculatie bijwerken
+      tags: [CalulatieModule]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ModCalcHeaderInput'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModCalcHeader'
+    delete:
+      operationId: deleteModCalculatie
+      summary: Calculatie verwijderen
+      tags: [CalulatieModule]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Verwijderd
+
+  /modules/calculaties/{id}/dupliceer:
+    post:
+      operationId: dupliceerModCalculatie
+      summary: Calculatie dupliceren
+      tags: [CalulatieModule]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '201':
+          description: Duplicaat aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModCalcHeader'
+
+  /modules/calculaties/{id}/regels:
+    get:
+      operationId: listModCalcRegels
+      summary: Calculatieregels ophalen
+      tags: [CalulatieModule]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ModCalcRegel'
+    post:
+      operationId: createModCalcRegel
+      summary: Calculatieregel aanmaken
+      tags: [CalulatieModule]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ModCalcRegelInput'
+      responses:
+        '201':
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModCalcRegel'
+
+  /modules/calculaties/{id}/regels/{regelId}:
+    patch:
+      operationId: updateModCalcRegel
+      summary: Calculatieregel bijwerken
+      tags: [CalulatieModule]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+        - in: path
+          name: regelId
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ModCalcRegelInput'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModCalcRegel'
+    delete:
+      operationId: deleteModCalcRegel
+      summary: Calculatieregel verwijderen
+      tags: [CalulatieModule]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+        - in: path
+          name: regelId
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Verwijderd
+
+
 components:
   schemas:
     MailStatus:
@@ -11235,3 +11735,376 @@ components:
           type: string
         bevestigd_op:
           type: string
+
+    PlanningMedewerker:
+      type: object
+      required: [id, naam]
+      properties:
+        id:
+          type: integer
+        naam:
+          type: string
+        functie:
+          type: string
+          nullable: true
+        contracturenPerWeek:
+          type: number
+          nullable: true
+        telefoon:
+          type: string
+          nullable: true
+        email:
+          type: string
+          nullable: true
+        actief:
+          type: boolean
+
+    PlanningItem:
+      type: object
+      required: [id, titel, datum_start, datum_eind, uren, status, type]
+      properties:
+        id:
+          type: integer
+        titel:
+          type: string
+        omschrijving:
+          type: string
+          nullable: true
+        medewerker_id:
+          type: integer
+          nullable: true
+        medewerker_naam:
+          type: string
+          nullable: true
+        gebouw_id:
+          type: integer
+          nullable: true
+        gebouw_naam:
+          type: string
+          nullable: true
+        project_naam:
+          type: string
+          nullable: true
+        datum_start:
+          type: string
+        datum_eind:
+          type: string
+        tijd_start:
+          type: string
+          nullable: true
+        tijd_eind:
+          type: string
+          nullable: true
+        uren:
+          type: number
+        status:
+          type: string
+        type:
+          type: string
+        notities:
+          type: string
+          nullable: true
+        aangemaakt_op:
+          type: string
+
+    PlanningItemInput:
+      type: object
+      required: [titel, datum_start, datum_eind, uren, status, type]
+      properties:
+        titel:
+          type: string
+        omschrijving:
+          type: string
+          nullable: true
+        medewerker_id:
+          type: integer
+          nullable: true
+        gebouw_id:
+          type: integer
+          nullable: true
+        project_naam:
+          type: string
+          nullable: true
+        datum_start:
+          type: string
+        datum_eind:
+          type: string
+        tijd_start:
+          type: string
+          nullable: true
+        tijd_eind:
+          type: string
+          nullable: true
+        uren:
+          type: number
+        status:
+          type: string
+        type:
+          type: string
+        notities:
+          type: string
+          nullable: true
+
+    PlanningAfwezigheid:
+      type: object
+      required: [id, medewerker_id, type, datum_start, datum_eind, status]
+      properties:
+        id:
+          type: integer
+        medewerker_id:
+          type: integer
+        medewerker_naam:
+          type: string
+          nullable: true
+        type:
+          type: string
+        datum_start:
+          type: string
+        datum_eind:
+          type: string
+        omschrijving:
+          type: string
+          nullable: true
+        status:
+          type: string
+        aangemaakt_op:
+          type: string
+
+    PlanningAfwezigheidInput:
+      type: object
+      required: [medewerker_id, type, datum_start, datum_eind]
+      properties:
+        medewerker_id:
+          type: integer
+        type:
+          type: string
+        datum_start:
+          type: string
+        datum_eind:
+          type: string
+        omschrijving:
+          type: string
+          nullable: true
+        status:
+          type: string
+
+    ModCalcTarief:
+      type: object
+      required: [id, naam, tarief, eenheid, categorie, actief]
+      properties:
+        id:
+          type: integer
+        naam:
+          type: string
+        tarief:
+          type: number
+        eenheid:
+          type: string
+        categorie:
+          type: string
+        actief:
+          type: boolean
+
+    ModCalcTariefInput:
+      type: object
+      required: [naam, tarief, eenheid, categorie]
+      properties:
+        naam:
+          type: string
+        tarief:
+          type: number
+        eenheid:
+          type: string
+        categorie:
+          type: string
+        actief:
+          type: boolean
+
+    ModCalcNormtijd:
+      type: object
+      required: [id, code, omschrijving, categorie, eenheid, uren_per_eenheid, actief]
+      properties:
+        id:
+          type: integer
+        code:
+          type: string
+        omschrijving:
+          type: string
+        categorie:
+          type: string
+        eenheid:
+          type: string
+        uren_per_eenheid:
+          type: number
+        actief:
+          type: boolean
+
+    ModCalcNormtijdInput:
+      type: object
+      required: [code, omschrijving, categorie, eenheid, uren_per_eenheid]
+      properties:
+        code:
+          type: string
+        omschrijving:
+          type: string
+        categorie:
+          type: string
+        eenheid:
+          type: string
+        uren_per_eenheid:
+          type: number
+        actief:
+          type: boolean
+
+    ModCalcHeader:
+      type: object
+      required: [id, naam, status, opslag_ak, opslag_risico, opslag_winst, korting, aangemaakt_op]
+      properties:
+        id:
+          type: integer
+        naam:
+          type: string
+        referentie:
+          type: string
+          nullable: true
+        klant_naam:
+          type: string
+          nullable: true
+        gebouw_id:
+          type: integer
+          nullable: true
+        gebouw_naam:
+          type: string
+          nullable: true
+        project_naam:
+          type: string
+          nullable: true
+        status:
+          type: string
+        omschrijving:
+          type: string
+          nullable: true
+        opmerkingen:
+          type: string
+          nullable: true
+        opslag_ak:
+          type: number
+        opslag_risico:
+          type: number
+        opslag_winst:
+          type: number
+        korting:
+          type: number
+        subtotaal:
+          type: number
+          nullable: true
+        totaal_na_opslagen:
+          type: number
+          nullable: true
+        aangemaakt_door_naam:
+          type: string
+          nullable: true
+        aangemaakt_op:
+          type: string
+        bijgewerkt_op:
+          type: string
+
+    ModCalcHeaderDetail:
+      allOf:
+        - $ref: '#/components/schemas/ModCalcHeader'
+        - type: object
+          properties:
+            regels:
+              type: array
+              items:
+                $ref: '#/components/schemas/ModCalcRegel'
+
+    ModCalcHeaderInput:
+      type: object
+      required: [naam]
+      properties:
+        naam:
+          type: string
+        referentie:
+          type: string
+          nullable: true
+        klant_naam:
+          type: string
+          nullable: true
+        gebouw_id:
+          type: integer
+          nullable: true
+        project_naam:
+          type: string
+          nullable: true
+        status:
+          type: string
+        omschrijving:
+          type: string
+          nullable: true
+        opmerkingen:
+          type: string
+          nullable: true
+        opslag_ak:
+          type: number
+        opslag_risico:
+          type: number
+        opslag_winst:
+          type: number
+        korting:
+          type: number
+
+    ModCalcRegel:
+      type: object
+      required: [id, calculatie_id, categorie, omschrijving, eenheid, hoeveelheid, tarief, totaal, volgorde]
+      properties:
+        id:
+          type: integer
+        calculatie_id:
+          type: integer
+        categorie:
+          type: string
+        omschrijving:
+          type: string
+        normtijd_id:
+          type: integer
+          nullable: true
+        normtijd_code:
+          type: string
+          nullable: true
+        eenheid:
+          type: string
+        hoeveelheid:
+          type: number
+        tarief:
+          type: number
+        totaal:
+          type: number
+        volgorde:
+          type: integer
+        opmerkingen:
+          type: string
+          nullable: true
+
+    ModCalcRegelInput:
+      type: object
+      required: [categorie, omschrijving, eenheid, hoeveelheid, tarief]
+      properties:
+        categorie:
+          type: string
+        omschrijving:
+          type: string
+        normtijd_id:
+          type: integer
+          nullable: true
+        eenheid:
+          type: string
+        hoeveelheid:
+          type: number
+        tarief:
+          type: number
+        volgorde:
+          type: integer
+        opmerkingen:
+          type: string
+          nullable: true

@@ -3413,6 +3413,176 @@ export interface ToolboxBerichtInput {
   doelgroep_gebruiker_id?: number | null;
 }
 
+export interface PlanningMedewerker {
+  id: number;
+  naam: string;
+  functie?: string | null;
+  contracturenPerWeek?: number | null;
+  telefoon?: string | null;
+  email?: string | null;
+  actief?: boolean;
+}
+
+export interface PlanningItem {
+  id: number;
+  titel: string;
+  omschrijving?: string | null;
+  medewerker_id?: number | null;
+  medewerker_naam?: string | null;
+  gebouw_id?: number | null;
+  gebouw_naam?: string | null;
+  project_naam?: string | null;
+  datum_start: string;
+  datum_eind: string;
+  tijd_start?: string | null;
+  tijd_eind?: string | null;
+  uren: number;
+  status: string;
+  type: string;
+  notities?: string | null;
+  aangemaakt_op?: string;
+}
+
+export interface PlanningItemInput {
+  titel: string;
+  omschrijving?: string | null;
+  medewerker_id?: number | null;
+  gebouw_id?: number | null;
+  project_naam?: string | null;
+  datum_start: string;
+  datum_eind: string;
+  tijd_start?: string | null;
+  tijd_eind?: string | null;
+  uren: number;
+  status: string;
+  type: string;
+  notities?: string | null;
+}
+
+export interface PlanningAfwezigheid {
+  id: number;
+  medewerker_id: number;
+  medewerker_naam?: string | null;
+  type: string;
+  datum_start: string;
+  datum_eind: string;
+  omschrijving?: string | null;
+  status: string;
+  aangemaakt_op?: string;
+}
+
+export interface PlanningAfwezigheidInput {
+  medewerker_id: number;
+  type: string;
+  datum_start: string;
+  datum_eind: string;
+  omschrijving?: string | null;
+  status?: string;
+}
+
+export interface ModCalcTarief {
+  id: number;
+  naam: string;
+  tarief: number;
+  eenheid: string;
+  categorie: string;
+  actief: boolean;
+}
+
+export interface ModCalcTariefInput {
+  naam: string;
+  tarief: number;
+  eenheid: string;
+  categorie: string;
+  actief?: boolean;
+}
+
+export interface ModCalcNormtijd {
+  id: number;
+  code: string;
+  omschrijving: string;
+  categorie: string;
+  eenheid: string;
+  uren_per_eenheid: number;
+  actief: boolean;
+}
+
+export interface ModCalcNormtijdInput {
+  code: string;
+  omschrijving: string;
+  categorie: string;
+  eenheid: string;
+  uren_per_eenheid: number;
+  actief?: boolean;
+}
+
+export interface ModCalcHeader {
+  id: number;
+  naam: string;
+  referentie?: string | null;
+  klant_naam?: string | null;
+  gebouw_id?: number | null;
+  gebouw_naam?: string | null;
+  project_naam?: string | null;
+  status: string;
+  omschrijving?: string | null;
+  opmerkingen?: string | null;
+  opslag_ak: number;
+  opslag_risico: number;
+  opslag_winst: number;
+  korting: number;
+  subtotaal?: number | null;
+  totaal_na_opslagen?: number | null;
+  aangemaakt_door_naam?: string | null;
+  aangemaakt_op: string;
+  bijgewerkt_op?: string;
+}
+
+export interface ModCalcRegel {
+  id: number;
+  calculatie_id: number;
+  categorie: string;
+  omschrijving: string;
+  normtijd_id?: number | null;
+  normtijd_code?: string | null;
+  eenheid: string;
+  hoeveelheid: number;
+  tarief: number;
+  totaal: number;
+  volgorde: number;
+  opmerkingen?: string | null;
+}
+
+export type ModCalcHeaderDetail = ModCalcHeader & {
+  regels?: ModCalcRegel[];
+};
+
+export interface ModCalcHeaderInput {
+  naam: string;
+  referentie?: string | null;
+  klant_naam?: string | null;
+  gebouw_id?: number | null;
+  project_naam?: string | null;
+  status?: string;
+  omschrijving?: string | null;
+  opmerkingen?: string | null;
+  opslag_ak?: number;
+  opslag_risico?: number;
+  opslag_winst?: number;
+  korting?: number;
+}
+
+export interface ModCalcRegelInput {
+  categorie: string;
+  omschrijving: string;
+  normtijd_id?: number | null;
+  eenheid: string;
+  hoeveelheid: number;
+  tarief: number;
+  volgorde?: number;
+  opmerkingen?: string | null;
+}
+
 export type GetRecenteActiviteitParams = {
 limit?: number;
 };
@@ -3579,5 +3749,20 @@ export type AiCalculatieRegels200 = {
   regels: CalculatieRegelInput[];
   /** @nullable */
   gebouw_naam?: string | null;
+};
+
+export type ListPlanningItemsParams = {
+van?: string;
+tot?: string;
+medewerker_id?: number;
+};
+
+export type ListPlanningAfwezigheidParams = {
+medewerker_id?: number;
+};
+
+export type ListModCalculatiesParams = {
+status?: string;
+zoek?: string;
 };
 

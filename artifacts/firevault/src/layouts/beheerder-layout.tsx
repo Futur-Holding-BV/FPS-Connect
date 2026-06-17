@@ -309,6 +309,39 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
             </SidebarGroup>
           )}
 
+          {/* ── Modules ── */}
+          {isHoofdbeheerder && (
+            <SidebarGroup>
+              <SidebarGroupLabel>Modules</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={location === "/modules/planning" || location.startsWith("/modules/planning/")}
+                    >
+                      <Link href="/modules/planning">
+                        <CalendarDays />
+                        <span>Planning</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={location === "/modules/calculatie" || location.startsWith("/modules/calculatie/")}
+                    >
+                      <Link href="/modules/calculatie">
+                        <Calculator />
+                        <span>Calculatie</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          )}
+
           {/* ── FPS Connect ── */}
           {isHoofdbeheerder && (
             <SidebarGroup>
