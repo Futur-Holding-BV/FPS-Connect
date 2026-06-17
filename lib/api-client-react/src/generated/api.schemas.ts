@@ -474,6 +474,10 @@ export interface Gebouw {
   gearchiveerd?: boolean;
   /** @nullable */
   gearchiveerd_op?: string | null;
+  /** @nullable */
+  werkgever_id?: number | null;
+  /** @nullable */
+  werkmaatschappij_naam?: string | null;
 }
 
 export interface Verdieping {
@@ -549,6 +553,10 @@ export interface GebouwDetail {
   gearchiveerd?: boolean;
   /** @nullable */
   gearchiveerd_op?: string | null;
+  /** @nullable */
+  werkgever_id?: number | null;
+  /** @nullable */
+  werkmaatschappij_naam?: string | null;
   verdiepingen: Verdieping[];
   stats?: GebouwStats;
 }
@@ -769,6 +777,7 @@ export interface GebouwInput {
   gebouw_type?: string;
   latitude?: number;
   longitude?: number;
+  werkgever_id?: number;
 }
 
 export interface GebouwUpdate {
@@ -788,6 +797,7 @@ export interface GebouwUpdate {
   gebouw_type?: string | null;
   latitude?: number | null;
   longitude?: number | null;
+  werkgever_id?: number | null;
 }
 
 export interface GebouwAiAnalyseInput {
@@ -2407,6 +2417,20 @@ export interface Werkgever {
   briefpapier_document_id?: number | null;
   /** @nullable */
   personeelsbeleid?: string | null;
+  /** @nullable */
+  adres?: string | null;
+  /** @nullable */
+  kvk?: string | null;
+  /** @nullable */
+  btw?: string | null;
+  /** @nullable */
+  telefoon?: string | null;
+  /** @nullable */
+  email?: string | null;
+  /** @nullable */
+  website?: string | null;
+  /** @nullable */
+  voettekst?: string | null;
   actief: boolean;
   aangemaakt_op: string;
   bijgewerkt_op: string;
@@ -2421,6 +2445,20 @@ export interface WerkgeverInput {
   briefpapier_document_id?: number | null;
   /** @nullable */
   personeelsbeleid?: string | null;
+  /** @nullable */
+  adres?: string | null;
+  /** @nullable */
+  kvk?: string | null;
+  /** @nullable */
+  btw?: string | null;
+  /** @nullable */
+  telefoon?: string | null;
+  /** @nullable */
+  email?: string | null;
+  /** @nullable */
+  website?: string | null;
+  /** @nullable */
+  voettekst?: string | null;
   actief?: boolean;
 }
 

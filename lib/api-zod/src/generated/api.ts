@@ -134,7 +134,9 @@ export const ListGebouwenResponseItem = zod.object({
   "gereed_op": zod.string().nullish(),
   "gereed_door": zod.string().nullish(),
   "gearchiveerd": zod.boolean().optional(),
-  "gearchiveerd_op": zod.string().nullish()
+  "gearchiveerd_op": zod.string().nullish(),
+  "werkgever_id": zod.number().nullish(),
+  "werkmaatschappij_naam": zod.string().nullish()
 })
 export const ListGebouwenResponse = zod.array(ListGebouwenResponseItem)
 
@@ -158,7 +160,8 @@ export const CreateGebouwBody = zod.object({
   "oppervlakte": zod.number().optional(),
   "gebouw_type": zod.string().optional(),
   "latitude": zod.number().optional(),
-  "longitude": zod.number().optional()
+  "longitude": zod.number().optional(),
+  "werkgever_id": zod.number().optional()
 })
 
 export const CreateGebouwResponse = zod.void()
@@ -313,6 +316,8 @@ export const GetGebouwResponse = zod.object({
   "gereed_door": zod.string().nullish(),
   "gearchiveerd": zod.boolean().optional(),
   "gearchiveerd_op": zod.string().nullish(),
+  "werkgever_id": zod.number().nullish(),
+  "werkmaatschappij_naam": zod.string().nullish(),
   "verdiepingen": zod.array(zod.object({
   "id": zod.number(),
   "gebouw_id": zod.number(),
@@ -360,7 +365,8 @@ export const UpdateGebouwBody = zod.object({
   "oppervlakte": zod.number().nullish(),
   "gebouw_type": zod.string().nullish(),
   "latitude": zod.number().nullish(),
-  "longitude": zod.number().nullish()
+  "longitude": zod.number().nullish(),
+  "werkgever_id": zod.number().nullish()
 })
 
 export const UpdateGebouwResponse = zod.object({
@@ -393,7 +399,9 @@ export const UpdateGebouwResponse = zod.object({
   "gereed_op": zod.string().nullish(),
   "gereed_door": zod.string().nullish(),
   "gearchiveerd": zod.boolean().optional(),
-  "gearchiveerd_op": zod.string().nullish()
+  "gearchiveerd_op": zod.string().nullish(),
+  "werkgever_id": zod.number().nullish(),
+  "werkmaatschappij_naam": zod.string().nullish()
 })
 
 
@@ -448,7 +456,9 @@ export const MeldGebouwGereedResponse = zod.object({
   "gereed_op": zod.string().nullish(),
   "gereed_door": zod.string().nullish(),
   "gearchiveerd": zod.boolean().optional(),
-  "gearchiveerd_op": zod.string().nullish()
+  "gearchiveerd_op": zod.string().nullish(),
+  "werkgever_id": zod.number().nullish(),
+  "werkmaatschappij_naam": zod.string().nullish()
 })
 
 
@@ -489,7 +499,9 @@ export const HerstelGebouwActiefResponse = zod.object({
   "gereed_op": zod.string().nullish(),
   "gereed_door": zod.string().nullish(),
   "gearchiveerd": zod.boolean().optional(),
-  "gearchiveerd_op": zod.string().nullish()
+  "gearchiveerd_op": zod.string().nullish(),
+  "werkgever_id": zod.number().nullish(),
+  "werkmaatschappij_naam": zod.string().nullish()
 })
 
 
@@ -545,6 +557,8 @@ export const ArchiveerGebouwResponse = zod.object({
   "gereed_door": zod.string().nullish(),
   "gearchiveerd": zod.boolean().optional(),
   "gearchiveerd_op": zod.string().nullish(),
+  "werkgever_id": zod.number().nullish(),
+  "werkmaatschappij_naam": zod.string().nullish(),
   "verdiepingen": zod.array(zod.object({
   "id": zod.number(),
   "gebouw_id": zod.number(),
@@ -4826,6 +4840,13 @@ export const ListWerkgeversResponseItem = zod.object({
   "logo_document_id": zod.number().nullish(),
   "briefpapier_document_id": zod.number().nullish(),
   "personeelsbeleid": zod.string().nullish(),
+  "adres": zod.string().nullish(),
+  "kvk": zod.string().nullish(),
+  "btw": zod.string().nullish(),
+  "telefoon": zod.string().nullish(),
+  "email": zod.string().nullish(),
+  "website": zod.string().nullish(),
+  "voettekst": zod.string().nullish(),
   "actief": zod.boolean(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
@@ -4842,6 +4863,13 @@ export const CreateWerkgeverBody = zod.object({
   "logo_document_id": zod.number().nullish(),
   "briefpapier_document_id": zod.number().nullish(),
   "personeelsbeleid": zod.string().nullish(),
+  "adres": zod.string().nullish(),
+  "kvk": zod.string().nullish(),
+  "btw": zod.string().nullish(),
+  "telefoon": zod.string().nullish(),
+  "email": zod.string().nullish(),
+  "website": zod.string().nullish(),
+  "voettekst": zod.string().nullish(),
   "actief": zod.boolean().optional()
 })
 
@@ -4862,6 +4890,13 @@ export const GetWerkgeverResponse = zod.object({
   "logo_document_id": zod.number().nullish(),
   "briefpapier_document_id": zod.number().nullish(),
   "personeelsbeleid": zod.string().nullish(),
+  "adres": zod.string().nullish(),
+  "kvk": zod.string().nullish(),
+  "btw": zod.string().nullish(),
+  "telefoon": zod.string().nullish(),
+  "email": zod.string().nullish(),
+  "website": zod.string().nullish(),
+  "voettekst": zod.string().nullish(),
   "actief": zod.boolean(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
@@ -4881,6 +4916,13 @@ export const UpdateWerkgeverBody = zod.object({
   "logo_document_id": zod.number().nullish(),
   "briefpapier_document_id": zod.number().nullish(),
   "personeelsbeleid": zod.string().nullish(),
+  "adres": zod.string().nullish(),
+  "kvk": zod.string().nullish(),
+  "btw": zod.string().nullish(),
+  "telefoon": zod.string().nullish(),
+  "email": zod.string().nullish(),
+  "website": zod.string().nullish(),
+  "voettekst": zod.string().nullish(),
   "actief": zod.boolean().optional()
 })
 
@@ -4891,6 +4933,13 @@ export const UpdateWerkgeverResponse = zod.object({
   "logo_document_id": zod.number().nullish(),
   "briefpapier_document_id": zod.number().nullish(),
   "personeelsbeleid": zod.string().nullish(),
+  "adres": zod.string().nullish(),
+  "kvk": zod.string().nullish(),
+  "btw": zod.string().nullish(),
+  "telefoon": zod.string().nullish(),
+  "email": zod.string().nullish(),
+  "website": zod.string().nullish(),
+  "voettekst": zod.string().nullish(),
   "actief": zod.boolean(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()

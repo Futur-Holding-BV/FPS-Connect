@@ -55,4 +55,8 @@ export interface Gebouw {
   gearchiveerd?: boolean;
   /** @nullable */
   gearchiveerd_op?: string | null;
+  /** @nullable */
+  werkgever_id?: number | null;
+  /** @nullable */
+  werkmaatschappij_naam?: string | null;
 }

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import {
   useUpdateGebouw,
   useAiAnalyseGebouw,
+  useListWerkgevers,
 } from "@workspace/api-client-react";
 import type { Gebouw, GebouwSuggestie } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -100,8 +101,10 @@ export function GebouwBewerkenDialog({ gebouw, open, onOpenChange }: Props) {
   const queryClient = useQueryClient();
   const wijzigGebouw = useUpdateGebouw();
   const aiAnalyse = useAiAnalyseGebouw();
+  const { data: werkgevers } = useListWerkgevers();
 
   const [velden, setVelden] = useState<Velden>(() => uitGebouw(gebouw));
+  const [werkgeverId, setWerkgeverId] = useState<number | null>((gebouw as any).werkgever_id ?? null);
   const [foutmelding, setFoutmelding] = useState<string | null>(null);
 
   // Bestaande gebouwgegevens starten als door de gebruiker beheerd: de AI
@@ -119,6 +122,7 @@ export function GebouwBewerkenDialog({ gebouw, open, onOpenChange }: Props) {
   useEffect(() => {
     if (open) {
       setVelden(uitGebouw(gebouw));
+      setWerkgeverId((gebouw as any).werkgever_id ?? null);
       aiVeldenRef.current = new Set();
       setFoutmelding(null);
       setAiTekst(standaardBeschrijving(gebouw));
@@ -256,6 +260,7 @@ export function GebouwBewerkenDialog({ gebouw, open, onOpenChange }: Props) {
           breedte: getalOfNull(velden.breedte),
           diepte: getalOfNull(velden.diepte),
           oppervlakte: getalOfNull(velden.oppervlakte),
+          werkgever_id: werkgeverId,
         },
       });
       await queryClient.invalidateQueries();
@@ -426,6 +431,20 @@ export function GebouwBewerkenDialog({ gebouw, open, onOpenChange }: Props) {
               value={velden.gebouw_type}
               onChange={(e) => zet("gebouw_type", e.target.value)}
             />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="b-werkmaatschappij">Werkmaatschappij</Label>
+            <select
+              id="b-werkmaatschappij"
+              value={werkgeverId ?? ""}
+              onChange={(e) => setWerkgeverId(e.target.value ? Number(e.target.value) : null)}
+              className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            >
+              <option value="">Geen</option>
+              {(werkgevers ?? []).map((w) => (
+                <option key={w.id} value={w.id}>{w.naam}</option>
+              ))}
+            </select>
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="b-verdiepingen">Aantal verdiepingen</Label>

@@ -2,6 +2,7 @@ import { pgTable, serial, text, integer, timestamp, real, boolean, primaryKey } 
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { gebruikersTable } from "./gebruikers";
+import { werkgeversTable } from "./hrm";
 
 export const gebouwenTable = pgTable("gebouwen", {
   id: serial("id").primaryKey(),
@@ -27,6 +28,7 @@ export const gebouwenTable = pgTable("gebouwen", {
   gereedDoor: text("gereed_door"),
   gearchiveerd: boolean("gearchiveerd").notNull().default(false),
   gearchiveerdOp: timestamp("gearchiveerd_op"),
+  werkgeverId: integer("werkgever_id").references(() => werkgeversTable.id, { onDelete: "set null" }),
 });
 
 export const insertGebouwSchema = createInsertSchema(gebouwenTable).omit({ id: true, aangemaaktOp: true, bijgewerktOp: true });

@@ -10,6 +10,7 @@ import {
   tekeningenTable,
   documentenTable,
   documentKoppelingenTable,
+  werkgeversTable,
 } from "@workspace/db";
 import { eq, inArray, count, and, sql, max, ne } from "drizzle-orm";
 import { requireBevoegdheid, requireBevoegdheidOfKlant } from "../middlewares/auth";
@@ -99,6 +100,7 @@ function gebouwRij(
   naam: string | null,
   partijen: { type: string; naam: string }[] = [],
   laatsteSpotOp: Date | string | null = null,
+  werkmaatschappijNaam: string | null = null,
 ) {
   return {
     id: g.id,
@@ -128,6 +130,8 @@ function gebouwRij(
     gereed_door: g.gereedDoor ?? null,
     gearchiveerd: g.gearchiveerd,
     gearchiveerd_op: g.gearchiveerdOp ? g.gearchiveerdOp.toISOString() : null,
+    werkgever_id: g.werkgeverId ?? null,
+    werkmaatschappij_naam: werkmaatschappijNaam,
   };
 }
 
@@ -198,6 +202,11 @@ router.get("/gebouwen", lezenGebouwenOfKlant, async (req, res) => {
       partijenPerGebouw.set(p.gebouwId, lijst);
     }
 
+    const alleWerkgevers = await db
+      .select({ id: werkgeversTable.id, naam: werkgeversTable.naam })
+      .from(werkgeversTable);
+    const werkgeverNamen = new Map(alleWerkgevers.map((w) => [w.id, w.naam]));
+
     const result = await Promise.all(
       gebouwen.map(async (g) => {
         const [stats] = await db
@@ -213,6 +222,7 @@ router.get("/gebouwen", lezenGebouwenOfKlant, async (req, res) => {
           await klantNaam(g.klantId),
           partijenPerGebouw.get(g.id) ?? [],
           stats?.laatsteSpotOp ?? null,
+          werkgeverNamen.get(g.werkgeverId ?? -1) ?? null,
         );
       }),
     );
@@ -244,6 +254,7 @@ router.post("/gebouwen", requireBevoegdheid("gebouwen", 3), async (req, res) => 
       gebouw_type,
       latitude,
       longitude,
+      werkgever_id,
     } = req.body;
     if (!naam || !adres) {
       return res.status(400).json({ error: "naam en adres zijn verplicht" });
@@ -271,9 +282,13 @@ router.post("/gebouwen", requireBevoegdheid("gebouwen", 3), async (req, res) => 
         gebouwType: gebouw_type,
         latitude,
         longitude,
+        werkgeverId: werkgever_id ?? null,
       })
       .returning();
-    res.status(201).json(gebouwRij(gebouw, 0, await klantNaam(gebouw.klantId)));
+    const wgNaam = gebouw.werkgeverId
+      ? ((await db.select({ naam: werkgeversTable.naam }).from(werkgeversTable).where(eq(werkgeversTable.id, gebouw.werkgeverId))).at(0)?.naam ?? null)
+      : null;
+    res.status(201).json(gebouwRij(gebouw, 0, await klantNaam(gebouw.klantId), [], null, wgNaam));
   } catch (err) {
     if (uniekFoutAntwoord(err, res)) {
       return;
@@ -520,6 +535,10 @@ router.get("/gebouwen/:id", lezenGebouwenOfKlant, async (req, res) => {
     const [gebouw] = await db.select().from(gebouwenTable).where(eq(gebouwenTable.id, id));
     if (!gebouw) return res.status(404).json({ error: "Gebouw niet gevonden" });
 
+    const werkgeverNaamDetail = gebouw.werkgeverId
+      ? ((await db.select({ naam: werkgeversTable.naam }).from(werkgeversTable).where(eq(werkgeversTable.id, gebouw.werkgeverId))).at(0)?.naam ?? null)
+      : null;
+
     // Toegangscontrole: beperkte gebruikers mogen alleen toegewezen gebouwen zien
     if (beperkt) {
       const ids = await toegewezenGebouwIds(userId);
@@ -588,6 +607,8 @@ router.get("/gebouwen/:id", lezenGebouwenOfKlant, async (req, res) => {
       gereed_door: gebouw.gereedDoor ?? null,
       gearchiveerd: gebouw.gearchiveerd,
       gearchiveerd_op: gebouw.gearchiveerdOp ? gebouw.gearchiveerdOp.toISOString() : null,
+      werkgever_id: gebouw.werkgeverId ?? null,
+      werkmaatschappij_naam: werkgeverNaamDetail,
       verdiepingen: verdiepingenMet,
       stats,
     });
@@ -618,6 +639,7 @@ router.patch("/gebouwen/:id", requireBevoegdheid("gebouwen", 2), async (req, res
       gebouw_type,
       latitude,
       longitude,
+      werkgever_id,
     } = req.body;
     const [gebouw] = await db
       .update(gebouwenTable)
@@ -652,6 +674,7 @@ router.patch("/gebouwen/:id", requireBevoegdheid("gebouwen", 2), async (req, res
         gebouwType: gebouw_type,
         latitude,
         longitude,
+        ...(werkgever_id !== undefined ? { werkgeverId: werkgever_id ?? null } : {}),
         bijgewerktOp: new Date(),
       })
       .where(eq(gebouwenTable.id, id))
@@ -661,7 +684,10 @@ router.patch("/gebouwen/:id", requireBevoegdheid("gebouwen", 2), async (req, res
       .select({ count: count() })
       .from(voorzieningenTable)
       .where(eq(voorzieningenTable.gebouwId, id));
-    res.json(gebouwRij(gebouw, Number(totaal?.count ?? 0), await klantNaam(gebouw.klantId)));
+    const patchWgNaam = gebouw.werkgeverId
+      ? ((await db.select({ naam: werkgeversTable.naam }).from(werkgeversTable).where(eq(werkgeversTable.id, gebouw.werkgeverId))).at(0)?.naam ?? null)
+      : null;
+    res.json(gebouwRij(gebouw, Number(totaal?.count ?? 0), await klantNaam(gebouw.klantId), [], null, patchWgNaam));
   } catch (err) {
     if (uniekFoutAntwoord(err, res)) {
       return;

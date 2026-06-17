@@ -17,6 +17,20 @@ export interface Werkgever {
   briefpapier_document_id?: number | null;
   /** @nullable */
   personeelsbeleid?: string | null;
+  /** @nullable */
+  adres?: string | null;
+  /** @nullable */
+  kvk?: string | null;
+  /** @nullable */
+  btw?: string | null;
+  /** @nullable */
+  telefoon?: string | null;
+  /** @nullable */
+  email?: string | null;
+  /** @nullable */
+  website?: string | null;
+  /** @nullable */
+  voettekst?: string | null;
   actief: boolean;
   aangemaakt_op: string;
   bijgewerkt_op: string;

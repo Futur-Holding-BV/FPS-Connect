@@ -29,7 +29,7 @@ import { useAuth } from "@/context/auth-context";
 import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
 import { useToast } from "@/hooks/use-toast";
 import { useUpload } from "@workspace/object-storage-web";
-import { ArrowLeft, Printer, Loader2, Save } from "lucide-react";
+import { ArrowLeft, Printer, Loader2, Save, ChevronDown, ChevronRight, Settings2, Mail } from "lucide-react";
 import { resolveAssetUrl } from "@/components/documentopmaak";
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
@@ -144,7 +144,84 @@ const DOCUMENTTYPE_LABEL: Record<string, string> = {
   verwerkingsvoorschrift: "Verwerkingsvoorschrift",
 };
 
-const REPORT_TITEL = "Opleverrapport brandveiligheid";
+// ─── Rapporttype-presets ─────────────────────────────────────────────────────
+
+type RapportType = "werkpakket_monteur" | "voortgang" | "opleverrapport" | "opleverdossier";
+
+const RAPPORT_TYPE_LABEL: Record<RapportType, string> = {
+  werkpakket_monteur: "Werkpakket monteur",
+  voortgang:          "Voortgangsrapportage",
+  opleverrapport:     "Opleverrapport brandveiligheid",
+  opleverdossier:     "Opleverdossier compleet",
+};
+
+const RAPPORT_TYPE_OMSCHRIJVING: Record<RapportType, string> = {
+  werkpakket_monteur: "Plattegronden, spots en werkzaamheden voor uitvoering",
+  voortgang:          "Voortgang, aantallen en openstaande punten",
+  opleverrapport:     "Volledig opleverrapport met juridische basis",
+  opleverdossier:     "Opleverrapport inclusief ETA's, certificaten en correspondentie",
+};
+
+type Sectiesleutels = {
+  voorblad:            boolean;
+  projectomschrijving: boolean;
+  juridisch:           boolean;
+  plattegronden:       boolean;
+  spotdetails:         boolean;
+  fotos:               boolean;
+  eta_certificaten:    boolean;
+  tekeningen:          boolean;
+  relevante_emails:    boolean;
+  onderhoud:           boolean;
+  inspecties:          boolean;
+};
+
+const PRESET_SECTIES: Record<RapportType, Sectiesleutels> = {
+  werkpakket_monteur: {
+    voorblad: true, projectomschrijving: true, juridisch: false,
+    plattegronden: true, spotdetails: true, fotos: true,
+    eta_certificaten: false, tekeningen: false, relevante_emails: true,
+    onderhoud: true, inspecties: false,
+  },
+  voortgang: {
+    voorblad: true, projectomschrijving: true, juridisch: false,
+    plattegronden: true, spotdetails: false, fotos: false,
+    eta_certificaten: false, tekeningen: false, relevante_emails: false,
+    onderhoud: true, inspecties: true,
+  },
+  opleverrapport: {
+    voorblad: true, projectomschrijving: true, juridisch: true,
+    plattegronden: true, spotdetails: true, fotos: true,
+    eta_certificaten: true, tekeningen: true, relevante_emails: true,
+    onderhoud: false, inspecties: false,
+  },
+  opleverdossier: {
+    voorblad: true, projectomschrijving: true, juridisch: true,
+    plattegronden: true, spotdetails: true, fotos: true,
+    eta_certificaten: true, tekeningen: true, relevante_emails: true,
+    onderhoud: true, inspecties: true,
+  },
+};
+
+const SECTIES_LABELS: Record<keyof Sectiesleutels, string> = {
+  voorblad:            "Voorblad",
+  projectomschrijving: "Projectomschrijving",
+  juridisch:           "Juridische toelichting",
+  plattegronden:       "Plattegronden",
+  spotdetails:         "Spot-detailpagina's",
+  fotos:               "Foto's",
+  eta_certificaten:    "ETA's / certificaten",
+  tekeningen:          "Tekeningen",
+  relevante_emails:    "Relevante e-mails",
+  onderhoud:           "Onderhoud",
+  inspecties:          "Inspecties",
+};
+
+const SECTIES_VOLGORDE: (keyof Sectiesleutels)[] = [
+  "voorblad", "projectomschrijving", "juridisch",
+  "plattegronden", "spotdetails", "fotos", "eta_certificaten",
+  "tekeningen", "relevante_emails", "onderhoud", "inspecties",
+];
 
 const CANVAS_W = 1200;
 const CANVAS_H = 800;
@@ -310,6 +387,8 @@ function SpotDetailBlok({
   logoSrc,
   documenten,
   typeNaam,
+  toonFotos,
+  toonEtaCertificaten,
   onGereed,
 }: {
   spot: SVGVoorziening;
@@ -324,6 +403,8 @@ function SpotDetailBlok({
   logoSrc: string;
   documenten: any[] | undefined;
   typeNaam: Record<string, string>;
+  toonFotos: boolean;
+  toonEtaCertificaten: boolean;
   onGereed: () => void;
 }) {
   const { data: detail } = useGetVoorziening(spot.id);
@@ -513,7 +594,7 @@ function SpotDetailBlok({
         )}
       </div>
 
-      <div className="prt-spot-testinfo">
+      {toonEtaCertificaten && <div className="prt-spot-testinfo">
         <div className="prt-spot-testinfo-titel">Productcertificaten / ETA's</div>
         {spotDocumenten.length > 0 ? (
           spotDocumenten.map((doc: any) => (
@@ -539,12 +620,12 @@ function SpotDetailBlok({
             <span className="prt-spot-testitem-naam" style={{ color: "#94a3b8", fontStyle: "italic" }}>Geen gekoppeld document</span>
           </div>
         )}
-      </div>
+      </div>}
 
-      {fotosPassenSamen && heeftFotos && fotosInhoud}
+      {toonFotos && fotosPassenSamen && heeftFotos && fotosInhoud}
     </div>
 
-    {!fotosPassenSamen && heeftFotos && (
+    {toonFotos && !fotosPassenSamen && heeftFotos && (
       <div className="prt-spot-fotopagina">
         <div className="prt-spot-kop">
           <div className="prt-spot-kop-links">
@@ -595,6 +676,70 @@ function renderScheidingen(scheidingen: any[] | undefined, W: number, H: number)
   });
 }
 
+// ─── VerdiepingSpotSelector (composer-component) ─────────────────────────────
+
+function VerdiepingSpotSelector({
+  verdieping,
+  geselecteerdeSpotIds,
+  onChange,
+}: {
+  verdieping: Verdieping;
+  geselecteerdeSpotIds: Set<number> | undefined;
+  onChange: (verdiepingId: number, selectie: Set<number> | undefined) => void;
+}) {
+  const { data: voorzieningen } = useListVoorzieningenOpVerdieping(verdieping.id);
+  const [open, setOpen] = useState(false);
+
+  const spots = (voorzieningen ?? []) as any[];
+  const alleIds = useMemo(() => new Set<number>(spots.map((v: any) => v.id as number)), [spots]);
+
+  const allesGeselecteerd = geselecteerdeSpotIds === undefined;
+  const aantalGeselecteerd = allesGeselecteerd ? spots.length : geselecteerdeSpotIds!.size;
+  const verdiepingAan = geselecteerdeSpotIds === undefined || geselecteerdeSpotIds.size > 0;
+
+  function toggleVerdieping(aan: boolean) {
+    onChange(verdieping.id, aan ? undefined : new Set<number>());
+  }
+
+  function toggleSpot(spotId: number, aan: boolean) {
+    const basis = geselecteerdeSpotIds ?? alleIds;
+    const nieuw = new Set(basis);
+    if (aan) nieuw.add(spotId); else nieuw.delete(spotId);
+    onChange(verdieping.id, [...alleIds].every(id => nieuw.has(id)) ? undefined : nieuw);
+  }
+
+  return (
+    <div className="cmpr-verd-item">
+      <div className="cmpr-verd-rij">
+        <label className="cmpr-checkregel" style={{ flex: 1 }}>
+          <input type="checkbox" checked={verdiepingAan} onChange={e => toggleVerdieping(e.target.checked)} className="cmpr-check" />
+          <span className="cmpr-verd-naam">{verdieping.naam}</span>
+          <span className="cmpr-verd-meta">{aantalGeselecteerd}/{spots.length}</span>
+        </label>
+        {spots.length > 0 && (
+          <button type="button" className="cmpr-expand-btn" onClick={() => setOpen(o => !o)}>
+            {open ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
+          </button>
+        )}
+      </div>
+      {open && spots.length > 0 && (
+        <div className="cmpr-spot-lijst">
+          {spots.map((v: any) => {
+            const geselecteerd = allesGeselecteerd || geselecteerdeSpotIds!.has(v.id as number);
+            return (
+              <label key={v.id} className="cmpr-checkregel cmpr-spot-regel">
+                <input type="checkbox" checked={geselecteerd} onChange={e => toggleSpot(v.id as number, e.target.checked)} className="cmpr-check" />
+                <span className="cmpr-spot-nr">{v.objectnummer}</span>
+                <span className="cmpr-spot-type">{TYPEN[v.type]?.label ?? v.type}</span>
+              </label>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── PrintVerdieping ─────────────────────────────────────────────────────────
 
 function PrintVerdieping({
@@ -609,6 +754,9 @@ function PrintVerdieping({
   toonSpotDetails,
   groepeerOpCluster,
   clusters,
+  geselecteerdeSpotIds,
+  toonFotos,
+  toonEtaCertificaten,
 }: {
   verdieping: Verdieping;
   onGereed: () => void;
@@ -621,6 +769,9 @@ function PrintVerdieping({
   toonSpotDetails: boolean;
   groepeerOpCluster: boolean;
   clusters: Cluster[] | undefined;
+  geselecteerdeSpotIds: Set<number> | undefined;
+  toonFotos: boolean;
+  toonEtaCertificaten: boolean;
 }) {
   const [pdfBeeld, setPdfBeeld]     = useState<string | null>(null);
   const [pdfDims, setPdfDims]       = useState<{ w: number; h: number } | null>(null);
@@ -685,6 +836,7 @@ function PrintVerdieping({
     : null;
 
   const geplaatst: SVGVoorziening[] = (voorzieningen ?? [])
+    .filter((v: any) => geselecteerdeSpotIds === undefined || geselecteerdeSpotIds.has(v.id as number))
     .filter((v: any) => v.locatie_x != null && v.locatie_y != null)
     .map((v: any) => ({
       id: v.id,
@@ -698,7 +850,7 @@ function PrintVerdieping({
       cluster_naam: v.cluster_naam ?? null,
     }));
 
-  const alleVoorzieningen = (voorzieningen ?? []) as any[];
+  const alleVoorzieningen = ((voorzieningen ?? []) as any[]).filter((v: any) => geselecteerdeSpotIds === undefined || geselecteerdeSpotIds.has(v.id as number));
   const aantalSpots = toonSpotDetails ? geplaatst.length : 0;
   const alleSpotsGereed = spotsGereed >= aantalSpots;
 
@@ -749,6 +901,8 @@ function PrintVerdieping({
       logoSrc={logoSrc}
       documenten={documenten}
       typeNaam={typeNaam}
+      toonFotos={toonFotos}
+      toonEtaCertificaten={toonEtaCertificaten}
       onGereed={() => setSpotsGereed(n => n + 1)}
     />
   );
@@ -973,9 +1127,23 @@ export default function GebouwPrint() {
   const [gereedFloors, setGereedFloors] = useState(0);
   const gedrukt = useRef(false);
 
-  const [toonOverzicht,   setToonOverzicht]   = useState(true);
-  const [toonSpotDetails, setToonSpotDetails] = useState(true);
+  const [rapportType, setRapportType] = useState<RapportType>("opleverrapport");
+  const [secties, setSecties] = useState<Sectiesleutels>(PRESET_SECTIES["opleverrapport"]);
   const [groepeerOpCluster, setGroepeerOpCluster] = useState(false);
+  const [spotSelectie, setSpotSelectie] = useState<Record<number, Set<number> | undefined>>({});
+  const [emailModus, setEmailModus] = useState<"ai" | "handmatig">("ai");
+  const [handmatigeEmailSelectie, setHandmatigeEmailSelectie] = useState<Set<number>>(new Set());
+
+  function kiesRapportType(type: RapportType) {
+    setRapportType(type);
+    setSecties(PRESET_SECTIES[type]);
+  }
+  function updateSecties(sleutel: keyof Sectiesleutels, aan: boolean) {
+    setSecties(prev => ({ ...prev, [sleutel]: aan }));
+  }
+  function updateSpotSelectie(verdiepingId: number, selectie: Set<number> | undefined) {
+    setSpotSelectie(prev => ({ ...prev, [verdiepingId]: selectie }));
+  }
 
   const verdiepingen = [...((gebouw?.verdiepingen ?? []) as Verdieping[])].sort(
     (a, b) => (a.niveau ?? 0) - (b.niveau ?? 0),
@@ -1017,6 +1185,7 @@ export default function GebouwPrint() {
   const nu = new Date();
   const exportDatum = `${nu.toLocaleDateString("nl-NL")} ${nu.toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit" })}`;
   const logoSrc = resolveAssetUrl("logo-fps.png");
+  const werkgeverNaam = (gebouw as any).werkmaatschappij_naam ?? "FPS Brandpreventie";
 
   const rapportDatum   = nu.toLocaleDateString("nl-NL");
   const rapportVersie  = "1.0";
@@ -1101,11 +1270,13 @@ export default function GebouwPrint() {
     || "";
 
   const projectTekeningen = (tekeningen ?? []).filter((t) => t.type !== "document");
-  const projectEmails     = (emails ?? []).filter((e) => e.ai_relevant !== false);
+  const projectEmails = emailModus === "ai"
+    ? (emails ?? []).filter((e) => e.ai_relevant !== false)
+    : (emails ?? []).filter((e) => handmatigeEmailSelectie.has(e.id));
   const emailGroepen      = CATEGORIE_VOLGORDE
     .map(cat => ({ categorie: cat, emails: projectEmails.filter(e => emailCategorie(e.ai_relevant_reden, e.ai_omschrijving) === cat) }))
     .filter(g => g.emails.length > 0);
-  const heeftDocumenten   = projectTekeningen.length > 0 || emailGroepen.length > 0;
+  const heeftDocumenten   = (secties.tekeningen && projectTekeningen.length > 0) || (secties.relevante_emails && emailGroepen.length > 0);
 
   const teamleden = Object.values(
     (toewijzingen ?? []).reduce<Record<number, { id: number; naam: string; rol: string; rollen: string[] }>>((acc, t) => {
@@ -1322,13 +1493,45 @@ export default function GebouwPrint() {
         .prt-cluster-meta { font-size: 11px; font-weight: 500; color: #64748b; margin-left: auto; }
         .prt-cluster-groep .prt-cluster-kop + .prt-spot-detail { break-before: avoid; }
 
-        /* ── Toolbar ── */
-        .prt-toolbar { position: sticky; top: 0; z-index: 10; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; padding: 10px 24px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; }
-        .prt-toolbar-links { display: flex; gap: 8px; align-items: center; }
-        .prt-modus-label { font-size: 12px; font-weight: 600; color: #334155; margin-right: 4px; }
-        .prt-modus-checkboxen { display: flex; gap: 16px; flex-wrap: wrap; }
-        .prt-modus-opt { display: flex; align-items: center; gap: 5px; font-size: 12px; color: #334155; cursor: pointer; user-select: none; }
-        .prt-modus-opt input { accent-color: hsl(12 90% 50%); width: 14px; height: 14px; cursor: pointer; }
+        /* ── Topbalk ── */
+        .prt-topbar { position: sticky; top: 0; z-index: 20; display: flex; align-items: center; gap: 12px; padding: 8px 16px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; height: 44px; }
+        .prt-topbar-midden { flex: 1; display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: #334155; overflow: hidden; }
+        .prt-topbar-acties { display: flex; gap: 6px; flex-shrink: 0; }
+        .prt-concept-badge { font-size: 9px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; padding: 2px 7px; background: #fef9c3; color: #854d0e; border: 1px solid #fef08a; border-radius: 4px; white-space: nowrap; flex-shrink: 0; }
+
+        /* ── Layout ── */
+        .prt-layout { display: flex; align-items: flex-start; }
+        .prt-cmpr { width: 264px; flex-shrink: 0; border-right: 1px solid #e2e8f0; background: #fff; position: sticky; top: 44px; height: calc(100vh - 44px); overflow-y: auto; }
+        .prt-preview { flex: 1; min-width: 0; }
+
+        /* ── Composer ── */
+        .cmpr-sectie { padding: 10px 12px 8px; border-bottom: 1px solid #f1f5f9; }
+        .cmpr-sectie:last-child { border-bottom: none; }
+        .cmpr-sectie-kop { display: flex; align-items: center; gap: 5px; font-size: 10px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: .08em; margin-bottom: 7px; }
+        .cmpr-sectie-kop-actie { margin-left: auto; font-size: 10px; font-weight: 500; color: hsl(12 90% 50%); cursor: pointer; text-transform: none; letter-spacing: 0; background: none; border: none; padding: 0; }
+        .cmpr-type-optie { display: flex; align-items: flex-start; gap: 7px; padding: 6px 7px; border-radius: 5px; cursor: pointer; border: 1px solid transparent; margin-bottom: 2px; }
+        .cmpr-type-optie:hover { background: #f8fafc; }
+        .cmpr-type-aktief { background: #fff7f5 !important; border-color: hsl(12 90% 50% / .22) !important; }
+        .cmpr-type-naam { font-size: 11.5px; font-weight: 600; color: #0f172a; line-height: 1.3; }
+        .cmpr-type-sub { font-size: 10px; color: #64748b; margin-top: 1px; line-height: 1.3; }
+        .cmpr-checkregel { display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: #334155; cursor: pointer; padding: 2.5px 0; user-select: none; line-height: 1.3; }
+        .cmpr-checkregel:hover { color: #0f172a; }
+        .cmpr-check { accent-color: hsl(12 90% 50%); width: 13px; height: 13px; cursor: pointer; flex-shrink: 0; }
+        .cmpr-sub-optie { padding-left: 19px; color: #64748b; }
+        .cmpr-verd-item { border: 1px solid #f1f5f9; border-radius: 5px; margin-bottom: 3px; overflow: hidden; }
+        .cmpr-verd-rij { display: flex; align-items: center; padding: 4px 6px; gap: 2px; background: #f8fafc; }
+        .cmpr-verd-naam { font-weight: 600; flex: 1; font-size: 11px; color: #0f172a; }
+        .cmpr-verd-meta { font-size: 10px; color: #94a3b8; margin-right: 2px; }
+        .cmpr-expand-btn { background: none; border: none; cursor: pointer; color: #94a3b8; padding: 2px; display: flex; align-items: center; }
+        .cmpr-spot-lijst { padding: 3px 6px 5px 20px; background: #fff; }
+        .cmpr-spot-regel { align-items: center; }
+        .cmpr-spot-nr { font-weight: 600; font-size: 10.5px; color: #475569; min-width: 50px; }
+        .cmpr-spot-type { font-size: 10.5px; color: #94a3b8; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .cmpr-email-modus { margin-bottom: 5px; }
+        .cmpr-email-lijst { max-height: 180px; overflow-y: auto; border: 1px solid #f1f5f9; border-radius: 4px; padding: 3px; margin-top: 4px; }
+        .cmpr-email-regel { align-items: flex-start; }
+        .cmpr-email-onderwerp { font-size: 10.5px; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 170px; }
+        .cmpr-ai-badge { font-size: 9px; font-weight: 700; padding: 0 4px; border-radius: 3px; background: #dbeafe; color: #1d4ed8; flex-shrink: 0; }
 
         /* ── Footer ── */
         .prt-leeg { font-size: 13px; color: #64748b; }
@@ -1336,67 +1539,150 @@ export default function GebouwPrint() {
 
         @media print {
           .no-print { display: none !important; }
+          .prt-layout { display: block; }
+          .prt-cmpr { display: none !important; }
           .prt-voorblad { min-height: 0; }
           .prt-pagina { max-width: none; padding: 0; break-before: page; }
           @page { margin: 14mm; }
         }
         @media screen {
           .prt-root { background: #f1f5f9; min-height: 100vh; }
-          .prt-voorblad { max-width: 960px; box-shadow: 0 1px 3px rgba(0,0,0,.1); margin: 24px auto; min-height: 860px; }
-          .prt-pagina { background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.1); margin: 24px auto; }
+          .prt-preview .prt-voorblad { max-width: 960px; box-shadow: 0 1px 3px rgba(0,0,0,.1); margin: 24px auto; min-height: 860px; }
+          .prt-preview .prt-pagina { background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.1); margin: 24px auto; }
         }
       `}</style>
 
-      {/* ── Toolbar ── */}
-      <div className="prt-toolbar no-print">
-        <div className="prt-toolbar-links">
-          <Link href={`/gebouwen/${gebouwId}`}>
-            <Button variant="outline" size="sm"><ArrowLeft className="h-4 w-4" /> Terug</Button>
-          </Link>
-          <span className="prt-modus-label">Inhoud:</span>
-          <div className="prt-modus-checkboxen">
-            <label className="prt-modus-opt">
-              <input type="checkbox" checked={toonOverzicht} onChange={e => setToonOverzicht(e.target.checked)} />
-              Overzichtsplattegrond
-            </label>
-            <label className="prt-modus-opt">
-              <input type="checkbox" checked={toonSpotDetails} onChange={e => setToonSpotDetails(e.target.checked)} />
-              Spot-detailpagina's
-            </label>
-            <label className="prt-modus-opt" style={{ opacity: toonSpotDetails && (clusters ?? []).length > 0 ? 1 : 0.5 }}>
-              <input
-                type="checkbox"
-                checked={groepeerOpCluster}
-                disabled={!toonSpotDetails || (clusters ?? []).length === 0}
-                onChange={e => setGroepeerOpCluster(e.target.checked)}
-              />
-              Groeperen op cluster
-            </label>
-          </div>
+      {/* ── Topbalk ── */}
+      <div className="prt-topbar no-print">
+        <Link href={`/gebouwen/${gebouwId}`}>
+          <Button variant="outline" size="sm"><ArrowLeft className="h-4 w-4" /> Terug</Button>
+        </Link>
+        <div className="prt-topbar-midden">
+          {RAPPORT_TYPE_LABEL[rapportType]}
+          <span className="prt-concept-badge">Concept</span>
         </div>
-        <div style={{ display: "flex", gap: "0.5rem" }}>
+        <div className="prt-topbar-acties">
           {magOpslaanInDms && (
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={slaOpInDms}
-              disabled={!allesGereed || bezigOpslaan}
-            >
+            <Button size="sm" variant="outline" onClick={slaOpInDms} disabled={!allesGereed || bezigOpslaan}>
               {bezigOpslaan ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-              {bezigOpslaan ? "Opslaan in DMS…" : "Opslaan in DMS"}
+              {bezigOpslaan ? "Opslaan…" : "Opslaan in DMS"}
             </Button>
           )}
           <Button size="sm" onClick={() => window.print()} disabled={!allesGereed}>
             {allesGereed ? <Printer className="h-4 w-4" /> : <Loader2 className="h-4 w-4 animate-spin" />}
-            {allesGereed ? "Afdrukken / Opslaan als PDF" : "Voorbereiden…"}
+            {allesGereed ? "Afdrukken / PDF" : "Voorbereiden…"}
           </Button>
         </div>
       </div>
 
+      {/* ── Layout: composer | preview ── */}
+      <div className="prt-layout">
+
+        {/* ── Composer-paneel ── */}
+        <div className="prt-cmpr no-print">
+
+          {/* Rapporttype */}
+          <div className="cmpr-sectie">
+            <div className="cmpr-sectie-kop">Rapporttype</div>
+            {(["werkpakket_monteur", "voortgang", "opleverrapport", "opleverdossier"] as RapportType[]).map(type => (
+              <label key={type} className={`cmpr-type-optie ${rapportType === type ? "cmpr-type-aktief" : ""}`}>
+                <input type="radio" name="rapporttype" value={type} checked={rapportType === type} onChange={() => kiesRapportType(type)} className="cmpr-check" style={{ marginTop: 2 }} />
+                <div>
+                  <div className="cmpr-type-naam">{RAPPORT_TYPE_LABEL[type]}</div>
+                  <div className="cmpr-type-sub">{RAPPORT_TYPE_OMSCHRIJVING[type]}</div>
+                </div>
+              </label>
+            ))}
+          </div>
+
+          {/* Secties */}
+          <div className="cmpr-sectie">
+            <div className="cmpr-sectie-kop">
+              <Settings2 size={11} />
+              Secties
+              <button type="button" className="cmpr-sectie-kop-actie" onClick={() => setSecties(PRESET_SECTIES[rapportType])}>Reset</button>
+            </div>
+            {SECTIES_VOLGORDE.map(sleutel => (
+              <label key={sleutel} className="cmpr-checkregel">
+                <input type="checkbox" checked={secties[sleutel]} onChange={e => updateSecties(sleutel, e.target.checked)} className="cmpr-check" />
+                {SECTIES_LABELS[sleutel]}
+              </label>
+            ))}
+            {secties.spotdetails && (
+              <label className="cmpr-checkregel cmpr-sub-optie" style={{ opacity: (clusters ?? []).length > 0 ? 1 : 0.4 }}>
+                <input type="checkbox" checked={groepeerOpCluster} disabled={(clusters ?? []).length === 0} onChange={e => setGroepeerOpCluster(e.target.checked)} className="cmpr-check" />
+                Groeperen op cluster
+              </label>
+            )}
+          </div>
+
+          {/* Spots per verdieping */}
+          {verdiepingen.length > 0 && (
+            <div className="cmpr-sectie">
+              <div className="cmpr-sectie-kop">
+                Spots
+                <button type="button" className="cmpr-sectie-kop-actie" onClick={() => setSpotSelectie({})}>Alles</button>
+              </div>
+              {verdiepingen.map(v => (
+                <VerdiepingSpotSelector
+                  key={v.id}
+                  verdieping={v}
+                  geselecteerdeSpotIds={spotSelectie[v.id]}
+                  onChange={updateSpotSelectie}
+                />
+              ))}
+            </div>
+          )}
+
+          {/* E-mails */}
+          {secties.relevante_emails && (
+            <div className="cmpr-sectie">
+              <div className="cmpr-sectie-kop">
+                <Mail size={11} />
+                E-mails
+              </div>
+              <div className="cmpr-email-modus">
+                <label className="cmpr-checkregel">
+                  <input type="radio" name="emailmodus" checked={emailModus === "ai"} onChange={() => setEmailModus("ai")} className="cmpr-check" />
+                  AI-filter (automatisch)
+                </label>
+                <label className="cmpr-checkregel">
+                  <input type="radio" name="emailmodus" checked={emailModus === "handmatig"} onChange={() => {
+                    setEmailModus("handmatig");
+                    if (handmatigeEmailSelectie.size === 0 && (emails ?? []).length > 0) {
+                      setHandmatigeEmailSelectie(new Set((emails ?? []).filter(e => e.ai_relevant !== false).map(e => e.id)));
+                    }
+                  }} className="cmpr-check" />
+                  Handmatig selecteren
+                </label>
+              </div>
+              {emailModus === "handmatig" && (emails ?? []).length > 0 && (
+                <div className="cmpr-email-lijst">
+                  {(emails ?? []).map(e => (
+                    <label key={e.id} className="cmpr-checkregel cmpr-email-regel">
+                      <input type="checkbox" checked={handmatigeEmailSelectie.has(e.id)} onChange={ev => {
+                        const nieuw = new Set(handmatigeEmailSelectie);
+                        if (ev.target.checked) nieuw.add(e.id); else nieuw.delete(e.id);
+                        setHandmatigeEmailSelectie(nieuw);
+                      }} className="cmpr-check" style={{ marginTop: 2 }} />
+                      <span className="cmpr-email-onderwerp">{e.onderwerp || e.bestandsnaam || "Geen onderwerp"}</span>
+                      {e.ai_relevant !== false && <span className="cmpr-ai-badge">AI</span>}
+                    </label>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+        </div>{/* .prt-cmpr */}
+
+        {/* ── Preview ── */}
+        <div className="prt-preview">
+
       {/* ════════════════════════════════════════════════════════════════
           PAGINA 1 — VOORBLAD
       ════════════════════════════════════════════════════════════════ */}
-      <div className="prt-voorblad">
+      {secties.voorblad && <div className="prt-voorblad">
         <div className="prt-cover-top">
           <img src={logoSrc} alt="FPS Brandpreventie" className="prt-cover-logo" />
         </div>
@@ -1413,7 +1699,8 @@ export default function GebouwPrint() {
 
         <div className="prt-cover-main">
           <div className="prt-cover-accentlijn" />
-          <div className="prt-cover-type">{REPORT_TITEL}</div>
+          <div className="prt-cover-type">{RAPPORT_TYPE_LABEL[rapportType]}</div>
+          <div style={{ marginBottom: 4 }}><span className="prt-concept-badge" style={{ fontSize: 10, padding: "2px 8px" }}>Concept — niet definitief</span></div>
           <div className="prt-cover-naam">{gebouw.naam}</div>
           {(gebouw.adres || gebouw.stad) && (
             <div className="prt-cover-adres">
@@ -1450,7 +1737,7 @@ export default function GebouwPrint() {
 
         <div className="prt-cover-voet">
           <div>
-            <div className="prt-cover-voet-merk">FPS Brandpreventie</div>
+            <div className="prt-cover-voet-merk">{werkgeverNaam}</div>
             <div className="prt-cover-voet-tagline">Brandveiligheid door vakmanschap</div>
           </div>
           <div className="prt-cover-voet-rechts">
@@ -1458,7 +1745,7 @@ export default function GebouwPrint() {
             <div>Rapportdatum: <span className="prt-cover-voet-waarde">{rapportDatum}</span></div>
           </div>
         </div>
-      </div>
+      </div>}
 
       {/* ════════════════════════════════════════════════════════════════
           PAGINA 2 — RAPPORTGEGEVENS
@@ -1475,7 +1762,7 @@ export default function GebouwPrint() {
         <section className="prt-sectie">
           <h2 className="prt-sectie-titel">Rapportgegevens</h2>
           <div className="prt-grid">
-            <div><div className="lbl">Rapporttitel</div><div className="val">{REPORT_TITEL}</div></div>
+            <div><div className="lbl">Rapporttitel</div><div className="val">{RAPPORT_TYPE_LABEL[rapportType]}</div></div>
             <div><div className="lbl">Project</div><div className="val">{titel}</div></div>
             <div><div className="lbl">Documentnummer</div><div className="val">{documentnummer}</div></div>
             <div><div className="lbl">Rapportversie</div><div className="val">{rapportVersie}</div></div>
@@ -1504,7 +1791,7 @@ export default function GebouwPrint() {
           </div>
         </div>
 
-        {projectOmschrijving && (
+        {secties.projectomschrijving && projectOmschrijving && (
           <section className="prt-sectie">
             <h2 className="prt-sectie-titel">Projectomschrijving</h2>
             <p style={{ fontSize: 12, color: "#475569", lineHeight: 1.65, whiteSpace: "pre-line" }}>
@@ -1536,7 +1823,7 @@ export default function GebouwPrint() {
           <section className="prt-sectie">
             <h2 className="prt-sectie-titel">Projectkaders en documenten</h2>
 
-            {projectTekeningen.length > 0 && (
+            {secties.tekeningen && projectTekeningen.length > 0 && (
               <>
                 <div className="prt-tegel-koplabel" style={{ marginTop: 4 }}>Tekeningen</div>
                 <table className="prt-tabel">
@@ -1562,7 +1849,7 @@ export default function GebouwPrint() {
               </>
             )}
 
-            {emailGroepen.length > 0 && (
+            {secties.relevante_emails && emailGroepen.length > 0 && (
               <>
                 <div className="prt-tegel-koplabel" style={{ marginTop: 12 }}>Relevante correspondentie en e-mails</div>
                 <table className="prt-tabel">
@@ -1688,7 +1975,7 @@ export default function GebouwPrint() {
       {/* ════════════════════════════════════════════════════════════════
           PAGINA 3 — UITGANGSPUNTEN EN JURIDISCHE TOELICHTING
       ════════════════════════════════════════════════════════════════ */}
-      <div className="prt-pagina prt-juridisch-pagina">
+      {secties.juridisch && <div className="prt-pagina prt-juridisch-pagina">
         <div className="prt-pagina-kop">
           <img src={logoSrc} alt="FPS Brandpreventie" />
           <div className="prt-pagina-kop-info">
@@ -1823,7 +2110,7 @@ export default function GebouwPrint() {
           <div className="prt-juridisch">
             <p>
               Dit rapport is samengesteld op basis van de op het moment van opstellen beschikbare
-              gegevens in het beheersysteem van FPS Brandpreventie. FPS Brandpreventie staat in
+              gegevens in het beheersysteem van {werkgeverNaam}. {werkgeverNaam} staat in
               voor een zorgvuldige registratie, maar aanvaardt geen aansprakelijkheid voor
               onjuistheden die het gevolg zijn van:
             </p>
@@ -1838,11 +2125,11 @@ export default function GebouwPrint() {
               &ldquo;Gereedmelding en oplevering&rdquo;.
             </p>
             <p style={{ fontSize: 11, color: "#94a3b8", marginTop: 16, fontStyle: "italic" }}>
-              FPS Brandpreventie — Brandveiligheid door vakmanschap
+              {werkgeverNaam} — Brandveiligheid door vakmanschap
             </p>
           </div>
         </section>
-      </div>
+      </div>}
 
       {/* ════════════════════════════════════════════════════════════════
           PAGINA 4+ — RAPPORTINHOUD
@@ -1871,16 +2158,19 @@ export default function GebouwPrint() {
                 logoSrc={logoSrc}
                 documenten={documenten}
                 typeNaam={typeNaam}
-                toonOverzicht={toonOverzicht}
-                toonSpotDetails={toonSpotDetails}
+                toonOverzicht={secties.plattegronden}
+                toonSpotDetails={secties.spotdetails}
                 groepeerOpCluster={groepeerOpCluster}
                 clusters={clusters}
+                geselecteerdeSpotIds={spotSelectie[v.id]}
+                toonFotos={secties.fotos}
+                toonEtaCertificaten={secties.eta_certificaten}
               />
             ))
           )}
         </section>
 
-        {(onderhoud ?? []).length > 0 && (
+        {secties.onderhoud && (onderhoud ?? []).length > 0 && (
           <section className="prt-sectie">
             <h2 className="prt-sectie-titel">Onderhoud</h2>
             <table className="prt-tabel">
@@ -1902,7 +2192,7 @@ export default function GebouwPrint() {
           </section>
         )}
 
-        {(inspecties ?? []).length > 0 && (
+        {secties.inspecties && (inspecties ?? []).length > 0 && (
           <section className="prt-sectie">
             <h2 className="prt-sectie-titel">Inspecties</h2>
             <table className="prt-tabel">
@@ -1925,10 +2215,12 @@ export default function GebouwPrint() {
         )}
 
         <div className="prt-voet">
-          <span>FPS Brandpreventie — {titel}</span>
-          <span>Geëxporteerd {exportDatum}</span>
+          <span>{werkgeverNaam} — {titel}</span>
+          <span>Gegenereerd met FPS Connect · {exportDatum}</span>
         </div>
       </div>
+        </div>{/* .prt-preview */}
+      </div>{/* .prt-layout */}
     </div>
   );
 }

@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import {
   useCreateGebouw,
   useAiAnalyseGebouw,
+  useListWerkgevers,
   type ErrorType,
   type GebouwSuggestie,
 } from "@workspace/api-client-react";
@@ -83,9 +84,11 @@ export function GebouwAanmakenDialog() {
   const queryClient = useQueryClient();
   const maakGebouw = useCreateGebouw();
   const aiAnalyse = useAiAnalyseGebouw();
+  const { data: werkgevers } = useListWerkgevers();
 
   const [open, setOpen] = useState(false);
   const [velden, setVelden] = useState<Velden>(LEEG);
+  const [werkgeverId, setWerkgeverId] = useState<number | null>(null);
   // Bijhouden welke velden door de AI zijn ingevuld; door de gebruiker getypte
   // velden blijven altijd staan en worden nooit door een nieuwe AI-run overschreven.
   // Bewust een ref (niet in de render gebruikt): zo lezen we tijdens een lopend
@@ -126,6 +129,7 @@ export function GebouwAanmakenDialog() {
 
   function herstel() {
     setVelden(LEEG);
+    setWerkgeverId(null);
     aiVeldenRef.current = new Set();
     setAiTekst("");
     setLaatsteAiTekst(null);
@@ -277,6 +281,7 @@ export function GebouwAanmakenDialog() {
           breedte: getalOfUndefined(velden.breedte),
           diepte: getalOfUndefined(velden.diepte),
           oppervlakte: getalOfUndefined(velden.oppervlakte),
+          werkgever_id: werkgeverId ?? undefined,
         },
       });
       await queryClient.invalidateQueries();
@@ -486,6 +491,20 @@ export function GebouwAanmakenDialog() {
               value={velden.gebouw_type}
               onChange={(e) => zet("gebouw_type", e.target.value)}
             />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="g-werkmaatschappij">Werkmaatschappij</Label>
+            <select
+              id="g-werkmaatschappij"
+              value={werkgeverId ?? ""}
+              onChange={(e) => setWerkgeverId(e.target.value ? Number(e.target.value) : null)}
+              className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            >
+              <option value="">Geen</option>
+              {(werkgevers ?? []).map((w) => (
+                <option key={w.id} value={w.id}>{w.naam}</option>
+              ))}
+            </select>
           </div>
           {geschatteAfmetingen && (
             <div className="sm:col-span-2 flex items-start gap-2 rounded-md border border-amber-500/40 bg-amber-50/60 dark:bg-amber-950/20 px-3 py-2 text-xs text-amber-700 dark:text-amber-400">

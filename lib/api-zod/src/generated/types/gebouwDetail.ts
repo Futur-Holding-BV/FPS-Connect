@@ -52,6 +52,10 @@ export interface GebouwDetail {
   gearchiveerd?: boolean;
   /** @nullable */
   gearchiveerd_op?: string | null;
+  /** @nullable */
+  werkgever_id?: number | null;
+  /** @nullable */
+  werkmaatschappij_naam?: string | null;
   verdiepingen: Verdieping[];
   stats?: GebouwStats;
 }

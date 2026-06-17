@@ -2,7 +2,7 @@
 
 Vastgelegde fasen; elk pas bouwen ná formeel akkoord op die fase. Zie [`README.md`](./README.md) voor het overzicht en [`replit.md`](../../replit.md) voor de Ontwikkelstop-regel en de drie sporen.
 
-## V1.4 — Opleverrapportage (in aanbouw — met formeel akkoord)
+## V1.4 — Opleverrapportage (in aanbouw — met formeel akkoord) — I3 gebouwd (17 juni 2026)
 
 Bouwt voort op de bibliotheek (V1.2). Onderdelen: voorblad, rapportopmaak, e-mailselectie, bijlagenpakket en definitief maken van het rapport. De opleverrapportage wordt nu live gegenereerd in `print.tsx`; deze fase brengt de opmaak en het samenstellen op orde. Het gepersisteerd en onveranderlijk vastleggen van definitieve rapporten gebeurt in V1.5.
 

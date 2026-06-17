@@ -6391,6 +6391,10 @@ components:
           type: boolean
         gearchiveerd_op:
           type: ["string", "null"]
+        werkgever_id:
+          type: ["integer", "null"]
+        werkmaatschappij_naam:
+          type: ["string", "null"]
 
     GebouwDetail:
       type: object
@@ -6443,6 +6447,10 @@ components:
         gearchiveerd:
           type: boolean
         gearchiveerd_op:
+          type: ["string", "null"]
+        werkgever_id:
+          type: ["integer", "null"]
+        werkmaatschappij_naam:
           type: ["string", "null"]
         verdiepingen:
           type: array
@@ -6833,6 +6841,8 @@ components:
           type: number
         longitude:
           type: number
+        werkgever_id:
+          type: integer
 
     GebouwUpdate:
       type: object
@@ -6882,6 +6892,9 @@ components:
           nullable: true
         longitude:
           type: number
+          nullable: true
+        werkgever_id:
+          type: integer
           nullable: true
 
     GebouwAiAnalyseInput:
@@ -9081,6 +9094,20 @@ components:
           type: ["integer", "null"]
         personeelsbeleid:
           type: ["string", "null"]
+        adres:
+          type: ["string", "null"]
+        kvk:
+          type: ["string", "null"]
+        btw:
+          type: ["string", "null"]
+        telefoon:
+          type: ["string", "null"]
+        email:
+          type: ["string", "null"]
+        website:
+          type: ["string", "null"]
+        voettekst:
+          type: ["string", "null"]
         actief:
           type: boolean
         aangemaakt_op:
@@ -9101,6 +9128,20 @@ components:
         briefpapier_document_id:
           type: ["integer", "null"]
         personeelsbeleid:
+          type: ["string", "null"]
+        adres:
+          type: ["string", "null"]
+        kvk:
+          type: ["string", "null"]
+        btw:
+          type: ["string", "null"]
+        telefoon:
+          type: ["string", "null"]
+        email:
+          type: ["string", "null"]
+        website:
+          type: ["string", "null"]
+        voettekst:
           type: ["string", "null"]
         actief:
           type: boolean

@@ -180,6 +180,13 @@ export default function PersoneelPagina() {
     naam: "",
     cao: "",
     personeelsbeleid: null,
+    adres: null,
+    kvk: null,
+    btw: null,
+    telefoon: null,
+    email: null,
+    website: null,
+    voettekst: null,
     actief: true,
   });
 
@@ -288,7 +295,7 @@ export default function PersoneelPagina() {
 
   function startWerkgeverNieuw() {
     setWerkgeverEditId(null);
-    setWerkgeverForm({ naam: "", cao: "", personeelsbeleid: null, actief: true });
+    setWerkgeverForm({ naam: "", cao: "", personeelsbeleid: null, adres: null, kvk: null, btw: null, telefoon: null, email: null, website: null, voettekst: null, actief: true });
     setWerkgeverOpen(true);
   }
 
@@ -298,6 +305,13 @@ export default function PersoneelPagina() {
       naam: w.naam,
       cao: w.cao,
       personeelsbeleid: w.personeelsbeleid ?? null,
+      adres: w.adres ?? null,
+      kvk: w.kvk ?? null,
+      btw: w.btw ?? null,
+      telefoon: w.telefoon ?? null,
+      email: w.email ?? null,
+      website: w.website ?? null,
+      voettekst: w.voettekst ?? null,
       actief: w.actief,
     });
     setWerkgeverOpen(true);
@@ -1301,6 +1315,40 @@ export default function PersoneelPagina() {
                 rows={3}
                 value={werkgeverForm.personeelsbeleid ?? ""}
                 onChange={(e) => setWerkgeverForm({ ...werkgeverForm, personeelsbeleid: e.target.value || null })}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5 col-span-2">
+                <Label>Adres</Label>
+                <Input value={werkgeverForm.adres ?? ""} onChange={(e) => setWerkgeverForm({ ...werkgeverForm, adres: e.target.value || null })} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>KVK-nummer</Label>
+                <Input value={werkgeverForm.kvk ?? ""} onChange={(e) => setWerkgeverForm({ ...werkgeverForm, kvk: e.target.value || null })} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>BTW-nummer</Label>
+                <Input value={werkgeverForm.btw ?? ""} onChange={(e) => setWerkgeverForm({ ...werkgeverForm, btw: e.target.value || null })} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Telefoon</Label>
+                <Input value={werkgeverForm.telefoon ?? ""} onChange={(e) => setWerkgeverForm({ ...werkgeverForm, telefoon: e.target.value || null })} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>E-mailadres</Label>
+                <Input value={werkgeverForm.email ?? ""} onChange={(e) => setWerkgeverForm({ ...werkgeverForm, email: e.target.value || null })} />
+              </div>
+              <div className="space-y-1.5 col-span-2">
+                <Label>Website</Label>
+                <Input value={werkgeverForm.website ?? ""} onChange={(e) => setWerkgeverForm({ ...werkgeverForm, website: e.target.value || null })} />
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Voettekst</Label>
+              <Textarea
+                rows={2}
+                value={werkgeverForm.voettekst ?? ""}
+                onChange={(e) => setWerkgeverForm({ ...werkgeverForm, voettekst: e.target.value || null })}
               />
             </div>
             <label className="flex items-center gap-2 text-sm">
