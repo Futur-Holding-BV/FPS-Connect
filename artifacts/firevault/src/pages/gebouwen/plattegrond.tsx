@@ -47,12 +47,9 @@ import { ToepassingMultiSelect } from "@/components/toepassing-multi-select";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/context/auth-context";
 import { useRol } from "@/context/rol-context";
+import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
 
 const BEHEERDER_ROLLEN = ["beheerder", "hoofdbeheerder"];
-// Rollen die de plattegrond mogen bewerken (spots plaatsen/verplaatsen, status,
-// foto's, scheidingen). Klant en controleur mogen uitsluitend inzien —
-// controleur is alleen actief bij onderhoudscontracten, niet in de projectfase.
-const BEWERKER_ROLLEN = ["monteur", "beheerder", "hoofdbeheerder"];
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 
@@ -552,11 +549,17 @@ export default function Plattegrond() {
   useEffect(() => { logoBoxRef.current = logoBox; }, [logoBox]);
 
   const { gebruiker } = useAuth();
-  // Bewerkrechten volgen de EFFECTIEVE rol zodat "bekijken als" een teamlid exact
-  // toont wat dat teamlid mag. Backend dwingt schrijven op de echte rol af.
+  // isBeheerder volgt de EFFECTIEVE rol ("bekijken als" toont de teamlid-weergave);
+  // bewerkrechten komen uit de echte bevoegdheden-matrix. Backend dwingt schrijven
+  // sowieso server-side af.
   const { rol: effectieveRol } = useRol();
+  const { heeftNiveau } = useBevoegdheid();
   const isBeheerder = BEHEERDER_ROLLEN.includes(effectieveRol as string);
-  const magBewerken = BEWERKER_ROLLEN.includes(effectieveRol as string);
+  // Spots plaatsen, scheidingen tekenen en clusters beheren komt uit de
+  // bevoegdheden-matrix (Spots-module, "Aanmaken en wijzigen" = niveau 3), niet
+  // uit een rolnaam. De rol-enum kent alleen nog hoofdbeheerder/gebruiker/klant,
+  // dus rol-string-gating liet de bewerkbalk verdwijnen voor gewone gebruikers.
+  const magBewerken = heeftNiveau("voorzieningen", 3);
 
   const queryClient = useQueryClient();
   const { data: verdieping } = useGetVerdieping(Number(verdiepingId));

@@ -15,14 +15,9 @@ import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label as FormLabel } from "@/components/ui/label";
 import { ArrowLeft, Building, Calendar, User, Package, MapPin, QrCode, CheckCircle, AlertCircle, Clock, Pencil, Tag, Sparkles } from "lucide-react";
-import { useAuth } from "@/context/auth-context";
 import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
 import { VoorzieningStatusDialog } from "./voorziening-status-dialog";
 import { VoorzieningBewerkenDialog } from "./voorziening-bewerken-dialog";
-
-// Controleur valt buiten de normale project-/opleverworkflow; alleen monteur en beheerder
-// mogen spots bewerken. Controleur krijgt inzagerechten via TOEGEWEZEN_ROLLEN op de server.
-const BEWERK_ROLLEN = ["monteur", "beheerder", "hoofdbeheerder"];
 
 const statusKleur: Record<string, string> = {
   concept: "bg-gray-100 text-gray-700 border-gray-200",
@@ -208,14 +203,16 @@ function AiControlePaneel({ voorzieningId, labels }: { voorzieningId: number; la
 
 export default function VoorzieningDetail() {
   const { id } = useParams<{ id: string }>();
-  const { gebruiker } = useAuth();
   const { heeftNiveau } = useBevoegdheid();
   const { data: voorziening, isLoading } = useGetVoorziening(Number(id), {
     query: { enabled: !!id, queryKey: getGetVoorzieningQueryKey(Number(id)) },
   });
   const [statusOpen, setStatusOpen] = useState(false);
   const [bewerkenOpen, setBewerkenOpen] = useState(false);
-  const magBewerken = !!gebruiker?.rol && BEWERK_ROLLEN.includes(gebruiker.rol as string);
+  // Spots bewerken (status, foto's, gegevens) komt uit de bevoegdheden-matrix
+  // (Spots-module, niveau 3 "Aanmaken en wijzigen"), niet uit een rolnaam — de
+  // rol-enum kent alleen nog hoofdbeheerder/gebruiker/klant.
+  const magBewerken = heeftNiveau("voorzieningen", 3);
   // AI-controle bevestigen vereist volledig beheer (niveau 4) op de spots-module,
   // zodat een monteur (niveau 3) zijn eigen afwijking niet zelf kan bevestigen.
   const magControleren = heeftNiveau("voorzieningen", 4);
