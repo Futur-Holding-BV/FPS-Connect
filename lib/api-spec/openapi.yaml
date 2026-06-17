@@ -35,6 +35,8 @@ tags:
     description: Offertestructuur, begroting en uitgangspunten (Offerte Intelligence)
   - name: mail
     description: Mailkoppeling (Microsoft 365) — status, verbindingstest, testmail en logboek
+  - name: calculaties
+    description: Projectcalculaties en begrotingsregels (FPS Connect)
 
 paths:
   /healthz:
@@ -5693,6 +5695,188 @@ paths:
                 items:
                   $ref: "#/components/schemas/MailLogregel"
 
+  # ── Calculaties (FPS Connect) ─────────────────────────────────────────────
+  /calculaties:
+    get:
+      operationId: listCalculaties
+      tags: [calculaties]
+      summary: Calculaties ophalen
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Calculatie"
+    post:
+      operationId: createCalculatie
+      tags: [calculaties]
+      summary: Calculatie aanmaken
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CalculatieInput"
+      responses:
+        "201":
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Calculatie"
+
+  /calculaties/{id}:
+    get:
+      operationId: getCalculatie
+      tags: [calculaties]
+      summary: Calculatie met regels ophalen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CalculatieDetail"
+        "404":
+          description: Niet gevonden
+    patch:
+      operationId: updateCalculatie
+      tags: [calculaties]
+      summary: Calculatie bijwerken
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CalculatieInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Calculatie"
+    delete:
+      operationId: deleteCalculatie
+      tags: [calculaties]
+      summary: Calculatie verwijderen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Verwijderd
+
+  /calculaties/{id}/regels:
+    get:
+      operationId: listCalculatieRegels
+      tags: [calculaties]
+      summary: Begrotingsregels van een calculatie
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CalculatieRegel"
+    post:
+      operationId: createCalculatieRegel
+      tags: [calculaties]
+      summary: Begrotingsregel toevoegen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CalculatieRegelInput"
+      responses:
+        "201":
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CalculatieRegel"
+
+  /calculaties/{id}/regels/{regelId}:
+    patch:
+      operationId: updateCalculatieRegel
+      tags: [calculaties]
+      summary: Begrotingsregel bijwerken
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+        - in: path
+          name: regelId
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CalculatieRegelInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CalculatieRegel"
+    delete:
+      operationId: deleteCalculatieRegel
+      tags: [calculaties]
+      summary: Begrotingsregel verwijderen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+        - in: path
+          name: regelId
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Verwijderd
+
 components:
   schemas:
     MailStatus:
@@ -10127,3 +10311,122 @@ components:
           type: integer
         ai_voorstel:
           type: boolean
+
+    Calculatie:
+      type: object
+      required: [id, naam, status, totaal_excl_btw, aangemaakt_op, bijgewerkt_op]
+      properties:
+        id:
+          type: integer
+        naam:
+          type: string
+        gebouw_id:
+          type: ["integer", "null"]
+        gebouw_naam:
+          type: ["string", "null"]
+        status:
+          type: string
+        omschrijving:
+          type: ["string", "null"]
+        aangemaakt_door_id:
+          type: ["integer", "null"]
+        aangemaakt_door_naam:
+          type: ["string", "null"]
+        totaal_excl_btw:
+          type: number
+        aangemaakt_op:
+          type: string
+        bijgewerkt_op:
+          type: string
+
+    CalculatieDetail:
+      type: object
+      required: [id, naam, status, totaal_excl_btw, regels, aangemaakt_op, bijgewerkt_op]
+      properties:
+        id:
+          type: integer
+        naam:
+          type: string
+        gebouw_id:
+          type: ["integer", "null"]
+        gebouw_naam:
+          type: ["string", "null"]
+        status:
+          type: string
+        omschrijving:
+          type: ["string", "null"]
+        aangemaakt_door_id:
+          type: ["integer", "null"]
+        aangemaakt_door_naam:
+          type: ["string", "null"]
+        totaal_excl_btw:
+          type: number
+        regels:
+          type: array
+          items:
+            $ref: "#/components/schemas/CalculatieRegel"
+        aangemaakt_op:
+          type: string
+        bijgewerkt_op:
+          type: string
+
+    CalculatieInput:
+      type: object
+      required: [naam]
+      properties:
+        naam:
+          type: string
+        gebouw_id:
+          type: ["integer", "null"]
+        status:
+          type: string
+        omschrijving:
+          type: ["string", "null"]
+
+    CalculatieRegel:
+      type: object
+      required: [id, calculatie_id, categorie, omschrijving, eenheid, hoeveelheid, stukprijs, totaal, volgorde, aangemaakt_op, bijgewerkt_op]
+      properties:
+        id:
+          type: integer
+        calculatie_id:
+          type: integer
+        categorie:
+          type: string
+        omschrijving:
+          type: string
+        eenheid:
+          type: string
+        hoeveelheid:
+          type: number
+        stukprijs:
+          type: number
+        totaal:
+          type: number
+        volgorde:
+          type: integer
+        opmerkingen:
+          type: ["string", "null"]
+        aangemaakt_op:
+          type: string
+        bijgewerkt_op:
+          type: string
+
+    CalculatieRegelInput:
+      type: object
+      required: [omschrijving]
+      properties:
+        categorie:
+          type: string
+        omschrijving:
+          type: string
+        eenheid:
+          type: string
+        hoeveelheid:
+          type: number
+        stukprijs:
+          type: number
+        volgorde:
+          type: integer
+        opmerkingen:
+          type: ["string", "null"]

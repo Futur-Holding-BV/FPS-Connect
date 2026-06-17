@@ -32,6 +32,11 @@ import type {
   AuthGebruiker,
   Bekwaamheid,
   BekwaamheidInput,
+  Calculatie,
+  CalculatieDetail,
+  CalculatieInput,
+  CalculatieRegel,
+  CalculatieRegelInput,
   CaoOptie,
   Cluster,
   ClusterInput,
@@ -20089,4 +20094,662 @@ export function useGetMailLogboek<TData = Awaited<ReturnType<typeof getMailLogbo
 
 
 
+
+export const getListCalculatiesUrl = () => {
+
+
+
+
+  return `/api/calculaties`
+}
+
+/**
+ * @summary Calculaties ophalen
+ */
+export const listCalculaties = async ( options?: RequestInit): Promise<Calculatie[]> => {
+
+  return customFetch<Calculatie[]>(getListCalculatiesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListCalculatiesQueryKey = () => {
+    return [
+    `/api/calculaties`
+    ] as const;
+    }
+
+
+export const getListCalculatiesQueryOptions = <TData = Awaited<ReturnType<typeof listCalculaties>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listCalculaties>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListCalculatiesQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listCalculaties>>> = ({ signal }) => listCalculaties({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listCalculaties>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListCalculatiesQueryResult = NonNullable<Awaited<ReturnType<typeof listCalculaties>>>
+export type ListCalculatiesQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Calculaties ophalen
+ */
+
+export function useListCalculaties<TData = Awaited<ReturnType<typeof listCalculaties>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listCalculaties>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListCalculatiesQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateCalculatieUrl = () => {
+
+
+
+
+  return `/api/calculaties`
+}
+
+/**
+ * @summary Calculatie aanmaken
+ */
+export const createCalculatie = async (calculatieInput: CalculatieInput, options?: RequestInit): Promise<Calculatie> => {
+
+  return customFetch<Calculatie>(getCreateCalculatieUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(calculatieInput)
+  }
+);}
+
+
+
+
+export const getCreateCalculatieMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createCalculatie>>, TError,{data: BodyType<CalculatieInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createCalculatie>>, TError,{data: BodyType<CalculatieInput>}, TContext> => {
+
+const mutationKey = ['createCalculatie'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createCalculatie>>, {data: BodyType<CalculatieInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createCalculatie(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateCalculatieMutationResult = NonNullable<Awaited<ReturnType<typeof createCalculatie>>>
+    export type CreateCalculatieMutationBody = BodyType<CalculatieInput>
+    export type CreateCalculatieMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Calculatie aanmaken
+ */
+export const useCreateCalculatie = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createCalculatie>>, TError,{data: BodyType<CalculatieInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createCalculatie>>,
+        TError,
+        {data: BodyType<CalculatieInput>},
+        TContext
+      > => {
+      return useMutation(getCreateCalculatieMutationOptions(options));
+    }
+
+export const getGetCalculatieUrl = (id: number,) => {
+
+
+
+
+  return `/api/calculaties/${id}`
+}
+
+/**
+ * @summary Calculatie met regels ophalen
+ */
+export const getCalculatie = async (id: number, options?: RequestInit): Promise<CalculatieDetail> => {
+
+  return customFetch<CalculatieDetail>(getGetCalculatieUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetCalculatieQueryKey = (id: number,) => {
+    return [
+    `/api/calculaties/${id}`
+    ] as const;
+    }
+
+
+export const getGetCalculatieQueryOptions = <TData = Awaited<ReturnType<typeof getCalculatie>>, TError = ErrorType<void>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getCalculatie>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetCalculatieQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getCalculatie>>> = ({ signal }) => getCalculatie(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getCalculatie>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetCalculatieQueryResult = NonNullable<Awaited<ReturnType<typeof getCalculatie>>>
+export type GetCalculatieQueryError = ErrorType<void>
+
+
+/**
+ * @summary Calculatie met regels ophalen
+ */
+
+export function useGetCalculatie<TData = Awaited<ReturnType<typeof getCalculatie>>, TError = ErrorType<void>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getCalculatie>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetCalculatieQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getUpdateCalculatieUrl = (id: number,) => {
+
+
+
+
+  return `/api/calculaties/${id}`
+}
+
+/**
+ * @summary Calculatie bijwerken
+ */
+export const updateCalculatie = async (id: number,
+    calculatieInput: CalculatieInput, options?: RequestInit): Promise<Calculatie> => {
+
+  return customFetch<Calculatie>(getUpdateCalculatieUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(calculatieInput)
+  }
+);}
+
+
+
+
+export const getUpdateCalculatieMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateCalculatie>>, TError,{id: number;data: BodyType<CalculatieInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateCalculatie>>, TError,{id: number;data: BodyType<CalculatieInput>}, TContext> => {
+
+const mutationKey = ['updateCalculatie'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateCalculatie>>, {id: number;data: BodyType<CalculatieInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateCalculatie(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateCalculatieMutationResult = NonNullable<Awaited<ReturnType<typeof updateCalculatie>>>
+    export type UpdateCalculatieMutationBody = BodyType<CalculatieInput>
+    export type UpdateCalculatieMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Calculatie bijwerken
+ */
+export const useUpdateCalculatie = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateCalculatie>>, TError,{id: number;data: BodyType<CalculatieInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateCalculatie>>,
+        TError,
+        {id: number;data: BodyType<CalculatieInput>},
+        TContext
+      > => {
+      return useMutation(getUpdateCalculatieMutationOptions(options));
+    }
+
+export const getDeleteCalculatieUrl = (id: number,) => {
+
+
+
+
+  return `/api/calculaties/${id}`
+}
+
+/**
+ * @summary Calculatie verwijderen
+ */
+export const deleteCalculatie = async (id: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteCalculatieUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteCalculatieMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteCalculatie>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteCalculatie>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deleteCalculatie'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteCalculatie>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteCalculatie(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteCalculatieMutationResult = NonNullable<Awaited<ReturnType<typeof deleteCalculatie>>>
+
+    export type DeleteCalculatieMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Calculatie verwijderen
+ */
+export const useDeleteCalculatie = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteCalculatie>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteCalculatie>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeleteCalculatieMutationOptions(options));
+    }
+
+export const getListCalculatieRegelsUrl = (id: number,) => {
+
+
+
+
+  return `/api/calculaties/${id}/regels`
+}
+
+/**
+ * @summary Begrotingsregels van een calculatie
+ */
+export const listCalculatieRegels = async (id: number, options?: RequestInit): Promise<CalculatieRegel[]> => {
+
+  return customFetch<CalculatieRegel[]>(getListCalculatieRegelsUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListCalculatieRegelsQueryKey = (id: number,) => {
+    return [
+    `/api/calculaties/${id}/regels`
+    ] as const;
+    }
+
+
+export const getListCalculatieRegelsQueryOptions = <TData = Awaited<ReturnType<typeof listCalculatieRegels>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listCalculatieRegels>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListCalculatieRegelsQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listCalculatieRegels>>> = ({ signal }) => listCalculatieRegels(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listCalculatieRegels>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListCalculatieRegelsQueryResult = NonNullable<Awaited<ReturnType<typeof listCalculatieRegels>>>
+export type ListCalculatieRegelsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Begrotingsregels van een calculatie
+ */
+
+export function useListCalculatieRegels<TData = Awaited<ReturnType<typeof listCalculatieRegels>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listCalculatieRegels>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListCalculatieRegelsQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateCalculatieRegelUrl = (id: number,) => {
+
+
+
+
+  return `/api/calculaties/${id}/regels`
+}
+
+/**
+ * @summary Begrotingsregel toevoegen
+ */
+export const createCalculatieRegel = async (id: number,
+    calculatieRegelInput: CalculatieRegelInput, options?: RequestInit): Promise<CalculatieRegel> => {
+
+  return customFetch<CalculatieRegel>(getCreateCalculatieRegelUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(calculatieRegelInput)
+  }
+);}
+
+
+
+
+export const getCreateCalculatieRegelMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createCalculatieRegel>>, TError,{id: number;data: BodyType<CalculatieRegelInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createCalculatieRegel>>, TError,{id: number;data: BodyType<CalculatieRegelInput>}, TContext> => {
+
+const mutationKey = ['createCalculatieRegel'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createCalculatieRegel>>, {id: number;data: BodyType<CalculatieRegelInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  createCalculatieRegel(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateCalculatieRegelMutationResult = NonNullable<Awaited<ReturnType<typeof createCalculatieRegel>>>
+    export type CreateCalculatieRegelMutationBody = BodyType<CalculatieRegelInput>
+    export type CreateCalculatieRegelMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Begrotingsregel toevoegen
+ */
+export const useCreateCalculatieRegel = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createCalculatieRegel>>, TError,{id: number;data: BodyType<CalculatieRegelInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createCalculatieRegel>>,
+        TError,
+        {id: number;data: BodyType<CalculatieRegelInput>},
+        TContext
+      > => {
+      return useMutation(getCreateCalculatieRegelMutationOptions(options));
+    }
+
+export const getUpdateCalculatieRegelUrl = (id: number,
+    regelId: number,) => {
+
+
+
+
+  return `/api/calculaties/${id}/regels/${regelId}`
+}
+
+/**
+ * @summary Begrotingsregel bijwerken
+ */
+export const updateCalculatieRegel = async (id: number,
+    regelId: number,
+    calculatieRegelInput: CalculatieRegelInput, options?: RequestInit): Promise<CalculatieRegel> => {
+
+  return customFetch<CalculatieRegel>(getUpdateCalculatieRegelUrl(id,regelId),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(calculatieRegelInput)
+  }
+);}
+
+
+
+
+export const getUpdateCalculatieRegelMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateCalculatieRegel>>, TError,{id: number;regelId: number;data: BodyType<CalculatieRegelInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateCalculatieRegel>>, TError,{id: number;regelId: number;data: BodyType<CalculatieRegelInput>}, TContext> => {
+
+const mutationKey = ['updateCalculatieRegel'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateCalculatieRegel>>, {id: number;regelId: number;data: BodyType<CalculatieRegelInput>}> = (props) => {
+          const {id,regelId,data} = props ?? {};
+
+          return  updateCalculatieRegel(id,regelId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateCalculatieRegelMutationResult = NonNullable<Awaited<ReturnType<typeof updateCalculatieRegel>>>
+    export type UpdateCalculatieRegelMutationBody = BodyType<CalculatieRegelInput>
+    export type UpdateCalculatieRegelMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Begrotingsregel bijwerken
+ */
+export const useUpdateCalculatieRegel = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateCalculatieRegel>>, TError,{id: number;regelId: number;data: BodyType<CalculatieRegelInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateCalculatieRegel>>,
+        TError,
+        {id: number;regelId: number;data: BodyType<CalculatieRegelInput>},
+        TContext
+      > => {
+      return useMutation(getUpdateCalculatieRegelMutationOptions(options));
+    }
+
+export const getDeleteCalculatieRegelUrl = (id: number,
+    regelId: number,) => {
+
+
+
+
+  return `/api/calculaties/${id}/regels/${regelId}`
+}
+
+/**
+ * @summary Begrotingsregel verwijderen
+ */
+export const deleteCalculatieRegel = async (id: number,
+    regelId: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteCalculatieRegelUrl(id,regelId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteCalculatieRegelMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteCalculatieRegel>>, TError,{id: number;regelId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteCalculatieRegel>>, TError,{id: number;regelId: number}, TContext> => {
+
+const mutationKey = ['deleteCalculatieRegel'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteCalculatieRegel>>, {id: number;regelId: number}> = (props) => {
+          const {id,regelId} = props ?? {};
+
+          return  deleteCalculatieRegel(id,regelId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteCalculatieRegelMutationResult = NonNullable<Awaited<ReturnType<typeof deleteCalculatieRegel>>>
+
+    export type DeleteCalculatieRegelMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Begrotingsregel verwijderen
+ */
+export const useDeleteCalculatieRegel = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteCalculatieRegel>>, TError,{id: number;regelId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteCalculatieRegel>>,
+        TError,
+        {id: number;regelId: number},
+        TContext
+      > => {
+      return useMutation(getDeleteCalculatieRegelMutationOptions(options));
+    }
 

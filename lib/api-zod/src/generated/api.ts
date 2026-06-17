@@ -6679,3 +6679,199 @@ export const GetMailLogboekResponseItem = zod.object({
 export const GetMailLogboekResponse = zod.array(GetMailLogboekResponseItem)
 
 
+/**
+ * @summary Calculaties ophalen
+ */
+export const ListCalculatiesResponseItem = zod.object({
+  "id": zod.number(),
+  "naam": zod.string(),
+  "gebouw_id": zod.number().nullish(),
+  "gebouw_naam": zod.string().nullish(),
+  "status": zod.string(),
+  "omschrijving": zod.string().nullish(),
+  "aangemaakt_door_id": zod.number().nullish(),
+  "aangemaakt_door_naam": zod.string().nullish(),
+  "totaal_excl_btw": zod.number(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+export const ListCalculatiesResponse = zod.array(ListCalculatiesResponseItem)
+
+
+/**
+ * @summary Calculatie aanmaken
+ */
+export const CreateCalculatieBody = zod.object({
+  "naam": zod.string(),
+  "gebouw_id": zod.number().nullish(),
+  "status": zod.string().optional(),
+  "omschrijving": zod.string().nullish()
+})
+
+export const CreateCalculatieResponse = zod.void()
+
+
+/**
+ * @summary Calculatie met regels ophalen
+ */
+export const GetCalculatieParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetCalculatieResponse = zod.object({
+  "id": zod.number(),
+  "naam": zod.string(),
+  "gebouw_id": zod.number().nullish(),
+  "gebouw_naam": zod.string().nullish(),
+  "status": zod.string(),
+  "omschrijving": zod.string().nullish(),
+  "aangemaakt_door_id": zod.number().nullish(),
+  "aangemaakt_door_naam": zod.string().nullish(),
+  "totaal_excl_btw": zod.number(),
+  "regels": zod.array(zod.object({
+  "id": zod.number(),
+  "calculatie_id": zod.number(),
+  "categorie": zod.string(),
+  "omschrijving": zod.string(),
+  "eenheid": zod.string(),
+  "hoeveelheid": zod.number(),
+  "stukprijs": zod.number(),
+  "totaal": zod.number(),
+  "volgorde": zod.number(),
+  "opmerkingen": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+
+
+/**
+ * @summary Calculatie bijwerken
+ */
+export const UpdateCalculatieParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateCalculatieBody = zod.object({
+  "naam": zod.string(),
+  "gebouw_id": zod.number().nullish(),
+  "status": zod.string().optional(),
+  "omschrijving": zod.string().nullish()
+})
+
+export const UpdateCalculatieResponse = zod.object({
+  "id": zod.number(),
+  "naam": zod.string(),
+  "gebouw_id": zod.number().nullish(),
+  "gebouw_naam": zod.string().nullish(),
+  "status": zod.string(),
+  "omschrijving": zod.string().nullish(),
+  "aangemaakt_door_id": zod.number().nullish(),
+  "aangemaakt_door_naam": zod.string().nullish(),
+  "totaal_excl_btw": zod.number(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+
+
+/**
+ * @summary Calculatie verwijderen
+ */
+export const DeleteCalculatieParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteCalculatieResponse = zod.void()
+
+
+/**
+ * @summary Begrotingsregels van een calculatie
+ */
+export const ListCalculatieRegelsParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ListCalculatieRegelsResponseItem = zod.object({
+  "id": zod.number(),
+  "calculatie_id": zod.number(),
+  "categorie": zod.string(),
+  "omschrijving": zod.string(),
+  "eenheid": zod.string(),
+  "hoeveelheid": zod.number(),
+  "stukprijs": zod.number(),
+  "totaal": zod.number(),
+  "volgorde": zod.number(),
+  "opmerkingen": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+export const ListCalculatieRegelsResponse = zod.array(ListCalculatieRegelsResponseItem)
+
+
+/**
+ * @summary Begrotingsregel toevoegen
+ */
+export const CreateCalculatieRegelParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const CreateCalculatieRegelBody = zod.object({
+  "categorie": zod.string().optional(),
+  "omschrijving": zod.string(),
+  "eenheid": zod.string().optional(),
+  "hoeveelheid": zod.number().optional(),
+  "stukprijs": zod.number().optional(),
+  "volgorde": zod.number().optional(),
+  "opmerkingen": zod.string().nullish()
+})
+
+export const CreateCalculatieRegelResponse = zod.void()
+
+
+/**
+ * @summary Begrotingsregel bijwerken
+ */
+export const UpdateCalculatieRegelParams = zod.object({
+  "id": zod.coerce.number(),
+  "regelId": zod.coerce.number()
+})
+
+export const UpdateCalculatieRegelBody = zod.object({
+  "categorie": zod.string().optional(),
+  "omschrijving": zod.string(),
+  "eenheid": zod.string().optional(),
+  "hoeveelheid": zod.number().optional(),
+  "stukprijs": zod.number().optional(),
+  "volgorde": zod.number().optional(),
+  "opmerkingen": zod.string().nullish()
+})
+
+export const UpdateCalculatieRegelResponse = zod.object({
+  "id": zod.number(),
+  "calculatie_id": zod.number(),
+  "categorie": zod.string(),
+  "omschrijving": zod.string(),
+  "eenheid": zod.string(),
+  "hoeveelheid": zod.number(),
+  "stukprijs": zod.number(),
+  "totaal": zod.number(),
+  "volgorde": zod.number(),
+  "opmerkingen": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+
+
+/**
+ * @summary Begrotingsregel verwijderen
+ */
+export const DeleteCalculatieRegelParams = zod.object({
+  "id": zod.coerce.number(),
+  "regelId": zod.coerce.number()
+})
+
+export const DeleteCalculatieRegelResponse = zod.void()
+
+

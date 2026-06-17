@@ -13,3 +13,4 @@ export * from "./hrm";
 export * from "./dossiers";
 export * from "./offertes";
 export * from "./mail";
+export * from "./calculaties";

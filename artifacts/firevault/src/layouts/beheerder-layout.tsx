@@ -9,6 +9,7 @@ import {
   ShieldCheck, Building, Wrench, Users, Search, Home, Receipt,
   ShieldAlert, LifeBuoy, MessageSquarePlus, Activity, Contact, Info, BookOpen, Clock,
   FolderOpen, FileText, ListChecks, Files, LayoutTemplate, Mail,
+  Calculator, CalendarDays, LayoutDashboard, Globe, BarChart3, CreditCard,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { GebruikerMenu } from "@/components/gebruiker-menu";
@@ -276,6 +277,105 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
                       <Link href="/documenten">
                         <Files />
                         <span>Documenten</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          )}
+
+          {/* ── FPS Connect ── */}
+          {isHoofdbeheerder && (
+            <SidebarGroup>
+              <SidebarGroupLabel>FPS Connect</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={location === "/connect/planning" || location.startsWith("/connect/planning/")}
+                    >
+                      <Link href="/connect/planning">
+                        <CalendarDays />
+                        <span>Planning</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={location === "/connect/calculatie" || location.startsWith("/connect/calculatie/")}
+                    >
+                      <Link href="/connect/calculatie">
+                        <Calculator />
+                        <span>Calculatie</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={location === "/connect/hrm" || location.startsWith("/connect/hrm/")}
+                    >
+                      <Link href="/connect/hrm">
+                        <Users />
+                        <span>HRM</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          )}
+
+          {/* ── FPS One ── */}
+          {isHoofdbeheerder && (
+            <SidebarGroup>
+              <SidebarGroupLabel>FPS One</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={location === "/one/dashboard"}
+                    >
+                      <Link href="/one/dashboard">
+                        <LayoutDashboard />
+                        <span>Dashboard</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={location === "/one/documenten" || location.startsWith("/one/documenten/")}
+                    >
+                      <Link href="/one/documenten">
+                        <Globe />
+                        <span>Documenten</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={location === "/one/rapporten" || location.startsWith("/one/rapporten/")}
+                    >
+                      <Link href="/one/rapporten">
+                        <BarChart3 />
+                        <span>Rapporten</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={location === "/one/abonnementen" || location.startsWith("/one/abonnementen/")}
+                    >
+                      <Link href="/one/abonnementen">
+                        <CreditCard />
+                        <span>Abonnementen</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>

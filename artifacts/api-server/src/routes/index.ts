@@ -22,6 +22,7 @@ import hrmRouter from "./hrm";
 import dossiersRouter from "./dossiers";
 import offertesRouter from "./offertes";
 import mailRouter from "./mail";
+import calculatiesRouter from "./calculaties";
 import testToegangRouter from "./test-toegang";
 import { requireAuth } from "../middlewares/auth";
 
@@ -57,5 +58,6 @@ router.use(hrmRouter);
 router.use(dossiersRouter);
 router.use(offertesRouter);
 router.use(mailRouter);
+router.use(calculatiesRouter);
 
 export default router;

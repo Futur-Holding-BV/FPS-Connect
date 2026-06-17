@@ -3139,6 +3139,81 @@ export interface OfferteUitgangspuntInput {
   ai_voorstel?: boolean;
 }
 
+export interface Calculatie {
+  id: number;
+  naam: string;
+  /** @nullable */
+  gebouw_id?: number | null;
+  /** @nullable */
+  gebouw_naam?: string | null;
+  status: string;
+  /** @nullable */
+  omschrijving?: string | null;
+  /** @nullable */
+  aangemaakt_door_id?: number | null;
+  /** @nullable */
+  aangemaakt_door_naam?: string | null;
+  totaal_excl_btw: number;
+  aangemaakt_op: string;
+  bijgewerkt_op: string;
+}
+
+export interface CalculatieRegel {
+  id: number;
+  calculatie_id: number;
+  categorie: string;
+  omschrijving: string;
+  eenheid: string;
+  hoeveelheid: number;
+  stukprijs: number;
+  totaal: number;
+  volgorde: number;
+  /** @nullable */
+  opmerkingen?: string | null;
+  aangemaakt_op: string;
+  bijgewerkt_op: string;
+}
+
+export interface CalculatieDetail {
+  id: number;
+  naam: string;
+  /** @nullable */
+  gebouw_id?: number | null;
+  /** @nullable */
+  gebouw_naam?: string | null;
+  status: string;
+  /** @nullable */
+  omschrijving?: string | null;
+  /** @nullable */
+  aangemaakt_door_id?: number | null;
+  /** @nullable */
+  aangemaakt_door_naam?: string | null;
+  totaal_excl_btw: number;
+  regels: CalculatieRegel[];
+  aangemaakt_op: string;
+  bijgewerkt_op: string;
+}
+
+export interface CalculatieInput {
+  naam: string;
+  /** @nullable */
+  gebouw_id?: number | null;
+  status?: string;
+  /** @nullable */
+  omschrijving?: string | null;
+}
+
+export interface CalculatieRegelInput {
+  categorie?: string;
+  omschrijving: string;
+  eenheid?: string;
+  hoeveelheid?: number;
+  stukprijs?: number;
+  volgorde?: number;
+  /** @nullable */
+  opmerkingen?: string | null;
+}
+
 export type GetRecenteActiviteitParams = {
 limit?: number;
 };
