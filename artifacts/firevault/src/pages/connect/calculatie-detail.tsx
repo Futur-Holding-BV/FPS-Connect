@@ -8,6 +8,7 @@ import {
   useCreateCalculatieRegel,
   useUpdateCalculatieRegel,
   useDeleteCalculatieRegel,
+  useAiCalculatieRegels,
   getListCalculatiesQueryKey,
   getGetCalculatieQueryKey,
 } from "@workspace/api-client-react";
@@ -26,10 +27,13 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+} from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import {
   Calculator, ArrowLeft, Plus, Trash2, Pencil, Check, X,
-  Euro, Layers, Package, Settings, HelpCircle,
+  Layers, Package, Settings, HelpCircle, Sparkles,
 } from "lucide-react";
 
 const CATEGORIE_OPTIES = [
@@ -66,6 +70,11 @@ export default function ConnectCalculatieDetail() {
   const [toevoegenOpen, setToevoegenOpen] = useState(false);
   const [regelBewerkenId, setRegelBewerkenId] = useState<number | null>(null);
   const [regelEdit, setRegelEdit] = useState<NieuweRegel>({});
+  const [aiOpen, setAiOpen] = useState(false);
+  const [aiRegels, setAiRegels] = useState<CalculatieRegelInput[]>([]);
+  const [aiGebouwNaam, setAiGebouwNaam] = useState<string | null>(null);
+  const [aiGekozen, setAiGekozen] = useState<Set<number>>(new Set());
+  const [aiLaden, setAiLaden] = useState(false);
 
   const { data, isLoading, error } = useGetCalculatie(cId);
   const { mutateAsync: bijwerken, isPending: opslaan } = useUpdateCalculatie();
@@ -73,6 +82,7 @@ export default function ConnectCalculatieDetail() {
   const { mutateAsync: regelAanmaken, isPending: regelAanmaakBezig } = useCreateCalculatieRegel();
   const { mutateAsync: regelBijwerken, isPending: regelEditBezig } = useUpdateCalculatieRegel();
   const { mutateAsync: regelVerwijderen } = useDeleteCalculatieRegel();
+  const { mutateAsync: haalAi } = useAiCalculatieRegels();
 
   const inv = async () => {
     await qc.invalidateQueries({ queryKey: getGetCalculatieQueryKey(cId) });
@@ -164,6 +174,47 @@ export default function ConnectCalculatieDetail() {
     } catch {
       toast({ title: "Fout bij verwijderen", variant: "destructive" });
     }
+  }
+
+  async function haalAiSuggesties() {
+    setAiLaden(true);
+    try {
+      const result = await haalAi({ id: cId });
+      const suggesties = result.regels ?? [];
+      setAiRegels(suggesties);
+      setAiGebouwNaam(result.gebouw_naam ?? null);
+      setAiGekozen(new Set(suggesties.map((_, i) => i)));
+      setAiOpen(true);
+    } catch {
+      toast({ title: "AI-suggesties ophalen mislukt", variant: "destructive" });
+    } finally {
+      setAiLaden(false);
+    }
+  }
+
+  async function voegAiRegelsIn() {
+    const geselecteerd = aiRegels.filter((_, i) => aiGekozen.has(i));
+    let success = 0;
+    for (const r of geselecteerd) {
+      try {
+        await regelAanmaken({
+          id: cId,
+          data: {
+            categorie: r.categorie ?? "overig",
+            omschrijving: r.omschrijving,
+            eenheid: r.eenheid ?? "st",
+            hoeveelheid: r.hoeveelheid ?? 1,
+            stukprijs: r.stukprijs ?? 0,
+          },
+        });
+        success++;
+      } catch {
+        // Door blijven met de overige regels
+      }
+    }
+    await inv();
+    setAiOpen(false);
+    toast({ title: `${success} regel${success !== 1 ? "s" : ""} toegevoegd aan begroting` });
   }
 
   if (isLoading) {
@@ -303,10 +354,21 @@ export default function ConnectCalculatieDetail() {
       <Card>
         <CardHeader className="pb-3 flex flex-row items-center justify-between">
           <CardTitle className="text-base">Begrotingsregels</CardTitle>
-          <Button size="sm" onClick={() => setToevoegenOpen(true)}>
-            <Plus className="h-4 w-4 mr-1" />
-            Regel toevoegen
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={haalAiSuggesties}
+              disabled={aiLaden || regelAanmaakBezig}
+            >
+              <Sparkles className="h-4 w-4 mr-1 text-amber-600" />
+              {aiLaden ? "Laden…" : "AI-suggesties"}
+            </Button>
+            <Button size="sm" onClick={() => setToevoegenOpen(true)}>
+              <Plus className="h-4 w-4 mr-1" />
+              Regel toevoegen
+            </Button>
+          </div>
         </CardHeader>
         <CardContent className="pt-0">
           {regels.length === 0 && !toevoegenOpen ? (
@@ -531,6 +593,62 @@ export default function ConnectCalculatieDetail() {
           </CardFooter>
         )}
       </Card>
+
+      <Dialog open={aiOpen} onOpenChange={setAiOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-amber-600" />
+              AI-kostenregel-suggesties
+            </DialogTitle>
+          </DialogHeader>
+          {aiGebouwNaam && (
+            <p className="text-xs text-muted-foreground -mt-2">Gebaseerd op voorzieningen in: {aiGebouwNaam}</p>
+          )}
+          <div className="rounded-md border bg-amber-50/70 px-3 py-2 text-xs text-amber-700">
+            AI stelt voor — u beslist welke regels worden toegevoegd. Klik op een regel om te selecteren/deselecteren.
+          </div>
+          <div className="space-y-1 max-h-80 overflow-y-auto">
+            {aiRegels.map((r, i) => (
+              <div
+                key={i}
+                className={`flex items-center gap-3 p-2 rounded-md border cursor-pointer transition-colors select-none ${aiGekozen.has(i) ? "border-primary/40 bg-primary/5" : "border-transparent bg-muted/30 opacity-60"}`}
+                onClick={() =>
+                  setAiGekozen((s) => {
+                    const ns = new Set(s);
+                    if (ns.has(i)) ns.delete(i); else ns.add(i);
+                    return ns;
+                  })
+                }
+              >
+                <div className={`h-4 w-4 rounded-sm border-2 flex items-center justify-center shrink-0 transition-colors ${aiGekozen.has(i) ? "bg-primary border-primary" : "border-muted-foreground/40"}`}>
+                  {aiGekozen.has(i) && <Check className="h-2.5 w-2.5 text-white" />}
+                </div>
+                <Badge variant="outline" className="text-[10px] shrink-0">
+                  {CATEGORIE_OPTIES.find((o) => o.value === r.categorie)?.label ?? r.categorie ?? "overig"}
+                </Badge>
+                <span className="text-sm flex-1 truncate">{r.omschrijving}</span>
+                <span className="text-xs text-muted-foreground shrink-0">
+                  {r.hoeveelheid ?? 1} {r.eenheid ?? "st"} × {formatBedrag(r.stukprijs ?? 0)}
+                </span>
+                <span className="text-xs font-medium shrink-0 min-w-[60px] text-right">
+                  {formatBedrag((r.hoeveelheid ?? 1) * (r.stukprijs ?? 0))}
+                </span>
+              </div>
+            ))}
+            {aiRegels.length === 0 && (
+              <p className="text-sm text-muted-foreground text-center py-6">Geen suggesties gegenereerd.</p>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAiOpen(false)}>Annuleren</Button>
+            <Button onClick={voegAiRegelsIn} disabled={aiGekozen.size === 0 || regelAanmaakBezig}>
+              <Check className="h-4 w-4 mr-1" />
+              {aiGekozen.size} regel{aiGekozen.size !== 1 ? "s" : ""} toevoegen
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <AlertDialog open={verwijderOpen} onOpenChange={setVerwijderOpen}>
         <AlertDialogContent>

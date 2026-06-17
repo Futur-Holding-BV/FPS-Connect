@@ -71,4 +71,11 @@ export interface Voorziening {
   gearchiveerd_op?: string | null;
   aangemaakt_op: string;
   bijgewerkt_op?: string;
+  /**
+     * Indien ingesteld is dit een onderdeel van de opgegeven samengestelde spot
+     * @nullable
+     */
+  parent_spot_id?: number | null;
+  /** Afgeleid - true als er onderdelen aan deze spot zijn gekoppeld */
+  heeft_onderdelen?: boolean;
 }

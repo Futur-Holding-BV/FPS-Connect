@@ -13,8 +13,13 @@ import {
   useCreateFabrikant,
   useUpdateFabrikant,
   getListFabrikantenQueryKey,
+  useListConstructieTemplates,
+  useCreateConstructieTemplate,
+  useUpdateConstructieTemplate,
+  useDeleteConstructieTemplate,
+  getListConstructieTemplatesQueryKey,
 } from "@workspace/api-client-react";
-import type { VoorzieningType, Label, Fabrikant } from "@workspace/api-client-react";
+import type { VoorzieningType, Label, Fabrikant, ConstructieTemplate } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -56,9 +61,11 @@ import {
   FileSpreadsheet,
   FlameKindling,
   Link2,
+  Layers,
   Pencil,
   Plus,
   ShieldCheck,
+  Trash2,
   Wind,
   X,
   XCircle,
@@ -1607,6 +1614,282 @@ function TabMeetwaarden() {
   );
 }
 
+const ONDERDEEL_TYPEN = [
+  { waarde: "branddeur", label: "Branddeur" },
+  { waarde: "doorvoering", label: "Doorvoering" },
+  { waarde: "brandklep", label: "Brandklep" },
+  { waarde: "kitvoeg", label: "Kitvoeg" },
+  { waarde: "manchet", label: "Manchet" },
+  { waarde: "brandwerend_glas", label: "Brandwerend Glas" },
+  { waarde: "coating", label: "Coating" },
+  { waarde: "luik", label: "Luik" },
+  { waarde: "plaatconstructie", label: "Plaatconstructie" },
+  { waarde: "schuifdeur", label: "Schuifdeur" },
+  { waarde: "puiconstructie", label: "Puiconstructie" },
+  { waarde: "dakdoorvoer", label: "Dakdoorvoer" },
+];
+
+// ── Tab Constructietemplates ─────────────────────────────────────────────────
+function TabConstructies() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const { heeftNiveau } = useBevoegdheid();
+  const kanSchrijven = heeftNiveau("bibliotheek", 2);
+
+  const { data: templates = [] } = useListConstructieTemplates();
+  const maakTemplate = useCreateConstructieTemplate();
+  const wijzigTemplate = useUpdateConstructieTemplate();
+  const verwijderTemplate = useDeleteConstructieTemplate();
+
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [gekozen, setGekozen] = useState<ConstructieTemplate | null>(null);
+  const [naam, setNaam] = useState("");
+  const [omschrijving, setOmschrijving] = useState("");
+  const [onderdelen, setOnderdelen] = useState<Array<{ type: string; label: string; omschrijving: string }>>([]);
+
+  function openNieuw() {
+    setGekozen(null);
+    setNaam("");
+    setOmschrijving("");
+    setOnderdelen([]);
+    setDialogOpen(true);
+  }
+
+  function openBewerk(t: ConstructieTemplate) {
+    setGekozen(t);
+    setNaam(t.naam);
+    setOmschrijving(t.omschrijving ?? "");
+    setOnderdelen(
+      ((t.onderdelen ?? []) as Array<{ type: string; label: string; omschrijving?: string | null }>).map((o) => ({
+        type: o.type,
+        label: o.label,
+        omschrijving: o.omschrijving ?? "",
+      })),
+    );
+    setDialogOpen(true);
+  }
+
+  async function opslaan() {
+    const payload = {
+      naam: naam.trim(),
+      omschrijving: omschrijving.trim() || null,
+      onderdelen: onderdelen.map((o) => ({
+        type: o.type,
+        label: o.label.trim(),
+        omschrijving: o.omschrijving.trim() || null,
+      })),
+    };
+    try {
+      if (gekozen) {
+        await wijzigTemplate.mutateAsync({ id: gekozen.id, data: payload });
+        toast({ description: "Template bijgewerkt" });
+      } else {
+        await maakTemplate.mutateAsync({ data: payload });
+        toast({ description: "Template aangemaakt" });
+      }
+      await queryClient.invalidateQueries({ queryKey: getListConstructieTemplatesQueryKey() });
+      setDialogOpen(false);
+    } catch (err) {
+      toast({ variant: "destructive", description: foutmelding(err, "Opslaan mislukt") });
+    }
+  }
+
+  async function verwijder(t: ConstructieTemplate) {
+    try {
+      await verwijderTemplate.mutateAsync({ id: t.id });
+      await queryClient.invalidateQueries({ queryKey: getListConstructieTemplatesQueryKey() });
+      toast({ description: "Template verwijderd" });
+    } catch (err) {
+      toast({ variant: "destructive", description: foutmelding(err, "Verwijderen mislukt") });
+    }
+  }
+
+  function voegOnderdeelToe() {
+    setOnderdelen((o) => [...o, { type: "doorvoering", label: "", omschrijving: "" }]);
+  }
+
+  function verwijderOnderdeel(idx: number) {
+    setOnderdelen((o) => o.filter((_, i) => i !== idx));
+  }
+
+  function wijzigOnderdeel(idx: number, key: "type" | "label" | "omschrijving", waarde: string) {
+    setOnderdelen((o) => o.map((item, i) => (i === idx ? { ...item, [key]: waarde } : item)));
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-start justify-between gap-4">
+        <p className="text-sm text-muted-foreground">
+          Constructietemplates beschrijven de samenstelling van een samengestelde constructie.
+          Onderdelen worden als afzonderlijke spots geregistreerd onder een hoofdspot van het type
+          &ldquo;Samengesteld&rdquo;.
+        </p>
+        {kanSchrijven && (
+          <Button size="sm" onClick={openNieuw} className="flex-shrink-0">
+            <Plus className="h-4 w-4 mr-1.5" />
+            Nieuw template
+          </Button>
+        )}
+      </div>
+
+      <Card>
+        <CardContent className="p-0">
+          {(templates as ConstructieTemplate[]).length === 0 ? (
+            <div className="py-10 text-center text-muted-foreground text-sm">
+              Nog geen constructietemplates. Klik op &ldquo;Nieuw template&rdquo; om er een aan te maken.
+            </div>
+          ) : (
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b bg-muted/20">
+                  <th className="text-left px-4 py-2 font-medium text-muted-foreground">Naam</th>
+                  <th className="text-left px-4 py-2 font-medium text-muted-foreground hidden sm:table-cell">
+                    Omschrijving
+                  </th>
+                  <th className="text-left px-4 py-2 font-medium text-muted-foreground w-28">
+                    Onderdelen
+                  </th>
+                  {kanSchrijven && <th className="px-4 py-2 w-20" />}
+                </tr>
+              </thead>
+              <tbody>
+                {(templates as ConstructieTemplate[]).map((t) => (
+                  <tr key={t.id} className="border-b last:border-0 hover:bg-muted/10">
+                    <td className="px-4 py-3 font-medium">{t.naam}</td>
+                    <td className="px-4 py-3 text-muted-foreground hidden sm:table-cell">
+                      {t.omschrijving ?? <em className="text-muted-foreground/60">—</em>}
+                    </td>
+                    <td className="px-4 py-3">
+                      <Badge variant="secondary">
+                        <Layers className="h-3 w-3 mr-1" />
+                        {((t.onderdelen ?? []) as unknown[]).length}
+                      </Badge>
+                    </td>
+                    {kanSchrijven && (
+                      <td className="px-4 py-3">
+                        <div className="flex gap-1 justify-end">
+                          <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => openBewerk(t)}>
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 w-7 p-0"
+                            onClick={() => verwijder(t)}
+                          >
+                            <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                          </Button>
+                        </div>
+                      </td>
+                    )}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </CardContent>
+      </Card>
+
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent className="sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>{gekozen ? "Template bewerken" : "Nieuw constructietemplate"}</DialogTitle>
+            <DialogDescription>
+              Definieer de samenstelling van een samengestelde constructie.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-1.5">
+              <UiLabel>Naam</UiLabel>
+              <Input
+                value={naam}
+                onChange={(e) => setNaam(e.target.value)}
+                placeholder="bv. Brandwerende doorvoering met manchet"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <UiLabel>Omschrijving (optioneel)</UiLabel>
+              <Input
+                value={omschrijving}
+                onChange={(e) => setOmschrijving(e.target.value)}
+                placeholder="Korte toelichting"
+              />
+            </div>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <UiLabel>Onderdelen</UiLabel>
+                <Button variant="outline" size="sm" onClick={voegOnderdeelToe}>
+                  <Plus className="h-3.5 w-3.5 mr-1" />
+                  Voeg toe
+                </Button>
+              </div>
+              {onderdelen.length === 0 ? (
+                <p className="text-sm text-muted-foreground py-2">
+                  Nog geen onderdelen. Klik op &ldquo;Voeg toe&rdquo; om te beginnen.
+                </p>
+              ) : (
+                <ScrollArea className="max-h-56">
+                  <div className="space-y-2 pr-2">
+                    {onderdelen.map((o, idx) => (
+                      <div key={idx} className="flex gap-2 items-center border rounded-lg p-2">
+                        <div className="flex-1 grid grid-cols-3 gap-2">
+                          <Select
+                            value={o.type}
+                            onValueChange={(v) => wijzigOnderdeel(idx, "type", v)}
+                          >
+                            <SelectTrigger className="h-8 text-xs">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {ONDERDEEL_TYPEN.map((t) => (
+                                <SelectItem key={t.waarde} value={t.waarde}>
+                                  {t.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <Input
+                            value={o.label}
+                            onChange={(e) => wijzigOnderdeel(idx, "label", e.target.value)}
+                            className="h-8 text-xs"
+                            placeholder="Productnaam"
+                          />
+                          <Input
+                            value={o.omschrijving}
+                            onChange={(e) => wijzigOnderdeel(idx, "omschrijving", e.target.value)}
+                            className="h-8 text-xs"
+                            placeholder="Opmerking (opt.)"
+                          />
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 p-0 flex-shrink-0"
+                          onClick={() => verwijderOnderdeel(idx)}
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </ScrollArea>
+              )}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDialogOpen(false)}>
+              Annuleren
+            </Button>
+            <Button onClick={opslaan} disabled={!naam.trim()}>
+              Opslaan
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
 // ── Hoofdpagina ──────────────────────────────────────────────────────────────
 export default function Bibliotheek() {
   const [actieveTab, setActieveTab] = useVoorkeur(
@@ -1635,6 +1918,7 @@ export default function Bibliotheek() {
           <TabsTrigger value="documenten">Documenten</TabsTrigger>
           <TabsTrigger value="fabrikanten">Fabrikanten</TabsTrigger>
           <TabsTrigger value="meetwaarden">Meetwaarden</TabsTrigger>
+          <TabsTrigger value="constructies">Constructies</TabsTrigger>
         </TabsList>
 
         <TabsContent value="applicaties" className="mt-5">
@@ -1655,6 +1939,9 @@ export default function Bibliotheek() {
 
         <TabsContent value="meetwaarden" className="mt-5">
           <TabMeetwaarden />
+        </TabsContent>
+        <TabsContent value="constructies" className="mt-5">
+          <TabConstructies />
         </TabsContent>
       </Tabs>
     </div>

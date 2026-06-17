@@ -141,7 +141,23 @@ function AiControlePaneel({ voorzieningId, labels }: { voorzieningId: number; la
               <div className="text-sm text-muted-foreground">Geen toepassingsvoorstel</div>
             )}
             {voorstel?.betrouwbaarheid && (
-              <div className="text-xs text-amber-700 mt-2">Betrouwbaarheid: {voorstel.betrouwbaarheid}</div>
+              <div className="mt-2">
+                {voorstel.betrouwbaarheid === "laag" && (
+                  <span className="inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-medium bg-red-100 text-red-800 border border-red-200">
+                    Betrouwbaarheid laag — controle aanbevolen
+                  </span>
+                )}
+                {voorstel.betrouwbaarheid === "midden" && (
+                  <span className="inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-medium bg-amber-100 text-amber-800 border border-amber-200">
+                    Betrouwbaarheid gemiddeld
+                  </span>
+                )}
+                {voorstel.betrouwbaarheid === "hoog" && (
+                  <span className="inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-medium bg-emerald-100 text-emerald-800 border border-emerald-200">
+                    Betrouwbaarheid hoog
+                  </span>
+                )}
+              </div>
             )}
           </div>
           <div className="rounded-md border bg-background p-3">

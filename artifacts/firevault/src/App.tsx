@@ -51,11 +51,14 @@ import DossiersPagina from "@/pages/dossiers/index";
 import OffertesPagina from "@/pages/offertes/index";
 import DocumentenPagina from "@/pages/documenten/index";
 import { OndersteuningWidget } from "@/components/ondersteuning-widget";
+import RapportenPagina from "@/pages/rapporten/index";
+import ToolboxPagina from "@/pages/toolbox/index";
 import ConnectPlanning from "@/pages/connect/planning";
 import ConnectCalculatie from "@/pages/connect/calculatie";
 import ConnectCalculatieDetail from "@/pages/connect/calculatie-detail";
 import ConnectHrm from "@/pages/connect/hrm";
 import OneDashboard from "@/pages/one/dashboard";
+import OneGebouwen from "@/pages/one/gebouwen";
 import OneDocumenten from "@/pages/one/documenten";
 import OneRapporten from "@/pages/one/rapporten";
 import OneAbonnementen from "@/pages/one/abonnementen";
@@ -97,11 +100,14 @@ function BeheerderPortal() {
         <Route path="/beheer/documentopmaak" component={DocumentopmaakBeheer} />
         <Route path="/beheer/mail" component={MailBeheer} />
         <Route path="/documenten" component={DocumentenPagina} />
+        <Route path="/rapporten" component={RapportenPagina} />
+        <Route path="/toolbox" component={ToolboxPagina} />
         <Route path="/connect/planning" component={ConnectPlanning} />
         <Route path="/connect/calculatie/:id" component={ConnectCalculatieDetail} />
         <Route path="/connect/calculatie" component={ConnectCalculatie} />
         <Route path="/connect/hrm" component={ConnectHrm} />
         <Route path="/one/dashboard" component={OneDashboard} />
+        <Route path="/one/gebouwen" component={OneGebouwen} />
         <Route path="/one/documenten" component={OneDocumenten} />
         <Route path="/one/rapporten" component={OneRapporten} />
         <Route path="/one/abonnementen" component={OneAbonnementen} />
@@ -189,11 +195,14 @@ function PermissiePortal() {
         <Route path="/beheer/documentopmaak" component={DocumentopmaakBeheer} />
         <Route path="/beheer/mail" component={MailBeheer} />
         <Route path="/documenten" component={DocumentenPagina} />
+        <Route path="/rapporten" component={RapportenPagina} />
+        <Route path="/toolbox" component={ToolboxPagina} />
         <Route path="/connect/planning" component={ConnectPlanning} />
         <Route path="/connect/calculatie/:id" component={ConnectCalculatieDetail} />
         <Route path="/connect/calculatie" component={ConnectCalculatie} />
         <Route path="/connect/hrm" component={ConnectHrm} />
         <Route path="/one/dashboard" component={OneDashboard} />
+        <Route path="/one/gebouwen" component={OneGebouwen} />
         <Route path="/one/documenten" component={OneDocumenten} />
         <Route path="/one/rapporten" component={OneRapporten} />
         <Route path="/one/abonnementen" component={OneAbonnementen} />

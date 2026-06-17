@@ -24,6 +24,7 @@ import type {
   AbonnementInput,
   AbonnementUpdate,
   Activiteit,
+  AiCalculatieRegels200,
   AppInstellingen,
   AppInstellingenInput,
   ApplicatieLabelsInput,
@@ -43,6 +44,8 @@ import type {
   ClusterMonteurInput,
   ClusterUpdate,
   CodeInput,
+  ConstructieTemplate,
+  ConstructieTemplateInput,
   CrmCommercieel,
   CrmCommercieelInput,
   CrmCommunicatie,
@@ -124,6 +127,7 @@ import type {
   LabelDocumentenInput,
   LabelInput,
   LabelUpdate,
+  LeesBevestiging,
   ListAlleVerlofAanvragenParams,
   ListDocumentLogboekParams,
   ListDocumentenParams,
@@ -134,7 +138,9 @@ import type {
   ListLabelsParams,
   ListMuisGebeurtenissenParams,
   ListOnderhoudParams,
+  ListRapportenParams,
   ListTestrapportenParams,
+  ListToolboxBerichtenParams,
   ListVoorzieningTypesParams,
   ListVoorzieningenParams,
   LoginInput,
@@ -149,6 +155,7 @@ import type {
   MedewerkerOnboardingInput,
   MedewerkerOpleiding,
   MedewerkerOpleidingInput,
+  MijnWerkGebouw,
   ModuleBeoordeling,
   ModuleBeoordelingInput,
   MuisGebeurtenis,
@@ -178,6 +185,10 @@ import type {
   ProfielInput,
   ProfielToepassen200,
   ProfielenAanvullen200,
+  Rapport,
+  RapportDefinitief,
+  RapportInput,
+  RapportPatch,
   Scheiding,
   ScheidingInput,
   ScheidingUpdate,
@@ -201,6 +212,9 @@ import type {
   ToewijsbareGebruiker,
   Toewijzing,
   ToewijzingInput,
+  ToolboxBericht,
+  ToolboxBerichtDetail,
+  ToolboxBerichtInput,
   TweeFactorSetup,
   UitnodigingActiveren,
   UitnodigingActiveren200,
@@ -3059,6 +3073,538 @@ export const useDeleteGebouwTekening = <TError = ErrorType<void>,
       return useMutation(getDeleteGebouwTekeningMutationOptions(options));
     }
 
+export const getListRapportenUrl = (params?: ListRapportenParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/rapporten?${stringifiedParams}` : `/api/rapporten`
+}
+
+/**
+ * @summary Alle opleverrapporten (cross-gebouw, optioneel gefilterd op status)
+ */
+export const listRapporten = async (params?: ListRapportenParams, options?: RequestInit): Promise<Rapport[]> => {
+
+  return customFetch<Rapport[]>(getListRapportenUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListRapportenQueryKey = (params?: ListRapportenParams,) => {
+    return [
+    `/api/rapporten`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListRapportenQueryOptions = <TData = Awaited<ReturnType<typeof listRapporten>>, TError = ErrorType<unknown>>(params?: ListRapportenParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listRapporten>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListRapportenQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listRapporten>>> = ({ signal }) => listRapporten(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listRapporten>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListRapportenQueryResult = NonNullable<Awaited<ReturnType<typeof listRapporten>>>
+export type ListRapportenQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Alle opleverrapporten (cross-gebouw, optioneel gefilterd op status)
+ */
+
+export function useListRapporten<TData = Awaited<ReturnType<typeof listRapporten>>, TError = ErrorType<unknown>>(
+ params?: ListRapportenParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listRapporten>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListRapportenQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getListGebouwRapportenUrl = (id: number,) => {
+
+
+
+
+  return `/api/gebouwen/${id}/rapporten`
+}
+
+/**
+ * @summary Alle rapporten voor een gebouw (concept en definitief)
+ */
+export const listGebouwRapporten = async (id: number, options?: RequestInit): Promise<Rapport[]> => {
+
+  return customFetch<Rapport[]>(getListGebouwRapportenUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListGebouwRapportenQueryKey = (id: number,) => {
+    return [
+    `/api/gebouwen/${id}/rapporten`
+    ] as const;
+    }
+
+
+export const getListGebouwRapportenQueryOptions = <TData = Awaited<ReturnType<typeof listGebouwRapporten>>, TError = ErrorType<void>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listGebouwRapporten>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListGebouwRapportenQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listGebouwRapporten>>> = ({ signal }) => listGebouwRapporten(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listGebouwRapporten>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListGebouwRapportenQueryResult = NonNullable<Awaited<ReturnType<typeof listGebouwRapporten>>>
+export type ListGebouwRapportenQueryError = ErrorType<void>
+
+
+/**
+ * @summary Alle rapporten voor een gebouw (concept en definitief)
+ */
+
+export function useListGebouwRapporten<TData = Awaited<ReturnType<typeof listGebouwRapporten>>, TError = ErrorType<void>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listGebouwRapporten>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListGebouwRapportenQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateRapportUrl = (id: number,) => {
+
+
+
+
+  return `/api/gebouwen/${id}/rapporten`
+}
+
+/**
+ * @summary Nieuw concept-rapport aanmaken
+ */
+export const createRapport = async (id: number,
+    rapportInput: RapportInput, options?: RequestInit): Promise<Rapport> => {
+
+  return customFetch<Rapport>(getCreateRapportUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(rapportInput)
+  }
+);}
+
+
+
+
+export const getCreateRapportMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createRapport>>, TError,{id: number;data: BodyType<RapportInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createRapport>>, TError,{id: number;data: BodyType<RapportInput>}, TContext> => {
+
+const mutationKey = ['createRapport'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createRapport>>, {id: number;data: BodyType<RapportInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  createRapport(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateRapportMutationResult = NonNullable<Awaited<ReturnType<typeof createRapport>>>
+    export type CreateRapportMutationBody = BodyType<RapportInput>
+    export type CreateRapportMutationError = ErrorType<void>
+
+    /**
+ * @summary Nieuw concept-rapport aanmaken
+ */
+export const useCreateRapport = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createRapport>>, TError,{id: number;data: BodyType<RapportInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createRapport>>,
+        TError,
+        {id: number;data: BodyType<RapportInput>},
+        TContext
+      > => {
+      return useMutation(getCreateRapportMutationOptions(options));
+    }
+
+export const getGetRapportUrl = (id: number,
+    rapportId: number,) => {
+
+
+
+
+  return `/api/gebouwen/${id}/rapporten/${rapportId}`
+}
+
+/**
+ * @summary Eén rapport ophalen
+ */
+export const getRapport = async (id: number,
+    rapportId: number, options?: RequestInit): Promise<Rapport> => {
+
+  return customFetch<Rapport>(getGetRapportUrl(id,rapportId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetRapportQueryKey = (id: number,
+    rapportId: number,) => {
+    return [
+    `/api/gebouwen/${id}/rapporten/${rapportId}`
+    ] as const;
+    }
+
+
+export const getGetRapportQueryOptions = <TData = Awaited<ReturnType<typeof getRapport>>, TError = ErrorType<void>>(id: number,
+    rapportId: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getRapport>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetRapportQueryKey(id,rapportId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getRapport>>> = ({ signal }) => getRapport(id,rapportId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined && rapportId !== null && rapportId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getRapport>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetRapportQueryResult = NonNullable<Awaited<ReturnType<typeof getRapport>>>
+export type GetRapportQueryError = ErrorType<void>
+
+
+/**
+ * @summary Eén rapport ophalen
+ */
+
+export function useGetRapport<TData = Awaited<ReturnType<typeof getRapport>>, TError = ErrorType<void>>(
+ id: number,
+    rapportId: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getRapport>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetRapportQueryOptions(id,rapportId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getUpdateRapportUrl = (id: number,
+    rapportId: number,) => {
+
+
+
+
+  return `/api/gebouwen/${id}/rapporten/${rapportId}`
+}
+
+/**
+ * @summary Concept-rapport bijwerken (alleen concept)
+ */
+export const updateRapport = async (id: number,
+    rapportId: number,
+    rapportPatch: RapportPatch, options?: RequestInit): Promise<Rapport> => {
+
+  return customFetch<Rapport>(getUpdateRapportUrl(id,rapportId),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(rapportPatch)
+  }
+);}
+
+
+
+
+export const getUpdateRapportMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateRapport>>, TError,{id: number;rapportId: number;data: BodyType<RapportPatch>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateRapport>>, TError,{id: number;rapportId: number;data: BodyType<RapportPatch>}, TContext> => {
+
+const mutationKey = ['updateRapport'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateRapport>>, {id: number;rapportId: number;data: BodyType<RapportPatch>}> = (props) => {
+          const {id,rapportId,data} = props ?? {};
+
+          return  updateRapport(id,rapportId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateRapportMutationResult = NonNullable<Awaited<ReturnType<typeof updateRapport>>>
+    export type UpdateRapportMutationBody = BodyType<RapportPatch>
+    export type UpdateRapportMutationError = ErrorType<void>
+
+    /**
+ * @summary Concept-rapport bijwerken (alleen concept)
+ */
+export const useUpdateRapport = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateRapport>>, TError,{id: number;rapportId: number;data: BodyType<RapportPatch>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateRapport>>,
+        TError,
+        {id: number;rapportId: number;data: BodyType<RapportPatch>},
+        TContext
+      > => {
+      return useMutation(getUpdateRapportMutationOptions(options));
+    }
+
+export const getDeleteRapportUrl = (id: number,
+    rapportId: number,) => {
+
+
+
+
+  return `/api/gebouwen/${id}/rapporten/${rapportId}`
+}
+
+/**
+ * @summary Concept-rapport verwijderen
+ */
+export const deleteRapport = async (id: number,
+    rapportId: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteRapportUrl(id,rapportId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteRapportMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteRapport>>, TError,{id: number;rapportId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteRapport>>, TError,{id: number;rapportId: number}, TContext> => {
+
+const mutationKey = ['deleteRapport'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteRapport>>, {id: number;rapportId: number}> = (props) => {
+          const {id,rapportId} = props ?? {};
+
+          return  deleteRapport(id,rapportId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteRapportMutationResult = NonNullable<Awaited<ReturnType<typeof deleteRapport>>>
+
+    export type DeleteRapportMutationError = ErrorType<void>
+
+    /**
+ * @summary Concept-rapport verwijderen
+ */
+export const useDeleteRapport = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteRapport>>, TError,{id: number;rapportId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteRapport>>,
+        TError,
+        {id: number;rapportId: number},
+        TContext
+      > => {
+      return useMutation(getDeleteRapportMutationOptions(options));
+    }
+
+export const getMaakRapportDefinitiefUrl = (id: number,
+    rapportId: number,) => {
+
+
+
+
+  return `/api/gebouwen/${id}/rapporten/${rapportId}/definitief`
+}
+
+/**
+ * @summary Rapport definitief maken (bevriest documentrevisies)
+ */
+export const maakRapportDefinitief = async (id: number,
+    rapportId: number,
+    rapportDefinitief: RapportDefinitief, options?: RequestInit): Promise<Rapport> => {
+
+  return customFetch<Rapport>(getMaakRapportDefinitiefUrl(id,rapportId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(rapportDefinitief)
+  }
+);}
+
+
+
+
+export const getMaakRapportDefinitiefMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof maakRapportDefinitief>>, TError,{id: number;rapportId: number;data: BodyType<RapportDefinitief>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof maakRapportDefinitief>>, TError,{id: number;rapportId: number;data: BodyType<RapportDefinitief>}, TContext> => {
+
+const mutationKey = ['maakRapportDefinitief'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof maakRapportDefinitief>>, {id: number;rapportId: number;data: BodyType<RapportDefinitief>}> = (props) => {
+          const {id,rapportId,data} = props ?? {};
+
+          return  maakRapportDefinitief(id,rapportId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type MaakRapportDefinitiefMutationResult = NonNullable<Awaited<ReturnType<typeof maakRapportDefinitief>>>
+    export type MaakRapportDefinitiefMutationBody = BodyType<RapportDefinitief>
+    export type MaakRapportDefinitiefMutationError = ErrorType<void>
+
+    /**
+ * @summary Rapport definitief maken (bevriest documentrevisies)
+ */
+export const useMaakRapportDefinitief = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof maakRapportDefinitief>>, TError,{id: number;rapportId: number;data: BodyType<RapportDefinitief>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof maakRapportDefinitief>>,
+        TError,
+        {id: number;rapportId: number;data: BodyType<RapportDefinitief>},
+        TContext
+      > => {
+      return useMutation(getMaakRapportDefinitiefMutationOptions(options));
+    }
+
 export const getListVoorzieningenUrl = (params?: ListVoorzieningenParams,) => {
   const normalizedParams = new URLSearchParams();
 
@@ -3793,6 +4339,83 @@ export const useArchiveerVoorziening = <TError = ErrorType<void>,
       return useMutation(getArchiveerVoorzieningMutationOptions(options));
     }
 
+export const getListSpotOnderdelenUrl = (id: number,) => {
+
+
+
+
+  return `/api/voorzieningen/${id}/onderdelen`
+}
+
+/**
+ * @summary Onderdelen van een samengestelde spot ophalen
+ */
+export const listSpotOnderdelen = async (id: number, options?: RequestInit): Promise<Voorziening[]> => {
+
+  return customFetch<Voorziening[]>(getListSpotOnderdelenUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListSpotOnderdelenQueryKey = (id: number,) => {
+    return [
+    `/api/voorzieningen/${id}/onderdelen`
+    ] as const;
+    }
+
+
+export const getListSpotOnderdelenQueryOptions = <TData = Awaited<ReturnType<typeof listSpotOnderdelen>>, TError = ErrorType<void>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listSpotOnderdelen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListSpotOnderdelenQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listSpotOnderdelen>>> = ({ signal }) => listSpotOnderdelen(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listSpotOnderdelen>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListSpotOnderdelenQueryResult = NonNullable<Awaited<ReturnType<typeof listSpotOnderdelen>>>
+export type ListSpotOnderdelenQueryError = ErrorType<void>
+
+
+/**
+ * @summary Onderdelen van een samengestelde spot ophalen
+ */
+
+export function useListSpotOnderdelen<TData = Awaited<ReturnType<typeof listSpotOnderdelen>>, TError = ErrorType<void>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listSpotOnderdelen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListSpotOnderdelenQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
 export const getAiSpotvoorstelUrl = () => {
 
 
@@ -4376,6 +4999,960 @@ export const useSetApplicatieLabels = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getSetApplicatieLabelsMutationOptions(options));
+    }
+
+export const getListConstructieTemplatesUrl = () => {
+
+
+
+
+  return `/api/constructie-templates`
+}
+
+/**
+ * @summary Lijst van constructietemplates
+ */
+export const listConstructieTemplates = async ( options?: RequestInit): Promise<ConstructieTemplate[]> => {
+
+  return customFetch<ConstructieTemplate[]>(getListConstructieTemplatesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListConstructieTemplatesQueryKey = () => {
+    return [
+    `/api/constructie-templates`
+    ] as const;
+    }
+
+
+export const getListConstructieTemplatesQueryOptions = <TData = Awaited<ReturnType<typeof listConstructieTemplates>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listConstructieTemplates>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListConstructieTemplatesQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listConstructieTemplates>>> = ({ signal }) => listConstructieTemplates({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listConstructieTemplates>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListConstructieTemplatesQueryResult = NonNullable<Awaited<ReturnType<typeof listConstructieTemplates>>>
+export type ListConstructieTemplatesQueryError = ErrorType<void>
+
+
+/**
+ * @summary Lijst van constructietemplates
+ */
+
+export function useListConstructieTemplates<TData = Awaited<ReturnType<typeof listConstructieTemplates>>, TError = ErrorType<void>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listConstructieTemplates>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListConstructieTemplatesQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateConstructieTemplateUrl = () => {
+
+
+
+
+  return `/api/constructie-templates`
+}
+
+/**
+ * @summary Constructietemplate aanmaken
+ */
+export const createConstructieTemplate = async (constructieTemplateInput: ConstructieTemplateInput, options?: RequestInit): Promise<ConstructieTemplate> => {
+
+  return customFetch<ConstructieTemplate>(getCreateConstructieTemplateUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(constructieTemplateInput)
+  }
+);}
+
+
+
+
+export const getCreateConstructieTemplateMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createConstructieTemplate>>, TError,{data: BodyType<ConstructieTemplateInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createConstructieTemplate>>, TError,{data: BodyType<ConstructieTemplateInput>}, TContext> => {
+
+const mutationKey = ['createConstructieTemplate'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createConstructieTemplate>>, {data: BodyType<ConstructieTemplateInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createConstructieTemplate(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateConstructieTemplateMutationResult = NonNullable<Awaited<ReturnType<typeof createConstructieTemplate>>>
+    export type CreateConstructieTemplateMutationBody = BodyType<ConstructieTemplateInput>
+    export type CreateConstructieTemplateMutationError = ErrorType<void>
+
+    /**
+ * @summary Constructietemplate aanmaken
+ */
+export const useCreateConstructieTemplate = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createConstructieTemplate>>, TError,{data: BodyType<ConstructieTemplateInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createConstructieTemplate>>,
+        TError,
+        {data: BodyType<ConstructieTemplateInput>},
+        TContext
+      > => {
+      return useMutation(getCreateConstructieTemplateMutationOptions(options));
+    }
+
+export const getGetConstructieTemplateUrl = (id: number,) => {
+
+
+
+
+  return `/api/constructie-templates/${id}`
+}
+
+/**
+ * @summary Eén constructietemplate ophalen
+ */
+export const getConstructieTemplate = async (id: number, options?: RequestInit): Promise<ConstructieTemplate> => {
+
+  return customFetch<ConstructieTemplate>(getGetConstructieTemplateUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetConstructieTemplateQueryKey = (id: number,) => {
+    return [
+    `/api/constructie-templates/${id}`
+    ] as const;
+    }
+
+
+export const getGetConstructieTemplateQueryOptions = <TData = Awaited<ReturnType<typeof getConstructieTemplate>>, TError = ErrorType<void>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getConstructieTemplate>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetConstructieTemplateQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getConstructieTemplate>>> = ({ signal }) => getConstructieTemplate(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getConstructieTemplate>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetConstructieTemplateQueryResult = NonNullable<Awaited<ReturnType<typeof getConstructieTemplate>>>
+export type GetConstructieTemplateQueryError = ErrorType<void>
+
+
+/**
+ * @summary Eén constructietemplate ophalen
+ */
+
+export function useGetConstructieTemplate<TData = Awaited<ReturnType<typeof getConstructieTemplate>>, TError = ErrorType<void>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getConstructieTemplate>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetConstructieTemplateQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getUpdateConstructieTemplateUrl = (id: number,) => {
+
+
+
+
+  return `/api/constructie-templates/${id}`
+}
+
+/**
+ * @summary Constructietemplate bijwerken
+ */
+export const updateConstructieTemplate = async (id: number,
+    constructieTemplateInput: ConstructieTemplateInput, options?: RequestInit): Promise<ConstructieTemplate> => {
+
+  return customFetch<ConstructieTemplate>(getUpdateConstructieTemplateUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(constructieTemplateInput)
+  }
+);}
+
+
+
+
+export const getUpdateConstructieTemplateMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateConstructieTemplate>>, TError,{id: number;data: BodyType<ConstructieTemplateInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateConstructieTemplate>>, TError,{id: number;data: BodyType<ConstructieTemplateInput>}, TContext> => {
+
+const mutationKey = ['updateConstructieTemplate'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateConstructieTemplate>>, {id: number;data: BodyType<ConstructieTemplateInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateConstructieTemplate(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateConstructieTemplateMutationResult = NonNullable<Awaited<ReturnType<typeof updateConstructieTemplate>>>
+    export type UpdateConstructieTemplateMutationBody = BodyType<ConstructieTemplateInput>
+    export type UpdateConstructieTemplateMutationError = ErrorType<void>
+
+    /**
+ * @summary Constructietemplate bijwerken
+ */
+export const useUpdateConstructieTemplate = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateConstructieTemplate>>, TError,{id: number;data: BodyType<ConstructieTemplateInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateConstructieTemplate>>,
+        TError,
+        {id: number;data: BodyType<ConstructieTemplateInput>},
+        TContext
+      > => {
+      return useMutation(getUpdateConstructieTemplateMutationOptions(options));
+    }
+
+export const getDeleteConstructieTemplateUrl = (id: number,) => {
+
+
+
+
+  return `/api/constructie-templates/${id}`
+}
+
+/**
+ * @summary Constructietemplate verwijderen
+ */
+export const deleteConstructieTemplate = async (id: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteConstructieTemplateUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteConstructieTemplateMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteConstructieTemplate>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteConstructieTemplate>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deleteConstructieTemplate'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteConstructieTemplate>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteConstructieTemplate(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteConstructieTemplateMutationResult = NonNullable<Awaited<ReturnType<typeof deleteConstructieTemplate>>>
+
+    export type DeleteConstructieTemplateMutationError = ErrorType<void>
+
+    /**
+ * @summary Constructietemplate verwijderen
+ */
+export const useDeleteConstructieTemplate = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteConstructieTemplate>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteConstructieTemplate>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeleteConstructieTemplateMutationOptions(options));
+    }
+
+export const getGetMijnWerkUrl = () => {
+
+
+
+
+  return `/api/mijn-werk`
+}
+
+/**
+ * @summary Overzicht van aan de ingelogde monteur toegewezen spots, gegroepeerd per gebouw
+ */
+export const getMijnWerk = async ( options?: RequestInit): Promise<MijnWerkGebouw[]> => {
+
+  return customFetch<MijnWerkGebouw[]>(getGetMijnWerkUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetMijnWerkQueryKey = () => {
+    return [
+    `/api/mijn-werk`
+    ] as const;
+    }
+
+
+export const getGetMijnWerkQueryOptions = <TData = Awaited<ReturnType<typeof getMijnWerk>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMijnWerk>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetMijnWerkQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getMijnWerk>>> = ({ signal }) => getMijnWerk({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getMijnWerk>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetMijnWerkQueryResult = NonNullable<Awaited<ReturnType<typeof getMijnWerk>>>
+export type GetMijnWerkQueryError = ErrorType<void>
+
+
+/**
+ * @summary Overzicht van aan de ingelogde monteur toegewezen spots, gegroepeerd per gebouw
+ */
+
+export function useGetMijnWerk<TData = Awaited<ReturnType<typeof getMijnWerk>>, TError = ErrorType<void>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMijnWerk>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetMijnWerkQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getListToolboxBerichtenUrl = (params?: ListToolboxBerichtenParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/toolbox-berichten?${stringifiedParams}` : `/api/toolbox-berichten`
+}
+
+/**
+ * @summary Lijst van toolbox-berichten (beheerder ziet alle; monteur ziet alleen gepubliceerde voor hem)
+ */
+export const listToolboxBerichten = async (params?: ListToolboxBerichtenParams, options?: RequestInit): Promise<ToolboxBericht[]> => {
+
+  return customFetch<ToolboxBericht[]>(getListToolboxBerichtenUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListToolboxBerichtenQueryKey = (params?: ListToolboxBerichtenParams,) => {
+    return [
+    `/api/toolbox-berichten`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListToolboxBerichtenQueryOptions = <TData = Awaited<ReturnType<typeof listToolboxBerichten>>, TError = ErrorType<unknown>>(params?: ListToolboxBerichtenParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listToolboxBerichten>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListToolboxBerichtenQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listToolboxBerichten>>> = ({ signal }) => listToolboxBerichten(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listToolboxBerichten>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListToolboxBerichtenQueryResult = NonNullable<Awaited<ReturnType<typeof listToolboxBerichten>>>
+export type ListToolboxBerichtenQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Lijst van toolbox-berichten (beheerder ziet alle; monteur ziet alleen gepubliceerde voor hem)
+ */
+
+export function useListToolboxBerichten<TData = Awaited<ReturnType<typeof listToolboxBerichten>>, TError = ErrorType<unknown>>(
+ params?: ListToolboxBerichtenParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listToolboxBerichten>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListToolboxBerichtenQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateToolboxBerichtUrl = () => {
+
+
+
+
+  return `/api/toolbox-berichten`
+}
+
+/**
+ * @summary Nieuw toolbox-bericht aanmaken
+ */
+export const createToolboxBericht = async (toolboxBerichtInput: ToolboxBerichtInput, options?: RequestInit): Promise<ToolboxBericht> => {
+
+  return customFetch<ToolboxBericht>(getCreateToolboxBerichtUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(toolboxBerichtInput)
+  }
+);}
+
+
+
+
+export const getCreateToolboxBerichtMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createToolboxBericht>>, TError,{data: BodyType<ToolboxBerichtInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createToolboxBericht>>, TError,{data: BodyType<ToolboxBerichtInput>}, TContext> => {
+
+const mutationKey = ['createToolboxBericht'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createToolboxBericht>>, {data: BodyType<ToolboxBerichtInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createToolboxBericht(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateToolboxBerichtMutationResult = NonNullable<Awaited<ReturnType<typeof createToolboxBericht>>>
+    export type CreateToolboxBerichtMutationBody = BodyType<ToolboxBerichtInput>
+    export type CreateToolboxBerichtMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Nieuw toolbox-bericht aanmaken
+ */
+export const useCreateToolboxBericht = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createToolboxBericht>>, TError,{data: BodyType<ToolboxBerichtInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createToolboxBericht>>,
+        TError,
+        {data: BodyType<ToolboxBerichtInput>},
+        TContext
+      > => {
+      return useMutation(getCreateToolboxBerichtMutationOptions(options));
+    }
+
+export const getGetToolboxBerichtUrl = (id: number,) => {
+
+
+
+
+  return `/api/toolbox-berichten/${id}`
+}
+
+/**
+ * @summary Detail van een toolbox-bericht
+ */
+export const getToolboxBericht = async (id: number, options?: RequestInit): Promise<ToolboxBerichtDetail> => {
+
+  return customFetch<ToolboxBerichtDetail>(getGetToolboxBerichtUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetToolboxBerichtQueryKey = (id: number,) => {
+    return [
+    `/api/toolbox-berichten/${id}`
+    ] as const;
+    }
+
+
+export const getGetToolboxBerichtQueryOptions = <TData = Awaited<ReturnType<typeof getToolboxBericht>>, TError = ErrorType<void>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getToolboxBericht>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetToolboxBerichtQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getToolboxBericht>>> = ({ signal }) => getToolboxBericht(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getToolboxBericht>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetToolboxBerichtQueryResult = NonNullable<Awaited<ReturnType<typeof getToolboxBericht>>>
+export type GetToolboxBerichtQueryError = ErrorType<void>
+
+
+/**
+ * @summary Detail van een toolbox-bericht
+ */
+
+export function useGetToolboxBericht<TData = Awaited<ReturnType<typeof getToolboxBericht>>, TError = ErrorType<void>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getToolboxBericht>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetToolboxBerichtQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getUpdateToolboxBerichtUrl = (id: number,) => {
+
+
+
+
+  return `/api/toolbox-berichten/${id}`
+}
+
+/**
+ * @summary Toolbox-bericht bijwerken
+ */
+export const updateToolboxBericht = async (id: number,
+    toolboxBerichtInput: ToolboxBerichtInput, options?: RequestInit): Promise<ToolboxBericht> => {
+
+  return customFetch<ToolboxBericht>(getUpdateToolboxBerichtUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(toolboxBerichtInput)
+  }
+);}
+
+
+
+
+export const getUpdateToolboxBerichtMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateToolboxBericht>>, TError,{id: number;data: BodyType<ToolboxBerichtInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateToolboxBericht>>, TError,{id: number;data: BodyType<ToolboxBerichtInput>}, TContext> => {
+
+const mutationKey = ['updateToolboxBericht'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateToolboxBericht>>, {id: number;data: BodyType<ToolboxBerichtInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateToolboxBericht(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateToolboxBerichtMutationResult = NonNullable<Awaited<ReturnType<typeof updateToolboxBericht>>>
+    export type UpdateToolboxBerichtMutationBody = BodyType<ToolboxBerichtInput>
+    export type UpdateToolboxBerichtMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Toolbox-bericht bijwerken
+ */
+export const useUpdateToolboxBericht = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateToolboxBericht>>, TError,{id: number;data: BodyType<ToolboxBerichtInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateToolboxBericht>>,
+        TError,
+        {id: number;data: BodyType<ToolboxBerichtInput>},
+        TContext
+      > => {
+      return useMutation(getUpdateToolboxBerichtMutationOptions(options));
+    }
+
+export const getDeleteToolboxBerichtUrl = (id: number,) => {
+
+
+
+
+  return `/api/toolbox-berichten/${id}`
+}
+
+/**
+ * @summary Toolbox-bericht verwijderen
+ */
+export const deleteToolboxBericht = async (id: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteToolboxBerichtUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteToolboxBerichtMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteToolboxBericht>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteToolboxBericht>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deleteToolboxBericht'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteToolboxBericht>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteToolboxBericht(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteToolboxBerichtMutationResult = NonNullable<Awaited<ReturnType<typeof deleteToolboxBericht>>>
+
+    export type DeleteToolboxBerichtMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Toolbox-bericht verwijderen
+ */
+export const useDeleteToolboxBericht = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteToolboxBericht>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteToolboxBericht>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeleteToolboxBerichtMutationOptions(options));
+    }
+
+export const getPublicerenToolboxBerichtUrl = (id: number,) => {
+
+
+
+
+  return `/api/toolbox-berichten/${id}/publiceren`
+}
+
+/**
+ * @summary Toolbox-bericht publiceren (maakt het zichtbaar voor monteurs)
+ */
+export const publicerenToolboxBericht = async (id: number, options?: RequestInit): Promise<ToolboxBericht> => {
+
+  return customFetch<ToolboxBericht>(getPublicerenToolboxBerichtUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getPublicerenToolboxBerichtMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof publicerenToolboxBericht>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof publicerenToolboxBericht>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['publicerenToolboxBericht'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof publicerenToolboxBericht>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  publicerenToolboxBericht(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PublicerenToolboxBerichtMutationResult = NonNullable<Awaited<ReturnType<typeof publicerenToolboxBericht>>>
+
+    export type PublicerenToolboxBerichtMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Toolbox-bericht publiceren (maakt het zichtbaar voor monteurs)
+ */
+export const usePublicerenToolboxBericht = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof publicerenToolboxBericht>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof publicerenToolboxBericht>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getPublicerenToolboxBerichtMutationOptions(options));
+    }
+
+export const getBevestigenToolboxBerichtUrl = (id: number,) => {
+
+
+
+
+  return `/api/toolbox-berichten/${id}/bevestigen`
+}
+
+/**
+ * @summary Ingelogde monteur bevestigt gelezen te hebben
+ */
+export const bevestigenToolboxBericht = async (id: number, options?: RequestInit): Promise<LeesBevestiging> => {
+
+  return customFetch<LeesBevestiging>(getBevestigenToolboxBerichtUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getBevestigenToolboxBerichtMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof bevestigenToolboxBericht>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof bevestigenToolboxBericht>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['bevestigenToolboxBericht'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof bevestigenToolboxBericht>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  bevestigenToolboxBericht(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type BevestigenToolboxBerichtMutationResult = NonNullable<Awaited<ReturnType<typeof bevestigenToolboxBericht>>>
+
+    export type BevestigenToolboxBerichtMutationError = ErrorType<void>
+
+    /**
+ * @summary Ingelogde monteur bevestigt gelezen te hebben
+ */
+export const useBevestigenToolboxBericht = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof bevestigenToolboxBericht>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof bevestigenToolboxBericht>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getBevestigenToolboxBerichtMutationOptions(options));
     }
 
 export const getListLabelsUrl = (params?: ListLabelsParams,) => {
@@ -20751,5 +22328,75 @@ export const useDeleteCalculatieRegel = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getDeleteCalculatieRegelMutationOptions(options));
+    }
+
+export const getAiCalculatieRegelsUrl = (id: number,) => {
+
+
+
+
+  return `/api/calculaties/${id}/ai-regels`
+}
+
+/**
+ * @summary AI-gestuurde kostenregel-suggesties op basis van spots in het gekoppelde gebouw
+ */
+export const aiCalculatieRegels = async (id: number, options?: RequestInit): Promise<AiCalculatieRegels200> => {
+
+  return customFetch<AiCalculatieRegels200>(getAiCalculatieRegelsUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getAiCalculatieRegelsMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof aiCalculatieRegels>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof aiCalculatieRegels>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['aiCalculatieRegels'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof aiCalculatieRegels>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  aiCalculatieRegels(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AiCalculatieRegelsMutationResult = NonNullable<Awaited<ReturnType<typeof aiCalculatieRegels>>>
+
+    export type AiCalculatieRegelsMutationError = ErrorType<void>
+
+    /**
+ * @summary AI-gestuurde kostenregel-suggesties op basis van spots in het gekoppelde gebouw
+ */
+export const useAiCalculatieRegels = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof aiCalculatieRegels>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof aiCalculatieRegels>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getAiCalculatieRegelsMutationOptions(options));
     }
 

@@ -9,7 +9,7 @@ import {
   ShieldCheck, Building, Wrench, Users, Search, Home, Receipt,
   ShieldAlert, LifeBuoy, MessageSquarePlus, Activity, Contact, Info, BookOpen, Clock,
   FolderOpen, FileText, ListChecks, Files, LayoutTemplate, Mail,
-  Calculator, CalendarDays, LayoutDashboard, Globe, BarChart3, CreditCard,
+  Calculator, CalendarDays, LayoutDashboard, Globe, BarChart3, CreditCard, MessageSquare,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { GebruikerMenu } from "@/components/gebruiker-menu";
@@ -36,7 +36,7 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
   const toonOffertes      = heeftNiveau("offertes", 1);
 
   const heeftDomein = toonInspecties || toonOnderhoud || toonCrm || toonAbonnementen;
-  const heeftOrganisatie = toonPersoneel || toonDossiers || toonOffertes;
+  const heeftOrganisatie = toonPersoneel || toonDossiers || toonOffertes || isHoofdbeheerder;
 
   const projectenActief =
     location === "/gebouwen" || location.startsWith("/gebouwen/") ||
@@ -247,6 +247,19 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                   )}
+                  {isHoofdbeheerder && (
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={location === "/toolbox" || location.startsWith("/toolbox/")}
+                      >
+                        <Link href="/toolbox">
+                          <MessageSquare />
+                          <span>Toolbox &amp; berichten</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )}
                 </SidebarMenu>
               </SidebarGroupContent>
             </SidebarGroup>
@@ -277,6 +290,17 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
                       <Link href="/documenten">
                         <Files />
                         <span>Documenten</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={location === "/rapporten" || location.startsWith("/rapporten/")}
+                    >
+                      <Link href="/rapporten">
+                        <FileText />
+                        <span>Rapporten</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -343,6 +367,17 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
                       <Link href="/one/dashboard">
                         <LayoutDashboard />
                         <span>Dashboard</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={location === "/one/gebouwen" || location.startsWith("/one/gebouwen/")}
+                    >
+                      <Link href="/one/gebouwen">
+                        <Building />
+                        <span>Gebouwen</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>

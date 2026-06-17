@@ -889,6 +889,203 @@ paths:
         "403":
           description: Geen toegang
 
+  # ── OPLEVERRAPPORTEN ──────────────────────────────────────────────────────
+  /rapporten:
+    get:
+      operationId: listRapporten
+      tags: [gebouwen]
+      summary: Alle opleverrapporten (cross-gebouw, optioneel gefilterd op status)
+      parameters:
+        - in: query
+          name: status
+          required: false
+          schema:
+            type: string
+            enum: [concept, definitief, gearchiveerd]
+      responses:
+        "200":
+          description: Lijst van rapporten
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Rapport"
+
+  /gebouwen/{id}/rapporten:
+    get:
+      operationId: listGebouwRapporten
+      tags: [gebouwen]
+      summary: Alle rapporten voor een gebouw (concept en definitief)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Rapport"
+        "403":
+          description: Geen toegang
+        "404":
+          description: Niet gevonden
+    post:
+      operationId: createRapport
+      tags: [gebouwen]
+      summary: Nieuw concept-rapport aanmaken
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RapportInput"
+      responses:
+        "201":
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Rapport"
+        "400":
+          description: Ongeldige invoer
+        "403":
+          description: Geen toegang
+
+  /gebouwen/{id}/rapporten/{rapportId}:
+    get:
+      operationId: getRapport
+      tags: [gebouwen]
+      summary: Eén rapport ophalen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+        - in: path
+          name: rapportId
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Rapport"
+        "403":
+          description: Geen toegang
+        "404":
+          description: Niet gevonden
+    patch:
+      operationId: updateRapport
+      tags: [gebouwen]
+      summary: Concept-rapport bijwerken (alleen concept)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+        - in: path
+          name: rapportId
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RapportPatch"
+      responses:
+        "200":
+          description: Bijgewerkt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Rapport"
+        "403":
+          description: Geen toegang
+        "404":
+          description: Niet gevonden
+        "409":
+          description: Rapport is definitief of gearchiveerd
+    delete:
+      operationId: deleteRapport
+      tags: [gebouwen]
+      summary: Concept-rapport verwijderen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+        - in: path
+          name: rapportId
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Verwijderd
+        "403":
+          description: Geen toegang
+        "409":
+          description: Rapport is definitief of gearchiveerd
+
+  /gebouwen/{id}/rapporten/{rapportId}/definitief:
+    post:
+      operationId: maakRapportDefinitief
+      tags: [gebouwen]
+      summary: Rapport definitief maken (bevriest documentrevisies)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+        - in: path
+          name: rapportId
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RapportDefinitief"
+      responses:
+        "200":
+          description: Rapport definitief gemaakt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Rapport"
+        "400":
+          description: Ongeldige invoer
+        "403":
+          description: Geen toegang
+        "404":
+          description: Niet gevonden
+        "409":
+          description: Rapport is al definitief of gearchiveerd
+
   # ── BRANDVOORZIENINGEN ────────────────────────────────────────────────────
   /voorzieningen:
     get:
@@ -1136,6 +1333,31 @@ paths:
         "404":
           description: Niet gevonden
 
+  /voorzieningen/{id}/onderdelen:
+    get:
+      operationId: listSpotOnderdelen
+      tags: [voorzieningen]
+      summary: Onderdelen van een samengestelde spot ophalen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Voorziening"
+        "401":
+          description: Niet ingelogd
+        "404":
+          description: Niet gevonden
+
   /voorzieningen/ai-spotvoorstel:
     post:
       operationId: aiSpotvoorstel
@@ -1324,6 +1546,248 @@ paths:
                 $ref: "#/components/schemas/VoorzieningType"
         "404":
           description: Niet gevonden
+
+  /constructie-templates:
+    get:
+      operationId: listConstructieTemplates
+      tags: [bibliotheek]
+      summary: Lijst van constructietemplates
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ConstructieTemplate"
+        "401":
+          description: Niet ingelogd
+    post:
+      operationId: createConstructieTemplate
+      tags: [bibliotheek]
+      summary: Constructietemplate aanmaken
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConstructieTemplateInput"
+      responses:
+        "201":
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConstructieTemplate"
+        "401":
+          description: Niet ingelogd
+
+  /constructie-templates/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    get:
+      operationId: getConstructieTemplate
+      tags: [bibliotheek]
+      summary: Eén constructietemplate ophalen
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConstructieTemplate"
+        "401":
+          description: Niet ingelogd
+        "404":
+          description: Niet gevonden
+    patch:
+      operationId: updateConstructieTemplate
+      tags: [bibliotheek]
+      summary: Constructietemplate bijwerken
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConstructieTemplateInput"
+      responses:
+        "200":
+          description: Bijgewerkt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConstructieTemplate"
+        "401":
+          description: Niet ingelogd
+        "404":
+          description: Niet gevonden
+    delete:
+      operationId: deleteConstructieTemplate
+      tags: [bibliotheek]
+      summary: Constructietemplate verwijderen
+      responses:
+        "204":
+          description: Verwijderd
+        "401":
+          description: Niet ingelogd
+        "404":
+          description: Niet gevonden
+
+  /mijn-werk:
+    get:
+      operationId: getMijnWerk
+      tags: [mijn-werk]
+      summary: Overzicht van aan de ingelogde monteur toegewezen spots, gegroepeerd per gebouw
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MijnWerkGebouw"
+        "401":
+          description: Niet ingelogd
+
+  /toolbox-berichten:
+    get:
+      operationId: listToolboxBerichten
+      tags: [toolbox]
+      summary: Lijst van toolbox-berichten (beheerder ziet alle; monteur ziet alleen gepubliceerde voor hem)
+      parameters:
+        - in: query
+          name: gepubliceerd
+          schema:
+            type: boolean
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ToolboxBericht"
+    post:
+      operationId: createToolboxBericht
+      tags: [toolbox]
+      summary: Nieuw toolbox-bericht aanmaken
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ToolboxBerichtInput"
+      responses:
+        "201":
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ToolboxBericht"
+
+  /toolbox-berichten/{id}:
+    get:
+      operationId: getToolboxBericht
+      tags: [toolbox]
+      summary: Detail van een toolbox-bericht
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ToolboxBerichtDetail"
+        "404":
+          description: Niet gevonden
+    patch:
+      operationId: updateToolboxBericht
+      tags: [toolbox]
+      summary: Toolbox-bericht bijwerken
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ToolboxBerichtInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ToolboxBericht"
+    delete:
+      operationId: deleteToolboxBericht
+      tags: [toolbox]
+      summary: Toolbox-bericht verwijderen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Verwijderd
+
+  /toolbox-berichten/{id}/publiceren:
+    post:
+      operationId: publicerenToolboxBericht
+      tags: [toolbox]
+      summary: Toolbox-bericht publiceren (maakt het zichtbaar voor monteurs)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ToolboxBericht"
+
+  /toolbox-berichten/{id}/bevestigen:
+    post:
+      operationId: bevestigenToolboxBericht
+      tags: [toolbox]
+      summary: Ingelogde monteur bevestigt gelezen te hebben
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LeesBevestiging"
+        "409":
+          description: Al bevestigd
 
   /labels:
     get:
@@ -5877,6 +6341,37 @@ paths:
         "204":
           description: Verwijderd
 
+  /calculaties/{id}/ai-regels:
+    post:
+      operationId: aiCalculatieRegels
+      tags: [calculaties]
+      summary: AI-gestuurde kostenregel-suggesties op basis van spots in het gekoppelde gebouw
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Gesuggereerde regels (nog niet opgeslagen — mens bevestigt per regel)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [regels]
+                properties:
+                  regels:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/CalculatieRegelInput"
+                  gebouw_naam:
+                    type: ["string", "null"]
+        "404":
+          description: Calculatie niet gevonden
+        "503":
+          description: OpenAI niet beschikbaar
+
 components:
   schemas:
     MailStatus:
@@ -7314,6 +7809,12 @@ components:
           type: string
         bijgewerkt_op:
           type: string
+        parent_spot_id:
+          type: ["integer", "null"]
+          description: Indien ingesteld is dit een onderdeel van de opgegeven samengestelde spot
+        heeft_onderdelen:
+          type: boolean
+          description: Afgeleid - true als er onderdelen aan deze spot zijn gekoppeld
 
     VoorzieningDetail:
       type: object
@@ -7539,6 +8040,8 @@ components:
           type: array
           items:
             type: integer
+        parent_spot_id:
+          type: ["integer", "null"]
 
     VoorzieningUpdate:
       type: object
@@ -7591,6 +8094,8 @@ components:
           type: array
           items:
             type: integer
+        parent_spot_id:
+          type: ["integer", "null"]
 
     # ── CLUSTER (logische groepering van spots) ──────────────────────────
     Cluster:
@@ -10430,3 +10935,303 @@ components:
           type: integer
         opmerkingen:
           type: ["string", "null"]
+
+    Rapport:
+      type: object
+      required: [id, gebouw_id, rapport_type, versie, status, secties, spot_selectie, bijlagen_ids, tekening_ids, aangemaakt_op, bijgewerkt_op]
+      properties:
+        id:
+          type: integer
+        gebouw_id:
+          type: integer
+        rapport_type:
+          type: string
+        versie:
+          type: integer
+        status:
+          type: string
+          enum: [concept, definitief, gearchiveerd]
+        titel:
+          type: ["string", "null"]
+        secties:
+          type: object
+        spot_selectie:
+          type: object
+        bijlagen_ids:
+          type: array
+          items:
+            type: integer
+        tekening_ids:
+          type: array
+          items:
+            type: integer
+        bevroren_op:
+          type: ["string", "null"]
+        bevroren_document_revisies:
+          type: ["object", "null"]
+        reactietermijn_datum:
+          type: ["string", "null"]
+        reactietermijn_gestart_op:
+          type: ["string", "null"]
+        aangemaakt_door:
+          type: ["integer", "null"]
+        aangemaakt_door_naam:
+          type: ["string", "null"]
+        gebouw_naam:
+          type: ["string", "null"]
+        aangemaakt_op:
+          type: string
+          format: date-time
+        bijgewerkt_op:
+          type: string
+          format: date-time
+
+    RapportInput:
+      type: object
+      required: [rapport_type]
+      properties:
+        rapport_type:
+          type: string
+        titel:
+          type: ["string", "null"]
+        secties:
+          type: object
+        spot_selectie:
+          type: object
+        bijlagen_ids:
+          type: array
+          items:
+            type: integer
+        tekening_ids:
+          type: array
+          items:
+            type: integer
+        reactietermijn_datum:
+          type: ["string", "null"]
+
+    RapportPatch:
+      type: object
+      properties:
+        titel:
+          type: ["string", "null"]
+        secties:
+          type: object
+        spot_selectie:
+          type: object
+        bijlagen_ids:
+          type: array
+          items:
+            type: integer
+        tekening_ids:
+          type: array
+          items:
+            type: integer
+        reactietermijn_datum:
+          type: ["string", "null"]
+
+    RapportDefinitief:
+      type: object
+      required: [reactietermijn_dagen]
+      properties:
+        reactietermijn_dagen:
+          type: integer
+          minimum: 1
+          maximum: 365
+
+    # ── CONSTRUCTIE TEMPLATES (samengestelde constructies in de Bibliotheek) ──
+    ConstructieTemplateOnderdeel:
+      type: object
+      required: [type, label]
+      properties:
+        type:
+          type: string
+          description: Spot-type van het onderdeel (branddeur, doorvoering, manchet, etc.)
+        label:
+          type: string
+          description: Korte omschrijving of productnaam
+        omschrijving:
+          type: ["string", "null"]
+
+    ConstructieTemplate:
+      type: object
+      required: [id, naam, onderdelen, aangemaakt_op, bijgewerkt_op]
+      properties:
+        id:
+          type: integer
+        naam:
+          type: string
+        omschrijving:
+          type: ["string", "null"]
+        onderdelen:
+          type: array
+          items:
+            $ref: '#/components/schemas/ConstructieTemplateOnderdeel'
+        aangemaakt_door_id:
+          type: ["integer", "null"]
+        aangemaakt_op:
+          type: string
+          format: date-time
+        bijgewerkt_op:
+          type: string
+          format: date-time
+
+    ConstructieTemplateInput:
+      type: object
+      required: [naam, onderdelen]
+      properties:
+        naam:
+          type: string
+        omschrijving:
+          type: ["string", "null"]
+        onderdelen:
+          type: array
+          items:
+            $ref: '#/components/schemas/ConstructieTemplateOnderdeel'
+
+    MijnWerkSpot:
+      type: object
+      required: [id, objectnummer, type, status]
+      properties:
+        id:
+          type: integer
+        objectnummer:
+          type: string
+        type:
+          type: string
+        status:
+          type: string
+        ruimte:
+          type: ["string", "null"]
+        verdieping_naam:
+          type: ["string", "null"]
+        verdieping_id:
+          type: ["integer", "null"]
+
+    MijnWerkGebouw:
+      type: object
+      required: [gebouw_id, gebouw_naam, adres, stad, spots]
+      properties:
+        gebouw_id:
+          type: integer
+        gebouw_naam:
+          type: string
+        adres:
+          type: string
+        stad:
+          type: string
+        spots:
+          type: array
+          items:
+            $ref: '#/components/schemas/MijnWerkSpot'
+
+    ToolboxBerichtBijlage:
+      type: object
+      required: [naam, url]
+      properties:
+        naam:
+          type: string
+        url:
+          type: string
+        soort:
+          type: string
+          description: "pdf | foto | video | overig"
+
+    ToolboxBericht:
+      type: object
+      required: [id, titel, inhoud, bijlagen, doelgroep, gepubliceerd, aangemaakt_op, bijgewerkt_op]
+      properties:
+        id:
+          type: integer
+        titel:
+          type: string
+        inhoud:
+          type: string
+        bijlagen:
+          type: array
+          items:
+            $ref: '#/components/schemas/ToolboxBerichtBijlage'
+        doelgroep:
+          type: string
+          description: "iedereen | gebruiker"
+        doelgroep_gebruiker_id:
+          type: integer
+          nullable: true
+        aangemaakt_door_id:
+          type: integer
+          nullable: true
+        aangemaakt_door_naam:
+          type: string
+          nullable: true
+        gepubliceerd:
+          type: boolean
+        gepubliceerd_op:
+          type: string
+          nullable: true
+        aangemaakt_op:
+          type: string
+        bijgewerkt_op:
+          type: string
+        mijn_bevestiging:
+          nullable: true
+          allOf:
+            - $ref: '#/components/schemas/LeesBevestiging'
+        aantal_bevestigd:
+          type: integer
+          nullable: true
+        aantal_ontvangers:
+          type: integer
+          nullable: true
+
+    ToolboxBerichtDetail:
+      allOf:
+        - $ref: '#/components/schemas/ToolboxBericht'
+        - type: object
+          properties:
+            bevestigingen:
+              type: array
+              items:
+                $ref: '#/components/schemas/LeesBevestigingRegel'
+
+    ToolboxBerichtInput:
+      type: object
+      required: [titel, inhoud]
+      properties:
+        titel:
+          type: string
+        inhoud:
+          type: string
+        bijlagen:
+          type: array
+          items:
+            $ref: '#/components/schemas/ToolboxBerichtBijlage'
+        doelgroep:
+          type: string
+        doelgroep_gebruiker_id:
+          type: integer
+          nullable: true
+
+    LeesBevestiging:
+      type: object
+      required: [id, bericht_id, gebruiker_id, bevestigd_op]
+      properties:
+        id:
+          type: integer
+        bericht_id:
+          type: integer
+        gebruiker_id:
+          type: integer
+        bevestigd_op:
+          type: string
+
+    LeesBevestigingRegel:
+      type: object
+      required: [id, gebruiker_id, naam, bevestigd_op]
+      properties:
+        id:
+          type: integer
+        gebruiker_id:
+          type: integer
+        naam:
+          type: string
+        bevestigd_op:
+          type: string

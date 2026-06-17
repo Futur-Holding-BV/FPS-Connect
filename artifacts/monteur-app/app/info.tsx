@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { bovenInset } from "@/components/ui";
 import { useAuth } from "@/context/auth";
+import { useSync } from "@/context/sync";
 import { useColors } from "@/hooks/useColors";
 import { useResponsive } from "@/hooks/useResponsive";
 
@@ -62,7 +63,19 @@ export default function InfoScherm() {
   const { inhoudMaxBreedte, leesMaxBreedte } = useResponsive();
   const { data: instellingen } = useGetInfoInstellingen();
   const { biometrieAan, biometrieBeschikbaar, biometrieType, zetBiometrie } = useAuth();
+  const { aantalWachtend, aantalMislukt: aantalMisluktSync, isSyncing, syncStatus, forceerSync, wisMislukte } = useSync();
   const [bezigBio, setBezigBio] = useState(false);
+  const [bezigSync, setBezigSync] = useState(false);
+
+  async function syncNu() {
+    if (bezigSync) return;
+    setBezigSync(true);
+    try {
+      await forceerSync();
+    } finally {
+      setBezigSync(false);
+    }
+  }
 
   async function wisselBiometrie(aan: boolean) {
     if (bezigBio) return;
@@ -168,6 +181,91 @@ export default function InfoScherm() {
       <ScrollView
         contentContainerStyle={{ padding: 16, gap: 14, paddingBottom: insets.bottom + 32, width: "100%", maxWidth: leesMaxBreedte, alignSelf: "center" }}
       >
+        <Kaart titel="Synchronisatie">
+          <View style={{ gap: 10 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+              <Text style={{ color: c.foreground, fontSize: 14, fontFamily: "Inter_600SemiBold" }}>
+                Status
+              </Text>
+              <Text
+                style={{
+                  fontSize: 13,
+                  fontFamily: "Inter_600SemiBold",
+                  color:
+                    syncStatus === "gesynchroniseerd"
+                      ? "#16a34a"
+                      : syncStatus === "mislukt"
+                      ? "#dc2626"
+                      : syncStatus === "synchroniseert"
+                      ? c.primary
+                      : "#d97706",
+                }}
+              >
+                {syncStatus === "gesynchroniseerd"
+                  ? "Gesynchroniseerd"
+                  : syncStatus === "mislukt"
+                  ? `${aantalMisluktSync} mislukt`
+                  : syncStatus === "synchroniseert"
+                  ? "Bezig..."
+                  : syncStatus === "opgeslagen"
+                  ? `${aantalWachtend} wachtend`
+                  : "Wacht op verbinding"}
+              </Text>
+            </View>
+
+            {aantalWachtend > 0 || aantalMisluktSync > 0 ? (
+              <Text
+                style={{ color: c.mutedForeground, fontSize: 12, fontFamily: "Inter_400Regular" }}
+              >
+                {aantalWachtend > 0
+                  ? `${aantalWachtend} item${aantalWachtend !== 1 ? "s" : ""} wachten op synchronisatie. `
+                  : ""}
+                {aantalMisluktSync > 0
+                  ? `${aantalMisluktSync} item${aantalMisluktSync !== 1 ? "s" : ""} zijn definitief mislukt.`
+                  : ""}
+              </Text>
+            ) : null}
+
+            <View style={{ flexDirection: "row", gap: 8 }}>
+              <Pressable
+                onPress={syncNu}
+                disabled={bezigSync || isSyncing}
+                style={{
+                  flex: 1,
+                  backgroundColor: c.primary,
+                  borderRadius: 8,
+                  paddingVertical: 9,
+                  alignItems: "center",
+                  opacity: bezigSync || isSyncing ? 0.6 : 1,
+                }}
+              >
+                <Text style={{ color: "#fff", fontSize: 13, fontFamily: "Inter_600SemiBold" }}>
+                  {isSyncing ? "Bezig..." : "Nu synchroniseren"}
+                </Text>
+              </Pressable>
+
+              {aantalMisluktSync > 0 ? (
+                <Pressable
+                  onPress={wisMislukte}
+                  style={{
+                    flex: 1,
+                    backgroundColor: c.accent,
+                    borderRadius: 8,
+                    borderWidth: 1,
+                    borderColor: c.border,
+                    paddingVertical: 9,
+                    alignItems: "center",
+                  }}
+                >
+                  <Text style={{ color: "#dc2626", fontSize: 13, fontFamily: "Inter_600SemiBold" }}>
+                    Wis mislukte items
+                  </Text>
+                </Pressable>
+              ) : null}
+            </View>
+          </View>
+        </Kaart>
+
         <Kaart titel="Beveiliging">
           <View
             style={{

@@ -180,6 +180,8 @@ async function mapVoorziening(v: typeof voorzieningenTable.$inferSelect) {
     gearchiveerd_op: v.gearchiveerdOp ? v.gearchiveerdOp.toISOString() : null,
     aangemaakt_op: v.aangemaaktOp.toISOString(),
     bijgewerkt_op: v.bijgewerktOp.toISOString(),
+    parent_spot_id: v.parentSpotId ?? null,
+    heeft_onderdelen: (await db.select({ id: voorzieningenTable.id }).from(voorzieningenTable).where(eq(voorzieningenTable.parentSpotId, v.id))).length > 0,
   };
 }
 
@@ -261,7 +263,7 @@ router.post("/voorzieningen", requireBevoegdheid("voorzieningen", 3), async (req
       verdieping_id, ruimte, huisnummer, locatie_omschrijving, locatie_x, locatie_y,
       materialen, opmerkingen, monteur_id, controleur_id,
       installatie_datum, volgende_inspectie,
-      wbdbo, wrd, wand_of_plafond, cluster_id, label_ids,
+      wbdbo, wrd, wand_of_plafond, cluster_id, label_ids, parent_spot_id,
     } = req.body;
 
     // De aanmaker (maker) wordt altijd afgeleid uit de ingelogde sessie,
@@ -308,6 +310,7 @@ router.post("/voorzieningen", requireBevoegdheid("voorzieningen", 3), async (req
             wbdbo, wrd, wandOfPlafond: wand_of_plafond,
             clusterId: cluster_id != null ? Number(cluster_id) : null,
             makerMonteurId: maker_monteur_id,
+            parentSpotId: parent_spot_id != null ? Number(parent_spot_id) : null,
           })
           .returning();
         break;
@@ -437,7 +440,7 @@ router.patch("/voorzieningen/:id", requireBevoegdheid("voorzieningen", 2), async
       verdieping_id, ruimte, huisnummer, locatie_omschrijving, locatie_x, locatie_y,
       materialen, opmerkingen, monteur_id, controleur_id,
       installatie_datum, volgende_inspectie,
-      wbdbo, wrd, wand_of_plafond, cluster_id, maker_monteur_id, label_ids,
+      wbdbo, wrd, wand_of_plafond, cluster_id, maker_monteur_id, label_ids, parent_spot_id,
     } = req.body;
 
     // Integriteit: een meegestuurde verdieping moet bij het gebouw van deze
@@ -462,6 +465,7 @@ router.patch("/voorzieningen/:id", requireBevoegdheid("voorzieningen", 2), async
         // undefined = niet wijzigen; null = ontkoppelen; getal = koppelen aan cluster.
         clusterId: cluster_id === undefined ? undefined : cluster_id === null ? null : Number(cluster_id),
         makerMonteurId: maker_monteur_id,
+        parentSpotId: parent_spot_id === undefined ? undefined : parent_spot_id === null ? null : Number(parent_spot_id),
         bijgewerktOp: new Date(),
       })
       .where(eq(voorzieningenTable.id, id))
@@ -1173,6 +1177,25 @@ router.post("/voorzieningen/:id/ai-controle", requireBevoegdheid("voorzieningen"
     });
 
     return res.json(await mapSpotAiVoorstel(rij));
+  } catch (err) {
+    req.log.error(err);
+    return res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// GET /voorzieningen/:id/onderdelen
+router.get("/voorzieningen/:id/onderdelen", lezenVoorzieningen, async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    if (!(await magBijGebouw(req.session.userId!, await gebouwIdVanVoorziening(id)))) {
+      return res.status(403).json({ error: "Geen toegang tot deze voorziening" });
+    }
+    const rows = await db
+      .select()
+      .from(voorzieningenTable)
+      .where(eq(voorzieningenTable.parentSpotId, id));
+    const items = await Promise.all(rows.map(mapVoorziening));
+    return res.json(items);
   } catch (err) {
     req.log.error(err);
     return res.status(500).json({ error: "Interne serverfout" });

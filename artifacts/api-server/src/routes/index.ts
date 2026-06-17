@@ -23,6 +23,10 @@ import dossiersRouter from "./dossiers";
 import offertesRouter from "./offertes";
 import mailRouter from "./mail";
 import calculatiesRouter from "./calculaties";
+import rapportenRouter from "./rapporten";
+import constructieTemplatesRouter from "./constructie-templates";
+import mijnWerkRouter from "./mijn-werk";
+import toolboxRouter from "./toolbox";
 import testToegangRouter from "./test-toegang";
 import { requireAuth } from "../middlewares/auth";
 
@@ -59,5 +63,9 @@ router.use(dossiersRouter);
 router.use(offertesRouter);
 router.use(mailRouter);
 router.use(calculatiesRouter);
+router.use(rapportenRouter);
+router.use(constructieTemplatesRouter);
+router.use(mijnWerkRouter);
+router.use(toolboxRouter);
 
 export default router;

@@ -32,4 +32,6 @@ export interface VoorzieningInput {
   cluster_id?: number | null;
   maker_monteur_id?: number;
   label_ids?: number[];
+  /** @nullable */
+  parent_spot_id?: number | null;
 }

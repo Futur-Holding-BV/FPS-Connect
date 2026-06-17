@@ -972,6 +972,13 @@ export interface Voorziening {
   gearchiveerd_op?: string | null;
   aangemaakt_op: string;
   bijgewerkt_op?: string;
+  /**
+     * Indien ingesteld is dit een onderdeel van de opgegeven samengestelde spot
+     * @nullable
+     */
+  parent_spot_id?: number | null;
+  /** Afgeleid - true als er onderdelen aan deze spot zijn gekoppeld */
+  heeft_onderdelen?: boolean;
 }
 
 export type FotoFase = typeof FotoFase[keyof typeof FotoFase];
@@ -1275,6 +1282,8 @@ export interface VoorzieningInput {
   cluster_id?: number | null;
   maker_monteur_id?: number;
   label_ids?: number[];
+  /** @nullable */
+  parent_spot_id?: number | null;
 }
 
 export interface VoorzieningUpdate {
@@ -1302,6 +1311,8 @@ export interface VoorzieningUpdate {
   cluster_id?: number | null;
   maker_monteur_id?: number;
   label_ids?: number[];
+  /** @nullable */
+  parent_spot_id?: number | null;
 }
 
 export interface Cluster {
@@ -3214,6 +3225,194 @@ export interface CalculatieRegelInput {
   opmerkingen?: string | null;
 }
 
+export type RapportStatus = typeof RapportStatus[keyof typeof RapportStatus];
+
+
+export const RapportStatus = {
+  concept: 'concept',
+  definitief: 'definitief',
+  gearchiveerd: 'gearchiveerd',
+} as const;
+
+export type RapportSecties = { [key: string]: unknown };
+
+export type RapportSpotSelectie = { [key: string]: unknown };
+
+/**
+ * @nullable
+ */
+export type RapportBevrorenDocumentRevisies = { [key: string]: unknown } | null;
+
+export interface Rapport {
+  id: number;
+  gebouw_id: number;
+  rapport_type: string;
+  versie: number;
+  status: RapportStatus;
+  /** @nullable */
+  titel?: string | null;
+  secties: RapportSecties;
+  spot_selectie: RapportSpotSelectie;
+  bijlagen_ids: number[];
+  tekening_ids: number[];
+  /** @nullable */
+  bevroren_op?: string | null;
+  /** @nullable */
+  bevroren_document_revisies?: RapportBevrorenDocumentRevisies;
+  /** @nullable */
+  reactietermijn_datum?: string | null;
+  /** @nullable */
+  reactietermijn_gestart_op?: string | null;
+  /** @nullable */
+  aangemaakt_door?: number | null;
+  /** @nullable */
+  aangemaakt_door_naam?: string | null;
+  /** @nullable */
+  gebouw_naam?: string | null;
+  aangemaakt_op: string;
+  bijgewerkt_op: string;
+}
+
+export type RapportInputSecties = { [key: string]: unknown };
+
+export type RapportInputSpotSelectie = { [key: string]: unknown };
+
+export interface RapportInput {
+  rapport_type: string;
+  /** @nullable */
+  titel?: string | null;
+  secties?: RapportInputSecties;
+  spot_selectie?: RapportInputSpotSelectie;
+  bijlagen_ids?: number[];
+  tekening_ids?: number[];
+  /** @nullable */
+  reactietermijn_datum?: string | null;
+}
+
+export type RapportPatchSecties = { [key: string]: unknown };
+
+export type RapportPatchSpotSelectie = { [key: string]: unknown };
+
+export interface RapportPatch {
+  /** @nullable */
+  titel?: string | null;
+  secties?: RapportPatchSecties;
+  spot_selectie?: RapportPatchSpotSelectie;
+  bijlagen_ids?: number[];
+  tekening_ids?: number[];
+  /** @nullable */
+  reactietermijn_datum?: string | null;
+}
+
+export interface RapportDefinitief {
+  /**
+     * @minimum 1
+     * @maximum 365
+     */
+  reactietermijn_dagen: number;
+}
+
+export interface ConstructieTemplateOnderdeel {
+  /** Spot-type van het onderdeel (branddeur, doorvoering, manchet, etc.) */
+  type: string;
+  /** Korte omschrijving of productnaam */
+  label: string;
+  /** @nullable */
+  omschrijving?: string | null;
+}
+
+export interface ConstructieTemplate {
+  id: number;
+  naam: string;
+  /** @nullable */
+  omschrijving?: string | null;
+  onderdelen: ConstructieTemplateOnderdeel[];
+  /** @nullable */
+  aangemaakt_door_id?: number | null;
+  aangemaakt_op: string;
+  bijgewerkt_op: string;
+}
+
+export interface ConstructieTemplateInput {
+  naam: string;
+  /** @nullable */
+  omschrijving?: string | null;
+  onderdelen: ConstructieTemplateOnderdeel[];
+}
+
+export interface MijnWerkSpot {
+  id: number;
+  objectnummer: string;
+  type: string;
+  status: string;
+  /** @nullable */
+  ruimte?: string | null;
+  /** @nullable */
+  verdieping_naam?: string | null;
+  /** @nullable */
+  verdieping_id?: number | null;
+}
+
+export interface MijnWerkGebouw {
+  gebouw_id: number;
+  gebouw_naam: string;
+  adres: string;
+  stad: string;
+  spots: MijnWerkSpot[];
+}
+
+export interface ToolboxBerichtBijlage {
+  naam: string;
+  url: string;
+  /** pdf | foto | video | overig */
+  soort?: string;
+}
+
+export interface LeesBevestiging {
+  id: number;
+  bericht_id: number;
+  gebruiker_id: number;
+  bevestigd_op: string;
+}
+
+export interface ToolboxBericht {
+  id: number;
+  titel: string;
+  inhoud: string;
+  bijlagen: ToolboxBerichtBijlage[];
+  /** iedereen | gebruiker */
+  doelgroep: string;
+  doelgroep_gebruiker_id?: number | null;
+  aangemaakt_door_id?: number | null;
+  aangemaakt_door_naam?: string | null;
+  gepubliceerd: boolean;
+  gepubliceerd_op?: string | null;
+  aangemaakt_op: string;
+  bijgewerkt_op: string;
+  mijn_bevestiging?: LeesBevestiging | null;
+  aantal_bevestigd?: number | null;
+  aantal_ontvangers?: number | null;
+}
+
+export interface LeesBevestigingRegel {
+  id: number;
+  gebruiker_id: number;
+  naam: string;
+  bevestigd_op: string;
+}
+
+export type ToolboxBerichtDetail = ToolboxBericht & {
+  bevestigingen?: LeesBevestigingRegel[];
+};
+
+export interface ToolboxBerichtInput {
+  titel: string;
+  inhoud: string;
+  bijlagen?: ToolboxBerichtBijlage[];
+  doelgroep?: string;
+  doelgroep_gebruiker_id?: number | null;
+}
+
 export type GetRecenteActiviteitParams = {
 limit?: number;
 };
@@ -3248,6 +3447,19 @@ export type GetGebouwGevelbeeld200 = {
   beeld: string | null;
 };
 
+export type ListRapportenParams = {
+status?: ListRapportenStatus;
+};
+
+export type ListRapportenStatus = typeof ListRapportenStatus[keyof typeof ListRapportenStatus];
+
+
+export const ListRapportenStatus = {
+  concept: 'concept',
+  definitief: 'definitief',
+  gearchiveerd: 'gearchiveerd',
+} as const;
+
 export type ListVoorzieningenParams = {
 gebouw_id?: number;
 verdieping_id?: number;
@@ -3263,6 +3475,10 @@ per_pagina?: number;
 
 export type ListVoorzieningTypesParams = {
 inclusief_inactief?: boolean;
+};
+
+export type ListToolboxBerichtenParams = {
+gepubliceerd?: boolean;
 };
 
 export type ListLabelsParams = {
@@ -3357,5 +3573,11 @@ export type UitnodigingActiveren200 = {
 
 export type ListAlleVerlofAanvragenParams = {
 status?: string;
+};
+
+export type AiCalculatieRegels200 = {
+  regels: CalculatieRegelInput[];
+  /** @nullable */
+  gebouw_naam?: string | null;
 };
 

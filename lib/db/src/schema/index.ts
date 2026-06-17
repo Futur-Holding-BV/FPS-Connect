@@ -14,3 +14,5 @@ export * from "./dossiers";
 export * from "./offertes";
 export * from "./mail";
 export * from "./calculaties";
+export * from "./rapporten";
+export * from "./toolbox";

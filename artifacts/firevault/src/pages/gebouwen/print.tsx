@@ -19,6 +19,7 @@ import {
   useGetGebouwGevelbeeld,
   useListToewijsbareGebruikers,
   useListClusters,
+  useListSpotOnderdelen,
   useBewaarOpleverrapport,
   type Verdieping,
   type VoorzieningType,
@@ -59,6 +60,7 @@ const TYPEN: Record<string, { kleur: string; ring: string; label: string }> = {
   schuifdeur:       { kleur: "#dc2626", ring: "#991b1b", label: "Schuifdeur" },
   puiconstructie:   { kleur: "#6366f1", ring: "#3730a3", label: "Puiconstructie" },
   dakdoorvoer:      { kleur: "#14b8a6", ring: "#0f766e", label: "Dakdoorvoer" },
+  samengesteld:     { kleur: "#F23B0D", ring: "#b91c1c", label: "Samengesteld" },
 };
 
 const SCHEIDING_TYPEN: Record<string, { kleur: string; label: string }> = {
@@ -171,6 +173,7 @@ type Sectiesleutels = {
   fotos:               boolean;
   eta_certificaten:    boolean;
   tekeningen:          boolean;
+  bijlagen:            boolean;
   relevante_emails:    boolean;
   onderhoud:           boolean;
   inspecties:          boolean;
@@ -180,26 +183,26 @@ const PRESET_SECTIES: Record<RapportType, Sectiesleutels> = {
   werkpakket_monteur: {
     voorblad: true, projectomschrijving: true, juridisch: false,
     plattegronden: true, spotdetails: true, fotos: true,
-    eta_certificaten: false, tekeningen: false, relevante_emails: true,
-    onderhoud: true, inspecties: false,
+    eta_certificaten: false, tekeningen: false, bijlagen: false,
+    relevante_emails: true, onderhoud: true, inspecties: false,
   },
   voortgang: {
     voorblad: true, projectomschrijving: true, juridisch: false,
     plattegronden: true, spotdetails: false, fotos: false,
-    eta_certificaten: false, tekeningen: false, relevante_emails: false,
-    onderhoud: true, inspecties: true,
+    eta_certificaten: false, tekeningen: false, bijlagen: false,
+    relevante_emails: false, onderhoud: true, inspecties: true,
   },
   opleverrapport: {
     voorblad: true, projectomschrijving: true, juridisch: true,
     plattegronden: true, spotdetails: true, fotos: true,
-    eta_certificaten: true, tekeningen: true, relevante_emails: true,
-    onderhoud: false, inspecties: false,
+    eta_certificaten: true, tekeningen: true, bijlagen: true,
+    relevante_emails: true, onderhoud: false, inspecties: false,
   },
   opleverdossier: {
     voorblad: true, projectomschrijving: true, juridisch: true,
     plattegronden: true, spotdetails: true, fotos: true,
-    eta_certificaten: true, tekeningen: true, relevante_emails: true,
-    onderhoud: true, inspecties: true,
+    eta_certificaten: true, tekeningen: true, bijlagen: true,
+    relevante_emails: true, onderhoud: true, inspecties: true,
   },
 };
 
@@ -212,6 +215,7 @@ const SECTIES_LABELS: Record<keyof Sectiesleutels, string> = {
   fotos:               "Foto's",
   eta_certificaten:    "ETA's / certificaten",
   tekeningen:          "Tekeningen",
+  bijlagen:            "Bijlagen (DMS)",
   relevante_emails:    "Relevante e-mails",
   onderhoud:           "Onderhoud",
   inspecties:          "Inspecties",
@@ -220,7 +224,7 @@ const SECTIES_LABELS: Record<keyof Sectiesleutels, string> = {
 const SECTIES_VOLGORDE: (keyof Sectiesleutels)[] = [
   "voorblad", "projectomschrijving", "juridisch",
   "plattegronden", "spotdetails", "fotos", "eta_certificaten",
-  "tekeningen", "relevante_emails", "onderhoud", "inspecties",
+  "tekeningen", "bijlagen", "relevante_emails", "onderhoud", "inspecties",
 ];
 
 const CANVAS_W = 1200;
@@ -408,6 +412,7 @@ function SpotDetailBlok({
   onGereed: () => void;
 }) {
   const { data: detail } = useGetVoorziening(spot.id);
+  const { data: spotOnderdelen } = useListSpotOnderdelen(spot.id);
   const gereedGemeld = useRef(false);
 
   useEffect(() => {
@@ -622,6 +627,26 @@ function SpotDetailBlok({
         )}
       </div>}
 
+      {(spotOnderdelen ?? []).length > 0 && (
+        <div className="prt-spot-testinfo">
+          <div className="prt-spot-testinfo-titel">Onderdelen samengestelde constructie</div>
+          {(spotOnderdelen ?? []).map((o: any) => (
+            <div key={o.id} className="prt-spot-testitem">
+              <span className="prt-spot-testitem-naam">
+                {o.objectnummer} — {TYPEN[o.type]?.label ?? o.type}
+              </span>
+              {o.ruimte && (
+                <span className="prt-spot-testitem-meta">Ruimte: {o.ruimte}</span>
+              )}
+              {o.status && (
+                <span className="prt-spot-testitem-meta">
+                  Status: {STATUSLABEL[o.status] ?? o.status}
+                </span>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
       {toonFotos && fotosPassenSamen && heeftFotos && fotosInhoud}
     </div>
 
@@ -1114,7 +1139,7 @@ export default function GebouwPrint() {
   const { data: emails, isLoading: emailsLaden }              = useListGebouwEmails(gebouwId);
   const { data: samenvatting }                                = useGetGebouwEmailSamenvatting(gebouwId);
   const { data: gevelbeeld, isLoading: gevelbeeldLaden }      = useGetGebouwGevelbeeld(gebouwId);
-  const { data: documenten, isLoading: documentenLaden }      = useListDocumenten();
+  const { data: documenten, isLoading: documentenLaden }      = useListDocumenten({ alleen_actueel: true });
   const { data: typen, isLoading: typenLaden }                = useListVoorzieningTypes();
   const { data: clusters, isLoading: clustersLaden }          = useListClusters(gebouwId);
   const { isLoading: gebruikersLaden }      = useListToewijsbareGebruikers();
@@ -1133,13 +1158,36 @@ export default function GebouwPrint() {
   const [spotSelectie, setSpotSelectie] = useState<Record<number, Set<number> | undefined>>({});
   const [emailModus, setEmailModus] = useState<"ai" | "handmatig">("ai");
   const [handmatigeEmailSelectie, setHandmatigeEmailSelectie] = useState<Set<number>>(new Set());
+  const [geselecteerdeTekeningen, setGeselecteerdeTekeningen] = useState<Set<number>>(new Set());
+  const [geselecteerdeBijlagen, setGeselecteerdeBijlagen] = useState<Set<number>>(new Set());
+  const tekeningenInitRef = useRef(false);
+
+  useEffect(() => {
+    if (tekeningen && tekeningen.length > 0 && !tekeningenInitRef.current) {
+      tekeningenInitRef.current = true;
+      setGeselecteerdeTekeningen(new Set(tekeningen.filter(t => t.type !== "document").map(t => t.id)));
+      setGeselecteerdeBijlagen(new Set(tekeningen.filter(t => t.type === "document").map(t => t.id)));
+    }
+  }, [tekeningen]);
 
   function kiesRapportType(type: RapportType) {
     setRapportType(type);
     setSecties(PRESET_SECTIES[type]);
+    tekeningenInitRef.current = false;
+    if (tekeningen && tekeningen.length > 0) {
+      tekeningenInitRef.current = true;
+      setGeselecteerdeTekeningen(new Set(tekeningen.filter(t => t.type !== "document").map(t => t.id)));
+      setGeselecteerdeBijlagen(new Set(tekeningen.filter(t => t.type === "document").map(t => t.id)));
+    }
   }
   function updateSecties(sleutel: keyof Sectiesleutels, aan: boolean) {
     setSecties(prev => ({ ...prev, [sleutel]: aan }));
+    if (sleutel === "tekeningen" && aan && tekeningen) {
+      setGeselecteerdeTekeningen(new Set(tekeningen.filter(t => t.type !== "document").map(t => t.id)));
+    }
+    if (sleutel === "bijlagen" && aan && tekeningen) {
+      setGeselecteerdeBijlagen(new Set(tekeningen.filter(t => t.type === "document").map(t => t.id)));
+    }
   }
   function updateSpotSelectie(verdiepingId: number, selectie: Set<number> | undefined) {
     setSpotSelectie(prev => ({ ...prev, [verdiepingId]: selectie }));
@@ -1270,13 +1318,29 @@ export default function GebouwPrint() {
     || "";
 
   const projectTekeningen = (tekeningen ?? []).filter((t) => t.type !== "document");
+  const gebouwBijlagen    = (tekeningen ?? []).filter((t) => t.type === "document");
+
+  const tekeningenInRapport = geselecteerdeTekeningen.size > 0
+    ? projectTekeningen.filter(t => geselecteerdeTekeningen.has(t.id))
+    : projectTekeningen;
+  const bijlagenInRapport = geselecteerdeBijlagen.size > 0
+    ? gebouwBijlagen.filter(b => geselecteerdeBijlagen.has(b.id))
+    : gebouwBijlagen;
+
+  const bijlagenDmsInRapport = secties.bijlagen
+    ? (documenten ?? []).filter((d: any) =>
+        !d.gearchiveerd &&
+        (geselecteerdeBijlagen.size === 0 || geselecteerdeBijlagen.has(d.id)),
+      )
+    : [];
+
   const projectEmails = emailModus === "ai"
     ? (emails ?? []).filter((e) => e.ai_relevant !== false)
     : (emails ?? []).filter((e) => handmatigeEmailSelectie.has(e.id));
   const emailGroepen      = CATEGORIE_VOLGORDE
     .map(cat => ({ categorie: cat, emails: projectEmails.filter(e => emailCategorie(e.ai_relevant_reden, e.ai_omschrijving) === cat) }))
     .filter(g => g.emails.length > 0);
-  const heeftDocumenten   = (secties.tekeningen && projectTekeningen.length > 0) || (secties.relevante_emails && emailGroepen.length > 0);
+  const heeftDocumenten   = (secties.tekeningen && tekeningenInRapport.length > 0) || (secties.bijlagen && bijlagenDmsInRapport.length > 0) || (secties.relevante_emails && emailGroepen.length > 0);
 
   const teamleden = Object.values(
     (toewijzingen ?? []).reduce<Record<number, { id: number; naam: string; rol: string; rollen: string[] }>>((acc, t) => {
@@ -1634,6 +1698,46 @@ export default function GebouwPrint() {
             </div>
           )}
 
+          {/* Tekeningen-selectie */}
+          {secties.tekeningen && projectTekeningen.length > 0 && (
+            <div className="cmpr-sectie">
+              <div className="cmpr-sectie-kop">
+                Tekeningen selecteren
+                <button type="button" className="cmpr-sectie-kop-actie" onClick={() => setGeselecteerdeTekeningen(new Set(projectTekeningen.map(t => t.id)))}>Alles</button>
+              </div>
+              {projectTekeningen.map(t => (
+                <label key={t.id} className="cmpr-checkregel cmpr-sub-optie">
+                  <input type="checkbox" checked={geselecteerdeTekeningen.has(t.id)} onChange={ev => {
+                    const nieuw = new Set(geselecteerdeTekeningen);
+                    if (ev.target.checked) nieuw.add(t.id); else nieuw.delete(t.id);
+                    setGeselecteerdeTekeningen(nieuw);
+                  }} className="cmpr-check" />
+                  <span className="cmpr-email-onderwerp">{t.naam} — {TEKENING_TYPELABEL[t.type] ?? t.type}</span>
+                </label>
+              ))}
+            </div>
+          )}
+
+          {/* Bijlagen (DMS) — selectie */}
+          {secties.bijlagen && (documenten ?? []).filter((d: any) => !d.gearchiveerd).length > 0 && (
+            <div className="cmpr-sectie">
+              <div className="cmpr-sectie-kop">
+                Bijlagen selecteren
+                <button type="button" className="cmpr-sectie-kop-actie" onClick={() => setGeselecteerdeBijlagen(new Set((documenten ?? []).filter((d: any) => !d.gearchiveerd).map((d: any) => d.id)))}>Alles</button>
+              </div>
+              {(documenten ?? []).filter((d: any) => !d.gearchiveerd).map((d: any) => (
+                <label key={d.id} className="cmpr-checkregel cmpr-sub-optie">
+                  <input type="checkbox" checked={geselecteerdeBijlagen.has(d.id)} onChange={ev => {
+                    const nieuw = new Set(geselecteerdeBijlagen);
+                    if (ev.target.checked) nieuw.add(d.id); else nieuw.delete(d.id);
+                    setGeselecteerdeBijlagen(nieuw);
+                  }} className="cmpr-check" />
+                  <span className="cmpr-email-onderwerp">{d.naam} <span className="cmpr-ai-badge">{DOCUMENTTYPE_LABEL[d.documenttype] ?? d.documenttype}</span></span>
+                </label>
+              ))}
+            </div>
+          )}
+
           {/* E-mails */}
           {secties.relevante_emails && (
             <div className="cmpr-sectie">
@@ -1823,7 +1927,7 @@ export default function GebouwPrint() {
           <section className="prt-sectie">
             <h2 className="prt-sectie-titel">Projectkaders en documenten</h2>
 
-            {secties.tekeningen && projectTekeningen.length > 0 && (
+            {secties.tekeningen && tekeningenInRapport.length > 0 && (
               <>
                 <div className="prt-tegel-koplabel" style={{ marginTop: 4 }}>Tekeningen</div>
                 <table className="prt-tabel">
@@ -1836,12 +1940,38 @@ export default function GebouwPrint() {
                     </tr>
                   </thead>
                   <tbody>
-                    {projectTekeningen.map(t => (
+                    {tekeningenInRapport.map(t => (
                       <tr key={t.id}>
                         <td>{t.naam}</td>
                         <td>{TEKENING_TYPELABEL[t.type] ?? t.type}</td>
                         <td>{t.schaal || "—"}</td>
                         <td>{datumNL(t.aangemaakt_op)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </>
+            )}
+
+            {secties.bijlagen && bijlagenDmsInRapport.length > 0 && (
+              <>
+                <div className="prt-tegel-koplabel" style={{ marginTop: 12 }}>Bijlagen documentatie</div>
+                <table className="prt-tabel">
+                  <thead>
+                    <tr>
+                      <th>Naam</th>
+                      <th>Type</th>
+                      <th>Revisie</th>
+                      <th>Datum</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {bijlagenDmsInRapport.map((d: any) => (
+                      <tr key={d.id}>
+                        <td>{d.naam}</td>
+                        <td>{DOCUMENTTYPE_LABEL[d.documenttype] ?? d.documenttype ?? "—"}</td>
+                        <td>{d.revisie_nummer ?? "—"}</td>
+                        <td>{datumNL(d.aangemaakt_op)}</td>
                       </tr>
                     ))}
                   </tbody>

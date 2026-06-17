@@ -67,6 +67,7 @@ const TYPEN: Record<string, { kleur: string; label: string; ring: string }> = {
   schuifdeur:      { kleur: "#dc2626", ring: "#991b1b", label: "Schuifdeur" },
   puiconstructie:  { kleur: "#6366f1", ring: "#3730a3", label: "Puiconstructie" },
   dakdoorvoer:     { kleur: "#14b8a6", ring: "#0f766e", label: "Dakdoorvoer" },
+  samengesteld:    { kleur: "#F23B0D", ring: "#b91c1c", label: "Samengesteld" },
 };
 
 const SCHEIDING_TYPEN: Record<string, { kleur: string; label: string }> = {

@@ -18,10 +18,22 @@ export default function MenuScherm() {
 
   const acties: RadiaalActie[] = [
     {
+      sleutel: "mijn-werk",
+      label: "Mijn werk",
+      icoon: "construct",
+      onPress: () => router.push("/mijn-werk"),
+    },
+    {
       sleutel: "gebouwen",
       label: "Gebouwen",
       icoon: "business",
       onPress: () => router.push("/gebouwen"),
+    },
+    {
+      sleutel: "planning",
+      label: "Routeplanning",
+      icoon: "navigate",
+      onPress: () => router.push("/planning"),
     },
     {
       sleutel: "personeel",
@@ -38,25 +50,10 @@ export default function MenuScherm() {
         router.push({ pathname: "/binnenkort", params: { titel: "Urenverantwoording" } }),
     },
     {
-      sleutel: "planning",
-      label: "Planning",
-      icoon: "calendar",
-      binnenkort: true,
-      onPress: () => router.push({ pathname: "/binnenkort", params: { titel: "Planning" } }),
-    },
-    {
-      sleutel: "fabrikanten",
-      label: "Fabrikanten",
-      icoon: "cube",
-      onPress: () => router.push("/fabrikanten"),
-    },
-    {
-      sleutel: "berichten",
+      sleutel: "berichten-menu",
       label: "Berichten",
       icoon: "chatbubbles",
-      binnenkort: true,
-      onPress: () =>
-        router.push({ pathname: "/binnenkort", params: { titel: "Berichten en chat" } }),
+      onPress: () => router.push("/berichten"),
     },
   ];
 

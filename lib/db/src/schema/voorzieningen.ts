@@ -32,6 +32,8 @@ export const voorzieningenTable = pgTable("voorzieningen", {
   volgendeInspectie: text("volgende_inspectie"),
   aiTeControleren: boolean("ai_te_controleren").notNull().default(false),
   aiVoorstelId: integer("ai_voorstel_id"),
+  // Samengestelde constructie: als ingesteld is deze spot een onderdeel van de parent spot
+  parentSpotId: integer("parent_spot_id"),
   gearchiveerd: boolean("gearchiveerd").notNull().default(false),
   gearchiveerdOp: timestamp("gearchiveerd_op"),
   aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
@@ -186,6 +188,26 @@ export const spotAiVoorstellenTable = pgTable("spot_ai_voorstellen", {
 export const insertSpotAiVoorstelSchema = createInsertSchema(spotAiVoorstellenTable).omit({ id: true, aangemaaktOp: true, bijgewerktOp: true });
 export type InsertSpotAiVoorstel = z.infer<typeof insertSpotAiVoorstelSchema>;
 export type SpotAiVoorstel = typeof spotAiVoorstellenTable.$inferSelect;
+
+// ── CONSTRUCTIE TEMPLATES (samengestelde constructies, Bibliotheek) ──────────
+export interface ConstructieTemplateOnderdeel {
+  type: string;
+  label: string;
+  omschrijving?: string | null;
+}
+
+export const constructieTemplatesTable = pgTable("constructie_templates", {
+  id: serial("id").primaryKey(),
+  naam: text("naam").notNull(),
+  omschrijving: text("omschrijving"),
+  onderdelen: jsonb("onderdelen").$type<ConstructieTemplateOnderdeel[]>().notNull().default([]),
+  aangemaaktDoorId: integer("aangemaakt_door_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
+  aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
+  bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
+});
+export const insertConstructieTemplateSchema = createInsertSchema(constructieTemplatesTable).omit({ id: true, aangemaaktOp: true, bijgewerktOp: true });
+export type InsertConstructieTemplate = z.infer<typeof insertConstructieTemplateSchema>;
+export type ConstructieTemplateRecord = typeof constructieTemplatesTable.$inferSelect;
 
 // ── CLUSTERS (logische groepering van spots, bv. schacht of strook) ──────────
 // Een beheerder maakt een benoemd cluster en koppelt spots eraan (voorzieningen.cluster_id).

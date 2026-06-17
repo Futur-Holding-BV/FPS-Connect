@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useParams, Link } from "wouter";
+import { useParams, Link, useSearch } from "wouter";
 import {
   useGetGebouw,
   useGetGebouwKaart,
@@ -77,6 +77,7 @@ import { GebouwBewerkenDialog } from "./gebouw-bewerken-dialog";
 import GebouwPlattegrondHero from "./gebouw-plattegrond-hero";
 import GebouwActiviteit from "./gebouw-activiteit";
 import GebouwStappenplan from "./gebouw-stappenplan";
+import GebouwRapporten from "./gebouw-rapporten";
 
 const BEHEERDER_ROLLEN = ["beheerder", "hoofdbeheerder"];
 const TEAM_UITGESLOTEN_ROLLEN = ["hoofdbeheerder", "klant"];
@@ -293,7 +294,8 @@ export default function GebouwDetail() {
   const [gekozenProjectRol, setGekozenProjectRol] = useState<string>("");
   const [bezig, setBezig] = useState(false);
   const [bewerkenOpen, setBewerkenOpen] = useState(false);
-  const [segment, setSegment] = useState("project");
+  const search = useSearch();
+  const [segment, setSegment] = useState(() => new URLSearchParams(search).get("tab") ?? "project");
   const [gereedBezig, setGereedBezig] = useState(false);
   const [herstelBezig, setHerstelBezig] = useState(false);
   const [archiveerBezig, setArchiveerBezig] = useState(false);
@@ -562,10 +564,10 @@ export default function GebouwDetail() {
           ════════════════════════════════════════════════════ */}
       <Tabs value={segment} onValueChange={setSegment} className="w-full">
         <div className="flex items-start justify-between gap-4">
-          <TabsList className="grid w-full max-w-2xl min-w-0 grid-cols-3">
+          <TabsList className="grid w-full max-w-3xl min-w-0 grid-cols-4">
             <TabsTrigger value="project" className="gap-1.5">
               <Building2 className="h-4 w-4 shrink-0" />
-              <span className="hidden sm:inline">Project &amp; Gebouwgegevens</span>
+              <span className="hidden sm:inline">Project &amp; Gebouw</span>
               <span className="sm:hidden">Project</span>
             </TabsTrigger>
             <TabsTrigger value="uitvoering" className="gap-1.5">
@@ -574,8 +576,11 @@ export default function GebouwDetail() {
             </TabsTrigger>
             <TabsTrigger value="beheer" className="gap-1.5">
               <Sparkles className="h-4 w-4 shrink-0" />
-              <span className="hidden sm:inline">Beheer &amp; Historie</span>
-              <span className="sm:hidden">Beheer</span>
+              <span className="hidden sm:inline">Beheer</span>
+            </TabsTrigger>
+            <TabsTrigger value="rapporten" className="gap-1.5">
+              <FileText className="h-4 w-4 shrink-0" />
+              <span className="hidden sm:inline">Rapporten</span>
             </TabsTrigger>
           </TabsList>
 
@@ -1082,6 +1087,13 @@ export default function GebouwDetail() {
             Beheerinhoud is alleen beschikbaar voor beheerders.
           </div>
         )}
+      </TabsContent>
+
+      {/* ════════════════════════════════════════════════════
+          SEGMENT 4 — Opleverrapporten
+          ════════════════════════════════════════════════════ */}
+      <TabsContent value="rapporten" className="space-y-4 mt-6">
+        <GebouwRapporten gebouwId={gebouwId} isBeheerder={isBeheerder} />
       </TabsContent>
       </Tabs>
 

@@ -7,9 +7,11 @@ import {
   calculatieRegelsTable,
   gebouwenTable,
   gebruikersTable,
+  voorzieningenTable,
 } from "@workspace/db";
 import { eq, desc, asc, inArray } from "drizzle-orm";
 import { requireAuth } from "../middlewares/auth";
+import { heeftOpenAi, maakOpenAiClient } from "../lib/openai";
 
 const router = Router();
 
@@ -314,6 +316,81 @@ router.delete("/calculaties/:id/regels/:regelId", async (req, res) => {
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Serverfout" });
+  }
+});
+
+// POST /calculaties/:id/ai-regels — AI-gestuurde kostenregel-suggesties.
+// Mens bevestigt per regel; niets wordt automatisch opgeslagen.
+router.post("/calculaties/:id/ai-regels", requireAuth, async (req, res) => {
+  try {
+    if (!heeftOpenAi()) {
+      return res.status(503).json({ error: "OpenAI niet beschikbaar" });
+    }
+    const calcId = parseId(req.params["id"]);
+    const [calculatie] = await db
+      .select()
+      .from(calculatiesTable)
+      .where(eq(calculatiesTable.id, calcId));
+    if (!calculatie) return res.status(404).json({ error: "Calculatie niet gevonden" });
+
+    let gebouwNaam: string | null = null;
+    let spotSamenvatting = "Nog geen voorzieningen geregistreerd.";
+
+    if (calculatie.gebouwId) {
+      const [gebouw] = await db
+        .select({ naam: gebouwenTable.naam })
+        .from(gebouwenTable)
+        .where(eq(gebouwenTable.id, calculatie.gebouwId));
+      if (gebouw) gebouwNaam = gebouw.naam;
+
+      const spots = await db
+        .select({ type: voorzieningenTable.type, status: voorzieningenTable.status })
+        .from(voorzieningenTable)
+        .where(eq(voorzieningenTable.gebouwId, calculatie.gebouwId));
+
+      if (spots.length > 0) {
+        const perType: Record<string, number> = {};
+        for (const s of spots) {
+          const key = s.type ?? "onbekend";
+          perType[key] = (perType[key] ?? 0) + 1;
+        }
+        spotSamenvatting = Object.entries(perType)
+          .map(([t, n]) => `${n}x ${t}`)
+          .join(", ");
+      }
+    }
+
+    const prompt = `Je bent kostenexpert voor passieve brandwering in Nederland.
+${gebouwNaam ? `Project: ${gebouwNaam}.` : "Geen gebouw gekoppeld."}
+Geïnstalleerde brandpreventieve voorzieningen: ${spotSamenvatting}
+Calculatienaam: "${calculatie.naam}".${calculatie.omschrijving ? `\nOmschrijving: ${calculatie.omschrijving}.` : ""}
+
+Genereer een realistische projectbegroting voor het uitvoeren, controleren en opleveren van deze brandpreventieve voorzieningen in Nederland.
+Gebruik categorieën: arbeid, materiaal, overhead, overig.
+Geef 6-10 begrotingsregels terug als JSON object met sleutel "regels":
+{"regels":[{"categorie":"arbeid|materiaal|overhead|overig","omschrijving":"...","eenheid":"uur|st|m2|m|lump sum","hoeveelheid":1,"stukprijs":1}]}
+Alleen het JSON object, geen uitleg.`;
+
+    const openai = maakOpenAiClient();
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [{ role: "user", content: prompt }],
+      max_tokens: 1500,
+    });
+
+    let regels: object[] = [];
+    const raw = completion.choices[0]?.message?.content ?? "{}";
+    try {
+      const parsed = JSON.parse(raw) as Record<string, unknown>;
+      regels = Array.isArray(parsed) ? parsed : (Array.isArray(parsed["regels"]) ? (parsed["regels"] as object[]) : []);
+    } catch {
+      regels = [];
+    }
+
+    res.json({ regels, gebouw_naam: gebouwNaam });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Serverfout bij AI-suggesties" });
   }
 });
 

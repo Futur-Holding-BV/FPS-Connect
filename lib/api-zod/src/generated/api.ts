@@ -939,6 +939,247 @@ export const DeleteGebouwTekeningResponse = zod.void()
 
 
 /**
+ * @summary Alle opleverrapporten (cross-gebouw, optioneel gefilterd op status)
+ */
+export const ListRapportenQueryParams = zod.object({
+  "status": zod.enum(['concept', 'definitief', 'gearchiveerd']).optional()
+})
+
+export const ListRapportenResponseItem = zod.object({
+  "id": zod.number(),
+  "gebouw_id": zod.number(),
+  "rapport_type": zod.string(),
+  "versie": zod.number(),
+  "status": zod.enum(['concept', 'definitief', 'gearchiveerd']),
+  "titel": zod.string().nullish(),
+  "secties": zod.object({
+
+}).passthrough(),
+  "spot_selectie": zod.object({
+
+}).passthrough(),
+  "bijlagen_ids": zod.array(zod.number()),
+  "tekening_ids": zod.array(zod.number()),
+  "bevroren_op": zod.string().nullish(),
+  "bevroren_document_revisies": zod.object({
+
+}).passthrough().nullish(),
+  "reactietermijn_datum": zod.string().nullish(),
+  "reactietermijn_gestart_op": zod.string().nullish(),
+  "aangemaakt_door": zod.number().nullish(),
+  "aangemaakt_door_naam": zod.string().nullish(),
+  "gebouw_naam": zod.string().nullish(),
+  "aangemaakt_op": zod.coerce.date(),
+  "bijgewerkt_op": zod.coerce.date()
+})
+export const ListRapportenResponse = zod.array(ListRapportenResponseItem)
+
+
+/**
+ * @summary Alle rapporten voor een gebouw (concept en definitief)
+ */
+export const ListGebouwRapportenParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ListGebouwRapportenResponseItem = zod.object({
+  "id": zod.number(),
+  "gebouw_id": zod.number(),
+  "rapport_type": zod.string(),
+  "versie": zod.number(),
+  "status": zod.enum(['concept', 'definitief', 'gearchiveerd']),
+  "titel": zod.string().nullish(),
+  "secties": zod.object({
+
+}).passthrough(),
+  "spot_selectie": zod.object({
+
+}).passthrough(),
+  "bijlagen_ids": zod.array(zod.number()),
+  "tekening_ids": zod.array(zod.number()),
+  "bevroren_op": zod.string().nullish(),
+  "bevroren_document_revisies": zod.object({
+
+}).passthrough().nullish(),
+  "reactietermijn_datum": zod.string().nullish(),
+  "reactietermijn_gestart_op": zod.string().nullish(),
+  "aangemaakt_door": zod.number().nullish(),
+  "aangemaakt_door_naam": zod.string().nullish(),
+  "gebouw_naam": zod.string().nullish(),
+  "aangemaakt_op": zod.coerce.date(),
+  "bijgewerkt_op": zod.coerce.date()
+})
+export const ListGebouwRapportenResponse = zod.array(ListGebouwRapportenResponseItem)
+
+
+/**
+ * @summary Nieuw concept-rapport aanmaken
+ */
+export const CreateRapportParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const CreateRapportBody = zod.object({
+  "rapport_type": zod.string(),
+  "titel": zod.string().nullish(),
+  "secties": zod.object({
+
+}).passthrough().optional(),
+  "spot_selectie": zod.object({
+
+}).passthrough().optional(),
+  "bijlagen_ids": zod.array(zod.number()).optional(),
+  "tekening_ids": zod.array(zod.number()).optional(),
+  "reactietermijn_datum": zod.string().nullish()
+})
+
+export const CreateRapportResponse = zod.void()
+
+
+/**
+ * @summary Eén rapport ophalen
+ */
+export const GetRapportParams = zod.object({
+  "id": zod.coerce.number(),
+  "rapportId": zod.coerce.number()
+})
+
+export const GetRapportResponse = zod.object({
+  "id": zod.number(),
+  "gebouw_id": zod.number(),
+  "rapport_type": zod.string(),
+  "versie": zod.number(),
+  "status": zod.enum(['concept', 'definitief', 'gearchiveerd']),
+  "titel": zod.string().nullish(),
+  "secties": zod.object({
+
+}).passthrough(),
+  "spot_selectie": zod.object({
+
+}).passthrough(),
+  "bijlagen_ids": zod.array(zod.number()),
+  "tekening_ids": zod.array(zod.number()),
+  "bevroren_op": zod.string().nullish(),
+  "bevroren_document_revisies": zod.object({
+
+}).passthrough().nullish(),
+  "reactietermijn_datum": zod.string().nullish(),
+  "reactietermijn_gestart_op": zod.string().nullish(),
+  "aangemaakt_door": zod.number().nullish(),
+  "aangemaakt_door_naam": zod.string().nullish(),
+  "gebouw_naam": zod.string().nullish(),
+  "aangemaakt_op": zod.coerce.date(),
+  "bijgewerkt_op": zod.coerce.date()
+})
+
+
+/**
+ * @summary Concept-rapport bijwerken (alleen concept)
+ */
+export const UpdateRapportParams = zod.object({
+  "id": zod.coerce.number(),
+  "rapportId": zod.coerce.number()
+})
+
+export const UpdateRapportBody = zod.object({
+  "titel": zod.string().nullish(),
+  "secties": zod.object({
+
+}).passthrough().optional(),
+  "spot_selectie": zod.object({
+
+}).passthrough().optional(),
+  "bijlagen_ids": zod.array(zod.number()).optional(),
+  "tekening_ids": zod.array(zod.number()).optional(),
+  "reactietermijn_datum": zod.string().nullish()
+})
+
+export const UpdateRapportResponse = zod.object({
+  "id": zod.number(),
+  "gebouw_id": zod.number(),
+  "rapport_type": zod.string(),
+  "versie": zod.number(),
+  "status": zod.enum(['concept', 'definitief', 'gearchiveerd']),
+  "titel": zod.string().nullish(),
+  "secties": zod.object({
+
+}).passthrough(),
+  "spot_selectie": zod.object({
+
+}).passthrough(),
+  "bijlagen_ids": zod.array(zod.number()),
+  "tekening_ids": zod.array(zod.number()),
+  "bevroren_op": zod.string().nullish(),
+  "bevroren_document_revisies": zod.object({
+
+}).passthrough().nullish(),
+  "reactietermijn_datum": zod.string().nullish(),
+  "reactietermijn_gestart_op": zod.string().nullish(),
+  "aangemaakt_door": zod.number().nullish(),
+  "aangemaakt_door_naam": zod.string().nullish(),
+  "gebouw_naam": zod.string().nullish(),
+  "aangemaakt_op": zod.coerce.date(),
+  "bijgewerkt_op": zod.coerce.date()
+})
+
+
+/**
+ * @summary Concept-rapport verwijderen
+ */
+export const DeleteRapportParams = zod.object({
+  "id": zod.coerce.number(),
+  "rapportId": zod.coerce.number()
+})
+
+export const DeleteRapportResponse = zod.void()
+
+
+/**
+ * @summary Rapport definitief maken (bevriest documentrevisies)
+ */
+export const MaakRapportDefinitiefParams = zod.object({
+  "id": zod.coerce.number(),
+  "rapportId": zod.coerce.number()
+})
+
+export const maakRapportDefinitiefBodyReactietermijnDagenMax = 365;
+
+
+
+export const MaakRapportDefinitiefBody = zod.object({
+  "reactietermijn_dagen": zod.number().min(1).max(maakRapportDefinitiefBodyReactietermijnDagenMax)
+})
+
+export const MaakRapportDefinitiefResponse = zod.object({
+  "id": zod.number(),
+  "gebouw_id": zod.number(),
+  "rapport_type": zod.string(),
+  "versie": zod.number(),
+  "status": zod.enum(['concept', 'definitief', 'gearchiveerd']),
+  "titel": zod.string().nullish(),
+  "secties": zod.object({
+
+}).passthrough(),
+  "spot_selectie": zod.object({
+
+}).passthrough(),
+  "bijlagen_ids": zod.array(zod.number()),
+  "tekening_ids": zod.array(zod.number()),
+  "bevroren_op": zod.string().nullish(),
+  "bevroren_document_revisies": zod.object({
+
+}).passthrough().nullish(),
+  "reactietermijn_datum": zod.string().nullish(),
+  "reactietermijn_gestart_op": zod.string().nullish(),
+  "aangemaakt_door": zod.number().nullish(),
+  "aangemaakt_door_naam": zod.string().nullish(),
+  "gebouw_naam": zod.string().nullish(),
+  "aangemaakt_op": zod.coerce.date(),
+  "bijgewerkt_op": zod.coerce.date()
+})
+
+
+/**
  * @summary Lijst van brandpreventieve voorzieningen
  */
 export const listVoorzieningenQueryPaginaDefault = 1;
@@ -994,7 +1235,9 @@ export const ListVoorzieningenResponse = zod.object({
   "gearchiveerd": zod.boolean().optional(),
   "gearchiveerd_op": zod.string().nullish(),
   "aangemaakt_op": zod.string(),
-  "bijgewerkt_op": zod.string().optional()
+  "bijgewerkt_op": zod.string().optional(),
+  "parent_spot_id": zod.number().nullish().describe('Indien ingesteld is dit een onderdeel van de opgegeven samengestelde spot'),
+  "heeft_onderdelen": zod.boolean().optional().describe('Afgeleid - true als er onderdelen aan deze spot zijn gekoppeld')
 })),
   "totaal": zod.number(),
   "pagina": zod.number(),
@@ -1029,7 +1272,8 @@ export const CreateVoorzieningBody = zod.object({
   "wand_of_plafond": zod.string().optional(),
   "cluster_id": zod.number().nullish(),
   "maker_monteur_id": zod.number().optional(),
-  "label_ids": zod.array(zod.number()).optional()
+  "label_ids": zod.array(zod.number()).optional(),
+  "parent_spot_id": zod.number().nullish()
 })
 
 export const CreateVoorzieningResponse = zod.void()
@@ -1183,7 +1427,8 @@ export const UpdateVoorzieningBody = zod.object({
   "wand_of_plafond": zod.string().optional(),
   "cluster_id": zod.number().nullish(),
   "maker_monteur_id": zod.number().optional(),
-  "label_ids": zod.array(zod.number()).optional()
+  "label_ids": zod.array(zod.number()).optional(),
+  "parent_spot_id": zod.number().nullish()
 })
 
 export const UpdateVoorzieningResponse = zod.object({
@@ -1222,7 +1467,9 @@ export const UpdateVoorzieningResponse = zod.object({
   "gearchiveerd": zod.boolean().optional(),
   "gearchiveerd_op": zod.string().nullish(),
   "aangemaakt_op": zod.string(),
-  "bijgewerkt_op": zod.string().optional()
+  "bijgewerkt_op": zod.string().optional(),
+  "parent_spot_id": zod.number().nullish().describe('Indien ingesteld is dit een onderdeel van de opgegeven samengestelde spot'),
+  "heeft_onderdelen": zod.boolean().optional().describe('Afgeleid - true als er onderdelen aan deze spot zijn gekoppeld')
 })
 
 
@@ -1329,7 +1576,9 @@ export const UpdateVoorzieningStatusResponse = zod.object({
   "gearchiveerd": zod.boolean().optional(),
   "gearchiveerd_op": zod.string().nullish(),
   "aangemaakt_op": zod.string(),
-  "bijgewerkt_op": zod.string().optional()
+  "bijgewerkt_op": zod.string().optional(),
+  "parent_spot_id": zod.number().nullish().describe('Indien ingesteld is dit een onderdeel van de opgegeven samengestelde spot'),
+  "heeft_onderdelen": zod.boolean().optional().describe('Afgeleid - true als er onderdelen aan deze spot zijn gekoppeld')
 })
 
 
@@ -1380,8 +1629,60 @@ export const ArchiveerVoorzieningResponse = zod.object({
   "gearchiveerd": zod.boolean().optional(),
   "gearchiveerd_op": zod.string().nullish(),
   "aangemaakt_op": zod.string(),
-  "bijgewerkt_op": zod.string().optional()
+  "bijgewerkt_op": zod.string().optional(),
+  "parent_spot_id": zod.number().nullish().describe('Indien ingesteld is dit een onderdeel van de opgegeven samengestelde spot'),
+  "heeft_onderdelen": zod.boolean().optional().describe('Afgeleid - true als er onderdelen aan deze spot zijn gekoppeld')
 })
+
+
+/**
+ * @summary Onderdelen van een samengestelde spot ophalen
+ */
+export const ListSpotOnderdelenParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ListSpotOnderdelenResponseItem = zod.object({
+  "id": zod.number(),
+  "objectnummer": zod.string(),
+  "qr_code": zod.string().nullish(),
+  "type": zod.string(),
+  "status": zod.enum(['concept', 'voorbereid', 'in_uitvoering', 'wacht_op_akkoord', 'meerwerk_financieel', 'opgeleverd', 'goedgekeurd', 'afgekeurd', 'in_onderhoud', 'vervallen']),
+  "classificatie": zod.enum(['30', '60', '90', '120']),
+  "gebouw_id": zod.number(),
+  "gebouw_naam": zod.string().nullish(),
+  "verdieping_id": zod.number().nullish(),
+  "verdieping_naam": zod.string().nullish(),
+  "ruimte": zod.string().nullish(),
+  "huisnummer": zod.string().nullish(),
+  "locatie_omschrijving": zod.string().nullish(),
+  "locatie_x": zod.number().nullish(),
+  "locatie_y": zod.number().nullish(),
+  "materialen": zod.string().nullish(),
+  "opmerkingen": zod.string().nullish(),
+  "monteur_id": zod.number().nullish(),
+  "monteur_naam": zod.string().nullish(),
+  "controleur_id": zod.number().nullish(),
+  "controleur_naam": zod.string().nullish(),
+  "installatie_datum": zod.string().nullish(),
+  "volgende_inspectie": zod.string().nullish(),
+  "wbdbo": zod.string().nullish(),
+  "wrd": zod.string().nullish(),
+  "wand_of_plafond": zod.string().nullish(),
+  "cluster_id": zod.number().nullish(),
+  "cluster_naam": zod.string().nullish(),
+  "maker_monteur_id": zod.number().nullish(),
+  "maker_monteur_naam": zod.string().nullish(),
+  "ai_te_controleren": zod.boolean().optional(),
+  "ai_voorstel_id": zod.number().nullish(),
+  "gearchiveerd": zod.boolean().optional(),
+  "gearchiveerd_op": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string().optional(),
+  "parent_spot_id": zod.number().nullish().describe('Indien ingesteld is dit een onderdeel van de opgegeven samengestelde spot'),
+  "heeft_onderdelen": zod.boolean().optional().describe('Afgeleid - true als er onderdelen aan deze spot zijn gekoppeld')
+})
+export const ListSpotOnderdelenResponse = zod.array(ListSpotOnderdelenResponseItem)
 
 
 /**
@@ -1611,6 +1912,329 @@ export const SetApplicatieLabelsResponse = zod.object({
   "categorie": zod.string(),
   "volgorde": zod.number(),
   "actief": zod.boolean()
+})
+
+
+/**
+ * @summary Lijst van constructietemplates
+ */
+export const ListConstructieTemplatesResponseItem = zod.object({
+  "id": zod.number(),
+  "naam": zod.string(),
+  "omschrijving": zod.string().nullish(),
+  "onderdelen": zod.array(zod.object({
+  "type": zod.string().describe('Spot-type van het onderdeel (branddeur, doorvoering, manchet, etc.)'),
+  "label": zod.string().describe('Korte omschrijving of productnaam'),
+  "omschrijving": zod.string().nullish()
+})),
+  "aangemaakt_door_id": zod.number().nullish(),
+  "aangemaakt_op": zod.coerce.date(),
+  "bijgewerkt_op": zod.coerce.date()
+})
+export const ListConstructieTemplatesResponse = zod.array(ListConstructieTemplatesResponseItem)
+
+
+/**
+ * @summary Constructietemplate aanmaken
+ */
+export const CreateConstructieTemplateBody = zod.object({
+  "naam": zod.string(),
+  "omschrijving": zod.string().nullish(),
+  "onderdelen": zod.array(zod.object({
+  "type": zod.string().describe('Spot-type van het onderdeel (branddeur, doorvoering, manchet, etc.)'),
+  "label": zod.string().describe('Korte omschrijving of productnaam'),
+  "omschrijving": zod.string().nullish()
+}))
+})
+
+export const CreateConstructieTemplateResponse = zod.void()
+
+
+/**
+ * @summary Eén constructietemplate ophalen
+ */
+export const GetConstructieTemplateParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetConstructieTemplateResponse = zod.object({
+  "id": zod.number(),
+  "naam": zod.string(),
+  "omschrijving": zod.string().nullish(),
+  "onderdelen": zod.array(zod.object({
+  "type": zod.string().describe('Spot-type van het onderdeel (branddeur, doorvoering, manchet, etc.)'),
+  "label": zod.string().describe('Korte omschrijving of productnaam'),
+  "omschrijving": zod.string().nullish()
+})),
+  "aangemaakt_door_id": zod.number().nullish(),
+  "aangemaakt_op": zod.coerce.date(),
+  "bijgewerkt_op": zod.coerce.date()
+})
+
+
+/**
+ * @summary Constructietemplate bijwerken
+ */
+export const UpdateConstructieTemplateParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateConstructieTemplateBody = zod.object({
+  "naam": zod.string(),
+  "omschrijving": zod.string().nullish(),
+  "onderdelen": zod.array(zod.object({
+  "type": zod.string().describe('Spot-type van het onderdeel (branddeur, doorvoering, manchet, etc.)'),
+  "label": zod.string().describe('Korte omschrijving of productnaam'),
+  "omschrijving": zod.string().nullish()
+}))
+})
+
+export const UpdateConstructieTemplateResponse = zod.object({
+  "id": zod.number(),
+  "naam": zod.string(),
+  "omschrijving": zod.string().nullish(),
+  "onderdelen": zod.array(zod.object({
+  "type": zod.string().describe('Spot-type van het onderdeel (branddeur, doorvoering, manchet, etc.)'),
+  "label": zod.string().describe('Korte omschrijving of productnaam'),
+  "omschrijving": zod.string().nullish()
+})),
+  "aangemaakt_door_id": zod.number().nullish(),
+  "aangemaakt_op": zod.coerce.date(),
+  "bijgewerkt_op": zod.coerce.date()
+})
+
+
+/**
+ * @summary Constructietemplate verwijderen
+ */
+export const DeleteConstructieTemplateParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteConstructieTemplateResponse = zod.void()
+
+
+/**
+ * @summary Overzicht van aan de ingelogde monteur toegewezen spots, gegroepeerd per gebouw
+ */
+export const GetMijnWerkResponseItem = zod.object({
+  "gebouw_id": zod.number(),
+  "gebouw_naam": zod.string(),
+  "adres": zod.string(),
+  "stad": zod.string(),
+  "spots": zod.array(zod.object({
+  "id": zod.number(),
+  "objectnummer": zod.string(),
+  "type": zod.string(),
+  "status": zod.string(),
+  "ruimte": zod.string().nullish(),
+  "verdieping_naam": zod.string().nullish(),
+  "verdieping_id": zod.number().nullish()
+}))
+})
+export const GetMijnWerkResponse = zod.array(GetMijnWerkResponseItem)
+
+
+/**
+ * @summary Lijst van toolbox-berichten (beheerder ziet alle; monteur ziet alleen gepubliceerde voor hem)
+ */
+export const ListToolboxBerichtenQueryParams = zod.object({
+  "gepubliceerd": zod.coerce.boolean().optional()
+})
+
+export const ListToolboxBerichtenResponseItem = zod.object({
+  "id": zod.number(),
+  "titel": zod.string(),
+  "inhoud": zod.string(),
+  "bijlagen": zod.array(zod.object({
+  "naam": zod.string(),
+  "url": zod.string(),
+  "soort": zod.string().optional().describe('pdf | foto | video | overig')
+})),
+  "doelgroep": zod.string().describe('iedereen | gebruiker'),
+  "doelgroep_gebruiker_id": zod.number().nullish(),
+  "aangemaakt_door_id": zod.number().nullish(),
+  "aangemaakt_door_naam": zod.string().nullish(),
+  "gepubliceerd": zod.boolean(),
+  "gepubliceerd_op": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string(),
+  "mijn_bevestiging": zod.object({
+  "id": zod.number(),
+  "bericht_id": zod.number(),
+  "gebruiker_id": zod.number(),
+  "bevestigd_op": zod.string()
+}).nullish(),
+  "aantal_bevestigd": zod.number().nullish(),
+  "aantal_ontvangers": zod.number().nullish()
+})
+export const ListToolboxBerichtenResponse = zod.array(ListToolboxBerichtenResponseItem)
+
+
+/**
+ * @summary Nieuw toolbox-bericht aanmaken
+ */
+export const CreateToolboxBerichtBody = zod.object({
+  "titel": zod.string(),
+  "inhoud": zod.string(),
+  "bijlagen": zod.array(zod.object({
+  "naam": zod.string(),
+  "url": zod.string(),
+  "soort": zod.string().optional().describe('pdf | foto | video | overig')
+})).optional(),
+  "doelgroep": zod.string().optional(),
+  "doelgroep_gebruiker_id": zod.number().nullish()
+})
+
+export const CreateToolboxBerichtResponse = zod.void()
+
+
+/**
+ * @summary Detail van een toolbox-bericht
+ */
+export const GetToolboxBerichtParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetToolboxBerichtResponse = zod.object({
+  "id": zod.number(),
+  "titel": zod.string(),
+  "inhoud": zod.string(),
+  "bijlagen": zod.array(zod.object({
+  "naam": zod.string(),
+  "url": zod.string(),
+  "soort": zod.string().optional().describe('pdf | foto | video | overig')
+})),
+  "doelgroep": zod.string().describe('iedereen | gebruiker'),
+  "doelgroep_gebruiker_id": zod.number().nullish(),
+  "aangemaakt_door_id": zod.number().nullish(),
+  "aangemaakt_door_naam": zod.string().nullish(),
+  "gepubliceerd": zod.boolean(),
+  "gepubliceerd_op": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string(),
+  "mijn_bevestiging": zod.object({
+  "id": zod.number(),
+  "bericht_id": zod.number(),
+  "gebruiker_id": zod.number(),
+  "bevestigd_op": zod.string()
+}).nullish(),
+  "aantal_bevestigd": zod.number().nullish(),
+  "aantal_ontvangers": zod.number().nullish()
+}).and(zod.object({
+  "bevestigingen": zod.array(zod.object({
+  "id": zod.number(),
+  "gebruiker_id": zod.number(),
+  "naam": zod.string(),
+  "bevestigd_op": zod.string()
+})).optional()
+}))
+
+
+/**
+ * @summary Toolbox-bericht bijwerken
+ */
+export const UpdateToolboxBerichtParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateToolboxBerichtBody = zod.object({
+  "titel": zod.string(),
+  "inhoud": zod.string(),
+  "bijlagen": zod.array(zod.object({
+  "naam": zod.string(),
+  "url": zod.string(),
+  "soort": zod.string().optional().describe('pdf | foto | video | overig')
+})).optional(),
+  "doelgroep": zod.string().optional(),
+  "doelgroep_gebruiker_id": zod.number().nullish()
+})
+
+export const UpdateToolboxBerichtResponse = zod.object({
+  "id": zod.number(),
+  "titel": zod.string(),
+  "inhoud": zod.string(),
+  "bijlagen": zod.array(zod.object({
+  "naam": zod.string(),
+  "url": zod.string(),
+  "soort": zod.string().optional().describe('pdf | foto | video | overig')
+})),
+  "doelgroep": zod.string().describe('iedereen | gebruiker'),
+  "doelgroep_gebruiker_id": zod.number().nullish(),
+  "aangemaakt_door_id": zod.number().nullish(),
+  "aangemaakt_door_naam": zod.string().nullish(),
+  "gepubliceerd": zod.boolean(),
+  "gepubliceerd_op": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string(),
+  "mijn_bevestiging": zod.object({
+  "id": zod.number(),
+  "bericht_id": zod.number(),
+  "gebruiker_id": zod.number(),
+  "bevestigd_op": zod.string()
+}).nullish(),
+  "aantal_bevestigd": zod.number().nullish(),
+  "aantal_ontvangers": zod.number().nullish()
+})
+
+
+/**
+ * @summary Toolbox-bericht verwijderen
+ */
+export const DeleteToolboxBerichtParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteToolboxBerichtResponse = zod.void()
+
+
+/**
+ * @summary Toolbox-bericht publiceren (maakt het zichtbaar voor monteurs)
+ */
+export const PublicerenToolboxBerichtParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const PublicerenToolboxBerichtResponse = zod.object({
+  "id": zod.number(),
+  "titel": zod.string(),
+  "inhoud": zod.string(),
+  "bijlagen": zod.array(zod.object({
+  "naam": zod.string(),
+  "url": zod.string(),
+  "soort": zod.string().optional().describe('pdf | foto | video | overig')
+})),
+  "doelgroep": zod.string().describe('iedereen | gebruiker'),
+  "doelgroep_gebruiker_id": zod.number().nullish(),
+  "aangemaakt_door_id": zod.number().nullish(),
+  "aangemaakt_door_naam": zod.string().nullish(),
+  "gepubliceerd": zod.boolean(),
+  "gepubliceerd_op": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string(),
+  "mijn_bevestiging": zod.object({
+  "id": zod.number(),
+  "bericht_id": zod.number(),
+  "gebruiker_id": zod.number(),
+  "bevestigd_op": zod.string()
+}).nullish(),
+  "aantal_bevestigd": zod.number().nullish(),
+  "aantal_ontvangers": zod.number().nullish()
+})
+
+
+/**
+ * @summary Ingelogde monteur bevestigt gelezen te hebben
+ */
+export const BevestigenToolboxBerichtParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const BevestigenToolboxBerichtResponse = zod.object({
+  "id": zod.number(),
+  "bericht_id": zod.number(),
+  "gebruiker_id": zod.number(),
+  "bevestigd_op": zod.string()
 })
 
 
@@ -3131,7 +3755,9 @@ export const GetInspectieResponse = zod.object({
   "gearchiveerd": zod.boolean().optional(),
   "gearchiveerd_op": zod.string().nullish(),
   "aangemaakt_op": zod.string(),
-  "bijgewerkt_op": zod.string().optional()
+  "bijgewerkt_op": zod.string().optional(),
+  "parent_spot_id": zod.number().nullish().describe('Indien ingesteld is dit een onderdeel van de opgegeven samengestelde spot'),
+  "heeft_onderdelen": zod.boolean().optional().describe('Afgeleid - true als er onderdelen aan deze spot zijn gekoppeld')
 }))
 })
 
@@ -6873,5 +7499,26 @@ export const DeleteCalculatieRegelParams = zod.object({
 })
 
 export const DeleteCalculatieRegelResponse = zod.void()
+
+
+/**
+ * @summary AI-gestuurde kostenregel-suggesties op basis van spots in het gekoppelde gebouw
+ */
+export const AiCalculatieRegelsParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const AiCalculatieRegelsResponse = zod.object({
+  "regels": zod.array(zod.object({
+  "categorie": zod.string().optional(),
+  "omschrijving": zod.string(),
+  "eenheid": zod.string().optional(),
+  "hoeveelheid": zod.number().optional(),
+  "stukprijs": zod.number().optional(),
+  "volgorde": zod.number().optional(),
+  "opmerkingen": zod.string().nullish()
+})),
+  "gebouw_naam": zod.string().nullish()
+})
 
 
