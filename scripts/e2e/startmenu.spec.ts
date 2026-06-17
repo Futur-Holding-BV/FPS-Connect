@@ -16,15 +16,15 @@ import {
   wachtOpNieuwTotpVenster,
 } from "../src/e2e-monteur-testaccount";
 
-const SLEUTELS = ["gebouwen", "personeel", "uren", "planning", "fabrikanten", "berichten"] as const;
+const SLEUTELS = ["mijn-werk", "gebouwen", "planning", "personeel", "uren", "berichten"] as const;
 
 const ROUTES: { sleutel: string; route: RegExp }[] = [
+  { sleutel: "mijn-werk", route: /\/mijn-werk(\b|\?|$)/ },
   { sleutel: "gebouwen", route: /\/gebouwen(\b|\?|$)/ },
+  { sleutel: "planning", route: /\/planning(\b|\?|$)/ },
   { sleutel: "personeel", route: /\/hrm(\b|\?|$)/ },
-  { sleutel: "fabrikanten", route: /\/fabrikanten(\b|\?|$)/ },
   { sleutel: "uren", route: /\/binnenkort(\b|\?|$)/ },
-  { sleutel: "planning", route: /\/binnenkort(\b|\?|$)/ },
-  { sleutel: "berichten", route: /\/binnenkort(\b|\?|$)/ },
+  { sleutel: "berichten", route: /\/berichten(\b|\?|$)/ },
 ];
 
 const HULPTEKST = "Tik op FPS om het menu te openen";

@@ -50,7 +50,7 @@ export default function MenuScherm() {
         router.push({ pathname: "/binnenkort", params: { titel: "Urenverantwoording" } }),
     },
     {
-      sleutel: "berichten-menu",
+      sleutel: "berichten",
       label: "Berichten",
       icoon: "chatbubbles",
       onPress: () => router.push("/berichten"),
