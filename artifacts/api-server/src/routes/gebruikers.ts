@@ -386,7 +386,7 @@ router.patch("/gebruikers/:id", alleenBeheerder, async (req, res) => {
       // Geen expliciete herkomst meegestuurd, bevoegdheden wijzigen, en er is nog
       // geen herkomst: koppel het profiel dat exact en als enige overeenkomt
       // (automatisch afgeleid).
-      const auto = await vindUniekeHerkomstPreset(wijziging.bevoegdheden);
+      const auto = await vindUniekeHerkomstPreset(wijziging.bevoegdheden!);
       if (auto != null) {
         wijziging.herkomstProfielId = auto;
         wijziging.herkomstAutomatisch = true;

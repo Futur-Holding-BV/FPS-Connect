@@ -19,6 +19,7 @@ Bestaande termen (klantomgeving, klantenportaal, gebruikersomgeving, appnaam) wo
 - `pnpm --filter @workspace/api-spec run codegen` — API hooks en Zod schemas regenereren
 - `pnpm --filter @workspace/db run push` — DB schema pushen (dev only)
 - `pnpm --filter @workspace/scripts run security-scan` — beveiligingsscan (pnpm audit + verouderde pakketten), rapporteert alleen, wijzigt niets
+- `pnpm --filter @workspace/scripts run kwaliteitscheck` — volledige kwaliteitscontrole (typecheck alle packages, build, OpenAPI-drift, DB schema, architectuur, security); rapporteert alleen, wijzigt niets. Zie [docs/kwaliteitscontrole.md](docs/kwaliteitscontrole.md).
 - Vereiste env: `DATABASE_URL` — Postgres connectiestring
 
 ## Stack

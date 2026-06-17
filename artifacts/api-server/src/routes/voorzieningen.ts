@@ -1186,7 +1186,7 @@ router.post("/voorzieningen/:id/ai-controle", requireBevoegdheid("voorzieningen"
 // GET /voorzieningen/:id/onderdelen
 router.get("/voorzieningen/:id/onderdelen", lezenVoorzieningen, async (req, res) => {
   try {
-    const id = parseInt(req.params.id);
+    const id = parseInt(String(req.params.id));
     if (!(await magBijGebouw(req.session.userId!, await gebouwIdVanVoorziening(id)))) {
       return res.status(403).json({ error: "Geen toegang tot deze voorziening" });
     }

@@ -11,6 +11,7 @@
     "e2e-monteur-testaccount": "tsx ./src/e2e-monteur-testaccount.ts",
     "e2e-monteur": "playwright test",
     "e2e-monteur-ci": "tsx ./src/e2e-monteur-run.ts",
+    "kwaliteitscheck": "tsx ./src/kwaliteitscheck.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
