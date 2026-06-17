@@ -300,6 +300,7 @@ function Minimap({
 function SpotDetailBlok({
   spot,
   pdfBeeld,
+  plattegrondMelding,
   W,
   H,
   scheidingen,
@@ -313,6 +314,7 @@ function SpotDetailBlok({
 }: {
   spot: SVGVoorziening;
   pdfBeeld: string | null;
+  plattegrondMelding: string | null;
   W: number;
   H: number;
   scheidingen: any[] | undefined;
@@ -418,7 +420,22 @@ function SpotDetailBlok({
           >
             {pdfBeeld
               ? <image href={pdfBeeld} x={0} y={0} width={W} height={H} />
-              : <GridAchtergrond w={W} h={H} />}
+              : <>
+                  <GridAchtergrond w={W} h={H} />
+                  {plattegrondMelding && (
+                    <text
+                      x={vbX + vbW / 2}
+                      y={vbY + vbH / 2}
+                      textAnchor="middle"
+                      dominantBaseline="middle"
+                      fontSize={Math.round(vbW / 18)}
+                      fontWeight={600}
+                      fill="#94a3b8"
+                    >
+                      {plattegrondMelding}
+                    </text>
+                  )}
+                </>}
             {renderScheidingen(scheidingen, W, H)}
             <SpotIcoon v={spot} />
             <circle
@@ -663,6 +680,9 @@ function PrintVerdieping({
 
   const W = pdfDims?.w ?? CANVAS_W;
   const H = pdfDims?.h ?? CANVAS_H;
+  const plattegrondMelding = beeldKlaar && !pdfBeeld
+    ? (plattegrondUrl ? "Plattegrond kon niet worden geladen" : "Geen plattegrond voor deze verdieping")
+    : null;
 
   const geplaatst: SVGVoorziening[] = (voorzieningen ?? [])
     .filter((v: any) => v.locatie_x != null && v.locatie_y != null)
@@ -719,6 +739,7 @@ function PrintVerdieping({
       key={spot.id}
       spot={spot}
       pdfBeeld={pdfBeeld}
+      plattegrondMelding={plattegrondMelding}
       W={W}
       H={H}
       scheidingen={scheidingen}
@@ -760,7 +781,22 @@ function PrintVerdieping({
             <svg width="100%" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="xMidYMid meet" style={{ display: "block" }}>
               {pdfBeeld
                 ? <image href={pdfBeeld} x={0} y={0} width={W} height={H} />
-                : <GridAchtergrond w={W} h={H} />}
+                : <>
+                    <GridAchtergrond w={W} h={H} />
+                    {plattegrondMelding && (
+                      <text
+                        x={W / 2}
+                        y={H / 2}
+                        textAnchor="middle"
+                        dominantBaseline="middle"
+                        fontSize={Math.round(W / 28)}
+                        fontWeight={600}
+                        fill="#94a3b8"
+                      >
+                        {plattegrondMelding}
+                      </text>
+                    )}
+                  </>}
               {renderScheidingen(scheidingen, W, H)}
               {geplaatst.map(v => <SpotIcoon key={v.id} v={v} />)}
               {pdfBeeld && (
@@ -769,6 +805,26 @@ function PrintVerdieping({
               )}
             </svg>
           </div>
+          {geplaatst.length > 0 && (() => {
+            const telling = geplaatst.reduce<Record<string, number>>((acc, v) => {
+              acc[v.status] = (acc[v.status] ?? 0) + 1;
+              return acc;
+            }, {});
+            const rijen = Object.entries(telling).sort((a, b) => b[1] - a[1]);
+            return (
+              <div className="prt-tegel-legende" style={{ marginTop: 10 }}>
+                {rijen.map(([s, n]) => (
+                  <span key={s} className="prt-tegel-status">
+                    <span className="prt-stip" style={{ backgroundColor: STATUSKLEUREN[s] ?? "#94a3b8" }} />
+                    {STATUSLABEL[s] ?? s}: {n}
+                  </span>
+                ))}
+                <span className="prt-tegel-status" style={{ fontWeight: 700, color: "#0f172a" }}>
+                  Totaal op plattegrond: {geplaatst.length}
+                </span>
+              </div>
+            );
+          })()}
         </div>
       )}
 
