@@ -17,12 +17,15 @@ if (Number.isNaN(port) || port <= 0) {
 }
 
 const azureTenantRaw = process.env["AZURE_TENANT_ID"];
+const azureClientRaw = process.env["AZURE_CLIENT_ID_NEW"];
 logger.info(
   {
     azureTenantPrefix: azureTenantRaw ? azureTenantRaw.slice(0, 8) : null,
     azureTenantLengte: azureTenantRaw ? azureTenantRaw.length : 0,
+    azureClientIdPrefix: azureClientRaw ? azureClientRaw.slice(0, 8) : null,
+    azureClientIdLengte: azureClientRaw ? azureClientRaw.length : 0,
   },
-  "Azure tenant-id in gebruik (eerste 8 tekens)",
+  "Azure tenant-id en client-id in gebruik (eerste 8 tekens)",
 );
 
 ensureSessionTable()

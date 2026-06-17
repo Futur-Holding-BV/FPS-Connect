@@ -6,7 +6,9 @@ import { db, mailLogboekTable } from "@workspace/db";
 // sendMail). Geen gebruikerswachtwoorden. De Azure-gegevens staan uitsluitend
 // in Replit Secrets en worden nooit gelogd of teruggegeven.
 const TENANT_ID = process.env.AZURE_TENANT_ID;
-const CLIENT_ID = process.env.AZURE_CLIENT_ID;
+// Tijdelijk: clientId uit AZURE_CLIENT_ID_NEW (de juiste Application/client ID),
+// omdat AZURE_CLIENT_ID nog de tenant-waarde bevatte.
+const CLIENT_ID = process.env.AZURE_CLIENT_ID_NEW;
 const CLIENT_SECRET = process.env.AZURE_CLIENT_SECRET;
 
 // Zichtbare afzender — alle uitgaande mail komt hiervandaan.

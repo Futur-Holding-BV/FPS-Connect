@@ -56,6 +56,30 @@ de chat/log printen.
 - Tenant-ID is een niet-geheime identifier (mag in detail staan); client_secret/
   tokens worden wél geredigeerd.
 
+## Diagnose: token-flow direct testen + roles-claim (non-obvious)
+Test de Azure-config los van de app: doe vanuit bash een directe
+client_credentials POST naar `login.microsoftonline.com/{tenant}/oauth2/v2.0/token`
+met scope `https://graph.microsoft.com/.default`, decodeer dan de JWT-payload.
+- HTTP 200 met `app: "<naam>"` = tenant + client-id + secret kloppen.
+- **`roles: []` in het token = de app mist Application-permissie `Mail.Send` met
+  admin consent.** Token slaagt dan tóch, maar Graph `sendMail` geeft daarna 403.
+  Delegated permissies (User.Read/offline_access) tellen NIET voor app-only mail.
+  Dit is de meest verraderlijke stap: auth "werkt", maar verzenden faalt later.
+- Redigeer JWT's uit alle output; tenant/client-id zijn niet-geheim, secret wel.
+
+## Veld/naam-valkuilen bij Azure-secrets (env ververst wél)
+De omgeving ververst nieuwe secret-waarden gewoon bij een workflow-restart
+(bewezen: verse waarde leesbaar in nieuw proces). Staleness is dus zelden de
+oorzaak. Veel waarschijnlijker:
+- **Velden verwisseld**: tenant in `AZURE_CLIENT_ID` geplakt of omgekeerd →
+  AADSTS90002 (verkeerde tenant) of AADSTS700016 (`Application '...' not found`
+  = de client-id is in werkelijkheid de tenant-waarde).
+- **GUID-vormige "secret"** (8-4-4-4-12 hex) is vrijwel zeker de Geheim-**ID**,
+  niet de bruikbare **Waarde** (~40 tekens met leestekens). → AADSTS7000215.
+- **Typefout in secret-NAAM** (bv. `AZURE_CLINET_ID_NEW`): code leest dan `null`
+  zonder fout. Verifieer namen met `viewEnvVars` (geeft alleen bestaan, geen
+  waarde) en lees prefixes uit een vers `node -e` proces.
+
 ## Env-var/secret-collisie (gotcha)
 Een sleutel als shared env var zetten EN dezelfde sleutel door de gebruiker als
 secret laten aanleveren botst: `viewEnvVars` kan na een delete op nul uitkomen
