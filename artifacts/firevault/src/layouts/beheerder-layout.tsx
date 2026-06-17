@@ -15,6 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { GebruikerMenu } from "@/components/gebruiker-menu";
 import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
 import { useRol } from "@/context/rol-context";
+import { featureFlags } from "@/lib/feature-flags";
 
 export default function BeheerderLayout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
@@ -310,33 +311,37 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
           )}
 
           {/* ── Modules ── */}
-          {isHoofdbeheerder && (
+          {isHoofdbeheerder && (featureFlags.planning || featureFlags.calculatie) && (
             <SidebarGroup>
               <SidebarGroupLabel>Modules</SidebarGroupLabel>
               <SidebarGroupContent>
                 <SidebarMenu>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton
-                      asChild
-                      isActive={location === "/modules/planning" || location.startsWith("/modules/planning/")}
-                    >
-                      <Link href="/modules/planning">
-                        <CalendarDays />
-                        <span>Planning</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton
-                      asChild
-                      isActive={location === "/modules/calculatie" || location.startsWith("/modules/calculatie/")}
-                    >
-                      <Link href="/modules/calculatie">
-                        <Calculator />
-                        <span>Calculatie</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
+                  {featureFlags.planning && (
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={location === "/modules/planning" || location.startsWith("/modules/planning/")}
+                      >
+                        <Link href="/modules/planning">
+                          <CalendarDays />
+                          <span>Planning</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )}
+                  {featureFlags.calculatie && (
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={location === "/modules/calculatie" || location.startsWith("/modules/calculatie/")}
+                      >
+                        <Link href="/modules/calculatie">
+                          <Calculator />
+                          <span>Calculatie</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )}
                 </SidebarMenu>
               </SidebarGroupContent>
             </SidebarGroup>
@@ -348,28 +353,32 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
               <SidebarGroupLabel>FPS Connect</SidebarGroupLabel>
               <SidebarGroupContent>
                 <SidebarMenu>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton
-                      asChild
-                      isActive={location === "/connect/planning" || location.startsWith("/connect/planning/")}
-                    >
-                      <Link href="/connect/planning">
-                        <CalendarDays />
-                        <span>Planning</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton
-                      asChild
-                      isActive={location === "/connect/calculatie" || location.startsWith("/connect/calculatie/")}
-                    >
-                      <Link href="/connect/calculatie">
-                        <Calculator />
-                        <span>Calculatie</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
+                  {featureFlags.planning && (
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={location === "/connect/planning" || location.startsWith("/connect/planning/")}
+                      >
+                        <Link href="/connect/planning">
+                          <CalendarDays />
+                          <span>Planning</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )}
+                  {featureFlags.calculatie && (
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={location === "/connect/calculatie" || location.startsWith("/connect/calculatie/")}
+                      >
+                        <Link href="/connect/calculatie">
+                          <Calculator />
+                          <span>Calculatie</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )}
                   <SidebarMenuItem>
                     <SidebarMenuButton
                       asChild

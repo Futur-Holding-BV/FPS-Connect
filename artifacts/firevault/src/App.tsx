@@ -1,6 +1,7 @@
 import { Switch, Route, Router as WouterRouter } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { Loader2 } from "lucide-react";
+import { Loader2, Lock } from "lucide-react";
+import { featureFlags } from "@/lib/feature-flags";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
@@ -72,6 +73,25 @@ import { HeatmapTracker } from "@/components/heatmap-tracker";
 
 const queryClient = new QueryClient();
 
+function ModuleNietBeschikbaar({ naam }: { naam: string }) {
+  return (
+    <div className="flex flex-col items-center justify-center h-64 gap-4 text-center px-4">
+      <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center">
+        <Lock className="w-5 h-5 text-muted-foreground" />
+      </div>
+      <div>
+        <p className="font-semibold text-foreground">{naam} — niet beschikbaar in pilot</p>
+        <p className="text-sm text-muted-foreground mt-1">
+          Deze module is uitgeschakeld in de huidige omgeving.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+const PlanningNietBeschikbaar = () => <ModuleNietBeschikbaar naam="Planning" />;
+const CalculatieNietBeschikbaar = () => <ModuleNietBeschikbaar naam="Calculatie" />;
+
 function BeheerderPortal() {
   return (
     <BeheerderLayout>
@@ -108,16 +128,16 @@ function BeheerderPortal() {
         <Route path="/documenten" component={DocumentenPagina} />
         <Route path="/rapporten" component={RapportenPagina} />
         <Route path="/toolbox" component={ToolboxPagina} />
-        <Route path="/connect/planning" component={ConnectPlanning} />
-        <Route path="/connect/calculatie/:id" component={ConnectCalculatieDetail} />
-        <Route path="/connect/calculatie" component={ConnectCalculatie} />
+        <Route path="/connect/planning" component={featureFlags.planning ? ConnectPlanning : PlanningNietBeschikbaar} />
+        <Route path="/connect/calculatie/:id" component={featureFlags.calculatie ? ConnectCalculatieDetail : CalculatieNietBeschikbaar} />
+        <Route path="/connect/calculatie" component={featureFlags.calculatie ? ConnectCalculatie : CalculatieNietBeschikbaar} />
         <Route path="/connect/hrm" component={ConnectHrm} />
-        <Route path="/modules/calculatie/nieuw" component={ModulesCalculatieNieuw} />
-        <Route path="/modules/calculatie/:id" component={ModulesCalculatieDetail} />
-        <Route path="/modules/calculatie" component={ModulesCalculatie} />
-        <Route path="/modules/planning/medewerkers" component={ModulesPlanningMedewerkers} />
-        <Route path="/modules/planning/afwezigheid" component={ModulesPlanningAfwezigheid} />
-        <Route path="/modules/planning" component={ModulesPlanning} />
+        <Route path="/modules/calculatie/nieuw" component={featureFlags.calculatie ? ModulesCalculatieNieuw : CalculatieNietBeschikbaar} />
+        <Route path="/modules/calculatie/:id" component={featureFlags.calculatie ? ModulesCalculatieDetail : CalculatieNietBeschikbaar} />
+        <Route path="/modules/calculatie" component={featureFlags.calculatie ? ModulesCalculatie : CalculatieNietBeschikbaar} />
+        <Route path="/modules/planning/medewerkers" component={featureFlags.planning ? ModulesPlanningMedewerkers : PlanningNietBeschikbaar} />
+        <Route path="/modules/planning/afwezigheid" component={featureFlags.planning ? ModulesPlanningAfwezigheid : PlanningNietBeschikbaar} />
+        <Route path="/modules/planning" component={featureFlags.planning ? ModulesPlanning : PlanningNietBeschikbaar} />
         <Route path="/one/dashboard" component={OneDashboard} />
         <Route path="/one/gebouwen" component={OneGebouwen} />
         <Route path="/one/documenten" component={OneDocumenten} />
@@ -209,16 +229,16 @@ function PermissiePortal() {
         <Route path="/documenten" component={DocumentenPagina} />
         <Route path="/rapporten" component={RapportenPagina} />
         <Route path="/toolbox" component={ToolboxPagina} />
-        <Route path="/connect/planning" component={ConnectPlanning} />
-        <Route path="/connect/calculatie/:id" component={ConnectCalculatieDetail} />
-        <Route path="/connect/calculatie" component={ConnectCalculatie} />
+        <Route path="/connect/planning" component={featureFlags.planning ? ConnectPlanning : PlanningNietBeschikbaar} />
+        <Route path="/connect/calculatie/:id" component={featureFlags.calculatie ? ConnectCalculatieDetail : CalculatieNietBeschikbaar} />
+        <Route path="/connect/calculatie" component={featureFlags.calculatie ? ConnectCalculatie : CalculatieNietBeschikbaar} />
         <Route path="/connect/hrm" component={ConnectHrm} />
-        <Route path="/modules/calculatie/nieuw" component={ModulesCalculatieNieuw} />
-        <Route path="/modules/calculatie/:id" component={ModulesCalculatieDetail} />
-        <Route path="/modules/calculatie" component={ModulesCalculatie} />
-        <Route path="/modules/planning/medewerkers" component={ModulesPlanningMedewerkers} />
-        <Route path="/modules/planning/afwezigheid" component={ModulesPlanningAfwezigheid} />
-        <Route path="/modules/planning" component={ModulesPlanning} />
+        <Route path="/modules/calculatie/nieuw" component={featureFlags.calculatie ? ModulesCalculatieNieuw : CalculatieNietBeschikbaar} />
+        <Route path="/modules/calculatie/:id" component={featureFlags.calculatie ? ModulesCalculatieDetail : CalculatieNietBeschikbaar} />
+        <Route path="/modules/calculatie" component={featureFlags.calculatie ? ModulesCalculatie : CalculatieNietBeschikbaar} />
+        <Route path="/modules/planning/medewerkers" component={featureFlags.planning ? ModulesPlanningMedewerkers : PlanningNietBeschikbaar} />
+        <Route path="/modules/planning/afwezigheid" component={featureFlags.planning ? ModulesPlanningAfwezigheid : PlanningNietBeschikbaar} />
+        <Route path="/modules/planning" component={featureFlags.planning ? ModulesPlanning : PlanningNietBeschikbaar} />
         <Route path="/one/dashboard" component={OneDashboard} />
         <Route path="/one/gebouwen" component={OneGebouwen} />
         <Route path="/one/documenten" component={OneDocumenten} />

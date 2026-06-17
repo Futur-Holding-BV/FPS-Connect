@@ -39,6 +39,20 @@ Bestaande termen (klantomgeving, klantenportaal, gebruikersomgeving, appnaam) wo
 - `artifacts/api-server/src/routes/` — Express route handlers
 - `artifacts/firevault/src/pages/` — React paginacomponenten
 
+## Feature flags
+
+Modules worden per omgeving aan/uit gezet via `VITE_FEATURE_*` variabelen in `artifacts/firevault/.env`:
+
+| Variabele | Standaard | Betekenis |
+|---|---|---|
+| `VITE_FEATURE_PLANNING=true` | **aan** | Planning V1 ingeschakeld voor pilot |
+| `VITE_FEATURE_CALCULATIE=false` | **uit** | Calculatie uitgeschakeld voor pilot |
+
+- Pilotomgeving: Planning aan, Calculatie uit.
+- Als een module uitgeschakeld is, verdwijnt het nav-item automatisch en toont de route "niet beschikbaar in pilot".
+- Calculatie moet worden doorontwikkeld in een geïsoleerde omgeving; het raakt kostprijzen, tarieven, marges en commerciële besluitvorming.
+- Zie `artifacts/firevault/src/lib/feature-flags.ts` voor de implementatie.
+
 ## Architecture decisions
 
 - Contract-first API: OpenAPI spec wordt eerst geschreven, daarna codegen uitvoeren voor types en hooks
