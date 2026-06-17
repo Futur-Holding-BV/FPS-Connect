@@ -29,7 +29,10 @@ import {
   useUpdateCluster,
   useDeleteCluster,
   useAssignClusterMonteur,
+  useAiSpotvoorstel,
+  useBewaarSpotAiVoorstel,
 } from "@workspace/api-client-react";
+import type { SpotAiVoorstelResultaat } from "@workspace/api-client-react";
 import { useUpload } from "@workspace/object-storage-web";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -37,7 +40,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Plus, X, ZoomIn, ZoomOut, RotateCcw, Map, FileText, Trash2, Image as ImageIcon, Loader2, Spline, Check, Move, Archive, ArchiveRestore, Boxes, Pencil, Layers, UserCheck } from "lucide-react";
+import { ArrowLeft, Plus, X, ZoomIn, ZoomOut, RotateCcw, Map, FileText, Trash2, Image as ImageIcon, Loader2, Spline, Check, Move, Archive, ArchiveRestore, Boxes, Pencil, Layers, UserCheck, Sparkles } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { ApplicatiePicker } from "@/components/applicatie-picker";
 import { ToepassingMultiSelect } from "@/components/toepassing-multi-select";
@@ -449,6 +452,15 @@ function FotoUploader({
   );
 }
 
+// AI-voorstel markering (geel/amber) tot de gebruiker het veld bevestigt of aanpast.
+function AiBadge() {
+  return (
+    <Badge variant="outline" className="gap-1 border-amber-300 bg-amber-50 text-amber-700">
+      <Sparkles className="h-3 w-3" /> AI-voorstel
+    </Badge>
+  );
+}
+
 function spotVolgnummer(objectnummer: string): string {
   const m = objectnummer?.match(/(\d+)$/);
   return m ? m[1] : (objectnummer ?? "");
@@ -482,6 +494,9 @@ export default function Plattegrond() {
   const [nieuwLabelIds, setNieuwLabelIds] = useState<number[]>([]);
   const [voorFotos, setVoorFotos] = useState<string[]>([]);
   const [naFotos, setNaFotos] = useState<string[]>([]);
+  const [aiVoorstel, setAiVoorstel] = useState<SpotAiVoorstelResultaat | null>(null);
+  const [aiVelden, setAiVelden] = useState<Set<string>>(new Set());
+  const [aiFout, setAiFout] = useState<string | null>(null);
   const [ruimteOpties] = useState(() => getRuimteVolgorde());
 
   // ---- Serie plaatsen: meerdere voorbereide spots achter elkaar met hetzelfde
@@ -554,6 +569,8 @@ export default function Plattegrond() {
   const updateVerdieping = useUpdateVerdieping();
   const { data: volgendSpot, refetch: refetchSpotnummer } = useGetVolgendSpotnummer(Number(id));
   const addFoto = useAddFoto();
+  const aiSpotvoorstel = useAiSpotvoorstel();
+  const bewaarAiVoorstel = useBewaarSpotAiVoorstel();
 
   const { data: scheidingen, refetch: refetchScheidingen } = useListScheidingen(Number(verdiepingId));
   const maakScheiding = useCreateScheiding();
@@ -596,6 +613,10 @@ export default function Plattegrond() {
   // keuze staan (handmatige keuze wint).
   const { data: alleDocumenten = [] } = useListDocumenten();
   const wandPlafondHandmatigRef = useRef(false);
+  // Sessie-token voor AI-spotherkenning: stijgt bij dialoog open/sluiten en bij elke
+  // fotowijziging, zodat een laat binnenkomend AI-resultaat van een vorige sessie
+  // wordt genegeerd (geen stale voorstel in een nieuwe spot).
+  const aiSessieRef = useRef(0);
 
   const afgeleidWandPlafond = useMemo(() => {
     if (!nieuwLabelIds.length) return "";
@@ -869,6 +890,14 @@ export default function Plattegrond() {
       installatie_datum: vandaag,
       monteur_id: huidigeIsMonteur && gebruiker?.id != null ? String(gebruiker.id) : "",
     });
+    setNieuwLabelIds([]);
+    setVoorFotos([]);
+    setNaFotos([]);
+    setAiVoorstel(null);
+    setAiVelden(new Set());
+    setAiFout(null);
+    aiSessieRef.current += 1;
+    wandPlafondHandmatigRef.current = false;
     setNieuwDialoog(true);
   }, [plaatsenModus, serieModus, serieMethode, serieLijnStart, serieAantal, serieRijen, serieKolommen, tekenModus, verplaatsModus, geselecteerdId, view, W, H, volgendSpot, gebruiker, monteurs]);
 
@@ -1131,6 +1160,77 @@ export default function Plattegrond() {
   const zoomIn = () => setView((v) => ({ ...v, zoom: Math.min(MAX_ZOOM, v.zoom * 1.25) }));
   const zoomOut = () => setView((v) => ({ ...v, zoom: Math.max(MIN_ZOOM, v.zoom * 0.8) }));
 
+  // Een veld is "AI" (amber) zolang het de AI-suggestie houdt en niet is aangeraakt.
+  function isAi(veld: string) {
+    return aiVelden.has(veld);
+  }
+  function raakAanAi(veld: string) {
+    setAiVelden((s) => {
+      if (!s.has(veld)) return s;
+      const n = new Set(s);
+      n.delete(veld);
+      return n;
+    });
+  }
+  // Het AI-voorstel hoort bij specifieke foto's; zodra de foto's wijzigen is het
+  // voorstel niet meer geldig. Ook een eventueel lopend AI-verzoek wordt geïnvalideerd.
+  function wisAiVoorstel() {
+    aiSessieRef.current += 1;
+    setAiVoorstel(null);
+    setAiVelden(new Set());
+    setAiFout(null);
+  }
+
+  // AI-spotherkenning: analyseert de geüploade foto ná (vergelijkt met foto vóór)
+  // en stelt applicatie/toepassing/wand-of-plafond + document voor. De mens bevestigt;
+  // de AI keurt nooit zelfstandig goed.
+  async function analyseerMetAi() {
+    if (naFotos.length === 0) return;
+    setAiFout(null);
+    const sessie = aiSessieRef.current;
+    try {
+      const res = await aiSpotvoorstel.mutateAsync({
+        data: {
+          gebouw_id: Number(id),
+          foto_voor_url: voorFotos[0] ?? null,
+          foto_na_url: naFotos[0],
+        },
+      });
+      // Negeer een laat resultaat als de dialoog inmiddels is gesloten/heropend of
+      // de foto's zijn gewijzigd (anders schrijft het naar een andere spot).
+      if (aiSessieRef.current !== sessie) return;
+      setAiVoorstel(res);
+      const nieuw = new Set<string>();
+      setNieuwForm((f) => {
+        const next = { ...f };
+        if (res.type_code) {
+          next.type = res.type_code;
+          nieuw.add("type");
+        }
+        if (res.wand_of_plafond) {
+          next.wand_of_plafond = res.wand_of_plafond;
+          nieuw.add("wand_of_plafond");
+          // Voorkom dat de afgeleide wand/plafond-keuze het AI-voorstel overschrijft.
+          wandPlafondHandmatigRef.current = true;
+        }
+        return next;
+      });
+      // Toepassing alleen automatisch invullen bij een betrouwbare suggestie (score > 0);
+      // applicatie-gekoppelde opties (score 0) tonen we alleen als hint.
+      const top = res.toepassing_suggesties?.[0];
+      if (top && top.score > 0) {
+        setNieuwLabelIds([top.label_id]);
+        nieuw.add("toepassing");
+      } else {
+        setNieuwLabelIds([]);
+      }
+      setAiVelden(nieuw);
+    } catch (err) {
+      if (aiSessieRef.current !== sessie) return;
+      setAiFout(err instanceof Error ? err.message : "AI-analyse mislukt");
+    }
+  }
+
   // ---- Voorziening aanmaken ----
   async function maakNieuw(e: React.FormEvent) {
     e.preventDefault();
@@ -1168,6 +1268,28 @@ export default function Plattegrond() {
       for (const url of naFotos) {
         await addFoto.mutateAsync({ id: nieuwId, data: { fase: "na", url } });
       }
+      // Leerset: bewaar het AI-voorstel + de uiteindelijke keuze. De server
+      // berekent de afwijking en markeert de spot eventueel voor beheerder-controle.
+      if (aiVoorstel) {
+        try {
+          await bewaarAiVoorstel.mutateAsync({
+            id: nieuwId,
+            data: {
+              foto_voor_url: voorFotos[0] ?? null,
+              foto_na_url: naFotos[0] ?? null,
+              voorstel: aiVoorstel,
+              gekozen: {
+                wand_of_plafond: nieuwForm.wand_of_plafond || null,
+                type_code: nieuwForm.type || null,
+                label_ids: nieuwLabelIds,
+              },
+            },
+          });
+        } catch (err) {
+          // Het opslaan van de leerset is niet kritiek voor het aanmaken van de spot.
+          console.warn("AI-leerset opslaan mislukt", err);
+        }
+      }
     }
 
     setNieuwDialoog(false);
@@ -1176,6 +1298,9 @@ export default function Plattegrond() {
     setNieuwLabelIds([]);
     setVoorFotos([]);
     setNaFotos([]);
+    setAiVoorstel(null);
+    setAiVelden(new Set());
+    setAiFout(null);
     wandPlafondHandmatigRef.current = false;
     refetch();
     refetchSpotnummer();
@@ -1188,6 +1313,10 @@ export default function Plattegrond() {
       setNieuwLabelIds([]);
       setVoorFotos([]);
       setNaFotos([]);
+      setAiVoorstel(null);
+      setAiVelden(new Set());
+      setAiFout(null);
+      aiSessieRef.current += 1;
       wandPlafondHandmatigRef.current = false;
     }
   }
@@ -1751,16 +1880,111 @@ export default function Plattegrond() {
               </p>
             </div>
 
+            {/* Foto's vóór en ná — bij een spot eerst de foto's, dan AI-herkenning,
+                daarna de overige velden. Op desktop is alleen uploaden mogelijk (geen camera). */}
+            <div className="grid grid-cols-2 gap-4 pt-2 border-t">
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <Label className="text-xs uppercase tracking-wide text-muted-foreground">Foto's vóór</Label>
+                  <FotoUploader label="Uploaden" onUploaded={(p) => { setVoorFotos((a) => [...a, p]); wisAiVoorstel(); }} />
+                </div>
+                <FotoStrip paths={voorFotos} onVerwijder={(i) => { setVoorFotos((a) => a.filter((_, idx) => idx !== i)); wisAiVoorstel(); }} />
+              </div>
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <Label className="text-xs uppercase tracking-wide text-muted-foreground">Foto's ná</Label>
+                  <FotoUploader label="Uploaden" onUploaded={(p) => { setNaFotos((a) => [...a, p]); wisAiVoorstel(); }} />
+                </div>
+                <FotoStrip paths={naFotos} onVerwijder={(i) => { setNaFotos((a) => a.filter((_, idx) => idx !== i)); wisAiVoorstel(); }} />
+              </div>
+            </div>
+
+            {/* AI-spotherkenning op de geüploade foto ná (vergelijkt met foto vóór).
+                De AI stelt voor; de mens bevestigt; de AI keurt nooit zelf goed. */}
+            <div className="space-y-2 rounded-lg border border-dashed border-amber-300 bg-amber-50/40 p-3">
+              <div className="flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-amber-600" />
+                <span className="text-sm font-medium">AI-spotherkenning</span>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                disabled={naFotos.length === 0 || aiSpotvoorstel.isPending}
+                onClick={analyseerMetAi}
+                className="w-full border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100 hover:text-amber-900"
+              >
+                {aiSpotvoorstel.isPending ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    AI analyseert de foto...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="h-4 w-4 mr-2" />
+                    {aiVoorstel ? "Opnieuw analyseren met AI" : "Analyseer geüploade foto met AI"}
+                  </>
+                )}
+              </Button>
+              {naFotos.length === 0 && (
+                <p className="text-xs text-muted-foreground">
+                  Upload eerst een foto ná de afwerking. De AI vergelijkt die met de foto vóór en
+                  stelt applicatie, toepassing, wand of plafond en het bijbehorende document voor.
+                </p>
+              )}
+              {aiFout && (
+                <p className="text-xs text-destructive">AI-analyse mislukt: {aiFout}</p>
+              )}
+              {aiVoorstel && (
+                <div className="rounded-md border border-amber-300 bg-amber-50 p-2 space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold text-amber-800">AI-voorstel</span>
+                    {!!aiVoorstel.betrouwbaarheid && (
+                      <span className="text-xs font-medium text-amber-700">
+                        Betrouwbaarheid: {aiVoorstel.betrouwbaarheid}
+                      </span>
+                    )}
+                  </div>
+                  {!!aiVoorstel.observaties && (
+                    <p className="text-xs text-amber-900">{aiVoorstel.observaties}</p>
+                  )}
+                  {!!aiVoorstel.toelichting && (
+                    <p className="text-xs text-amber-900">{aiVoorstel.toelichting}</p>
+                  )}
+                  {aiVoorstel.toepassing_suggesties && aiVoorstel.toepassing_suggesties.length > 0 && (
+                    <p className="text-xs text-amber-900">
+                      <span className="font-medium">AI stelt voor:</span>{" "}
+                      {aiVoorstel.toepassing_suggesties.map((s) => s.naam).join(", ")}
+                    </p>
+                  )}
+                  {!!aiVoorstel.document_naam && (
+                    <p className="text-xs font-medium text-amber-800">
+                      Voorgesteld document: {aiVoorstel.document_naam}
+                    </p>
+                  )}
+                  <p className="text-xs text-amber-700 pt-0.5">
+                    Controleer en pas aan waar nodig. De AI keurt niets zelf goed.
+                  </p>
+                </div>
+              )}
+            </div>
+
             {/* Applicatie */}
             <div>
-              <Label>Applicatie *</Label>
-              <ApplicatiePicker
-                value={nieuwForm.type}
-                onValueChange={(v) => {
-                  setNieuwForm((f) => ({ ...f, type: v }));
-                  setNieuwLabelIds([]);
-                }}
-              />
+              <div className="flex items-center gap-2">
+                <Label>Applicatie *</Label>
+                {isAi("type") && <AiBadge />}
+              </div>
+              <div className={isAi("type") ? "rounded-md ring-1 ring-amber-300" : undefined}>
+                <ApplicatiePicker
+                  value={nieuwForm.type}
+                  onValueChange={(v) => {
+                    setNieuwForm((f) => ({ ...f, type: v }));
+                    setNieuwLabelIds([]);
+                    raakAanAi("type");
+                    raakAanAi("toepassing");
+                  }}
+                />
+              </div>
               <p className="text-xs text-muted-foreground mt-1">
                 Kies de applicatie uit de centrale bibliotheek.
               </p>
@@ -1769,14 +1993,20 @@ export default function Plattegrond() {
             {/* Toepassing (alleen als applicatie gekozen) */}
             {nieuwForm.type && (
               <div className="border rounded-lg p-4 space-y-2">
-                <p className="text-sm font-medium">Toepassing</p>
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-medium">Toepassing</p>
+                  {isAi("toepassing") && <AiBadge />}
+                </div>
                 <p className="text-xs text-muted-foreground">
                   Selecteer de gebruikte producten of systemen bij deze spot.
                 </p>
                 <ToepassingMultiSelect
                   typeCode={nieuwForm.type}
                   selectedIds={nieuwLabelIds}
-                  onSelectionChange={setNieuwLabelIds}
+                  onSelectionChange={(ids) => {
+                    setNieuwLabelIds(ids);
+                    raakAanAi("toepassing");
+                  }}
                   magLabelsAanmaken={isBeheerder}
                 />
                 {nieuwFabrikanten.length > 0 && (
@@ -1791,11 +2021,15 @@ export default function Plattegrond() {
             <div className="grid grid-cols-2 gap-3">
               {/* Wand of plafond */}
               <div>
-                <Label>Wand of plafond</Label>
+                <div className="flex items-center gap-2">
+                  <Label>Wand of plafond</Label>
+                  {isAi("wand_of_plafond") && <AiBadge />}
+                </div>
                 <Select
                   value={nieuwForm.wand_of_plafond || GEEN_WAND_PLAFOND_VAL}
                   onValueChange={(v) => {
                     wandPlafondHandmatigRef.current = true;
+                    raakAanAi("wand_of_plafond");
                     setNieuwForm((f) => ({ ...f, wand_of_plafond: v === GEEN_WAND_PLAFOND_VAL ? "" : v }));
                   }}
                 >
@@ -1904,29 +2138,11 @@ export default function Plattegrond() {
               </div>
             </div>
 
-            {/* Foto's voor / na */}
-            <div className="grid grid-cols-2 gap-4 pt-2 border-t">
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <Label className="text-xs uppercase tracking-wide text-muted-foreground">Foto's voor</Label>
-                  <FotoUploader label="Toevoegen" onUploaded={(p) => setVoorFotos((a) => [...a, p])} />
-                </div>
-                <FotoStrip paths={voorFotos} onVerwijder={(i) => setVoorFotos((a) => a.filter((_, idx) => idx !== i))} />
-              </div>
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <Label className="text-xs uppercase tracking-wide text-muted-foreground">Foto's na</Label>
-                  <FotoUploader label="Toevoegen" onUploaded={(p) => setNaFotos((a) => [...a, p])} />
-                </div>
-                <FotoStrip paths={naFotos} onVerwijder={(i) => setNaFotos((a) => a.filter((_, idx) => idx !== i))} />
-              </div>
-            </div>
-
             <DialogFooter className="gap-2">
               <Button type="button" variant="outline" onClick={() => sluitDialoog(false)}>
                 Annuleren
               </Button>
-              <Button type="submit" disabled={!nieuwForm.type || maakVoorziening.isPending || addFoto.isPending}>
+              <Button type="submit" disabled={!nieuwForm.type || maakVoorziening.isPending || addFoto.isPending || aiSpotvoorstel.isPending}>
                 {maakVoorziening.isPending || addFoto.isPending ? "Opslaan..." : "Spot plaatsen"}
               </Button>
             </DialogFooter>
