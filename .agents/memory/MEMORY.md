@@ -3,7 +3,7 @@
 - [Toewijzingen API velden](toewijzingen-velden.md) — Toewijzing type heeft naam/rol, NIET gebruiker_naam/gebruiker_rol; ToewijzingInput heeft alleen gebruiker_id.
 - [Orval enabled-opties](orval-enabled.md) — { query: { enabled } } geeft TS2741 (queryKey ontbreekt) in hele codebase; pre-existing; Vite werkt gewoon; gate op UI-niveau ipv hook-niveau.
 - [Stale lib declarations na merge](stale-lib-declarations.md) — TS2305 "no exported member" op bestaande API-hook = stale composite lib-build; fix met codegen/typecheck:libs, niet code "repareren".
-- [Rol-filter backend](rol-filter.md) — gebouw-scoping is matrix-driven (effectieveContext.beperkt / isBeperktTotToegewezen), NIET rolnaam; TOEGEWEZEN_ROLLEN bestaat niet meer.
+- [Rol-filter backend](rol-filter.md) — gebouw-scoping matrix-driven (effectieveContext.beperkt), NIET rolnaam; beperkt≠gebouwen<2: klant+gebouwen<1 altijd beperkt, gebouwen>=2 nooit, gebouwen==1 alleen veldgebruiker; kantoor-leesrol ziet hele portefeuille.
 - [Controleur/monteur gedecommissioneerd](controleur-rol.md) — rol-enum=hoofdbeheerder/gebruiker/klant; server-controleurlogica + TOEGEWEZEN_ROLLEN verwijderd; alleen bevoegdhedenVoorLegacyRol (migratie) houdt monteur/controleur; frontend mogelijk nog legacy.
 - [Voorziening archief](voorziening-archief.md) — terugplaatsen=beheerder-only (server-side afdwingen in archief-handler, niet alleen UI); archieflijst-hook in child-component mounten zodat niet-beheerders niet fetchen.
 - [Spotnummer ontwerp](spotnummer.md) — objectnummer = auto <gebouwAfk>-<volgnr> via GET /gebouwen/:id/volgend-spotnummer; POST retry op 23505; markers tonen laatste cijfers (regex /(\d+)$/), niet type.slice(0,2).

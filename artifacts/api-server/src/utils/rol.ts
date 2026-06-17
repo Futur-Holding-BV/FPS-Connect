@@ -36,17 +36,45 @@ function effectieveBevoegdheden(rol: string, ruwe: unknown): Bevoegdheden {
   return bev;
 }
 
-// Drempel voor toewijzingsbeperking: wie de gebouwen-module hooguit mag lezen
-// (niveau < 2) is een veldgebruiker en ziet/muteert uitsluitend de aan hem
-// toegewezen gebouwen. Wie gebouwen mag beheren (niveau >= 2) heeft
-// projectbrede toegang. Dit vervangt de oude harde rollijst (monteur/controleur).
+// Drempel voor projectbrede gebouwtoegang: wie de gebouwen-module mag beheren
+// (niveau >= 2) heeft sowieso de hele portefeuille in beeld.
 const GEBOUW_BEHEER_NIVEAU = 2;
 
+// Minimaal leesrecht op de gebouwen-module. Zonder dit recht (niveau 0) mag een
+// gebruiker de portefeuille nooit projectbreed zien en blijft hij beperkt tot
+// zijn toegewezen gebouwen, ongeacht eventuele rechten op andere modules.
+const GEBOUW_LEZEN_NIVEAU = 1;
+
+// Veldgebruikers voeren daadwerkelijk werk uit op locatie: zij muteren spots,
+// onderhoud of inspecties (niveau >= 2 op een van deze modules). Alleen zij
+// worden tot hun toegewezen gebouwen beperkt.
+const VELD_UITVOERING_MODULES = ["voorzieningen", "onderhoud", "inspecties"] as const;
+const VELD_UITVOERING_NIVEAU = 2;
+
+function isVeldUitvoerder(bevoegdheden: Bevoegdheden): boolean {
+  return VELD_UITVOERING_MODULES.some(
+    (m) => niveauVan(bevoegdheden, m) >= VELD_UITVOERING_NIVEAU,
+  );
+}
+
 // Of een gebruiker met deze rol + matrix beperkt is tot toegewezen gebouwen.
-// hoofdbeheerder omzeilt de matrix volledig en is nooit beperkt.
+// hoofdbeheerder omzeilt de matrix volledig en is nooit beperkt. Een klant ziet
+// uitsluitend de aan zijn account toegewezen gebouwen (object-scope van het
+// klantportaal loopt volledig via deze beperking + toegewezenGebouwIds) en is
+// dus altijd beperkt. Zonder leesrecht op de gebouwen-module (niveau 0) blijft
+// een gebruiker altijd beperkt tot toegewezen gebouwen, ook al heeft hij rechten
+// op gebouw-gescopete modules (voorzieningen/onderhoud/inspecties). Wie gebouwen
+// mag beheren (>= 2) is niet beperkt. Bij alleen-leesrecht op gebouwen (niveau 1)
+// maken we onderscheid: een veldgebruiker (voert spots/onderhoud/inspecties uit)
+// blijft beperkt tot zijn toegewezen gebouwen, maar kantoorpersoneel met enkel
+// leesrechten (bv. commercieel, calculatie) ziet de hele portefeuille.
 function isBeperkt(rol: string, bevoegdheden: Bevoegdheden): boolean {
   if (rol === "hoofdbeheerder") return false;
-  return niveauVan(bevoegdheden, "gebouwen") < GEBOUW_BEHEER_NIVEAU;
+  if (rol === "klant") return true;
+  const gebouwNiveau = niveauVan(bevoegdheden, "gebouwen");
+  if (gebouwNiveau < GEBOUW_LEZEN_NIVEAU) return true;
+  if (gebouwNiveau >= GEBOUW_BEHEER_NIVEAU) return false;
+  return isVeldUitvoerder(bevoegdheden);
 }
 
 export type EffectieveContext = {
