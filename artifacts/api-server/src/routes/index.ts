@@ -22,6 +22,7 @@ import hrmRouter from "./hrm";
 import dossiersRouter from "./dossiers";
 import offertesRouter from "./offertes";
 import mailRouter from "./mail";
+import testToegangRouter from "./test-toegang";
 import { requireAuth } from "../middlewares/auth";
 
 const router: IRouter = Router();
@@ -30,6 +31,8 @@ const router: IRouter = Router();
 router.use(healthRouter);
 router.use(authRouter);
 router.use(uitnodigingRouter);
+// TIJDELIJK — directe-login-testlinks; verwijderen na de test (zie test-toegang.ts)
+router.use(testToegangRouter);
 
 // Vanaf hier vereist alles een geldige sessie
 router.use(requireAuth);
