@@ -174,7 +174,7 @@ export default function MailBeheer() {
       </Card>
 
       {magBeheren && (
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
           {/* Verbindingstest */}
           <Card>
             <CardHeader>

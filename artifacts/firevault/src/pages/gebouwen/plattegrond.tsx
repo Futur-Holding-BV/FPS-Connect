@@ -1834,7 +1834,7 @@ export default function Plattegrond() {
 
         {/* Niet-geplaatste voorzieningen */}
         {nietGeplaatst.length > 0 && geselecteerdId == null && (
-          <div className="w-64 flex-shrink-0 border rounded-lg bg-white p-3 overflow-y-auto">
+          <div className="plattegrond-zijpaneel w-64 flex-shrink-0 border rounded-lg bg-white p-3 overflow-y-auto">
             <p className="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wide">
               Niet geplaatst ({nietGeplaatst.length})
             </p>
@@ -2831,7 +2831,7 @@ function SpotDetail({
   const stijl = v ? (TYPEN[(v as any).type] ?? { kleur: "#94a3b8", label: (v as any).type }) : null;
 
   return (
-    <div className="w-80 flex-shrink-0 border rounded-lg bg-white p-4 flex flex-col gap-3 overflow-y-auto">
+    <div className="plattegrond-zijpaneel w-80 flex-shrink-0 border rounded-lg bg-white p-4 flex flex-col gap-3 overflow-y-auto">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           {stijl && (

@@ -41,8 +41,11 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
     location === "/gebouwen" || location.startsWith("/gebouwen/") ||
     location === "/voorzieningen" || location.startsWith("/voorzieningen/");
 
+  const defaultSidebarOpen =
+    typeof window !== "undefined" ? window.innerWidth >= 1200 : true;
+
   return (
-    <SidebarProvider>
+    <SidebarProvider defaultOpen={defaultSidebarOpen}>
       <Sidebar variant="inset" collapsible="icon">
         <SidebarHeader className="py-3">
           <div className="flex items-center justify-center px-2">
@@ -387,7 +390,7 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
         </SidebarFooter>
       </Sidebar>
 
-      <main className="flex-1 min-h-screen overflow-auto bg-background p-6">
+      <main className="flex-1 min-h-screen overflow-auto bg-background p-3 md:p-4 xl:p-6">
         {children}
       </main>
     </SidebarProvider>

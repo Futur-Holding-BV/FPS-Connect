@@ -33,8 +33,11 @@ export default function MonteurLayout({ children }: { children: React.ReactNode 
   const routes = rol === "controleur" ? ROUTES_CONTROLEUR : ROUTES_MONTEUR;
   const portalNaam = rol === "controleur" ? t("nav.controleurPortal") : t("nav.monteurPortal");
 
+  const defaultSidebarOpen =
+    typeof window !== "undefined" ? window.innerWidth >= 1200 : true;
+
   return (
-    <SidebarProvider>
+    <SidebarProvider defaultOpen={defaultSidebarOpen}>
       <Sidebar variant="inset" collapsible="icon">
         <SidebarHeader className="py-3">
           <div className="flex items-center justify-center px-2">
@@ -77,7 +80,7 @@ export default function MonteurLayout({ children }: { children: React.ReactNode 
         </SidebarFooter>
       </Sidebar>
 
-      <main className="flex-1 min-h-screen overflow-auto bg-background p-6">
+      <main className="flex-1 min-h-screen overflow-auto bg-background p-3 md:p-4 xl:p-6">
         {children}
       </main>
     </SidebarProvider>

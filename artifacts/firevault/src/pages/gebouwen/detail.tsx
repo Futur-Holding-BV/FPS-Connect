@@ -672,8 +672,8 @@ export default function GebouwDetail() {
           noodzakelijk
         />
         <DataWaarschuwing punten={ontbrekendeProjectdata} />
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-          <div className="lg:col-span-2 space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 items-start">
+          <div className="xl:col-span-2 space-y-6">
 
             {/* Bewerkbaar projectformulier (AI-aangevuld, beheerder bevestigt) */}
             <Projectformulier gebouwId={gebouwId} isBeheerder={isBeheerder} gebouw={gebouw} />
@@ -820,8 +820,8 @@ export default function GebouwDetail() {
 
         <GebouwPlattegrondHero gebouwId={gebouwId} verdiepingen={verdiepingen} />
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+          <div className="xl:col-span-2 space-y-6">
             <GebouwBouwlagen
               gebouwId={gebouwId}
               verdiepingen={verdiepingen}
@@ -905,8 +905,8 @@ export default function GebouwDetail() {
           ondertitel="E-mails, teamleden, 3D-weergave en projectactiviteit"
         />
         {isBeheerder ? (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-            <div className="lg:col-span-2 space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 items-start">
+            <div className="xl:col-span-2 space-y-6">
               <GebouwEmails gebouwId={gebouwId} isBeheerder={isBeheerder} />
 
               {/* Teamleden / toewijzingen */}

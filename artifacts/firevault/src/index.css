@@ -175,3 +175,37 @@
 [data-slot="sidebar-container"] {
   overflow: hidden;
 }
+
+/* ── Responsive tablet/mobiel-hulpklassen ────────────────────────────────────
+   Gebruik .resp-tabel-scroll om een tabelcontainer horizontaal scrollbaar te
+   maken op smalle viewports; touch-scroll inbegrepen.
+────────────────────────────────────────────────────────────────────────────── */
+.resp-tabel-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Tablet (768 – 1199 px): compactere paginatitels */
+@media (min-width: 768px) and (max-width: 1199px) {
+  .resp-paginatitel {
+    font-size: 1.5rem;
+    line-height: 2rem;
+  }
+}
+
+/* Tablet: plattegrond-zijpaneel smaller zodat canvas meer ruimte krijgt */
+@media (min-width: 768px) and (max-width: 1099px) {
+  .plattegrond-zijpaneel {
+    width: 14rem !important;
+    min-width: 14rem !important;
+  }
+}
+
+/* Mobiel (<768 px): grote aanraakdoelen voor actieknoppen */
+@media (max-width: 767px) {
+  .resp-touch-knop {
+    min-height: 2.75rem;
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+}
