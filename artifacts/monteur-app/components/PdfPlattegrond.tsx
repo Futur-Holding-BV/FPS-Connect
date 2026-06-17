@@ -458,6 +458,13 @@ export function PdfPlattegrond({
     [domein, token, plattegrondUrl],
   );
 
+  // Reset 'klaar' zodra de HTML verandert (nieuw token, nieuw plattegrond-URL
+  // of nieuw domein). De WebView herlaadt dan de HTML opnieuw, en de data-
+  // injectie (spots/scheidingen/clusters) herstart na de nieuwe onLoadEnd.
+  useEffect(() => {
+    setKlaar(false);
+  }, [html]);
+
   useEffect(() => {
     if (!klaar) return;
     webRef.current?.injectJavaScript(
@@ -509,7 +516,7 @@ export function PdfPlattegrond({
       <WebView
         ref={webRef}
         originWhitelist={["*"]}
-        source={{ html }}
+        source={{ html, baseUrl: `https://${domein}` }}
         onMessage={opBericht}
         onLoadEnd={() => setKlaar(true)}
         javaScriptEnabled
