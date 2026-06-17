@@ -16,6 +16,15 @@ if (Number.isNaN(port) || port <= 0) {
   throw new Error(`Invalid PORT value: "${rawPort}"`);
 }
 
+const azureTenantRaw = process.env["AZURE_TENANT_ID"];
+logger.info(
+  {
+    azureTenantPrefix: azureTenantRaw ? azureTenantRaw.slice(0, 8) : null,
+    azureTenantLengte: azureTenantRaw ? azureTenantRaw.length : 0,
+  },
+  "Azure tenant-id in gebruik (eerste 8 tekens)",
+);
+
 ensureSessionTable()
   .then(() => {
     app.listen(port, (err) => {
