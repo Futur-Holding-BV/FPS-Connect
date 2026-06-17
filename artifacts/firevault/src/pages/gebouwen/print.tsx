@@ -30,8 +30,19 @@ import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
 import { useToast } from "@/hooks/use-toast";
 import { useUpload } from "@workspace/object-storage-web";
 import { ArrowLeft, Printer, Loader2, Save } from "lucide-react";
+import { resolveAssetUrl } from "@/components/documentopmaak";
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
+
+// Asset-URL resolver gedeeld met het Document Design System (DDS): branding-
+// bestanden krijgen het app-basispad, storage-assets (foto's/plattegronden)
+// blijven onder /api/storage, en absolute of reeds /-gewortelde URL's gaan
+// ongewijzigd door. Eén bron van waarheid voor asset-URL's, gelijk aan de DDS.
+function storageBeeldUrl(pad?: string | null): string {
+  if (!pad) return "";
+  if (/^(https?:|data:|blob:)/.test(pad)) return resolveAssetUrl(pad);
+  return resolveAssetUrl(pad.startsWith("/api/") ? pad : `/api/storage${pad}`);
+}
 
 // ─── Constanten ─────────────────────────────────────────────────────────────
 
@@ -363,7 +374,7 @@ function SpotDetailBlok({
           <div className="prt-spot-foto-label">Foto's voor</div>
           <div className="prt-spot-foto-rij">
             {voorFotos.map((f: any) => (
-              <img key={f.id} src={`/api/storage${f.url}`} alt="Foto voor" className="prt-spot-foto" />
+              <img key={f.id} src={storageBeeldUrl(f.url)} alt="Foto voor" className="prt-spot-foto" />
             ))}
           </div>
         </div>
@@ -373,7 +384,7 @@ function SpotDetailBlok({
           <div className="prt-spot-foto-label">Foto's na</div>
           <div className="prt-spot-foto-rij">
             {naFotos.map((f: any) => (
-              <img key={f.id} src={`/api/storage${f.url}`} alt="Foto na" className="prt-spot-foto" />
+              <img key={f.id} src={storageBeeldUrl(f.url)} alt="Foto na" className="prt-spot-foto" />
             ))}
           </div>
         </div>
@@ -616,7 +627,7 @@ function PrintVerdieping({
       try {
         let dataUrl: string, dims: { w: number; h: number };
         try {
-          laadTaak = pdfjsLib.getDocument({ url: `/api/storage${plattegrondUrl}` });
+          laadTaak = pdfjsLib.getDocument({ url: storageBeeldUrl(plattegrondUrl) });
           const pdf = await laadTaak.promise;
           const page = await pdf.getPage(1);
           const viewport = page.getViewport({ scale: 2 });
@@ -632,7 +643,7 @@ function PrintVerdieping({
             const i = new Image();
             i.onload = () => resolve(i);
             i.onerror = () => reject(new Error("Afbeelding laden mislukt"));
-            i.src = `/api/storage${plattegrondUrl}`;
+            i.src = storageBeeldUrl(plattegrondUrl);
           });
           const canvas = document.createElement("canvas");
           canvas.width = img.naturalWidth; canvas.height = img.naturalHeight;
@@ -949,7 +960,7 @@ export default function GebouwPrint() {
   const titel = gebouw.projectnummer ? `${gebouw.projectnummer} - ${gebouw.naam}` : gebouw.naam;
   const nu = new Date();
   const exportDatum = `${nu.toLocaleDateString("nl-NL")} ${nu.toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit" })}`;
-  const logoSrc = `${import.meta.env.BASE_URL}logo-fps.png`;
+  const logoSrc = resolveAssetUrl("logo-fps.png");
 
   const rapportDatum   = nu.toLocaleDateString("nl-NL");
   const rapportVersie  = "1.0";
@@ -1336,7 +1347,7 @@ export default function GebouwPrint() {
 
         <div className="prt-cover-beeld">
           {gevelbeeld?.beeld ? (
-            <img src={gevelbeeld.beeld} alt={`Gevelaanzicht ${gebouw.naam}`} className="prt-cover-foto" />
+            <img src={resolveAssetUrl(gevelbeeld.beeld)} alt={`Gevelaanzicht ${gebouw.naam}`} className="prt-cover-foto" />
           ) : (
             <div className="prt-cover-beeld-leeg">
               <span>Geen gevelafbeelding beschikbaar</span>

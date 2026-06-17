@@ -63,11 +63,11 @@ Eerst alleen de **visuele basis en voorbeeldtemplates** met dummy-inhoud, om de 
 
 ## Afhankelijkheden & raakvlakken
 
-- **V1.4 Opleverrapportage / V1.5 Rapportenmodule** — opleverrapporten vallen onder familie A; de documentmotor wordt de gedeelde opmaaklaag voor de live `print.tsx`-rapportage en de latere gepersisteerde rapporten. De documentmotor is daarmee een logische fundering vóór of samen met V1.4/V1.5.
+- **V1.4 Opleverrapportage / V1.5 Rapportenmodule** — opleverrapporten vallen onder familie A; de documentmotor wordt de gedeelde opmaaklaag voor de live `print.tsx`-rapportage en de latere gepersisteerde rapporten. De documentmotor is daarmee een logische fundering vóór of samen met V1.4/V1.5. **Integratie-light gebouwd (17 juni 2026):** `print.tsx` haalt zijn asset-URL's (logo, gevelbeeld, spotfoto's, plattegronden) nu via de gedeelde `resolveAssetUrl` op — functioneel identiek (byte-identieke URL's voor alle reële invoer). Het voorblad gebruikte al de Familie A-merktokens (#F23B0D + slate `#0f172a`), dus visueel is het al uitgelijnd; de zwaardere frame-overname (`DocumentFrame`/voorblad-component) is bewust uitgesteld om de fijn afgestelde print-/`html2canvas`-export en auto-print-gereedheid niet te regressen.
 - **DMS / Documentenbibliotheek (gebouwd)** — gegenereerde documenten landen als revisies in het DMS; versiebeheer en bevriezing sluiten aan op de bestaande documentrevisies.
 - **HRM / Personeel (parallel spoor)** — familie B levert de juridische/HRM-documenten; bouwt op de Werkgever-entiteit.
 - **Digitale ondertekening** — bewust als latere uitbreiding belegd (familie B is daar qua opmaak op voorbereid), niet in de eerste oplevering.
 
 ## Ontwikkelstop — opgeheven (13 juni 2026)
 
-De Ontwikkelstop is opgeheven; per-fase formeel akkoord vooraf is niet meer vereist (zie [`replit.md`](../../replit.md)). De eerste oplevering (visuele basis + vijf voorbeeldtemplates met dummy-content) is als eerste increment **gebouwd** en is beoordeelbaar in de preview. De verdieping — versiebeheer, PDF-generatie, latere digitale ondertekening en per-werkmaatschappij centraal beheer bovenop de Werkgever-entiteit — volgt in latere increments.
+De Ontwikkelstop is opgeheven; per-fase formeel akkoord vooraf is niet meer vereist (zie [`replit.md`](../../replit.md)). De eerste oplevering (visuele basis + vijf voorbeeldtemplates met dummy-content) is als eerste increment **gebouwd** en is beoordeelbaar in de preview. Als tweede increment is de **integratie-light in `print.tsx`** gebouwd (gedeelde `resolveAssetUrl`; zie het raakvlak V1.4/V1.5 hierboven). De verdieping — versiebeheer, PDF-generatie, latere digitale ondertekening en per-werkmaatschappij centraal beheer bovenop de Werkgever-entiteit — volgt in latere increments.
