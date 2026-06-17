@@ -63,8 +63,8 @@ export default function Gebouwen() {
         }}
       >
         <View style={{ width: "100%", maxWidth: inhoudMaxBreedte, alignSelf: "center" }}>
-        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-          <View style={{ flex: 1 }}>
+        <View>
+          <View style={{ width: "100%" }}>
             <Text style={{ color: c.primary, fontSize: 11, fontFamily: "Inter_700Bold", letterSpacing: 1.5, textTransform: "uppercase" }}>
               FPS Brandpreventie
             </Text>
@@ -75,7 +75,7 @@ export default function Gebouwen() {
               {gebruiker?.naam ?? "Monteur"}
             </Text>
           </View>
-          <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "flex-end", alignItems: "center", gap: 8, flexShrink: 1 }}>
+          <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "flex-start", alignItems: "center", gap: 8, marginTop: 14 }}>
             <Pressable
               onPress={() => router.push("/menu")}
               accessibilityLabel="Naar hoofdmenu"
