@@ -4,6 +4,7 @@ import {
   Image,
   KeyboardAvoidingView,
   Platform,
+  Pressable,
   ScrollView,
   Text,
   View,
@@ -20,13 +21,15 @@ export default function Login() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { isTablet } = useResponsive();
-  const { token, inloggen } = useAuth();
+  const { token, inloggen, biometrieBeschikbaar, biometrieAan, biometrieType, zetBiometrie } = useAuth();
 
   const [email, setEmail] = useState("");
   const [wachtwoord, setWachtwoord] = useState("");
   const [code, setCode] = useState("");
   const [bezig, setBezig] = useState(false);
   const [fout, setFout] = useState<string | null>(null);
+  const [biedBiometriAan, setBiedBiometriAan] = useState(false);
+  const [bezigBio, setBezigBio] = useState(false);
 
   if (token) return <Redirect href="/menu" />;
 
@@ -39,12 +42,115 @@ export default function Login() {
     setBezig(true);
     try {
       await inloggen(email, wachtwoord, code);
-      router.replace("/menu");
+      if (biometrieBeschikbaar && !biometrieAan) {
+        setBiedBiometriAan(true);
+      } else {
+        router.replace("/menu");
+      }
     } catch (e) {
       setFout(e instanceof Error ? e.message : "Inloggen mislukt");
     } finally {
       setBezig(false);
     }
+  }
+
+  async function schakelBiometriIn() {
+    if (bezigBio) return;
+    setBezigBio(true);
+    try {
+      await zetBiometrie(true);
+    } finally {
+      setBezigBio(false);
+    }
+    router.replace("/menu");
+  }
+
+  function slaOver() {
+    router.replace("/menu");
+  }
+
+  const maxBreedte = isTablet ? 460 : undefined;
+
+  if (biedBiometriAan) {
+    return (
+      <View
+        style={{
+          flex: 1,
+          backgroundColor: c.dark,
+          paddingTop: bovenInset(insets) + 40,
+          paddingHorizontal: 24,
+          paddingBottom: insets.bottom + 32,
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <View style={{ width: "100%", maxWidth: maxBreedte, alignItems: "center", gap: 28 }}>
+          <View style={{ alignItems: "center", gap: 16 }}>
+            <View
+              style={{
+                backgroundColor: c.primary,
+                borderRadius: 20,
+                width: 72,
+                height: 72,
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <Text style={{ fontSize: 28, color: "#fff", fontFamily: "Inter_700Bold" }}>
+                {biometrieType.charAt(0).toUpperCase()}
+              </Text>
+            </View>
+            <Text
+              style={{
+                color: c.darkForeground,
+                fontSize: 22,
+                fontFamily: "Inter_700Bold",
+                textAlign: "center",
+              }}
+            >
+              Snel ontgrendelen inschakelen?
+            </Text>
+            <Text
+              style={{
+                color: c.darkMuted,
+                fontSize: 15,
+                fontFamily: "Inter_400Regular",
+                textAlign: "center",
+                lineHeight: 22,
+              }}
+            >
+              Gebruik{" "}
+              <Text style={{ fontFamily: "Inter_600SemiBold", color: c.darkForeground }}>
+                {biometrieType}
+              </Text>{" "}
+              de volgende keer om de app snel te openen. Je sessie blijft veilig opgeslagen op dit
+              toestel.
+            </Text>
+          </View>
+
+          <View style={{ width: "100%", gap: 14 }}>
+            <Knop
+              titel={`Inschakelen met ${biometrieType}`}
+              onPress={schakelBiometriIn}
+              bezig={bezigBio}
+              groot
+            />
+            <Pressable onPress={slaOver} style={{ paddingVertical: 12 }}>
+              <Text
+                style={{
+                  color: c.darkMuted,
+                  fontSize: 15,
+                  textAlign: "center",
+                  fontFamily: "Inter_600SemiBold",
+                }}
+              >
+                Niet nu
+              </Text>
+            </Pressable>
+          </View>
+        </View>
+      </View>
+    );
   }
 
   return (
@@ -56,7 +162,7 @@ export default function Login() {
         contentContainerStyle={{ flexGrow: 1, justifyContent: "center" }}
         keyboardShouldPersistTaps="handled"
       >
-        <View style={{ paddingTop: bovenInset(insets) + 40, paddingHorizontal: 24, paddingBottom: 40, width: "100%", maxWidth: isTablet ? 460 : undefined, alignSelf: "center" }}>
+        <View style={{ paddingTop: bovenInset(insets) + 40, paddingHorizontal: 24, paddingBottom: 40, width: "100%", maxWidth: maxBreedte, alignSelf: "center" }}>
           <View style={{ alignItems: "center", marginBottom: 36 }}>
             <View
               style={{
