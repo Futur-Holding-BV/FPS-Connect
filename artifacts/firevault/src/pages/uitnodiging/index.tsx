@@ -131,8 +131,8 @@ export default function ActivatiePagina({ token }: Props) {
           <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-primary mb-4">
             <ShieldCheck className="h-7 w-7 text-white" />
           </div>
-          <p className="text-white font-semibold text-lg">FPS Brandpreventie</p>
-          <p className="text-zinc-400 text-sm">Platform voor brandpreventie</p>
+          <p className="text-white font-semibold text-lg">FPS Connect</p>
+          <p className="text-zinc-400 text-sm">Beheer- en inspectieplatform</p>
         </div>
 
         <div className="bg-white rounded-xl shadow-xl overflow-hidden">
@@ -325,7 +325,7 @@ export default function ActivatiePagina({ token }: Props) {
         </div>
 
         <p className="text-center text-zinc-600 text-xs mt-6">
-          FPS Brandpreventie &bull; Vragen? Neem contact op met uw beheerder.
+          FPS Connect &bull; Vragen? Neem contact op met uw beheerder.
         </p>
       </div>
     </div>
