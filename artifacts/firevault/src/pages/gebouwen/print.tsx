@@ -23,11 +23,21 @@ import {
   useBewaarOpleverrapport,
   useGetRapport,
   useUpdateRapport,
+  useMaakRapportDefinitief,
   type Verdieping,
   type VoorzieningType,
   type Cluster,
 } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { useAuth } from "@/context/auth-context";
 import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
 import { useToast } from "@/hooks/use-toast";
@@ -1501,6 +1511,31 @@ export default function GebouwPrint() {
   const documentnummer = `OPL-${gebouw.projectnummer ?? gebouw.werknummer ?? gebouwId}`;
   const opsteller      = gebruiker?.naam ?? "—";
   const magOpslaanInDms = heeftNiveau("bibliotheek", 3);
+  const magDefinitiefMaken = heeftNiveau("rapporten", 3);
+
+  const definitiefMaken = useMaakRapportDefinitief();
+  const [definitiefOpen, setDefinitiefOpen] = useState(false);
+  const [definitiefDagen, setDefinitiefDagen] = useState("30");
+
+  async function handleDefinitief() {
+    if (!rapportId || !gebouwId) return;
+    const dagen = Number(definitiefDagen);
+    if (isNaN(dagen) || dagen < 1 || dagen > 365) {
+      toast({ title: "Voer een geldig aantal dagen in (1–365)", variant: "destructive" });
+      return;
+    }
+    try {
+      await definitiefMaken.mutateAsync({
+        id: gebouwId,
+        rapportId,
+        data: { reactietermijn_dagen: dagen },
+      });
+      toast({ title: "Rapport definitief gemaakt", description: `Reactietermijn: ${dagen} dag${dagen !== 1 ? "en" : ""}` });
+      setDefinitiefOpen(false);
+    } catch {
+      toast({ title: "Definitief maken mislukt", variant: "destructive" });
+    }
+  }
 
   async function slaOpInDms() {
     if (bezigOpslaan) return;
@@ -1935,6 +1970,16 @@ export default function GebouwPrint() {
             <Button size="sm" variant="outline" onClick={slaOpInDms} disabled={!allesGereed || bezigOpslaan}>
               {bezigOpslaan ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
               {bezigOpslaan ? "Opslaan…" : "Opslaan in DMS"}
+            </Button>
+          )}
+          {rapportId && huidigRapport?.status === "concept" && magDefinitiefMaken && (
+            <Button
+              size="sm"
+              onClick={() => { setDefinitiefDagen("30"); setDefinitiefOpen(true); }}
+              disabled={definitiefMaken.isPending}
+            >
+              {definitiefMaken.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Lock className="h-4 w-4" />}
+              Definitief maken
             </Button>
           )}
           <Button size="sm" onClick={() => window.print()} disabled={!allesGereed}>
@@ -2708,6 +2753,51 @@ export default function GebouwPrint() {
       </div>
         </div>{/* .prt-preview */}
       </div>{/* .prt-layout */}
+
+      {/* Definitief maken dialog */}
+      <Dialog open={definitiefOpen} onOpenChange={setDefinitiefOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Rapport definitief maken</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-2">
+            <p className="text-sm text-muted-foreground">
+              Het rapport wordt definitief gemaakt en de documentrevisies worden bevroren.
+              Stel de reactietermijn in (aantal dagen na vaststelling).
+            </p>
+            {huidigRapport && (
+              <div className="rounded-md border bg-muted/40 p-3 text-sm">
+                <div className="font-medium">
+                  {huidigRapport.titel || RAPPORT_TYPE_LABEL[huidigRapport.rapport_type as RapportType] || huidigRapport.rapport_type}
+                </div>
+                <div className="text-muted-foreground text-xs mt-0.5">v{huidigRapport.versie}</div>
+              </div>
+            )}
+            <div className="space-y-1.5">
+              <Label>Reactietermijn (dagen)</Label>
+              <Input
+                type="number"
+                min={1}
+                max={365}
+                value={definitiefDagen}
+                onChange={(e) => setDefinitiefDagen(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">
+                Standaard 30 dagen. Wettelijk minimum varieert per type inspectie.
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDefinitiefOpen(false)}>
+              Annuleren
+            </Button>
+            <Button onClick={handleDefinitief} disabled={definitiefMaken.isPending}>
+              {definitiefMaken.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+              Definitief maken
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
