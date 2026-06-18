@@ -23,7 +23,7 @@ const ROUTES: { sleutel: string; route: RegExp }[] = [
   { sleutel: "gebouwen", route: /\/gebouwen(\b|\?|$)/ },
   { sleutel: "planning", route: /\/planning(\b|\?|$)/ },
   { sleutel: "personeel", route: /\/hrm(\b|\?|$)/ },
-  { sleutel: "uren", route: /\/binnenkort(\b|\?|$)/ },
+  { sleutel: "uren", route: /\/uren(\b|\?|$)/ },
   { sleutel: "berichten", route: /\/berichten(\b|\?|$)/ },
 ];
 
