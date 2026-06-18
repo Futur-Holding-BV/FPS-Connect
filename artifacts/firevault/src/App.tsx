@@ -59,6 +59,8 @@ import OffertesPagina from "@/pages/offertes/index";
 import DocumentenPagina from "@/pages/documenten/index";
 import { OndersteuningWidget } from "@/components/ondersteuning-widget";
 import RapportenPagina from "@/pages/rapporten/index";
+import UrenPagina from "@/pages/uren/index";
+import WeekstatenPaginaComponent from "@/pages/uren/weekstaten";
 import ToolboxPagina from "@/pages/toolbox/index";
 import BerichtenPagina from "@/pages/berichten/index";
 import ConnectPlanning from "@/pages/connect/planning";
@@ -79,6 +81,7 @@ import OneAbonnementen from "@/pages/one/abonnementen";
 import { HeatmapTracker } from "@/components/heatmap-tracker";
 
 const queryClient = new QueryClient();
+const WeekstatenPagina = () => <WeekstatenPaginaComponent />;
 
 function ModuleNietBeschikbaar({ naam }: { naam: string }) {
   return (
@@ -136,6 +139,8 @@ function BeheerderPortal() {
         <Route path="/beheer/documentopmaak" component={DocumentopmaakBeheer} />
         <Route path="/beheer/mail" component={MailBeheer} />
         <Route path="/documenten" component={DocumentenPagina} />
+        <Route path="/uren" component={UrenPagina} />
+        <Route path="/weekstaten" component={WeekstatenPagina} />
         <Route path="/rapporten" component={RapportenPagina} />
         <Route path="/toolbox" component={ToolboxPagina} />
         <Route path="/berichten" component={BerichtenPagina} />
@@ -240,6 +245,8 @@ function PermissiePortal() {
         <Route path="/beheer/documentopmaak" component={DocumentopmaakBeheer} />
         <Route path="/beheer/mail" component={MailBeheer} />
         <Route path="/documenten" component={DocumentenPagina} />
+        <Route path="/uren" component={UrenPagina} />
+        <Route path="/weekstaten" component={WeekstatenPagina} />
         <Route path="/rapporten" component={RapportenPagina} />
         <Route path="/toolbox" component={ToolboxPagina} />
         <Route path="/berichten" component={BerichtenPagina} />

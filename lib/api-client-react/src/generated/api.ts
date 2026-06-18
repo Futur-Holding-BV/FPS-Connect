@@ -120,6 +120,7 @@ import type {
   GereedschapMelding,
   GereedschapMeldingInput,
   GetGebouwGevelbeeld200,
+  GetMijnWeekUrenParams,
   GetRecenteActiviteitParams,
   GetVervaldagenParams,
   GetZiekmeldingenStatistiekenParams,
@@ -159,8 +160,10 @@ import type {
   ListRapportenParams,
   ListTestrapportenParams,
   ListToolboxBerichtenParams,
+  ListUrenParams,
   ListVoorzieningTypesParams,
   ListVoorzieningenParams,
+  ListWeekStatenParams,
   ListZiekmeldingenParams,
   LoginInput,
   LoginPoging,
@@ -255,6 +258,8 @@ import type {
   UitnodigingInfo,
   UploadUrlRequest,
   UploadUrlResponse,
+  UrenRegistratie,
+  UrenRegistratieInput,
   Verdieping,
   VerdiepingInput,
   VerdiepingUpdate,
@@ -278,6 +283,11 @@ import type {
   WachtwoordResetInput,
   WachtwoordVergetenInput,
   WachtwoordWijzigen,
+  WeekSamenvatting,
+  WeekStaat,
+  WeekStaatAfwijzenInput,
+  WeekStaatInput,
+  WeekStaatPatch,
   Werkgever,
   WerkgeverInput,
   Ziekmelding,
@@ -25621,6 +25631,975 @@ export const useDeleteModCalcRegel = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getDeleteModCalcRegelMutationOptions(options));
+    }
+
+export const getListUrenUrl = (params?: ListUrenParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/uren?${stringifiedParams}` : `/api/uren`
+}
+
+/**
+ * @summary Lijst urenregistraties
+ */
+export const listUren = async (params?: ListUrenParams, options?: RequestInit): Promise<UrenRegistratie[]> => {
+
+  return customFetch<UrenRegistratie[]>(getListUrenUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListUrenQueryKey = (params?: ListUrenParams,) => {
+    return [
+    `/api/uren`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListUrenQueryOptions = <TData = Awaited<ReturnType<typeof listUren>>, TError = ErrorType<unknown>>(params?: ListUrenParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listUren>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListUrenQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listUren>>> = ({ signal }) => listUren(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listUren>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListUrenQueryResult = NonNullable<Awaited<ReturnType<typeof listUren>>>
+export type ListUrenQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Lijst urenregistraties
+ */
+
+export function useListUren<TData = Awaited<ReturnType<typeof listUren>>, TError = ErrorType<unknown>>(
+ params?: ListUrenParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listUren>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListUrenQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateUrenRegistratieUrl = () => {
+
+
+
+
+  return `/api/uren`
+}
+
+/**
+ * @summary Nieuwe urenregistratie aanmaken
+ */
+export const createUrenRegistratie = async (urenRegistratieInput: UrenRegistratieInput, options?: RequestInit): Promise<UrenRegistratie> => {
+
+  return customFetch<UrenRegistratie>(getCreateUrenRegistratieUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(urenRegistratieInput)
+  }
+);}
+
+
+
+
+export const getCreateUrenRegistratieMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createUrenRegistratie>>, TError,{data: BodyType<UrenRegistratieInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createUrenRegistratie>>, TError,{data: BodyType<UrenRegistratieInput>}, TContext> => {
+
+const mutationKey = ['createUrenRegistratie'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createUrenRegistratie>>, {data: BodyType<UrenRegistratieInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createUrenRegistratie(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateUrenRegistratieMutationResult = NonNullable<Awaited<ReturnType<typeof createUrenRegistratie>>>
+    export type CreateUrenRegistratieMutationBody = BodyType<UrenRegistratieInput>
+    export type CreateUrenRegistratieMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Nieuwe urenregistratie aanmaken
+ */
+export const useCreateUrenRegistratie = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createUrenRegistratie>>, TError,{data: BodyType<UrenRegistratieInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createUrenRegistratie>>,
+        TError,
+        {data: BodyType<UrenRegistratieInput>},
+        TContext
+      > => {
+      return useMutation(getCreateUrenRegistratieMutationOptions(options));
+    }
+
+export const getGetMijnWeekUrenUrl = (params?: GetMijnWeekUrenParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/uren/mijn-week?${stringifiedParams}` : `/api/uren/mijn-week`
+}
+
+/**
+ * @summary Eigen uren van de huidige week ophalen
+ */
+export const getMijnWeekUren = async (params?: GetMijnWeekUrenParams, options?: RequestInit): Promise<WeekSamenvatting> => {
+
+  return customFetch<WeekSamenvatting>(getGetMijnWeekUrenUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetMijnWeekUrenQueryKey = (params?: GetMijnWeekUrenParams,) => {
+    return [
+    `/api/uren/mijn-week`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetMijnWeekUrenQueryOptions = <TData = Awaited<ReturnType<typeof getMijnWeekUren>>, TError = ErrorType<unknown>>(params?: GetMijnWeekUrenParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMijnWeekUren>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetMijnWeekUrenQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getMijnWeekUren>>> = ({ signal }) => getMijnWeekUren(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getMijnWeekUren>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetMijnWeekUrenQueryResult = NonNullable<Awaited<ReturnType<typeof getMijnWeekUren>>>
+export type GetMijnWeekUrenQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Eigen uren van de huidige week ophalen
+ */
+
+export function useGetMijnWeekUren<TData = Awaited<ReturnType<typeof getMijnWeekUren>>, TError = ErrorType<unknown>>(
+ params?: GetMijnWeekUrenParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMijnWeekUren>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetMijnWeekUrenQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetUrenRegistratieUrl = (id: number,) => {
+
+
+
+
+  return `/api/uren/${id}`
+}
+
+/**
+ * @summary Enkele urenregistratie ophalen
+ */
+export const getUrenRegistratie = async (id: number, options?: RequestInit): Promise<UrenRegistratie> => {
+
+  return customFetch<UrenRegistratie>(getGetUrenRegistratieUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetUrenRegistratieQueryKey = (id: number,) => {
+    return [
+    `/api/uren/${id}`
+    ] as const;
+    }
+
+
+export const getGetUrenRegistratieQueryOptions = <TData = Awaited<ReturnType<typeof getUrenRegistratie>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getUrenRegistratie>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetUrenRegistratieQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getUrenRegistratie>>> = ({ signal }) => getUrenRegistratie(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getUrenRegistratie>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetUrenRegistratieQueryResult = NonNullable<Awaited<ReturnType<typeof getUrenRegistratie>>>
+export type GetUrenRegistratieQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Enkele urenregistratie ophalen
+ */
+
+export function useGetUrenRegistratie<TData = Awaited<ReturnType<typeof getUrenRegistratie>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getUrenRegistratie>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetUrenRegistratieQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getUpdateUrenRegistratieUrl = (id: number,) => {
+
+
+
+
+  return `/api/uren/${id}`
+}
+
+/**
+ * @summary Urenregistratie bijwerken
+ */
+export const updateUrenRegistratie = async (id: number,
+    urenRegistratieInput: UrenRegistratieInput, options?: RequestInit): Promise<UrenRegistratie> => {
+
+  return customFetch<UrenRegistratie>(getUpdateUrenRegistratieUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(urenRegistratieInput)
+  }
+);}
+
+
+
+
+export const getUpdateUrenRegistratieMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateUrenRegistratie>>, TError,{id: number;data: BodyType<UrenRegistratieInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateUrenRegistratie>>, TError,{id: number;data: BodyType<UrenRegistratieInput>}, TContext> => {
+
+const mutationKey = ['updateUrenRegistratie'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateUrenRegistratie>>, {id: number;data: BodyType<UrenRegistratieInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateUrenRegistratie(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateUrenRegistratieMutationResult = NonNullable<Awaited<ReturnType<typeof updateUrenRegistratie>>>
+    export type UpdateUrenRegistratieMutationBody = BodyType<UrenRegistratieInput>
+    export type UpdateUrenRegistratieMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Urenregistratie bijwerken
+ */
+export const useUpdateUrenRegistratie = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateUrenRegistratie>>, TError,{id: number;data: BodyType<UrenRegistratieInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateUrenRegistratie>>,
+        TError,
+        {id: number;data: BodyType<UrenRegistratieInput>},
+        TContext
+      > => {
+      return useMutation(getUpdateUrenRegistratieMutationOptions(options));
+    }
+
+export const getDeleteUrenRegistratieUrl = (id: number,) => {
+
+
+
+
+  return `/api/uren/${id}`
+}
+
+/**
+ * @summary Urenregistratie verwijderen
+ */
+export const deleteUrenRegistratie = async (id: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteUrenRegistratieUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteUrenRegistratieMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteUrenRegistratie>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteUrenRegistratie>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deleteUrenRegistratie'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteUrenRegistratie>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteUrenRegistratie(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteUrenRegistratieMutationResult = NonNullable<Awaited<ReturnType<typeof deleteUrenRegistratie>>>
+
+    export type DeleteUrenRegistratieMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Urenregistratie verwijderen
+ */
+export const useDeleteUrenRegistratie = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteUrenRegistratie>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteUrenRegistratie>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeleteUrenRegistratieMutationOptions(options));
+    }
+
+export const getListWeekStatenUrl = (params?: ListWeekStatenParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/weekstaten?${stringifiedParams}` : `/api/weekstaten`
+}
+
+/**
+ * @summary Lijst weekstaten
+ */
+export const listWeekStaten = async (params?: ListWeekStatenParams, options?: RequestInit): Promise<WeekStaat[]> => {
+
+  return customFetch<WeekStaat[]>(getListWeekStatenUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListWeekStatenQueryKey = (params?: ListWeekStatenParams,) => {
+    return [
+    `/api/weekstaten`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListWeekStatenQueryOptions = <TData = Awaited<ReturnType<typeof listWeekStaten>>, TError = ErrorType<unknown>>(params?: ListWeekStatenParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listWeekStaten>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListWeekStatenQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listWeekStaten>>> = ({ signal }) => listWeekStaten(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listWeekStaten>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListWeekStatenQueryResult = NonNullable<Awaited<ReturnType<typeof listWeekStaten>>>
+export type ListWeekStatenQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Lijst weekstaten
+ */
+
+export function useListWeekStaten<TData = Awaited<ReturnType<typeof listWeekStaten>>, TError = ErrorType<unknown>>(
+ params?: ListWeekStatenParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listWeekStaten>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListWeekStatenQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateWeekStaatUrl = () => {
+
+
+
+
+  return `/api/weekstaten`
+}
+
+/**
+ * @summary Weekstaat aanmaken of genereren
+ */
+export const createWeekStaat = async (weekStaatInput: WeekStaatInput, options?: RequestInit): Promise<WeekStaat> => {
+
+  return customFetch<WeekStaat>(getCreateWeekStaatUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(weekStaatInput)
+  }
+);}
+
+
+
+
+export const getCreateWeekStaatMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createWeekStaat>>, TError,{data: BodyType<WeekStaatInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createWeekStaat>>, TError,{data: BodyType<WeekStaatInput>}, TContext> => {
+
+const mutationKey = ['createWeekStaat'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createWeekStaat>>, {data: BodyType<WeekStaatInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createWeekStaat(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateWeekStaatMutationResult = NonNullable<Awaited<ReturnType<typeof createWeekStaat>>>
+    export type CreateWeekStaatMutationBody = BodyType<WeekStaatInput>
+    export type CreateWeekStaatMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Weekstaat aanmaken of genereren
+ */
+export const useCreateWeekStaat = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createWeekStaat>>, TError,{data: BodyType<WeekStaatInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createWeekStaat>>,
+        TError,
+        {data: BodyType<WeekStaatInput>},
+        TContext
+      > => {
+      return useMutation(getCreateWeekStaatMutationOptions(options));
+    }
+
+export const getGetWeekStaatUrl = (id: number,) => {
+
+
+
+
+  return `/api/weekstaten/${id}`
+}
+
+/**
+ * @summary Weekstaat ophalen
+ */
+export const getWeekStaat = async (id: number, options?: RequestInit): Promise<WeekStaat> => {
+
+  return customFetch<WeekStaat>(getGetWeekStaatUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetWeekStaatQueryKey = (id: number,) => {
+    return [
+    `/api/weekstaten/${id}`
+    ] as const;
+    }
+
+
+export const getGetWeekStaatQueryOptions = <TData = Awaited<ReturnType<typeof getWeekStaat>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getWeekStaat>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetWeekStaatQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getWeekStaat>>> = ({ signal }) => getWeekStaat(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getWeekStaat>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetWeekStaatQueryResult = NonNullable<Awaited<ReturnType<typeof getWeekStaat>>>
+export type GetWeekStaatQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Weekstaat ophalen
+ */
+
+export function useGetWeekStaat<TData = Awaited<ReturnType<typeof getWeekStaat>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getWeekStaat>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetWeekStaatQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getUpdateWeekStaatUrl = (id: number,) => {
+
+
+
+
+  return `/api/weekstaten/${id}`
+}
+
+/**
+ * @summary Weekstaat bijwerken
+ */
+export const updateWeekStaat = async (id: number,
+    weekStaatPatch: WeekStaatPatch, options?: RequestInit): Promise<WeekStaat> => {
+
+  return customFetch<WeekStaat>(getUpdateWeekStaatUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(weekStaatPatch)
+  }
+);}
+
+
+
+
+export const getUpdateWeekStaatMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateWeekStaat>>, TError,{id: number;data: BodyType<WeekStaatPatch>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateWeekStaat>>, TError,{id: number;data: BodyType<WeekStaatPatch>}, TContext> => {
+
+const mutationKey = ['updateWeekStaat'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateWeekStaat>>, {id: number;data: BodyType<WeekStaatPatch>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateWeekStaat(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateWeekStaatMutationResult = NonNullable<Awaited<ReturnType<typeof updateWeekStaat>>>
+    export type UpdateWeekStaatMutationBody = BodyType<WeekStaatPatch>
+    export type UpdateWeekStaatMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Weekstaat bijwerken
+ */
+export const useUpdateWeekStaat = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateWeekStaat>>, TError,{id: number;data: BodyType<WeekStaatPatch>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateWeekStaat>>,
+        TError,
+        {id: number;data: BodyType<WeekStaatPatch>},
+        TContext
+      > => {
+      return useMutation(getUpdateWeekStaatMutationOptions(options));
+    }
+
+export const getWeekStaatIndienenUrl = (id: number,) => {
+
+
+
+
+  return `/api/weekstaten/${id}/indienen`
+}
+
+/**
+ * @summary Weekstaat indienen ter goedkeuring
+ */
+export const weekStaatIndienen = async (id: number, options?: RequestInit): Promise<WeekStaat> => {
+
+  return customFetch<WeekStaat>(getWeekStaatIndienenUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getWeekStaatIndienenMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof weekStaatIndienen>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof weekStaatIndienen>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['weekStaatIndienen'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof weekStaatIndienen>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  weekStaatIndienen(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type WeekStaatIndienenMutationResult = NonNullable<Awaited<ReturnType<typeof weekStaatIndienen>>>
+
+    export type WeekStaatIndienenMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Weekstaat indienen ter goedkeuring
+ */
+export const useWeekStaatIndienen = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof weekStaatIndienen>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof weekStaatIndienen>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getWeekStaatIndienenMutationOptions(options));
+    }
+
+export const getWeekStaatGoedkeurenUrl = (id: number,) => {
+
+
+
+
+  return `/api/weekstaten/${id}/goedkeuren`
+}
+
+/**
+ * @summary Weekstaat goedkeuren
+ */
+export const weekStaatGoedkeuren = async (id: number, options?: RequestInit): Promise<WeekStaat> => {
+
+  return customFetch<WeekStaat>(getWeekStaatGoedkeurenUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getWeekStaatGoedkeurenMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof weekStaatGoedkeuren>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof weekStaatGoedkeuren>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['weekStaatGoedkeuren'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof weekStaatGoedkeuren>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  weekStaatGoedkeuren(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type WeekStaatGoedkeurenMutationResult = NonNullable<Awaited<ReturnType<typeof weekStaatGoedkeuren>>>
+
+    export type WeekStaatGoedkeurenMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Weekstaat goedkeuren
+ */
+export const useWeekStaatGoedkeuren = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof weekStaatGoedkeuren>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof weekStaatGoedkeuren>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getWeekStaatGoedkeurenMutationOptions(options));
+    }
+
+export const getWeekStaatAfwijzenUrl = (id: number,) => {
+
+
+
+
+  return `/api/weekstaten/${id}/afwijzen`
+}
+
+/**
+ * @summary Weekstaat afwijzen
+ */
+export const weekStaatAfwijzen = async (id: number,
+    weekStaatAfwijzenInput: WeekStaatAfwijzenInput, options?: RequestInit): Promise<WeekStaat> => {
+
+  return customFetch<WeekStaat>(getWeekStaatAfwijzenUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(weekStaatAfwijzenInput)
+  }
+);}
+
+
+
+
+export const getWeekStaatAfwijzenMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof weekStaatAfwijzen>>, TError,{id: number;data: BodyType<WeekStaatAfwijzenInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof weekStaatAfwijzen>>, TError,{id: number;data: BodyType<WeekStaatAfwijzenInput>}, TContext> => {
+
+const mutationKey = ['weekStaatAfwijzen'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof weekStaatAfwijzen>>, {id: number;data: BodyType<WeekStaatAfwijzenInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  weekStaatAfwijzen(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type WeekStaatAfwijzenMutationResult = NonNullable<Awaited<ReturnType<typeof weekStaatAfwijzen>>>
+    export type WeekStaatAfwijzenMutationBody = BodyType<WeekStaatAfwijzenInput>
+    export type WeekStaatAfwijzenMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Weekstaat afwijzen
+ */
+export const useWeekStaatAfwijzen = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof weekStaatAfwijzen>>, TError,{id: number;data: BodyType<WeekStaatAfwijzenInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof weekStaatAfwijzen>>,
+        TError,
+        {id: number;data: BodyType<WeekStaatAfwijzenInput>},
+        TContext
+      > => {
+      return useMutation(getWeekStaatAfwijzenMutationOptions(options));
     }
 
 export const getListGereedschappenUrl = (params?: ListGereedschappenParams,) => {

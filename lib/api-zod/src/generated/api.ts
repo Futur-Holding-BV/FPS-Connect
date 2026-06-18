@@ -8608,6 +8608,397 @@ export const DeleteModCalcRegelResponse = zod.void()
 
 
 /**
+ * @summary Lijst urenregistraties
+ */
+export const ListUrenQueryParams = zod.object({
+  "medewerker_id": zod.coerce.number().optional(),
+  "datum_van": zod.coerce.string().optional(),
+  "datum_tot": zod.coerce.string().optional(),
+  "week": zod.coerce.number().optional(),
+  "jaar": zod.coerce.number().optional(),
+  "status": zod.coerce.string().optional(),
+  "gebouw_id": zod.coerce.number().optional()
+})
+
+export const ListUrenResponseItem = zod.object({
+  "id": zod.number(),
+  "datum": zod.string(),
+  "medewerker_id": zod.number(),
+  "medewerker_naam": zod.string().nullish(),
+  "gebouw_id": zod.number().nullish(),
+  "gebouw_naam": zod.string().nullish(),
+  "project_naam": zod.string().nullish(),
+  "werkzaamheden": zod.string().nullish(),
+  "begin_tijd": zod.string(),
+  "eind_tijd": zod.string(),
+  "pauze_minuten": zod.number(),
+  "netto_uren": zod.number(),
+  "opmerkingen": zod.string().nullish(),
+  "status": zod.string(),
+  "planning_item_id": zod.number().nullish(),
+  "ingediend_op": zod.string().nullish(),
+  "goedgekeurd_door_id": zod.number().nullish(),
+  "goedgekeurd_door_naam": zod.string().nullish(),
+  "goedgekeurd_op": zod.string().nullish(),
+  "afgewezen": zod.boolean(),
+  "afwijzing_reden": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+export const ListUrenResponse = zod.array(ListUrenResponseItem)
+
+
+/**
+ * @summary Nieuwe urenregistratie aanmaken
+ */
+export const CreateUrenRegistratieBody = zod.object({
+  "datum": zod.string(),
+  "medewerker_id": zod.number().optional(),
+  "gebouw_id": zod.number().nullish(),
+  "project_naam": zod.string().nullish(),
+  "werkzaamheden": zod.string().nullish(),
+  "begin_tijd": zod.string(),
+  "eind_tijd": zod.string(),
+  "pauze_minuten": zod.number().optional(),
+  "opmerkingen": zod.string().nullish(),
+  "planning_item_id": zod.number().nullish()
+})
+
+export const CreateUrenRegistratieResponse = zod.void()
+
+
+/**
+ * @summary Eigen uren van de huidige week ophalen
+ */
+export const GetMijnWeekUrenQueryParams = zod.object({
+  "jaar": zod.coerce.number().optional(),
+  "week": zod.coerce.number().optional()
+})
+
+export const GetMijnWeekUrenResponse = zod.object({
+  "medewerker_id": zod.number().nullable(),
+  "jaar": zod.number(),
+  "week_nummer": zod.number(),
+  "datum_van": zod.string(),
+  "datum_tot": zod.string(),
+  "uren": zod.array(zod.object({
+  "id": zod.number(),
+  "datum": zod.string(),
+  "medewerker_id": zod.number(),
+  "medewerker_naam": zod.string().nullish(),
+  "gebouw_id": zod.number().nullish(),
+  "gebouw_naam": zod.string().nullish(),
+  "project_naam": zod.string().nullish(),
+  "werkzaamheden": zod.string().nullish(),
+  "begin_tijd": zod.string(),
+  "eind_tijd": zod.string(),
+  "pauze_minuten": zod.number(),
+  "netto_uren": zod.number(),
+  "opmerkingen": zod.string().nullish(),
+  "status": zod.string(),
+  "planning_item_id": zod.number().nullish(),
+  "ingediend_op": zod.string().nullish(),
+  "goedgekeurd_door_id": zod.number().nullish(),
+  "goedgekeurd_door_naam": zod.string().nullish(),
+  "goedgekeurd_op": zod.string().nullish(),
+  "afgewezen": zod.boolean(),
+  "afwijzing_reden": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})),
+  "planning_items": zod.array(zod.object({
+
+}).passthrough()),
+  "totaal_uren": zod.number(),
+  "adv_uren": zod.number()
+})
+
+
+/**
+ * @summary Enkele urenregistratie ophalen
+ */
+export const GetUrenRegistratieParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetUrenRegistratieResponse = zod.object({
+  "id": zod.number(),
+  "datum": zod.string(),
+  "medewerker_id": zod.number(),
+  "medewerker_naam": zod.string().nullish(),
+  "gebouw_id": zod.number().nullish(),
+  "gebouw_naam": zod.string().nullish(),
+  "project_naam": zod.string().nullish(),
+  "werkzaamheden": zod.string().nullish(),
+  "begin_tijd": zod.string(),
+  "eind_tijd": zod.string(),
+  "pauze_minuten": zod.number(),
+  "netto_uren": zod.number(),
+  "opmerkingen": zod.string().nullish(),
+  "status": zod.string(),
+  "planning_item_id": zod.number().nullish(),
+  "ingediend_op": zod.string().nullish(),
+  "goedgekeurd_door_id": zod.number().nullish(),
+  "goedgekeurd_door_naam": zod.string().nullish(),
+  "goedgekeurd_op": zod.string().nullish(),
+  "afgewezen": zod.boolean(),
+  "afwijzing_reden": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+
+
+/**
+ * @summary Urenregistratie bijwerken
+ */
+export const UpdateUrenRegistratieParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateUrenRegistratieBody = zod.object({
+  "datum": zod.string(),
+  "medewerker_id": zod.number().optional(),
+  "gebouw_id": zod.number().nullish(),
+  "project_naam": zod.string().nullish(),
+  "werkzaamheden": zod.string().nullish(),
+  "begin_tijd": zod.string(),
+  "eind_tijd": zod.string(),
+  "pauze_minuten": zod.number().optional(),
+  "opmerkingen": zod.string().nullish(),
+  "planning_item_id": zod.number().nullish()
+})
+
+export const UpdateUrenRegistratieResponse = zod.object({
+  "id": zod.number(),
+  "datum": zod.string(),
+  "medewerker_id": zod.number(),
+  "medewerker_naam": zod.string().nullish(),
+  "gebouw_id": zod.number().nullish(),
+  "gebouw_naam": zod.string().nullish(),
+  "project_naam": zod.string().nullish(),
+  "werkzaamheden": zod.string().nullish(),
+  "begin_tijd": zod.string(),
+  "eind_tijd": zod.string(),
+  "pauze_minuten": zod.number(),
+  "netto_uren": zod.number(),
+  "opmerkingen": zod.string().nullish(),
+  "status": zod.string(),
+  "planning_item_id": zod.number().nullish(),
+  "ingediend_op": zod.string().nullish(),
+  "goedgekeurd_door_id": zod.number().nullish(),
+  "goedgekeurd_door_naam": zod.string().nullish(),
+  "goedgekeurd_op": zod.string().nullish(),
+  "afgewezen": zod.boolean(),
+  "afwijzing_reden": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+
+
+/**
+ * @summary Urenregistratie verwijderen
+ */
+export const DeleteUrenRegistratieParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteUrenRegistratieResponse = zod.void()
+
+
+/**
+ * @summary Lijst weekstaten
+ */
+export const ListWeekStatenQueryParams = zod.object({
+  "medewerker_id": zod.coerce.number().optional(),
+  "jaar": zod.coerce.number().optional(),
+  "week": zod.coerce.number().optional(),
+  "status": zod.coerce.string().optional()
+})
+
+export const ListWeekStatenResponseItem = zod.object({
+  "id": zod.number(),
+  "medewerker_id": zod.number(),
+  "medewerker_naam": zod.string().nullish(),
+  "jaar": zod.number(),
+  "week_nummer": zod.number(),
+  "status": zod.string(),
+  "totaal_uren": zod.number().nullish(),
+  "adv_uren": zod.number().nullish(),
+  "notities": zod.string().nullish(),
+  "afwijzing_reden": zod.string().nullish(),
+  "ingediend_op": zod.string().nullish(),
+  "goedgekeurd_door_id": zod.number().nullish(),
+  "goedgekeurd_door_naam": zod.string().nullish(),
+  "goedgekeurd_op": zod.string().nullish(),
+  "document_id": zod.number().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+export const ListWeekStatenResponse = zod.array(ListWeekStatenResponseItem)
+
+
+/**
+ * @summary Weekstaat aanmaken of genereren
+ */
+export const CreateWeekStaatBody = zod.object({
+  "medewerker_id": zod.number().optional(),
+  "jaar": zod.number(),
+  "week_nummer": zod.number(),
+  "notities": zod.string().nullish()
+})
+
+export const CreateWeekStaatResponse = zod.void()
+
+
+/**
+ * @summary Weekstaat ophalen
+ */
+export const GetWeekStaatParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetWeekStaatResponse = zod.object({
+  "id": zod.number(),
+  "medewerker_id": zod.number(),
+  "medewerker_naam": zod.string().nullish(),
+  "jaar": zod.number(),
+  "week_nummer": zod.number(),
+  "status": zod.string(),
+  "totaal_uren": zod.number().nullish(),
+  "adv_uren": zod.number().nullish(),
+  "notities": zod.string().nullish(),
+  "afwijzing_reden": zod.string().nullish(),
+  "ingediend_op": zod.string().nullish(),
+  "goedgekeurd_door_id": zod.number().nullish(),
+  "goedgekeurd_door_naam": zod.string().nullish(),
+  "goedgekeurd_op": zod.string().nullish(),
+  "document_id": zod.number().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+
+
+/**
+ * @summary Weekstaat bijwerken
+ */
+export const UpdateWeekStaatParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateWeekStaatBody = zod.object({
+  "notities": zod.string().nullish()
+})
+
+export const UpdateWeekStaatResponse = zod.object({
+  "id": zod.number(),
+  "medewerker_id": zod.number(),
+  "medewerker_naam": zod.string().nullish(),
+  "jaar": zod.number(),
+  "week_nummer": zod.number(),
+  "status": zod.string(),
+  "totaal_uren": zod.number().nullish(),
+  "adv_uren": zod.number().nullish(),
+  "notities": zod.string().nullish(),
+  "afwijzing_reden": zod.string().nullish(),
+  "ingediend_op": zod.string().nullish(),
+  "goedgekeurd_door_id": zod.number().nullish(),
+  "goedgekeurd_door_naam": zod.string().nullish(),
+  "goedgekeurd_op": zod.string().nullish(),
+  "document_id": zod.number().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+
+
+/**
+ * @summary Weekstaat indienen ter goedkeuring
+ */
+export const WeekStaatIndienenParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const WeekStaatIndienenResponse = zod.object({
+  "id": zod.number(),
+  "medewerker_id": zod.number(),
+  "medewerker_naam": zod.string().nullish(),
+  "jaar": zod.number(),
+  "week_nummer": zod.number(),
+  "status": zod.string(),
+  "totaal_uren": zod.number().nullish(),
+  "adv_uren": zod.number().nullish(),
+  "notities": zod.string().nullish(),
+  "afwijzing_reden": zod.string().nullish(),
+  "ingediend_op": zod.string().nullish(),
+  "goedgekeurd_door_id": zod.number().nullish(),
+  "goedgekeurd_door_naam": zod.string().nullish(),
+  "goedgekeurd_op": zod.string().nullish(),
+  "document_id": zod.number().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+
+
+/**
+ * @summary Weekstaat goedkeuren
+ */
+export const WeekStaatGoedkeurenParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const WeekStaatGoedkeurenResponse = zod.object({
+  "id": zod.number(),
+  "medewerker_id": zod.number(),
+  "medewerker_naam": zod.string().nullish(),
+  "jaar": zod.number(),
+  "week_nummer": zod.number(),
+  "status": zod.string(),
+  "totaal_uren": zod.number().nullish(),
+  "adv_uren": zod.number().nullish(),
+  "notities": zod.string().nullish(),
+  "afwijzing_reden": zod.string().nullish(),
+  "ingediend_op": zod.string().nullish(),
+  "goedgekeurd_door_id": zod.number().nullish(),
+  "goedgekeurd_door_naam": zod.string().nullish(),
+  "goedgekeurd_op": zod.string().nullish(),
+  "document_id": zod.number().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+
+
+/**
+ * @summary Weekstaat afwijzen
+ */
+export const WeekStaatAfwijzenParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const WeekStaatAfwijzenBody = zod.object({
+  "reden": zod.string()
+})
+
+export const WeekStaatAfwijzenResponse = zod.object({
+  "id": zod.number(),
+  "medewerker_id": zod.number(),
+  "medewerker_naam": zod.string().nullish(),
+  "jaar": zod.number(),
+  "week_nummer": zod.number(),
+  "status": zod.string(),
+  "totaal_uren": zod.number().nullish(),
+  "adv_uren": zod.number().nullish(),
+  "notities": zod.string().nullish(),
+  "afwijzing_reden": zod.string().nullish(),
+  "ingediend_op": zod.string().nullish(),
+  "goedgekeurd_door_id": zod.number().nullish(),
+  "goedgekeurd_door_naam": zod.string().nullish(),
+  "goedgekeurd_op": zod.string().nullish(),
+  "document_id": zod.number().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+
+
+/**
  * @summary Lijst gereedschappen
  */
 export const ListGereedschappenQueryParams = zod.object({

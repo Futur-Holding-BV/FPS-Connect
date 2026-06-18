@@ -66,6 +66,7 @@ function RootLayoutNav() {
       <Stack.Screen name="hrm/index" />
       <Stack.Screen name="hrm/opleidingen" />
       <Stack.Screen name="hrm/kennisbank" />
+      <Stack.Screen name="uren" />
       <Stack.Screen name="info" />
     </Stack>
   );

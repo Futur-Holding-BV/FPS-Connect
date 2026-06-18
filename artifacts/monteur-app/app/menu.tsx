@@ -45,9 +45,7 @@ export default function MenuScherm() {
       sleutel: "uren",
       label: "Uren",
       icoon: "stopwatch",
-      binnenkort: true,
-      onPress: () =>
-        router.push({ pathname: "/binnenkort", params: { titel: "Urenverantwoording" } }),
+      onPress: () => router.push("/uren"),
     },
     {
       sleutel: "berichten",

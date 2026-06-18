@@ -39,6 +39,8 @@ tags:
     description: Projectcalculaties en begrotingsregels (FPS Connect)
   - name: gereedschappen
     description: Gereedschapregistratie, bruikleenovereenkomsten en meldingen (FPS Connect)
+  - name: uren
+    description: Urenregistratie, weekstaten en ADV-berekening (FPS Connect)
 
 paths:
   /healthz:
@@ -7237,6 +7239,290 @@ paths:
         '204':
           description: Verwijderd
 
+  /uren:
+    get:
+      operationId: listUren
+      summary: Lijst urenregistraties
+      tags: [uren]
+      security: [{ cookieAuth: [] }, { bearerAuth: [] }]
+      parameters:
+        - in: query
+          name: medewerker_id
+          schema: { type: integer }
+        - in: query
+          name: datum_van
+          schema: { type: string }
+        - in: query
+          name: datum_tot
+          schema: { type: string }
+        - in: query
+          name: week
+          schema: { type: integer }
+        - in: query
+          name: jaar
+          schema: { type: integer }
+        - in: query
+          name: status
+          schema: { type: string }
+        - in: query
+          name: gebouw_id
+          schema: { type: integer }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/UrenRegistratie'
+    post:
+      operationId: createUrenRegistratie
+      summary: Nieuwe urenregistratie aanmaken
+      tags: [uren]
+      security: [{ cookieAuth: [] }, { bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UrenRegistratieInput'
+      responses:
+        '201':
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UrenRegistratie'
+
+  /uren/mijn-week:
+    get:
+      operationId: getMijnWeekUren
+      summary: Eigen uren van de huidige week ophalen
+      tags: [uren]
+      security: [{ cookieAuth: [] }, { bearerAuth: [] }]
+      parameters:
+        - in: query
+          name: jaar
+          schema: { type: integer }
+        - in: query
+          name: week
+          schema: { type: integer }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WeekSamenvatting'
+
+  /uren/{id}:
+    get:
+      operationId: getUrenRegistratie
+      summary: Enkele urenregistratie ophalen
+      tags: [uren]
+      security: [{ cookieAuth: [] }, { bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UrenRegistratie'
+    patch:
+      operationId: updateUrenRegistratie
+      summary: Urenregistratie bijwerken
+      tags: [uren]
+      security: [{ cookieAuth: [] }, { bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UrenRegistratieInput'
+      responses:
+        '200':
+          description: Bijgewerkt
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UrenRegistratie'
+    delete:
+      operationId: deleteUrenRegistratie
+      summary: Urenregistratie verwijderen
+      tags: [uren]
+      security: [{ cookieAuth: [] }, { bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        '204':
+          description: Verwijderd
+
+  /weekstaten:
+    get:
+      operationId: listWeekStaten
+      summary: Lijst weekstaten
+      tags: [uren]
+      security: [{ cookieAuth: [] }, { bearerAuth: [] }]
+      parameters:
+        - in: query
+          name: medewerker_id
+          schema: { type: integer }
+        - in: query
+          name: jaar
+          schema: { type: integer }
+        - in: query
+          name: week
+          schema: { type: integer }
+        - in: query
+          name: status
+          schema: { type: string }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/WeekStaat'
+    post:
+      operationId: createWeekStaat
+      summary: Weekstaat aanmaken of genereren
+      tags: [uren]
+      security: [{ cookieAuth: [] }, { bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WeekStaatInput'
+      responses:
+        '201':
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WeekStaat'
+
+  /weekstaten/{id}:
+    get:
+      operationId: getWeekStaat
+      summary: Weekstaat ophalen
+      tags: [uren]
+      security: [{ cookieAuth: [] }, { bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WeekStaat'
+    patch:
+      operationId: updateWeekStaat
+      summary: Weekstaat bijwerken
+      tags: [uren]
+      security: [{ cookieAuth: [] }, { bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WeekStaatPatch'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WeekStaat'
+
+  /weekstaten/{id}/indienen:
+    post:
+      operationId: weekStaatIndienen
+      summary: Weekstaat indienen ter goedkeuring
+      tags: [uren]
+      security: [{ cookieAuth: [] }, { bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Ingediend
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WeekStaat'
+
+  /weekstaten/{id}/goedkeuren:
+    post:
+      operationId: weekStaatGoedkeuren
+      summary: Weekstaat goedkeuren
+      tags: [uren]
+      security: [{ cookieAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Goedgekeurd
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WeekStaat'
+
+  /weekstaten/{id}/afwijzen:
+    post:
+      operationId: weekStaatAfwijzen
+      summary: Weekstaat afwijzen
+      tags: [uren]
+      security: [{ cookieAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WeekStaatAfwijzenInput'
+      responses:
+        '200':
+          description: Afgewezen
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WeekStaat'
+
   /gereedschappen:
     get:
       operationId: listGereedschappen
@@ -13069,6 +13355,204 @@ components:
         opmerkingen:
           type: string
           nullable: true
+
+    UrenRegistratie:
+      type: object
+      required: [id, datum, medewerker_id, begin_tijd, eind_tijd, pauze_minuten, netto_uren, status, afgewezen, aangemaakt_op, bijgewerkt_op]
+      properties:
+        id:
+          type: integer
+        datum:
+          type: string
+        medewerker_id:
+          type: integer
+        medewerker_naam:
+          type: string
+          nullable: true
+        gebouw_id:
+          type: integer
+          nullable: true
+        gebouw_naam:
+          type: string
+          nullable: true
+        project_naam:
+          type: string
+          nullable: true
+        werkzaamheden:
+          type: string
+          nullable: true
+        begin_tijd:
+          type: string
+        eind_tijd:
+          type: string
+        pauze_minuten:
+          type: integer
+        netto_uren:
+          type: number
+        opmerkingen:
+          type: string
+          nullable: true
+        status:
+          type: string
+        planning_item_id:
+          type: integer
+          nullable: true
+        ingediend_op:
+          type: string
+          nullable: true
+        goedgekeurd_door_id:
+          type: integer
+          nullable: true
+        goedgekeurd_door_naam:
+          type: string
+          nullable: true
+        goedgekeurd_op:
+          type: string
+          nullable: true
+        afgewezen:
+          type: boolean
+        afwijzing_reden:
+          type: string
+          nullable: true
+        aangemaakt_op:
+          type: string
+        bijgewerkt_op:
+          type: string
+
+    UrenRegistratieInput:
+      type: object
+      required: [datum, begin_tijd, eind_tijd]
+      properties:
+        datum:
+          type: string
+        medewerker_id:
+          type: integer
+        gebouw_id:
+          type: integer
+          nullable: true
+        project_naam:
+          type: string
+          nullable: true
+        werkzaamheden:
+          type: string
+          nullable: true
+        begin_tijd:
+          type: string
+        eind_tijd:
+          type: string
+        pauze_minuten:
+          type: integer
+        opmerkingen:
+          type: string
+          nullable: true
+        planning_item_id:
+          type: integer
+          nullable: true
+
+    WeekStaat:
+      type: object
+      required: [id, medewerker_id, jaar, week_nummer, status, aangemaakt_op, bijgewerkt_op]
+      properties:
+        id:
+          type: integer
+        medewerker_id:
+          type: integer
+        medewerker_naam:
+          type: string
+          nullable: true
+        jaar:
+          type: integer
+        week_nummer:
+          type: integer
+        status:
+          type: string
+        totaal_uren:
+          type: number
+          nullable: true
+        adv_uren:
+          type: number
+          nullable: true
+        notities:
+          type: string
+          nullable: true
+        afwijzing_reden:
+          type: string
+          nullable: true
+        ingediend_op:
+          type: string
+          nullable: true
+        goedgekeurd_door_id:
+          type: integer
+          nullable: true
+        goedgekeurd_door_naam:
+          type: string
+          nullable: true
+        goedgekeurd_op:
+          type: string
+          nullable: true
+        document_id:
+          type: integer
+          nullable: true
+        aangemaakt_op:
+          type: string
+        bijgewerkt_op:
+          type: string
+
+    WeekStaatInput:
+      type: object
+      required: [jaar, week_nummer]
+      properties:
+        medewerker_id:
+          type: integer
+        jaar:
+          type: integer
+        week_nummer:
+          type: integer
+        notities:
+          type: string
+          nullable: true
+
+    WeekStaatPatch:
+      type: object
+      properties:
+        notities:
+          type: string
+          nullable: true
+
+    WeekStaatAfwijzenInput:
+      type: object
+      required: [reden]
+      properties:
+        reden:
+          type: string
+
+    WeekSamenvatting:
+      type: object
+      required: [medewerker_id, jaar, week_nummer, datum_van, datum_tot, uren, planning_items, totaal_uren, adv_uren]
+      properties:
+        medewerker_id:
+          type: integer
+          nullable: true
+        jaar:
+          type: integer
+        week_nummer:
+          type: integer
+        datum_van:
+          type: string
+        datum_tot:
+          type: string
+        uren:
+          type: array
+          items:
+            $ref: '#/components/schemas/UrenRegistratie'
+        planning_items:
+          type: array
+          items:
+            type: object
+        totaal_uren:
+          type: number
+        adv_uren:
+          type: number
 
     Gereedschap:
       type: object

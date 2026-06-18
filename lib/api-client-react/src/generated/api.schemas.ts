@@ -3760,6 +3760,94 @@ export interface ModCalcRegelInput {
   opmerkingen?: string | null;
 }
 
+export interface UrenRegistratie {
+  id: number;
+  datum: string;
+  medewerker_id: number;
+  medewerker_naam?: string | null;
+  gebouw_id?: number | null;
+  gebouw_naam?: string | null;
+  project_naam?: string | null;
+  werkzaamheden?: string | null;
+  begin_tijd: string;
+  eind_tijd: string;
+  pauze_minuten: number;
+  netto_uren: number;
+  opmerkingen?: string | null;
+  status: string;
+  planning_item_id?: number | null;
+  ingediend_op?: string | null;
+  goedgekeurd_door_id?: number | null;
+  goedgekeurd_door_naam?: string | null;
+  goedgekeurd_op?: string | null;
+  afgewezen: boolean;
+  afwijzing_reden?: string | null;
+  aangemaakt_op: string;
+  bijgewerkt_op: string;
+}
+
+export interface UrenRegistratieInput {
+  datum: string;
+  medewerker_id?: number;
+  gebouw_id?: number | null;
+  project_naam?: string | null;
+  werkzaamheden?: string | null;
+  begin_tijd: string;
+  eind_tijd: string;
+  pauze_minuten?: number;
+  opmerkingen?: string | null;
+  planning_item_id?: number | null;
+}
+
+export interface WeekStaat {
+  id: number;
+  medewerker_id: number;
+  medewerker_naam?: string | null;
+  jaar: number;
+  week_nummer: number;
+  status: string;
+  totaal_uren?: number | null;
+  adv_uren?: number | null;
+  notities?: string | null;
+  afwijzing_reden?: string | null;
+  ingediend_op?: string | null;
+  goedgekeurd_door_id?: number | null;
+  goedgekeurd_door_naam?: string | null;
+  goedgekeurd_op?: string | null;
+  document_id?: number | null;
+  aangemaakt_op: string;
+  bijgewerkt_op: string;
+}
+
+export interface WeekStaatInput {
+  medewerker_id?: number;
+  jaar: number;
+  week_nummer: number;
+  notities?: string | null;
+}
+
+export interface WeekStaatPatch {
+  notities?: string | null;
+}
+
+export interface WeekStaatAfwijzenInput {
+  reden: string;
+}
+
+export type WeekSamenvattingPlanningItemsItem = { [key: string]: unknown };
+
+export interface WeekSamenvatting {
+  medewerker_id: number | null;
+  jaar: number;
+  week_nummer: number;
+  datum_van: string;
+  datum_tot: string;
+  uren: UrenRegistratie[];
+  planning_items: WeekSamenvattingPlanningItemsItem[];
+  totaal_uren: number;
+  adv_uren: number;
+}
+
 export interface Gereedschap {
   id: number;
   volgnummer: string;
@@ -4178,6 +4266,28 @@ medewerker_id?: number;
 export type ListModCalculatiesParams = {
 status?: string;
 zoek?: string;
+};
+
+export type ListUrenParams = {
+medewerker_id?: number;
+datum_van?: string;
+datum_tot?: string;
+week?: number;
+jaar?: number;
+status?: string;
+gebouw_id?: number;
+};
+
+export type GetMijnWeekUrenParams = {
+jaar?: number;
+week?: number;
+};
+
+export type ListWeekStatenParams = {
+medewerker_id?: number;
+jaar?: number;
+week?: number;
+status?: string;
 };
 
 export type ListGereedschappenParams = {

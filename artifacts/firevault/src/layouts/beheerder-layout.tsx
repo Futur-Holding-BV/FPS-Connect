@@ -358,6 +358,19 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
                         <SidebarMenuItem>
                           <SidebarMenuButton
                             asChild
+                            isActive={location === "/uren" || location.startsWith("/uren/")}
+                          >
+                            <Link href="/uren">
+                              <Clock />
+                              <span>Urenregistratie</span>
+                            </Link>
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                      )}
+                      {(toonPersoneel || isHoofdbeheerder) && (
+                        <SidebarMenuItem>
+                          <SidebarMenuButton
+                            asChild
                             isActive={location === "/hall-of-fame"}
                           >
                             <Link href="/hall-of-fame">
