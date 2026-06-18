@@ -3914,6 +3914,41 @@ export interface GereedschapMeldingInput {
   opmerkingen?: string | null;
 }
 
+export interface Achievement {
+  id: number;
+  gebruiker_id: number;
+  medewerker_id?: number | null;
+  spots_mijlpaal: number;
+  rang: string;
+  beloning: string;
+  behaald_op: string;
+  aangemaakt_op: string;
+}
+
+export interface AchievementControleerResponse {
+  nieuw: Achievement[];
+  totaal_spots: number;
+}
+
+export interface MedewerkerAchievementsResponse {
+  totaal_spots: number;
+  huidige_rang?: string | null;
+  huidige_beloning?: string | null;
+  volgende_rang?: string | null;
+  volgende_mijlpaal?: number | null;
+  achievements: Achievement[];
+}
+
+export interface HallOfFameEntry {
+  positie: number;
+  gebruiker_id: number;
+  medewerker_id?: number | null;
+  naam: string;
+  rang?: string | null;
+  beloning?: string | null;
+  spots_count: number;
+}
+
 export type GetRecenteActiviteitParams = {
 limit?: number;
 };

@@ -11,6 +11,7 @@ import {
   ShieldAlert, LifeBuoy, MessageSquarePlus, Activity, Contact, Info, BookOpen, Clock,
   FolderOpen, FileText, ListChecks, Files, LayoutTemplate, Mail,
   Calculator, CalendarDays, LayoutDashboard, BarChart3, CreditCard, MessageSquare, HardHat,
+  Trophy,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { GebruikerMenu } from "@/components/gebruiker-menu";
@@ -349,6 +350,19 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
                             <Link href="/gereedschappen">
                               <Wrench />
                               <span>{t("nav.gereedschappen")}</span>
+                            </Link>
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                      )}
+                      {(toonPersoneel || isHoofdbeheerder) && (
+                        <SidebarMenuItem>
+                          <SidebarMenuButton
+                            asChild
+                            isActive={location === "/hall-of-fame"}
+                          >
+                            <Link href="/hall-of-fame">
+                              <Trophy />
+                              <span>Hall of Fame</span>
                             </Link>
                           </SidebarMenuButton>
                         </SidebarMenuItem>

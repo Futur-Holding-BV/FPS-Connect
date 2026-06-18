@@ -67,3 +67,4 @@
 - [Mail via Microsoft 365](mail-microsoft365.md) — MAIL_FROM=zichtbare afzender (alias) vs MAIL_MAILBOX=gedeelde postbus die via Graph verzendt; Azure send-as/Mail.Send vereist; redacteer upstream foutteksten vóór DB/log/respons.
 - [Kwaliteitscheck script](kwaliteitscheck.md) — pnpm audit severity via "Severity: X low | Y moderate | Z high" (plain-text, geen JSON); route-teller: `import \w+Router from` vs `router.use(\w+Router)` — middleware-imports niet meerekenen.
 - [Zombie node processen](zombie-node.md) — als `node --version` hangt (exit 124), zijn er zombie node-pids (ps aux|grep node); fix: kill -9 pids + restart_workflow; NIET oplosbaar door esbuild/code debuggen.
+- [Api-server middleware importpad](api-server-middlewares-pad.md) — api-server middleware map heet `middlewares` (meervoud), NIET `middleware`; nieuwe routes importeren uit `"../middlewares/auth"` anders faalt esbuild-build.

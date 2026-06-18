@@ -23,6 +23,7 @@ import type {
   Abonnement,
   AbonnementInput,
   AbonnementUpdate,
+  AchievementControleerResponse,
   Activiteit,
   AiAnalyseToolboxBerichten200,
   AiCalculatieRegels200,
@@ -122,6 +123,7 @@ import type {
   GetRecenteActiviteitParams,
   GetVervaldagenParams,
   GetZiekmeldingenStatistiekenParams,
+  HallOfFameEntry,
   HealthStatus,
   HelpdeskTicket,
   HelpdeskTicketInput,
@@ -168,6 +170,7 @@ import type {
   MailStatus,
   MailTestmailInput,
   Medewerker,
+  MedewerkerAchievementsResponse,
   MedewerkerInput,
   MedewerkerOnboardingInput,
   MedewerkerOpleiding,
@@ -26571,6 +26574,230 @@ export function useListMijnGereedschappen<TData = Awaited<ReturnType<typeof list
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getListMijnGereedschappenQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getControleerAchievementsUrl = () => {
+
+
+
+
+  return `/api/achievements/controleer`
+}
+
+/**
+ * @summary Controleer en ken nieuwe achievements toe aan ingelogde gebruiker
+ */
+export const controleerAchievements = async ( options?: RequestInit): Promise<AchievementControleerResponse> => {
+
+  return customFetch<AchievementControleerResponse>(getControleerAchievementsUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getControleerAchievementsMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof controleerAchievements>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof controleerAchievements>>, TError,void, TContext> => {
+
+const mutationKey = ['controleerAchievements'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof controleerAchievements>>, void> = () => {
+
+
+          return  controleerAchievements(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ControleerAchievementsMutationResult = NonNullable<Awaited<ReturnType<typeof controleerAchievements>>>
+
+    export type ControleerAchievementsMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Controleer en ken nieuwe achievements toe aan ingelogde gebruiker
+ */
+export const useControleerAchievements = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof controleerAchievements>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof controleerAchievements>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getControleerAchievementsMutationOptions(options));
+    }
+
+export const getGetMedewerkerAchievementsUrl = (id: number,) => {
+
+
+
+
+  return `/api/medewerkers/${id}/achievements`
+}
+
+/**
+ * @summary Achievements van een medewerker
+ */
+export const getMedewerkerAchievements = async (id: number, options?: RequestInit): Promise<MedewerkerAchievementsResponse> => {
+
+  return customFetch<MedewerkerAchievementsResponse>(getGetMedewerkerAchievementsUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetMedewerkerAchievementsQueryKey = (id: number,) => {
+    return [
+    `/api/medewerkers/${id}/achievements`
+    ] as const;
+    }
+
+
+export const getGetMedewerkerAchievementsQueryOptions = <TData = Awaited<ReturnType<typeof getMedewerkerAchievements>>, TError = ErrorType<void>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMedewerkerAchievements>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetMedewerkerAchievementsQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getMedewerkerAchievements>>> = ({ signal }) => getMedewerkerAchievements(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getMedewerkerAchievements>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetMedewerkerAchievementsQueryResult = NonNullable<Awaited<ReturnType<typeof getMedewerkerAchievements>>>
+export type GetMedewerkerAchievementsQueryError = ErrorType<void>
+
+
+/**
+ * @summary Achievements van een medewerker
+ */
+
+export function useGetMedewerkerAchievements<TData = Awaited<ReturnType<typeof getMedewerkerAchievements>>, TError = ErrorType<void>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMedewerkerAchievements>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetMedewerkerAchievementsQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetHallOfFameUrl = () => {
+
+
+
+
+  return `/api/hall-of-fame`
+}
+
+/**
+ * @summary Ranglijst monteurs op geplaatste spots
+ */
+export const getHallOfFame = async ( options?: RequestInit): Promise<HallOfFameEntry[]> => {
+
+  return customFetch<HallOfFameEntry[]>(getGetHallOfFameUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetHallOfFameQueryKey = () => {
+    return [
+    `/api/hall-of-fame`
+    ] as const;
+    }
+
+
+export const getGetHallOfFameQueryOptions = <TData = Awaited<ReturnType<typeof getHallOfFame>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getHallOfFame>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetHallOfFameQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getHallOfFame>>> = ({ signal }) => getHallOfFame({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getHallOfFame>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetHallOfFameQueryResult = NonNullable<Awaited<ReturnType<typeof getHallOfFame>>>
+export type GetHallOfFameQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Ranglijst monteurs op geplaatste spots
+ */
+
+export function useGetHallOfFame<TData = Awaited<ReturnType<typeof getHallOfFame>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getHallOfFame>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetHallOfFameQueryOptions(options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

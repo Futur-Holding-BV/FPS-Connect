@@ -30,6 +30,7 @@ import toolboxRouter from "./toolbox";
 import planningModuleRouter from "./planning-module";
 import modCalculatieRouter from "./mod-calculatie";
 import gereedschappenRouter from "./gereedschappen";
+import { achievementsRouter } from "./achievements";
 import { requireAuth } from "../middlewares/auth";
 
 const router: IRouter = Router();
@@ -69,5 +70,6 @@ router.use(toolboxRouter);
 router.use(planningModuleRouter);
 router.use(modCalculatieRouter);
 router.use(gereedschappenRouter);
+router.use(achievementsRouter);
 
 export default router;

@@ -8,6 +8,7 @@ import NotFound from "@/pages/not-found";
 import { AuthProvider, useAuth } from "@/context/auth-context";
 import { TaalProvider } from "@/context/taal-context";
 import { useRol, RolProvider } from "@/context/rol-context";
+import { AchievementProvider } from "@/context/achievement-context";
 import LoginPagina from "@/pages/auth/login";
 import ActivatiePagina from "@/pages/uitnodiging/index";
 import WachtwoordVergetenPagina from "@/pages/auth/wachtwoord-vergeten";
@@ -52,6 +53,7 @@ import PersoneelPagina from "@/pages/personeel/index";
 import MedewerkerDetailPagina from "@/pages/personeel/detail";
 import GereedschappenPagina from "@/pages/gereedschappen/index";
 import GereedschapDetailPagina from "@/pages/gereedschappen/detail";
+import HallOfFamePagina from "@/pages/hall-of-fame";
 import DossiersPagina from "@/pages/dossiers/index";
 import OffertesPagina from "@/pages/offertes/index";
 import DocumentenPagina from "@/pages/documenten/index";
@@ -119,6 +121,7 @@ function BeheerderPortal() {
         <Route path="/personeel/:id" component={MedewerkerDetailPagina} />
         <Route path="/gereedschappen" component={GereedschappenPagina} />
         <Route path="/gereedschappen/:id" component={GereedschapDetailPagina} />
+        <Route path="/hall-of-fame" component={HallOfFamePagina} />
         <Route path="/dossiers" component={DossiersPagina} />
         <Route path="/offertes" component={OffertesPagina} />
         <Route path="/abonnementen" component={Abonnementen} />
@@ -333,9 +336,11 @@ function Gate() {
       <Switch>
         <Route path="/gebouwen/:id/print" component={GebouwPrint} />
         <Route>
-          <Portalen />
-          <OndersteuningWidget />
-          <HeatmapTracker />
+          <AchievementProvider>
+            <Portalen />
+            <OndersteuningWidget />
+            <HeatmapTracker />
+          </AchievementProvider>
         </Route>
       </Switch>
     </WouterRouter>

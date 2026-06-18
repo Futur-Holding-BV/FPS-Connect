@@ -31,6 +31,7 @@ import {
   getListVerlofAanvragenQueryKey,
   getListAlleVerlofAanvragenQueryKey,
   getGetHrmStatsQueryKey,
+  useGetMedewerkerAchievements,
 } from "@workspace/api-client-react";
 import type {
   MedewerkerInput,
@@ -62,7 +63,7 @@ import { useToast } from "@/hooks/use-toast";
 import {
   ArrowLeft, Pencil, Trash2, Plus, GraduationCap, Award, CalendarClock,
   Mail, Phone, Briefcase, ShieldCheck, AlertTriangle, Check, X,
-  MapPin, Car, FileText, Cake,
+  MapPin, Car, FileText, Cake, Trophy,
 } from "lucide-react";
 
 const NIVEAUS = [
@@ -116,6 +117,146 @@ function fmtDatum(datum?: string | null) {
 
 function uren(n?: number | null) {
   return `${(n ?? 0).toLocaleString("nl-NL", { maximumFractionDigits: 1 })} uur`;
+}
+
+function achievementKleurDetail(beloning: string | null | undefined): string {
+  if (!beloning) return "#6b7280";
+  if (beloning.includes("Legende")) return "#F23B0D";
+  if (beloning.includes("Diamanten")) return "#4FC3F7";
+  if (beloning.includes("Kristallen")) return "#00CED1";
+  if (beloning.includes("Gouden")) return "#FFD700";
+  if (beloning.includes("Zilveren")) return "#C0C0C0";
+  if (beloning.includes("Bronzen")) return "#CD7F32";
+  if (beloning.includes("Speciale")) return "#9B59B6";
+  return "#6b7280";
+}
+
+function PrestatieSectie({ medewerkerId }: { medewerkerId: number }) {
+  const { data, isLoading } = useGetMedewerkerAchievements(medewerkerId);
+
+  if (isLoading) {
+    return (
+      <div className="space-y-3 pt-4">
+        <Skeleton className="h-32 w-full" />
+        <div className="grid grid-cols-2 gap-3">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} className="h-20 w-full" />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (!data) return null;
+
+  const prevMijlpaal =
+    data.achievements.length > 0
+      ? data.achievements[data.achievements.length - 1].spots_mijlpaal
+      : 0;
+  const progress = data.volgende_mijlpaal
+    ? Math.min(
+        100,
+        ((data.totaal_spots - prevMijlpaal) /
+          (data.volgende_mijlpaal - prevMijlpaal)) *
+          100,
+      )
+    : 100;
+  const kleur = achievementKleurDetail(data.huidige_beloning);
+
+  return (
+    <div className="space-y-4 pt-4">
+      <Card>
+        <CardContent className="pt-5 space-y-4">
+          <div className="flex items-center gap-4">
+            <div
+              className="w-14 h-14 rounded-full flex items-center justify-center flex-shrink-0"
+              style={{ background: `${kleur}22`, border: `2px solid ${kleur}` }}
+            >
+              <Trophy className="h-6 w-6" style={{ color: kleur }} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm text-muted-foreground">Huidige rang</p>
+              <p className="text-lg font-semibold" style={{ color: kleur }}>
+                {data.huidige_rang ?? "Nog geen rang"}
+              </p>
+              {data.huidige_beloning && (
+                <p className="text-xs text-muted-foreground">{data.huidige_beloning}</p>
+              )}
+            </div>
+            <div className="text-right">
+              <p className="text-2xl font-bold tabular-nums">
+                {data.totaal_spots.toLocaleString("nl-NL")}
+              </p>
+              <p className="text-xs text-muted-foreground">Spots geplaatst</p>
+            </div>
+          </div>
+
+          {data.volgende_rang && data.volgende_mijlpaal && (
+            <div className="space-y-1.5">
+              <div className="flex justify-between text-xs text-muted-foreground">
+                <span>Voortgang naar {data.volgende_rang}</span>
+                <span>
+                  {data.totaal_spots.toLocaleString("nl-NL")} /{" "}
+                  {data.volgende_mijlpaal.toLocaleString("nl-NL")}
+                </span>
+              </div>
+              <div className="h-2 rounded-full bg-muted overflow-hidden">
+                <div
+                  className="h-full rounded-full transition-all duration-500"
+                  style={{ width: `${progress}%`, background: kleur }}
+                />
+              </div>
+            </div>
+          )}
+
+          {!data.volgende_rang && data.achievements.length > 0 && (
+            <p className="text-sm text-center font-medium" style={{ color: kleur }}>
+              Maximale rang bereikt
+            </p>
+          )}
+        </CardContent>
+      </Card>
+
+      {data.achievements.length === 0 && (
+        <div className="text-center py-10 text-muted-foreground">
+          <Award className="h-10 w-10 mx-auto mb-3 opacity-30" />
+          <p className="text-sm">Nog geen prestaties behaald.</p>
+          <p className="text-xs mt-1">De eerste rang wordt bereikt bij 50 Spots.</p>
+        </div>
+      )}
+
+      {data.achievements.length > 0 && (
+        <div>
+          <p className="text-sm font-medium text-muted-foreground mb-3">Behaalde rangen</p>
+          <div className="grid grid-cols-2 gap-3">
+            {data.achievements.map((a) => {
+              const aKleur = achievementKleurDetail(a.beloning);
+              return (
+                <div
+                  key={a.id}
+                  className="rounded-lg p-3 border"
+                  style={{ borderColor: `${aKleur}55`, background: `${aKleur}0d` }}
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    <Award className="h-4 w-4 flex-shrink-0" style={{ color: aKleur }} />
+                    <span className="text-xs font-semibold" style={{ color: aKleur }}>
+                      {a.rang}
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {a.spots_mijlpaal.toLocaleString("nl-NL")} Spots
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {new Date(a.behaald_op).toLocaleDateString("nl-NL")}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
 
 export default function MedewerkerDetailPagina() {
@@ -538,6 +679,7 @@ export default function MedewerkerDetailPagina() {
           <TabsTrigger value="bekwaamheden">Bekwaamheden</TabsTrigger>
           <TabsTrigger value="verlof">Verlof</TabsTrigger>
           <TabsTrigger value="achtergrond"><FileText className="h-3.5 w-3.5 mr-1.5" />Achtergrond / CV</TabsTrigger>
+          <TabsTrigger value="prestaties"><Trophy className="h-3.5 w-3.5 mr-1.5" />Prestaties</TabsTrigger>
         </TabsList>
 
         {/* Opleidingen */}
@@ -751,6 +893,11 @@ export default function MedewerkerDetailPagina() {
               </CardContent>
             </Card>
           )}
+        </TabsContent>
+
+        {/* Prestaties */}
+        <TabsContent value="prestaties">
+          <PrestatieSectie medewerkerId={Number(id)} />
         </TabsContent>
       </Tabs>
 

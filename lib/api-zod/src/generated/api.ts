@@ -9017,3 +9017,62 @@ export const ListMijnGereedschappenResponseItem = zod.object({
 export const ListMijnGereedschappenResponse = zod.array(ListMijnGereedschappenResponseItem)
 
 
+/**
+ * @summary Controleer en ken nieuwe achievements toe aan ingelogde gebruiker
+ */
+export const ControleerAchievementsResponse = zod.object({
+  "nieuw": zod.array(zod.object({
+  "id": zod.number(),
+  "gebruiker_id": zod.number(),
+  "medewerker_id": zod.number().nullish(),
+  "spots_mijlpaal": zod.number(),
+  "rang": zod.string(),
+  "beloning": zod.string(),
+  "behaald_op": zod.coerce.date(),
+  "aangemaakt_op": zod.coerce.date()
+})),
+  "totaal_spots": zod.number()
+})
+
+
+/**
+ * @summary Achievements van een medewerker
+ */
+export const GetMedewerkerAchievementsParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetMedewerkerAchievementsResponse = zod.object({
+  "totaal_spots": zod.number(),
+  "huidige_rang": zod.string().nullish(),
+  "huidige_beloning": zod.string().nullish(),
+  "volgende_rang": zod.string().nullish(),
+  "volgende_mijlpaal": zod.number().nullish(),
+  "achievements": zod.array(zod.object({
+  "id": zod.number(),
+  "gebruiker_id": zod.number(),
+  "medewerker_id": zod.number().nullish(),
+  "spots_mijlpaal": zod.number(),
+  "rang": zod.string(),
+  "beloning": zod.string(),
+  "behaald_op": zod.coerce.date(),
+  "aangemaakt_op": zod.coerce.date()
+}))
+})
+
+
+/**
+ * @summary Ranglijst monteurs op geplaatste spots
+ */
+export const GetHallOfFameResponseItem = zod.object({
+  "positie": zod.number(),
+  "gebruiker_id": zod.number(),
+  "medewerker_id": zod.number().nullish(),
+  "naam": zod.string(),
+  "rang": zod.string().nullish(),
+  "beloning": zod.string().nullish(),
+  "spots_count": zod.number()
+})
+export const GetHallOfFameResponse = zod.array(GetHallOfFameResponseItem)
+
+

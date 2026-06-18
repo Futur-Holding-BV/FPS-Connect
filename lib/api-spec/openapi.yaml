@@ -7511,6 +7511,58 @@ paths:
         '404':
           description: Geen medewerker gekoppeld aan dit account
 
+  /achievements/controleer:
+    post:
+      operationId: controleerAchievements
+      summary: Controleer en ken nieuwe achievements toe aan ingelogde gebruiker
+      tags: [achievements]
+      security: [{ cookieAuth: [] }, { bearerAuth: [] }]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AchievementControleerResponse'
+
+  /medewerkers/{id}/achievements:
+    get:
+      operationId: getMedewerkerAchievements
+      summary: Achievements van een medewerker
+      tags: [achievements]
+      security: [{ cookieAuth: [] }, { bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedewerkerAchievementsResponse'
+        '404':
+          description: Medewerker niet gevonden
+
+  /hall-of-fame:
+    get:
+      operationId: getHallOfFame
+      summary: Ranglijst monteurs op geplaatste spots
+      tags: [achievements]
+      security: [{ cookieAuth: [] }, { bearerAuth: [] }]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/HallOfFameEntry'
+
 
 components:
   schemas:
@@ -13302,3 +13354,83 @@ components:
         opmerkingen:
           type: string
           nullable: true
+
+    Achievement:
+      type: object
+      required: [id, gebruiker_id, spots_mijlpaal, rang, beloning, behaald_op, aangemaakt_op]
+      properties:
+        id:
+          type: integer
+        gebruiker_id:
+          type: integer
+        medewerker_id:
+          type: integer
+          nullable: true
+        spots_mijlpaal:
+          type: integer
+        rang:
+          type: string
+        beloning:
+          type: string
+        behaald_op:
+          type: string
+          format: date
+        aangemaakt_op:
+          type: string
+          format: date-time
+
+    AchievementControleerResponse:
+      type: object
+      required: [nieuw, totaal_spots]
+      properties:
+        nieuw:
+          type: array
+          items:
+            $ref: '#/components/schemas/Achievement'
+        totaal_spots:
+          type: integer
+
+    MedewerkerAchievementsResponse:
+      type: object
+      required: [totaal_spots, achievements]
+      properties:
+        totaal_spots:
+          type: integer
+        huidige_rang:
+          type: string
+          nullable: true
+        huidige_beloning:
+          type: string
+          nullable: true
+        volgende_rang:
+          type: string
+          nullable: true
+        volgende_mijlpaal:
+          type: integer
+          nullable: true
+        achievements:
+          type: array
+          items:
+            $ref: '#/components/schemas/Achievement'
+
+    HallOfFameEntry:
+      type: object
+      required: [positie, gebruiker_id, naam, spots_count]
+      properties:
+        positie:
+          type: integer
+        gebruiker_id:
+          type: integer
+        medewerker_id:
+          type: integer
+          nullable: true
+        naam:
+          type: string
+        rang:
+          type: string
+          nullable: true
+        beloning:
+          type: string
+          nullable: true
+        spots_count:
+          type: integer

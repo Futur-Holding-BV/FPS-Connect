@@ -57,6 +57,7 @@ import { useColors } from "@/hooks/useColors";
 import { useResponsive } from "@/hooks/useResponsive";
 import { useAuth } from "@/context/auth";
 import { useSync } from "@/context/sync";
+import { useAchievement } from "@/context/achievement";
 import { FabrikantSectie } from "@/components/FabrikantSectie";
 import { SyncStatusBadge } from "@/components/SyncStatusBadge";
 import { uploadFoto } from "@/lib/upload";
@@ -123,6 +124,7 @@ export default function Plattegrond() {
   const bewaarAiVoorstel = useBewaarSpotAiVoorstel();
 
   const { syncStatus, aantalWachtend, aantalMislukt, wisMislukte, forceerSync } = useSync();
+  const { checkAchievements } = useAchievement();
 
   const [plaatsModus, setPlaatsModus] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
@@ -345,6 +347,7 @@ export default function Plattegrond() {
       refetchSpotnummer();
       // Direct synchroniseren zodra verbinding beschikbaar is
       forceerSync();
+      void checkAchievements();
     } catch (e) {
       Alert.alert("Opslaan mislukt", e instanceof Error ? e.message : "Onbekende fout");
     } finally {
