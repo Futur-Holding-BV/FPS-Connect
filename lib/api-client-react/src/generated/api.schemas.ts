@@ -1729,6 +1729,15 @@ export interface HerkomstBevestigenBulkInput {
   ids?: number[];
 }
 
+export interface WachtwoordVergetenInput {
+  email: string;
+}
+
+export interface WachtwoordResetInput {
+  token: string;
+  nieuw_wachtwoord: string;
+}
+
 export interface WachtwoordWijzigen {
   huidig_wachtwoord: string;
   nieuw_wachtwoord: string;

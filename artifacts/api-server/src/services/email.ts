@@ -452,6 +452,35 @@ export async function stuurUitnodigingsmail(opties: {
 }
 
 /**
+ * Verstuurt een wachtwoord-reset e-mail.
+ */
+export async function verstuurWachtwoordResetMail(opties: {
+  naarEmail: string;
+  naarNaam: string;
+  resetLink: string;
+}): Promise<void> {
+  const { naarEmail, naarNaam, resetLink } = opties;
+  const onderwerp = "Wachtwoord opnieuw instellen — FPS Brandpreventie";
+  const html = mailShell({
+    titel: onderwerp,
+    kopje: `Wachtwoord opnieuw instellen`,
+    paragrafen: [
+      `U ontvangt dit bericht omdat er een verzoek is ingediend om het wachtwoord van uw account (${naarEmail}) opnieuw in te stellen.`,
+      "Klik op de knop hieronder om een nieuw wachtwoord in te stellen. De link is <strong>1 uur geldig</strong>.",
+      "Heeft u dit verzoek niet zelf ingediend? Dan kunt u dit bericht negeren. Uw wachtwoord blijft ongewijzigd.",
+    ],
+    knop: { label: "Wachtwoord opnieuw instellen", link: resetLink },
+  });
+  await verstuurMail({
+    naarEmail,
+    naarNaam,
+    onderwerp,
+    html,
+    soort: "wachtwoord_reset",
+  });
+}
+
+/**
  * Verstuurt een testbericht om de mailkoppeling te controleren.
  */
 export async function stuurTestmail(opties: {

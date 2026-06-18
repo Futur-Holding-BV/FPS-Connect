@@ -188,6 +188,14 @@ export default function LoginPagina() {
                     {bezig && <Loader2 className="h-4 w-4 animate-spin" />}
                     {t("auth.inloggenKnop")}
                   </Button>
+                  <div className="text-center">
+                    <a
+                      href="/wachtwoord-vergeten"
+                      className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      {t("auth.wachtwoordVergeten")}
+                    </a>
+                  </div>
                 </form>
               </CardContent>
             </>

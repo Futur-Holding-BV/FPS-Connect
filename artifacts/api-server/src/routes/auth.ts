@@ -1,13 +1,19 @@
 import { Router } from "express";
 import bcrypt from "bcryptjs";
+import crypto from "crypto";
 import { authenticator } from "otplib";
 import QRCode from "qrcode";
-import { db, gebruikersTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { db, gebruikersTable, wachtwoordResetTokensTable } from "@workspace/db";
+import { eq, and, gt, isNull } from "drizzle-orm";
 import { maakToken } from "../lib/token";
 import { legLoginPogingVast } from "./systeem";
+import { verstuurWachtwoordResetMail } from "../services/email.js";
 
 const router = Router();
+
+function domein(): string {
+  return (process.env.REPLIT_DOMAINS ?? "").split(",")[0]?.trim() || "localhost";
+}
 
 const ISSUER = "FPS Brandpreventie";
 
@@ -260,6 +266,97 @@ router.post("/auth/logout", (req, res) => {
     res.clearCookie("fps.sid");
     res.status(204).send();
   });
+});
+
+// POST /auth/wachtwoord-vergeten — publiek; altijd 204 (geen e-mail-enumeratie)
+router.post("/auth/wachtwoord-vergeten", async (req, res) => {
+  try {
+    const { email } = req.body ?? {};
+    if (!email) return res.status(204).send();
+
+    const [g] = await db
+      .select()
+      .from(gebruikersTable)
+      .where(eq(gebruikersTable.email, String(email).trim().toLowerCase()))
+      .limit(1);
+
+    if (!g || !g.actief) return res.status(204).send();
+
+    // Genereer een cryptografisch veilige token (32 bytes = 64 hex-tekens)
+    const token = crypto.randomBytes(32).toString("hex");
+    const verlooptOp = new Date(Date.now() + 60 * 60 * 1000); // 1 uur
+
+    await db.insert(wachtwoordResetTokensTable).values({
+      gebruikerId: g.id,
+      token,
+      verlooptOp,
+    });
+
+    const resetLink = `https://${domein()}/wachtwoord-reset?token=${token}`;
+
+    try {
+      await verstuurWachtwoordResetMail({
+        naarEmail: g.email,
+        naarNaam: g.naam,
+        resetLink,
+      });
+    } catch {
+      // Mail kan niet geblokkeerd zijn — route geeft altijd 204 terug
+      req.log.warn({ email: g.email }, "Wachtwoord-reset mail kon niet worden verstuurd");
+    }
+
+    return res.status(204).send();
+  } catch (err) {
+    req.log.error(err, "POST /auth/wachtwoord-vergeten");
+    return res.status(204).send();
+  }
+});
+
+// POST /auth/wachtwoord-reset — publiek; token + nieuw wachtwoord
+router.post("/auth/wachtwoord-reset", async (req, res) => {
+  try {
+    const { token, nieuw_wachtwoord } = req.body ?? {};
+    if (!token || !nieuw_wachtwoord) {
+      return res.status(400).json({ error: "Token en nieuw wachtwoord zijn verplicht" });
+    }
+    if (String(nieuw_wachtwoord).length < 8) {
+      return res.status(400).json({ error: "Wachtwoord moet minimaal 8 tekens bevatten" });
+    }
+
+    const now = new Date();
+    const [resetToken] = await db
+      .select()
+      .from(wachtwoordResetTokensTable)
+      .where(
+        and(
+          eq(wachtwoordResetTokensTable.token, String(token)),
+          gt(wachtwoordResetTokensTable.verlooptOp, now),
+          isNull(wachtwoordResetTokensTable.gebruiktOp),
+        ),
+      )
+      .limit(1);
+
+    if (!resetToken) {
+      return res.status(400).json({ error: "De resetlink is ongeldig of verlopen" });
+    }
+
+    const gehasht = await bcrypt.hash(String(nieuw_wachtwoord), 10);
+
+    await db
+      .update(gebruikersTable)
+      .set({ wachtwoord: gehasht })
+      .where(eq(gebruikersTable.id, resetToken.gebruikerId));
+
+    await db
+      .update(wachtwoordResetTokensTable)
+      .set({ gebruiktOp: now })
+      .where(eq(wachtwoordResetTokensTable.id, resetToken.id));
+
+    return res.status(204).send();
+  } catch (err) {
+    req.log.error(err, "POST /auth/wachtwoord-reset");
+    return res.status(500).json({ error: "Onbekende fout" });
+  }
 });
 
 // POST /auth/wachtwoord-wijzigen

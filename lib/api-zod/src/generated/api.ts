@@ -4447,6 +4447,27 @@ export const UitnodigingActiverenResponse = zod.object({
 
 
 /**
+ * @summary Wachtwoord-reset e-mail aanvragen (publiek)
+ */
+export const WachtwoordVergetenBody = zod.object({
+  "email": zod.string().email()
+})
+
+export const WachtwoordVergetenResponse = zod.void()
+
+
+/**
+ * @summary Wachtwoord opnieuw instellen via reset-token (publiek)
+ */
+export const WachtwoordResetBody = zod.object({
+  "token": zod.string(),
+  "nieuw_wachtwoord": zod.string()
+})
+
+export const WachtwoordResetResponse = zod.void()
+
+
+/**
  * @summary Eigen wachtwoord wijzigen (ingelogd)
  */
 export const WachtwoordWijzigenBody = zod.object({

@@ -3730,6 +3730,38 @@ paths:
         "410":
           description: Uitnodiging verlopen
 
+  /auth/wachtwoord-vergeten:
+    post:
+      operationId: wachtwoordVergeten
+      tags: [auth]
+      summary: Wachtwoord-reset e-mail aanvragen (publiek)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WachtwoordVergetenInput"
+      responses:
+        "204":
+          description: Verzoek verwerkt (altijd 204, ook als e-mailadres onbekend is)
+
+  /auth/wachtwoord-reset:
+    post:
+      operationId: wachtwoordReset
+      tags: [auth]
+      summary: Wachtwoord opnieuw instellen via reset-token (publiek)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WachtwoordResetInput"
+      responses:
+        "204":
+          description: Wachtwoord succesvol gewijzigd
+        "400":
+          description: Token ongeldig of verlopen
+
   /auth/wachtwoord-wijzigen:
     post:
       operationId: wachtwoordWijzigen
@@ -9290,6 +9322,23 @@ components:
             ids worden alle onbevestigde automatische koppelingen bevestigd.
           items:
             type: integer
+
+    WachtwoordVergetenInput:
+      type: object
+      required: [email]
+      properties:
+        email:
+          type: string
+          format: email
+
+    WachtwoordResetInput:
+      type: object
+      required: [token, nieuw_wachtwoord]
+      properties:
+        token:
+          type: string
+        nieuw_wachtwoord:
+          type: string
 
     WachtwoordWijzigen:
       type: object

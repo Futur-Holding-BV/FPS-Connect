@@ -1,4 +1,4 @@
-import { pgTable, serial, integer, text, boolean, timestamp, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, serial, integer, text, boolean, timestamp, jsonb, index } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
@@ -54,6 +54,23 @@ export const profielenTable = pgTable("profielen", {
   systeem: boolean("systeem").notNull().default(false),
   aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
 });
+
+// Tokens voor het resetten van een vergeten wachtwoord. Eenmalig gebruik,
+// verlopen na 1 uur. De token is een willekeurige hex-string (32 bytes).
+export const wachtwoordResetTokensTable = pgTable(
+  "wachtwoord_reset_tokens",
+  {
+    id: serial("id").primaryKey(),
+    gebruikerId: integer("gebruiker_id")
+      .notNull()
+      .references(() => gebruikersTable.id, { onDelete: "cascade" }),
+    token: text("token").notNull().unique(),
+    verlooptOp: timestamp("verloopt_op").notNull(),
+    gebruiktOp: timestamp("gebruikt_op"),
+    aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
+  },
+  (t) => [index("wrt_token_idx").on(t.token)],
+);
 
 export const insertGebruikerSchema = createInsertSchema(gebruikersTable).omit({ id: true, aangemaaktOp: true });
 export type InsertGebruiker = z.infer<typeof insertGebruikerSchema>;

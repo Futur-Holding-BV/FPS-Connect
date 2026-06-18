@@ -307,6 +307,8 @@ export * from './voorzieningType';
 export * from './voorzieningTypeInput';
 export * from './voorzieningTypeUpdate';
 export * from './voorzieningUpdate';
+export * from './wachtwoordResetInput';
+export * from './wachtwoordVergetenInput';
 export * from './wachtwoordWijzigen';
 export * from './werkgever';
 export * from './werkgeverInput';

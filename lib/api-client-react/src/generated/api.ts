@@ -258,6 +258,8 @@ import type {
   VoorzieningTypeInput,
   VoorzieningTypeUpdate,
   VoorzieningUpdate,
+  WachtwoordResetInput,
+  WachtwoordVergetenInput,
   WachtwoordWijzigen,
   Werkgever,
   WerkgeverInput
@@ -12451,6 +12453,146 @@ export const useUitnodigingActiveren = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getUitnodigingActiverenMutationOptions(options));
+    }
+
+export const getWachtwoordVergetenUrl = () => {
+
+
+
+
+  return `/api/auth/wachtwoord-vergeten`
+}
+
+/**
+ * @summary Wachtwoord-reset e-mail aanvragen (publiek)
+ */
+export const wachtwoordVergeten = async (wachtwoordVergetenInput: WachtwoordVergetenInput, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getWachtwoordVergetenUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(wachtwoordVergetenInput)
+  }
+);}
+
+
+
+
+export const getWachtwoordVergetenMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof wachtwoordVergeten>>, TError,{data: BodyType<WachtwoordVergetenInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof wachtwoordVergeten>>, TError,{data: BodyType<WachtwoordVergetenInput>}, TContext> => {
+
+const mutationKey = ['wachtwoordVergeten'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof wachtwoordVergeten>>, {data: BodyType<WachtwoordVergetenInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  wachtwoordVergeten(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type WachtwoordVergetenMutationResult = NonNullable<Awaited<ReturnType<typeof wachtwoordVergeten>>>
+    export type WachtwoordVergetenMutationBody = BodyType<WachtwoordVergetenInput>
+    export type WachtwoordVergetenMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Wachtwoord-reset e-mail aanvragen (publiek)
+ */
+export const useWachtwoordVergeten = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof wachtwoordVergeten>>, TError,{data: BodyType<WachtwoordVergetenInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof wachtwoordVergeten>>,
+        TError,
+        {data: BodyType<WachtwoordVergetenInput>},
+        TContext
+      > => {
+      return useMutation(getWachtwoordVergetenMutationOptions(options));
+    }
+
+export const getWachtwoordResetUrl = () => {
+
+
+
+
+  return `/api/auth/wachtwoord-reset`
+}
+
+/**
+ * @summary Wachtwoord opnieuw instellen via reset-token (publiek)
+ */
+export const wachtwoordReset = async (wachtwoordResetInput: WachtwoordResetInput, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getWachtwoordResetUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(wachtwoordResetInput)
+  }
+);}
+
+
+
+
+export const getWachtwoordResetMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof wachtwoordReset>>, TError,{data: BodyType<WachtwoordResetInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof wachtwoordReset>>, TError,{data: BodyType<WachtwoordResetInput>}, TContext> => {
+
+const mutationKey = ['wachtwoordReset'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof wachtwoordReset>>, {data: BodyType<WachtwoordResetInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  wachtwoordReset(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type WachtwoordResetMutationResult = NonNullable<Awaited<ReturnType<typeof wachtwoordReset>>>
+    export type WachtwoordResetMutationBody = BodyType<WachtwoordResetInput>
+    export type WachtwoordResetMutationError = ErrorType<void>
+
+    /**
+ * @summary Wachtwoord opnieuw instellen via reset-token (publiek)
+ */
+export const useWachtwoordReset = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof wachtwoordReset>>, TError,{data: BodyType<WachtwoordResetInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof wachtwoordReset>>,
+        TError,
+        {data: BodyType<WachtwoordResetInput>},
+        TContext
+      > => {
+      return useMutation(getWachtwoordResetMutationOptions(options));
     }
 
 export const getWachtwoordWijzigenUrl = () => {
