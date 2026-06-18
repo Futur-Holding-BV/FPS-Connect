@@ -2052,7 +2052,6 @@ export default function GebouwPrint() {
                     <tr>
                       <th>Naam</th>
                       <th>Type</th>
-                      <th>Revisie</th>
                       <th>Datum</th>
                     </tr>
                   </thead>
@@ -2061,7 +2060,6 @@ export default function GebouwPrint() {
                       <tr key={d.id}>
                         <td>{d.naam}</td>
                         <td>{DOCUMENTTYPE_LABEL[d.documenttype] ?? d.documenttype ?? "—"}</td>
-                        <td>{d.revisie_nummer ?? "—"}</td>
                         <td>{datumNL(d.aangemaakt_op)}</td>
                       </tr>
                     ))}
