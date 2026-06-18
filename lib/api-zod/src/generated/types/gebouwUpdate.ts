@@ -24,4 +24,5 @@ export interface GebouwUpdate {
   latitude?: number | null;
   longitude?: number | null;
   werkgever_id?: number | null;
+  project_status?: string | null;
 }

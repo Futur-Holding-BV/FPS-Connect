@@ -132,6 +132,7 @@ function gebouwRij(
     gearchiveerd_op: g.gearchiveerdOp ? g.gearchiveerdOp.toISOString() : null,
     werkgever_id: g.werkgeverId ?? null,
     werkmaatschappij_naam: werkmaatschappijNaam,
+    project_status: g.projectStatus ?? null,
   };
 }
 
@@ -609,6 +610,7 @@ router.get("/gebouwen/:id", lezenGebouwenOfKlant, async (req, res) => {
       gearchiveerd_op: gebouw.gearchiveerdOp ? gebouw.gearchiveerdOp.toISOString() : null,
       werkgever_id: gebouw.werkgeverId ?? null,
       werkmaatschappij_naam: werkgeverNaamDetail,
+      project_status: gebouw.projectStatus ?? null,
       verdiepingen: verdiepingenMet,
       stats,
     });
@@ -640,6 +642,7 @@ router.patch("/gebouwen/:id", requireBevoegdheid("gebouwen", 2), async (req, res
       latitude,
       longitude,
       werkgever_id,
+      project_status,
     } = req.body;
     const [gebouw] = await db
       .update(gebouwenTable)
@@ -675,6 +678,7 @@ router.patch("/gebouwen/:id", requireBevoegdheid("gebouwen", 2), async (req, res
         latitude,
         longitude,
         ...(werkgever_id !== undefined ? { werkgeverId: werkgever_id ?? null } : {}),
+        ...(project_status !== undefined ? { projectStatus: project_status ?? null } : {}),
         bijgewerktOp: new Date(),
       })
       .where(eq(gebouwenTable.id, id))

@@ -82,6 +82,31 @@ import GebouwRapporten from "./gebouw-rapporten";
 const BEHEERDER_ROLLEN = ["beheerder", "hoofdbeheerder"];
 const TEAM_UITGESLOTEN_ROLLEN = ["hoofdbeheerder", "klant"];
 
+const PROJECT_STATUS_CONFIG: Record<string, { label: string; className: string }> = {
+  offerte_aanvraag: {
+    label: "Offerte-aanvraag",
+    className: "bg-amber-100 text-amber-800 border-amber-300",
+  },
+  offerte_ingediend: {
+    label: "Offerte-ingediend",
+    className: "bg-blue-100 text-blue-800 border-blue-300",
+  },
+  opdracht_in_uitvoering: {
+    label: "Opdracht in uitvoering",
+    className: "bg-primary/10 text-primary border-primary/30",
+  },
+};
+
+function ProjectStatusBadge({ status }: { status: string }) {
+  const cfg = PROJECT_STATUS_CONFIG[status];
+  if (!cfg) return null;
+  return (
+    <Badge variant="outline" className={`shrink-0 text-xs font-medium ${cfg.className}`}>
+      {cfg.label}
+    </Badge>
+  );
+}
+
 function rolLabelVan(g: { rol?: string | null }): string {
   return g.rol ?? "";
 }
@@ -492,6 +517,9 @@ export default function GebouwDetail() {
                 ? `${gebouw.projectnummer} \u2014 ${gebouw.naam}`
                 : gebouw.naam}
             </h1>
+            {gebouw.project_status && (
+              <ProjectStatusBadge status={gebouw.project_status} />
+            )}
             {gebouw.gereed_op && (
               <Badge className="bg-green-600 text-white gap-1 shrink-0">
                 <CheckCircle className="h-3 w-3" /> Gereed

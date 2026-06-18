@@ -29,6 +29,7 @@ export const gebouwenTable = pgTable("gebouwen", {
   gearchiveerd: boolean("gearchiveerd").notNull().default(false),
   gearchiveerdOp: timestamp("gearchiveerd_op"),
   werkgeverId: integer("werkgever_id").references(() => werkgeversTable.id, { onDelete: "set null" }),
+  projectStatus: text("project_status"),
 });
 
 export const insertGebouwSchema = createInsertSchema(gebouwenTable).omit({ id: true, aangemaaktOp: true, bijgewerktOp: true });

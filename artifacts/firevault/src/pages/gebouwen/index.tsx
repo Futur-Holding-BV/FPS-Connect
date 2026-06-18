@@ -32,6 +32,18 @@ import { GebouwAanmakenDialog } from "./gebouw-aanmaken-dialog";
 
 const BEHEERDER_ROLLEN = ["beheerder", "hoofdbeheerder"];
 
+const PROJECT_STATUS_LABELS: Record<string, string> = {
+  offerte_aanvraag: "Offerte-aanvraag",
+  offerte_ingediend: "Offerte-ingediend",
+  opdracht_in_uitvoering: "Opdracht in uitvoering",
+};
+
+const PROJECT_STATUS_KLASSEN: Record<string, string> = {
+  offerte_aanvraag: "bg-amber-100 text-amber-800 border-amber-300",
+  offerte_ingediend: "bg-blue-100 text-blue-800 border-blue-300",
+  opdracht_in_uitvoering: "bg-primary/10 text-primary border-primary/30",
+};
+
 const PARTIJ_TYPE_LABELS: Record<string, string> = {
   eigenaar: "Eigenaar",
   gebruiker: "Gebruiker",
@@ -397,10 +409,15 @@ export default function Gebouwen() {
                     <div className="bg-primary/10 p-2 rounded-md">
                       <Building className="h-6 w-6 text-primary" />
                     </div>
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-1 flex-wrap">
                       {gebouw.gearchiveerd && (
                         <Badge variant="outline" className="bg-background text-muted-foreground border-muted-foreground/40 shrink-0 text-xs">
                           <Archive className="h-3 w-3 mr-1" /> Gearchiveerd
+                        </Badge>
+                      )}
+                      {!gebouw.gearchiveerd && gebouw.project_status && (
+                        <Badge variant="outline" className={`shrink-0 text-xs font-medium ${PROJECT_STATUS_KLASSEN[gebouw.project_status] ?? ""}`}>
+                          {PROJECT_STATUS_LABELS[gebouw.project_status] ?? gebouw.project_status}
                         </Badge>
                       )}
                       {!gebouw.gearchiveerd && (gebouw.totaal_voorzieningen ?? 0) > 0 && (

@@ -23,6 +23,12 @@ import { Separator } from "@/components/ui/separator";
 import { Loader2, AlertCircle, Sparkles, TriangleAlert } from "lucide-react";
 import { GebouwAiSuggesties } from "./gebouw-ai-suggesties";
 
+const PROJECT_STATUSSEN = [
+  { waarde: "offerte_aanvraag", label: "Offerte-aanvraag" },
+  { waarde: "offerte_ingediend", label: "Offerte-ingediend" },
+  { waarde: "opdracht_in_uitvoering", label: "Opdracht in uitvoering" },
+] as const;
+
 interface Velden {
   projectnummer: string;
   naam: string;
@@ -81,6 +87,8 @@ function uitGebouw(gebouw: Gebouw): Velden {
   };
 }
 
+type ProjectStatus = (typeof PROJECT_STATUSSEN)[number]["waarde"] | "";
+
 function standaardBeschrijving(gebouw: Gebouw): string {
   const delen = [
     tekst(gebouw.naam),
@@ -105,6 +113,7 @@ export function GebouwBewerkenDialog({ gebouw, open, onOpenChange }: Props) {
 
   const [velden, setVelden] = useState<Velden>(() => uitGebouw(gebouw));
   const [werkgeverId, setWerkgeverId] = useState<number | null>((gebouw as any).werkgever_id ?? null);
+  const [projectStatus, setProjectStatus] = useState<ProjectStatus>((gebouw as any).project_status ?? "");
   const [foutmelding, setFoutmelding] = useState<string | null>(null);
 
   // Bestaande gebouwgegevens starten als door de gebruiker beheerd: de AI
@@ -123,6 +132,7 @@ export function GebouwBewerkenDialog({ gebouw, open, onOpenChange }: Props) {
     if (open) {
       setVelden(uitGebouw(gebouw));
       setWerkgeverId((gebouw as any).werkgever_id ?? null);
+      setProjectStatus((gebouw as any).project_status ?? "");
       aiVeldenRef.current = new Set();
       setFoutmelding(null);
       setAiTekst(standaardBeschrijving(gebouw));
@@ -261,6 +271,7 @@ export function GebouwBewerkenDialog({ gebouw, open, onOpenChange }: Props) {
           diepte: getalOfNull(velden.diepte),
           oppervlakte: getalOfNull(velden.oppervlakte),
           werkgever_id: werkgeverId,
+          project_status: projectStatus || null,
         },
       });
       await queryClient.invalidateQueries();
@@ -431,6 +442,20 @@ export function GebouwBewerkenDialog({ gebouw, open, onOpenChange }: Props) {
               value={velden.gebouw_type}
               onChange={(e) => zet("gebouw_type", e.target.value)}
             />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="b-project-status">Projectstatus</Label>
+            <select
+              id="b-project-status"
+              value={projectStatus}
+              onChange={(e) => setProjectStatus(e.target.value as ProjectStatus)}
+              className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            >
+              <option value="">Geen status</option>
+              {PROJECT_STATUSSEN.map((s) => (
+                <option key={s.waarde} value={s.waarde}>{s.label}</option>
+              ))}
+            </select>
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="b-werkmaatschappij">Werkmaatschappij</Label>

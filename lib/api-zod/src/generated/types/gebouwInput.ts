@@ -24,4 +24,5 @@ export interface GebouwInput {
   latitude?: number;
   longitude?: number;
   werkgever_id?: number;
+  project_status?: string;
 }

@@ -478,6 +478,8 @@ export interface Gebouw {
   werkgever_id?: number | null;
   /** @nullable */
   werkmaatschappij_naam?: string | null;
+  /** @nullable */
+  project_status?: string | null;
 }
 
 export interface Verdieping {
@@ -557,6 +559,8 @@ export interface GebouwDetail {
   werkgever_id?: number | null;
   /** @nullable */
   werkmaatschappij_naam?: string | null;
+  /** @nullable */
+  project_status?: string | null;
   verdiepingen: Verdieping[];
   stats?: GebouwStats;
 }
@@ -778,6 +782,7 @@ export interface GebouwInput {
   latitude?: number;
   longitude?: number;
   werkgever_id?: number;
+  project_status?: string;
 }
 
 export interface GebouwUpdate {
@@ -798,6 +803,7 @@ export interface GebouwUpdate {
   latitude?: number | null;
   longitude?: number | null;
   werkgever_id?: number | null;
+  project_status?: string | null;
 }
 
 export interface GebouwAiAnalyseInput {

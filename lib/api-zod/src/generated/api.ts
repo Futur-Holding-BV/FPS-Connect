@@ -136,7 +136,8 @@ export const ListGebouwenResponseItem = zod.object({
   "gearchiveerd": zod.boolean().optional(),
   "gearchiveerd_op": zod.string().nullish(),
   "werkgever_id": zod.number().nullish(),
-  "werkmaatschappij_naam": zod.string().nullish()
+  "werkmaatschappij_naam": zod.string().nullish(),
+  "project_status": zod.string().nullish()
 })
 export const ListGebouwenResponse = zod.array(ListGebouwenResponseItem)
 
@@ -161,7 +162,8 @@ export const CreateGebouwBody = zod.object({
   "gebouw_type": zod.string().optional(),
   "latitude": zod.number().optional(),
   "longitude": zod.number().optional(),
-  "werkgever_id": zod.number().optional()
+  "werkgever_id": zod.number().optional(),
+  "project_status": zod.string().optional()
 })
 
 export const CreateGebouwResponse = zod.void()
@@ -318,6 +320,7 @@ export const GetGebouwResponse = zod.object({
   "gearchiveerd_op": zod.string().nullish(),
   "werkgever_id": zod.number().nullish(),
   "werkmaatschappij_naam": zod.string().nullish(),
+  "project_status": zod.string().nullish(),
   "verdiepingen": zod.array(zod.object({
   "id": zod.number(),
   "gebouw_id": zod.number(),
@@ -366,7 +369,8 @@ export const UpdateGebouwBody = zod.object({
   "gebouw_type": zod.string().nullish(),
   "latitude": zod.number().nullish(),
   "longitude": zod.number().nullish(),
-  "werkgever_id": zod.number().nullish()
+  "werkgever_id": zod.number().nullish(),
+  "project_status": zod.string().nullish()
 })
 
 export const UpdateGebouwResponse = zod.object({
@@ -401,7 +405,8 @@ export const UpdateGebouwResponse = zod.object({
   "gearchiveerd": zod.boolean().optional(),
   "gearchiveerd_op": zod.string().nullish(),
   "werkgever_id": zod.number().nullish(),
-  "werkmaatschappij_naam": zod.string().nullish()
+  "werkmaatschappij_naam": zod.string().nullish(),
+  "project_status": zod.string().nullish()
 })
 
 
@@ -458,7 +463,8 @@ export const MeldGebouwGereedResponse = zod.object({
   "gearchiveerd": zod.boolean().optional(),
   "gearchiveerd_op": zod.string().nullish(),
   "werkgever_id": zod.number().nullish(),
-  "werkmaatschappij_naam": zod.string().nullish()
+  "werkmaatschappij_naam": zod.string().nullish(),
+  "project_status": zod.string().nullish()
 })
 
 
@@ -501,7 +507,8 @@ export const HerstelGebouwActiefResponse = zod.object({
   "gearchiveerd": zod.boolean().optional(),
   "gearchiveerd_op": zod.string().nullish(),
   "werkgever_id": zod.number().nullish(),
-  "werkmaatschappij_naam": zod.string().nullish()
+  "werkmaatschappij_naam": zod.string().nullish(),
+  "project_status": zod.string().nullish()
 })
 
 
@@ -559,6 +566,7 @@ export const ArchiveerGebouwResponse = zod.object({
   "gearchiveerd_op": zod.string().nullish(),
   "werkgever_id": zod.number().nullish(),
   "werkmaatschappij_naam": zod.string().nullish(),
+  "project_status": zod.string().nullish(),
   "verdiepingen": zod.array(zod.object({
   "id": zod.number(),
   "gebouw_id": zod.number(),

@@ -59,4 +59,6 @@ export interface Gebouw {
   werkgever_id?: number | null;
   /** @nullable */
   werkmaatschappij_naam?: string | null;
+  /** @nullable */
+  project_status?: string | null;
 }

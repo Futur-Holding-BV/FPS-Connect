@@ -56,6 +56,8 @@ export interface GebouwDetail {
   werkgever_id?: number | null;
   /** @nullable */
   werkmaatschappij_naam?: string | null;
+  /** @nullable */
+  project_status?: string | null;
   verdiepingen: Verdieping[];
   stats?: GebouwStats;
 }

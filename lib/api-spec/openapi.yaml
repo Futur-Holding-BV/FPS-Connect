@@ -8557,6 +8557,8 @@ components:
           type: ["integer", "null"]
         werkmaatschappij_naam:
           type: ["string", "null"]
+        project_status:
+          type: ["string", "null"]
 
     GebouwDetail:
       type: object
@@ -8613,6 +8615,8 @@ components:
         werkgever_id:
           type: ["integer", "null"]
         werkmaatschappij_naam:
+          type: ["string", "null"]
+        project_status:
           type: ["string", "null"]
         verdiepingen:
           type: array
@@ -9005,6 +9009,8 @@ components:
           type: number
         werkgever_id:
           type: integer
+        project_status:
+          type: string
 
     GebouwUpdate:
       type: object
@@ -9057,6 +9063,9 @@ components:
           nullable: true
         werkgever_id:
           type: integer
+          nullable: true
+        project_status:
+          type: string
           nullable: true
 
     GebouwAiAnalyseInput:
