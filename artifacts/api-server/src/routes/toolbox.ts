@@ -6,9 +6,12 @@ import {
   gebruikersTable,
 } from "@workspace/db";
 import { eq, and, or, desc } from "drizzle-orm";
-import { requireAuth } from "../middlewares/auth.js";
+import { requireAuth, requireBevoegdheid } from "../middlewares/auth.js";
 
 const toolboxRouter = Router();
+
+const schrijvenToolbox = requireBevoegdheid("toolbox", 3);
+const verwijderenToolbox = requireBevoegdheid("toolbox", 4);
 
 function formatBericht(r: Record<string, unknown>, mijnUserId?: number, bevestigingen?: Array<{ id: number; gebruikerId: number; naam: string; bevestigdOp: Date }>) {
   const bijlagen = Array.isArray(r.bijlagen) ? r.bijlagen : [];
@@ -142,7 +145,7 @@ toolboxRouter.get("/toolbox-berichten", requireAuth, async (req, res) => {
   return res.json(result);
 });
 
-toolboxRouter.post("/toolbox-berichten", requireAuth, async (req, res) => {
+toolboxRouter.post("/toolbox-berichten", schrijvenToolbox, async (req, res) => {
   const userId = req.session?.userId;
   if (!userId) return res.status(401).json({ fout: "Niet ingelogd" });
 
@@ -260,7 +263,7 @@ toolboxRouter.get("/toolbox-berichten/:id", requireAuth, async (req, res) => {
   });
 });
 
-toolboxRouter.patch("/toolbox-berichten/:id", requireAuth, async (req, res) => {
+toolboxRouter.patch("/toolbox-berichten/:id", schrijvenToolbox, async (req, res) => {
   const id = parseInt(String(req.params["id"]));
   if (isNaN(id)) return res.status(400).json({ fout: "Ongeldig id" });
 
@@ -306,7 +309,7 @@ toolboxRouter.patch("/toolbox-berichten/:id", requireAuth, async (req, res) => {
   });
 });
 
-toolboxRouter.delete("/toolbox-berichten/:id", requireAuth, async (req, res) => {
+toolboxRouter.delete("/toolbox-berichten/:id", verwijderenToolbox, async (req, res) => {
   const id = parseInt(String(req.params["id"]));
   if (isNaN(id)) return res.status(400).json({ fout: "Ongeldig id" });
 
@@ -314,7 +317,7 @@ toolboxRouter.delete("/toolbox-berichten/:id", requireAuth, async (req, res) => 
   return res.status(204).send();
 });
 
-toolboxRouter.post("/toolbox-berichten/:id/publiceren", requireAuth, async (req, res) => {
+toolboxRouter.post("/toolbox-berichten/:id/publiceren", schrijvenToolbox, async (req, res) => {
   const id = parseInt(String(req.params["id"]));
   if (isNaN(id)) return res.status(400).json({ fout: "Ongeldig id" });
 

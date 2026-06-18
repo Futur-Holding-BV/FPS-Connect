@@ -10,9 +10,15 @@ import {
   documentenTable,
 } from "@workspace/db";
 import { eq, desc, and, inArray } from "drizzle-orm";
-import { requireAuth } from "../middlewares/auth";
+import { requireBevoegdheid, requireBevoegdheidOfKlant } from "../middlewares/auth";
 
 const router = Router();
+
+const lezenRapporten = requireBevoegdheid("rapportages", 1);
+const lezenRapportenOfKlant = requireBevoegdheidOfKlant("rapportages", 1);
+const schrijvenRapporten = requireBevoegdheid("rapportages", 2);
+const aanmakenRapporten = requireBevoegdheid("rapportages", 3);
+const verwijderenRapporten = requireBevoegdheid("rapportages", 4);
 
 const iso = (d: Date | null | undefined) => (d ? d.toISOString() : null);
 
@@ -52,7 +58,7 @@ function userId(req: Request): number | null {
 }
 
 // ── GET /rapporten (cross-gebouw) ─────────────────────────────────────────────
-router.get("/rapporten", requireAuth, async (req, res) => {
+router.get("/rapporten", lezenRapporten, async (req, res) => {
   try {
     const statusFilter = req.query.status as string | undefined;
     const q = db
@@ -73,7 +79,7 @@ router.get("/rapporten", requireAuth, async (req, res) => {
 });
 
 // ── GET /gebouwen/:id/rapporten ───────────────────────────────────────────────
-router.get("/gebouwen/:id/rapporten", requireAuth, async (req, res) => {
+router.get("/gebouwen/:id/rapporten", lezenRapportenOfKlant, async (req, res) => {
   try {
     const gebouwId = parseId(req.params.id);
     const rijen = await db
@@ -90,7 +96,7 @@ router.get("/gebouwen/:id/rapporten", requireAuth, async (req, res) => {
 });
 
 // ── POST /gebouwen/:id/rapporten ──────────────────────────────────────────────
-router.post("/gebouwen/:id/rapporten", requireAuth, async (req, res) => {
+router.post("/gebouwen/:id/rapporten", aanmakenRapporten, async (req, res) => {
   try {
     const gebouwId = parseId(req.params.id);
 
@@ -136,7 +142,7 @@ router.post("/gebouwen/:id/rapporten", requireAuth, async (req, res) => {
 });
 
 // ── GET /gebouwen/:id/rapporten/:rapportId ────────────────────────────────────
-router.get("/gebouwen/:id/rapporten/:rapportId", requireAuth, async (req, res) => {
+router.get("/gebouwen/:id/rapporten/:rapportId", lezenRapportenOfKlant, async (req, res) => {
   try {
     const gebouwId = parseId(req.params.id);
     const rapportId = parseId(req.params.rapportId);
@@ -160,7 +166,7 @@ router.get("/gebouwen/:id/rapporten/:rapportId", requireAuth, async (req, res) =
 });
 
 // ── PATCH /gebouwen/:id/rapporten/:rapportId ──────────────────────────────────
-router.patch("/gebouwen/:id/rapporten/:rapportId", requireAuth, async (req, res) => {
+router.patch("/gebouwen/:id/rapporten/:rapportId", schrijvenRapporten, async (req, res) => {
   try {
     const gebouwId = parseId(req.params.id);
     const rapportId = parseId(req.params.rapportId);
@@ -214,7 +220,7 @@ router.patch("/gebouwen/:id/rapporten/:rapportId", requireAuth, async (req, res)
 });
 
 // ── DELETE /gebouwen/:id/rapporten/:rapportId ─────────────────────────────────
-router.delete("/gebouwen/:id/rapporten/:rapportId", requireAuth, async (req, res) => {
+router.delete("/gebouwen/:id/rapporten/:rapportId", verwijderenRapporten, async (req, res) => {
   try {
     const gebouwId = parseId(req.params.id);
     const rapportId = parseId(req.params.rapportId);
@@ -244,7 +250,7 @@ router.delete("/gebouwen/:id/rapporten/:rapportId", requireAuth, async (req, res
 
 // ── POST /gebouwen/:id/rapporten/:rapportId/definitief ────────────────────────
 // Bevriest de documentrevisies en start de reactietermijn.
-router.post("/gebouwen/:id/rapporten/:rapportId/definitief", requireAuth, async (req, res) => {
+router.post("/gebouwen/:id/rapporten/:rapportId/definitief", aanmakenRapporten, async (req, res) => {
   try {
     const gebouwId = parseId(req.params.id);
     const rapportId = parseId(req.params.rapportId);

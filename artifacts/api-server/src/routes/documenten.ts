@@ -113,7 +113,7 @@ router.post(
 
 // ── CENTRALE DOCUMENTBIBLIOTHEEK ────────────────────────────────────────────
 // GET /documenten — lijst met filters
-router.get("/documenten", async (req, res) => {
+router.get("/documenten", requireBevoegdheid("bibliotheek", 1), async (req, res) => {
   try {
     const {
       zoek,
@@ -220,7 +220,7 @@ router.post(
 );
 
 // GET /documenten/signaleringen — documenten die aandacht nodig hebben
-router.get("/documenten/signaleringen", async (req, res) => {
+router.get("/documenten/signaleringen", requireBevoegdheid("bibliotheek", 1), async (req, res) => {
   try {
     const rows = await db
       .select()
@@ -276,7 +276,7 @@ router.get("/documenten/logboek", requireBevoegdheid("bibliotheek", 4), async (r
 });
 
 // GET /documenten/gekoppeld — documenten gekoppeld aan een entiteit
-router.get("/documenten/gekoppeld", async (req, res) => {
+router.get("/documenten/gekoppeld", requireBevoegdheid("bibliotheek", 1), async (req, res) => {
   try {
     const doelType = String(req.query.doel_type ?? "");
     const doelId = parseInt(String(req.query.doel_id ?? ""));
@@ -303,7 +303,7 @@ router.get("/documenten/gekoppeld", async (req, res) => {
 });
 
 // GET /documenten/:id — detail
-router.get("/documenten/:id", async (req, res) => {
+router.get("/documenten/:id", requireBevoegdheid("bibliotheek", 1), async (req, res) => {
   try {
     const id = parseInt(String(req.params.id));
     const [d] = await db.select().from(documentenTable).where(eq(documentenTable.id, id));
@@ -316,7 +316,7 @@ router.get("/documenten/:id", async (req, res) => {
 });
 
 // GET /documenten/:id/revisies — revisiehistorie van de documentgroep
-router.get("/documenten/:id/revisies", async (req, res) => {
+router.get("/documenten/:id/revisies", requireBevoegdheid("bibliotheek", 1), async (req, res) => {
   try {
     const id = parseInt(String(req.params.id));
     const [d] = await db.select().from(documentenTable).where(eq(documentenTable.id, id));
@@ -553,7 +553,7 @@ router.put("/documenten/:id/toepassingen", requireBevoegdheid("bibliotheek", 2),
 
 // ── KOPPELINGEN (document ↔ entiteit) ───────────────────────────────────────
 // GET /documenten/:id/koppelingen
-router.get("/documenten/:id/koppelingen", async (req, res) => {
+router.get("/documenten/:id/koppelingen", requireBevoegdheid("bibliotheek", 1), async (req, res) => {
   try {
     const id = parseInt(String(req.params.id));
     const rows = await db
@@ -731,7 +731,7 @@ router.post(
 );
 
 // GET /documenten/:id/goedkeuringen — goedkeuringshistorie
-router.get("/documenten/:id/goedkeuringen", async (req, res) => {
+router.get("/documenten/:id/goedkeuringen", requireBevoegdheid("bibliotheek", 1), async (req, res) => {
   try {
     const id = parseInt(String(req.params.id));
     const rows = await db
@@ -747,7 +747,7 @@ router.get("/documenten/:id/goedkeuringen", async (req, res) => {
 });
 
 // GET /documenten/:id/logboek — audittrail van één document
-router.get("/documenten/:id/logboek", async (req, res) => {
+router.get("/documenten/:id/logboek", requireBevoegdheid("bibliotheek", 1), async (req, res) => {
   try {
     const id = parseInt(String(req.params.id));
     const rows = await db
@@ -763,7 +763,7 @@ router.get("/documenten/:id/logboek", async (req, res) => {
 });
 
 // GET /documenten/:id/download — log de download en stuur door naar het bestand
-router.get("/documenten/:id/download", async (req, res) => {
+router.get("/documenten/:id/download", requireBevoegdheid("bibliotheek", 1), async (req, res) => {
   try {
     const id = parseInt(String(req.params.id));
     const [d] = await db.select().from(documentenTable).where(eq(documentenTable.id, id));

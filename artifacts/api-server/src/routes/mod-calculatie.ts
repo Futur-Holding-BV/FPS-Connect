@@ -11,10 +11,15 @@ import {
   gebruikersTable,
 } from "@workspace/db";
 import { eq, desc, asc, ilike, or } from "drizzle-orm";
-import { requireAuth } from "../middlewares/auth";
+import { requireBevoegdheid } from "../middlewares/auth";
 
 const router = Router();
 const iso = (d: Date) => d.toISOString();
+
+const lezenCalc = requireBevoegdheid("calculaties", 1);
+const schrijvenCalc = requireBevoegdheid("calculaties", 2);
+const aanmakenCalc = requireBevoegdheid("calculaties", 3);
+const verwijderenCalc = requireBevoegdheid("calculaties", 4);
 
 function parseId(v: unknown): number {
   return parseInt(String(v), 10);
@@ -81,7 +86,7 @@ function mapRegel(r: typeof modCalcRegelsTable.$inferSelect, normtijdCode?: stri
 
 // ── Tarieven ───────────────────────────────────────────────────────────────
 
-router.get("/modules/calculaties/tarieven", requireAuth, async (req, res) => {
+router.get("/modules/calculaties/tarieven", lezenCalc, async (req, res) => {
   try {
     const rows = await db.select().from(modCalcTarievenTable)
       .where(eq(modCalcTarievenTable.actief, true))
@@ -96,7 +101,7 @@ router.get("/modules/calculaties/tarieven", requireAuth, async (req, res) => {
   }
 });
 
-router.post("/modules/calculaties/tarieven", requireAuth, async (req, res) => {
+router.post("/modules/calculaties/tarieven", schrijvenCalc, async (req, res) => {
   try {
     const { naam, tarief, eenheid = "uur", categorie = "arbeid" } = req.body as Record<string, unknown>;
     if (!naam) return res.status(400).json({ error: "naam is verplicht" });
@@ -110,7 +115,7 @@ router.post("/modules/calculaties/tarieven", requireAuth, async (req, res) => {
   }
 });
 
-router.patch("/modules/calculaties/tarieven/:id", requireAuth, async (req, res) => {
+router.patch("/modules/calculaties/tarieven/:id", schrijvenCalc, async (req, res) => {
   try {
     const id = parseId(req.params["id"]);
     const body = req.body as Record<string, unknown>;
@@ -129,7 +134,7 @@ router.patch("/modules/calculaties/tarieven/:id", requireAuth, async (req, res) 
   }
 });
 
-router.delete("/modules/calculaties/tarieven/:id", requireAuth, async (req, res) => {
+router.delete("/modules/calculaties/tarieven/:id", verwijderenCalc, async (req, res) => {
   try {
     const id = parseId(req.params["id"]);
     await db.delete(modCalcTarievenTable).where(eq(modCalcTarievenTable.id, id));
@@ -142,7 +147,7 @@ router.delete("/modules/calculaties/tarieven/:id", requireAuth, async (req, res)
 
 // ── Normtijden ─────────────────────────────────────────────────────────────
 
-router.get("/modules/calculaties/normtijden", requireAuth, async (req, res) => {
+router.get("/modules/calculaties/normtijden", lezenCalc, async (req, res) => {
   try {
     const rows = await db.select().from(modCalcNormtijdenTable)
       .where(eq(modCalcNormtijdenTable.actief, true))
@@ -157,7 +162,7 @@ router.get("/modules/calculaties/normtijden", requireAuth, async (req, res) => {
   }
 });
 
-router.post("/modules/calculaties/normtijden", requireAuth, async (req, res) => {
+router.post("/modules/calculaties/normtijden", schrijvenCalc, async (req, res) => {
   try {
     const { code, omschrijving, categorie = "brandwerende afdichting", eenheid = "st", uren_per_eenheid = 0 } =
       req.body as Record<string, unknown>;
@@ -176,7 +181,7 @@ router.post("/modules/calculaties/normtijden", requireAuth, async (req, res) => 
 
 // ── Calculatie headers ─────────────────────────────────────────────────────
 
-router.get("/modules/calculaties", requireAuth, async (req, res) => {
+router.get("/modules/calculaties", lezenCalc, async (req, res) => {
   try {
     const { status, zoek } = req.query as Record<string, string>;
 
@@ -224,7 +229,7 @@ router.get("/modules/calculaties", requireAuth, async (req, res) => {
   }
 });
 
-router.post("/modules/calculaties", requireAuth, async (req, res) => {
+router.post("/modules/calculaties", aanmakenCalc, async (req, res) => {
   try {
     const {
       naam, referentie, klant_naam, gebouw_id, project_naam, status = "concept",
@@ -256,7 +261,7 @@ router.post("/modules/calculaties", requireAuth, async (req, res) => {
   }
 });
 
-router.get("/modules/calculaties/:id", requireAuth, async (req, res) => {
+router.get("/modules/calculaties/:id", lezenCalc, async (req, res) => {
   try {
     const id = parseId(req.params["id"]);
 
@@ -301,7 +306,7 @@ router.get("/modules/calculaties/:id", requireAuth, async (req, res) => {
   }
 });
 
-router.patch("/modules/calculaties/:id", requireAuth, async (req, res) => {
+router.patch("/modules/calculaties/:id", schrijvenCalc, async (req, res) => {
   try {
     const id = parseId(req.params["id"]);
     const body = req.body as Record<string, unknown>;
@@ -327,7 +332,7 @@ router.patch("/modules/calculaties/:id", requireAuth, async (req, res) => {
   }
 });
 
-router.delete("/modules/calculaties/:id", requireAuth, async (req, res) => {
+router.delete("/modules/calculaties/:id", verwijderenCalc, async (req, res) => {
   try {
     const id = parseId(req.params["id"]);
     await db.delete(modCalcHeadersTable).where(eq(modCalcHeadersTable.id, id));
@@ -338,7 +343,7 @@ router.delete("/modules/calculaties/:id", requireAuth, async (req, res) => {
   }
 });
 
-router.post("/modules/calculaties/:id/dupliceer", requireAuth, async (req, res) => {
+router.post("/modules/calculaties/:id/dupliceer", aanmakenCalc, async (req, res) => {
   try {
     const id = parseId(req.params["id"]);
     const [original] = await db.select().from(modCalcHeadersTable).where(eq(modCalcHeadersTable.id, id));
@@ -390,7 +395,7 @@ router.post("/modules/calculaties/:id/dupliceer", requireAuth, async (req, res) 
 
 // ── Calculatie regels ──────────────────────────────────────────────────────
 
-router.get("/modules/calculaties/:id/regels", requireAuth, async (req, res) => {
+router.get("/modules/calculaties/:id/regels", lezenCalc, async (req, res) => {
   try {
     const id = parseId(req.params["id"]);
     const rows = await db
@@ -406,7 +411,7 @@ router.get("/modules/calculaties/:id/regels", requireAuth, async (req, res) => {
   }
 });
 
-router.post("/modules/calculaties/:id/regels", requireAuth, async (req, res) => {
+router.post("/modules/calculaties/:id/regels", schrijvenCalc, async (req, res) => {
   try {
     const id = parseId(req.params["id"]);
     const [header] = await db.select().from(modCalcHeadersTable).where(eq(modCalcHeadersTable.id, id));
@@ -440,7 +445,7 @@ router.post("/modules/calculaties/:id/regels", requireAuth, async (req, res) => 
   }
 });
 
-router.patch("/modules/calculaties/:id/regels/:regelId", requireAuth, async (req, res) => {
+router.patch("/modules/calculaties/:id/regels/:regelId", schrijvenCalc, async (req, res) => {
   try {
     const regelId = parseId(req.params["regelId"]);
     const body = req.body as Record<string, unknown>;
@@ -469,7 +474,7 @@ router.patch("/modules/calculaties/:id/regels/:regelId", requireAuth, async (req
   }
 });
 
-router.delete("/modules/calculaties/:id/regels/:regelId", requireAuth, async (req, res) => {
+router.delete("/modules/calculaties/:id/regels/:regelId", schrijvenCalc, async (req, res) => {
   try {
     const regelId = parseId(req.params["regelId"]);
     await db.delete(modCalcRegelsTable).where(eq(modCalcRegelsTable.id, regelId));

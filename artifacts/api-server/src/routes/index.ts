@@ -27,7 +27,6 @@ import rapportenRouter from "./rapporten";
 import constructieTemplatesRouter from "./constructie-templates";
 import mijnWerkRouter from "./mijn-werk";
 import toolboxRouter from "./toolbox";
-import testToegangRouter from "./test-toegang";
 import planningModuleRouter from "./planning-module";
 import modCalculatieRouter from "./mod-calculatie";
 import { requireAuth } from "../middlewares/auth";
@@ -38,9 +37,6 @@ const router: IRouter = Router();
 router.use(healthRouter);
 router.use(authRouter);
 router.use(uitnodigingRouter);
-// TIJDELIJK — directe-login-testlinks; verwijderen na de test (zie test-toegang.ts)
-router.use(testToegangRouter);
-
 // Vanaf hier vereist alles een geldige sessie
 router.use(requireAuth);
 

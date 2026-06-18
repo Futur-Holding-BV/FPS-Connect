@@ -11,10 +11,14 @@ import {
   functiesTable,
 } from "@workspace/db";
 import { eq, and, gte, lte, desc, asc } from "drizzle-orm";
-import { requireAuth } from "../middlewares/auth";
+import { requireBevoegdheid } from "../middlewares/auth";
 
 const router = Router();
 const iso = (d: Date) => d.toISOString();
+
+const lezenPlanning = requireBevoegdheid("planning", 1);
+const schrijvenPlanning = requireBevoegdheid("planning", 2);
+const aanmakenPlanning = requireBevoegdheid("planning", 3);
 
 function parseId(v: unknown): number {
   return parseInt(String(v), 10);
@@ -22,7 +26,7 @@ function parseId(v: unknown): number {
 
 // ── Medewerkers voor planning ─────────────────────────────────────────────
 
-router.get("/modules/planning/medewerkers", requireAuth, async (req, res) => {
+router.get("/modules/planning/medewerkers", lezenPlanning, async (req, res) => {
   try {
     const rows = await db
       .select({
@@ -56,7 +60,7 @@ router.get("/modules/planning/medewerkers", requireAuth, async (req, res) => {
 
 // ── Planning items ─────────────────────────────────────────────────────────
 
-router.get("/modules/planning/items", requireAuth, async (req, res) => {
+router.get("/modules/planning/items", lezenPlanning, async (req, res) => {
   try {
     const { van, tot, medewerker_id } = req.query as Record<string, string>;
 
@@ -104,7 +108,7 @@ router.get("/modules/planning/items", requireAuth, async (req, res) => {
   }
 });
 
-router.post("/modules/planning/items", requireAuth, async (req, res) => {
+router.post("/modules/planning/items", aanmakenPlanning, async (req, res) => {
   try {
     const {
       titel, omschrijving, medewerker_id, gebouw_id, project_naam,
@@ -158,7 +162,7 @@ router.post("/modules/planning/items", requireAuth, async (req, res) => {
   }
 });
 
-router.get("/modules/planning/items/:id", requireAuth, async (req, res) => {
+router.get("/modules/planning/items/:id", lezenPlanning, async (req, res) => {
   try {
     const id = parseId(req.params["id"]);
     const [row] = await db
@@ -190,7 +194,7 @@ router.get("/modules/planning/items/:id", requireAuth, async (req, res) => {
   }
 });
 
-router.patch("/modules/planning/items/:id", requireAuth, async (req, res) => {
+router.patch("/modules/planning/items/:id", schrijvenPlanning, async (req, res) => {
   try {
     const id = parseId(req.params["id"]);
     const body = req.body as Record<string, unknown>;
@@ -225,7 +229,7 @@ router.patch("/modules/planning/items/:id", requireAuth, async (req, res) => {
   }
 });
 
-router.delete("/modules/planning/items/:id", requireAuth, async (req, res) => {
+router.delete("/modules/planning/items/:id", aanmakenPlanning, async (req, res) => {
   try {
     const id = parseId(req.params["id"]);
     await db.delete(planningItemsTable).where(eq(planningItemsTable.id, id));
@@ -238,7 +242,7 @@ router.delete("/modules/planning/items/:id", requireAuth, async (req, res) => {
 
 // ── Afwezigheid ────────────────────────────────────────────────────────────
 
-router.get("/modules/planning/afwezigheid", requireAuth, async (req, res) => {
+router.get("/modules/planning/afwezigheid", lezenPlanning, async (req, res) => {
   try {
     const { medewerker_id } = req.query as Record<string, string>;
 
@@ -274,7 +278,7 @@ router.get("/modules/planning/afwezigheid", requireAuth, async (req, res) => {
   }
 });
 
-router.post("/modules/planning/afwezigheid", requireAuth, async (req, res) => {
+router.post("/modules/planning/afwezigheid", schrijvenPlanning, async (req, res) => {
   try {
     const { medewerker_id, type = "vakantie", datum_start, datum_eind, omschrijving, status = "aangevraagd" } =
       req.body as Record<string, unknown>;
@@ -304,7 +308,7 @@ router.post("/modules/planning/afwezigheid", requireAuth, async (req, res) => {
   }
 });
 
-router.patch("/modules/planning/afwezigheid/:id", requireAuth, async (req, res) => {
+router.patch("/modules/planning/afwezigheid/:id", schrijvenPlanning, async (req, res) => {
   try {
     const id = parseId(req.params["id"]);
     const body = req.body as Record<string, unknown>;
@@ -327,7 +331,7 @@ router.patch("/modules/planning/afwezigheid/:id", requireAuth, async (req, res) 
   }
 });
 
-router.delete("/modules/planning/afwezigheid/:id", requireAuth, async (req, res) => {
+router.delete("/modules/planning/afwezigheid/:id", schrijvenPlanning, async (req, res) => {
   try {
     const id = parseId(req.params["id"]);
     await db.delete(planningAfwezigheidTable).where(eq(planningAfwezigheidTable.id, id));

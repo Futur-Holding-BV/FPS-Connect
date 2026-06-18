@@ -72,6 +72,21 @@ export const MODULES = [
     label: "Systeembeheer",
     omschrijving: "Systeeminstellingen, beveiliging en logboeken",
   },
+  {
+    id: "planning",
+    label: "Planning",
+    omschrijving: "Planningsitems, werkagenda's en afwezigheid",
+  },
+  {
+    id: "calculaties",
+    label: "Calculaties",
+    omschrijving: "Kostenberekeningen, tarieven en normtijden",
+  },
+  {
+    id: "toolbox",
+    label: "Toolbox",
+    omschrijving: "Toolboxberichten en leesbevestigingen",
+  },
 ] as const;
 
 export type ModuleId = (typeof MODULES)[number]["id"];
@@ -172,6 +187,7 @@ export const PRESETS: Preset[] = [
     bevoegdheden: matrix({
       gebouwen: 4, voorzieningen: 4, inspecties: 4, onderhoud: 4,
       rapportages: 4, bibliotheek: 3, crm: 3,
+      planning: 3, toolbox: 3, calculaties: 1,
     }),
   },
   {
@@ -192,7 +208,7 @@ export const PRESETS: Preset[] = [
     naam: "Monteur",
     bevoegdheden: matrix({
       gebouwen: 1, voorzieningen: 3, inspecties: 3, onderhoud: 3,
-      rapportages: 1, bibliotheek: 1,
+      rapportages: 1, bibliotheek: 1, planning: 1, toolbox: 1,
     }),
   },
   {
@@ -206,7 +222,7 @@ export const PRESETS: Preset[] = [
     naam: "Uitvoerder",
     bevoegdheden: matrix({
       gebouwen: 2, voorzieningen: 3, inspecties: 3, onderhoud: 3,
-      rapportages: 2, bibliotheek: 1,
+      rapportages: 2, bibliotheek: 1, planning: 2, toolbox: 1,
     }),
   },
   {
@@ -233,7 +249,7 @@ export const PRESETS: Preset[] = [
     naam: "Calculatie",
     bevoegdheden: matrix({
       gebouwen: 1, voorzieningen: 1, rapportages: 1, bibliotheek: 2,
-      offertes: 4, dossiers: 2, crm: 1,
+      offertes: 4, dossiers: 2, crm: 1, calculaties: 4,
     }),
   },
 ];
