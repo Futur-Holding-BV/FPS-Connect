@@ -33,7 +33,6 @@
 - [Expo typed routes regeneratie](expo-typed-routes.md) — nieuw app/-routebestand → typecheck faalt TS2345 op router.push tot .expo/types/router.d.ts regenereert; herstart expo-workflow, niet handmatig editen.
 - [Tekening-type document + zichtbaar_monteur](tekening-documenten.md) — documenten nooit in opleverrapport (print.tsx filter) en alleen zichtbaar voor niet-beheerders bij vlag; 3 plekken synchroon; zichtbaarheid ≠ access control (geen storage ACL).
 - [Projectformulier edit leeg](projectformulier-edit-leeg.md) — lege edit-velden + niet opslaan = meestal api-server down/HMR-stale, geen UI-bug; check workflows draaien + hard refresh vóór codejacht.
-
 - [Betrokken contacten-kaart](betrokkenen-kaart.md) — projectformulier-kaart groepeert op partij (opdrachtgever boven); rol/org in groepskop, dus kale PersoonRegel buiten groep heeft toonContext nodig.
 - [Drizzle push & post-merge drift](drizzle-push-postmerge.md) — push faalt op additieve UNIQUE + session (fix via ALTER); ontbrekende kolom uit drift → select-all 500 op álle lijst-queries (lijkt frontend-bug).
 - [Nav "In uitvoering"-badge](nav-in-uitvoering-badge.md) — geparkeerde modules krijgen outline-badge met nav.inUitvoering (klok-icoon); viel stil weg bij matrix-herschrijving; behouden bij elke sidebar-refactor.
@@ -68,3 +67,4 @@
 - [Kwaliteitscheck script](kwaliteitscheck.md) — pnpm audit severity via "Severity: X low | Y moderate | Z high" (plain-text, geen JSON); route-teller: `import \w+Router from` vs `router.use(\w+Router)` — middleware-imports niet meerekenen.
 - [Zombie node processen](zombie-node.md) — als `node --version` hangt (exit 124), zijn er zombie node-pids (ps aux|grep node); fix: kill -9 pids + restart_workflow; NIET oplosbaar door esbuild/code debuggen.
 - [Api-server middleware importpad](api-server-middlewares-pad.md) — api-server middleware map heet `middlewares` (meervoud), NIET `middleware`; nieuwe routes importeren uit `"../middlewares/auth"` anders faalt esbuild-build.
+- [S3-opslagabstractie](s3-storage-abstractie.md) — StorageFile interface in objectStorageTypes.ts; factory in objectStorage.ts (S3_BUCKET→S3, anders GCS); getObjectEntityUploadURL retourneert {uploadURL,objectPath}; geen normalizeObjectEntityPath meer in routes.

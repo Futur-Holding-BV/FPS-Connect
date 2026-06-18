@@ -71,11 +71,10 @@ router.post("/storage/uploads/request-url", requireAuth, async (req: Request, re
       }
     }
 
-    const uploadURL = await objectStorageService.getObjectEntityUploadURL(
+    const { uploadURL, objectPath } = await objectStorageService.getObjectEntityUploadURL(
       gebouw_id ?? null,
       (bestand_type ?? null) as BestandType | null,
     );
-    const objectPath = objectStorageService.normalizeObjectEntityPath(uploadURL);
 
     res.json(
       RequestUploadUrlResponse.parse({

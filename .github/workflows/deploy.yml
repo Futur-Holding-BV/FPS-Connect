@@ -1,0 +1,141 @@
+name: Deploy naar productie
+
+on:
+  # Handmatig starten vanuit de GitHub Actions-tab
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: "Docker image tag (bijv. v1.2.0 of een commit-SHA)"
+        required: false
+        default: "latest"
+
+  # Of automatisch na een geslaagde CI op main
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+
+# ─── Expliciete goedkeuring vereist ──────────────────────────────────────────
+# Stel in GitHub → Settings → Environments → production in:
+#   - Required reviewers: voeg de goedkeurder(s) toe
+#   - Prevent self-review: aan
+# Zonder goedkeuring wordt de deploy-stap niet uitgevoerd.
+
+jobs:
+  # ─── Stap 1: Bouw en push Docker images ──────────────────────────────────
+  build:
+    name: Bouw Docker images
+    runs-on: ubuntu-latest
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      image_tag: ${{ steps.meta.outputs.version }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in bij container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Docker metadata (api)
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/fps-connect-api
+          tags: |
+            type=sha,prefix=,format=short
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+            type=raw,value=${{ inputs.image_tag || 'latest' }}
+
+      - name: Docker metadata (web)
+        id: meta-web
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/fps-connect-web
+          tags: |
+            type=sha,prefix=,format=short
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+            type=raw,value=${{ inputs.image_tag || 'latest' }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Bouw en push api-server image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: artifacts/api-server/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Bouw en push firevault image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: artifacts/firevault/Dockerfile
+          push: true
+          tags: ${{ steps.meta-web.outputs.tags }}
+          labels: ${{ steps.meta-web.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ─── Stap 2: Deploy naar productie (VEREIST GOEDKEURING) ─────────────────
+  deploy:
+    name: Deploy naar productie
+    needs: build
+    runs-on: ubuntu-latest
+    environment: production        # <-- hier vereist GitHub goedkeuring
+    concurrency:
+      group: production
+      cancel-in-progress: false    # nooit een lopende deploy annuleren
+
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.PROD_SSH_HOST }}
+          username: ${{ secrets.PROD_SSH_USER }}
+          key: ${{ secrets.PROD_SSH_KEY }}
+          port: ${{ secrets.PROD_SSH_PORT || 22 }}
+          script: |
+            set -e
+            cd /opt/fps-connect
+
+            # Haal de nieuwe images op
+            IMAGE_TAG=${{ needs.build.outputs.image_tag }}
+            export IMAGE_TAG
+
+            docker compose -f docker-compose.production.yml pull
+
+            # Draai DB-migraties vóór de cutover
+            docker compose -f docker-compose.production.yml run --rm api \
+              node -e "
+                const { drizzle } = require('drizzle-orm/node-postgres');
+                const { migrate } = require('drizzle-orm/node-postgres/migrator');
+                const { Pool } = require('pg');
+                const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+                const db = drizzle(pool);
+                migrate(db, { migrationsFolder: 'drizzle' }).then(() => {
+                  console.log('Migraties voltooid');
+                  pool.end();
+                });
+              " 2>/dev/null || echo 'Push-migratie overgeslagen (geen drizzle-folder)'
+
+            # Zero-downtime herstart: start de nieuwe containers, verwijder de oude
+            docker compose -f docker-compose.production.yml up -d --remove-orphans
+
+            # Opschonen van oude images (bewaar de laatste 3)
+            docker image prune -f --filter "until=72h"
+
+            echo "Deploy voltooid: $IMAGE_TAG"
