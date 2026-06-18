@@ -76,6 +76,8 @@ const mapWerkgever = (w: typeof werkgeversTable.$inferSelect) => ({
   briefpapier_document_id: w.briefpapierDocumentId,
   personeelsbeleid: w.personeelsbeleid,
   adres: w.adres,
+  postcode: w.postcode,
+  plaats: w.plaats,
   kvk: w.kvk,
   btw: w.btw,
   telefoon: w.telefoon,
@@ -110,7 +112,7 @@ router.get("/werkgevers", lezen, async (req, res) => {
 
 router.post("/werkgevers", schrijven, async (req, res) => {
   try {
-    const { naam, cao, logo_document_id, briefpapier_document_id, personeelsbeleid, adres, kvk, btw, telefoon, email, website, voettekst, actief } = req.body;
+    const { naam, cao, logo_document_id, briefpapier_document_id, personeelsbeleid, adres, postcode, plaats, kvk, btw, telefoon, email, website, voettekst, actief } = req.body;
     if (!naam || typeof naam !== "string" || !naam.trim()) {
       return res.status(400).json({ error: "naam is verplicht" });
     }
@@ -123,6 +125,8 @@ router.post("/werkgevers", schrijven, async (req, res) => {
         briefpapierDocumentId: briefpapier_document_id ?? null,
         personeelsbeleid: personeelsbeleid ?? null,
         adres: adres ?? null,
+        postcode: postcode ?? null,
+        plaats: plaats ?? null,
         kvk: kvk ?? null,
         btw: btw ?? null,
         telefoon: telefoon ?? null,
@@ -153,7 +157,7 @@ router.get("/werkgevers/:id", lezen, async (req, res) => {
 router.patch("/werkgevers/:id", schrijven, async (req, res) => {
   try {
     const id = parseId(req.params.id);
-    const { naam, cao, logo_document_id, briefpapier_document_id, personeelsbeleid, adres, kvk, btw, telefoon, email, website, voettekst, actief } = req.body;
+    const { naam, cao, logo_document_id, briefpapier_document_id, personeelsbeleid, adres, postcode, plaats, kvk, btw, telefoon, email, website, voettekst, actief } = req.body;
     const nieuweNaam = typeof naam === "string" && naam.trim() ? naam.trim() : undefined;
 
     const w = await db.transaction(async (tx) => {
@@ -169,6 +173,8 @@ router.patch("/werkgevers/:id", schrijven, async (req, res) => {
           briefpapierDocumentId: briefpapier_document_id !== undefined ? briefpapier_document_id : undefined,
           personeelsbeleid,
           adres: adres !== undefined ? adres : undefined,
+          postcode: postcode !== undefined ? postcode : undefined,
+          plaats: plaats !== undefined ? plaats : undefined,
           kvk: kvk !== undefined ? kvk : undefined,
           btw: btw !== undefined ? btw : undefined,
           telefoon: telefoon !== undefined ? telefoon : undefined,

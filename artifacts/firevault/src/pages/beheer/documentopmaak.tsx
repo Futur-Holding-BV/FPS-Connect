@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Select,
   SelectContent,
@@ -12,53 +12,26 @@ import {
   HoofdstukpaginaA,
   VervolgpaginaB,
   ChecklistpaginaC,
-  WerkmaatschappijInfo,
-  DocumentMeta
+  type WerkmaatschappijInfo,
+  type DocumentMeta,
 } from "@/components/documentopmaak";
 import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
+import { useListWerkgevers, type Werkgever } from "@workspace/api-client-react";
+import { Loader2 } from "lucide-react";
 
-const WERKMAATSCHAPPIJEN: Record<string, WerkmaatschappijInfo> = {
-  "fps-bouw": {
-    naam: "FPS Bouw",
+function werkgeverNaarMij(w: Werkgever): WerkmaatschappijInfo {
+  return {
+    id: String(w.id),
+    naam: w.naam,
     logoUrl: "logo-fps.png",
-    adres: "Nijverheidsstraat 12",
-    postcodeWoonplaats: "7511 CH Enschede",
-    telefoon: "053 - 123 45 67",
-    email: "info@fps-bouw.nl",
-    website: "www.fps-bouw.nl",
-    kvk: "12345678"
-  },
-  "fps-brandpreventie": {
-    naam: "FPS Brandpreventie",
-    logoUrl: "logo-fps.png",
-    adres: "Brandweerlaan 4",
-    postcodeWoonplaats: "7553 AA Hengelo",
-    telefoon: "074 - 987 65 43",
-    email: "info@fps-brandpreventie.nl",
-    website: "www.fps-brandpreventie.nl",
-    kvk: "87654321"
-  },
-  "fps-onderhoud": {
-    naam: "FPS Onderhoud",
-    logoUrl: "logo-fps.png",
-    adres: "Onderhoudsweg 8",
-    postcodeWoonplaats: "7602 BB Almelo",
-    telefoon: "0546 - 112 233",
-    email: "info@fps-onderhoud.nl",
-    website: "www.fps-onderhoud.nl",
-    kvk: "56781234"
-  },
-  "fps-bouw-renovatie": {
-    naam: "FPS Bouw en Renovatie",
-    logoUrl: "logo-fps.png",
-    adres: "Renovatieplein 1",
-    postcodeWoonplaats: "7411 CC Deventer",
-    telefoon: "0570 - 445 566",
-    email: "info@fps-bouw-renovatie.nl",
-    website: "www.fps-bouw-renovatie.nl",
-    kvk: "34567812"
-  }
-};
+    adres: w.adres ?? "",
+    postcodeWoonplaats: [w.postcode, w.plaats].filter(Boolean).join(" "),
+    telefoon: w.telefoon ?? "",
+    email: w.email ?? "",
+    website: w.website ?? "",
+    kvk: w.kvk ?? "",
+  };
+}
 
 const DUMMY_META_KLANT: DocumentMeta = {
   titel: "Opleverrapport Brandveiligheid",
@@ -104,12 +77,34 @@ const DUMMY_META_OP: DocumentMeta = {
 
 type TemplateId = "A1" | "A2" | "A3" | "B1" | "C1";
 
+const LEGE_MIJ: WerkmaatschappijInfo = {
+  naam: "",
+  logoUrl: "logo-fps.png",
+  adres: "",
+  postcodeWoonplaats: "",
+  telefoon: "",
+  email: "",
+  website: "",
+  kvk: "",
+};
+
 export default function DocumentDesignSystem() {
   const { heeftNiveau } = useBevoegdheid();
-  const [werkmijId, setWerkmijId] = useState<string>("fps-brandpreventie");
+  const [werkgeverId, setWerkgeverId] = useState<number | null>(null);
   const [templateId, setTemplateId] = useState<TemplateId>("A1");
 
-  const mij = WERKMAATSCHAPPIJEN[werkmijId];
+  const { data: werkgevers = [], isLoading } = useListWerkgevers();
+
+  useEffect(() => {
+    if (werkgeverId === null && werkgevers.length > 0) {
+      setWerkgeverId(werkgevers[0].id);
+    }
+  }, [werkgevers, werkgeverId]);
+
+  const geselecteerdeWerkgever = werkgevers.find((w) => w.id === werkgeverId) ?? null;
+  const mij: WerkmaatschappijInfo = geselecteerdeWerkgever
+    ? werkgeverNaarMij(geselecteerdeWerkgever)
+    : LEGE_MIJ;
 
   if (!heeftNiveau("systeem", 1)) {
     return (
@@ -148,17 +143,42 @@ export default function DocumentDesignSystem() {
         <div className="flex items-center gap-4">
           <div className="w-64">
             <label className="text-xs font-semibold text-slate-600 block mb-1">Werkmaatschappij (Branding)</label>
-            <Select value={werkmijId} onValueChange={setWerkmijId}>
-              <SelectTrigger className="bg-white">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {Object.entries(WERKMAATSCHAPPIJEN).map(([id, w]) => (
-                  <SelectItem key={id} value={id}>{w.naam}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {isLoading ? (
+              <div className="flex items-center gap-2 text-sm text-slate-400 h-10">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Laden...
+              </div>
+            ) : werkgevers.length === 0 ? (
+              <div className="text-sm text-slate-400 h-10 flex items-center">
+                Geen werkgevers gevonden
+              </div>
+            ) : (
+              <Select
+                value={werkgeverId != null ? String(werkgeverId) : ""}
+                onValueChange={(v) => setWerkgeverId(Number(v))}
+              >
+                <SelectTrigger className="bg-white">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {werkgevers.map((w) => (
+                    <SelectItem key={w.id} value={String(w.id)}>{w.naam}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
           </div>
+
+          {geselecteerdeWerkgever && (
+            <div className="text-xs text-slate-400 leading-relaxed hidden md:block">
+              {[geselecteerdeWerkgever.adres, [geselecteerdeWerkgever.postcode, geselecteerdeWerkgever.plaats].filter(Boolean).join(" ")].filter(Boolean).join(", ")}
+              {geselecteerdeWerkgever.kvk && (
+                <span className="ml-2 text-slate-300">KVK {geselecteerdeWerkgever.kvk}</span>
+              )}
+            </div>
+          )}
+
+          <div className="h-8 border-l border-slate-200"></div>
 
           <div className="w-80">
             <label className="text-xs font-semibold text-slate-600 block mb-1">Template / Pagina</label>

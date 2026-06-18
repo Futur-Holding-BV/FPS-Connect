@@ -24,6 +24,8 @@ export const werkgeversTable = pgTable("werkgevers", {
   briefpapierDocumentId: integer("briefpapier_document_id").references(() => documentenTable.id, { onDelete: "set null" }),
   personeelsbeleid: text("personeelsbeleid"),
   adres: text("adres"),
+  postcode: text("postcode"),
+  plaats: text("plaats"),
   kvk: text("kvk"),
   btw: text("btw"),
   telefoon: text("telefoon"),

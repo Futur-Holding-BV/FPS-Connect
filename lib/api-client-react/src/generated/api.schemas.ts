@@ -2440,6 +2440,10 @@ export interface Werkgever {
   /** @nullable */
   adres?: string | null;
   /** @nullable */
+  postcode?: string | null;
+  /** @nullable */
+  plaats?: string | null;
+  /** @nullable */
   kvk?: string | null;
   /** @nullable */
   btw?: string | null;
@@ -2467,6 +2471,10 @@ export interface WerkgeverInput {
   personeelsbeleid?: string | null;
   /** @nullable */
   adres?: string | null;
+  /** @nullable */
+  postcode?: string | null;
+  /** @nullable */
+  plaats?: string | null;
   /** @nullable */
   kvk?: string | null;
   /** @nullable */

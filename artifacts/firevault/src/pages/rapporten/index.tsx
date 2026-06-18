@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { Link } from "wouter";
 import { useListRapporten, type Rapport } from "@workspace/api-client-react";
+import { useAuth } from "@/context/auth-context";
+import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -67,6 +69,28 @@ function StatusIcoon({ status }: { status: string }) {
   if (status === "concept") return <FileText className="h-4 w-4 text-amber-500" />;
   if (status === "definitief") return <CheckCircle2 className="h-4 w-4 text-green-600" />;
   return <Archive className="h-4 w-4 text-muted-foreground" />;
+}
+
+function useProjectOpenenHref(gebouwId: number): string {
+  const { gebruiker } = useAuth();
+  const { heeftNiveau } = useBevoegdheid();
+  const rol = gebruiker?.rol ?? "";
+
+  if (rol === "klant") return `/klant/rapportages?gebouw=${gebouwId}`;
+  if (rol === "hoofdbeheerder") return `/gebouwen/${gebouwId}`;
+  if (heeftNiveau("gebouwen", 2)) return `/gebouwen/${gebouwId}`;
+  return `/gebouwen/${gebouwId}?tab=uitvoering`;
+}
+
+function ProjectOpenenKnop({ gebouwId }: { gebouwId: number }) {
+  const href = useProjectOpenenHref(gebouwId);
+  return (
+    <Link href={href}>
+      <Button variant="outline" size="sm" className="text-xs shrink-0">
+        Project openen
+      </Button>
+    </Link>
+  );
 }
 
 export default function RapportenPagina() {
@@ -201,11 +225,7 @@ export default function RapportenPagina() {
                     </div>
                   </div>
                   {r.gebouw_id && (
-                    <Link href={`/gebouwen/${r.gebouw_id}?tab=rapporten`}>
-                      <Button variant="ghost" size="sm" className="text-xs shrink-0">
-                        Naar gebouw
-                      </Button>
-                    </Link>
+                    <ProjectOpenenKnop gebouwId={r.gebouw_id} />
                   )}
                 </div>
               ))}

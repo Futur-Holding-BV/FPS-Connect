@@ -181,6 +181,8 @@ export default function PersoneelPagina() {
     cao: "",
     personeelsbeleid: null,
     adres: null,
+    postcode: null,
+    plaats: null,
     kvk: null,
     btw: null,
     telefoon: null,
@@ -296,7 +298,7 @@ export default function PersoneelPagina() {
 
   function startWerkgeverNieuw() {
     setWerkgeverEditId(null);
-    setWerkgeverForm({ naam: "", cao: "", personeelsbeleid: null, adres: null, kvk: null, btw: null, telefoon: null, email: null, website: null, voettekst: null, actief: true });
+    setWerkgeverForm({ naam: "", cao: "", personeelsbeleid: null, adres: null, postcode: null, plaats: null, kvk: null, btw: null, telefoon: null, email: null, website: null, voettekst: null, actief: true });
     setWerkgeverOpen(true);
   }
 
@@ -307,6 +309,8 @@ export default function PersoneelPagina() {
       cao: w.cao,
       personeelsbeleid: w.personeelsbeleid ?? null,
       adres: w.adres ?? null,
+      postcode: w.postcode ?? null,
+      plaats: w.plaats ?? null,
       kvk: w.kvk ?? null,
       btw: w.btw ?? null,
       telefoon: w.telefoon ?? null,
@@ -1340,8 +1344,16 @@ export default function PersoneelPagina() {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5 col-span-2">
-                <Label>Adres</Label>
+                <Label>Adres (straat + huisnummer)</Label>
                 <Input value={werkgeverForm.adres ?? ""} onChange={(e) => setWerkgeverForm({ ...werkgeverForm, adres: e.target.value || null })} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Postcode</Label>
+                <Input value={werkgeverForm.postcode ?? ""} onChange={(e) => setWerkgeverForm({ ...werkgeverForm, postcode: e.target.value || null })} placeholder="1234 AB" />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Plaats</Label>
+                <Input value={werkgeverForm.plaats ?? ""} onChange={(e) => setWerkgeverForm({ ...werkgeverForm, plaats: e.target.value || null })} placeholder="Enschede" />
               </div>
               <div className="space-y-1.5">
                 <Label>KVK-nummer</Label>

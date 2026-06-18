@@ -10347,6 +10347,10 @@ components:
           type: ["string", "null"]
         adres:
           type: ["string", "null"]
+        postcode:
+          type: ["string", "null"]
+        plaats:
+          type: ["string", "null"]
         kvk:
           type: ["string", "null"]
         btw:
@@ -10381,6 +10385,10 @@ components:
         personeelsbeleid:
           type: ["string", "null"]
         adres:
+          type: ["string", "null"]
+        postcode:
+          type: ["string", "null"]
+        plaats:
           type: ["string", "null"]
         kvk:
           type: ["string", "null"]
