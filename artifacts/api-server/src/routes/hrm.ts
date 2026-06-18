@@ -85,6 +85,7 @@ const mapWerkgever = (w: typeof werkgeversTable.$inferSelect) => ({
   email: w.email,
   website: w.website,
   voettekst: w.voettekst,
+  handtekening_url: w.handtekeningUrl,
   actief: w.actief,
   aangemaakt_op: iso(w.aangemaaktOp),
   bijgewerkt_op: iso(w.bijgewerktOp),
@@ -113,7 +114,7 @@ router.get("/werkgevers", lezen, async (req, res) => {
 
 router.post("/werkgevers", schrijven, async (req, res) => {
   try {
-    const { naam, cao, logo_document_id, briefpapier_document_id, personeelsbeleid, adres, postcode, plaats, kvk, btw, telefoon, email, website, voettekst, actief } = req.body;
+    const { naam, cao, logo_document_id, briefpapier_document_id, personeelsbeleid, adres, postcode, plaats, kvk, btw, telefoon, email, website, voettekst, handtekening_url, actief } = req.body;
     if (!naam || typeof naam !== "string" || !naam.trim()) {
       return res.status(400).json({ error: "naam is verplicht" });
     }
@@ -134,6 +135,7 @@ router.post("/werkgevers", schrijven, async (req, res) => {
         email: email ?? null,
         website: website ?? null,
         voettekst: voettekst ?? null,
+        handtekeningUrl: handtekening_url ?? null,
         actief: actief ?? true,
       })
       .returning();
@@ -158,7 +160,7 @@ router.get("/werkgevers/:id", lezen, async (req, res) => {
 router.patch("/werkgevers/:id", schrijven, async (req, res) => {
   try {
     const id = parseId(req.params.id);
-    const { naam, cao, logo_document_id, briefpapier_document_id, personeelsbeleid, adres, postcode, plaats, kvk, btw, telefoon, email, website, voettekst, actief } = req.body;
+    const { naam, cao, logo_document_id, briefpapier_document_id, personeelsbeleid, adres, postcode, plaats, kvk, btw, telefoon, email, website, voettekst, handtekening_url, actief } = req.body;
     const nieuweNaam = typeof naam === "string" && naam.trim() ? naam.trim() : undefined;
 
     const w = await db.transaction(async (tx) => {
@@ -182,6 +184,7 @@ router.patch("/werkgevers/:id", schrijven, async (req, res) => {
           email: email !== undefined ? email : undefined,
           website: website !== undefined ? website : undefined,
           voettekst: voettekst !== undefined ? voettekst : undefined,
+          handtekeningUrl: handtekening_url !== undefined ? handtekening_url : undefined,
           actief,
           bijgewerktOp: new Date(),
         })

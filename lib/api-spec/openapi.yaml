@@ -1086,6 +1086,42 @@ paths:
         "409":
           description: Rapport is al definitief of gearchiveerd
 
+  /gebouwen/{id}/rapporten/{rapportId}/certificaat-akkoord:
+    post:
+      operationId: accordeerCertificaat
+      tags: [gebouwen]
+      summary: Certificaat accorderen en ondertekenen (alleen hoofdbeheerder)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+        - in: path
+          name: rapportId
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CertificaatAkkoordInput"
+      responses:
+        "200":
+          description: Certificaat geaccordeerd
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Rapport"
+        "403":
+          description: Geen toegang — alleen hoofdbeheerder
+        "404":
+          description: Rapport niet gevonden
+        "409":
+          description: Certificaat is al geaccordeerd
+
   /gebouwen/{id}/rapporten/{rapportId}/bijlagenbundel:
     get:
       operationId: getOpleverrapportBijlagenbundel
@@ -10653,6 +10689,9 @@ components:
           type: ["string", "null"]
         voettekst:
           type: ["string", "null"]
+        handtekening_url:
+          type: ["string", "null"]
+          description: URL van de geüploade handtekeningafbeelding (PNG/JPG) voor het certificaat.
         actief:
           type: boolean
         aangemaakt_op:
@@ -10691,6 +10730,8 @@ components:
         website:
           type: ["string", "null"]
         voettekst:
+          type: ["string", "null"]
+        handtekening_url:
           type: ["string", "null"]
         actief:
           type: boolean
@@ -11975,6 +12016,14 @@ components:
           type: ["string", "null"]
         reactietermijn_gestart_op:
           type: ["string", "null"]
+        certificaat_geaccordeerd:
+          type: boolean
+        certificaat_geaccordeerd_op:
+          type: ["string", "null"]
+          format: date-time
+        certificaat_garantie_maanden:
+          type: integer
+          description: Garantieduur in maanden (standaard 12).
         aangemaakt_door:
           type: ["integer", "null"]
         aangemaakt_door_naam:
@@ -12030,6 +12079,13 @@ components:
             type: integer
         reactietermijn_datum:
           type: ["string", "null"]
+
+    CertificaatAkkoordInput:
+      type: object
+      properties:
+        garantie_maanden:
+          type: integer
+          description: Garantieduur in maanden (standaard 12).
 
     RapportDefinitief:
       type: object

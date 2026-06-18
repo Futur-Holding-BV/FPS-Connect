@@ -966,6 +966,9 @@ export const ListRapportenResponseItem = zod.object({
 }).passthrough().nullish(),
   "reactietermijn_datum": zod.string().nullish(),
   "reactietermijn_gestart_op": zod.string().nullish(),
+  "certificaat_geaccordeerd": zod.boolean().optional(),
+  "certificaat_geaccordeerd_op": zod.coerce.date().nullish(),
+  "certificaat_garantie_maanden": zod.number().optional().describe('Garantieduur in maanden (standaard 12).'),
   "aangemaakt_door": zod.number().nullish(),
   "aangemaakt_door_naam": zod.string().nullish(),
   "gebouw_naam": zod.string().nullish(),
@@ -1003,6 +1006,9 @@ export const ListGebouwRapportenResponseItem = zod.object({
 }).passthrough().nullish(),
   "reactietermijn_datum": zod.string().nullish(),
   "reactietermijn_gestart_op": zod.string().nullish(),
+  "certificaat_geaccordeerd": zod.boolean().optional(),
+  "certificaat_geaccordeerd_op": zod.coerce.date().nullish(),
+  "certificaat_garantie_maanden": zod.number().optional().describe('Garantieduur in maanden (standaard 12).'),
   "aangemaakt_door": zod.number().nullish(),
   "aangemaakt_door_naam": zod.string().nullish(),
   "gebouw_naam": zod.string().nullish(),
@@ -1065,6 +1071,9 @@ export const GetRapportResponse = zod.object({
 }).passthrough().nullish(),
   "reactietermijn_datum": zod.string().nullish(),
   "reactietermijn_gestart_op": zod.string().nullish(),
+  "certificaat_geaccordeerd": zod.boolean().optional(),
+  "certificaat_geaccordeerd_op": zod.coerce.date().nullish(),
+  "certificaat_garantie_maanden": zod.number().optional().describe('Garantieduur in maanden (standaard 12).'),
   "aangemaakt_door": zod.number().nullish(),
   "aangemaakt_door_naam": zod.string().nullish(),
   "gebouw_naam": zod.string().nullish(),
@@ -1115,6 +1124,9 @@ export const UpdateRapportResponse = zod.object({
 }).passthrough().nullish(),
   "reactietermijn_datum": zod.string().nullish(),
   "reactietermijn_gestart_op": zod.string().nullish(),
+  "certificaat_geaccordeerd": zod.boolean().optional(),
+  "certificaat_geaccordeerd_op": zod.coerce.date().nullish(),
+  "certificaat_garantie_maanden": zod.number().optional().describe('Garantieduur in maanden (standaard 12).'),
   "aangemaakt_door": zod.number().nullish(),
   "aangemaakt_door_naam": zod.string().nullish(),
   "gebouw_naam": zod.string().nullish(),
@@ -1171,6 +1183,53 @@ export const MaakRapportDefinitiefResponse = zod.object({
 }).passthrough().nullish(),
   "reactietermijn_datum": zod.string().nullish(),
   "reactietermijn_gestart_op": zod.string().nullish(),
+  "certificaat_geaccordeerd": zod.boolean().optional(),
+  "certificaat_geaccordeerd_op": zod.coerce.date().nullish(),
+  "certificaat_garantie_maanden": zod.number().optional().describe('Garantieduur in maanden (standaard 12).'),
+  "aangemaakt_door": zod.number().nullish(),
+  "aangemaakt_door_naam": zod.string().nullish(),
+  "gebouw_naam": zod.string().nullish(),
+  "aangemaakt_op": zod.coerce.date(),
+  "bijgewerkt_op": zod.coerce.date()
+})
+
+
+/**
+ * @summary Certificaat accorderen en ondertekenen (alleen hoofdbeheerder)
+ */
+export const AccordeerCertificaatParams = zod.object({
+  "id": zod.coerce.number(),
+  "rapportId": zod.coerce.number()
+})
+
+export const AccordeerCertificaatBody = zod.object({
+  "garantie_maanden": zod.number().optional().describe('Garantieduur in maanden (standaard 12).')
+})
+
+export const AccordeerCertificaatResponse = zod.object({
+  "id": zod.number(),
+  "gebouw_id": zod.number(),
+  "rapport_type": zod.string(),
+  "versie": zod.number(),
+  "status": zod.enum(['concept', 'definitief', 'gearchiveerd']),
+  "titel": zod.string().nullish(),
+  "secties": zod.object({
+
+}).passthrough(),
+  "spot_selectie": zod.object({
+
+}).passthrough(),
+  "bijlagen_ids": zod.array(zod.number()),
+  "tekening_ids": zod.array(zod.number()),
+  "bevroren_op": zod.string().nullish(),
+  "bevroren_document_revisies": zod.object({
+
+}).passthrough().nullish(),
+  "reactietermijn_datum": zod.string().nullish(),
+  "reactietermijn_gestart_op": zod.string().nullish(),
+  "certificaat_geaccordeerd": zod.boolean().optional(),
+  "certificaat_geaccordeerd_op": zod.coerce.date().nullish(),
+  "certificaat_garantie_maanden": zod.number().optional().describe('Garantieduur in maanden (standaard 12).'),
   "aangemaakt_door": zod.number().nullish(),
   "aangemaakt_door_naam": zod.string().nullish(),
   "gebouw_naam": zod.string().nullish(),
@@ -5701,6 +5760,7 @@ export const ListWerkgeversResponseItem = zod.object({
   "email": zod.string().nullish(),
   "website": zod.string().nullish(),
   "voettekst": zod.string().nullish(),
+  "handtekening_url": zod.string().nullish().describe('URL van de geüploade handtekeningafbeelding (PNG\/JPG) voor het certificaat.'),
   "actief": zod.boolean(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
@@ -5726,6 +5786,7 @@ export const CreateWerkgeverBody = zod.object({
   "email": zod.string().nullish(),
   "website": zod.string().nullish(),
   "voettekst": zod.string().nullish(),
+  "handtekening_url": zod.string().nullish(),
   "actief": zod.boolean().optional()
 })
 
@@ -5755,6 +5816,7 @@ export const GetWerkgeverResponse = zod.object({
   "email": zod.string().nullish(),
   "website": zod.string().nullish(),
   "voettekst": zod.string().nullish(),
+  "handtekening_url": zod.string().nullish().describe('URL van de geüploade handtekeningafbeelding (PNG\/JPG) voor het certificaat.'),
   "actief": zod.boolean(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
@@ -5783,6 +5845,7 @@ export const UpdateWerkgeverBody = zod.object({
   "email": zod.string().nullish(),
   "website": zod.string().nullish(),
   "voettekst": zod.string().nullish(),
+  "handtekening_url": zod.string().nullish(),
   "actief": zod.boolean().optional()
 })
 
@@ -5802,6 +5865,7 @@ export const UpdateWerkgeverResponse = zod.object({
   "email": zod.string().nullish(),
   "website": zod.string().nullish(),
   "voettekst": zod.string().nullish(),
+  "handtekening_url": zod.string().nullish().describe('URL van de geüploade handtekeningafbeelding (PNG\/JPG) voor het certificaat.'),
   "actief": zod.boolean(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()

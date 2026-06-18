@@ -1,4 +1,4 @@
-import { pgTable, serial, text, integer, timestamp, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, integer, boolean, timestamp, jsonb } from "drizzle-orm/pg-core";
 import { gebouwenTable } from "./gebouwen";
 import { gebruikersTable } from "./gebruikers";
 
@@ -17,6 +17,9 @@ export const opleverrapportenTable = pgTable("opleverrapporten", {
   bevrorenDocumentRevisies: jsonb("bevroren_document_revisies"),
   reactietermijnDatum: timestamp("reactietermijn_datum"),
   reactietermijnGestarteOp: timestamp("reactietermijn_gestart_op"),
+  certificaatGeaccordeerd: boolean("certificaat_geaccordeerd").notNull().default(false),
+  certificaatGeaccordeerdOp: timestamp("certificaat_geaccordeerd_op"),
+  certificaatGarantieMaanden: integer("certificaat_garantie_maanden").notNull().default(12),
   aangemaaktDoor: integer("aangemaakt_door").references(() => gebruikersTable.id, { onDelete: "set null" }),
   aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
   bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),

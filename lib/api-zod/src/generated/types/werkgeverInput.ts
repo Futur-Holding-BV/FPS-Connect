@@ -33,5 +33,7 @@ export interface WerkgeverInput {
   website?: string | null;
   /** @nullable */
   voettekst?: string | null;
+  /** @nullable */
+  handtekening_url?: string | null;
   actief?: boolean;
 }

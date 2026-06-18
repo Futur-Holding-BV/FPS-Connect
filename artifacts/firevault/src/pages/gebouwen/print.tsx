@@ -24,6 +24,8 @@ import {
   useGetRapport,
   useUpdateRapport,
   useMaakRapportDefinitief,
+  useAccordeerCertificaat,
+  useListWerkgevers,
   type Verdieping,
   type VoorzieningType,
   type Cluster,
@@ -42,7 +44,7 @@ import { useAuth } from "@/context/auth-context";
 import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
 import { useToast } from "@/hooks/use-toast";
 import { useUpload } from "@workspace/object-storage-web";
-import { ArrowLeft, Printer, Loader2, Save, ChevronDown, ChevronRight, Settings2, Mail, Lock, LayoutTemplate, Download } from "lucide-react";
+import { ArrowLeft, Printer, Loader2, Save, ChevronDown, ChevronRight, Settings2, Mail, Lock, LayoutTemplate, Download, PenLine, CheckCircle2 } from "lucide-react";
 import { resolveAssetUrl } from "@/components/documentopmaak";
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
@@ -753,77 +755,154 @@ function CertificaatFPS({
   werkgeverNaam,
   logoSrc,
   exportDatum,
+  geaccordeerd,
+  geaccordeerdOp,
+  garantieMaanden,
+  handtekeningUrl,
+  documentnummer,
 }: {
   gebouw: any;
   werkgeverNaam: string;
   logoSrc: string;
   exportDatum: string;
+  geaccordeerd: boolean;
+  geaccordeerdOp?: string | null;
+  garantieMaanden: number;
+  handtekeningUrl?: string | null;
+  documentnummer?: string;
 }) {
   const adresRegel = [gebouw?.straat, gebouw?.huisnummer].filter(Boolean).join(" ");
   const postcodeRegel = [gebouw?.postcode, gebouw?.woonplaats].filter(Boolean).join(" ");
   const volledigAdres = [adresRegel, postcodeRegel].filter(Boolean).join(", ");
 
+  const garantieEindDatum = new Date();
+  garantieEindDatum.setMonth(garantieEindDatum.getMonth() + garantieMaanden);
+  const garantieEindStr = garantieEindDatum.toLocaleDateString("nl-NL", { day: "numeric", month: "long", year: "numeric" });
+
+  const datumStr = geaccordeerdOp
+    ? new Date(geaccordeerdOp).toLocaleDateString("nl-NL", { day: "numeric", month: "long", year: "numeric" })
+    : exportDatum;
+
   return (
     <div className="prt-cert-pagina">
-      <div className="prt-cert-kop">
-        <img src={logoSrc} alt={werkgeverNaam} className="prt-cert-logo" />
-        <div className="prt-cert-kop-rechts">
-          <div className="prt-cert-bedrijfsnaam">{werkgeverNaam}</div>
-          <div className="prt-cert-kop-ondertitel">Gecertificeerde brandwerende voorzieningen</div>
+      <div className="prt-cert-buitenrand">
+        <div className="prt-cert-binnenrand">
+
+          {/* Koptekst */}
+          <div className="prt-cert-header">
+            <img src={logoSrc} alt={werkgeverNaam} className="prt-cert-logo" />
+            <div className="prt-cert-header-bedrijf">
+              <div className="prt-cert-bedrijfsnaam">{werkgeverNaam}</div>
+              <div className="prt-cert-bedrijf-sub">Gecertificeerde brandpreventie-specialist</div>
+            </div>
+            {documentnummer && (
+              <div className="prt-cert-kenmerk">
+                <div>Kenmerk</div>
+                <div style={{ fontWeight: 700, color: "#475569" }}>{documentnummer}</div>
+              </div>
+            )}
+          </div>
+
+          {/* Titelblok */}
+          <div className="prt-cert-titelbalk">
+            <div className="prt-cert-ornament">— — —</div>
+            <div className="prt-cert-titel-groot">GARANTIEVERKLARING</div>
+            <div className="prt-cert-titel-streep" />
+            <div className="prt-cert-titel-sub">Brandwerende Voorzieningen</div>
+          </div>
+
+          {/* Verklaring */}
+          <div className="prt-cert-verklaring">
+            <p>
+              <strong>{werkgeverNaam}</strong> verleent hierbij aan de opdrachtgever de garantie dat de in het
+              bijgevoegde opleverrapport beschreven brandwerende voorzieningen zijn aangebracht overeenkomstig
+              de geldende wet- en regelgeving (Besluit bouwwerken leefomgeving), de fabrieksspecificaties en
+              de van toepassing zijnde NEN-normen. De werkzaamheden zijn uitgevoerd door gecertificeerde
+              monteurs en volledig gedocumenteerd in het bijgevoegde opleverrapport.
+            </p>
+            <p>
+              De garantieduur bedraagt <strong>{garantieMaanden} maanden</strong> na datum van oplevering,
+              tenzij schriftelijk anders overeengekomen. De garantie vervalt bij wijzigingen of beschadigingen
+              aangebracht door derden, of als gevolg van onjuist gebruik of nalaten van regulier onderhoud.
+            </p>
+          </div>
+
+          {/* Projectgegevens */}
+          <table className="prt-cert-tabel">
+            <tbody>
+              <tr>
+                <th>Project / gebouw</th>
+                <td>{gebouw?.naam ?? "—"}</td>
+              </tr>
+              <tr>
+                <th>Adres</th>
+                <td>{volledigAdres || "—"}</td>
+              </tr>
+              {gebouw?.projectnummer && (
+                <tr>
+                  <th>Opdrachtnummer</th>
+                  <td>{gebouw.projectnummer}</td>
+                </tr>
+              )}
+              <tr>
+                <th>Datum oplevering</th>
+                <td>{exportDatum}</td>
+              </tr>
+              <tr>
+                <th>Garantieduur</th>
+                <td>{garantieMaanden} maanden (geldig t/m {garantieEindStr})</td>
+              </tr>
+            </tbody>
+          </table>
+
+          {/* Ondertekening */}
+          <div className="prt-cert-ondertekening-sectie">
+            <div className="prt-cert-handtekening-blok">
+              {geaccordeerd && handtekeningUrl ? (
+                <img
+                  src={storageBeeldUrl(handtekeningUrl)}
+                  alt="Handtekening"
+                  className="prt-cert-handtekening-img"
+                  crossOrigin="anonymous"
+                />
+              ) : (
+                <div className="prt-cert-handtekening-ruimte" />
+              )}
+              <div className="prt-cert-ondertekening-naam">Directeur</div>
+              <div className="prt-cert-ondertekening-functie">{werkgeverNaam}</div>
+              <div className="prt-cert-ondertekening-datum">{datumStr}</div>
+              {geaccordeerd && (
+                <div className="prt-cert-geaccordeerd-badge">Digitaal geaccordeerd</div>
+              )}
+            </div>
+            {!geaccordeerd && (
+              <div className="prt-cert-wacht-accordering no-print">
+                <div className="prt-cert-wacht-tekst">Wacht op accordering</div>
+                <div className="prt-cert-wacht-sub">
+                  Gebruik de knop "Certificaat accorderen" in de werkbalk om de handtekening te plaatsen.
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Disclaimer */}
+          <div className="prt-cert-disclaimer">
+            Dit certificaat heeft uitsluitend betrekking op de geregistreerde voorzieningen en de in het rapport beschreven
+            locaties. De geldigheid is afhankelijk van de juistheid van de verstrekte informatie op het moment van oplevering.
+            Bij twijfel kunt u contact opnemen via de contactgegevens op de voorzijde van het opleverrapport. Op dit certificaat
+            is Nederlands recht van toepassing; bij geschillen is de rechter in het arrondissement van de vestigingsplaats
+            van {werkgeverNaam} exclusief bevoegd.
+          </div>
+
+          {/* Voet */}
+          <div className="prt-cert-voet">
+            <div className="prt-cert-voet-links">
+              Gegenereerd met FPS Connect · {exportDatum}{documentnummer ? ` · Ref: ${documentnummer}` : ""}
+            </div>
+            <div className="prt-cert-voet-badge">FPS Brandpreventie</div>
+          </div>
+
         </div>
-      </div>
-
-      <div className="prt-cert-banner">
-        <div className="prt-cert-banner-titel">CERTIFICAAT VAN OPLEVERING</div>
-        <div className="prt-cert-banner-sub">Brandwerende voorzieningen</div>
-      </div>
-
-      <div className="prt-cert-verklaring">
-        <strong>{werkgeverNaam}</strong> verklaart hierbij dat de brandwerende voorzieningen
-        in het onderstaande project zijn aangebracht conform de eisen van het Bouwbesluit 2012,
-        de fabrieksspecificaties en de toepasselijke NEN-normen. De werkzaamheden zijn
-        uitgevoerd door gecertificeerde monteurs en volledig gedocumenteerd in het
-        bijgevoegde opleverrapport.
-      </div>
-
-      <table className="prt-cert-tabel">
-        <tbody>
-          <tr>
-            <th>Gebouw</th>
-            <td>{gebouw?.naam ?? "—"}</td>
-          </tr>
-          <tr>
-            <th>Adres</th>
-            <td>{volledigAdres || "—"}</td>
-          </tr>
-          {gebouw?.projectnummer && (
-            <tr>
-              <th>Opdrachtnummer</th>
-              <td>{gebouw.projectnummer}</td>
-            </tr>
-          )}
-          <tr>
-            <th>Datum oplevering</th>
-            <td>{exportDatum}</td>
-          </tr>
-        </tbody>
-      </table>
-
-      <div className="prt-cert-ondertekening">
-        <div className="prt-cert-ondertekening-blok">
-          <div className="prt-cert-handtekening-ruimte" />
-          <div className="prt-cert-lijn" />
-          <div className="prt-cert-naam">R. Vink</div>
-          <div className="prt-cert-functie">Directeur — {werkgeverNaam}</div>
-          <div className="prt-cert-datum">{exportDatum}</div>
-        </div>
-      </div>
-
-      <div className="prt-cert-disclaimer">
-        Dit certificaat heeft uitsluitend betrekking op de geregistreerde voorzieningen en de in het
-        rapport beschreven locaties. {werkgeverNaam} aanvaardt geen aansprakelijkheid voor
-        wijzigingen aangebracht na datum van oplevering. Bij twijfel over de geldigheid van dit
-        document kunt u contact opnemen via de contactgegevens op de voorzijde van het rapport.
       </div>
     </div>
   );
@@ -1310,7 +1389,9 @@ export default function GebouwPrint() {
   const { data: clusters, isLoading: clustersLaden }          = useListClusters(gebouwId);
   const { isLoading: gebruikersLaden }      = useListToewijsbareGebruikers();
   const { data: huidigRapport }             = useGetRapport(gebouwId, rapportId ?? 0);
+  const { data: werkgevers }                = useListWerkgevers();
   const updateRapport = useUpdateRapport();
+  const accordeerCertificaat = useAccordeerCertificaat();
 
   const typeNaam = useMemo(
     () => Object.fromEntries(((typen ?? []) as VoorzieningType[]).map((t) => [t.code, t.naam])),
@@ -1477,6 +1558,8 @@ export default function GebouwPrint() {
   const exportDatum = `${nu.toLocaleDateString("nl-NL")} ${nu.toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit" })}`;
   const logoSrc = resolveAssetUrl("logo-fps.png");
   const werkgeverNaam = (gebouw as any).werkmaatschappij_naam ?? "FPS Brandpreventie";
+  const huidigWerkgever = (werkgevers ?? []).find(w => w.naam === werkgeverNaam) ?? (werkgevers ?? [])[0] ?? null;
+  const handtekeningUrl = huidigWerkgever?.handtekening_url ?? null;
 
   async function downloadBijlagenbundel() {
     if (!rapportId || !gebouwId) return;
@@ -1512,6 +1595,8 @@ export default function GebouwPrint() {
   const opsteller      = gebruiker?.naam ?? "—";
   const magOpslaanInDms = heeftNiveau("bibliotheek", 3);
   const magDefinitiefMaken = heeftNiveau("rapporten", 3);
+  const isHoofdbeheerder = gebruiker?.rol === "hoofdbeheerder";
+  const magCertificaatAccorderen = isHoofdbeheerder && !!secties.certificaat && !!rapportId && !(huidigRapport?.certificaat_geaccordeerd ?? false);
 
   const definitiefMaken = useMaakRapportDefinitief();
   const [definitiefOpen, setDefinitiefOpen] = useState(false);
@@ -1534,6 +1619,16 @@ export default function GebouwPrint() {
       setDefinitiefOpen(false);
     } catch {
       toast({ title: "Definitief maken mislukt", variant: "destructive" });
+    }
+  }
+
+  async function handleAccordeer() {
+    if (!rapportId || !gebouwId) return;
+    try {
+      await accordeerCertificaat.mutateAsync({ id: gebouwId, rapportId });
+      toast({ title: "Certificaat geaccordeerd", description: "De handtekening is geplaatst op het certificaat." });
+    } catch {
+      toast({ title: "Accordering mislukt", variant: "destructive" });
     }
   }
 
@@ -1846,28 +1941,43 @@ export default function GebouwPrint() {
         .prt-spot-foto { width: 100%; height: 88px; object-fit: cover; border-radius: 6px; border: 1px solid #e2e8f0; break-inside: avoid; }
         .prt-spot-fotopagina { break-before: page; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px; background: #fff; }
 
-        /* ── Certificaat FPS ── */
-        .prt-cert-pagina { background: #fff; padding: 48px; display: flex; flex-direction: column; gap: 28px; min-height: 100vh; page-break-before: always; page-break-after: always; }
-        .prt-cert-kop { display: flex; align-items: center; gap: 16px; border-bottom: 3px solid hsl(12 90% 50%); padding-bottom: 16px; }
-        .prt-cert-logo { height: 36px; object-fit: contain; }
-        .prt-cert-kop-rechts { display: flex; flex-direction: column; gap: 2px; }
-        .prt-cert-bedrijfsnaam { font-size: 14px; font-weight: 700; color: #212631; }
-        .prt-cert-kop-ondertitel { font-size: 10px; color: #94a3b8; }
-        .prt-cert-banner { background: hsl(12 90% 50%); color: #fff; padding: 24px 32px; border-radius: 2px; }
-        .prt-cert-banner-titel { font-size: 22px; font-weight: 800; letter-spacing: .06em; }
-        .prt-cert-banner-sub { font-size: 12px; opacity: .9; margin-top: 4px; }
-        .prt-cert-verklaring { font-size: 12px; line-height: 1.7; color: #374151; }
-        .prt-cert-tabel { width: 100%; border-collapse: collapse; font-size: 12px; }
-        .prt-cert-tabel th { text-align: left; padding: 8px 12px; background: #f8fafc; font-weight: 600; color: #475569; width: 160px; border: 1px solid #e2e8f0; }
-        .prt-cert-tabel td { padding: 8px 12px; border: 1px solid #e2e8f0; color: #1e293b; }
-        .prt-cert-ondertekening { margin-top: 32px; }
-        .prt-cert-ondertekening-blok { display: inline-block; min-width: 240px; }
-        .prt-cert-handtekening-ruimte { height: 48px; }
-        .prt-cert-lijn { border-bottom: 1.5px solid #475569; margin-bottom: 6px; }
-        .prt-cert-naam { font-size: 12px; font-weight: 700; color: #212631; }
-        .prt-cert-functie { font-size: 11px; color: #64748b; }
-        .prt-cert-datum { font-size: 11px; color: #94a3b8; margin-top: 2px; }
-        .prt-cert-disclaimer { font-size: 9.5px; color: #94a3b8; line-height: 1.6; border-top: 1px solid #e2e8f0; padding-top: 16px; margin-top: auto; }
+        /* ── Certificaat FPS — professioneel volledig-pagina garantiebewijs ── */
+        .prt-cert-pagina { background: #fff; padding: 0; min-height: 100vh; page-break-before: always; page-break-after: always; display: flex; flex-direction: column; }
+        .prt-cert-buitenrand { flex: 1; margin: 18px; border: 3px solid hsl(12 90% 50%); display: flex; flex-direction: column; }
+        .prt-cert-binnenrand { flex: 1; margin: 5px; border: 1px solid hsl(12 90% 50% / 0.32); padding: 30px 42px; display: flex; flex-direction: column; gap: 18px; }
+        .prt-cert-header { display: flex; align-items: center; gap: 16px; padding-bottom: 16px; border-bottom: 2.5px solid hsl(12 90% 50%); }
+        .prt-cert-logo { height: 40px; object-fit: contain; }
+        .prt-cert-header-bedrijf { flex: 1; }
+        .prt-cert-bedrijfsnaam { font-size: 13px; font-weight: 800; color: #1e293b; letter-spacing: 0.05em; text-transform: uppercase; }
+        .prt-cert-bedrijf-sub { font-size: 9px; color: hsl(12 90% 50%); font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; margin-top: 3px; }
+        .prt-cert-kenmerk { font-size: 9px; color: #94a3b8; text-align: right; line-height: 1.6; }
+        .prt-cert-titelbalk { text-align: center; padding: 10px 0 6px; }
+        .prt-cert-ornament { color: hsl(12 90% 50%); font-size: 13px; letter-spacing: 6px; font-weight: 300; margin-bottom: 8px; }
+        .prt-cert-titel-groot { font-size: 27px; font-weight: 900; letter-spacing: 0.14em; color: #1e293b; text-transform: uppercase; }
+        .prt-cert-titel-streep { width: 68px; height: 3px; background: hsl(12 90% 50%); margin: 10px auto 8px; }
+        .prt-cert-titel-sub { font-size: 10px; color: #475569; font-weight: 600; text-transform: uppercase; letter-spacing: 0.12em; }
+        .prt-cert-verklaring { font-size: 11px; line-height: 1.85; color: #374151; text-align: justify; }
+        .prt-cert-verklaring p { margin: 0 0 7px; }
+        .prt-cert-verklaring strong { color: #1e293b; }
+        .prt-cert-tabel { width: 100%; border-collapse: collapse; font-size: 11px; }
+        .prt-cert-tabel th { text-align: left; padding: 8px 13px; background: hsl(12 90% 50%); color: #fff; font-weight: 600; width: 165px; border: 1px solid hsl(12 90% 45%); }
+        .prt-cert-tabel td { padding: 8px 13px; border: 1px solid #e2e8f0; color: #1e293b; }
+        .prt-cert-tabel tr:nth-child(even) td { background: #fafafa; }
+        .prt-cert-ondertekening-sectie { display: flex; align-items: flex-start; gap: 36px; }
+        .prt-cert-handtekening-blok { min-width: 210px; }
+        .prt-cert-handtekening-img { height: 60px; max-width: 190px; object-fit: contain; display: block; margin-bottom: 4px; }
+        .prt-cert-handtekening-ruimte { height: 60px; border-bottom: 1.5px solid #475569; margin-bottom: 4px; }
+        .prt-cert-ondertekening-naam { font-size: 11.5px; font-weight: 700; color: #1e293b; margin-top: 4px; }
+        .prt-cert-ondertekening-functie { font-size: 10px; color: #64748b; }
+        .prt-cert-ondertekening-datum { font-size: 9px; color: #94a3b8; margin-top: 2px; }
+        .prt-cert-geaccordeerd-badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; border-radius: 99px; background: #dcfce7; color: #15803d; font-size: 9px; font-weight: 700; border: 1px solid #bbf7d0; margin-top: 6px; }
+        .prt-cert-wacht-accordering { flex: 1; background: #fffbeb; border: 1px dashed #fcd34d; border-radius: 6px; padding: 12px 14px; align-self: center; }
+        .prt-cert-wacht-tekst { font-size: 10.5px; font-weight: 700; color: #92400e; margin-bottom: 3px; }
+        .prt-cert-wacht-sub { font-size: 9px; color: #78350f; line-height: 1.6; }
+        .prt-cert-disclaimer { font-size: 8px; color: #94a3b8; line-height: 1.7; border-top: 1px solid #e2e8f0; padding-top: 13px; margin-top: auto; text-align: justify; }
+        .prt-cert-voet { display: flex; align-items: center; justify-content: space-between; border-top: 2px solid hsl(12 90% 50%); padding-top: 8px; }
+        .prt-cert-voet-links { font-size: 7.5px; color: #94a3b8; }
+        .prt-cert-voet-badge { font-size: 8px; font-weight: 800; color: hsl(12 90% 50%); letter-spacing: 0.08em; text-transform: uppercase; }
 
         /* ── Cluster-groepering ── */
         .prt-cluster-kop { break-before: page; break-after: avoid; display: flex; align-items: center; gap: 8px; padding: 8px 12px; margin-bottom: 12px; background: #f1f5f9; border-left: 4px solid #6366f1; border-radius: 6px; }
@@ -1981,6 +2091,17 @@ export default function GebouwPrint() {
               {definitiefMaken.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Lock className="h-4 w-4" />}
               Definitief maken
             </Button>
+          )}
+          {magCertificaatAccorderen && (
+            <Button size="sm" variant="outline" onClick={handleAccordeer} disabled={accordeerCertificaat.isPending}>
+              {accordeerCertificaat.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <PenLine className="h-4 w-4" />}
+              Certificaat accorderen
+            </Button>
+          )}
+          {secties.certificaat && (huidigRapport?.certificaat_geaccordeerd ?? false) && (
+            <span style={{ fontSize: 11, color: "#15803d", display: "flex", alignItems: "center", gap: 4 }}>
+              <CheckCircle2 className="h-3.5 w-3.5" /> Certificaat geaccordeerd
+            </span>
           )}
           <Button size="sm" onClick={() => window.print()} disabled={!allesGereed}>
             {allesGereed ? <Printer className="h-4 w-4" /> : <Loader2 className="h-4 w-4 animate-spin" />}
@@ -2742,6 +2863,11 @@ export default function GebouwPrint() {
               werkgeverNaam={werkgeverNaam}
               logoSrc={logoSrc}
               exportDatum={exportDatum}
+              geaccordeerd={huidigRapport?.certificaat_geaccordeerd ?? false}
+              geaccordeerdOp={huidigRapport?.certificaat_geaccordeerd_op ?? null}
+              garantieMaanden={huidigRapport?.certificaat_garantie_maanden ?? 12}
+              handtekeningUrl={handtekeningUrl}
+              documentnummer={documentnummer}
             />
           </section>
         )}

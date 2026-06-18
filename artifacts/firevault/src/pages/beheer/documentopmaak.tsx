@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   Select,
   SelectContent,
@@ -6,6 +6,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
 import {
   VoorbladA,
   InhoudspaginaA,
@@ -16,7 +17,9 @@ import {
   type DocumentMeta,
 } from "@/components/documentopmaak";
 import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
-import { useListWerkgevers, type Werkgever } from "@workspace/api-client-react";
+import { useToast } from "@/hooks/use-toast";
+import { useListWerkgevers, useUpdateWerkgever, type Werkgever } from "@workspace/api-client-react";
+import { useUpload } from "@workspace/object-storage-web";
 import { Loader2 } from "lucide-react";
 
 function werkgeverNaarMij(w: Werkgever): WerkmaatschappijInfo {
@@ -94,6 +97,11 @@ export default function DocumentDesignSystem() {
   const [templateId, setTemplateId] = useState<TemplateId>("A1");
 
   const { data: werkgevers = [], isLoading } = useListWerkgevers();
+  const updateWerkgever = useUpdateWerkgever();
+  const { uploadFile } = useUpload();
+  const { toast } = useToast();
+  const [uploadBezig, setUploadBezig] = useState(false);
+  const handtekeningInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (werkgeverId === null && werkgevers.length > 0) {
@@ -117,6 +125,27 @@ export default function DocumentDesignSystem() {
         </div>
       </div>
     );
+  }
+
+  async function handleHandtekeningUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    if (!werkgeverId || !geselecteerdeWerkgever) return;
+    const bestand = e.target.files?.[0];
+    if (!bestand) return;
+    setUploadBezig(true);
+    try {
+      const res = await uploadFile(bestand);
+      if (!res?.objectPath) throw new Error("Uploaden mislukt");
+      await updateWerkgever.mutateAsync({
+        id: werkgeverId,
+        data: { naam: geselecteerdeWerkgever.naam, handtekening_url: res.objectPath },
+      });
+      toast({ title: "Handtekening opgeslagen", description: "De handtekening is bijgewerkt voor deze werkmaatschappij." });
+      if (handtekeningInputRef.current) handtekeningInputRef.current.value = "";
+    } catch {
+      toast({ title: "Uploaden mislukt", variant: "destructive" });
+    } finally {
+      setUploadBezig(false);
+    }
   }
 
   const renderTemplate = () => {
@@ -202,6 +231,59 @@ export default function DocumentDesignSystem() {
         <div className="max-w-[210mm] mx-auto">
           <div className="text-center text-sm text-slate-400 mb-4 tracking-widest uppercase font-semibold">A4 Print Preview</div>
           {renderTemplate()}
+
+          {geselecteerdeWerkgever && (
+            <div className="mt-10 bg-white rounded-lg border border-slate-200 shadow-sm p-6">
+              <h2 className="text-sm font-semibold text-slate-900 mb-1">Handtekening voor certificaat</h2>
+              <p className="text-xs text-slate-500 mb-5">
+                De handtekening verschijnt als digitale ondertekening op het garantiecertificaat bij opleverrapporten.
+                Upload een transparante PNG-afbeelding (aanbevolen 400 x 150 px, zwarte lijn op transparante achtergrond).
+              </p>
+              <div className="flex items-start gap-8">
+                <div>
+                  <div className="text-xs font-semibold text-slate-600 mb-2">Huidige handtekening</div>
+                  {geselecteerdeWerkgever.handtekening_url ? (
+                    <img
+                      src={`/api/storage/${geselecteerdeWerkgever.handtekening_url}`}
+                      alt="Handtekening"
+                      className="h-16 max-w-[220px] object-contain border border-slate-200 rounded-md p-2 bg-white"
+                    />
+                  ) : (
+                    <div className="h-16 w-52 border border-dashed border-slate-300 rounded-md flex items-center justify-center text-xs text-slate-400 bg-slate-50">
+                      Nog niet ingesteld
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <div className="text-xs font-semibold text-slate-600 mb-2">Nieuwe handtekening uploaden</div>
+                  <input
+                    ref={handtekeningInputRef}
+                    type="file"
+                    accept="image/png,image/jpeg,image/gif,image/webp"
+                    className="hidden"
+                    onChange={handleHandtekeningUpload}
+                    disabled={uploadBezig}
+                  />
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={uploadBezig}
+                    onClick={() => handtekeningInputRef.current?.click()}
+                    type="button"
+                  >
+                    {uploadBezig ? (
+                      <><Loader2 className="h-4 w-4 animate-spin" /> Uploaden...</>
+                    ) : (
+                      "Bestand kiezen (PNG / JPG)"
+                    )}
+                  </Button>
+                  <div className="text-xs text-slate-400 mt-2 max-w-xs leading-relaxed">
+                    Aanbevolen: transparante PNG, 400 x 150 px, zwarte lijn op wit of transparant
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

@@ -32,6 +32,7 @@ export const werkgeversTable = pgTable("werkgevers", {
   email: text("email"),
   website: text("website"),
   voettekst: text("voettekst"),
+  handtekeningUrl: text("handtekening_url"),
   actief: boolean("actief").notNull().default(true),
   aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
   bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),

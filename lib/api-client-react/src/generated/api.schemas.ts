@@ -2463,6 +2463,11 @@ export interface Werkgever {
   website?: string | null;
   /** @nullable */
   voettekst?: string | null;
+  /**
+     * URL van de geüploade handtekeningafbeelding (PNG/JPG) voor het certificaat.
+     * @nullable
+     */
+  handtekening_url?: string | null;
   actief: boolean;
   aangemaakt_op: string;
   bijgewerkt_op: string;
@@ -2495,6 +2500,8 @@ export interface WerkgeverInput {
   website?: string | null;
   /** @nullable */
   voettekst?: string | null;
+  /** @nullable */
+  handtekening_url?: string | null;
   actief?: boolean;
 }
 
@@ -3380,6 +3387,11 @@ export interface Rapport {
   reactietermijn_datum?: string | null;
   /** @nullable */
   reactietermijn_gestart_op?: string | null;
+  certificaat_geaccordeerd?: boolean;
+  /** @nullable */
+  certificaat_geaccordeerd_op?: string | null;
+  /** Garantieduur in maanden (standaard 12). */
+  certificaat_garantie_maanden?: number;
   /** @nullable */
   aangemaakt_door?: number | null;
   /** @nullable */
@@ -3419,6 +3431,11 @@ export interface RapportPatch {
   tekening_ids?: number[];
   /** @nullable */
   reactietermijn_datum?: string | null;
+}
+
+export interface CertificaatAkkoordInput {
+  /** Garantieduur in maanden (standaard 12). */
+  garantie_maanden?: number;
 }
 
 export interface RapportDefinitief {

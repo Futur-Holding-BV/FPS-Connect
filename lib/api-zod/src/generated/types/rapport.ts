@@ -30,6 +30,11 @@ export interface Rapport {
   reactietermijn_datum?: string | null;
   /** @nullable */
   reactietermijn_gestart_op?: string | null;
+  certificaat_geaccordeerd?: boolean;
+  /** @nullable */
+  certificaat_geaccordeerd_op?: Date | null;
+  /** Garantieduur in maanden (standaard 12). */
+  certificaat_garantie_maanden?: number;
   /** @nullable */
   aangemaakt_door?: number | null;
   /** @nullable */

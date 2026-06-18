@@ -47,6 +47,9 @@ function mapRapport(
     bevroren_document_revisies: r.bevrorenDocumentRevisies ?? null,
     reactietermijn_datum: iso(r.reactietermijnDatum),
     reactietermijn_gestart_op: iso(r.reactietermijnGestarteOp),
+    certificaat_geaccordeerd: r.certificaatGeaccordeerd,
+    certificaat_geaccordeerd_op: iso(r.certificaatGeaccordeerdOp),
+    certificaat_garantie_maanden: r.certificaatGarantieMaanden,
     aangemaakt_door: r.aangemaaktDoor,
     aangemaakt_door_naam: extra?.aangemaaktDoorNaam ?? null,
     gebouw_naam: extra?.gebouwNaam ?? null,
@@ -313,6 +316,48 @@ router.post("/gebouwen/:id/rapporten/:rapportId/definitief", aanmakenRapporten, 
       .returning();
 
     res.json(mapRapport(definitief));
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Serverfout" });
+  }
+});
+
+// ── POST /gebouwen/:id/rapporten/:rapportId/certificaat-akkoord ──────────────
+// Hoofdbeheerder accodeert het certificaat en plaatst zijn handtekening.
+router.post("/gebouwen/:id/rapporten/:rapportId/certificaat-akkoord", aanmakenRapporten, async (req, res) => {
+  try {
+    const gebouwId = parseId(req.params.id);
+    const rapportId = parseId(req.params.rapportId);
+
+    const [huidig] = await db
+      .select()
+      .from(opleverrapportenTable)
+      .where(and(
+        eq(opleverrapportenTable.id, rapportId),
+        eq(opleverrapportenTable.gebouwId, gebouwId),
+      ));
+    if (!huidig) { res.status(404).json({ error: "Rapport niet gevonden" }); return; }
+    if (huidig.certificaatGeaccordeerd) {
+      res.status(409).json({ error: "Certificaat is al geaccordeerd" });
+      return;
+    }
+
+    const body = (req.body ?? {}) as { garantie_maanden?: number };
+    const maanden = body.garantie_maanden ? Number(body.garantie_maanden) : undefined;
+
+    const nu = new Date();
+    const [bijgewerkt] = await db
+      .update(opleverrapportenTable)
+      .set({
+        certificaatGeaccordeerd: true,
+        certificaatGeaccordeerdOp: nu,
+        ...(maanden && !isNaN(maanden) && maanden > 0 ? { certificaatGarantieMaanden: maanden } : {}),
+        bijgewerktOp: nu,
+      })
+      .where(eq(opleverrapportenTable.id, rapportId))
+      .returning();
+
+    res.json(mapRapport(bijgewerkt));
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Serverfout" });

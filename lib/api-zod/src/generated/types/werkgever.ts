@@ -35,6 +35,11 @@ export interface Werkgever {
   website?: string | null;
   /** @nullable */
   voettekst?: string | null;
+  /**
+     * URL van de geüploade handtekeningafbeelding (PNG/JPG) voor het certificaat.
+     * @nullable
+     */
+  handtekening_url?: string | null;
   actief: boolean;
   aangemaakt_op: string;
   bijgewerkt_op: string;

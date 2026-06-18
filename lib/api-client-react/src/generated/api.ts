@@ -40,6 +40,7 @@ import type {
   CalculatieRegel,
   CalculatieRegelInput,
   CaoOptie,
+  CertificaatAkkoordInput,
   Cluster,
   ClusterInput,
   ClusterMonteurInput,
@@ -3630,6 +3631,79 @@ export const useMaakRapportDefinitief = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getMaakRapportDefinitiefMutationOptions(options));
+    }
+
+export const getAccordeerCertificaatUrl = (id: number,
+    rapportId: number,) => {
+
+
+
+
+  return `/api/gebouwen/${id}/rapporten/${rapportId}/certificaat-akkoord`
+}
+
+/**
+ * @summary Certificaat accorderen en ondertekenen (alleen hoofdbeheerder)
+ */
+export const accordeerCertificaat = async (id: number,
+    rapportId: number,
+    certificaatAkkoordInput?: CertificaatAkkoordInput, options?: RequestInit): Promise<Rapport> => {
+
+  return customFetch<Rapport>(getAccordeerCertificaatUrl(id,rapportId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(certificaatAkkoordInput)
+  }
+);}
+
+
+
+
+export const getAccordeerCertificaatMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof accordeerCertificaat>>, TError,{id: number;rapportId: number;data?: BodyType<CertificaatAkkoordInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof accordeerCertificaat>>, TError,{id: number;rapportId: number;data?: BodyType<CertificaatAkkoordInput>}, TContext> => {
+
+const mutationKey = ['accordeerCertificaat'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof accordeerCertificaat>>, {id: number;rapportId: number;data?: BodyType<CertificaatAkkoordInput>}> = (props) => {
+          const {id,rapportId,data} = props ?? {};
+
+          return  accordeerCertificaat(id,rapportId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AccordeerCertificaatMutationResult = NonNullable<Awaited<ReturnType<typeof accordeerCertificaat>>>
+    export type AccordeerCertificaatMutationBody = BodyType<CertificaatAkkoordInput> | undefined
+    export type AccordeerCertificaatMutationError = ErrorType<void>
+
+    /**
+ * @summary Certificaat accorderen en ondertekenen (alleen hoofdbeheerder)
+ */
+export const useAccordeerCertificaat = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof accordeerCertificaat>>, TError,{id: number;rapportId: number;data?: BodyType<CertificaatAkkoordInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof accordeerCertificaat>>,
+        TError,
+        {id: number;rapportId: number;data?: BodyType<CertificaatAkkoordInput>},
+        TContext
+      > => {
+      return useMutation(getAccordeerCertificaatMutationOptions(options));
     }
 
 export const getGetOpleverrapportBijlagenbundelUrl = (id: number,

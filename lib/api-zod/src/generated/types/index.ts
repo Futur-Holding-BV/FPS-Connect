@@ -30,6 +30,7 @@ export * from './calculatieInput';
 export * from './calculatieRegel';
 export * from './calculatieRegelInput';
 export * from './caoOptie';
+export * from './certificaatAkkoordInput';
 export * from './cluster';
 export * from './clusterInput';
 export * from './clusterMonteurInput';
