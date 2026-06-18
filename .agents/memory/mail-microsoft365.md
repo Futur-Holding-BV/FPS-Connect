@@ -85,3 +85,5 @@ Een sleutel als shared env var zetten EN dezelfde sleutel door de gebruiker als
 secret laten aanleveren botst: `viewEnvVars` kan na een delete op nul uitkomen
 (env var weg, secret niet aangemaakt). Voor niet-gevoelige config: zelf als env
 var zetten en NIET ook als secret opvragen.
+
+**Bevestigd werkend (18 juni 2026):** Token ophalen + sendMail via Graph naar zowel fpsbouw.nl als Gmail gaf 202. Afzender is MAIL_FROM-alias; postbus is MAIL_MAILBOX. AZURE_CLIENT_ID_NEW bevat de correcte Application/client ID.
