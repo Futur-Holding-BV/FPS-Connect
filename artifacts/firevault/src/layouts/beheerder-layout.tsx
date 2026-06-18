@@ -101,12 +101,11 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
       <Sidebar variant="inset" collapsible="icon">
         <SidebarHeader className="py-3">
           <div className="flex items-center px-2 gap-2.5 group-data-[collapsible=icon]:justify-center">
-            <div className="flex items-center justify-center w-8 h-8 bg-primary rounded flex-shrink-0">
-              <ShieldCheck className="h-4 w-4 text-white" />
-            </div>
-            <span className="group-data-[collapsible=icon]:hidden text-[15px] font-bold tracking-tight text-foreground leading-none">
-              FPS Connect
-            </span>
+            <img
+              src="/logo-fps-connect.png"
+              alt="FPS Connect"
+              className="h-8 w-auto group-data-[collapsible=icon]:h-7 flex-shrink-0"
+            />
           </div>
 
           {aantalOmgevingen > 1 && (
