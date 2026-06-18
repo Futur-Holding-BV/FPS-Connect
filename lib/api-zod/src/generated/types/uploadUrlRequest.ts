@@ -5,6 +5,7 @@
  * FPS Brandpreventie - Platform voor brandpreventieve gebouwvoorzieningen
  * OpenAPI spec version: 0.1.0
  */
+import type { UploadUrlRequestBestandType } from './uploadUrlRequestBestandType';
 
 export interface UploadUrlRequest {
   /** @minLength 1 */
@@ -13,4 +14,8 @@ export interface UploadUrlRequest {
   size: number;
   /** @minLength 1 */
   contentType: string;
+  /** Gebouw waartoe het bestand behoort (voor ACL en mapstructuur). */
+  gebouw_id?: number;
+  /** Type bestand — bepaalt de submap in object storage. */
+  bestand_type?: UploadUrlRequestBestandType;
 }

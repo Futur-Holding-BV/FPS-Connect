@@ -3209,7 +3209,7 @@ paths:
     get:
       tags: [Storage]
       operationId: getStorageObject
-      summary: Serveer een geüpload object
+      summary: Serveer een geüpload object (beveiligd met gebouw-ACL)
       parameters:
         - name: objectPath
           in: path
@@ -3224,6 +3224,12 @@ paths:
               schema:
                 type: string
                 format: binary
+        "403":
+          description: Geen toegang tot dit bestand.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
         "404":
           description: Niet gevonden.
           content:
@@ -3236,7 +3242,6 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorEnvelope"
-
   # ── INSPECTIES ────────────────────────────────────────────────────────────
   /inspecties:
     get:
@@ -9407,6 +9412,13 @@ components:
         contentType:
           type: string
           minLength: 1
+        gebouw_id:
+          type: integer
+          description: Gebouw waartoe het bestand behoort (voor ACL en mapstructuur).
+        bestand_type:
+          type: string
+          enum: [foto, rapport, tekening, bijlage, algemeen]
+          description: Type bestand — bepaalt de submap in object storage.
     UploadUrlResponse:
       type: object
       required: [uploadURL, objectPath]

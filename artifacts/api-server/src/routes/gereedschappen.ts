@@ -5,14 +5,13 @@ import {
   bruikleenOvereenkomstenTable,
   gereedschapMeldingenTable,
   medewerkersTable,
-  gebruikersTable,
 } from "@workspace/db/schema";
 import { eq, ilike, or, and, desc } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
 
 const router = Router();
 
-const lezen   = requireBevoegdheid("gereedschappen", 1);
+const lezen     = requireBevoegdheid("gereedschappen", 1);
 const schrijven = requireBevoegdheid("gereedschappen", 2);
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -155,7 +154,8 @@ router.post("/gereedschappen", schrijven, async (req, res) => {
   } = req.body;
 
   if (!omschrijving || !categorie || !aandrijving) {
-    return res.status(400).json({ error: "omschrijving, categorie en aandrijving zijn verplicht" });
+    res.status(400).json({ error: "omschrijving, categorie en aandrijving zijn verplicht" });
+    return;
   }
 
   const [aangemaakt] = await db
@@ -184,7 +184,7 @@ router.post("/gereedschappen", schrijven, async (req, res) => {
       laatsteKeuring: laatste_keuring ?? null,
       volgendeKeuring: volgende_keuring ?? null,
       opmerkingen: opmerkingen ?? null,
-      aangemaaktDoorId: req.session.gebruikerId ?? null,
+      aangemaaktDoorId: req.session.userId ?? null,
     })
     .returning();
 
@@ -199,20 +199,20 @@ router.post("/gereedschappen", schrijven, async (req, res) => {
 
 // ── GET /gereedschappen/:id ───────────────────────────────────────────────────
 router.get("/gereedschappen/:id", lezen, async (req, res) => {
-  const id = parseInt(req.params.id);
+  const id = parseInt(req.params.id as string);
   const rijen = await db
     .select({ g: gereedschappenTable, medewerkerNaam: medewerkersTable.naam })
     .from(gereedschappenTable)
     .leftJoin(medewerkersTable, eq(gereedschappenTable.huidigeMedewerkerId, medewerkersTable.id))
     .where(eq(gereedschappenTable.id, id));
 
-  if (!rijen[0]) return res.status(404).json({ error: "Niet gevonden" });
+  if (!rijen[0]) { res.status(404).json({ error: "Niet gevonden" }); return; }
   res.json(mapGereedschap(rijen[0].g, rijen[0].medewerkerNaam));
 });
 
 // ── PATCH /gereedschappen/:id ─────────────────────────────────────────────────
 router.patch("/gereedschappen/:id", schrijven, async (req, res) => {
-  const id = parseInt(req.params.id);
+  const id = parseInt(req.params.id as string);
   const {
     gegraveerd_nummer, omschrijving, merk, type, serienummer,
     categorie, aandrijving, met_snoer, accu_inbegrepen, lader_inbegrepen,
@@ -251,7 +251,7 @@ router.patch("/gereedschappen/:id", schrijven, async (req, res) => {
     .where(eq(gereedschappenTable.id, id))
     .returning();
 
-  if (!bijgewerkt) return res.status(404).json({ error: "Niet gevonden" });
+  if (!bijgewerkt) { res.status(404).json({ error: "Niet gevonden" }); return; }
 
   const rijen = await db
     .select({ g: gereedschappenTable, medewerkerNaam: medewerkersTable.naam })
@@ -264,7 +264,7 @@ router.patch("/gereedschappen/:id", schrijven, async (req, res) => {
 
 // ── DELETE /gereedschappen/:id ────────────────────────────────────────────────
 router.delete("/gereedschappen/:id", schrijven, async (req, res) => {
-  const id = parseInt(req.params.id);
+  const id = parseInt(req.params.id as string);
   await db
     .update(gereedschappenTable)
     .set({ status: "Afgeschreven", bijgewerktOp: new Date() })
@@ -274,7 +274,7 @@ router.delete("/gereedschappen/:id", schrijven, async (req, res) => {
 
 // ── GET /gereedschappen/:id/bruikleen ─────────────────────────────────────────
 router.get("/gereedschappen/:id/bruikleen", lezen, async (req, res) => {
-  const id = parseInt(req.params.id);
+  const id = parseInt(req.params.id as string);
   const rijen = await db
     .select({
       b: bruikleenOvereenkomstenTable,
@@ -297,7 +297,7 @@ router.get("/gereedschappen/:id/bruikleen", lezen, async (req, res) => {
 
 // ── GET /gereedschappen/:id/meldingen ─────────────────────────────────────────
 router.get("/gereedschappen/:id/meldingen", lezen, async (req, res) => {
-  const id = parseInt(req.params.id);
+  const id = parseInt(req.params.id as string);
   const rijen = await db
     .select({
       m: gereedschapMeldingenTable,
@@ -313,18 +313,19 @@ router.get("/gereedschappen/:id/meldingen", lezen, async (req, res) => {
 
 // ── POST /gereedschappen/:id/meldingen ────────────────────────────────────────
 router.post("/gereedschappen/:id/meldingen", lezen, async (req, res) => {
-  const gereedschapId = parseInt(req.params.id);
+  const gereedschapId = parseInt(req.params.id as string);
   const { soort_melding, omschrijving, urgentie, kan_nog_veilig_gebruikt_worden, datum_melding, opmerkingen } = req.body;
 
   if (!soort_melding || !omschrijving || !datum_melding) {
-    return res.status(400).json({ error: "soort_melding, omschrijving en datum_melding zijn verplicht" });
+    res.status(400).json({ error: "soort_melding, omschrijving en datum_melding zijn verplicht" });
+    return;
   }
 
   const [aangemaakt] = await db
     .insert(gereedschapMeldingenTable)
     .values({
       gereedschapId,
-      gemeldDoorGebruikerId: req.session.gebruikerId ?? null,
+      gemeldDoorGebruikerId: req.session.userId ?? null,
       soortMelding: soort_melding,
       omschrijving,
       urgentie: urgentie ?? "normaal",
@@ -348,7 +349,8 @@ router.post("/bruikleen", schrijven, async (req, res) => {
   const { gereedschap_id, medewerker_id, datum_uitgifte, staat_bij_uitgifte, accessoires, bruikleen_voorwaarden, opmerkingen } = req.body;
 
   if (!gereedschap_id || !medewerker_id || !datum_uitgifte) {
-    return res.status(400).json({ error: "gereedschap_id, medewerker_id en datum_uitgifte zijn verplicht" });
+    res.status(400).json({ error: "gereedschap_id, medewerker_id en datum_uitgifte zijn verplicht" });
+    return;
   }
 
   const [aangemaakt] = await db
@@ -356,7 +358,7 @@ router.post("/bruikleen", schrijven, async (req, res) => {
     .values({
       gereedschapId: gereedschap_id,
       medewerkerId: medewerker_id,
-      uitgegeverDoorId: req.session.gebruikerId ?? null,
+      uitgegeverDoorId: req.session.userId ?? null,
       datumUitgifte: datum_uitgifte,
       staatBijUitgifte: staat_bij_uitgifte ?? null,
       accessoires: accessoires ?? null,
@@ -391,7 +393,7 @@ router.post("/bruikleen", schrijven, async (req, res) => {
 
 // ── GET /bruikleen/:id ────────────────────────────────────────────────────────
 router.get("/bruikleen/:id", lezen, async (req, res) => {
-  const id = parseInt(req.params.id);
+  const id = parseInt(req.params.id as string);
   const rijen = await db
     .select({
       b: bruikleenOvereenkomstenTable,
@@ -404,7 +406,7 @@ router.get("/bruikleen/:id", lezen, async (req, res) => {
     .leftJoin(gereedschappenTable, eq(bruikleenOvereenkomstenTable.gereedschapId, gereedschappenTable.id))
     .where(eq(bruikleenOvereenkomstenTable.id, id));
 
-  if (!rijen[0]) return res.status(404).json({ error: "Niet gevonden" });
+  if (!rijen[0]) { res.status(404).json({ error: "Niet gevonden" }); return; }
   res.json(mapBruikleen(rijen[0].b, {
     medewerkerNaam: rijen[0].medewerkerNaam,
     gereedschapOmschrijving: rijen[0].gereedschapOmschrijving,
@@ -414,11 +416,12 @@ router.get("/bruikleen/:id", lezen, async (req, res) => {
 
 // ── PATCH /bruikleen/:id/retourgave ───────────────────────────────────────────
 router.patch("/bruikleen/:id/retourgave", schrijven, async (req, res) => {
-  const id = parseInt(req.params.id);
+  const id = parseInt(req.params.id as string);
   const { datum_inname, staat_bij_inname, opmerkingen } = req.body;
 
   if (!datum_inname) {
-    return res.status(400).json({ error: "datum_inname is verplicht" });
+    res.status(400).json({ error: "datum_inname is verplicht" });
+    return;
   }
 
   const bestaand = await db
@@ -427,7 +430,7 @@ router.patch("/bruikleen/:id/retourgave", schrijven, async (req, res) => {
     .where(eq(bruikleenOvereenkomstenTable.id, id))
     .limit(1);
 
-  if (!bestaand[0]) return res.status(404).json({ error: "Niet gevonden" });
+  if (!bestaand[0]) { res.status(404).json({ error: "Niet gevonden" }); return; }
 
   const [bijgewerkt] = await db
     .update(bruikleenOvereenkomstenTable)
@@ -450,11 +453,12 @@ router.patch("/bruikleen/:id/retourgave", schrijven, async (req, res) => {
 
 // ── PATCH /bruikleen/:id/ondertekening ────────────────────────────────────────
 router.patch("/bruikleen/:id/ondertekening", lezen, async (req, res) => {
-  const id = parseInt(req.params.id);
+  const id = parseInt(req.params.id as string);
   const { rol, handtekening_url } = req.body;
 
   if (!rol || !handtekening_url) {
-    return res.status(400).json({ error: "rol en handtekening_url zijn verplicht" });
+    res.status(400).json({ error: "rol en handtekening_url zijn verplicht" });
+    return;
   }
 
   const bestaand = await db
@@ -463,17 +467,13 @@ router.patch("/bruikleen/:id/ondertekening", lezen, async (req, res) => {
     .where(eq(bruikleenOvereenkomstenTable.id, id))
     .limit(1);
 
-  if (!bestaand[0]) return res.status(404).json({ error: "Niet gevonden" });
-  if (bestaand[0].definitief) return res.status(409).json({ error: "Overeenkomst is al definitief ondertekend" });
+  if (!bestaand[0]) { res.status(404).json({ error: "Niet gevonden" }); return; }
+  if (bestaand[0].definitief) { res.status(409).json({ error: "Overeenkomst is al definitief ondertekend" }); return; }
 
   const update: Record<string, unknown> = { bijgewerktOp: new Date() };
   if (rol === "medewerker") update.handtekeningMedewerkerUrl = handtekening_url;
   else if (rol === "uitgever") update.handtekeningUitgeverUrl = handtekening_url;
-  else return res.status(400).json({ error: "rol moet medewerker of uitgever zijn" });
-
-  const beiden = bestaand[0].handtekeningMedewerkerUrl && (rol === "medewerker"
-    ? true
-    : bestaand[0].handtekeningMedewerkerUrl !== null);
+  else { res.status(400).json({ error: "rol moet medewerker of uitgever zijn" }); return; }
 
   if (
     (rol === "medewerker" && bestaand[0].handtekeningUitgeverUrl) ||
@@ -494,16 +494,16 @@ router.patch("/bruikleen/:id/ondertekening", lezen, async (req, res) => {
 
 // ── GET /mijn-gereedschappen ──────────────────────────────────────────────────
 router.get("/mijn-gereedschappen", async (req, res) => {
-  const gebruikerId = req.session.gebruikerId;
-  if (!gebruikerId) return res.status(401).json({ error: "Niet ingelogd" });
+  const userId = req.session.userId;
+  if (!userId) { res.status(401).json({ error: "Niet ingelogd" }); return; }
 
   const medewerker = await db
     .select({ id: medewerkersTable.id })
     .from(medewerkersTable)
-    .where(eq(medewerkersTable.gebruikerId, gebruikerId))
+    .where(eq(medewerkersTable.gebruikerId, userId))
     .limit(1);
 
-  if (!medewerker[0]) return res.status(404).json({ error: "Geen medewerker gekoppeld aan dit account" });
+  if (!medewerker[0]) { res.status(404).json({ error: "Geen medewerker gekoppeld aan dit account" }); return; }
 
   const rijen = await db
     .select({ g: gereedschappenTable, medewerkerNaam: medewerkersTable.naam })

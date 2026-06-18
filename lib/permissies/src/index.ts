@@ -87,6 +87,11 @@ export const MODULES = [
     label: "Toolbox",
     omschrijving: "Toolboxberichten en leesbevestigingen",
   },
+  {
+    id: "gereedschappen",
+    label: "Gereedschappen",
+    omschrijving: "Machines, gereedschappen, bruikleenovereenkomsten en meldingen",
+  },
 ] as const;
 
 export type ModuleId = (typeof MODULES)[number]["id"];

@@ -3867,7 +3867,9 @@ export const DeleteModuleBeoordelingResponse = zod.void()
 export const RequestUploadUrlBody = zod.object({
   "name": zod.string().min(1),
   "size": zod.number().min(1),
-  "contentType": zod.string().min(1)
+  "contentType": zod.string().min(1),
+  "gebouw_id": zod.number().optional().describe('Gebouw waartoe het bestand behoort (voor ACL en mapstructuur).'),
+  "bestand_type": zod.enum(['foto', 'rapport', 'tekening', 'bijlage', 'algemeen']).optional().describe('Type bestand — bepaalt de submap in object storage.')
 })
 
 
@@ -3881,7 +3883,9 @@ export const RequestUploadUrlResponse = zod.object({
   "metadata": zod.object({
   "name": zod.string().min(1),
   "size": zod.number().min(1),
-  "contentType": zod.string().min(1)
+  "contentType": zod.string().min(1),
+  "gebouw_id": zod.number().optional().describe('Gebouw waartoe het bestand behoort (voor ACL en mapstructuur).'),
+  "bestand_type": zod.enum(['foto', 'rapport', 'tekening', 'bijlage', 'algemeen']).optional().describe('Type bestand — bepaalt de submap in object storage.')
 }).optional()
 })
 
@@ -3897,7 +3901,7 @@ export const GetPublicObjectResponse = zod.unknown()
 
 
 /**
- * @summary Serveer een geüpload object
+ * @summary Serveer een geüpload object (beveiligd met gebouw-ACL)
  */
 export const GetStorageObjectParams = zod.object({
   "objectPath": zod.coerce.string()

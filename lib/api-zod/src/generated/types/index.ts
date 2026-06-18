@@ -310,6 +310,7 @@ export * from './uitnodigingActiveren200';
 export * from './uitnodigingActiverenTaal';
 export * from './uitnodigingInfo';
 export * from './uploadUrlRequest';
+export * from './uploadUrlRequestBestandType';
 export * from './uploadUrlResponse';
 export * from './verdieping';
 export * from './verdiepingInput';

@@ -10750,7 +10750,7 @@ export const getGetStorageObjectUrl = (objectPath: string,) => {
 }
 
 /**
- * @summary Serveer een geüpload object
+ * @summary Serveer een geüpload object (beveiligd met gebouw-ACL)
  */
 export const getStorageObject = async (objectPath: string, options?: RequestInit): Promise<Blob> => {
 
@@ -10797,7 +10797,7 @@ export type GetStorageObjectQueryError = ErrorType<ErrorEnvelope>
 
 
 /**
- * @summary Serveer een geüpload object
+ * @summary Serveer een geüpload object (beveiligd met gebouw-ACL)
  */
 
 export function useGetStorageObject<TData = Awaited<ReturnType<typeof getStorageObject>>, TError = ErrorType<ErrorEnvelope>>(

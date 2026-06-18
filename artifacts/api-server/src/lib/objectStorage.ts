@@ -37,6 +37,8 @@ export class ObjectNotFoundError extends Error {
   }
 }
 
+export type BestandType = "foto" | "rapport" | "tekening" | "bijlage" | "algemeen";
+
 export class ObjectStorageService {
   constructor() {}
 
@@ -106,18 +108,31 @@ export class ObjectStorageService {
     return new Response(webStream, { headers });
   }
 
-  async getObjectEntityUploadURL(): Promise<string> {
+  /**
+   * Vraag een presigned PUT-URL aan voor een nieuw bestand.
+   *
+   * Bestandspad in object storage:
+   * - Met gebouwId + type: `{PRIVATE_OBJECT_DIR}/{gebouwId}/{type}/{uuid}`
+   *   → normalised path: `/objects/{gebouwId}/{type}/{uuid}`
+   * - Zonder: `{PRIVATE_OBJECT_DIR}/algemeen/{uuid}`
+   *   → normalised path: `/objects/algemeen/{uuid}`
+   * - Legacy: `{PRIVATE_OBJECT_DIR}/uploads/{uuid}`
+   */
+  async getObjectEntityUploadURL(
+    gebouwId?: number | null,
+    bestandType?: BestandType | null,
+  ): Promise<string> {
     const privateObjectDir = this.getPrivateObjectDir();
-    if (!privateObjectDir) {
-      throw new Error(
-        "PRIVATE_OBJECT_DIR not set. Create a bucket in 'Object Storage' " +
-          "tool and set PRIVATE_OBJECT_DIR env var."
-      );
+    const objectId = randomUUID();
+
+    let subPath: string;
+    if (gebouwId != null && bestandType && bestandType !== "algemeen") {
+      subPath = `${gebouwId}/${bestandType}s/${objectId}`;
+    } else {
+      subPath = `algemeen/${objectId}`;
     }
 
-    const objectId = randomUUID();
-    const fullPath = `${privateObjectDir}/uploads/${objectId}`;
-
+    const fullPath = `${privateObjectDir}/${subPath}`;
     const { bucketName, objectName } = parseObjectPath(fullPath);
 
     return signObjectURL({
@@ -204,6 +219,20 @@ export class ObjectStorageService {
       requestedPermission: requestedPermission ?? ObjectPermission.READ,
     });
   }
+}
+
+/**
+ * Parse het gebouw-ID uit een genormaliseerd object-pad.
+ * Structurele paden: `/objects/{gebouwId}/{type}/{uuid}` → gebouwId
+ * Legacy/algemeen paden: `/objects/uploads/...` of `/objects/algemeen/...` → null
+ */
+export function parseGebouwIdFromObjectPath(objectPath: string): number | null {
+  if (!objectPath.startsWith("/objects/")) return null;
+  const rest = objectPath.slice("/objects/".length);
+  const firstSegment = rest.split("/")[0];
+  const num = parseInt(firstSegment, 10);
+  if (isNaN(num) || num <= 0) return null;
+  return num;
 }
 
 function parseObjectPath(path: string): {

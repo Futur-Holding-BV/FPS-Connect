@@ -1384,6 +1384,20 @@ export interface FotoInput {
   beschrijving?: string;
 }
 
+/**
+ * Type bestand — bepaalt de submap in object storage.
+ */
+export type UploadUrlRequestBestandType = typeof UploadUrlRequestBestandType[keyof typeof UploadUrlRequestBestandType];
+
+
+export const UploadUrlRequestBestandType = {
+  foto: 'foto',
+  rapport: 'rapport',
+  tekening: 'tekening',
+  bijlage: 'bijlage',
+  algemeen: 'algemeen',
+} as const;
+
 export interface UploadUrlRequest {
   /** @minLength 1 */
   name: string;
@@ -1391,6 +1405,10 @@ export interface UploadUrlRequest {
   size: number;
   /** @minLength 1 */
   contentType: string;
+  /** Gebouw waartoe het bestand behoort (voor ACL en mapstructuur). */
+  gebouw_id?: number;
+  /** Type bestand — bepaalt de submap in object storage. */
+  bestand_type?: UploadUrlRequestBestandType;
 }
 
 export interface UploadUrlResponse {
