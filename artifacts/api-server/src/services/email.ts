@@ -18,7 +18,7 @@ const MAIL_FROM = process.env.MAIL_FROM ?? "noreply@fpsbrandpreventie.nl";
 const MAIL_MAILBOX = process.env.MAIL_MAILBOX ?? "app@fpsbrandpreventie.nl";
 
 // Weergegeven afzendernaam in e-mailclients: platform | bedrijfsnaam
-const AFZENDER_NAAM = "FPS Connect | FPS Brandpreventie";
+const AFZENDER_NAAM = "FPS Connect";
 
 // ── Foutmodel ────────────────────────────────────────────────────────────────
 export type MailFoutCategorie =
@@ -347,7 +347,7 @@ function mailShell(opties: {
     .join("\n              ");
   const voet =
     opties.voettekst ??
-    "Dit bericht is verstuurd door FPS Brandpreventie &bull; Niet aangevraagd? Neem contact op met uw beheerder.";
+    "Dit bericht is verstuurd door FPS Connect &bull; Niet aangevraagd? Neem contact op met uw beheerder.";
   return `
 <!DOCTYPE html>
 <html lang="nl">
@@ -363,12 +363,13 @@ function mailShell(opties: {
         <table width="560" cellpadding="0" cellspacing="0"
           style="background:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.12);">
           <tr>
-            <td style="background:#F23B0D;padding:32px 40px;text-align:center;">
-              <p style="margin:0;color:#ffffff;font-size:13px;letter-spacing:1px;text-transform:uppercase;font-weight:600;">
-                FPS Brandpreventie
+            <td style="background:#212631;padding:28px 40px;text-align:center;">
+              <p style="margin:0;display:inline-flex;align-items:center;gap:8px;">
+                <span style="display:inline-block;width:28px;height:28px;background:#F23B0D;border-radius:6px;vertical-align:middle;"></span>
+                <span style="color:#ffffff;font-size:16px;letter-spacing:.5px;font-weight:700;vertical-align:middle;">FPS Connect</span>
               </p>
-              <p style="margin:8px 0 0;color:rgba(255,255,255,.8);font-size:12px;">
-                Platform voor brandpreventieve gebouwvoorzieningen
+              <p style="margin:10px 0 0;color:rgba(255,255,255,.55);font-size:12px;letter-spacing:.2px;">
+                Beheersomgeving brandpreventieve voorzieningen
               </p>
             </td>
           </tr>
@@ -406,8 +407,8 @@ export async function stuurUitnodigingsmail(opties: {
   const { naarEmail, naarNaam, activatieLink, isOpnieuw = false, verstuurdDoorId } = opties;
 
   const onderwerp = isOpnieuw
-    ? "Uw uitnodiging voor FPS Brandpreventie (herinnering)"
-    : "U bent uitgenodigd voor FPS Brandpreventie";
+    ? "Uw uitnodiging voor FPS Connect (herinnering)"
+    : "U bent uitgenodigd voor FPS Connect";
 
   // Behoud bestaand gedrag: zonder configuratie wordt er niet verstuurd, maar
   // de uitnodiging kan in de ontwikkelomgeving wel worden aangemaakt.
@@ -434,9 +435,9 @@ export async function stuurUitnodigingsmail(opties: {
     kopje: `${isOpnieuw ? "Herinnering:" : "Welkom,"} ${naarNaam}`,
     paragrafen: [
       isOpnieuw
-        ? "U heeft eerder een uitnodiging ontvangen voor het FPS Brandpreventie-platform. " +
+        ? "U heeft eerder een uitnodiging ontvangen voor FPS Connect. " +
           "Gebruik onderstaande knop om uw account te activeren."
-        : "U bent uitgenodigd voor het FPS Brandpreventie-platform. " +
+        : "U bent uitgenodigd voor FPS Connect. " +
           "Activeer hieronder uw account, stel uw wachtwoord in en koppel de authenticator-app.",
       "De activatielink is <strong>7 dagen geldig</strong>.",
     ],
@@ -463,7 +464,7 @@ export async function verstuurWachtwoordResetMail(opties: {
   resetLink: string;
 }): Promise<void> {
   const { naarEmail, naarNaam, resetLink } = opties;
-  const onderwerp = "Wachtwoord opnieuw instellen — FPS Brandpreventie";
+  const onderwerp = "Wachtwoord opnieuw instellen — FPS Connect";
   const html = mailShell({
     titel: onderwerp,
     kopje: `Wachtwoord opnieuw instellen`,
@@ -490,16 +491,16 @@ export async function stuurTestmail(opties: {
   naarEmail: string;
   verstuurdDoorId?: number | null;
 }): Promise<void> {
-  const onderwerp = "Testbericht van FPS Brandpreventie";
+  const onderwerp = "Testbericht van FPS Connect";
   const html = mailShell({
     titel: onderwerp,
     kopje: "Testbericht",
     paragrafen: [
-      "Dit is een testbericht om de mailkoppeling van FPS Brandpreventie te controleren.",
+      "Dit is een testbericht om de mailkoppeling van FPS Connect te controleren.",
       "Ontvangt u dit bericht? Dan werkt de verbinding met Microsoft 365 correct.",
     ],
     voettekst:
-      "Dit bericht is automatisch gegenereerd vanuit de mailinstellingen van FPS Brandpreventie.",
+      "Dit bericht is automatisch gegenereerd vanuit de mailinstellingen van FPS Connect.",
   });
   await verstuurMail({
     naarEmail: opties.naarEmail,
