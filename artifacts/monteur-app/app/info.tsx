@@ -1,7 +1,7 @@
 import { useGetInfoInstellingen } from "@workspace/api-client-react";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
-import { Image, Linking, Pressable, ScrollView, Switch, Text, View } from "react-native";
+import { Image, Linking, Platform, Pressable, ScrollView, Switch, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { bovenInset } from "@/components/ui";
@@ -288,7 +288,9 @@ export default function InfoScherm() {
                   marginTop: 2,
                 }}
               >
-                {biometrieBeschikbaar
+                {Platform.OS === "web"
+                  ? "Snel ontgrendelen is alleen beschikbaar in de native app op een iOS- of Android-toestel."
+                  : biometrieBeschikbaar
                   ? `Open de app voortaan met ${biometrieType} in plaats van opnieuw inloggen. Je sessie blijft veilig opgeslagen op dit toestel.`
                   : "Stel eerst een vingerafdruk of gezichtsherkenning in op dit toestel om snel ontgrendelen te kunnen gebruiken."}
               </Text>

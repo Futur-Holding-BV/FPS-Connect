@@ -97,19 +97,34 @@ export default function MenuScherm() {
             </Text>
           </View>
         </View>
-        <Pressable
-          onPress={uitloggen}
-          style={{
-            paddingHorizontal: 14,
-            paddingVertical: 9,
-            borderRadius: 10,
-            backgroundColor: "rgba(255,255,255,0.12)",
-          }}
-        >
-          <Text style={{ color: c.darkForeground, fontFamily: "Inter_600SemiBold", fontSize: 14 }}>
-            Uitloggen
-          </Text>
-        </Pressable>
+        <View style={{ flexDirection: "row", gap: 8, alignItems: "center" }}>
+          <Pressable
+            onPress={() => router.push("/info")}
+            style={{
+              paddingHorizontal: 14,
+              paddingVertical: 9,
+              borderRadius: 10,
+              backgroundColor: "rgba(255,255,255,0.12)",
+            }}
+          >
+            <Text style={{ color: c.darkForeground, fontFamily: "Inter_600SemiBold", fontSize: 14 }}>
+              Instellingen
+            </Text>
+          </Pressable>
+          <Pressable
+            onPress={uitloggen}
+            style={{
+              paddingHorizontal: 14,
+              paddingVertical: 9,
+              borderRadius: 10,
+              backgroundColor: "rgba(255,255,255,0.12)",
+            }}
+          >
+            <Text style={{ color: c.darkForeground, fontFamily: "Inter_600SemiBold", fontSize: 14 }}>
+              Uitloggen
+            </Text>
+          </Pressable>
+        </View>
       </View>
 
       <RadiaalMenu acties={acties} />
