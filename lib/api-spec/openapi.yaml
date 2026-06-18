@@ -9040,6 +9040,10 @@ components:
           type: ["integer", "null"]
         herkomst_automatisch:
           type: boolean
+        dienstverband:
+          type: ["string", "null"]
+        bedrijf_uitzendbureau:
+          type: ["string", "null"]
 
     ToewijsbareGebruiker:
       type: object
@@ -9286,6 +9290,10 @@ components:
             type: integer
         herkomst_profiel_id:
           type: ["integer", "null"]
+        dienstverband:
+          type: string
+        bedrijf_uitzendbureau:
+          type: string
 
     GebruikerUpdate:
       type: object
@@ -9324,6 +9332,10 @@ components:
             type: integer
         herkomst_profiel_id:
           type: ["integer", "null"]
+        dienstverband:
+          type: string
+        bedrijf_uitzendbureau:
+          type: string
 
     HerkomstBevestigenBulkInput:
       type: object
@@ -10639,6 +10651,8 @@ components:
           type: boolean
         opmerkingen:
           type: ["string", "null"]
+        bedrijf_uitzendbureau:
+          type: ["string", "null"]
         aangemaakt_op:
           type: string
         bijgewerkt_op:
@@ -10679,6 +10693,8 @@ components:
         actief:
           type: boolean
         opmerkingen:
+          type: string
+        bedrijf_uitzendbureau:
           type: string
 
     MedewerkerOnboardingInput:

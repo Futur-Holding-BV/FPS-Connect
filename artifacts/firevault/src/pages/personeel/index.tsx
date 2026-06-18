@@ -61,7 +61,16 @@ import {
 import { WERKMAATSCHAPPIJEN, caoVoorWerkmaatschappij } from "@/lib/werkmaatschappijen";
 
 const WERKMAATSCHAPPIJ_STD = WERKMAATSCHAPPIJEN[0];
-const DIENSTVERBANDEN = ["vast", "tijdelijk", "oproep", "stage", "inhuur"] as const;
+const DIENSTVERBANDEN = ["vast", "tijdelijk", "oproep", "stage", "inhuur", "zzp", "uitzend"] as const;
+const DIENSTVERBAND_LABELS: Record<string, string> = {
+  vast: "Vaste medewerker",
+  tijdelijk: "Tijdelijk contract",
+  oproep: "Oproepkracht",
+  stage: "Stagiair",
+  inhuur: "Inhuur / onderaannemer",
+  zzp: "ZZP-er",
+  uitzend: "Uitzendkracht",
+};
 
 const SOORT_OPTIES = [
   { value: "cursus", label: "Cursus" },
@@ -196,6 +205,7 @@ export default function PersoneelPagina() {
     naam: "",
     werkmaatschappij: WERKMAATSCHAPPIJ_STD,
     dienstverband: "vast",
+    bedrijf_uitzendbureau: undefined,
   });
   const [functieForm, setFunctieForm] = useState<FunctieInput>({
     naam: "",
@@ -236,7 +246,7 @@ export default function PersoneelPagina() {
       await queryClient.invalidateQueries({ queryKey: getListMedewerkersQueryKey() });
       await queryClient.invalidateQueries({ queryKey: getGetHrmStatsQueryKey() });
       toast({ title: "Medewerker toegevoegd" });
-      setMedewerkerForm({ naam: "", werkmaatschappij: WERKMAATSCHAPPIJ_STD, dienstverband: "vast" });
+      setMedewerkerForm({ naam: "", werkmaatschappij: WERKMAATSCHAPPIJ_STD, dienstverband: "vast", bedrijf_uitzendbureau: undefined });
       setMedewerkerOpen(false);
     } catch {
       toast({ title: "Opslaan mislukt", variant: "destructive" });
@@ -931,13 +941,24 @@ export default function PersoneelPagina() {
             </div>
             <div className="space-y-1.5">
               <Label>Dienstverband</Label>
-              <Select value={medewerkerForm.dienstverband} onValueChange={(v) => setMedewerkerForm({ ...medewerkerForm, dienstverband: v })}>
+              <Select value={medewerkerForm.dienstverband} onValueChange={(v) => setMedewerkerForm({ ...medewerkerForm, dienstverband: v, bedrijf_uitzendbureau: (v === "uitzend" || v === "inhuur") ? (medewerkerForm.bedrijf_uitzendbureau ?? "") : undefined })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {DIENSTVERBANDEN.map((d) => <SelectItem key={d} value={d}>{d}</SelectItem>)}
+                  {DIENSTVERBANDEN.map((d) => <SelectItem key={d} value={d}>{DIENSTVERBAND_LABELS[d] ?? d}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
+            {(medewerkerForm.dienstverband === "uitzend" || medewerkerForm.dienstverband === "inhuur") && (
+              <div className="space-y-1.5">
+                <Label>{medewerkerForm.dienstverband === "uitzend" ? "Naam uitzendbureau" : "Naam bedrijf / onderaannemer"}</Label>
+                <input
+                  className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                  value={medewerkerForm.bedrijf_uitzendbureau ?? ""}
+                  onChange={(e) => setMedewerkerForm({ ...medewerkerForm, bedrijf_uitzendbureau: e.target.value || undefined })}
+                  placeholder={medewerkerForm.dienstverband === "uitzend" ? "bijv. Randstad" : "Naam van het bedrijf"}
+                />
+              </div>
+            )}
             <div className="space-y-1.5">
               <Label>Contracturen/week</Label>
               <Input

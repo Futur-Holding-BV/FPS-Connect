@@ -24,4 +24,6 @@ export interface GebruikerUpdate {
   bevoegdheden?: GebruikerUpdateBevoegdheden;
   /** @nullable */
   herkomst_profiel_id?: number | null;
+  dienstverband?: string;
+  bedrijf_uitzendbureau?: string;
 }

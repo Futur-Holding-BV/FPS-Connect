@@ -43,6 +43,9 @@ export const gebruikersTable = pgTable("gebruikers", {
   // door een beheerder gekozen. Een beheerder kan een automatische koppeling
   // bevestigen (zet dit op false) of verwijderen.
   herkomstAutomatisch: boolean("herkomst_automatisch").notNull().default(false),
+  // Type dienstverband voor extern ingeleend personeel (zzp, uitzend, intern).
+  dienstverband: text("dienstverband").notNull().default("intern"),
+  bedrijfUitzendbureau: text("bedrijf_uitzendbureau"),
 });
 
 // Standaardprofielen (presets) die de bevoegdheden-matrix als startpunt vullen.

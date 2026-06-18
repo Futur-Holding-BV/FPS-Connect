@@ -40,6 +40,8 @@ export interface Medewerker {
   actief: boolean;
   /** @nullable */
   opmerkingen?: string | null;
+  /** @nullable */
+  bedrijf_uitzendbureau?: string | null;
   aangemaakt_op: string;
   bijgewerkt_op: string;
 }

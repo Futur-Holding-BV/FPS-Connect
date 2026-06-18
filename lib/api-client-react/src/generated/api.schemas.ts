@@ -1549,6 +1549,10 @@ export interface Gebruiker {
   /** @nullable */
   herkomst_profiel_id?: number | null;
   herkomst_automatisch?: boolean;
+  /** @nullable */
+  dienstverband?: string | null;
+  /** @nullable */
+  bedrijf_uitzendbureau?: string | null;
 }
 
 export interface ToewijsbareGebruiker {
@@ -1701,6 +1705,8 @@ export interface GebruikerInput {
   bevoegdheden?: GebruikerInputBevoegdheden;
   /** @nullable */
   herkomst_profiel_id?: number | null;
+  dienstverband?: string;
+  bedrijf_uitzendbureau?: string;
 }
 
 export type GebruikerUpdateBevoegdheden = {[key: string]: number};
@@ -1722,6 +1728,8 @@ export interface GebruikerUpdate {
   bevoegdheden?: GebruikerUpdateBevoegdheden;
   /** @nullable */
   herkomst_profiel_id?: number | null;
+  dienstverband?: string;
+  bedrijf_uitzendbureau?: string;
 }
 
 export interface HerkomstBevestigenBulkInput {
@@ -2689,6 +2697,8 @@ export interface Medewerker {
   actief: boolean;
   /** @nullable */
   opmerkingen?: string | null;
+  /** @nullable */
+  bedrijf_uitzendbureau?: string | null;
   aangemaakt_op: string;
   bijgewerkt_op: string;
 }
@@ -2713,6 +2723,7 @@ export interface MedewerkerInput {
   noodcontact_telefoon?: string;
   actief?: boolean;
   opmerkingen?: string;
+  bedrijf_uitzendbureau?: string;
 }
 
 export interface MedewerkerOnboardingInput {

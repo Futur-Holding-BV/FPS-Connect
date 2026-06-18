@@ -511,6 +511,7 @@ async function medewerkerNaarJson(m: typeof medewerkersTable.$inferSelect) {
     functie_naam: functieNaam,
     cao: m.cao,
     dienstverband: m.dienstverband,
+    bedrijf_uitzendbureau: m.bedrijfUitzendbureau ?? null,
     contracturen_per_week: m.contracturenPerWeek,
     in_dienst_sinds: m.inDienstSinds,
     uit_dienst_per: m.uitDienstPer,
@@ -564,7 +565,7 @@ router.get("/medewerkers", lezen, async (req, res) => {
 
 router.post("/medewerkers", schrijven, async (req, res) => {
   try {
-    const { naam, gebruiker_id, email, telefoon, mobiel, werkmaatschappij, functie_id, cao, dienstverband, contracturen_per_week, in_dienst_sinds, uit_dienst_per, noodcontact_naam, noodcontact_telefoon, actief, opmerkingen } = req.body;
+    const { naam, gebruiker_id, email, telefoon, mobiel, werkmaatschappij, functie_id, cao, dienstverband, bedrijf_uitzendbureau, contracturen_per_week, in_dienst_sinds, uit_dienst_per, noodcontact_naam, noodcontact_telefoon, actief, opmerkingen } = req.body;
     if (!naam) return res.status(400).json({ error: "naam is verplicht" });
     const wm = werkmaatschappij || "FPS Brandpreventie";
     const [m] = await db
@@ -580,6 +581,7 @@ router.post("/medewerkers", schrijven, async (req, res) => {
         functieId: functie_id ?? null,
         cao,
         dienstverband: dienstverband || "vast",
+        bedrijfUitzendbureau: bedrijf_uitzendbureau || null,
         contracturenPerWeek: contracturen_per_week ?? null,
         inDienstSinds: in_dienst_sinds,
         uitDienstPer: uit_dienst_per,
@@ -745,7 +747,7 @@ router.get("/medewerkers/:id", lezen, async (req, res) => {
 
 router.patch("/medewerkers/:id", schrijven, async (req, res) => {
   try {
-    const { naam, gebruiker_id, email, telefoon, mobiel, werkmaatschappij, functie_id, cao, dienstverband, contracturen_per_week, in_dienst_sinds, uit_dienst_per, noodcontact_naam, noodcontact_telefoon, actief, opmerkingen } = req.body;
+    const { naam, gebruiker_id, email, telefoon, mobiel, werkmaatschappij, functie_id, cao, dienstverband, bedrijf_uitzendbureau, contracturen_per_week, in_dienst_sinds, uit_dienst_per, noodcontact_naam, noodcontact_telefoon, actief, opmerkingen } = req.body;
     // Voorkom dat één account aan twee medewerkers gekoppeld raakt (onboarding blokkeert
     // dit al; hier ook bij profielwijziging, want er is geen unieke DB-constraint).
     if (gebruiker_id != null) {
@@ -771,6 +773,7 @@ router.patch("/medewerkers/:id", schrijven, async (req, res) => {
         functieId: functie_id !== undefined ? functie_id : undefined,
         cao,
         dienstverband,
+        bedrijfUitzendbureau: bedrijf_uitzendbureau !== undefined ? (bedrijf_uitzendbureau || null) : undefined,
         contracturenPerWeek: contracturen_per_week !== undefined ? contracturen_per_week : undefined,
         inDienstSinds: in_dienst_sinds,
         uitDienstPer: uit_dienst_per,

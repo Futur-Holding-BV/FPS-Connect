@@ -73,7 +73,16 @@ const NIVEAUS = [
 ] as const;
 
 const OPLEIDING_STATUSSEN = ["gepland", "behaald", "verlopen", "vrijgesteld"] as const;
-const DIENSTVERBANDEN = ["vast", "tijdelijk", "oproep", "stage", "inhuur"] as const;
+const DIENSTVERBANDEN = ["vast", "tijdelijk", "oproep", "stage", "inhuur", "zzp", "uitzend"] as const;
+const DIENSTVERBAND_LABELS: Record<string, string> = {
+  vast: "Vaste medewerker",
+  tijdelijk: "Tijdelijk contract",
+  oproep: "Oproepkracht",
+  stage: "Stagiair",
+  inhuur: "Inhuur / onderaannemer",
+  zzp: "ZZP-er",
+  uitzend: "Uitzendkracht",
+};
 const VERLOF_STATUS_LABEL: Record<string, string> = {
   aangevraagd: "Aangevraagd",
   goedgekeurd: "Goedgekeurd",
@@ -176,6 +185,7 @@ export default function MedewerkerDetailPagina() {
       functie_id: medewerker.functie_id ?? null,
       cao: medewerker.cao ?? undefined,
       dienstverband: medewerker.dienstverband,
+      bedrijf_uitzendbureau: medewerker.bedrijf_uitzendbureau ?? undefined,
       contracturen_per_week: medewerker.contracturen_per_week ?? null,
       in_dienst_sinds: medewerker.in_dienst_sinds ?? undefined,
       uit_dienst_per: medewerker.uit_dienst_per ?? undefined,
@@ -433,7 +443,11 @@ export default function MedewerkerDetailPagina() {
           </div>
           <div className="space-y-1.5">
             <div className="text-xs font-medium text-muted-foreground">Dienstverband</div>
-            <div className="text-sm">{medewerker.dienstverband}{medewerker.contracturen_per_week != null ? ` — ${medewerker.contracturen_per_week} uur/week` : ""}</div>
+            <div className="text-sm">
+              {DIENSTVERBAND_LABELS[medewerker.dienstverband] ?? medewerker.dienstverband}
+              {medewerker.contracturen_per_week != null ? ` — ${medewerker.contracturen_per_week} uur/week` : ""}
+              {medewerker.bedrijf_uitzendbureau ? ` (${medewerker.bedrijf_uitzendbureau})` : ""}
+            </div>
           </div>
           <div className="space-y-1.5">
             <div className="text-xs font-medium text-muted-foreground flex items-center gap-1.5"><Mail className="h-3.5 w-3.5" /> E-mail</div>
@@ -707,11 +721,21 @@ export default function MedewerkerDetailPagina() {
               </div>
               <div className="space-y-1.5">
                 <Label>Dienstverband</Label>
-                <Select value={profielForm.dienstverband} onValueChange={(v) => setProfielForm({ ...profielForm, dienstverband: v })}>
+                <Select value={profielForm.dienstverband} onValueChange={(v) => setProfielForm({ ...profielForm, dienstverband: v, bedrijf_uitzendbureau: (v === "uitzend" || v === "inhuur") ? (profielForm.bedrijf_uitzendbureau ?? "") : undefined })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>{DIENSTVERBANDEN.map((d) => <SelectItem key={d} value={d}>{d}</SelectItem>)}</SelectContent>
+                  <SelectContent>{DIENSTVERBANDEN.map((d) => <SelectItem key={d} value={d}>{DIENSTVERBAND_LABELS[d] ?? d}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
+              {(profielForm.dienstverband === "uitzend" || profielForm.dienstverband === "inhuur") && (
+                <div className="space-y-1.5">
+                  <Label>{profielForm.dienstverband === "uitzend" ? "Naam uitzendbureau" : "Naam bedrijf / onderaannemer"}</Label>
+                  <Input
+                    value={profielForm.bedrijf_uitzendbureau ?? ""}
+                    onChange={(e) => setProfielForm({ ...profielForm, bedrijf_uitzendbureau: e.target.value || undefined })}
+                    placeholder={profielForm.dienstverband === "uitzend" ? "bijv. Randstad" : "Naam van het bedrijf"}
+                  />
+                </div>
+              )}
               <div className="space-y-1.5">
                 <Label>CAO</Label>
                 <Select value={profielForm.cao || "geen"} onValueChange={(v) => setProfielForm({ ...profielForm, cao: v === "geen" ? undefined : v })}>

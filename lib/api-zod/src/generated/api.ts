@@ -4004,7 +4004,9 @@ export const ListGebruikersResponseItem = zod.object({
   "taal": zod.enum(['nl', 'en', 'de', 'fr', 'ar', 'tr']).optional(),
   "bevoegdheden": zod.record(zod.string(), zod.number()),
   "herkomst_profiel_id": zod.number().nullish(),
-  "herkomst_automatisch": zod.boolean().optional()
+  "herkomst_automatisch": zod.boolean().optional(),
+  "dienstverband": zod.string().nullish(),
+  "bedrijf_uitzendbureau": zod.string().nullish()
 })
 export const ListGebruikersResponse = zod.array(ListGebruikersResponseItem)
 
@@ -4026,7 +4028,9 @@ export const CreateGebruikerBody = zod.object({
   "uitnodiging_status": zod.string().optional(),
   "taal": zod.string().optional(),
   "bevoegdheden": zod.record(zod.string(), zod.number()).optional(),
-  "herkomst_profiel_id": zod.number().nullish()
+  "herkomst_profiel_id": zod.number().nullish(),
+  "dienstverband": zod.string().optional(),
+  "bedrijf_uitzendbureau": zod.string().optional()
 })
 
 export const CreateGebruikerResponse = zod.void()
@@ -4062,7 +4066,9 @@ export const GetGebruikerResponse = zod.object({
   "taal": zod.enum(['nl', 'en', 'de', 'fr', 'ar', 'tr']).optional(),
   "bevoegdheden": zod.record(zod.string(), zod.number()),
   "herkomst_profiel_id": zod.number().nullish(),
-  "herkomst_automatisch": zod.boolean().optional()
+  "herkomst_automatisch": zod.boolean().optional(),
+  "dienstverband": zod.string().nullish(),
+  "bedrijf_uitzendbureau": zod.string().nullish()
 })
 
 
@@ -4088,7 +4094,9 @@ export const UpdateGebruikerBody = zod.object({
   "uitnodiging_status": zod.string().optional(),
   "taal": zod.string().optional(),
   "bevoegdheden": zod.record(zod.string(), zod.number()).optional(),
-  "herkomst_profiel_id": zod.number().nullish()
+  "herkomst_profiel_id": zod.number().nullish(),
+  "dienstverband": zod.string().optional(),
+  "bedrijf_uitzendbureau": zod.string().optional()
 })
 
 export const UpdateGebruikerResponse = zod.object({
@@ -4114,7 +4122,9 @@ export const UpdateGebruikerResponse = zod.object({
   "taal": zod.enum(['nl', 'en', 'de', 'fr', 'ar', 'tr']).optional(),
   "bevoegdheden": zod.record(zod.string(), zod.number()),
   "herkomst_profiel_id": zod.number().nullish(),
-  "herkomst_automatisch": zod.boolean().optional()
+  "herkomst_automatisch": zod.boolean().optional(),
+  "dienstverband": zod.string().nullish(),
+  "bedrijf_uitzendbureau": zod.string().nullish()
 })
 
 
@@ -4158,7 +4168,9 @@ export const UitnodigingVersturenResponse = zod.object({
   "taal": zod.enum(['nl', 'en', 'de', 'fr', 'ar', 'tr']).optional(),
   "bevoegdheden": zod.record(zod.string(), zod.number()),
   "herkomst_profiel_id": zod.number().nullish(),
-  "herkomst_automatisch": zod.boolean().optional()
+  "herkomst_automatisch": zod.boolean().optional(),
+  "dienstverband": zod.string().nullish(),
+  "bedrijf_uitzendbureau": zod.string().nullish()
 })
 
 
@@ -4192,7 +4204,9 @@ export const UitnodigingOpnieuwVersturenResponse = zod.object({
   "taal": zod.enum(['nl', 'en', 'de', 'fr', 'ar', 'tr']).optional(),
   "bevoegdheden": zod.record(zod.string(), zod.number()),
   "herkomst_profiel_id": zod.number().nullish(),
-  "herkomst_automatisch": zod.boolean().optional()
+  "herkomst_automatisch": zod.boolean().optional(),
+  "dienstverband": zod.string().nullish(),
+  "bedrijf_uitzendbureau": zod.string().nullish()
 })
 
 
@@ -4226,7 +4240,9 @@ export const GebruikerHerkomstToepassenResponse = zod.object({
   "taal": zod.enum(['nl', 'en', 'de', 'fr', 'ar', 'tr']).optional(),
   "bevoegdheden": zod.record(zod.string(), zod.number()),
   "herkomst_profiel_id": zod.number().nullish(),
-  "herkomst_automatisch": zod.boolean().optional()
+  "herkomst_automatisch": zod.boolean().optional(),
+  "dienstverband": zod.string().nullish(),
+  "bedrijf_uitzendbureau": zod.string().nullish()
 })
 
 
@@ -4260,7 +4276,9 @@ export const GebruikerHerkomstBevestigenResponse = zod.object({
   "taal": zod.enum(['nl', 'en', 'de', 'fr', 'ar', 'tr']).optional(),
   "bevoegdheden": zod.record(zod.string(), zod.number()),
   "herkomst_profiel_id": zod.number().nullish(),
-  "herkomst_automatisch": zod.boolean().optional()
+  "herkomst_automatisch": zod.boolean().optional(),
+  "dienstverband": zod.string().nullish(),
+  "bedrijf_uitzendbureau": zod.string().nullish()
 })
 
 
@@ -4315,7 +4333,9 @@ export const GebruikerHerkomstVerwijderenResponse = zod.object({
   "taal": zod.enum(['nl', 'en', 'de', 'fr', 'ar', 'tr']).optional(),
   "bevoegdheden": zod.record(zod.string(), zod.number()),
   "herkomst_profiel_id": zod.number().nullish(),
-  "herkomst_automatisch": zod.boolean().optional()
+  "herkomst_automatisch": zod.boolean().optional(),
+  "dienstverband": zod.string().nullish(),
+  "bedrijf_uitzendbureau": zod.string().nullish()
 })
 
 
@@ -5876,6 +5896,7 @@ export const ListMedewerkersResponseItem = zod.object({
   "noodcontact_telefoon": zod.string().nullish(),
   "actief": zod.boolean(),
   "opmerkingen": zod.string().nullish(),
+  "bedrijf_uitzendbureau": zod.string().nullish(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
 })
@@ -5901,7 +5922,8 @@ export const CreateMedewerkerBody = zod.object({
   "noodcontact_naam": zod.string().optional(),
   "noodcontact_telefoon": zod.string().optional(),
   "actief": zod.boolean().optional(),
-  "opmerkingen": zod.string().optional()
+  "opmerkingen": zod.string().optional(),
+  "bedrijf_uitzendbureau": zod.string().optional()
 })
 
 export const CreateMedewerkerResponse = zod.void()
@@ -5958,6 +5980,7 @@ export const GetMedewerkerResponse = zod.object({
   "noodcontact_telefoon": zod.string().nullish(),
   "actief": zod.boolean(),
   "opmerkingen": zod.string().nullish(),
+  "bedrijf_uitzendbureau": zod.string().nullish(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
 })
@@ -5986,7 +6009,8 @@ export const UpdateMedewerkerBody = zod.object({
   "noodcontact_naam": zod.string().optional(),
   "noodcontact_telefoon": zod.string().optional(),
   "actief": zod.boolean().optional(),
-  "opmerkingen": zod.string().optional()
+  "opmerkingen": zod.string().optional(),
+  "bedrijf_uitzendbureau": zod.string().optional()
 })
 
 export const UpdateMedewerkerResponse = zod.object({
@@ -6009,6 +6033,7 @@ export const UpdateMedewerkerResponse = zod.object({
   "noodcontact_telefoon": zod.string().nullish(),
   "actief": zod.boolean(),
   "opmerkingen": zod.string().nullish(),
+  "bedrijf_uitzendbureau": zod.string().nullish(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
 })

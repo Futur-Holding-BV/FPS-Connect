@@ -225,6 +225,8 @@ const leegForm = {
   bevoegdheden: {} as Record<string, number>,
   herkomst_profiel_id: null as number | null,
   herkomst_automatisch: false,
+  dienstverband: "intern",
+  bedrijf_uitzendbureau: "",
 };
 type GebruikerForm = typeof leegForm;
 
@@ -243,6 +245,8 @@ type Gebruiker = {
   bedrijfskleuren?: string | null;
   bevoegdheden?: Record<string, number> | null;
   herkomst_profiel_id?: number | null;
+  dienstverband?: string | null;
+  bedrijf_uitzendbureau?: string | null;
   uitnodiging_status?: string | null;
   uitnodiging_verstuurd_op?: string | null;
   uitnodiging_verloopt_op?: string | null;
@@ -388,6 +392,8 @@ export default function Gebruikers() {
           bedrijfskleuren:  toevoegenForm.bedrijfskleuren    || undefined,
           bevoegdheden:     toevoegenForm.bevoegdheden,
           herkomst_profiel_id: toevoegenForm.herkomst_profiel_id,
+          dienstverband:    toevoegenForm.dienstverband || undefined,
+          bedrijf_uitzendbureau: toevoegenForm.bedrijf_uitzendbureau.trim() || undefined,
         },
       });
       await invalideer();
@@ -416,6 +422,8 @@ export default function Gebruikers() {
       bevoegdheden:     g.bevoegdheden    ?? {},
       herkomst_profiel_id: g.herkomst_profiel_id ?? null,
       herkomst_automatisch: (g as any).herkomst_automatisch === true,
+      dienstverband: g.dienstverband ?? "intern",
+      bedrijf_uitzendbureau: g.bedrijf_uitzendbureau ?? "",
     });
     setBewerkFout(null);
   }
@@ -444,6 +452,8 @@ export default function Gebruikers() {
           bedrijfskleuren:  bewerkForm.bedrijfskleuren    || undefined,
           bevoegdheden:     bewerkForm.bevoegdheden,
           herkomst_profiel_id: bewerkForm.herkomst_profiel_id,
+          dienstverband:    bewerkForm.dienstverband || undefined,
+          bedrijf_uitzendbureau: bewerkForm.bedrijf_uitzendbureau.trim() || undefined,
         },
       });
       await invalideer();
@@ -1558,6 +1568,37 @@ function GebruikerVelden({
               );
             })}
           </div>
+        </div>
+      )}
+
+      {form.rol === "gebruiker" && (
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-1.5">
+            <Label htmlFor="g-dienstverband">Type personeel</Label>
+            <Select
+              value={form.dienstverband}
+              onValueChange={(v) => setForm((f) => ({ ...f, dienstverband: v, bedrijf_uitzendbureau: (v === "uitzend" || v === "inhuur") ? f.bedrijf_uitzendbureau : "" }))}
+            >
+              <SelectTrigger id="g-dienstverband"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="intern">Intern (eigen dienst)</SelectItem>
+                <SelectItem value="zzp">ZZP-er</SelectItem>
+                <SelectItem value="uitzend">Uitzendkracht</SelectItem>
+                <SelectItem value="inhuur">Inhuur / onderaannemer</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          {(form.dienstverband === "uitzend" || form.dienstverband === "inhuur") && (
+            <div className="space-y-1.5">
+              <Label htmlFor="g-bedrijf-uitzend">{form.dienstverband === "uitzend" ? "Naam uitzendbureau" : "Naam bedrijf / onderaannemer"}</Label>
+              <Input
+                id="g-bedrijf-uitzend"
+                value={form.bedrijf_uitzendbureau}
+                onChange={(e) => setForm((f) => ({ ...f, bedrijf_uitzendbureau: e.target.value }))}
+                placeholder={form.dienstverband === "uitzend" ? "bijv. Randstad" : "Naam van het bedrijf"}
+              />
+            </div>
+          )}
         </div>
       )}
 

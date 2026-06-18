@@ -88,6 +88,8 @@ const mapGebruiker = (g: typeof gebruikersTable.$inferSelect) => ({
   bevoegdheden: (g.bevoegdheden as Record<string, number>) ?? {},
   herkomst_profiel_id: g.herkomstProfielId ?? null,
   herkomst_automatisch: g.herkomstProfielId != null ? (g.herkomstAutomatisch ?? false) : false,
+  dienstverband: g.dienstverband ?? "intern",
+  bedrijf_uitzendbureau: g.bedrijfUitzendbureau ?? null,
 });
 
 // Veilige projectie zonder PII voor niet-beheerders: namen/rol blijven zichtbaar
@@ -207,7 +209,7 @@ router.post("/gebruikers", alleenBeheerder, async (req, res) => {
     const {
       naam, email, rol, functietitels, telefoon, bedrijf, wachtwoord,
       avatar_url, bedrijfslogo_url, bedrijfskleuren, taal, bevoegdheden,
-      herkomst_profiel_id,
+      herkomst_profiel_id, dienstverband, bedrijf_uitzendbureau,
     } = req.body;
     if (!naam || !email || !rol) {
       return res.status(400).json({ error: "naam, email en rol zijn verplicht" });
@@ -267,6 +269,8 @@ router.post("/gebruikers", alleenBeheerder, async (req, res) => {
         herkomstProfielId: herkomstId,
         herkomstAutomatisch,
         uitnodigingStatus: "niet_uitgenodigd",
+        dienstverband: dienstverband || "intern",
+        bedrijfUitzendbureau: bedrijf_uitzendbureau || null,
       })
       .returning();
     res.status(201).json(mapGebruiker(g));
@@ -301,7 +305,7 @@ router.patch("/gebruikers/:id", alleenBeheerder, async (req, res) => {
     const {
       naam, email, rol, functietitels, telefoon, bedrijf, actief, wachtwoord,
       avatar_url, bedrijfslogo_url, bedrijfskleuren, uitnodiging_status, taal, bevoegdheden,
-      herkomst_profiel_id,
+      herkomst_profiel_id, dienstverband, bedrijf_uitzendbureau,
     } = req.body;
     // Bestaande rol én functietitels ophalen: zo wist een partiële PATCH niets
     // onterecht, terwijl een expliciete rolwissel de oude functies wél opschoont.
@@ -344,6 +348,8 @@ router.patch("/gebruikers/:id", alleenBeheerder, async (req, res) => {
       bedrijfskleuren,
       uitnodigingStatus: uitnodiging_status,
       taal,
+      dienstverband: dienstverband || undefined,
+      bedrijfUitzendbureau: bedrijf_uitzendbureau !== undefined ? (bedrijf_uitzendbureau || null) : undefined,
     };
     if (bevoegdheden !== undefined && typeof bevoegdheden === "object" && bevoegdheden !== null) {
       // Zelf-escalatiebeveiliging: niemand mag hogere niveaus toekennen dan eigen matrix.

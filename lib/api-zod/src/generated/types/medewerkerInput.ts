@@ -26,4 +26,5 @@ export interface MedewerkerInput {
   noodcontact_telefoon?: string;
   actief?: boolean;
   opmerkingen?: string;
+  bedrijf_uitzendbureau?: string;
 }

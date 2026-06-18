@@ -46,4 +46,8 @@ export interface Gebruiker {
   /** @nullable */
   herkomst_profiel_id?: number | null;
   herkomst_automatisch?: boolean;
+  /** @nullable */
+  dienstverband?: string | null;
+  /** @nullable */
+  bedrijf_uitzendbureau?: string | null;
 }
