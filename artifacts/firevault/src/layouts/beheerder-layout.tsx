@@ -100,15 +100,13 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
     <SidebarProvider defaultOpen={defaultSidebarOpen}>
       <Sidebar variant="inset" collapsible="icon">
         <SidebarHeader className="py-3">
-          <div className="flex items-center justify-center px-2">
-            <img
-              src="/logo-fps.png"
-              alt="FPS Brandpreventie"
-              className="group-data-[collapsible=icon]:hidden h-9 w-auto object-contain bg-white rounded px-2 py-1"
-            />
-            <div className="hidden group-data-[collapsible=icon]:flex items-center justify-center w-8 h-8 bg-white rounded text-[10px] font-extrabold text-primary leading-none">
-              FPS
+          <div className="flex items-center px-2 gap-2.5 group-data-[collapsible=icon]:justify-center">
+            <div className="flex items-center justify-center w-8 h-8 bg-primary rounded flex-shrink-0">
+              <ShieldCheck className="h-4 w-4 text-white" />
             </div>
+            <span className="group-data-[collapsible=icon]:hidden text-[15px] font-bold tracking-tight text-foreground leading-none">
+              FPS Connect
+            </span>
           </div>
 
           {aantalOmgevingen > 1 && (

@@ -4,7 +4,7 @@ type Boom = Record<string, string>;
 
 export const vertalingen: Record<TaalCode, Boom> = {
   nl: {
-    "app.naam": "FPS Brandpreventie",
+    "app.naam": "FPS Connect",
 
     "auth.ondertitel": "Platform voor brandpreventie",
     "auth.taalKiezen": "Kies uw taal",
