@@ -23,6 +23,7 @@ export interface Functie {
   /** @nullable */
   doorgroeipad?: string | null;
   actief: boolean;
+  uitvoerend?: boolean;
   aangemaakt_op: string;
   bijgewerkt_op: string;
 }

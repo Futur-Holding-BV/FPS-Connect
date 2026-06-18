@@ -28,6 +28,15 @@ function parseId(v: unknown): number {
 
 router.get("/modules/planning/medewerkers", lezenPlanning, async (req, res) => {
   try {
+    const alleenUitvoerend = req.query.alleen_uitvoerend === "true";
+    const wmFilter = typeof req.query.werkmaatschappij === "string" ? req.query.werkmaatschappij : undefined;
+    const dvFilter = typeof req.query.dienstverband === "string" ? req.query.dienstverband : undefined;
+
+    const conditions = [eq(medewerkersTable.actief, true)];
+    if (alleenUitvoerend) conditions.push(eq(functiesTable.uitvoerend, true));
+    if (wmFilter) conditions.push(eq(medewerkersTable.werkmaatschappij, wmFilter));
+    if (dvFilter) conditions.push(eq(medewerkersTable.dienstverband, dvFilter));
+
     const rows = await db
       .select({
         id: medewerkersTable.id,
@@ -35,12 +44,17 @@ router.get("/modules/planning/medewerkers", lezenPlanning, async (req, res) => {
         email: medewerkersTable.email,
         telefoon: medewerkersTable.telefoon,
         contracturenPerWeek: medewerkersTable.contracturenPerWeek,
+        dienstverband: medewerkersTable.dienstverband,
+        werkmaatschappij: medewerkersTable.werkmaatschappij,
+        bedrijfUitzendbureau: medewerkersTable.bedrijfUitzendbureau,
+        uitDienstPer: medewerkersTable.uitDienstPer,
         actief: medewerkersTable.actief,
         functieNaam: functiesTable.naam,
+        functieUitvoerend: functiesTable.uitvoerend,
       })
       .from(medewerkersTable)
       .leftJoin(functiesTable, eq(medewerkersTable.functieId, functiesTable.id))
-      .where(eq(medewerkersTable.actief, true))
+      .where(and(...conditions))
       .orderBy(asc(medewerkersTable.naam));
 
     res.json(rows.map((r) => ({
@@ -49,8 +63,13 @@ router.get("/modules/planning/medewerkers", lezenPlanning, async (req, res) => {
       email: r.email,
       telefoon: r.telefoon,
       contracturen_per_week: r.contracturenPerWeek,
+      dienstverband: r.dienstverband ?? null,
+      werkmaatschappij: r.werkmaatschappij ?? null,
+      bedrijf_uitzendbureau: r.bedrijfUitzendbureau ?? null,
+      uit_dienst_per: r.uitDienstPer ?? null,
       actief: r.actief,
       functie: r.functieNaam ?? null,
+      functie_uitvoerend: r.functieUitvoerend ?? null,
     })));
   } catch (e) {
     req.log.error(e);

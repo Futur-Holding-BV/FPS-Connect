@@ -10,7 +10,12 @@ export interface PlanningMedewerker {
   id: number;
   naam: string;
   functie?: string | null;
+  functie_uitvoerend?: boolean | null;
   contracturenPerWeek?: number | null;
+  dienstverband?: string | null;
+  werkmaatschappij?: string | null;
+  bedrijf_uitzendbureau?: string | null;
+  uit_dienst_per?: string | null;
   telefoon?: string | null;
   email?: string | null;
   actief?: boolean;

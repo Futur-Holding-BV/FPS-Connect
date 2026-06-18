@@ -198,6 +198,7 @@ export default function PersoneelPagina() {
   const [functieForm, setFunctieForm] = useState<FunctieInput>({
     naam: "",
     werkmaatschappij: WERKMAATSCHAPPIJ_STD,
+    uitvoerend: false,
   });
   const [opleidingForm, setOpleidingForm] = useState<OpleidingInput>({
     naam: "",
@@ -270,7 +271,7 @@ export default function PersoneelPagina() {
         setOnboardForm((f) => ({ ...f, functie_id: nieuw.id }));
       }
       toast({ title: "Functie toegevoegd" });
-      setFunctieForm({ naam: "", werkmaatschappij: WERKMAATSCHAPPIJ_STD });
+      setFunctieForm({ naam: "", werkmaatschappij: WERKMAATSCHAPPIJ_STD, uitvoerend: false });
       setFunctieOpen(false);
     } catch {
       toast({ title: "Opslaan mislukt", variant: "destructive" });
@@ -615,7 +616,14 @@ export default function PersoneelPagina() {
               {(functies ?? []).map((f) => (
                 <Card key={f.id}>
                   <CardContent className="p-4 space-y-1">
-                    <div className="font-semibold">{f.naam}</div>
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="font-semibold">{f.naam}</div>
+                      {f.uitvoerend && (
+                        <Badge variant="outline" className="shrink-0 text-xs border-primary/30 text-primary bg-primary/5">
+                          Uitvoerend
+                        </Badge>
+                      )}
+                    </div>
                     <div className="text-xs text-muted-foreground">{f.werkmaatschappij}</div>
                     {f.omschrijving && <p className="text-xs text-muted-foreground line-clamp-2">{f.omschrijving}</p>}
                   </CardContent>
@@ -1090,6 +1098,19 @@ export default function PersoneelPagina() {
               <Label>Omschrijving</Label>
               <Textarea value={functieForm.omschrijving ?? ""} onChange={(e) => setFunctieForm({ ...functieForm, omschrijving: e.target.value })} />
             </div>
+            <div className="flex items-center gap-2 pt-1">
+              <Checkbox
+                id="functie-uitvoerend"
+                checked={functieForm.uitvoerend ?? false}
+                onCheckedChange={(v) => setFunctieForm({ ...functieForm, uitvoerend: Boolean(v) })}
+              />
+              <Label htmlFor="functie-uitvoerend" className="cursor-pointer font-normal">
+                Uitvoerende functie (monteur, timmerman, voorman, leerling)
+              </Label>
+            </div>
+            <p className="text-xs text-muted-foreground -mt-1">
+              Medewerkers met een uitvoerende functie verschijnen automatisch in de planning.
+            </p>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setFunctieOpen(false)}>Annuleren</Button>

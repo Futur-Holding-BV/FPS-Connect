@@ -2499,6 +2499,7 @@ export interface Functie {
   /** @nullable */
   doorgroeipad?: string | null;
   actief: boolean;
+  uitvoerend?: boolean;
   aangemaakt_op: string;
   bijgewerkt_op: string;
 }
@@ -2512,6 +2513,7 @@ export interface FunctieInput {
   competenties?: string;
   opleidingsvereisten?: string;
   doorgroeipad?: string;
+  uitvoerend?: boolean;
   actief?: boolean;
 }
 
@@ -3426,7 +3428,12 @@ export interface PlanningMedewerker {
   id: number;
   naam: string;
   functie?: string | null;
+  functie_uitvoerend?: boolean | null;
   contracturenPerWeek?: number | null;
+  dienstverband?: string | null;
+  werkmaatschappij?: string | null;
+  bedrijf_uitzendbureau?: string | null;
+  uit_dienst_per?: string | null;
   telefoon?: string | null;
   email?: string | null;
   actief?: boolean;
@@ -3758,6 +3765,12 @@ export type AiCalculatieRegels200 = {
   regels: CalculatieRegelInput[];
   /** @nullable */
   gebouw_naam?: string | null;
+};
+
+export type ListPlanningMedewerkersParams = {
+alleen_uitvoerend?: boolean;
+werkmaatschappij?: string;
+dienstverband?: string;
 };
 
 export type ListPlanningItemsParams = {

@@ -211,6 +211,7 @@ const mapFunctie = (f: typeof functiesTable.$inferSelect) => ({
   competenties: f.competenties,
   opleidingsvereisten: f.opleidingsvereisten,
   doorgroeipad: f.doorgroeipad,
+  uitvoerend: f.uitvoerend,
   actief: f.actief,
   aangemaakt_op: iso(f.aangemaaktOp),
   bijgewerkt_op: iso(f.bijgewerktOp),
@@ -228,7 +229,7 @@ router.get("/functies", lezen, async (req, res) => {
 
 router.post("/functies", schrijven, async (req, res) => {
   try {
-    const { naam, werkmaatschappij, omschrijving, taken, verantwoordelijkheden, competenties, opleidingsvereisten, doorgroeipad, actief } = req.body;
+    const { naam, werkmaatschappij, omschrijving, taken, verantwoordelijkheden, competenties, opleidingsvereisten, doorgroeipad, uitvoerend, actief } = req.body;
     if (!naam) return res.status(400).json({ error: "naam is verplicht" });
     const wm = werkmaatschappij || "FPS Brandpreventie";
     const [f] = await db
@@ -243,6 +244,7 @@ router.post("/functies", schrijven, async (req, res) => {
         competenties,
         opleidingsvereisten,
         doorgroeipad,
+        uitvoerend: uitvoerend ?? false,
         actief: actief ?? true,
       })
       .returning();
@@ -266,11 +268,11 @@ router.get("/functies/:id", lezen, async (req, res) => {
 
 router.patch("/functies/:id", schrijven, async (req, res) => {
   try {
-    const { naam, werkmaatschappij, omschrijving, taken, verantwoordelijkheden, competenties, opleidingsvereisten, doorgroeipad, actief } = req.body;
+    const { naam, werkmaatschappij, omschrijving, taken, verantwoordelijkheden, competenties, opleidingsvereisten, doorgroeipad, uitvoerend, actief } = req.body;
     const werkgeverId = werkmaatschappij !== undefined ? await werkgeverIdVoor(werkmaatschappij) : undefined;
     const [f] = await db
       .update(functiesTable)
-      .set({ naam, werkmaatschappij, werkgeverId, omschrijving, taken, verantwoordelijkheden, competenties, opleidingsvereisten, doorgroeipad, actief, bijgewerktOp: new Date() })
+      .set({ naam, werkmaatschappij, werkgeverId, omschrijving, taken, verantwoordelijkheden, competenties, opleidingsvereisten, doorgroeipad, uitvoerend, actief, bijgewerktOp: new Date() })
       .where(eq(functiesTable.id, parseId(req.params.id)))
       .returning();
     if (!f) return res.status(404).json({ error: "Functie niet gevonden" });

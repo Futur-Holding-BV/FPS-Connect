@@ -141,6 +141,7 @@ import type {
   ListOnderhoudParams,
   ListPlanningAfwezigheidParams,
   ListPlanningItemsParams,
+  ListPlanningMedewerkersParams,
   ListRapportenParams,
   ListTestrapportenParams,
   ListToolboxBerichtenParams,
@@ -22559,20 +22560,27 @@ export const useAiCalculatieRegels = <TError = ErrorType<void>,
       return useMutation(getAiCalculatieRegelsMutationOptions(options));
     }
 
-export const getListPlanningMedewerkersUrl = () => {
+export const getListPlanningMedewerkersUrl = (params?: ListPlanningMedewerkersParams,) => {
+  const normalizedParams = new URLSearchParams();
 
+  Object.entries(params || {}).forEach(([key, value]) => {
 
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
 
+  const stringifiedParams = normalizedParams.toString();
 
-  return `/api/modules/planning/medewerkers`
+  return stringifiedParams.length > 0 ? `/api/modules/planning/medewerkers?${stringifiedParams}` : `/api/modules/planning/medewerkers`
 }
 
 /**
  * @summary Medewerkers ophalen voor planning
  */
-export const listPlanningMedewerkers = async ( options?: RequestInit): Promise<PlanningMedewerker[]> => {
+export const listPlanningMedewerkers = async (params?: ListPlanningMedewerkersParams, options?: RequestInit): Promise<PlanningMedewerker[]> => {
 
-  return customFetch<PlanningMedewerker[]>(getListPlanningMedewerkersUrl(),
+  return customFetch<PlanningMedewerker[]>(getListPlanningMedewerkersUrl(params),
   {
     ...options,
     method: 'GET'
@@ -22585,23 +22593,23 @@ export const listPlanningMedewerkers = async ( options?: RequestInit): Promise<P
 
 
 
-export const getListPlanningMedewerkersQueryKey = () => {
+export const getListPlanningMedewerkersQueryKey = (params?: ListPlanningMedewerkersParams,) => {
     return [
-    `/api/modules/planning/medewerkers`
+    `/api/modules/planning/medewerkers`, ...(params ? [params] : [])
     ] as const;
     }
 
 
-export const getListPlanningMedewerkersQueryOptions = <TData = Awaited<ReturnType<typeof listPlanningMedewerkers>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listPlanningMedewerkers>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export const getListPlanningMedewerkersQueryOptions = <TData = Awaited<ReturnType<typeof listPlanningMedewerkers>>, TError = ErrorType<unknown>>(params?: ListPlanningMedewerkersParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listPlanningMedewerkers>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getListPlanningMedewerkersQueryKey();
+  const queryKey =  queryOptions?.queryKey ?? getListPlanningMedewerkersQueryKey(params);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listPlanningMedewerkers>>> = ({ signal }) => listPlanningMedewerkers({ signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listPlanningMedewerkers>>> = ({ signal }) => listPlanningMedewerkers(params, { signal, ...requestOptions });
 
 
 
@@ -22619,11 +22627,11 @@ export type ListPlanningMedewerkersQueryError = ErrorType<unknown>
  */
 
 export function useListPlanningMedewerkers<TData = Awaited<ReturnType<typeof listPlanningMedewerkers>>, TError = ErrorType<unknown>>(
-  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listPlanningMedewerkers>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+ params?: ListPlanningMedewerkersParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listPlanningMedewerkers>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
-  const queryOptions = getListPlanningMedewerkersQueryOptions(options)
+  const queryOptions = getListPlanningMedewerkersQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

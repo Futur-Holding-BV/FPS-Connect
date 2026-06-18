@@ -85,11 +85,29 @@ type PlanItem = {
   notities?: string | null;
 };
 
+const DIENSTVERBAND_LABEL: Record<string, string> = {
+  vast: "Vast",
+  inhuur: "Inhuur",
+  onderaannemer: "Onderaannemer",
+  uitzend: "Uitzend",
+};
+
+const DIENSTVERBAND_KLEUR: Record<string, string> = {
+  vast: "bg-blue-50 text-blue-700 border-blue-200",
+  inhuur: "bg-orange-50 text-orange-700 border-orange-200",
+  onderaannemer: "bg-purple-50 text-purple-700 border-purple-200",
+  uitzend: "bg-amber-50 text-amber-700 border-amber-200",
+};
+
 type Medewerker = {
   id: number;
   naam: string;
   functie?: string | null;
+  functie_uitvoerend?: boolean | null;
   contracturen_per_week?: number | null;
+  dienstverband?: string | null;
+  werkmaatschappij?: string | null;
+  bedrijf_uitzendbureau?: string | null;
 };
 
 type LegePlanItem = {
@@ -107,6 +125,9 @@ export default function ModulesPlanning() {
   const [maandag, setMaandag] = useState(() => maandagVanWeek(new Date()));
   const [dialoog, setDialoog] = useState<Partial<LegePlanItem> | null>(null);
   const [bewerkenId, setBewerkenId] = useState<number | null>(null);
+  const [filterWerkmaatschappij, setFilterWerkmaatschappij] = useState<string>("alle");
+  const [filterDienstverband, setFilterDienstverband] = useState<string>("alle");
+  const [filterAlleenUitvoerend, setFilterAlleenUitvoerend] = useState(false);
 
   const queryClient = useQueryClient();
 
@@ -123,8 +144,14 @@ export default function ModulesPlanning() {
     { van, tot },
     { query: { queryKey: ["planning-items", van, tot] } }
   );
+  const medewerkersParams = {
+    ...(filterAlleenUitvoerend ? { alleen_uitvoerend: true } : {}),
+    ...(filterWerkmaatschappij !== "alle" ? { werkmaatschappij: filterWerkmaatschappij } : {}),
+    ...(filterDienstverband !== "alle" ? { dienstverband: filterDienstverband } : {}),
+  };
   const { data: medewerkers = [], isLoading: medewerkersLoading } = useListPlanningMedewerkers(
-    { query: { queryKey: ["planning-medewerkers"] } }
+    medewerkersParams,
+    { query: { queryKey: ["planning-medewerkers", filterAlleenUitvoerend, filterWerkmaatschappij, filterDienstverband] } }
   );
   const { data: afwezigheid = [] } = useListPlanningAfwezigheid(
     {},
@@ -281,6 +308,54 @@ export default function ModulesPlanning() {
           </div>
         </div>
 
+        {/* Filterbar */}
+        <div className="flex flex-wrap items-center gap-3 rounded-lg border bg-slate-50/60 px-4 py-3">
+          <span className="text-xs font-medium text-muted-foreground shrink-0">Filter:</span>
+          <div className="flex items-center gap-1.5">
+            <Select value={filterWerkmaatschappij} onValueChange={setFilterWerkmaatschappij}>
+              <SelectTrigger className="h-8 text-xs w-48">
+                <SelectValue placeholder="Werkmaatschappij" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="alle">Alle werkmaatschappijen</SelectItem>
+                <SelectItem value="FPS Brandpreventie">FPS Brandpreventie</SelectItem>
+                <SelectItem value="FPS Bouw">FPS Bouw</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <Select value={filterDienstverband} onValueChange={setFilterDienstverband}>
+              <SelectTrigger className="h-8 text-xs w-40">
+                <SelectValue placeholder="Dienstverband" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="alle">Alle dienstverbanden</SelectItem>
+                <SelectItem value="vast">Vast</SelectItem>
+                <SelectItem value="inhuur">Inhuur</SelectItem>
+                <SelectItem value="onderaannemer">Onderaannemer</SelectItem>
+                <SelectItem value="uitzend">Uitzend</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <button
+            className={`flex items-center gap-1.5 rounded border px-2.5 py-1 text-xs transition-colors ${filterAlleenUitvoerend ? "border-primary bg-primary/10 text-primary font-medium" : "border-slate-200 bg-white text-muted-foreground hover:border-slate-300"}`}
+            onClick={() => setFilterAlleenUitvoerend((v) => !v)}
+            type="button"
+          >
+            Alleen uitvoerend
+          </button>
+          {(filterWerkmaatschappij !== "alle" || filterDienstverband !== "alle" || filterAlleenUitvoerend) && (
+            <button
+              className="text-xs text-muted-foreground underline hover:text-slate-700"
+              onClick={() => { setFilterWerkmaatschappij("alle"); setFilterDienstverband("alle"); setFilterAlleenUitvoerend(false); }}
+              type="button"
+            >
+              Wis filters
+            </button>
+          )}
+          <span className="ml-auto text-xs text-muted-foreground">{(medewerkers as Medewerker[]).length} medewerker{(medewerkers as Medewerker[]).length !== 1 ? "s" : ""}</span>
+        </div>
+
         {/* Samenvattingskaarten */}
         <div className="grid grid-cols-4 gap-3">
           <Card>
@@ -362,6 +437,15 @@ export default function ModulesPlanning() {
                               <p className="text-sm font-medium text-slate-800">{med.naam}</p>
                               {med.functie && (
                                 <p className="text-xs text-muted-foreground">{med.functie}</p>
+                              )}
+                              {med.dienstverband && med.dienstverband !== "vast" && (
+                                <Badge
+                                  variant="outline"
+                                  className={`mt-0.5 text-[10px] px-1 py-0 h-4 ${DIENSTVERBAND_KLEUR[med.dienstverband] ?? ""}`}
+                                >
+                                  {DIENSTVERBAND_LABEL[med.dienstverband] ?? med.dienstverband}
+                                  {med.bedrijf_uitzendbureau ? ` · ${med.bedrijf_uitzendbureau}` : ""}
+                                </Badge>
                               )}
                             </div>
                             {overGepland && (

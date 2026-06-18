@@ -5607,6 +5607,7 @@ export const ListFunctiesResponseItem = zod.object({
   "opleidingsvereisten": zod.string().nullish(),
   "doorgroeipad": zod.string().nullish(),
   "actief": zod.boolean(),
+  "uitvoerend": zod.boolean().optional(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
 })
@@ -5625,6 +5626,7 @@ export const CreateFunctieBody = zod.object({
   "competenties": zod.string().optional(),
   "opleidingsvereisten": zod.string().optional(),
   "doorgroeipad": zod.string().optional(),
+  "uitvoerend": zod.boolean().optional(),
   "actief": zod.boolean().optional()
 })
 
@@ -5649,6 +5651,7 @@ export const GetFunctieResponse = zod.object({
   "opleidingsvereisten": zod.string().nullish(),
   "doorgroeipad": zod.string().nullish(),
   "actief": zod.boolean(),
+  "uitvoerend": zod.boolean().optional(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
 })
@@ -5670,6 +5673,7 @@ export const UpdateFunctieBody = zod.object({
   "competenties": zod.string().optional(),
   "opleidingsvereisten": zod.string().optional(),
   "doorgroeipad": zod.string().optional(),
+  "uitvoerend": zod.boolean().optional(),
   "actief": zod.boolean().optional()
 })
 
@@ -5684,6 +5688,7 @@ export const UpdateFunctieResponse = zod.object({
   "opleidingsvereisten": zod.string().nullish(),
   "doorgroeipad": zod.string().nullish(),
   "actief": zod.boolean(),
+  "uitvoerend": zod.boolean().optional(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
 })
@@ -7546,11 +7551,22 @@ export const AiCalculatieRegelsResponse = zod.object({
 /**
  * @summary Medewerkers ophalen voor planning
  */
+export const ListPlanningMedewerkersQueryParams = zod.object({
+  "alleen_uitvoerend": zod.coerce.boolean().optional(),
+  "werkmaatschappij": zod.coerce.string().optional(),
+  "dienstverband": zod.coerce.string().optional()
+})
+
 export const ListPlanningMedewerkersResponseItem = zod.object({
   "id": zod.number(),
   "naam": zod.string(),
   "functie": zod.string().nullish(),
+  "functie_uitvoerend": zod.boolean().nullish(),
   "contracturenPerWeek": zod.number().nullish(),
+  "dienstverband": zod.string().nullish(),
+  "werkmaatschappij": zod.string().nullish(),
+  "bedrijf_uitzendbureau": zod.string().nullish(),
+  "uit_dienst_per": zod.string().nullish(),
   "telefoon": zod.string().nullish(),
   "email": zod.string().nullish(),
   "actief": zod.boolean().optional()

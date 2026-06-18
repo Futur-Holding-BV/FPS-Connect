@@ -6409,6 +6409,19 @@ paths:
       operationId: listPlanningMedewerkers
       summary: Medewerkers ophalen voor planning
       tags: [PlanningModule]
+      parameters:
+        - in: query
+          name: alleen_uitvoerend
+          schema:
+            type: boolean
+        - in: query
+          name: werkmaatschappij
+          schema:
+            type: string
+        - in: query
+          name: dienstverband
+          schema:
+            type: string
       responses:
         '200':
           description: OK
@@ -10408,6 +10421,8 @@ components:
           type: ["string", "null"]
         actief:
           type: boolean
+        uitvoerend:
+          type: boolean
         aangemaakt_op:
           type: string
         bijgewerkt_op:
@@ -10433,6 +10448,8 @@ components:
           type: string
         doorgroeipad:
           type: string
+        uitvoerend:
+          type: boolean
         actief:
           type: boolean
 
@@ -11796,8 +11813,23 @@ components:
         functie:
           type: string
           nullable: true
+        functie_uitvoerend:
+          type: boolean
+          nullable: true
         contracturenPerWeek:
           type: number
+          nullable: true
+        dienstverband:
+          type: string
+          nullable: true
+        werkmaatschappij:
+          type: string
+          nullable: true
+        bedrijf_uitzendbureau:
+          type: string
+          nullable: true
+        uit_dienst_per:
+          type: string
           nullable: true
         telefoon:
           type: string

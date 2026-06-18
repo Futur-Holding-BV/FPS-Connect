@@ -49,6 +49,9 @@ export const functiesTable = pgTable("functies", {
   competenties: text("competenties"),
   opleidingsvereisten: text("opleidingsvereisten"),
   doorgroeipad: text("doorgroeipad"),
+  // uitvoerend = veldmedewerker (monteur, timmerman, voorman, leerling, ingehuurd uitvoerend).
+  // true → medewerker verschijnt automatisch in de planning; kantoor-functies blijven verborgen.
+  uitvoerend: boolean("uitvoerend").notNull().default(false),
   actief: boolean("actief").notNull().default(true),
   aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
   bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
@@ -68,6 +71,8 @@ export const medewerkersTable = pgTable("medewerkers", {
   functieId: integer("functie_id").references(() => functiesTable.id, { onDelete: "set null" }),
   cao: text("cao"),
   dienstverband: text("dienstverband").notNull().default("vast"),
+  // Naam uitzendbureau of onderaannemingsbedrijf (alleen relevant bij inhuur/onderaannemer).
+  bedrijfUitzendbureau: text("bedrijf_uitzendbureau"),
   contracturenPerWeek: real("contracturen_per_week"),
   inDienstSinds: text("in_dienst_sinds"),
   uitDienstPer: text("uit_dienst_per"),

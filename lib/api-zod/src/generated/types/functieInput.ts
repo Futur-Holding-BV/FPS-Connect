@@ -15,5 +15,6 @@ export interface FunctieInput {
   competenties?: string;
   opleidingsvereisten?: string;
   doorgroeipad?: string;
+  uitvoerend?: boolean;
   actief?: boolean;
 }

@@ -6,11 +6,29 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowLeft, Users, Clock, Phone, Mail } from "lucide-react";
 
+const DIENSTVERBAND_LABEL: Record<string, string> = {
+  vast: "Vast",
+  inhuur: "Inhuur",
+  onderaannemer: "Onderaannemer",
+  uitzend: "Uitzend",
+};
+
+const DIENSTVERBAND_KLEUR: Record<string, string> = {
+  vast: "bg-blue-50 text-blue-700 border-blue-200",
+  inhuur: "bg-orange-50 text-orange-700 border-orange-200",
+  onderaannemer: "bg-purple-50 text-purple-700 border-purple-200",
+  uitzend: "bg-amber-50 text-amber-700 border-amber-200",
+};
+
 type Medewerker = {
   id: number;
   naam: string;
   functie?: string | null;
+  functie_uitvoerend?: boolean | null;
   contracturen_per_week?: number | null;
+  dienstverband?: string | null;
+  werkmaatschappij?: string | null;
+  bedrijf_uitzendbureau?: string | null;
   telefoon?: string | null;
   email?: string | null;
   actief?: boolean;
@@ -122,6 +140,7 @@ export default function PlanningMedewerkers() {
                 <tr className="border-b bg-slate-50 text-slate-500 text-xs uppercase tracking-wide">
                   <th className="px-6 py-3 text-left font-medium">Naam</th>
                   <th className="px-4 py-3 text-left font-medium">Functie</th>
+                  <th className="px-4 py-3 text-left font-medium">Dienstverband</th>
                   <th className="px-4 py-3 text-left font-medium">Contact</th>
                   <th className="px-4 py-3 text-center font-medium">Contract (u/week)</th>
                   <th className="px-4 py-3 text-center font-medium">Gepland deze maand</th>
@@ -138,9 +157,34 @@ export default function PlanningMedewerkers() {
                     <tr key={m.id} className="hover:bg-slate-50 transition-colors">
                       <td className="px-6 py-3.5">
                         <p className="font-medium text-slate-900">{m.naam}</p>
+                        {m.werkmaatschappij && (
+                          <p className="text-xs text-muted-foreground">{m.werkmaatschappij}</p>
+                        )}
                       </td>
-                      <td className="px-4 py-3.5 text-muted-foreground">
-                        {m.functie ?? "—"}
+                      <td className="px-4 py-3.5">
+                        <span className="text-muted-foreground">{m.functie ?? "—"}</span>
+                        {m.functie_uitvoerend && (
+                          <Badge variant="outline" className="ml-1.5 text-[10px] px-1 py-0 h-4 border-primary/30 text-primary bg-primary/5">
+                            Uitvoerend
+                          </Badge>
+                        )}
+                      </td>
+                      <td className="px-4 py-3.5">
+                        {m.dienstverband ? (
+                          <div className="space-y-0.5">
+                            <Badge
+                              variant="outline"
+                              className={`text-xs ${DIENSTVERBAND_KLEUR[m.dienstverband] ?? ""}`}
+                            >
+                              {DIENSTVERBAND_LABEL[m.dienstverband] ?? m.dienstverband}
+                            </Badge>
+                            {m.bedrijf_uitzendbureau && (
+                              <p className="text-xs text-muted-foreground">{m.bedrijf_uitzendbureau}</p>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
                       </td>
                       <td className="px-4 py-3.5">
                         <div className="space-y-0.5">

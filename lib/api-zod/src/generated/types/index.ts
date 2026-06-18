@@ -159,6 +159,7 @@ export * from './listMuisGebeurtenissenParams';
 export * from './listOnderhoudParams';
 export * from './listPlanningAfwezigheidParams';
 export * from './listPlanningItemsParams';
+export * from './listPlanningMedewerkersParams';
 export * from './listRapportenParams';
 export * from './listRapportenStatus';
 export * from './listTestrapportenParams';
