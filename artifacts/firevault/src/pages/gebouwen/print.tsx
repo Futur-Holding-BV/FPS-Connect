@@ -1843,30 +1843,31 @@ export default function GebouwPrint() {
         .prt-cover-voet-waarde { color: #475569; font-weight: 600; }
 
         /* ── Pagina-container (pagina's 2+) ── */
-        .prt-pagina { max-width: 960px; margin: 0 auto; padding: 32px; }
+        .prt-pagina { max-width: 960px; margin: 0 auto; padding: 44px; }
         .prt-pagina-kop {
           display: flex;
           align-items: center;
           justify-content: space-between;
-          border-bottom: 2px solid #F23B0D;
-          padding-bottom: 12px;
-          margin-bottom: 28px;
+          border-bottom: 2.5px solid #F23B0D;
+          padding-bottom: 18px;
+          margin-bottom: 38px;
         }
-        .prt-pagina-kop img { height: 30px; width: auto; }
-        .prt-pagina-kop-info { text-align: right; font-size: 11px; color: #64748b; line-height: 1.6; }
-        .prt-pagina-kop-info strong { color: #0f172a; font-size: 12px; }
+        .prt-pagina-kop img { height: 40px; width: auto; font-size: 0; color: transparent; }
+        .prt-pagina-kop-info { text-align: right; font-size: 12px; color: #475569; line-height: 1.7; }
+        .prt-pagina-kop-info strong { color: #0f172a; font-size: 14px; }
 
         /* ── Secties ── */
-        .prt-sectie { margin-bottom: 22px; break-inside: avoid; }
-        .prt-sectie-titel { font-size: 15px; font-weight: 700; color: hsl(12 90% 45%); border-bottom: 1px solid #e2e8f0; padding-bottom: 5px; margin-bottom: 10px; }
+        .prt-sectie { margin-bottom: 28px; break-inside: avoid; }
+        .prt-sectie-titel { font-size: 16px; font-weight: 800; color: hsl(12 90% 42%); border-bottom: 2px solid hsl(12 90% 50% / .18); padding-bottom: 7px; margin-bottom: 14px; letter-spacing: .01em; }
         .prt-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px 18px; }
         .prt-grid .lbl { font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: .03em; }
         .prt-grid .val { font-size: 14px; font-weight: 600; }
 
         /* ── Tabellen ── */
         .prt-tabel { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 8px; }
-        .prt-tabel th { text-align: left; background: #f1f5f9; color: #334155; font-weight: 600; padding: 6px 8px; border-bottom: 1px solid #e2e8f0; }
-        .prt-tabel td { padding: 6px 8px; border-bottom: 1px solid #eef2f6; vertical-align: top; }
+        .prt-tabel th { text-align: left; background: #1e293b; color: #f8fafc; font-weight: 700; padding: 9px 12px; border-bottom: 2px solid #F23B0D; }
+        .prt-tabel td { padding: 8px 12px; border-bottom: 1px solid #e2e8f0; vertical-align: top; }
+        .prt-tabel tr:nth-child(even) td { background: #f8fafc; }
         .prt-stip { display: inline-block; width: 9px; height: 9px; border-radius: 9999px; margin-right: 6px; vertical-align: middle; }
 
         /* ── Kaarten ── */
@@ -1913,32 +1914,34 @@ export default function GebouwPrint() {
         .prt-tegel-status { font-size: 10px; color: #475569; display: flex; align-items: center; gap: 3px; }
 
         /* ── Spot-detail ── */
-        .prt-spot-detail { break-before: page; break-inside: avoid; margin-bottom: 0; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px; background: #fff; }
-        .prt-spot-kop { display: flex; align-items: flex-start; justify-content: space-between; border-bottom: 2px solid #F23B0D; padding-bottom: 10px; margin-bottom: 12px; }
-        .prt-spot-kop-links { display: flex; align-items: center; gap: 12px; }
-        .prt-spot-logo { height: 28px; width: auto; }
-        .prt-spot-gebouw { font-size: 13px; font-weight: 700; color: #0f172a; }
-        .prt-spot-bouwlaag { font-size: 11px; color: #64748b; margin-top: 1px; }
+        .prt-spot-detail { break-before: page; break-inside: avoid; margin-bottom: 0; border: 2px solid #e2e8f0; border-radius: 10px; padding: 22px; background: #fff; }
+        .prt-spot-kop { display: flex; align-items: flex-start; justify-content: space-between; border-bottom: 2.5px solid #F23B0D; padding-bottom: 14px; margin-bottom: 16px; }
+        .prt-spot-kop-links { display: flex; align-items: center; gap: 14px; }
+        .prt-spot-logo { height: 34px; width: auto; font-size: 0; color: transparent; }
+        .prt-spot-gebouw { font-size: 14px; font-weight: 800; color: #0f172a; }
+        .prt-spot-bouwlaag { font-size: 11px; color: #64748b; margin-top: 2px; }
         .prt-spot-kop-rechts { text-align: right; }
-        .prt-spot-nr { font-size: 20px; font-weight: 800; color: #F23B0D; }
+        .prt-spot-nr { font-size: 22px; font-weight: 900; color: #F23B0D; letter-spacing: .02em; }
         .prt-spot-datum { font-size: 10px; color: #94a3b8; margin-top: 2px; }
-        .prt-spot-body { display: flex; gap: 16px; margin-bottom: 12px; align-items: flex-start; }
-        .prt-spot-tekening { flex: 1; min-width: 0; height: 210px; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; background: #f8fafc; }
-        .prt-spot-info { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 16px; margin-bottom: 12px; }
+        .prt-spot-body { display: flex; gap: 20px; margin-bottom: 16px; align-items: flex-start; }
+        .prt-spot-tekening { flex: 1; min-width: 0; height: 240px; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; background: #f8fafc; }
+        .prt-spot-info { display: grid; grid-template-columns: 1fr 1fr; gap: 5px 20px; margin-bottom: 14px; }
         .prt-spot-info-rij { display: contents; }
-        .prt-spot-lbl { font-size: 10px; font-weight: 600; color: #64748b; padding: 3px 0; display: flex; align-items: center; }
-        .prt-spot-val { font-size: 11px; color: #0f172a; padding: 3px 0; display: flex; align-items: center; gap: 4px; }
-        .prt-spot-testinfo { background: #f1f5f9; border-radius: 6px; padding: 10px 12px; margin-bottom: 12px; }
-        .prt-spot-testinfo-titel { font-size: 11px; font-weight: 700; color: #334155; margin-bottom: 6px; }
+        .prt-spot-lbl { font-size: 10px; font-weight: 700; color: #64748b; padding: 3px 0; display: flex; align-items: center; text-transform: uppercase; letter-spacing: .04em; }
+        .prt-spot-val { font-size: 12px; color: #0f172a; padding: 3px 0; display: flex; align-items: center; gap: 4px; font-weight: 500; }
+        .prt-spot-testinfo { background: #f8fafc; border: 1px solid #e2e8f0; border-left: 3px solid #F23B0D; border-radius: 6px; padding: 12px 14px; margin-bottom: 14px; }
+        .prt-spot-testinfo-titel { font-size: 11px; font-weight: 800; color: #1e293b; margin-bottom: 8px; text-transform: uppercase; letter-spacing: .05em; }
         .prt-spot-testitem { display: flex; flex-wrap: wrap; gap: 8px; align-items: baseline; margin-bottom: 4px; }
         .prt-spot-testitem-naam { font-size: 11px; font-weight: 600; color: #0f172a; }
         .prt-spot-testitem-meta { font-size: 10px; color: #64748b; }
-        .prt-spot-fotos { margin-top: 8px; display: flex; gap: 16px; flex-wrap: wrap; }
-        .prt-spot-fotos > div { flex: 1; min-width: 260px; }
-        .prt-spot-foto-label { font-size: 10px; font-weight: 600; color: #64748b; margin-bottom: 6px; margin-top: 4px; }
-        .prt-spot-foto-rij { display: grid; grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: 6px; }
-        .prt-spot-foto { width: 100%; height: 88px; object-fit: cover; border-radius: 6px; border: 1px solid #e2e8f0; break-inside: avoid; }
-        .prt-spot-fotopagina { break-before: page; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px; background: #fff; }
+        .prt-spot-fotos { margin-top: 16px; display: flex; gap: 20px; flex-wrap: wrap; }
+        .prt-spot-fotos > div { flex: 1; min-width: 0; }
+        .prt-spot-foto-label { font-size: 10px; font-weight: 700; color: #475569; margin-bottom: 8px; margin-top: 4px; text-transform: uppercase; letter-spacing: .06em; }
+        .prt-spot-foto-rij { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; }
+        .prt-spot-foto { width: 100%; height: 180px; object-fit: cover; border-radius: 8px; border: 1px solid #e2e8f0; break-inside: avoid; }
+        .prt-spot-fotopagina { break-before: page; border: 2px solid #e2e8f0; border-radius: 10px; padding: 22px; background: #fff; }
+        .prt-spot-fotopagina .prt-spot-foto { height: 260px; }
+        .prt-spot-fotopagina .prt-spot-foto-rij { grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
 
         /* ── Certificaat FPS — professioneel volledig-pagina garantiebewijs ── */
         .prt-cert-pagina { background: #fff; padding: 0; min-height: 100vh; page-break-before: always; page-break-after: always; display: flex; flex-direction: column; }
@@ -2036,15 +2039,15 @@ export default function GebouwPrint() {
 
         /* ── Footer ── */
         .prt-leeg { font-size: 13px; color: #64748b; }
-        .prt-voet { margin-top: 24px; padding-top: 12px; border-top: 1px solid #e2e8f0; font-size: 11px; color: #94a3b8; display: flex; justify-content: space-between; }
+        .prt-voet { margin-top: 48px; padding-top: 18px; border-top: 2px solid #e2e8f0; font-size: 11px; color: #94a3b8; display: flex; justify-content: space-between; }
 
         @media print {
           .no-print { display: none !important; }
           .prt-layout { display: block; }
           .prt-cmpr { display: none !important; }
           .prt-voorblad { min-height: 0; }
-          .prt-pagina { max-width: none; padding: 0; break-before: page; }
-          @page { margin: 14mm; }
+          .prt-pagina { max-width: none; padding: 20mm 18mm 18mm; break-before: page; }
+          @page { margin: 0; }
         }
         @media screen {
           .prt-root { background: #f1f5f9; min-height: 100vh; }
