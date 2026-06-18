@@ -2945,6 +2945,69 @@ export interface VerlofAanvraagInput {
   opmerking?: string;
 }
 
+export interface Ziekmelding {
+  id: number;
+  medewerker_id: number;
+  /** @nullable */
+  medewerker_naam?: string | null;
+  start_datum: string;
+  /** @nullable */
+  eind_datum?: string | null;
+  /** @nullable */
+  reden?: string | null;
+  /** @nullable */
+  omschrijving?: string | null;
+  status: string;
+  /** @nullable */
+  gemeld_door_id?: number | null;
+  aangemaakt_op: string;
+  bijgewerkt_op?: string;
+}
+
+export interface ZiekmeldingenInput {
+  medewerker_id: number;
+  start_datum: string;
+  /** @nullable */
+  eind_datum?: string | null;
+  /** @nullable */
+  reden?: string | null;
+  /** @nullable */
+  omschrijving?: string | null;
+  status?: string;
+}
+
+export interface ZiekmeldingenSelfInput {
+  start_datum: string;
+  /** @nullable */
+  eind_datum?: string | null;
+  /** @nullable */
+  reden?: string | null;
+  /** @nullable */
+  omschrijving?: string | null;
+}
+
+export interface ZiekmeldingenMaandpunt {
+  maand: number;
+  jaar: number;
+  percentage: number;
+  medewerkers_ziek: number;
+  totale_medewerkers: number;
+}
+
+export interface NationaalMaandpunt {
+  maand: number;
+  percentage: number;
+}
+
+export interface ZiekmeldingenStatistieken {
+  huidig_ziek: number;
+  totale_medewerkers: number;
+  verzuimpercentage_huidig: number;
+  gemiddeld_dit_jaar: number;
+  maanden: ZiekmeldingenMaandpunt[];
+  nationaal: NationaalMaandpunt[];
+}
+
 export interface HrmStats {
   medewerkers: number;
   actief: number;
@@ -3818,6 +3881,16 @@ export type UitnodigingActiveren200 = {
 
 export type ListAlleVerlofAanvragenParams = {
 status?: string;
+};
+
+export type ListZiekmeldingenParams = {
+status?: string;
+medewerker_id?: number;
+actief?: boolean;
+};
+
+export type GetZiekmeldingenStatistiekenParams = {
+jaar?: number;
 };
 
 export type AiCalculatieRegels200 = {

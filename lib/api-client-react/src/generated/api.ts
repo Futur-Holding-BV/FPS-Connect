@@ -112,6 +112,7 @@ import type {
   GetGebouwGevelbeeld200,
   GetRecenteActiviteitParams,
   GetVervaldagenParams,
+  GetZiekmeldingenStatistiekenParams,
   HealthStatus,
   HelpdeskTicket,
   HelpdeskTicketInput,
@@ -148,6 +149,7 @@ import type {
   ListToolboxBerichtenParams,
   ListVoorzieningTypesParams,
   ListVoorzieningenParams,
+  ListZiekmeldingenParams,
   LoginInput,
   LoginPoging,
   LoginResultaat,
@@ -264,7 +266,11 @@ import type {
   WachtwoordVergetenInput,
   WachtwoordWijzigen,
   Werkgever,
-  WerkgeverInput
+  WerkgeverInput,
+  Ziekmelding,
+  ZiekmeldingenInput,
+  ZiekmeldingenSelfInput,
+  ZiekmeldingenStatistieken
 } from './api.schemas';
 
 import { customFetch } from '../custom-fetch';
@@ -19445,6 +19451,532 @@ export const useDeleteVerlofAanvraag = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getDeleteVerlofAanvraagMutationOptions(options));
+    }
+
+export const getListZiekmeldingenUrl = (params?: ListZiekmeldingenParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/ziekmeldingen?${stringifiedParams}` : `/api/ziekmeldingen`
+}
+
+/**
+ * @summary Alle ziekmeldingen (HRM/beheerder)
+ */
+export const listZiekmeldingen = async (params?: ListZiekmeldingenParams, options?: RequestInit): Promise<Ziekmelding[]> => {
+
+  return customFetch<Ziekmelding[]>(getListZiekmeldingenUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListZiekmeldingenQueryKey = (params?: ListZiekmeldingenParams,) => {
+    return [
+    `/api/ziekmeldingen`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListZiekmeldingenQueryOptions = <TData = Awaited<ReturnType<typeof listZiekmeldingen>>, TError = ErrorType<unknown>>(params?: ListZiekmeldingenParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listZiekmeldingen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListZiekmeldingenQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listZiekmeldingen>>> = ({ signal }) => listZiekmeldingen(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listZiekmeldingen>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListZiekmeldingenQueryResult = NonNullable<Awaited<ReturnType<typeof listZiekmeldingen>>>
+export type ListZiekmeldingenQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Alle ziekmeldingen (HRM/beheerder)
+ */
+
+export function useListZiekmeldingen<TData = Awaited<ReturnType<typeof listZiekmeldingen>>, TError = ErrorType<unknown>>(
+ params?: ListZiekmeldingenParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listZiekmeldingen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListZiekmeldingenQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateZiekmeldingUrl = () => {
+
+
+
+
+  return `/api/ziekmeldingen`
+}
+
+/**
+ * @summary Ziekmelding registreren (door HRM of beheerder)
+ */
+export const createZiekmelding = async (ziekmeldingenInput: ZiekmeldingenInput, options?: RequestInit): Promise<Ziekmelding> => {
+
+  return customFetch<Ziekmelding>(getCreateZiekmeldingUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(ziekmeldingenInput)
+  }
+);}
+
+
+
+
+export const getCreateZiekmeldingMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createZiekmelding>>, TError,{data: BodyType<ZiekmeldingenInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createZiekmelding>>, TError,{data: BodyType<ZiekmeldingenInput>}, TContext> => {
+
+const mutationKey = ['createZiekmelding'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createZiekmelding>>, {data: BodyType<ZiekmeldingenInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createZiekmelding(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateZiekmeldingMutationResult = NonNullable<Awaited<ReturnType<typeof createZiekmelding>>>
+    export type CreateZiekmeldingMutationBody = BodyType<ZiekmeldingenInput>
+    export type CreateZiekmeldingMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Ziekmelding registreren (door HRM of beheerder)
+ */
+export const useCreateZiekmelding = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createZiekmelding>>, TError,{data: BodyType<ZiekmeldingenInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createZiekmelding>>,
+        TError,
+        {data: BodyType<ZiekmeldingenInput>},
+        TContext
+      > => {
+      return useMutation(getCreateZiekmeldingMutationOptions(options));
+    }
+
+export const getGetZiekmeldingenStatistiekenUrl = (params?: GetZiekmeldingenStatistiekenParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/ziekmeldingen/statistieken?${stringifiedParams}` : `/api/ziekmeldingen/statistieken`
+}
+
+/**
+ * @summary Verzuimstatistieken voor het dashboard
+ */
+export const getZiekmeldingenStatistieken = async (params?: GetZiekmeldingenStatistiekenParams, options?: RequestInit): Promise<ZiekmeldingenStatistieken> => {
+
+  return customFetch<ZiekmeldingenStatistieken>(getGetZiekmeldingenStatistiekenUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetZiekmeldingenStatistiekenQueryKey = (params?: GetZiekmeldingenStatistiekenParams,) => {
+    return [
+    `/api/ziekmeldingen/statistieken`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetZiekmeldingenStatistiekenQueryOptions = <TData = Awaited<ReturnType<typeof getZiekmeldingenStatistieken>>, TError = ErrorType<unknown>>(params?: GetZiekmeldingenStatistiekenParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getZiekmeldingenStatistieken>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetZiekmeldingenStatistiekenQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getZiekmeldingenStatistieken>>> = ({ signal }) => getZiekmeldingenStatistieken(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getZiekmeldingenStatistieken>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetZiekmeldingenStatistiekenQueryResult = NonNullable<Awaited<ReturnType<typeof getZiekmeldingenStatistieken>>>
+export type GetZiekmeldingenStatistiekenQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Verzuimstatistieken voor het dashboard
+ */
+
+export function useGetZiekmeldingenStatistieken<TData = Awaited<ReturnType<typeof getZiekmeldingenStatistieken>>, TError = ErrorType<unknown>>(
+ params?: GetZiekmeldingenStatistiekenParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getZiekmeldingenStatistieken>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetZiekmeldingenStatistiekenQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getUpdateZiekmeldingUrl = (id: number,) => {
+
+
+
+
+  return `/api/ziekmeldingen/${id}`
+}
+
+/**
+ * @summary Ziekmelding bijwerken (hersteld melden, eind_datum instellen)
+ */
+export const updateZiekmelding = async (id: number,
+    ziekmeldingenInput: ZiekmeldingenInput, options?: RequestInit): Promise<Ziekmelding> => {
+
+  return customFetch<Ziekmelding>(getUpdateZiekmeldingUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(ziekmeldingenInput)
+  }
+);}
+
+
+
+
+export const getUpdateZiekmeldingMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateZiekmelding>>, TError,{id: number;data: BodyType<ZiekmeldingenInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateZiekmelding>>, TError,{id: number;data: BodyType<ZiekmeldingenInput>}, TContext> => {
+
+const mutationKey = ['updateZiekmelding'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateZiekmelding>>, {id: number;data: BodyType<ZiekmeldingenInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateZiekmelding(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateZiekmeldingMutationResult = NonNullable<Awaited<ReturnType<typeof updateZiekmelding>>>
+    export type UpdateZiekmeldingMutationBody = BodyType<ZiekmeldingenInput>
+    export type UpdateZiekmeldingMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Ziekmelding bijwerken (hersteld melden, eind_datum instellen)
+ */
+export const useUpdateZiekmelding = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateZiekmelding>>, TError,{id: number;data: BodyType<ZiekmeldingenInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateZiekmelding>>,
+        TError,
+        {id: number;data: BodyType<ZiekmeldingenInput>},
+        TContext
+      > => {
+      return useMutation(getUpdateZiekmeldingMutationOptions(options));
+    }
+
+export const getDeleteZiekmeldingUrl = (id: number,) => {
+
+
+
+
+  return `/api/ziekmeldingen/${id}`
+}
+
+/**
+ * @summary Ziekmelding verwijderen
+ */
+export const deleteZiekmelding = async (id: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteZiekmeldingUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteZiekmeldingMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteZiekmelding>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteZiekmelding>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deleteZiekmelding'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteZiekmelding>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteZiekmelding(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteZiekmeldingMutationResult = NonNullable<Awaited<ReturnType<typeof deleteZiekmelding>>>
+
+    export type DeleteZiekmeldingMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Ziekmelding verwijderen
+ */
+export const useDeleteZiekmelding = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteZiekmelding>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteZiekmelding>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeleteZiekmeldingMutationOptions(options));
+    }
+
+export const getListMijnZiekmeldingenUrl = () => {
+
+
+
+
+  return `/api/mijn/ziekmeldingen`
+}
+
+/**
+ * @summary Eigen ziekmeldingen (self-service)
+ */
+export const listMijnZiekmeldingen = async ( options?: RequestInit): Promise<Ziekmelding[]> => {
+
+  return customFetch<Ziekmelding[]>(getListMijnZiekmeldingenUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListMijnZiekmeldingenQueryKey = () => {
+    return [
+    `/api/mijn/ziekmeldingen`
+    ] as const;
+    }
+
+
+export const getListMijnZiekmeldingenQueryOptions = <TData = Awaited<ReturnType<typeof listMijnZiekmeldingen>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listMijnZiekmeldingen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListMijnZiekmeldingenQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listMijnZiekmeldingen>>> = ({ signal }) => listMijnZiekmeldingen({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listMijnZiekmeldingen>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListMijnZiekmeldingenQueryResult = NonNullable<Awaited<ReturnType<typeof listMijnZiekmeldingen>>>
+export type ListMijnZiekmeldingenQueryError = ErrorType<void>
+
+
+/**
+ * @summary Eigen ziekmeldingen (self-service)
+ */
+
+export function useListMijnZiekmeldingen<TData = Awaited<ReturnType<typeof listMijnZiekmeldingen>>, TError = ErrorType<void>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listMijnZiekmeldingen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListMijnZiekmeldingenQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateMijnZiekmeldingUrl = () => {
+
+
+
+
+  return `/api/mijn/ziekmeldingen`
+}
+
+/**
+ * @summary Ziek melden (self-service)
+ */
+export const createMijnZiekmelding = async (ziekmeldingenSelfInput: ZiekmeldingenSelfInput, options?: RequestInit): Promise<Ziekmelding> => {
+
+  return customFetch<Ziekmelding>(getCreateMijnZiekmeldingUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(ziekmeldingenSelfInput)
+  }
+);}
+
+
+
+
+export const getCreateMijnZiekmeldingMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createMijnZiekmelding>>, TError,{data: BodyType<ZiekmeldingenSelfInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createMijnZiekmelding>>, TError,{data: BodyType<ZiekmeldingenSelfInput>}, TContext> => {
+
+const mutationKey = ['createMijnZiekmelding'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createMijnZiekmelding>>, {data: BodyType<ZiekmeldingenSelfInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createMijnZiekmelding(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateMijnZiekmeldingMutationResult = NonNullable<Awaited<ReturnType<typeof createMijnZiekmelding>>>
+    export type CreateMijnZiekmeldingMutationBody = BodyType<ZiekmeldingenSelfInput>
+    export type CreateMijnZiekmeldingMutationError = ErrorType<void>
+
+    /**
+ * @summary Ziek melden (self-service)
+ */
+export const useCreateMijnZiekmelding = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createMijnZiekmelding>>, TError,{data: BodyType<ZiekmeldingenSelfInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createMijnZiekmelding>>,
+        TError,
+        {data: BodyType<ZiekmeldingenSelfInput>},
+        TContext
+      > => {
+      return useMutation(getCreateMijnZiekmeldingMutationOptions(options));
     }
 
 export const getGetHrmStatsUrl = () => {

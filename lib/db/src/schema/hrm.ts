@@ -223,6 +223,22 @@ export const verlofAanvragenTable = pgTable("verlofaanvragen", {
   bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
 });
 
+// Ziekmeldingen — registratie van ziekteverzuim per medewerker.
+// Kan worden ingediend door de medewerker zelf of door HRM/beheerder.
+// status: gemeld | hersteld | langdurig (>6 weken aaneengesloten)
+export const ziekmeldingenTable = pgTable("ziekmeldingen", {
+  id: serial("id").primaryKey(),
+  medewerkerId: integer("medewerker_id").notNull().references(() => medewerkersTable.id, { onDelete: "cascade" }),
+  startDatum: text("start_datum").notNull(),
+  eindDatum: text("eind_datum"),
+  reden: text("reden"), // griep | burn-out | operatie | privé | onbekend | overige
+  omschrijving: text("omschrijving"),
+  status: text("status").notNull().default("gemeld"),
+  gemeldDoorId: integer("gemeld_door_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
+  aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
+  bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
+});
+
 export const insertWerkgeverSchema = createInsertSchema(werkgeversTable).omit({ id: true, aangemaaktOp: true, bijgewerktOp: true });
 export const insertFunctieSchema = createInsertSchema(functiesTable).omit({ id: true, aangemaaktOp: true, bijgewerktOp: true });
 export const insertMedewerkerSchema = createInsertSchema(medewerkersTable).omit({ id: true, aangemaaktOp: true, bijgewerktOp: true });
@@ -233,6 +249,7 @@ export const insertBekwaamheidSchema = createInsertSchema(bekwaamhedenTable).omi
 export const insertVerlofsoortSchema = createInsertSchema(verlofsoortenTable).omit({ id: true, aangemaaktOp: true, bijgewerktOp: true });
 export const insertVerlofSaldoSchema = createInsertSchema(verlofSaldiTable).omit({ id: true, aangemaaktOp: true, bijgewerktOp: true });
 export const insertVerlofAanvraagSchema = createInsertSchema(verlofAanvragenTable).omit({ id: true, aangemaaktOp: true, bijgewerktOp: true });
+export const insertZiekmeldingenSchema = createInsertSchema(ziekmeldingenTable).omit({ id: true, aangemaaktOp: true, bijgewerktOp: true });
 
 export type InsertWerkgever = z.infer<typeof insertWerkgeverSchema>;
 export type InsertFunctie = z.infer<typeof insertFunctieSchema>;
@@ -255,3 +272,5 @@ export type Bekwaamheid = typeof bekwaamhedenTable.$inferSelect;
 export type Verlofsoort = typeof verlofsoortenTable.$inferSelect;
 export type VerlofSaldo = typeof verlofSaldiTable.$inferSelect;
 export type VerlofAanvraag = typeof verlofAanvragenTable.$inferSelect;
+export type InsertZiekmelding = z.infer<typeof insertZiekmeldingenSchema>;
+export type Ziekmelding = typeof ziekmeldingenTable.$inferSelect;

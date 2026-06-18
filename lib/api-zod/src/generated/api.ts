@@ -6762,6 +6762,145 @@ export const DeleteVerlofAanvraagResponse = zod.void()
 
 
 /**
+ * @summary Alle ziekmeldingen (HRM/beheerder)
+ */
+export const ListZiekmeldingenQueryParams = zod.object({
+  "status": zod.coerce.string().optional(),
+  "medewerker_id": zod.coerce.number().optional(),
+  "actief": zod.coerce.boolean().optional()
+})
+
+export const ListZiekmeldingenResponseItem = zod.object({
+  "id": zod.number(),
+  "medewerker_id": zod.number(),
+  "medewerker_naam": zod.string().nullish(),
+  "start_datum": zod.string(),
+  "eind_datum": zod.string().nullish(),
+  "reden": zod.string().nullish(),
+  "omschrijving": zod.string().nullish(),
+  "status": zod.string(),
+  "gemeld_door_id": zod.number().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string().optional()
+})
+export const ListZiekmeldingenResponse = zod.array(ListZiekmeldingenResponseItem)
+
+
+/**
+ * @summary Ziekmelding registreren (door HRM of beheerder)
+ */
+export const CreateZiekmeldingBody = zod.object({
+  "medewerker_id": zod.number(),
+  "start_datum": zod.string(),
+  "eind_datum": zod.string().nullish(),
+  "reden": zod.string().nullish(),
+  "omschrijving": zod.string().nullish(),
+  "status": zod.string().optional()
+})
+
+export const CreateZiekmeldingResponse = zod.void()
+
+
+/**
+ * @summary Verzuimstatistieken voor het dashboard
+ */
+export const GetZiekmeldingenStatistiekenQueryParams = zod.object({
+  "jaar": zod.coerce.number().optional()
+})
+
+export const GetZiekmeldingenStatistiekenResponse = zod.object({
+  "huidig_ziek": zod.number(),
+  "totale_medewerkers": zod.number(),
+  "verzuimpercentage_huidig": zod.number(),
+  "gemiddeld_dit_jaar": zod.number(),
+  "maanden": zod.array(zod.object({
+  "maand": zod.number(),
+  "jaar": zod.number(),
+  "percentage": zod.number(),
+  "medewerkers_ziek": zod.number(),
+  "totale_medewerkers": zod.number()
+})),
+  "nationaal": zod.array(zod.object({
+  "maand": zod.number(),
+  "percentage": zod.number()
+}))
+})
+
+
+/**
+ * @summary Ziekmelding bijwerken (hersteld melden, eind_datum instellen)
+ */
+export const UpdateZiekmeldingParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateZiekmeldingBody = zod.object({
+  "medewerker_id": zod.number(),
+  "start_datum": zod.string(),
+  "eind_datum": zod.string().nullish(),
+  "reden": zod.string().nullish(),
+  "omschrijving": zod.string().nullish(),
+  "status": zod.string().optional()
+})
+
+export const UpdateZiekmeldingResponse = zod.object({
+  "id": zod.number(),
+  "medewerker_id": zod.number(),
+  "medewerker_naam": zod.string().nullish(),
+  "start_datum": zod.string(),
+  "eind_datum": zod.string().nullish(),
+  "reden": zod.string().nullish(),
+  "omschrijving": zod.string().nullish(),
+  "status": zod.string(),
+  "gemeld_door_id": zod.number().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string().optional()
+})
+
+
+/**
+ * @summary Ziekmelding verwijderen
+ */
+export const DeleteZiekmeldingParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteZiekmeldingResponse = zod.void()
+
+
+/**
+ * @summary Eigen ziekmeldingen (self-service)
+ */
+export const ListMijnZiekmeldingenResponseItem = zod.object({
+  "id": zod.number(),
+  "medewerker_id": zod.number(),
+  "medewerker_naam": zod.string().nullish(),
+  "start_datum": zod.string(),
+  "eind_datum": zod.string().nullish(),
+  "reden": zod.string().nullish(),
+  "omschrijving": zod.string().nullish(),
+  "status": zod.string(),
+  "gemeld_door_id": zod.number().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string().optional()
+})
+export const ListMijnZiekmeldingenResponse = zod.array(ListMijnZiekmeldingenResponseItem)
+
+
+/**
+ * @summary Ziek melden (self-service)
+ */
+export const CreateMijnZiekmeldingBody = zod.object({
+  "start_datum": zod.string(),
+  "eind_datum": zod.string().nullish(),
+  "reden": zod.string().nullish(),
+  "omschrijving": zod.string().nullish()
+})
+
+export const CreateMijnZiekmeldingResponse = zod.void()
+
+
+/**
  * @summary HRM-dashboardstatistieken
  */
 export const GetHrmStatsResponse = zod.object({

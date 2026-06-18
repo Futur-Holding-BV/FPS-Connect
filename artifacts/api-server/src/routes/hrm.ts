@@ -20,9 +20,10 @@ import {
   verlofsoortenTable,
   verlofSaldiTable,
   verlofAanvragenTable,
+  ziekmeldingenTable,
   gebruikersTable,
 } from "@workspace/db";
-import { eq, desc, and, ne, inArray } from "drizzle-orm";
+import { eq, desc, and, ne, inArray, or, isNull, gte, lte } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
 import { stelOpleidingenVoor } from "../services/opleiding-ai";
 
@@ -1683,6 +1684,249 @@ router.post("/mijn/verlofaanvragen", async (req, res) => {
       aangemaakt_op: iso(a.aangemaaktOp),
       bijgewerkt_op: iso(a.bijgewerktOp),
     });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// ── Ziekmeldingen ─────────────────────────────────────────────────────────────
+// Nationaal gemiddelde verzuimpercentage per maand (CBS Statline / Rivm,
+// bouwnijverheid & technische dienstverlening, meerjaarlijks gemiddelde).
+// Hard-coded als referentielijn; actuele CBS-data wordt niet real-time opgehaald.
+const NATIONAAL_BENCHMARK = [
+  { maand: 1, percentage: 5.8 }, { maand: 2, percentage: 5.4 },
+  { maand: 3, percentage: 4.9 }, { maand: 4, percentage: 4.2 },
+  { maand: 5, percentage: 3.8 }, { maand: 6, percentage: 3.4 },
+  { maand: 7, percentage: 3.0 }, { maand: 8, percentage: 2.9 },
+  { maand: 9, percentage: 3.7 }, { maand: 10, percentage: 4.4 },
+  { maand: 11, percentage: 4.9 }, { maand: 12, percentage: 5.2 },
+];
+
+function mapZiekmelding(z: typeof ziekmeldingenTable.$inferSelect & { medewerker_naam?: string | null }) {
+  return {
+    id: z.id,
+    medewerker_id: z.medewerkerId,
+    medewerker_naam: z.medewerker_naam ?? null,
+    start_datum: z.startDatum,
+    eind_datum: z.eindDatum ?? null,
+    reden: z.reden ?? null,
+    omschrijving: z.omschrijving ?? null,
+    status: z.status,
+    gemeld_door_id: z.gemeldDoorId ?? null,
+    aangemaakt_op: iso(z.aangemaaktOp),
+    bijgewerkt_op: iso(z.bijgewerktOp),
+  };
+}
+
+// Lijst (HRM/beheerder)
+router.get("/ziekmeldingen", lezen, async (req, res) => {
+  try {
+    const { status, medewerker_id, actief } = req.query;
+    const rijen = await db
+      .select({
+        id: ziekmeldingenTable.id,
+        medewerkerId: ziekmeldingenTable.medewerkerId,
+        medewerker_naam: medewerkersTable.naam,
+        startDatum: ziekmeldingenTable.startDatum,
+        eindDatum: ziekmeldingenTable.eindDatum,
+        reden: ziekmeldingenTable.reden,
+        omschrijving: ziekmeldingenTable.omschrijving,
+        status: ziekmeldingenTable.status,
+        gemeldDoorId: ziekmeldingenTable.gemeldDoorId,
+        aangemaaktOp: ziekmeldingenTable.aangemaaktOp,
+        bijgewerktOp: ziekmeldingenTable.bijgewerktOp,
+      })
+      .from(ziekmeldingenTable)
+      .leftJoin(medewerkersTable, eq(medewerkersTable.id, ziekmeldingenTable.medewerkerId))
+      .where(
+        and(
+          status ? eq(ziekmeldingenTable.status, String(status)) : undefined,
+          medewerker_id ? eq(ziekmeldingenTable.medewerkerId, parseId(medewerker_id)) : undefined,
+          actief === "true"
+            ? or(isNull(ziekmeldingenTable.eindDatum), gte(ziekmeldingenTable.eindDatum, new Date().toISOString().slice(0, 10)))
+            : undefined,
+        ),
+      )
+      .orderBy(desc(ziekmeldingenTable.aangemaaktOp));
+    res.json(rijen.map((z) => mapZiekmelding({ ...z, medewerker_naam: z.medewerker_naam } as Parameters<typeof mapZiekmelding>[0])));
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// Aanmaken (HRM/beheerder)
+router.post("/ziekmeldingen", schrijven, async (req, res) => {
+  try {
+    const { medewerker_id, start_datum, eind_datum, reden, omschrijving, status } = req.body;
+    if (!medewerker_id || !start_datum) {
+      return res.status(400).json({ error: "medewerker_id en start_datum zijn verplicht" });
+    }
+    const [z] = await db
+      .insert(ziekmeldingenTable)
+      .values({
+        medewerkerId: parseId(medewerker_id),
+        startDatum: start_datum,
+        eindDatum: eind_datum ?? null,
+        reden: reden ?? null,
+        omschrijving: omschrijving ?? null,
+        status: status ?? "gemeld",
+        gemeldDoorId: req.session.userId ?? null,
+      })
+      .returning();
+    const [m] = await db.select({ naam: medewerkersTable.naam }).from(medewerkersTable).where(eq(medewerkersTable.id, z.medewerkerId));
+    res.status(201).json(mapZiekmelding({ ...z, medewerker_naam: m?.naam ?? null } as Parameters<typeof mapZiekmelding>[0]));
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// Statistieken (dashboard)
+router.get("/ziekmeldingen/statistieken", lezen, async (req, res) => {
+  try {
+    const jaar = req.query.jaar ? Number(req.query.jaar) : new Date().getFullYear();
+    const vandaag = new Date().toISOString().slice(0, 10);
+    const totaleMedewerkers = await db
+      .select({ id: medewerkersTable.id })
+      .from(medewerkersTable)
+      .where(eq(medewerkersTable.actief, true));
+    const totaal = totaleMedewerkers.length || 1;
+
+    // Huidig ziek: status gemeld/langdurig EN geen einddatum of einddatum >= vandaag
+    const huidigZiek = await db
+      .select({ id: ziekmeldingenTable.id })
+      .from(ziekmeldingenTable)
+      .where(
+        and(
+          ne(ziekmeldingenTable.status, "hersteld"),
+          or(isNull(ziekmeldingenTable.eindDatum), gte(ziekmeldingenTable.eindDatum, vandaag)),
+        ),
+      );
+
+    // Alle ziekmeldingen voor het gevraagde jaar
+    const alleZiek = await db
+      .select({
+        medewerkerId: ziekmeldingenTable.medewerkerId,
+        startDatum: ziekmeldingenTable.startDatum,
+        eindDatum: ziekmeldingenTable.eindDatum,
+        status: ziekmeldingenTable.status,
+      })
+      .from(ziekmeldingenTable);
+
+    const jaarStr = String(jaar);
+    const maanden: { maand: number; jaar: number; percentage: number; medewerkers_ziek: number; totale_medewerkers: number }[] = [];
+    for (let m = 1; m <= 12; m++) {
+      const eerstedag = `${jaarStr}-${String(m).padStart(2, "0")}-01`;
+      const laatstemm = m === 12 ? `${jaar + 1}-01-01` : `${jaarStr}-${String(m + 1).padStart(2, "0")}-01`;
+      // Ziek in deze maand: start <= einde van maand EN (geen einddatum OF einddatum >= begin van maand)
+      const ziekInMaand = new Set(
+        alleZiek
+          .filter((z) => {
+            const start = z.startDatum;
+            const eind = z.eindDatum ?? "9999-12-31";
+            return start < laatstemm && eind >= eerstedag;
+          })
+          .map((z) => z.medewerkerId),
+      );
+      const percentage = totaal > 0 ? Math.round((ziekInMaand.size / totaal) * 1000) / 10 : 0;
+      maanden.push({ maand: m, jaar, percentage, medewerkers_ziek: ziekInMaand.size, totale_medewerkers: totaal });
+    }
+
+    const huidigPct = totaal > 0 ? Math.round((huidigZiek.length / totaal) * 1000) / 10 : 0;
+    const gemiddeldDitJaar = maanden.length > 0
+      ? Math.round((maanden.reduce((s, m) => s + m.percentage, 0) / maanden.length) * 10) / 10
+      : 0;
+
+    res.json({
+      huidig_ziek: huidigZiek.length,
+      totale_medewerkers: totaal,
+      verzuimpercentage_huidig: huidigPct,
+      gemiddeld_dit_jaar: gemiddeldDitJaar,
+      maanden,
+      nationaal: NATIONAAL_BENCHMARK,
+    });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// Bijwerken
+router.patch("/ziekmeldingen/:id", schrijven, async (req, res) => {
+  try {
+    const id = parseId(req.params.id);
+    const { start_datum, eind_datum, reden, omschrijving, status } = req.body;
+    const [z] = await db
+      .update(ziekmeldingenTable)
+      .set({
+        ...(start_datum != null ? { startDatum: start_datum } : {}),
+        eindDatum: eind_datum !== undefined ? (eind_datum ?? null) : undefined,
+        ...(reden !== undefined ? { reden: reden ?? null } : {}),
+        ...(omschrijving !== undefined ? { omschrijving: omschrijving ?? null } : {}),
+        ...(status != null ? { status } : {}),
+        bijgewerktOp: new Date(),
+      })
+      .where(eq(ziekmeldingenTable.id, id))
+      .returning();
+    if (!z) return res.status(404).json({ error: "Niet gevonden" });
+    const [m] = await db.select({ naam: medewerkersTable.naam }).from(medewerkersTable).where(eq(medewerkersTable.id, z.medewerkerId));
+    res.json(mapZiekmelding({ ...z, medewerker_naam: m?.naam ?? null } as Parameters<typeof mapZiekmelding>[0]));
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// Verwijderen
+router.delete("/ziekmeldingen/:id", schrijven, async (req, res) => {
+  try {
+    await db.delete(ziekmeldingenTable).where(eq(ziekmeldingenTable.id, parseId(req.params.id)));
+    res.status(204).end();
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// Self-service: eigen ziekmeldingen lezen
+router.get("/mijn/ziekmeldingen", async (req, res) => {
+  try {
+    const medewerkerId = await getMijnMedewerkerId(req);
+    if (!medewerkerId) return res.status(403).json({ error: "Geen medewerker gekoppeld aan uw account." });
+    const rijen = await db
+      .select()
+      .from(ziekmeldingenTable)
+      .where(eq(ziekmeldingenTable.medewerkerId, medewerkerId))
+      .orderBy(desc(ziekmeldingenTable.startDatum));
+    res.json(rijen.map((z) => mapZiekmelding({ ...z, medewerker_naam: null } as Parameters<typeof mapZiekmelding>[0])));
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// Self-service: ziek melden
+router.post("/mijn/ziekmeldingen", async (req, res) => {
+  try {
+    const medewerkerId = await getMijnMedewerkerId(req);
+    if (!medewerkerId) return res.status(403).json({ error: "Geen medewerker gekoppeld aan uw account." });
+    const { start_datum, eind_datum, reden, omschrijving } = req.body;
+    if (!start_datum) return res.status(400).json({ error: "start_datum is verplicht" });
+    const [z] = await db
+      .insert(ziekmeldingenTable)
+      .values({
+        medewerkerId,
+        startDatum: start_datum,
+        eindDatum: eind_datum ?? null,
+        reden: reden ?? null,
+        omschrijving: omschrijving ?? null,
+        status: "gemeld",
+        gemeldDoorId: req.session.userId ?? null,
+      })
+      .returning();
+    res.status(201).json(mapZiekmelding({ ...z, medewerker_naam: null } as Parameters<typeof mapZiekmelding>[0]));
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Interne serverfout" });

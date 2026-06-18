@@ -5585,6 +5585,143 @@ paths:
         "204":
           description: Verwijderd
 
+  /ziekmeldingen:
+    get:
+      operationId: listZiekmeldingen
+      tags: [personeel]
+      summary: Alle ziekmeldingen (HRM/beheerder)
+      parameters:
+        - in: query
+          name: status
+          schema:
+            type: string
+        - in: query
+          name: medewerker_id
+          schema:
+            type: integer
+        - in: query
+          name: actief
+          schema:
+            type: boolean
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Ziekmelding"
+    post:
+      operationId: createZiekmelding
+      tags: [personeel]
+      summary: Ziekmelding registreren (door HRM of beheerder)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ZiekmeldingenInput"
+      responses:
+        "201":
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Ziekmelding"
+
+  /ziekmeldingen/statistieken:
+    get:
+      operationId: getZiekmeldingenStatistieken
+      tags: [personeel]
+      summary: Verzuimstatistieken voor het dashboard
+      parameters:
+        - in: query
+          name: jaar
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ZiekmeldingenStatistieken"
+
+  /ziekmeldingen/{id}:
+    patch:
+      operationId: updateZiekmelding
+      tags: [personeel]
+      summary: Ziekmelding bijwerken (hersteld melden, eind_datum instellen)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ZiekmeldingenInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Ziekmelding"
+    delete:
+      operationId: deleteZiekmelding
+      tags: [personeel]
+      summary: Ziekmelding verwijderen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Verwijderd
+
+  /mijn/ziekmeldingen:
+    get:
+      operationId: listMijnZiekmeldingen
+      tags: [personeel]
+      summary: Eigen ziekmeldingen (self-service)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Ziekmelding"
+        "403":
+          description: Geen medewerker gekoppeld aan dit account
+    post:
+      operationId: createMijnZiekmelding
+      tags: [personeel]
+      summary: Ziek melden (self-service)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ZiekmeldingenSelfInput"
+      responses:
+        "201":
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Ziekmelding"
+        "403":
+          description: Geen medewerker gekoppeld aan dit account
+
   /hrm/stats:
     get:
       operationId: getHrmStats
@@ -11178,6 +11315,108 @@ components:
           type: string
         opmerking:
           type: string
+
+    Ziekmelding:
+      type: object
+      required: [id, medewerker_id, start_datum, status, aangemaakt_op]
+      properties:
+        id:
+          type: integer
+        medewerker_id:
+          type: integer
+        medewerker_naam:
+          type: ["string", "null"]
+        start_datum:
+          type: string
+        eind_datum:
+          type: ["string", "null"]
+        reden:
+          type: ["string", "null"]
+        omschrijving:
+          type: ["string", "null"]
+        status:
+          type: string
+        gemeld_door_id:
+          type: ["integer", "null"]
+        aangemaakt_op:
+          type: string
+        bijgewerkt_op:
+          type: string
+
+    ZiekmeldingenInput:
+      type: object
+      required: [medewerker_id, start_datum]
+      properties:
+        medewerker_id:
+          type: integer
+        start_datum:
+          type: string
+        eind_datum:
+          type: ["string", "null"]
+        reden:
+          type: ["string", "null"]
+        omschrijving:
+          type: ["string", "null"]
+        status:
+          type: string
+
+    ZiekmeldingenSelfInput:
+      type: object
+      required: [start_datum]
+      properties:
+        start_datum:
+          type: string
+        eind_datum:
+          type: ["string", "null"]
+        reden:
+          type: ["string", "null"]
+        omschrijving:
+          type: ["string", "null"]
+
+    ZiekmeldingenMaandpunt:
+      type: object
+      required: [maand, jaar, percentage, medewerkers_ziek, totale_medewerkers]
+      properties:
+        maand:
+          type: integer
+        jaar:
+          type: integer
+        percentage:
+          type: number
+        medewerkers_ziek:
+          type: integer
+        totale_medewerkers:
+          type: integer
+
+    NationaalMaandpunt:
+      type: object
+      required: [maand, percentage]
+      properties:
+        maand:
+          type: integer
+        percentage:
+          type: number
+
+    ZiekmeldingenStatistieken:
+      type: object
+      required: [huidig_ziek, totale_medewerkers, verzuimpercentage_huidig, gemiddeld_dit_jaar, maanden, nationaal]
+      properties:
+        huidig_ziek:
+          type: integer
+        totale_medewerkers:
+          type: integer
+        verzuimpercentage_huidig:
+          type: number
+        gemiddeld_dit_jaar:
+          type: number
+        maanden:
+          type: array
+          items:
+            $ref: "#/components/schemas/ZiekmeldingenMaandpunt"
+        nationaal:
+          type: array
+          items:
+            $ref: "#/components/schemas/NationaalMaandpunt"
 
     HrmStats:
       type: object

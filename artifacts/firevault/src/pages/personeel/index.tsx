@@ -24,12 +24,17 @@ import {
   useListWerkgevers,
   useCreateWerkgever,
   useUpdateWerkgever,
+  useListZiekmeldingen,
+  useCreateZiekmelding,
+  useUpdateZiekmelding,
+  useDeleteZiekmelding,
   getGetHrmStatsQueryKey,
   getListMedewerkersQueryKey,
   getListFunctiesQueryKey,
   getListOpleidingenQueryKey,
   getListAlleVerlofAanvragenQueryKey,
   getListWerkgeversQueryKey,
+  getListZiekmeldingenQueryKey,
 } from "@workspace/api-client-react";
 import type {
   MedewerkerInput,
@@ -42,6 +47,7 @@ import type {
   VerlofAanvraag,
   Werkgever,
   WerkgeverInput,
+  ZiekmeldingenInput,
 } from "@workspace/api-client-react";
 import { useRol } from "@/context/rol-context";
 import { Card, CardContent } from "@/components/ui/card";
@@ -62,7 +68,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import {
   Users, Plus, UserPlus, Briefcase, GraduationCap, CalendarClock, AlertTriangle,
-  Award, Check, X, ChevronRight, Building2, Pencil, Trash2,
+  Award, Check, X, ChevronRight, Building2, Pencil, Trash2, HeartPulse,
 } from "lucide-react";
 import { WERKMAATSCHAPPIJEN, caoVoorWerkmaatschappij } from "@/lib/werkmaatschappijen";
 
@@ -135,6 +141,7 @@ export default function PersoneelPagina() {
   const { data: openAanvragen } = useListAlleVerlofAanvragen({ status: "aangevraagd" });
   const { data: alleBekwaamheden } = useListAlleBekwaamheden();
   const { data: werkgevers } = useListWerkgevers();
+  const { data: ziekmeldingen } = useListZiekmeldingen();
 
   const maakMedewerker = useCreateMedewerker();
   const onboard = useOnboardMedewerker();
@@ -147,6 +154,9 @@ export default function PersoneelPagina() {
   const beoordeelMutatie = useUpdateVerlofAanvraag();
   const maakWerkgever = useCreateWerkgever();
   const wijzigWerkgever = useUpdateWerkgever();
+  const maakZiekmelding = useCreateZiekmelding();
+  const wijzigZiekmelding = useUpdateZiekmelding();
+  const verwijderZiekmeldingMut = useDeleteZiekmelding();
 
   const gekoppeldeIds = new Set(
     (medewerkers ?? []).map((m) => m.gebruiker_id).filter((x): x is number => x != null),
@@ -189,6 +199,48 @@ export default function PersoneelPagina() {
     setOnboardOpen(true);
   }
 
+  async function slaZiekmeldingOp() {
+    try {
+      if (!ziekForm.medewerker_id || !ziekForm.start_datum) {
+        toast({ title: "Medewerker en startdatum zijn verplicht", variant: "destructive" });
+        return;
+      }
+      await maakZiekmelding.mutateAsync({ data: ziekForm });
+      await queryClient.invalidateQueries({ queryKey: getListZiekmeldingenQueryKey() });
+      await queryClient.invalidateQueries({ queryKey: getGetHrmStatsQueryKey() });
+      setZiekOpen(false);
+      setZiekForm({ medewerker_id: 0, start_datum: new Date().toISOString().slice(0, 10) });
+      toast({ title: "Ziekmelding opgeslagen" });
+    } catch {
+      toast({ title: "Opslaan mislukt", variant: "destructive" });
+    }
+  }
+
+  async function markeerStatus(id: number, status: string, eindDatum?: string) {
+    try {
+      await wijzigZiekmelding.mutateAsync({
+        id,
+        data: { status, eind_datum: eindDatum ?? new Date().toISOString().slice(0, 10) } as ZiekmeldingenInput,
+      });
+      await queryClient.invalidateQueries({ queryKey: getListZiekmeldingenQueryKey() });
+      await queryClient.invalidateQueries({ queryKey: getGetHrmStatsQueryKey() });
+      toast({ title: status === "hersteld" ? "Medewerker hersteld gemeld" : "Status bijgewerkt" });
+    } catch {
+      toast({ title: "Bijwerken mislukt", variant: "destructive" });
+    }
+  }
+
+  async function verwijderZiekmelding(id: number) {
+    try {
+      await verwijderZiekmeldingMut.mutateAsync({ id });
+      await queryClient.invalidateQueries({ queryKey: getListZiekmeldingenQueryKey() });
+      setVerwijderZiekId(null);
+      toast({ title: "Ziekmelding verwijderd" });
+    } catch {
+      toast({ title: "Verwijderen mislukt", variant: "destructive" });
+    }
+  }
+
   const [medewerkerOpen, setMedewerkerOpen] = useState(false);
   const [onboardOpen, setOnboardOpen] = useState(false);
   const [functieOpen, setFunctieOpen] = useState(false);
@@ -199,6 +251,12 @@ export default function PersoneelPagina() {
   const [opleidingBewerkenId, setOpleidingBewerkenId] = useState<number | null>(null);
   const [verwijderFunctieId, setVerwijderFunctieId] = useState<number | null>(null);
   const [verwijderOpleidingId, setVerwijderOpleidingId] = useState<number | null>(null);
+  const [ziekOpen, setZiekOpen] = useState(false);
+  const [ziekForm, setZiekForm] = useState<ZiekmeldingenInput>({
+    medewerker_id: 0,
+    start_datum: new Date().toISOString().slice(0, 10),
+  });
+  const [verwijderZiekId, setVerwijderZiekId] = useState<number | null>(null);
   const [werkgeverForm, setWerkgeverForm] = useState<WerkgeverInput>({
     naam: "",
     cao: "",
@@ -577,6 +635,7 @@ export default function PersoneelPagina() {
           <TabsTrigger value="opleidingen">Opleidingen</TabsTrigger>
           <TabsTrigger value="bekwaamheden">Bekwaamheden</TabsTrigger>
           <TabsTrigger value="verlof">Verlof</TabsTrigger>
+          <TabsTrigger value="ziekmeldingen">Ziekmeldingen</TabsTrigger>
         </TabsList>
 
         <TabsContent value="medewerkers" className="space-y-4">
@@ -1041,6 +1100,141 @@ export default function PersoneelPagina() {
               ))}
             </div>
           )}
+        </TabsContent>
+
+        {/* ── Ziekmeldingen ── */}
+        <TabsContent value="ziekmeldingen" className="space-y-4">
+          {magSchrijven && (
+            <div className="flex justify-end">
+              <Button
+                size="sm"
+                onClick={() => {
+                  setZiekForm({ medewerker_id: 0, start_datum: new Date().toISOString().slice(0, 10) });
+                  setZiekOpen(true);
+                }}
+              >
+                <HeartPulse className="h-4 w-4 mr-1" /> Ziekmelding registreren
+              </Button>
+            </div>
+          )}
+
+          {/* Actief ziek */}
+          {(() => {
+            const actief = (ziekmeldingen ?? []).filter(
+              (z) => z.status !== "hersteld" && (!z.eind_datum || z.eind_datum >= new Date().toISOString().slice(0, 10)),
+            );
+            return (
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <HeartPulse className="h-4 w-4 text-red-500" />
+                  <h2 className="text-sm font-semibold">Momenteel ziek</h2>
+                  {actief.length > 0 && <Badge variant="secondary" className="bg-red-100 text-red-700">{actief.length}</Badge>}
+                </div>
+                {actief.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">Geen medewerkers momenteel ziek gemeld.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {actief.map((z) => (
+                      <Card key={z.id}>
+                        <CardContent className="p-4 flex items-center justify-between gap-3 flex-wrap">
+                          <div className="min-w-0">
+                            <div className="font-medium">
+                              {z.medewerker_naam ?? `Medewerker #${z.medewerker_id}`}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              Ziek sinds {fmtDatum(z.start_datum)}
+                              {z.reden ? ` · ${z.reden}` : ""}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <Badge
+                              variant="outline"
+                              className={
+                                z.status === "langdurig"
+                                  ? "bg-red-100 text-red-700 border-red-200"
+                                  : "bg-orange-100 text-orange-700 border-orange-200"
+                              }
+                            >
+                              {z.status === "langdurig" ? "Langdurig" : "Gemeld"}
+                            </Badge>
+                            {magSchrijven && (
+                              <>
+                                {z.status !== "langdurig" && (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => markeerStatus(z.id, "langdurig")}
+                                  >
+                                    Langdurig
+                                  </Button>
+                                )}
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => markeerStatus(z.id, "hersteld")}
+                                >
+                                  <Check className="h-4 w-4 mr-1" /> Hersteld
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="text-destructive hover:text-destructive"
+                                  onClick={() => setVerwijderZiekId(z.id)}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </>
+                            )}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+
+          {/* Historisch */}
+          {(() => {
+            const hist = (ziekmeldingen ?? []).filter(
+              (z) => z.status === "hersteld" || (z.eind_datum && z.eind_datum < new Date().toISOString().slice(0, 10)),
+            );
+            if (hist.length === 0) return null;
+            return (
+              <div>
+                <h2 className="text-sm font-semibold mb-2 text-muted-foreground">Eerder hersteld</h2>
+                <div className="space-y-2">
+                  {hist.slice(0, 10).map((z) => (
+                    <Card key={z.id} className="opacity-70">
+                      <CardContent className="p-3 flex items-center justify-between gap-3 flex-wrap">
+                        <div className="min-w-0">
+                          <div className="font-medium text-sm">{z.medewerker_naam ?? `Medewerker #${z.medewerker_id}`}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {fmtDatum(z.start_datum)} – {fmtDatum(z.eind_datum)}
+                            {z.reden ? ` · ${z.reden}` : ""}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <Badge variant="outline" className="bg-green-100 text-green-700 border-green-200 text-xs">Hersteld</Badge>
+                          {magSchrijven && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-destructive hover:text-destructive"
+                              onClick={() => setVerwijderZiekId(z.id)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
         </TabsContent>
       </Tabs>
 
@@ -1603,6 +1797,96 @@ export default function PersoneelPagina() {
               onClick={() => verwijderOpleidingId !== null && verwijderOpleiding(verwijderOpleidingId)}
             >
               {verwijderOpleidingMut.isPending ? "Bezig…" : "Verwijderen"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Ziekmelding registreren */}
+      <Dialog open={ziekOpen} onOpenChange={setZiekOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader><DialogTitle>Ziekmelding registreren</DialogTitle></DialogHeader>
+          <div className="grid gap-3">
+            <div className="space-y-1.5">
+              <Label>Medewerker *</Label>
+              <select
+                className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm"
+                value={ziekForm.medewerker_id ?? ""}
+                onChange={(e) => setZiekForm({ ...ziekForm, medewerker_id: Number(e.target.value) })}
+              >
+                <option value="">Kies medewerker…</option>
+                {(medewerkers ?? []).map((m) => (
+                  <option key={m.id} value={m.id}>{m.naam}</option>
+                ))}
+              </select>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label>Startdatum *</Label>
+                <Input
+                  type="date"
+                  value={ziekForm.start_datum}
+                  onChange={(e) => setZiekForm({ ...ziekForm, start_datum: e.target.value })}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Einddatum (herstel)</Label>
+                <Input
+                  type="date"
+                  value={ziekForm.eind_datum ?? ""}
+                  onChange={(e) => setZiekForm({ ...ziekForm, eind_datum: e.target.value || undefined })}
+                />
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Reden</Label>
+              <select
+                className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm"
+                value={ziekForm.reden ?? ""}
+                onChange={(e) => setZiekForm({ ...ziekForm, reden: e.target.value || undefined })}
+              >
+                <option value="">Niet opgegeven</option>
+                <option value="ziekte">Ziekte</option>
+                <option value="letsel">Letsel / arbeidsongeval</option>
+                <option value="zwangerschap">Zwangerschap / bevalling</option>
+                <option value="burn-out">Burn-out / overspanning</option>
+                <option value="operatie">Operatie / herstel</option>
+                <option value="overig">Overig</option>
+              </select>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Toelichting</Label>
+              <Input
+                placeholder="Optionele toelichting voor intern gebruik"
+                value={ziekForm.omschrijving ?? ""}
+                onChange={(e) => setZiekForm({ ...ziekForm, omschrijving: e.target.value || undefined })}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setZiekOpen(false)}>Annuleren</Button>
+            <Button disabled={maakZiekmelding.isPending} onClick={slaZiekmeldingOp}>
+              {maakZiekmelding.isPending ? "Bezig…" : "Opslaan"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Ziekmelding verwijderen */}
+      <Dialog open={verwijderZiekId !== null} onOpenChange={(o) => !o && setVerwijderZiekId(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader><DialogTitle>Ziekmelding verwijderen</DialogTitle></DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Weet je zeker dat je deze ziekmelding wilt verwijderen? Dit kan niet ongedaan worden gemaakt.
+          </p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setVerwijderZiekId(null)}>Annuleren</Button>
+            <Button
+              variant="destructive"
+              disabled={verwijderZiekmeldingMut.isPending}
+              onClick={() => verwijderZiekId !== null && verwijderZiekmelding(verwijderZiekId)}
+            >
+              {verwijderZiekmeldingMut.isPending ? "Bezig…" : "Verwijderen"}
             </Button>
           </DialogFooter>
         </DialogContent>

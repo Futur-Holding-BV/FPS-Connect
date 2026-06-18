@@ -1,13 +1,24 @@
 import { useTranslation } from "react-i18next";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   useGetDashboardStats,
   useGetRecenteActiviteit,
   useGetStatusVerdeling,
   useGetVervaldagen,
+  useListAlleVerlofAanvragen,
+  useGetZiekmeldingenStatistieken,
 } from "@workspace/api-client-react";
-import { Building, ShieldCheck, AlertTriangle, Calendar, TrendingUp, CheckCircle, XCircle, Clock } from "lucide-react";
+import {
+  Building, ShieldCheck, AlertTriangle, Calendar, TrendingUp, Clock,
+  Users, HeartPulse, ChevronRight,
+} from "lucide-react";
+import { useRol } from "@/context/rol-context";
+import { Link } from "wouter";
+import {
+  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
+} from "recharts";
 
 const STATUSKLEUR: Record<string, string> = {
   goedgekeurd:   "bg-green-100 text-green-800",
@@ -27,12 +38,30 @@ const STATUSLABEL: Record<string, string> = {
   concept:       "Concept",
 };
 
+const MAAND_KORT = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Aug", "Sep", "Okt", "Nov", "Dec"];
+
+const ZIEKTE_STATUS_KLEUR: Record<string, string> = {
+  gemeld:    "bg-orange-100 text-orange-700",
+  langdurig: "bg-red-100 text-red-700",
+  hersteld:  "bg-green-100 text-green-700",
+};
+
 export default function BeheerderDashboard() {
   const { t } = useTranslation();
+  const { echteRol, bevoegdheden } = useRol();
+
   const { data: stats } = useGetDashboardStats();
   const { data: activiteit } = useGetRecenteActiviteit();
   const { data: verdeling } = useGetStatusVerdeling();
   const { data: vervaldagen } = useGetVervaldagen();
+
+  const magHrm = echteRol === "hoofdbeheerder" || (bevoegdheden.personeel ?? 0) >= 1;
+  const magVerlof = magHrm || (bevoegdheden.planning ?? 0) >= 1;
+
+  const { data: verlofAanvragen } = useListAlleVerlofAanvragen(
+    { status: "aangevraagd" },
+  );
+  const { data: ziekStats } = useGetZiekmeldingenStatistieken();
 
   const statusTotalen = (verdeling ?? []).reduce(
     (acc, v) => {
@@ -59,6 +88,20 @@ export default function BeheerderDashboard() {
     { label: "Afgekeurde inspecties",waarde: stats?.vervallen_inspecties ?? 0, icoon: Calendar,      kleur: "text-destructive" },
   ];
 
+  // Grafiekdata: combineer eigen maanden + nationaal benchmark
+  const chartData = MAAND_KORT.map((naam, i) => {
+    const maandNr = i + 1;
+    const eigen = ziekStats?.maanden.find((m) => m.maand === maandNr);
+    const nationaal = ziekStats?.nationaal.find((n) => n.maand === maandNr);
+    return {
+      naam,
+      eigen: eigen?.percentage ?? null,
+      nationaal: nationaal?.percentage ?? null,
+    };
+  });
+
+  const openVerlofAanvragen = verlofAanvragen ?? [];
+
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
       <div>
@@ -80,6 +123,138 @@ export default function BeheerderDashboard() {
           </Card>
         ))}
       </div>
+
+      {/* HRM signaleringen (verlof + ziekte) */}
+      {(magVerlof || magHrm) && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Verlofaanvragen */}
+          {magVerlof && (
+            <Card className={openVerlofAanvragen.length > 0 ? "border-amber-200" : ""}>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Clock className="h-4 w-4 text-amber-600" />
+                  Verlofaanvragen
+                </CardTitle>
+                {openVerlofAanvragen.length > 0 && (
+                  <Badge className="bg-amber-100 text-amber-700 border-amber-200">
+                    {openVerlofAanvragen.length} open
+                  </Badge>
+                )}
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {openVerlofAanvragen.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">Geen openstaande aanvragen.</p>
+                ) : (
+                  <>
+                    <div className="space-y-2">
+                      {openVerlofAanvragen.slice(0, 5).map((a) => (
+                        <div key={a.id} className="flex items-center justify-between border-b pb-1.5 last:border-0">
+                          <div>
+                            <div className="text-sm font-medium">{a.medewerker_naam ?? "—"}</div>
+                            <div className="text-xs text-muted-foreground">
+                              {a.start_datum} t/m {a.eind_datum}
+                              {a.verlofsoort_naam ? ` · ${a.verlofsoort_naam}` : ""}
+                            </div>
+                          </div>
+                          <Badge variant="outline" className="text-xs bg-amber-50 border-amber-200 text-amber-700 shrink-0">
+                            In behandeling
+                          </Badge>
+                        </div>
+                      ))}
+                    </div>
+                    {openVerlofAanvragen.length > 5 && (
+                      <p className="text-xs text-muted-foreground">
+                        +{openVerlofAanvragen.length - 5} meer
+                      </p>
+                    )}
+                    <div className="pt-1">
+                      <Link href="/personeel?tab=verlof">
+                        <Button variant="outline" size="sm" className="gap-1 w-full text-xs">
+                          Beoordelen in Personeel <ChevronRight className="h-3 w-3" />
+                        </Button>
+                      </Link>
+                    </div>
+                  </>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Ziekteverzuim */}
+          {magHrm && ziekStats && (
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <HeartPulse className="h-4 w-4 text-red-500" />
+                  Ziekteverzuim
+                </CardTitle>
+                <Badge
+                  className={
+                    (ziekStats.verzuimpercentage_huidig ?? 0) > 5
+                      ? "bg-red-100 text-red-700 border-red-200"
+                      : "bg-green-100 text-green-700 border-green-200"
+                  }
+                >
+                  {ziekStats.verzuimpercentage_huidig}% nu
+                </Badge>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="grid grid-cols-3 gap-2 text-center">
+                  <div>
+                    <div className="text-2xl font-bold text-red-600">{ziekStats.huidig_ziek}</div>
+                    <div className="text-xs text-muted-foreground">Nu ziek</div>
+                  </div>
+                  <div>
+                    <div className="text-2xl font-bold">{ziekStats.verzuimpercentage_huidig}%</div>
+                    <div className="text-xs text-muted-foreground">Huidig %</div>
+                  </div>
+                  <div>
+                    <div className="text-2xl font-bold">{ziekStats.gemiddeld_dit_jaar}%</div>
+                    <div className="text-xs text-muted-foreground">Gem. dit jaar</div>
+                  </div>
+                </div>
+                <div className="h-40">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={chartData} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                      <XAxis dataKey="naam" tick={{ fontSize: 10 }} />
+                      <YAxis tickFormatter={(v) => `${v}%`} tick={{ fontSize: 10 }} domain={[0, "auto"]} />
+                      <Tooltip formatter={(v: number) => [`${v}%`]} />
+                      <Legend iconSize={10} wrapperStyle={{ fontSize: 11 }} />
+                      <Line
+                        type="monotone"
+                        dataKey="eigen"
+                        name="FPS"
+                        stroke="#e54a2e"
+                        strokeWidth={2}
+                        dot={false}
+                        connectNulls
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="nationaal"
+                        name="Landelijk (bouw)"
+                        stroke="#94a3b8"
+                        strokeWidth={1.5}
+                        strokeDasharray="4 2"
+                        dot={false}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Landelijke referentie: CBS bouwnijverheid &amp; techniek (meerjaarlijks gemiddelde).
+                </p>
+                <Link href="/personeel?tab=ziekmeldingen">
+                  <Button variant="outline" size="sm" className="gap-1 w-full text-xs">
+                    Ziekmeldingen beheren <ChevronRight className="h-3 w-3" />
+                  </Button>
+                </Link>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
         {/* Statusverdeling */}

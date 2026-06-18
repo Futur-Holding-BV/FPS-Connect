@@ -191,7 +191,7 @@ function KlantPortal() {
 
 function PermissieDashboard() {
   const { bevoegdheden } = useRol();
-  const isBeheerGericht = (bevoegdheden.gebouwen ?? 0) >= 1;
+  const isBeheerGericht = (bevoegdheden.gebouwen ?? 0) >= 1 || (bevoegdheden.personeel ?? 0) >= 1 || (bevoegdheden.planning ?? 0) >= 1;
   return isBeheerGericht ? <BeheerderDashboard /> : <MonteurDashboard />;
 }
 
