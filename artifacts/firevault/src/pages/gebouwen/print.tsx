@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from "react";
-import { useParams, Link } from "wouter";
+import { useParams, Link, useSearch } from "wouter";
 import * as pdfjsLib from "pdfjs-dist";
 import pdfWorkerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 import {
@@ -21,6 +21,8 @@ import {
   useListClusters,
   useListSpotOnderdelen,
   useBewaarOpleverrapport,
+  useGetRapport,
+  useUpdateRapport,
   type Verdieping,
   type VoorzieningType,
   type Cluster,
@@ -30,7 +32,7 @@ import { useAuth } from "@/context/auth-context";
 import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
 import { useToast } from "@/hooks/use-toast";
 import { useUpload } from "@workspace/object-storage-web";
-import { ArrowLeft, Printer, Loader2, Save, ChevronDown, ChevronRight, Settings2, Mail } from "lucide-react";
+import { ArrowLeft, Printer, Loader2, Save, ChevronDown, ChevronRight, Settings2, Mail, Lock } from "lucide-react";
 import { resolveAssetUrl } from "@/components/documentopmaak";
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
@@ -1123,6 +1125,12 @@ async function sha256Hex(buf: ArrayBuffer): Promise<string> {
 export default function GebouwPrint() {
   const { id } = useParams<{ id: string }>();
   const gebouwId = Number(id);
+  const zoekParams = useSearch();
+  const rapportId = useMemo(() => {
+    const p = new URLSearchParams(zoekParams);
+    const v = p.get("rapport_id");
+    return v ? Number(v) : null;
+  }, [zoekParams]);
   const { gebruiker } = useAuth();
   const { heeftNiveau } = useBevoegdheid();
   const { toast } = useToast();
@@ -1143,6 +1151,8 @@ export default function GebouwPrint() {
   const { data: typen, isLoading: typenLaden }                = useListVoorzieningTypes();
   const { data: clusters, isLoading: clustersLaden }          = useListClusters(gebouwId);
   const { isLoading: gebruikersLaden }      = useListToewijsbareGebruikers();
+  const { data: huidigRapport }             = useGetRapport(gebouwId, rapportId ?? 0);
+  const updateRapport = useUpdateRapport();
 
   const typeNaam = useMemo(
     () => Object.fromEntries(((typen ?? []) as VoorzieningType[]).map((t) => [t.code, t.naam])),
@@ -1150,7 +1160,8 @@ export default function GebouwPrint() {
   );
 
   const [gereedFloors, setGereedFloors] = useState(0);
-  const gedrukt = useRef(false);
+  const rapportIsLadenRef = useRef(false);
+  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [rapportType, setRapportType] = useState<RapportType>("opleverrapport");
   const [secties, setSecties] = useState<Sectiesleutels>(PRESET_SECTIES["opleverrapport"]);
@@ -1204,14 +1215,82 @@ export default function GebouwPrint() {
     !tekeningenLaden && !emailsLaden && !gevelbeeldLaden && !documentenLaden && !typenLaden && !clustersLaden && !gebruikersLaden &&
     gereedFloors >= aantalFloors;
 
+  // Initializeer composer-state vanuit opgeslagen concept-rapport (wanneer rapport_id in URL staat)
   useEffect(() => {
-    if (allesGereed && !gedrukt.current) {
-      gedrukt.current = true;
-      const t = setTimeout(() => window.print(), 700);
-      return () => clearTimeout(t);
+    if (!huidigRapport || !rapportId) return;
+    rapportIsLadenRef.current = true;
+    tekeningenInitRef.current = true; // voorkom dat tekeningen-init de selectie overschrijft
+
+    const raw = (huidigRapport.secties ?? {}) as Record<string, unknown>;
+
+    // Secties (boolean-velden) + rapporttype
+    const geladen: Sectiesleutels = { ...PRESET_SECTIES["opleverrapport"] };
+    for (const sleutel of SECTIES_VOLGORDE) {
+      if (typeof raw[sleutel] === "boolean") (geladen as Record<string, boolean>)[sleutel] = raw[sleutel] as boolean;
     }
-    return undefined;
-  }, [allesGereed]);
+    setSecties(geladen);
+    const type = huidigRapport.rapport_type as RapportType;
+    if ((["werkpakket_monteur","voortgang","opleverrapport","opleverdossier"] as string[]).includes(type)) {
+      setRapportType(type);
+    }
+
+    // Spot-selectie
+    const savedSpots = (huidigRapport.spot_selectie ?? {}) as Record<string, number[]>;
+    const spotSel: Record<number, Set<number> | undefined> = {};
+    for (const [vid, ids] of Object.entries(savedSpots)) {
+      if (Array.isArray(ids) && ids.length > 0) spotSel[Number(vid)] = new Set(ids);
+    }
+    setSpotSelectie(spotSel);
+
+    // Tekeningen & bijlagen
+    const tekIds = Array.isArray(huidigRapport.tekening_ids) ? (huidigRapport.tekening_ids as number[]) : [];
+    const bijIds = Array.isArray(huidigRapport.bijlagen_ids) ? (huidigRapport.bijlagen_ids as number[]) : [];
+    if (tekIds.length > 0) setGeselecteerdeTekeningen(new Set(tekIds));
+    if (bijIds.length > 0) setGeselecteerdeBijlagen(new Set(bijIds));
+
+    // E-mails (opgeslagen als speciale velden in secties JSONB)
+    const emailModusOp = raw["_emailModus"];
+    const emailIdsOp = Array.isArray(raw["_emailIds"]) ? (raw["_emailIds"] as number[]) : [];
+    if (emailModusOp === "handmatig") {
+      setEmailModus("handmatig");
+      setHandmatigeEmailSelectie(new Set(emailIdsOp));
+    } else {
+      setEmailModus("ai");
+    }
+
+    setTimeout(() => { rapportIsLadenRef.current = false; }, 300);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [huidigRapport?.id, rapportId]);
+
+  // Auto-save: sla composer-state op in het gekoppelde concept-rapport (debounce 1.5s)
+  useEffect(() => {
+    if (!rapportId || rapportIsLadenRef.current || huidigRapport?.status !== "concept") return;
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    saveTimeoutRef.current = setTimeout(() => {
+      if (!rapportId) return;
+      const sectiesMetEmail = {
+        ...secties,
+        _emailModus: emailModus,
+        _emailIds: Array.from(handmatigeEmailSelectie),
+      };
+      const spotSel: Record<string, number[]> = {};
+      for (const [vid, set] of Object.entries(spotSelectie)) {
+        if (set && set.size > 0) spotSel[String(vid)] = Array.from(set);
+      }
+      updateRapport.mutate({
+        id: gebouwId,
+        rapportId,
+        data: {
+          secties: sectiesMetEmail,
+          spot_selectie: spotSel,
+          bijlagen_ids: Array.from(geselecteerdeBijlagen),
+          tekening_ids: Array.from(geselecteerdeTekeningen),
+        },
+      });
+    }, 1500);
+    return () => { if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [secties, spotSelectie, geselecteerdeTekeningen, geselecteerdeBijlagen, emailModus, handmatigeEmailSelectie, rapportId, huidigRapport?.status]);
 
   if (isLoading) {
     return (
@@ -1622,10 +1701,22 @@ export default function GebouwPrint() {
           <Button variant="outline" size="sm"><ArrowLeft className="h-4 w-4" /> Terug</Button>
         </Link>
         <div className="prt-topbar-midden">
-          {RAPPORT_TYPE_LABEL[rapportType]}
-          <span className="prt-concept-badge">Concept</span>
+          {huidigRapport
+            ? (huidigRapport.titel || RAPPORT_TYPE_LABEL[rapportType])
+            : RAPPORT_TYPE_LABEL[rapportType]}
+          {huidigRapport?.status === "definitief"
+            ? <span className="prt-concept-badge" style={{ background: "#dcfce7", color: "#15803d", borderColor: "#bbf7d0" }}><Lock className="h-2.5 w-2.5" style={{ display: "inline", verticalAlign: "middle" }} /> Definitief</span>
+            : <span className="prt-concept-badge">Concept</span>}
+          {rapportId && updateRapport.isPending && (
+            <span style={{ fontSize: 10, color: "#94a3b8", marginLeft: 4 }}>Opslaan…</span>
+          )}
         </div>
         <div className="prt-topbar-acties">
+          {rapportId && huidigRapport?.status === "concept" && (
+            <span style={{ fontSize: 11, color: "#64748b", alignSelf: "center" }}>
+              Selectie wordt automatisch opgeslagen
+            </span>
+          )}
           {magOpslaanInDms && (
             <Button size="sm" variant="outline" onClick={slaOpInDms} disabled={!allesGereed || bezigOpslaan}>
               {bezigOpslaan ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}

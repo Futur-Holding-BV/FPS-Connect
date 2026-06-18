@@ -48,6 +48,7 @@ import {
   Archive,
   Printer,
   AlertCircle,
+  PenLine,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { getListGebouwRapportenQueryKey } from "@workspace/api-client-react";
@@ -280,10 +281,26 @@ export default function GebouwRapporten({ gebouwId, isBeheerder }: { gebouwId: n
                     </div>
                   </div>
 
-                  {isBeheerder && (
-                    <div className="flex items-center gap-1 shrink-0">
-                      {r.status === "concept" && (
-                        <>
+                  <div className="flex items-center gap-1 shrink-0">
+                    {r.status === "concept" && (
+                      <Link href={`/gebouwen/${gebouwId}/print?rapport_id=${r.id}`}>
+                        <Button size="sm" variant="outline" className="gap-1.5 text-xs">
+                          <PenLine className="h-3.5 w-3.5" />
+                          Samenstellen
+                        </Button>
+                      </Link>
+                    )}
+                    {r.status === "definitief" && (
+                      <Link href={`/gebouwen/${gebouwId}/print?rapport_id=${r.id}`}>
+                        <Button size="sm" variant="outline" className="gap-1.5 text-xs">
+                          <Printer className="h-3.5 w-3.5" />
+                          Bekijken
+                        </Button>
+                      </Link>
+                    )}
+                    {isBeheerder && (
+                      <>
+                        {r.status === "concept" && (
                           <Button
                             size="sm"
                             variant="outline"
@@ -297,6 +314,8 @@ export default function GebouwRapporten({ gebouwId, isBeheerder }: { gebouwId: n
                             <Lock className="h-3.5 w-3.5" />
                             Definitief
                           </Button>
+                        )}
+                        {r.status === "concept" && (
                           <Button
                             size="sm"
                             variant="ghost"
@@ -308,10 +327,10 @@ export default function GebouwRapporten({ gebouwId, isBeheerder }: { gebouwId: n
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
-                        </>
-                      )}
-                    </div>
-                  )}
+                        )}
+                      </>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
