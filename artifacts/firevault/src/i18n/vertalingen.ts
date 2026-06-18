@@ -53,7 +53,7 @@ export const vertalingen: Record<TaalCode, Boom> = {
     "nav.inUitvoering": "In uitvoering",
     "nav.organisatie": "Organisatie",
     "nav.personeel": "Personeel / HRM",
-    "nav.dossiers": "Dossiers",
+    "nav.dossiers": "Documenten",
     "nav.offertes": "Offertes",
     "nav.mijnOpdrachten": "Mijn opdrachten",
     "nav.werkbonnen": "Werkbonnen",

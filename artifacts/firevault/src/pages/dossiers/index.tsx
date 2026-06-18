@@ -6,7 +6,6 @@ import {
   useDossierDefinitiefMaken,
   useDossierArchiveren,
   useListDossierDocumenten,
-  useListGebouwen,
   getListDossiersQueryKey,
 } from "@workspace/api-client-react";
 import type { Dossier, DossierInput, DossierDocument } from "@workspace/api-client-react";
@@ -36,7 +35,17 @@ import {
   Files,
 } from "lucide-react";
 
-const TYPES = ["algemeen", "project", "gebouw", "kwaliteit", "incident"] as const;
+const TYPES = [
+  { waarde: "handboek",  label: "Handboek" },
+  { waarde: "instructie", label: "Instructie" },
+  { waarde: "procedure",  label: "Procedure" },
+  { waarde: "beleid",    label: "Beleid" },
+  { waarde: "kwaliteit", label: "Kwaliteitsdocument" },
+  { waarde: "incident",  label: "Incident" },
+  { waarde: "algemeen",  label: "Algemeen" },
+] as const;
+
+const TYPE_LABEL: Record<string, string> = Object.fromEntries(TYPES.map((t) => [t.waarde, t.label]));
 
 const STATUS_KLEUR: Record<string, string> = {
   concept: "bg-amber-100 text-amber-800 border-amber-200",
@@ -44,9 +53,15 @@ const STATUS_KLEUR: Record<string, string> = {
   gearchiveerd: "bg-muted text-muted-foreground border-border",
 };
 
+const STATUS_LABEL: Record<string, string> = {
+  concept: "Concept",
+  definitief: "Definitief",
+  gearchiveerd: "Gearchiveerd",
+};
+
 const LEEG: DossierInput = {
   naam: "",
-  type: "algemeen",
+  type: "handboek",
   omschrijving: "",
 };
 
@@ -54,7 +69,6 @@ export default function DossiersPagina() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { data: dossiers, isLoading } = useListDossiers();
-  const { data: gebouwen } = useListGebouwen();
   const maakDossier = useCreateDossier();
   const definitiefMaken = useDossierDefinitiefMaken();
   const archiveren = useDossierArchiveren();
@@ -67,7 +81,7 @@ export default function DossiersPagina() {
   const gefilterd = (dossiers ?? []).filter((d) => {
     const t = zoek.trim().toLowerCase();
     if (!t) return true;
-    return d.naam.toLowerCase().includes(t) || (d.gebouw_naam ?? "").toLowerCase().includes(t);
+    return d.naam.toLowerCase().includes(t) || (d.omschrijving ?? "").toLowerCase().includes(t);
   });
 
   async function herlaad() {
@@ -84,7 +98,6 @@ export default function DossiersPagina() {
         naam: form.naam.trim(),
         type: form.type,
         omschrijving: form.omschrijving?.trim() || undefined,
-        gebouw_id: form.gebouw_id ?? undefined,
       };
       await maakDossier.mutateAsync({ data: schoon });
       await herlaad();
@@ -120,19 +133,19 @@ export default function DossiersPagina() {
     <div className="max-w-6xl mx-auto space-y-6">
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Dossiers</h1>
+          <h1 className="text-2xl font-bold text-foreground">Organisatiedocumenten</h1>
           <p className="text-sm text-muted-foreground">
-            Centrale dossiers met statussturing en documentbevriezing.
+            Handboeken, instructies, procedures en beleidsdocumenten voor de organisatie.
           </p>
         </div>
         <Button onClick={() => setOpen(true)}>
-          <Plus className="h-4 w-4" /> Nieuw dossier
+          <Plus className="h-4 w-4" /> Nieuw document
         </Button>
       </div>
 
       <div className="relative max-w-sm">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input placeholder="Zoek op naam of gebouw…" value={zoek} onChange={(e) => setZoek(e.target.value)} className="pl-9" />
+        <Input placeholder="Zoek op naam of omschrijving…" value={zoek} onChange={(e) => setZoek(e.target.value)} className="pl-9" />
       </div>
 
       {isLoading ? (
@@ -142,7 +155,7 @@ export default function DossiersPagina() {
       ) : gefilterd.length === 0 ? (
         <Card><CardContent className="py-12 text-center text-muted-foreground">
           <FolderOpen className="h-10 w-10 mx-auto mb-3 opacity-40" />
-          <p>Geen dossiers gevonden.</p>
+          <p>Geen organisatiedocumenten gevonden.</p>
         </CardContent></Card>
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -156,12 +169,11 @@ export default function DossiersPagina() {
                     </div>
                     <div className="min-w-0">
                       <div className="font-semibold truncate">{d.naam}</div>
-                      <div className="text-xs text-muted-foreground">{d.type}</div>
+                      <div className="text-xs text-muted-foreground">{TYPE_LABEL[d.type] ?? d.type}</div>
                     </div>
                   </div>
-                  <Badge variant="outline" className={STATUS_KLEUR[d.status] ?? ""}>{d.status}</Badge>
+                  <Badge variant="outline" className={STATUS_KLEUR[d.status] ?? ""}>{STATUS_LABEL[d.status] ?? d.status}</Badge>
                 </div>
-                {d.gebouw_naam && <div className="text-xs text-muted-foreground">Gebouw: {d.gebouw_naam}</div>}
                 {d.omschrijving && <p className="text-xs text-muted-foreground line-clamp-2">{d.omschrijving}</p>}
                 {d.definitief_op && (
                   <div className="text-xs text-muted-foreground flex items-center gap-1.5">
@@ -197,36 +209,24 @@ export default function DossiersPagina() {
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-lg">
-          <DialogHeader><DialogTitle>Nieuw dossier</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>Nieuw organisatiedocument</DialogTitle></DialogHeader>
           <div className="space-y-3">
             <div className="space-y-1.5">
               <Label>Naam *</Label>
-              <Input value={form.naam} onChange={(e) => setForm({ ...form, naam: e.target.value })} />
+              <Input value={form.naam} onChange={(e) => setForm({ ...form, naam: e.target.value })} placeholder="bijv. Veiligheidshandboek 2025" />
             </div>
             <div className="space-y-1.5">
-              <Label>Type</Label>
+              <Label>Categorie</Label>
               <Select value={form.type} onValueChange={(v) => setForm({ ...form, type: v })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {TYPES.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label>Gebouw (optioneel)</Label>
-              <Select
-                value={form.gebouw_id ? String(form.gebouw_id) : undefined}
-                onValueChange={(v) => setForm({ ...form, gebouw_id: Number(v) })}
-              >
-                <SelectTrigger><SelectValue placeholder="Geen koppeling" /></SelectTrigger>
-                <SelectContent>
-                  {(gebouwen ?? []).map((g) => <SelectItem key={g.id} value={String(g.id)}>{g.naam}</SelectItem>)}
+                  {TYPES.map((t) => <SelectItem key={t.waarde} value={t.waarde}>{t.label}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-1.5">
               <Label>Omschrijving</Label>
-              <Textarea value={form.omschrijving ?? ""} onChange={(e) => setForm({ ...form, omschrijving: e.target.value })} />
+              <Textarea value={form.omschrijving ?? ""} onChange={(e) => setForm({ ...form, omschrijving: e.target.value })} placeholder="Korte toelichting op de inhoud en het gebruik…" />
             </div>
           </div>
           <DialogFooter>
