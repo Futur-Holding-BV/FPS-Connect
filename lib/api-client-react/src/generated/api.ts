@@ -3625,6 +3625,88 @@ export const useMaakRapportDefinitief = <TError = ErrorType<void>,
       return useMutation(getMaakRapportDefinitiefMutationOptions(options));
     }
 
+export const getGetOpleverrapportBijlagenbundelUrl = (id: number,
+    rapportId: number,) => {
+
+
+
+
+  return `/api/gebouwen/${id}/rapporten/${rapportId}/bijlagenbundel`
+}
+
+/**
+ * @summary Bijlagenbundel als PDF genereren (geselecteerde bijlagen per rapport)
+ */
+export const getOpleverrapportBijlagenbundel = async (id: number,
+    rapportId: number, options?: RequestInit): Promise<Blob> => {
+
+  return customFetch<Blob>(getGetOpleverrapportBijlagenbundelUrl(id,rapportId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetOpleverrapportBijlagenbundelQueryKey = (id: number,
+    rapportId: number,) => {
+    return [
+    `/api/gebouwen/${id}/rapporten/${rapportId}/bijlagenbundel`
+    ] as const;
+    }
+
+
+export const getGetOpleverrapportBijlagenbundelQueryOptions = <TData = Awaited<ReturnType<typeof getOpleverrapportBijlagenbundel>>, TError = ErrorType<void>>(id: number,
+    rapportId: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getOpleverrapportBijlagenbundel>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetOpleverrapportBijlagenbundelQueryKey(id,rapportId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getOpleverrapportBijlagenbundel>>> = ({ signal }) => getOpleverrapportBijlagenbundel(id,rapportId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined && rapportId !== null && rapportId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getOpleverrapportBijlagenbundel>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetOpleverrapportBijlagenbundelQueryResult = NonNullable<Awaited<ReturnType<typeof getOpleverrapportBijlagenbundel>>>
+export type GetOpleverrapportBijlagenbundelQueryError = ErrorType<void>
+
+
+/**
+ * @summary Bijlagenbundel als PDF genereren (geselecteerde bijlagen per rapport)
+ */
+
+export function useGetOpleverrapportBijlagenbundel<TData = Awaited<ReturnType<typeof getOpleverrapportBijlagenbundel>>, TError = ErrorType<void>>(
+ id: number,
+    rapportId: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getOpleverrapportBijlagenbundel>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetOpleverrapportBijlagenbundelQueryOptions(id,rapportId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
 export const getListVoorzieningenUrl = (params?: ListVoorzieningenParams,) => {
   const normalizedParams = new URLSearchParams();
 

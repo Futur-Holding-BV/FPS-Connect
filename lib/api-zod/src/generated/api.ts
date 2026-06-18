@@ -1180,6 +1180,17 @@ export const MaakRapportDefinitiefResponse = zod.object({
 
 
 /**
+ * @summary Bijlagenbundel als PDF genereren (geselecteerde bijlagen per rapport)
+ */
+export const GetOpleverrapportBijlagenbundelParams = zod.object({
+  "id": zod.coerce.number(),
+  "rapportId": zod.coerce.number()
+})
+
+export const GetOpleverrapportBijlagenbundelResponse = zod.unknown()
+
+
+/**
  * @summary Lijst van brandpreventieve voorzieningen
  */
 export const listVoorzieningenQueryPaginaDefault = 1;

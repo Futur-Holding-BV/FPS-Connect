@@ -32,7 +32,7 @@ import { useAuth } from "@/context/auth-context";
 import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
 import { useToast } from "@/hooks/use-toast";
 import { useUpload } from "@workspace/object-storage-web";
-import { ArrowLeft, Printer, Loader2, Save, ChevronDown, ChevronRight, Settings2, Mail, Lock } from "lucide-react";
+import { ArrowLeft, Printer, Loader2, Save, ChevronDown, ChevronRight, Settings2, Mail, Lock, LayoutTemplate, Download } from "lucide-react";
 import { resolveAssetUrl } from "@/components/documentopmaak";
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
@@ -172,41 +172,98 @@ type Sectiesleutels = {
   juridisch:           boolean;
   plattegronden:       boolean;
   spotdetails:         boolean;
-  fotos:               boolean;
+  foto_voor:           boolean;
+  foto_na:             boolean;
   eta_certificaten:    boolean;
   tekeningen:          boolean;
   bijlagen:            boolean;
   relevante_emails:    boolean;
   onderhoud:           boolean;
   inspecties:          boolean;
+  certificaat:         boolean;
 };
 
 const PRESET_SECTIES: Record<RapportType, Sectiesleutels> = {
   werkpakket_monteur: {
     voorblad: true, projectomschrijving: true, juridisch: false,
-    plattegronden: true, spotdetails: true, fotos: true,
+    plattegronden: true, spotdetails: true, foto_voor: true, foto_na: true,
     eta_certificaten: false, tekeningen: false, bijlagen: false,
-    relevante_emails: true, onderhoud: true, inspecties: false,
+    relevante_emails: true, onderhoud: true, inspecties: false, certificaat: false,
   },
   voortgang: {
     voorblad: true, projectomschrijving: true, juridisch: false,
-    plattegronden: true, spotdetails: false, fotos: false,
+    plattegronden: true, spotdetails: false, foto_voor: false, foto_na: false,
     eta_certificaten: false, tekeningen: false, bijlagen: false,
-    relevante_emails: false, onderhoud: true, inspecties: true,
+    relevante_emails: false, onderhoud: true, inspecties: true, certificaat: false,
   },
   opleverrapport: {
     voorblad: true, projectomschrijving: true, juridisch: true,
-    plattegronden: true, spotdetails: true, fotos: true,
+    plattegronden: true, spotdetails: true, foto_voor: true, foto_na: true,
     eta_certificaten: true, tekeningen: true, bijlagen: true,
-    relevante_emails: true, onderhoud: false, inspecties: false,
+    relevante_emails: true, onderhoud: false, inspecties: false, certificaat: true,
   },
   opleverdossier: {
     voorblad: true, projectomschrijving: true, juridisch: true,
-    plattegronden: true, spotdetails: true, fotos: true,
+    plattegronden: true, spotdetails: true, foto_voor: true, foto_na: true,
     eta_certificaten: true, tekeningen: true, bijlagen: true,
-    relevante_emails: true, onderhoud: true, inspecties: true,
+    relevante_emails: true, onderhoud: true, inspecties: true, certificaat: true,
   },
 };
+
+type RapportModel = { id: string; label: string; secties: Sectiesleutels };
+
+const RAPPORT_MODELLEN: RapportModel[] = [
+  {
+    id: "volledig",
+    label: "Volledig rapport",
+    secties: {
+      voorblad: true, projectomschrijving: true, juridisch: true,
+      plattegronden: true, spotdetails: true, foto_voor: true, foto_na: true,
+      eta_certificaten: true, tekeningen: true, bijlagen: true,
+      relevante_emails: true, onderhoud: false, inspecties: false, certificaat: true,
+    },
+  },
+  {
+    id: "enkel_fotos",
+    label: "Enkel foto's",
+    secties: {
+      voorblad: true, projectomschrijving: false, juridisch: false,
+      plattegronden: false, spotdetails: true, foto_voor: true, foto_na: true,
+      eta_certificaten: false, tekeningen: false, bijlagen: false,
+      relevante_emails: false, onderhoud: false, inspecties: false, certificaat: false,
+    },
+  },
+  {
+    id: "enkel_tekeningen",
+    label: "Enkel tekeningen",
+    secties: {
+      voorblad: true, projectomschrijving: false, juridisch: false,
+      plattegronden: false, spotdetails: false, foto_voor: false, foto_na: false,
+      eta_certificaten: false, tekeningen: true, bijlagen: false,
+      relevante_emails: false, onderhoud: false, inspecties: false, certificaat: false,
+    },
+  },
+  {
+    id: "zonder_voorfoto",
+    label: "Compleet zonder voorfoto",
+    secties: {
+      voorblad: true, projectomschrijving: true, juridisch: true,
+      plattegronden: true, spotdetails: true, foto_voor: false, foto_na: true,
+      eta_certificaten: true, tekeningen: true, bijlagen: true,
+      relevante_emails: true, onderhoud: false, inspecties: false, certificaat: true,
+    },
+  },
+  {
+    id: "enkel_nafoto",
+    label: "Enkel nafoto's",
+    secties: {
+      voorblad: true, projectomschrijving: false, juridisch: false,
+      plattegronden: false, spotdetails: true, foto_voor: false, foto_na: true,
+      eta_certificaten: false, tekeningen: false, bijlagen: false,
+      relevante_emails: false, onderhoud: false, inspecties: false, certificaat: false,
+    },
+  },
+];
 
 const SECTIES_LABELS: Record<keyof Sectiesleutels, string> = {
   voorblad:            "Voorblad",
@@ -214,19 +271,22 @@ const SECTIES_LABELS: Record<keyof Sectiesleutels, string> = {
   juridisch:           "Juridische toelichting",
   plattegronden:       "Plattegronden",
   spotdetails:         "Spot-detailpagina's",
-  fotos:               "Foto's",
+  foto_voor:           "Foto's voor",
+  foto_na:             "Foto's na",
   eta_certificaten:    "ETA's / certificaten",
   tekeningen:          "Tekeningen",
   bijlagen:            "Bijlagen (DMS)",
   relevante_emails:    "Relevante e-mails",
   onderhoud:           "Onderhoud",
   inspecties:          "Inspecties",
+  certificaat:         "FPS Certificaat",
 };
 
 const SECTIES_VOLGORDE: (keyof Sectiesleutels)[] = [
   "voorblad", "projectomschrijving", "juridisch",
-  "plattegronden", "spotdetails", "fotos", "eta_certificaten",
+  "plattegronden", "spotdetails", "foto_voor", "foto_na", "eta_certificaten",
   "tekeningen", "bijlagen", "relevante_emails", "onderhoud", "inspecties",
+  "certificaat",
 ];
 
 const CANVAS_W = 1200;
@@ -393,7 +453,8 @@ function SpotDetailBlok({
   logoSrc,
   documenten,
   typeNaam,
-  toonFotos,
+  toonFotoVoor,
+  toonFotoNa,
   toonEtaCertificaten,
   onGereed,
 }: {
@@ -409,7 +470,8 @@ function SpotDetailBlok({
   logoSrc: string;
   documenten: any[] | undefined;
   typeNaam: Record<string, string>;
-  toonFotos: boolean;
+  toonFotoVoor: boolean;
+  toonFotoNa: boolean;
   toonEtaCertificaten: boolean;
   onGereed: () => void;
 }) {
@@ -432,8 +494,8 @@ function SpotDetailBlok({
 
   const fotos    = (detail as any)?.fotos  as any[] | undefined ?? [];
   const labels   = (detail as any)?.labels as any[] | undefined ?? [];
-  const voorFotos = fotos.filter((f: any) => f.fase === "voor");
-  const naFotos   = fotos.filter((f: any) => f.fase === "na");
+  const voorFotos = toonFotoVoor ? fotos.filter((f: any) => f.fase === "voor") : [];
+  const naFotos   = toonFotoNa  ? fotos.filter((f: any) => f.fase === "na")  : [];
 
   const d = detail as any;
   const catalogNaam = typeNaam[spot.type];
@@ -649,10 +711,10 @@ function SpotDetailBlok({
           ))}
         </div>
       )}
-      {toonFotos && fotosPassenSamen && heeftFotos && fotosInhoud}
+      {(toonFotoVoor || toonFotoNa) && fotosPassenSamen && heeftFotos && fotosInhoud}
     </div>
 
-    {toonFotos && !fotosPassenSamen && heeftFotos && (
+    {(toonFotoVoor || toonFotoNa) && !fotosPassenSamen && heeftFotos && (
       <div className="prt-spot-fotopagina">
         <div className="prt-spot-kop">
           <div className="prt-spot-kop-links">
@@ -671,6 +733,89 @@ function SpotDetailBlok({
       </div>
     )}
     </>
+  );
+}
+
+// ─── CertificaatFPS ──────────────────────────────────────────────────────────
+
+function CertificaatFPS({
+  gebouw,
+  werkgeverNaam,
+  logoSrc,
+  exportDatum,
+}: {
+  gebouw: any;
+  werkgeverNaam: string;
+  logoSrc: string;
+  exportDatum: string;
+}) {
+  const adresRegel = [gebouw?.straat, gebouw?.huisnummer].filter(Boolean).join(" ");
+  const postcodeRegel = [gebouw?.postcode, gebouw?.woonplaats].filter(Boolean).join(" ");
+  const volledigAdres = [adresRegel, postcodeRegel].filter(Boolean).join(", ");
+
+  return (
+    <div className="prt-cert-pagina">
+      <div className="prt-cert-kop">
+        <img src={logoSrc} alt={werkgeverNaam} className="prt-cert-logo" />
+        <div className="prt-cert-kop-rechts">
+          <div className="prt-cert-bedrijfsnaam">{werkgeverNaam}</div>
+          <div className="prt-cert-kop-ondertitel">Gecertificeerde brandwerende voorzieningen</div>
+        </div>
+      </div>
+
+      <div className="prt-cert-banner">
+        <div className="prt-cert-banner-titel">CERTIFICAAT VAN OPLEVERING</div>
+        <div className="prt-cert-banner-sub">Brandwerende voorzieningen</div>
+      </div>
+
+      <div className="prt-cert-verklaring">
+        <strong>{werkgeverNaam}</strong> verklaart hierbij dat de brandwerende voorzieningen
+        in het onderstaande project zijn aangebracht conform de eisen van het Bouwbesluit 2012,
+        de fabrieksspecificaties en de toepasselijke NEN-normen. De werkzaamheden zijn
+        uitgevoerd door gecertificeerde monteurs en volledig gedocumenteerd in het
+        bijgevoegde opleverrapport.
+      </div>
+
+      <table className="prt-cert-tabel">
+        <tbody>
+          <tr>
+            <th>Gebouw</th>
+            <td>{gebouw?.naam ?? "—"}</td>
+          </tr>
+          <tr>
+            <th>Adres</th>
+            <td>{volledigAdres || "—"}</td>
+          </tr>
+          {gebouw?.projectnummer && (
+            <tr>
+              <th>Opdrachtnummer</th>
+              <td>{gebouw.projectnummer}</td>
+            </tr>
+          )}
+          <tr>
+            <th>Datum oplevering</th>
+            <td>{exportDatum}</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div className="prt-cert-ondertekening">
+        <div className="prt-cert-ondertekening-blok">
+          <div className="prt-cert-handtekening-ruimte" />
+          <div className="prt-cert-lijn" />
+          <div className="prt-cert-naam">R. Vink</div>
+          <div className="prt-cert-functie">Directeur — {werkgeverNaam}</div>
+          <div className="prt-cert-datum">{exportDatum}</div>
+        </div>
+      </div>
+
+      <div className="prt-cert-disclaimer">
+        Dit certificaat heeft uitsluitend betrekking op de geregistreerde voorzieningen en de in het
+        rapport beschreven locaties. {werkgeverNaam} aanvaardt geen aansprakelijkheid voor
+        wijzigingen aangebracht na datum van oplevering. Bij twijfel over de geldigheid van dit
+        document kunt u contact opnemen via de contactgegevens op de voorzijde van het rapport.
+      </div>
+    </div>
   );
 }
 
@@ -782,7 +927,8 @@ function PrintVerdieping({
   groepeerOpCluster,
   clusters,
   geselecteerdeSpotIds,
-  toonFotos,
+  toonFotoVoor,
+  toonFotoNa,
   toonEtaCertificaten,
 }: {
   verdieping: Verdieping;
@@ -797,7 +943,8 @@ function PrintVerdieping({
   groepeerOpCluster: boolean;
   clusters: Cluster[] | undefined;
   geselecteerdeSpotIds: Set<number> | undefined;
-  toonFotos: boolean;
+  toonFotoVoor: boolean;
+  toonFotoNa: boolean;
   toonEtaCertificaten: boolean;
 }) {
   const [pdfBeeld, setPdfBeeld]     = useState<string | null>(null);
@@ -928,7 +1075,8 @@ function PrintVerdieping({
       logoSrc={logoSrc}
       documenten={documenten}
       typeNaam={typeNaam}
-      toonFotos={toonFotos}
+      toonFotoVoor={toonFotoVoor}
+      toonFotoNa={toonFotoNa}
       toonEtaCertificaten={toonEtaCertificaten}
       onGereed={() => setSpotsGereed(n => n + 1)}
     />
@@ -1165,6 +1313,7 @@ export default function GebouwPrint() {
 
   const [rapportType, setRapportType] = useState<RapportType>("opleverrapport");
   const [secties, setSecties] = useState<Sectiesleutels>(PRESET_SECTIES["opleverrapport"]);
+  const [bundleBezig, setBundleBezig] = useState(false);
   const [groepeerOpCluster, setGroepeerOpCluster] = useState(false);
   const [spotSelectie, setSpotSelectie] = useState<Record<number, Set<number> | undefined>>({});
   const [emailModus, setEmailModus] = useState<"ai" | "handmatig">("ai");
@@ -1227,6 +1376,11 @@ export default function GebouwPrint() {
     const geladen: Sectiesleutels = { ...PRESET_SECTIES["opleverrapport"] };
     for (const sleutel of SECTIES_VOLGORDE) {
       if (typeof raw[sleutel] === "boolean") (geladen as Record<string, boolean>)[sleutel] = raw[sleutel] as boolean;
+    }
+    // Backward compat: bestaande rapporten die het oud 'fotos'-veld bevatten
+    if (typeof raw["fotos"] === "boolean" && raw["foto_voor"] === undefined && raw["foto_na"] === undefined) {
+      geladen.foto_voor = raw["fotos"] as boolean;
+      geladen.foto_na   = raw["fotos"] as boolean;
     }
     setSecties(geladen);
     const type = huidigRapport.rapport_type as RapportType;
@@ -1313,6 +1467,34 @@ export default function GebouwPrint() {
   const exportDatum = `${nu.toLocaleDateString("nl-NL")} ${nu.toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit" })}`;
   const logoSrc = resolveAssetUrl("logo-fps.png");
   const werkgeverNaam = (gebouw as any).werkmaatschappij_naam ?? "FPS Brandpreventie";
+
+  async function downloadBijlagenbundel() {
+    if (!rapportId || !gebouwId) return;
+    setBundleBezig(true);
+    try {
+      const res = await fetch(
+        `/api/gebouwen/${gebouwId}/rapporten/${rapportId}/bijlagenbundel`,
+        { credentials: "include" },
+      );
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({})) as Record<string, unknown>;
+        throw new Error(String(data.error ?? "Genereren mislukt"));
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `bijlagenbundel-${titel ?? String(gebouwId)}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (e: unknown) {
+      toast({ title: "Fout", description: e instanceof Error ? e.message : "Onbekende fout", variant: "destructive" });
+    } finally {
+      setBundleBezig(false);
+    }
+  }
 
   const rapportDatum   = nu.toLocaleDateString("nl-NL");
   const rapportVersie  = "1.0";
@@ -1629,6 +1811,29 @@ export default function GebouwPrint() {
         .prt-spot-foto { width: 100%; height: 88px; object-fit: cover; border-radius: 6px; border: 1px solid #e2e8f0; break-inside: avoid; }
         .prt-spot-fotopagina { break-before: page; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px; background: #fff; }
 
+        /* ── Certificaat FPS ── */
+        .prt-cert-pagina { background: #fff; padding: 48px; display: flex; flex-direction: column; gap: 28px; min-height: 100vh; page-break-before: always; page-break-after: always; }
+        .prt-cert-kop { display: flex; align-items: center; gap: 16px; border-bottom: 3px solid hsl(12 90% 50%); padding-bottom: 16px; }
+        .prt-cert-logo { height: 36px; object-fit: contain; }
+        .prt-cert-kop-rechts { display: flex; flex-direction: column; gap: 2px; }
+        .prt-cert-bedrijfsnaam { font-size: 14px; font-weight: 700; color: #212631; }
+        .prt-cert-kop-ondertitel { font-size: 10px; color: #94a3b8; }
+        .prt-cert-banner { background: hsl(12 90% 50%); color: #fff; padding: 24px 32px; border-radius: 2px; }
+        .prt-cert-banner-titel { font-size: 22px; font-weight: 800; letter-spacing: .06em; }
+        .prt-cert-banner-sub { font-size: 12px; opacity: .9; margin-top: 4px; }
+        .prt-cert-verklaring { font-size: 12px; line-height: 1.7; color: #374151; }
+        .prt-cert-tabel { width: 100%; border-collapse: collapse; font-size: 12px; }
+        .prt-cert-tabel th { text-align: left; padding: 8px 12px; background: #f8fafc; font-weight: 600; color: #475569; width: 160px; border: 1px solid #e2e8f0; }
+        .prt-cert-tabel td { padding: 8px 12px; border: 1px solid #e2e8f0; color: #1e293b; }
+        .prt-cert-ondertekening { margin-top: 32px; }
+        .prt-cert-ondertekening-blok { display: inline-block; min-width: 240px; }
+        .prt-cert-handtekening-ruimte { height: 48px; }
+        .prt-cert-lijn { border-bottom: 1.5px solid #475569; margin-bottom: 6px; }
+        .prt-cert-naam { font-size: 12px; font-weight: 700; color: #212631; }
+        .prt-cert-functie { font-size: 11px; color: #64748b; }
+        .prt-cert-datum { font-size: 11px; color: #94a3b8; margin-top: 2px; }
+        .prt-cert-disclaimer { font-size: 9.5px; color: #94a3b8; line-height: 1.6; border-top: 1px solid #e2e8f0; padding-top: 16px; margin-top: auto; }
+
         /* ── Cluster-groepering ── */
         .prt-cluster-kop { break-before: page; break-after: avoid; display: flex; align-items: center; gap: 8px; padding: 8px 12px; margin-bottom: 12px; background: #f1f5f9; border-left: 4px solid #6366f1; border-radius: 6px; }
         .prt-cluster-stip { display: inline-block; width: 12px; height: 12px; border-radius: 9999px; flex-shrink: 0; }
@@ -1666,6 +1871,15 @@ export default function GebouwPrint() {
         .cmpr-verd-naam { font-weight: 600; flex: 1; font-size: 11px; color: #0f172a; }
         .cmpr-verd-meta { font-size: 10px; color: #94a3b8; margin-right: 2px; }
         .cmpr-expand-btn { background: none; border: none; cursor: pointer; color: #94a3b8; padding: 2px; display: flex; align-items: center; }
+
+        /* ── Rapportmodel picker + bijlagenbundel ── */
+        .cmpr-model-grid { display: flex; flex-direction: column; gap: 4px; }
+        .cmpr-model-btn { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 4px; padding: 6px 8px; font-size: 10px; font-weight: 500; color: #475569; text-align: left; cursor: pointer; display: flex; align-items: center; gap: 5px; width: 100%; transition: background .12s; }
+        .cmpr-model-btn:hover { background: hsl(12 90% 50% / .08); border-color: hsl(12 90% 50% / .4); color: hsl(12 90% 35%); }
+        .cmpr-bundle-btn { background: #f0fdf4; border-color: #86efac; color: #166534; justify-content: center; }
+        .cmpr-bundle-btn:hover { background: #dcfce7; border-color: #4ade80; }
+        .cmpr-bundle-btn:disabled { opacity: .6; cursor: not-allowed; }
+        .cmpr-bundle-hint { font-size: 9px; color: #94a3b8; line-height: 1.4; margin-top: 4px; }
         .cmpr-spot-lijst { padding: 3px 6px 5px 20px; background: #fff; }
         .cmpr-spot-regel { align-items: center; }
         .cmpr-spot-nr { font-weight: 600; font-size: 10.5px; color: #475569; min-width: 50px; }
@@ -1750,6 +1964,26 @@ export default function GebouwPrint() {
             ))}
           </div>
 
+          {/* Rapportmodel */}
+          <div className="cmpr-sectie">
+            <div className="cmpr-sectie-kop">
+              <LayoutTemplate size={11} />
+              Rapportmodel
+            </div>
+            <div className="cmpr-model-grid">
+              {RAPPORT_MODELLEN.map(model => (
+                <button
+                  key={model.id}
+                  type="button"
+                  className="cmpr-model-btn"
+                  onClick={() => setSecties(model.secties)}
+                >
+                  {model.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
           {/* Secties */}
           <div className="cmpr-sectie">
             <div className="cmpr-sectie-kop">
@@ -1826,6 +2060,28 @@ export default function GebouwPrint() {
                   <span className="cmpr-email-onderwerp">{d.naam} <span className="cmpr-ai-badge">{DOCUMENTTYPE_LABEL[d.documenttype] ?? d.documenttype}</span></span>
                 </label>
               ))}
+            </div>
+          )}
+
+          {/* Bijlagenbundel downloaden */}
+          {secties.bijlagen && geselecteerdeBijlagen.size > 0 && rapportId && (
+            <div className="cmpr-sectie">
+              <button
+                type="button"
+                className="cmpr-model-btn cmpr-bundle-btn"
+                onClick={downloadBijlagenbundel}
+                disabled={bundleBezig}
+              >
+                {bundleBezig
+                  ? <Loader2 size={11} className="animate-spin" />
+                  : <Download size={11} />}
+                {bundleBezig
+                  ? "Genereren..."
+                  : `Bijlagenbundel downloaden (${geselecteerdeBijlagen.size})`}
+              </button>
+              <div className="cmpr-bundle-hint">
+                Documenten van meer dan 5 pagina's worden samengevat door AI.
+              </div>
             </div>
           )}
 
@@ -2382,7 +2638,8 @@ export default function GebouwPrint() {
                 groepeerOpCluster={groepeerOpCluster}
                 clusters={clusters}
                 geselecteerdeSpotIds={spotSelectie[v.id]}
-                toonFotos={secties.fotos}
+                toonFotoVoor={secties.foto_voor}
+                toonFotoNa={secties.foto_na}
                 toonEtaCertificaten={secties.eta_certificaten}
               />
             ))
@@ -2430,6 +2687,17 @@ export default function GebouwPrint() {
                 ))}
               </tbody>
             </table>
+          </section>
+        )}
+
+        {secties.certificaat && (
+          <section className="prt-sectie">
+            <CertificaatFPS
+              gebouw={gebouw}
+              werkgeverNaam={werkgeverNaam}
+              logoSrc={logoSrc}
+              exportDatum={exportDatum}
+            />
           </section>
         )}
 

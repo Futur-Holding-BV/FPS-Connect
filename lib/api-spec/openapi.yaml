@@ -1086,6 +1086,39 @@ paths:
         "409":
           description: Rapport is al definitief of gearchiveerd
 
+  /gebouwen/{id}/rapporten/{rapportId}/bijlagenbundel:
+    get:
+      operationId: getOpleverrapportBijlagenbundel
+      tags: [gebouwen]
+      summary: Bijlagenbundel als PDF genereren (geselecteerde bijlagen per rapport)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+        - in: path
+          name: rapportId
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: PDF-bundel met geselecteerde bijlagen
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        "400":
+          description: Geen bijlagen geselecteerd in dit rapport
+        "403":
+          description: Geen toegang
+        "404":
+          description: Rapport niet gevonden
+        "422":
+          description: Geen van de bijlagen kon worden verwerkt
+
   # ── BRANDVOORZIENINGEN ────────────────────────────────────────────────────
   /voorzieningen:
     get:

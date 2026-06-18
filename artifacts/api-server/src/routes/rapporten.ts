@@ -11,6 +11,8 @@ import {
 } from "@workspace/db";
 import { eq, desc, and, inArray } from "drizzle-orm";
 import { requireBevoegdheid, requireBevoegdheidOfKlant } from "../middlewares/auth";
+import { ObjectStorageService } from "../lib/objectStorage";
+import { heeftOpenAi, maakOpenAiClient } from "../lib/openai";
 
 const router = Router();
 
@@ -314,6 +316,168 @@ router.post("/gebouwen/:id/rapporten/:rapportId/definitief", aanmakenRapporten, 
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Serverfout" });
+  }
+});
+
+// ── Hulpfunctie: tekst afbreken voor PDF rendering ───────────────────────────
+
+function wrapTextPdf(
+  text: string,
+  font: { widthOfTextAtSize(t: string, size: number): number },
+  size: number,
+  maxWidth: number,
+): string[] {
+  const regels: string[] = [];
+  for (const alinea of text.split("\n")) {
+    const woorden = alinea.split(" ");
+    let huidig = "";
+    for (const woord of woorden) {
+      const kandidaat = huidig ? `${huidig} ${woord}` : woord;
+      let breedte = 0;
+      try { breedte = font.widthOfTextAtSize(kandidaat, size); } catch { breedte = kandidaat.length * size * 0.5; }
+      if (breedte > maxWidth && huidig) { regels.push(huidig); huidig = woord; }
+      else { huidig = kandidaat; }
+    }
+    if (huidig) regels.push(huidig);
+    regels.push("");
+  }
+  return regels.filter((r, i, arr) => !(r === "" && (i === 0 || arr[i - 1] === "")));
+}
+
+// ── GET /gebouwen/:id/rapporten/:rapportId/bijlagenbundel ─────────────────────
+
+router.get("/gebouwen/:id/rapporten/:rapportId/bijlagenbundel", lezenRapporten, async (req, res) => {
+  try {
+    const gebouwId  = parseId(req.params.id);
+    const rapportId = parseId(req.params.rapportId);
+
+    const [rapport] = await db
+      .select()
+      .from(opleverrapportenTable)
+      .where(and(eq(opleverrapportenTable.id, rapportId), eq(opleverrapportenTable.gebouwId, gebouwId)));
+
+    if (!rapport) return void res.status(404).json({ error: "Rapport niet gevonden" });
+
+    const secties = (rapport.secties ?? {}) as Record<string, unknown>;
+    const bijlagenIds = Array.isArray(secties["bijlagen_ids"])
+      ? (secties["bijlagen_ids"] as unknown[]).filter((x): x is number => Number.isInteger(x))
+      : [];
+
+    if (bijlagenIds.length === 0) {
+      return void res.status(400).json({ error: "Geen bijlagen geselecteerd in dit rapport" });
+    }
+
+    const docs = await db
+      .select()
+      .from(documentenTable)
+      .where(inArray(documentenTable.id, bijlagenIds));
+
+    const { PDFDocument, StandardFonts, rgb } = await import("pdf-lib");
+    const outputDoc = await PDFDocument.create();
+    const oss = new ObjectStorageService();
+
+    for (const doc of docs) {
+      if (!doc.pdfUrl) continue;
+      try {
+        const bestand  = await oss.getObjectEntityFile(doc.pdfUrl);
+        const response = await oss.downloadObject(bestand);
+        const buffer   = Buffer.from(await response.arrayBuffer());
+
+        const bronDoc   = await PDFDocument.load(buffer, { ignoreEncryption: true });
+        const aantalPag = bronDoc.getPageCount();
+
+        if (aantalPag <= 5) {
+          // Directe kopie voor korte documenten
+          const kopieën = await outputDoc.copyPages(bronDoc, Array.from({ length: aantalPag }, (_, i) => i));
+          for (const p of kopieën) outputDoc.addPage(p);
+        } else {
+          // Samenvattingspagina voor langere documenten
+          let samenvatting = "";
+          if (heeftOpenAi()) {
+            try {
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              const pdfParse = ((await import("pdf-parse")) as any).default as (buf: Buffer) => Promise<{ text: string }>;
+              const parsed = await pdfParse(buffer);
+              const tekst  = parsed.text.slice(0, 8000);
+              const ai     = maakOpenAiClient();
+              const result = await ai.chat.completions.create({
+                model: "gpt-4o",
+                messages: [
+                  {
+                    role: "system",
+                    content: "Je bent een assistent die technische brandpreventiedocumenten samenvat. Geef een beknopte samenvatting in het Nederlands (maximaal 3 alinea's).",
+                  },
+                  {
+                    role: "user",
+                    content: `Samenvatten het volgende document (${aantalPag} pagina's):\n\n${tekst}`,
+                  },
+                ],
+                max_tokens: 600,
+              });
+              samenvatting = result.choices[0]?.message?.content ?? "";
+            } catch (aiErr) {
+              req.log.warn({ err: aiErr }, "AI-samenvatting bijlage mislukt");
+              samenvatting = "(Automatische samenvatting niet beschikbaar.)";
+            }
+          } else {
+            samenvatting = `Dit document bevat ${aantalPag} pagina's en is niet automatisch samengevat.`;
+          }
+
+          const [A4B, A4H] = [595.28, 841.89];
+          const pagina   = outputDoc.addPage([A4B, A4H]);
+          const fontBold = await outputDoc.embedFont(StandardFonts.HelveticaBold);
+          const fontReg  = await outputDoc.embedFont(StandardFonts.Helvetica);
+
+          // Banner
+          pagina.drawRectangle({ x: 0, y: A4H - 80, width: A4B, height: 80, color: rgb(0.945, 0.231, 0.051) });
+          pagina.drawText("SAMENVATTING", {
+            x: 50, y: A4H - 28, font: fontBold, size: 11, color: rgb(1, 1, 1),
+          });
+          pagina.drawText(`${doc.naam ?? "Document"} — ${aantalPag} pagina's`, {
+            x: 50, y: A4H - 50, font: fontReg, size: 9, color: rgb(1, 1, 1),
+          });
+          if (doc.bijgewerktOp) {
+            pagina.drawText(`Datum: ${new Date(doc.bijgewerktOp).toLocaleDateString("nl-NL")}`, {
+              x: 50, y: A4H - 65, font: fontReg, size: 8, color: rgb(1, 1, 1),
+            });
+          }
+
+          let y = A4H - 108;
+          for (const regel of wrapTextPdf(samenvatting, fontReg, 10, A4B - 100)) {
+            if (y < 80) break;
+            pagina.drawText(regel, { x: 50, y, font: fontReg, size: 10, color: rgb(0.1, 0.1, 0.1) });
+            y -= 15;
+          }
+
+          pagina.drawText(
+            "Dit is een automatisch gegenereerde samenvatting. Raadpleeg het originele document voor technische details.",
+            { x: 50, y: 40, font: fontReg, size: 7.5, color: rgb(0.5, 0.5, 0.5) },
+          );
+        }
+      } catch (docErr) {
+        req.log.warn({ docId: doc.id, err: docErr }, "Bijlage overgeslagen bij bundle-generering");
+      }
+    }
+
+    if (outputDoc.getPageCount() === 0) {
+      return void res.status(422).json({ error: "Geen van de bijlagen kon worden verwerkt" });
+    }
+
+    const [gebouw] = await db
+      .select({ naam: gebouwenTable.naam })
+      .from(gebouwenTable)
+      .where(eq(gebouwenTable.id, gebouwId));
+
+    const veiligNaam  = (gebouw?.naam ?? String(gebouwId)).replace(/[^a-z0-9]+/gi, "-").toLowerCase();
+    const pdfBytes    = await outputDoc.save();
+
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `attachment; filename="bijlagenbundel-${veiligNaam}.pdf"`);
+    res.setHeader("Content-Length", pdfBytes.length);
+    res.end(Buffer.from(pdfBytes));
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Serverfout bij genereren bijlagenbundel" });
   }
 });
 
