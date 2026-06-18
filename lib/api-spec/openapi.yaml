@@ -10887,7 +10887,7 @@ components:
 
     SpotAiVoorstelResultaat:
       type: object
-      required: [betrouwbaarheid]
+      required: [betrouwbaarheid, meerdere_doorvoeren]
       properties:
         wand_of_plafond:
           type: ["string", "null"]
@@ -10913,6 +10913,15 @@ components:
           type: ["integer", "null"]
         document_naam:
           type: ["string", "null"]
+        meerdere_doorvoeren:
+          type: boolean
+          description: >
+            True als de AI op de foto meerdere aparte doorvoeren detecteert die elk een eigen spot
+            vereisen (meer dan 50 cm uit elkaar). De monteur moet dan beslissen of hij aparte
+            spots aanmaakt of toch doorgaat; bij doorgaan krijgt de spot een controlevlag.
+        meerdere_doorvoeren_toelichting:
+          type: ["string", "null"]
+          description: Korte beschrijving van wat de AI ziet (aantallen, ligging); alleen gevuld als meerdere_doorvoeren true is.
 
     SpotAiGekozenWaarden:
       type: object
@@ -10985,6 +10994,12 @@ components:
             - type: "null"
         gekozen:
           $ref: "#/components/schemas/SpotAiGekozenWaarden"
+        meerdere_doorvoeren_doorgang:
+          type: boolean
+          description: >
+            True als de monteur bewust heeft gekozen om door te gaan ondanks de AI-waarschuwing
+            dat er meerdere aparte doorvoeren op de foto staan. De spot krijgt dan een
+            controlevlag zodat de projectleider deze kan beoordelen.
 
     # ── HRM / Personeel ───────────────────────────────────────────────────
     Werkgever:

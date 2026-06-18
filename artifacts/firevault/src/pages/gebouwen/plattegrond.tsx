@@ -40,7 +40,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Plus, X, ZoomIn, ZoomOut, RotateCcw, Map, FileText, Trash2, Image as ImageIcon, Loader2, Spline, Check, Move, Archive, ArchiveRestore, Boxes, Pencil, Layers, UserCheck, Sparkles } from "lucide-react";
+import { ArrowLeft, Plus, X, ZoomIn, ZoomOut, RotateCcw, Map, FileText, Trash2, Image as ImageIcon, Loader2, Spline, Check, Move, Archive, ArchiveRestore, Boxes, Pencil, Layers, UserCheck, Sparkles, TriangleAlert } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { ApplicatiePicker } from "@/components/applicatie-picker";
 import { ToepassingMultiSelect } from "@/components/toepassing-multi-select";
@@ -495,6 +495,8 @@ export default function Plattegrond() {
   const [aiVoorstel, setAiVoorstel] = useState<SpotAiVoorstelResultaat | null>(null);
   const [aiVelden, setAiVelden] = useState<Set<string>>(new Set());
   const [aiFout, setAiFout] = useState<string | null>(null);
+  const [doorvoerWaarschuwing, setDoorvoerWaarschuwing] = useState(false);
+  const [doorvoerDoorgangBevestigd, setDoorvoerDoorgangBevestigd] = useState(false);
   const [ruimteOpties] = useState(() => getRuimteVolgorde());
 
   // ---- Serie plaatsen: meerdere voorbereide spots achter elkaar met hetzelfde
@@ -1183,6 +1185,33 @@ export default function Plattegrond() {
     setAiVoorstel(null);
     setAiVelden(new Set());
     setAiFout(null);
+    setDoorvoerWaarschuwing(false);
+    setDoorvoerDoorgangBevestigd(false);
+  }
+
+  function vulFormMetAiVoorstel(res: SpotAiVoorstelResultaat) {
+    const nieuw = new Set<string>();
+    setNieuwForm((f) => {
+      const next = { ...f };
+      if (res.type_code) {
+        next.type = res.type_code;
+        nieuw.add("type");
+      }
+      if (res.wand_of_plafond) {
+        next.wand_of_plafond = res.wand_of_plafond;
+        nieuw.add("wand_of_plafond");
+        wandPlafondHandmatigRef.current = true;
+      }
+      return next;
+    });
+    const top = res.toepassing_suggesties?.[0];
+    if (top && top.score > 0) {
+      setNieuwLabelIds([top.label_id]);
+      nieuw.add("toepassing");
+    } else {
+      setNieuwLabelIds([]);
+    }
+    setAiVelden(nieuw);
   }
 
   // AI-spotherkenning: analyseert de geüploade foto ná (vergelijkt met foto vóór)
@@ -1204,31 +1233,15 @@ export default function Plattegrond() {
       // de foto's zijn gewijzigd (anders schrijft het naar een andere spot).
       if (aiSessieRef.current !== sessie) return;
       setAiVoorstel(res);
-      const nieuw = new Set<string>();
-      setNieuwForm((f) => {
-        const next = { ...f };
-        if (res.type_code) {
-          next.type = res.type_code;
-          nieuw.add("type");
-        }
-        if (res.wand_of_plafond) {
-          next.wand_of_plafond = res.wand_of_plafond;
-          nieuw.add("wand_of_plafond");
-          // Voorkom dat de afgeleide wand/plafond-keuze het AI-voorstel overschrijft.
-          wandPlafondHandmatigRef.current = true;
-        }
-        return next;
-      });
+      // Als de AI meerdere doorvoeren detecteert, toon een waarschuwing en wacht
+      // op de keuze van de monteur vóórdat de formuliervelden worden ingevuld.
+      if (res.meerdere_doorvoeren) {
+        setDoorvoerWaarschuwing(true);
+        return;
+      }
       // Toepassing alleen automatisch invullen bij een betrouwbare suggestie (score > 0);
       // applicatie-gekoppelde opties (score 0) tonen we alleen als hint.
-      const top = res.toepassing_suggesties?.[0];
-      if (top && top.score > 0) {
-        setNieuwLabelIds([top.label_id]);
-        nieuw.add("toepassing");
-      } else {
-        setNieuwLabelIds([]);
-      }
-      setAiVelden(nieuw);
+      vulFormMetAiVoorstel(res);
     } catch (err) {
       if (aiSessieRef.current !== sessie) return;
       setAiFout(err instanceof Error ? err.message : "AI-analyse mislukt");
@@ -1287,6 +1300,7 @@ export default function Plattegrond() {
                 type_code: nieuwForm.type || null,
                 label_ids: nieuwLabelIds,
               },
+              meerdere_doorvoeren_doorgang: doorvoerDoorgangBevestigd,
             },
           });
         } catch (err) {
@@ -1322,6 +1336,8 @@ export default function Plattegrond() {
       setAiFout(null);
       aiSessieRef.current += 1;
       wandPlafondHandmatigRef.current = false;
+      setDoorvoerWaarschuwing(false);
+      setDoorvoerDoorgangBevestigd(false);
     }
   }
 
@@ -1938,7 +1954,45 @@ export default function Plattegrond() {
               {aiFout && (
                 <p className="text-xs text-destructive">AI-analyse mislukt: {aiFout}</p>
               )}
-              {aiVoorstel && (
+              {aiVoorstel && doorvoerWaarschuwing && (
+                <div className="rounded-md border border-red-300 bg-red-50 p-3 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <TriangleAlert className="h-4 w-4 text-red-600 shrink-0" />
+                    <span className="text-sm font-semibold text-red-800">Meerdere doorvoeren gedetecteerd</span>
+                  </div>
+                  <p className="text-xs text-red-700">
+                    De AI ziet meerdere aparte doorvoeren op deze foto. Per doorvoer dient een eigen spot te worden aangemaakt, tenzij de doorvoeren binnen een vlak van 50&times;50&nbsp;cm bij elkaar liggen.
+                  </p>
+                  {!!aiVoorstel.meerdere_doorvoeren_toelichting && (
+                    <p className="text-xs text-red-600 italic">{aiVoorstel.meerdere_doorvoeren_toelichting}</p>
+                  )}
+                  <div className="flex gap-2 pt-1">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="flex-1 border-red-300 text-red-700 hover:bg-red-100"
+                      onClick={() => { wisAiVoorstel(); sluitDialoog(false); }}
+                    >
+                      Aparte spots aanmaken
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="flex-1 border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100"
+                      onClick={() => {
+                        setDoorvoerWaarschuwing(false);
+                        setDoorvoerDoorgangBevestigd(true);
+                        vulFormMetAiVoorstel(aiVoorstel);
+                      }}
+                    >
+                      Toch doorgaan
+                    </Button>
+                  </div>
+                </div>
+              )}
+              {aiVoorstel && !doorvoerWaarschuwing && (
                 <div className="rounded-md border border-amber-300 bg-amber-50 p-2 space-y-1">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-semibold text-amber-800">AI-voorstel</span>

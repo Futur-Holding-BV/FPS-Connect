@@ -1085,7 +1085,7 @@ router.post("/voorzieningen/:id/ai-voorstel", requireBevoegdheid("voorzieningen"
       return res.status(403).json({ error: "Geen toegang tot deze voorziening" });
     }
 
-    const { foto_voor_url, foto_na_url, voorstel, gekozen } = req.body ?? {};
+    const { foto_voor_url, foto_na_url, voorstel, gekozen, meerdere_doorvoeren_doorgang } = req.body ?? {};
     const gekozenWaarden = (gekozen ?? {}) as SpotAiGekozen;
     const gekozenLabelIds = Array.isArray(gekozenWaarden.label_ids)
       ? gekozenWaarden.label_ids.map((n) => Number(n))
@@ -1104,6 +1104,13 @@ router.post("/voorzieningen/:id/ai-voorstel", requireBevoegdheid("voorzieningen"
     const afwijking =
       topSuggestie != null && gekozenLabelIds.length > 0 && !gekozenLabelIds.includes(topSuggestie);
 
+    // Meerdere-doorvoeren-doorgang: de monteur heeft bewust gekozen om door te gaan
+    // ondanks de AI-waarschuwing. De spot krijgt een controlevlag zodat de projectleider
+    // deze kan beoordelen en goedkeuren.
+    const meerdereDoorvoeren = voorstel?.meerdere_doorvoeren === true;
+    const doorgang = meerdere_doorvoeren_doorgang === true;
+    const aiTeControleren = afwijking || (meerdereDoorvoeren && doorgang);
+
     const [rij] = await db
       .insert(spotAiVoorstellenTable)
       .values({
@@ -1119,7 +1126,7 @@ router.post("/voorzieningen/:id/ai-voorstel", requireBevoegdheid("voorzieningen"
 
     await db
       .update(voorzieningenTable)
-      .set({ aiVoorstelId: rij.id, aiTeControleren: afwijking, bijgewerktOp: new Date() })
+      .set({ aiVoorstelId: rij.id, aiTeControleren, bijgewerktOp: new Date() })
       .where(eq(voorzieningenTable.id, id));
 
     return res.status(201).json(await mapSpotAiVoorstel(rij));

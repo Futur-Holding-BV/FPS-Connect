@@ -2371,6 +2371,13 @@ export interface SpotAiVoorstelResultaat {
   document_id?: number | null;
   /** @nullable */
   document_naam?: string | null;
+  /** True als de AI op de foto meerdere aparte doorvoeren detecteert die elk een eigen spot vereisen (meer dan 50 cm uit elkaar). De monteur moet dan beslissen of hij aparte spots aanmaakt of toch doorgaat; bij doorgaan krijgt de spot een controlevlag. */
+  meerdere_doorvoeren: boolean;
+  /**
+     * Korte beschrijving van wat de AI ziet (aantallen, ligging); alleen gevuld als meerdere_doorvoeren true is.
+     * @nullable
+     */
+  meerdere_doorvoeren_toelichting?: string | null;
 }
 
 export interface SpotAiGekozenWaarden {
@@ -2432,6 +2439,8 @@ export interface SpotAiVoorstelPersistInput {
   foto_na_url?: string | null;
   voorstel?: SpotAiVoorstelResultaat | null;
   gekozen: SpotAiGekozenWaarden;
+  /** True als de monteur bewust heeft gekozen om door te gaan ondanks de AI-waarschuwing dat er meerdere aparte doorvoeren op de foto staan. De spot krijgt dan een controlevlag zodat de projectleider deze kan beoordelen. */
+  meerdere_doorvoeren_doorgang?: boolean;
 }
 
 export interface Werkgever {

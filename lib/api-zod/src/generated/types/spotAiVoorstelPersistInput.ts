@@ -15,4 +15,6 @@ export interface SpotAiVoorstelPersistInput {
   foto_na_url?: string | null;
   voorstel?: SpotAiVoorstelResultaat | null;
   gekozen: SpotAiGekozenWaarden;
+  /** True als de monteur bewust heeft gekozen om door te gaan ondanks de AI-waarschuwing dat er meerdere aparte doorvoeren op de foto staan. De spot krijgt dan een controlevlag zodat de projectleider deze kan beoordelen. */
+  meerdere_doorvoeren_doorgang?: boolean;
 }

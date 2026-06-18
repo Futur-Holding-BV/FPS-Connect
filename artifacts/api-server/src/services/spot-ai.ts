@@ -31,6 +31,8 @@ export interface SpotAiVoorstel {
   toepassing_suggesties: SpotAiToepassingSuggestie[];
   document_id: number | null;
   document_naam: string | null;
+  meerdere_doorvoeren: boolean;
+  meerdere_doorvoeren_toelichting: string | null;
 }
 
 function strOfNull(v: unknown): string | null {
@@ -48,6 +50,8 @@ function leeg(toelichting: string): SpotAiVoorstel {
     toepassing_suggesties: [],
     document_id: null,
     document_naam: null,
+    meerdere_doorvoeren: false,
+    meerdere_doorvoeren_toelichting: null,
   };
 }
 
@@ -80,11 +84,13 @@ Je krijgt mogelijk een foto VÓÓR de afwerking (de situatie/sparing) en altijd 
 Bepaal op basis van wat ZICHTBAAR is:
 - de oriëntatie: betreft het een wand of een plafond/vloer;
 - welke applicatie (situatie) het beste past, gekozen uit de meegeleverde catalogus;
-- welk product/fabrikant zichtbaar is (teksten, kleuren, manchetten, kit, coating, stenen, platen, labels).
+- welk product/fabrikant zichtbaar is (teksten, kleuren, manchetten, kit, coating, stenen, platen, labels);
+- of er meerdere APARTE doorvoeren zichtbaar zijn die elk een eigen sparing hebben en NIET binnen een vlak van 50×50 cm bij elkaar liggen (want dan moet elke doorvoer een eigen spot krijgen).
 Belangrijke regels:
 - Verzin niets. Laat een veld op null als je het niet met redelijke zekerheid uit de foto kunt afleiden.
 - Bepaal NOOIT de brandwerendheid, de WBDBO-waarde of de scheidende-constructie-classificatie (s.g.-constructie). Dat doet een mens.
 - Kies de applicatie-code EXACT uit de meegeleverde lijst; verzin geen nieuwe code.
+- Stel meerdere_doorvoeren in op true als je twee of meer doorvoeren ziet die duidelijk in APARTE sparingen zitten en meer dan 50 cm uit elkaar liggen. Liggen ze binnen 50×50 cm bij elkaar, dan zijn ze één spot en geef je false terug.
 Geef uitsluitend geldige JSON terug met deze velden:
 - wand_of_plafond (tekst of null): exact "wand" of "plafond".
 - applicatie_code (tekst of null): exact één code uit de catalogus.
@@ -95,6 +101,8 @@ Geef uitsluitend geldige JSON terug met deze velden:
 - observaties (korte Nederlandse tekst of null): wat je op de foto ziet dat tot dit voorstel leidt.
 - toelichting (korte Nederlandse tekst of null): korte onderbouwing.
 - betrouwbaarheid (tekst): "laag", "midden" of "hoog".
+- meerdere_doorvoeren (boolean): true als meerdere aparte doorvoeren zichtbaar zijn die elk een eigen spot vereisen (>50 cm uit elkaar), anders false.
+- meerdere_doorvoeren_toelichting (tekst of null): alleen als meerdere_doorvoeren true is — korte beschrijving van wat je ziet (aantallen, ligging).
 Antwoord in het Nederlands. Alleen JSON, geen extra tekst.`;
 
 // Bevestigde leerset-correcties als richtlijntekst: gebouwspecifieke voorbeelden
@@ -331,6 +339,8 @@ export async function analyseerSpot(opts: {
     }
   }
 
+  const meerdere_doorvoeren = parsed.meerdere_doorvoeren === true;
+
   return {
     wand_of_plafond,
     type_code,
@@ -341,5 +351,7 @@ export async function analyseerSpot(opts: {
     toepassing_suggesties,
     document_id,
     document_naam,
+    meerdere_doorvoeren,
+    meerdere_doorvoeren_toelichting: meerdere_doorvoeren ? strOfNull(parsed.meerdere_doorvoeren_toelichting) : null,
   };
 }

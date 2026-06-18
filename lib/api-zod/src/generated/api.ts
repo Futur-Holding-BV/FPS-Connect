@@ -1779,7 +1779,9 @@ export const AiSpotvoorstelResponse = zod.object({
   "reden": zod.string().nullish()
 })).optional(),
   "document_id": zod.number().nullish(),
-  "document_naam": zod.string().nullish()
+  "document_naam": zod.string().nullish(),
+  "meerdere_doorvoeren": zod.boolean().describe('True als de AI op de foto meerdere aparte doorvoeren detecteert die elk een eigen spot vereisen (meer dan 50 cm uit elkaar). De monteur moet dan beslissen of hij aparte spots aanmaakt of toch doorgaat; bij doorgaan krijgt de spot een controlevlag.\n'),
+  "meerdere_doorvoeren_toelichting": zod.string().nullish().describe('Korte beschrijving van wat de AI ziet (aantallen, ligging); alleen gevuld als meerdere_doorvoeren true is.')
 })
 
 
@@ -1811,7 +1813,9 @@ export const GetSpotAiVoorstelResponse = zod.object({
   "reden": zod.string().nullish()
 })).optional(),
   "document_id": zod.number().nullish(),
-  "document_naam": zod.string().nullish()
+  "document_naam": zod.string().nullish(),
+  "meerdere_doorvoeren": zod.boolean().describe('True als de AI op de foto meerdere aparte doorvoeren detecteert die elk een eigen spot vereisen (meer dan 50 cm uit elkaar). De monteur moet dan beslissen of hij aparte spots aanmaakt of toch doorgaat; bij doorgaan krijgt de spot een controlevlag.\n'),
+  "meerdere_doorvoeren_toelichting": zod.string().nullish().describe('Korte beschrijving van wat de AI ziet (aantallen, ligging); alleen gevuld als meerdere_doorvoeren true is.')
 }),zod.null()]).optional(),
   "gekozen": zod.union([zod.object({
   "wand_of_plafond": zod.string().nullish(),
@@ -1852,13 +1856,16 @@ export const BewaarSpotAiVoorstelBody = zod.object({
   "reden": zod.string().nullish()
 })).optional(),
   "document_id": zod.number().nullish(),
-  "document_naam": zod.string().nullish()
+  "document_naam": zod.string().nullish(),
+  "meerdere_doorvoeren": zod.boolean().describe('True als de AI op de foto meerdere aparte doorvoeren detecteert die elk een eigen spot vereisen (meer dan 50 cm uit elkaar). De monteur moet dan beslissen of hij aparte spots aanmaakt of toch doorgaat; bij doorgaan krijgt de spot een controlevlag.\n'),
+  "meerdere_doorvoeren_toelichting": zod.string().nullish().describe('Korte beschrijving van wat de AI ziet (aantallen, ligging); alleen gevuld als meerdere_doorvoeren true is.')
 }),zod.null()]).optional(),
   "gekozen": zod.object({
   "wand_of_plafond": zod.string().nullish(),
   "type_code": zod.string().nullish(),
   "label_ids": zod.array(zod.number()).optional()
-})
+}),
+  "meerdere_doorvoeren_doorgang": zod.boolean().optional().describe('True als de monteur bewust heeft gekozen om door te gaan ondanks de AI-waarschuwing dat er meerdere aparte doorvoeren op de foto staan. De spot krijgt dan een controlevlag zodat de projectleider deze kan beoordelen.\n')
 })
 
 export const BewaarSpotAiVoorstelResponse = zod.void()
@@ -1896,7 +1903,9 @@ export const BevestigSpotAiControleResponse = zod.object({
   "reden": zod.string().nullish()
 })).optional(),
   "document_id": zod.number().nullish(),
-  "document_naam": zod.string().nullish()
+  "document_naam": zod.string().nullish(),
+  "meerdere_doorvoeren": zod.boolean().describe('True als de AI op de foto meerdere aparte doorvoeren detecteert die elk een eigen spot vereisen (meer dan 50 cm uit elkaar). De monteur moet dan beslissen of hij aparte spots aanmaakt of toch doorgaat; bij doorgaan krijgt de spot een controlevlag.\n'),
+  "meerdere_doorvoeren_toelichting": zod.string().nullish().describe('Korte beschrijving van wat de AI ziet (aantallen, ligging); alleen gevuld als meerdere_doorvoeren true is.')
 }),zod.null()]).optional(),
   "gekozen": zod.union([zod.object({
   "wand_of_plafond": zod.string().nullish(),

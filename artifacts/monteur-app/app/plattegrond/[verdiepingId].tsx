@@ -141,6 +141,7 @@ export default function Plattegrond() {
   const [aiVoorstel, setAiVoorstel] = useState<SpotAiVoorstelResultaat | null>(null);
   const [aiBezig, setAiBezig] = useState(false);
   const [aiVelden, setAiVelden] = useState<Set<string>>(new Set());
+  const [doorvoerDoorgang, setDoorvoerDoorgang] = useState(false);
 
   // Een veld is "AI" (amber) zolang het de AI-suggestie houdt en niet is aangeraakt.
   const isAi = (veld: string) => aiVelden.has(veld);
@@ -199,6 +200,7 @@ export default function Plattegrond() {
     setVoorFotos([]);
     setNaFotos([]);
     setAiVoorstel(null);
+    setDoorvoerDoorgang(false);
     setAiVelden(new Set());
     setFormOpen(true);
   }
@@ -258,6 +260,48 @@ export default function Plattegrond() {
         },
       });
       setAiVoorstel(res);
+      // Als de AI meerdere doorvoeren detecteert, toon een keuze-dialoog vóórdat
+      // de formuliervelden worden ingevuld. De monteur kiest: aparte spots aanmaken
+      // (reset AI-voorstel) of toch doorgaan (spot krijgt controlevlag).
+      if (res.meerdere_doorvoeren) {
+        setAiBezig(false);
+        const toelichting = res.meerdere_doorvoeren_toelichting
+          ? `\n\n${res.meerdere_doorvoeren_toelichting}`
+          : "";
+        Alert.alert(
+          "Meerdere doorvoeren gedetecteerd",
+          `De AI heeft meerdere aparte doorvoeren gezien. Per doorvoer dient een eigen spot te worden aangemaakt, tenzij ze binnen een vlak van 50\u00d750\u00a0cm bij elkaar liggen.${toelichting}\n\nWil je toch doorgaan met \u00e9\u00e9n spot?`,
+          [
+            {
+              text: "Aparte spots aanmaken",
+              style: "cancel",
+              onPress: () => {
+                setAiVoorstel(null);
+                setAiVelden(new Set());
+                setDoorvoerDoorgang(false);
+              },
+            },
+            {
+              text: "Toch doorgaan",
+              onPress: () => {
+                setDoorvoerDoorgang(true);
+                const nieuw2 = new Set<string>();
+                setForm((f) => {
+                  const next = { ...f };
+                  if (res.type_code) { next.type = res.type_code; nieuw2.add("type"); }
+                  if (res.wand_of_plafond) { next.wand_of_plafond = res.wand_of_plafond; nieuw2.add("wand_of_plafond"); }
+                  return next;
+                });
+                const topS = res.toepassing_suggesties?.[0];
+                if (topS && topS.score > 0) { setLabelIds([topS.label_id]); nieuw2.add("toepassing"); }
+                else { setLabelIds([]); }
+                setAiVelden(nieuw2);
+              },
+            },
+          ],
+        );
+        return;
+      }
       const nieuw = new Set<string>();
       setForm((f) => {
         const next = { ...f };
@@ -333,6 +377,7 @@ export default function Plattegrond() {
                   type_code: form.type || null,
                   label_ids: labelIds,
                 },
+                meerdere_doorvoeren_doorgang: doorvoerDoorgang,
               },
             });
           } catch (e) {
@@ -342,6 +387,7 @@ export default function Plattegrond() {
         }
       }
       setFormOpen(false);
+      setDoorvoerDoorgang(false);
       setPlaatsModus(false);
       await refetch();
       refetchSpotnummer();
