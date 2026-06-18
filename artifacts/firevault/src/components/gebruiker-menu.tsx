@@ -297,12 +297,14 @@ function BekijkenAlsSelector({
     }
     const r = actueel.rol as Rol;
     const ft = actueel.functietitels ?? [];
+    const bev = (actueel.bevoegdheden ?? {}) as Record<string, number>;
     if (
       actueel.naam !== persoon.naam ||
       r !== persoon.rol ||
-      ft.join("|") !== (persoon.functietitels ?? []).join("|")
+      ft.join("|") !== (persoon.functietitels ?? []).join("|") ||
+      JSON.stringify(bev) !== JSON.stringify(persoon.bevoegdheden ?? {})
     ) {
-      zetPersoon({ id: actueel.id, naam: actueel.naam, rol: r, functietitels: ft });
+      zetPersoon({ id: actueel.id, naam: actueel.naam, rol: r, functietitels: ft, bevoegdheden: bev });
     }
   }, [teamleden, persoon, zetPersoon]);
 
@@ -352,6 +354,7 @@ function BekijkenAlsSelector({
                     naam: g.naam,
                     rol: r,
                     functietitels: g.functietitels ?? [],
+                    bevoegdheden: (g.bevoegdheden ?? {}) as Record<string, number>,
                   })
                 }
                 className={persoon?.id === g.id ? "bg-accent" : ""}

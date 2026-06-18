@@ -1,11 +1,7 @@
-import { useAuth } from "@/context/auth-context";
+import { useRol } from "@/context/rol-context";
 
 export function useBevoegdheid() {
-  const { gebruiker } = useAuth();
-  const rol = gebruiker?.rol ?? "";
-
-  // Toegang komt puur uit de bevoegdheden-matrix.
-  const bevoegdheden = (gebruiker?.bevoegdheden ?? {}) as Record<string, number>;
+  const { rol, bevoegdheden } = useRol();
 
   function heeftNiveau(module: string, minNiveau: number): boolean {
     if (rol === "hoofdbeheerder") return true;

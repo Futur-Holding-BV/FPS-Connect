@@ -10,6 +10,7 @@ export type GeimiteerdePersoon = {
   naam: string;
   rol: Rol;
   functietitels: string[];
+  bevoegdheden: Record<string, number>;
 };
 
 const OPSLAG_SLEUTEL = "fps.bekijkenAlsPersoon";
@@ -39,7 +40,7 @@ function leesOpgeslagenPersoon(): GeimiteerdePersoon | null {
   try {
     const p = JSON.parse(ruw) as GeimiteerdePersoon;
     if (typeof p?.id === "number" && typeof p?.rol === "string" && p.rol) {
-      return p;
+      return { ...p, bevoegdheden: (p.bevoegdheden ?? {}) as Record<string, number> };
     }
     return null;
   } catch {
@@ -53,7 +54,7 @@ export function RolProvider({ children }: { children: React.ReactNode }) {
   // beheerder worden. We laten de waarde ongeldig zodat Portalen naar
   // GeenToegang valt in plaats van het beheerderportaal te tonen.
   const echteRol = (gebruiker?.rol as Rol) ?? ("" as Rol);
-  const bevoegdheden = (gebruiker?.bevoegdheden ?? {}) as Record<string, number>;
+  const echteBevoegdheden = (gebruiker?.bevoegdheden ?? {}) as Record<string, number>;
   const kanWisselen = echteRol === "hoofdbeheerder";
 
   const [persoon, setPersoon] = useState<GeimiteerdePersoon | null>(() =>
@@ -72,7 +73,14 @@ export function RolProvider({ children }: { children: React.ReactNode }) {
   // de hoofdbeheerder zijn eigen (beheerder)portaal; andere rollen zien altijd
   // hun eigen portaal.
   const actievePersoon = kanWisselen ? persoon : null;
-  const rol: Rol = kanWisselen ? (actievePersoon?.rol ?? "beheerder") : echteRol;
+  const rol: Rol = kanWisselen ? (actievePersoon?.rol ?? "hoofdbeheerder") : echteRol;
+
+  // Bevoegdheden: gebruik de matrix van de geïmiteerde persoon zodat de nav
+  // en permissie-guards exact diens weergave spiegelen.
+  const bevoegdheden: Record<string, number> =
+    kanWisselen && actievePersoon
+      ? (actievePersoon.bevoegdheden ?? {})
+      : echteBevoegdheden;
 
   // Synchroniseer de impersonatie naar de API-client zodat de backend exact
   // dezelfde data filtert als het portaal toont (op basis van het teamlid-id).
