@@ -51,9 +51,10 @@ function huidigeMaand() {
 
 export default function PlanningMedewerkers() {
   const { van, tot } = huidigeMaand();
-  const { data: medewerkers = [], isLoading } = useListPlanningMedewerkers({
-    query: { queryKey: ["planning-medewerkers"] },
-  });
+  const { data: medewerkers = [], isLoading } = useListPlanningMedewerkers(
+    {},
+    { query: { queryKey: ["planning-medewerkers"] } }
+  );
   const { data: items = [] } = useListPlanningItems(
     { van, tot },
     { query: { queryKey: ["planning-items-maand", van, tot] } }

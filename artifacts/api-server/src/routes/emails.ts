@@ -258,14 +258,14 @@ async function leesObjectBuffer(objectPad: string): Promise<Buffer> {
 
 async function uploadBijlage(bijlage: GeparseerdeBijlage): Promise<string | null> {
   try {
-    const uploadURL = await objectStorage.getObjectEntityUploadURL();
+    const { uploadURL, objectPath } = await objectStorage.getObjectEntityUploadURL();
     const putRes = await fetch(uploadURL, {
       method: "PUT",
       headers: { "Content-Type": bijlage.contentType || "application/octet-stream" },
       body: new Uint8Array(bijlage.inhoud),
     });
     if (!putRes.ok) return null;
-    return objectStorage.normalizeObjectEntityPath(uploadURL);
+    return objectPath;
   } catch {
     return null;
   }

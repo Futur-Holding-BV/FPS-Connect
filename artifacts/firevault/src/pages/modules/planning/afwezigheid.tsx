@@ -105,9 +105,10 @@ export default function PlanningAfwezigheid() {
     {},
     { query: { queryKey: ["planning-afwezigheid"] } }
   );
-  const { data: medewerkers = [] } = useListPlanningMedewerkers({
-    query: { queryKey: ["planning-medewerkers"] },
-  });
+  const { data: medewerkers = [] } = useListPlanningMedewerkers(
+    {},
+    { query: { queryKey: ["planning-medewerkers"] } }
+  );
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ["planning-afwezigheid"] });
   const createMut = useCreatePlanningAfwezigheid({ mutation: { onSuccess: () => { invalidate(); setDialoog(null); } } });

@@ -30,8 +30,8 @@ export default function MonteurLayout({ children }: { children: React.ReactNode 
   const [location] = useLocation();
   const { rol } = useRol();
   const { t } = useTranslation();
-  const routes = rol === "controleur" ? ROUTES_CONTROLEUR : ROUTES_MONTEUR;
-  const portalNaam = rol === "controleur" ? t("nav.controleurPortal") : t("nav.monteurPortal");
+  const routes = ROUTES_MONTEUR;
+  const portalNaam = t("nav.monteurPortal");
 
   const defaultSidebarOpen =
     typeof window !== "undefined" ? window.innerWidth >= 1200 : true;

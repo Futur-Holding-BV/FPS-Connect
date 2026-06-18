@@ -32,13 +32,13 @@ export type PlattegrondCluster = {
 };
 
 type Props = {
-  plattegrondUrl: string | null | undefined;
+  plattegrondUrl: string | null;
+  token: string;
+  domein: string;
   spots: PlattegrondSpot[];
   scheidingen: PlattegrondScheiding[];
   clusters?: PlattegrondCluster[];
   plaatsModus: boolean;
-  token: string;
-  domein: string;
   onTap: (x: number, y: number) => void;
   onSpot: (id: number) => void;
   onCluster: (id: number) => void;

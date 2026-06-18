@@ -35,13 +35,10 @@ export default function MonteurDashboard() {
 
   const mijnOpdrachten = onderhoud?.filter((o: any) => o.status !== "afgerond" && o.status !== "geannuleerd") ?? [];
   const mijnInspecties = (inspecties?.filter((i: any) => {
-    if (rol === "controleur") {
-      return i.status !== "goedgekeurd" && ONDERHOUD_TYPES.includes(i.type);
-    }
     return i.status !== "goedgekeurd";
   }) ?? []);
 
-  const isControleur = rol === "controleur";
+  const isControleur = false;
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto">

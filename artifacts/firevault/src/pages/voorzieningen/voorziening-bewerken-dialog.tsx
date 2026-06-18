@@ -113,7 +113,7 @@ export function VoorzieningBewerkenDialog({
   const wijzigVoorziening = useUpdateVoorziening();
   const { echteRol } = useRol();
   const magLabelsAanmaken =
-    echteRol === "beheerder" || echteRol === "hoofdbeheerder";
+    echteRol === "hoofdbeheerder";
 
   const [velden, setVelden] = useState<Velden>(() => uitVoorziening(voorziening));
   const [labelIds, setLabelIds] = useState<number[]>([]);

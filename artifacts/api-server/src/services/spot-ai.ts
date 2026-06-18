@@ -62,7 +62,14 @@ async function objectPathNaarDataUrl(objectPath: string): Promise<string | null>
     const svc = new ObjectStorageService();
     const genormaliseerd = svc.normalizeObjectEntityPath(objectPath);
     const file = await svc.getObjectEntityFile(genormaliseerd);
-    const [buffer] = await file.download();
+    const stream = file.createReadStream();
+    const chunks: Buffer[] = [];
+    await new Promise<void>((resolve, reject) => {
+      stream.on("data", (chunk: Buffer) => chunks.push(chunk));
+      stream.on("end", resolve);
+      stream.on("error", reject);
+    });
+    const buffer = Buffer.concat(chunks);
     let contentType = "image/jpeg";
     try {
       const [md] = await file.getMetadata();

@@ -25,8 +25,8 @@ type RolContextType = {
 };
 
 const RolContext = createContext<RolContextType>({
-  rol: "beheerder",
-  echteRol: "beheerder",
+  rol: "gebruiker",
+  echteRol: "gebruiker",
   bevoegdheden: {},
   kanWisselen: false,
   persoon: null,
