@@ -1,4 +1,7 @@
-import { requestUploadUrl } from "@workspace/api-client-react";
+import {
+  requestUploadUrl,
+  type UploadUrlRequestBestandType,
+} from "@workspace/api-client-react";
 
 /**
  * Upload een lokaal foto-bestand (file:// URI) via de presigned-URL-flow.
@@ -6,7 +9,11 @@ import { requestUploadUrl } from "@workspace/api-client-react";
  * 2. PUT de bytes rechtstreeks naar de presigned URL (geen auth).
  * Retourneert het objectPath (begint met /objects/...) voor opslag bij de foto.
  */
-export async function uploadFoto(localUri: string): Promise<string> {
+export async function uploadFoto(
+  localUri: string,
+  gebouwId?: number,
+  bestandType?: UploadUrlRequestBestandType,
+): Promise<string> {
   const resp = await fetch(localUri);
   const blob = await resp.blob();
   const naam =
@@ -17,6 +24,8 @@ export async function uploadFoto(localUri: string): Promise<string> {
     name: naam,
     size: blob.size || 1,
     contentType,
+    ...(gebouwId != null && { gebouw_id: gebouwId }),
+    ...(bestandType != null && { bestand_type: bestandType }),
   });
 
   const put = await fetch(up.uploadURL, {

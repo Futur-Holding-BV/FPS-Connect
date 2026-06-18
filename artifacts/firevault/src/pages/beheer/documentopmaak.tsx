@@ -98,7 +98,7 @@ export default function DocumentDesignSystem() {
 
   const { data: werkgevers = [], isLoading } = useListWerkgevers();
   const updateWerkgever = useUpdateWerkgever();
-  const { uploadFile } = useUpload();
+  const { uploadFile } = useUpload({ bestand_type: "algemeen" });
   const { toast } = useToast();
   const [uploadBezig, setUploadBezig] = useState(false);
   const handtekeningInputRef = useRef<HTMLInputElement>(null);

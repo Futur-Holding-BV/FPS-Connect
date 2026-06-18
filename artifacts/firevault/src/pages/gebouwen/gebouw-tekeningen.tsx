@@ -76,7 +76,7 @@ export default function GebouwTekeningen({
   const verwijderTekening = useDeleteGebouwTekening();
   const maakVerdieping = useCreateVerdieping();
   const analyseTekening = useAiAnalyseTekening();
-  const { uploadFile, isUploading } = useUpload();
+  const { uploadFile, isUploading } = useUpload({ gebouw_id: gebouwId, bestand_type: "tekening" });
 
   const inputRef = useRef<HTMLInputElement>(null);
   const [formOpen, setFormOpen] = useState(false);

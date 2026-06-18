@@ -16,45 +16,73 @@ interface UploadResponse {
 interface UseUploadOptions {
   /** Base path where object storage routes are mounted (default: "/api/storage") */
   basePath?: string;
+  /** Koppel de upload aan een gebouw voor ACL-routing */
+  gebouw_id?: number;
+  /** Bestandstype voor directory-structuur (foto | tekening | rapport | bijlage | algemeen) */
+  bestand_type?: string;
   onSuccess?: (response: UploadResponse) => void;
   onError?: (error: Error) => void;
 }
 
+const MAX_DIM = 1920;
+const JPEG_QUALITY = 0.85;
+
+/** Comprimeer een afbeelding client-side via Canvas (max 1920×1920, JPEG 0.85). */
+async function compressImage(file: File): Promise<File> {
+  if (!file.type.startsWith("image/")) return file;
+
+  const img = new Image();
+  const url = URL.createObjectURL(file);
+
+  await new Promise<void>((resolve, reject) => {
+    img.onload = () => resolve();
+    img.onerror = () => reject(new Error("Afbeelding laden mislukt"));
+    img.src = url;
+  });
+  URL.revokeObjectURL(url);
+
+  const { naturalWidth: w, naturalHeight: h } = img;
+  const scale = Math.min(1, MAX_DIM / Math.max(w, h));
+  const outW = Math.round(w * scale);
+  const outH = Math.round(h * scale);
+
+  const canvas = document.createElement("canvas");
+  canvas.width = outW;
+  canvas.height = outH;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return file;
+  ctx.drawImage(img, 0, 0, outW, outH);
+
+  return new Promise<File>((resolve) => {
+    canvas.toBlob(
+      (blob) => {
+        if (!blob) {
+          resolve(file);
+          return;
+        }
+        const naam = file.name.replace(/\.[^.]+$/, ".jpg");
+        resolve(new File([blob], naam, { type: "image/jpeg" }));
+      },
+      "image/jpeg",
+      JPEG_QUALITY,
+    );
+  });
+}
+
 /**
- * React hook for handling file uploads with presigned URLs.
+ * React hook voor bestandsuploads via presigned URLs.
  *
- * This hook implements the two-step presigned URL upload flow:
- * 1. Request a presigned URL from your backend (sends JSON metadata, NOT the file)
- * 2. Upload the file directly to the presigned URL
+ * Tweestaps-flow:
+ * 1. Vraag een presigned URL aan bij de backend (stuurt JSON-metadata).
+ * 2. Upload het bestand rechtstreeks naar de presigned URL.
  *
- * @example
- * ```tsx
- * function FileUploader() {
- *   const { uploadFile, isUploading, error } = useUpload({
- *     onSuccess: (response) => {
- *       console.log("Uploaded to:", response.objectPath);
- *     },
- *   });
- *
- *   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
- *     const file = e.target.files?.[0];
- *     if (file) {
- *       await uploadFile(file);
- *     }
- *   };
- *
- *   return (
- *     <div>
- *       <input type="file" onChange={handleFileChange} disabled={isUploading} />
- *       {isUploading && <p>Uploading...</p>}
- *       {error && <p>Error: {error.message}</p>}
- *     </div>
- *   );
- * }
- * ```
+ * Afbeeldingen worden automatisch gecomprimeerd (max 1920×1920, JPEG 0.85).
  */
 export function useUpload(options: UseUploadOptions = {}) {
   const basePath = options.basePath ?? "/api/storage";
+  const gebouwId = options.gebouw_id;
+  const bestandType = options.bestand_type;
+
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
   const [progress, setProgress] = useState(0);
@@ -70,17 +98,19 @@ export function useUpload(options: UseUploadOptions = {}) {
           name: file.name,
           size: file.size,
           contentType: file.type || "application/octet-stream",
+          ...(gebouwId != null && { gebouw_id: gebouwId }),
+          ...(bestandType != null && { bestand_type: bestandType }),
         }),
       });
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || "Failed to get upload URL");
+        throw new Error(errorData.error || "Ophalen upload-URL mislukt");
       }
 
       return response.json();
     },
-    []
+    [basePath, gebouwId, bestandType],
   );
 
   const uploadToPresignedUrl = useCallback(
@@ -94,10 +124,10 @@ export function useUpload(options: UseUploadOptions = {}) {
       });
 
       if (!response.ok) {
-        throw new Error("Failed to upload file to storage");
+        throw new Error("Uploaden naar opslag mislukt");
       }
     },
-    []
+    [],
   );
 
   const uploadFile = useCallback(
@@ -107,30 +137,34 @@ export function useUpload(options: UseUploadOptions = {}) {
       setProgress(0);
 
       try {
+        setProgress(5);
+        const compressed = await compressImage(file);
+
         setProgress(10);
-        const uploadResponse = await requestUploadUrl(file);
+        const uploadResponse = await requestUploadUrl(compressed);
 
         setProgress(30);
-        await uploadToPresignedUrl(file, uploadResponse.uploadURL);
+        await uploadToPresignedUrl(compressed, uploadResponse.uploadURL);
 
         setProgress(100);
         options.onSuccess?.(uploadResponse);
         return uploadResponse;
       } catch (err) {
-        const error = err instanceof Error ? err : new Error("Upload failed");
-        setError(error);
-        options.onError?.(error);
+        const uploadError =
+          err instanceof Error ? err : new Error("Upload mislukt");
+        setError(uploadError);
+        options.onError?.(uploadError);
         return null;
       } finally {
         setIsUploading(false);
       }
     },
-    [requestUploadUrl, uploadToPresignedUrl, options]
+    [requestUploadUrl, uploadToPresignedUrl, options],
   );
 
   const getUploadParameters = useCallback(
     async (
-      file: UppyFile<Record<string, unknown>, Record<string, unknown>>
+      file: UppyFile<Record<string, unknown>, Record<string, unknown>>,
     ): Promise<{
       method: "PUT";
       url: string;
@@ -145,11 +179,13 @@ export function useUpload(options: UseUploadOptions = {}) {
           name: file.name,
           size: file.size,
           contentType: file.type || "application/octet-stream",
+          ...(gebouwId != null && { gebouw_id: gebouwId }),
+          ...(bestandType != null && { bestand_type: bestandType }),
         }),
       });
 
       if (!response.ok) {
-        throw new Error("Failed to get upload URL");
+        throw new Error("Ophalen upload-URL mislukt");
       }
 
       const data = await response.json();
@@ -159,7 +195,7 @@ export function useUpload(options: UseUploadOptions = {}) {
         headers: { "Content-Type": file.type || "application/octet-stream" },
       };
     },
-    []
+    [basePath, gebouwId, bestandType],
   );
 
   return {

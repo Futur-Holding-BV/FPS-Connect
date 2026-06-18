@@ -413,12 +413,16 @@ function GridAchtergrond({ w, h }: { w: number; h: number }) {
 function FotoUploader({
   label,
   onUploaded,
+  gebouwId,
 }: {
   label: string;
   onUploaded: (objectPath: string) => void;
+  gebouwId?: number;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const { uploadFile, isUploading } = useUpload({
+    gebouw_id: gebouwId,
+    bestand_type: "foto",
     onSuccess: (res) => onUploaded(res.objectPath),
   });
 
@@ -1839,6 +1843,7 @@ export default function Plattegrond() {
         {geselecteerdId != null && (
           <SpotDetail
             id={geselecteerdId}
+            gebouwId={Number(id)}
             magBewerken={magBewerken}
             clusters={(clusters ?? []) as any[]}
             onClose={() => { setGeselecteerdId(null); setVerplaatsModus(false); }}
@@ -1906,14 +1911,14 @@ export default function Plattegrond() {
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <Label className="text-xs uppercase tracking-wide text-muted-foreground">Foto's vóór</Label>
-                  <FotoUploader label="Uploaden" onUploaded={(p) => { setVoorFotos((a) => [...a, p]); wisAiVoorstel(); }} />
+                  <FotoUploader label="Uploaden" gebouwId={Number(id)} onUploaded={(p) => { setVoorFotos((a) => [...a, p]); wisAiVoorstel(); }} />
                 </div>
                 <FotoStrip paths={voorFotos} onVerwijder={(i) => { setVoorFotos((a) => a.filter((_, idx) => idx !== i)); wisAiVoorstel(); }} />
               </div>
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <Label className="text-xs uppercase tracking-wide text-muted-foreground">Foto's ná</Label>
-                  <FotoUploader label="Uploaden" onUploaded={(p) => { setNaFotos((a) => [...a, p]); wisAiVoorstel(); }} />
+                  <FotoUploader label="Uploaden" gebouwId={Number(id)} onUploaded={(p) => { setNaFotos((a) => [...a, p]); wisAiVoorstel(); }} />
                 </div>
                 <FotoStrip paths={naFotos} onVerwijder={(i) => { setNaFotos((a) => a.filter((_, idx) => idx !== i)); wisAiVoorstel(); }} />
               </div>
@@ -2832,6 +2837,7 @@ function FotoStrip({ paths, onVerwijder }: { paths: string[]; onVerwijder: (i: n
 // Detail zijpaneel met alle velden + foto's voor/na
 function SpotDetail({
   id,
+  gebouwId,
   magBewerken,
   clusters,
   onClose,
@@ -2841,6 +2847,7 @@ function SpotDetail({
   onVerplaatsAnnuleer,
 }: {
   id: number;
+  gebouwId: number;
   magBewerken: boolean;
   clusters: any[];
   onClose: () => void;
@@ -3012,7 +3019,7 @@ function SpotDetail({
           <div className="pt-2 border-t">
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs uppercase tracking-wide text-muted-foreground font-semibold">Foto's voor</span>
-              {magBewerken && <FotoUploader label="Toevoegen" onUploaded={(p) => voegToe("voor", p)} />}
+              {magBewerken && <FotoUploader label="Toevoegen" gebouwId={gebouwId} onUploaded={(p) => voegToe("voor", p)} />}
             </div>
             <FotoGalerij fotos={voor} onVerwijder={magBewerken ? verwijder : undefined} />
           </div>
@@ -3021,7 +3028,7 @@ function SpotDetail({
           <div className="pt-2 border-t">
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs uppercase tracking-wide text-muted-foreground font-semibold">Foto's na</span>
-              {magBewerken && <FotoUploader label="Toevoegen" onUploaded={(p) => voegToe("na", p)} />}
+              {magBewerken && <FotoUploader label="Toevoegen" gebouwId={gebouwId} onUploaded={(p) => voegToe("na", p)} />}
             </div>
             <FotoGalerij fotos={na} onVerwijder={magBewerken ? verwijder : undefined} />
           </div>

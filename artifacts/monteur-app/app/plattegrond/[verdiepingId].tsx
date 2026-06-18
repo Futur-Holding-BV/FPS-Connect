@@ -226,7 +226,7 @@ export default function Plattegrond() {
           : await ImagePicker.launchImageLibraryAsync({ quality: 0.6, mediaTypes: ["images"] });
       if (res.canceled || !res.assets?.[0]) return;
       setFotoBezig(true);
-      const objectPath = await uploadFoto(res.assets[0].uri);
+      const objectPath = await uploadFoto(res.assets[0].uri, gId, "foto");
       if (fase === "voor") setVoorFotos((a) => [...a, objectPath]);
       else setNaFotos((a) => [...a, objectPath]);
     } catch (e) {
@@ -1233,7 +1233,7 @@ function SpotDetail({
           : await ImagePicker.launchImageLibraryAsync({ quality: 0.6, mediaTypes: ["images"] });
       if (res.canceled || !res.assets?.[0]) return;
       setFotoBezig(true);
-      const objectPath = await uploadFoto(res.assets[0].uri);
+      const objectPath = await uploadFoto(res.assets[0].uri, gId, "foto");
       setNaFotos((a) => [...a, objectPath]);
     } catch (e) {
       Alert.alert("Fout", e instanceof Error ? e.message : "Foto opslaan mislukt");

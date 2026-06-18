@@ -1370,7 +1370,7 @@ export default function GebouwPrint() {
   const { gebruiker } = useAuth();
   const { heeftNiveau } = useBevoegdheid();
   const { toast } = useToast();
-  const { uploadFile } = useUpload();
+  const { uploadFile } = useUpload({ gebouw_id: gebouwId, bestand_type: "rapport" });
   const bewaarRapport = useBewaarOpleverrapport();
   const [bezigOpslaan, setBezigOpslaan] = useState(false);
 

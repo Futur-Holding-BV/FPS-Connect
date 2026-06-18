@@ -406,6 +406,7 @@ function DocumentFormulier({
   const duplicaatCheck = useControleerDocumentDuplicaat();
   const [duplicaten, setDuplicaten] = useState<DocumentDuplicaatMatch[]>([]);
   const { uploadFile, isUploading } = useUpload({
+    bestand_type: "rapport",
     onSuccess: (res) => setForm((f) => ({ ...f, pdf_url: res.objectPath })),
   });
 

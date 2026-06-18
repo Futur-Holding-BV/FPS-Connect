@@ -285,7 +285,7 @@ export default function GebouwEmails({
   const { data: emails, isLoading } = useListGebouwEmails(gebouwId);
   const maak = useCreateGebouwEmail();
   const verwijder = useDeleteGebouwEmail();
-  const { uploadFile, isUploading } = useUpload();
+  const { uploadFile, isUploading } = useUpload({ gebouw_id: gebouwId, bestand_type: "bijlage" });
   const fileRef = useRef<HTMLInputElement>(null);
 
   const [bezig, setBezig] = useState(false);

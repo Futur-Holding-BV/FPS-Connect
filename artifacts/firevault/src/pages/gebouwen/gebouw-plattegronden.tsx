@@ -28,7 +28,7 @@ export default function GebouwPlattegronden({
 }) {
   const queryClient = useQueryClient();
   const updateVerdieping = useUpdateVerdieping();
-  const { uploadFile } = useUpload();
+  const { uploadFile } = useUpload({ gebouw_id: gebouwId, bestand_type: "tekening" });
 
   const inputRef = useRef<HTMLInputElement>(null);
   const doelId = useRef<number | null>(null);
