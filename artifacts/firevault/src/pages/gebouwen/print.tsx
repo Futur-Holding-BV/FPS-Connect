@@ -295,10 +295,9 @@ const SECTIES_LABELS: Record<keyof Sectiesleutels, string> = {
 };
 
 const SECTIES_VOLGORDE: (keyof Sectiesleutels)[] = [
-  "voorblad", "projectomschrijving", "juridisch",
+  "voorblad", "projectomschrijving", "juridisch", "certificaat",
   "plattegronden", "spotdetails", "foto_voor", "foto_na", "eta_certificaten",
   "tekeningen", "bijlagen", "relevante_emails", "onderhoud", "inspecties",
-  "certificaat",
 ];
 
 const CANVAS_W = 1200;
@@ -2772,6 +2771,20 @@ export default function GebouwPrint() {
         </section>
       </div>}
 
+      {secties.certificaat && (
+        <CertificaatFPS
+          gebouw={gebouw}
+          werkgeverNaam={werkgeverNaam}
+          logoSrc={logoSrc}
+          exportDatum={exportDatum}
+          geaccordeerd={huidigRapport?.certificaat_geaccordeerd ?? false}
+          geaccordeerdOp={huidigRapport?.certificaat_geaccordeerd_op ?? null}
+          garantieMaanden={huidigRapport?.certificaat_garantie_maanden ?? 12}
+          handtekeningUrl={handtekeningUrl}
+          documentnummer={documentnummer}
+        />
+      )}
+
       {/* ════════════════════════════════════════════════════════════════
           PAGINA 4+ — RAPPORTINHOUD
       ════════════════════════════════════════════════════════════════ */}
@@ -2853,22 +2866,6 @@ export default function GebouwPrint() {
                 ))}
               </tbody>
             </table>
-          </section>
-        )}
-
-        {secties.certificaat && (
-          <section className="prt-sectie">
-            <CertificaatFPS
-              gebouw={gebouw}
-              werkgeverNaam={werkgeverNaam}
-              logoSrc={logoSrc}
-              exportDatum={exportDatum}
-              geaccordeerd={huidigRapport?.certificaat_geaccordeerd ?? false}
-              geaccordeerdOp={huidigRapport?.certificaat_geaccordeerd_op ?? null}
-              garantieMaanden={huidigRapport?.certificaat_garantie_maanden ?? 12}
-              handtekeningUrl={handtekeningUrl}
-              documentnummer={documentnummer}
-            />
           </section>
         )}
 
