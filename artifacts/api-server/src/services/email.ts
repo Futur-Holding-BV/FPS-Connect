@@ -17,8 +17,8 @@ const MAIL_FROM = process.env.MAIL_FROM ?? "noreply@fpsbrandpreventie.nl";
 // noreply-afzender is een alias van deze postbus.
 const MAIL_MAILBOX = process.env.MAIL_MAILBOX ?? "app@fpsbrandpreventie.nl";
 
-// Weergegeven afzendernaam in e-mailclients: platform | werkmaatschappij
-const AFZENDER_NAAM = "FPS Connect | FPS Bouw";
+// Weergegeven afzendernaam in e-mailclients: platform | bedrijfsnaam
+const AFZENDER_NAAM = "FPS Connect | FPS Brandpreventie";
 
 // ── Foutmodel ────────────────────────────────────────────────────────────────
 export type MailFoutCategorie =
