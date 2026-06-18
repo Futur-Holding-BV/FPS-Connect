@@ -1766,6 +1766,10 @@ paths:
           name: gepubliceerd
           schema:
             type: boolean
+        - in: query
+          name: gearchiveerd
+          schema:
+            type: boolean
       responses:
         "200":
           description: OK
@@ -1855,6 +1859,42 @@ paths:
       operationId: publicerenToolboxBericht
       tags: [toolbox]
       summary: Toolbox-bericht publiceren (maakt het zichtbaar voor monteurs)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ToolboxBericht"
+
+  /toolbox-berichten/ai-analyse:
+    post:
+      operationId: aiAnalyseToolboxBerichten
+      tags: [toolbox]
+      summary: AI analyseert en classificeert actieve berichten (belangrijk / niet-belangrijk)
+      responses:
+        "200":
+          description: Analyse voltooid
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [verwerkt]
+                properties:
+                  verwerkt:
+                    type: integer
+
+  /toolbox-berichten/{id}/archiveren:
+    post:
+      operationId: archiverenToolboxBericht
+      tags: [toolbox]
+      summary: Bericht archiveren
       parameters:
         - in: path
           name: id
@@ -11859,9 +11899,18 @@ components:
           type: string
           description: "pdf | foto | video | overig"
 
+    ToolboxBerichtKoppeling:
+      type: object
+      required: [label, href]
+      properties:
+        label:
+          type: string
+        href:
+          type: string
+
     ToolboxBericht:
       type: object
-      required: [id, titel, inhoud, bijlagen, doelgroep, gepubliceerd, aangemaakt_op, bijgewerkt_op]
+      required: [id, titel, inhoud, bijlagen, doelgroep, gepubliceerd, gearchiveerd, koppelingen, aangemaakt_op, bijgewerkt_op]
       properties:
         id:
           type: integer
@@ -11890,6 +11939,21 @@ components:
         gepubliceerd_op:
           type: string
           nullable: true
+        gearchiveerd:
+          type: boolean
+        gearchiveerd_op:
+          type: string
+          nullable: true
+        is_belangrijk:
+          type: boolean
+          nullable: true
+        ai_verwerkt_op:
+          type: string
+          nullable: true
+        koppelingen:
+          type: array
+          items:
+            $ref: '#/components/schemas/ToolboxBerichtKoppeling'
         aangemaakt_op:
           type: string
         bijgewerkt_op:
@@ -11932,6 +11996,10 @@ components:
         doelgroep_gebruiker_id:
           type: integer
           nullable: true
+        koppelingen:
+          type: array
+          items:
+            $ref: '#/components/schemas/ToolboxBerichtKoppeling'
 
     LeesBevestiging:
       type: object

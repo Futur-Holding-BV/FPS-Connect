@@ -5,16 +5,23 @@ import {
   leesbevestigingenTable,
   gebruikersTable,
 } from "@workspace/db";
-import { eq, and, or, desc } from "drizzle-orm";
+import { eq, and, or, desc, isNotNull, lte } from "drizzle-orm";
 import { requireAuth, requireBevoegdheid } from "../middlewares/auth.js";
+import { maakOpenAiClient, heeftOpenAi } from "../lib/openai.js";
+import { logger } from "../lib/logger.js";
 
 const toolboxRouter = Router();
 
 const schrijvenToolbox = requireBevoegdheid("toolbox", 3);
 const verwijderenToolbox = requireBevoegdheid("toolbox", 4);
 
+// ── Auto-trigger: AI-analyse elke 4 uur ──────────────────────────────────────
+let lastAutoAnalyseTrigger = 0;
+const VIER_UREN_MS = 4 * 60 * 60 * 1000;
+
 function formatBericht(r: Record<string, unknown>, mijnUserId?: number, bevestigingen?: Array<{ id: number; gebruikerId: number; naam: string; bevestigdOp: Date }>) {
   const bijlagen = Array.isArray(r.bijlagen) ? r.bijlagen : [];
+  const koppelingen = Array.isArray(r.koppelingen) ? r.koppelingen : [];
   const mijnBevestiging = bevestigingen
     ? bevestigingen.find((b) => b.gebruikerId === mijnUserId) ?? null
     : null;
@@ -23,12 +30,17 @@ function formatBericht(r: Record<string, unknown>, mijnUserId?: number, bevestig
     titel: r.titel,
     inhoud: r.inhoud,
     bijlagen,
+    koppelingen,
     doelgroep: r.doelgroep,
     doelgroep_gebruiker_id: r.doelgroepGebruikerId ?? null,
     aangemaakt_door_id: r.aangemaaktDoorId ?? null,
     aangemaakt_door_naam: r.aangemaaktDoorNaam ?? null,
     gepubliceerd: r.gepubliceerd,
     gepubliceerd_op: r.gepubliceerdOp ? (r.gepubliceerdOp as Date).toISOString() : null,
+    gearchiveerd: r.gearchiveerd ?? false,
+    gearchiveerd_op: r.gearchivierdOp ? (r.gearchivierdOp as Date).toISOString() : null,
+    is_belangrijk: r.isBelangrijk ?? null,
+    ai_verwerkt_op: r.aiVerwerktOp ? (r.aiVerwerktOp as Date).toISOString() : null,
     aangemaakt_op: (r.aangemaaktOp as Date).toISOString(),
     bijgewerkt_op: (r.bijgewerktOp as Date).toISOString(),
     mijn_bevestiging: mijnBevestiging
@@ -48,7 +60,7 @@ function formatBericht(r: Record<string, unknown>, mijnUserId?: number, bevestig
       bevestigingen: bevestigingen.map((b) => ({
         id: b.id,
         gebruiker_id: b.gebruikerId,
-        naam: b.naam,
+        naam: b.naam ?? "",
         bevestigd_op: (b.bevestigdOp as Date).toISOString(),
       })),
     };
@@ -56,15 +68,38 @@ function formatBericht(r: Record<string, unknown>, mijnUserId?: number, bevestig
   return base;
 }
 
+// Helper: heeft de ingelogde gebruiker HRM-leestoegang of is hoofdbeheerder?
+async function heeftBeperktArchiefToegang(userId: number): Promise<boolean> {
+  const [g] = await db
+    .select({ rol: gebruikersTable.rol, bevoegdheden: gebruikersTable.bevoegdheden })
+    .from(gebruikersTable)
+    .where(eq(gebruikersTable.id, userId));
+  if (!g) return false;
+  if (g.rol === "hoofdbeheerder") return true;
+  const bev = (g.bevoegdheden as Record<string, number> | null) ?? {};
+  return (bev["personeel"] ?? 0) >= 1;
+}
+
+// ── GET /toolbox-berichten ────────────────────────────────────────────────────
 toolboxRouter.get("/toolbox-berichten", requireAuth, async (req, res) => {
   const userId = req.session?.userId;
   if (!userId) return res.status(401).json({ fout: "Niet ingelogd" });
 
   const gepubliceerdQ = req.query["gepubliceerd"];
+  const gearchivierdQ = req.query["gearchiveerd"];
   const filterGepubliceerd =
     gepubliceerdQ === "true" ? true : gepubliceerdQ === "false" ? false : undefined;
+  const filterGearchiveerd =
+    gearchivierdQ === "true" ? true : gearchivierdQ === "false" ? false : false; // default: actief
 
   const isBeheerder = (req.session as unknown as Record<string, unknown>)?.["rol"] === "hoofdbeheerder";
+
+  // Auto-trigger AI-analyse elke 4 uur (fire-and-forget)
+  const nuMs = Date.now();
+  if (heeftOpenAi() && filterGearchiveerd === false && nuMs - lastAutoAnalyseTrigger > VIER_UREN_MS) {
+    lastAutoAnalyseTrigger = nuMs;
+    voerAiAnalyseUit().catch((e: unknown) => logger.warn({ err: e }, "Auto AI-analyse mislukt"));
+  }
 
   const rows = await db
     .select({
@@ -72,12 +107,17 @@ toolboxRouter.get("/toolbox-berichten", requireAuth, async (req, res) => {
       titel: toolboxBerichtenTable.titel,
       inhoud: toolboxBerichtenTable.inhoud,
       bijlagen: toolboxBerichtenTable.bijlagen,
+      koppelingen: toolboxBerichtenTable.koppelingen,
       doelgroep: toolboxBerichtenTable.doelgroep,
       doelgroepGebruikerId: toolboxBerichtenTable.doelgroepGebruikerId,
       aangemaaktDoorId: toolboxBerichtenTable.aangemaaktDoorId,
       aangemaaktDoorNaam: gebruikersTable.naam,
       gepubliceerd: toolboxBerichtenTable.gepubliceerd,
       gepubliceerdOp: toolboxBerichtenTable.gepubliceerdOp,
+      gearchiveerd: toolboxBerichtenTable.gearchiveerd,
+      gearchivierdOp: toolboxBerichtenTable.gearchivierdOp,
+      isBelangrijk: toolboxBerichtenTable.isBelangrijk,
+      aiVerwerktOp: toolboxBerichtenTable.aiVerwerktOp,
       aangemaaktOp: toolboxBerichtenTable.aangemaaktOp,
       bijgewerktOp: toolboxBerichtenTable.bijgewerktOp,
     })
@@ -85,11 +125,15 @@ toolboxRouter.get("/toolbox-berichten", requireAuth, async (req, res) => {
     .leftJoin(gebruikersTable, eq(toolboxBerichtenTable.aangemaaktDoorId, gebruikersTable.id))
     .where(
       filterGepubliceerd !== undefined
-        ? eq(toolboxBerichtenTable.gepubliceerd, filterGepubliceerd)
+        ? and(
+            eq(toolboxBerichtenTable.gepubliceerd, filterGepubliceerd),
+            eq(toolboxBerichtenTable.gearchiveerd, filterGearchiveerd),
+          )
         : isBeheerder
-        ? undefined
+        ? eq(toolboxBerichtenTable.gearchiveerd, filterGearchiveerd)
         : and(
             eq(toolboxBerichtenTable.gepubliceerd, true),
+            eq(toolboxBerichtenTable.gearchiveerd, filterGearchiveerd),
             or(
               eq(toolboxBerichtenTable.doelgroep, "iedereen"),
               and(
@@ -101,34 +145,28 @@ toolboxRouter.get("/toolbox-berichten", requireAuth, async (req, res) => {
     )
     .orderBy(desc(toolboxBerichtenTable.aangemaaktOp));
 
-  const berichtIds = rows.map((r) => r.id);
+  // Archief: filter niet-belangrijke berichten voor gebruikers zonder HRM-toegang
+  let gefilterd = rows;
+  if (filterGearchiveerd === true) {
+    const heeftToegang = await heeftBeperktArchiefToegang(userId);
+    if (!heeftToegang) {
+      gefilterd = rows.filter((r) => r.isBelangrijk === true);
+    }
+  }
+
+  const berichtIds = gefilterd.map((r) => r.id);
   const mijnBevestigingen =
     berichtIds.length > 0
       ? await db
           .select()
           .from(leesbevestigingenTable)
-          .where(
-            and(
-              eq(leesbevestigingenTable.gebruikerId, userId)
-            )
-          )
+          .where(eq(leesbevestigingenTable.gebruikerId, userId))
       : [];
 
-  const result = rows.map((r) => {
+  const result = gefilterd.map((r) => {
     const mijnBev = mijnBevestigingen.find((b) => b.berichtId === r.id);
     return {
-      id: r.id,
-      titel: r.titel,
-      inhoud: r.inhoud,
-      bijlagen: Array.isArray(r.bijlagen) ? r.bijlagen : [],
-      doelgroep: r.doelgroep,
-      doelgroep_gebruiker_id: r.doelgroepGebruikerId ?? null,
-      aangemaakt_door_id: r.aangemaaktDoorId ?? null,
-      aangemaakt_door_naam: r.aangemaaktDoorNaam ?? null,
-      gepubliceerd: r.gepubliceerd,
-      gepubliceerd_op: r.gepubliceerdOp ? r.gepubliceerdOp.toISOString() : null,
-      aangemaakt_op: r.aangemaaktOp.toISOString(),
-      bijgewerkt_op: r.bijgewerktOp.toISOString(),
+      ...formatBericht(r as Record<string, unknown>),
       mijn_bevestiging: mijnBev
         ? {
             id: mijnBev.id,
@@ -137,8 +175,6 @@ toolboxRouter.get("/toolbox-berichten", requireAuth, async (req, res) => {
             bevestigd_op: mijnBev.bevestigdOp.toISOString(),
           }
         : null,
-      aantal_bevestigd: null,
-      aantal_ontvangers: null,
     };
   });
 
@@ -149,12 +185,13 @@ toolboxRouter.post("/toolbox-berichten", schrijvenToolbox, async (req, res) => {
   const userId = req.session?.userId;
   if (!userId) return res.status(401).json({ fout: "Niet ingelogd" });
 
-  const { titel, inhoud, bijlagen = [], doelgroep = "iedereen", doelgroep_gebruiker_id } = req.body as {
+  const { titel, inhoud, bijlagen = [], doelgroep = "iedereen", doelgroep_gebruiker_id, koppelingen = [] } = req.body as {
     titel: string;
     inhoud: string;
     bijlagen?: unknown[];
     doelgroep?: string;
     doelgroep_gebruiker_id?: number | null;
+    koppelingen?: unknown[];
   };
 
   if (!titel || !inhoud) return res.status(422).json({ fout: "titel en inhoud zijn verplicht" });
@@ -168,26 +205,11 @@ toolboxRouter.post("/toolbox-berichten", schrijvenToolbox, async (req, res) => {
       doelgroep,
       doelgroepGebruikerId: doelgroep_gebruiker_id ?? null,
       aangemaaktDoorId: userId,
+      koppelingen: koppelingen as never,
     })
     .returning();
 
-  return res.status(201).json({
-    id: rij.id,
-    titel: rij.titel,
-    inhoud: rij.inhoud,
-    bijlagen: Array.isArray(rij.bijlagen) ? rij.bijlagen : [],
-    doelgroep: rij.doelgroep,
-    doelgroep_gebruiker_id: rij.doelgroepGebruikerId ?? null,
-    aangemaakt_door_id: rij.aangemaaktDoorId ?? null,
-    aangemaakt_door_naam: null,
-    gepubliceerd: rij.gepubliceerd,
-    gepubliceerd_op: null,
-    aangemaakt_op: rij.aangemaaktOp.toISOString(),
-    bijgewerkt_op: rij.bijgewerktOp.toISOString(),
-    mijn_bevestiging: null,
-    aantal_bevestigd: null,
-    aantal_ontvangers: null,
-  });
+  return res.status(201).json(formatBericht(rij as unknown as Record<string, unknown>));
 });
 
 toolboxRouter.get("/toolbox-berichten/:id", requireAuth, async (req, res) => {
@@ -203,12 +225,17 @@ toolboxRouter.get("/toolbox-berichten/:id", requireAuth, async (req, res) => {
       titel: toolboxBerichtenTable.titel,
       inhoud: toolboxBerichtenTable.inhoud,
       bijlagen: toolboxBerichtenTable.bijlagen,
+      koppelingen: toolboxBerichtenTable.koppelingen,
       doelgroep: toolboxBerichtenTable.doelgroep,
       doelgroepGebruikerId: toolboxBerichtenTable.doelgroepGebruikerId,
       aangemaaktDoorId: toolboxBerichtenTable.aangemaaktDoorId,
       aangemaaktDoorNaam: gebruikersTable.naam,
       gepubliceerd: toolboxBerichtenTable.gepubliceerd,
       gepubliceerdOp: toolboxBerichtenTable.gepubliceerdOp,
+      gearchiveerd: toolboxBerichtenTable.gearchiveerd,
+      gearchivierdOp: toolboxBerichtenTable.gearchivierdOp,
+      isBelangrijk: toolboxBerichtenTable.isBelangrijk,
+      aiVerwerktOp: toolboxBerichtenTable.aiVerwerktOp,
       aangemaaktOp: toolboxBerichtenTable.aangemaaktOp,
       bijgewerktOp: toolboxBerichtenTable.bijgewerktOp,
     })
@@ -229,50 +256,20 @@ toolboxRouter.get("/toolbox-berichten/:id", requireAuth, async (req, res) => {
     .leftJoin(gebruikersTable, eq(leesbevestigingenTable.gebruikerId, gebruikersTable.id))
     .where(eq(leesbevestigingenTable.berichtId, id));
 
-  const mijnBev = bevestigingen.find((b) => b.gebruikerId === userId);
-
-  return res.json({
-    id: rij.id,
-    titel: rij.titel,
-    inhoud: rij.inhoud,
-    bijlagen: Array.isArray(rij.bijlagen) ? rij.bijlagen : [],
-    doelgroep: rij.doelgroep,
-    doelgroep_gebruiker_id: rij.doelgroepGebruikerId ?? null,
-    aangemaakt_door_id: rij.aangemaaktDoorId ?? null,
-    aangemaakt_door_naam: rij.aangemaaktDoorNaam ?? null,
-    gepubliceerd: rij.gepubliceerd,
-    gepubliceerd_op: rij.gepubliceerdOp ? rij.gepubliceerdOp.toISOString() : null,
-    aangemaakt_op: rij.aangemaaktOp.toISOString(),
-    bijgewerkt_op: rij.bijgewerktOp.toISOString(),
-    mijn_bevestiging: mijnBev
-      ? {
-          id: mijnBev.id,
-          bericht_id: id,
-          gebruiker_id: mijnBev.gebruikerId,
-          bevestigd_op: mijnBev.bevestigdOp.toISOString(),
-        }
-      : null,
-    aantal_bevestigd: bevestigingen.length,
-    aantal_ontvangers: null,
-    bevestigingen: bevestigingen.map((b) => ({
-      id: b.id,
-      gebruiker_id: b.gebruikerId,
-      naam: b.naam ?? "",
-      bevestigd_op: b.bevestigdOp.toISOString(),
-    })),
-  });
+  return res.json(formatBericht(rij as unknown as Record<string, unknown>, userId, bevestigingen as never));
 });
 
 toolboxRouter.patch("/toolbox-berichten/:id", schrijvenToolbox, async (req, res) => {
   const id = parseInt(String(req.params["id"]));
   if (isNaN(id)) return res.status(400).json({ fout: "Ongeldig id" });
 
-  const { titel, inhoud, bijlagen, doelgroep, doelgroep_gebruiker_id } = req.body as {
+  const { titel, inhoud, bijlagen, doelgroep, doelgroep_gebruiker_id, koppelingen } = req.body as {
     titel?: string;
     inhoud?: string;
     bijlagen?: unknown[];
     doelgroep?: string;
     doelgroep_gebruiker_id?: number | null;
+    koppelingen?: unknown[];
   };
 
   const patch: Record<string, unknown> = { bijgewerktOp: new Date() };
@@ -281,6 +278,7 @@ toolboxRouter.patch("/toolbox-berichten/:id", schrijvenToolbox, async (req, res)
   if (bijlagen !== undefined) patch["bijlagen"] = bijlagen;
   if (doelgroep !== undefined) patch["doelgroep"] = doelgroep;
   if (doelgroep_gebruiker_id !== undefined) patch["doelgroepGebruikerId"] = doelgroep_gebruiker_id;
+  if (koppelingen !== undefined) patch["koppelingen"] = koppelingen;
 
   const [rij] = await db
     .update(toolboxBerichtenTable)
@@ -289,24 +287,7 @@ toolboxRouter.patch("/toolbox-berichten/:id", schrijvenToolbox, async (req, res)
     .returning();
 
   if (!rij) return res.status(404).json({ fout: "Niet gevonden" });
-
-  return res.json({
-    id: rij.id,
-    titel: rij.titel,
-    inhoud: rij.inhoud,
-    bijlagen: Array.isArray(rij.bijlagen) ? rij.bijlagen : [],
-    doelgroep: rij.doelgroep,
-    doelgroep_gebruiker_id: rij.doelgroepGebruikerId ?? null,
-    aangemaakt_door_id: rij.aangemaaktDoorId ?? null,
-    aangemaakt_door_naam: null,
-    gepubliceerd: rij.gepubliceerd,
-    gepubliceerd_op: rij.gepubliceerdOp ? rij.gepubliceerdOp.toISOString() : null,
-    aangemaakt_op: rij.aangemaaktOp.toISOString(),
-    bijgewerkt_op: rij.bijgewerktOp.toISOString(),
-    mijn_bevestiging: null,
-    aantal_bevestigd: null,
-    aantal_ontvangers: null,
-  });
+  return res.json(formatBericht(rij as unknown as Record<string, unknown>));
 });
 
 toolboxRouter.delete("/toolbox-berichten/:id", verwijderenToolbox, async (req, res) => {
@@ -328,25 +309,91 @@ toolboxRouter.post("/toolbox-berichten/:id/publiceren", schrijvenToolbox, async 
     .returning();
 
   if (!rij) return res.status(404).json({ fout: "Niet gevonden" });
-
-  return res.json({
-    id: rij.id,
-    titel: rij.titel,
-    inhoud: rij.inhoud,
-    bijlagen: Array.isArray(rij.bijlagen) ? rij.bijlagen : [],
-    doelgroep: rij.doelgroep,
-    doelgroep_gebruiker_id: rij.doelgroepGebruikerId ?? null,
-    aangemaakt_door_id: rij.aangemaaktDoorId ?? null,
-    aangemaakt_door_naam: null,
-    gepubliceerd: rij.gepubliceerd,
-    gepubliceerd_op: rij.gepubliceerdOp ? rij.gepubliceerdOp.toISOString() : null,
-    aangemaakt_op: rij.aangemaaktOp.toISOString(),
-    bijgewerkt_op: rij.bijgewerktOp.toISOString(),
-    mijn_bevestiging: null,
-    aantal_bevestigd: null,
-    aantal_ontvangers: null,
-  });
+  return res.json(formatBericht(rij as unknown as Record<string, unknown>));
 });
+
+// ── POST /toolbox-berichten/:id/archiveren ────────────────────────────────────
+toolboxRouter.post("/toolbox-berichten/:id/archiveren", schrijvenToolbox, async (req, res) => {
+  const id = parseInt(String(req.params["id"]));
+  if (isNaN(id)) return res.status(400).json({ fout: "Ongeldig id" });
+
+  const [rij] = await db
+    .update(toolboxBerichtenTable)
+    .set({ gearchiveerd: true, gearchivierdOp: new Date(), bijgewerktOp: new Date() })
+    .where(eq(toolboxBerichtenTable.id, id))
+    .returning();
+
+  if (!rij) return res.status(404).json({ fout: "Niet gevonden" });
+  return res.json(formatBericht(rij as unknown as Record<string, unknown>));
+});
+
+// ── POST /toolbox-berichten/ai-analyse ────────────────────────────────────────
+toolboxRouter.post("/toolbox-berichten/ai-analyse", schrijvenToolbox, async (req, res) => {
+  const verwerkt = await voerAiAnalyseUit();
+  return res.json({ verwerkt });
+});
+
+// ── AI-analyse implementatie ──────────────────────────────────────────────────
+async function voerAiAnalyseUit(): Promise<number> {
+  if (!heeftOpenAi()) return 0;
+
+  const rijen = await db
+    .select({
+      id: toolboxBerichtenTable.id,
+      titel: toolboxBerichtenTable.titel,
+      inhoud: toolboxBerichtenTable.inhoud,
+    })
+    .from(toolboxBerichtenTable)
+    .where(
+      and(
+        eq(toolboxBerichtenTable.gepubliceerd, true),
+        eq(toolboxBerichtenTable.gearchiveerd, false),
+      )
+    );
+
+  if (rijen.length === 0) return 0;
+
+  const client = maakOpenAiClient();
+  let verwerkt = 0;
+
+  for (const r of rijen) {
+    try {
+      const antwoord = await client.chat.completions.create({
+        model: "gpt-4o-mini",
+        max_tokens: 10,
+        messages: [
+          {
+            role: "system",
+            content:
+              "Je beoordeelt interne berichten van een brandpreventiebedrijf. " +
+              "Geef uitsluitend 'ja' of 'nee' als antwoord. " +
+              "'ja' betekent: dit bericht heeft blijvende waarde (veiligheidsregels, werkinstructies, procedures, " +
+              "informatie die ook voor nieuwe medewerkers later relevant is). " +
+              "'nee' betekent: routinebericht, tijdgebonden of eenmalig (datum-specifiek, al verwerkt, administratief).",
+          },
+          {
+            role: "user",
+            content: `Titel: ${r.titel}\n\n${r.inhoud}\n\nIs dit bericht blijvend belangrijk?`,
+          },
+        ],
+      });
+
+      const tekst = (antwoord.choices[0]?.message?.content ?? "").toLowerCase().trim();
+      const isBelangrijk = tekst.startsWith("ja");
+
+      await db
+        .update(toolboxBerichtenTable)
+        .set({ isBelangrijk, aiVerwerktOp: new Date(), bijgewerktOp: new Date() })
+        .where(eq(toolboxBerichtenTable.id, r.id));
+
+      verwerkt++;
+    } catch (e) {
+      logger.warn({ err: e, berichtId: r.id }, "AI-classificatie mislukt voor bericht");
+    }
+  }
+
+  return verwerkt;
+}
 
 toolboxRouter.post("/toolbox-berichten/:id/bevestigen", requireAuth, async (req, res) => {
   const id = parseInt(String(req.params["id"]));

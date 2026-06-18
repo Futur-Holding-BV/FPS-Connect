@@ -24,6 +24,7 @@ import type {
   AbonnementInput,
   AbonnementUpdate,
   Activiteit,
+  AiAnalyseToolboxBerichten200,
   AiCalculatieRegels200,
   AppInstellingen,
   AppInstellingenInput,
@@ -6286,6 +6287,146 @@ export const usePublicerenToolboxBericht = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getPublicerenToolboxBerichtMutationOptions(options));
+    }
+
+export const getAiAnalyseToolboxBerichtenUrl = () => {
+
+
+
+
+  return `/api/toolbox-berichten/ai-analyse`
+}
+
+/**
+ * @summary AI analyseert en classificeert actieve berichten (belangrijk / niet-belangrijk)
+ */
+export const aiAnalyseToolboxBerichten = async ( options?: RequestInit): Promise<AiAnalyseToolboxBerichten200> => {
+
+  return customFetch<AiAnalyseToolboxBerichten200>(getAiAnalyseToolboxBerichtenUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getAiAnalyseToolboxBerichtenMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof aiAnalyseToolboxBerichten>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof aiAnalyseToolboxBerichten>>, TError,void, TContext> => {
+
+const mutationKey = ['aiAnalyseToolboxBerichten'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof aiAnalyseToolboxBerichten>>, void> = () => {
+
+
+          return  aiAnalyseToolboxBerichten(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AiAnalyseToolboxBerichtenMutationResult = NonNullable<Awaited<ReturnType<typeof aiAnalyseToolboxBerichten>>>
+
+    export type AiAnalyseToolboxBerichtenMutationError = ErrorType<unknown>
+
+    /**
+ * @summary AI analyseert en classificeert actieve berichten (belangrijk / niet-belangrijk)
+ */
+export const useAiAnalyseToolboxBerichten = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof aiAnalyseToolboxBerichten>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof aiAnalyseToolboxBerichten>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getAiAnalyseToolboxBerichtenMutationOptions(options));
+    }
+
+export const getArchiverenToolboxBerichtUrl = (id: number,) => {
+
+
+
+
+  return `/api/toolbox-berichten/${id}/archiveren`
+}
+
+/**
+ * @summary Bericht archiveren
+ */
+export const archiverenToolboxBericht = async (id: number, options?: RequestInit): Promise<ToolboxBericht> => {
+
+  return customFetch<ToolboxBericht>(getArchiverenToolboxBerichtUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getArchiverenToolboxBerichtMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof archiverenToolboxBericht>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof archiverenToolboxBericht>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['archiverenToolboxBericht'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof archiverenToolboxBericht>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  archiverenToolboxBericht(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ArchiverenToolboxBerichtMutationResult = NonNullable<Awaited<ReturnType<typeof archiverenToolboxBericht>>>
+
+    export type ArchiverenToolboxBerichtMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Bericht archiveren
+ */
+export const useArchiverenToolboxBericht = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof archiverenToolboxBericht>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof archiverenToolboxBericht>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getArchiverenToolboxBerichtMutationOptions(options));
     }
 
 export const getBevestigenToolboxBerichtUrl = (id: number,) => {

@@ -2132,7 +2132,8 @@ export const GetMijnWerkResponse = zod.array(GetMijnWerkResponseItem)
  * @summary Lijst van toolbox-berichten (beheerder ziet alle; monteur ziet alleen gepubliceerde voor hem)
  */
 export const ListToolboxBerichtenQueryParams = zod.object({
-  "gepubliceerd": zod.coerce.boolean().optional()
+  "gepubliceerd": zod.coerce.boolean().optional(),
+  "gearchiveerd": zod.coerce.boolean().optional()
 })
 
 export const ListToolboxBerichtenResponseItem = zod.object({
@@ -2150,6 +2151,14 @@ export const ListToolboxBerichtenResponseItem = zod.object({
   "aangemaakt_door_naam": zod.string().nullish(),
   "gepubliceerd": zod.boolean(),
   "gepubliceerd_op": zod.string().nullish(),
+  "gearchiveerd": zod.boolean(),
+  "gearchiveerd_op": zod.string().nullish(),
+  "is_belangrijk": zod.boolean().nullish(),
+  "ai_verwerkt_op": zod.string().nullish(),
+  "koppelingen": zod.array(zod.object({
+  "label": zod.string(),
+  "href": zod.string()
+})),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string(),
   "mijn_bevestiging": zod.object({
@@ -2176,7 +2185,11 @@ export const CreateToolboxBerichtBody = zod.object({
   "soort": zod.string().optional().describe('pdf | foto | video | overig')
 })).optional(),
   "doelgroep": zod.string().optional(),
-  "doelgroep_gebruiker_id": zod.number().nullish()
+  "doelgroep_gebruiker_id": zod.number().nullish(),
+  "koppelingen": zod.array(zod.object({
+  "label": zod.string(),
+  "href": zod.string()
+})).optional()
 })
 
 export const CreateToolboxBerichtResponse = zod.void()
@@ -2204,6 +2217,14 @@ export const GetToolboxBerichtResponse = zod.object({
   "aangemaakt_door_naam": zod.string().nullish(),
   "gepubliceerd": zod.boolean(),
   "gepubliceerd_op": zod.string().nullish(),
+  "gearchiveerd": zod.boolean(),
+  "gearchiveerd_op": zod.string().nullish(),
+  "is_belangrijk": zod.boolean().nullish(),
+  "ai_verwerkt_op": zod.string().nullish(),
+  "koppelingen": zod.array(zod.object({
+  "label": zod.string(),
+  "href": zod.string()
+})),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string(),
   "mijn_bevestiging": zod.object({
@@ -2240,7 +2261,11 @@ export const UpdateToolboxBerichtBody = zod.object({
   "soort": zod.string().optional().describe('pdf | foto | video | overig')
 })).optional(),
   "doelgroep": zod.string().optional(),
-  "doelgroep_gebruiker_id": zod.number().nullish()
+  "doelgroep_gebruiker_id": zod.number().nullish(),
+  "koppelingen": zod.array(zod.object({
+  "label": zod.string(),
+  "href": zod.string()
+})).optional()
 })
 
 export const UpdateToolboxBerichtResponse = zod.object({
@@ -2258,6 +2283,14 @@ export const UpdateToolboxBerichtResponse = zod.object({
   "aangemaakt_door_naam": zod.string().nullish(),
   "gepubliceerd": zod.boolean(),
   "gepubliceerd_op": zod.string().nullish(),
+  "gearchiveerd": zod.boolean(),
+  "gearchiveerd_op": zod.string().nullish(),
+  "is_belangrijk": zod.boolean().nullish(),
+  "ai_verwerkt_op": zod.string().nullish(),
+  "koppelingen": zod.array(zod.object({
+  "label": zod.string(),
+  "href": zod.string()
+})),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string(),
   "mijn_bevestiging": zod.object({
@@ -2303,6 +2336,65 @@ export const PublicerenToolboxBerichtResponse = zod.object({
   "aangemaakt_door_naam": zod.string().nullish(),
   "gepubliceerd": zod.boolean(),
   "gepubliceerd_op": zod.string().nullish(),
+  "gearchiveerd": zod.boolean(),
+  "gearchiveerd_op": zod.string().nullish(),
+  "is_belangrijk": zod.boolean().nullish(),
+  "ai_verwerkt_op": zod.string().nullish(),
+  "koppelingen": zod.array(zod.object({
+  "label": zod.string(),
+  "href": zod.string()
+})),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string(),
+  "mijn_bevestiging": zod.object({
+  "id": zod.number(),
+  "bericht_id": zod.number(),
+  "gebruiker_id": zod.number(),
+  "bevestigd_op": zod.string()
+}).nullish(),
+  "aantal_bevestigd": zod.number().nullish(),
+  "aantal_ontvangers": zod.number().nullish()
+})
+
+
+/**
+ * @summary AI analyseert en classificeert actieve berichten (belangrijk / niet-belangrijk)
+ */
+export const AiAnalyseToolboxBerichtenResponse = zod.object({
+  "verwerkt": zod.number()
+})
+
+
+/**
+ * @summary Bericht archiveren
+ */
+export const ArchiverenToolboxBerichtParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ArchiverenToolboxBerichtResponse = zod.object({
+  "id": zod.number(),
+  "titel": zod.string(),
+  "inhoud": zod.string(),
+  "bijlagen": zod.array(zod.object({
+  "naam": zod.string(),
+  "url": zod.string(),
+  "soort": zod.string().optional().describe('pdf | foto | video | overig')
+})),
+  "doelgroep": zod.string().describe('iedereen | gebruiker'),
+  "doelgroep_gebruiker_id": zod.number().nullish(),
+  "aangemaakt_door_id": zod.number().nullish(),
+  "aangemaakt_door_naam": zod.string().nullish(),
+  "gepubliceerd": zod.boolean(),
+  "gepubliceerd_op": zod.string().nullish(),
+  "gearchiveerd": zod.boolean(),
+  "gearchiveerd_op": zod.string().nullish(),
+  "is_belangrijk": zod.boolean().nullish(),
+  "ai_verwerkt_op": zod.string().nullish(),
+  "koppelingen": zod.array(zod.object({
+  "label": zod.string(),
+  "href": zod.string()
+})),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string(),
   "mijn_bevestiging": zod.object({

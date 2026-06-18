@@ -6,7 +6,6 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type ListToolboxBerichtenParams = {
-gepubliceerd?: boolean;
-gearchiveerd?: boolean;
+export type AiAnalyseToolboxBerichten200 = {
+  verwerkt: number;
 };

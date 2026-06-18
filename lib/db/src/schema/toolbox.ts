@@ -12,6 +12,12 @@ export const toolboxBerichtenTable = pgTable("toolbox_berichten", {
   gepubliceerdOp: timestamp("gepubliceerd_op"),
   aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
   bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
+  // AI-classificatie en archivering
+  isBelangrijk: boolean("is_belangrijk"),
+  gearchiveerd: boolean("gearchiveerd").notNull().default(false),
+  gearchivierdOp: timestamp("gearchiveerd_op"),
+  aiVerwerktOp: timestamp("ai_verwerkt_op"),
+  koppelingen: jsonb("koppelingen").notNull().default([]),
 });
 
 export const leesbevestigingenTable = pgTable("leesbevestigingen", {

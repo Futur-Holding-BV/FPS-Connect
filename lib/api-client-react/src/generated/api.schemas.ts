@@ -3422,6 +3422,11 @@ export interface ToolboxBerichtBijlage {
   soort?: string;
 }
 
+export interface ToolboxBerichtKoppeling {
+  label: string;
+  href: string;
+}
+
 export interface LeesBevestiging {
   id: number;
   bericht_id: number;
@@ -3441,6 +3446,11 @@ export interface ToolboxBericht {
   aangemaakt_door_naam?: string | null;
   gepubliceerd: boolean;
   gepubliceerd_op?: string | null;
+  gearchiveerd: boolean;
+  gearchiveerd_op?: string | null;
+  is_belangrijk?: boolean | null;
+  ai_verwerkt_op?: string | null;
+  koppelingen: ToolboxBerichtKoppeling[];
   aangemaakt_op: string;
   bijgewerkt_op: string;
   mijn_bevestiging?: LeesBevestiging | null;
@@ -3465,6 +3475,7 @@ export interface ToolboxBerichtInput {
   bijlagen?: ToolboxBerichtBijlage[];
   doelgroep?: string;
   doelgroep_gebruiker_id?: number | null;
+  koppelingen?: ToolboxBerichtKoppeling[];
 }
 
 export interface PlanningMedewerker {
@@ -3708,6 +3719,11 @@ inclusief_inactief?: boolean;
 
 export type ListToolboxBerichtenParams = {
 gepubliceerd?: boolean;
+gearchiveerd?: boolean;
+};
+
+export type AiAnalyseToolboxBerichten200 = {
+  verwerkt: number;
 };
 
 export type ListLabelsParams = {

@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { ToolboxBerichtBijlage } from './toolboxBerichtBijlage';
+import type { ToolboxBerichtKoppeling } from './toolboxBerichtKoppeling';
 
 export interface ToolboxBerichtInput {
   titel: string;
@@ -13,4 +14,5 @@ export interface ToolboxBerichtInput {
   bijlagen?: ToolboxBerichtBijlage[];
   doelgroep?: string;
   doelgroep_gebruiker_id?: number | null;
+  koppelingen?: ToolboxBerichtKoppeling[];
 }

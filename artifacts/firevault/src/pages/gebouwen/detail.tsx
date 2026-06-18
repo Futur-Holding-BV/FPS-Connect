@@ -596,13 +596,11 @@ export default function GebouwDetail() {
                   />
                 )}
                 <GebouwStappenplan gebouwId={gebouwId} gebouw={gebouw} compact />
-                <PdfRailKnop gebouwId={gebouwId} />
               </>
             )}
             {segment === "uitvoering" && (
               <>
                 <GebouwStappenplan gebouwId={gebouwId} gebouw={gebouw} compact />
-                <PdfRailKnop gebouwId={gebouwId} />
               </>
             )}
             {segment === "beheer" && (
@@ -663,8 +661,10 @@ export default function GebouwDetail() {
                     disabled={archiveerBezig}
                   />
                 )}
-                <PdfRailKnop gebouwId={gebouwId} />
               </>
+            )}
+            {segment === "rapporten" && (
+              <PdfRailKnop gebouwId={gebouwId} />
             )}
           </div>
         </div>

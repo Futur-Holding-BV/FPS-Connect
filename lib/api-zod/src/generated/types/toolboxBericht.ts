@@ -7,6 +7,7 @@
  */
 import type { LeesBevestiging } from './leesBevestiging';
 import type { ToolboxBerichtBijlage } from './toolboxBerichtBijlage';
+import type { ToolboxBerichtKoppeling } from './toolboxBerichtKoppeling';
 
 export interface ToolboxBericht {
   id: number;
@@ -20,6 +21,11 @@ export interface ToolboxBericht {
   aangemaakt_door_naam?: string | null;
   gepubliceerd: boolean;
   gepubliceerd_op?: string | null;
+  gearchiveerd: boolean;
+  gearchiveerd_op?: string | null;
+  is_belangrijk?: boolean | null;
+  ai_verwerkt_op?: string | null;
+  koppelingen: ToolboxBerichtKoppeling[];
   aangemaakt_op: string;
   bijgewerkt_op: string;
   mijn_bevestiging?: LeesBevestiging | null;
