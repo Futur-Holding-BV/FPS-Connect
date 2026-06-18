@@ -201,7 +201,7 @@ router.get("/uren/mijn-week", requireAuth, async (req, res) => {
   if (!mid) {
     return res.json({
       medewerker_id: null, jaar: 0, week_nummer: 0,
-      datum_van: "", datum_tot: "", dagen: [], planning_items: [],
+      datum_van: "", datum_tot: "", uren: [], planning_items: [],
       totaal_uren: 0, adv_uren: 0,
     });
   }
@@ -228,9 +228,13 @@ router.get("/uren/mijn-week", requireAuth, async (req, res) => {
     )
     .orderBy(urenRegistratiesTable.datum, urenRegistratiesTable.beginTijd);
 
-  const planningItems = await db
-    .select()
+  const planningItemsRows = await db
+    .select({
+      item: planningItemsTable,
+      gebouwNaam: gebouwenTable.naam,
+    })
     .from(planningItemsTable)
+    .leftJoin(gebouwenTable, eq(planningItemsTable.gebouwId, gebouwenTable.id))
     .where(
       and(
         eq(planningItemsTable.medewerkerId, mid),
@@ -248,26 +252,21 @@ router.get("/uren/mijn-week", requireAuth, async (req, res) => {
   const totaalUren = rows.reduce((acc, r) => acc + r.uren.nettoUren, 0);
   const advUren = medewerker ? berekenAdv(medewerker, totaalUren) : 0;
 
-  const dagenMap: Record<string, ReturnType<typeof mapUren>[]> = {};
-  for (const r of rows) {
-    if (!dagenMap[r.uren.datum]) dagenMap[r.uren.datum] = [];
-    dagenMap[r.uren.datum].push(mapUren(r.uren, { gebouwNaam: r.gebouwNaam }));
-  }
-
   res.json({
     medewerker_id: mid,
     jaar: targetJaar,
     week_nummer: targetWeek,
     datum_van: van,
     datum_tot: tot,
-    dagen: Object.entries(dagenMap).map(([datum, uren]) => ({ datum, uren })),
-    planning_items: planningItems.map((p) => ({
-      id: p.id,
-      datum: p.datumStart,
-      gebouw_id: p.gebouwId ?? null,
-      omschrijving: p.omschrijving ?? null,
-      begin_tijd: p.tijdStart ?? null,
-      eind_tijd: p.tijdEind ?? null,
+    uren: rows.map((r) => mapUren(r.uren, { gebouwNaam: r.gebouwNaam })),
+    planning_items: planningItemsRows.map((p) => ({
+      id: p.item.id,
+      datum: p.item.datumStart,
+      gebouw_id: p.item.gebouwId ?? null,
+      gebouw_naam: p.gebouwNaam ?? null,
+      omschrijving: p.item.omschrijving ?? null,
+      begin_tijd: p.item.tijdStart ?? null,
+      eind_tijd: p.item.tijdEind ?? null,
     })),
     totaal_uren: Math.round(totaalUren * 100) / 100,
     adv_uren: advUren,

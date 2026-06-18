@@ -13558,6 +13558,28 @@ components:
           type: array
           items:
             type: object
+            required: [id]
+            properties:
+              id:
+                type: integer
+              datum:
+                type: string
+                nullable: true
+              gebouw_id:
+                type: integer
+                nullable: true
+              gebouw_naam:
+                type: string
+                nullable: true
+              omschrijving:
+                type: string
+                nullable: true
+              begin_tijd:
+                type: string
+                nullable: true
+              eind_tijd:
+                type: string
+                nullable: true
         totaal_uren:
           type: number
         adv_uren:

@@ -8715,8 +8715,14 @@ export const GetMijnWeekUrenResponse = zod.object({
   "bijgewerkt_op": zod.string()
 })),
   "planning_items": zod.array(zod.object({
-
-}).passthrough()),
+  "id": zod.number(),
+  "datum": zod.string().nullish(),
+  "gebouw_id": zod.number().nullish(),
+  "gebouw_naam": zod.string().nullish(),
+  "omschrijving": zod.string().nullish(),
+  "begin_tijd": zod.string().nullish(),
+  "eind_tijd": zod.string().nullish()
+})),
   "totaal_uren": zod.number(),
   "adv_uren": zod.number()
 })

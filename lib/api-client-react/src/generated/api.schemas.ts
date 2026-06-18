@@ -3840,7 +3840,15 @@ export interface WeekStaatAfwijzenInput {
   reden: string;
 }
 
-export type WeekSamenvattingPlanningItemsItem = { [key: string]: unknown };
+export type WeekSamenvattingPlanningItemsItem = {
+  id: number;
+  datum?: string | null;
+  gebouw_id?: number | null;
+  gebouw_naam?: string | null;
+  omschrijving?: string | null;
+  begin_tijd?: string | null;
+  eind_tijd?: string | null;
+};
 
 export interface WeekSamenvatting {
   medewerker_id: number | null;
