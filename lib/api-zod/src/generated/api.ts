@@ -2026,6 +2026,88 @@ export const DeleteConstructieTemplateResponse = zod.void()
 
 
 /**
+ * @summary Actieve verlofsoorten (beschikbaar bij verlofaanvraag)
+ */
+export const ListMijnVerlofsoortenResponseItem = zod.object({
+  "id": zod.number(),
+  "naam": zod.string(),
+  "categorie": zod.string(),
+  "cao": zod.string().nullish(),
+  "werkmaatschappij": zod.string().nullish(),
+  "betaald": zod.boolean(),
+  "collectief": zod.boolean(),
+  "opbouw_uren_per_jaar": zod.number().nullish(),
+  "opbouw_regel": zod.string().nullish(),
+  "verval_regel": zod.string().nullish(),
+  "juridisch_kader": zod.string().nullish(),
+  "toelichting": zod.string().nullish(),
+  "actief": zod.boolean(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+export const ListMijnVerlofsoortenResponse = zod.array(ListMijnVerlofsoortenResponseItem)
+
+
+/**
+ * @summary Verlof saldi van de ingelogde medewerker
+ */
+export const ListMijnVerlofsaldiResponseItem = zod.object({
+  "id": zod.number(),
+  "medewerker_id": zod.number(),
+  "verlofsoort_id": zod.number(),
+  "verlofsoort_naam": zod.string().nullish(),
+  "jaar": zod.number(),
+  "beginsaldo_uren": zod.number().optional(),
+  "opgebouwd_uren": zod.number().optional(),
+  "opgenomen_uren": zod.number().optional(),
+  "saldo_uren": zod.number(),
+  "vervalt_op": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+export const ListMijnVerlofsaldiResponse = zod.array(ListMijnVerlofsaldiResponseItem)
+
+
+/**
+ * @summary Verlofaanvragen van de ingelogde medewerker
+ */
+export const ListMijnVerlofaanvragenResponseItem = zod.object({
+  "id": zod.number(),
+  "medewerker_id": zod.number(),
+  "medewerker_naam": zod.string().nullish(),
+  "verlofsoort_id": zod.number(),
+  "verlofsoort_naam": zod.string().nullish(),
+  "start_datum": zod.string(),
+  "eind_datum": zod.string(),
+  "aantal_uren": zod.number().optional(),
+  "status": zod.string(),
+  "reden": zod.string().nullish(),
+  "opmerking": zod.string().nullish(),
+  "beoordeeld_door_id": zod.number().nullish(),
+  "beoordeeld_op": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+export const ListMijnVerlofaanvragenResponse = zod.array(ListMijnVerlofaanvragenResponseItem)
+
+
+/**
+ * @summary Verlofaanvraag indienen
+ */
+export const CreateMijnVerlofaanvraagBody = zod.object({
+  "verlofsoort_id": zod.number(),
+  "start_datum": zod.string(),
+  "eind_datum": zod.string(),
+  "aantal_uren": zod.number().optional(),
+  "status": zod.string().optional(),
+  "reden": zod.string().optional(),
+  "opmerking": zod.string().optional()
+})
+
+export const CreateMijnVerlofaanvraagResponse = zod.void()
+
+
+/**
  * @summary Overzicht van aan de ingelogde monteur toegewezen spots, gegroepeerd per gebouw
  */
 export const GetMijnWerkResponseItem = zod.object({

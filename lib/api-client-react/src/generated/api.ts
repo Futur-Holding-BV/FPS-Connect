@@ -5468,6 +5468,307 @@ export const useDeleteConstructieTemplate = <TError = ErrorType<void>,
       return useMutation(getDeleteConstructieTemplateMutationOptions(options));
     }
 
+export const getListMijnVerlofsoortenUrl = () => {
+
+
+
+
+  return `/api/api/mijn/verlofsoorten`
+}
+
+/**
+ * @summary Actieve verlofsoorten (beschikbaar bij verlofaanvraag)
+ */
+export const listMijnVerlofsoorten = async ( options?: RequestInit): Promise<Verlofsoort[]> => {
+
+  return customFetch<Verlofsoort[]>(getListMijnVerlofsoortenUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListMijnVerlofsoortenQueryKey = () => {
+    return [
+    `/api/api/mijn/verlofsoorten`
+    ] as const;
+    }
+
+
+export const getListMijnVerlofsoortenQueryOptions = <TData = Awaited<ReturnType<typeof listMijnVerlofsoorten>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listMijnVerlofsoorten>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListMijnVerlofsoortenQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listMijnVerlofsoorten>>> = ({ signal }) => listMijnVerlofsoorten({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listMijnVerlofsoorten>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListMijnVerlofsoortenQueryResult = NonNullable<Awaited<ReturnType<typeof listMijnVerlofsoorten>>>
+export type ListMijnVerlofsoortenQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Actieve verlofsoorten (beschikbaar bij verlofaanvraag)
+ */
+
+export function useListMijnVerlofsoorten<TData = Awaited<ReturnType<typeof listMijnVerlofsoorten>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listMijnVerlofsoorten>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListMijnVerlofsoortenQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getListMijnVerlofsaldiUrl = () => {
+
+
+
+
+  return `/api/api/mijn/verlofsaldi`
+}
+
+/**
+ * @summary Verlof saldi van de ingelogde medewerker
+ */
+export const listMijnVerlofsaldi = async ( options?: RequestInit): Promise<VerlofSaldo[]> => {
+
+  return customFetch<VerlofSaldo[]>(getListMijnVerlofsaldiUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListMijnVerlofsaldiQueryKey = () => {
+    return [
+    `/api/api/mijn/verlofsaldi`
+    ] as const;
+    }
+
+
+export const getListMijnVerlofsaldiQueryOptions = <TData = Awaited<ReturnType<typeof listMijnVerlofsaldi>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listMijnVerlofsaldi>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListMijnVerlofsaldiQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listMijnVerlofsaldi>>> = ({ signal }) => listMijnVerlofsaldi({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listMijnVerlofsaldi>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListMijnVerlofsaldiQueryResult = NonNullable<Awaited<ReturnType<typeof listMijnVerlofsaldi>>>
+export type ListMijnVerlofsaldiQueryError = ErrorType<void>
+
+
+/**
+ * @summary Verlof saldi van de ingelogde medewerker
+ */
+
+export function useListMijnVerlofsaldi<TData = Awaited<ReturnType<typeof listMijnVerlofsaldi>>, TError = ErrorType<void>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listMijnVerlofsaldi>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListMijnVerlofsaldiQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getListMijnVerlofaanvragenUrl = () => {
+
+
+
+
+  return `/api/api/mijn/verlofaanvragen`
+}
+
+/**
+ * @summary Verlofaanvragen van de ingelogde medewerker
+ */
+export const listMijnVerlofaanvragen = async ( options?: RequestInit): Promise<VerlofAanvraag[]> => {
+
+  return customFetch<VerlofAanvraag[]>(getListMijnVerlofaanvragenUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListMijnVerlofaanvragenQueryKey = () => {
+    return [
+    `/api/api/mijn/verlofaanvragen`
+    ] as const;
+    }
+
+
+export const getListMijnVerlofaanvragenQueryOptions = <TData = Awaited<ReturnType<typeof listMijnVerlofaanvragen>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listMijnVerlofaanvragen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListMijnVerlofaanvragenQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listMijnVerlofaanvragen>>> = ({ signal }) => listMijnVerlofaanvragen({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listMijnVerlofaanvragen>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListMijnVerlofaanvragenQueryResult = NonNullable<Awaited<ReturnType<typeof listMijnVerlofaanvragen>>>
+export type ListMijnVerlofaanvragenQueryError = ErrorType<void>
+
+
+/**
+ * @summary Verlofaanvragen van de ingelogde medewerker
+ */
+
+export function useListMijnVerlofaanvragen<TData = Awaited<ReturnType<typeof listMijnVerlofaanvragen>>, TError = ErrorType<void>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listMijnVerlofaanvragen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListMijnVerlofaanvragenQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateMijnVerlofaanvraagUrl = () => {
+
+
+
+
+  return `/api/api/mijn/verlofaanvragen`
+}
+
+/**
+ * @summary Verlofaanvraag indienen
+ */
+export const createMijnVerlofaanvraag = async (verlofAanvraagInput: VerlofAanvraagInput, options?: RequestInit): Promise<VerlofAanvraag> => {
+
+  return customFetch<VerlofAanvraag>(getCreateMijnVerlofaanvraagUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(verlofAanvraagInput)
+  }
+);}
+
+
+
+
+export const getCreateMijnVerlofaanvraagMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createMijnVerlofaanvraag>>, TError,{data: BodyType<VerlofAanvraagInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createMijnVerlofaanvraag>>, TError,{data: BodyType<VerlofAanvraagInput>}, TContext> => {
+
+const mutationKey = ['createMijnVerlofaanvraag'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createMijnVerlofaanvraag>>, {data: BodyType<VerlofAanvraagInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createMijnVerlofaanvraag(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateMijnVerlofaanvraagMutationResult = NonNullable<Awaited<ReturnType<typeof createMijnVerlofaanvraag>>>
+    export type CreateMijnVerlofaanvraagMutationBody = BodyType<VerlofAanvraagInput>
+    export type CreateMijnVerlofaanvraagMutationError = ErrorType<void>
+
+    /**
+ * @summary Verlofaanvraag indienen
+ */
+export const useCreateMijnVerlofaanvraag = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createMijnVerlofaanvraag>>, TError,{data: BodyType<VerlofAanvraagInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createMijnVerlofaanvraag>>,
+        TError,
+        {data: BodyType<VerlofAanvraagInput>},
+        TContext
+      > => {
+      return useMutation(getCreateMijnVerlofaanvraagMutationOptions(options));
+    }
+
 export const getGetMijnWerkUrl = () => {
 
 

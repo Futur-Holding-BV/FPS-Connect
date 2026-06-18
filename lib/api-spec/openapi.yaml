@@ -1671,6 +1671,74 @@ paths:
         "404":
           description: Niet gevonden
 
+  /api/mijn/verlofsoorten:
+    get:
+      operationId: listMijnVerlofsoorten
+      tags: [mijn]
+      summary: Actieve verlofsoorten (beschikbaar bij verlofaanvraag)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Verlofsoort"
+
+  /api/mijn/verlofsaldi:
+    get:
+      operationId: listMijnVerlofsaldi
+      tags: [mijn]
+      summary: Verlof saldi van de ingelogde medewerker
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/VerlofSaldo"
+        "404":
+          description: Geen medewerker gekoppeld aan dit account
+
+  /api/mijn/verlofaanvragen:
+    get:
+      operationId: listMijnVerlofaanvragen
+      tags: [mijn]
+      summary: Verlofaanvragen van de ingelogde medewerker
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/VerlofAanvraag"
+        "404":
+          description: Geen medewerker gekoppeld aan dit account
+    post:
+      operationId: createMijnVerlofaanvraag
+      tags: [mijn]
+      summary: Verlofaanvraag indienen
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VerlofAanvraagInput"
+      responses:
+        "201":
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VerlofAanvraag"
+        "404":
+          description: Geen medewerker gekoppeld aan dit account
+
   /mijn-werk:
     get:
       operationId: getMijnWerk

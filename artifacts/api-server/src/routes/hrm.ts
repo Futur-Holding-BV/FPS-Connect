@@ -1502,4 +1502,159 @@ router.get("/hrm/cao-opties", lezen, async (_req, res) => {
   );
 });
 
+// ── Mijn verlof — self-service, alle geauthenticeerde gebruikers ─────────────
+// Geen personeel-bevoegdheid vereist; een medewerker raadpleegt en dient in
+// uitsluitend zijn eigen verlofdata. requireAuth is al globaal toegepast.
+
+async function getMijnMedewerkerId(req: import("express").Request): Promise<number | null> {
+  const userId = req.session.userId;
+  if (!userId) return null;
+  const [m] = await db
+    .select({ id: medewerkersTable.id })
+    .from(medewerkersTable)
+    .where(eq(medewerkersTable.gebruikerId, userId));
+  return m?.id ?? null;
+}
+
+router.get("/mijn/verlofsoorten", async (req, res) => {
+  try {
+    const rijen = await db
+      .select()
+      .from(verlofsoortenTable)
+      .where(eq(verlofsoortenTable.actief, true))
+      .orderBy(verlofsoortenTable.naam);
+    res.json(
+      rijen.map((s) => ({
+        id: s.id,
+        naam: s.naam,
+        categorie: s.categorie,
+        cao: s.cao ?? null,
+        werkmaatschappij: s.werkmaatschappij ?? null,
+        betaald: s.betaald,
+        collectief: s.collectief,
+        opbouw_uren_per_jaar: s.opbouwUrenPerJaar ?? null,
+        opbouw_regel: s.opbouwRegel ?? null,
+        verval_regel: s.vervalRegel ?? null,
+        juridisch_kader: s.juridischKader ?? null,
+        toelichting: s.toelichting ?? null,
+        actief: s.actief,
+        aangemaakt_op: iso(s.aangemaaktOp),
+        bijgewerkt_op: iso(s.bijgewerktOp),
+      })),
+    );
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+router.get("/mijn/verlofsaldi", async (req, res) => {
+  try {
+    const medewerkerId = await getMijnMedewerkerId(req);
+    if (!medewerkerId) return res.status(404).json({ error: "Geen medewerker gekoppeld aan uw account." });
+    const rijen = await db
+      .select({ s: verlofSaldiTable, verlofsoortNaam: verlofsoortenTable.naam })
+      .from(verlofSaldiTable)
+      .leftJoin(verlofsoortenTable, eq(verlofSaldiTable.verlofsoortId, verlofsoortenTable.id))
+      .where(eq(verlofSaldiTable.medewerkerId, medewerkerId))
+      .orderBy(desc(verlofSaldiTable.jaar));
+    res.json(
+      rijen.map((r) => ({
+        id: r.s.id,
+        medewerker_id: r.s.medewerkerId,
+        verlofsoort_id: r.s.verlofsoortId,
+        verlofsoort_naam: r.verlofsoortNaam ?? null,
+        jaar: r.s.jaar,
+        beginsaldo_uren: r.s.beginsaldoUren,
+        opgebouwd_uren: r.s.opgebouwdUren,
+        opgenomen_uren: r.s.opgenomenUren,
+        saldo_uren: r.s.saldoUren,
+        vervalt_op: r.s.vervaltOp,
+        aangemaakt_op: iso(r.s.aangemaaktOp),
+        bijgewerkt_op: iso(r.s.bijgewerktOp),
+      })),
+    );
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+router.get("/mijn/verlofaanvragen", async (req, res) => {
+  try {
+    const medewerkerId = await getMijnMedewerkerId(req);
+    if (!medewerkerId) return res.status(404).json({ error: "Geen medewerker gekoppeld aan uw account." });
+    const rijen = await db
+      .select({ a: verlofAanvragenTable, verlofsoortNaam: verlofsoortenTable.naam })
+      .from(verlofAanvragenTable)
+      .leftJoin(verlofsoortenTable, eq(verlofAanvragenTable.verlofsoortId, verlofsoortenTable.id))
+      .where(eq(verlofAanvragenTable.medewerkerId, medewerkerId))
+      .orderBy(desc(verlofAanvragenTable.startDatum));
+    res.json(
+      rijen.map((r) => ({
+        id: r.a.id,
+        medewerker_id: r.a.medewerkerId,
+        verlofsoort_id: r.a.verlofsoortId,
+        verlofsoort_naam: r.verlofsoortNaam ?? null,
+        start_datum: r.a.startDatum,
+        eind_datum: r.a.eindDatum,
+        aantal_uren: r.a.aantalUren,
+        status: r.a.status,
+        reden: r.a.reden,
+        opmerking: r.a.opmerking,
+        beoordeeld_door_id: r.a.beoordeeldDoorId,
+        beoordeeld_op: isoOf(r.a.beoordeeldOp),
+        aangemaakt_op: iso(r.a.aangemaaktOp),
+        bijgewerkt_op: iso(r.a.bijgewerktOp),
+      })),
+    );
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+router.post("/mijn/verlofaanvragen", async (req, res) => {
+  try {
+    const medewerkerId = await getMijnMedewerkerId(req);
+    if (!medewerkerId) return res.status(404).json({ error: "Geen medewerker gekoppeld aan uw account." });
+    const { verlofsoort_id, start_datum, eind_datum, aantal_uren, reden, opmerking } = req.body;
+    if (verlofsoort_id == null || !start_datum || !eind_datum) {
+      return res.status(400).json({ error: "verlofsoort_id, start_datum en eind_datum zijn verplicht" });
+    }
+    const [a] = await db
+      .insert(verlofAanvragenTable)
+      .values({
+        medewerkerId,
+        verlofsoortId: parseId(verlofsoort_id),
+        startDatum: start_datum,
+        eindDatum: eind_datum,
+        aantalUren: aantal_uren ?? 0,
+        status: "aangevraagd",
+        reden: reden ?? null,
+        opmerking: opmerking ?? null,
+      })
+      .returning();
+    res.status(201).json({
+      id: a.id,
+      medewerker_id: a.medewerkerId,
+      verlofsoort_id: a.verlofsoortId,
+      verlofsoort_naam: null,
+      start_datum: a.startDatum,
+      eind_datum: a.eindDatum,
+      aantal_uren: a.aantalUren,
+      status: a.status,
+      reden: a.reden,
+      opmerking: a.opmerking,
+      beoordeeld_door_id: a.beoordeeldDoorId,
+      beoordeeld_op: isoOf(a.beoordeeldOp),
+      aangemaakt_op: iso(a.aangemaaktOp),
+      bijgewerkt_op: iso(a.bijgewerktOp),
+    });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
 export default router;
