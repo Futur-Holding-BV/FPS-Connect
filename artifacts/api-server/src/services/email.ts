@@ -17,7 +17,8 @@ const MAIL_FROM = process.env.MAIL_FROM ?? "noreply@fpsbrandpreventie.nl";
 // noreply-afzender is een alias van deze postbus.
 const MAIL_MAILBOX = process.env.MAIL_MAILBOX ?? "app@fpsbrandpreventie.nl";
 
-const AFZENDER_NAAM = "FPS Brandpreventie";
+// Weergegeven afzendernaam in e-mailclients: platform | werkmaatschappij
+const AFZENDER_NAAM = "FPS Connect | FPS Bouw";
 
 // ── Foutmodel ────────────────────────────────────────────────────────────────
 export type MailFoutCategorie =
@@ -200,6 +201,8 @@ async function verstuurViaGraph(opties: {
         { emailAddress: { address: opties.naarEmail, name: opties.naarNaam ?? opties.naarEmail } },
       ],
       from: { emailAddress: { address: MAIL_FROM, name: AFZENDER_NAAM } },
+      // Antwoorden komen terug in de gedeelde postbus, niet op het noreply-alias.
+      replyTo: [{ emailAddress: { address: MAIL_MAILBOX, name: "FPS Connect" } }],
     },
     saveToSentItems: false,
   };
