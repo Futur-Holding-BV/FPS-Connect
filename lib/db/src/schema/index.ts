@@ -18,3 +18,4 @@ export * from "./rapporten";
 export * from "./toolbox";
 export * from "./planning";
 export * from "./mod-calculatie";
+export * from "./gereedschappen";

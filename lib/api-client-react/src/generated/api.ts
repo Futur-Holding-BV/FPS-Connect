@@ -34,6 +34,10 @@ import type {
   AuthGebruiker,
   Bekwaamheid,
   BekwaamheidInput,
+  BruikleenInput,
+  BruikleenOndertekeningInput,
+  BruikleenOvereenkomst,
+  BruikleenRetourgaveInput,
   Calculatie,
   CalculatieDetail,
   CalculatieInput,
@@ -110,6 +114,10 @@ import type {
   GebruikerInput,
   GebruikerUpdate,
   GebruikersAanvullen200,
+  Gereedschap,
+  GereedschapInput,
+  GereedschapMelding,
+  GereedschapMeldingInput,
   GetGebouwGevelbeeld200,
   GetRecenteActiviteitParams,
   GetVervaldagenParams,
@@ -137,6 +145,7 @@ import type {
   ListFabrikantenParams,
   ListGebouwenParams,
   ListGekoppeldeDocumentenParams,
+  ListGereedschappenParams,
   ListInspectiesParams,
   ListLabelsParams,
   ListModCalculatiesParams,
@@ -25610,4 +25619,967 @@ export const useDeleteModCalcRegel = <TError = ErrorType<unknown>,
       > => {
       return useMutation(getDeleteModCalcRegelMutationOptions(options));
     }
+
+export const getListGereedschappenUrl = (params?: ListGereedschappenParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/gereedschappen?${stringifiedParams}` : `/api/gereedschappen`
+}
+
+/**
+ * @summary Lijst gereedschappen
+ */
+export const listGereedschappen = async (params?: ListGereedschappenParams, options?: RequestInit): Promise<Gereedschap[]> => {
+
+  return customFetch<Gereedschap[]>(getListGereedschappenUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListGereedschappenQueryKey = (params?: ListGereedschappenParams,) => {
+    return [
+    `/api/gereedschappen`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListGereedschappenQueryOptions = <TData = Awaited<ReturnType<typeof listGereedschappen>>, TError = ErrorType<unknown>>(params?: ListGereedschappenParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listGereedschappen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListGereedschappenQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listGereedschappen>>> = ({ signal }) => listGereedschappen(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listGereedschappen>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListGereedschappenQueryResult = NonNullable<Awaited<ReturnType<typeof listGereedschappen>>>
+export type ListGereedschappenQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Lijst gereedschappen
+ */
+
+export function useListGereedschappen<TData = Awaited<ReturnType<typeof listGereedschappen>>, TError = ErrorType<unknown>>(
+ params?: ListGereedschappenParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listGereedschappen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListGereedschappenQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateGereedschapUrl = () => {
+
+
+
+
+  return `/api/gereedschappen`
+}
+
+/**
+ * @summary Gereedschap registreren
+ */
+export const createGereedschap = async (gereedschapInput: GereedschapInput, options?: RequestInit): Promise<Gereedschap> => {
+
+  return customFetch<Gereedschap>(getCreateGereedschapUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(gereedschapInput)
+  }
+);}
+
+
+
+
+export const getCreateGereedschapMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createGereedschap>>, TError,{data: BodyType<GereedschapInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createGereedschap>>, TError,{data: BodyType<GereedschapInput>}, TContext> => {
+
+const mutationKey = ['createGereedschap'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createGereedschap>>, {data: BodyType<GereedschapInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createGereedschap(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateGereedschapMutationResult = NonNullable<Awaited<ReturnType<typeof createGereedschap>>>
+    export type CreateGereedschapMutationBody = BodyType<GereedschapInput>
+    export type CreateGereedschapMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Gereedschap registreren
+ */
+export const useCreateGereedschap = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createGereedschap>>, TError,{data: BodyType<GereedschapInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createGereedschap>>,
+        TError,
+        {data: BodyType<GereedschapInput>},
+        TContext
+      > => {
+      return useMutation(getCreateGereedschapMutationOptions(options));
+    }
+
+export const getGetGereedschapUrl = (id: number,) => {
+
+
+
+
+  return `/api/gereedschappen/${id}`
+}
+
+/**
+ * @summary Gereedschap detail
+ */
+export const getGereedschap = async (id: number, options?: RequestInit): Promise<Gereedschap> => {
+
+  return customFetch<Gereedschap>(getGetGereedschapUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetGereedschapQueryKey = (id: number,) => {
+    return [
+    `/api/gereedschappen/${id}`
+    ] as const;
+    }
+
+
+export const getGetGereedschapQueryOptions = <TData = Awaited<ReturnType<typeof getGereedschap>>, TError = ErrorType<void>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getGereedschap>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetGereedschapQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getGereedschap>>> = ({ signal }) => getGereedschap(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getGereedschap>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetGereedschapQueryResult = NonNullable<Awaited<ReturnType<typeof getGereedschap>>>
+export type GetGereedschapQueryError = ErrorType<void>
+
+
+/**
+ * @summary Gereedschap detail
+ */
+
+export function useGetGereedschap<TData = Awaited<ReturnType<typeof getGereedschap>>, TError = ErrorType<void>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getGereedschap>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetGereedschapQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getUpdateGereedschapUrl = (id: number,) => {
+
+
+
+
+  return `/api/gereedschappen/${id}`
+}
+
+/**
+ * @summary Gereedschap bijwerken
+ */
+export const updateGereedschap = async (id: number,
+    gereedschapInput: GereedschapInput, options?: RequestInit): Promise<Gereedschap> => {
+
+  return customFetch<Gereedschap>(getUpdateGereedschapUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(gereedschapInput)
+  }
+);}
+
+
+
+
+export const getUpdateGereedschapMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateGereedschap>>, TError,{id: number;data: BodyType<GereedschapInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateGereedschap>>, TError,{id: number;data: BodyType<GereedschapInput>}, TContext> => {
+
+const mutationKey = ['updateGereedschap'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateGereedschap>>, {id: number;data: BodyType<GereedschapInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateGereedschap(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateGereedschapMutationResult = NonNullable<Awaited<ReturnType<typeof updateGereedschap>>>
+    export type UpdateGereedschapMutationBody = BodyType<GereedschapInput>
+    export type UpdateGereedschapMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Gereedschap bijwerken
+ */
+export const useUpdateGereedschap = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateGereedschap>>, TError,{id: number;data: BodyType<GereedschapInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateGereedschap>>,
+        TError,
+        {id: number;data: BodyType<GereedschapInput>},
+        TContext
+      > => {
+      return useMutation(getUpdateGereedschapMutationOptions(options));
+    }
+
+export const getDeleteGereedschapUrl = (id: number,) => {
+
+
+
+
+  return `/api/gereedschappen/${id}`
+}
+
+/**
+ * @summary Gereedschap afschrijven (status Afgeschreven)
+ */
+export const deleteGereedschap = async (id: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteGereedschapUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteGereedschapMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteGereedschap>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteGereedschap>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deleteGereedschap'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteGereedschap>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteGereedschap(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteGereedschapMutationResult = NonNullable<Awaited<ReturnType<typeof deleteGereedschap>>>
+
+    export type DeleteGereedschapMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Gereedschap afschrijven (status Afgeschreven)
+ */
+export const useDeleteGereedschap = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteGereedschap>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteGereedschap>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeleteGereedschapMutationOptions(options));
+    }
+
+export const getListGereedschapBruikleenUrl = (id: number,) => {
+
+
+
+
+  return `/api/gereedschappen/${id}/bruikleen`
+}
+
+/**
+ * @summary Bruikleengeschiedenis van een gereedschap
+ */
+export const listGereedschapBruikleen = async (id: number, options?: RequestInit): Promise<BruikleenOvereenkomst[]> => {
+
+  return customFetch<BruikleenOvereenkomst[]>(getListGereedschapBruikleenUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListGereedschapBruikleenQueryKey = (id: number,) => {
+    return [
+    `/api/gereedschappen/${id}/bruikleen`
+    ] as const;
+    }
+
+
+export const getListGereedschapBruikleenQueryOptions = <TData = Awaited<ReturnType<typeof listGereedschapBruikleen>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listGereedschapBruikleen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListGereedschapBruikleenQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listGereedschapBruikleen>>> = ({ signal }) => listGereedschapBruikleen(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listGereedschapBruikleen>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListGereedschapBruikleenQueryResult = NonNullable<Awaited<ReturnType<typeof listGereedschapBruikleen>>>
+export type ListGereedschapBruikleenQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Bruikleengeschiedenis van een gereedschap
+ */
+
+export function useListGereedschapBruikleen<TData = Awaited<ReturnType<typeof listGereedschapBruikleen>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listGereedschapBruikleen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListGereedschapBruikleenQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getListGereedschapMeldingenUrl = (id: number,) => {
+
+
+
+
+  return `/api/gereedschappen/${id}/meldingen`
+}
+
+/**
+ * @summary Meldingen voor een gereedschap
+ */
+export const listGereedschapMeldingen = async (id: number, options?: RequestInit): Promise<GereedschapMelding[]> => {
+
+  return customFetch<GereedschapMelding[]>(getListGereedschapMeldingenUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListGereedschapMeldingenQueryKey = (id: number,) => {
+    return [
+    `/api/gereedschappen/${id}/meldingen`
+    ] as const;
+    }
+
+
+export const getListGereedschapMeldingenQueryOptions = <TData = Awaited<ReturnType<typeof listGereedschapMeldingen>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listGereedschapMeldingen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListGereedschapMeldingenQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listGereedschapMeldingen>>> = ({ signal }) => listGereedschapMeldingen(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listGereedschapMeldingen>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListGereedschapMeldingenQueryResult = NonNullable<Awaited<ReturnType<typeof listGereedschapMeldingen>>>
+export type ListGereedschapMeldingenQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Meldingen voor een gereedschap
+ */
+
+export function useListGereedschapMeldingen<TData = Awaited<ReturnType<typeof listGereedschapMeldingen>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listGereedschapMeldingen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListGereedschapMeldingenQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateGereedschapMeldingUrl = (id: number,) => {
+
+
+
+
+  return `/api/gereedschappen/${id}/meldingen`
+}
+
+/**
+ * @summary Schade-, defect- of vermissingsmelding toevoegen
+ */
+export const createGereedschapMelding = async (id: number,
+    gereedschapMeldingInput: GereedschapMeldingInput, options?: RequestInit): Promise<GereedschapMelding> => {
+
+  return customFetch<GereedschapMelding>(getCreateGereedschapMeldingUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(gereedschapMeldingInput)
+  }
+);}
+
+
+
+
+export const getCreateGereedschapMeldingMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createGereedschapMelding>>, TError,{id: number;data: BodyType<GereedschapMeldingInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createGereedschapMelding>>, TError,{id: number;data: BodyType<GereedschapMeldingInput>}, TContext> => {
+
+const mutationKey = ['createGereedschapMelding'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createGereedschapMelding>>, {id: number;data: BodyType<GereedschapMeldingInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  createGereedschapMelding(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateGereedschapMeldingMutationResult = NonNullable<Awaited<ReturnType<typeof createGereedschapMelding>>>
+    export type CreateGereedschapMeldingMutationBody = BodyType<GereedschapMeldingInput>
+    export type CreateGereedschapMeldingMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Schade-, defect- of vermissingsmelding toevoegen
+ */
+export const useCreateGereedschapMelding = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createGereedschapMelding>>, TError,{id: number;data: BodyType<GereedschapMeldingInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createGereedschapMelding>>,
+        TError,
+        {id: number;data: BodyType<GereedschapMeldingInput>},
+        TContext
+      > => {
+      return useMutation(getCreateGereedschapMeldingMutationOptions(options));
+    }
+
+export const getCreateBruikleenUrl = () => {
+
+
+
+
+  return `/api/bruikleen`
+}
+
+/**
+ * @summary Bruikleenovereenkomst aanmaken (uitgifte)
+ */
+export const createBruikleen = async (bruikleenInput: BruikleenInput, options?: RequestInit): Promise<BruikleenOvereenkomst> => {
+
+  return customFetch<BruikleenOvereenkomst>(getCreateBruikleenUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(bruikleenInput)
+  }
+);}
+
+
+
+
+export const getCreateBruikleenMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createBruikleen>>, TError,{data: BodyType<BruikleenInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createBruikleen>>, TError,{data: BodyType<BruikleenInput>}, TContext> => {
+
+const mutationKey = ['createBruikleen'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createBruikleen>>, {data: BodyType<BruikleenInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createBruikleen(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateBruikleenMutationResult = NonNullable<Awaited<ReturnType<typeof createBruikleen>>>
+    export type CreateBruikleenMutationBody = BodyType<BruikleenInput>
+    export type CreateBruikleenMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Bruikleenovereenkomst aanmaken (uitgifte)
+ */
+export const useCreateBruikleen = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createBruikleen>>, TError,{data: BodyType<BruikleenInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createBruikleen>>,
+        TError,
+        {data: BodyType<BruikleenInput>},
+        TContext
+      > => {
+      return useMutation(getCreateBruikleenMutationOptions(options));
+    }
+
+export const getGetBruikleenUrl = (id: number,) => {
+
+
+
+
+  return `/api/bruikleen/${id}`
+}
+
+/**
+ * @summary Bruikleenovereenkomst detail
+ */
+export const getBruikleen = async (id: number, options?: RequestInit): Promise<BruikleenOvereenkomst> => {
+
+  return customFetch<BruikleenOvereenkomst>(getGetBruikleenUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetBruikleenQueryKey = (id: number,) => {
+    return [
+    `/api/bruikleen/${id}`
+    ] as const;
+    }
+
+
+export const getGetBruikleenQueryOptions = <TData = Awaited<ReturnType<typeof getBruikleen>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getBruikleen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetBruikleenQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getBruikleen>>> = ({ signal }) => getBruikleen(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getBruikleen>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetBruikleenQueryResult = NonNullable<Awaited<ReturnType<typeof getBruikleen>>>
+export type GetBruikleenQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Bruikleenovereenkomst detail
+ */
+
+export function useGetBruikleen<TData = Awaited<ReturnType<typeof getBruikleen>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getBruikleen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetBruikleenQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getVerwerkRetourgaveUrl = (id: number,) => {
+
+
+
+
+  return `/api/bruikleen/${id}/retourgave`
+}
+
+/**
+ * @summary Retourgave verwerken (inname)
+ */
+export const verwerkRetourgave = async (id: number,
+    bruikleenRetourgaveInput: BruikleenRetourgaveInput, options?: RequestInit): Promise<BruikleenOvereenkomst> => {
+
+  return customFetch<BruikleenOvereenkomst>(getVerwerkRetourgaveUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(bruikleenRetourgaveInput)
+  }
+);}
+
+
+
+
+export const getVerwerkRetourgaveMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof verwerkRetourgave>>, TError,{id: number;data: BodyType<BruikleenRetourgaveInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof verwerkRetourgave>>, TError,{id: number;data: BodyType<BruikleenRetourgaveInput>}, TContext> => {
+
+const mutationKey = ['verwerkRetourgave'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof verwerkRetourgave>>, {id: number;data: BodyType<BruikleenRetourgaveInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  verwerkRetourgave(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type VerwerkRetourgaveMutationResult = NonNullable<Awaited<ReturnType<typeof verwerkRetourgave>>>
+    export type VerwerkRetourgaveMutationBody = BodyType<BruikleenRetourgaveInput>
+    export type VerwerkRetourgaveMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Retourgave verwerken (inname)
+ */
+export const useVerwerkRetourgave = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof verwerkRetourgave>>, TError,{id: number;data: BodyType<BruikleenRetourgaveInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof verwerkRetourgave>>,
+        TError,
+        {id: number;data: BodyType<BruikleenRetourgaveInput>},
+        TContext
+      > => {
+      return useMutation(getVerwerkRetourgaveMutationOptions(options));
+    }
+
+export const getOndertekBruikleenUrl = (id: number,) => {
+
+
+
+
+  return `/api/bruikleen/${id}/ondertekening`
+}
+
+/**
+ * @summary Digitale handtekening opslaan
+ */
+export const ondertekBruikleen = async (id: number,
+    bruikleenOndertekeningInput: BruikleenOndertekeningInput, options?: RequestInit): Promise<BruikleenOvereenkomst> => {
+
+  return customFetch<BruikleenOvereenkomst>(getOndertekBruikleenUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(bruikleenOndertekeningInput)
+  }
+);}
+
+
+
+
+export const getOndertekBruikleenMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof ondertekBruikleen>>, TError,{id: number;data: BodyType<BruikleenOndertekeningInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof ondertekBruikleen>>, TError,{id: number;data: BodyType<BruikleenOndertekeningInput>}, TContext> => {
+
+const mutationKey = ['ondertekBruikleen'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof ondertekBruikleen>>, {id: number;data: BodyType<BruikleenOndertekeningInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  ondertekBruikleen(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type OndertekBruikleenMutationResult = NonNullable<Awaited<ReturnType<typeof ondertekBruikleen>>>
+    export type OndertekBruikleenMutationBody = BodyType<BruikleenOndertekeningInput>
+    export type OndertekBruikleenMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Digitale handtekening opslaan
+ */
+export const useOndertekBruikleen = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof ondertekBruikleen>>, TError,{id: number;data: BodyType<BruikleenOndertekeningInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof ondertekBruikleen>>,
+        TError,
+        {id: number;data: BodyType<BruikleenOndertekeningInput>},
+        TContext
+      > => {
+      return useMutation(getOndertekBruikleenMutationOptions(options));
+    }
+
+export const getListMijnGereedschappenUrl = () => {
+
+
+
+
+  return `/api/mijn-gereedschappen`
+}
+
+/**
+ * @summary Gereedschappen op naam van de ingelogde medewerker
+ */
+export const listMijnGereedschappen = async ( options?: RequestInit): Promise<Gereedschap[]> => {
+
+  return customFetch<Gereedschap[]>(getListMijnGereedschappenUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListMijnGereedschappenQueryKey = () => {
+    return [
+    `/api/mijn-gereedschappen`
+    ] as const;
+    }
+
+
+export const getListMijnGereedschappenQueryOptions = <TData = Awaited<ReturnType<typeof listMijnGereedschappen>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listMijnGereedschappen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListMijnGereedschappenQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listMijnGereedschappen>>> = ({ signal }) => listMijnGereedschappen({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listMijnGereedschappen>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListMijnGereedschappenQueryResult = NonNullable<Awaited<ReturnType<typeof listMijnGereedschappen>>>
+export type ListMijnGereedschappenQueryError = ErrorType<void>
+
+
+/**
+ * @summary Gereedschappen op naam van de ingelogde medewerker
+ */
+
+export function useListMijnGereedschappen<TData = Awaited<ReturnType<typeof listMijnGereedschappen>>, TError = ErrorType<void>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listMijnGereedschappen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListMijnGereedschappenQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
 

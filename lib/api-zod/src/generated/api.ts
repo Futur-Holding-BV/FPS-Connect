@@ -8594,3 +8594,426 @@ export const DeleteModCalcRegelParams = zod.object({
 export const DeleteModCalcRegelResponse = zod.void()
 
 
+/**
+ * @summary Lijst gereedschappen
+ */
+export const ListGereedschappenQueryParams = zod.object({
+  "status": zod.coerce.string().optional().describe('Filter op status'),
+  "zoek": zod.coerce.string().optional().describe('Zoeken op omschrijving, volgnummer, gegraveerd nummer of merk'),
+  "categorie": zod.coerce.string().optional(),
+  "medewerker_id": zod.coerce.number().optional().describe('Alleen gereedschappen op naam van deze medewerker')
+})
+
+export const ListGereedschappenResponseItem = zod.object({
+  "id": zod.number(),
+  "volgnummer": zod.string(),
+  "gegraveerd_nummer": zod.string().nullish(),
+  "omschrijving": zod.string(),
+  "merk": zod.string().nullish(),
+  "type": zod.string().nullish(),
+  "serienummer": zod.string().nullish(),
+  "categorie": zod.string(),
+  "aandrijving": zod.string(),
+  "met_snoer": zod.boolean(),
+  "accu_inbegrepen": zod.boolean(),
+  "lader_inbegrepen": zod.boolean(),
+  "koffer_inbegrepen": zod.boolean(),
+  "aankoopdatum": zod.string().nullish(),
+  "aankoopprijs": zod.number().nullish(),
+  "leverancier": zod.string().nullish(),
+  "garantietermijn": zod.string().nullish(),
+  "status": zod.string(),
+  "huidige_medewerker_id": zod.number().nullish(),
+  "huidige_medewerker_naam": zod.string().nullish(),
+  "locatie": zod.string().nullish(),
+  "keuringsplichtig": zod.boolean(),
+  "laatste_keuring": zod.string().nullish(),
+  "volgende_keuring": zod.string().nullish(),
+  "opmerkingen": zod.string().nullish(),
+  "aangemaakt_op": zod.coerce.date(),
+  "bijgewerkt_op": zod.coerce.date()
+})
+export const ListGereedschappenResponse = zod.array(ListGereedschappenResponseItem)
+
+
+/**
+ * @summary Gereedschap registreren
+ */
+export const CreateGereedschapBody = zod.object({
+  "gegraveerd_nummer": zod.string().nullish(),
+  "omschrijving": zod.string(),
+  "merk": zod.string().nullish(),
+  "type": zod.string().nullish(),
+  "serienummer": zod.string().nullish(),
+  "categorie": zod.string(),
+  "aandrijving": zod.string(),
+  "met_snoer": zod.boolean().optional(),
+  "accu_inbegrepen": zod.boolean().optional(),
+  "lader_inbegrepen": zod.boolean().optional(),
+  "koffer_inbegrepen": zod.boolean().optional(),
+  "aankoopdatum": zod.string().nullish(),
+  "aankoopprijs": zod.number().nullish(),
+  "leverancier": zod.string().nullish(),
+  "garantietermijn": zod.string().nullish(),
+  "status": zod.string().optional(),
+  "huidige_medewerker_id": zod.number().nullish(),
+  "locatie": zod.string().nullish(),
+  "keuringsplichtig": zod.boolean().optional(),
+  "laatste_keuring": zod.string().nullish(),
+  "volgende_keuring": zod.string().nullish(),
+  "opmerkingen": zod.string().nullish()
+})
+
+export const CreateGereedschapResponse = zod.void()
+
+
+/**
+ * @summary Gereedschap detail
+ */
+export const GetGereedschapParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetGereedschapResponse = zod.object({
+  "id": zod.number(),
+  "volgnummer": zod.string(),
+  "gegraveerd_nummer": zod.string().nullish(),
+  "omschrijving": zod.string(),
+  "merk": zod.string().nullish(),
+  "type": zod.string().nullish(),
+  "serienummer": zod.string().nullish(),
+  "categorie": zod.string(),
+  "aandrijving": zod.string(),
+  "met_snoer": zod.boolean(),
+  "accu_inbegrepen": zod.boolean(),
+  "lader_inbegrepen": zod.boolean(),
+  "koffer_inbegrepen": zod.boolean(),
+  "aankoopdatum": zod.string().nullish(),
+  "aankoopprijs": zod.number().nullish(),
+  "leverancier": zod.string().nullish(),
+  "garantietermijn": zod.string().nullish(),
+  "status": zod.string(),
+  "huidige_medewerker_id": zod.number().nullish(),
+  "huidige_medewerker_naam": zod.string().nullish(),
+  "locatie": zod.string().nullish(),
+  "keuringsplichtig": zod.boolean(),
+  "laatste_keuring": zod.string().nullish(),
+  "volgende_keuring": zod.string().nullish(),
+  "opmerkingen": zod.string().nullish(),
+  "aangemaakt_op": zod.coerce.date(),
+  "bijgewerkt_op": zod.coerce.date()
+})
+
+
+/**
+ * @summary Gereedschap bijwerken
+ */
+export const UpdateGereedschapParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateGereedschapBody = zod.object({
+  "gegraveerd_nummer": zod.string().nullish(),
+  "omschrijving": zod.string(),
+  "merk": zod.string().nullish(),
+  "type": zod.string().nullish(),
+  "serienummer": zod.string().nullish(),
+  "categorie": zod.string(),
+  "aandrijving": zod.string(),
+  "met_snoer": zod.boolean().optional(),
+  "accu_inbegrepen": zod.boolean().optional(),
+  "lader_inbegrepen": zod.boolean().optional(),
+  "koffer_inbegrepen": zod.boolean().optional(),
+  "aankoopdatum": zod.string().nullish(),
+  "aankoopprijs": zod.number().nullish(),
+  "leverancier": zod.string().nullish(),
+  "garantietermijn": zod.string().nullish(),
+  "status": zod.string().optional(),
+  "huidige_medewerker_id": zod.number().nullish(),
+  "locatie": zod.string().nullish(),
+  "keuringsplichtig": zod.boolean().optional(),
+  "laatste_keuring": zod.string().nullish(),
+  "volgende_keuring": zod.string().nullish(),
+  "opmerkingen": zod.string().nullish()
+})
+
+export const UpdateGereedschapResponse = zod.object({
+  "id": zod.number(),
+  "volgnummer": zod.string(),
+  "gegraveerd_nummer": zod.string().nullish(),
+  "omschrijving": zod.string(),
+  "merk": zod.string().nullish(),
+  "type": zod.string().nullish(),
+  "serienummer": zod.string().nullish(),
+  "categorie": zod.string(),
+  "aandrijving": zod.string(),
+  "met_snoer": zod.boolean(),
+  "accu_inbegrepen": zod.boolean(),
+  "lader_inbegrepen": zod.boolean(),
+  "koffer_inbegrepen": zod.boolean(),
+  "aankoopdatum": zod.string().nullish(),
+  "aankoopprijs": zod.number().nullish(),
+  "leverancier": zod.string().nullish(),
+  "garantietermijn": zod.string().nullish(),
+  "status": zod.string(),
+  "huidige_medewerker_id": zod.number().nullish(),
+  "huidige_medewerker_naam": zod.string().nullish(),
+  "locatie": zod.string().nullish(),
+  "keuringsplichtig": zod.boolean(),
+  "laatste_keuring": zod.string().nullish(),
+  "volgende_keuring": zod.string().nullish(),
+  "opmerkingen": zod.string().nullish(),
+  "aangemaakt_op": zod.coerce.date(),
+  "bijgewerkt_op": zod.coerce.date()
+})
+
+
+/**
+ * @summary Gereedschap afschrijven (status Afgeschreven)
+ */
+export const DeleteGereedschapParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteGereedschapResponse = zod.void()
+
+
+/**
+ * @summary Bruikleengeschiedenis van een gereedschap
+ */
+export const ListGereedschapBruikleenParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ListGereedschapBruikleenResponseItem = zod.object({
+  "id": zod.number(),
+  "gereedschap_id": zod.number(),
+  "gereedschap_omschrijving": zod.string().nullish(),
+  "gereedschap_volgnummer": zod.string().nullish(),
+  "medewerker_id": zod.number(),
+  "medewerker_naam": zod.string().nullish(),
+  "uitgegever_door_id": zod.number().nullish(),
+  "uitgegever_naam": zod.string().nullish(),
+  "datum_uitgifte": zod.string(),
+  "datum_inname": zod.string().nullish(),
+  "staat_bij_uitgifte": zod.string().nullish(),
+  "staat_bij_inname": zod.string().nullish(),
+  "accessoires": zod.string().nullish(),
+  "bruikleen_voorwaarden": zod.string().nullish(),
+  "handtekening_medewerker_url": zod.string().nullish(),
+  "handtekening_uitgever_url": zod.string().nullish(),
+  "definitief": zod.boolean(),
+  "definitief_op": zod.coerce.date().nullish(),
+  "pdf_url": zod.string().nullish(),
+  "opmerkingen": zod.string().nullish(),
+  "aangemaakt_op": zod.coerce.date(),
+  "bijgewerkt_op": zod.coerce.date()
+})
+export const ListGereedschapBruikleenResponse = zod.array(ListGereedschapBruikleenResponseItem)
+
+
+/**
+ * @summary Meldingen voor een gereedschap
+ */
+export const ListGereedschapMeldingenParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ListGereedschapMeldingenResponseItem = zod.object({
+  "id": zod.number(),
+  "gereedschap_id": zod.number(),
+  "gemeld_door_medewerker_id": zod.number().nullish(),
+  "gemeld_door_naam": zod.string().nullish(),
+  "soort_melding": zod.enum(['schade', 'defect', 'vermissing']),
+  "omschrijving": zod.string(),
+  "urgentie": zod.enum(['laag', 'normaal', 'hoog', 'kritiek']),
+  "kan_nog_veilig_gebruikt_worden": zod.boolean().nullish(),
+  "datum_melding": zod.string(),
+  "status": zod.enum(['nieuw', 'in_behandeling', 'afgehandeld']),
+  "opmerkingen": zod.string().nullish(),
+  "aangemaakt_op": zod.coerce.date(),
+  "bijgewerkt_op": zod.coerce.date()
+})
+export const ListGereedschapMeldingenResponse = zod.array(ListGereedschapMeldingenResponseItem)
+
+
+/**
+ * @summary Schade-, defect- of vermissingsmelding toevoegen
+ */
+export const CreateGereedschapMeldingParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const CreateGereedschapMeldingBody = zod.object({
+  "soort_melding": zod.enum(['schade', 'defect', 'vermissing']),
+  "omschrijving": zod.string(),
+  "urgentie": zod.enum(['laag', 'normaal', 'hoog', 'kritiek']).optional(),
+  "kan_nog_veilig_gebruikt_worden": zod.boolean().nullish(),
+  "datum_melding": zod.string(),
+  "opmerkingen": zod.string().nullish()
+})
+
+export const CreateGereedschapMeldingResponse = zod.void()
+
+
+/**
+ * @summary Bruikleenovereenkomst aanmaken (uitgifte)
+ */
+export const CreateBruikleenBody = zod.object({
+  "gereedschap_id": zod.number(),
+  "medewerker_id": zod.number(),
+  "datum_uitgifte": zod.string(),
+  "staat_bij_uitgifte": zod.string().nullish(),
+  "accessoires": zod.string().nullish(),
+  "bruikleen_voorwaarden": zod.string().nullish(),
+  "opmerkingen": zod.string().nullish()
+})
+
+export const CreateBruikleenResponse = zod.void()
+
+
+/**
+ * @summary Bruikleenovereenkomst detail
+ */
+export const GetBruikleenParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetBruikleenResponse = zod.object({
+  "id": zod.number(),
+  "gereedschap_id": zod.number(),
+  "gereedschap_omschrijving": zod.string().nullish(),
+  "gereedschap_volgnummer": zod.string().nullish(),
+  "medewerker_id": zod.number(),
+  "medewerker_naam": zod.string().nullish(),
+  "uitgegever_door_id": zod.number().nullish(),
+  "uitgegever_naam": zod.string().nullish(),
+  "datum_uitgifte": zod.string(),
+  "datum_inname": zod.string().nullish(),
+  "staat_bij_uitgifte": zod.string().nullish(),
+  "staat_bij_inname": zod.string().nullish(),
+  "accessoires": zod.string().nullish(),
+  "bruikleen_voorwaarden": zod.string().nullish(),
+  "handtekening_medewerker_url": zod.string().nullish(),
+  "handtekening_uitgever_url": zod.string().nullish(),
+  "definitief": zod.boolean(),
+  "definitief_op": zod.coerce.date().nullish(),
+  "pdf_url": zod.string().nullish(),
+  "opmerkingen": zod.string().nullish(),
+  "aangemaakt_op": zod.coerce.date(),
+  "bijgewerkt_op": zod.coerce.date()
+})
+
+
+/**
+ * @summary Retourgave verwerken (inname)
+ */
+export const VerwerkRetourgaveParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const VerwerkRetourgaveBody = zod.object({
+  "datum_inname": zod.string(),
+  "staat_bij_inname": zod.string().nullish(),
+  "opmerkingen": zod.string().nullish()
+})
+
+export const VerwerkRetourgaveResponse = zod.object({
+  "id": zod.number(),
+  "gereedschap_id": zod.number(),
+  "gereedschap_omschrijving": zod.string().nullish(),
+  "gereedschap_volgnummer": zod.string().nullish(),
+  "medewerker_id": zod.number(),
+  "medewerker_naam": zod.string().nullish(),
+  "uitgegever_door_id": zod.number().nullish(),
+  "uitgegever_naam": zod.string().nullish(),
+  "datum_uitgifte": zod.string(),
+  "datum_inname": zod.string().nullish(),
+  "staat_bij_uitgifte": zod.string().nullish(),
+  "staat_bij_inname": zod.string().nullish(),
+  "accessoires": zod.string().nullish(),
+  "bruikleen_voorwaarden": zod.string().nullish(),
+  "handtekening_medewerker_url": zod.string().nullish(),
+  "handtekening_uitgever_url": zod.string().nullish(),
+  "definitief": zod.boolean(),
+  "definitief_op": zod.coerce.date().nullish(),
+  "pdf_url": zod.string().nullish(),
+  "opmerkingen": zod.string().nullish(),
+  "aangemaakt_op": zod.coerce.date(),
+  "bijgewerkt_op": zod.coerce.date()
+})
+
+
+/**
+ * @summary Digitale handtekening opslaan
+ */
+export const OndertekBruikleenParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const OndertekBruikleenBody = zod.object({
+  "rol": zod.enum(['medewerker', 'uitgever']),
+  "handtekening_url": zod.string()
+})
+
+export const OndertekBruikleenResponse = zod.object({
+  "id": zod.number(),
+  "gereedschap_id": zod.number(),
+  "gereedschap_omschrijving": zod.string().nullish(),
+  "gereedschap_volgnummer": zod.string().nullish(),
+  "medewerker_id": zod.number(),
+  "medewerker_naam": zod.string().nullish(),
+  "uitgegever_door_id": zod.number().nullish(),
+  "uitgegever_naam": zod.string().nullish(),
+  "datum_uitgifte": zod.string(),
+  "datum_inname": zod.string().nullish(),
+  "staat_bij_uitgifte": zod.string().nullish(),
+  "staat_bij_inname": zod.string().nullish(),
+  "accessoires": zod.string().nullish(),
+  "bruikleen_voorwaarden": zod.string().nullish(),
+  "handtekening_medewerker_url": zod.string().nullish(),
+  "handtekening_uitgever_url": zod.string().nullish(),
+  "definitief": zod.boolean(),
+  "definitief_op": zod.coerce.date().nullish(),
+  "pdf_url": zod.string().nullish(),
+  "opmerkingen": zod.string().nullish(),
+  "aangemaakt_op": zod.coerce.date(),
+  "bijgewerkt_op": zod.coerce.date()
+})
+
+
+/**
+ * @summary Gereedschappen op naam van de ingelogde medewerker
+ */
+export const ListMijnGereedschappenResponseItem = zod.object({
+  "id": zod.number(),
+  "volgnummer": zod.string(),
+  "gegraveerd_nummer": zod.string().nullish(),
+  "omschrijving": zod.string(),
+  "merk": zod.string().nullish(),
+  "type": zod.string().nullish(),
+  "serienummer": zod.string().nullish(),
+  "categorie": zod.string(),
+  "aandrijving": zod.string(),
+  "met_snoer": zod.boolean(),
+  "accu_inbegrepen": zod.boolean(),
+  "lader_inbegrepen": zod.boolean(),
+  "koffer_inbegrepen": zod.boolean(),
+  "aankoopdatum": zod.string().nullish(),
+  "aankoopprijs": zod.number().nullish(),
+  "leverancier": zod.string().nullish(),
+  "garantietermijn": zod.string().nullish(),
+  "status": zod.string(),
+  "huidige_medewerker_id": zod.number().nullish(),
+  "huidige_medewerker_naam": zod.string().nullish(),
+  "locatie": zod.string().nullish(),
+  "keuringsplichtig": zod.boolean(),
+  "laatste_keuring": zod.string().nullish(),
+  "volgende_keuring": zod.string().nullish(),
+  "opmerkingen": zod.string().nullish(),
+  "aangemaakt_op": zod.coerce.date(),
+  "bijgewerkt_op": zod.coerce.date()
+})
+export const ListMijnGereedschappenResponse = zod.array(ListMijnGereedschappenResponseItem)
+
+

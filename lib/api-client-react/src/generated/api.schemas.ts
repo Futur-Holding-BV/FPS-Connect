@@ -3733,6 +3733,187 @@ export interface ModCalcRegelInput {
   opmerkingen?: string | null;
 }
 
+export interface Gereedschap {
+  id: number;
+  volgnummer: string;
+  gegraveerd_nummer?: string | null;
+  omschrijving: string;
+  merk?: string | null;
+  type?: string | null;
+  serienummer?: string | null;
+  categorie: string;
+  aandrijving: string;
+  met_snoer: boolean;
+  accu_inbegrepen: boolean;
+  lader_inbegrepen: boolean;
+  koffer_inbegrepen: boolean;
+  aankoopdatum?: string | null;
+  aankoopprijs?: number | null;
+  leverancier?: string | null;
+  garantietermijn?: string | null;
+  status: string;
+  huidige_medewerker_id?: number | null;
+  huidige_medewerker_naam?: string | null;
+  locatie?: string | null;
+  keuringsplichtig: boolean;
+  laatste_keuring?: string | null;
+  volgende_keuring?: string | null;
+  opmerkingen?: string | null;
+  aangemaakt_op: string;
+  bijgewerkt_op: string;
+}
+
+export interface GereedschapInput {
+  gegraveerd_nummer?: string | null;
+  omschrijving: string;
+  merk?: string | null;
+  type?: string | null;
+  serienummer?: string | null;
+  categorie: string;
+  aandrijving: string;
+  met_snoer?: boolean;
+  accu_inbegrepen?: boolean;
+  lader_inbegrepen?: boolean;
+  koffer_inbegrepen?: boolean;
+  aankoopdatum?: string | null;
+  aankoopprijs?: number | null;
+  leverancier?: string | null;
+  garantietermijn?: string | null;
+  status?: string;
+  huidige_medewerker_id?: number | null;
+  locatie?: string | null;
+  keuringsplichtig?: boolean;
+  laatste_keuring?: string | null;
+  volgende_keuring?: string | null;
+  opmerkingen?: string | null;
+}
+
+export interface BruikleenOvereenkomst {
+  id: number;
+  gereedschap_id: number;
+  gereedschap_omschrijving?: string | null;
+  gereedschap_volgnummer?: string | null;
+  medewerker_id: number;
+  medewerker_naam?: string | null;
+  uitgegever_door_id?: number | null;
+  uitgegever_naam?: string | null;
+  datum_uitgifte: string;
+  datum_inname?: string | null;
+  staat_bij_uitgifte?: string | null;
+  staat_bij_inname?: string | null;
+  accessoires?: string | null;
+  bruikleen_voorwaarden?: string | null;
+  handtekening_medewerker_url?: string | null;
+  handtekening_uitgever_url?: string | null;
+  definitief: boolean;
+  definitief_op?: string | null;
+  pdf_url?: string | null;
+  opmerkingen?: string | null;
+  aangemaakt_op: string;
+  bijgewerkt_op: string;
+}
+
+export interface BruikleenInput {
+  gereedschap_id: number;
+  medewerker_id: number;
+  datum_uitgifte: string;
+  staat_bij_uitgifte?: string | null;
+  accessoires?: string | null;
+  bruikleen_voorwaarden?: string | null;
+  opmerkingen?: string | null;
+}
+
+export interface BruikleenRetourgaveInput {
+  datum_inname: string;
+  staat_bij_inname?: string | null;
+  opmerkingen?: string | null;
+}
+
+export type BruikleenOndertekeningInputRol = typeof BruikleenOndertekeningInputRol[keyof typeof BruikleenOndertekeningInputRol];
+
+
+export const BruikleenOndertekeningInputRol = {
+  medewerker: 'medewerker',
+  uitgever: 'uitgever',
+} as const;
+
+export interface BruikleenOndertekeningInput {
+  rol: BruikleenOndertekeningInputRol;
+  handtekening_url: string;
+}
+
+export type GereedschapMeldingSoortMelding = typeof GereedschapMeldingSoortMelding[keyof typeof GereedschapMeldingSoortMelding];
+
+
+export const GereedschapMeldingSoortMelding = {
+  schade: 'schade',
+  defect: 'defect',
+  vermissing: 'vermissing',
+} as const;
+
+export type GereedschapMeldingUrgentie = typeof GereedschapMeldingUrgentie[keyof typeof GereedschapMeldingUrgentie];
+
+
+export const GereedschapMeldingUrgentie = {
+  laag: 'laag',
+  normaal: 'normaal',
+  hoog: 'hoog',
+  kritiek: 'kritiek',
+} as const;
+
+export type GereedschapMeldingStatus = typeof GereedschapMeldingStatus[keyof typeof GereedschapMeldingStatus];
+
+
+export const GereedschapMeldingStatus = {
+  nieuw: 'nieuw',
+  in_behandeling: 'in_behandeling',
+  afgehandeld: 'afgehandeld',
+} as const;
+
+export interface GereedschapMelding {
+  id: number;
+  gereedschap_id: number;
+  gemeld_door_medewerker_id?: number | null;
+  gemeld_door_naam?: string | null;
+  soort_melding: GereedschapMeldingSoortMelding;
+  omschrijving: string;
+  urgentie: GereedschapMeldingUrgentie;
+  kan_nog_veilig_gebruikt_worden?: boolean | null;
+  datum_melding: string;
+  status: GereedschapMeldingStatus;
+  opmerkingen?: string | null;
+  aangemaakt_op: string;
+  bijgewerkt_op: string;
+}
+
+export type GereedschapMeldingInputSoortMelding = typeof GereedschapMeldingInputSoortMelding[keyof typeof GereedschapMeldingInputSoortMelding];
+
+
+export const GereedschapMeldingInputSoortMelding = {
+  schade: 'schade',
+  defect: 'defect',
+  vermissing: 'vermissing',
+} as const;
+
+export type GereedschapMeldingInputUrgentie = typeof GereedschapMeldingInputUrgentie[keyof typeof GereedschapMeldingInputUrgentie];
+
+
+export const GereedschapMeldingInputUrgentie = {
+  laag: 'laag',
+  normaal: 'normaal',
+  hoog: 'hoog',
+  kritiek: 'kritiek',
+} as const;
+
+export interface GereedschapMeldingInput {
+  soort_melding: GereedschapMeldingInputSoortMelding;
+  omschrijving: string;
+  urgentie?: GereedschapMeldingInputUrgentie;
+  kan_nog_veilig_gebruikt_worden?: boolean | null;
+  datum_melding: string;
+  opmerkingen?: string | null;
+}
+
 export type GetRecenteActiviteitParams = {
 limit?: number;
 };
@@ -3935,5 +4116,21 @@ medewerker_id?: number;
 export type ListModCalculatiesParams = {
 status?: string;
 zoek?: string;
+};
+
+export type ListGereedschappenParams = {
+/**
+ * Filter op status
+ */
+status?: string;
+/**
+ * Zoeken op omschrijving, volgnummer, gegraveerd nummer of merk
+ */
+zoek?: string;
+categorie?: string;
+/**
+ * Alleen gereedschappen op naam van deze medewerker
+ */
+medewerker_id?: number;
 };
 

@@ -50,6 +50,8 @@ import MailBeheer from "@/pages/beheer/mail";
 import InfoPagina from "@/pages/info/index";
 import PersoneelPagina from "@/pages/personeel/index";
 import MedewerkerDetailPagina from "@/pages/personeel/detail";
+import GereedschappenPagina from "@/pages/gereedschappen/index";
+import GereedschapDetailPagina from "@/pages/gereedschappen/detail";
 import DossiersPagina from "@/pages/dossiers/index";
 import OffertesPagina from "@/pages/offertes/index";
 import DocumentenPagina from "@/pages/documenten/index";
@@ -115,6 +117,8 @@ function BeheerderPortal() {
         <Route path="/crm/:id" component={CrmKlantDetail} />
         <Route path="/personeel" component={PersoneelPagina} />
         <Route path="/personeel/:id" component={MedewerkerDetailPagina} />
+        <Route path="/gereedschappen" component={GereedschappenPagina} />
+        <Route path="/gereedschappen/:id" component={GereedschapDetailPagina} />
         <Route path="/dossiers" component={DossiersPagina} />
         <Route path="/offertes" component={OffertesPagina} />
         <Route path="/abonnementen" component={Abonnementen} />
@@ -217,6 +221,8 @@ function PermissiePortal() {
         <Route path="/crm/:id" component={CrmKlantDetail} />
         <Route path="/personeel" component={PersoneelPagina} />
         <Route path="/personeel/:id" component={MedewerkerDetailPagina} />
+        <Route path="/gereedschappen" component={GereedschappenPagina} />
+        <Route path="/gereedschappen/:id" component={GereedschapDetailPagina} />
         <Route path="/dossiers" component={DossiersPagina} />
         <Route path="/offertes" component={OffertesPagina} />
         <Route path="/abonnementen" component={Abonnementen} />

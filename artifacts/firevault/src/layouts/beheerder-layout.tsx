@@ -53,6 +53,7 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
   const toonGebruikers = heeftNiveau("gebruikers", 1);
   const toonSysteem    = heeftNiveau("systeem", 1);
   const toonPersoneel  = heeftNiveau("personeel", 1);
+  const toonGereedschappen = heeftNiveau("gereedschappen", 1);
   const toonDossiers   = heeftNiveau("dossiers", 1);
   const toonOffertes   = heeftNiveau("offertes", 1);
 
@@ -320,7 +321,7 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
                 </SidebarGroupContent>
               </SidebarGroup>
 
-              {(toonPersoneel || toonDossiers || toonCrm || isHoofdbeheerder) && (
+              {(toonPersoneel || toonGereedschappen || toonDossiers || toonCrm || isHoofdbeheerder) && (
                 <SidebarGroup>
                   <SidebarGroupLabel>Organisatie</SidebarGroupLabel>
                   <SidebarGroupContent>
@@ -335,6 +336,19 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
                               <Users />
                               <span>{t("nav.personeel")}</span>
                               <InUitvoering />
+                            </Link>
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                      )}
+                      {toonGereedschappen && (
+                        <SidebarMenuItem>
+                          <SidebarMenuButton
+                            asChild
+                            isActive={location === "/gereedschappen" || location.startsWith("/gereedschappen/")}
+                          >
+                            <Link href="/gereedschappen">
+                              <Wrench />
+                              <span>{t("nav.gereedschappen")}</span>
                             </Link>
                           </SidebarMenuButton>
                         </SidebarMenuItem>

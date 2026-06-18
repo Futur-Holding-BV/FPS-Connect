@@ -37,6 +37,8 @@ tags:
     description: Mailkoppeling (Microsoft 365) — status, verbindingstest, testmail en logboek
   - name: calculaties
     description: Projectcalculaties en begrotingsregels (FPS Connect)
+  - name: gereedschappen
+    description: Gereedschapregistratie, bruikleenovereenkomsten en meldingen (FPS Connect)
 
 paths:
   /healthz:
@@ -7230,6 +7232,285 @@ paths:
         '204':
           description: Verwijderd
 
+  /gereedschappen:
+    get:
+      operationId: listGereedschappen
+      summary: Lijst gereedschappen
+      tags: [gereedschappen]
+      security: [{ cookieAuth: [] }]
+      parameters:
+        - in: query
+          name: status
+          schema: { type: string }
+          description: Filter op status
+        - in: query
+          name: zoek
+          schema: { type: string }
+          description: Zoeken op omschrijving, volgnummer, gegraveerd nummer of merk
+        - in: query
+          name: categorie
+          schema: { type: string }
+        - in: query
+          name: medewerker_id
+          schema: { type: integer }
+          description: Alleen gereedschappen op naam van deze medewerker
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Gereedschap'
+    post:
+      operationId: createGereedschap
+      summary: Gereedschap registreren
+      tags: [gereedschappen]
+      security: [{ cookieAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GereedschapInput'
+      responses:
+        '201':
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Gereedschap'
+
+  /gereedschappen/{id}:
+    get:
+      operationId: getGereedschap
+      summary: Gereedschap detail
+      tags: [gereedschappen]
+      security: [{ cookieAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Gereedschap'
+        '404':
+          description: Niet gevonden
+    patch:
+      operationId: updateGereedschap
+      summary: Gereedschap bijwerken
+      tags: [gereedschappen]
+      security: [{ cookieAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GereedschapInput'
+      responses:
+        '200':
+          description: Bijgewerkt
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Gereedschap'
+    delete:
+      operationId: deleteGereedschap
+      summary: Gereedschap afschrijven (status Afgeschreven)
+      tags: [gereedschappen]
+      security: [{ cookieAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        '204':
+          description: Afgeschreven
+
+  /gereedschappen/{id}/bruikleen:
+    get:
+      operationId: listGereedschapBruikleen
+      summary: Bruikleengeschiedenis van een gereedschap
+      tags: [gereedschappen]
+      security: [{ cookieAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/BruikleenOvereenkomst'
+
+  /gereedschappen/{id}/meldingen:
+    get:
+      operationId: listGereedschapMeldingen
+      summary: Meldingen voor een gereedschap
+      tags: [gereedschappen]
+      security: [{ cookieAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/GereedschapMelding'
+    post:
+      operationId: createGereedschapMelding
+      summary: Schade-, defect- of vermissingsmelding toevoegen
+      tags: [gereedschappen]
+      security: [{ cookieAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GereedschapMeldingInput'
+      responses:
+        '201':
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GereedschapMelding'
+
+  /bruikleen:
+    post:
+      operationId: createBruikleen
+      summary: Bruikleenovereenkomst aanmaken (uitgifte)
+      tags: [gereedschappen]
+      security: [{ cookieAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BruikleenInput'
+      responses:
+        '201':
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BruikleenOvereenkomst'
+
+  /bruikleen/{id}:
+    get:
+      operationId: getBruikleen
+      summary: Bruikleenovereenkomst detail
+      tags: [gereedschappen]
+      security: [{ cookieAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BruikleenOvereenkomst'
+
+  /bruikleen/{id}/retourgave:
+    patch:
+      operationId: verwerkRetourgave
+      summary: Retourgave verwerken (inname)
+      tags: [gereedschappen]
+      security: [{ cookieAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BruikleenRetourgaveInput'
+      responses:
+        '200':
+          description: Verwerkt
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BruikleenOvereenkomst'
+
+  /bruikleen/{id}/ondertekening:
+    patch:
+      operationId: ondertekBruikleen
+      summary: Digitale handtekening opslaan
+      tags: [gereedschappen]
+      security: [{ cookieAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BruikleenOndertekeningInput'
+      responses:
+        '200':
+          description: Ondertekend
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BruikleenOvereenkomst'
+
+  /mijn-gereedschappen:
+    get:
+      operationId: listMijnGereedschappen
+      summary: Gereedschappen op naam van de ingelogde medewerker
+      tags: [gereedschappen]
+      security: [{ cookieAuth: [] }]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Gereedschap'
+        '404':
+          description: Geen medewerker gekoppeld aan dit account
+
 
 components:
   schemas:
@@ -12706,6 +12987,318 @@ components:
           type: number
         volgorde:
           type: integer
+        opmerkingen:
+          type: string
+          nullable: true
+
+    Gereedschap:
+      type: object
+      required: [id, volgnummer, omschrijving, categorie, aandrijving, status, keuringsplichtig, met_snoer, accu_inbegrepen, lader_inbegrepen, koffer_inbegrepen, aangemaakt_op, bijgewerkt_op]
+      properties:
+        id:
+          type: integer
+        volgnummer:
+          type: string
+          example: GS-0001
+        gegraveerd_nummer:
+          type: string
+          nullable: true
+        omschrijving:
+          type: string
+        merk:
+          type: string
+          nullable: true
+        type:
+          type: string
+          nullable: true
+        serienummer:
+          type: string
+          nullable: true
+        categorie:
+          type: string
+        aandrijving:
+          type: string
+        met_snoer:
+          type: boolean
+        accu_inbegrepen:
+          type: boolean
+        lader_inbegrepen:
+          type: boolean
+        koffer_inbegrepen:
+          type: boolean
+        aankoopdatum:
+          type: string
+          nullable: true
+        aankoopprijs:
+          type: number
+          nullable: true
+        leverancier:
+          type: string
+          nullable: true
+        garantietermijn:
+          type: string
+          nullable: true
+        status:
+          type: string
+        huidige_medewerker_id:
+          type: integer
+          nullable: true
+        huidige_medewerker_naam:
+          type: string
+          nullable: true
+        locatie:
+          type: string
+          nullable: true
+        keuringsplichtig:
+          type: boolean
+        laatste_keuring:
+          type: string
+          nullable: true
+        volgende_keuring:
+          type: string
+          nullable: true
+        opmerkingen:
+          type: string
+          nullable: true
+        aangemaakt_op:
+          type: string
+          format: date-time
+        bijgewerkt_op:
+          type: string
+          format: date-time
+
+    GereedschapInput:
+      type: object
+      required: [omschrijving, categorie, aandrijving]
+      properties:
+        gegraveerd_nummer:
+          type: string
+          nullable: true
+        omschrijving:
+          type: string
+        merk:
+          type: string
+          nullable: true
+        type:
+          type: string
+          nullable: true
+        serienummer:
+          type: string
+          nullable: true
+        categorie:
+          type: string
+        aandrijving:
+          type: string
+        met_snoer:
+          type: boolean
+        accu_inbegrepen:
+          type: boolean
+        lader_inbegrepen:
+          type: boolean
+        koffer_inbegrepen:
+          type: boolean
+        aankoopdatum:
+          type: string
+          nullable: true
+        aankoopprijs:
+          type: number
+          nullable: true
+        leverancier:
+          type: string
+          nullable: true
+        garantietermijn:
+          type: string
+          nullable: true
+        status:
+          type: string
+        huidige_medewerker_id:
+          type: integer
+          nullable: true
+        locatie:
+          type: string
+          nullable: true
+        keuringsplichtig:
+          type: boolean
+        laatste_keuring:
+          type: string
+          nullable: true
+        volgende_keuring:
+          type: string
+          nullable: true
+        opmerkingen:
+          type: string
+          nullable: true
+
+    BruikleenOvereenkomst:
+      type: object
+      required: [id, gereedschap_id, medewerker_id, datum_uitgifte, definitief, aangemaakt_op, bijgewerkt_op]
+      properties:
+        id:
+          type: integer
+        gereedschap_id:
+          type: integer
+        gereedschap_omschrijving:
+          type: string
+          nullable: true
+        gereedschap_volgnummer:
+          type: string
+          nullable: true
+        medewerker_id:
+          type: integer
+        medewerker_naam:
+          type: string
+          nullable: true
+        uitgegever_door_id:
+          type: integer
+          nullable: true
+        uitgegever_naam:
+          type: string
+          nullable: true
+        datum_uitgifte:
+          type: string
+        datum_inname:
+          type: string
+          nullable: true
+        staat_bij_uitgifte:
+          type: string
+          nullable: true
+        staat_bij_inname:
+          type: string
+          nullable: true
+        accessoires:
+          type: string
+          nullable: true
+        bruikleen_voorwaarden:
+          type: string
+          nullable: true
+        handtekening_medewerker_url:
+          type: string
+          nullable: true
+        handtekening_uitgever_url:
+          type: string
+          nullable: true
+        definitief:
+          type: boolean
+        definitief_op:
+          type: string
+          format: date-time
+          nullable: true
+        pdf_url:
+          type: string
+          nullable: true
+        opmerkingen:
+          type: string
+          nullable: true
+        aangemaakt_op:
+          type: string
+          format: date-time
+        bijgewerkt_op:
+          type: string
+          format: date-time
+
+    BruikleenInput:
+      type: object
+      required: [gereedschap_id, medewerker_id, datum_uitgifte]
+      properties:
+        gereedschap_id:
+          type: integer
+        medewerker_id:
+          type: integer
+        datum_uitgifte:
+          type: string
+        staat_bij_uitgifte:
+          type: string
+          nullable: true
+        accessoires:
+          type: string
+          nullable: true
+        bruikleen_voorwaarden:
+          type: string
+          nullable: true
+        opmerkingen:
+          type: string
+          nullable: true
+
+    BruikleenRetourgaveInput:
+      type: object
+      required: [datum_inname]
+      properties:
+        datum_inname:
+          type: string
+        staat_bij_inname:
+          type: string
+          nullable: true
+        opmerkingen:
+          type: string
+          nullable: true
+
+    BruikleenOndertekeningInput:
+      type: object
+      required: [rol, handtekening_url]
+      properties:
+        rol:
+          type: string
+          enum: [medewerker, uitgever]
+        handtekening_url:
+          type: string
+
+    GereedschapMelding:
+      type: object
+      required: [id, gereedschap_id, soort_melding, omschrijving, urgentie, datum_melding, status, aangemaakt_op, bijgewerkt_op]
+      properties:
+        id:
+          type: integer
+        gereedschap_id:
+          type: integer
+        gemeld_door_medewerker_id:
+          type: integer
+          nullable: true
+        gemeld_door_naam:
+          type: string
+          nullable: true
+        soort_melding:
+          type: string
+          enum: [schade, defect, vermissing]
+        omschrijving:
+          type: string
+        urgentie:
+          type: string
+          enum: [laag, normaal, hoog, kritiek]
+        kan_nog_veilig_gebruikt_worden:
+          type: boolean
+          nullable: true
+        datum_melding:
+          type: string
+        status:
+          type: string
+          enum: [nieuw, in_behandeling, afgehandeld]
+        opmerkingen:
+          type: string
+          nullable: true
+        aangemaakt_op:
+          type: string
+          format: date-time
+        bijgewerkt_op:
+          type: string
+          format: date-time
+
+    GereedschapMeldingInput:
+      type: object
+      required: [soort_melding, omschrijving, datum_melding]
+      properties:
+        soort_melding:
+          type: string
+          enum: [schade, defect, vermissing]
+        omschrijving:
+          type: string
+        urgentie:
+          type: string
+          enum: [laag, normaal, hoog, kritiek]
+        kan_nog_veilig_gebruikt_worden:
+          type: boolean
+          nullable: true
+        datum_melding:
+          type: string
         opmerkingen:
           type: string
           nullable: true
