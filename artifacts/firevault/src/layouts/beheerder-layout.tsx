@@ -10,7 +10,7 @@ import {
   ShieldCheck, Building, Wrench, Users, Search, Home,
   ShieldAlert, LifeBuoy, MessageSquarePlus, Activity, Contact, Info, BookOpen, Clock,
   FolderOpen, FileText, ListChecks, Files, LayoutTemplate, Mail,
-  Calculator, CalendarDays, LayoutDashboard, BarChart3, CreditCard, MessageSquare,
+  Calculator, CalendarDays, LayoutDashboard, BarChart3, CreditCard, MessageSquare, HardHat,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { GebruikerMenu } from "@/components/gebruiker-menu";
@@ -210,33 +210,6 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
                       </SidebarMenuItem>
                     )}
 
-                    {featureFlags.planning && (
-                      <SidebarMenuItem>
-                        <SidebarMenuButton
-                          asChild
-                          isActive={location === "/modules/planning" || location.startsWith("/modules/planning/")}
-                        >
-                          <Link href="/modules/planning">
-                            <CalendarDays />
-                            <span>Planning</span>
-                          </Link>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                    )}
-
-                    {featureFlags.calculatie && (
-                      <SidebarMenuItem>
-                        <SidebarMenuButton
-                          asChild
-                          isActive={location === "/modules/calculatie" || location.startsWith("/modules/calculatie/")}
-                        >
-                          <Link href="/modules/calculatie">
-                            <Calculator />
-                            <span>Calculatie</span>
-                          </Link>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                    )}
                   </SidebarMenu>
                 </SidebarGroupContent>
               </SidebarGroup>
@@ -289,7 +262,66 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
                 </SidebarGroup>
               )}
 
-              {(toonPersoneel || toonDossiers || toonOffertes || toonCrm || isHoofdbeheerder) && (
+              <SidebarGroup>
+                <SidebarGroupLabel>CWU</SidebarGroupLabel>
+                <SidebarGroupContent>
+                  <SidebarMenu>
+                    {featureFlags.calculatie && (
+                      <SidebarMenuItem>
+                        <SidebarMenuButton
+                          asChild
+                          isActive={location === "/modules/calculatie" || location.startsWith("/modules/calculatie/")}
+                        >
+                          <Link href="/modules/calculatie">
+                            <Calculator />
+                            <span>Calculatie</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    )}
+                    {featureFlags.planning && (
+                      <SidebarMenuItem>
+                        <SidebarMenuButton
+                          asChild
+                          isActive={location === "/modules/planning" || location.startsWith("/modules/planning/")}
+                        >
+                          <Link href="/modules/planning">
+                            <CalendarDays />
+                            <span>Planning</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    )}
+                    {toonOffertes && (
+                      <SidebarMenuItem>
+                        <SidebarMenuButton
+                          asChild
+                          isActive={location === "/offertes" || location.startsWith("/offertes/")}
+                        >
+                          <Link href="/offertes">
+                            <FileText />
+                            <span>{t("nav.offertes")}</span>
+                            <InUitvoering />
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    )}
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={location === "/berichten" || location.startsWith("/berichten/")}
+                      >
+                        <Link href="/berichten">
+                          <MessageSquare />
+                          <span>Berichten</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              </SidebarGroup>
+
+              {(toonPersoneel || toonDossiers || toonCrm || isHoofdbeheerder) && (
                 <SidebarGroup>
                   <SidebarGroupLabel>Organisatie</SidebarGroupLabel>
                   <SidebarGroupContent>
@@ -336,20 +368,6 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
                           </SidebarMenuButton>
                         </SidebarMenuItem>
                       )}
-                      {toonOffertes && (
-                        <SidebarMenuItem>
-                          <SidebarMenuButton
-                            asChild
-                            isActive={location === "/offertes" || location.startsWith("/offertes/")}
-                          >
-                            <Link href="/offertes">
-                              <FileText />
-                              <span>{t("nav.offertes")}</span>
-                              <InUitvoering />
-                            </Link>
-                          </SidebarMenuButton>
-                        </SidebarMenuItem>
-                      )}
                       {isHoofdbeheerder && (
                         <SidebarMenuItem>
                           <SidebarMenuButton
@@ -357,8 +375,8 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
                             isActive={location === "/toolbox" || location.startsWith("/toolbox/")}
                           >
                             <Link href="/toolbox">
-                              <MessageSquare />
-                              <span>Toolbox &amp; berichten</span>
+                              <HardHat />
+                              <span>Toolbox</span>
                             </Link>
                           </SidebarMenuButton>
                         </SidebarMenuItem>

@@ -56,6 +56,7 @@ import DocumentenPagina from "@/pages/documenten/index";
 import { OndersteuningWidget } from "@/components/ondersteuning-widget";
 import RapportenPagina from "@/pages/rapporten/index";
 import ToolboxPagina from "@/pages/toolbox/index";
+import BerichtenPagina from "@/pages/berichten/index";
 import ConnectPlanning from "@/pages/connect/planning";
 import ConnectCalculatie from "@/pages/connect/calculatie";
 import ConnectCalculatieDetail from "@/pages/connect/calculatie-detail";
@@ -130,6 +131,7 @@ function BeheerderPortal() {
         <Route path="/documenten" component={DocumentenPagina} />
         <Route path="/rapporten" component={RapportenPagina} />
         <Route path="/toolbox" component={ToolboxPagina} />
+        <Route path="/berichten" component={BerichtenPagina} />
         <Route path="/connect/planning" component={featureFlags.planning ? ConnectPlanning : PlanningNietBeschikbaar} />
         <Route path="/connect/calculatie/:id" component={featureFlags.calculatie ? ConnectCalculatieDetail : CalculatieNietBeschikbaar} />
         <Route path="/connect/calculatie" component={featureFlags.calculatie ? ConnectCalculatie : CalculatieNietBeschikbaar} />
@@ -231,6 +233,7 @@ function PermissiePortal() {
         <Route path="/documenten" component={DocumentenPagina} />
         <Route path="/rapporten" component={RapportenPagina} />
         <Route path="/toolbox" component={ToolboxPagina} />
+        <Route path="/berichten" component={BerichtenPagina} />
         <Route path="/connect/planning" component={featureFlags.planning ? ConnectPlanning : PlanningNietBeschikbaar} />
         <Route path="/connect/calculatie/:id" component={featureFlags.calculatie ? ConnectCalculatieDetail : CalculatieNietBeschikbaar} />
         <Route path="/connect/calculatie" component={featureFlags.calculatie ? ConnectCalculatie : CalculatieNietBeschikbaar} />
