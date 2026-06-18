@@ -8,8 +8,12 @@ import {
   useOnboardMedewerker,
   useListFuncties,
   useCreateFunctie,
+  useUpdateFunctie,
+  useDeleteFunctie,
   useListOpleidingen,
   useCreateOpleiding,
+  useUpdateOpleiding,
+  useDeleteOpleiding,
   useVoorstelOpleidingenVoorFunctie,
   useListVerlofsoorten,
   useListCaoOpties,
@@ -30,7 +34,9 @@ import {
 import type {
   MedewerkerInput,
   FunctieInput,
+  Functie,
   OpleidingInput,
+  Opleiding,
   OpleidingVoorstel,
   MedewerkerOnboardingInput,
   VerlofAanvraag,
@@ -56,7 +62,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import {
   Users, Plus, UserPlus, Briefcase, GraduationCap, CalendarClock, AlertTriangle,
-  Award, Check, X, ChevronRight, Building2, Pencil,
+  Award, Check, X, ChevronRight, Building2, Pencil, Trash2,
 } from "lucide-react";
 import { WERKMAATSCHAPPIJEN, caoVoorWerkmaatschappij } from "@/lib/werkmaatschappijen";
 
@@ -133,7 +139,11 @@ export default function PersoneelPagina() {
   const maakMedewerker = useCreateMedewerker();
   const onboard = useOnboardMedewerker();
   const maakFunctie = useCreateFunctie();
+  const wijzigFunctie = useUpdateFunctie();
+  const verwijderFunctieMut = useDeleteFunctie();
   const maakOpleiding = useCreateOpleiding();
+  const wijzigOpleiding = useUpdateOpleiding();
+  const verwijderOpleidingMut = useDeleteOpleiding();
   const beoordeelMutatie = useUpdateVerlofAanvraag();
   const maakWerkgever = useCreateWerkgever();
   const wijzigWerkgever = useUpdateWerkgever();
@@ -185,6 +195,10 @@ export default function PersoneelPagina() {
   const [opleidingOpen, setOpleidingOpen] = useState(false);
   const [werkgeverOpen, setWerkgeverOpen] = useState(false);
   const [werkgeverEditId, setWerkgeverEditId] = useState<number | null>(null);
+  const [functieBewerkenId, setFunctieBewerkenId] = useState<number | null>(null);
+  const [opleidingBewerkenId, setOpleidingBewerkenId] = useState<number | null>(null);
+  const [verwijderFunctieId, setVerwijderFunctieId] = useState<number | null>(null);
+  const [verwijderOpleidingId, setVerwijderOpleidingId] = useState<number | null>(null);
   const [werkgeverForm, setWerkgeverForm] = useState<WerkgeverInput>({
     naam: "",
     cao: "",
@@ -276,14 +290,20 @@ export default function PersoneelPagina() {
       return;
     }
     try {
-      const nieuw = await maakFunctie.mutateAsync({ data: { ...functieForm, naam: functieForm.naam.trim() } });
+      if (functieBewerkenId !== null) {
+        await wijzigFunctie.mutateAsync({ id: functieBewerkenId, data: { ...functieForm, naam: functieForm.naam.trim() } });
+        toast({ title: "Functie bijgewerkt" });
+      } else {
+        const nieuw = await maakFunctie.mutateAsync({ data: { ...functieForm, naam: functieForm.naam.trim() } });
+        if (onboardOpen && nieuw?.id) {
+          setOnboardForm((f) => ({ ...f, functie_id: nieuw.id }));
+        }
+        toast({ title: "Functie toegevoegd" });
+      }
       await queryClient.invalidateQueries({ queryKey: getListFunctiesQueryKey() });
       await queryClient.invalidateQueries({ queryKey: getGetHrmStatsQueryKey() });
-      if (onboardOpen && nieuw?.id) {
-        setOnboardForm((f) => ({ ...f, functie_id: nieuw.id }));
-      }
-      toast({ title: "Functie toegevoegd" });
       setFunctieForm({ naam: "", werkmaatschappij: WERKMAATSCHAPPIJ_STD, uitvoerend: false });
+      setFunctieBewerkenId(null);
       setFunctieOpen(false);
     } catch {
       toast({ title: "Opslaan mislukt", variant: "destructive" });
@@ -296,13 +316,87 @@ export default function PersoneelPagina() {
       return;
     }
     try {
-      await maakOpleiding.mutateAsync({ data: { ...opleidingForm, naam: opleidingForm.naam.trim() } });
+      if (opleidingBewerkenId !== null) {
+        await wijzigOpleiding.mutateAsync({ id: opleidingBewerkenId, data: { ...opleidingForm, naam: opleidingForm.naam.trim() } });
+        toast({ title: "Opleiding bijgewerkt" });
+      } else {
+        await maakOpleiding.mutateAsync({ data: { ...opleidingForm, naam: opleidingForm.naam.trim() } });
+        toast({ title: "Opleiding toegevoegd" });
+      }
       await queryClient.invalidateQueries({ queryKey: getListOpleidingenQueryKey() });
-      toast({ title: "Opleiding toegevoegd" });
       setOpleidingForm({ naam: "", categorie: "vakopleiding", soort: "cursus" });
+      setOpleidingBewerkenId(null);
       setOpleidingOpen(false);
     } catch {
       toast({ title: "Opslaan mislukt", variant: "destructive" });
+    }
+  }
+
+  function startFunctieNieuw() {
+    setFunctieBewerkenId(null);
+    setFunctieForm({ naam: "", werkmaatschappij: WERKMAATSCHAPPIJ_STD, uitvoerend: false });
+    setFunctieOpen(true);
+  }
+
+  function startFunctieBewerken(f: Functie) {
+    setFunctieBewerkenId(f.id);
+    setFunctieForm({
+      naam: f.naam,
+      werkmaatschappij: f.werkmaatschappij,
+      omschrijving: f.omschrijving ?? undefined,
+      uitvoerend: f.uitvoerend ?? false,
+    });
+    setFunctieOpen(true);
+  }
+
+  function startOpleidingNieuw() {
+    setOpleidingBewerkenId(null);
+    setOpleidingForm({ naam: "", categorie: "vakopleiding", soort: "cursus" });
+    setOpleidingOpen(true);
+  }
+
+  function startOpleidingBewerken(o: Opleiding) {
+    setOpleidingBewerkenId(o.id);
+    setOpleidingForm({
+      naam: o.naam,
+      categorie: o.categorie,
+      soort: o.soort,
+      omschrijving: o.omschrijving ?? null,
+      niveau: o.niveau ?? undefined,
+      opleider: o.opleider ?? null,
+      studieduur: o.studieduur ?? null,
+      studiebelasting: o.studiebelasting ?? null,
+      lesvorm: o.lesvorm ?? undefined,
+      kosten_indicatie: o.kosten_indicatie ?? null,
+      kosten_werkgever_pct: o.kosten_werkgever_pct ?? null,
+      kosten_werknemer_pct: o.kosten_werknemer_pct ?? null,
+      geldigheid_maanden: o.geldigheid_maanden ?? null,
+      verplicht: o.verplicht,
+      functie_ids: o.functie_ids ?? [],
+    });
+    setOpleidingOpen(true);
+  }
+
+  async function verwijderFunctie(id: number) {
+    try {
+      await verwijderFunctieMut.mutateAsync({ id });
+      await queryClient.invalidateQueries({ queryKey: getListFunctiesQueryKey() });
+      await queryClient.invalidateQueries({ queryKey: getGetHrmStatsQueryKey() });
+      toast({ title: "Functie verwijderd" });
+      setVerwijderFunctieId(null);
+    } catch {
+      toast({ title: "Verwijderen mislukt", variant: "destructive" });
+    }
+  }
+
+  async function verwijderOpleiding(id: number) {
+    try {
+      await verwijderOpleidingMut.mutateAsync({ id });
+      await queryClient.invalidateQueries({ queryKey: getListOpleidingenQueryKey() });
+      toast({ title: "Opleiding verwijderd" });
+      setVerwijderOpleidingId(null);
+    } catch {
+      toast({ title: "Verwijderen mislukt", variant: "destructive" });
     }
   }
 
@@ -618,7 +712,9 @@ export default function PersoneelPagina() {
 
         <TabsContent value="functies" className="space-y-4">
           <div className="flex items-center justify-end">
-            <Button onClick={() => setFunctieOpen(true)}><Plus className="h-4 w-4" /> Nieuwe functie</Button>
+            {magSchrijven && (
+              <Button onClick={startFunctieNieuw}><Plus className="h-4 w-4" /> Nieuwe functie</Button>
+            )}
           </div>
           {(functies ?? []).length === 0 ? (
             <Card><CardContent className="py-12 text-center text-muted-foreground">
@@ -632,11 +728,35 @@ export default function PersoneelPagina() {
                   <CardContent className="p-4 space-y-1">
                     <div className="flex items-start justify-between gap-2">
                       <div className="font-semibold">{f.naam}</div>
-                      {f.uitvoerend && (
-                        <Badge variant="outline" className="shrink-0 text-xs border-primary/30 text-primary bg-primary/5">
-                          Uitvoerend
-                        </Badge>
-                      )}
+                      <div className="flex items-center gap-1 shrink-0">
+                        {f.uitvoerend && (
+                          <Badge variant="outline" className="text-xs border-primary/30 text-primary bg-primary/5">
+                            Uitvoerend
+                          </Badge>
+                        )}
+                        {magSchrijven && (
+                          <>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-6 w-6"
+                              onClick={() => startFunctieBewerken(f)}
+                              title="Bewerken"
+                            >
+                              <Pencil className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-6 w-6 text-muted-foreground hover:text-destructive"
+                              onClick={() => setVerwijderFunctieId(f.id)}
+                              title="Verwijderen"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </>
+                        )}
+                      </div>
                     </div>
                     <div className="text-xs text-muted-foreground">{f.werkmaatschappij}</div>
                     {f.omschrijving && <p className="text-xs text-muted-foreground line-clamp-2">{f.omschrijving}</p>}
@@ -649,7 +769,9 @@ export default function PersoneelPagina() {
 
         <TabsContent value="opleidingen" className="space-y-4">
           <div className="flex items-center justify-end">
-            <Button onClick={() => setOpleidingOpen(true)}><Plus className="h-4 w-4" /> Nieuwe opleiding</Button>
+            {magSchrijven && (
+              <Button onClick={startOpleidingNieuw}><Plus className="h-4 w-4" /> Nieuwe opleiding</Button>
+            )}
           </div>
 
           {magSchrijven && (
@@ -670,7 +792,7 @@ export default function PersoneelPagina() {
                         <p className="rounded-md border border-dashed px-3 py-2 text-xs text-muted-foreground">
                           Nog geen functies in het functiehuis.
                         </p>
-                        <Button type="button" variant="outline" size="sm" className="gap-1" onClick={() => setFunctieOpen(true)}>
+                        <Button type="button" variant="outline" size="sm" className="gap-1" onClick={startFunctieNieuw}>
                           <Plus className="h-3 w-3" /> Nieuwe functie
                         </Button>
                       </div>
@@ -762,9 +884,33 @@ export default function PersoneelPagina() {
               {(opleidingen ?? []).map((o) => (
                 <Card key={o.id}>
                   <CardContent className="p-4 space-y-1">
-                    <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-start justify-between gap-2">
                       <div className="font-semibold">{o.naam}</div>
-                      {o.verplicht && <Badge variant="outline" className="border-amber-200 text-amber-700">verplicht</Badge>}
+                      <div className="flex items-center gap-1 shrink-0">
+                        {o.verplicht && <Badge variant="outline" className="border-amber-200 text-amber-700 text-xs">verplicht</Badge>}
+                        {magSchrijven && (
+                          <>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-6 w-6"
+                              onClick={() => startOpleidingBewerken(o)}
+                              title="Bewerken"
+                            >
+                              <Pencil className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-6 w-6 text-muted-foreground hover:text-destructive"
+                              onClick={() => setVerwijderOpleidingId(o.id)}
+                              title="Verwijderen"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </>
+                        )}
+                      </div>
                     </div>
                     <div className="flex flex-wrap items-center gap-1.5">
                       <Badge variant="secondary">{soortLabel(o.soort)}</Badge>
@@ -1014,7 +1160,7 @@ export default function PersoneelPagina() {
                   variant="ghost"
                   size="sm"
                   className="h-6 gap-1 px-2 text-xs"
-                  onClick={() => setFunctieOpen(true)}
+                  onClick={startFunctieNieuw}
                 >
                   <Plus className="h-3 w-3" /> Nieuwe functie
                 </Button>
@@ -1098,10 +1244,10 @@ export default function PersoneelPagina() {
         </DialogContent>
       </Dialog>
 
-      {/* Nieuwe functie */}
-      <Dialog open={functieOpen} onOpenChange={setFunctieOpen}>
+      {/* Functie aanmaken / bewerken */}
+      <Dialog open={functieOpen} onOpenChange={(open) => { if (!open) setFunctieBewerkenId(null); setFunctieOpen(open); }}>
         <DialogContent className="max-w-lg">
-          <DialogHeader><DialogTitle>Nieuwe functie</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{functieBewerkenId !== null ? "Functie bewerken" : "Nieuwe functie"}</DialogTitle></DialogHeader>
           <div className="space-y-3">
             <div className="space-y-1.5">
               <Label>Naam *</Label>
@@ -1139,17 +1285,17 @@ export default function PersoneelPagina() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setFunctieOpen(false)}>Annuleren</Button>
-            <Button onClick={opslaanFunctie} disabled={maakFunctie.isPending}>
-              {maakFunctie.isPending ? "Bezig…" : "Opslaan"}
+            <Button onClick={opslaanFunctie} disabled={maakFunctie.isPending || wijzigFunctie.isPending}>
+              {(maakFunctie.isPending || wijzigFunctie.isPending) ? "Bezig…" : "Opslaan"}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Nieuwe opleiding */}
-      <Dialog open={opleidingOpen} onOpenChange={setOpleidingOpen}>
+      {/* Opleiding aanmaken / bewerken */}
+      <Dialog open={opleidingOpen} onOpenChange={(open) => { if (!open) setOpleidingBewerkenId(null); setOpleidingOpen(open); }}>
         <DialogContent className="max-w-lg">
-          <DialogHeader><DialogTitle>Nieuwe opleiding of cursus</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{opleidingBewerkenId !== null ? "Opleiding bewerken" : "Nieuwe opleiding of cursus"}</DialogTitle></DialogHeader>
           <div className="space-y-3 max-h-[70vh] overflow-y-auto pr-1">
             <div className="space-y-1.5">
               <Label>Naam *</Label>
@@ -1321,8 +1467,8 @@ export default function PersoneelPagina() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpleidingOpen(false)}>Annuleren</Button>
-            <Button onClick={opslaanOpleiding} disabled={maakOpleiding.isPending}>
-              {maakOpleiding.isPending ? "Bezig…" : "Opslaan"}
+            <Button onClick={opslaanOpleiding} disabled={maakOpleiding.isPending || wijzigOpleiding.isPending}>
+              {(maakOpleiding.isPending || wijzigOpleiding.isPending) ? "Bezig…" : "Opslaan"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1417,6 +1563,46 @@ export default function PersoneelPagina() {
             <Button variant="outline" onClick={() => setWerkgeverOpen(false)}>Annuleren</Button>
             <Button onClick={opslaanWerkgever} disabled={maakWerkgever.isPending || wijzigWerkgever.isPending}>
               {maakWerkgever.isPending || wijzigWerkgever.isPending ? "Bezig…" : "Opslaan"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Functie verwijderen */}
+      <Dialog open={verwijderFunctieId !== null} onOpenChange={(open) => { if (!open) setVerwijderFunctieId(null); }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader><DialogTitle>Functie verwijderen</DialogTitle></DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Weet je zeker dat je deze functie wilt verwijderen? Medewerkers die aan deze functie zijn gekoppeld behouden hun koppeling, maar de functie verdwijnt uit het functiehuis.
+          </p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setVerwijderFunctieId(null)}>Annuleren</Button>
+            <Button
+              variant="destructive"
+              disabled={verwijderFunctieMut.isPending}
+              onClick={() => verwijderFunctieId !== null && verwijderFunctie(verwijderFunctieId)}
+            >
+              {verwijderFunctieMut.isPending ? "Bezig…" : "Verwijderen"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Opleiding verwijderen */}
+      <Dialog open={verwijderOpleidingId !== null} onOpenChange={(open) => { if (!open) setVerwijderOpleidingId(null); }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader><DialogTitle>Opleiding verwijderen</DialogTitle></DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Weet je zeker dat je deze opleiding wilt verwijderen? Certificaten van medewerkers die aan deze opleiding zijn gekoppeld blijven bestaan.
+          </p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setVerwijderOpleidingId(null)}>Annuleren</Button>
+            <Button
+              variant="destructive"
+              disabled={verwijderOpleidingMut.isPending}
+              onClick={() => verwijderOpleidingId !== null && verwijderOpleiding(verwijderOpleidingId)}
+            >
+              {verwijderOpleidingMut.isPending ? "Bezig…" : "Verwijderen"}
             </Button>
           </DialogFooter>
         </DialogContent>
