@@ -1,4 +1,5 @@
 import { Link, useLocation } from "wouter";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   SidebarProvider, Sidebar, SidebarHeader, SidebarContent, SidebarFooter,
@@ -6,16 +7,36 @@ import {
   SidebarMenu, SidebarMenuItem, SidebarMenuButton,
 } from "@/components/ui/sidebar";
 import {
-  ShieldCheck, Building, Wrench, Users, Search, Home, Receipt,
+  ShieldCheck, Building, Wrench, Users, Search, Home,
   ShieldAlert, LifeBuoy, MessageSquarePlus, Activity, Contact, Info, BookOpen, Clock,
   FolderOpen, FileText, ListChecks, Files, LayoutTemplate, Mail,
-  Calculator, CalendarDays, LayoutDashboard, Globe, BarChart3, CreditCard, MessageSquare,
+  Calculator, CalendarDays, LayoutDashboard, BarChart3, CreditCard, MessageSquare,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { GebruikerMenu } from "@/components/gebruiker-menu";
 import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
 import { useRol } from "@/context/rol-context";
 import { featureFlags } from "@/lib/feature-flags";
+import { cn } from "@/lib/utils";
+
+type Omgeving = "connect" | "one" | "beheer";
+const OMGEVING_SLEUTEL = "fps.omgeving";
+
+function omgevingVanLocatie(loc: string): Omgeving | null {
+  if (loc.startsWith("/one/")) return "one";
+  if (
+    loc === "/gebruikers" || loc.startsWith("/gebruikers/") ||
+    loc === "/beheer/profielen" ||
+    loc === "/beheer/login-pogingen" ||
+    loc === "/beheer/mail" ||
+    loc === "/beheer/documentopmaak" ||
+    loc === "/beheer/helpdesk" ||
+    loc === "/beheer/feedback" ||
+    loc === "/beheer/heatmaps" ||
+    loc === "/beheer/ontwikkelstatus"
+  ) return "beheer";
+  return null;
+}
 
 export default function BeheerderLayout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
@@ -24,20 +45,37 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
   const { rol } = useRol();
   const isHoofdbeheerder = rol === "hoofdbeheerder";
 
-  const toonGebouwen      = heeftNiveau("gebouwen", 1);
-  const toonInspecties    = heeftNiveau("inspecties", 1);
-  const toonOnderhoud     = heeftNiveau("onderhoud", 1);
-  const toonCrm           = heeftNiveau("crm", 1);
-  const toonAbonnementen  = heeftNiveau("abonnementen", 1);
-  const toonBibliotheek   = heeftNiveau("bibliotheek", 1);
-  const toonGebruikers    = heeftNiveau("gebruikers", 1);
-  const toonSysteem       = heeftNiveau("systeem", 1);
-  const toonPersoneel     = heeftNiveau("personeel", 1);
-  const toonDossiers      = heeftNiveau("dossiers", 1);
-  const toonOffertes      = heeftNiveau("offertes", 1);
+  const toonGebouwen   = heeftNiveau("gebouwen", 1);
+  const toonInspecties = heeftNiveau("inspecties", 1);
+  const toonOnderhoud  = heeftNiveau("onderhoud", 1);
+  const toonCrm        = heeftNiveau("crm", 1);
+  const toonBibliotheek = heeftNiveau("bibliotheek", 1);
+  const toonGebruikers = heeftNiveau("gebruikers", 1);
+  const toonSysteem    = heeftNiveau("systeem", 1);
+  const toonPersoneel  = heeftNiveau("personeel", 1);
+  const toonDossiers   = heeftNiveau("dossiers", 1);
+  const toonOffertes   = heeftNiveau("offertes", 1);
 
-  const heeftDomein = toonInspecties || toonOnderhoud || toonCrm || toonAbonnementen;
-  const heeftOrganisatie = toonPersoneel || toonDossiers || toonOffertes || isHoofdbeheerder;
+  const heeftOne    = isHoofdbeheerder;
+  const heeftBeheer = toonGebruikers || toonSysteem;
+  const aantalOmgevingen = 1 + (heeftOne ? 1 : 0) + (heeftBeheer ? 1 : 0);
+
+  const [opgeslagenKeuze, setOpgeslagenKeuze] = useState<Omgeving>(() => {
+    if (typeof localStorage !== "undefined") {
+      const v = localStorage.getItem(OMGEVING_SLEUTEL);
+      if (v === "connect" || v === "one" || v === "beheer") return v as Omgeving;
+    }
+    return "connect";
+  });
+
+  const actieveOmgeving: Omgeving = omgevingVanLocatie(location) ?? opgeslagenKeuze;
+
+  function kiesOmgeving(o: Omgeving) {
+    setOpgeslagenKeuze(o);
+    if (typeof localStorage !== "undefined") {
+      localStorage.setItem(OMGEVING_SLEUTEL, o);
+    }
+  }
 
   const projectenActief =
     location === "/gebouwen" || location.startsWith("/gebouwen/") ||
@@ -45,6 +83,18 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
 
   const defaultSidebarOpen =
     typeof window !== "undefined" ? window.innerWidth >= 1200 : true;
+
+  function InUitvoering() {
+    return (
+      <Badge
+        variant="outline"
+        className="ml-auto text-[10px] px-1.5 py-0 leading-tight border-muted-foreground/40 text-muted-foreground group-data-[collapsible=icon]:hidden"
+      >
+        <Clock className="h-2.5 w-2.5 mr-0.5" />
+        {t("nav.inUitvoering")}
+      </Badge>
+    );
+  }
 
   return (
     <SidebarProvider defaultOpen={defaultSidebarOpen}>
@@ -60,352 +110,275 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
               FPS
             </div>
           </div>
+
+          {aantalOmgevingen > 1 && (
+            <div className="mt-2 flex gap-1 px-1 group-data-[collapsible=icon]:hidden">
+              <button
+                onClick={() => kiesOmgeving("connect")}
+                className={cn(
+                  "flex-1 text-[11px] font-semibold py-1.5 px-1 rounded transition-colors",
+                  actieveOmgeving === "connect"
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-muted text-muted-foreground hover:bg-muted/80",
+                )}
+              >
+                Connect
+              </button>
+              {heeftOne && (
+                <button
+                  onClick={() => kiesOmgeving("one")}
+                  className={cn(
+                    "flex-1 text-[11px] font-semibold py-1.5 px-1 rounded transition-colors",
+                    actieveOmgeving === "one"
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-muted text-muted-foreground hover:bg-muted/80",
+                  )}
+                >
+                  One
+                </button>
+              )}
+              {heeftBeheer && (
+                <button
+                  onClick={() => kiesOmgeving("beheer")}
+                  className={cn(
+                    "flex-1 text-[11px] font-semibold py-1.5 px-1 rounded transition-colors",
+                    actieveOmgeving === "beheer"
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-muted text-muted-foreground hover:bg-muted/80",
+                  )}
+                >
+                  Beheer
+                </button>
+              )}
+            </div>
+          )}
         </SidebarHeader>
 
         <SidebarContent>
-          {/* ── Platform ── */}
-          <SidebarGroup>
-            <SidebarGroupLabel>{t("nav.platform")}</SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={location === "/"}>
-                    <Link href="/">
-                      <Home />
-                      <span>{t("nav.dashboard")}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
 
-                {toonGebouwen && (
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={projectenActief}>
-                      <Link href="/gebouwen">
-                        <Building />
-                        <span>{t("nav.gebouwen")}</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                )}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
+          {/* ══════════ FPS CONNECT ══════════ */}
+          {actieveOmgeving === "connect" && (
+            <>
+              <SidebarGroup>
+                <SidebarGroupContent>
+                  <SidebarMenu>
+                    <SidebarMenuItem>
+                      <SidebarMenuButton asChild isActive={location === "/"}>
+                        <Link href="/">
+                          <Home />
+                          <span>{t("nav.dashboard")}</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
 
-          {/* ── Domeinen ── */}
-          {heeftDomein && (
-            <SidebarGroup>
-              <SidebarGroupLabel>{t("nav.domeinen")}</SidebarGroupLabel>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  {toonInspecties && (
-                    <SidebarMenuItem>
-                      <SidebarMenuButton
-                        asChild
-                        isActive={location === "/inspecties" || location.startsWith("/inspecties/")}
-                      >
-                        <Link href="/inspecties">
-                          <Search />
-                          <span>{t("nav.inspecties")}</span>
-                          <Badge
-                            variant="outline"
-                            className="ml-auto text-[10px] px-1.5 py-0 leading-tight border-muted-foreground/40 text-muted-foreground group-data-[collapsible=icon]:hidden"
+                    {toonGebouwen && (
+                      <SidebarMenuItem>
+                        <SidebarMenuButton asChild isActive={projectenActief}>
+                          <Link href="/gebouwen">
+                            <Building />
+                            <span>{t("nav.gebouwen")}</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    )}
+
+                    {toonInspecties && (
+                      <SidebarMenuItem>
+                        <SidebarMenuButton
+                          asChild
+                          isActive={location === "/inspecties" || location.startsWith("/inspecties/")}
+                        >
+                          <Link href="/inspecties">
+                            <Search />
+                            <span>{t("nav.inspecties")}</span>
+                            <InUitvoering />
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    )}
+
+                    {toonOnderhoud && (
+                      <SidebarMenuItem>
+                        <SidebarMenuButton
+                          asChild
+                          isActive={location === "/onderhoud" || location.startsWith("/onderhoud/")}
+                        >
+                          <Link href="/onderhoud">
+                            <Wrench />
+                            <span>{t("nav.onderhoud")}</span>
+                            <InUitvoering />
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    )}
+
+                    {featureFlags.planning && (
+                      <SidebarMenuItem>
+                        <SidebarMenuButton
+                          asChild
+                          isActive={location === "/modules/planning" || location.startsWith("/modules/planning/")}
+                        >
+                          <Link href="/modules/planning">
+                            <CalendarDays />
+                            <span>Planning</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    )}
+
+                    {featureFlags.calculatie && (
+                      <SidebarMenuItem>
+                        <SidebarMenuButton
+                          asChild
+                          isActive={location === "/modules/calculatie" || location.startsWith("/modules/calculatie/")}
+                        >
+                          <Link href="/modules/calculatie">
+                            <Calculator />
+                            <span>Calculatie</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    )}
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              </SidebarGroup>
+
+              {toonBibliotheek && (
+                <SidebarGroup>
+                  <SidebarGroupLabel>Bibliotheek</SidebarGroupLabel>
+                  <SidebarGroupContent>
+                    <SidebarMenu>
+                      <SidebarMenuItem>
+                        <SidebarMenuButton
+                          asChild
+                          isActive={location === "/rapporten" || location.startsWith("/rapporten/")}
+                        >
+                          <Link href="/rapporten">
+                            <FileText />
+                            <span>Rapporten</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                      <SidebarMenuItem>
+                        <SidebarMenuButton
+                          asChild
+                          isActive={location === "/documenten" || location.startsWith("/documenten/")}
+                        >
+                          <Link href="/documenten">
+                            <Files />
+                            <span>Documenten</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                      <SidebarMenuItem>
+                        <SidebarMenuButton
+                          asChild
+                          isActive={
+                            location === "/beheer/bibliotheek" ||
+                            location.startsWith("/beheer/bibliotheek/") ||
+                            location.startsWith("/beheer/toepassingen") ||
+                            location.startsWith("/beheer/applicaties")
+                          }
+                        >
+                          <Link href="/beheer/bibliotheek">
+                            <BookOpen />
+                            <span>Bibliotheek</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    </SidebarMenu>
+                  </SidebarGroupContent>
+                </SidebarGroup>
+              )}
+
+              {(toonPersoneel || toonDossiers || toonOffertes || toonCrm || isHoofdbeheerder) && (
+                <SidebarGroup>
+                  <SidebarGroupLabel>Organisatie</SidebarGroupLabel>
+                  <SidebarGroupContent>
+                    <SidebarMenu>
+                      {toonPersoneel && (
+                        <SidebarMenuItem>
+                          <SidebarMenuButton
+                            asChild
+                            isActive={location === "/personeel" || location.startsWith("/personeel/")}
                           >
-                            <Clock className="h-2.5 w-2.5 mr-0.5" />
-                            {t("nav.inUitvoering")}
-                          </Badge>
-                        </Link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  )}
-                  {toonOnderhoud && (
-                    <SidebarMenuItem>
-                      <SidebarMenuButton
-                        asChild
-                        isActive={location === "/onderhoud" || location.startsWith("/onderhoud/")}
-                      >
-                        <Link href="/onderhoud">
-                          <Wrench />
-                          <span>{t("nav.onderhoud")}</span>
-                          <Badge
-                            variant="outline"
-                            className="ml-auto text-[10px] px-1.5 py-0 leading-tight border-muted-foreground/40 text-muted-foreground group-data-[collapsible=icon]:hidden"
+                            <Link href="/personeel">
+                              <Users />
+                              <span>{t("nav.personeel")}</span>
+                              <InUitvoering />
+                            </Link>
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                      )}
+                      {toonCrm && (
+                        <SidebarMenuItem>
+                          <SidebarMenuButton
+                            asChild
+                            isActive={location === "/crm" || location.startsWith("/crm/")}
                           >
-                            <Clock className="h-2.5 w-2.5 mr-0.5" />
-                            {t("nav.inUitvoering")}
-                          </Badge>
-                        </Link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  )}
-                  {toonCrm && (
-                    <SidebarMenuItem>
-                      <SidebarMenuButton
-                        asChild
-                        isActive={location === "/crm" || location.startsWith("/crm/")}
-                      >
-                        <Link href="/crm">
-                          <Contact />
-                          <span>{t("nav.crm")}</span>
-                          <Badge
-                            variant="outline"
-                            className="ml-auto text-[10px] px-1.5 py-0 leading-tight border-muted-foreground/40 text-muted-foreground group-data-[collapsible=icon]:hidden"
+                            <Link href="/crm">
+                              <Contact />
+                              <span>{t("nav.crm")}</span>
+                              <InUitvoering />
+                            </Link>
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                      )}
+                      {toonDossiers && (
+                        <SidebarMenuItem>
+                          <SidebarMenuButton
+                            asChild
+                            isActive={location === "/dossiers" || location.startsWith("/dossiers/")}
                           >
-                            <Clock className="h-2.5 w-2.5 mr-0.5" />
-                            {t("nav.inUitvoering")}
-                          </Badge>
-                        </Link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  )}
-                  {toonAbonnementen && (
-                    <SidebarMenuItem>
-                      <SidebarMenuButton
-                        asChild
-                        isActive={location === "/abonnementen" || location.startsWith("/abonnementen/")}
-                      >
-                        <Link href="/abonnementen">
-                          <Receipt />
-                          <span>{t("nav.abonnementen")}</span>
-                          <Badge
-                            variant="outline"
-                            className="ml-auto text-[10px] px-1.5 py-0 leading-tight border-muted-foreground/40 text-muted-foreground group-data-[collapsible=icon]:hidden"
+                            <Link href="/dossiers">
+                              <FolderOpen />
+                              <span>{t("nav.dossiers")}</span>
+                              <InUitvoering />
+                            </Link>
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                      )}
+                      {toonOffertes && (
+                        <SidebarMenuItem>
+                          <SidebarMenuButton
+                            asChild
+                            isActive={location === "/offertes" || location.startsWith("/offertes/")}
                           >
-                            <Clock className="h-2.5 w-2.5 mr-0.5" />
-                            {t("nav.inUitvoering")}
-                          </Badge>
-                        </Link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  )}
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </SidebarGroup>
+                            <Link href="/offertes">
+                              <FileText />
+                              <span>{t("nav.offertes")}</span>
+                              <InUitvoering />
+                            </Link>
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                      )}
+                      {isHoofdbeheerder && (
+                        <SidebarMenuItem>
+                          <SidebarMenuButton
+                            asChild
+                            isActive={location === "/toolbox" || location.startsWith("/toolbox/")}
+                          >
+                            <Link href="/toolbox">
+                              <MessageSquare />
+                              <span>Toolbox &amp; berichten</span>
+                            </Link>
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                      )}
+                    </SidebarMenu>
+                  </SidebarGroupContent>
+                </SidebarGroup>
+              )}
+            </>
           )}
 
-          {/* ── Organisatie ── */}
-          {heeftOrganisatie && (
+          {/* ══════════ FPS ONE ══════════ */}
+          {actieveOmgeving === "one" && heeftOne && (
             <SidebarGroup>
-              <SidebarGroupLabel>{t("nav.organisatie")}</SidebarGroupLabel>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  {toonPersoneel && (
-                    <SidebarMenuItem>
-                      <SidebarMenuButton
-                        asChild
-                        isActive={location === "/personeel" || location.startsWith("/personeel/")}
-                      >
-                        <Link href="/personeel">
-                          <Users />
-                          <span>{t("nav.personeel")}</span>
-                          <Badge
-                            variant="outline"
-                            className="ml-auto text-[10px] px-1.5 py-0 leading-tight border-muted-foreground/40 text-muted-foreground group-data-[collapsible=icon]:hidden"
-                          >
-                            <Clock className="h-2.5 w-2.5 mr-0.5" />
-                            {t("nav.inUitvoering")}
-                          </Badge>
-                        </Link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  )}
-                  {toonDossiers && (
-                    <SidebarMenuItem>
-                      <SidebarMenuButton
-                        asChild
-                        isActive={location === "/dossiers" || location.startsWith("/dossiers/")}
-                      >
-                        <Link href="/dossiers">
-                          <FolderOpen />
-                          <span>{t("nav.dossiers")}</span>
-                          <Badge
-                            variant="outline"
-                            className="ml-auto text-[10px] px-1.5 py-0 leading-tight border-muted-foreground/40 text-muted-foreground group-data-[collapsible=icon]:hidden"
-                          >
-                            <Clock className="h-2.5 w-2.5 mr-0.5" />
-                            {t("nav.inUitvoering")}
-                          </Badge>
-                        </Link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  )}
-                  {toonOffertes && (
-                    <SidebarMenuItem>
-                      <SidebarMenuButton
-                        asChild
-                        isActive={location === "/offertes" || location.startsWith("/offertes/")}
-                      >
-                        <Link href="/offertes">
-                          <FileText />
-                          <span>{t("nav.offertes")}</span>
-                          <Badge
-                            variant="outline"
-                            className="ml-auto text-[10px] px-1.5 py-0 leading-tight border-muted-foreground/40 text-muted-foreground group-data-[collapsible=icon]:hidden"
-                          >
-                            <Clock className="h-2.5 w-2.5 mr-0.5" />
-                            {t("nav.inUitvoering")}
-                          </Badge>
-                        </Link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  )}
-                  {isHoofdbeheerder && (
-                    <SidebarMenuItem>
-                      <SidebarMenuButton
-                        asChild
-                        isActive={location === "/toolbox" || location.startsWith("/toolbox/")}
-                      >
-                        <Link href="/toolbox">
-                          <MessageSquare />
-                          <span>Toolbox &amp; berichten</span>
-                        </Link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  )}
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </SidebarGroup>
-          )}
-
-          {/* ── Bibliotheek ── */}
-          {toonBibliotheek && (
-            <SidebarGroup>
-              <SidebarGroupLabel>Bibliotheek</SidebarGroupLabel>
               <SidebarGroupContent>
                 <SidebarMenu>
                   <SidebarMenuItem>
-                    <SidebarMenuButton
-                      asChild
-                      isActive={location === "/beheer/bibliotheek" || location.startsWith("/beheer/bibliotheek/")}
-                    >
-                      <Link href="/beheer/bibliotheek">
-                        <BookOpen />
-                        <span>Bibliotheek</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton
-                      asChild
-                      isActive={location === "/documenten" || location.startsWith("/documenten/")}
-                    >
-                      <Link href="/documenten">
-                        <Files />
-                        <span>Documenten</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton
-                      asChild
-                      isActive={location === "/rapporten" || location.startsWith("/rapporten/")}
-                    >
-                      <Link href="/rapporten">
-                        <FileText />
-                        <span>Rapporten</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </SidebarGroup>
-          )}
-
-          {/* ── Modules ── */}
-          {isHoofdbeheerder && (featureFlags.planning || featureFlags.calculatie) && (
-            <SidebarGroup>
-              <SidebarGroupLabel>Modules</SidebarGroupLabel>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  {featureFlags.planning && (
-                    <SidebarMenuItem>
-                      <SidebarMenuButton
-                        asChild
-                        isActive={location === "/modules/planning" || location.startsWith("/modules/planning/")}
-                      >
-                        <Link href="/modules/planning">
-                          <CalendarDays />
-                          <span>Planning</span>
-                        </Link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  )}
-                  {featureFlags.calculatie && (
-                    <SidebarMenuItem>
-                      <SidebarMenuButton
-                        asChild
-                        isActive={location === "/modules/calculatie" || location.startsWith("/modules/calculatie/")}
-                      >
-                        <Link href="/modules/calculatie">
-                          <Calculator />
-                          <span>Calculatie</span>
-                        </Link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  )}
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </SidebarGroup>
-          )}
-
-          {/* ── FPS Connect ── */}
-          {isHoofdbeheerder && (
-            <SidebarGroup>
-              <SidebarGroupLabel>FPS Connect</SidebarGroupLabel>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  {featureFlags.planning && (
-                    <SidebarMenuItem>
-                      <SidebarMenuButton
-                        asChild
-                        isActive={location === "/connect/planning" || location.startsWith("/connect/planning/")}
-                      >
-                        <Link href="/connect/planning">
-                          <CalendarDays />
-                          <span>Planning</span>
-                        </Link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  )}
-                  {featureFlags.calculatie && (
-                    <SidebarMenuItem>
-                      <SidebarMenuButton
-                        asChild
-                        isActive={location === "/connect/calculatie" || location.startsWith("/connect/calculatie/")}
-                      >
-                        <Link href="/connect/calculatie">
-                          <Calculator />
-                          <span>Calculatie</span>
-                        </Link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  )}
-                  <SidebarMenuItem>
-                    <SidebarMenuButton
-                      asChild
-                      isActive={location === "/connect/hrm" || location.startsWith("/connect/hrm/")}
-                    >
-                      <Link href="/connect/hrm">
-                        <Users />
-                        <span>HRM</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </SidebarGroup>
-          )}
-
-          {/* ── FPS One ── */}
-          {isHoofdbeheerder && (
-            <SidebarGroup>
-              <SidebarGroupLabel>FPS One</SidebarGroupLabel>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton
-                      asChild
-                      isActive={location === "/one/dashboard"}
-                    >
+                    <SidebarMenuButton asChild isActive={location === "/one/dashboard"}>
                       <Link href="/one/dashboard">
                         <LayoutDashboard />
                         <span>Dashboard</span>
@@ -429,7 +402,7 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
                       isActive={location === "/one/documenten" || location.startsWith("/one/documenten/")}
                     >
                       <Link href="/one/documenten">
-                        <Globe />
+                        <Files />
                         <span>Documenten</span>
                       </Link>
                     </SidebarMenuButton>
@@ -461,105 +434,107 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
             </SidebarGroup>
           )}
 
-          {/* ── Beheer ── */}
-          <SidebarGroup>
-            <SidebarGroupLabel>Beheer</SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                {toonGebruikers && (
-                  <SidebarMenuItem>
-                    <SidebarMenuButton
-                      asChild
-                      isActive={location === "/gebruikers" || location.startsWith("/gebruikers/")}
-                    >
-                      <Link href="/gebruikers">
-                        <Users />
-                        <span>{t("nav.gebruikers")}</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                )}
-                {toonSysteem && (
-                  <>
+          {/* ══════════ BEHEER ══════════ */}
+          {actieveOmgeving === "beheer" && heeftBeheer && (
+            <SidebarGroup>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {toonGebruikers && (
                     <SidebarMenuItem>
-                      <SidebarMenuButton asChild isActive={location === "/beheer/login-pogingen"}>
-                        <Link href="/beheer/login-pogingen">
-                          <ShieldAlert />
-                          <span>Login-pogingen</span>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={location === "/gebruikers" || location.startsWith("/gebruikers/")}
+                      >
+                        <Link href="/gebruikers">
+                          <Users />
+                          <span>{t("nav.gebruikers")}</span>
                         </Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
+                  )}
+                  {isHoofdbeheerder && (
                     <SidebarMenuItem>
-                      <SidebarMenuButton asChild isActive={location === "/beheer/helpdesk"}>
-                        <Link href="/beheer/helpdesk">
-                          <LifeBuoy />
-                          <span>Helpdesk</span>
+                      <SidebarMenuButton asChild isActive={location === "/beheer/profielen"}>
+                        <Link href="/beheer/profielen">
+                          <ShieldCheck />
+                          <span>Profielen</span>
                         </Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
-                    <SidebarMenuItem>
-                      <SidebarMenuButton asChild isActive={location === "/beheer/feedback"}>
-                        <Link href="/beheer/feedback">
-                          <MessageSquarePlus />
-                          <span>Feedback</span>
-                        </Link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                    <SidebarMenuItem>
-                      <SidebarMenuButton asChild isActive={location === "/beheer/heatmaps"}>
-                        <Link href="/beheer/heatmaps">
-                          <Activity />
-                          <span>Heatmaps</span>
-                        </Link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                    {isHoofdbeheerder && (
+                  )}
+                  {toonSysteem && (
+                    <>
                       <SidebarMenuItem>
-                        <SidebarMenuButton asChild isActive={location === "/beheer/profielen"}>
-                          <Link href="/beheer/profielen">
-                            <ShieldCheck />
-                            <span>Profielen</span>
+                        <SidebarMenuButton asChild isActive={location === "/beheer/login-pogingen"}>
+                          <Link href="/beheer/login-pogingen">
+                            <ShieldAlert />
+                            <span>Login-pogingen</span>
                           </Link>
                         </SidebarMenuButton>
                       </SidebarMenuItem>
-                    )}
-                    <SidebarMenuItem>
-                      <SidebarMenuButton asChild isActive={location === "/beheer/ontwikkelstatus"}>
-                        <Link href="/beheer/ontwikkelstatus">
-                          <ListChecks />
-                          <span>Ontwikkelstatus</span>
-                        </Link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                    <SidebarMenuItem>
-                      <SidebarMenuButton asChild isActive={location === "/beheer/documentopmaak"}>
-                        <Link href="/beheer/documentopmaak">
-                          <LayoutTemplate />
-                          <span>Documentopmaak</span>
-                        </Link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                    <SidebarMenuItem>
-                      <SidebarMenuButton asChild isActive={location === "/beheer/mail"}>
-                        <Link href="/beheer/mail">
-                          <Mail />
-                          <span>Mailinstellingen</span>
-                        </Link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  </>
-                )}
-                <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={location === "/info"}>
-                    <Link href="/info">
-                      <Info />
-                      <span>{t("nav.info")}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
+                      <SidebarMenuItem>
+                        <SidebarMenuButton asChild isActive={location === "/beheer/mail"}>
+                          <Link href="/beheer/mail">
+                            <Mail />
+                            <span>Mailinstellingen</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                      <SidebarMenuItem>
+                        <SidebarMenuButton asChild isActive={location === "/beheer/documentopmaak"}>
+                          <Link href="/beheer/documentopmaak">
+                            <LayoutTemplate />
+                            <span>Documentopmaak</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                      <SidebarMenuItem>
+                        <SidebarMenuButton asChild isActive={location === "/beheer/helpdesk"}>
+                          <Link href="/beheer/helpdesk">
+                            <LifeBuoy />
+                            <span>Helpdesk</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                      <SidebarMenuItem>
+                        <SidebarMenuButton asChild isActive={location === "/beheer/feedback"}>
+                          <Link href="/beheer/feedback">
+                            <MessageSquarePlus />
+                            <span>Feedback</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                      <SidebarMenuItem>
+                        <SidebarMenuButton asChild isActive={location === "/beheer/heatmaps"}>
+                          <Link href="/beheer/heatmaps">
+                            <Activity />
+                            <span>Heatmaps</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                      <SidebarMenuItem>
+                        <SidebarMenuButton asChild isActive={location === "/beheer/ontwikkelstatus"}>
+                          <Link href="/beheer/ontwikkelstatus">
+                            <ListChecks />
+                            <span>Ontwikkelstatus</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    </>
+                  )}
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild isActive={location === "/info"}>
+                      <Link href="/info">
+                        <Info />
+                        <span>{t("nav.info")}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          )}
+
         </SidebarContent>
 
         <SidebarFooter>
