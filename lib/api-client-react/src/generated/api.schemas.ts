@@ -2694,6 +2694,22 @@ export interface Medewerker {
   noodcontact_naam?: string | null;
   /** @nullable */
   noodcontact_telefoon?: string | null;
+  /** @nullable */
+  geboortedatum?: string | null;
+  /** @nullable */
+  geboorteplaats?: string | null;
+  /** @nullable */
+  adres?: string | null;
+  /** @nullable */
+  postcode?: string | null;
+  /** @nullable */
+  woonplaats?: string | null;
+  /** @nullable */
+  rijbewijs?: string | null;
+  /** @nullable */
+  rijbewijs_vervaldatum?: string | null;
+  /** @nullable */
+  cv_tekst?: string | null;
   actief: boolean;
   /** @nullable */
   opmerkingen?: string | null;
@@ -2721,6 +2737,14 @@ export interface MedewerkerInput {
   uit_dienst_per?: string;
   noodcontact_naam?: string;
   noodcontact_telefoon?: string;
+  geboortedatum?: string;
+  geboorteplaats?: string;
+  adres?: string;
+  postcode?: string;
+  woonplaats?: string;
+  rijbewijs?: string;
+  rijbewijs_vervaldatum?: string;
+  cv_tekst?: string;
   actief?: boolean;
   opmerkingen?: string;
   bedrijf_uitzendbureau?: string;

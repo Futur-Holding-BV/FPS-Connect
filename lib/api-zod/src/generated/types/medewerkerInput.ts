@@ -24,6 +24,14 @@ export interface MedewerkerInput {
   uit_dienst_per?: string;
   noodcontact_naam?: string;
   noodcontact_telefoon?: string;
+  geboortedatum?: string;
+  geboorteplaats?: string;
+  adres?: string;
+  postcode?: string;
+  woonplaats?: string;
+  rijbewijs?: string;
+  rijbewijs_vervaldatum?: string;
+  cv_tekst?: string;
   actief?: boolean;
   opmerkingen?: string;
   bedrijf_uitzendbureau?: string;

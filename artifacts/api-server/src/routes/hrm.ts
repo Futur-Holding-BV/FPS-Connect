@@ -517,6 +517,14 @@ async function medewerkerNaarJson(m: typeof medewerkersTable.$inferSelect) {
     uit_dienst_per: m.uitDienstPer,
     noodcontact_naam: m.noodcontactNaam,
     noodcontact_telefoon: m.noodcontactTelefoon,
+    geboortedatum: m.geboortedatum ?? null,
+    geboorteplaats: m.geboorteplaats ?? null,
+    adres: m.adres ?? null,
+    postcode: m.postcode ?? null,
+    woonplaats: m.woonplaats ?? null,
+    rijbewijs: m.rijbewijs ?? null,
+    rijbewijs_vervaldatum: m.rijbewijsVervaldatum ?? null,
+    cv_tekst: m.cvTekst ?? null,
     actief: m.actief,
     opmerkingen: m.opmerkingen,
     aangemaakt_op: iso(m.aangemaaktOp),
@@ -551,6 +559,14 @@ router.get("/medewerkers", lezen, async (req, res) => {
         uit_dienst_per: r.m.uitDienstPer,
         noodcontact_naam: r.m.noodcontactNaam,
         noodcontact_telefoon: r.m.noodcontactTelefoon,
+        geboortedatum: r.m.geboortedatum ?? null,
+        geboorteplaats: r.m.geboorteplaats ?? null,
+        adres: r.m.adres ?? null,
+        postcode: r.m.postcode ?? null,
+        woonplaats: r.m.woonplaats ?? null,
+        rijbewijs: r.m.rijbewijs ?? null,
+        rijbewijs_vervaldatum: r.m.rijbewijsVervaldatum ?? null,
+        cv_tekst: r.m.cvTekst ?? null,
         actief: r.m.actief,
         opmerkingen: r.m.opmerkingen,
         aangemaakt_op: iso(r.m.aangemaaktOp),
@@ -565,7 +581,7 @@ router.get("/medewerkers", lezen, async (req, res) => {
 
 router.post("/medewerkers", schrijven, async (req, res) => {
   try {
-    const { naam, gebruiker_id, email, telefoon, mobiel, werkmaatschappij, functie_id, cao, dienstverband, bedrijf_uitzendbureau, contracturen_per_week, in_dienst_sinds, uit_dienst_per, noodcontact_naam, noodcontact_telefoon, actief, opmerkingen } = req.body;
+    const { naam, gebruiker_id, email, telefoon, mobiel, werkmaatschappij, functie_id, cao, dienstverband, bedrijf_uitzendbureau, contracturen_per_week, in_dienst_sinds, uit_dienst_per, noodcontact_naam, noodcontact_telefoon, geboortedatum, geboorteplaats, adres, postcode, woonplaats, rijbewijs, rijbewijs_vervaldatum, cv_tekst, actief, opmerkingen } = req.body;
     if (!naam) return res.status(400).json({ error: "naam is verplicht" });
     const wm = werkmaatschappij || "FPS Brandpreventie";
     const [m] = await db
@@ -587,6 +603,14 @@ router.post("/medewerkers", schrijven, async (req, res) => {
         uitDienstPer: uit_dienst_per,
         noodcontactNaam: noodcontact_naam,
         noodcontactTelefoon: noodcontact_telefoon,
+        geboortedatum: geboortedatum || null,
+        geboorteplaats: geboorteplaats || null,
+        adres: adres || null,
+        postcode: postcode || null,
+        woonplaats: woonplaats || null,
+        rijbewijs: rijbewijs || null,
+        rijbewijsVervaldatum: rijbewijs_vervaldatum || null,
+        cvTekst: cv_tekst || null,
         actief: actief ?? true,
         opmerkingen,
       })
@@ -747,7 +771,7 @@ router.get("/medewerkers/:id", lezen, async (req, res) => {
 
 router.patch("/medewerkers/:id", schrijven, async (req, res) => {
   try {
-    const { naam, gebruiker_id, email, telefoon, mobiel, werkmaatschappij, functie_id, cao, dienstverband, bedrijf_uitzendbureau, contracturen_per_week, in_dienst_sinds, uit_dienst_per, noodcontact_naam, noodcontact_telefoon, actief, opmerkingen } = req.body;
+    const { naam, gebruiker_id, email, telefoon, mobiel, werkmaatschappij, functie_id, cao, dienstverband, bedrijf_uitzendbureau, contracturen_per_week, in_dienst_sinds, uit_dienst_per, noodcontact_naam, noodcontact_telefoon, geboortedatum, geboorteplaats, adres, postcode, woonplaats, rijbewijs, rijbewijs_vervaldatum, cv_tekst, actief, opmerkingen } = req.body;
     // Voorkom dat één account aan twee medewerkers gekoppeld raakt (onboarding blokkeert
     // dit al; hier ook bij profielwijziging, want er is geen unieke DB-constraint).
     if (gebruiker_id != null) {
@@ -779,6 +803,14 @@ router.patch("/medewerkers/:id", schrijven, async (req, res) => {
         uitDienstPer: uit_dienst_per,
         noodcontactNaam: noodcontact_naam,
         noodcontactTelefoon: noodcontact_telefoon,
+        geboortedatum: geboortedatum !== undefined ? (geboortedatum || null) : undefined,
+        geboorteplaats: geboorteplaats !== undefined ? (geboorteplaats || null) : undefined,
+        adres: adres !== undefined ? (adres || null) : undefined,
+        postcode: postcode !== undefined ? (postcode || null) : undefined,
+        woonplaats: woonplaats !== undefined ? (woonplaats || null) : undefined,
+        rijbewijs: rijbewijs !== undefined ? (rijbewijs || null) : undefined,
+        rijbewijsVervaldatum: rijbewijs_vervaldatum !== undefined ? (rijbewijs_vervaldatum || null) : undefined,
+        cvTekst: cv_tekst !== undefined ? (cv_tekst || null) : undefined,
         actief,
         opmerkingen,
         bijgewerktOp: new Date(),

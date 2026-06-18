@@ -62,6 +62,7 @@ import { useToast } from "@/hooks/use-toast";
 import {
   ArrowLeft, Pencil, Trash2, Plus, GraduationCap, Award, CalendarClock,
   Mail, Phone, Briefcase, ShieldCheck, AlertTriangle, Check, X,
+  MapPin, Car, FileText, Cake,
 } from "lucide-react";
 
 const NIVEAUS = [
@@ -191,6 +192,14 @@ export default function MedewerkerDetailPagina() {
       uit_dienst_per: medewerker.uit_dienst_per ?? undefined,
       noodcontact_naam: medewerker.noodcontact_naam ?? undefined,
       noodcontact_telefoon: medewerker.noodcontact_telefoon ?? undefined,
+      geboortedatum: medewerker.geboortedatum ?? undefined,
+      geboorteplaats: medewerker.geboorteplaats ?? undefined,
+      adres: medewerker.adres ?? undefined,
+      postcode: medewerker.postcode ?? undefined,
+      woonplaats: medewerker.woonplaats ?? undefined,
+      rijbewijs: medewerker.rijbewijs ?? undefined,
+      rijbewijs_vervaldatum: medewerker.rijbewijs_vervaldatum ?? undefined,
+      cv_tekst: medewerker.cv_tekst ?? undefined,
       actief: medewerker.actief,
       opmerkingen: medewerker.opmerkingen ?? undefined,
     });
@@ -483,6 +492,43 @@ export default function MedewerkerDetailPagina() {
               <p className="text-sm whitespace-pre-wrap">{medewerker.opmerkingen}</p>
             </div>
           )}
+
+          {/* Persoonsgegevens — toon alleen als er iets ingevuld is */}
+          {(medewerker.geboortedatum || medewerker.adres || medewerker.woonplaats || medewerker.rijbewijs) && (
+            <div className="sm:col-span-2 lg:col-span-3 border-t pt-3 mt-1">
+              <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Persoonsgegevens</div>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {medewerker.geboortedatum && (
+                  <div className="space-y-1.5">
+                    <div className="text-xs font-medium text-muted-foreground flex items-center gap-1.5"><Cake className="h-3.5 w-3.5" /> Geboortedatum</div>
+                    <div className="text-sm">{fmtDatum(medewerker.geboortedatum)}{medewerker.geboorteplaats ? ` — ${medewerker.geboorteplaats}` : ""}</div>
+                  </div>
+                )}
+                {(medewerker.adres || medewerker.woonplaats) && (
+                  <div className="space-y-1.5">
+                    <div className="text-xs font-medium text-muted-foreground flex items-center gap-1.5"><MapPin className="h-3.5 w-3.5" /> Woonadres</div>
+                    <div className="text-sm">
+                      {medewerker.adres && <div>{medewerker.adres}</div>}
+                      {(medewerker.postcode || medewerker.woonplaats) && (
+                        <div>{[medewerker.postcode, medewerker.woonplaats].filter(Boolean).join("  ")}</div>
+                      )}
+                    </div>
+                  </div>
+                )}
+                {medewerker.rijbewijs && (
+                  <div className="space-y-1.5">
+                    <div className="text-xs font-medium text-muted-foreground flex items-center gap-1.5"><Car className="h-3.5 w-3.5" /> Rijbewijs</div>
+                    <div className="text-sm">
+                      <div>{medewerker.rijbewijs}</div>
+                      {medewerker.rijbewijs_vervaldatum && (
+                        <div className="text-xs text-muted-foreground">Geldig t/m {fmtDatum(medewerker.rijbewijs_vervaldatum)}</div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -491,6 +537,7 @@ export default function MedewerkerDetailPagina() {
           <TabsTrigger value="opleidingen">Opleidingen & certificaten</TabsTrigger>
           <TabsTrigger value="bekwaamheden">Bekwaamheden</TabsTrigger>
           <TabsTrigger value="verlof">Verlof</TabsTrigger>
+          <TabsTrigger value="achtergrond"><FileText className="h-3.5 w-3.5 mr-1.5" />Achtergrond / CV</TabsTrigger>
         </TabsList>
 
         {/* Opleidingen */}
@@ -648,6 +695,63 @@ export default function MedewerkerDetailPagina() {
             )}
           </div>
         </TabsContent>
+
+        {/* Achtergrond / CV */}
+        <TabsContent value="achtergrond" className="space-y-4">
+          <Card>
+            <CardContent className="p-5">
+              {medewerker.cv_tekst ? (
+                <div>
+                  <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3 flex items-center gap-1.5">
+                    <FileText className="h-3.5 w-3.5" /> CV / Werkachtergrond
+                  </div>
+                  <p className="text-sm whitespace-pre-wrap leading-relaxed">{medewerker.cv_tekst}</p>
+                </div>
+              ) : (
+                <div className="py-10 text-center text-muted-foreground">
+                  <FileText className="h-10 w-10 mx-auto mb-3 opacity-40" />
+                  <p className="text-sm">Nog geen CV of werkachtergrond ingevuld.</p>
+                  {magSchrijven && (
+                    <p className="text-xs mt-1">Klik op <span className="font-medium">Bewerken</span> om dit aan te vullen.</p>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+          {(medewerker.geboortedatum || medewerker.adres || medewerker.rijbewijs) && (
+            <Card>
+              <CardContent className="p-5">
+                <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Overige gegevens</div>
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  {medewerker.geboortedatum && (
+                    <div className="space-y-1">
+                      <div className="text-xs font-medium text-muted-foreground flex items-center gap-1.5"><Cake className="h-3.5 w-3.5" /> Geboortedatum</div>
+                      <div className="text-sm">{fmtDatum(medewerker.geboortedatum)}{medewerker.geboorteplaats ? `, ${medewerker.geboorteplaats}` : ""}</div>
+                    </div>
+                  )}
+                  {(medewerker.adres || medewerker.woonplaats) && (
+                    <div className="space-y-1">
+                      <div className="text-xs font-medium text-muted-foreground flex items-center gap-1.5"><MapPin className="h-3.5 w-3.5" /> Woonadres</div>
+                      <div className="text-sm">
+                        {medewerker.adres && <div>{medewerker.adres}</div>}
+                        {(medewerker.postcode || medewerker.woonplaats) && <div>{[medewerker.postcode, medewerker.woonplaats].filter(Boolean).join("  ")}</div>}
+                      </div>
+                    </div>
+                  )}
+                  {medewerker.rijbewijs && (
+                    <div className="space-y-1">
+                      <div className="text-xs font-medium text-muted-foreground flex items-center gap-1.5"><Car className="h-3.5 w-3.5" /> Rijbewijs</div>
+                      <div className="text-sm">
+                        {medewerker.rijbewijs}
+                        {medewerker.rijbewijs_vervaldatum && <div className="text-xs text-muted-foreground">Geldig t/m {fmtDatum(medewerker.rijbewijs_vervaldatum)}</div>}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
       </Tabs>
 
       {/* Profiel bewerken */}
@@ -766,6 +870,64 @@ export default function MedewerkerDetailPagina() {
                 <Label>Noodcontact telefoon</Label>
                 <Input value={profielForm.noodcontact_telefoon ?? ""} onChange={(e) => setProfielForm({ ...profielForm, noodcontact_telefoon: e.target.value })} />
               </div>
+
+              {/* Persoonsgegevens */}
+              <div className="sm:col-span-2 border-t pt-3 mt-1">
+                <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Persoonsgegevens</div>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Geboortedatum</Label>
+                <Input type="date" value={profielForm.geboortedatum ?? ""} onChange={(e) => setProfielForm({ ...profielForm, geboortedatum: e.target.value || undefined })} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Geboorteplaats</Label>
+                <Input value={profielForm.geboorteplaats ?? ""} onChange={(e) => setProfielForm({ ...profielForm, geboorteplaats: e.target.value || undefined })} placeholder="Geboorteplaats" />
+              </div>
+
+              {/* Woonadres */}
+              <div className="sm:col-span-2 border-t pt-3 mt-1">
+                <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Woonadres</div>
+              </div>
+              <div className="sm:col-span-2 space-y-1.5">
+                <Label>Straat en huisnummer</Label>
+                <Input value={profielForm.adres ?? ""} onChange={(e) => setProfielForm({ ...profielForm, adres: e.target.value || undefined })} placeholder="bijv. Brandstraat 12" />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Postcode</Label>
+                <Input value={profielForm.postcode ?? ""} onChange={(e) => setProfielForm({ ...profielForm, postcode: e.target.value || undefined })} placeholder="1234 AB" />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Woonplaats</Label>
+                <Input value={profielForm.woonplaats ?? ""} onChange={(e) => setProfielForm({ ...profielForm, woonplaats: e.target.value || undefined })} placeholder="Plaats" />
+              </div>
+
+              {/* Rijbewijs */}
+              <div className="sm:col-span-2 border-t pt-3 mt-1">
+                <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Rijbewijs</div>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Categorieën <span className="font-normal text-muted-foreground">(bijv. B, BE, C)</span></Label>
+                <Input value={profielForm.rijbewijs ?? ""} onChange={(e) => setProfielForm({ ...profielForm, rijbewijs: e.target.value || undefined })} placeholder="B, BE, C, CE" />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Geldig tot</Label>
+                <Input type="date" value={profielForm.rijbewijs_vervaldatum ?? ""} onChange={(e) => setProfielForm({ ...profielForm, rijbewijs_vervaldatum: e.target.value || undefined })} />
+              </div>
+
+              {/* Achtergrond / CV */}
+              <div className="sm:col-span-2 border-t pt-3 mt-1">
+                <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Achtergrond / CV</div>
+              </div>
+              <div className="sm:col-span-2 space-y-1.5">
+                <Label>Werkachtergrond en relevante ervaring</Label>
+                <Textarea
+                  rows={4}
+                  value={profielForm.cv_tekst ?? ""}
+                  onChange={(e) => setProfielForm({ ...profielForm, cv_tekst: e.target.value || undefined })}
+                  placeholder="Korte samenvatting van werkervaring, eerdere functies, relevante achtergrond..."
+                />
+              </div>
+
               <label className="sm:col-span-2 flex items-center gap-2 text-sm">
                 <Checkbox checked={profielForm.actief ?? true} onCheckedChange={(c) => setProfielForm({ ...profielForm, actief: Boolean(c) })} />
                 Actief in dienst

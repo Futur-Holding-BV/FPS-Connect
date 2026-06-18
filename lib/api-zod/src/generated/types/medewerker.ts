@@ -37,6 +37,22 @@ export interface Medewerker {
   noodcontact_naam?: string | null;
   /** @nullable */
   noodcontact_telefoon?: string | null;
+  /** @nullable */
+  geboortedatum?: string | null;
+  /** @nullable */
+  geboorteplaats?: string | null;
+  /** @nullable */
+  adres?: string | null;
+  /** @nullable */
+  postcode?: string | null;
+  /** @nullable */
+  woonplaats?: string | null;
+  /** @nullable */
+  rijbewijs?: string | null;
+  /** @nullable */
+  rijbewijs_vervaldatum?: string | null;
+  /** @nullable */
+  cv_tekst?: string | null;
   actief: boolean;
   /** @nullable */
   opmerkingen?: string | null;

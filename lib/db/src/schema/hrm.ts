@@ -80,6 +80,18 @@ export const medewerkersTable = pgTable("medewerkers", {
   uitDienstPer: text("uit_dienst_per"),
   noodcontactNaam: text("noodcontact_naam"),
   noodcontactTelefoon: text("noodcontact_telefoon"),
+  // Persoonsgegevens
+  geboortedatum: text("geboortedatum"),
+  geboorteplaats: text("geboorteplaats"),
+  // Woonadres
+  adres: text("adres"),
+  postcode: text("postcode"),
+  woonplaats: text("woonplaats"),
+  // Rijbewijs (comma-separated categorieën, bijv. "B, BE, C")
+  rijbewijs: text("rijbewijs"),
+  rijbewijsVervaldatum: text("rijbewijs_vervaldatum"),
+  // CV / werkachtergrond (vrij tekstveld)
+  cvTekst: text("cv_tekst"),
   actief: boolean("actief").notNull().default(true),
   opmerkingen: text("opmerkingen"),
   aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),

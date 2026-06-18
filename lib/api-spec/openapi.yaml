@@ -10748,6 +10748,22 @@ components:
           type: ["string", "null"]
         noodcontact_telefoon:
           type: ["string", "null"]
+        geboortedatum:
+          type: ["string", "null"]
+        geboorteplaats:
+          type: ["string", "null"]
+        adres:
+          type: ["string", "null"]
+        postcode:
+          type: ["string", "null"]
+        woonplaats:
+          type: ["string", "null"]
+        rijbewijs:
+          type: ["string", "null"]
+        rijbewijs_vervaldatum:
+          type: ["string", "null"]
+        cv_tekst:
+          type: ["string", "null"]
         actief:
           type: boolean
         opmerkingen:
@@ -10790,6 +10806,22 @@ components:
         noodcontact_naam:
           type: string
         noodcontact_telefoon:
+          type: string
+        geboortedatum:
+          type: string
+        geboorteplaats:
+          type: string
+        adres:
+          type: string
+        postcode:
+          type: string
+        woonplaats:
+          type: string
+        rijbewijs:
+          type: string
+        rijbewijs_vervaldatum:
+          type: string
+        cv_tekst:
           type: string
         actief:
           type: boolean
