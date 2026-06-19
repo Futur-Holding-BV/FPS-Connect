@@ -13,6 +13,7 @@ import {
   useListOnderhoud,
   useArchiveerGebouw,
   useListGekoppeldeDocumenten,
+  useUpdateGebouw,
   type Document,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -66,6 +67,7 @@ import {
 import { useAuth } from "@/context/auth-context";
 import { useRol } from "@/context/rol-context";
 import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
+import { useToast } from "@/hooks/use-toast";
 import { TYPE_LABELS } from "@/lib/documenten-labels";
 import GebouwPartijen from "./gebouw-partijen";
 import GebouwTekeningen from "./gebouw-tekeningen";
@@ -96,6 +98,12 @@ const PROJECT_STATUS_CONFIG: Record<string, { label: string; className: string }
     className: "bg-primary/10 text-primary border-primary/30",
   },
 };
+
+const PROJECT_STATUSSEN = [
+  { waarde: "offerte_aanvraag",      label: "Offerte-aanvraag" },
+  { waarde: "offerte_ingediend",     label: "Offerte-ingediend" },
+  { waarde: "opdracht_in_uitvoering", label: "Opdracht in uitvoering" },
+] as const;
 
 function ProjectStatusBadge({ status }: { status: string }) {
   const cfg = PROJECT_STATUS_CONFIG[status];
@@ -314,6 +322,8 @@ export default function GebouwDetail() {
   const gereedMelden = useMeldGebouwGereed();
   const herstelGereed = useHerstelGebouwActief();
   const archiveerMutatie = useArchiveerGebouw();
+  const updateGebouw = useUpdateGebouw();
+  const { toast } = useToast();
 
   const [gekozenGebruikerId, setGekozenGebruikerId] = useState<string>("");
   const [gekozenProjectRol, setGekozenProjectRol] = useState<string>("");
@@ -451,6 +461,19 @@ export default function GebouwDetail() {
     }
   }
 
+  async function wijzigStatus(nieuweStatus: string) {
+    try {
+      await updateGebouw.mutateAsync({
+        id: gebouwId,
+        data: { project_status: nieuweStatus },
+      });
+      queryClient.invalidateQueries();
+      toast({ description: "Projectstatus bijgewerkt." });
+    } catch {
+      toast({ variant: "destructive", description: "Status bijwerken mislukt." });
+    }
+  }
+
   const projectAdmin = (toewijzingen ?? []).find(
     (t) => t.project_rol === "Project-admin",
   );
@@ -517,8 +540,26 @@ export default function GebouwDetail() {
                 ? `${gebouw.projectnummer} \u2014 ${gebouw.naam}`
                 : gebouw.naam}
             </h1>
-            {gebouw.project_status && (
-              <ProjectStatusBadge status={gebouw.project_status} />
+            {isBeheerder ? (
+              <Select
+                value={gebouw.project_status ?? ""}
+                onValueChange={wijzigStatus}
+              >
+                <SelectTrigger className="h-6 text-xs px-2 gap-1 w-auto min-w-[130px] shrink-0">
+                  <SelectValue placeholder="Status instellen" />
+                </SelectTrigger>
+                <SelectContent>
+                  {PROJECT_STATUSSEN.map((s) => (
+                    <SelectItem key={s.waarde} value={s.waarde}>
+                      {s.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : (
+              gebouw.project_status && (
+                <ProjectStatusBadge status={gebouw.project_status} />
+              )
             )}
             {gebouw.gereed_op && (
               <Badge className="bg-green-600 text-white gap-1 shrink-0">

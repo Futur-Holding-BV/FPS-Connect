@@ -250,6 +250,7 @@ export default function Gebouwen() {
   const [partijNaam, setPartijNaam] = useVoorkeur<string>("gebouwen_partij_naam", ALLE);
   const [sortering, setSortering] = useVoorkeur<SorteerOptie>("gebouwen_sortering", "alfabetisch");
   const [inclusiefGearchiveerd, setInclusiefGearchiveerd] = useVoorkeur<boolean>("gebouwen_incl_gearchiveerd", false);
+  const [filterStatus, setFilterStatus] = useVoorkeur<string>("gebouwen_filter_status", ALLE);
 
   const { data: partijOpties } = useListGebouwPartijOpties();
 
@@ -277,10 +278,13 @@ export default function Gebouwen() {
   const isBeheerder =
     !!gebruiker?.rol && BEHEERDER_ROLLEN.includes(gebruiker.rol as string);
 
-  const filterActief = partijType !== ALLE || partijNaam !== ALLE;
+  const filterActief = partijType !== ALLE || partijNaam !== ALLE || filterStatus !== ALLE;
 
   const gesorteerdeGebouwen = useMemo(() => {
-    const lijst = [...(gebouwen ?? [])];
+    let lijst = [...(gebouwen ?? [])];
+    if (filterStatus !== ALLE) {
+      lijst = lijst.filter((g) => g.project_status === filterStatus);
+    }
     switch (sortering) {
       case "laatst_toegevoegd":
         return lijst.sort((a, b) => tijd(b.aangemaakt_op) - tijd(a.aangemaakt_op));
@@ -292,7 +296,7 @@ export default function Gebouwen() {
       default:
         return lijst.sort((a, b) => a.naam.localeCompare(b.naam, "nl"));
     }
-  }, [gebouwen, sortering]);
+  }, [gebouwen, sortering, filterStatus]);
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
@@ -351,6 +355,18 @@ export default function Gebouwen() {
           </SelectContent>
         </Select>
 
+        <Select value={filterStatus} onValueChange={setFilterStatus}>
+          <SelectTrigger className="w-full sm:w-52">
+            <SelectValue placeholder="Filter op status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={ALLE}>Alle statussen</SelectItem>
+            {Object.entries(PROJECT_STATUS_LABELS).map(([waarde, label]) => (
+              <SelectItem key={waarde} value={waarde}>{label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
         {filterActief && (
           <Button
             variant="ghost"
@@ -358,6 +374,7 @@ export default function Gebouwen() {
             onClick={() => {
               setPartijType(ALLE);
               setPartijNaam(ALLE);
+              setFilterStatus(ALLE);
             }}
           >
             <X className="h-4 w-4 mr-1" /> Filter wissen
