@@ -36,6 +36,7 @@ function omgevingVanLocatie(loc: string): Omgeving | null {
     loc === "/beheer/feedback" ||
     loc === "/beheer/heatmaps" ||
     loc === "/beheer/ontwikkelstatus" ||
+    loc === "/beheer/projectstatus" ||
     loc === "/beheer/backup"
   ) return "beheer";
   return null;
@@ -580,6 +581,14 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
                           <Link href="/beheer/ontwikkelstatus">
                             <ListChecks />
                             <span>Ontwikkelstatus</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                      <SidebarMenuItem>
+                        <SidebarMenuButton asChild isActive={location === "/beheer/projectstatus"}>
+                          <Link href="/beheer/projectstatus">
+                            <BarChart3 />
+                            <span>Projectstatus</span>
                           </Link>
                         </SidebarMenuButton>
                       </SidebarMenuItem>

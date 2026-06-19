@@ -49,6 +49,7 @@ import Ontwikkelstatus from "@/pages/beheer/ontwikkelstatus";
 import DocumentopmaakBeheer from "@/pages/beheer/documentopmaak";
 import MailBeheer from "@/pages/beheer/mail";
 import BackupBeheer from "@/pages/beheer/backup";
+import ProjectstatusPagina from "@/pages/beheer/projectstatus";
 import InfoPagina from "@/pages/info/index";
 import PersoneelPagina from "@/pages/personeel/index";
 import MedewerkerDetailPagina from "@/pages/personeel/detail";
@@ -140,6 +141,7 @@ function BeheerderPortal() {
         <Route path="/beheer/documentopmaak" component={DocumentopmaakBeheer} />
         <Route path="/beheer/mail" component={MailBeheer} />
         <Route path="/beheer/backup" component={BackupBeheer} />
+        <Route path="/beheer/projectstatus" component={ProjectstatusPagina} />
         <Route path="/documenten" component={DocumentenPagina} />
         <Route path="/uren" component={UrenPagina} />
         <Route path="/weekstaten" component={WeekstatenPagina} />
@@ -247,6 +249,7 @@ function PermissiePortal() {
         <Route path="/beheer/documentopmaak" component={DocumentopmaakBeheer} />
         <Route path="/beheer/mail" component={MailBeheer} />
         <Route path="/beheer/backup" component={BackupBeheer} />
+        <Route path="/beheer/projectstatus" component={ProjectstatusPagina} />
         <Route path="/documenten" component={DocumentenPagina} />
         <Route path="/uren" component={UrenPagina} />
         <Route path="/weekstaten" component={WeekstatenPagina} />
