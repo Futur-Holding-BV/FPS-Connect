@@ -22,6 +22,10 @@ export interface PlanningItem {
   uren: number;
   status: string;
   type: string;
+  werknummer?: string | null;
+  /** JSON string met huisnummer per tijdslot, bijv. {"07:30":"47","08:30":"47"} */
+  tijdsloten?: string | null;
+  dag_notities?: string | null;
   notities?: string | null;
   aangemaakt_op?: string;
 }

@@ -8083,6 +8083,9 @@ export const ListPlanningItemsResponseItem = zod.object({
   "uren": zod.number(),
   "status": zod.string(),
   "type": zod.string(),
+  "werknummer": zod.string().nullish(),
+  "tijdsloten": zod.string().nullish().describe('JSON string met huisnummer per tijdslot, bijv. {\"07:30\":\"47\",\"08:30\":\"47\"}'),
+  "dag_notities": zod.string().nullish(),
   "notities": zod.string().nullish(),
   "aangemaakt_op": zod.string().optional()
 })
@@ -8098,6 +8101,9 @@ export const CreatePlanningItemBody = zod.object({
   "medewerker_id": zod.number().nullish(),
   "gebouw_id": zod.number().nullish(),
   "project_naam": zod.string().nullish(),
+  "werknummer": zod.string().nullish(),
+  "tijdsloten": zod.string().nullish().describe('JSON string met huisnummer per tijdslot'),
+  "dag_notities": zod.string().nullish(),
   "datum_start": zod.string(),
   "datum_eind": zod.string(),
   "tijd_start": zod.string().nullish(),
@@ -8134,6 +8140,9 @@ export const GetPlanningItemResponse = zod.object({
   "uren": zod.number(),
   "status": zod.string(),
   "type": zod.string(),
+  "werknummer": zod.string().nullish(),
+  "tijdsloten": zod.string().nullish().describe('JSON string met huisnummer per tijdslot, bijv. {\"07:30\":\"47\",\"08:30\":\"47\"}'),
+  "dag_notities": zod.string().nullish(),
   "notities": zod.string().nullish(),
   "aangemaakt_op": zod.string().optional()
 })
@@ -8152,6 +8161,9 @@ export const UpdatePlanningItemBody = zod.object({
   "medewerker_id": zod.number().nullish(),
   "gebouw_id": zod.number().nullish(),
   "project_naam": zod.string().nullish(),
+  "werknummer": zod.string().nullish(),
+  "tijdsloten": zod.string().nullish().describe('JSON string met huisnummer per tijdslot'),
+  "dag_notities": zod.string().nullish(),
   "datum_start": zod.string(),
   "datum_eind": zod.string(),
   "tijd_start": zod.string().nullish(),
@@ -8178,6 +8190,9 @@ export const UpdatePlanningItemResponse = zod.object({
   "uren": zod.number(),
   "status": zod.string(),
   "type": zod.string(),
+  "werknummer": zod.string().nullish(),
+  "tijdsloten": zod.string().nullish().describe('JSON string met huisnummer per tijdslot, bijv. {\"07:30\":\"47\",\"08:30\":\"47\"}'),
+  "dag_notities": zod.string().nullish(),
   "notities": zod.string().nullish(),
   "aangemaakt_op": zod.string().optional()
 })

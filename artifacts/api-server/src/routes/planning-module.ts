@@ -118,6 +118,9 @@ router.get("/modules/planning/items", lezenPlanning, async (req, res) => {
       uren: item.uren,
       status: item.status,
       type: item.type,
+      werknummer: item.werknummer ?? null,
+      tijdsloten: item.tijdsloten ?? null,
+      dag_notities: item.dagNotities ?? null,
       notities: item.notities,
       aangemaakt_op: iso(item.aangemaaktOp),
     })));
@@ -133,6 +136,7 @@ router.post("/modules/planning/items", aanmakenPlanning, async (req, res) => {
       titel, omschrijving, medewerker_id, gebouw_id, project_naam,
       datum_start, datum_eind, tijd_start, tijd_eind, uren,
       status = "concept", type = "intern", notities,
+      werknummer, tijdsloten, dag_notities,
     } = req.body as Record<string, unknown>;
 
     if (!titel || !datum_start || !datum_eind) {
@@ -152,6 +156,9 @@ router.post("/modules/planning/items", aanmakenPlanning, async (req, res) => {
       uren: uren !== undefined ? Number(uren) : 8,
       status: String(status),
       type: String(type),
+      werknummer: werknummer ? String(werknummer) : null,
+      tijdsloten: tijdsloten ? String(tijdsloten) : null,
+      dagNotities: dag_notities ? String(dag_notities) : null,
       notities: notities ? String(notities) : null,
       aangemaaktDoorId: (req as any).session?.gebruikerId ?? null,
     }).returning();
@@ -172,6 +179,9 @@ router.post("/modules/planning/items", aanmakenPlanning, async (req, res) => {
       uren: row.uren,
       status: row.status,
       type: row.type,
+      werknummer: row.werknummer ?? null,
+      tijdsloten: row.tijdsloten ?? null,
+      dag_notities: row.dagNotities ?? null,
       notities: row.notities,
       aangemaakt_op: iso(row.aangemaaktOp),
     });
@@ -204,7 +214,11 @@ router.get("/modules/planning/items/:id", lezenPlanning, async (req, res) => {
       gebouw_id: item.gebouwId, gebouw_naam: gebouwNaam ?? null,
       project_naam: item.projectNaam, datum_start: item.datumStart,
       datum_eind: item.datumEind, tijd_start: item.tijdStart, tijd_eind: item.tijdEind,
-      uren: item.uren, status: item.status, type: item.type, notities: item.notities,
+      uren: item.uren, status: item.status, type: item.type,
+      werknummer: item.werknummer ?? null,
+      tijdsloten: item.tijdsloten ?? null,
+      dag_notities: item.dagNotities ?? null,
+      notities: item.notities,
       aangemaakt_op: iso(item.aangemaaktOp),
     });
   } catch (e) {
@@ -233,6 +247,9 @@ router.patch("/modules/planning/items/:id", schrijvenPlanning, async (req, res) 
     if (body.uren !== undefined) update.uren = Number(body.uren);
     if (body.status !== undefined) update.status = String(body.status);
     if (body.type !== undefined) update.type = String(body.type);
+    if (body.werknummer !== undefined) update.werknummer = body.werknummer ? String(body.werknummer) : null;
+    if (body.tijdsloten !== undefined) update.tijdsloten = body.tijdsloten ? String(body.tijdsloten) : null;
+    if (body.dag_notities !== undefined) update.dagNotities = body.dag_notities ? String(body.dag_notities) : null;
     if (body.notities !== undefined) update.notities = body.notities ? String(body.notities) : null;
 
     const [row] = await db.update(planningItemsTable).set(update).where(eq(planningItemsTable.id, id)).returning();
@@ -240,7 +257,9 @@ router.patch("/modules/planning/items/:id", schrijvenPlanning, async (req, res) 
 
     res.json({ id: row.id, titel: row.titel, datum_start: row.datumStart, datum_eind: row.datumEind,
       uren: row.uren, status: row.status, type: row.type, medewerker_id: row.medewerkerId,
-      gebouw_id: row.gebouwId, project_naam: row.projectNaam, notities: row.notities,
+      gebouw_id: row.gebouwId, project_naam: row.projectNaam,
+      werknummer: row.werknummer ?? null, tijdsloten: row.tijdsloten ?? null,
+      dag_notities: row.dagNotities ?? null, notities: row.notities,
       medewerker_naam: null, gebouw_naam: null, aangemaakt_op: iso(row.aangemaaktOp) });
   } catch (e) {
     req.log.error(e);

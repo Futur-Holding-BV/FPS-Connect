@@ -13199,6 +13199,16 @@ components:
           type: string
         type:
           type: string
+        werknummer:
+          type: string
+          nullable: true
+        tijdsloten:
+          type: string
+          nullable: true
+          description: JSON string met huisnummer per tijdslot, bijv. {"07:30":"47","08:30":"47"}
+        dag_notities:
+          type: string
+          nullable: true
         notities:
           type: string
           nullable: true
@@ -13221,6 +13231,16 @@ components:
           type: integer
           nullable: true
         project_naam:
+          type: string
+          nullable: true
+        werknummer:
+          type: string
+          nullable: true
+        tijdsloten:
+          type: string
+          nullable: true
+          description: JSON string met huisnummer per tijdslot
+        dag_notities:
           type: string
           nullable: true
         datum_start:
