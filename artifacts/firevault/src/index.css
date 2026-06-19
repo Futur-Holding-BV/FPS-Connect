@@ -209,3 +209,73 @@
     padding-right: 1rem;
   }
 }
+
+/* ── 3D-knop schaduwtokens ───────────────────────────────────────────────────
+   Elke knopvariant krijgt een variant-specifieke bodemschaduw die de knop
+   optisch verhoogd maakt. Bij indrukken verdwijnt de schaduw en zakt de knop
+   naar beneden (translateY), wat een tastbare drukbeweging simuleert.
+────────────────────────────────────────────────────────────────────────────── */
+:root {
+  --schaduw-primair:    hsl(12 75% 30%);
+  --schaduw-neutraal:   hsl(214 32% 72%);
+  --schaduw-destructief: hsl(0 84% 36%);
+  --schaduw-secondary:  hsl(220 15% 72%);
+}
+.dark {
+  --schaduw-primair:    hsl(12 75% 22%);
+  --schaduw-neutraal:   hsl(220 20% 8%);
+  --schaduw-destructief: hsl(0 84% 20%);
+  --schaduw-secondary:  hsl(220 20% 8%);
+}
+
+.knop-3d-primair {
+  box-shadow: 0 4px 0 var(--schaduw-primair);
+}
+.knop-3d-primair:not(:disabled):hover {
+  box-shadow: 0 3px 0 var(--schaduw-primair);
+  transform: translateY(1px);
+}
+.knop-3d-primair:not(:disabled):active {
+  box-shadow: none;
+  transform: translateY(4px);
+}
+
+.knop-3d-neutraal {
+  box-shadow: 0 3px 0 var(--schaduw-neutraal);
+}
+.knop-3d-neutraal:not(:disabled):hover {
+  box-shadow: 0 2px 0 var(--schaduw-neutraal);
+  transform: translateY(1px);
+}
+.knop-3d-neutraal:not(:disabled):active {
+  box-shadow: none;
+  transform: translateY(3px);
+}
+
+.knop-3d-destructief {
+  box-shadow: 0 4px 0 var(--schaduw-destructief);
+}
+.knop-3d-destructief:not(:disabled):hover {
+  box-shadow: 0 3px 0 var(--schaduw-destructief);
+  transform: translateY(1px);
+}
+.knop-3d-destructief:not(:disabled):active {
+  box-shadow: none;
+  transform: translateY(4px);
+}
+
+.knop-3d-secondary {
+  box-shadow: 0 3px 0 var(--schaduw-secondary);
+}
+.knop-3d-secondary:not(:disabled):hover {
+  box-shadow: 0 2px 0 var(--schaduw-secondary);
+  transform: translateY(1px);
+}
+.knop-3d-secondary:not(:disabled):active {
+  box-shadow: none;
+  transform: translateY(3px);
+}
+
+/* Overgebleven Replit-klassen (no-ops vervangen door bovenstaande) */
+.hover-elevate  { transition: transform 75ms ease-out, box-shadow 75ms ease-out; }
+.active-elevate-2:not(:disabled):active { transform: translateY(2px); }
