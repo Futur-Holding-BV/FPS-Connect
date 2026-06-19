@@ -18,12 +18,67 @@ import {
 
 const SLEUTELS = ["gebouwen", "planning", "personeel", "uren", "berichten"] as const;
 
-const ROUTES: { sleutel: string; route: RegExp }[] = [
-  { sleutel: "gebouwen", route: /\/gebouwen(\b|\?|$)/ },
-  { sleutel: "planning", route: /\/planning(\b|\?|$)/ },
-  { sleutel: "personeel", route: /\/hrm(\b|\?|$)/ },
-  { sleutel: "uren", route: /\/uren(\b|\?|$)/ },
-  { sleutel: "berichten", route: /\/berichten(\b|\?|$)/ },
+// Lichte inhoudscontrole per route: bovenop de URL-check verifiëren we dat het
+// doelscherm zijn eigen inhoud daadwerkelijk rendert (een kop of een lijstitem),
+// zodat een regressie waarbij de route klopt maar het scherm leeg blijft of crasht
+// alsnog wordt opgemerkt. De checks zijn opzettelijk data-onafhankelijk zodat de
+// test stabiel blijft ongeacht de dev-database.
+const INHOUD_TIMEOUT = 20_000;
+
+// expo-router houdt het vorige scherm (o.a. het radiale menu met labels als
+// "Planning", "Berichten") gemount maar verborgen in de DOM. getByText doet
+// substring-matching en zou anders op die verborgen kopieën aanslaan, dus we
+// filteren overal expliciet op zichtbare elementen.
+function zichtbareTekst(page: Page, tekst: string | RegExp) {
+  return page.getByText(tekst).filter({ visible: true });
+}
+
+async function controleerGebouwen(page: Page): Promise<void> {
+  // Distinctief kop-/body-element van het gebouwenscherm.
+  await expect(page.getByPlaceholder("Zoek gebouw, adres of stad…")).toBeVisible({
+    timeout: INHOUD_TIMEOUT,
+  });
+  // Lijst geladen: óf een gebouwkaart (spot-badge) óf de lege-staat.
+  const lijstitem = zichtbareTekst(page, /\d+\s+spots?\b/);
+  const leeg = zichtbareTekst(page, "Geen gebouwen gevonden");
+  await expect(lijstitem.first().or(leeg.first())).toBeVisible({ timeout: INHOUD_TIMEOUT });
+}
+
+async function controleerPersoneel(page: Page): Promise<void> {
+  await expect(zichtbareTekst(page, "Personeel").first()).toBeVisible({ timeout: INHOUD_TIMEOUT });
+  // HRM-overzichtskaarten verschijnen ongeacht de aantallen.
+  await expect(zichtbareTekst(page, "Medewerkers").first()).toBeVisible({ timeout: INHOUD_TIMEOUT });
+}
+
+async function controleerPlanning(page: Page): Promise<void> {
+  // Routeplanning rendert zijn eigen scherm (kop), niet langer een placeholder.
+  await expect(zichtbareTekst(page, "Routeplanning").first()).toBeVisible({
+    timeout: INHOUD_TIMEOUT,
+  });
+}
+
+async function controleerUren(page: Page): Promise<void> {
+  await expect(zichtbareTekst(page, "Urenregistratie").first()).toBeVisible({
+    timeout: INHOUD_TIMEOUT,
+  });
+}
+
+async function controleerBerichten(page: Page): Promise<void> {
+  await expect(zichtbareTekst(page, "Berichten").first()).toBeVisible({ timeout: INHOUD_TIMEOUT });
+  // De Toolbox-tab is altijd aanwezig, ongeacht of er berichten zijn.
+  await expect(zichtbareTekst(page, "Toolbox").first()).toBeVisible({ timeout: INHOUD_TIMEOUT });
+}
+
+const ROUTES: {
+  sleutel: string;
+  route: RegExp;
+  controleerInhoud: (page: Page) => Promise<void>;
+}[] = [
+  { sleutel: "gebouwen", route: /\/gebouwen(\b|\?|$)/, controleerInhoud: controleerGebouwen },
+  { sleutel: "planning", route: /\/planning(\b|\?|$)/, controleerInhoud: controleerPlanning },
+  { sleutel: "personeel", route: /\/hrm(\b|\?|$)/, controleerInhoud: controleerPersoneel },
+  { sleutel: "uren", route: /\/uren(\b|\?|$)/, controleerInhoud: controleerUren },
+  { sleutel: "berichten", route: /\/berichten(\b|\?|$)/, controleerInhoud: controleerBerichten },
 ];
 
 const HULPTEKST = "Tik op FPS om het menu te openen";
@@ -100,11 +155,12 @@ test("FPS startmenu: login, waaier en doorlinken", async ({ page }) => {
     }
   });
 
-  await test.step("elk item linkt naar de juiste route", async () => {
-    for (const { sleutel, route } of ROUTES) {
+  await test.step("elk item linkt naar de juiste route én toont zijn inhoud", async () => {
+    for (const { sleutel, route, controleerInhoud } of ROUTES) {
       await zorgWaaierOpen(page);
       await page.getByTestId(`radiaal-${sleutel}`).click();
       await expect(page).toHaveURL(route);
+      await controleerInhoud(page);
       await page.goBack();
       await expect(page.getByTestId("radiaal-fps")).toBeVisible();
     }
