@@ -11,8 +11,6 @@ import { GebruikerMenu } from "@/components/gebruiker-menu";
 
 const ROUTES_MONTEUR = [
   { href: "/", labelKey: "nav.mijnOpdrachten", icoon: Home },
-  { href: "/onderhoud", labelKey: "nav.werkbonnen", icoon: Wrench },
-  { href: "/inspecties", labelKey: "nav.inspecties", icoon: Search },
   { href: "/voorzieningen", labelKey: "nav.voorzieningen", icoon: ShieldCheck },
   { href: "/gebouwen", labelKey: "nav.gebouwen", icoon: Building },
   { href: "/info", labelKey: "nav.info", icoon: Info },
@@ -20,8 +18,6 @@ const ROUTES_MONTEUR = [
 
 const ROUTES_CONTROLEUR = [
   { href: "/", labelKey: "nav.mijnInspecties", icoon: Home },
-  { href: "/onderhoud", labelKey: "nav.werkbonnen", icoon: Wrench },
-  { href: "/inspecties", labelKey: "nav.inspecties", icoon: Search },
   { href: "/gebouwen", labelKey: "nav.gebouwenPlattegronden", icoon: Map },
   { href: "/info", labelKey: "nav.info", icoon: Info },
 ];

@@ -48,8 +48,8 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
   const isHoofdbeheerder = rol === "hoofdbeheerder";
 
   const toonGebouwen   = heeftNiveau("gebouwen", 1);
-  const toonInspecties = heeftNiveau("inspecties", 1);
-  const toonOnderhoud  = heeftNiveau("onderhoud", 1);
+  const toonInspecties = false;
+  const toonOnderhoud  = false;
   const toonCrm        = heeftNiveau("crm", 1);
   const toonBibliotheek = heeftNiveau("bibliotheek", 1);
   const toonGebruikers = heeftNiveau("gebruikers", 1);
