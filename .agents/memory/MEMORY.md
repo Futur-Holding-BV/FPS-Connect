@@ -69,3 +69,4 @@
 - [Zombie node processen](zombie-node.md) — als `node --version` hangt (exit 124), zijn er zombie node-pids (ps aux|grep node); fix: kill -9 pids + restart_workflow; NIET oplosbaar door esbuild/code debuggen.
 - [Api-server middleware importpad](api-server-middlewares-pad.md) — api-server middleware map heet `middlewares` (meervoud), NIET `middleware`; nieuwe routes importeren uit `"../middlewares/auth"` anders faalt esbuild-build.
 - [S3-opslagabstractie](s3-storage-abstractie.md) — StorageFile interface in objectStorageTypes.ts; factory in objectStorage.ts (S3_BUCKET→S3, anders GCS); getObjectEntityUploadURL retourneert {uploadURL,objectPath}; geen normalizeObjectEntityPath meer in routes.
+- [Chat polling patroon](chat-polling.md) — refetchInterval geeft TS2741 (queryKey ontbreekt, pre-existing); voor chat-polling setInterval+refetch() gebruiken; web: 5s berichten, 10s gesprekkenlijst; mobiel: 5s berichten, 10s lijst.

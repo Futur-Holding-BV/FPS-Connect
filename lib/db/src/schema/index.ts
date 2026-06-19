@@ -21,3 +21,4 @@ export * from "./mod-calculatie";
 export * from "./gereedschappen";
 export * from "./achievements";
 export * from "./uren";
+export * from "./chat";

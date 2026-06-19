@@ -4078,6 +4078,59 @@ export interface HallOfFameEntry {
   spots_count: number;
 }
 
+export interface ChatGebruiker {
+  id: number;
+  naam: string;
+  email: string;
+  rol: string;
+  avatar_url?: string | null;
+  laatst_online?: string | null;
+}
+
+export interface ChatDeelnemer {
+  gebruiker_id: number;
+  naam: string;
+  email: string;
+  rol: string;
+  avatar_url?: string | null;
+  gelezen_tot?: number | null;
+}
+
+export interface ChatBericht {
+  id: number;
+  gesprek_id: number;
+  afzender_id?: number | null;
+  afzender_naam?: string | null;
+  afzender_avatar?: string | null;
+  inhoud: string;
+  bijlage_url?: string | null;
+  bijlage_type?: string | null;
+  aangemaakt_op: string;
+}
+
+export interface ChatGesprek {
+  id: number;
+  type: string;
+  naam?: string | null;
+  deelnemers: ChatDeelnemer[];
+  laatste_bericht?: ChatBericht | null;
+  ongelezen_aantal: number;
+  bijgewerkt_op: string;
+  aangemaakt_op: string;
+}
+
+export interface ChatGesprekInput {
+  type?: string;
+  naam?: string | null;
+  deelnemer_ids: number[];
+}
+
+export interface ChatBerichtInput {
+  inhoud: string;
+  bijlage_url?: string | null;
+  bijlage_type?: string | null;
+}
+
 export type GetRecenteActiviteitParams = {
 limit?: number;
 };

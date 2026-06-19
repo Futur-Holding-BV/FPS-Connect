@@ -46,6 +46,11 @@ import type {
   CalculatieRegelInput,
   CaoOptie,
   CertificaatAkkoordInput,
+  ChatBericht,
+  ChatBerichtInput,
+  ChatGebruiker,
+  ChatGesprek,
+  ChatGesprekInput,
   Cluster,
   ClusterInput,
   ClusterMonteurInput,
@@ -27788,4 +27793,523 @@ export function useGetHallOfFame<TData = Awaited<ReturnType<typeof getHallOfFame
 
 
 
+
+export const getListChatGebruikersUrl = () => {
+
+
+
+
+  return `/api/chat/gebruikers`
+}
+
+/**
+ * @summary Alle actieve gebruikers om een gesprek mee te starten
+ */
+export const listChatGebruikers = async ( options?: RequestInit): Promise<ChatGebruiker[]> => {
+
+  return customFetch<ChatGebruiker[]>(getListChatGebruikersUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListChatGebruikersQueryKey = () => {
+    return [
+    `/api/chat/gebruikers`
+    ] as const;
+    }
+
+
+export const getListChatGebruikersQueryOptions = <TData = Awaited<ReturnType<typeof listChatGebruikers>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listChatGebruikers>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListChatGebruikersQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listChatGebruikers>>> = ({ signal }) => listChatGebruikers({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listChatGebruikers>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListChatGebruikersQueryResult = NonNullable<Awaited<ReturnType<typeof listChatGebruikers>>>
+export type ListChatGebruikersQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Alle actieve gebruikers om een gesprek mee te starten
+ */
+
+export function useListChatGebruikers<TData = Awaited<ReturnType<typeof listChatGebruikers>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listChatGebruikers>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListChatGebruikersQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getListChatGesprekkenUrl = () => {
+
+
+
+
+  return `/api/chat/gesprekken`
+}
+
+/**
+ * @summary Mijn gesprekken (met laatste bericht en ongelezen teller)
+ */
+export const listChatGesprekken = async ( options?: RequestInit): Promise<ChatGesprek[]> => {
+
+  return customFetch<ChatGesprek[]>(getListChatGesprekkenUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListChatGesprekkenQueryKey = () => {
+    return [
+    `/api/chat/gesprekken`
+    ] as const;
+    }
+
+
+export const getListChatGesprekkenQueryOptions = <TData = Awaited<ReturnType<typeof listChatGesprekken>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listChatGesprekken>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListChatGesprekkenQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listChatGesprekken>>> = ({ signal }) => listChatGesprekken({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listChatGesprekken>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListChatGesprekkenQueryResult = NonNullable<Awaited<ReturnType<typeof listChatGesprekken>>>
+export type ListChatGesprekkenQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Mijn gesprekken (met laatste bericht en ongelezen teller)
+ */
+
+export function useListChatGesprekken<TData = Awaited<ReturnType<typeof listChatGesprekken>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listChatGesprekken>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListChatGesprekkenQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateChatGesprekUrl = () => {
+
+
+
+
+  return `/api/chat/gesprekken`
+}
+
+/**
+ * @summary Nieuw gesprek starten (direct of groep)
+ */
+export const createChatGesprek = async (chatGesprekInput: ChatGesprekInput, options?: RequestInit): Promise<ChatGesprek> => {
+
+  return customFetch<ChatGesprek>(getCreateChatGesprekUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(chatGesprekInput)
+  }
+);}
+
+
+
+
+export const getCreateChatGesprekMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createChatGesprek>>, TError,{data: BodyType<ChatGesprekInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createChatGesprek>>, TError,{data: BodyType<ChatGesprekInput>}, TContext> => {
+
+const mutationKey = ['createChatGesprek'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createChatGesprek>>, {data: BodyType<ChatGesprekInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createChatGesprek(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateChatGesprekMutationResult = NonNullable<Awaited<ReturnType<typeof createChatGesprek>>>
+    export type CreateChatGesprekMutationBody = BodyType<ChatGesprekInput>
+    export type CreateChatGesprekMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Nieuw gesprek starten (direct of groep)
+ */
+export const useCreateChatGesprek = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createChatGesprek>>, TError,{data: BodyType<ChatGesprekInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createChatGesprek>>,
+        TError,
+        {data: BodyType<ChatGesprekInput>},
+        TContext
+      > => {
+      return useMutation(getCreateChatGesprekMutationOptions(options));
+    }
+
+export const getGetChatGesprekUrl = (id: number,) => {
+
+
+
+
+  return `/api/chat/gesprekken/${id}`
+}
+
+/**
+ * @summary Detail van een gesprek
+ */
+export const getChatGesprek = async (id: number, options?: RequestInit): Promise<ChatGesprek> => {
+
+  return customFetch<ChatGesprek>(getGetChatGesprekUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetChatGesprekQueryKey = (id: number,) => {
+    return [
+    `/api/chat/gesprekken/${id}`
+    ] as const;
+    }
+
+
+export const getGetChatGesprekQueryOptions = <TData = Awaited<ReturnType<typeof getChatGesprek>>, TError = ErrorType<void>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getChatGesprek>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetChatGesprekQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getChatGesprek>>> = ({ signal }) => getChatGesprek(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getChatGesprek>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetChatGesprekQueryResult = NonNullable<Awaited<ReturnType<typeof getChatGesprek>>>
+export type GetChatGesprekQueryError = ErrorType<void>
+
+
+/**
+ * @summary Detail van een gesprek
+ */
+
+export function useGetChatGesprek<TData = Awaited<ReturnType<typeof getChatGesprek>>, TError = ErrorType<void>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getChatGesprek>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetChatGesprekQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getListChatBerichtenUrl = (id: number,) => {
+
+
+
+
+  return `/api/chat/gesprekken/${id}/berichten`
+}
+
+/**
+ * @summary Berichten van een gesprek (nieuwste eerst)
+ */
+export const listChatBerichten = async (id: number, options?: RequestInit): Promise<ChatBericht[]> => {
+
+  return customFetch<ChatBericht[]>(getListChatBerichtenUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListChatBerichtenQueryKey = (id: number,) => {
+    return [
+    `/api/chat/gesprekken/${id}/berichten`
+    ] as const;
+    }
+
+
+export const getListChatBerichtenQueryOptions = <TData = Awaited<ReturnType<typeof listChatBerichten>>, TError = ErrorType<void>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listChatBerichten>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListChatBerichtenQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listChatBerichten>>> = ({ signal }) => listChatBerichten(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listChatBerichten>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListChatBerichtenQueryResult = NonNullable<Awaited<ReturnType<typeof listChatBerichten>>>
+export type ListChatBerichtenQueryError = ErrorType<void>
+
+
+/**
+ * @summary Berichten van een gesprek (nieuwste eerst)
+ */
+
+export function useListChatBerichten<TData = Awaited<ReturnType<typeof listChatBerichten>>, TError = ErrorType<void>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listChatBerichten>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListChatBerichtenQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateChatBerichtUrl = (id: number,) => {
+
+
+
+
+  return `/api/chat/gesprekken/${id}/berichten`
+}
+
+/**
+ * @summary Bericht versturen in een gesprek
+ */
+export const createChatBericht = async (id: number,
+    chatBerichtInput: ChatBerichtInput, options?: RequestInit): Promise<ChatBericht> => {
+
+  return customFetch<ChatBericht>(getCreateChatBerichtUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(chatBerichtInput)
+  }
+);}
+
+
+
+
+export const getCreateChatBerichtMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createChatBericht>>, TError,{id: number;data: BodyType<ChatBerichtInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createChatBericht>>, TError,{id: number;data: BodyType<ChatBerichtInput>}, TContext> => {
+
+const mutationKey = ['createChatBericht'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createChatBericht>>, {id: number;data: BodyType<ChatBerichtInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  createChatBericht(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateChatBerichtMutationResult = NonNullable<Awaited<ReturnType<typeof createChatBericht>>>
+    export type CreateChatBerichtMutationBody = BodyType<ChatBerichtInput>
+    export type CreateChatBerichtMutationError = ErrorType<void>
+
+    /**
+ * @summary Bericht versturen in een gesprek
+ */
+export const useCreateChatBericht = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createChatBericht>>, TError,{id: number;data: BodyType<ChatBerichtInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createChatBericht>>,
+        TError,
+        {id: number;data: BodyType<ChatBerichtInput>},
+        TContext
+      > => {
+      return useMutation(getCreateChatBerichtMutationOptions(options));
+    }
+
+export const getMarkeerChatGelezenUrl = (id: number,) => {
+
+
+
+
+  return `/api/chat/gesprekken/${id}/gelezen`
+}
+
+/**
+ * @summary Gesprek als gelezen markeren (tot het laatste bericht)
+ */
+export const markeerChatGelezen = async (id: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getMarkeerChatGelezenUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getMarkeerChatGelezenMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof markeerChatGelezen>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof markeerChatGelezen>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['markeerChatGelezen'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof markeerChatGelezen>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  markeerChatGelezen(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type MarkeerChatGelezenMutationResult = NonNullable<Awaited<ReturnType<typeof markeerChatGelezen>>>
+
+    export type MarkeerChatGelezenMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Gesprek als gelezen markeren (tot het laatste bericht)
+ */
+export const useMarkeerChatGelezen = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof markeerChatGelezen>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof markeerChatGelezen>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getMarkeerChatGelezenMutationOptions(options));
+    }
 

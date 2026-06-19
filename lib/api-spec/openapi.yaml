@@ -7854,6 +7854,148 @@ paths:
                 items:
                   $ref: '#/components/schemas/HallOfFameEntry'
 
+  /chat/gebruikers:
+    get:
+      operationId: listChatGebruikers
+      summary: Alle actieve gebruikers om een gesprek mee te starten
+      tags: [chat]
+      security: [{ cookieAuth: [] }, { bearerAuth: [] }]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ChatGebruiker'
+
+  /chat/gesprekken:
+    get:
+      operationId: listChatGesprekken
+      summary: Mijn gesprekken (met laatste bericht en ongelezen teller)
+      tags: [chat]
+      security: [{ cookieAuth: [] }, { bearerAuth: [] }]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ChatGesprek'
+    post:
+      operationId: createChatGesprek
+      summary: Nieuw gesprek starten (direct of groep)
+      tags: [chat]
+      security: [{ cookieAuth: [] }, { bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChatGesprekInput'
+      responses:
+        '201':
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatGesprek'
+
+  /chat/gesprekken/{id}:
+    get:
+      operationId: getChatGesprek
+      summary: Detail van een gesprek
+      tags: [chat]
+      security: [{ cookieAuth: [] }, { bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatGesprek'
+        '404':
+          description: Niet gevonden
+
+  /chat/gesprekken/{id}/berichten:
+    get:
+      operationId: listChatBerichten
+      summary: Berichten van een gesprek (nieuwste eerst)
+      tags: [chat]
+      security: [{ cookieAuth: [] }, { bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ChatBericht'
+        '403':
+          description: Geen toegang
+        '404':
+          description: Niet gevonden
+    post:
+      operationId: createChatBericht
+      summary: Bericht versturen in een gesprek
+      tags: [chat]
+      security: [{ cookieAuth: [] }, { bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChatBerichtInput'
+      responses:
+        '201':
+          description: Verstuurd
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatBericht'
+        '403':
+          description: Geen toegang
+        '404':
+          description: Niet gevonden
+
+  /chat/gesprekken/{id}/gelezen:
+    post:
+      operationId: markeerChatGelezen
+      summary: Gesprek als gelezen markeren (tot het laatste bericht)
+      tags: [chat]
+      security: [{ cookieAuth: [] }, { bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Gemarkeerd
+
 
 components:
   schemas:
@@ -13976,3 +14118,126 @@ components:
           nullable: true
         spots_count:
           type: integer
+
+    ChatGebruiker:
+      type: object
+      required: [id, naam, email, rol]
+      properties:
+        id:
+          type: integer
+        naam:
+          type: string
+        email:
+          type: string
+        rol:
+          type: string
+        avatar_url:
+          type: string
+          nullable: true
+        laatst_online:
+          type: string
+          format: date-time
+          nullable: true
+
+    ChatDeelnemer:
+      type: object
+      required: [gebruiker_id, naam, email, rol]
+      properties:
+        gebruiker_id:
+          type: integer
+        naam:
+          type: string
+        email:
+          type: string
+        rol:
+          type: string
+        avatar_url:
+          type: string
+          nullable: true
+        gelezen_tot:
+          type: integer
+          nullable: true
+
+    ChatBericht:
+      type: object
+      required: [id, gesprek_id, inhoud, aangemaakt_op]
+      properties:
+        id:
+          type: integer
+        gesprek_id:
+          type: integer
+        afzender_id:
+          type: integer
+          nullable: true
+        afzender_naam:
+          type: string
+          nullable: true
+        afzender_avatar:
+          type: string
+          nullable: true
+        inhoud:
+          type: string
+        bijlage_url:
+          type: string
+          nullable: true
+        bijlage_type:
+          type: string
+          nullable: true
+        aangemaakt_op:
+          type: string
+          format: date-time
+
+    ChatGesprek:
+      type: object
+      required: [id, type, deelnemers, ongelezen_aantal, bijgewerkt_op, aangemaakt_op]
+      properties:
+        id:
+          type: integer
+        type:
+          type: string
+        naam:
+          type: string
+          nullable: true
+        deelnemers:
+          type: array
+          items:
+            $ref: '#/components/schemas/ChatDeelnemer'
+        laatste_bericht:
+          $ref: '#/components/schemas/ChatBericht'
+          nullable: true
+        ongelezen_aantal:
+          type: integer
+        bijgewerkt_op:
+          type: string
+          format: date-time
+        aangemaakt_op:
+          type: string
+          format: date-time
+
+    ChatGesprekInput:
+      type: object
+      required: [deelnemer_ids]
+      properties:
+        type:
+          type: string
+          default: direct
+        naam:
+          type: string
+          nullable: true
+        deelnemer_ids:
+          type: array
+          items:
+            type: integer
+
+    ChatBerichtInput:
+      type: object
+      required: [inhoud]
+      properties:
+        inhoud:
+          type: string
+        bijlage_url:
+          type: string
+          nullable: true
+        bijlage_type:
+          type: string
+          nullable: true

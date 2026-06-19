@@ -9494,3 +9494,147 @@ export const GetHallOfFameResponseItem = zod.object({
 export const GetHallOfFameResponse = zod.array(GetHallOfFameResponseItem)
 
 
+/**
+ * @summary Alle actieve gebruikers om een gesprek mee te starten
+ */
+export const ListChatGebruikersResponseItem = zod.object({
+  "id": zod.number(),
+  "naam": zod.string(),
+  "email": zod.string(),
+  "rol": zod.string(),
+  "avatar_url": zod.string().nullish(),
+  "laatst_online": zod.coerce.date().nullish()
+})
+export const ListChatGebruikersResponse = zod.array(ListChatGebruikersResponseItem)
+
+
+/**
+ * @summary Mijn gesprekken (met laatste bericht en ongelezen teller)
+ */
+export const ListChatGesprekkenResponseItem = zod.object({
+  "id": zod.number(),
+  "type": zod.string(),
+  "naam": zod.string().nullish(),
+  "deelnemers": zod.array(zod.object({
+  "gebruiker_id": zod.number(),
+  "naam": zod.string(),
+  "email": zod.string(),
+  "rol": zod.string(),
+  "avatar_url": zod.string().nullish(),
+  "gelezen_tot": zod.number().nullish()
+})),
+  "laatste_bericht": zod.object({
+  "id": zod.number(),
+  "gesprek_id": zod.number(),
+  "afzender_id": zod.number().nullish(),
+  "afzender_naam": zod.string().nullish(),
+  "afzender_avatar": zod.string().nullish(),
+  "inhoud": zod.string(),
+  "bijlage_url": zod.string().nullish(),
+  "bijlage_type": zod.string().nullish(),
+  "aangemaakt_op": zod.coerce.date()
+}).nullish(),
+  "ongelezen_aantal": zod.number(),
+  "bijgewerkt_op": zod.coerce.date(),
+  "aangemaakt_op": zod.coerce.date()
+})
+export const ListChatGesprekkenResponse = zod.array(ListChatGesprekkenResponseItem)
+
+
+/**
+ * @summary Nieuw gesprek starten (direct of groep)
+ */
+export const createChatGesprekBodyTypeDefault = `direct`;
+
+export const CreateChatGesprekBody = zod.object({
+  "type": zod.string().default(createChatGesprekBodyTypeDefault),
+  "naam": zod.string().nullish(),
+  "deelnemer_ids": zod.array(zod.number())
+})
+
+export const CreateChatGesprekResponse = zod.void()
+
+
+/**
+ * @summary Detail van een gesprek
+ */
+export const GetChatGesprekParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetChatGesprekResponse = zod.object({
+  "id": zod.number(),
+  "type": zod.string(),
+  "naam": zod.string().nullish(),
+  "deelnemers": zod.array(zod.object({
+  "gebruiker_id": zod.number(),
+  "naam": zod.string(),
+  "email": zod.string(),
+  "rol": zod.string(),
+  "avatar_url": zod.string().nullish(),
+  "gelezen_tot": zod.number().nullish()
+})),
+  "laatste_bericht": zod.object({
+  "id": zod.number(),
+  "gesprek_id": zod.number(),
+  "afzender_id": zod.number().nullish(),
+  "afzender_naam": zod.string().nullish(),
+  "afzender_avatar": zod.string().nullish(),
+  "inhoud": zod.string(),
+  "bijlage_url": zod.string().nullish(),
+  "bijlage_type": zod.string().nullish(),
+  "aangemaakt_op": zod.coerce.date()
+}).nullish(),
+  "ongelezen_aantal": zod.number(),
+  "bijgewerkt_op": zod.coerce.date(),
+  "aangemaakt_op": zod.coerce.date()
+})
+
+
+/**
+ * @summary Berichten van een gesprek (nieuwste eerst)
+ */
+export const ListChatBerichtenParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ListChatBerichtenResponseItem = zod.object({
+  "id": zod.number(),
+  "gesprek_id": zod.number(),
+  "afzender_id": zod.number().nullish(),
+  "afzender_naam": zod.string().nullish(),
+  "afzender_avatar": zod.string().nullish(),
+  "inhoud": zod.string(),
+  "bijlage_url": zod.string().nullish(),
+  "bijlage_type": zod.string().nullish(),
+  "aangemaakt_op": zod.coerce.date()
+})
+export const ListChatBerichtenResponse = zod.array(ListChatBerichtenResponseItem)
+
+
+/**
+ * @summary Bericht versturen in een gesprek
+ */
+export const CreateChatBerichtParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const CreateChatBerichtBody = zod.object({
+  "inhoud": zod.string(),
+  "bijlage_url": zod.string().nullish(),
+  "bijlage_type": zod.string().nullish()
+})
+
+export const CreateChatBerichtResponse = zod.void()
+
+
+/**
+ * @summary Gesprek als gelezen markeren (tot het laatste bericht)
+ */
+export const MarkeerChatGelezenParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const MarkeerChatGelezenResponse = zod.void()
+
+
