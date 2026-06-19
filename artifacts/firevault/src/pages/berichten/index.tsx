@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   useListChatGesprekken,
   useListChatBerichten,
@@ -7,7 +8,6 @@ import {
   useCreateChatGesprek,
   useListChatGebruikers,
   getListChatGesprekkenQueryKey,
-  getListChatBerichtenQueryKey,
   type ChatGesprek,
   type ChatBericht,
   type ChatGebruiker,
@@ -17,7 +17,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import {
   Dialog,
   DialogContent,
@@ -25,7 +24,21 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useAuth } from "@/context/auth-context";
-import { MessageSquare, Plus, Send, Users, Search, X } from "lucide-react";
+import { useUpload } from "@workspace/object-storage-web";
+import {
+  MessageSquare,
+  Plus,
+  Send,
+  Users,
+  Search,
+  X,
+  Paperclip,
+  FileText,
+  RotateCcw,
+  Video,
+} from "lucide-react";
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function formatTijdstip(dt: string | Date) {
   const d = new Date(dt);
@@ -55,6 +68,21 @@ function initialen(naam: string): string {
     .toUpperCase();
 }
 
+function bijlageUrlNaarApi(pad: string | null | undefined): string | null {
+  if (!pad) return null;
+  return pad.startsWith("/objects/")
+    ? `/api/storage/objects/${pad.slice("/objects/".length)}`
+    : pad;
+}
+
+function detecteerType(file: File): "foto" | "video" | "bestand" {
+  if (file.type.startsWith("image/")) return "foto";
+  if (file.type.startsWith("video/")) return "video";
+  return "bestand";
+}
+
+// ─── AvatarRond ───────────────────────────────────────────────────────────────
+
 function AvatarRond({ naam, size = 36 }: { naam: string; size?: number }) {
   const kleuren = [
     "bg-orange-100 text-orange-700",
@@ -73,21 +101,106 @@ function AvatarRond({ naam, size = 36 }: { naam: string; size?: number }) {
   );
 }
 
-function BerichtBel({
-  bericht,
-  isEigen,
-}: {
-  bericht: ChatBericht;
-  isEigen: boolean;
-}) {
+// ─── BerichtBel ───────────────────────────────────────────────────────────────
+
+function BerichtBel({ bericht, isEigen }: { bericht: ChatBericht; isEigen: boolean }) {
+  const [vergroot, setVergroot] = useState(false);
+  const apiUrl = bijlageUrlNaarApi(bericht.bijlage_url);
+  const isAfbeelding = bericht.bijlage_type === "foto";
+  const isVideo = bericht.bijlage_type === "video";
+  const isBijlage = !!bericht.bijlage_url && !isAfbeelding && !isVideo;
+
+  const bubbleBase = isEigen
+    ? "bg-primary text-primary-foreground rounded-br-sm"
+    : "bg-muted text-foreground rounded-bl-sm";
+
+  const tijdstipKlasse = `text-[10px] mt-0.5 ${
+    isEigen ? "text-primary-foreground/70 text-right" : "text-muted-foreground"
+  }`;
+
+  if (isAfbeelding && apiUrl) {
+    return (
+      <div className={`flex ${isEigen ? "justify-end" : "justify-start"} mb-1`}>
+        <div className={`max-w-[72%] rounded-2xl overflow-hidden text-sm ${bubbleBase}`}>
+          {!isEigen && bericht.afzender_naam && (
+            <div className="text-[10px] font-semibold px-3 pt-2 opacity-70">
+              {bericht.afzender_naam}
+            </div>
+          )}
+          <img
+            src={apiUrl}
+            alt=""
+            loading="lazy"
+            className="max-w-full max-h-60 object-cover cursor-pointer block"
+            onClick={() => setVergroot(true)}
+          />
+          {bericht.inhoud ? (
+            <div className="px-3 pt-1.5">
+              <p className="text-sm whitespace-pre-wrap break-words leading-relaxed">
+                {bericht.inhoud}
+              </p>
+            </div>
+          ) : null}
+          <div className={`${tijdstipKlasse} px-3 pb-2`}>{formatTijdstip(bericht.aangemaakt_op)}</div>
+        </div>
+        {vergroot &&
+          createPortal(
+            <div
+              className="fixed inset-0 z-[100] bg-black/92 flex items-center justify-center p-4"
+              onClick={() => setVergroot(false)}
+            >
+              <img src={apiUrl} alt="" className="max-w-full max-h-full object-contain rounded-lg" />
+            </div>,
+            document.body,
+          )}
+      </div>
+    );
+  }
+
+  if (isVideo && apiUrl) {
+    return (
+      <div className={`flex ${isEigen ? "justify-end" : "justify-start"} mb-1`}>
+        <div className={`max-w-[72%] rounded-2xl overflow-hidden text-sm ${bubbleBase}`}>
+          {!isEigen && bericht.afzender_naam && (
+            <div className="text-[10px] font-semibold px-3 pt-2 opacity-70">
+              {bericht.afzender_naam}
+            </div>
+          )}
+          <video src={apiUrl} controls className="max-w-full max-h-48 block" />
+          <div className={`${tijdstipKlasse} px-3 pb-2`}>{formatTijdstip(bericht.aangemaakt_op)}</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (isBijlage && apiUrl) {
+    return (
+      <div className={`flex ${isEigen ? "justify-end" : "justify-start"} mb-1`}>
+        <div className={`max-w-[72%] rounded-2xl px-3 py-2 text-sm ${bubbleBase}`}>
+          {!isEigen && bericht.afzender_naam && (
+            <div className="text-[10px] font-semibold mb-1 opacity-70">{bericht.afzender_naam}</div>
+          )}
+          <a
+            href={apiUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={`flex items-center gap-2 rounded-lg px-3 py-2 mb-1 transition ${
+              isEigen ? "bg-white/20 hover:bg-white/30" : "bg-black/10 hover:bg-black/15"
+            }`}
+          >
+            <FileText size={16} className="flex-shrink-0" />
+            <span className="text-xs truncate">{bericht.inhoud || "Bestand"}</span>
+          </a>
+          <div className={tijdstipKlasse}>{formatTijdstip(bericht.aangemaakt_op)}</div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className={`flex ${isEigen ? "justify-end" : "justify-start"} mb-1`}>
       <div
-        className={`max-w-[72%] rounded-2xl px-3 py-2 text-sm ${
-          isEigen
-            ? "bg-primary text-primary-foreground rounded-br-sm"
-            : "bg-muted text-foreground rounded-bl-sm"
-        }`}
+        className={`max-w-[72%] rounded-2xl px-3 py-2 text-sm ${bubbleBase}`}
       >
         {!isEigen && bericht.afzender_naam && (
           <div className="text-[10px] font-semibold mb-0.5 opacity-70">
@@ -95,17 +208,262 @@ function BerichtBel({
           </div>
         )}
         <p className="whitespace-pre-wrap break-words leading-relaxed">{bericht.inhoud}</p>
-        <div
-          className={`text-[10px] mt-0.5 ${
-            isEigen ? "text-primary-foreground/70 text-right" : "text-muted-foreground"
-          }`}
-        >
-          {formatTijdstip(bericht.aangemaakt_op)}
-        </div>
+        <div className={tijdstipKlasse}>{formatTijdstip(bericht.aangemaakt_op)}</div>
       </div>
     </div>
   );
 }
+
+// ─── FotoBewerker ─────────────────────────────────────────────────────────────
+
+function FotoBewerker({
+  afbeelding,
+  onBevestig,
+  onAnnuleer,
+}: {
+  afbeelding: File;
+  onBevestig: (geannoteerd: File) => void;
+  onAnnuleer: () => void;
+}) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [kleur, setKleur] = useState("#ef4444");
+  const [dikte, setDikte] = useState(4);
+  const [isTekenen, setIsTekenen] = useState(false);
+  const [geschiedenis, setGeschiedenis] = useState<ImageData[]>([]);
+  const [geladen, setGeladen] = useState(false);
+  const prevPosRef = useRef<[number, number] | null>(null);
+
+  useEffect(() => {
+    const url = URL.createObjectURL(afbeelding);
+    const img = new Image();
+    img.onload = () => {
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      canvas.width = img.naturalWidth;
+      canvas.height = img.naturalHeight;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
+      ctx.drawImage(img, 0, 0);
+      setGeladen(true);
+      URL.revokeObjectURL(url);
+    };
+    img.src = url;
+  }, [afbeelding]);
+
+  function schaalPos(e: React.MouseEvent<HTMLCanvasElement>): [number, number] {
+    const canvas = canvasRef.current!;
+    const rect = canvas.getBoundingClientRect();
+    return [
+      (e.clientX - rect.left) * (canvas.width / rect.width),
+      (e.clientY - rect.top) * (canvas.height / rect.height),
+    ];
+  }
+
+  function onMouseDown(e: React.MouseEvent<HTMLCanvasElement>) {
+    const canvas = canvasRef.current!;
+    const ctx = canvas.getContext("2d")!;
+    setGeschiedenis((prev) => [
+      ...prev,
+      ctx.getImageData(0, 0, canvas.width, canvas.height),
+    ]);
+    const pos = schaalPos(e);
+    prevPosRef.current = pos;
+    ctx.beginPath();
+    ctx.arc(pos[0], pos[1], dikte / 2, 0, Math.PI * 2);
+    ctx.fillStyle = kleur;
+    ctx.fill();
+    setIsTekenen(true);
+  }
+
+  function onMouseMove(e: React.MouseEvent<HTMLCanvasElement>) {
+    if (!isTekenen || !prevPosRef.current) return;
+    const canvas = canvasRef.current!;
+    const ctx = canvas.getContext("2d")!;
+    const pos = schaalPos(e);
+    ctx.beginPath();
+    ctx.moveTo(prevPosRef.current[0], prevPosRef.current[1]);
+    ctx.lineTo(pos[0], pos[1]);
+    ctx.strokeStyle = kleur;
+    ctx.lineWidth = dikte;
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    ctx.stroke();
+    prevPosRef.current = pos;
+  }
+
+  function onMouseUp() {
+    setIsTekenen(false);
+    prevPosRef.current = null;
+  }
+
+  function ongedaanMaken() {
+    if (geschiedenis.length === 0) return;
+    const canvas = canvasRef.current!;
+    const ctx = canvas.getContext("2d")!;
+    ctx.putImageData(geschiedenis[geschiedenis.length - 1], 0, 0);
+    setGeschiedenis((prev) => prev.slice(0, -1));
+  }
+
+  function bevestig() {
+    const canvas = canvasRef.current!;
+    canvas.toBlob(
+      (blob) => {
+        if (!blob) return;
+        const naam = afbeelding.name.replace(/\.[^.]+$/, ".jpg");
+        onBevestig(new File([blob], naam, { type: "image/jpeg" }));
+      },
+      "image/jpeg",
+      0.92,
+    );
+  }
+
+  const kleuren = ["#ef4444", "#000000", "#f59e0b", "#3b82f6", "#22c55e", "#ffffff"];
+
+  return createPortal(
+    <div className="fixed inset-0 z-[60] bg-black/95 flex flex-col select-none">
+      <div className="flex items-center gap-3 px-4 py-3 border-b border-white/10">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={onAnnuleer}
+          className="text-white/70 hover:text-white hover:bg-white/10"
+        >
+          <X size={18} />
+        </Button>
+        <span className="text-white font-medium flex-1 text-sm">Foto bewerken</span>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={ongedaanMaken}
+          disabled={geschiedenis.length === 0}
+          className="text-white/70 hover:text-white hover:bg-white/10 disabled:opacity-30"
+        >
+          <RotateCcw size={16} />
+        </Button>
+        <Button
+          size="sm"
+          onClick={bevestig}
+          disabled={!geladen}
+          className="bg-primary hover:bg-primary/90 text-white rounded-full px-5"
+        >
+          Versturen
+        </Button>
+      </div>
+
+      <div className="flex items-center gap-3 px-4 py-2 border-b border-white/10">
+        {kleuren.map((k) => (
+          <button
+            key={k}
+            onClick={() => setKleur(k)}
+            className="rounded-full border-2 transition-all flex-shrink-0"
+            style={{
+              width: 24,
+              height: 24,
+              backgroundColor: k,
+              borderColor: kleur === k ? "#fff" : "transparent",
+              transform: kleur === k ? "scale(1.35)" : "scale(1)",
+            }}
+          />
+        ))}
+        <div className="w-px h-5 bg-white/20 mx-1" />
+        <div className="flex items-center gap-2">
+          <div className="w-2 h-2 rounded-full bg-white/50 flex-shrink-0" />
+          <input
+            type="range"
+            min={2}
+            max={16}
+            value={dikte}
+            onChange={(e) => setDikte(parseInt(e.target.value, 10))}
+            className="w-24 accent-primary"
+          />
+          <div className="w-4 h-4 rounded-full bg-white/50 flex-shrink-0" />
+        </div>
+      </div>
+
+      <div className="flex-1 overflow-auto flex items-center justify-center p-4">
+        {!geladen && <p className="text-white/40 text-sm">Laden...</p>}
+        <canvas
+          ref={canvasRef}
+          className={`max-w-full max-h-full rounded-lg cursor-crosshair ${!geladen ? "hidden" : ""}`}
+          style={{ touchAction: "none" }}
+          onMouseDown={onMouseDown}
+          onMouseMove={onMouseMove}
+          onMouseUp={onMouseUp}
+          onMouseLeave={onMouseUp}
+        />
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
+// ─── BijlageVoorbeeldBalk ─────────────────────────────────────────────────────
+
+function BijlageVoorbeeldBalk({
+  bestand,
+  type,
+  preview,
+  bezig,
+  onVerwijder,
+  onBewerken,
+}: {
+  bestand: File;
+  type: "foto" | "video" | "bestand";
+  preview: string | null;
+  bezig: boolean;
+  onVerwijder: () => void;
+  onBewerken?: () => void;
+}) {
+  return (
+    <div className="border-t px-3 pt-2 pb-1 bg-muted/30 flex items-center gap-3">
+      {type === "foto" && preview ? (
+        <img
+          src={preview}
+          alt=""
+          className="w-14 h-14 object-cover rounded-lg flex-shrink-0"
+        />
+      ) : type === "video" ? (
+        <div className="w-14 h-14 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
+          <Video size={22} className="text-muted-foreground" />
+        </div>
+      ) : (
+        <div className="w-14 h-14 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
+          <FileText size={22} className="text-muted-foreground" />
+        </div>
+      )}
+
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium truncate">{bestand.name}</p>
+        <p className="text-xs text-muted-foreground">
+          {bezig ? "Uploaden..." : `${(bestand.size / 1024).toFixed(0)} KB`}
+        </p>
+      </div>
+
+      {type === "foto" && onBewerken && !bezig && (
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={onBewerken}
+          className="text-xs flex-shrink-0"
+        >
+          Bewerken
+        </Button>
+      )}
+
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={onVerwijder}
+        disabled={bezig}
+        className="flex-shrink-0 text-muted-foreground hover:text-foreground"
+      >
+        <X size={16} />
+      </Button>
+    </div>
+  );
+}
+
+// ─── GespreksPanel ─────────────────────────────────────────────────────────────
 
 function GespreksPanel({
   gesprekId,
@@ -119,40 +477,91 @@ function GespreksPanel({
   const queryClient = useQueryClient();
   const [inputText, setInputText] = useState("");
   const [verzending, setVerzending] = useState(false);
+  const [bijlageBestand, setBijlageBestand] = useState<File | null>(null);
+  const [bijlageType, setBijlageType] = useState<"foto" | "video" | "bestand" | null>(null);
+  const [bijlagePreview, setBijlagePreview] = useState<string | null>(null);
+  const [toonBewerker, setToonBewerker] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const bestandInputRef = useRef<HTMLInputElement>(null);
 
+  const { uploadFile, isUploading } = useUpload({ bestand_type: "bijlage" });
   const { data: berichten, refetch } = useListChatBerichten(gesprekId);
-
-  useEffect(() => {
-    const t = setInterval(() => { void refetch(); }, 5000);
-    return () => clearInterval(t);
-  }, [refetch]);
-
   const stuurBericht = useCreateChatBericht();
   const markeerGelezen = useMarkeerChatGelezen();
 
-  // Scroll to bottom when messages load/change
+  useEffect(() => {
+    const t = setInterval(() => {
+      void refetch();
+    }, 5000);
+    return () => clearInterval(t);
+  }, [refetch]);
+
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [berichten]);
 
-  // Mark as read on mount and when messages arrive
   useEffect(() => {
     markeerGelezen.mutate({ id: gesprekId });
     void queryClient.invalidateQueries({ queryKey: getListChatGesprekkenQueryKey() });
   }, [gesprekId, berichten?.length]);
 
+  function onBestandGekozen(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = "";
+    const type = detecteerType(file);
+    setBijlageBestand(file);
+    setBijlageType(type);
+    if (type === "foto" || type === "video") {
+      setBijlagePreview(URL.createObjectURL(file));
+    } else {
+      setBijlagePreview(null);
+    }
+  }
+
+  function verwijderBijlage() {
+    if (bijlagePreview) URL.revokeObjectURL(bijlagePreview);
+    setBijlageBestand(null);
+    setBijlageType(null);
+    setBijlagePreview(null);
+  }
+
+  function onFotoBewerkt(geannoteerd: File) {
+    if (bijlagePreview) URL.revokeObjectURL(bijlagePreview);
+    setBijlageBestand(geannoteerd);
+    setBijlagePreview(URL.createObjectURL(geannoteerd));
+    setToonBewerker(false);
+  }
+
   async function verzend() {
-    if (!inputText.trim() || verzending) return;
+    if ((!inputText.trim() && !bijlageBestand) || verzending) return;
     setVerzending(true);
     try {
+      let objectPath: string | null = null;
+      let berichtInhoud = inputText.trim();
+
+      if (bijlageBestand) {
+        const result = await uploadFile(bijlageBestand);
+        if (!result) return;
+        objectPath = result.objectPath;
+        if (bijlageType === "bestand" && !berichtInhoud) {
+          berichtInhoud = bijlageBestand.name;
+        }
+      }
+
       await stuurBericht.mutateAsync({
         id: gesprekId,
-        data: { inhoud: inputText.trim() },
+        data: {
+          inhoud: berichtInhoud,
+          bijlage_url: objectPath ?? undefined,
+          bijlage_type: bijlageType ?? undefined,
+        },
       });
+
       setInputText("");
+      verwijderBijlage();
       await refetch();
       await queryClient.invalidateQueries({ queryKey: getListChatGesprekkenQueryKey() });
     } finally {
@@ -168,6 +577,7 @@ function GespreksPanel({
   }
 
   const gesorteerdeBerichten = [...(berichten ?? [])].reverse();
+  const kanVerzenden = (!!inputText.trim() || !!bijlageBestand) && !verzending;
 
   return (
     <div className="flex flex-col h-full">
@@ -178,6 +588,7 @@ function GespreksPanel({
           </button>
         </div>
       )}
+
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-4 space-y-1">
         {gesorteerdeBerichten.length === 0 && (
           <div className="flex flex-col items-center justify-center h-full gap-2 text-muted-foreground">
@@ -189,27 +600,71 @@ function GespreksPanel({
           <BerichtBel key={b.id} bericht={b} isEigen={b.afzender_id === mijnId} />
         ))}
       </div>
-      <div className="border-t p-3 flex gap-2">
+
+      {bijlageBestand && bijlageType && (
+        <BijlageVoorbeeldBalk
+          bestand={bijlageBestand}
+          type={bijlageType}
+          preview={bijlagePreview}
+          bezig={isUploading || verzending}
+          onVerwijder={verwijderBijlage}
+          onBewerken={bijlageType === "foto" ? () => setToonBewerker(true) : undefined}
+        />
+      )}
+
+      <div className="border-t p-3 flex gap-2 items-center">
+        <input
+          ref={bestandInputRef}
+          type="file"
+          accept="image/*,video/*,.pdf,.doc,.docx,.xlsx,.xls,.txt,.zip,.rar"
+          className="hidden"
+          onChange={onBestandGekozen}
+        />
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => bestandInputRef.current?.click()}
+          disabled={verzending}
+          title="Bijlage toevoegen"
+          className="text-muted-foreground hover:text-foreground flex-shrink-0"
+        >
+          <Paperclip size={18} />
+        </Button>
         <Input
           value={inputText}
           onChange={(e) => setInputText(e.target.value)}
           onKeyDown={onKeyDown}
-          placeholder="Typ een bericht..."
+          placeholder={bijlageBestand ? "Bijschrift toevoegen (optioneel)..." : "Typ een bericht..."}
           disabled={verzending}
           className="flex-1"
         />
         <Button
           onClick={() => void verzend()}
-          disabled={!inputText.trim() || verzending}
+          disabled={!kanVerzenden}
           size="icon"
           variant="default"
+          className="flex-shrink-0"
         >
-          <Send size={16} />
+          {isUploading || verzending ? (
+            <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+          ) : (
+            <Send size={16} />
+          )}
         </Button>
       </div>
+
+      {toonBewerker && bijlageBestand && bijlageType === "foto" && (
+        <FotoBewerker
+          afbeelding={bijlageBestand}
+          onBevestig={onFotoBewerkt}
+          onAnnuleer={() => setToonBewerker(false)}
+        />
+      )}
     </div>
   );
 }
+
+// ─── GebruikerKiezerDialog ────────────────────────────────────────────────────
 
 function GebruikerKiezerDialog({
   open,
@@ -334,6 +789,8 @@ function GebruikerKiezerDialog({
   );
 }
 
+// ─── BerichtenPagina ──────────────────────────────────────────────────────────
+
 export default function BerichtenPagina() {
   const { gebruiker } = useAuth();
   const mijnId = gebruiker?.id ?? 0;
@@ -346,7 +803,9 @@ export default function BerichtenPagina() {
   const { data: gesprekken, refetch: refetchGesprekken } = useListChatGesprekken();
 
   useEffect(() => {
-    const t = setInterval(() => { void refetchGesprekken(); }, 10000);
+    const t = setInterval(() => {
+      void refetchGesprekken();
+    }, 10000);
     return () => clearInterval(t);
   }, [refetchGesprekken]);
 
@@ -358,13 +817,8 @@ export default function BerichtenPagina() {
 
   const geselecteerdGesprek = gesprekken?.find((g) => g.id === selectedId);
 
-  function selecteer(id: number) {
-    setSelectedId(id);
-  }
-
   return (
     <div className="flex h-[calc(100vh-64px)]">
-      {/* Linkerpaneel: gesprekkenlijst */}
       <div className="w-80 flex flex-col border-r flex-shrink-0">
         <div className="p-3 border-b flex items-center gap-2">
           <div className="flex-1 flex items-center gap-2 border rounded-md px-2.5 py-1.5 bg-muted/40">
@@ -391,7 +845,9 @@ export default function BerichtenPagina() {
             <div className="flex flex-col items-center justify-center h-48 gap-2 text-muted-foreground px-4">
               <MessageSquare size={28} />
               <p className="text-sm text-center">
-                {zoekterm ? "Geen gesprekken gevonden" : "Nog geen gesprekken. Klik + om te starten."}
+                {zoekterm
+                  ? "Geen gesprekken gevonden"
+                  : "Nog geen gesprekken. Klik + om te starten."}
               </p>
             </div>
           )}
@@ -401,9 +857,11 @@ export default function BerichtenPagina() {
             return (
               <button
                 key={g.id}
-                onClick={() => selecteer(g.id)}
+                onClick={() => setSelectedId(g.id)}
                 className={`w-full flex items-start gap-3 p-3 border-b text-left transition-colors ${
-                  isActief ? "bg-primary/8 border-l-2 border-l-primary" : "hover:bg-muted/50"
+                  isActief
+                    ? "bg-primary/8 border-l-2 border-l-primary"
+                    : "hover:bg-muted/50"
                 }`}
               >
                 {g.type === "groep" ? (
@@ -415,18 +873,31 @@ export default function BerichtenPagina() {
                 )}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-1 mb-0.5">
-                    <span className={`text-sm truncate ${g.ongelezen_aantal > 0 ? "font-semibold" : "font-medium"}`}>
+                    <span
+                      className={`text-sm truncate ${
+                        g.ongelezen_aantal > 0 ? "font-semibold" : "font-medium"
+                      }`}
+                    >
                       {naam}
                     </span>
                     <span className="text-[10px] text-muted-foreground flex-shrink-0">
-                      {g.laatste_bericht ? formatTijdstip(g.laatste_bericht.aangemaakt_op) : ""}
+                      {g.laatste_bericht
+                        ? formatTijdstip(g.laatste_bericht.aangemaakt_op)
+                        : ""}
                     </span>
                   </div>
                   <div className="flex items-center justify-between gap-1">
                     <p className="text-xs text-muted-foreground truncate">
                       {g.laatste_bericht
-                        ? (g.laatste_bericht.afzender_id === mijnId ? "Jij: " : "") +
-                          g.laatste_bericht.inhoud
+                        ? (g.laatste_bericht.bijlage_type === "foto"
+                            ? "Foto"
+                            : g.laatste_bericht.bijlage_type === "video"
+                              ? "Video"
+                              : g.laatste_bericht.bijlage_type === "bestand"
+                                ? "Bestand"
+                                : (g.laatste_bericht.afzender_id === mijnId
+                                    ? "Jij: "
+                                    : "") + g.laatste_bericht.inhoud)
                         : "Nog geen berichten"}
                     </p>
                     {g.ongelezen_aantal > 0 && (
@@ -442,7 +913,6 @@ export default function BerichtenPagina() {
         </ScrollArea>
       </div>
 
-      {/* Rechterpaneel: chat */}
       <div className="flex-1 flex flex-col min-w-0">
         {!selectedId && (
           <div className="flex flex-col items-center justify-center h-full gap-3 text-muted-foreground">
@@ -458,7 +928,6 @@ export default function BerichtenPagina() {
 
         {selectedId && geselecteerdGesprek && (
           <>
-            {/* Koptekst gesprek */}
             <div className="flex items-center gap-3 px-4 py-3 border-b">
               {geselecteerdGesprek.type === "groep" ? (
                 <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
@@ -479,7 +948,10 @@ export default function BerichtenPagina() {
               </div>
             </div>
             <div className="flex-1 min-h-0">
-              <GespreksPanel gesprekId={selectedId} mijnId={mijnId} />
+              <GespreksPanel
+                gesprekId={selectedId}
+                mijnId={mijnId}
+              />
             </div>
           </>
         )}
