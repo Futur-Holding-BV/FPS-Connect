@@ -1,6 +1,7 @@
 import { Link, useLocation } from "wouter";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
+import { useListChatGesprekken } from "@workspace/api-client-react";
 import {
   SidebarProvider, Sidebar, SidebarHeader, SidebarContent, SidebarFooter,
   SidebarGroup, SidebarGroupLabel, SidebarGroupContent,
@@ -95,6 +96,24 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
       >
         <Clock className="h-2.5 w-2.5 mr-0.5" />
         {t("nav.inUitvoering")}
+      </Badge>
+    );
+  }
+
+  function OngelezenBerichtenBadge() {
+    const { data: gesprekken, refetch } = useListChatGesprekken();
+    useEffect(() => {
+      const t = setInterval(() => void refetch(), 30000);
+      return () => clearInterval(t);
+    }, [refetch]);
+    const totaal = (gesprekken ?? []).reduce(
+      (som, g) => som + (g.ongelezen_aantal ?? 0),
+      0,
+    );
+    if (totaal === 0) return null;
+    return (
+      <Badge className="ml-auto text-[10px] px-1.5 py-0 min-w-5 h-4 bg-primary group-data-[collapsible=icon]:hidden">
+        {totaal > 99 ? "99+" : totaal}
       </Badge>
     );
   }
@@ -286,6 +305,14 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
                         </SidebarMenuButton>
                       </SidebarMenuItem>
                     )}
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              </SidebarGroup>
+
+              <SidebarGroup>
+                <SidebarGroupLabel>Communicatie</SidebarGroupLabel>
+                <SidebarGroupContent>
+                  <SidebarMenu>
                     <SidebarMenuItem>
                       <SidebarMenuButton
                         asChild
@@ -294,6 +321,7 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
                         <Link href="/berichten">
                           <MessageSquare />
                           <span>Berichten</span>
+                          <OngelezenBerichtenBadge />
                         </Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
