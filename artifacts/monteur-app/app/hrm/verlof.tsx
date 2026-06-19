@@ -340,10 +340,11 @@ export default function VerlofScherm() {
       )}
 
       <Modal visible={modalOpen} animationType="slide" transparent onRequestClose={sluitModal}>
-        <TouchableWithoutFeedback onPress={sluitModal}>
-          <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.45)", justifyContent: "flex-end" }} />
-        </TouchableWithoutFeedback>
-        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ position: "absolute", bottom: 0, left: 0, right: 0 }}>
+        <View style={{ flex: 1 }}>
+          <TouchableWithoutFeedback onPress={sluitModal}>
+            <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.45)" }} />
+          </TouchableWithoutFeedback>
+          <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ position: "absolute", bottom: 0, left: 0, right: 0 }}>
           <View
             style={{
               backgroundColor: c.card,
@@ -524,27 +525,29 @@ export default function VerlofScherm() {
             </Pressable>
           </View>
         </KeyboardAvoidingView>
+        </View>
       </Modal>
 
       <Modal visible={soortPickerOpen} animationType="slide" transparent onRequestClose={() => setSoortPickerOpen(false)}>
-        <TouchableWithoutFeedback onPress={() => setSoortPickerOpen(false)}>
-          <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.45)" }} />
-        </TouchableWithoutFeedback>
-        <View
-          style={{
-            position: "absolute",
-            bottom: 0,
-            left: 0,
-            right: 0,
-            backgroundColor: c.card,
-            borderTopLeftRadius: 20,
-            borderTopRightRadius: 20,
-            paddingHorizontal: 20,
-            paddingTop: 20,
-            paddingBottom: insets.bottom + 24,
-            maxHeight: "60%",
-          }}
-        >
+        <View style={{ flex: 1 }}>
+          <TouchableWithoutFeedback onPress={() => setSoortPickerOpen(false)}>
+            <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.45)" }} />
+          </TouchableWithoutFeedback>
+          <View
+            style={{
+              position: "absolute",
+              bottom: 0,
+              left: 0,
+              right: 0,
+              backgroundColor: c.card,
+              borderTopLeftRadius: 20,
+              borderTopRightRadius: 20,
+              paddingHorizontal: 20,
+              paddingTop: 20,
+              paddingBottom: insets.bottom + 24,
+              maxHeight: "60%",
+            }}
+          >
           <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
             <Text style={{ color: c.foreground, fontSize: 17, fontFamily: "Inter_700Bold" }}>
               Verlofsoort kiezen
@@ -594,6 +597,7 @@ export default function VerlofScherm() {
               )}
             />
           )}
+          </View>
         </View>
       </Modal>
     </View>

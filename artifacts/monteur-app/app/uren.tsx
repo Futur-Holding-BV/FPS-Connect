@@ -7,6 +7,7 @@ import {
   useCreateWeekStaat,
   useWeekStaatIndienen,
   useListWeekStaten,
+  useListGebouwen,
 } from "@workspace/api-client-react";
 import type { UrenRegistratie } from "@workspace/api-client-react";
 import { Ionicons } from "@expo/vector-icons";
@@ -237,15 +238,13 @@ function UrenFormulier({ datum, bestaand, planningItem, planningItemsVanWeek = [
   const [opmerkingen, setOpmerkingen] = useState(bestaand?.opmerkingen ?? "");
   const [toontWerkzOpties, setToontWerkzOpties] = useState(false);
 
-  // Unieke gebouwen uit planning-items van de week
-  const gebouwSuggesties = planningItemsVanWeek
-    .filter((p) => p.gebouw_id && p.gebouw_naam)
-    .reduce<Array<{ gebouw_id: number; gebouw_naam: string }>>((acc, p) => {
-      if (!acc.some((a) => a.gebouw_id === p.gebouw_id)) {
-        acc.push({ gebouw_id: p.gebouw_id!, gebouw_naam: p.gebouw_naam! });
-      }
-      return acc;
-    }, []);
+  // Alle gebouwen die aan de monteur zijn toegewezen
+  const { data: gebouwen } = useListGebouwen();
+  const [gebouwZoek, setGebouwZoek] = useState("");
+
+  const gefilterdGebouwen = (gebouwen ?? []).filter((g) =>
+    !gebouwZoek || g.naam.toLowerCase().includes(gebouwZoek.toLowerCase())
+  );
 
   const aanmaken = useCreateUrenRegistratie();
   const bijwerken = useUpdateUrenRegistratie();
@@ -254,7 +253,7 @@ function UrenFormulier({ datum, bestaand, planningItem, planningItemsVanWeek = [
     const [bH, bM] = begin.split(":").map(Number);
     const [eH, eM] = eind.split(":").map(Number);
     const min = (eH * 60 + eM) - (bH * 60 + bM) - pauze;
-    return Math.max(0, Math.round(min * 10) / 10) / 10;
+    return Math.max(0, Math.round((min / 60) * 10) / 10);
   }
 
   function wisselType(type: "project" | "intern") {
@@ -426,63 +425,90 @@ function UrenFormulier({ datum, bestaand, planningItem, planningItemsVanWeek = [
               Gebouw / Project
             </Text>
 
-            {/* Suggesties vanuit planning */}
-            {gebouwSuggesties.length > 0 && (
-              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 8 }}>
-                {gebouwSuggesties.map((s) => {
-                  const geselecteerd = gebouwId === s.gebouw_id;
-                  return (
-                    <Pressable
-                      key={s.gebouw_id}
-                      onPress={() => selecteerGebouw(s.gebouw_id, s.gebouw_naam)}
-                      style={{
-                        paddingHorizontal: 14,
-                        paddingVertical: 8,
-                        borderRadius: 20,
-                        backgroundColor: geselecteerd ? c.primary : c.accent,
-                        borderWidth: 1,
-                        borderColor: geselecteerd ? c.primary : c.border,
-                        maxWidth: 220,
-                      }}
-                    >
-                      <Text numberOfLines={1} style={{
-                        color: geselecteerd ? "#fff" : c.foreground,
-                        fontSize: 13,
-                        fontFamily: geselecteerd ? "Inter_600SemiBold" : "Inter_400Regular",
-                      }}>
-                        {s.gebouw_naam}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
-                <Pressable
-                  onPress={() => {
-                    setVrijeInvoer(true);
-                    setGebouwId(null);
-                    setProject("");
-                  }}
-                  style={{
-                    paddingHorizontal: 14,
-                    paddingVertical: 8,
-                    borderRadius: 20,
-                    backgroundColor: vrijeInvoer ? c.primary : c.accent,
-                    borderWidth: 1,
-                    borderColor: vrijeInvoer ? c.primary : c.border,
-                  }}
-                >
-                  <Text style={{
-                    color: vrijeInvoer ? "#fff" : c.mutedForeground,
-                    fontSize: 13,
-                    fontFamily: vrijeInvoer ? "Inter_600SemiBold" : "Inter_400Regular",
-                  }}>
-                    Overig / vrij invoeren
-                  </Text>
-                </Pressable>
-              </View>
+            {/* Zoekfilter — alleen zichtbaar als er gebouwen zijn */}
+            {(gebouwen ?? []).length > 0 && (
+              <TextInput
+                value={gebouwZoek}
+                onChangeText={setGebouwZoek}
+                placeholder="Zoek gebouw..."
+                placeholderTextColor={c.mutedForeground}
+                style={{
+                  borderWidth: 1,
+                  borderColor: c.border,
+                  borderRadius: 10,
+                  padding: 10,
+                  fontSize: 14,
+                  fontFamily: "Inter_400Regular",
+                  color: c.foreground,
+                  backgroundColor: c.card,
+                  marginBottom: 10,
+                }}
+              />
             )}
 
-            {/* Vrije tekstinvoer (altijd zichtbaar als geen suggesties, of bij "Vrij invoeren") */}
-            {(vrijeInvoer || gebouwSuggesties.length === 0) && (
+            {/* Toegewezen gebouwen als chips */}
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 8 }}>
+              {gefilterdGebouwen.map((g) => {
+                const geselecteerd = gebouwId === g.id;
+                return (
+                  <Pressable
+                    key={g.id}
+                    onPress={() => { selecteerGebouw(g.id, g.naam); setVrijeInvoer(false); }}
+                    style={{
+                      paddingHorizontal: 14,
+                      paddingVertical: 8,
+                      borderRadius: 20,
+                      backgroundColor: geselecteerd ? c.primary : c.accent,
+                      borderWidth: 1,
+                      borderColor: geselecteerd ? c.primary : c.border,
+                      maxWidth: 240,
+                    }}
+                  >
+                    <Text numberOfLines={1} style={{
+                      color: geselecteerd ? "#fff" : c.foreground,
+                      fontSize: 13,
+                      fontFamily: geselecteerd ? "Inter_600SemiBold" : "Inter_400Regular",
+                    }}>
+                      {g.naam}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+              {gefilterdGebouwen.length === 0 && gebouwZoek.length > 0 && (
+                <Text style={{ color: c.mutedForeground, fontSize: 13, fontFamily: "Inter_400Regular", padding: 4 }}>
+                  Geen gebouwen gevonden.
+                </Text>
+              )}
+
+              {/* Vrij invoeren — voor werkzaamheden zonder gebouw of niet gevonden */}
+              <Pressable
+                onPress={() => {
+                  setVrijeInvoer(true);
+                  setGebouwId(null);
+                  setProject("");
+                  setGebouwZoek("");
+                }}
+                style={{
+                  paddingHorizontal: 14,
+                  paddingVertical: 8,
+                  borderRadius: 20,
+                  backgroundColor: vrijeInvoer ? c.primary : c.accent,
+                  borderWidth: 1,
+                  borderColor: vrijeInvoer ? c.primary : c.border,
+                }}
+              >
+                <Text style={{
+                  color: vrijeInvoer ? "#fff" : c.mutedForeground,
+                  fontSize: 13,
+                  fontFamily: vrijeInvoer ? "Inter_600SemiBold" : "Inter_400Regular",
+                }}>
+                  Overig / vrij invoeren
+                </Text>
+              </Pressable>
+            </View>
+
+            {/* Vrije tekstinvoer bij "Overig" */}
+            {vrijeInvoer && (
               <TextInput
                 value={project}
                 onChangeText={(v) => { setProject(v); setGebouwId(null); }}

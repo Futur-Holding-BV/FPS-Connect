@@ -18,12 +18,6 @@ export default function MenuScherm() {
 
   const acties: RadiaalActie[] = [
     {
-      sleutel: "mijn-werk",
-      label: "Mijn werk",
-      icoon: "construct",
-      onPress: () => router.push("/mijn-werk"),
-    },
-    {
       sleutel: "gebouwen",
       label: "Gebouwen",
       icoon: "business",
