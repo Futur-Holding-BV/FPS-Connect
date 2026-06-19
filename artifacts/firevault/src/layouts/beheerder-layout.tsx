@@ -224,17 +224,6 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
                       <SidebarMenuItem>
                         <SidebarMenuButton
                           asChild
-                          isActive={location === "/rapporten" || location.startsWith("/rapporten/")}
-                        >
-                          <Link href="/rapporten">
-                            <FileText />
-                            <span>Rapporten</span>
-                          </Link>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                      <SidebarMenuItem>
-                        <SidebarMenuButton
-                          asChild
                           isActive={location === "/documenten" || location.startsWith("/documenten/")}
                         >
                           <Link href="/documenten">
