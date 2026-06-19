@@ -33,6 +33,7 @@ import gereedschappenRouter from "./gereedschappen";
 import { achievementsRouter } from "./achievements";
 import urenRouter from "./uren";
 import chatRouter from "./chat";
+import backupsRouter from "./backups";
 import { requireAuth } from "../middlewares/auth";
 
 const router: IRouter = Router();
@@ -75,5 +76,6 @@ router.use(gereedschappenRouter);
 router.use(urenRouter);
 router.use(achievementsRouter);
 router.use(chatRouter);
+router.use(backupsRouter);
 
 export default router;

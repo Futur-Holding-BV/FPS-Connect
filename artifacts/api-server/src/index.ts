@@ -1,6 +1,7 @@
 import app from "./app";
 import { logger } from "./lib/logger";
 import { ensureSessionTable } from "./lib/session";
+import { planDagelijksBackup } from "./lib/backupService";
 
 const rawPort = process.env["PORT"];
 
@@ -37,6 +38,7 @@ ensureSessionTable()
       }
 
       logger.info({ port }, "Server listening");
+      planDagelijksBackup();
     });
   })
   .catch((err) => {

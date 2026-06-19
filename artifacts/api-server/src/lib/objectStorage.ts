@@ -329,6 +329,153 @@ export class ObjectStorageService {
       requestedPermission: requestedPermission ?? ObjectPermission.READ,
     });
   }
+
+  // ── Back-up bestanden (server-side upload/download) ──────────────────────────
+
+  /**
+   * Upload een back-upbestand vanuit een Buffer direct naar object storage.
+   * Slaat op onder {PRIVATE_OBJECT_DIR}/backups/{slug}/{filename}.
+   */
+  async uploadBackupFile(
+    slug: string,
+    filename: string,
+    data: Buffer,
+    contentType = "application/octet-stream",
+  ): Promise<void> {
+    const subPath = `backups/${slug}/${filename}`;
+
+    if (isS3Mode()) {
+      const { PutObjectCommand } = await import("@aws-sdk/client-s3");
+      await getS3Client().send(
+        new PutObjectCommand({
+          Bucket: getS3Bucket(),
+          Key: subPath,
+          Body: data,
+          ContentType: contentType,
+        }),
+      );
+      return;
+    }
+
+    // GCS-backend
+    const privateObjectDir = this.getPrivateObjectDir();
+    const fullPath = `${privateObjectDir}/${subPath}`;
+    const { bucketName, objectName } = parseGCSObjectPath(fullPath);
+    const file = getGcsStorage().bucket(bucketName).file(objectName);
+    await file.save(data, { contentType, resumable: false });
+  }
+
+  /**
+   * Download een back-upbestand als Buffer vanuit object storage.
+   */
+  async downloadBackupFile(slug: string, filename: string): Promise<Buffer> {
+    const subPath = `backups/${slug}/${filename}`;
+
+    if (isS3Mode()) {
+      const { GetObjectCommand } = await import("@aws-sdk/client-s3");
+      const resp = await getS3Client().send(
+        new GetObjectCommand({ Bucket: getS3Bucket(), Key: subPath }),
+      );
+      const body = resp.Body;
+      if (!body) throw new Error("Leeg antwoord van S3");
+      const chunks: Buffer[] = [];
+      for await (const chunk of body as AsyncIterable<Uint8Array>) {
+        chunks.push(Buffer.from(chunk));
+      }
+      return Buffer.concat(chunks);
+    }
+
+    // GCS-backend
+    const privateObjectDir = this.getPrivateObjectDir();
+    const fullPath = `${privateObjectDir}/${subPath}`;
+    const { bucketName, objectName } = parseGCSObjectPath(fullPath);
+    const file = getGcsStorage().bucket(bucketName).file(objectName);
+    const [buf] = await file.download();
+    return buf;
+  }
+
+  /**
+   * Stream een back-upbestand als een Web API Response (voor download-endpoints).
+   */
+  async streamBackupFile(
+    slug: string,
+    filename: string,
+    downloadNaam?: string,
+  ): Promise<Response> {
+    const subPath = `backups/${slug}/${filename}`;
+    const contentType =
+      filename.endsWith(".gz") ? "application/gzip" : "application/json";
+    const dispNaam = downloadNaam ?? filename;
+
+    if (isS3Mode()) {
+      const { GetObjectCommand } = await import("@aws-sdk/client-s3");
+      const resp = await getS3Client().send(
+        new GetObjectCommand({ Bucket: getS3Bucket(), Key: subPath }),
+      );
+      const body = resp.Body;
+      if (!body) throw new Error("Leeg antwoord van S3");
+      return new Response(body as ReadableStream, {
+        headers: {
+          "Content-Type": contentType,
+          "Content-Disposition": `attachment; filename="${dispNaam}"`,
+          ...(resp.ContentLength
+            ? { "Content-Length": String(resp.ContentLength) }
+            : {}),
+        },
+      });
+    }
+
+    // GCS-backend
+    const privateObjectDir = this.getPrivateObjectDir();
+    const fullPath = `${privateObjectDir}/${subPath}`;
+    const { bucketName, objectName } = parseGCSObjectPath(fullPath);
+    const gcsFile = getGcsStorage().bucket(bucketName).file(objectName);
+    const [metadata] = await gcsFile.getMetadata();
+    const nodeStream = gcsFile.createReadStream();
+    const webStream = Readable.toWeb(nodeStream) as ReadableStream;
+    return new Response(webStream, {
+      headers: {
+        "Content-Type": contentType,
+        "Content-Disposition": `attachment; filename="${dispNaam}"`,
+        ...(metadata.size ? { "Content-Length": String(metadata.size) } : {}),
+      },
+    });
+  }
+
+  /**
+   * Verwijder alle bestanden van een back-up vanuit object storage.
+   */
+  async deleteBackupFiles(slug: string): Promise<void> {
+    const subPath = `backups/${slug}`;
+
+    if (isS3Mode()) {
+      const { ListObjectsV2Command, DeleteObjectsCommand } = await import(
+        "@aws-sdk/client-s3"
+      );
+      const listed = await getS3Client().send(
+        new ListObjectsV2Command({ Bucket: getS3Bucket(), Prefix: subPath }),
+      );
+      if (listed.Contents?.length) {
+        await getS3Client().send(
+          new DeleteObjectsCommand({
+            Bucket: getS3Bucket(),
+            Delete: {
+              Objects: listed.Contents.map((o) => ({ Key: o.Key! })),
+            },
+          }),
+        );
+      }
+      return;
+    }
+
+    // GCS-backend
+    const privateObjectDir = this.getPrivateObjectDir();
+    const fullPath = `${privateObjectDir}/${subPath}`;
+    const { bucketName, objectName } = parseGCSObjectPath(fullPath);
+    const bucket = getGcsStorage().bucket(bucketName);
+    const [files] = await bucket.getFiles({ prefix: objectName });
+    await Promise.all(files.map((f) => f.delete({ ignoreNotFound: true })));
+  }
 }
 
 // Geëxporteerd voor backward-compatibiliteit (gebruik ObjectStorageService)

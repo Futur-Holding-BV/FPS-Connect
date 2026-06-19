@@ -22,3 +22,4 @@ export * from "./gereedschappen";
 export * from "./achievements";
 export * from "./uren";
 export * from "./chat";
+export * from "./backups";

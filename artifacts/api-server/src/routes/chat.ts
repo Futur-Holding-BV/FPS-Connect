@@ -299,7 +299,7 @@ router.post("/chat/gesprekken", requireAuth, async (req, res) => {
 
 router.get("/chat/gesprekken/:id", requireAuth, async (req, res) => {
   const userId = req.session.userId!;
-  const gesprekId = parseInt(req.params.id);
+  const gesprekId = parseInt(String(req.params.id), 10);
 
   const [toegang] = await db
     .select()
@@ -325,10 +325,10 @@ router.get("/chat/gesprekken/:id", requireAuth, async (req, res) => {
 
 router.get("/chat/gesprekken/:id/berichten", requireAuth, async (req, res) => {
   const userId = req.session.userId!;
-  const gesprekId = parseInt(req.params.id);
-  const naId = req.query.na ? parseInt(req.query.na as string) : undefined;
-  const voorId = req.query.voor ? parseInt(req.query.voor as string) : undefined;
-  const limiet = req.query.limiet ? parseInt(req.query.limiet as string) : 50;
+  const gesprekId = parseInt(String(req.params.id), 10);
+  const naId = req.query.na ? parseInt(req.query.na as string, 10) : undefined;
+  const voorId = req.query.voor ? parseInt(req.query.voor as string, 10) : undefined;
+  const limiet = req.query.limiet ? parseInt(req.query.limiet as string, 10) : 50;
 
   const [toegang] = await db
     .select()
@@ -369,7 +369,7 @@ router.get("/chat/gesprekken/:id/berichten", requireAuth, async (req, res) => {
 
 router.post("/chat/gesprekken/:id/berichten", requireAuth, async (req, res) => {
   const userId = req.session.userId!;
-  const gesprekId = parseInt(req.params.id);
+  const gesprekId = parseInt(String(req.params.id), 10);
   const { inhoud, bijlage_url, bijlage_type } = req.body as {
     inhoud: string;
     bijlage_url?: string | null;
@@ -433,7 +433,7 @@ router.post("/chat/gesprekken/:id/berichten", requireAuth, async (req, res) => {
 
 router.post("/chat/gesprekken/:id/gelezen", requireAuth, async (req, res) => {
   const userId = req.session.userId!;
-  const gesprekId = parseInt(req.params.id);
+  const gesprekId = parseInt(String(req.params.id), 10);
 
   // Zoek het laatste bericht id
   const [laatste] = await db
