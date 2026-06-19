@@ -16,10 +16,9 @@ import {
   wachtOpNieuwTotpVenster,
 } from "../src/e2e-monteur-testaccount";
 
-const SLEUTELS = ["mijn-werk", "gebouwen", "planning", "personeel", "uren", "berichten"] as const;
+const SLEUTELS = ["gebouwen", "planning", "personeel", "uren", "berichten"] as const;
 
 const ROUTES: { sleutel: string; route: RegExp }[] = [
-  { sleutel: "mijn-werk", route: /\/mijn-werk(\b|\?|$)/ },
   { sleutel: "gebouwen", route: /\/gebouwen(\b|\?|$)/ },
   { sleutel: "planning", route: /\/planning(\b|\?|$)/ },
   { sleutel: "personeel", route: /\/hrm(\b|\?|$)/ },
@@ -79,7 +78,7 @@ test("FPS startmenu: login, waaier en doorlinken", async ({ page }) => {
     await logIn(page);
   });
 
-  await test.step("header en zes menu-items zichtbaar", async () => {
+  await test.step("header en vijf menu-items zichtbaar", async () => {
     await expect(page.getByText("E2E Test Monteur")).toBeVisible();
     for (const sleutel of SLEUTELS) {
       await expect(page.getByTestId(`radiaal-${sleutel}`)).toBeVisible();
