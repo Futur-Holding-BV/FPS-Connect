@@ -23,3 +23,4 @@ export * from "./achievements";
 export * from "./uren";
 export * from "./chat";
 export * from "./backups";
+export * from "./opname";

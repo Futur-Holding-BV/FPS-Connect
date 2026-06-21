@@ -9653,3 +9653,378 @@ export const MarkeerChatGelezenParams = zod.object({
 export const MarkeerChatGelezenResponse = zod.void()
 
 
+/**
+ * @summary Opnames (optioneel gefilterd op gebouw)
+ */
+export const ListOpnamesQueryParams = zod.object({
+  "gebouw_id": zod.coerce.number().optional(),
+  "status": zod.coerce.string().optional()
+})
+
+export const ListOpnamesResponseItem = zod.object({
+  "id": zod.number(),
+  "gebouw_id": zod.number(),
+  "gebouw_naam": zod.string().nullish(),
+  "naam": zod.string(),
+  "datum": zod.string(),
+  "status": zod.string(),
+  "notities": zod.string().nullish(),
+  "aangemaakt_door_naam": zod.string().nullish(),
+  "aantal_items": zod.number(),
+  "aangemaakt_op": zod.coerce.date(),
+  "bijgewerkt_op": zod.coerce.date()
+})
+export const ListOpnamesResponse = zod.array(ListOpnamesResponseItem)
+
+
+/**
+ * @summary Nieuwe opname aanmaken
+ */
+export const CreateOpnameBody = zod.object({
+  "gebouw_id": zod.number(),
+  "naam": zod.string(),
+  "datum": zod.string(),
+  "notities": zod.string().nullish()
+})
+
+export const CreateOpnameResponse = zod.void()
+
+
+/**
+ * @summary Opname detail inclusief items
+ */
+export const GetOpnameParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetOpnameResponse = zod.object({
+  "id": zod.number(),
+  "gebouw_id": zod.number(),
+  "gebouw_naam": zod.string().nullish(),
+  "naam": zod.string(),
+  "datum": zod.string(),
+  "status": zod.string(),
+  "notities": zod.string().nullish(),
+  "aangemaakt_door_naam": zod.string().nullish(),
+  "items": zod.array(zod.object({
+  "id": zod.number(),
+  "opname_id": zod.number(),
+  "spot_type": zod.string(),
+  "ruimte": zod.string().nullish(),
+  "verdieping_id": zod.number().nullish(),
+  "verdieping_naam": zod.string().nullish(),
+  "beschrijving": zod.string().nullish(),
+  "actie": zod.string(),
+  "bereikbaarheid": zod.string(),
+  "aantal": zod.number(),
+  "afmetingen": zod.string().nullish(),
+  "prioriteit": zod.string(),
+  "notities": zod.string().nullish(),
+  "afgerond": zod.boolean(),
+  "fotos": zod.array(zod.object({
+  "id": zod.number(),
+  "item_id": zod.number(),
+  "object_path": zod.string(),
+  "url": zod.string().nullish(),
+  "bijschrift": zod.string().nullish(),
+  "aangemaakt_op": zod.coerce.date()
+})),
+  "aangemaakt_op": zod.coerce.date(),
+  "bijgewerkt_op": zod.coerce.date()
+})),
+  "aangemaakt_op": zod.coerce.date(),
+  "bijgewerkt_op": zod.coerce.date()
+})
+
+
+/**
+ * @summary Opname bijwerken
+ */
+export const UpdateOpnameParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateOpnameBody = zod.object({
+  "naam": zod.string().optional(),
+  "datum": zod.string().optional(),
+  "notities": zod.string().nullish(),
+  "status": zod.string().optional()
+})
+
+export const UpdateOpnameResponse = zod.object({
+  "id": zod.number(),
+  "gebouw_id": zod.number(),
+  "gebouw_naam": zod.string().nullish(),
+  "naam": zod.string(),
+  "datum": zod.string(),
+  "status": zod.string(),
+  "notities": zod.string().nullish(),
+  "aangemaakt_door_naam": zod.string().nullish(),
+  "items": zod.array(zod.object({
+  "id": zod.number(),
+  "opname_id": zod.number(),
+  "spot_type": zod.string(),
+  "ruimte": zod.string().nullish(),
+  "verdieping_id": zod.number().nullish(),
+  "verdieping_naam": zod.string().nullish(),
+  "beschrijving": zod.string().nullish(),
+  "actie": zod.string(),
+  "bereikbaarheid": zod.string(),
+  "aantal": zod.number(),
+  "afmetingen": zod.string().nullish(),
+  "prioriteit": zod.string(),
+  "notities": zod.string().nullish(),
+  "afgerond": zod.boolean(),
+  "fotos": zod.array(zod.object({
+  "id": zod.number(),
+  "item_id": zod.number(),
+  "object_path": zod.string(),
+  "url": zod.string().nullish(),
+  "bijschrift": zod.string().nullish(),
+  "aangemaakt_op": zod.coerce.date()
+})),
+  "aangemaakt_op": zod.coerce.date(),
+  "bijgewerkt_op": zod.coerce.date()
+})),
+  "aangemaakt_op": zod.coerce.date(),
+  "bijgewerkt_op": zod.coerce.date()
+})
+
+
+/**
+ * @summary Opname verwijderen
+ */
+export const DeleteOpnameParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteOpnameResponse = zod.void()
+
+
+/**
+ * @summary Opname definitief maken
+ */
+export const SluitOpnameAfParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const SluitOpnameAfResponse = zod.object({
+  "id": zod.number(),
+  "gebouw_id": zod.number(),
+  "gebouw_naam": zod.string().nullish(),
+  "naam": zod.string(),
+  "datum": zod.string(),
+  "status": zod.string(),
+  "notities": zod.string().nullish(),
+  "aangemaakt_door_naam": zod.string().nullish(),
+  "items": zod.array(zod.object({
+  "id": zod.number(),
+  "opname_id": zod.number(),
+  "spot_type": zod.string(),
+  "ruimte": zod.string().nullish(),
+  "verdieping_id": zod.number().nullish(),
+  "verdieping_naam": zod.string().nullish(),
+  "beschrijving": zod.string().nullish(),
+  "actie": zod.string(),
+  "bereikbaarheid": zod.string(),
+  "aantal": zod.number(),
+  "afmetingen": zod.string().nullish(),
+  "prioriteit": zod.string(),
+  "notities": zod.string().nullish(),
+  "afgerond": zod.boolean(),
+  "fotos": zod.array(zod.object({
+  "id": zod.number(),
+  "item_id": zod.number(),
+  "object_path": zod.string(),
+  "url": zod.string().nullish(),
+  "bijschrift": zod.string().nullish(),
+  "aangemaakt_op": zod.coerce.date()
+})),
+  "aangemaakt_op": zod.coerce.date(),
+  "bijgewerkt_op": zod.coerce.date()
+})),
+  "aangemaakt_op": zod.coerce.date(),
+  "bijgewerkt_op": zod.coerce.date()
+})
+
+
+/**
+ * @summary Items van een opname
+ */
+export const ListOpnameItemsParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ListOpnameItemsResponseItem = zod.object({
+  "id": zod.number(),
+  "opname_id": zod.number(),
+  "spot_type": zod.string(),
+  "ruimte": zod.string().nullish(),
+  "verdieping_id": zod.number().nullish(),
+  "verdieping_naam": zod.string().nullish(),
+  "beschrijving": zod.string().nullish(),
+  "actie": zod.string(),
+  "bereikbaarheid": zod.string(),
+  "aantal": zod.number(),
+  "afmetingen": zod.string().nullish(),
+  "prioriteit": zod.string(),
+  "notities": zod.string().nullish(),
+  "afgerond": zod.boolean(),
+  "fotos": zod.array(zod.object({
+  "id": zod.number(),
+  "item_id": zod.number(),
+  "object_path": zod.string(),
+  "url": zod.string().nullish(),
+  "bijschrift": zod.string().nullish(),
+  "aangemaakt_op": zod.coerce.date()
+})),
+  "aangemaakt_op": zod.coerce.date(),
+  "bijgewerkt_op": zod.coerce.date()
+})
+export const ListOpnameItemsResponse = zod.array(ListOpnameItemsResponseItem)
+
+
+/**
+ * @summary Item toevoegen aan opname
+ */
+export const CreateOpnameItemParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const CreateOpnameItemBody = zod.object({
+  "spot_type": zod.string(),
+  "ruimte": zod.string().nullish(),
+  "verdieping_id": zod.number().nullish(),
+  "beschrijving": zod.string().nullish(),
+  "actie": zod.string().optional(),
+  "bereikbaarheid": zod.string().optional(),
+  "aantal": zod.number().optional(),
+  "afmetingen": zod.string().nullish(),
+  "prioriteit": zod.string().optional(),
+  "notities": zod.string().nullish(),
+  "afgerond": zod.boolean().optional()
+})
+
+export const CreateOpnameItemResponse = zod.void()
+
+
+/**
+ * @summary Item detail inclusief foto's
+ */
+export const GetOpnameItemParams = zod.object({
+  "itemId": zod.coerce.number()
+})
+
+export const GetOpnameItemResponse = zod.object({
+  "id": zod.number(),
+  "opname_id": zod.number(),
+  "spot_type": zod.string(),
+  "ruimte": zod.string().nullish(),
+  "verdieping_id": zod.number().nullish(),
+  "verdieping_naam": zod.string().nullish(),
+  "beschrijving": zod.string().nullish(),
+  "actie": zod.string(),
+  "bereikbaarheid": zod.string(),
+  "aantal": zod.number(),
+  "afmetingen": zod.string().nullish(),
+  "prioriteit": zod.string(),
+  "notities": zod.string().nullish(),
+  "afgerond": zod.boolean(),
+  "fotos": zod.array(zod.object({
+  "id": zod.number(),
+  "item_id": zod.number(),
+  "object_path": zod.string(),
+  "url": zod.string().nullish(),
+  "bijschrift": zod.string().nullish(),
+  "aangemaakt_op": zod.coerce.date()
+})),
+  "aangemaakt_op": zod.coerce.date(),
+  "bijgewerkt_op": zod.coerce.date()
+})
+
+
+/**
+ * @summary Item bijwerken
+ */
+export const UpdateOpnameItemParams = zod.object({
+  "itemId": zod.coerce.number()
+})
+
+export const UpdateOpnameItemBody = zod.object({
+  "spot_type": zod.string().optional(),
+  "ruimte": zod.string().nullish(),
+  "verdieping_id": zod.number().nullish(),
+  "beschrijving": zod.string().nullish(),
+  "actie": zod.string().optional(),
+  "bereikbaarheid": zod.string().optional(),
+  "aantal": zod.number().optional(),
+  "afmetingen": zod.string().nullish(),
+  "prioriteit": zod.string().optional(),
+  "notities": zod.string().nullish(),
+  "afgerond": zod.boolean().optional()
+})
+
+export const UpdateOpnameItemResponse = zod.object({
+  "id": zod.number(),
+  "opname_id": zod.number(),
+  "spot_type": zod.string(),
+  "ruimte": zod.string().nullish(),
+  "verdieping_id": zod.number().nullish(),
+  "verdieping_naam": zod.string().nullish(),
+  "beschrijving": zod.string().nullish(),
+  "actie": zod.string(),
+  "bereikbaarheid": zod.string(),
+  "aantal": zod.number(),
+  "afmetingen": zod.string().nullish(),
+  "prioriteit": zod.string(),
+  "notities": zod.string().nullish(),
+  "afgerond": zod.boolean(),
+  "fotos": zod.array(zod.object({
+  "id": zod.number(),
+  "item_id": zod.number(),
+  "object_path": zod.string(),
+  "url": zod.string().nullish(),
+  "bijschrift": zod.string().nullish(),
+  "aangemaakt_op": zod.coerce.date()
+})),
+  "aangemaakt_op": zod.coerce.date(),
+  "bijgewerkt_op": zod.coerce.date()
+})
+
+
+/**
+ * @summary Item verwijderen
+ */
+export const DeleteOpnameItemParams = zod.object({
+  "itemId": zod.coerce.number()
+})
+
+export const DeleteOpnameItemResponse = zod.void()
+
+
+/**
+ * @summary Upload-URL genereren voor een opname-foto
+ */
+export const CreateOpnameFotoUploadUrlParams = zod.object({
+  "itemId": zod.coerce.number()
+})
+
+export const CreateOpnameFotoUploadUrlBody = zod.object({
+  "bestandsnaam": zod.string(),
+  "content_type": zod.string(),
+  "bijschrift": zod.string().nullish()
+})
+
+export const CreateOpnameFotoUploadUrlResponse = zod.void()
+
+
+/**
+ * @summary Foto verwijderen
+ */
+export const DeleteOpnameFotoParams = zod.object({
+  "fotoId": zod.coerce.number()
+})
+
+export const DeleteOpnameFotoResponse = zod.void()
+
+

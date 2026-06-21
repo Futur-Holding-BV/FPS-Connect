@@ -50,6 +50,7 @@ import DocumentopmaakBeheer from "@/pages/beheer/documentopmaak";
 import MailBeheer from "@/pages/beheer/mail";
 import BackupBeheer from "@/pages/beheer/backup";
 import ProjectstatusPagina from "@/pages/beheer/projectstatus";
+import OpnamePagina from "@/pages/opname/index";
 import InfoPagina from "@/pages/info/index";
 import PersoneelPagina from "@/pages/personeel/index";
 import MedewerkerDetailPagina from "@/pages/personeel/detail";
@@ -128,6 +129,7 @@ function BeheerderPortal() {
         <Route path="/gereedschappen/:id" component={GereedschapDetailPagina} />
         <Route path="/hall-of-fame" component={HallOfFamePagina} />
         <Route path="/dossiers" component={DossiersPagina} />
+        <Route path="/opname" component={OpnamePagina} />
         <Route path="/offertes" component={OffertesPagina} />
         <Route path="/abonnementen" component={Abonnementen} />
         <Route path="/beheer/toepassingen" component={ToepassingenBeheer} />
@@ -236,6 +238,7 @@ function PermissiePortal() {
         <Route path="/gereedschappen" component={GereedschappenPagina} />
         <Route path="/gereedschappen/:id" component={GereedschapDetailPagina} />
         <Route path="/dossiers" component={DossiersPagina} />
+        <Route path="/opname" component={OpnamePagina} />
         <Route path="/offertes" component={OffertesPagina} />
         <Route path="/abonnementen" component={Abonnementen} />
         <Route path="/beheer/toepassingen" component={ToepassingenBeheer} />

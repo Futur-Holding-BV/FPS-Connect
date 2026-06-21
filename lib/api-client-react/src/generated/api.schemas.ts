@@ -4139,6 +4139,116 @@ export interface ChatBerichtInput {
   bijlage_type?: string | null;
 }
 
+export interface OpnameSamenvatting {
+  id: number;
+  gebouw_id: number;
+  gebouw_naam?: string | null;
+  naam: string;
+  datum: string;
+  status: string;
+  notities?: string | null;
+  aangemaakt_door_naam?: string | null;
+  aantal_items: number;
+  aangemaakt_op: string;
+  bijgewerkt_op: string;
+}
+
+export interface OpnameFoto {
+  id: number;
+  item_id: number;
+  object_path: string;
+  url?: string | null;
+  bijschrift?: string | null;
+  aangemaakt_op: string;
+}
+
+export interface OpnameItem {
+  id: number;
+  opname_id: number;
+  spot_type: string;
+  ruimte?: string | null;
+  verdieping_id?: number | null;
+  verdieping_naam?: string | null;
+  beschrijving?: string | null;
+  actie: string;
+  bereikbaarheid: string;
+  aantal: number;
+  afmetingen?: string | null;
+  prioriteit: string;
+  notities?: string | null;
+  afgerond: boolean;
+  fotos: OpnameFoto[];
+  aangemaakt_op: string;
+  bijgewerkt_op: string;
+}
+
+export interface Opname {
+  id: number;
+  gebouw_id: number;
+  gebouw_naam?: string | null;
+  naam: string;
+  datum: string;
+  status: string;
+  notities?: string | null;
+  aangemaakt_door_naam?: string | null;
+  items: OpnameItem[];
+  aangemaakt_op: string;
+  bijgewerkt_op: string;
+}
+
+export interface OpnameInput {
+  gebouw_id: number;
+  naam: string;
+  datum: string;
+  notities?: string | null;
+}
+
+export interface OpnamePatchInput {
+  naam?: string;
+  datum?: string;
+  notities?: string | null;
+  status?: string;
+}
+
+export interface OpnameItemInput {
+  spot_type: string;
+  ruimte?: string | null;
+  verdieping_id?: number | null;
+  beschrijving?: string | null;
+  actie?: string;
+  bereikbaarheid?: string;
+  aantal?: number;
+  afmetingen?: string | null;
+  prioriteit?: string;
+  notities?: string | null;
+  afgerond?: boolean;
+}
+
+export interface OpnameItemPatchInput {
+  spot_type?: string;
+  ruimte?: string | null;
+  verdieping_id?: number | null;
+  beschrijving?: string | null;
+  actie?: string;
+  bereikbaarheid?: string;
+  aantal?: number;
+  afmetingen?: string | null;
+  prioriteit?: string;
+  notities?: string | null;
+  afgerond?: boolean;
+}
+
+export interface OpnameFotoInput {
+  bestandsnaam: string;
+  content_type: string;
+  bijschrift?: string | null;
+}
+
+export interface OpnameFotoUploadResponse {
+  upload_url: string;
+  foto: OpnameFoto;
+}
+
 export type GetRecenteActiviteitParams = {
 limit?: number;
 };
@@ -4379,5 +4489,10 @@ categorie?: string;
  * Alleen gereedschappen op naam van deze medewerker
  */
 medewerker_id?: number;
+};
+
+export type ListOpnamesParams = {
+gebouw_id?: number;
+status?: string;
 };
 

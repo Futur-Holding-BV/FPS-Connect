@@ -47,6 +47,12 @@ export default function MenuScherm() {
       icoon: "chatbubbles",
       onPress: () => router.push("/berichten"),
     },
+    {
+      sleutel: "opname",
+      label: "Opname",
+      icoon: "clipboard",
+      onPress: () => router.push("/opname"),
+    },
   ];
 
   return (

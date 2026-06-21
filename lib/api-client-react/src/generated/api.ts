@@ -159,6 +159,7 @@ import type {
   ListModCalculatiesParams,
   ListMuisGebeurtenissenParams,
   ListOnderhoudParams,
+  ListOpnamesParams,
   ListPlanningAfwezigheidParams,
   ListPlanningItemsParams,
   ListPlanningMedewerkersParams,
@@ -216,6 +217,15 @@ import type {
   OpleidingInput,
   OpleidingenVoorstelResultaat,
   OpleverrapportNaarDmsInput,
+  Opname,
+  OpnameFotoInput,
+  OpnameFotoUploadResponse,
+  OpnameInput,
+  OpnameItem,
+  OpnameItemInput,
+  OpnameItemPatchInput,
+  OpnamePatchInput,
+  OpnameSamenvatting,
   PlanningAfwezigheid,
   PlanningAfwezigheidInput,
   PlanningItem,
@@ -28311,5 +28321,954 @@ export const useMarkeerChatGelezen = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getMarkeerChatGelezenMutationOptions(options));
+    }
+
+export const getListOpnamesUrl = (params?: ListOpnamesParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/opname?${stringifiedParams}` : `/api/opname`
+}
+
+/**
+ * @summary Opnames (optioneel gefilterd op gebouw)
+ */
+export const listOpnames = async (params?: ListOpnamesParams, options?: RequestInit): Promise<OpnameSamenvatting[]> => {
+
+  return customFetch<OpnameSamenvatting[]>(getListOpnamesUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListOpnamesQueryKey = (params?: ListOpnamesParams,) => {
+    return [
+    `/api/opname`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListOpnamesQueryOptions = <TData = Awaited<ReturnType<typeof listOpnames>>, TError = ErrorType<unknown>>(params?: ListOpnamesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listOpnames>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListOpnamesQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listOpnames>>> = ({ signal }) => listOpnames(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listOpnames>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListOpnamesQueryResult = NonNullable<Awaited<ReturnType<typeof listOpnames>>>
+export type ListOpnamesQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Opnames (optioneel gefilterd op gebouw)
+ */
+
+export function useListOpnames<TData = Awaited<ReturnType<typeof listOpnames>>, TError = ErrorType<unknown>>(
+ params?: ListOpnamesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listOpnames>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListOpnamesQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateOpnameUrl = () => {
+
+
+
+
+  return `/api/opname`
+}
+
+/**
+ * @summary Nieuwe opname aanmaken
+ */
+export const createOpname = async (opnameInput: OpnameInput, options?: RequestInit): Promise<Opname> => {
+
+  return customFetch<Opname>(getCreateOpnameUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(opnameInput)
+  }
+);}
+
+
+
+
+export const getCreateOpnameMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createOpname>>, TError,{data: BodyType<OpnameInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createOpname>>, TError,{data: BodyType<OpnameInput>}, TContext> => {
+
+const mutationKey = ['createOpname'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createOpname>>, {data: BodyType<OpnameInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createOpname(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateOpnameMutationResult = NonNullable<Awaited<ReturnType<typeof createOpname>>>
+    export type CreateOpnameMutationBody = BodyType<OpnameInput>
+    export type CreateOpnameMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Nieuwe opname aanmaken
+ */
+export const useCreateOpname = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createOpname>>, TError,{data: BodyType<OpnameInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createOpname>>,
+        TError,
+        {data: BodyType<OpnameInput>},
+        TContext
+      > => {
+      return useMutation(getCreateOpnameMutationOptions(options));
+    }
+
+export const getGetOpnameUrl = (id: number,) => {
+
+
+
+
+  return `/api/opname/${id}`
+}
+
+/**
+ * @summary Opname detail inclusief items
+ */
+export const getOpname = async (id: number, options?: RequestInit): Promise<Opname> => {
+
+  return customFetch<Opname>(getGetOpnameUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetOpnameQueryKey = (id: number,) => {
+    return [
+    `/api/opname/${id}`
+    ] as const;
+    }
+
+
+export const getGetOpnameQueryOptions = <TData = Awaited<ReturnType<typeof getOpname>>, TError = ErrorType<void>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getOpname>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetOpnameQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getOpname>>> = ({ signal }) => getOpname(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getOpname>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetOpnameQueryResult = NonNullable<Awaited<ReturnType<typeof getOpname>>>
+export type GetOpnameQueryError = ErrorType<void>
+
+
+/**
+ * @summary Opname detail inclusief items
+ */
+
+export function useGetOpname<TData = Awaited<ReturnType<typeof getOpname>>, TError = ErrorType<void>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getOpname>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetOpnameQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getUpdateOpnameUrl = (id: number,) => {
+
+
+
+
+  return `/api/opname/${id}`
+}
+
+/**
+ * @summary Opname bijwerken
+ */
+export const updateOpname = async (id: number,
+    opnamePatchInput: OpnamePatchInput, options?: RequestInit): Promise<Opname> => {
+
+  return customFetch<Opname>(getUpdateOpnameUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(opnamePatchInput)
+  }
+);}
+
+
+
+
+export const getUpdateOpnameMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateOpname>>, TError,{id: number;data: BodyType<OpnamePatchInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateOpname>>, TError,{id: number;data: BodyType<OpnamePatchInput>}, TContext> => {
+
+const mutationKey = ['updateOpname'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateOpname>>, {id: number;data: BodyType<OpnamePatchInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateOpname(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateOpnameMutationResult = NonNullable<Awaited<ReturnType<typeof updateOpname>>>
+    export type UpdateOpnameMutationBody = BodyType<OpnamePatchInput>
+    export type UpdateOpnameMutationError = ErrorType<void>
+
+    /**
+ * @summary Opname bijwerken
+ */
+export const useUpdateOpname = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateOpname>>, TError,{id: number;data: BodyType<OpnamePatchInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateOpname>>,
+        TError,
+        {id: number;data: BodyType<OpnamePatchInput>},
+        TContext
+      > => {
+      return useMutation(getUpdateOpnameMutationOptions(options));
+    }
+
+export const getDeleteOpnameUrl = (id: number,) => {
+
+
+
+
+  return `/api/opname/${id}`
+}
+
+/**
+ * @summary Opname verwijderen
+ */
+export const deleteOpname = async (id: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteOpnameUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteOpnameMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteOpname>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteOpname>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deleteOpname'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteOpname>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteOpname(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteOpnameMutationResult = NonNullable<Awaited<ReturnType<typeof deleteOpname>>>
+
+    export type DeleteOpnameMutationError = ErrorType<void>
+
+    /**
+ * @summary Opname verwijderen
+ */
+export const useDeleteOpname = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteOpname>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteOpname>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeleteOpnameMutationOptions(options));
+    }
+
+export const getSluitOpnameAfUrl = (id: number,) => {
+
+
+
+
+  return `/api/opname/${id}/definitief`
+}
+
+/**
+ * @summary Opname definitief maken
+ */
+export const sluitOpnameAf = async (id: number, options?: RequestInit): Promise<Opname> => {
+
+  return customFetch<Opname>(getSluitOpnameAfUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getSluitOpnameAfMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof sluitOpnameAf>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof sluitOpnameAf>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['sluitOpnameAf'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof sluitOpnameAf>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  sluitOpnameAf(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SluitOpnameAfMutationResult = NonNullable<Awaited<ReturnType<typeof sluitOpnameAf>>>
+
+    export type SluitOpnameAfMutationError = ErrorType<void>
+
+    /**
+ * @summary Opname definitief maken
+ */
+export const useSluitOpnameAf = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof sluitOpnameAf>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof sluitOpnameAf>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getSluitOpnameAfMutationOptions(options));
+    }
+
+export const getListOpnameItemsUrl = (id: number,) => {
+
+
+
+
+  return `/api/opname/${id}/items`
+}
+
+/**
+ * @summary Items van een opname
+ */
+export const listOpnameItems = async (id: number, options?: RequestInit): Promise<OpnameItem[]> => {
+
+  return customFetch<OpnameItem[]>(getListOpnameItemsUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListOpnameItemsQueryKey = (id: number,) => {
+    return [
+    `/api/opname/${id}/items`
+    ] as const;
+    }
+
+
+export const getListOpnameItemsQueryOptions = <TData = Awaited<ReturnType<typeof listOpnameItems>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listOpnameItems>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListOpnameItemsQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listOpnameItems>>> = ({ signal }) => listOpnameItems(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listOpnameItems>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListOpnameItemsQueryResult = NonNullable<Awaited<ReturnType<typeof listOpnameItems>>>
+export type ListOpnameItemsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Items van een opname
+ */
+
+export function useListOpnameItems<TData = Awaited<ReturnType<typeof listOpnameItems>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listOpnameItems>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListOpnameItemsQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateOpnameItemUrl = (id: number,) => {
+
+
+
+
+  return `/api/opname/${id}/items`
+}
+
+/**
+ * @summary Item toevoegen aan opname
+ */
+export const createOpnameItem = async (id: number,
+    opnameItemInput: OpnameItemInput, options?: RequestInit): Promise<OpnameItem> => {
+
+  return customFetch<OpnameItem>(getCreateOpnameItemUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(opnameItemInput)
+  }
+);}
+
+
+
+
+export const getCreateOpnameItemMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createOpnameItem>>, TError,{id: number;data: BodyType<OpnameItemInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createOpnameItem>>, TError,{id: number;data: BodyType<OpnameItemInput>}, TContext> => {
+
+const mutationKey = ['createOpnameItem'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createOpnameItem>>, {id: number;data: BodyType<OpnameItemInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  createOpnameItem(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateOpnameItemMutationResult = NonNullable<Awaited<ReturnType<typeof createOpnameItem>>>
+    export type CreateOpnameItemMutationBody = BodyType<OpnameItemInput>
+    export type CreateOpnameItemMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Item toevoegen aan opname
+ */
+export const useCreateOpnameItem = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createOpnameItem>>, TError,{id: number;data: BodyType<OpnameItemInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createOpnameItem>>,
+        TError,
+        {id: number;data: BodyType<OpnameItemInput>},
+        TContext
+      > => {
+      return useMutation(getCreateOpnameItemMutationOptions(options));
+    }
+
+export const getGetOpnameItemUrl = (itemId: number,) => {
+
+
+
+
+  return `/api/opname/items/${itemId}`
+}
+
+/**
+ * @summary Item detail inclusief foto's
+ */
+export const getOpnameItem = async (itemId: number, options?: RequestInit): Promise<OpnameItem> => {
+
+  return customFetch<OpnameItem>(getGetOpnameItemUrl(itemId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetOpnameItemQueryKey = (itemId: number,) => {
+    return [
+    `/api/opname/items/${itemId}`
+    ] as const;
+    }
+
+
+export const getGetOpnameItemQueryOptions = <TData = Awaited<ReturnType<typeof getOpnameItem>>, TError = ErrorType<void>>(itemId: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getOpnameItem>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetOpnameItemQueryKey(itemId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getOpnameItem>>> = ({ signal }) => getOpnameItem(itemId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: itemId !== null && itemId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getOpnameItem>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetOpnameItemQueryResult = NonNullable<Awaited<ReturnType<typeof getOpnameItem>>>
+export type GetOpnameItemQueryError = ErrorType<void>
+
+
+/**
+ * @summary Item detail inclusief foto's
+ */
+
+export function useGetOpnameItem<TData = Awaited<ReturnType<typeof getOpnameItem>>, TError = ErrorType<void>>(
+ itemId: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getOpnameItem>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetOpnameItemQueryOptions(itemId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getUpdateOpnameItemUrl = (itemId: number,) => {
+
+
+
+
+  return `/api/opname/items/${itemId}`
+}
+
+/**
+ * @summary Item bijwerken
+ */
+export const updateOpnameItem = async (itemId: number,
+    opnameItemPatchInput: OpnameItemPatchInput, options?: RequestInit): Promise<OpnameItem> => {
+
+  return customFetch<OpnameItem>(getUpdateOpnameItemUrl(itemId),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(opnameItemPatchInput)
+  }
+);}
+
+
+
+
+export const getUpdateOpnameItemMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateOpnameItem>>, TError,{itemId: number;data: BodyType<OpnameItemPatchInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateOpnameItem>>, TError,{itemId: number;data: BodyType<OpnameItemPatchInput>}, TContext> => {
+
+const mutationKey = ['updateOpnameItem'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateOpnameItem>>, {itemId: number;data: BodyType<OpnameItemPatchInput>}> = (props) => {
+          const {itemId,data} = props ?? {};
+
+          return  updateOpnameItem(itemId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateOpnameItemMutationResult = NonNullable<Awaited<ReturnType<typeof updateOpnameItem>>>
+    export type UpdateOpnameItemMutationBody = BodyType<OpnameItemPatchInput>
+    export type UpdateOpnameItemMutationError = ErrorType<void>
+
+    /**
+ * @summary Item bijwerken
+ */
+export const useUpdateOpnameItem = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateOpnameItem>>, TError,{itemId: number;data: BodyType<OpnameItemPatchInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateOpnameItem>>,
+        TError,
+        {itemId: number;data: BodyType<OpnameItemPatchInput>},
+        TContext
+      > => {
+      return useMutation(getUpdateOpnameItemMutationOptions(options));
+    }
+
+export const getDeleteOpnameItemUrl = (itemId: number,) => {
+
+
+
+
+  return `/api/opname/items/${itemId}`
+}
+
+/**
+ * @summary Item verwijderen
+ */
+export const deleteOpnameItem = async (itemId: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteOpnameItemUrl(itemId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteOpnameItemMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteOpnameItem>>, TError,{itemId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteOpnameItem>>, TError,{itemId: number}, TContext> => {
+
+const mutationKey = ['deleteOpnameItem'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteOpnameItem>>, {itemId: number}> = (props) => {
+          const {itemId} = props ?? {};
+
+          return  deleteOpnameItem(itemId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteOpnameItemMutationResult = NonNullable<Awaited<ReturnType<typeof deleteOpnameItem>>>
+
+    export type DeleteOpnameItemMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Item verwijderen
+ */
+export const useDeleteOpnameItem = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteOpnameItem>>, TError,{itemId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteOpnameItem>>,
+        TError,
+        {itemId: number},
+        TContext
+      > => {
+      return useMutation(getDeleteOpnameItemMutationOptions(options));
+    }
+
+export const getCreateOpnameFotoUploadUrlUrl = (itemId: number,) => {
+
+
+
+
+  return `/api/opname/items/${itemId}/fotos`
+}
+
+/**
+ * @summary Upload-URL genereren voor een opname-foto
+ */
+export const createOpnameFotoUploadUrl = async (itemId: number,
+    opnameFotoInput: OpnameFotoInput, options?: RequestInit): Promise<OpnameFotoUploadResponse> => {
+
+  return customFetch<OpnameFotoUploadResponse>(getCreateOpnameFotoUploadUrlUrl(itemId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(opnameFotoInput)
+  }
+);}
+
+
+
+
+export const getCreateOpnameFotoUploadUrlMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createOpnameFotoUploadUrl>>, TError,{itemId: number;data: BodyType<OpnameFotoInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createOpnameFotoUploadUrl>>, TError,{itemId: number;data: BodyType<OpnameFotoInput>}, TContext> => {
+
+const mutationKey = ['createOpnameFotoUploadUrl'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createOpnameFotoUploadUrl>>, {itemId: number;data: BodyType<OpnameFotoInput>}> = (props) => {
+          const {itemId,data} = props ?? {};
+
+          return  createOpnameFotoUploadUrl(itemId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateOpnameFotoUploadUrlMutationResult = NonNullable<Awaited<ReturnType<typeof createOpnameFotoUploadUrl>>>
+    export type CreateOpnameFotoUploadUrlMutationBody = BodyType<OpnameFotoInput>
+    export type CreateOpnameFotoUploadUrlMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Upload-URL genereren voor een opname-foto
+ */
+export const useCreateOpnameFotoUploadUrl = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createOpnameFotoUploadUrl>>, TError,{itemId: number;data: BodyType<OpnameFotoInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createOpnameFotoUploadUrl>>,
+        TError,
+        {itemId: number;data: BodyType<OpnameFotoInput>},
+        TContext
+      > => {
+      return useMutation(getCreateOpnameFotoUploadUrlMutationOptions(options));
+    }
+
+export const getDeleteOpnameFotoUrl = (fotoId: number,) => {
+
+
+
+
+  return `/api/opname/fotos/${fotoId}`
+}
+
+/**
+ * @summary Foto verwijderen
+ */
+export const deleteOpnameFoto = async (fotoId: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteOpnameFotoUrl(fotoId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteOpnameFotoMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteOpnameFoto>>, TError,{fotoId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteOpnameFoto>>, TError,{fotoId: number}, TContext> => {
+
+const mutationKey = ['deleteOpnameFoto'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteOpnameFoto>>, {fotoId: number}> = (props) => {
+          const {fotoId} = props ?? {};
+
+          return  deleteOpnameFoto(fotoId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteOpnameFotoMutationResult = NonNullable<Awaited<ReturnType<typeof deleteOpnameFoto>>>
+
+    export type DeleteOpnameFotoMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Foto verwijderen
+ */
+export const useDeleteOpnameFoto = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteOpnameFoto>>, TError,{fotoId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteOpnameFoto>>,
+        TError,
+        {fotoId: number},
+        TContext
+      > => {
+      return useMutation(getDeleteOpnameFotoMutationOptions(options));
     }
 

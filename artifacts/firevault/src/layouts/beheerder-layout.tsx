@@ -12,7 +12,7 @@ import {
   ShieldAlert, LifeBuoy, MessageSquarePlus, Activity, Contact, Info, BookOpen, Clock,
   FolderOpen, FileText, ListChecks, Files, LayoutTemplate, Mail,
   Calculator, CalendarDays, LayoutDashboard, BarChart3, CreditCard, MessageSquare, HardHat,
-  Trophy, HardDrive,
+  Trophy, HardDrive, ClipboardList,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { GebruikerMenu } from "@/components/gebruiker-menu";
@@ -59,6 +59,7 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
   const toonPersoneel  = heeftNiveau("personeel", 1);
   const toonGereedschappen = heeftNiveau("gereedschappen", 1);
   const toonDossiers   = heeftNiveau("dossiers", 1);
+  const toonOpname     = heeftNiveau("gebouwen", 1);
   const toonOffertes   = heeftNiveau("offertes", 1);
 
   const heeftOne    = isHoofdbeheerder;
@@ -412,6 +413,19 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
                               <FolderOpen />
                               <span>{t("nav.dossiers")}</span>
                               <InUitvoering />
+                            </Link>
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                      )}
+                      {toonOpname && (
+                        <SidebarMenuItem>
+                          <SidebarMenuButton
+                            asChild
+                            isActive={location === "/opname" || location.startsWith("/opname/")}
+                          >
+                            <Link href="/opname">
+                              <ClipboardList />
+                              <span>Opname</span>
                             </Link>
                           </SidebarMenuButton>
                         </SidebarMenuItem>

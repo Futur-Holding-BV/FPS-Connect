@@ -7996,6 +7996,285 @@ paths:
         '204':
           description: Gemarkeerd
 
+  /opname:
+    get:
+      operationId: listOpnames
+      summary: Opnames (optioneel gefilterd op gebouw)
+      tags: [opname]
+      security: [{ cookieAuth: [] }, { bearerAuth: [] }]
+      parameters:
+        - in: query
+          name: gebouw_id
+          schema:
+            type: integer
+        - in: query
+          name: status
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/OpnameSamenvatting'
+    post:
+      operationId: createOpname
+      summary: Nieuwe opname aanmaken
+      tags: [opname]
+      security: [{ cookieAuth: [] }, { bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OpnameInput'
+      responses:
+        '201':
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Opname'
+
+  /opname/{id}:
+    get:
+      operationId: getOpname
+      summary: Opname detail inclusief items
+      tags: [opname]
+      security: [{ cookieAuth: [] }, { bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Opname'
+        '404':
+          description: Niet gevonden
+    patch:
+      operationId: updateOpname
+      summary: Opname bijwerken
+      tags: [opname]
+      security: [{ cookieAuth: [] }, { bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OpnamePatchInput'
+      responses:
+        '200':
+          description: Bijgewerkt
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Opname'
+        '404':
+          description: Niet gevonden
+    delete:
+      operationId: deleteOpname
+      summary: Opname verwijderen
+      tags: [opname]
+      security: [{ cookieAuth: [] }, { bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Verwijderd
+        '404':
+          description: Niet gevonden
+
+  /opname/{id}/definitief:
+    post:
+      operationId: sluitOpnameAf
+      summary: Opname definitief maken
+      tags: [opname]
+      security: [{ cookieAuth: [] }, { bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Definitief gemaakt
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Opname'
+        '409':
+          description: Al definitief
+
+  /opname/{id}/items:
+    get:
+      operationId: listOpnameItems
+      summary: Items van een opname
+      tags: [opname]
+      security: [{ cookieAuth: [] }, { bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/OpnameItem'
+    post:
+      operationId: createOpnameItem
+      summary: Item toevoegen aan opname
+      tags: [opname]
+      security: [{ cookieAuth: [] }, { bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OpnameItemInput'
+      responses:
+        '201':
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OpnameItem'
+
+  /opname/items/{itemId}:
+    get:
+      operationId: getOpnameItem
+      summary: Item detail inclusief foto's
+      tags: [opname]
+      security: [{ cookieAuth: [] }, { bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: itemId
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OpnameItem'
+        '404':
+          description: Niet gevonden
+    patch:
+      operationId: updateOpnameItem
+      summary: Item bijwerken
+      tags: [opname]
+      security: [{ cookieAuth: [] }, { bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: itemId
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OpnameItemPatchInput'
+      responses:
+        '200':
+          description: Bijgewerkt
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OpnameItem'
+        '404':
+          description: Niet gevonden
+    delete:
+      operationId: deleteOpnameItem
+      summary: Item verwijderen
+      tags: [opname]
+      security: [{ cookieAuth: [] }, { bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: itemId
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Verwijderd
+
+  /opname/items/{itemId}/fotos:
+    post:
+      operationId: createOpnameFotoUploadUrl
+      summary: Upload-URL genereren voor een opname-foto
+      tags: [opname]
+      security: [{ cookieAuth: [] }, { bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: itemId
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OpnameFotoInput'
+      responses:
+        '201':
+          description: Upload-URL en opgeslagen foto
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OpnameFotoUploadResponse'
+
+  /opname/fotos/{fotoId}:
+    delete:
+      operationId: deleteOpnameFoto
+      summary: Foto verwijderen
+      tags: [opname]
+      security: [{ cookieAuth: [] }, { bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: fotoId
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Verwijderd
+
 
 components:
   schemas:
@@ -14261,3 +14540,249 @@ components:
         bijlage_type:
           type: string
           nullable: true
+
+    OpnameSamenvatting:
+      type: object
+      required: [id, gebouw_id, naam, datum, status, aantal_items, aangemaakt_op, bijgewerkt_op]
+      properties:
+        id:
+          type: integer
+        gebouw_id:
+          type: integer
+        gebouw_naam:
+          type: string
+          nullable: true
+        naam:
+          type: string
+        datum:
+          type: string
+        status:
+          type: string
+        notities:
+          type: string
+          nullable: true
+        aangemaakt_door_naam:
+          type: string
+          nullable: true
+        aantal_items:
+          type: integer
+        aangemaakt_op:
+          type: string
+          format: date-time
+        bijgewerkt_op:
+          type: string
+          format: date-time
+
+    Opname:
+      type: object
+      required: [id, gebouw_id, naam, datum, status, items, aangemaakt_op, bijgewerkt_op]
+      properties:
+        id:
+          type: integer
+        gebouw_id:
+          type: integer
+        gebouw_naam:
+          type: string
+          nullable: true
+        naam:
+          type: string
+        datum:
+          type: string
+        status:
+          type: string
+        notities:
+          type: string
+          nullable: true
+        aangemaakt_door_naam:
+          type: string
+          nullable: true
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/OpnameItem'
+        aangemaakt_op:
+          type: string
+          format: date-time
+        bijgewerkt_op:
+          type: string
+          format: date-time
+
+    OpnameItem:
+      type: object
+      required: [id, opname_id, spot_type, actie, bereikbaarheid, aantal, prioriteit, afgerond, fotos, aangemaakt_op, bijgewerkt_op]
+      properties:
+        id:
+          type: integer
+        opname_id:
+          type: integer
+        spot_type:
+          type: string
+        ruimte:
+          type: string
+          nullable: true
+        verdieping_id:
+          type: integer
+          nullable: true
+        verdieping_naam:
+          type: string
+          nullable: true
+        beschrijving:
+          type: string
+          nullable: true
+        actie:
+          type: string
+        bereikbaarheid:
+          type: string
+        aantal:
+          type: integer
+        afmetingen:
+          type: string
+          nullable: true
+        prioriteit:
+          type: string
+        notities:
+          type: string
+          nullable: true
+        afgerond:
+          type: boolean
+        fotos:
+          type: array
+          items:
+            $ref: '#/components/schemas/OpnameFoto'
+        aangemaakt_op:
+          type: string
+          format: date-time
+        bijgewerkt_op:
+          type: string
+          format: date-time
+
+    OpnameFoto:
+      type: object
+      required: [id, item_id, object_path, aangemaakt_op]
+      properties:
+        id:
+          type: integer
+        item_id:
+          type: integer
+        object_path:
+          type: string
+        url:
+          type: string
+          nullable: true
+        bijschrift:
+          type: string
+          nullable: true
+        aangemaakt_op:
+          type: string
+          format: date-time
+
+    OpnameInput:
+      type: object
+      required: [gebouw_id, naam, datum]
+      properties:
+        gebouw_id:
+          type: integer
+        naam:
+          type: string
+        datum:
+          type: string
+        notities:
+          type: string
+          nullable: true
+
+    OpnamePatchInput:
+      type: object
+      properties:
+        naam:
+          type: string
+        datum:
+          type: string
+        notities:
+          type: string
+          nullable: true
+        status:
+          type: string
+
+    OpnameItemInput:
+      type: object
+      required: [spot_type]
+      properties:
+        spot_type:
+          type: string
+        ruimte:
+          type: string
+          nullable: true
+        verdieping_id:
+          type: integer
+          nullable: true
+        beschrijving:
+          type: string
+          nullable: true
+        actie:
+          type: string
+        bereikbaarheid:
+          type: string
+        aantal:
+          type: integer
+        afmetingen:
+          type: string
+          nullable: true
+        prioriteit:
+          type: string
+        notities:
+          type: string
+          nullable: true
+        afgerond:
+          type: boolean
+
+    OpnameItemPatchInput:
+      type: object
+      properties:
+        spot_type:
+          type: string
+        ruimte:
+          type: string
+          nullable: true
+        verdieping_id:
+          type: integer
+          nullable: true
+        beschrijving:
+          type: string
+          nullable: true
+        actie:
+          type: string
+        bereikbaarheid:
+          type: string
+        aantal:
+          type: integer
+        afmetingen:
+          type: string
+          nullable: true
+        prioriteit:
+          type: string
+        notities:
+          type: string
+          nullable: true
+        afgerond:
+          type: boolean
+
+    OpnameFotoInput:
+      type: object
+      required: [bestandsnaam, content_type]
+      properties:
+        bestandsnaam:
+          type: string
+        content_type:
+          type: string
+        bijschrift:
+          type: string
+          nullable: true
+
+    OpnameFotoUploadResponse:
+      type: object
+      required: [upload_url, foto]
+      properties:
+        upload_url:
+          type: string
+        foto:
+          $ref: '#/components/schemas/OpnameFoto'
