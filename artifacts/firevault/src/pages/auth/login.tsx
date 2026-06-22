@@ -96,6 +96,10 @@ export default function LoginPagina() {
     } catch {
       setFout(t("auth.foutCode"));
       setCode("");
+    } finally {
+      // Reset zodat het scherm niet bevroren achterblijft als de auth-refresh
+      // mislukt of vertraagd is. Bij succes is de component al unmount door
+      // herlaad() → isAuthenticated=true; de state-update is dan een no-op.
       setBezig(false);
     }
   }
@@ -106,6 +110,7 @@ export default function LoginPagina() {
     setSetupData(null);
     setFout(null);
     setWachtwoord("");
+    setBezig(false);
   }
 
   function wijzigCode(waarde: string) {
