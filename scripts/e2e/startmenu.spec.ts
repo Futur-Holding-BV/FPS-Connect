@@ -294,4 +294,46 @@ test("FPS startmenu: login, waaier en doorlinken", async ({ page }) => {
     await page.goBack(); // terug naar root
     await expect(page.getByTestId("radiaal-fps")).toBeVisible({ timeout: INHOUD_TIMEOUT });
   });
+
+  await test.step("dieper: hrm-verlof toont saldo en aanvragen", async () => {
+    await zorgWaaierOpen(page);
+    await page.getByTestId("radiaal-personeel").click();
+    await expect(page).toHaveURL(/\/hrm(\b|\?|$)/);
+    await expect(zichtbareTekst(page, "Medewerkers").first()).toBeVisible({
+      timeout: INHOUD_TIMEOUT,
+    });
+
+    // "Verlof"-navigatiekaart op het HRM-dashboard.
+    await zichtbareTekst(page, "Verlof").first().click();
+    await expect(page).toHaveURL(/\/hrm\/verlof(\b|\?|$)/, { timeout: INHOUD_TIMEOUT });
+
+    // Schermkop altijd aanwezig ongeacht de data.
+    await expect(zichtbareTekst(page, "Verlof").first()).toBeVisible({
+      timeout: INHOUD_TIMEOUT,
+    });
+
+    // Sectiekop "Verlofsaldo" is altijd aanwezig nadat de data geladen is
+    // (óf met saldokaarten, óf met de lege-staat "Geen verlofsaldo beschikbaar").
+    const verlofsaldoKop = zichtbareTekst(page, "Verlofsaldo");
+    const saldoKaart = page.getByText(/\d+(?:[.,]\d+)?\s*u\b/).filter({ visible: true }).first();
+    const geenSaldo = zichtbareTekst(page, /Geen verlofsaldo beschikbaar/);
+    await expect(verlofsaldoKop.first()).toBeVisible({ timeout: INHOUD_TIMEOUT });
+    await expect(saldoKaart.or(geenSaldo.first())).toBeVisible({ timeout: INHOUD_TIMEOUT });
+
+    // Sectiekop "Aanvragen" en bijbehorende inhoud of lege-staat zijn altijd aanwezig.
+    const aanvragenKop = zichtbareTekst(page, "Aanvragen");
+    await expect(aanvragenKop.first()).toBeVisible({ timeout: INHOUD_TIMEOUT });
+    const aanvraagKaart = page
+      .getByText(/Aangevraagd|Goedgekeurd|Afgewezen|Ingetrokken/)
+      .filter({ visible: true })
+      .first();
+    const geenAanvragen = zichtbareTekst(page, "Geen verlofaanvragen gevonden.");
+    await expect(aanvraagKaart.or(geenAanvragen.first())).toBeVisible({
+      timeout: INHOUD_TIMEOUT,
+    });
+
+    await page.goBack(); // terug naar /hrm
+    await page.goBack(); // terug naar root
+    await expect(page.getByTestId("radiaal-fps")).toBeVisible({ timeout: INHOUD_TIMEOUT });
+  });
 });
