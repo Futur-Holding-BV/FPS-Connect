@@ -5606,7 +5606,7 @@ export const getListMijnVerlofsoortenUrl = () => {
 
 
 
-  return `/api/api/mijn/verlofsoorten`
+  return `/api/mijn/verlofsoorten`
 }
 
 /**
@@ -5629,7 +5629,7 @@ export const listMijnVerlofsoorten = async ( options?: RequestInit): Promise<Ver
 
 export const getListMijnVerlofsoortenQueryKey = () => {
     return [
-    `/api/api/mijn/verlofsoorten`
+    `/api/mijn/verlofsoorten`
     ] as const;
     }
 
@@ -5683,7 +5683,7 @@ export const getListMijnVerlofsaldiUrl = () => {
 
 
 
-  return `/api/api/mijn/verlofsaldi`
+  return `/api/mijn/verlofsaldi`
 }
 
 /**
@@ -5706,12 +5706,12 @@ export const listMijnVerlofsaldi = async ( options?: RequestInit): Promise<Verlo
 
 export const getListMijnVerlofsaldiQueryKey = () => {
     return [
-    `/api/api/mijn/verlofsaldi`
+    `/api/mijn/verlofsaldi`
     ] as const;
     }
 
 
-export const getListMijnVerlofsaldiQueryOptions = <TData = Awaited<ReturnType<typeof listMijnVerlofsaldi>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listMijnVerlofsaldi>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export const getListMijnVerlofsaldiQueryOptions = <TData = Awaited<ReturnType<typeof listMijnVerlofsaldi>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listMijnVerlofsaldi>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
@@ -5730,14 +5730,14 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type ListMijnVerlofsaldiQueryResult = NonNullable<Awaited<ReturnType<typeof listMijnVerlofsaldi>>>
-export type ListMijnVerlofsaldiQueryError = ErrorType<void>
+export type ListMijnVerlofsaldiQueryError = ErrorType<unknown>
 
 
 /**
  * @summary Verlof saldi van de ingelogde medewerker
  */
 
-export function useListMijnVerlofsaldi<TData = Awaited<ReturnType<typeof listMijnVerlofsaldi>>, TError = ErrorType<void>>(
+export function useListMijnVerlofsaldi<TData = Awaited<ReturnType<typeof listMijnVerlofsaldi>>, TError = ErrorType<unknown>>(
   options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listMijnVerlofsaldi>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
@@ -5760,7 +5760,7 @@ export const getListMijnVerlofaanvragenUrl = () => {
 
 
 
-  return `/api/api/mijn/verlofaanvragen`
+  return `/api/mijn/verlofaanvragen`
 }
 
 /**
@@ -5783,7 +5783,7 @@ export const listMijnVerlofaanvragen = async ( options?: RequestInit): Promise<V
 
 export const getListMijnVerlofaanvragenQueryKey = () => {
     return [
-    `/api/api/mijn/verlofaanvragen`
+    `/api/mijn/verlofaanvragen`
     ] as const;
     }
 
@@ -5837,7 +5837,7 @@ export const getCreateMijnVerlofaanvraagUrl = () => {
 
 
 
-  return `/api/api/mijn/verlofaanvragen`
+  return `/api/mijn/verlofaanvragen`
 }
 
 /**

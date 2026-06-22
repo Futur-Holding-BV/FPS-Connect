@@ -1587,7 +1587,9 @@ router.get("/mijn/verlofsoorten", async (req, res) => {
 router.get("/mijn/verlofsaldi", async (req, res) => {
   try {
     const medewerkerId = await getMijnMedewerkerId(req);
-    if (!medewerkerId) return res.status(404).json({ error: "Geen medewerker gekoppeld aan uw account." });
+    // Geen medewerker-koppeling: lege lijst teruggeven zodat de UI de
+    // lege-staat toont ("Geen verlofsaldo beschikbaar") i.p.v. een foutmelding.
+    if (!medewerkerId) return res.json([]);
     const rijen = await db
       .select({ s: verlofSaldiTable, verlofsoortNaam: verlofsoortenTable.naam })
       .from(verlofSaldiTable)
@@ -1619,7 +1621,9 @@ router.get("/mijn/verlofsaldi", async (req, res) => {
 router.get("/mijn/verlofaanvragen", async (req, res) => {
   try {
     const medewerkerId = await getMijnMedewerkerId(req);
-    if (!medewerkerId) return res.status(404).json({ error: "Geen medewerker gekoppeld aan uw account." });
+    // Geen medewerker-koppeling: lege lijst teruggeven zodat de UI de
+    // lege-staat toont ("Geen verlofaanvragen gevonden.") i.p.v. een foutmelding.
+    if (!medewerkerId) return res.json([]);
     const rijen = await db
       .select({ a: verlofAanvragenTable, verlofsoortNaam: verlofsoortenTable.naam })
       .from(verlofAanvragenTable)

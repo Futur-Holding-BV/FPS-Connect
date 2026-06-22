@@ -1713,7 +1713,7 @@ paths:
         "404":
           description: Niet gevonden
 
-  /api/mijn/verlofsoorten:
+  /mijn/verlofsoorten:
     get:
       operationId: listMijnVerlofsoorten
       tags: [mijn]
@@ -1728,7 +1728,7 @@ paths:
                 items:
                   $ref: "#/components/schemas/Verlofsoort"
 
-  /api/mijn/verlofsaldi:
+  /mijn/verlofsaldi:
     get:
       operationId: listMijnVerlofsaldi
       tags: [mijn]
@@ -1742,10 +1742,8 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/VerlofSaldo"
-        "404":
-          description: Geen medewerker gekoppeld aan dit account
 
-  /api/mijn/verlofaanvragen:
+  /mijn/verlofaanvragen:
     get:
       operationId: listMijnVerlofaanvragen
       tags: [mijn]

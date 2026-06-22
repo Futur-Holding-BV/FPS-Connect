@@ -24,6 +24,10 @@ const chromiumPad = vindChromium();
 
 export default defineConfig({
   testDir: "./e2e",
+  // Alleen de monteur-spec draaien; de web-spec (web-gebouw-detail.spec.ts)
+  // gebruikt een aparte config (playwright.web.config.ts) met de Vite baseURL
+  // en mag niet meelopen in de monteur-suite (Expo-baseURL, geen #email veld).
+  testMatch: ["**/startmenu.spec.ts"],
   // Een koude Expo-load is traag; ruime timeouts zodat de test niet flaky is.
   timeout: 180_000,
   expect: { timeout: 20_000 },
