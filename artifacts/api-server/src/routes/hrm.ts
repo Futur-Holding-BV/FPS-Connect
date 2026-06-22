@@ -1944,8 +1944,20 @@ router.post("/hrm/jaarafsluiting", alleenBeheerder, async (req, res) => {
     // Verwerking: saldo's overdragen in transactie (atomair, idempotent via lock)
     const verwerkOp = new Date();
     await db.transaction(async (tx) => {
+      // Idempotentie-lock binnen de transactie: voorkomt race tussen gelijktijdige verzoeken
+      const [nogmaalsCheck] = await tx
+        .select({ id: jaarAfsluitingRegelsTable.id })
+        .from(jaarAfsluitingRegelsTable)
+        .where(and(eq(jaarAfsluitingRegelsTable.jaar, afsluitJaar), sql`${jaarAfsluitingRegelsTable.uitgevoerdOp} IS NOT NULL`))
+        .for("update")
+        .limit(1);
+      if (nogmaalsCheck) throw Object.assign(new Error("al_uitgevoerd"), { statusCode: 409 });
+
       for (const ot of overdrachten) {
-        // 1. Debiteer het bronsaldo: verlaag saldo_uren met de overgedragen uren
+        // 1. Debiteer het bronsaldo terwijl de boekhoudkundige invariant behouden blijft:
+        //    saldo = beginsaldo + opgebouwd - opgenomen
+        //    De overdracht verhoogt 'opgenomen' (special jaar-einde opname) en verlaagt 'saldo'.
+        //    Dit zorgt dat pasVerlofSaldoAan later niet terugrekent naar het oude saldo.
         const [bronSaldo] = await tx
           .select()
           .from(verlofSaldiTable)
@@ -1955,13 +1967,19 @@ router.post("/hrm/jaarafsluiting", alleenBeheerder, async (req, res) => {
               eq(verlofSaldiTable.verlofsoortId, ot.verlofsoort_id),
               eq(verlofSaldiTable.jaar, afsluitJaar),
             ),
-          );
+          )
+          .for("update");
         if (bronSaldo) {
-          const nieuwBronSaldo = Math.max(0, Math.round((bronSaldo.saldoUren - ot.over_te_dragen_uren) * 10) / 10);
+          const nieuweOpgenomen = Math.round((bronSaldo.opgenomenUren + ot.over_te_dragen_uren) * 10) / 10;
+          const nieuwBronSaldo = Math.max(0, Math.round((bronSaldo.beginsaldoUren + bronSaldo.opgebouwdUren - nieuweOpgenomen) * 10) / 10);
           await tx
             .update(verlofSaldiTable)
-            .set({ saldoUren: nieuwBronSaldo, bijgewerktOp: verwerkOp })
+            .set({ opgenomenUren: nieuweOpgenomen, saldoUren: nieuwBronSaldo, bijgewerktOp: verwerkOp })
             .where(eq(verlofSaldiTable.id, bronSaldo.id));
+          logger.info(
+            { saldo_id: bronSaldo.id, medewerker_id: ot.medewerker_id, jaar: afsluitJaar, actie: "jaarafsluiting_debet", overdracht_uren: ot.over_te_dragen_uren, oud_saldo: bronSaldo.saldoUren, nieuw_saldo: nieuwBronSaldo },
+            "jaarafsluiting: bronsaldo gedebiteert",
+          );
         }
 
         // 2. Crediteer volgend jaar (upsert)
@@ -2031,7 +2049,67 @@ router.post("/hrm/jaarafsluiting", alleenBeheerder, async (req, res) => {
       totaal_uren: Math.round(overdrachten.reduce((s, o) => s + o.over_te_dragen_uren, 0) * 10) / 10,
       uitgevoerd_op: new Date().toISOString(),
     });
-  } catch (err) {
+  } catch (err: unknown) {
+    if (err instanceof Error && err.message === "al_uitgevoerd") {
+      return res.status(409).json({ error: `Jaarafsluiting ${req.body?.jaar} is al uitgevoerd (race-condition geblokkeerd).` });
+    }
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// ── Handmatige saldocorrectie (met verplichte reden) ─────────────────────────
+// Beheerdersactie: past het verlof-saldo van een medewerker handmatig aan.
+// Audit-log (logger.info) registreert oud/nieuw/reden bij elke correctie.
+router.post("/medewerkers/:id/saldocorrectie", alleenBeheerder, async (req, res) => {
+  try {
+    const medewerkerId = parseId(req.params.id);
+    const { verlofsoort_id, jaar, delta_uren, reden } = req.body;
+    if (!verlofsoort_id || !jaar || delta_uren === undefined || delta_uren === null) {
+      return res.status(400).json({ error: "verlofsoort_id, jaar en delta_uren zijn verplicht" });
+    }
+    if (!reden || String(reden).trim().length < 3) {
+      return res.status(400).json({ error: "reden is verplicht (minimaal 3 tekens)" });
+    }
+    const deltaUren = Number(delta_uren);
+    if (!Number.isFinite(deltaUren) || deltaUren === 0) {
+      return res.status(400).json({ error: "delta_uren moet een getal ≠ 0 zijn" });
+    }
+    const gebruikerId = req.session.userId ?? null;
+
+    const [m] = await db.select({ naam: medewerkersTable.naam }).from(medewerkersTable).where(eq(medewerkersTable.id, medewerkerId)).limit(1);
+    if (!m) return res.status(404).json({ error: "Medewerker niet gevonden" });
+
+    await db.transaction(async (tx) => {
+      const [s] = await tx
+        .select()
+        .from(verlofSaldiTable)
+        .where(and(eq(verlofSaldiTable.medewerkerId, medewerkerId), eq(verlofSaldiTable.verlofsoortId, parseId(verlofsoort_id)), eq(verlofSaldiTable.jaar, Number(jaar))))
+        .for("update")
+        .limit(1);
+      if (!s) throw Object.assign(new Error("saldo_niet_gevonden"), { statusCode: 404 });
+
+      const oudOpgenomen = s.opgenomenUren;
+      const oudSaldo = s.saldoUren;
+      // Correctie = speciale opname (positief = afschrijven, negatief = terugboeken)
+      const nieuweOpgenomen = Math.round((s.opgenomenUren + deltaUren) * 10) / 10;
+      const nieuwSaldo = Math.round((s.beginsaldoUren + s.opgebouwdUren - nieuweOpgenomen) * 10) / 10;
+
+      await tx.update(verlofSaldiTable)
+        .set({ opgenomenUren: nieuweOpgenomen, saldoUren: nieuwSaldo, bijgewerktOp: new Date() })
+        .where(eq(verlofSaldiTable.id, s.id));
+
+      logger.info(
+        { saldo_id: s.id, medewerker_id: medewerkerId, verlofsoort_id: parseId(verlofsoort_id), jaar: Number(jaar), delta_uren: deltaUren, oud_opgenomen: oudOpgenomen, oud_saldo: oudSaldo, nieuw_opgenomen: nieuweOpgenomen, nieuw_saldo: nieuwSaldo, reden: String(reden).trim(), uitgevoerd_door: gebruikerId },
+        "verlof-saldo handmatige correctie",
+      );
+    });
+
+    res.json({ ok: true });
+  } catch (err: unknown) {
+    if (err instanceof Error && err.message === "saldo_niet_gevonden") {
+      return res.status(404).json({ error: "Geen verlof-saldo gevonden voor dit jaar en verlofsoort" });
+    }
     req.log.error(err);
     res.status(500).json({ error: "Interne serverfout" });
   }
