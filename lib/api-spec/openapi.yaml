@@ -8469,6 +8469,30 @@ paths:
         '409':
           description: Al definitief
 
+  /opname/{id}/spots-aanmaken:
+    post:
+      operationId: opnameSpotsAanmaken
+      summary: Opname-items omzetten naar concept-spots in het gebouw
+      tags: [opname]
+      security: [{ cookieAuth: [] }, { bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Spots aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OpnameSpotsAanmakenResultaat'
+        '404':
+          description: Niet gevonden
+        '409':
+          description: Opname is nog niet definitief of heeft geen gebouw
+
   /opname/{id}/items:
     get:
       operationId: listOpnameItems
@@ -15376,6 +15400,19 @@ components:
           type: string
         foto:
           $ref: '#/components/schemas/OpnameFoto'
+
+    OpnameSpotsAanmakenResultaat:
+      type: object
+      required: [aangemaakt, overgeslagen, spot_ids]
+      properties:
+        aangemaakt:
+          type: integer
+        overgeslagen:
+          type: integer
+        spot_ids:
+          type: array
+          items:
+            type: integer
 
     WerkdagItem:
       type: object

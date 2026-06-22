@@ -7,10 +7,54 @@ import {
   gebouwenTable,
   verdiepingenTable,
   gebruikersTable,
+  voorzieningenTable,
 } from "@workspace/db";
 import { eq, and, desc, sql } from "drizzle-orm";
 import { requireAuth } from "../middlewares/auth.js";
 import { ObjectStorageService } from "../lib/objectStorage.js";
+
+function gebouwAfkorting(naam: string): string {
+  const woorden = (naam ?? "").trim().split(/\s+/).filter(Boolean);
+  let afk = "";
+  if (woorden.length >= 2) {
+    afk = woorden.map((w) => w[0]).join("");
+  } else if (woorden.length === 1) {
+    afk = woorden[0];
+  }
+  afk = afk.replace(/[^a-zA-Z0-9]/g, "").toUpperCase().slice(0, 3);
+  return afk || "GEB";
+}
+
+async function volgendSpotnummer(gebouwId: number): Promise<string> {
+  const gebouw = await db
+    .select({ naam: gebouwenTable.naam })
+    .from(gebouwenTable)
+    .where(eq(gebouwenTable.id, gebouwId))
+    .then((r) => r[0]);
+  const afk = gebouwAfkorting(gebouw?.naam ?? "");
+  const prefix = `${afk}-`;
+  const bestaande = await db
+    .select({ objectnummer: voorzieningenTable.objectnummer })
+    .from(voorzieningenTable)
+    .where(eq(voorzieningenTable.gebouwId, gebouwId));
+  let hoogste = 0;
+  for (const r of bestaande) {
+    if (!r.objectnummer?.startsWith(prefix)) continue;
+    const m = r.objectnummer.match(/(\d+)$/);
+    if (m) { const n = parseInt(m[1], 10); if (n > hoogste) hoogste = n; }
+  }
+  let n = hoogste + 1;
+  while (true) {
+    const kandidaat = `${prefix}${n}`;
+    const bestaat = await db
+      .select({ id: voorzieningenTable.id })
+      .from(voorzieningenTable)
+      .where(eq(voorzieningenTable.objectnummer, kandidaat))
+      .then((r) => r[0]);
+    if (!bestaat) return kandidaat;
+    n++;
+  }
+}
 
 const router = Router();
 const objectStorage = new ObjectStorageService();
@@ -227,6 +271,61 @@ router.post("/opname/:id/definitief", requireAuth, async (req, res) => {
 
   const volledig = await opnameMetItems(id);
   res.json(volledig);
+});
+
+// ─── POST /opname/:id/spots-aanmaken ──────────────────────────────────────────
+
+router.post("/opname/:id/spots-aanmaken", requireAuth, async (req, res) => {
+  const id = Number(req.params.id);
+  const opname = await opnameMetItems(id);
+  if (!opname) { res.status(404).json({ fout: "Niet gevonden" }); return; }
+  if (opname.status !== "definitief") {
+    res.status(409).json({ fout: "Opname moet definitief zijn voordat spots aangemaakt kunnen worden" });
+    return;
+  }
+  if (!opname.gebouw_id) {
+    res.status(409).json({ fout: "Opname heeft geen gekoppeld gebouw" });
+    return;
+  }
+
+  const gebouwId = opname.gebouw_id;
+  const aangemaakteIds: number[] = [];
+  let overgeslagen = 0;
+  const gebruikerId = (req.session as { gebruikerId?: number }).gebruikerId ?? null;
+
+  for (const item of opname.items) {
+    if (!item.spot_type) { overgeslagen++; continue; }
+    let nummer = await volgendSpotnummer(gebouwId);
+    let spot: typeof voorzieningenTable.$inferSelect | undefined;
+    for (let poging = 0; poging < 5; poging++) {
+      try {
+        [spot] = await db
+          .insert(voorzieningenTable)
+          .values({
+            objectnummer: nummer,
+            type: item.spot_type,
+            status: "concept",
+            classificatie: "60",
+            gebouwId,
+            verdiepingId: item.verdieping_id ?? null,
+            ruimte: item.ruimte ?? null,
+            opmerkingen: [item.beschrijving, item.notities].filter(Boolean).join(" | ") || null,
+            makerMonteurId: gebruikerId,
+          })
+          .returning();
+        break;
+      } catch (err) {
+        const code = (err as { code?: string })?.code;
+        if (code === "23505" && poging < 4) { nummer = await volgendSpotnummer(gebouwId); continue; }
+        spot = undefined;
+        break;
+      }
+    }
+    if (spot) aangemaakteIds.push(spot.id);
+    else overgeslagen++;
+  }
+
+  res.json({ aangemaakt: aangemaakteIds.length, overgeslagen, spot_ids: aangemaakteIds });
 });
 
 // ─── GET /opname/:id/items ────────────────────────────────────────────────────

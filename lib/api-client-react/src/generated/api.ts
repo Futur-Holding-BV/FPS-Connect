@@ -231,6 +231,7 @@ import type {
   OpnameItemPatchInput,
   OpnamePatchInput,
   OpnameSamenvatting,
+  OpnameSpotsAanmakenResultaat,
   PlanningAfwezigheid,
   PlanningAfwezigheidInput,
   PlanningItem,
@@ -30048,6 +30049,76 @@ export const useSluitOpnameAf = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getSluitOpnameAfMutationOptions(options));
+    }
+
+export const getOpnameSpotsAanmakenUrl = (id: number,) => {
+
+
+
+
+  return `/api/opname/${id}/spots-aanmaken`
+}
+
+/**
+ * @summary Opname-items omzetten naar concept-spots in het gebouw
+ */
+export const opnameSpotsAanmaken = async (id: number, options?: RequestInit): Promise<OpnameSpotsAanmakenResultaat> => {
+
+  return customFetch<OpnameSpotsAanmakenResultaat>(getOpnameSpotsAanmakenUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getOpnameSpotsAanmakenMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof opnameSpotsAanmaken>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof opnameSpotsAanmaken>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['opnameSpotsAanmaken'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof opnameSpotsAanmaken>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  opnameSpotsAanmaken(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type OpnameSpotsAanmakenMutationResult = NonNullable<Awaited<ReturnType<typeof opnameSpotsAanmaken>>>
+
+    export type OpnameSpotsAanmakenMutationError = ErrorType<void>
+
+    /**
+ * @summary Opname-items omzetten naar concept-spots in het gebouw
+ */
+export const useOpnameSpotsAanmaken = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof opnameSpotsAanmaken>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof opnameSpotsAanmaken>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getOpnameSpotsAanmakenMutationOptions(options));
     }
 
 export const getListOpnameItemsUrl = (id: number,) => {

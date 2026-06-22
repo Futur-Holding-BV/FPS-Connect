@@ -10257,6 +10257,20 @@ export const SluitOpnameAfResponse = zod.object({
 
 
 /**
+ * @summary Opname-items omzetten naar concept-spots in het gebouw
+ */
+export const OpnameSpotsAanmakenParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const OpnameSpotsAanmakenResponse = zod.object({
+  "aangemaakt": zod.number(),
+  "overgeslagen": zod.number(),
+  "spot_ids": zod.array(zod.number())
+})
+
+
+/**
  * @summary Items van een opname
  */
 export const ListOpnameItemsParams = zod.object({

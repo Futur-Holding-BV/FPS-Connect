@@ -4351,6 +4351,12 @@ export interface OpnameFotoUploadResponse {
   foto: OpnameFoto;
 }
 
+export interface OpnameSpotsAanmakenResultaat {
+  aangemaakt: number;
+  overgeslagen: number;
+  spot_ids: number[];
+}
+
 export interface WerkdagItem {
   id: number;
   titel: string;

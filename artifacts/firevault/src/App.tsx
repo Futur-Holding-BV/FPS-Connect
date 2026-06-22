@@ -52,6 +52,7 @@ import BackupBeheer from "@/pages/beheer/backup";
 import ProjectstatusPagina from "@/pages/beheer/projectstatus";
 import PwaTest from "@/pages/beheer/pwa-test";
 import OpnamePagina from "@/pages/opname/index";
+import OpnameDetailPagina from "@/pages/opname/detail";
 import InfoPagina from "@/pages/info/index";
 import PersoneelPagina from "@/pages/personeel/index";
 import MedewerkerDetailPagina from "@/pages/personeel/detail";
@@ -131,6 +132,7 @@ function BeheerderPortal() {
         <Route path="/hall-of-fame" component={HallOfFamePagina} />
         <Route path="/dossiers" component={DossiersPagina} />
         <Route path="/opname" component={OpnamePagina} />
+        <Route path="/opname/:id" component={OpnameDetailPagina} />
         <Route path="/offertes" component={OffertesPagina} />
         <Route path="/abonnementen" component={Abonnementen} />
         <Route path="/beheer/toepassingen" component={ToepassingenBeheer} />
@@ -241,6 +243,7 @@ function PermissiePortal() {
         <Route path="/gereedschappen/:id" component={GereedschapDetailPagina} />
         <Route path="/dossiers" component={DossiersPagina} />
         <Route path="/opname" component={OpnamePagina} />
+        <Route path="/opname/:id" component={OpnameDetailPagina} />
         <Route path="/offertes" component={OffertesPagina} />
         <Route path="/abonnementen" component={Abonnementen} />
         <Route path="/beheer/toepassingen" component={ToepassingenBeheer} />

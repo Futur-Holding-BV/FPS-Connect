@@ -269,6 +269,7 @@ export * from './opnameItemInput';
 export * from './opnameItemPatchInput';
 export * from './opnamePatchInput';
 export * from './opnameSamenvatting';
+export * from './opnameSpotsAanmakenResultaat';
 export * from './planningAfwezigheid';
 export * from './planningAfwezigheidInput';
 export * from './planningItem';

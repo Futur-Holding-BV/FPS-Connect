@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "wouter";
 import {
   useListOpnames,
   useListGebouwen,
@@ -63,50 +64,52 @@ function OpnameKaart({
   return (
     <Card className="hover:shadow-md transition-shadow">
       <CardContent className="p-4">
-        <div className="flex items-start justify-between gap-3 mb-3">
-          <div className="flex-1 min-w-0">
-            <p className="font-semibold text-sm truncate">{opname.naam}</p>
-            {opname.gebouw_naam && (
-              <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
-                <Building2 className="w-3 h-3" />
-                {opname.gebouw_naam}
-              </p>
+        <Link href={`/opname/${opname.id}`} className="block mb-3">
+          <div className="flex items-start justify-between gap-3 mb-2">
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold text-sm truncate hover:text-primary transition-colors">{opname.naam}</p>
+              {opname.gebouw_naam && (
+                <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                  <Building2 className="w-3 h-3" />
+                  {opname.gebouw_naam}
+                </p>
+              )}
+            </div>
+            <Badge variant={st.variant} className="shrink-0">
+              {st.label}
+            </Badge>
+          </div>
+
+          <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
+            <span className="flex items-center gap-1">
+              <Calendar className="w-3 h-3" />
+              {opname.datum}
+            </span>
+            <span className="flex items-center gap-1">
+              <List className="w-3 h-3" />
+              {opname.aantal_items} {opname.aantal_items === 1 ? "item" : "items"}
+            </span>
+            {opname.aangemaakt_door_naam && (
+              <span className="flex items-center gap-1">
+                <User className="w-3 h-3" />
+                {opname.aangemaakt_door_naam}
+              </span>
             )}
           </div>
-          <Badge variant={st.variant} className="shrink-0">
-            {st.label}
-          </Badge>
-        </div>
 
-        <div className="flex flex-wrap gap-3 text-xs text-muted-foreground mb-3">
-          <span className="flex items-center gap-1">
-            <Calendar className="w-3 h-3" />
-            {opname.datum}
-          </span>
-          <span className="flex items-center gap-1">
-            <List className="w-3 h-3" />
-            {opname.aantal_items} {opname.aantal_items === 1 ? "item" : "items"}
-          </span>
-          {opname.aangemaakt_door_naam && (
-            <span className="flex items-center gap-1">
-              <User className="w-3 h-3" />
-              {opname.aangemaakt_door_naam}
-            </span>
+          {opname.notities && (
+            <p className="text-xs text-muted-foreground bg-muted rounded px-2 py-1 mt-2 line-clamp-2">
+              {opname.notities}
+            </p>
           )}
-        </div>
+        </Link>
 
-        {opname.notities && (
-          <p className="text-xs text-muted-foreground bg-muted rounded px-2 py-1 mb-3 line-clamp-2">
-            {opname.notities}
-          </p>
-        )}
-
-        <div className="flex gap-2">
+        <div className="flex gap-2 pt-2 border-t">
           {!isDefinitief && (
             <Button
               size="sm"
               variant="outline"
-              onClick={onDefinitief}
+              onClick={(e) => { e.preventDefault(); onDefinitief(); }}
               className="flex-1 text-xs gap-1"
             >
               <Lock className="w-3 h-3" />
@@ -123,7 +126,7 @@ function OpnameKaart({
             <Button
               size="sm"
               variant="ghost"
-              onClick={onVerwijder}
+              onClick={(e) => { e.preventDefault(); onVerwijder(); }}
               className="text-destructive hover:text-destructive hover:bg-destructive/10 px-2"
             >
               <Trash2 className="w-3.5 h-3.5" />
