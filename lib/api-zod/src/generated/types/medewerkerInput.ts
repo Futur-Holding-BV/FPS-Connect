@@ -20,6 +20,11 @@ export interface MedewerkerInput {
   dienstverband?: string;
   /** @nullable */
   contracturen_per_week?: number | null;
+  /**
+     * Deeltijdfactor als percentage van de CAO-norm (bijv. 80 = 80%)
+     * @nullable
+     */
+  deeltijd_percentage?: number | null;
   in_dienst_sinds?: string;
   uit_dienst_per?: string;
   noodcontact_naam?: string;

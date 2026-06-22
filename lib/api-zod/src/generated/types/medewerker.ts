@@ -29,6 +29,11 @@ export interface Medewerker {
   dienstverband: string;
   /** @nullable */
   contracturen_per_week?: number | null;
+  /**
+     * Deeltijdfactor als percentage van de CAO-norm (bijv. 80 = 80%)
+     * @nullable
+     */
+  deeltijd_percentage?: number | null;
   /** @nullable */
   in_dienst_sinds?: string | null;
   /** @nullable */

@@ -596,6 +596,7 @@ export default function MedewerkerDetailPagina() {
             <div className="text-sm">
               {DIENSTVERBAND_LABELS[medewerker.dienstverband] ?? medewerker.dienstverband}
               {medewerker.contracturen_per_week != null ? ` — ${medewerker.contracturen_per_week} uur/week` : ""}
+              {medewerker.deeltijd_percentage != null ? ` (${medewerker.deeltijd_percentage}%)` : ""}
               {medewerker.bedrijf_uitzendbureau ? ` (${medewerker.bedrijf_uitzendbureau})` : ""}
             </div>
           </div>
@@ -1000,6 +1001,10 @@ export default function MedewerkerDetailPagina() {
               <div className="space-y-1.5">
                 <Label>Contracturen/week</Label>
                 <Input type="number" value={profielForm.contracturen_per_week ?? ""} onChange={(e) => setProfielForm({ ...profielForm, contracturen_per_week: e.target.value ? Number(e.target.value) : null })} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Deeltijdpercentage (%)</Label>
+                <Input type="number" min={1} max={100} placeholder="bijv. 80 voor 80%" value={profielForm.deeltijd_percentage ?? ""} onChange={(e) => setProfielForm({ ...profielForm, deeltijd_percentage: e.target.value ? Number(e.target.value) : null })} />
               </div>
               <div className="space-y-1.5">
                 <Label>In dienst sinds</Label>

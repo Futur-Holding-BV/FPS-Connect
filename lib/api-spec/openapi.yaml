@@ -12769,6 +12769,9 @@ components:
           type: string
         contracturen_per_week:
           type: ["number", "null"]
+        deeltijd_percentage:
+          type: ["number", "null"]
+          description: Deeltijdfactor als percentage van de CAO-norm (bijv. 80 = 80%)
         in_dienst_sinds:
           type: ["string", "null"]
         uit_dienst_per:
@@ -12828,6 +12831,9 @@ components:
           type: string
         contracturen_per_week:
           type: ["number", "null"]
+        deeltijd_percentage:
+          type: ["number", "null"]
+          description: Deeltijdfactor als percentage van de CAO-norm (bijv. 80 = 80%)
         in_dienst_sinds:
           type: string
         uit_dienst_per:

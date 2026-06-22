@@ -36,6 +36,7 @@ const router = Router();
 
 const lezen = requireBevoegdheid("personeel", 1);
 const schrijven = requireBevoegdheid("personeel", 2);
+const alleenBeheerder = requireBevoegdheid("systeem", 2);
 
 const iso = (d: Date) => d.toISOString();
 const isoOf = (d: Date | null) => (d ? d.toISOString() : null);
@@ -522,6 +523,7 @@ async function medewerkerNaarJson(m: typeof medewerkersTable.$inferSelect) {
     dienstverband: m.dienstverband,
     bedrijf_uitzendbureau: m.bedrijfUitzendbureau ?? null,
     contracturen_per_week: m.contracturenPerWeek,
+    deeltijd_percentage: m.deeltijdPercentage ?? null,
     in_dienst_sinds: m.inDienstSinds,
     uit_dienst_per: m.uitDienstPer,
     noodcontact_naam: m.noodcontactNaam,
@@ -1410,8 +1412,9 @@ async function logVerlofMutatie(
         nieuwStatus: params.nieuwStatus ?? null,
         opmerking: params.opmerking ?? null,
       });
-  } catch {
-    // Logfout mag hoofdactie niet blokkeren
+  } catch (err) {
+    // Auditlog-fout blokkeert de hoofdactie niet, maar wordt geregistreerd.
+    logger.error({ err, verlofaanvraagId, actie }, "logVerlofMutatie: audit insert mislukt");
   }
 }
 
@@ -1459,6 +1462,10 @@ router.patch("/verlofaanvragen/:id", schrijven, async (req, res) => {
     const GELDIGE_STATUS = ["concept", "aangevraagd", "goedgekeurd", "afgewezen", "ingetrokken"];
     if (status !== undefined && !GELDIGE_STATUS.includes(status)) {
       return res.status(400).json({ error: "Ongeldige status.", velden: ["status"] });
+    }
+    // Afwijsreden is verplicht bij het afwijzen van een aanvraag.
+    if (status === "afgewezen" && !reden?.trim()) {
+      return res.status(400).json({ error: "Reden is verplicht bij het afwijzen van een verlofaanvraag.", velden: ["reden"] });
     }
     // Bij beoordeling (goedkeuren/afwijzen) de beoordelaar en het tijdstip vastleggen.
     const beoordeeld = status === "goedgekeurd" || status === "afgewezen";
@@ -1606,7 +1613,7 @@ router.get("/feestdagen", lezen, async (req, res) => {
   }
 });
 
-router.post("/feestdagen", schrijven, async (req, res) => {
+router.post("/feestdagen", alleenBeheerder, async (req, res) => {
   try {
     const { werkgever_id, jaar, datum, naam } = req.body;
     if (!datum || !naam || !jaar) return res.status(400).json({ error: "datum, naam en jaar zijn verplicht" });
@@ -1626,7 +1633,7 @@ router.post("/feestdagen", schrijven, async (req, res) => {
   }
 });
 
-router.patch("/feestdagen/:id", schrijven, async (req, res) => {
+router.patch("/feestdagen/:id", alleenBeheerder, async (req, res) => {
   try {
     const { datum, naam, jaar, werkgever_id } = req.body;
     const [f] = await db
@@ -1648,7 +1655,7 @@ router.patch("/feestdagen/:id", schrijven, async (req, res) => {
   }
 });
 
-router.delete("/feestdagen/:id", schrijven, async (req, res) => {
+router.delete("/feestdagen/:id", alleenBeheerder, async (req, res) => {
   try {
     await db.delete(feestdagenTable).where(eq(feestdagenTable.id, parseId(req.params.id)));
     res.status(204).end();
@@ -1688,7 +1695,7 @@ router.get("/verlof-instellingen", lezen, async (req, res) => {
   }
 });
 
-router.post("/verlof-instellingen", schrijven, async (req, res) => {
+router.post("/verlof-instellingen", alleenBeheerder, async (req, res) => {
   try {
     const { werkgever_id, jaar, max_aaneengesloten, aanvraag_termijn_dagen, goedkeuring_automatisch, auto_goedkeuring_drempel_uren, notificatie_email, opmerking } = req.body;
     if (!jaar) return res.status(400).json({ error: "jaar is verplicht" });
@@ -1712,7 +1719,7 @@ router.post("/verlof-instellingen", schrijven, async (req, res) => {
   }
 });
 
-router.patch("/verlof-instellingen/:id", schrijven, async (req, res) => {
+router.patch("/verlof-instellingen/:id", alleenBeheerder, async (req, res) => {
   try {
     const { werkgever_id, jaar, max_aaneengesloten, aanvraag_termijn_dagen, goedkeuring_automatisch, auto_goedkeuring_drempel_uren, notificatie_email, opmerking } = req.body;
     const [vi] = await db
@@ -1738,7 +1745,7 @@ router.patch("/verlof-instellingen/:id", schrijven, async (req, res) => {
   }
 });
 
-router.delete("/verlof-instellingen/:id", schrijven, async (req, res) => {
+router.delete("/verlof-instellingen/:id", alleenBeheerder, async (req, res) => {
   try {
     await db.delete(verlofInstellingenTable).where(eq(verlofInstellingenTable.id, parseId(req.params.id)));
     res.status(204).end();
@@ -1778,7 +1785,7 @@ router.get("/jaarafsluiting-regels", lezen, async (req, res) => {
   }
 });
 
-router.post("/jaarafsluiting-regels", schrijven, async (req, res) => {
+router.post("/jaarafsluiting-regels", alleenBeheerder, async (req, res) => {
   try {
     const { werkgever_id, jaar, verlofsoort_id, max_overdracht_uren, overdracht_verval_datum, opmerking } = req.body;
     if (!jaar) return res.status(400).json({ error: "jaar is verplicht" });
@@ -1800,7 +1807,7 @@ router.post("/jaarafsluiting-regels", schrijven, async (req, res) => {
   }
 });
 
-router.patch("/jaarafsluiting-regels/:id", schrijven, async (req, res) => {
+router.patch("/jaarafsluiting-regels/:id", alleenBeheerder, async (req, res) => {
   try {
     const { werkgever_id, jaar, verlofsoort_id, max_overdracht_uren, overdracht_verval_datum, opmerking } = req.body;
     const [j] = await db
@@ -1824,7 +1831,7 @@ router.patch("/jaarafsluiting-regels/:id", schrijven, async (req, res) => {
   }
 });
 
-router.delete("/jaarafsluiting-regels/:id", schrijven, async (req, res) => {
+router.delete("/jaarafsluiting-regels/:id", alleenBeheerder, async (req, res) => {
   try {
     await db.delete(jaarAfsluitingRegelsTable).where(eq(jaarAfsluitingRegelsTable.id, parseId(req.params.id)));
     res.status(204).end();
@@ -1838,8 +1845,6 @@ router.delete("/jaarafsluiting-regels/:id", schrijven, async (req, res) => {
 // Drooglooppreview: berekent wat er zou worden overgedragen zonder te schrijven.
 // Verwerking: draagt saldo's over en zet uitgevoerd_op op de regels.
 // Altijd alleenBeheerder (systeem-niveau actie).
-const alleenBeheerder = requireBevoegdheid("systeem", 2);
-
 router.post("/hrm/jaarafsluiting", alleenBeheerder, async (req, res) => {
   try {
     const { jaar, droogloop } = req.body;
