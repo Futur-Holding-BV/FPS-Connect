@@ -615,16 +615,16 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
                           </Link>
                         </SidebarMenuButton>
                       </SidebarMenuItem>
-                      <SidebarMenuItem>
-                        <SidebarMenuButton asChild isActive={location === "/beheer/pwa-test"}>
-                          <Link href="/beheer/pwa-test">
-                            <Smartphone />
-                            <span>Mobiele test</span>
-                          </Link>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
                     </>
                   )}
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild isActive={location === "/beheer/pwa-test"}>
+                      <Link href="/beheer/pwa-test">
+                        <Smartphone />
+                        <span>Mobiele test</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
                   <SidebarMenuItem>
                     <SidebarMenuButton asChild isActive={location === "/info"}>
                       <Link href="/info">
