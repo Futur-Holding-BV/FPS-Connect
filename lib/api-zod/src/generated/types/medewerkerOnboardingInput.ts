@@ -28,4 +28,6 @@ export interface MedewerkerOnboardingInput {
   verlofsoort_ids?: number[];
   /** Jaar waarvoor het verlofsaldo wordt aangemaakt (standaard huidig jaar). */
   jaar?: number;
+  /** Naam uitzendbureau, ZZP-bedrijf of onderaannemingsbedrijf. */
+  bedrijf_uitzendbureau?: string;
 }

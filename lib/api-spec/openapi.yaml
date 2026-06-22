@@ -12536,6 +12536,9 @@ components:
         jaar:
           type: integer
           description: Jaar waarvoor het verlofsaldo wordt aangemaakt (standaard huidig jaar).
+        bedrijf_uitzendbureau:
+          type: string
+          description: Naam uitzendbureau, ZZP-bedrijf of onderaannemingsbedrijf.
 
     OnboardingFout:
       type: object

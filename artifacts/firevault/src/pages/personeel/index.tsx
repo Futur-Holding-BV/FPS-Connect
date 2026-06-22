@@ -306,6 +306,8 @@ export default function PersoneelPagina() {
     in_dienst_sinds: new Date().toISOString().slice(0, 10),
     jaar: huidigJaar(),
     verlofsoort_ids: [],
+    dienstverband: "vast",
+    bedrijf_uitzendbureau: undefined,
   });
 
   async function opslaanMedewerker() {
@@ -1281,21 +1283,23 @@ export default function PersoneelPagina() {
             </div>
             <div className="space-y-1.5">
               <Label>Dienstverband</Label>
-              <Select value={medewerkerForm.dienstverband} onValueChange={(v) => setMedewerkerForm({ ...medewerkerForm, dienstverband: v, bedrijf_uitzendbureau: (v === "uitzend" || v === "inhuur") ? (medewerkerForm.bedrijf_uitzendbureau ?? "") : undefined })}>
+              <Select value={medewerkerForm.dienstverband} onValueChange={(v) => setMedewerkerForm({ ...medewerkerForm, dienstverband: v, bedrijf_uitzendbureau: (v === "uitzend" || v === "inhuur" || v === "zzp") ? (medewerkerForm.bedrijf_uitzendbureau ?? "") : undefined })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {DIENSTVERBANDEN.map((d) => <SelectItem key={d} value={d}>{DIENSTVERBAND_LABELS[d] ?? d}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
-            {(medewerkerForm.dienstverband === "uitzend" || medewerkerForm.dienstverband === "inhuur") && (
+            {(medewerkerForm.dienstverband === "uitzend" || medewerkerForm.dienstverband === "inhuur" || medewerkerForm.dienstverband === "zzp") && (
               <div className="space-y-1.5">
-                <Label>{medewerkerForm.dienstverband === "uitzend" ? "Naam uitzendbureau" : "Naam bedrijf / onderaannemer"}</Label>
+                <Label>
+                  {medewerkerForm.dienstverband === "uitzend" ? "Naam uitzendbureau" : medewerkerForm.dienstverband === "zzp" ? "Bedrijfsnaam ZZP" : "Naam bedrijf / onderaannemer"}
+                </Label>
                 <input
                   className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                   value={medewerkerForm.bedrijf_uitzendbureau ?? ""}
                   onChange={(e) => setMedewerkerForm({ ...medewerkerForm, bedrijf_uitzendbureau: e.target.value || undefined })}
-                  placeholder={medewerkerForm.dienstverband === "uitzend" ? "bijv. Randstad" : "Naam van het bedrijf"}
+                  placeholder={medewerkerForm.dienstverband === "uitzend" ? "bijv. Randstad" : medewerkerForm.dienstverband === "zzp" ? "bijv. Jansen Installatietechniek" : "Naam van het bedrijf"}
                 />
               </div>
             )}
@@ -1414,6 +1418,30 @@ export default function PersoneelPagina() {
               <Label>In dienst sinds *</Label>
               <Input type="date" value={onboardForm.in_dienst_sinds} onChange={(e) => setOnboardForm({ ...onboardForm, in_dienst_sinds: e.target.value })} />
             </div>
+            <div className="space-y-1.5">
+              <Label>Dienstverband</Label>
+              <Select
+                value={onboardForm.dienstverband ?? "vast"}
+                onValueChange={(v) => setOnboardForm({ ...onboardForm, dienstverband: v, bedrijf_uitzendbureau: (v === "uitzend" || v === "inhuur" || v === "zzp") ? (onboardForm.bedrijf_uitzendbureau ?? "") : undefined })}
+              >
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {DIENSTVERBANDEN.map((d) => <SelectItem key={d} value={d}>{DIENSTVERBAND_LABELS[d] ?? d}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            {(onboardForm.dienstverband === "uitzend" || onboardForm.dienstverband === "inhuur" || onboardForm.dienstverband === "zzp") && (
+              <div className="sm:col-span-2 space-y-1.5">
+                <Label>
+                  {onboardForm.dienstverband === "uitzend" ? "Naam uitzendbureau" : onboardForm.dienstverband === "zzp" ? "Bedrijfsnaam ZZP" : "Naam bedrijf / onderaannemer"}
+                </Label>
+                <Input
+                  value={onboardForm.bedrijf_uitzendbureau ?? ""}
+                  onChange={(e) => setOnboardForm({ ...onboardForm, bedrijf_uitzendbureau: e.target.value || undefined })}
+                  placeholder={onboardForm.dienstverband === "uitzend" ? "bijv. Randstad" : onboardForm.dienstverband === "zzp" ? "bijv. Jansen Installatietechniek" : "Naam van het bedrijf"}
+                />
+              </div>
+            )}
             <div className="sm:col-span-2 space-y-1.5">
               <Label>Verlofsoorten met beginsaldo</Label>
               <div className="grid grid-cols-2 gap-2">

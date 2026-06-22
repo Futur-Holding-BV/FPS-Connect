@@ -6237,7 +6237,8 @@ export const OnboardMedewerkerBody = zod.object({
   "noodcontact_naam": zod.string().optional(),
   "noodcontact_telefoon": zod.string().optional(),
   "verlofsoort_ids": zod.array(zod.number()).optional().describe('Verlofsoorten waarvoor direct een beginsaldo wordt opgebouwd.'),
-  "jaar": zod.number().optional().describe('Jaar waarvoor het verlofsaldo wordt aangemaakt (standaard huidig jaar).')
+  "jaar": zod.number().optional().describe('Jaar waarvoor het verlofsaldo wordt aangemaakt (standaard huidig jaar).'),
+  "bedrijf_uitzendbureau": zod.string().optional().describe('Naam uitzendbureau, ZZP-bedrijf of onderaannemingsbedrijf.')
 })
 
 export const OnboardMedewerkerResponse = zod.void()

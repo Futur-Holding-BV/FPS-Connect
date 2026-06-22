@@ -473,9 +473,11 @@ export default function ModulesPlanning() {
               <SelectContent>
                 <SelectItem value="alle">Alle dienstverbanden</SelectItem>
                 <SelectItem value="vast">Vast</SelectItem>
+                <SelectItem value="tijdelijk">Tijdelijk</SelectItem>
+                <SelectItem value="zzp">ZZP</SelectItem>
+                <SelectItem value="uitzend">Uitzend</SelectItem>
                 <SelectItem value="inhuur">Inhuur</SelectItem>
                 <SelectItem value="onderaannemer">Onderaannemer</SelectItem>
-                <SelectItem value="uitzend">Uitzend</SelectItem>
               </SelectContent>
             </Select>
             <button
