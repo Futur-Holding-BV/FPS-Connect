@@ -5642,6 +5642,339 @@ paths:
         "204":
           description: Verwijderd
 
+  /verlofaanvragen/{id}/log:
+    get:
+      operationId: listVerlofAanvraagLog
+      tags: [personeel]
+      summary: Auditlog voor een verlofaanvraag
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/VerlofAanvraagLogRegel"
+
+  /verlof/overzicht:
+    get:
+      operationId: getVerlofOverzicht
+      tags: [personeel]
+      summary: Gecombineerd verlofoverzicht (saldi + aanvragen) voor een jaar
+      parameters:
+        - in: query
+          name: jaar
+          schema:
+            type: integer
+        - in: query
+          name: medewerker_id
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VerlofOverzicht"
+
+  /feestdagen:
+    get:
+      operationId: listFeestdagen
+      tags: [personeel]
+      summary: Feestdagen voor een jaar (nationaal + per werkgever)
+      parameters:
+        - in: query
+          name: jaar
+          schema:
+            type: integer
+        - in: query
+          name: werkgever_id
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Feestdag"
+    post:
+      operationId: createFeestdag
+      tags: [personeel]
+      summary: Feestdag aanmaken
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FeestdagInput"
+      responses:
+        "201":
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Feestdag"
+
+  /feestdagen/{id}:
+    patch:
+      operationId: updateFeestdag
+      tags: [personeel]
+      summary: Feestdag bijwerken
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FeestdagInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Feestdag"
+    delete:
+      operationId: deleteFeestdag
+      tags: [personeel]
+      summary: Feestdag verwijderen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Verwijderd
+
+  /verlof-instellingen:
+    get:
+      operationId: listVerlofInstellingen
+      tags: [personeel]
+      summary: Verlof-instellingen per werkgever/jaar
+      parameters:
+        - in: query
+          name: jaar
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/VerlofInstellingen"
+    post:
+      operationId: createVerlofInstellingen
+      tags: [personeel]
+      summary: Verlof-instellingen aanmaken
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VerlofInstellingenInput"
+      responses:
+        "201":
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VerlofInstellingen"
+
+  /verlof-instellingen/{id}:
+    patch:
+      operationId: updateVerlofInstellingen
+      tags: [personeel]
+      summary: Verlof-instellingen bijwerken
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VerlofInstellingenInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VerlofInstellingen"
+    delete:
+      operationId: deleteVerlofInstellingen
+      tags: [personeel]
+      summary: Verlof-instellingen verwijderen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Verwijderd
+
+  /jaarafsluiting-regels:
+    get:
+      operationId: listJaarAfsluitingRegels
+      tags: [personeel]
+      summary: Jaarafsluiting-regels ophalen
+      parameters:
+        - in: query
+          name: jaar
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/JaarAfsluitingRegel"
+    post:
+      operationId: createJaarAfsluitingRegel
+      tags: [personeel]
+      summary: Jaarafsluiting-regel aanmaken
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/JaarAfsluitingRegelInput"
+      responses:
+        "201":
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JaarAfsluitingRegel"
+
+  /jaarafsluiting-regels/{id}:
+    patch:
+      operationId: updateJaarAfsluitingRegel
+      tags: [personeel]
+      summary: Jaarafsluiting-regel bijwerken
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/JaarAfsluitingRegelInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JaarAfsluitingRegel"
+    delete:
+      operationId: deleteJaarAfsluitingRegel
+      tags: [personeel]
+      summary: Jaarafsluiting-regel verwijderen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Verwijderd
+
+  /hrm/jaarafsluiting:
+    post:
+      operationId: voerJaarAfsluitingUit
+      tags: [personeel]
+      summary: Jaarafsluiting uitvoeren of drooglooppreview
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/JaarAfsluitingInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JaarAfsluitingResultaat"
+
+  /capaciteit/bezetting:
+    get:
+      operationId: getCapaciteitBezetting
+      tags: [personeel]
+      summary: Bezettingsgraad per dag voor een week
+      parameters:
+        - in: query
+          name: datum
+          schema:
+            type: string
+          description: ISO datum van een dag in de gewenste week (standaard huidige week)
+        - in: query
+          name: jaar
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CapaciteitBezetting"
+
+  /hrm/capaciteit-analyse:
+    post:
+      operationId: analyseerCapaciteit
+      tags: [personeel]
+      summary: AI-analyse van verlof en capaciteit voor een periode
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CapaciteitAnalyseInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CapaciteitAnalyseResultaat"
+
   /ziekmeldingen:
     get:
       operationId: listZiekmeldingen
@@ -12967,6 +13300,329 @@ components:
           type: ["number", "null"]
         toelichting:
           type: ["string", "null"]
+
+    VerlofAanvraagLogRegel:
+      type: object
+      required: [id, verlofaanvraag_id, medewerker_id, actie, aangemaakt_op]
+      properties:
+        id:
+          type: integer
+        verlofaanvraag_id:
+          type: integer
+        medewerker_id:
+          type: integer
+        uitgevoerd_door_id:
+          type: ["integer", "null"]
+        uitgevoerd_door_naam:
+          type: ["string", "null"]
+        actie:
+          type: string
+        oud_status:
+          type: ["string", "null"]
+        nieuw_status:
+          type: ["string", "null"]
+        opmerking:
+          type: ["string", "null"]
+        aangemaakt_op:
+          type: string
+
+    VerlofOverzicht:
+      type: object
+      required: [jaar, saldi, aanvragen]
+      properties:
+        jaar:
+          type: integer
+        saldi:
+          type: array
+          items:
+            type: object
+            required: [id, medewerker_id, verlofsoort_id, jaar, saldo_uren]
+            properties:
+              id:
+                type: integer
+              medewerker_id:
+                type: integer
+              medewerker_naam:
+                type: ["string", "null"]
+              medewerker_actief:
+                type: boolean
+              verlofsoort_id:
+                type: integer
+              verlofsoort_naam:
+                type: ["string", "null"]
+              verlofsoort_categorie:
+                type: ["string", "null"]
+              jaar:
+                type: integer
+              beginsaldo_uren:
+                type: number
+              opgebouwd_uren:
+                type: number
+              opgenomen_uren:
+                type: number
+              saldo_uren:
+                type: number
+              vervalt_op:
+                type: ["string", "null"]
+        aanvragen:
+          type: array
+          items:
+            $ref: "#/components/schemas/VerlofAanvraag"
+
+    Feestdag:
+      type: object
+      required: [id, jaar, datum, naam, aangemaakt_op, bijgewerkt_op]
+      properties:
+        id:
+          type: integer
+        werkgever_id:
+          type: ["integer", "null"]
+        jaar:
+          type: integer
+        datum:
+          type: string
+        naam:
+          type: string
+        aangemaakt_op:
+          type: string
+        bijgewerkt_op:
+          type: string
+
+    FeestdagInput:
+      type: object
+      required: [jaar, datum, naam]
+      properties:
+        werkgever_id:
+          type: ["integer", "null"]
+        jaar:
+          type: integer
+        datum:
+          type: string
+        naam:
+          type: string
+
+    VerlofInstellingen:
+      type: object
+      required: [id, jaar, goedkeuring_automatisch, aangemaakt_op, bijgewerkt_op]
+      properties:
+        id:
+          type: integer
+        werkgever_id:
+          type: ["integer", "null"]
+        jaar:
+          type: integer
+        max_aaneengesloten:
+          type: ["integer", "null"]
+        aanvraag_termijn_dagen:
+          type: ["integer", "null"]
+        goedkeuring_automatisch:
+          type: boolean
+        auto_goedkeuring_drempel_uren:
+          type: ["number", "null"]
+        notificatie_email:
+          type: ["string", "null"]
+        opmerking:
+          type: ["string", "null"]
+        aangemaakt_op:
+          type: string
+        bijgewerkt_op:
+          type: string
+
+    VerlofInstellingenInput:
+      type: object
+      required: [jaar]
+      properties:
+        werkgever_id:
+          type: ["integer", "null"]
+        jaar:
+          type: integer
+        max_aaneengesloten:
+          type: ["integer", "null"]
+        aanvraag_termijn_dagen:
+          type: ["integer", "null"]
+        goedkeuring_automatisch:
+          type: boolean
+        auto_goedkeuring_drempel_uren:
+          type: ["number", "null"]
+        notificatie_email:
+          type: ["string", "null"]
+        opmerking:
+          type: ["string", "null"]
+
+    JaarAfsluitingRegel:
+      type: object
+      required: [id, jaar, aangemaakt_op, bijgewerkt_op]
+      properties:
+        id:
+          type: integer
+        werkgever_id:
+          type: ["integer", "null"]
+        jaar:
+          type: integer
+        verlofsoort_id:
+          type: ["integer", "null"]
+        max_overdracht_uren:
+          type: ["number", "null"]
+        overdracht_verval_datum:
+          type: ["string", "null"]
+        uitgevoerd_op:
+          type: ["string", "null"]
+        uitgevoerd_door_id:
+          type: ["integer", "null"]
+        opmerking:
+          type: ["string", "null"]
+        aangemaakt_op:
+          type: string
+        bijgewerkt_op:
+          type: string
+
+    JaarAfsluitingRegelInput:
+      type: object
+      required: [jaar]
+      properties:
+        werkgever_id:
+          type: ["integer", "null"]
+        jaar:
+          type: integer
+        verlofsoort_id:
+          type: ["integer", "null"]
+        max_overdracht_uren:
+          type: ["number", "null"]
+        overdracht_verval_datum:
+          type: ["string", "null"]
+        opmerking:
+          type: ["string", "null"]
+
+    JaarAfsluitingInput:
+      type: object
+      required: [jaar]
+      properties:
+        jaar:
+          type: integer
+        droogloop:
+          type: boolean
+          description: "true = preview zonder schrijven"
+
+    JaarAfsluitingResultaat:
+      type: object
+      required: [jaar, volgend_jaar, droogloop, overdrachten, totaal_medewerkers, totaal_uren]
+      properties:
+        jaar:
+          type: integer
+        volgend_jaar:
+          type: integer
+        droogloop:
+          type: boolean
+        overdrachten:
+          type: array
+          items:
+            type: object
+            properties:
+              medewerker_id:
+                type: integer
+              medewerker_naam:
+                type: ["string", "null"]
+              verlofsoort_id:
+                type: integer
+              verlofsoort_naam:
+                type: ["string", "null"]
+              saldo_uren:
+                type: number
+              over_te_dragen_uren:
+                type: number
+              verval_datum:
+                type: ["string", "null"]
+        totaal_medewerkers:
+          type: integer
+        totaal_uren:
+          type: number
+        uitgevoerd_op:
+          type: ["string", "null"]
+
+    CapaciteitDag:
+      type: object
+      required: [datum, dag, beschikbaar_uren, verlof_uren, ziek_uren, totaal_uren]
+      properties:
+        datum:
+          type: string
+        dag:
+          type: string
+        is_feestdag:
+          type: boolean
+        feestdag_naam:
+          type: ["string", "null"]
+        beschikbaar_uren:
+          type: number
+        verlof_uren:
+          type: number
+        ziek_uren:
+          type: number
+        totaal_uren:
+          type: number
+        verlof_namen:
+          type: array
+          items:
+            type: string
+        ziek_namen:
+          type: array
+          items:
+            type: string
+
+    CapaciteitBezetting:
+      type: object
+      required: [week_start, week_eind, jaar, totaal_medewerkers, dagen]
+      properties:
+        week_start:
+          type: string
+        week_eind:
+          type: string
+        jaar:
+          type: integer
+        totaal_medewerkers:
+          type: integer
+        totaal_contract_uren_per_week:
+          type: number
+        dagen:
+          type: array
+          items:
+            $ref: "#/components/schemas/CapaciteitDag"
+
+    CapaciteitAnalyseInput:
+      type: object
+      properties:
+        periode_start:
+          type: string
+        periode_eind:
+          type: string
+
+    CapaciteitSignaal:
+      type: object
+      properties:
+        type:
+          type: string
+        prioriteit:
+          type: string
+        onderwerp:
+          type: string
+        toelichting:
+          type: string
+        aanbeveling:
+          type: string
+
+    CapaciteitAnalyseResultaat:
+      type: object
+      required: [periode_start, periode_eind, geanalyseerd_op, signalen]
+      properties:
+        periode_start:
+          type: string
+        periode_eind:
+          type: string
+        geanalyseerd_op:
+          type: string
+        signalen:
+          type: array
+          items:
+            $ref: "#/components/schemas/CapaciteitSignaal"
 
     # ── Dossiers ──────────────────────────────────────────────────────────
     Dossier:

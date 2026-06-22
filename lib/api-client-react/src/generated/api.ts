@@ -45,6 +45,9 @@ import type {
   CalculatieRegel,
   CalculatieRegelInput,
   CaoOptie,
+  CapaciteitAnalyseInput,
+  CapaciteitAnalyseResultaat,
+  CapaciteitBezetting,
   CertificaatAkkoordInput,
   ChatBericht,
   ChatBerichtInput,
@@ -96,6 +99,8 @@ import type {
   FabrikantUpdate,
   Feedback,
   FeedbackInput,
+  Feestdag,
+  FeestdagInput,
   Foto,
   FotoInput,
   Functie,
@@ -124,10 +129,12 @@ import type {
   GereedschapInput,
   GereedschapMelding,
   GereedschapMeldingInput,
+  GetCapaciteitBezettingParams,
   GetGebouwGevelbeeld200,
   GetMijnWeekUrenParams,
   GetPlanningNacalculatieParams,
   GetRecenteActiviteitParams,
+  GetVerlofOverzichtParams,
   GetVervaldagenParams,
   GetZiekmeldingenStatistiekenParams,
   HallOfFameEntry,
@@ -142,6 +149,10 @@ import type {
   InspectieDetail,
   InspectieInput,
   InspectieUpdate,
+  JaarAfsluitingInput,
+  JaarAfsluitingRegel,
+  JaarAfsluitingRegelInput,
+  JaarAfsluitingResultaat,
   KaartEmbed,
   Label,
   LabelDocumentenInput,
@@ -152,10 +163,12 @@ import type {
   ListDocumentLogboekParams,
   ListDocumentenParams,
   ListFabrikantenParams,
+  ListFeestdagenParams,
   ListGebouwenParams,
   ListGekoppeldeDocumentenParams,
   ListGereedschappenParams,
   ListInspectiesParams,
+  ListJaarAfsluitingRegelsParams,
   ListLabelsParams,
   ListModCalculatiesParams,
   ListMuisGebeurtenissenParams,
@@ -172,6 +185,7 @@ import type {
   ListTestrapportenParams,
   ListToolboxBerichtenParams,
   ListUrenParams,
+  ListVerlofInstellingenParams,
   ListVoorzieningTypesParams,
   ListVoorzieningenParams,
   ListWeekStatenParams,
@@ -294,6 +308,10 @@ import type {
   VerdiepingUpdate,
   VerlofAanvraag,
   VerlofAanvraagInput,
+  VerlofAanvraagLogRegel,
+  VerlofInstellingen,
+  VerlofInstellingenInput,
+  VerlofOverzicht,
   VerlofSaldo,
   VerlofSaldoInput,
   Verlofsoort,
@@ -19578,6 +19596,1276 @@ export const useDeleteVerlofAanvraag = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getDeleteVerlofAanvraagMutationOptions(options));
+    }
+
+export const getListVerlofAanvraagLogUrl = (id: number,) => {
+
+
+
+
+  return `/api/verlofaanvragen/${id}/log`
+}
+
+/**
+ * @summary Auditlog voor een verlofaanvraag
+ */
+export const listVerlofAanvraagLog = async (id: number, options?: RequestInit): Promise<VerlofAanvraagLogRegel[]> => {
+
+  return customFetch<VerlofAanvraagLogRegel[]>(getListVerlofAanvraagLogUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListVerlofAanvraagLogQueryKey = (id: number,) => {
+    return [
+    `/api/verlofaanvragen/${id}/log`
+    ] as const;
+    }
+
+
+export const getListVerlofAanvraagLogQueryOptions = <TData = Awaited<ReturnType<typeof listVerlofAanvraagLog>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listVerlofAanvraagLog>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListVerlofAanvraagLogQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listVerlofAanvraagLog>>> = ({ signal }) => listVerlofAanvraagLog(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listVerlofAanvraagLog>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListVerlofAanvraagLogQueryResult = NonNullable<Awaited<ReturnType<typeof listVerlofAanvraagLog>>>
+export type ListVerlofAanvraagLogQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Auditlog voor een verlofaanvraag
+ */
+
+export function useListVerlofAanvraagLog<TData = Awaited<ReturnType<typeof listVerlofAanvraagLog>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listVerlofAanvraagLog>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListVerlofAanvraagLogQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetVerlofOverzichtUrl = (params?: GetVerlofOverzichtParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/verlof/overzicht?${stringifiedParams}` : `/api/verlof/overzicht`
+}
+
+/**
+ * @summary Gecombineerd verlofoverzicht (saldi + aanvragen) voor een jaar
+ */
+export const getVerlofOverzicht = async (params?: GetVerlofOverzichtParams, options?: RequestInit): Promise<VerlofOverzicht> => {
+
+  return customFetch<VerlofOverzicht>(getGetVerlofOverzichtUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetVerlofOverzichtQueryKey = (params?: GetVerlofOverzichtParams,) => {
+    return [
+    `/api/verlof/overzicht`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetVerlofOverzichtQueryOptions = <TData = Awaited<ReturnType<typeof getVerlofOverzicht>>, TError = ErrorType<unknown>>(params?: GetVerlofOverzichtParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getVerlofOverzicht>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetVerlofOverzichtQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getVerlofOverzicht>>> = ({ signal }) => getVerlofOverzicht(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getVerlofOverzicht>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetVerlofOverzichtQueryResult = NonNullable<Awaited<ReturnType<typeof getVerlofOverzicht>>>
+export type GetVerlofOverzichtQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Gecombineerd verlofoverzicht (saldi + aanvragen) voor een jaar
+ */
+
+export function useGetVerlofOverzicht<TData = Awaited<ReturnType<typeof getVerlofOverzicht>>, TError = ErrorType<unknown>>(
+ params?: GetVerlofOverzichtParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getVerlofOverzicht>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetVerlofOverzichtQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getListFeestdagenUrl = (params?: ListFeestdagenParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/feestdagen?${stringifiedParams}` : `/api/feestdagen`
+}
+
+/**
+ * @summary Feestdagen voor een jaar (nationaal + per werkgever)
+ */
+export const listFeestdagen = async (params?: ListFeestdagenParams, options?: RequestInit): Promise<Feestdag[]> => {
+
+  return customFetch<Feestdag[]>(getListFeestdagenUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListFeestdagenQueryKey = (params?: ListFeestdagenParams,) => {
+    return [
+    `/api/feestdagen`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListFeestdagenQueryOptions = <TData = Awaited<ReturnType<typeof listFeestdagen>>, TError = ErrorType<unknown>>(params?: ListFeestdagenParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listFeestdagen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListFeestdagenQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listFeestdagen>>> = ({ signal }) => listFeestdagen(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listFeestdagen>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListFeestdagenQueryResult = NonNullable<Awaited<ReturnType<typeof listFeestdagen>>>
+export type ListFeestdagenQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Feestdagen voor een jaar (nationaal + per werkgever)
+ */
+
+export function useListFeestdagen<TData = Awaited<ReturnType<typeof listFeestdagen>>, TError = ErrorType<unknown>>(
+ params?: ListFeestdagenParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listFeestdagen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListFeestdagenQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateFeestdagUrl = () => {
+
+
+
+
+  return `/api/feestdagen`
+}
+
+/**
+ * @summary Feestdag aanmaken
+ */
+export const createFeestdag = async (feestdagInput: FeestdagInput, options?: RequestInit): Promise<Feestdag> => {
+
+  return customFetch<Feestdag>(getCreateFeestdagUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(feestdagInput)
+  }
+);}
+
+
+
+
+export const getCreateFeestdagMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createFeestdag>>, TError,{data: BodyType<FeestdagInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createFeestdag>>, TError,{data: BodyType<FeestdagInput>}, TContext> => {
+
+const mutationKey = ['createFeestdag'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createFeestdag>>, {data: BodyType<FeestdagInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createFeestdag(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateFeestdagMutationResult = NonNullable<Awaited<ReturnType<typeof createFeestdag>>>
+    export type CreateFeestdagMutationBody = BodyType<FeestdagInput>
+    export type CreateFeestdagMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Feestdag aanmaken
+ */
+export const useCreateFeestdag = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createFeestdag>>, TError,{data: BodyType<FeestdagInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createFeestdag>>,
+        TError,
+        {data: BodyType<FeestdagInput>},
+        TContext
+      > => {
+      return useMutation(getCreateFeestdagMutationOptions(options));
+    }
+
+export const getUpdateFeestdagUrl = (id: number,) => {
+
+
+
+
+  return `/api/feestdagen/${id}`
+}
+
+/**
+ * @summary Feestdag bijwerken
+ */
+export const updateFeestdag = async (id: number,
+    feestdagInput: FeestdagInput, options?: RequestInit): Promise<Feestdag> => {
+
+  return customFetch<Feestdag>(getUpdateFeestdagUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(feestdagInput)
+  }
+);}
+
+
+
+
+export const getUpdateFeestdagMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateFeestdag>>, TError,{id: number;data: BodyType<FeestdagInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateFeestdag>>, TError,{id: number;data: BodyType<FeestdagInput>}, TContext> => {
+
+const mutationKey = ['updateFeestdag'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateFeestdag>>, {id: number;data: BodyType<FeestdagInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateFeestdag(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateFeestdagMutationResult = NonNullable<Awaited<ReturnType<typeof updateFeestdag>>>
+    export type UpdateFeestdagMutationBody = BodyType<FeestdagInput>
+    export type UpdateFeestdagMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Feestdag bijwerken
+ */
+export const useUpdateFeestdag = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateFeestdag>>, TError,{id: number;data: BodyType<FeestdagInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateFeestdag>>,
+        TError,
+        {id: number;data: BodyType<FeestdagInput>},
+        TContext
+      > => {
+      return useMutation(getUpdateFeestdagMutationOptions(options));
+    }
+
+export const getDeleteFeestdagUrl = (id: number,) => {
+
+
+
+
+  return `/api/feestdagen/${id}`
+}
+
+/**
+ * @summary Feestdag verwijderen
+ */
+export const deleteFeestdag = async (id: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteFeestdagUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteFeestdagMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteFeestdag>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteFeestdag>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deleteFeestdag'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteFeestdag>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteFeestdag(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteFeestdagMutationResult = NonNullable<Awaited<ReturnType<typeof deleteFeestdag>>>
+
+    export type DeleteFeestdagMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Feestdag verwijderen
+ */
+export const useDeleteFeestdag = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteFeestdag>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteFeestdag>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeleteFeestdagMutationOptions(options));
+    }
+
+export const getListVerlofInstellingenUrl = (params?: ListVerlofInstellingenParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/verlof-instellingen?${stringifiedParams}` : `/api/verlof-instellingen`
+}
+
+/**
+ * @summary Verlof-instellingen per werkgever/jaar
+ */
+export const listVerlofInstellingen = async (params?: ListVerlofInstellingenParams, options?: RequestInit): Promise<VerlofInstellingen[]> => {
+
+  return customFetch<VerlofInstellingen[]>(getListVerlofInstellingenUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListVerlofInstellingenQueryKey = (params?: ListVerlofInstellingenParams,) => {
+    return [
+    `/api/verlof-instellingen`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListVerlofInstellingenQueryOptions = <TData = Awaited<ReturnType<typeof listVerlofInstellingen>>, TError = ErrorType<unknown>>(params?: ListVerlofInstellingenParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listVerlofInstellingen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListVerlofInstellingenQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listVerlofInstellingen>>> = ({ signal }) => listVerlofInstellingen(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listVerlofInstellingen>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListVerlofInstellingenQueryResult = NonNullable<Awaited<ReturnType<typeof listVerlofInstellingen>>>
+export type ListVerlofInstellingenQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Verlof-instellingen per werkgever/jaar
+ */
+
+export function useListVerlofInstellingen<TData = Awaited<ReturnType<typeof listVerlofInstellingen>>, TError = ErrorType<unknown>>(
+ params?: ListVerlofInstellingenParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listVerlofInstellingen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListVerlofInstellingenQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateVerlofInstellingenUrl = () => {
+
+
+
+
+  return `/api/verlof-instellingen`
+}
+
+/**
+ * @summary Verlof-instellingen aanmaken
+ */
+export const createVerlofInstellingen = async (verlofInstellingenInput: VerlofInstellingenInput, options?: RequestInit): Promise<VerlofInstellingen> => {
+
+  return customFetch<VerlofInstellingen>(getCreateVerlofInstellingenUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(verlofInstellingenInput)
+  }
+);}
+
+
+
+
+export const getCreateVerlofInstellingenMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createVerlofInstellingen>>, TError,{data: BodyType<VerlofInstellingenInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createVerlofInstellingen>>, TError,{data: BodyType<VerlofInstellingenInput>}, TContext> => {
+
+const mutationKey = ['createVerlofInstellingen'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createVerlofInstellingen>>, {data: BodyType<VerlofInstellingenInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createVerlofInstellingen(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateVerlofInstellingenMutationResult = NonNullable<Awaited<ReturnType<typeof createVerlofInstellingen>>>
+    export type CreateVerlofInstellingenMutationBody = BodyType<VerlofInstellingenInput>
+    export type CreateVerlofInstellingenMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Verlof-instellingen aanmaken
+ */
+export const useCreateVerlofInstellingen = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createVerlofInstellingen>>, TError,{data: BodyType<VerlofInstellingenInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createVerlofInstellingen>>,
+        TError,
+        {data: BodyType<VerlofInstellingenInput>},
+        TContext
+      > => {
+      return useMutation(getCreateVerlofInstellingenMutationOptions(options));
+    }
+
+export const getUpdateVerlofInstellingenUrl = (id: number,) => {
+
+
+
+
+  return `/api/verlof-instellingen/${id}`
+}
+
+/**
+ * @summary Verlof-instellingen bijwerken
+ */
+export const updateVerlofInstellingen = async (id: number,
+    verlofInstellingenInput: VerlofInstellingenInput, options?: RequestInit): Promise<VerlofInstellingen> => {
+
+  return customFetch<VerlofInstellingen>(getUpdateVerlofInstellingenUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(verlofInstellingenInput)
+  }
+);}
+
+
+
+
+export const getUpdateVerlofInstellingenMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateVerlofInstellingen>>, TError,{id: number;data: BodyType<VerlofInstellingenInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateVerlofInstellingen>>, TError,{id: number;data: BodyType<VerlofInstellingenInput>}, TContext> => {
+
+const mutationKey = ['updateVerlofInstellingen'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateVerlofInstellingen>>, {id: number;data: BodyType<VerlofInstellingenInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateVerlofInstellingen(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateVerlofInstellingenMutationResult = NonNullable<Awaited<ReturnType<typeof updateVerlofInstellingen>>>
+    export type UpdateVerlofInstellingenMutationBody = BodyType<VerlofInstellingenInput>
+    export type UpdateVerlofInstellingenMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Verlof-instellingen bijwerken
+ */
+export const useUpdateVerlofInstellingen = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateVerlofInstellingen>>, TError,{id: number;data: BodyType<VerlofInstellingenInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateVerlofInstellingen>>,
+        TError,
+        {id: number;data: BodyType<VerlofInstellingenInput>},
+        TContext
+      > => {
+      return useMutation(getUpdateVerlofInstellingenMutationOptions(options));
+    }
+
+export const getDeleteVerlofInstellingenUrl = (id: number,) => {
+
+
+
+
+  return `/api/verlof-instellingen/${id}`
+}
+
+/**
+ * @summary Verlof-instellingen verwijderen
+ */
+export const deleteVerlofInstellingen = async (id: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteVerlofInstellingenUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteVerlofInstellingenMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteVerlofInstellingen>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteVerlofInstellingen>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deleteVerlofInstellingen'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteVerlofInstellingen>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteVerlofInstellingen(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteVerlofInstellingenMutationResult = NonNullable<Awaited<ReturnType<typeof deleteVerlofInstellingen>>>
+
+    export type DeleteVerlofInstellingenMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Verlof-instellingen verwijderen
+ */
+export const useDeleteVerlofInstellingen = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteVerlofInstellingen>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteVerlofInstellingen>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeleteVerlofInstellingenMutationOptions(options));
+    }
+
+export const getListJaarAfsluitingRegelsUrl = (params?: ListJaarAfsluitingRegelsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/jaarafsluiting-regels?${stringifiedParams}` : `/api/jaarafsluiting-regels`
+}
+
+/**
+ * @summary Jaarafsluiting-regels ophalen
+ */
+export const listJaarAfsluitingRegels = async (params?: ListJaarAfsluitingRegelsParams, options?: RequestInit): Promise<JaarAfsluitingRegel[]> => {
+
+  return customFetch<JaarAfsluitingRegel[]>(getListJaarAfsluitingRegelsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListJaarAfsluitingRegelsQueryKey = (params?: ListJaarAfsluitingRegelsParams,) => {
+    return [
+    `/api/jaarafsluiting-regels`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListJaarAfsluitingRegelsQueryOptions = <TData = Awaited<ReturnType<typeof listJaarAfsluitingRegels>>, TError = ErrorType<unknown>>(params?: ListJaarAfsluitingRegelsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listJaarAfsluitingRegels>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListJaarAfsluitingRegelsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listJaarAfsluitingRegels>>> = ({ signal }) => listJaarAfsluitingRegels(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listJaarAfsluitingRegels>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListJaarAfsluitingRegelsQueryResult = NonNullable<Awaited<ReturnType<typeof listJaarAfsluitingRegels>>>
+export type ListJaarAfsluitingRegelsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Jaarafsluiting-regels ophalen
+ */
+
+export function useListJaarAfsluitingRegels<TData = Awaited<ReturnType<typeof listJaarAfsluitingRegels>>, TError = ErrorType<unknown>>(
+ params?: ListJaarAfsluitingRegelsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listJaarAfsluitingRegels>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListJaarAfsluitingRegelsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateJaarAfsluitingRegelUrl = () => {
+
+
+
+
+  return `/api/jaarafsluiting-regels`
+}
+
+/**
+ * @summary Jaarafsluiting-regel aanmaken
+ */
+export const createJaarAfsluitingRegel = async (jaarAfsluitingRegelInput: JaarAfsluitingRegelInput, options?: RequestInit): Promise<JaarAfsluitingRegel> => {
+
+  return customFetch<JaarAfsluitingRegel>(getCreateJaarAfsluitingRegelUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(jaarAfsluitingRegelInput)
+  }
+);}
+
+
+
+
+export const getCreateJaarAfsluitingRegelMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createJaarAfsluitingRegel>>, TError,{data: BodyType<JaarAfsluitingRegelInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createJaarAfsluitingRegel>>, TError,{data: BodyType<JaarAfsluitingRegelInput>}, TContext> => {
+
+const mutationKey = ['createJaarAfsluitingRegel'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createJaarAfsluitingRegel>>, {data: BodyType<JaarAfsluitingRegelInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createJaarAfsluitingRegel(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateJaarAfsluitingRegelMutationResult = NonNullable<Awaited<ReturnType<typeof createJaarAfsluitingRegel>>>
+    export type CreateJaarAfsluitingRegelMutationBody = BodyType<JaarAfsluitingRegelInput>
+    export type CreateJaarAfsluitingRegelMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Jaarafsluiting-regel aanmaken
+ */
+export const useCreateJaarAfsluitingRegel = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createJaarAfsluitingRegel>>, TError,{data: BodyType<JaarAfsluitingRegelInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createJaarAfsluitingRegel>>,
+        TError,
+        {data: BodyType<JaarAfsluitingRegelInput>},
+        TContext
+      > => {
+      return useMutation(getCreateJaarAfsluitingRegelMutationOptions(options));
+    }
+
+export const getUpdateJaarAfsluitingRegelUrl = (id: number,) => {
+
+
+
+
+  return `/api/jaarafsluiting-regels/${id}`
+}
+
+/**
+ * @summary Jaarafsluiting-regel bijwerken
+ */
+export const updateJaarAfsluitingRegel = async (id: number,
+    jaarAfsluitingRegelInput: JaarAfsluitingRegelInput, options?: RequestInit): Promise<JaarAfsluitingRegel> => {
+
+  return customFetch<JaarAfsluitingRegel>(getUpdateJaarAfsluitingRegelUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(jaarAfsluitingRegelInput)
+  }
+);}
+
+
+
+
+export const getUpdateJaarAfsluitingRegelMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateJaarAfsluitingRegel>>, TError,{id: number;data: BodyType<JaarAfsluitingRegelInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateJaarAfsluitingRegel>>, TError,{id: number;data: BodyType<JaarAfsluitingRegelInput>}, TContext> => {
+
+const mutationKey = ['updateJaarAfsluitingRegel'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateJaarAfsluitingRegel>>, {id: number;data: BodyType<JaarAfsluitingRegelInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateJaarAfsluitingRegel(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateJaarAfsluitingRegelMutationResult = NonNullable<Awaited<ReturnType<typeof updateJaarAfsluitingRegel>>>
+    export type UpdateJaarAfsluitingRegelMutationBody = BodyType<JaarAfsluitingRegelInput>
+    export type UpdateJaarAfsluitingRegelMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Jaarafsluiting-regel bijwerken
+ */
+export const useUpdateJaarAfsluitingRegel = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateJaarAfsluitingRegel>>, TError,{id: number;data: BodyType<JaarAfsluitingRegelInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateJaarAfsluitingRegel>>,
+        TError,
+        {id: number;data: BodyType<JaarAfsluitingRegelInput>},
+        TContext
+      > => {
+      return useMutation(getUpdateJaarAfsluitingRegelMutationOptions(options));
+    }
+
+export const getDeleteJaarAfsluitingRegelUrl = (id: number,) => {
+
+
+
+
+  return `/api/jaarafsluiting-regels/${id}`
+}
+
+/**
+ * @summary Jaarafsluiting-regel verwijderen
+ */
+export const deleteJaarAfsluitingRegel = async (id: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteJaarAfsluitingRegelUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteJaarAfsluitingRegelMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteJaarAfsluitingRegel>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteJaarAfsluitingRegel>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deleteJaarAfsluitingRegel'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteJaarAfsluitingRegel>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteJaarAfsluitingRegel(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteJaarAfsluitingRegelMutationResult = NonNullable<Awaited<ReturnType<typeof deleteJaarAfsluitingRegel>>>
+
+    export type DeleteJaarAfsluitingRegelMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Jaarafsluiting-regel verwijderen
+ */
+export const useDeleteJaarAfsluitingRegel = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteJaarAfsluitingRegel>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteJaarAfsluitingRegel>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeleteJaarAfsluitingRegelMutationOptions(options));
+    }
+
+export const getVoerJaarAfsluitingUitUrl = () => {
+
+
+
+
+  return `/api/hrm/jaarafsluiting`
+}
+
+/**
+ * @summary Jaarafsluiting uitvoeren of drooglooppreview
+ */
+export const voerJaarAfsluitingUit = async (jaarAfsluitingInput: JaarAfsluitingInput, options?: RequestInit): Promise<JaarAfsluitingResultaat> => {
+
+  return customFetch<JaarAfsluitingResultaat>(getVoerJaarAfsluitingUitUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(jaarAfsluitingInput)
+  }
+);}
+
+
+
+
+export const getVoerJaarAfsluitingUitMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof voerJaarAfsluitingUit>>, TError,{data: BodyType<JaarAfsluitingInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof voerJaarAfsluitingUit>>, TError,{data: BodyType<JaarAfsluitingInput>}, TContext> => {
+
+const mutationKey = ['voerJaarAfsluitingUit'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof voerJaarAfsluitingUit>>, {data: BodyType<JaarAfsluitingInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  voerJaarAfsluitingUit(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type VoerJaarAfsluitingUitMutationResult = NonNullable<Awaited<ReturnType<typeof voerJaarAfsluitingUit>>>
+    export type VoerJaarAfsluitingUitMutationBody = BodyType<JaarAfsluitingInput>
+    export type VoerJaarAfsluitingUitMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Jaarafsluiting uitvoeren of drooglooppreview
+ */
+export const useVoerJaarAfsluitingUit = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof voerJaarAfsluitingUit>>, TError,{data: BodyType<JaarAfsluitingInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof voerJaarAfsluitingUit>>,
+        TError,
+        {data: BodyType<JaarAfsluitingInput>},
+        TContext
+      > => {
+      return useMutation(getVoerJaarAfsluitingUitMutationOptions(options));
+    }
+
+export const getGetCapaciteitBezettingUrl = (params?: GetCapaciteitBezettingParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/capaciteit/bezetting?${stringifiedParams}` : `/api/capaciteit/bezetting`
+}
+
+/**
+ * @summary Bezettingsgraad per dag voor een week
+ */
+export const getCapaciteitBezetting = async (params?: GetCapaciteitBezettingParams, options?: RequestInit): Promise<CapaciteitBezetting> => {
+
+  return customFetch<CapaciteitBezetting>(getGetCapaciteitBezettingUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetCapaciteitBezettingQueryKey = (params?: GetCapaciteitBezettingParams,) => {
+    return [
+    `/api/capaciteit/bezetting`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetCapaciteitBezettingQueryOptions = <TData = Awaited<ReturnType<typeof getCapaciteitBezetting>>, TError = ErrorType<unknown>>(params?: GetCapaciteitBezettingParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getCapaciteitBezetting>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetCapaciteitBezettingQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getCapaciteitBezetting>>> = ({ signal }) => getCapaciteitBezetting(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getCapaciteitBezetting>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetCapaciteitBezettingQueryResult = NonNullable<Awaited<ReturnType<typeof getCapaciteitBezetting>>>
+export type GetCapaciteitBezettingQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Bezettingsgraad per dag voor een week
+ */
+
+export function useGetCapaciteitBezetting<TData = Awaited<ReturnType<typeof getCapaciteitBezetting>>, TError = ErrorType<unknown>>(
+ params?: GetCapaciteitBezettingParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getCapaciteitBezetting>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetCapaciteitBezettingQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getAnalyseerCapaciteitUrl = () => {
+
+
+
+
+  return `/api/hrm/capaciteit-analyse`
+}
+
+/**
+ * @summary AI-analyse van verlof en capaciteit voor een periode
+ */
+export const analyseerCapaciteit = async (capaciteitAnalyseInput: CapaciteitAnalyseInput, options?: RequestInit): Promise<CapaciteitAnalyseResultaat> => {
+
+  return customFetch<CapaciteitAnalyseResultaat>(getAnalyseerCapaciteitUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(capaciteitAnalyseInput)
+  }
+);}
+
+
+
+
+export const getAnalyseerCapaciteitMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof analyseerCapaciteit>>, TError,{data: BodyType<CapaciteitAnalyseInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof analyseerCapaciteit>>, TError,{data: BodyType<CapaciteitAnalyseInput>}, TContext> => {
+
+const mutationKey = ['analyseerCapaciteit'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof analyseerCapaciteit>>, {data: BodyType<CapaciteitAnalyseInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  analyseerCapaciteit(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AnalyseerCapaciteitMutationResult = NonNullable<Awaited<ReturnType<typeof analyseerCapaciteit>>>
+    export type AnalyseerCapaciteitMutationBody = BodyType<CapaciteitAnalyseInput>
+    export type AnalyseerCapaciteitMutationError = ErrorType<unknown>
+
+    /**
+ * @summary AI-analyse van verlof en capaciteit voor een periode
+ */
+export const useAnalyseerCapaciteit = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof analyseerCapaciteit>>, TError,{data: BodyType<CapaciteitAnalyseInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof analyseerCapaciteit>>,
+        TError,
+        {data: BodyType<CapaciteitAnalyseInput>},
+        TContext
+      > => {
+      return useMutation(getAnalyseerCapaciteitMutationOptions(options));
     }
 
 export const getListZiekmeldingenUrl = (params?: ListZiekmeldingenParams,) => {

@@ -13,7 +13,7 @@ import {
   FolderOpen, FileText, ListChecks, Files, LayoutTemplate, Mail,
   Calculator, CalendarDays, LayoutDashboard, BarChart3, CreditCard, MessageSquare, HardHat,
   Trophy, HardDrive, ClipboardList, Smartphone, Plus, Hammer, PackageCheck,
-  BookOpen, HardDriveUpload,
+  BookOpen, HardDriveUpload, CalendarCheck2, Settings2, ArchiveRestore,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { GebruikerMenu } from "@/components/gebruiker-menu";
@@ -364,12 +364,64 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
                         <SidebarMenuItem>
                           <SidebarMenuButton
                             asChild
-                            isActive={location === "/personeel" || location.startsWith("/personeel/")}
+                            isActive={location === "/personeel" || (location.startsWith("/personeel/") && !location.startsWith("/personeel/verlof") && !location.startsWith("/personeel/capaciteitsplanning") && !location.startsWith("/personeel/jaarafsluiting"))}
                           >
                             <Link href="/personeel">
                               <Users />
                               <span>{t("nav.personeel")}</span>
                               <InUitvoering />
+                            </Link>
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                      )}
+                      {toonPersoneel && (
+                        <SidebarMenuItem>
+                          <SidebarMenuButton
+                            asChild
+                            isActive={location.startsWith("/personeel/verlof")}
+                          >
+                            <Link href="/personeel/verlof">
+                              <CalendarCheck2 />
+                              <span>Verlofoverzicht</span>
+                            </Link>
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                      )}
+                      {toonPersoneel && (
+                        <SidebarMenuItem>
+                          <SidebarMenuButton
+                            asChild
+                            isActive={location === "/personeel/capaciteitsplanning"}
+                          >
+                            <Link href="/personeel/capaciteitsplanning">
+                              <BarChart3 />
+                              <span>Capaciteitsplanning</span>
+                            </Link>
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                      )}
+                      {isHoofdbeheerder && (
+                        <SidebarMenuItem>
+                          <SidebarMenuButton
+                            asChild
+                            isActive={location === "/personeel/verlof-instellingen"}
+                          >
+                            <Link href="/personeel/verlof-instellingen">
+                              <Settings2 />
+                              <span>Verlof-instellingen</span>
+                            </Link>
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                      )}
+                      {isHoofdbeheerder && (
+                        <SidebarMenuItem>
+                          <SidebarMenuButton
+                            asChild
+                            isActive={location === "/personeel/jaarafsluiting"}
+                          >
+                            <Link href="/personeel/jaarafsluiting">
+                              <ArchiveRestore />
+                              <span>Jaarafsluiting verlof</span>
                             </Link>
                           </SidebarMenuButton>
                         </SidebarMenuItem>

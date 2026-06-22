@@ -56,6 +56,10 @@ import OpnameDetailPagina from "@/pages/opname/detail";
 import InfoPagina from "@/pages/info/index";
 import PersoneelPagina from "@/pages/personeel/index";
 import MedewerkerDetailPagina from "@/pages/personeel/detail";
+import VerlofOverzichtPagina from "@/pages/personeel/verlof-overzicht";
+import VerlofInstellingenPagina from "@/pages/personeel/verlof-instellingen";
+import JaarAfsluitingPagina from "@/pages/personeel/jaarafsluiting";
+import CapaciteitsplanningPagina from "@/pages/personeel/capaciteitsplanning";
 import GereedschappenPagina from "@/pages/gereedschappen/index";
 import GereedschapDetailPagina from "@/pages/gereedschappen/detail";
 import HallOfFamePagina from "@/pages/hall-of-fame";
@@ -205,6 +209,10 @@ function ConnectPortal() {
         {/* ── HRM ── */}
         <Route path="/personeel" component={PersoneelPagina} />
         <Route path="/personeel/:id" component={MedewerkerDetailPagina} />
+        <Route path="/personeel/verlof" component={VerlofOverzichtPagina} />
+        <Route path="/personeel/verlof-instellingen" component={VerlofInstellingenPagina} />
+        <Route path="/personeel/jaarafsluiting" component={JaarAfsluitingPagina} />
+        <Route path="/personeel/capaciteitsplanning" component={CapaciteitsplanningPagina} />
         <Route path="/gereedschappen" component={GereedschappenPagina} />
         <Route path="/gereedschappen/:id" component={GereedschapDetailPagina} />
         <Route path="/uren" component={UrenPagina} />

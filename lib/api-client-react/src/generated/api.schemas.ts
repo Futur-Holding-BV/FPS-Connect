@@ -3069,6 +3069,214 @@ export interface CaoOptie {
   toelichting?: string | null;
 }
 
+export interface VerlofAanvraagLogRegel {
+  id: number;
+  verlofaanvraag_id: number;
+  medewerker_id: number;
+  /** @nullable */
+  uitgevoerd_door_id?: number | null;
+  /** @nullable */
+  uitgevoerd_door_naam?: string | null;
+  actie: string;
+  /** @nullable */
+  oud_status?: string | null;
+  /** @nullable */
+  nieuw_status?: string | null;
+  /** @nullable */
+  opmerking?: string | null;
+  aangemaakt_op: string;
+}
+
+export type VerlofOverzichtSaldiItem = {
+  id: number;
+  medewerker_id: number;
+  /** @nullable */
+  medewerker_naam?: string | null;
+  medewerker_actief?: boolean;
+  verlofsoort_id: number;
+  /** @nullable */
+  verlofsoort_naam?: string | null;
+  /** @nullable */
+  verlofsoort_categorie?: string | null;
+  jaar: number;
+  beginsaldo_uren?: number;
+  opgebouwd_uren?: number;
+  opgenomen_uren?: number;
+  saldo_uren: number;
+  /** @nullable */
+  vervalt_op?: string | null;
+};
+
+export interface VerlofOverzicht {
+  jaar: number;
+  saldi: VerlofOverzichtSaldiItem[];
+  aanvragen: VerlofAanvraag[];
+}
+
+export interface Feestdag {
+  id: number;
+  /** @nullable */
+  werkgever_id?: number | null;
+  jaar: number;
+  datum: string;
+  naam: string;
+  aangemaakt_op: string;
+  bijgewerkt_op: string;
+}
+
+export interface FeestdagInput {
+  /** @nullable */
+  werkgever_id?: number | null;
+  jaar: number;
+  datum: string;
+  naam: string;
+}
+
+export interface VerlofInstellingen {
+  id: number;
+  /** @nullable */
+  werkgever_id?: number | null;
+  jaar: number;
+  /** @nullable */
+  max_aaneengesloten?: number | null;
+  /** @nullable */
+  aanvraag_termijn_dagen?: number | null;
+  goedkeuring_automatisch: boolean;
+  /** @nullable */
+  auto_goedkeuring_drempel_uren?: number | null;
+  /** @nullable */
+  notificatie_email?: string | null;
+  /** @nullable */
+  opmerking?: string | null;
+  aangemaakt_op: string;
+  bijgewerkt_op: string;
+}
+
+export interface VerlofInstellingenInput {
+  /** @nullable */
+  werkgever_id?: number | null;
+  jaar: number;
+  /** @nullable */
+  max_aaneengesloten?: number | null;
+  /** @nullable */
+  aanvraag_termijn_dagen?: number | null;
+  goedkeuring_automatisch?: boolean;
+  /** @nullable */
+  auto_goedkeuring_drempel_uren?: number | null;
+  /** @nullable */
+  notificatie_email?: string | null;
+  /** @nullable */
+  opmerking?: string | null;
+}
+
+export interface JaarAfsluitingRegel {
+  id: number;
+  /** @nullable */
+  werkgever_id?: number | null;
+  jaar: number;
+  /** @nullable */
+  verlofsoort_id?: number | null;
+  /** @nullable */
+  max_overdracht_uren?: number | null;
+  /** @nullable */
+  overdracht_verval_datum?: string | null;
+  /** @nullable */
+  uitgevoerd_op?: string | null;
+  /** @nullable */
+  uitgevoerd_door_id?: number | null;
+  /** @nullable */
+  opmerking?: string | null;
+  aangemaakt_op: string;
+  bijgewerkt_op: string;
+}
+
+export interface JaarAfsluitingRegelInput {
+  /** @nullable */
+  werkgever_id?: number | null;
+  jaar: number;
+  /** @nullable */
+  verlofsoort_id?: number | null;
+  /** @nullable */
+  max_overdracht_uren?: number | null;
+  /** @nullable */
+  overdracht_verval_datum?: string | null;
+  /** @nullable */
+  opmerking?: string | null;
+}
+
+export interface JaarAfsluitingInput {
+  jaar: number;
+  /** true = preview zonder schrijven */
+  droogloop?: boolean;
+}
+
+export type JaarAfsluitingResultaatOverdrachtenItem = {
+  medewerker_id?: number;
+  /** @nullable */
+  medewerker_naam?: string | null;
+  verlofsoort_id?: number;
+  /** @nullable */
+  verlofsoort_naam?: string | null;
+  saldo_uren?: number;
+  over_te_dragen_uren?: number;
+  /** @nullable */
+  verval_datum?: string | null;
+};
+
+export interface JaarAfsluitingResultaat {
+  jaar: number;
+  volgend_jaar: number;
+  droogloop: boolean;
+  overdrachten: JaarAfsluitingResultaatOverdrachtenItem[];
+  totaal_medewerkers: number;
+  totaal_uren: number;
+  /** @nullable */
+  uitgevoerd_op?: string | null;
+}
+
+export interface CapaciteitDag {
+  datum: string;
+  dag: string;
+  is_feestdag?: boolean;
+  /** @nullable */
+  feestdag_naam?: string | null;
+  beschikbaar_uren: number;
+  verlof_uren: number;
+  ziek_uren: number;
+  totaal_uren: number;
+  verlof_namen?: string[];
+  ziek_namen?: string[];
+}
+
+export interface CapaciteitBezetting {
+  week_start: string;
+  week_eind: string;
+  jaar: number;
+  totaal_medewerkers: number;
+  totaal_contract_uren_per_week?: number;
+  dagen: CapaciteitDag[];
+}
+
+export interface CapaciteitAnalyseInput {
+  periode_start?: string;
+  periode_eind?: string;
+}
+
+export interface CapaciteitSignaal {
+  type?: string;
+  prioriteit?: string;
+  onderwerp?: string;
+  toelichting?: string;
+  aanbeveling?: string;
+}
+
+export interface CapaciteitAnalyseResultaat {
+  periode_start: string;
+  periode_eind: string;
+  geanalyseerd_op: string;
+  signalen: CapaciteitSignaal[];
+}
+
 export interface Dossier {
   id: number;
   type: string;
@@ -4568,6 +4776,32 @@ export type UitnodigingActiveren200 = {
 
 export type ListAlleVerlofAanvragenParams = {
 status?: string;
+};
+
+export type GetVerlofOverzichtParams = {
+jaar?: number;
+medewerker_id?: number;
+};
+
+export type ListFeestdagenParams = {
+jaar?: number;
+werkgever_id?: number;
+};
+
+export type ListVerlofInstellingenParams = {
+jaar?: number;
+};
+
+export type ListJaarAfsluitingRegelsParams = {
+jaar?: number;
+};
+
+export type GetCapaciteitBezettingParams = {
+/**
+ * ISO datum van een dag in de gewenste week (standaard huidige week)
+ */
+datum?: string;
+jaar?: number;
 };
 
 export type ListZiekmeldingenParams = {

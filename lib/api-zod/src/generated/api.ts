@@ -6854,6 +6854,381 @@ export const DeleteVerlofAanvraagResponse = zod.void()
 
 
 /**
+ * @summary Auditlog voor een verlofaanvraag
+ */
+export const ListVerlofAanvraagLogParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ListVerlofAanvraagLogResponseItem = zod.object({
+  "id": zod.number(),
+  "verlofaanvraag_id": zod.number(),
+  "medewerker_id": zod.number(),
+  "uitgevoerd_door_id": zod.number().nullish(),
+  "uitgevoerd_door_naam": zod.string().nullish(),
+  "actie": zod.string(),
+  "oud_status": zod.string().nullish(),
+  "nieuw_status": zod.string().nullish(),
+  "opmerking": zod.string().nullish(),
+  "aangemaakt_op": zod.string()
+})
+export const ListVerlofAanvraagLogResponse = zod.array(ListVerlofAanvraagLogResponseItem)
+
+
+/**
+ * @summary Gecombineerd verlofoverzicht (saldi + aanvragen) voor een jaar
+ */
+export const GetVerlofOverzichtQueryParams = zod.object({
+  "jaar": zod.coerce.number().optional(),
+  "medewerker_id": zod.coerce.number().optional()
+})
+
+export const GetVerlofOverzichtResponse = zod.object({
+  "jaar": zod.number(),
+  "saldi": zod.array(zod.object({
+  "id": zod.number(),
+  "medewerker_id": zod.number(),
+  "medewerker_naam": zod.string().nullish(),
+  "medewerker_actief": zod.boolean().optional(),
+  "verlofsoort_id": zod.number(),
+  "verlofsoort_naam": zod.string().nullish(),
+  "verlofsoort_categorie": zod.string().nullish(),
+  "jaar": zod.number(),
+  "beginsaldo_uren": zod.number().optional(),
+  "opgebouwd_uren": zod.number().optional(),
+  "opgenomen_uren": zod.number().optional(),
+  "saldo_uren": zod.number(),
+  "vervalt_op": zod.string().nullish()
+})),
+  "aanvragen": zod.array(zod.object({
+  "id": zod.number(),
+  "medewerker_id": zod.number(),
+  "medewerker_naam": zod.string().nullish(),
+  "verlofsoort_id": zod.number(),
+  "verlofsoort_naam": zod.string().nullish(),
+  "start_datum": zod.string(),
+  "eind_datum": zod.string(),
+  "aantal_uren": zod.number().optional(),
+  "status": zod.string(),
+  "reden": zod.string().nullish(),
+  "opmerking": zod.string().nullish(),
+  "beoordeeld_door_id": zod.number().nullish(),
+  "beoordeeld_op": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+}))
+})
+
+
+/**
+ * @summary Feestdagen voor een jaar (nationaal + per werkgever)
+ */
+export const ListFeestdagenQueryParams = zod.object({
+  "jaar": zod.coerce.number().optional(),
+  "werkgever_id": zod.coerce.number().optional()
+})
+
+export const ListFeestdagenResponseItem = zod.object({
+  "id": zod.number(),
+  "werkgever_id": zod.number().nullish(),
+  "jaar": zod.number(),
+  "datum": zod.string(),
+  "naam": zod.string(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+export const ListFeestdagenResponse = zod.array(ListFeestdagenResponseItem)
+
+
+/**
+ * @summary Feestdag aanmaken
+ */
+export const CreateFeestdagBody = zod.object({
+  "werkgever_id": zod.number().nullish(),
+  "jaar": zod.number(),
+  "datum": zod.string(),
+  "naam": zod.string()
+})
+
+export const CreateFeestdagResponse = zod.void()
+
+
+/**
+ * @summary Feestdag bijwerken
+ */
+export const UpdateFeestdagParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateFeestdagBody = zod.object({
+  "werkgever_id": zod.number().nullish(),
+  "jaar": zod.number(),
+  "datum": zod.string(),
+  "naam": zod.string()
+})
+
+export const UpdateFeestdagResponse = zod.object({
+  "id": zod.number(),
+  "werkgever_id": zod.number().nullish(),
+  "jaar": zod.number(),
+  "datum": zod.string(),
+  "naam": zod.string(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+
+
+/**
+ * @summary Feestdag verwijderen
+ */
+export const DeleteFeestdagParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteFeestdagResponse = zod.void()
+
+
+/**
+ * @summary Verlof-instellingen per werkgever/jaar
+ */
+export const ListVerlofInstellingenQueryParams = zod.object({
+  "jaar": zod.coerce.number().optional()
+})
+
+export const ListVerlofInstellingenResponseItem = zod.object({
+  "id": zod.number(),
+  "werkgever_id": zod.number().nullish(),
+  "jaar": zod.number(),
+  "max_aaneengesloten": zod.number().nullish(),
+  "aanvraag_termijn_dagen": zod.number().nullish(),
+  "goedkeuring_automatisch": zod.boolean(),
+  "auto_goedkeuring_drempel_uren": zod.number().nullish(),
+  "notificatie_email": zod.string().nullish(),
+  "opmerking": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+export const ListVerlofInstellingenResponse = zod.array(ListVerlofInstellingenResponseItem)
+
+
+/**
+ * @summary Verlof-instellingen aanmaken
+ */
+export const CreateVerlofInstellingenBody = zod.object({
+  "werkgever_id": zod.number().nullish(),
+  "jaar": zod.number(),
+  "max_aaneengesloten": zod.number().nullish(),
+  "aanvraag_termijn_dagen": zod.number().nullish(),
+  "goedkeuring_automatisch": zod.boolean().optional(),
+  "auto_goedkeuring_drempel_uren": zod.number().nullish(),
+  "notificatie_email": zod.string().nullish(),
+  "opmerking": zod.string().nullish()
+})
+
+export const CreateVerlofInstellingenResponse = zod.void()
+
+
+/**
+ * @summary Verlof-instellingen bijwerken
+ */
+export const UpdateVerlofInstellingenParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateVerlofInstellingenBody = zod.object({
+  "werkgever_id": zod.number().nullish(),
+  "jaar": zod.number(),
+  "max_aaneengesloten": zod.number().nullish(),
+  "aanvraag_termijn_dagen": zod.number().nullish(),
+  "goedkeuring_automatisch": zod.boolean().optional(),
+  "auto_goedkeuring_drempel_uren": zod.number().nullish(),
+  "notificatie_email": zod.string().nullish(),
+  "opmerking": zod.string().nullish()
+})
+
+export const UpdateVerlofInstellingenResponse = zod.object({
+  "id": zod.number(),
+  "werkgever_id": zod.number().nullish(),
+  "jaar": zod.number(),
+  "max_aaneengesloten": zod.number().nullish(),
+  "aanvraag_termijn_dagen": zod.number().nullish(),
+  "goedkeuring_automatisch": zod.boolean(),
+  "auto_goedkeuring_drempel_uren": zod.number().nullish(),
+  "notificatie_email": zod.string().nullish(),
+  "opmerking": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+
+
+/**
+ * @summary Verlof-instellingen verwijderen
+ */
+export const DeleteVerlofInstellingenParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteVerlofInstellingenResponse = zod.void()
+
+
+/**
+ * @summary Jaarafsluiting-regels ophalen
+ */
+export const ListJaarAfsluitingRegelsQueryParams = zod.object({
+  "jaar": zod.coerce.number().optional()
+})
+
+export const ListJaarAfsluitingRegelsResponseItem = zod.object({
+  "id": zod.number(),
+  "werkgever_id": zod.number().nullish(),
+  "jaar": zod.number(),
+  "verlofsoort_id": zod.number().nullish(),
+  "max_overdracht_uren": zod.number().nullish(),
+  "overdracht_verval_datum": zod.string().nullish(),
+  "uitgevoerd_op": zod.string().nullish(),
+  "uitgevoerd_door_id": zod.number().nullish(),
+  "opmerking": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+export const ListJaarAfsluitingRegelsResponse = zod.array(ListJaarAfsluitingRegelsResponseItem)
+
+
+/**
+ * @summary Jaarafsluiting-regel aanmaken
+ */
+export const CreateJaarAfsluitingRegelBody = zod.object({
+  "werkgever_id": zod.number().nullish(),
+  "jaar": zod.number(),
+  "verlofsoort_id": zod.number().nullish(),
+  "max_overdracht_uren": zod.number().nullish(),
+  "overdracht_verval_datum": zod.string().nullish(),
+  "opmerking": zod.string().nullish()
+})
+
+export const CreateJaarAfsluitingRegelResponse = zod.void()
+
+
+/**
+ * @summary Jaarafsluiting-regel bijwerken
+ */
+export const UpdateJaarAfsluitingRegelParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateJaarAfsluitingRegelBody = zod.object({
+  "werkgever_id": zod.number().nullish(),
+  "jaar": zod.number(),
+  "verlofsoort_id": zod.number().nullish(),
+  "max_overdracht_uren": zod.number().nullish(),
+  "overdracht_verval_datum": zod.string().nullish(),
+  "opmerking": zod.string().nullish()
+})
+
+export const UpdateJaarAfsluitingRegelResponse = zod.object({
+  "id": zod.number(),
+  "werkgever_id": zod.number().nullish(),
+  "jaar": zod.number(),
+  "verlofsoort_id": zod.number().nullish(),
+  "max_overdracht_uren": zod.number().nullish(),
+  "overdracht_verval_datum": zod.string().nullish(),
+  "uitgevoerd_op": zod.string().nullish(),
+  "uitgevoerd_door_id": zod.number().nullish(),
+  "opmerking": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+
+
+/**
+ * @summary Jaarafsluiting-regel verwijderen
+ */
+export const DeleteJaarAfsluitingRegelParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteJaarAfsluitingRegelResponse = zod.void()
+
+
+/**
+ * @summary Jaarafsluiting uitvoeren of drooglooppreview
+ */
+export const VoerJaarAfsluitingUitBody = zod.object({
+  "jaar": zod.number(),
+  "droogloop": zod.boolean().optional().describe('true = preview zonder schrijven')
+})
+
+export const VoerJaarAfsluitingUitResponse = zod.object({
+  "jaar": zod.number(),
+  "volgend_jaar": zod.number(),
+  "droogloop": zod.boolean(),
+  "overdrachten": zod.array(zod.object({
+  "medewerker_id": zod.number().optional(),
+  "medewerker_naam": zod.string().nullish(),
+  "verlofsoort_id": zod.number().optional(),
+  "verlofsoort_naam": zod.string().nullish(),
+  "saldo_uren": zod.number().optional(),
+  "over_te_dragen_uren": zod.number().optional(),
+  "verval_datum": zod.string().nullish()
+})),
+  "totaal_medewerkers": zod.number(),
+  "totaal_uren": zod.number(),
+  "uitgevoerd_op": zod.string().nullish()
+})
+
+
+/**
+ * @summary Bezettingsgraad per dag voor een week
+ */
+export const GetCapaciteitBezettingQueryParams = zod.object({
+  "datum": zod.coerce.string().optional().describe('ISO datum van een dag in de gewenste week (standaard huidige week)'),
+  "jaar": zod.coerce.number().optional()
+})
+
+export const GetCapaciteitBezettingResponse = zod.object({
+  "week_start": zod.string(),
+  "week_eind": zod.string(),
+  "jaar": zod.number(),
+  "totaal_medewerkers": zod.number(),
+  "totaal_contract_uren_per_week": zod.number().optional(),
+  "dagen": zod.array(zod.object({
+  "datum": zod.string(),
+  "dag": zod.string(),
+  "is_feestdag": zod.boolean().optional(),
+  "feestdag_naam": zod.string().nullish(),
+  "beschikbaar_uren": zod.number(),
+  "verlof_uren": zod.number(),
+  "ziek_uren": zod.number(),
+  "totaal_uren": zod.number(),
+  "verlof_namen": zod.array(zod.string()).optional(),
+  "ziek_namen": zod.array(zod.string()).optional()
+}))
+})
+
+
+/**
+ * @summary AI-analyse van verlof en capaciteit voor een periode
+ */
+export const AnalyseerCapaciteitBody = zod.object({
+  "periode_start": zod.string().optional(),
+  "periode_eind": zod.string().optional()
+})
+
+export const AnalyseerCapaciteitResponse = zod.object({
+  "periode_start": zod.string(),
+  "periode_eind": zod.string(),
+  "geanalyseerd_op": zod.string(),
+  "signalen": zod.array(zod.object({
+  "type": zod.string().optional(),
+  "prioriteit": zod.string().optional(),
+  "onderwerp": zod.string().optional(),
+  "toelichting": zod.string().optional(),
+  "aanbeveling": zod.string().optional()
+}))
+})
+
+
+/**
  * @summary Alle ziekmeldingen (HRM/beheerder)
  */
 export const ListZiekmeldingenQueryParams = zod.object({

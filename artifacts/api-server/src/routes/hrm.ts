@@ -20,12 +20,17 @@ import {
   verlofsoortenTable,
   verlofSaldiTable,
   verlofAanvragenTable,
+  verlofAanvraagLogTable,
+  verlofInstellingenTable,
+  feestdagenTable,
+  jaarAfsluitingRegelsTable,
   ziekmeldingenTable,
   gebruikersTable,
 } from "@workspace/db";
-import { eq, desc, and, ne, inArray, or, isNull, gte, lte } from "drizzle-orm";
+import { eq, desc, and, ne, inArray, or, isNull, gte, lte, sql } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
 import { stelOpleidingenVoor } from "../services/opleiding-ai";
+import { maakOpenAiClient } from "../lib/openai";
 
 const router = Router();
 
@@ -1379,6 +1384,37 @@ const jaarVanDatum = (d: string) => {
   return Number.isFinite(y) ? y : new Date().getFullYear();
 };
 
+// Schrijft een auditlogregel voor een verlofaanvraag. Fouten worden geslikt
+// zodat de hoofdactie nooit blokkeert door een logfout.
+async function logVerlofMutatie(
+  uitvoerder: Parameters<Parameters<typeof db.transaction>[0]>[0] | typeof db,
+  verlofaanvraagId: number,
+  medewerkerId: number,
+  actie: string,
+  params: {
+    oudStatus?: string | null;
+    nieuwStatus?: string | null;
+    opmerking?: string | null;
+    uitgevoerdDoorId?: number | null;
+  } = {},
+) {
+  try {
+    await (uitvoerder as typeof db)
+      .insert(verlofAanvraagLogTable)
+      .values({
+        verlofaanvraagId,
+        medewerkerId,
+        uitgevoerdDoorId: params.uitgevoerdDoorId ?? null,
+        actie,
+        oudStatus: params.oudStatus ?? null,
+        nieuwStatus: params.nieuwStatus ?? null,
+        opmerking: params.opmerking ?? null,
+      });
+  } catch {
+    // Logfout mag hoofdactie niet blokkeren
+  }
+}
+
 // Centrale beoordelingslijst: alle verlofaanvragen, optioneel gefilterd op status.
 router.get("/verlofaanvragen", lezen, async (req, res) => {
   try {
@@ -1419,14 +1455,15 @@ router.get("/verlofaanvragen", lezen, async (req, res) => {
 router.patch("/verlofaanvragen/:id", schrijven, async (req, res) => {
   try {
     const { verlofsoort_id, start_datum, eind_datum, aantal_uren, status, reden, opmerking } = req.body;
-    // Status mag alleen een bekende waarde zijn.
-    const GELDIGE_STATUS = ["aangevraagd", "goedgekeurd", "afgewezen"];
+    // Status mag alleen een bekende waarde zijn (concept = opgeslagen maar nog niet ingediend).
+    const GELDIGE_STATUS = ["concept", "aangevraagd", "goedgekeurd", "afgewezen", "ingetrokken"];
     if (status !== undefined && !GELDIGE_STATUS.includes(status)) {
       return res.status(400).json({ error: "Ongeldige status.", velden: ["status"] });
     }
     // Bij beoordeling (goedkeuren/afwijzen) de beoordelaar en het tijdstip vastleggen.
     const beoordeeld = status === "goedgekeurd" || status === "afgewezen";
     const aanvraagId = parseId(req.params.id);
+    const gebruikerId = req.session.userId ?? null;
     // In één transactie met row-lock: voorkomt dat gelijktijdige goedkeuringen de
     // verlofuren dubbel toepassen. Reverse-then-apply blijft idempotent.
     const a = await db.transaction(async (tx) => {
@@ -1446,7 +1483,7 @@ router.patch("/verlofaanvragen/:id", schrijven, async (req, res) => {
           status,
           reden,
           opmerking,
-          beoordeeldDoorId: beoordeeld ? (req.session.userId ?? null) : undefined,
+          beoordeeldDoorId: beoordeeld ? gebruikerId : undefined,
           beoordeeldOp: beoordeeld ? new Date() : undefined,
           bijgewerktOp: new Date(),
         })
@@ -1454,12 +1491,20 @@ router.patch("/verlofaanvragen/:id", schrijven, async (req, res) => {
         .returning();
       if (!bijgewerkt) return null;
       // Saldo bijwerken: draai een eerdere goedkeuring terug en pas de nieuwe toe.
-      // Idempotent en bestand tegen wijziging van soort/uren/jaar in dezelfde PATCH.
       if (vorige.status === "goedgekeurd") {
         await pasVerlofSaldoAan(tx, vorige.medewerkerId, vorige.verlofsoortId, jaarVanDatum(vorige.startDatum), -vorige.aantalUren);
       }
       if (bijgewerkt.status === "goedgekeurd") {
         await pasVerlofSaldoAan(tx, bijgewerkt.medewerkerId, bijgewerkt.verlofsoortId, jaarVanDatum(bijgewerkt.startDatum), bijgewerkt.aantalUren);
+      }
+      // Auditlog schrijven bij statuswijziging
+      if (status !== undefined && status !== vorige.status) {
+        await logVerlofMutatie(tx, aanvraagId, vorige.medewerkerId, status, {
+          oudStatus: vorige.status,
+          nieuwStatus: status,
+          opmerking: opmerking ?? null,
+          uitgevoerdDoorId: gebruikerId,
+        });
       }
       return bijgewerkt;
     });
@@ -1490,6 +1535,766 @@ router.delete("/verlofaanvragen/:id", schrijven, async (req, res) => {
   try {
     await db.delete(verlofAanvragenTable).where(eq(verlofAanvragenTable.id, parseId(req.params.id)));
     res.status(204).send();
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// ── Auditlog voor verlofaanvragen ────────────────────────────────────────────
+router.get("/verlofaanvragen/:id/log", lezen, async (req, res) => {
+  try {
+    const aanvraagId = parseId(req.params.id);
+    const rijen = await db
+      .select({
+        l: verlofAanvraagLogTable,
+        uitgevoerdDoorNaam: gebruikersTable.naam,
+      })
+      .from(verlofAanvraagLogTable)
+      .leftJoin(gebruikersTable, eq(verlofAanvraagLogTable.uitgevoerdDoorId, gebruikersTable.id))
+      .where(eq(verlofAanvraagLogTable.verlofaanvraagId, aanvraagId))
+      .orderBy(desc(verlofAanvraagLogTable.aangemaaktOp));
+    res.json(
+      rijen.map((r) => ({
+        id: r.l.id,
+        verlofaanvraag_id: r.l.verlofaanvraagId,
+        medewerker_id: r.l.medewerkerId,
+        uitgevoerd_door_id: r.l.uitgevoerdDoorId,
+        uitgevoerd_door_naam: r.uitgevoerdDoorNaam ?? null,
+        actie: r.l.actie,
+        oud_status: r.l.oudStatus,
+        nieuw_status: r.l.nieuwStatus,
+        opmerking: r.l.opmerking,
+        aangemaakt_op: iso(r.l.aangemaaktOp),
+      })),
+    );
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// ── Feestdagen ───────────────────────────────────────────────────────────────
+const mapFeestdag = (f: typeof feestdagenTable.$inferSelect) => ({
+  id: f.id,
+  werkgever_id: f.werkgeverId,
+  jaar: f.jaar,
+  datum: f.datum,
+  naam: f.naam,
+  aangemaakt_op: iso(f.aangemaaktOp),
+  bijgewerkt_op: iso(f.bijgewerktOp),
+});
+
+router.get("/feestdagen", lezen, async (req, res) => {
+  try {
+    const jaar = req.query.jaar ? Number(req.query.jaar) : new Date().getFullYear();
+    const werkgeverId = req.query.werkgever_id ? parseId(req.query.werkgever_id) : undefined;
+    const rijen = await db
+      .select()
+      .from(feestdagenTable)
+      .where(
+        and(
+          eq(feestdagenTable.jaar, jaar),
+          werkgeverId ? or(isNull(feestdagenTable.werkgeverId), eq(feestdagenTable.werkgeverId, werkgeverId)) : undefined,
+        ),
+      )
+      .orderBy(feestdagenTable.datum);
+    res.json(rijen.map(mapFeestdag));
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+router.post("/feestdagen", schrijven, async (req, res) => {
+  try {
+    const { werkgever_id, jaar, datum, naam } = req.body;
+    if (!datum || !naam || !jaar) return res.status(400).json({ error: "datum, naam en jaar zijn verplicht" });
+    const [f] = await db
+      .insert(feestdagenTable)
+      .values({
+        werkgeverId: werkgever_id ?? null,
+        jaar: Number(jaar),
+        datum,
+        naam,
+      })
+      .returning();
+    res.status(201).json(mapFeestdag(f));
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+router.patch("/feestdagen/:id", schrijven, async (req, res) => {
+  try {
+    const { datum, naam, jaar, werkgever_id } = req.body;
+    const [f] = await db
+      .update(feestdagenTable)
+      .set({
+        ...(datum != null ? { datum } : {}),
+        ...(naam != null ? { naam } : {}),
+        ...(jaar != null ? { jaar: Number(jaar) } : {}),
+        ...(werkgever_id !== undefined ? { werkgeverId: werkgever_id ?? null } : {}),
+        bijgewerktOp: new Date(),
+      })
+      .where(eq(feestdagenTable.id, parseId(req.params.id)))
+      .returning();
+    if (!f) return res.status(404).json({ error: "Feestdag niet gevonden" });
+    res.json(mapFeestdag(f));
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+router.delete("/feestdagen/:id", schrijven, async (req, res) => {
+  try {
+    await db.delete(feestdagenTable).where(eq(feestdagenTable.id, parseId(req.params.id)));
+    res.status(204).end();
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// ── Verlof-instellingen ──────────────────────────────────────────────────────
+const mapVerlofInstellingen = (vi: typeof verlofInstellingenTable.$inferSelect) => ({
+  id: vi.id,
+  werkgever_id: vi.werkgeverId,
+  jaar: vi.jaar,
+  max_aaneengesloten: vi.maxAaneengesloten,
+  aanvraag_termijn_dagen: vi.aanvraagTermijnDagen,
+  goedkeuring_automatisch: vi.goedkeuringAutomatisch,
+  auto_goedkeuring_drempel_uren: vi.autoGoedkeuringDrempelUren,
+  notificatie_email: vi.notificatieEmail,
+  opmerking: vi.opmerking,
+  aangemaakt_op: iso(vi.aangemaaktOp),
+  bijgewerkt_op: iso(vi.bijgewerktOp),
+});
+
+router.get("/verlof-instellingen", lezen, async (req, res) => {
+  try {
+    const jaar = req.query.jaar ? Number(req.query.jaar) : undefined;
+    const rijen = await db
+      .select()
+      .from(verlofInstellingenTable)
+      .where(jaar ? eq(verlofInstellingenTable.jaar, jaar) : undefined)
+      .orderBy(desc(verlofInstellingenTable.jaar));
+    res.json(rijen.map(mapVerlofInstellingen));
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+router.post("/verlof-instellingen", schrijven, async (req, res) => {
+  try {
+    const { werkgever_id, jaar, max_aaneengesloten, aanvraag_termijn_dagen, goedkeuring_automatisch, auto_goedkeuring_drempel_uren, notificatie_email, opmerking } = req.body;
+    if (!jaar) return res.status(400).json({ error: "jaar is verplicht" });
+    const [vi] = await db
+      .insert(verlofInstellingenTable)
+      .values({
+        werkgeverId: werkgever_id ?? null,
+        jaar: Number(jaar),
+        maxAaneengesloten: max_aaneengesloten ?? null,
+        aanvraagTermijnDagen: aanvraag_termijn_dagen ?? null,
+        goedkeuringAutomatisch: goedkeuring_automatisch ?? false,
+        autoGoedkeuringDrempelUren: auto_goedkeuring_drempel_uren ?? null,
+        notificatieEmail: notificatie_email ?? null,
+        opmerking: opmerking ?? null,
+      })
+      .returning();
+    res.status(201).json(mapVerlofInstellingen(vi));
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+router.patch("/verlof-instellingen/:id", schrijven, async (req, res) => {
+  try {
+    const { werkgever_id, jaar, max_aaneengesloten, aanvraag_termijn_dagen, goedkeuring_automatisch, auto_goedkeuring_drempel_uren, notificatie_email, opmerking } = req.body;
+    const [vi] = await db
+      .update(verlofInstellingenTable)
+      .set({
+        ...(werkgever_id !== undefined ? { werkgeverId: werkgever_id ?? null } : {}),
+        ...(jaar != null ? { jaar: Number(jaar) } : {}),
+        ...(max_aaneengesloten !== undefined ? { maxAaneengesloten: max_aaneengesloten ?? null } : {}),
+        ...(aanvraag_termijn_dagen !== undefined ? { aanvraagTermijnDagen: aanvraag_termijn_dagen ?? null } : {}),
+        ...(goedkeuring_automatisch !== undefined ? { goedkeuringAutomatisch: goedkeuring_automatisch } : {}),
+        ...(auto_goedkeuring_drempel_uren !== undefined ? { autoGoedkeuringDrempelUren: auto_goedkeuring_drempel_uren ?? null } : {}),
+        ...(notificatie_email !== undefined ? { notificatieEmail: notificatie_email ?? null } : {}),
+        ...(opmerking !== undefined ? { opmerking: opmerking ?? null } : {}),
+        bijgewerktOp: new Date(),
+      })
+      .where(eq(verlofInstellingenTable.id, parseId(req.params.id)))
+      .returning();
+    if (!vi) return res.status(404).json({ error: "Instellingen niet gevonden" });
+    res.json(mapVerlofInstellingen(vi));
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+router.delete("/verlof-instellingen/:id", schrijven, async (req, res) => {
+  try {
+    await db.delete(verlofInstellingenTable).where(eq(verlofInstellingenTable.id, parseId(req.params.id)));
+    res.status(204).end();
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// ── Jaarafsluiting-regels ────────────────────────────────────────────────────
+const mapJaarAfsluitingRegel = (j: typeof jaarAfsluitingRegelsTable.$inferSelect) => ({
+  id: j.id,
+  werkgever_id: j.werkgeverId,
+  jaar: j.jaar,
+  verlofsoort_id: j.verlofsoortId,
+  max_overdracht_uren: j.maxOverdrachtUren,
+  overdracht_verval_datum: j.overdrachtVervalDatum,
+  uitgevoerd_op: j.uitgevoerdOp ? iso(j.uitgevoerdOp) : null,
+  uitgevoerd_door_id: j.uitgevoerdDoorId,
+  opmerking: j.opmerking,
+  aangemaakt_op: iso(j.aangemaaktOp),
+  bijgewerkt_op: iso(j.bijgewerktOp),
+});
+
+router.get("/jaarafsluiting-regels", lezen, async (req, res) => {
+  try {
+    const jaar = req.query.jaar ? Number(req.query.jaar) : undefined;
+    const rijen = await db
+      .select()
+      .from(jaarAfsluitingRegelsTable)
+      .where(jaar ? eq(jaarAfsluitingRegelsTable.jaar, jaar) : undefined)
+      .orderBy(desc(jaarAfsluitingRegelsTable.jaar));
+    res.json(rijen.map(mapJaarAfsluitingRegel));
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+router.post("/jaarafsluiting-regels", schrijven, async (req, res) => {
+  try {
+    const { werkgever_id, jaar, verlofsoort_id, max_overdracht_uren, overdracht_verval_datum, opmerking } = req.body;
+    if (!jaar) return res.status(400).json({ error: "jaar is verplicht" });
+    const [j] = await db
+      .insert(jaarAfsluitingRegelsTable)
+      .values({
+        werkgeverId: werkgever_id ?? null,
+        jaar: Number(jaar),
+        verlofsoortId: verlofsoort_id ?? null,
+        maxOverdrachtUren: max_overdracht_uren ?? null,
+        overdrachtVervalDatum: overdracht_verval_datum ?? null,
+        opmerking: opmerking ?? null,
+      })
+      .returning();
+    res.status(201).json(mapJaarAfsluitingRegel(j));
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+router.patch("/jaarafsluiting-regels/:id", schrijven, async (req, res) => {
+  try {
+    const { werkgever_id, jaar, verlofsoort_id, max_overdracht_uren, overdracht_verval_datum, opmerking } = req.body;
+    const [j] = await db
+      .update(jaarAfsluitingRegelsTable)
+      .set({
+        ...(werkgever_id !== undefined ? { werkgeverId: werkgever_id ?? null } : {}),
+        ...(jaar != null ? { jaar: Number(jaar) } : {}),
+        ...(verlofsoort_id !== undefined ? { verlofsoortId: verlofsoort_id ?? null } : {}),
+        ...(max_overdracht_uren !== undefined ? { maxOverdrachtUren: max_overdracht_uren ?? null } : {}),
+        ...(overdracht_verval_datum !== undefined ? { overdrachtVervalDatum: overdracht_verval_datum ?? null } : {}),
+        ...(opmerking !== undefined ? { opmerking: opmerking ?? null } : {}),
+        bijgewerktOp: new Date(),
+      })
+      .where(eq(jaarAfsluitingRegelsTable.id, parseId(req.params.id)))
+      .returning();
+    if (!j) return res.status(404).json({ error: "Regel niet gevonden" });
+    res.json(mapJaarAfsluitingRegel(j));
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+router.delete("/jaarafsluiting-regels/:id", schrijven, async (req, res) => {
+  try {
+    await db.delete(jaarAfsluitingRegelsTable).where(eq(jaarAfsluitingRegelsTable.id, parseId(req.params.id)));
+    res.status(204).end();
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// ── Jaarafsluiting-verwerking ────────────────────────────────────────────────
+// Drooglooppreview: berekent wat er zou worden overgedragen zonder te schrijven.
+// Verwerking: draagt saldo's over en zet uitgevoerd_op op de regels.
+// Altijd alleenBeheerder (systeem-niveau actie).
+const alleenBeheerder = requireBevoegdheid("systeem", 2);
+
+router.post("/hrm/jaarafsluiting", alleenBeheerder, async (req, res) => {
+  try {
+    const { jaar, droogloop } = req.body;
+    if (!jaar) return res.status(400).json({ error: "jaar is verplicht" });
+    const afsluitJaar = Number(jaar);
+    const volgendJaar = afsluitJaar + 1;
+    const gebruikerId = req.session.userId ?? null;
+
+    // Haal alle medewerkers op met actieve saldi voor het af te sluiten jaar
+    const saldi = await db
+      .select({
+        s: verlofSaldiTable,
+        verlofsoortNaam: verlofsoortenTable.naam,
+        verlofsoortCategorie: verlofsoortenTable.categorie,
+        medewerkerNaam: medewerkersTable.naam,
+      })
+      .from(verlofSaldiTable)
+      .leftJoin(verlofsoortenTable, eq(verlofSaldiTable.verlofsoortId, verlofsoortenTable.id))
+      .leftJoin(medewerkersTable, eq(verlofSaldiTable.medewerkerId, medewerkersTable.id))
+      .where(and(eq(verlofSaldiTable.jaar, afsluitJaar), gte(verlofSaldiTable.saldoUren, 0.1)));
+
+    // Haal de jaarafsluiting-regels op voor dit jaar
+    const regels = await db
+      .select()
+      .from(jaarAfsluitingRegelsTable)
+      .where(eq(jaarAfsluitingRegelsTable.jaar, afsluitJaar));
+
+    // Per saldo berekenen wat er overgedragen wordt
+    const overdrachten: {
+      medewerker_id: number;
+      medewerker_naam: string | null;
+      verlofsoort_id: number;
+      verlofsoort_naam: string | null;
+      saldo_uren: number;
+      over_te_dragen_uren: number;
+      verval_datum: string | null;
+    }[] = [];
+
+    for (const rij of saldi) {
+      const saldo = rij.s;
+      // Zoek de meest specifieke regel: verlofsoort-specifiek heeft voorrang op algemeen
+      const regel =
+        regels.find((r) => r.verlofsoortId === saldo.verlofsoortId) ??
+        regels.find((r) => r.verlofsoortId == null);
+
+      const maxOverdracht = regel?.maxOverdrachtUren ?? saldo.saldoUren;
+      const overTeDragen = Math.min(saldo.saldoUren, maxOverdracht);
+      if (overTeDragen <= 0) continue;
+
+      overdrachten.push({
+        medewerker_id: saldo.medewerkerId,
+        medewerker_naam: rij.medewerkerNaam ?? null,
+        verlofsoort_id: saldo.verlofsoortId,
+        verlofsoort_naam: rij.verlofsoortNaam ?? null,
+        saldo_uren: saldo.saldoUren,
+        over_te_dragen_uren: Math.round(overTeDragen * 10) / 10,
+        verval_datum: regel?.overdrachtVervalDatum ?? null,
+      });
+    }
+
+    if (droogloop) {
+      return res.json({
+        jaar: afsluitJaar,
+        volgend_jaar: volgendJaar,
+        droogloop: true,
+        overdrachten,
+        totaal_medewerkers: new Set(overdrachten.map((o) => o.medewerker_id)).size,
+        totaal_uren: Math.round(overdrachten.reduce((s, o) => s + o.over_te_dragen_uren, 0) * 10) / 10,
+      });
+    }
+
+    // Verwerking: saldo's overdragen in transactie
+    await db.transaction(async (tx) => {
+      for (const ot of overdrachten) {
+        // Voeg overdracht toe aan volgend jaar (maak saldo aan als het nog niet bestaat)
+        const [bestaand] = await tx
+          .select()
+          .from(verlofSaldiTable)
+          .where(
+            and(
+              eq(verlofSaldiTable.medewerkerId, ot.medewerker_id),
+              eq(verlofSaldiTable.verlofsoortId, ot.verlofsoort_id),
+              eq(verlofSaldiTable.jaar, volgendJaar),
+            ),
+          );
+        if (bestaand) {
+          await tx
+            .update(verlofSaldiTable)
+            .set({
+              beginsaldoUren: Math.round((bestaand.beginsaldoUren + ot.over_te_dragen_uren) * 10) / 10,
+              saldoUren: Math.round((bestaand.saldoUren + ot.over_te_dragen_uren) * 10) / 10,
+              ...(ot.verval_datum ? { vervaltOp: ot.verval_datum } : {}),
+              bijgewerktOp: new Date(),
+            })
+            .where(eq(verlofSaldiTable.id, bestaand.id));
+        } else {
+          await tx.insert(verlofSaldiTable).values({
+            medewerkerId: ot.medewerker_id,
+            verlofsoortId: ot.verlofsoort_id,
+            jaar: volgendJaar,
+            beginsaldoUren: ot.over_te_dragen_uren,
+            opgebouwdUren: 0,
+            opgenomenUren: 0,
+            saldoUren: ot.over_te_dragen_uren,
+            vervaltOp: ot.verval_datum ?? undefined,
+          });
+        }
+      }
+      // Markeer de regels als uitgevoerd
+      if (regels.length > 0) {
+        await tx
+          .update(jaarAfsluitingRegelsTable)
+          .set({ uitgevoerdOp: new Date(), uitgevoerdDoorId: gebruikerId, bijgewerktOp: new Date() })
+          .where(eq(jaarAfsluitingRegelsTable.jaar, afsluitJaar));
+      }
+    });
+
+    res.json({
+      jaar: afsluitJaar,
+      volgend_jaar: volgendJaar,
+      droogloop: false,
+      overdrachten,
+      totaal_medewerkers: new Set(overdrachten.map((o) => o.medewerker_id)).size,
+      totaal_uren: Math.round(overdrachten.reduce((s, o) => s + o.over_te_dragen_uren, 0) * 10) / 10,
+      uitgevoerd_op: new Date().toISOString(),
+    });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// ── Capaciteit / bezettingsgraad ─────────────────────────────────────────────
+// Geeft per dag in een week het aantal beschikbare uren, verlof, ziekte en
+// resulterende inzetbaarheid. Bron voor capaciteitsplanning-widget.
+router.get("/capaciteit/bezetting", lezen, async (req, res) => {
+  try {
+    const vandaag = new Date();
+    const jaar = req.query.jaar ? Number(req.query.jaar) : vandaag.getFullYear();
+    // week: ISO weeknummer; als niet opgegeven → huidige week
+    let weekStart: Date;
+    if (req.query.datum) {
+      weekStart = new Date(String(req.query.datum));
+    } else {
+      // Maandag van de huidige week
+      weekStart = new Date(vandaag);
+      const dag = weekStart.getDay() || 7;
+      weekStart.setDate(weekStart.getDate() - dag + 1);
+    }
+    weekStart.setHours(0, 0, 0, 0);
+
+    // 5 werkdagen bouwen
+    const dagen: { datum: string; dag: string }[] = [];
+    const DAGNAMEN = ["Maandag", "Dinsdag", "Woensdag", "Donderdag", "Vrijdag"];
+    for (let i = 0; i < 5; i++) {
+      const d = new Date(weekStart);
+      d.setDate(d.getDate() + i);
+      dagen.push({ datum: d.toISOString().slice(0, 10), dag: DAGNAMEN[i] });
+    }
+
+    const weekEindStr = dagen[4].datum;
+    const weekStartStr = dagen[0].datum;
+
+    // Actieve medewerkers en hun contracturen
+    const medewerkers = await db
+      .select({
+        id: medewerkersTable.id,
+        naam: medewerkersTable.naam,
+        contracturenPerWeek: medewerkersTable.contracturenPerWeek,
+      })
+      .from(medewerkersTable)
+      .where(eq(medewerkersTable.actief, true));
+    const aantalMedewerkers = medewerkers.length;
+    const totaalContractUren = medewerkers.reduce((s, m) => s + (m.contracturenPerWeek ?? 0), 0);
+    const gemiddeldeUrenPerDag = aantalMedewerkers > 0 ? totaalContractUren / 5 : 0;
+
+    // Goedgekeurde verlofaanvragen die de week overlappen
+    const verlofRijen = await db
+      .select({
+        medewerkerId: verlofAanvragenTable.medewerkerId,
+        startDatum: verlofAanvragenTable.startDatum,
+        eindDatum: verlofAanvragenTable.eindDatum,
+        aantalUren: verlofAanvragenTable.aantalUren,
+        medewerkerNaam: medewerkersTable.naam,
+      })
+      .from(verlofAanvragenTable)
+      .leftJoin(medewerkersTable, eq(verlofAanvragenTable.medewerkerId, medewerkersTable.id))
+      .where(
+        and(
+          eq(verlofAanvragenTable.status, "goedgekeurd"),
+          lte(verlofAanvragenTable.startDatum, weekEindStr),
+          gte(verlofAanvragenTable.eindDatum, weekStartStr),
+        ),
+      );
+
+    // Actieve ziekmeldingen die de week overlappen
+    const ziekRijen = await db
+      .select({
+        medewerkerId: ziekmeldingenTable.medewerkerId,
+        startDatum: ziekmeldingenTable.startDatum,
+        eindDatum: ziekmeldingenTable.eindDatum,
+        medewerkerNaam: medewerkersTable.naam,
+      })
+      .from(ziekmeldingenTable)
+      .leftJoin(medewerkersTable, eq(ziekmeldingenTable.medewerkerId, medewerkersTable.id))
+      .where(
+        and(
+          ne(ziekmeldingenTable.status, "hersteld"),
+          lte(ziekmeldingenTable.startDatum, weekEindStr),
+          or(isNull(ziekmeldingenTable.eindDatum), gte(ziekmeldingenTable.eindDatum, weekStartStr)),
+        ),
+      );
+
+    // Feestdagen voor deze week
+    const feestDagen = await db
+      .select({ datum: feestdagenTable.datum, naam: feestdagenTable.naam })
+      .from(feestdagenTable)
+      .where(
+        and(
+          eq(feestdagenTable.jaar, jaar),
+          gte(feestdagenTable.datum, weekStartStr),
+          lte(feestdagenTable.datum, weekEindStr),
+        ),
+      );
+    const feestdagSet = new Set(feestDagen.map((f) => f.datum));
+
+    // Per dag aggregeren
+    const dagoverzicht = dagen.map(({ datum, dag }) => {
+      const isFeestdag = feestdagSet.has(datum);
+      const verlofOpDag = verlofRijen.filter((v) => v.startDatum <= datum && v.eindDatum >= datum);
+      const ziekOpDag = ziekRijen.filter((z) => z.startDatum <= datum && (z.eindDatum == null || z.eindDatum >= datum));
+
+      const verlofUren = isFeestdag ? gemiddeldeUrenPerDag : verlofOpDag.reduce((s, v) => {
+        const dagen_aanvraag = Math.max(1, Math.round((new Date(v.eindDatum).getTime() - new Date(v.startDatum).getTime()) / (1000 * 60 * 60 * 24)) + 1);
+        return s + v.aantalUren / dagen_aanvraag;
+      }, 0);
+      const ziekUren = isFeestdag ? 0 : ziekOpDag.length * (totaalContractUren / 5 / (aantalMedewerkers || 1));
+
+      const beschikbaarUren = isFeestdag ? 0 : Math.max(0, gemiddeldeUrenPerDag - verlofUren - ziekUren);
+
+      return {
+        datum,
+        dag,
+        is_feestdag: isFeestdag,
+        feestdag_naam: feestDagen.find((f) => f.datum === datum)?.naam ?? null,
+        beschikbaar_uren: Math.round(beschikbaarUren * 10) / 10,
+        verlof_uren: Math.round(Math.min(verlofUren, gemiddeldeUrenPerDag) * 10) / 10,
+        ziek_uren: Math.round(Math.min(ziekUren, gemiddeldeUrenPerDag) * 10) / 10,
+        totaal_uren: Math.round(gemiddeldeUrenPerDag * 10) / 10,
+        verlof_namen: isFeestdag ? [] : verlofOpDag.map((v) => v.medewerkerNaam ?? "?"),
+        ziek_namen: isFeestdag ? [] : ziekOpDag.map((z) => z.medewerkerNaam ?? "?"),
+      };
+    });
+
+    res.json({
+      week_start: weekStartStr,
+      week_eind: weekEindStr,
+      jaar,
+      totaal_medewerkers: aantalMedewerkers,
+      totaal_contract_uren_per_week: Math.round(totaalContractUren * 10) / 10,
+      dagen: dagoverzicht,
+    });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// ── AI capaciteitsanalyse ────────────────────────────────────────────────────
+// Analyseert verlof, ziekte en capaciteit voor een opgegeven periode.
+// Stelt voor; een mens beoordeelt — geen automatische acties.
+router.post("/hrm/capaciteit-analyse", schrijven, async (req, res) => {
+  try {
+    const { periode_start, periode_eind } = req.body;
+    const startStr = periode_start ?? new Date().toISOString().slice(0, 10);
+    const eindStr = periode_eind ?? (() => { const d = new Date(); d.setDate(d.getDate() + 30); return d.toISOString().slice(0, 10); })();
+
+    // Data ophalen voor de analyse
+    const medewerkers = await db
+      .select({ id: medewerkersTable.id, naam: medewerkersTable.naam, contracturenPerWeek: medewerkersTable.contracturenPerWeek })
+      .from(medewerkersTable)
+      .where(eq(medewerkersTable.actief, true));
+
+    const verlof = await db
+      .select({
+        medewerkerNaam: medewerkersTable.naam,
+        verlofsoortNaam: verlofsoortenTable.naam,
+        startDatum: verlofAanvragenTable.startDatum,
+        eindDatum: verlofAanvragenTable.eindDatum,
+        aantalUren: verlofAanvragenTable.aantalUren,
+        status: verlofAanvragenTable.status,
+      })
+      .from(verlofAanvragenTable)
+      .leftJoin(medewerkersTable, eq(verlofAanvragenTable.medewerkerId, medewerkersTable.id))
+      .leftJoin(verlofsoortenTable, eq(verlofAanvragenTable.verlofsoortId, verlofsoortenTable.id))
+      .where(
+        and(
+          lte(verlofAanvragenTable.startDatum, eindStr),
+          gte(verlofAanvragenTable.eindDatum, startStr),
+          inArray(verlofAanvragenTable.status, ["aangevraagd", "goedgekeurd"]),
+        ),
+      );
+
+    const ziekmeldingen = await db
+      .select({
+        medewerkerNaam: medewerkersTable.naam,
+        startDatum: ziekmeldingenTable.startDatum,
+        eindDatum: ziekmeldingenTable.eindDatum,
+        status: ziekmeldingenTable.status,
+      })
+      .from(ziekmeldingenTable)
+      .leftJoin(medewerkersTable, eq(ziekmeldingenTable.medewerkerId, medewerkersTable.id))
+      .where(
+        and(
+          ne(ziekmeldingenTable.status, "hersteld"),
+          lte(ziekmeldingenTable.startDatum, eindStr),
+          or(isNull(ziekmeldingenTable.eindDatum), gte(ziekmeldingenTable.eindDatum, startStr)),
+        ),
+      );
+
+    // Verlopende saldi (saldo > 0 maar vervalt voor het einde van de periode)
+    const verlopendeSaldi = await db
+      .select({
+        medewerkerNaam: medewerkersTable.naam,
+        verlofsoortNaam: verlofsoortenTable.naam,
+        saldoUren: verlofSaldiTable.saldoUren,
+        vervaltOp: verlofSaldiTable.vervaltOp,
+      })
+      .from(verlofSaldiTable)
+      .leftJoin(medewerkersTable, eq(verlofSaldiTable.medewerkerId, medewerkersTable.id))
+      .leftJoin(verlofsoortenTable, eq(verlofSaldiTable.verlofsoortId, verlofsoortenTable.id))
+      .where(
+        and(
+          gte(verlofSaldiTable.saldoUren, 4),
+          lte(verlofSaldiTable.vervaltOp, eindStr),
+          gte(verlofSaldiTable.vervaltOp, startStr),
+        ),
+      );
+
+    const client = maakOpenAiClient();
+    const systeemPrompt = `Je bent een capaciteitsplanner voor een installatiebedrijf. Analyseer de verlof-, ziekte- en saldogegevens en geef korte, praktische signalen terug als JSON object met veld "signalen" (array). Elk signaal heeft: type (capaciteit_laag|verlof_ophoping|saldo_verloopt|ziektetrend), prioriteit (hoog|midden|laag), onderwerp (string, max 60 tekens), toelichting (string, max 200 tekens), en aanbeveling (string, max 150 tekens). Maximaal 6 signalen. Reageer ALLEEN in JSON.`;
+    const gebruikersTekst = JSON.stringify({
+      periode: { start: startStr, eind: eindStr },
+      medewerkers: medewerkers.length,
+      totaal_contracturen_per_week: medewerkers.reduce((s, m) => s + (m.contracturenPerWeek ?? 0), 0),
+      verlof_aangevraagd: verlof.filter((v) => v.status === "aangevraagd").length,
+      verlof_goedgekeurd: verlof.filter((v) => v.status === "goedgekeurd").length,
+      verlof_top5: verlof.slice(0, 5).map((v) => ({ medewerker: v.medewerkerNaam, soort: v.verlofsoortNaam, start: v.startDatum, eind: v.eindDatum, uren: v.aantalUren })),
+      actief_ziek: ziekmeldingen.filter((z) => z.status !== "hersteld").length,
+      verlopende_saldi: verlopendeSaldi.slice(0, 8).map((v) => ({ medewerker: v.medewerkerNaam, soort: v.verlofsoortNaam, uren: v.saldoUren, verloopt: v.vervaltOp })),
+    });
+
+    const voltooiing = await client.chat.completions.create({
+      model: "gpt-5-mini",
+      response_format: { type: "json_object" },
+      max_completion_tokens: 1200,
+      messages: [
+        { role: "system", content: systeemPrompt },
+        { role: "user", content: gebruikersTekst },
+      ],
+    });
+
+    const parsed = JSON.parse(voltooiing.choices[0]?.message?.content ?? "{}") as { signalen?: unknown[] };
+    const signalen = Array.isArray(parsed.signalen) ? parsed.signalen : [];
+
+    res.json({
+      periode_start: startStr,
+      periode_eind: eindStr,
+      geanalyseerd_op: new Date().toISOString(),
+      signalen,
+    });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// ── Verlof-overzicht (centraal, management) ──────────────────────────────────
+// Gecombineerd overzicht met saldi en aanvragen per medewerker voor een jaar.
+// Bron voor de /personeel/verlof pagina.
+router.get("/verlof/overzicht", lezen, async (req, res) => {
+  try {
+    const jaar = req.query.jaar ? Number(req.query.jaar) : new Date().getFullYear();
+    const medewerkerFilter = req.query.medewerker_id ? parseId(req.query.medewerker_id) : undefined;
+
+    const saldi = await db
+      .select({
+        s: verlofSaldiTable,
+        verlofsoortNaam: verlofsoortenTable.naam,
+        verlofsoortCategorie: verlofsoortenTable.categorie,
+        medewerkerNaam: medewerkersTable.naam,
+        medewerkerActief: medewerkersTable.actief,
+      })
+      .from(verlofSaldiTable)
+      .leftJoin(verlofsoortenTable, eq(verlofSaldiTable.verlofsoortId, verlofsoortenTable.id))
+      .leftJoin(medewerkersTable, eq(verlofSaldiTable.medewerkerId, medewerkersTable.id))
+      .where(
+        and(
+          eq(verlofSaldiTable.jaar, jaar),
+          medewerkerFilter ? eq(verlofSaldiTable.medewerkerId, medewerkerFilter) : undefined,
+        ),
+      )
+      .orderBy(medewerkersTable.naam, verlofsoortenTable.naam);
+
+    const aanvragen = await db
+      .select({
+        a: verlofAanvragenTable,
+        verlofsoortNaam: verlofsoortenTable.naam,
+        medewerkerNaam: medewerkersTable.naam,
+      })
+      .from(verlofAanvragenTable)
+      .leftJoin(verlofsoortenTable, eq(verlofAanvragenTable.verlofsoortId, verlofsoortenTable.id))
+      .leftJoin(medewerkersTable, eq(verlofAanvragenTable.medewerkerId, medewerkersTable.id))
+      .where(
+        and(
+          sql`EXTRACT(YEAR FROM ${verlofAanvragenTable.startDatum}::date)::int = ${jaar}`,
+          medewerkerFilter ? eq(verlofAanvragenTable.medewerkerId, medewerkerFilter) : undefined,
+        ),
+      )
+      .orderBy(desc(verlofAanvragenTable.startDatum));
+
+    res.json({
+      jaar,
+      saldi: saldi.map((r) => ({
+        id: r.s.id,
+        medewerker_id: r.s.medewerkerId,
+        medewerker_naam: r.medewerkerNaam ?? null,
+        medewerker_actief: r.medewerkerActief ?? true,
+        verlofsoort_id: r.s.verlofsoortId,
+        verlofsoort_naam: r.verlofsoortNaam ?? null,
+        verlofsoort_categorie: r.verlofsoortCategorie ?? null,
+        jaar: r.s.jaar,
+        beginsaldo_uren: r.s.beginsaldoUren,
+        opgebouwd_uren: r.s.opgebouwdUren,
+        opgenomen_uren: r.s.opgenomenUren,
+        saldo_uren: r.s.saldoUren,
+        vervalt_op: r.s.vervaltOp ?? null,
+      })),
+      aanvragen: aanvragen.map((r) => ({
+        id: r.a.id,
+        medewerker_id: r.a.medewerkerId,
+        medewerker_naam: r.medewerkerNaam ?? null,
+        verlofsoort_id: r.a.verlofsoortId,
+        verlofsoort_naam: r.verlofsoortNaam ?? null,
+        start_datum: r.a.startDatum,
+        eind_datum: r.a.eindDatum,
+        aantal_uren: r.a.aantalUren,
+        status: r.a.status,
+        reden: r.a.reden ?? null,
+        opmerking: r.a.opmerking ?? null,
+        beoordeeld_door_id: r.a.beoordeeldDoorId ?? null,
+        beoordeeld_op: isoOf(r.a.beoordeeldOp),
+        aangemaakt_op: iso(r.a.aangemaaktOp),
+      })),
+    });
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Interne serverfout" });

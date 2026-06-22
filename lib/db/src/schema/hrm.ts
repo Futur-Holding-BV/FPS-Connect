@@ -77,6 +77,8 @@ export const medewerkersTable = pgTable("medewerkers", {
   // Naam uitzendbureau of onderaannemingsbedrijf (alleen relevant bij inhuur/onderaannemer).
   bedrijfUitzendbureau: text("bedrijf_uitzendbureau"),
   contracturenPerWeek: real("contracturen_per_week"),
+  // Deeltijdpercentage (0-100); null = afgeleid uit contracturen/CAO-norm.
+  deeltijdPercentage: real("deeltijd_percentage"),
   inDienstSinds: text("in_dienst_sinds"),
   uitDienstPer: text("uit_dienst_per"),
   noodcontactNaam: text("noodcontact_naam"),
@@ -209,7 +211,7 @@ export const verlofSaldiTable = pgTable("verlof_saldi", {
   bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
 });
 
-// Verlofaanvragen/-opname. status: aangevraagd | goedgekeurd | afgewezen | ingetrokken.
+// Verlofaanvragen/-opname. status: concept | aangevraagd | goedgekeurd | afgewezen | ingetrokken.
 export const verlofAanvragenTable = pgTable("verlofaanvragen", {
   id: serial("id").primaryKey(),
   medewerkerId: integer("medewerker_id").notNull().references(() => medewerkersTable.id, { onDelete: "cascade" }),
@@ -222,6 +224,66 @@ export const verlofAanvragenTable = pgTable("verlofaanvragen", {
   opmerking: text("opmerking"),
   beoordeeldDoorId: integer("beoordeeld_door_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
   beoordeeldOp: timestamp("beoordeeld_op"),
+  aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
+  bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
+});
+
+// Audit-log voor alle statusovergangen en wijzigingen op verlofaanvragen.
+// Onveranderlijk (geen UPDATE/DELETE): append-only. Schrijf altijd via logVerlofMutatie().
+export const verlofAanvraagLogTable = pgTable("verlof_aanvraag_log", {
+  id: serial("id").primaryKey(),
+  verlofaanvraagId: integer("verlofaanvraag_id").notNull().references(() => verlofAanvragenTable.id, { onDelete: "cascade" }),
+  medewerkerId: integer("medewerker_id").notNull().references(() => medewerkersTable.id, { onDelete: "cascade" }),
+  uitgevoerdDoorId: integer("uitgevoerd_door_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
+  // actie: aangemaakt | goedgekeurd | afgewezen | ingetrokken | concept | gewijzigd | teruggedraaid
+  actie: text("actie").notNull(),
+  oudStatus: text("oud_status"),
+  nieuwStatus: text("nieuw_status"),
+  opmerking: text("opmerking"),
+  aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
+});
+
+// Verlof-instellingen per werkgever per jaar. Stuurt het goedkeuringsproces,
+// aanvraag-termijnen en overdrachtsregels voor het jaarrondeproces.
+export const verlofInstellingenTable = pgTable("verlof_instellingen", {
+  id: serial("id").primaryKey(),
+  werkgeverId: integer("werkgever_id").references(() => werkgeversTable.id, { onDelete: "set null" }),
+  jaar: integer("jaar").notNull(),
+  maxAaneengesloten: integer("max_aaneengesloten"),
+  aanvraagTermijnDagen: integer("aanvraag_termijn_dagen"),
+  goedkeuringAutomatisch: boolean("goedkeuring_automatisch").notNull().default(false),
+  autoGoedkeuringDrempelUren: real("auto_goedkeuring_drempel_uren"),
+  notificatieEmail: text("notificatie_email"),
+  opmerking: text("opmerking"),
+  aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
+  bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
+});
+
+// Feestdagen — nationaal (werkgever_id = null) of per werkgever.
+// Worden meegenomen bij berekening beschikbare capaciteit en in de bezettingsgraad.
+export const feestdagenTable = pgTable("feestdagen", {
+  id: serial("id").primaryKey(),
+  werkgeverId: integer("werkgever_id").references(() => werkgeversTable.id, { onDelete: "set null" }),
+  jaar: integer("jaar").notNull(),
+  datum: text("datum").notNull(),
+  naam: text("naam").notNull(),
+  aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
+  bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
+});
+
+// Jaarafsluiting-regels — definieert per werkgever en verlofsoort hoeveel uren
+// mogen worden overgedragen naar het volgende jaar en wanneer ze vervallen.
+// uitgevoerd_op wordt gezet zodra de POST /hrm/jaarafsluiting de verwerking heeft afgerond.
+export const jaarAfsluitingRegelsTable = pgTable("jaarafsluiting_regels", {
+  id: serial("id").primaryKey(),
+  werkgeverId: integer("werkgever_id").references(() => werkgeversTable.id, { onDelete: "set null" }),
+  jaar: integer("jaar").notNull(),
+  verlofsoortId: integer("verlofsoort_id").references(() => verlofsoortenTable.id, { onDelete: "set null" }),
+  maxOverdrachtUren: real("max_overdracht_uren"),
+  overdrachtVervalDatum: text("overdracht_verval_datum"),
+  uitgevoerdOp: timestamp("uitgevoerd_op"),
+  uitgevoerdDoorId: integer("uitgevoerd_door_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
+  opmerking: text("opmerking"),
   aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
   bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
 });
@@ -253,6 +315,10 @@ export const insertVerlofsoortSchema = createInsertSchema(verlofsoortenTable).om
 export const insertVerlofSaldoSchema = createInsertSchema(verlofSaldiTable).omit({ id: true, aangemaaktOp: true, bijgewerktOp: true });
 export const insertVerlofAanvraagSchema = createInsertSchema(verlofAanvragenTable).omit({ id: true, aangemaaktOp: true, bijgewerktOp: true });
 export const insertZiekmeldingenSchema = createInsertSchema(ziekmeldingenTable).omit({ id: true, aangemaaktOp: true, bijgewerktOp: true });
+export const insertVerlofAanvraagLogSchema = createInsertSchema(verlofAanvraagLogTable).omit({ id: true, aangemaaktOp: true });
+export const insertVerlofInstellingenSchema = createInsertSchema(verlofInstellingenTable).omit({ id: true, aangemaaktOp: true, bijgewerktOp: true });
+export const insertFeestdagSchema = createInsertSchema(feestdagenTable).omit({ id: true, aangemaaktOp: true, bijgewerktOp: true });
+export const insertJaarAfsluitingRegelSchema = createInsertSchema(jaarAfsluitingRegelsTable).omit({ id: true, aangemaaktOp: true, bijgewerktOp: true });
 
 export type InsertWerkgever = z.infer<typeof insertWerkgeverSchema>;
 export type InsertFunctie = z.infer<typeof insertFunctieSchema>;
@@ -264,6 +330,10 @@ export type InsertBekwaamheid = z.infer<typeof insertBekwaamheidSchema>;
 export type InsertVerlofsoort = z.infer<typeof insertVerlofsoortSchema>;
 export type InsertVerlofSaldo = z.infer<typeof insertVerlofSaldoSchema>;
 export type InsertVerlofAanvraag = z.infer<typeof insertVerlofAanvraagSchema>;
+export type InsertVerlofAanvraagLog = z.infer<typeof insertVerlofAanvraagLogSchema>;
+export type InsertVerlofInstellingen = z.infer<typeof insertVerlofInstellingenSchema>;
+export type InsertFeestdag = z.infer<typeof insertFeestdagSchema>;
+export type InsertJaarAfsluitingRegel = z.infer<typeof insertJaarAfsluitingRegelSchema>;
 
 export type Werkgever = typeof werkgeversTable.$inferSelect;
 export type Functie = typeof functiesTable.$inferSelect;
@@ -275,5 +345,9 @@ export type Bekwaamheid = typeof bekwaamhedenTable.$inferSelect;
 export type Verlofsoort = typeof verlofsoortenTable.$inferSelect;
 export type VerlofSaldo = typeof verlofSaldiTable.$inferSelect;
 export type VerlofAanvraag = typeof verlofAanvragenTable.$inferSelect;
+export type VerlofAanvraagLog = typeof verlofAanvraagLogTable.$inferSelect;
+export type VerlofInstellingen = typeof verlofInstellingenTable.$inferSelect;
+export type Feestdag = typeof feestdagenTable.$inferSelect;
+export type JaarAfsluitingRegel = typeof jaarAfsluitingRegelsTable.$inferSelect;
 export type InsertZiekmelding = z.infer<typeof insertZiekmeldingenSchema>;
 export type Ziekmelding = typeof ziekmeldingenTable.$inferSelect;

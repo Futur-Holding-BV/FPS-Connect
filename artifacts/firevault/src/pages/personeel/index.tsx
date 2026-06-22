@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, lazy, Suspense } from "react";
 import { Link } from "wouter";
+const HrmWidgets = lazy(() => import("./hrm-widgets"));
 import { useQueryClient } from "@tanstack/react-query";
 import {
   useGetHrmStats,
@@ -631,6 +632,7 @@ export default function PersoneelPagina() {
 
       <Tabs defaultValue="medewerkers">
         <TabsList>
+          <TabsTrigger value="statistieken">Statistieken</TabsTrigger>
           <TabsTrigger value="medewerkers">Medewerkers</TabsTrigger>
           <TabsTrigger value="werkgevers">Werkgevers</TabsTrigger>
           <TabsTrigger value="functies">Functiehuis</TabsTrigger>
@@ -639,6 +641,12 @@ export default function PersoneelPagina() {
           <TabsTrigger value="verlof">Verlof</TabsTrigger>
           <TabsTrigger value="ziekmeldingen">Ziekmeldingen</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="statistieken" className="mt-4">
+          <Suspense fallback={<div className="h-48 flex items-center justify-center text-muted-foreground text-sm">Laden...</div>}>
+            <HrmWidgets />
+          </Suspense>
+        </TabsContent>
 
         <TabsContent value="medewerkers" className="space-y-4">
           {magSchrijven && (
