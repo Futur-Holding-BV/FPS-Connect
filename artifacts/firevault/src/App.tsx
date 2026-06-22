@@ -50,6 +50,7 @@ import DocumentopmaakBeheer from "@/pages/beheer/documentopmaak";
 import MailBeheer from "@/pages/beheer/mail";
 import BackupBeheer from "@/pages/beheer/backup";
 import ProjectstatusPagina from "@/pages/beheer/projectstatus";
+import PwaTest from "@/pages/beheer/pwa-test";
 import OpnamePagina from "@/pages/opname/index";
 import InfoPagina from "@/pages/info/index";
 import PersoneelPagina from "@/pages/personeel/index";
@@ -144,6 +145,7 @@ function BeheerderPortal() {
         <Route path="/beheer/mail" component={MailBeheer} />
         <Route path="/beheer/backup" component={BackupBeheer} />
         <Route path="/beheer/projectstatus" component={ProjectstatusPagina} />
+        <Route path="/beheer/pwa-test" component={PwaTest} />
         <Route path="/documenten" component={DocumentenPagina} />
         <Route path="/uren" component={UrenPagina} />
         <Route path="/weekstaten" component={WeekstatenPagina} />
@@ -253,6 +255,7 @@ function PermissiePortal() {
         <Route path="/beheer/mail" component={MailBeheer} />
         <Route path="/beheer/backup" component={BackupBeheer} />
         <Route path="/beheer/projectstatus" component={ProjectstatusPagina} />
+        <Route path="/beheer/pwa-test" component={PwaTest} />
         <Route path="/documenten" component={DocumentenPagina} />
         <Route path="/uren" component={UrenPagina} />
         <Route path="/weekstaten" component={WeekstatenPagina} />

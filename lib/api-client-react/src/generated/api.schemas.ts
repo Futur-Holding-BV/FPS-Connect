@@ -1878,6 +1878,7 @@ export interface AuthGebruiker {
   nieuw_ip?: boolean;
   functietitels?: string[];
   bevoegdheden: AuthGebruikerBevoegdheden;
+  is_hoofdtester?: boolean;
 }
 
 export type AbonnementNiveau = typeof AbonnementNiveau[keyof typeof AbonnementNiveau];

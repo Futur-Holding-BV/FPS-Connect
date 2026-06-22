@@ -71,3 +71,4 @@
 - [S3-opslagabstractie](s3-storage-abstractie.md) — StorageFile interface in objectStorageTypes.ts; factory in objectStorage.ts (S3_BUCKET→S3, anders GCS); getObjectEntityUploadURL retourneert {uploadURL,objectPath}; geen normalizeObjectEntityPath meer in routes.
 - [Chat polling patroon](chat-polling.md) — refetchInterval geeft TS2741 (queryKey ontbreekt, pre-existing); voor chat-polling setInterval+refetch() gebruiken; web: 5s berichten, 10s gesprekkenlijst; mobiel: 5s berichten, 10s lijst.
 - [Back-up & Herstel systeem](backup-systeem.md) — backup_records tabel; ObjectStorageService.uploadBackupFile/downloadBackupFile; backupService.ts (pg_dump+gzip+sha256); dagelijks 03:00 via recursieve setTimeout; restore vereist "HERSTEL BEVESTIGEN" + hoofdbeheerder.
+- [FPS Connect PWA](fps-pwa.md) — manifest+SW in firevault/public; icons PNG via ImageMagick; QR via /api/auth/pwa-qr (qrcode pkg); René id=11 is_hoofdtester=true.

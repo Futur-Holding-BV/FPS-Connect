@@ -4781,7 +4781,8 @@ export const TaalWijzigenResponse = zod.object({
   "nieuw_apparaat": zod.boolean().optional(),
   "nieuw_ip": zod.boolean().optional(),
   "functietitels": zod.array(zod.string()).optional(),
-  "bevoegdheden": zod.record(zod.string(), zod.number())
+  "bevoegdheden": zod.record(zod.string(), zod.number()),
+  "is_hoofdtester": zod.boolean().optional()
 })
 
 
@@ -4928,7 +4929,8 @@ export const TweeFactorActiverenResponse = zod.object({
   "nieuw_apparaat": zod.boolean().optional(),
   "nieuw_ip": zod.boolean().optional(),
   "functietitels": zod.array(zod.string()).optional(),
-  "bevoegdheden": zod.record(zod.string(), zod.number())
+  "bevoegdheden": zod.record(zod.string(), zod.number()),
+  "is_hoofdtester": zod.boolean().optional()
 })
 
 
@@ -4950,7 +4952,8 @@ export const TweeFactorVerifyResponse = zod.object({
   "nieuw_apparaat": zod.boolean().optional(),
   "nieuw_ip": zod.boolean().optional(),
   "functietitels": zod.array(zod.string()).optional(),
-  "bevoegdheden": zod.record(zod.string(), zod.number())
+  "bevoegdheden": zod.record(zod.string(), zod.number()),
+  "is_hoofdtester": zod.boolean().optional()
 })
 
 
@@ -4974,7 +4977,8 @@ export const GetHuidigeGebruikerResponse = zod.object({
   "nieuw_apparaat": zod.boolean().optional(),
   "nieuw_ip": zod.boolean().optional(),
   "functietitels": zod.array(zod.string()).optional(),
-  "bevoegdheden": zod.record(zod.string(), zod.number())
+  "bevoegdheden": zod.record(zod.string(), zod.number()),
+  "is_hoofdtester": zod.boolean().optional()
 })
 
 

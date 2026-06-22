@@ -11024,6 +11024,8 @@ components:
           type: object
           additionalProperties:
             type: integer
+        is_hoofdtester:
+          type: boolean
 
     # ── ABONNEMENT ───────────────────────────────────────────────────────
     Abonnement:

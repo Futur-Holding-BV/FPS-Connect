@@ -23,4 +23,5 @@ export interface AuthGebruiker {
   nieuw_ip?: boolean;
   functietitels?: string[];
   bevoegdheden: AuthGebruikerBevoegdheden;
+  is_hoofdtester?: boolean;
 }

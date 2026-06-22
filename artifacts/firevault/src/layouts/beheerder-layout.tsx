@@ -12,7 +12,7 @@ import {
   ShieldAlert, LifeBuoy, MessageSquarePlus, Activity, Contact, Info, BookOpen, Clock,
   FolderOpen, FileText, ListChecks, Files, LayoutTemplate, Mail,
   Calculator, CalendarDays, LayoutDashboard, BarChart3, CreditCard, MessageSquare, HardHat,
-  Trophy, HardDrive, ClipboardList,
+  Trophy, HardDrive, ClipboardList, Smartphone,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { GebruikerMenu } from "@/components/gebruiker-menu";
@@ -37,7 +37,8 @@ function omgevingVanLocatie(loc: string): Omgeving | null {
     loc === "/beheer/heatmaps" ||
     loc === "/beheer/ontwikkelstatus" ||
     loc === "/beheer/projectstatus" ||
-    loc === "/beheer/backup"
+    loc === "/beheer/backup" ||
+    loc === "/beheer/pwa-test"
   ) return "beheer";
   return null;
 }
@@ -611,6 +612,14 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
                           <Link href="/beheer/backup">
                             <HardDrive />
                             <span>Back-up &amp; Herstel</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                      <SidebarMenuItem>
+                        <SidebarMenuButton asChild isActive={location === "/beheer/pwa-test"}>
+                          <Link href="/beheer/pwa-test">
+                            <Smartphone />
+                            <span>Mobiele test</span>
                           </Link>
                         </SidebarMenuButton>
                       </SidebarMenuItem>

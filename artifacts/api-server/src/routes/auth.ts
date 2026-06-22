@@ -31,6 +31,7 @@ const mapAuthGebruiker = (g: typeof gebruikersTable.$inferSelect) => ({
   taal: g.taal ?? "nl",
   functietitels: g.functietitels ?? [],
   bevoegdheden: (g.bevoegdheden as Record<string, number>) ?? {},
+  is_hoofdtester: g.isHoofdtester ?? false,
 });
 
 const schoonCode = (code: unknown) => String(code ?? "").replace(/\s+/g, "");
@@ -413,6 +414,42 @@ router.post("/auth/taal", async (req, res) => {
       return res.status(404).json({ error: "Gebruiker niet gevonden" });
     }
     res.json(mapAuthGebruiker(g));
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// GET /auth/pwa-qr — QR-code afbeelding voor PWA-installatie (alleen ingelogd)
+router.get("/auth/pwa-qr", async (req, res) => {
+  try {
+    if (!req.session.userId) return res.status(401).json({ error: "Niet ingelogd" });
+    const domeinen = (process.env.REPLIT_DOMAINS ?? "").split(",").map((d) => d.trim()).filter(Boolean);
+    const domein = domeinen[0] ?? req.get("host") ?? "";
+    const url = domein ? `https://${domein}/connect/planning` : "/connect/planning";
+    const qrBuffer = await QRCode.toBuffer(url, {
+      type: "png",
+      width: 360,
+      margin: 2,
+      color: { dark: "#212631", light: "#FFFFFF" },
+    });
+    res.setHeader("Content-Type", "image/png");
+    res.setHeader("Cache-Control", "public, max-age=3600");
+    res.end(qrBuffer);
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// GET /auth/pwa-url — geeft de PWA-URL als JSON terug
+router.get("/auth/pwa-url", async (req, res) => {
+  try {
+    if (!req.session.userId) return res.status(401).json({ error: "Niet ingelogd" });
+    const domeinen = (process.env.REPLIT_DOMAINS ?? "").split(",").map((d) => d.trim()).filter(Boolean);
+    const domein = domeinen[0] ?? req.get("host") ?? "";
+    const url = domein ? `https://${domein}/connect/planning` : "/connect/planning";
+    res.json({ url });
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Interne serverfout" });

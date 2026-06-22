@@ -13,6 +13,7 @@ export const gebruikersTable = pgTable("gebruikers", {
   totpSecret: text("totp_secret"),
   tweeFactorIngeschakeld: boolean("twee_factor_ingeschakeld").notNull().default(false),
   actief: boolean("actief").notNull().default(true),
+  isHoofdtester: boolean("is_hoofdtester").notNull().default(false),
   aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
   laatstOnline: timestamp("laatst_online"),
   avatarUrl: text("avatar_url"),
