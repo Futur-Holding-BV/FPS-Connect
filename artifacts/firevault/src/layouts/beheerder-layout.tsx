@@ -88,7 +88,7 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
     location === "/voorzieningen" || location.startsWith("/voorzieningen/");
 
   const defaultSidebarOpen =
-    typeof window !== "undefined" ? window.innerWidth >= 1200 : true;
+    typeof window !== "undefined" ? window.innerWidth >= 900 : true;
 
   function InUitvoering() {
     return (
