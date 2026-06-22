@@ -268,6 +268,19 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
                 <SidebarGroupLabel>CWU</SidebarGroupLabel>
                 <SidebarGroupContent>
                   <SidebarMenu>
+                    {toonOpname && (
+                      <SidebarMenuItem>
+                        <SidebarMenuButton
+                          asChild
+                          isActive={location === "/opname" || location.startsWith("/opname/")}
+                        >
+                          <Link href="/opname">
+                            <ClipboardList />
+                            <span>Opname</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    )}
                     {featureFlags.calculatie && (
                       <SidebarMenuItem>
                         <SidebarMenuButton
@@ -277,6 +290,20 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
                           <Link href="/modules/calculatie">
                             <Calculator />
                             <span>Calculatie</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    )}
+                    {toonOffertes && (
+                      <SidebarMenuItem>
+                        <SidebarMenuButton
+                          asChild
+                          isActive={location === "/offertes" || location.startsWith("/offertes/")}
+                        >
+                          <Link href="/offertes">
+                            <FileText />
+                            <span>{t("nav.offertes")}</span>
+                            <InUitvoering />
                           </Link>
                         </SidebarMenuButton>
                       </SidebarMenuItem>
@@ -294,16 +321,15 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
                         </SidebarMenuButton>
                       </SidebarMenuItem>
                     )}
-                    {toonOffertes && (
+                    {(toonPersoneel || isHoofdbeheerder) && (
                       <SidebarMenuItem>
                         <SidebarMenuButton
                           asChild
-                          isActive={location === "/offertes" || location.startsWith("/offertes/")}
+                          isActive={location === "/uren" || location.startsWith("/uren/")}
                         >
-                          <Link href="/offertes">
-                            <FileText />
-                            <span>{t("nav.offertes")}</span>
-                            <InUitvoering />
+                          <Link href="/uren">
+                            <Clock />
+                            <span>Urenregistratie</span>
                           </Link>
                         </SidebarMenuButton>
                       </SidebarMenuItem>
@@ -368,19 +394,6 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
                         <SidebarMenuItem>
                           <SidebarMenuButton
                             asChild
-                            isActive={location === "/uren" || location.startsWith("/uren/")}
-                          >
-                            <Link href="/uren">
-                              <Clock />
-                              <span>Urenregistratie</span>
-                            </Link>
-                          </SidebarMenuButton>
-                        </SidebarMenuItem>
-                      )}
-                      {(toonPersoneel || isHoofdbeheerder) && (
-                        <SidebarMenuItem>
-                          <SidebarMenuButton
-                            asChild
                             isActive={location === "/hall-of-fame"}
                           >
                             <Link href="/hall-of-fame">
@@ -414,19 +427,6 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
                               <FolderOpen />
                               <span>{t("nav.dossiers")}</span>
                               <InUitvoering />
-                            </Link>
-                          </SidebarMenuButton>
-                        </SidebarMenuItem>
-                      )}
-                      {toonOpname && (
-                        <SidebarMenuItem>
-                          <SidebarMenuButton
-                            asChild
-                            isActive={location === "/opname" || location.startsWith("/opname/")}
-                          >
-                            <Link href="/opname">
-                              <ClipboardList />
-                              <span>Opname</span>
                             </Link>
                           </SidebarMenuButton>
                         </SidebarMenuItem>
