@@ -1848,6 +1848,23 @@ router.post("/hrm/jaarafsluiting", alleenBeheerder, async (req, res) => {
     const volgendJaar = afsluitJaar + 1;
     const gebruikerId = req.session.userId ?? null;
 
+    // Idempotentie: weiger als er al regels zijn die uitgevoerd zijn voor dit jaar
+    const [reedUitgevoerd] = await db
+      .select({ id: jaarAfsluitingRegelsTable.id, uitgevoerdOp: jaarAfsluitingRegelsTable.uitgevoerdOp })
+      .from(jaarAfsluitingRegelsTable)
+      .where(
+        and(
+          eq(jaarAfsluitingRegelsTable.jaar, afsluitJaar),
+          sql`${jaarAfsluitingRegelsTable.uitgevoerdOp} IS NOT NULL`,
+        ),
+      )
+      .limit(1);
+    if (reedUitgevoerd && !droogloop) {
+      return res.status(409).json({
+        error: `Jaarafsluiting ${afsluitJaar} is al uitgevoerd op ${reedUitgevoerd.uitgevoerdOp?.toISOString().slice(0, 10)}. Kan niet opnieuw worden uitgevoerd.`,
+      });
+    }
+
     // Haal alle medewerkers op met actieve saldi voor het af te sluiten jaar
     const saldi = await db
       .select({
@@ -1911,10 +1928,30 @@ router.post("/hrm/jaarafsluiting", alleenBeheerder, async (req, res) => {
       });
     }
 
-    // Verwerking: saldo's overdragen in transactie
+    // Verwerking: saldo's overdragen in transactie (atomair, idempotent via lock)
+    const verwerkOp = new Date();
     await db.transaction(async (tx) => {
       for (const ot of overdrachten) {
-        // Voeg overdracht toe aan volgend jaar (maak saldo aan als het nog niet bestaat)
+        // 1. Debiteer het bronsaldo: verlaag saldo_uren met de overgedragen uren
+        const [bronSaldo] = await tx
+          .select()
+          .from(verlofSaldiTable)
+          .where(
+            and(
+              eq(verlofSaldiTable.medewerkerId, ot.medewerker_id),
+              eq(verlofSaldiTable.verlofsoortId, ot.verlofsoort_id),
+              eq(verlofSaldiTable.jaar, afsluitJaar),
+            ),
+          );
+        if (bronSaldo) {
+          const nieuwBronSaldo = Math.max(0, Math.round((bronSaldo.saldoUren - ot.over_te_dragen_uren) * 10) / 10);
+          await tx
+            .update(verlofSaldiTable)
+            .set({ saldoUren: nieuwBronSaldo, bijgewerktOp: verwerkOp })
+            .where(eq(verlofSaldiTable.id, bronSaldo.id));
+        }
+
+        // 2. Crediteer volgend jaar (upsert)
         const [bestaand] = await tx
           .select()
           .from(verlofSaldiTable)
@@ -1932,7 +1969,7 @@ router.post("/hrm/jaarafsluiting", alleenBeheerder, async (req, res) => {
               beginsaldoUren: Math.round((bestaand.beginsaldoUren + ot.over_te_dragen_uren) * 10) / 10,
               saldoUren: Math.round((bestaand.saldoUren + ot.over_te_dragen_uren) * 10) / 10,
               ...(ot.verval_datum ? { vervaltOp: ot.verval_datum } : {}),
-              bijgewerktOp: new Date(),
+              bijgewerktOp: verwerkOp,
             })
             .where(eq(verlofSaldiTable.id, bestaand.id));
         } else {
@@ -1947,13 +1984,28 @@ router.post("/hrm/jaarafsluiting", alleenBeheerder, async (req, res) => {
             vervaltOp: ot.verval_datum ?? undefined,
           });
         }
+
       }
-      // Markeer de regels als uitgevoerd
+      // Audit is vastgelegd via uitgevoerdOp/uitgevoerdDoorId op jaarAfsluitingRegelsTable.
+
+      // 4. Markeer de regels als uitgevoerd (ook als er geen regels zijn, insert een markering)
       if (regels.length > 0) {
         await tx
           .update(jaarAfsluitingRegelsTable)
-          .set({ uitgevoerdOp: new Date(), uitgevoerdDoorId: gebruikerId, bijgewerktOp: new Date() })
+          .set({ uitgevoerdOp: verwerkOp, uitgevoerdDoorId: gebruikerId, bijgewerktOp: verwerkOp })
           .where(eq(jaarAfsluitingRegelsTable.jaar, afsluitJaar));
+      } else {
+        // Geen regels gedefinieerd → insert een systeemregel als bewijs dat het is uitgevoerd
+        await tx.insert(jaarAfsluitingRegelsTable).values({
+          jaar: afsluitJaar,
+          werkgeverId: null,
+          verlofsoortId: null,
+          maxOverdrachtUren: null,
+          overdrachtVervalDatum: null,
+          opmerking: `Automatisch aangemaakt bij jaarafsluiting ${afsluitJaar}`,
+          uitgevoerdOp: verwerkOp,
+          uitgevoerdDoorId: gebruikerId,
+        });
       }
     });
 
@@ -2111,7 +2163,7 @@ router.get("/capaciteit/bezetting", lezen, async (req, res) => {
 // ── AI capaciteitsanalyse ────────────────────────────────────────────────────
 // Analyseert verlof, ziekte en capaciteit voor een opgegeven periode.
 // Stelt voor; een mens beoordeelt — geen automatische acties.
-router.post("/hrm/capaciteit-analyse", schrijven, async (req, res) => {
+router.post("/hrm/capaciteit-analyse", alleenBeheerder, async (req, res) => {
   try {
     const { periode_start, periode_eind } = req.body;
     const startStr = periode_start ?? new Date().toISOString().slice(0, 10);

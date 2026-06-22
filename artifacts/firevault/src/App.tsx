@@ -206,13 +206,13 @@ function ConnectPortal() {
         <Route path="/crm" component={CrmKlanten} />
         <Route path="/crm/:id" component={CrmKlantDetail} />
 
-        {/* ── HRM ── */}
-        <Route path="/personeel" component={PersoneelPagina} />
-        <Route path="/personeel/:id" component={MedewerkerDetailPagina} />
+        {/* ── HRM ── statische /personeel/* paden vóór dynamisch /:id */}
         <Route path="/personeel/verlof" component={VerlofOverzichtPagina} />
         <Route path="/personeel/verlof-instellingen" component={VerlofInstellingenPagina} />
         <Route path="/personeel/jaarafsluiting" component={JaarAfsluitingPagina} />
         <Route path="/personeel/capaciteitsplanning" component={CapaciteitsplanningPagina} />
+        <Route path="/personeel/:id" component={MedewerkerDetailPagina} />
+        <Route path="/personeel" component={PersoneelPagina} />
         <Route path="/gereedschappen" component={GereedschappenPagina} />
         <Route path="/gereedschappen/:id" component={GereedschapDetailPagina} />
         <Route path="/uren" component={UrenPagina} />
