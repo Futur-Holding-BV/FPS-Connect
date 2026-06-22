@@ -181,14 +181,6 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
                           </Link>
                         </SidebarMenuButton>
                       </SidebarMenuItem>
-                      <SidebarMenuItem>
-                        <SidebarMenuButton asChild>
-                          <Link href="/gebouwen">
-                            <Plus />
-                            <span>Nieuw gebouw</span>
-                          </Link>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
                     </SidebarMenu>
                   </SidebarGroupContent>
                 </SidebarGroup>
