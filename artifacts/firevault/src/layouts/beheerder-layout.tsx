@@ -92,7 +92,7 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
     if (typeof window === "undefined") return true;
     const cookie = document.cookie.split("; ").find((c) => c.startsWith("sidebar_state="));
     if (cookie) return cookie.split("=")[1] === "true";
-    return window.innerWidth >= 900;
+    return true;
   })();
 
   function InUitvoering() {
