@@ -40,49 +40,10 @@ export interface HealthStatus {
   status: string;
 }
 
-export interface CrmKlant {
-  id: number;
-  naam: string;
-  /** @nullable */
-  kvk?: string | null;
-  /** @nullable */
-  adres?: string | null;
-  /** @nullable */
-  postcode?: string | null;
-  /** @nullable */
-  stad?: string | null;
-  /** @nullable */
-  telefoon?: string | null;
-  /** @nullable */
-  email?: string | null;
-  /** @nullable */
-  website?: string | null;
-  /** @nullable */
-  branche?: string | null;
-  status: string;
-  /** @nullable */
-  opmerkingen?: string | null;
-  aangemaakt_op: string;
-  bijgewerkt_op: string;
-}
-
-export interface CrmKlantInput {
-  naam: string;
-  kvk?: string;
-  adres?: string;
-  postcode?: string;
-  stad?: string;
-  telefoon?: string;
-  email?: string;
-  website?: string;
-  branche?: string;
-  status?: string;
-  opmerkingen?: string;
-}
-
 export interface CrmContactpersoon {
   id: number;
-  klant_id: number;
+  /** @nullable */
+  klant_id: number | null;
   naam: string;
   /** @nullable */
   functie?: string | null;
@@ -92,11 +53,111 @@ export interface CrmContactpersoon {
   telefoon?: string | null;
   /** @nullable */
   mobiel?: string | null;
+  /** @nullable */
+  linkedin_url?: string | null;
+  /** @nullable */
+  beslisrol?: string | null;
+  /** @nullable */
+  relatiesterkte?: string | null;
   primair: boolean;
+  /** @nullable */
+  opmerkingen?: string | null;
+  /** @nullable */
+  laatste_contact_datum?: string | null;
+  /** @nullable */
+  volgende_actie?: string | null;
+  aangemaakt_op: string;
+  bijgewerkt_op: string;
+}
+
+export interface CrmProjectkans {
+  id: number;
+  klant_id: number;
+  /** @nullable */
+  gebouw_id?: number | null;
+  /** @nullable */
+  organisatie_naam?: string | null;
+  titel: string;
+  /** @nullable */
+  kans_type?: string | null;
+  fase: string;
+  /** @nullable */
+  waarde?: number | null;
+  /** @nullable */
+  kans?: number | null;
+  /** @nullable */
+  verwachte_datum?: string | null;
+  /** @nullable */
+  verantwoordelijke_id?: number | null;
+  /** @nullable */
+  concurrenten_betrokken?: string | null;
+  /** @nullable */
+  volgende_actie?: string | null;
+  /** @nullable */
+  ai_samenvatting?: string | null;
   /** @nullable */
   opmerkingen?: string | null;
   aangemaakt_op: string;
   bijgewerkt_op: string;
+}
+
+export interface CrmOrganisatie {
+  id: number;
+  naam: string;
+  /** @nullable */
+  type?: string | null;
+  /** @nullable */
+  kvk?: string | null;
+  /** @nullable */
+  adres?: string | null;
+  /** @nullable */
+  postcode?: string | null;
+  /** @nullable */
+  stad?: string | null;
+  /** @nullable */
+  regio?: string | null;
+  /** @nullable */
+  telefoon?: string | null;
+  /** @nullable */
+  email?: string | null;
+  /** @nullable */
+  website?: string | null;
+  /** @nullable */
+  linkedin_url?: string | null;
+  /** @nullable */
+  branche?: string | null;
+  status: string;
+  /** @nullable */
+  relatie_status?: string | null;
+  /** @nullable */
+  voorkeur_fps_bedrijf?: string | null;
+  /** @nullable */
+  opmerkingen?: string | null;
+  contactpersonen?: CrmContactpersoon[];
+  projectkansen?: CrmProjectkans[];
+  aangemaakt_op: string;
+  bijgewerkt_op: string;
+}
+
+export type CrmKlant = CrmOrganisatie;
+
+export interface CrmKlantInput {
+  naam: string;
+  type?: string;
+  kvk?: string;
+  adres?: string;
+  postcode?: string;
+  stad?: string;
+  regio?: string;
+  telefoon?: string;
+  email?: string;
+  website?: string;
+  linkedin_url?: string;
+  branche?: string;
+  status?: string;
+  relatie_status?: string;
+  voorkeur_fps_bedrijf?: string;
+  opmerkingen?: string;
 }
 
 export interface CrmContactpersoonInput {
@@ -105,8 +166,13 @@ export interface CrmContactpersoonInput {
   email?: string;
   telefoon?: string;
   mobiel?: string;
+  linkedin_url?: string;
+  beslisrol?: string;
+  relatiesterkte?: string;
   primair?: boolean;
   opmerkingen?: string;
+  laatste_contact_datum?: string;
+  volgende_actie?: string;
 }
 
 export interface CrmOpdracht {
@@ -226,6 +292,218 @@ export interface CrmFinancieelInput {
   datum?: string;
   vervaldatum?: string;
   opmerkingen?: string;
+}
+
+export type CrmDashboardVolgendeActiesItem = { [key: string]: unknown };
+
+export interface CrmDashboard {
+  totaal_organisaties: number;
+  open_kansen: number;
+  totaal_pijplijn_gewogen: number;
+  gewonnen_dit_jaar?: number;
+  verloren_dit_jaar?: number;
+  key_accounts?: number;
+  warme_prospects?: number;
+  geen_contact_60_dagen?: number;
+  concurrenten_getraceerd?: number;
+  volgende_acties?: CrmDashboardVolgendeActiesItem[];
+  open_kansen_top?: CrmProjectkans[];
+}
+
+export interface CrmProjectkansInput {
+  klant_id: number;
+  gebouw_id?: number;
+  titel: string;
+  kans_type?: string;
+  fase?: string;
+  waarde?: number;
+  kans?: number;
+  verwachte_datum?: string;
+  verantwoordelijke_id?: number;
+  concurrenten_betrokken?: string;
+  volgende_actie?: string;
+  opmerkingen?: string;
+}
+
+export interface CrmConcurrent {
+  id: number;
+  naam: string;
+  /** @nullable */
+  website?: string | null;
+  /** @nullable */
+  linkedin_url?: string | null;
+  /** @nullable */
+  regio?: string | null;
+  /** @nullable */
+  bekende_klanten?: string | null;
+  /** @nullable */
+  bekende_projecttypes?: string | null;
+  /** @nullable */
+  sterke_punten?: string | null;
+  /** @nullable */
+  zwakke_punten?: string | null;
+  /** @nullable */
+  where_we_encounter?: string | null;
+  /** @nullable */
+  opmerkingen?: string | null;
+  /** @nullable */
+  ai_samenvatting?: string | null;
+  aangemaakt_op: string;
+  bijgewerkt_op: string;
+}
+
+export interface CrmConcurrentInput {
+  naam: string;
+  website?: string;
+  linkedin_url?: string;
+  regio?: string;
+  bekende_klanten?: string;
+  bekende_projecttypes?: string;
+  sterke_punten?: string;
+  zwakke_punten?: string;
+  where_we_encounter?: string;
+  opmerkingen?: string;
+}
+
+export interface CrmMarktintelligentie {
+  id: number;
+  type: string;
+  /** @nullable */
+  organisatie_id?: number | null;
+  /** @nullable */
+  concurrent_id?: number | null;
+  titel: string;
+  /** @nullable */
+  inhoud?: string | null;
+  /** @nullable */
+  bron?: string | null;
+  /** @nullable */
+  regio?: string | null;
+  /** @nullable */
+  datum?: string | null;
+  aangemaakt_op: string;
+  bijgewerkt_op: string;
+}
+
+export interface CrmMarktintelligentieInput {
+  type?: string;
+  organisatie_id?: number;
+  concurrent_id?: number;
+  titel: string;
+  inhoud?: string;
+  bron?: string;
+  regio?: string;
+  datum?: string;
+}
+
+export interface InboxStats {
+  totaal: number;
+  nieuw: number;
+  ter_beoordeling: number;
+  goedgekeurd: number;
+  verplaatst: number;
+  afgewezen: number;
+  snagstream_rapporten?: number;
+  laag_betrouwbaarheid?: number;
+}
+
+export type InboxItemAuditlogItem = { [key: string]: unknown };
+
+export interface InboxItem {
+  id: number;
+  bestandsnaam: string;
+  bestandspad: string;
+  /** @nullable */
+  bestandsgrootte?: number | null;
+  /** @nullable */
+  mimetype?: string | null;
+  /** @nullable */
+  geupload_door?: number | null;
+  /** @nullable */
+  geupload_op?: string | null;
+  status: string;
+  /** @nullable */
+  document_categorie?: string | null;
+  /** @nullable */
+  bestemming?: string | null;
+  /** @nullable */
+  gekoppelde_entiteit_type?: string | null;
+  /** @nullable */
+  gekoppelde_entiteit_id?: number | null;
+  /** @nullable */
+  gekoppelde_entiteit_naam?: string | null;
+  /** @nullable */
+  ai_betrouwbaarheid?: string | null;
+  /** @nullable */
+  ai_samenvatting?: string | null;
+  /** @nullable */
+  ai_redenering?: string | null;
+  /** @nullable */
+  ai_volgende_actie?: string | null;
+  mogelijk_duplicaat?: boolean;
+  /** @nullable */
+  goedgekeurd_door?: number | null;
+  /** @nullable */
+  goedgekeurd_op?: string | null;
+  /** @nullable */
+  afgewezen_reden?: string | null;
+  /** @nullable */
+  verplaatst_op?: string | null;
+  /** @nullable */
+  opmerkingen?: string | null;
+  /** @nullable */
+  bijgewerkt_op?: string | null;
+  /** @nullable */
+  snagstream_opdrachtgever?: string | null;
+  /** @nullable */
+  snagstream_gebouw?: string | null;
+  /** @nullable */
+  snagstream_project?: string | null;
+  /** @nullable */
+  snagstream_rapportdatum?: string | null;
+  /** @nullable */
+  snagstream_rapporttype?: string | null;
+  /** @nullable */
+  snagstream_status?: string | null;
+  auditlog?: InboxItemAuditlogItem[];
+}
+
+export interface InboxItemInput {
+  bestandsnaam: string;
+  bestandspad?: string;
+  bestandsgrootte?: number;
+  mimetype?: string;
+  opmerkingen?: string;
+}
+
+export interface InboxItemPatch {
+  document_categorie?: string;
+  bestemming?: string;
+  opmerkingen?: string;
+  gekoppelde_entiteit_type?: string;
+  gekoppelde_entiteit_id?: number;
+  gekoppelde_entiteit_naam?: string;
+  snagstream_opdrachtgever?: string;
+  snagstream_gebouw?: string;
+  snagstream_project?: string;
+  snagstream_rapportdatum?: string;
+  snagstream_rapporttype?: string;
+  snagstream_status?: string;
+}
+
+export interface InboxGoedkeurenBody {
+  opmerkingen?: string;
+}
+
+export interface InboxAfwijzenBody {
+  reden: string;
+}
+
+export interface InboxVerplaatsenBody {
+  bestemming: string;
+  gekoppelde_entiteit_type?: string;
+  gekoppelde_entiteit_id?: number;
+  gekoppelde_entiteit_naam?: string;
 }
 
 export interface GebouwEmailBijlage {
@@ -4782,6 +5060,20 @@ export type ProfielToepassen200 = {
 
 export type UitnodigingActiveren200 = {
   status?: string;
+};
+
+export type ListCrmContactpersonenAllParams = {
+q?: string;
+};
+
+export type ListCrmProjectkansenParams = {
+fase?: string;
+klant_id?: number;
+};
+
+export type ListInboxItemsParams = {
+status?: string;
+bestemming?: string;
 };
 
 export type ListAlleVerlofAanvragenParams = {

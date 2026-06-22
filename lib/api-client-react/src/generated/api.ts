@@ -65,14 +65,21 @@ import type {
   CrmCommercieelInput,
   CrmCommunicatie,
   CrmCommunicatieInput,
+  CrmConcurrent,
+  CrmConcurrentInput,
   CrmContactpersoon,
   CrmContactpersoonInput,
+  CrmDashboard,
   CrmFinancieel,
   CrmFinancieelInput,
-  CrmKlant,
   CrmKlantInput,
+  CrmMarktintelligentie,
+  CrmMarktintelligentieInput,
   CrmOpdracht,
   CrmOpdrachtInput,
+  CrmOrganisatie,
+  CrmProjectkans,
+  CrmProjectkansInput,
   DashboardStats,
   Document,
   DocumentAiAnalyseInput,
@@ -144,6 +151,13 @@ import type {
   HelpdeskTicketUpdate,
   HerkomstBevestigenBulkInput,
   HrmStats,
+  InboxAfwijzenBody,
+  InboxGoedkeurenBody,
+  InboxItem,
+  InboxItemInput,
+  InboxItemPatch,
+  InboxStats,
+  InboxVerplaatsenBody,
   Inspectie,
   InspectieAfronden,
   InspectieDetail,
@@ -160,6 +174,8 @@ import type {
   LabelUpdate,
   LeesBevestiging,
   ListAlleVerlofAanvragenParams,
+  ListCrmContactpersonenAllParams,
+  ListCrmProjectkansenParams,
   ListDocumentLogboekParams,
   ListDocumentenParams,
   ListFabrikantenParams,
@@ -167,6 +183,7 @@ import type {
   ListGebouwenParams,
   ListGekoppeldeDocumentenParams,
   ListGereedschappenParams,
+  ListInboxItemsParams,
   ListInspectiesParams,
   ListJaarAfsluitingRegelsParams,
   ListLabelsParams,
@@ -14291,9 +14308,9 @@ export const getListCrmKlantenUrl = () => {
 /**
  * @summary Klanten ophalen (beheerder+)
  */
-export const listCrmKlanten = async ( options?: RequestInit): Promise<CrmKlant[]> => {
+export const listCrmKlanten = async ( options?: RequestInit): Promise<CrmOrganisatie[]> => {
 
-  return customFetch<CrmKlant[]>(getListCrmKlantenUrl(),
+  return customFetch<CrmOrganisatie[]>(getListCrmKlantenUrl(),
   {
     ...options,
     method: 'GET'
@@ -14368,9 +14385,9 @@ export const getCreateCrmKlantUrl = () => {
 /**
  * @summary Klant aanmaken (beheerder+)
  */
-export const createCrmKlant = async (crmKlantInput: CrmKlantInput, options?: RequestInit): Promise<CrmKlant> => {
+export const createCrmKlant = async (crmKlantInput: CrmKlantInput, options?: RequestInit): Promise<CrmOrganisatie> => {
 
-  return customFetch<CrmKlant>(getCreateCrmKlantUrl(),
+  return customFetch<CrmOrganisatie>(getCreateCrmKlantUrl(),
   {
     ...options,
     method: 'POST',
@@ -14438,9 +14455,9 @@ export const getGetCrmKlantUrl = (id: number,) => {
 /**
  * @summary Klant ophalen (beheerder+)
  */
-export const getCrmKlant = async (id: number, options?: RequestInit): Promise<CrmKlant> => {
+export const getCrmKlant = async (id: number, options?: RequestInit): Promise<CrmOrganisatie> => {
 
-  return customFetch<CrmKlant>(getGetCrmKlantUrl(id),
+  return customFetch<CrmOrganisatie>(getGetCrmKlantUrl(id),
   {
     ...options,
     method: 'GET'
@@ -14516,9 +14533,9 @@ export const getUpdateCrmKlantUrl = (id: number,) => {
  * @summary Klant bijwerken (beheerder+)
  */
 export const updateCrmKlant = async (id: number,
-    crmKlantInput: CrmKlantInput, options?: RequestInit): Promise<CrmKlant> => {
+    crmKlantInput: CrmKlantInput, options?: RequestInit): Promise<CrmOrganisatie> => {
 
-  return customFetch<CrmKlant>(getUpdateCrmKlantUrl(id),
+  return customFetch<CrmOrganisatie>(getUpdateCrmKlantUrl(id),
   {
     ...options,
     method: 'PATCH',
@@ -16017,6 +16034,1924 @@ export const useDeleteCrmFinancieel = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getDeleteCrmFinancieelMutationOptions(options));
+    }
+
+export const getGetCrmDashboardUrl = () => {
+
+
+
+
+  return `/api/crm/dashboard`
+}
+
+/**
+ * @summary CRM Dashboard statistieken
+ */
+export const getCrmDashboard = async ( options?: RequestInit): Promise<CrmDashboard> => {
+
+  return customFetch<CrmDashboard>(getGetCrmDashboardUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetCrmDashboardQueryKey = () => {
+    return [
+    `/api/crm/dashboard`
+    ] as const;
+    }
+
+
+export const getGetCrmDashboardQueryOptions = <TData = Awaited<ReturnType<typeof getCrmDashboard>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getCrmDashboard>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetCrmDashboardQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getCrmDashboard>>> = ({ signal }) => getCrmDashboard({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getCrmDashboard>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetCrmDashboardQueryResult = NonNullable<Awaited<ReturnType<typeof getCrmDashboard>>>
+export type GetCrmDashboardQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary CRM Dashboard statistieken
+ */
+
+export function useGetCrmDashboard<TData = Awaited<ReturnType<typeof getCrmDashboard>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getCrmDashboard>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetCrmDashboardQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getListCrmContactpersonenAllUrl = (params?: ListCrmContactpersonenAllParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/crm/contactpersonen?${stringifiedParams}` : `/api/crm/contactpersonen`
+}
+
+/**
+ * @summary Alle contactpersonen
+ */
+export const listCrmContactpersonenAll = async (params?: ListCrmContactpersonenAllParams, options?: RequestInit): Promise<CrmContactpersoon[]> => {
+
+  return customFetch<CrmContactpersoon[]>(getListCrmContactpersonenAllUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListCrmContactpersonenAllQueryKey = (params?: ListCrmContactpersonenAllParams,) => {
+    return [
+    `/api/crm/contactpersonen`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListCrmContactpersonenAllQueryOptions = <TData = Awaited<ReturnType<typeof listCrmContactpersonenAll>>, TError = ErrorType<unknown>>(params?: ListCrmContactpersonenAllParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listCrmContactpersonenAll>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListCrmContactpersonenAllQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listCrmContactpersonenAll>>> = ({ signal }) => listCrmContactpersonenAll(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listCrmContactpersonenAll>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListCrmContactpersonenAllQueryResult = NonNullable<Awaited<ReturnType<typeof listCrmContactpersonenAll>>>
+export type ListCrmContactpersonenAllQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Alle contactpersonen
+ */
+
+export function useListCrmContactpersonenAll<TData = Awaited<ReturnType<typeof listCrmContactpersonenAll>>, TError = ErrorType<unknown>>(
+ params?: ListCrmContactpersonenAllParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listCrmContactpersonenAll>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListCrmContactpersonenAllQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getListCrmProjectkansenUrl = (params?: ListCrmProjectkansenParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/crm/projectkansen?${stringifiedParams}` : `/api/crm/projectkansen`
+}
+
+/**
+ * @summary Projectkansen ophalen
+ */
+export const listCrmProjectkansen = async (params?: ListCrmProjectkansenParams, options?: RequestInit): Promise<CrmProjectkans[]> => {
+
+  return customFetch<CrmProjectkans[]>(getListCrmProjectkansenUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListCrmProjectkansenQueryKey = (params?: ListCrmProjectkansenParams,) => {
+    return [
+    `/api/crm/projectkansen`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListCrmProjectkansenQueryOptions = <TData = Awaited<ReturnType<typeof listCrmProjectkansen>>, TError = ErrorType<unknown>>(params?: ListCrmProjectkansenParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listCrmProjectkansen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListCrmProjectkansenQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listCrmProjectkansen>>> = ({ signal }) => listCrmProjectkansen(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listCrmProjectkansen>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListCrmProjectkansenQueryResult = NonNullable<Awaited<ReturnType<typeof listCrmProjectkansen>>>
+export type ListCrmProjectkansenQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Projectkansen ophalen
+ */
+
+export function useListCrmProjectkansen<TData = Awaited<ReturnType<typeof listCrmProjectkansen>>, TError = ErrorType<unknown>>(
+ params?: ListCrmProjectkansenParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listCrmProjectkansen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListCrmProjectkansenQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateCrmProjectkansUrl = () => {
+
+
+
+
+  return `/api/crm/projectkansen`
+}
+
+/**
+ * @summary Projectkans aanmaken
+ */
+export const createCrmProjectkans = async (crmProjectkansInput: CrmProjectkansInput, options?: RequestInit): Promise<CrmProjectkans> => {
+
+  return customFetch<CrmProjectkans>(getCreateCrmProjectkansUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(crmProjectkansInput)
+  }
+);}
+
+
+
+
+export const getCreateCrmProjectkansMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createCrmProjectkans>>, TError,{data: BodyType<CrmProjectkansInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createCrmProjectkans>>, TError,{data: BodyType<CrmProjectkansInput>}, TContext> => {
+
+const mutationKey = ['createCrmProjectkans'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createCrmProjectkans>>, {data: BodyType<CrmProjectkansInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createCrmProjectkans(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateCrmProjectkansMutationResult = NonNullable<Awaited<ReturnType<typeof createCrmProjectkans>>>
+    export type CreateCrmProjectkansMutationBody = BodyType<CrmProjectkansInput>
+    export type CreateCrmProjectkansMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Projectkans aanmaken
+ */
+export const useCreateCrmProjectkans = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createCrmProjectkans>>, TError,{data: BodyType<CrmProjectkansInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createCrmProjectkans>>,
+        TError,
+        {data: BodyType<CrmProjectkansInput>},
+        TContext
+      > => {
+      return useMutation(getCreateCrmProjectkansMutationOptions(options));
+    }
+
+export const getGetCrmProjectkansUrl = (id: number,) => {
+
+
+
+
+  return `/api/crm/projectkansen/${id}`
+}
+
+/**
+ * @summary Projectkans ophalen
+ */
+export const getCrmProjectkans = async (id: number, options?: RequestInit): Promise<CrmProjectkans> => {
+
+  return customFetch<CrmProjectkans>(getGetCrmProjectkansUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetCrmProjectkansQueryKey = (id: number,) => {
+    return [
+    `/api/crm/projectkansen/${id}`
+    ] as const;
+    }
+
+
+export const getGetCrmProjectkansQueryOptions = <TData = Awaited<ReturnType<typeof getCrmProjectkans>>, TError = ErrorType<void>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getCrmProjectkans>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetCrmProjectkansQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getCrmProjectkans>>> = ({ signal }) => getCrmProjectkans(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getCrmProjectkans>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetCrmProjectkansQueryResult = NonNullable<Awaited<ReturnType<typeof getCrmProjectkans>>>
+export type GetCrmProjectkansQueryError = ErrorType<void>
+
+
+/**
+ * @summary Projectkans ophalen
+ */
+
+export function useGetCrmProjectkans<TData = Awaited<ReturnType<typeof getCrmProjectkans>>, TError = ErrorType<void>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getCrmProjectkans>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetCrmProjectkansQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getUpdateCrmProjectkansUrl = (id: number,) => {
+
+
+
+
+  return `/api/crm/projectkansen/${id}`
+}
+
+/**
+ * @summary Projectkans bijwerken
+ */
+export const updateCrmProjectkans = async (id: number,
+    crmProjectkansInput: CrmProjectkansInput, options?: RequestInit): Promise<CrmProjectkans> => {
+
+  return customFetch<CrmProjectkans>(getUpdateCrmProjectkansUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(crmProjectkansInput)
+  }
+);}
+
+
+
+
+export const getUpdateCrmProjectkansMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateCrmProjectkans>>, TError,{id: number;data: BodyType<CrmProjectkansInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateCrmProjectkans>>, TError,{id: number;data: BodyType<CrmProjectkansInput>}, TContext> => {
+
+const mutationKey = ['updateCrmProjectkans'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateCrmProjectkans>>, {id: number;data: BodyType<CrmProjectkansInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateCrmProjectkans(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateCrmProjectkansMutationResult = NonNullable<Awaited<ReturnType<typeof updateCrmProjectkans>>>
+    export type UpdateCrmProjectkansMutationBody = BodyType<CrmProjectkansInput>
+    export type UpdateCrmProjectkansMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Projectkans bijwerken
+ */
+export const useUpdateCrmProjectkans = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateCrmProjectkans>>, TError,{id: number;data: BodyType<CrmProjectkansInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateCrmProjectkans>>,
+        TError,
+        {id: number;data: BodyType<CrmProjectkansInput>},
+        TContext
+      > => {
+      return useMutation(getUpdateCrmProjectkansMutationOptions(options));
+    }
+
+export const getDeleteCrmProjectkansUrl = (id: number,) => {
+
+
+
+
+  return `/api/crm/projectkansen/${id}`
+}
+
+/**
+ * @summary Projectkans verwijderen
+ */
+export const deleteCrmProjectkans = async (id: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteCrmProjectkansUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteCrmProjectkansMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteCrmProjectkans>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteCrmProjectkans>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deleteCrmProjectkans'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteCrmProjectkans>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteCrmProjectkans(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteCrmProjectkansMutationResult = NonNullable<Awaited<ReturnType<typeof deleteCrmProjectkans>>>
+
+    export type DeleteCrmProjectkansMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Projectkans verwijderen
+ */
+export const useDeleteCrmProjectkans = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteCrmProjectkans>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteCrmProjectkans>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeleteCrmProjectkansMutationOptions(options));
+    }
+
+export const getListCrmConcurrentenUrl = () => {
+
+
+
+
+  return `/api/crm/concurrenten`
+}
+
+/**
+ * @summary Concurrenten ophalen
+ */
+export const listCrmConcurrenten = async ( options?: RequestInit): Promise<CrmConcurrent[]> => {
+
+  return customFetch<CrmConcurrent[]>(getListCrmConcurrentenUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListCrmConcurrentenQueryKey = () => {
+    return [
+    `/api/crm/concurrenten`
+    ] as const;
+    }
+
+
+export const getListCrmConcurrentenQueryOptions = <TData = Awaited<ReturnType<typeof listCrmConcurrenten>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listCrmConcurrenten>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListCrmConcurrentenQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listCrmConcurrenten>>> = ({ signal }) => listCrmConcurrenten({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listCrmConcurrenten>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListCrmConcurrentenQueryResult = NonNullable<Awaited<ReturnType<typeof listCrmConcurrenten>>>
+export type ListCrmConcurrentenQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Concurrenten ophalen
+ */
+
+export function useListCrmConcurrenten<TData = Awaited<ReturnType<typeof listCrmConcurrenten>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listCrmConcurrenten>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListCrmConcurrentenQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateCrmConcurrentUrl = () => {
+
+
+
+
+  return `/api/crm/concurrenten`
+}
+
+/**
+ * @summary Concurrent aanmaken
+ */
+export const createCrmConcurrent = async (crmConcurrentInput: CrmConcurrentInput, options?: RequestInit): Promise<CrmConcurrent> => {
+
+  return customFetch<CrmConcurrent>(getCreateCrmConcurrentUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(crmConcurrentInput)
+  }
+);}
+
+
+
+
+export const getCreateCrmConcurrentMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createCrmConcurrent>>, TError,{data: BodyType<CrmConcurrentInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createCrmConcurrent>>, TError,{data: BodyType<CrmConcurrentInput>}, TContext> => {
+
+const mutationKey = ['createCrmConcurrent'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createCrmConcurrent>>, {data: BodyType<CrmConcurrentInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createCrmConcurrent(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateCrmConcurrentMutationResult = NonNullable<Awaited<ReturnType<typeof createCrmConcurrent>>>
+    export type CreateCrmConcurrentMutationBody = BodyType<CrmConcurrentInput>
+    export type CreateCrmConcurrentMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Concurrent aanmaken
+ */
+export const useCreateCrmConcurrent = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createCrmConcurrent>>, TError,{data: BodyType<CrmConcurrentInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createCrmConcurrent>>,
+        TError,
+        {data: BodyType<CrmConcurrentInput>},
+        TContext
+      > => {
+      return useMutation(getCreateCrmConcurrentMutationOptions(options));
+    }
+
+export const getGetCrmConcurrentUrl = (id: number,) => {
+
+
+
+
+  return `/api/crm/concurrenten/${id}`
+}
+
+/**
+ * @summary Concurrent ophalen
+ */
+export const getCrmConcurrent = async (id: number, options?: RequestInit): Promise<CrmConcurrent> => {
+
+  return customFetch<CrmConcurrent>(getGetCrmConcurrentUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetCrmConcurrentQueryKey = (id: number,) => {
+    return [
+    `/api/crm/concurrenten/${id}`
+    ] as const;
+    }
+
+
+export const getGetCrmConcurrentQueryOptions = <TData = Awaited<ReturnType<typeof getCrmConcurrent>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getCrmConcurrent>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetCrmConcurrentQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getCrmConcurrent>>> = ({ signal }) => getCrmConcurrent(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getCrmConcurrent>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetCrmConcurrentQueryResult = NonNullable<Awaited<ReturnType<typeof getCrmConcurrent>>>
+export type GetCrmConcurrentQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Concurrent ophalen
+ */
+
+export function useGetCrmConcurrent<TData = Awaited<ReturnType<typeof getCrmConcurrent>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getCrmConcurrent>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetCrmConcurrentQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getUpdateCrmConcurrentUrl = (id: number,) => {
+
+
+
+
+  return `/api/crm/concurrenten/${id}`
+}
+
+/**
+ * @summary Concurrent bijwerken
+ */
+export const updateCrmConcurrent = async (id: number,
+    crmConcurrentInput: CrmConcurrentInput, options?: RequestInit): Promise<CrmConcurrent> => {
+
+  return customFetch<CrmConcurrent>(getUpdateCrmConcurrentUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(crmConcurrentInput)
+  }
+);}
+
+
+
+
+export const getUpdateCrmConcurrentMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateCrmConcurrent>>, TError,{id: number;data: BodyType<CrmConcurrentInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateCrmConcurrent>>, TError,{id: number;data: BodyType<CrmConcurrentInput>}, TContext> => {
+
+const mutationKey = ['updateCrmConcurrent'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateCrmConcurrent>>, {id: number;data: BodyType<CrmConcurrentInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateCrmConcurrent(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateCrmConcurrentMutationResult = NonNullable<Awaited<ReturnType<typeof updateCrmConcurrent>>>
+    export type UpdateCrmConcurrentMutationBody = BodyType<CrmConcurrentInput>
+    export type UpdateCrmConcurrentMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Concurrent bijwerken
+ */
+export const useUpdateCrmConcurrent = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateCrmConcurrent>>, TError,{id: number;data: BodyType<CrmConcurrentInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateCrmConcurrent>>,
+        TError,
+        {id: number;data: BodyType<CrmConcurrentInput>},
+        TContext
+      > => {
+      return useMutation(getUpdateCrmConcurrentMutationOptions(options));
+    }
+
+export const getDeleteCrmConcurrentUrl = (id: number,) => {
+
+
+
+
+  return `/api/crm/concurrenten/${id}`
+}
+
+/**
+ * @summary Concurrent verwijderen
+ */
+export const deleteCrmConcurrent = async (id: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteCrmConcurrentUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteCrmConcurrentMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteCrmConcurrent>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteCrmConcurrent>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deleteCrmConcurrent'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteCrmConcurrent>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteCrmConcurrent(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteCrmConcurrentMutationResult = NonNullable<Awaited<ReturnType<typeof deleteCrmConcurrent>>>
+
+    export type DeleteCrmConcurrentMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Concurrent verwijderen
+ */
+export const useDeleteCrmConcurrent = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteCrmConcurrent>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteCrmConcurrent>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeleteCrmConcurrentMutationOptions(options));
+    }
+
+export const getListCrmMarktintelligentieUrl = () => {
+
+
+
+
+  return `/api/crm/marktintelligentie`
+}
+
+/**
+ * @summary Marktinformatie ophalen
+ */
+export const listCrmMarktintelligentie = async ( options?: RequestInit): Promise<CrmMarktintelligentie[]> => {
+
+  return customFetch<CrmMarktintelligentie[]>(getListCrmMarktintelligentieUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListCrmMarktintelligentieQueryKey = () => {
+    return [
+    `/api/crm/marktintelligentie`
+    ] as const;
+    }
+
+
+export const getListCrmMarktintelligentieQueryOptions = <TData = Awaited<ReturnType<typeof listCrmMarktintelligentie>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listCrmMarktintelligentie>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListCrmMarktintelligentieQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listCrmMarktintelligentie>>> = ({ signal }) => listCrmMarktintelligentie({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listCrmMarktintelligentie>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListCrmMarktintelligentieQueryResult = NonNullable<Awaited<ReturnType<typeof listCrmMarktintelligentie>>>
+export type ListCrmMarktintelligentieQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Marktinformatie ophalen
+ */
+
+export function useListCrmMarktintelligentie<TData = Awaited<ReturnType<typeof listCrmMarktintelligentie>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listCrmMarktintelligentie>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListCrmMarktintelligentieQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateCrmMarktintelligentieUrl = () => {
+
+
+
+
+  return `/api/crm/marktintelligentie`
+}
+
+/**
+ * @summary Marktinformatie toevoegen
+ */
+export const createCrmMarktintelligentie = async (crmMarktintelligentieInput: CrmMarktintelligentieInput, options?: RequestInit): Promise<CrmMarktintelligentie> => {
+
+  return customFetch<CrmMarktintelligentie>(getCreateCrmMarktintelligentieUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(crmMarktintelligentieInput)
+  }
+);}
+
+
+
+
+export const getCreateCrmMarktintelligentieMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createCrmMarktintelligentie>>, TError,{data: BodyType<CrmMarktintelligentieInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createCrmMarktintelligentie>>, TError,{data: BodyType<CrmMarktintelligentieInput>}, TContext> => {
+
+const mutationKey = ['createCrmMarktintelligentie'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createCrmMarktintelligentie>>, {data: BodyType<CrmMarktintelligentieInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createCrmMarktintelligentie(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateCrmMarktintelligentieMutationResult = NonNullable<Awaited<ReturnType<typeof createCrmMarktintelligentie>>>
+    export type CreateCrmMarktintelligentieMutationBody = BodyType<CrmMarktintelligentieInput>
+    export type CreateCrmMarktintelligentieMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Marktinformatie toevoegen
+ */
+export const useCreateCrmMarktintelligentie = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createCrmMarktintelligentie>>, TError,{data: BodyType<CrmMarktintelligentieInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createCrmMarktintelligentie>>,
+        TError,
+        {data: BodyType<CrmMarktintelligentieInput>},
+        TContext
+      > => {
+      return useMutation(getCreateCrmMarktintelligentieMutationOptions(options));
+    }
+
+export const getUpdateCrmMarktintelligentieUrl = (id: number,) => {
+
+
+
+
+  return `/api/crm/marktintelligentie/${id}`
+}
+
+/**
+ * @summary Marktinformatie bijwerken
+ */
+export const updateCrmMarktintelligentie = async (id: number,
+    crmMarktintelligentieInput: CrmMarktintelligentieInput, options?: RequestInit): Promise<CrmMarktintelligentie> => {
+
+  return customFetch<CrmMarktintelligentie>(getUpdateCrmMarktintelligentieUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(crmMarktintelligentieInput)
+  }
+);}
+
+
+
+
+export const getUpdateCrmMarktintelligentieMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateCrmMarktintelligentie>>, TError,{id: number;data: BodyType<CrmMarktintelligentieInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateCrmMarktintelligentie>>, TError,{id: number;data: BodyType<CrmMarktintelligentieInput>}, TContext> => {
+
+const mutationKey = ['updateCrmMarktintelligentie'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateCrmMarktintelligentie>>, {id: number;data: BodyType<CrmMarktintelligentieInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateCrmMarktintelligentie(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateCrmMarktintelligentieMutationResult = NonNullable<Awaited<ReturnType<typeof updateCrmMarktintelligentie>>>
+    export type UpdateCrmMarktintelligentieMutationBody = BodyType<CrmMarktintelligentieInput>
+    export type UpdateCrmMarktintelligentieMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Marktinformatie bijwerken
+ */
+export const useUpdateCrmMarktintelligentie = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateCrmMarktintelligentie>>, TError,{id: number;data: BodyType<CrmMarktintelligentieInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateCrmMarktintelligentie>>,
+        TError,
+        {id: number;data: BodyType<CrmMarktintelligentieInput>},
+        TContext
+      > => {
+      return useMutation(getUpdateCrmMarktintelligentieMutationOptions(options));
+    }
+
+export const getDeleteCrmMarktintelligentieUrl = (id: number,) => {
+
+
+
+
+  return `/api/crm/marktintelligentie/${id}`
+}
+
+/**
+ * @summary Marktinformatie verwijderen
+ */
+export const deleteCrmMarktintelligentie = async (id: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteCrmMarktintelligentieUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteCrmMarktintelligentieMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteCrmMarktintelligentie>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteCrmMarktintelligentie>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deleteCrmMarktintelligentie'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteCrmMarktintelligentie>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteCrmMarktintelligentie(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteCrmMarktintelligentieMutationResult = NonNullable<Awaited<ReturnType<typeof deleteCrmMarktintelligentie>>>
+
+    export type DeleteCrmMarktintelligentieMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Marktinformatie verwijderen
+ */
+export const useDeleteCrmMarktintelligentie = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteCrmMarktintelligentie>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteCrmMarktintelligentie>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeleteCrmMarktintelligentieMutationOptions(options));
+    }
+
+export const getGetInboxStatsUrl = () => {
+
+
+
+
+  return `/api/inbox/stats`
+}
+
+/**
+ * @summary Inbox statistieken
+ */
+export const getInboxStats = async ( options?: RequestInit): Promise<InboxStats> => {
+
+  return customFetch<InboxStats>(getGetInboxStatsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetInboxStatsQueryKey = () => {
+    return [
+    `/api/inbox/stats`
+    ] as const;
+    }
+
+
+export const getGetInboxStatsQueryOptions = <TData = Awaited<ReturnType<typeof getInboxStats>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getInboxStats>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetInboxStatsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getInboxStats>>> = ({ signal }) => getInboxStats({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getInboxStats>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetInboxStatsQueryResult = NonNullable<Awaited<ReturnType<typeof getInboxStats>>>
+export type GetInboxStatsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Inbox statistieken
+ */
+
+export function useGetInboxStats<TData = Awaited<ReturnType<typeof getInboxStats>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getInboxStats>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetInboxStatsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getListInboxItemsUrl = (params?: ListInboxItemsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/inbox/items?${stringifiedParams}` : `/api/inbox/items`
+}
+
+/**
+ * @summary Inbox items ophalen
+ */
+export const listInboxItems = async (params?: ListInboxItemsParams, options?: RequestInit): Promise<InboxItem[]> => {
+
+  return customFetch<InboxItem[]>(getListInboxItemsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListInboxItemsQueryKey = (params?: ListInboxItemsParams,) => {
+    return [
+    `/api/inbox/items`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListInboxItemsQueryOptions = <TData = Awaited<ReturnType<typeof listInboxItems>>, TError = ErrorType<unknown>>(params?: ListInboxItemsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listInboxItems>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListInboxItemsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listInboxItems>>> = ({ signal }) => listInboxItems(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listInboxItems>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListInboxItemsQueryResult = NonNullable<Awaited<ReturnType<typeof listInboxItems>>>
+export type ListInboxItemsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Inbox items ophalen
+ */
+
+export function useListInboxItems<TData = Awaited<ReturnType<typeof listInboxItems>>, TError = ErrorType<unknown>>(
+ params?: ListInboxItemsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listInboxItems>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListInboxItemsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateInboxItemUrl = () => {
+
+
+
+
+  return `/api/inbox/items`
+}
+
+/**
+ * @summary Document registreren in inbox
+ */
+export const createInboxItem = async (inboxItemInput: InboxItemInput, options?: RequestInit): Promise<InboxItem> => {
+
+  return customFetch<InboxItem>(getCreateInboxItemUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(inboxItemInput)
+  }
+);}
+
+
+
+
+export const getCreateInboxItemMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createInboxItem>>, TError,{data: BodyType<InboxItemInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createInboxItem>>, TError,{data: BodyType<InboxItemInput>}, TContext> => {
+
+const mutationKey = ['createInboxItem'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createInboxItem>>, {data: BodyType<InboxItemInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createInboxItem(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateInboxItemMutationResult = NonNullable<Awaited<ReturnType<typeof createInboxItem>>>
+    export type CreateInboxItemMutationBody = BodyType<InboxItemInput>
+    export type CreateInboxItemMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Document registreren in inbox
+ */
+export const useCreateInboxItem = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createInboxItem>>, TError,{data: BodyType<InboxItemInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createInboxItem>>,
+        TError,
+        {data: BodyType<InboxItemInput>},
+        TContext
+      > => {
+      return useMutation(getCreateInboxItemMutationOptions(options));
+    }
+
+export const getGetInboxItemUrl = (id: number,) => {
+
+
+
+
+  return `/api/inbox/items/${id}`
+}
+
+/**
+ * @summary Inbox item ophalen
+ */
+export const getInboxItem = async (id: number, options?: RequestInit): Promise<InboxItem> => {
+
+  return customFetch<InboxItem>(getGetInboxItemUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetInboxItemQueryKey = (id: number,) => {
+    return [
+    `/api/inbox/items/${id}`
+    ] as const;
+    }
+
+
+export const getGetInboxItemQueryOptions = <TData = Awaited<ReturnType<typeof getInboxItem>>, TError = ErrorType<void>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getInboxItem>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetInboxItemQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getInboxItem>>> = ({ signal }) => getInboxItem(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getInboxItem>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetInboxItemQueryResult = NonNullable<Awaited<ReturnType<typeof getInboxItem>>>
+export type GetInboxItemQueryError = ErrorType<void>
+
+
+/**
+ * @summary Inbox item ophalen
+ */
+
+export function useGetInboxItem<TData = Awaited<ReturnType<typeof getInboxItem>>, TError = ErrorType<void>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getInboxItem>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetInboxItemQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getUpdateInboxItemUrl = (id: number,) => {
+
+
+
+
+  return `/api/inbox/items/${id}`
+}
+
+/**
+ * @summary Inbox item bijwerken
+ */
+export const updateInboxItem = async (id: number,
+    inboxItemPatch: InboxItemPatch, options?: RequestInit): Promise<InboxItem> => {
+
+  return customFetch<InboxItem>(getUpdateInboxItemUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(inboxItemPatch)
+  }
+);}
+
+
+
+
+export const getUpdateInboxItemMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateInboxItem>>, TError,{id: number;data: BodyType<InboxItemPatch>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateInboxItem>>, TError,{id: number;data: BodyType<InboxItemPatch>}, TContext> => {
+
+const mutationKey = ['updateInboxItem'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateInboxItem>>, {id: number;data: BodyType<InboxItemPatch>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateInboxItem(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateInboxItemMutationResult = NonNullable<Awaited<ReturnType<typeof updateInboxItem>>>
+    export type UpdateInboxItemMutationBody = BodyType<InboxItemPatch>
+    export type UpdateInboxItemMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Inbox item bijwerken
+ */
+export const useUpdateInboxItem = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateInboxItem>>, TError,{id: number;data: BodyType<InboxItemPatch>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateInboxItem>>,
+        TError,
+        {id: number;data: BodyType<InboxItemPatch>},
+        TContext
+      > => {
+      return useMutation(getUpdateInboxItemMutationOptions(options));
+    }
+
+export const getDeleteInboxItemUrl = (id: number,) => {
+
+
+
+
+  return `/api/inbox/items/${id}`
+}
+
+/**
+ * @summary Inbox item verwijderen
+ */
+export const deleteInboxItem = async (id: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteInboxItemUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteInboxItemMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteInboxItem>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteInboxItem>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deleteInboxItem'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteInboxItem>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteInboxItem(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteInboxItemMutationResult = NonNullable<Awaited<ReturnType<typeof deleteInboxItem>>>
+
+    export type DeleteInboxItemMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Inbox item verwijderen
+ */
+export const useDeleteInboxItem = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteInboxItem>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteInboxItem>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeleteInboxItemMutationOptions(options));
+    }
+
+export const getGoedkeurenInboxItemUrl = (id: number,) => {
+
+
+
+
+  return `/api/inbox/items/${id}/goedkeuren`
+}
+
+/**
+ * @summary Inbox item goedkeuren
+ */
+export const goedkeurenInboxItem = async (id: number,
+    inboxGoedkeurenBody: InboxGoedkeurenBody, options?: RequestInit): Promise<InboxItem> => {
+
+  return customFetch<InboxItem>(getGoedkeurenInboxItemUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(inboxGoedkeurenBody)
+  }
+);}
+
+
+
+
+export const getGoedkeurenInboxItemMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof goedkeurenInboxItem>>, TError,{id: number;data: BodyType<InboxGoedkeurenBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof goedkeurenInboxItem>>, TError,{id: number;data: BodyType<InboxGoedkeurenBody>}, TContext> => {
+
+const mutationKey = ['goedkeurenInboxItem'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof goedkeurenInboxItem>>, {id: number;data: BodyType<InboxGoedkeurenBody>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  goedkeurenInboxItem(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type GoedkeurenInboxItemMutationResult = NonNullable<Awaited<ReturnType<typeof goedkeurenInboxItem>>>
+    export type GoedkeurenInboxItemMutationBody = BodyType<InboxGoedkeurenBody>
+    export type GoedkeurenInboxItemMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Inbox item goedkeuren
+ */
+export const useGoedkeurenInboxItem = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof goedkeurenInboxItem>>, TError,{id: number;data: BodyType<InboxGoedkeurenBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof goedkeurenInboxItem>>,
+        TError,
+        {id: number;data: BodyType<InboxGoedkeurenBody>},
+        TContext
+      > => {
+      return useMutation(getGoedkeurenInboxItemMutationOptions(options));
+    }
+
+export const getAfwijzenInboxItemUrl = (id: number,) => {
+
+
+
+
+  return `/api/inbox/items/${id}/afwijzen`
+}
+
+/**
+ * @summary Inbox item afwijzen
+ */
+export const afwijzenInboxItem = async (id: number,
+    inboxAfwijzenBody: InboxAfwijzenBody, options?: RequestInit): Promise<InboxItem> => {
+
+  return customFetch<InboxItem>(getAfwijzenInboxItemUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(inboxAfwijzenBody)
+  }
+);}
+
+
+
+
+export const getAfwijzenInboxItemMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof afwijzenInboxItem>>, TError,{id: number;data: BodyType<InboxAfwijzenBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof afwijzenInboxItem>>, TError,{id: number;data: BodyType<InboxAfwijzenBody>}, TContext> => {
+
+const mutationKey = ['afwijzenInboxItem'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof afwijzenInboxItem>>, {id: number;data: BodyType<InboxAfwijzenBody>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  afwijzenInboxItem(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AfwijzenInboxItemMutationResult = NonNullable<Awaited<ReturnType<typeof afwijzenInboxItem>>>
+    export type AfwijzenInboxItemMutationBody = BodyType<InboxAfwijzenBody>
+    export type AfwijzenInboxItemMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Inbox item afwijzen
+ */
+export const useAfwijzenInboxItem = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof afwijzenInboxItem>>, TError,{id: number;data: BodyType<InboxAfwijzenBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof afwijzenInboxItem>>,
+        TError,
+        {id: number;data: BodyType<InboxAfwijzenBody>},
+        TContext
+      > => {
+      return useMutation(getAfwijzenInboxItemMutationOptions(options));
+    }
+
+export const getVerplaatsenInboxItemUrl = (id: number,) => {
+
+
+
+
+  return `/api/inbox/items/${id}/verplaatsen`
+}
+
+/**
+ * @summary Inbox item verplaatsen naar module
+ */
+export const verplaatsenInboxItem = async (id: number,
+    inboxVerplaatsenBody: InboxVerplaatsenBody, options?: RequestInit): Promise<InboxItem> => {
+
+  return customFetch<InboxItem>(getVerplaatsenInboxItemUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(inboxVerplaatsenBody)
+  }
+);}
+
+
+
+
+export const getVerplaatsenInboxItemMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof verplaatsenInboxItem>>, TError,{id: number;data: BodyType<InboxVerplaatsenBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof verplaatsenInboxItem>>, TError,{id: number;data: BodyType<InboxVerplaatsenBody>}, TContext> => {
+
+const mutationKey = ['verplaatsenInboxItem'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof verplaatsenInboxItem>>, {id: number;data: BodyType<InboxVerplaatsenBody>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  verplaatsenInboxItem(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type VerplaatsenInboxItemMutationResult = NonNullable<Awaited<ReturnType<typeof verplaatsenInboxItem>>>
+    export type VerplaatsenInboxItemMutationBody = BodyType<InboxVerplaatsenBody>
+    export type VerplaatsenInboxItemMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Inbox item verplaatsen naar module
+ */
+export const useVerplaatsenInboxItem = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof verplaatsenInboxItem>>, TError,{id: number;data: BodyType<InboxVerplaatsenBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof verplaatsenInboxItem>>,
+        TError,
+        {id: number;data: BodyType<InboxVerplaatsenBody>},
+        TContext
+      > => {
+      return useMutation(getVerplaatsenInboxItemMutationOptions(options));
+    }
+
+export const getTerBeoordelingInboxItemUrl = (id: number,) => {
+
+
+
+
+  return `/api/inbox/items/${id}/ter-beoordeling`
+}
+
+/**
+ * @summary Inbox item ter beoordeling stellen
+ */
+export const terBeoordelingInboxItem = async (id: number, options?: RequestInit): Promise<InboxItem> => {
+
+  return customFetch<InboxItem>(getTerBeoordelingInboxItemUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getTerBeoordelingInboxItemMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof terBeoordelingInboxItem>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof terBeoordelingInboxItem>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['terBeoordelingInboxItem'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof terBeoordelingInboxItem>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  terBeoordelingInboxItem(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type TerBeoordelingInboxItemMutationResult = NonNullable<Awaited<ReturnType<typeof terBeoordelingInboxItem>>>
+
+    export type TerBeoordelingInboxItemMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Inbox item ter beoordeling stellen
+ */
+export const useTerBeoordelingInboxItem = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof terBeoordelingInboxItem>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof terBeoordelingInboxItem>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getTerBeoordelingInboxItemMutationOptions(options));
     }
 
 export const getListGebouwEmailsUrl = (id: number,) => {

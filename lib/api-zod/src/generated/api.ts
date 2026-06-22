@@ -5025,16 +5025,58 @@ export const UpdateInfoInstellingenResponse = zod.object({
 export const ListCrmKlantenResponseItem = zod.object({
   "id": zod.number(),
   "naam": zod.string(),
+  "type": zod.string().nullish(),
   "kvk": zod.string().nullish(),
   "adres": zod.string().nullish(),
   "postcode": zod.string().nullish(),
   "stad": zod.string().nullish(),
+  "regio": zod.string().nullish(),
   "telefoon": zod.string().nullish(),
   "email": zod.string().nullish(),
   "website": zod.string().nullish(),
+  "linkedin_url": zod.string().nullish(),
   "branche": zod.string().nullish(),
   "status": zod.string(),
+  "relatie_status": zod.string().nullish(),
+  "voorkeur_fps_bedrijf": zod.string().nullish(),
   "opmerkingen": zod.string().nullish(),
+  "contactpersonen": zod.array(zod.object({
+  "id": zod.number(),
+  "klant_id": zod.number().nullable(),
+  "naam": zod.string(),
+  "functie": zod.string().nullish(),
+  "email": zod.string().nullish(),
+  "telefoon": zod.string().nullish(),
+  "mobiel": zod.string().nullish(),
+  "linkedin_url": zod.string().nullish(),
+  "beslisrol": zod.string().nullish(),
+  "relatiesterkte": zod.string().nullish(),
+  "primair": zod.boolean(),
+  "opmerkingen": zod.string().nullish(),
+  "laatste_contact_datum": zod.string().nullish(),
+  "volgende_actie": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})).optional(),
+  "projectkansen": zod.array(zod.object({
+  "id": zod.number(),
+  "klant_id": zod.number(),
+  "gebouw_id": zod.number().nullish(),
+  "organisatie_naam": zod.string().nullish(),
+  "titel": zod.string(),
+  "kans_type": zod.string().nullish(),
+  "fase": zod.string(),
+  "waarde": zod.number().nullish(),
+  "kans": zod.number().nullish(),
+  "verwachte_datum": zod.string().nullish(),
+  "verantwoordelijke_id": zod.number().nullish(),
+  "concurrenten_betrokken": zod.string().nullish(),
+  "volgende_actie": zod.string().nullish(),
+  "ai_samenvatting": zod.string().nullish(),
+  "opmerkingen": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})).optional(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
 })
@@ -5046,15 +5088,20 @@ export const ListCrmKlantenResponse = zod.array(ListCrmKlantenResponseItem)
  */
 export const CreateCrmKlantBody = zod.object({
   "naam": zod.string(),
+  "type": zod.string().optional(),
   "kvk": zod.string().optional(),
   "adres": zod.string().optional(),
   "postcode": zod.string().optional(),
   "stad": zod.string().optional(),
+  "regio": zod.string().optional(),
   "telefoon": zod.string().optional(),
   "email": zod.string().optional(),
   "website": zod.string().optional(),
+  "linkedin_url": zod.string().optional(),
   "branche": zod.string().optional(),
   "status": zod.string().optional(),
+  "relatie_status": zod.string().optional(),
+  "voorkeur_fps_bedrijf": zod.string().optional(),
   "opmerkingen": zod.string().optional()
 })
 
@@ -5071,16 +5118,58 @@ export const GetCrmKlantParams = zod.object({
 export const GetCrmKlantResponse = zod.object({
   "id": zod.number(),
   "naam": zod.string(),
+  "type": zod.string().nullish(),
   "kvk": zod.string().nullish(),
   "adres": zod.string().nullish(),
   "postcode": zod.string().nullish(),
   "stad": zod.string().nullish(),
+  "regio": zod.string().nullish(),
   "telefoon": zod.string().nullish(),
   "email": zod.string().nullish(),
   "website": zod.string().nullish(),
+  "linkedin_url": zod.string().nullish(),
   "branche": zod.string().nullish(),
   "status": zod.string(),
+  "relatie_status": zod.string().nullish(),
+  "voorkeur_fps_bedrijf": zod.string().nullish(),
   "opmerkingen": zod.string().nullish(),
+  "contactpersonen": zod.array(zod.object({
+  "id": zod.number(),
+  "klant_id": zod.number().nullable(),
+  "naam": zod.string(),
+  "functie": zod.string().nullish(),
+  "email": zod.string().nullish(),
+  "telefoon": zod.string().nullish(),
+  "mobiel": zod.string().nullish(),
+  "linkedin_url": zod.string().nullish(),
+  "beslisrol": zod.string().nullish(),
+  "relatiesterkte": zod.string().nullish(),
+  "primair": zod.boolean(),
+  "opmerkingen": zod.string().nullish(),
+  "laatste_contact_datum": zod.string().nullish(),
+  "volgende_actie": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})).optional(),
+  "projectkansen": zod.array(zod.object({
+  "id": zod.number(),
+  "klant_id": zod.number(),
+  "gebouw_id": zod.number().nullish(),
+  "organisatie_naam": zod.string().nullish(),
+  "titel": zod.string(),
+  "kans_type": zod.string().nullish(),
+  "fase": zod.string(),
+  "waarde": zod.number().nullish(),
+  "kans": zod.number().nullish(),
+  "verwachte_datum": zod.string().nullish(),
+  "verantwoordelijke_id": zod.number().nullish(),
+  "concurrenten_betrokken": zod.string().nullish(),
+  "volgende_actie": zod.string().nullish(),
+  "ai_samenvatting": zod.string().nullish(),
+  "opmerkingen": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})).optional(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
 })
@@ -5095,31 +5184,78 @@ export const UpdateCrmKlantParams = zod.object({
 
 export const UpdateCrmKlantBody = zod.object({
   "naam": zod.string(),
+  "type": zod.string().optional(),
   "kvk": zod.string().optional(),
   "adres": zod.string().optional(),
   "postcode": zod.string().optional(),
   "stad": zod.string().optional(),
+  "regio": zod.string().optional(),
   "telefoon": zod.string().optional(),
   "email": zod.string().optional(),
   "website": zod.string().optional(),
+  "linkedin_url": zod.string().optional(),
   "branche": zod.string().optional(),
   "status": zod.string().optional(),
+  "relatie_status": zod.string().optional(),
+  "voorkeur_fps_bedrijf": zod.string().optional(),
   "opmerkingen": zod.string().optional()
 })
 
 export const UpdateCrmKlantResponse = zod.object({
   "id": zod.number(),
   "naam": zod.string(),
+  "type": zod.string().nullish(),
   "kvk": zod.string().nullish(),
   "adres": zod.string().nullish(),
   "postcode": zod.string().nullish(),
   "stad": zod.string().nullish(),
+  "regio": zod.string().nullish(),
   "telefoon": zod.string().nullish(),
   "email": zod.string().nullish(),
   "website": zod.string().nullish(),
+  "linkedin_url": zod.string().nullish(),
   "branche": zod.string().nullish(),
   "status": zod.string(),
+  "relatie_status": zod.string().nullish(),
+  "voorkeur_fps_bedrijf": zod.string().nullish(),
   "opmerkingen": zod.string().nullish(),
+  "contactpersonen": zod.array(zod.object({
+  "id": zod.number(),
+  "klant_id": zod.number().nullable(),
+  "naam": zod.string(),
+  "functie": zod.string().nullish(),
+  "email": zod.string().nullish(),
+  "telefoon": zod.string().nullish(),
+  "mobiel": zod.string().nullish(),
+  "linkedin_url": zod.string().nullish(),
+  "beslisrol": zod.string().nullish(),
+  "relatiesterkte": zod.string().nullish(),
+  "primair": zod.boolean(),
+  "opmerkingen": zod.string().nullish(),
+  "laatste_contact_datum": zod.string().nullish(),
+  "volgende_actie": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})).optional(),
+  "projectkansen": zod.array(zod.object({
+  "id": zod.number(),
+  "klant_id": zod.number(),
+  "gebouw_id": zod.number().nullish(),
+  "organisatie_naam": zod.string().nullish(),
+  "titel": zod.string(),
+  "kans_type": zod.string().nullish(),
+  "fase": zod.string(),
+  "waarde": zod.number().nullish(),
+  "kans": zod.number().nullish(),
+  "verwachte_datum": zod.string().nullish(),
+  "verantwoordelijke_id": zod.number().nullish(),
+  "concurrenten_betrokken": zod.string().nullish(),
+  "volgende_actie": zod.string().nullish(),
+  "ai_samenvatting": zod.string().nullish(),
+  "opmerkingen": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})).optional(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
 })
@@ -5144,14 +5280,19 @@ export const ListCrmContactpersonenParams = zod.object({
 
 export const ListCrmContactpersonenResponseItem = zod.object({
   "id": zod.number(),
-  "klant_id": zod.number(),
+  "klant_id": zod.number().nullable(),
   "naam": zod.string(),
   "functie": zod.string().nullish(),
   "email": zod.string().nullish(),
   "telefoon": zod.string().nullish(),
   "mobiel": zod.string().nullish(),
+  "linkedin_url": zod.string().nullish(),
+  "beslisrol": zod.string().nullish(),
+  "relatiesterkte": zod.string().nullish(),
   "primair": zod.boolean(),
   "opmerkingen": zod.string().nullish(),
+  "laatste_contact_datum": zod.string().nullish(),
+  "volgende_actie": zod.string().nullish(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
 })
@@ -5171,8 +5312,13 @@ export const CreateCrmContactpersoonBody = zod.object({
   "email": zod.string().optional(),
   "telefoon": zod.string().optional(),
   "mobiel": zod.string().optional(),
+  "linkedin_url": zod.string().optional(),
+  "beslisrol": zod.string().optional(),
+  "relatiesterkte": zod.string().optional(),
   "primair": zod.boolean().optional(),
-  "opmerkingen": zod.string().optional()
+  "opmerkingen": zod.string().optional(),
+  "laatste_contact_datum": zod.string().optional(),
+  "volgende_actie": zod.string().optional()
 })
 
 export const CreateCrmContactpersoonResponse = zod.void()
@@ -5191,20 +5337,30 @@ export const UpdateCrmContactpersoonBody = zod.object({
   "email": zod.string().optional(),
   "telefoon": zod.string().optional(),
   "mobiel": zod.string().optional(),
+  "linkedin_url": zod.string().optional(),
+  "beslisrol": zod.string().optional(),
+  "relatiesterkte": zod.string().optional(),
   "primair": zod.boolean().optional(),
-  "opmerkingen": zod.string().optional()
+  "opmerkingen": zod.string().optional(),
+  "laatste_contact_datum": zod.string().optional(),
+  "volgende_actie": zod.string().optional()
 })
 
 export const UpdateCrmContactpersoonResponse = zod.object({
   "id": zod.number(),
-  "klant_id": zod.number(),
+  "klant_id": zod.number().nullable(),
   "naam": zod.string(),
   "functie": zod.string().nullish(),
   "email": zod.string().nullish(),
   "telefoon": zod.string().nullish(),
   "mobiel": zod.string().nullish(),
+  "linkedin_url": zod.string().nullish(),
+  "beslisrol": zod.string().nullish(),
+  "relatiesterkte": zod.string().nullish(),
   "primair": zod.boolean(),
   "opmerkingen": zod.string().nullish(),
+  "laatste_contact_datum": zod.string().nullish(),
+  "volgende_actie": zod.string().nullish(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
 })
@@ -5526,6 +5682,776 @@ export const DeleteCrmFinancieelParams = zod.object({
 })
 
 export const DeleteCrmFinancieelResponse = zod.void()
+
+
+/**
+ * @summary CRM Dashboard statistieken
+ */
+export const GetCrmDashboardResponse = zod.object({
+  "totaal_organisaties": zod.number(),
+  "open_kansen": zod.number(),
+  "totaal_pijplijn_gewogen": zod.number(),
+  "gewonnen_dit_jaar": zod.number().optional(),
+  "verloren_dit_jaar": zod.number().optional(),
+  "key_accounts": zod.number().optional(),
+  "warme_prospects": zod.number().optional(),
+  "geen_contact_60_dagen": zod.number().optional(),
+  "concurrenten_getraceerd": zod.number().optional(),
+  "volgende_acties": zod.array(zod.object({
+
+}).passthrough()).optional(),
+  "open_kansen_top": zod.array(zod.object({
+  "id": zod.number(),
+  "klant_id": zod.number(),
+  "gebouw_id": zod.number().nullish(),
+  "organisatie_naam": zod.string().nullish(),
+  "titel": zod.string(),
+  "kans_type": zod.string().nullish(),
+  "fase": zod.string(),
+  "waarde": zod.number().nullish(),
+  "kans": zod.number().nullish(),
+  "verwachte_datum": zod.string().nullish(),
+  "verantwoordelijke_id": zod.number().nullish(),
+  "concurrenten_betrokken": zod.string().nullish(),
+  "volgende_actie": zod.string().nullish(),
+  "ai_samenvatting": zod.string().nullish(),
+  "opmerkingen": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})).optional()
+})
+
+
+/**
+ * @summary Alle contactpersonen
+ */
+export const ListCrmContactpersonenAllQueryParams = zod.object({
+  "q": zod.coerce.string().optional()
+})
+
+export const ListCrmContactpersonenAllResponseItem = zod.object({
+  "id": zod.number(),
+  "klant_id": zod.number().nullable(),
+  "naam": zod.string(),
+  "functie": zod.string().nullish(),
+  "email": zod.string().nullish(),
+  "telefoon": zod.string().nullish(),
+  "mobiel": zod.string().nullish(),
+  "linkedin_url": zod.string().nullish(),
+  "beslisrol": zod.string().nullish(),
+  "relatiesterkte": zod.string().nullish(),
+  "primair": zod.boolean(),
+  "opmerkingen": zod.string().nullish(),
+  "laatste_contact_datum": zod.string().nullish(),
+  "volgende_actie": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+export const ListCrmContactpersonenAllResponse = zod.array(ListCrmContactpersonenAllResponseItem)
+
+
+/**
+ * @summary Projectkansen ophalen
+ */
+export const ListCrmProjectkansenQueryParams = zod.object({
+  "fase": zod.coerce.string().optional(),
+  "klant_id": zod.coerce.number().optional()
+})
+
+export const ListCrmProjectkansenResponseItem = zod.object({
+  "id": zod.number(),
+  "klant_id": zod.number(),
+  "gebouw_id": zod.number().nullish(),
+  "organisatie_naam": zod.string().nullish(),
+  "titel": zod.string(),
+  "kans_type": zod.string().nullish(),
+  "fase": zod.string(),
+  "waarde": zod.number().nullish(),
+  "kans": zod.number().nullish(),
+  "verwachte_datum": zod.string().nullish(),
+  "verantwoordelijke_id": zod.number().nullish(),
+  "concurrenten_betrokken": zod.string().nullish(),
+  "volgende_actie": zod.string().nullish(),
+  "ai_samenvatting": zod.string().nullish(),
+  "opmerkingen": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+export const ListCrmProjectkansenResponse = zod.array(ListCrmProjectkansenResponseItem)
+
+
+/**
+ * @summary Projectkans aanmaken
+ */
+export const CreateCrmProjectkansBody = zod.object({
+  "klant_id": zod.number(),
+  "gebouw_id": zod.number().optional(),
+  "titel": zod.string(),
+  "kans_type": zod.string().optional(),
+  "fase": zod.string().optional(),
+  "waarde": zod.number().optional(),
+  "kans": zod.number().optional(),
+  "verwachte_datum": zod.string().optional(),
+  "verantwoordelijke_id": zod.number().optional(),
+  "concurrenten_betrokken": zod.string().optional(),
+  "volgende_actie": zod.string().optional(),
+  "opmerkingen": zod.string().optional()
+})
+
+export const CreateCrmProjectkansResponse = zod.void()
+
+
+/**
+ * @summary Projectkans ophalen
+ */
+export const GetCrmProjectkansParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetCrmProjectkansResponse = zod.object({
+  "id": zod.number(),
+  "klant_id": zod.number(),
+  "gebouw_id": zod.number().nullish(),
+  "organisatie_naam": zod.string().nullish(),
+  "titel": zod.string(),
+  "kans_type": zod.string().nullish(),
+  "fase": zod.string(),
+  "waarde": zod.number().nullish(),
+  "kans": zod.number().nullish(),
+  "verwachte_datum": zod.string().nullish(),
+  "verantwoordelijke_id": zod.number().nullish(),
+  "concurrenten_betrokken": zod.string().nullish(),
+  "volgende_actie": zod.string().nullish(),
+  "ai_samenvatting": zod.string().nullish(),
+  "opmerkingen": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+
+
+/**
+ * @summary Projectkans bijwerken
+ */
+export const UpdateCrmProjectkansParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateCrmProjectkansBody = zod.object({
+  "klant_id": zod.number(),
+  "gebouw_id": zod.number().optional(),
+  "titel": zod.string(),
+  "kans_type": zod.string().optional(),
+  "fase": zod.string().optional(),
+  "waarde": zod.number().optional(),
+  "kans": zod.number().optional(),
+  "verwachte_datum": zod.string().optional(),
+  "verantwoordelijke_id": zod.number().optional(),
+  "concurrenten_betrokken": zod.string().optional(),
+  "volgende_actie": zod.string().optional(),
+  "opmerkingen": zod.string().optional()
+})
+
+export const UpdateCrmProjectkansResponse = zod.object({
+  "id": zod.number(),
+  "klant_id": zod.number(),
+  "gebouw_id": zod.number().nullish(),
+  "organisatie_naam": zod.string().nullish(),
+  "titel": zod.string(),
+  "kans_type": zod.string().nullish(),
+  "fase": zod.string(),
+  "waarde": zod.number().nullish(),
+  "kans": zod.number().nullish(),
+  "verwachte_datum": zod.string().nullish(),
+  "verantwoordelijke_id": zod.number().nullish(),
+  "concurrenten_betrokken": zod.string().nullish(),
+  "volgende_actie": zod.string().nullish(),
+  "ai_samenvatting": zod.string().nullish(),
+  "opmerkingen": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+
+
+/**
+ * @summary Projectkans verwijderen
+ */
+export const DeleteCrmProjectkansParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteCrmProjectkansResponse = zod.void()
+
+
+/**
+ * @summary Concurrenten ophalen
+ */
+export const ListCrmConcurrentenResponseItem = zod.object({
+  "id": zod.number(),
+  "naam": zod.string(),
+  "website": zod.string().nullish(),
+  "linkedin_url": zod.string().nullish(),
+  "regio": zod.string().nullish(),
+  "bekende_klanten": zod.string().nullish(),
+  "bekende_projecttypes": zod.string().nullish(),
+  "sterke_punten": zod.string().nullish(),
+  "zwakke_punten": zod.string().nullish(),
+  "where_we_encounter": zod.string().nullish(),
+  "opmerkingen": zod.string().nullish(),
+  "ai_samenvatting": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+export const ListCrmConcurrentenResponse = zod.array(ListCrmConcurrentenResponseItem)
+
+
+/**
+ * @summary Concurrent aanmaken
+ */
+export const CreateCrmConcurrentBody = zod.object({
+  "naam": zod.string(),
+  "website": zod.string().optional(),
+  "linkedin_url": zod.string().optional(),
+  "regio": zod.string().optional(),
+  "bekende_klanten": zod.string().optional(),
+  "bekende_projecttypes": zod.string().optional(),
+  "sterke_punten": zod.string().optional(),
+  "zwakke_punten": zod.string().optional(),
+  "where_we_encounter": zod.string().optional(),
+  "opmerkingen": zod.string().optional()
+})
+
+export const CreateCrmConcurrentResponse = zod.void()
+
+
+/**
+ * @summary Concurrent ophalen
+ */
+export const GetCrmConcurrentParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetCrmConcurrentResponse = zod.object({
+  "id": zod.number(),
+  "naam": zod.string(),
+  "website": zod.string().nullish(),
+  "linkedin_url": zod.string().nullish(),
+  "regio": zod.string().nullish(),
+  "bekende_klanten": zod.string().nullish(),
+  "bekende_projecttypes": zod.string().nullish(),
+  "sterke_punten": zod.string().nullish(),
+  "zwakke_punten": zod.string().nullish(),
+  "where_we_encounter": zod.string().nullish(),
+  "opmerkingen": zod.string().nullish(),
+  "ai_samenvatting": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+
+
+/**
+ * @summary Concurrent bijwerken
+ */
+export const UpdateCrmConcurrentParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateCrmConcurrentBody = zod.object({
+  "naam": zod.string(),
+  "website": zod.string().optional(),
+  "linkedin_url": zod.string().optional(),
+  "regio": zod.string().optional(),
+  "bekende_klanten": zod.string().optional(),
+  "bekende_projecttypes": zod.string().optional(),
+  "sterke_punten": zod.string().optional(),
+  "zwakke_punten": zod.string().optional(),
+  "where_we_encounter": zod.string().optional(),
+  "opmerkingen": zod.string().optional()
+})
+
+export const UpdateCrmConcurrentResponse = zod.object({
+  "id": zod.number(),
+  "naam": zod.string(),
+  "website": zod.string().nullish(),
+  "linkedin_url": zod.string().nullish(),
+  "regio": zod.string().nullish(),
+  "bekende_klanten": zod.string().nullish(),
+  "bekende_projecttypes": zod.string().nullish(),
+  "sterke_punten": zod.string().nullish(),
+  "zwakke_punten": zod.string().nullish(),
+  "where_we_encounter": zod.string().nullish(),
+  "opmerkingen": zod.string().nullish(),
+  "ai_samenvatting": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+
+
+/**
+ * @summary Concurrent verwijderen
+ */
+export const DeleteCrmConcurrentParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteCrmConcurrentResponse = zod.void()
+
+
+/**
+ * @summary Marktinformatie ophalen
+ */
+export const ListCrmMarktintelligentieResponseItem = zod.object({
+  "id": zod.number(),
+  "type": zod.string(),
+  "organisatie_id": zod.number().nullish(),
+  "concurrent_id": zod.number().nullish(),
+  "titel": zod.string(),
+  "inhoud": zod.string().nullish(),
+  "bron": zod.string().nullish(),
+  "regio": zod.string().nullish(),
+  "datum": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+export const ListCrmMarktintelligentieResponse = zod.array(ListCrmMarktintelligentieResponseItem)
+
+
+/**
+ * @summary Marktinformatie toevoegen
+ */
+export const CreateCrmMarktintelligentieBody = zod.object({
+  "type": zod.string().optional(),
+  "organisatie_id": zod.number().optional(),
+  "concurrent_id": zod.number().optional(),
+  "titel": zod.string(),
+  "inhoud": zod.string().optional(),
+  "bron": zod.string().optional(),
+  "regio": zod.string().optional(),
+  "datum": zod.string().optional()
+})
+
+export const CreateCrmMarktintelligentieResponse = zod.void()
+
+
+/**
+ * @summary Marktinformatie bijwerken
+ */
+export const UpdateCrmMarktintelligentieParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateCrmMarktintelligentieBody = zod.object({
+  "type": zod.string().optional(),
+  "organisatie_id": zod.number().optional(),
+  "concurrent_id": zod.number().optional(),
+  "titel": zod.string(),
+  "inhoud": zod.string().optional(),
+  "bron": zod.string().optional(),
+  "regio": zod.string().optional(),
+  "datum": zod.string().optional()
+})
+
+export const UpdateCrmMarktintelligentieResponse = zod.object({
+  "id": zod.number(),
+  "type": zod.string(),
+  "organisatie_id": zod.number().nullish(),
+  "concurrent_id": zod.number().nullish(),
+  "titel": zod.string(),
+  "inhoud": zod.string().nullish(),
+  "bron": zod.string().nullish(),
+  "regio": zod.string().nullish(),
+  "datum": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+
+
+/**
+ * @summary Marktinformatie verwijderen
+ */
+export const DeleteCrmMarktintelligentieParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteCrmMarktintelligentieResponse = zod.void()
+
+
+/**
+ * @summary Inbox statistieken
+ */
+export const GetInboxStatsResponse = zod.object({
+  "totaal": zod.number(),
+  "nieuw": zod.number(),
+  "ter_beoordeling": zod.number(),
+  "goedgekeurd": zod.number(),
+  "verplaatst": zod.number(),
+  "afgewezen": zod.number(),
+  "snagstream_rapporten": zod.number().optional(),
+  "laag_betrouwbaarheid": zod.number().optional()
+})
+
+
+/**
+ * @summary Inbox items ophalen
+ */
+export const ListInboxItemsQueryParams = zod.object({
+  "status": zod.coerce.string().optional(),
+  "bestemming": zod.coerce.string().optional()
+})
+
+export const ListInboxItemsResponseItem = zod.object({
+  "id": zod.number(),
+  "bestandsnaam": zod.string(),
+  "bestandspad": zod.string(),
+  "bestandsgrootte": zod.number().nullish(),
+  "mimetype": zod.string().nullish(),
+  "geupload_door": zod.number().nullish(),
+  "geupload_op": zod.string().nullish(),
+  "status": zod.string(),
+  "document_categorie": zod.string().nullish(),
+  "bestemming": zod.string().nullish(),
+  "gekoppelde_entiteit_type": zod.string().nullish(),
+  "gekoppelde_entiteit_id": zod.number().nullish(),
+  "gekoppelde_entiteit_naam": zod.string().nullish(),
+  "ai_betrouwbaarheid": zod.string().nullish(),
+  "ai_samenvatting": zod.string().nullish(),
+  "ai_redenering": zod.string().nullish(),
+  "ai_volgende_actie": zod.string().nullish(),
+  "mogelijk_duplicaat": zod.boolean().optional(),
+  "goedgekeurd_door": zod.number().nullish(),
+  "goedgekeurd_op": zod.string().nullish(),
+  "afgewezen_reden": zod.string().nullish(),
+  "verplaatst_op": zod.string().nullish(),
+  "opmerkingen": zod.string().nullish(),
+  "bijgewerkt_op": zod.string().nullish(),
+  "snagstream_opdrachtgever": zod.string().nullish(),
+  "snagstream_gebouw": zod.string().nullish(),
+  "snagstream_project": zod.string().nullish(),
+  "snagstream_rapportdatum": zod.string().nullish(),
+  "snagstream_rapporttype": zod.string().nullish(),
+  "snagstream_status": zod.string().nullish(),
+  "auditlog": zod.array(zod.object({
+
+}).passthrough()).optional()
+})
+export const ListInboxItemsResponse = zod.array(ListInboxItemsResponseItem)
+
+
+/**
+ * @summary Document registreren in inbox
+ */
+export const CreateInboxItemBody = zod.object({
+  "bestandsnaam": zod.string(),
+  "bestandspad": zod.string().optional(),
+  "bestandsgrootte": zod.number().optional(),
+  "mimetype": zod.string().optional(),
+  "opmerkingen": zod.string().optional()
+})
+
+export const CreateInboxItemResponse = zod.void()
+
+
+/**
+ * @summary Inbox item ophalen
+ */
+export const GetInboxItemParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetInboxItemResponse = zod.object({
+  "id": zod.number(),
+  "bestandsnaam": zod.string(),
+  "bestandspad": zod.string(),
+  "bestandsgrootte": zod.number().nullish(),
+  "mimetype": zod.string().nullish(),
+  "geupload_door": zod.number().nullish(),
+  "geupload_op": zod.string().nullish(),
+  "status": zod.string(),
+  "document_categorie": zod.string().nullish(),
+  "bestemming": zod.string().nullish(),
+  "gekoppelde_entiteit_type": zod.string().nullish(),
+  "gekoppelde_entiteit_id": zod.number().nullish(),
+  "gekoppelde_entiteit_naam": zod.string().nullish(),
+  "ai_betrouwbaarheid": zod.string().nullish(),
+  "ai_samenvatting": zod.string().nullish(),
+  "ai_redenering": zod.string().nullish(),
+  "ai_volgende_actie": zod.string().nullish(),
+  "mogelijk_duplicaat": zod.boolean().optional(),
+  "goedgekeurd_door": zod.number().nullish(),
+  "goedgekeurd_op": zod.string().nullish(),
+  "afgewezen_reden": zod.string().nullish(),
+  "verplaatst_op": zod.string().nullish(),
+  "opmerkingen": zod.string().nullish(),
+  "bijgewerkt_op": zod.string().nullish(),
+  "snagstream_opdrachtgever": zod.string().nullish(),
+  "snagstream_gebouw": zod.string().nullish(),
+  "snagstream_project": zod.string().nullish(),
+  "snagstream_rapportdatum": zod.string().nullish(),
+  "snagstream_rapporttype": zod.string().nullish(),
+  "snagstream_status": zod.string().nullish(),
+  "auditlog": zod.array(zod.object({
+
+}).passthrough()).optional()
+})
+
+
+/**
+ * @summary Inbox item bijwerken
+ */
+export const UpdateInboxItemParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateInboxItemBody = zod.object({
+  "document_categorie": zod.string().optional(),
+  "bestemming": zod.string().optional(),
+  "opmerkingen": zod.string().optional(),
+  "gekoppelde_entiteit_type": zod.string().optional(),
+  "gekoppelde_entiteit_id": zod.number().optional(),
+  "gekoppelde_entiteit_naam": zod.string().optional(),
+  "snagstream_opdrachtgever": zod.string().optional(),
+  "snagstream_gebouw": zod.string().optional(),
+  "snagstream_project": zod.string().optional(),
+  "snagstream_rapportdatum": zod.string().optional(),
+  "snagstream_rapporttype": zod.string().optional(),
+  "snagstream_status": zod.string().optional()
+})
+
+export const UpdateInboxItemResponse = zod.object({
+  "id": zod.number(),
+  "bestandsnaam": zod.string(),
+  "bestandspad": zod.string(),
+  "bestandsgrootte": zod.number().nullish(),
+  "mimetype": zod.string().nullish(),
+  "geupload_door": zod.number().nullish(),
+  "geupload_op": zod.string().nullish(),
+  "status": zod.string(),
+  "document_categorie": zod.string().nullish(),
+  "bestemming": zod.string().nullish(),
+  "gekoppelde_entiteit_type": zod.string().nullish(),
+  "gekoppelde_entiteit_id": zod.number().nullish(),
+  "gekoppelde_entiteit_naam": zod.string().nullish(),
+  "ai_betrouwbaarheid": zod.string().nullish(),
+  "ai_samenvatting": zod.string().nullish(),
+  "ai_redenering": zod.string().nullish(),
+  "ai_volgende_actie": zod.string().nullish(),
+  "mogelijk_duplicaat": zod.boolean().optional(),
+  "goedgekeurd_door": zod.number().nullish(),
+  "goedgekeurd_op": zod.string().nullish(),
+  "afgewezen_reden": zod.string().nullish(),
+  "verplaatst_op": zod.string().nullish(),
+  "opmerkingen": zod.string().nullish(),
+  "bijgewerkt_op": zod.string().nullish(),
+  "snagstream_opdrachtgever": zod.string().nullish(),
+  "snagstream_gebouw": zod.string().nullish(),
+  "snagstream_project": zod.string().nullish(),
+  "snagstream_rapportdatum": zod.string().nullish(),
+  "snagstream_rapporttype": zod.string().nullish(),
+  "snagstream_status": zod.string().nullish(),
+  "auditlog": zod.array(zod.object({
+
+}).passthrough()).optional()
+})
+
+
+/**
+ * @summary Inbox item verwijderen
+ */
+export const DeleteInboxItemParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteInboxItemResponse = zod.void()
+
+
+/**
+ * @summary Inbox item goedkeuren
+ */
+export const GoedkeurenInboxItemParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GoedkeurenInboxItemBody = zod.object({
+  "opmerkingen": zod.string().optional()
+})
+
+export const GoedkeurenInboxItemResponse = zod.object({
+  "id": zod.number(),
+  "bestandsnaam": zod.string(),
+  "bestandspad": zod.string(),
+  "bestandsgrootte": zod.number().nullish(),
+  "mimetype": zod.string().nullish(),
+  "geupload_door": zod.number().nullish(),
+  "geupload_op": zod.string().nullish(),
+  "status": zod.string(),
+  "document_categorie": zod.string().nullish(),
+  "bestemming": zod.string().nullish(),
+  "gekoppelde_entiteit_type": zod.string().nullish(),
+  "gekoppelde_entiteit_id": zod.number().nullish(),
+  "gekoppelde_entiteit_naam": zod.string().nullish(),
+  "ai_betrouwbaarheid": zod.string().nullish(),
+  "ai_samenvatting": zod.string().nullish(),
+  "ai_redenering": zod.string().nullish(),
+  "ai_volgende_actie": zod.string().nullish(),
+  "mogelijk_duplicaat": zod.boolean().optional(),
+  "goedgekeurd_door": zod.number().nullish(),
+  "goedgekeurd_op": zod.string().nullish(),
+  "afgewezen_reden": zod.string().nullish(),
+  "verplaatst_op": zod.string().nullish(),
+  "opmerkingen": zod.string().nullish(),
+  "bijgewerkt_op": zod.string().nullish(),
+  "snagstream_opdrachtgever": zod.string().nullish(),
+  "snagstream_gebouw": zod.string().nullish(),
+  "snagstream_project": zod.string().nullish(),
+  "snagstream_rapportdatum": zod.string().nullish(),
+  "snagstream_rapporttype": zod.string().nullish(),
+  "snagstream_status": zod.string().nullish(),
+  "auditlog": zod.array(zod.object({
+
+}).passthrough()).optional()
+})
+
+
+/**
+ * @summary Inbox item afwijzen
+ */
+export const AfwijzenInboxItemParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const AfwijzenInboxItemBody = zod.object({
+  "reden": zod.string()
+})
+
+export const AfwijzenInboxItemResponse = zod.object({
+  "id": zod.number(),
+  "bestandsnaam": zod.string(),
+  "bestandspad": zod.string(),
+  "bestandsgrootte": zod.number().nullish(),
+  "mimetype": zod.string().nullish(),
+  "geupload_door": zod.number().nullish(),
+  "geupload_op": zod.string().nullish(),
+  "status": zod.string(),
+  "document_categorie": zod.string().nullish(),
+  "bestemming": zod.string().nullish(),
+  "gekoppelde_entiteit_type": zod.string().nullish(),
+  "gekoppelde_entiteit_id": zod.number().nullish(),
+  "gekoppelde_entiteit_naam": zod.string().nullish(),
+  "ai_betrouwbaarheid": zod.string().nullish(),
+  "ai_samenvatting": zod.string().nullish(),
+  "ai_redenering": zod.string().nullish(),
+  "ai_volgende_actie": zod.string().nullish(),
+  "mogelijk_duplicaat": zod.boolean().optional(),
+  "goedgekeurd_door": zod.number().nullish(),
+  "goedgekeurd_op": zod.string().nullish(),
+  "afgewezen_reden": zod.string().nullish(),
+  "verplaatst_op": zod.string().nullish(),
+  "opmerkingen": zod.string().nullish(),
+  "bijgewerkt_op": zod.string().nullish(),
+  "snagstream_opdrachtgever": zod.string().nullish(),
+  "snagstream_gebouw": zod.string().nullish(),
+  "snagstream_project": zod.string().nullish(),
+  "snagstream_rapportdatum": zod.string().nullish(),
+  "snagstream_rapporttype": zod.string().nullish(),
+  "snagstream_status": zod.string().nullish(),
+  "auditlog": zod.array(zod.object({
+
+}).passthrough()).optional()
+})
+
+
+/**
+ * @summary Inbox item verplaatsen naar module
+ */
+export const VerplaatsenInboxItemParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const VerplaatsenInboxItemBody = zod.object({
+  "bestemming": zod.string(),
+  "gekoppelde_entiteit_type": zod.string().optional(),
+  "gekoppelde_entiteit_id": zod.number().optional(),
+  "gekoppelde_entiteit_naam": zod.string().optional()
+})
+
+export const VerplaatsenInboxItemResponse = zod.object({
+  "id": zod.number(),
+  "bestandsnaam": zod.string(),
+  "bestandspad": zod.string(),
+  "bestandsgrootte": zod.number().nullish(),
+  "mimetype": zod.string().nullish(),
+  "geupload_door": zod.number().nullish(),
+  "geupload_op": zod.string().nullish(),
+  "status": zod.string(),
+  "document_categorie": zod.string().nullish(),
+  "bestemming": zod.string().nullish(),
+  "gekoppelde_entiteit_type": zod.string().nullish(),
+  "gekoppelde_entiteit_id": zod.number().nullish(),
+  "gekoppelde_entiteit_naam": zod.string().nullish(),
+  "ai_betrouwbaarheid": zod.string().nullish(),
+  "ai_samenvatting": zod.string().nullish(),
+  "ai_redenering": zod.string().nullish(),
+  "ai_volgende_actie": zod.string().nullish(),
+  "mogelijk_duplicaat": zod.boolean().optional(),
+  "goedgekeurd_door": zod.number().nullish(),
+  "goedgekeurd_op": zod.string().nullish(),
+  "afgewezen_reden": zod.string().nullish(),
+  "verplaatst_op": zod.string().nullish(),
+  "opmerkingen": zod.string().nullish(),
+  "bijgewerkt_op": zod.string().nullish(),
+  "snagstream_opdrachtgever": zod.string().nullish(),
+  "snagstream_gebouw": zod.string().nullish(),
+  "snagstream_project": zod.string().nullish(),
+  "snagstream_rapportdatum": zod.string().nullish(),
+  "snagstream_rapporttype": zod.string().nullish(),
+  "snagstream_status": zod.string().nullish(),
+  "auditlog": zod.array(zod.object({
+
+}).passthrough()).optional()
+})
+
+
+/**
+ * @summary Inbox item ter beoordeling stellen
+ */
+export const TerBeoordelingInboxItemParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const TerBeoordelingInboxItemResponse = zod.object({
+  "id": zod.number(),
+  "bestandsnaam": zod.string(),
+  "bestandspad": zod.string(),
+  "bestandsgrootte": zod.number().nullish(),
+  "mimetype": zod.string().nullish(),
+  "geupload_door": zod.number().nullish(),
+  "geupload_op": zod.string().nullish(),
+  "status": zod.string(),
+  "document_categorie": zod.string().nullish(),
+  "bestemming": zod.string().nullish(),
+  "gekoppelde_entiteit_type": zod.string().nullish(),
+  "gekoppelde_entiteit_id": zod.number().nullish(),
+  "gekoppelde_entiteit_naam": zod.string().nullish(),
+  "ai_betrouwbaarheid": zod.string().nullish(),
+  "ai_samenvatting": zod.string().nullish(),
+  "ai_redenering": zod.string().nullish(),
+  "ai_volgende_actie": zod.string().nullish(),
+  "mogelijk_duplicaat": zod.boolean().optional(),
+  "goedgekeurd_door": zod.number().nullish(),
+  "goedgekeurd_op": zod.string().nullish(),
+  "afgewezen_reden": zod.string().nullish(),
+  "verplaatst_op": zod.string().nullish(),
+  "opmerkingen": zod.string().nullish(),
+  "bijgewerkt_op": zod.string().nullish(),
+  "snagstream_opdrachtgever": zod.string().nullish(),
+  "snagstream_gebouw": zod.string().nullish(),
+  "snagstream_project": zod.string().nullish(),
+  "snagstream_rapportdatum": zod.string().nullish(),
+  "snagstream_rapporttype": zod.string().nullish(),
+  "snagstream_status": zod.string().nullish(),
+  "auditlog": zod.array(zod.object({
+
+}).passthrough()).optional()
+})
 
 
 /**

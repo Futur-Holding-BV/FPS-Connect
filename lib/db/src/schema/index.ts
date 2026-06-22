@@ -25,3 +25,4 @@ export * from "./uren";
 export * from "./chat";
 export * from "./backups";
 export * from "./opname";
+export * from "./inbox";

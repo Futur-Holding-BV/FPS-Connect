@@ -12,6 +12,11 @@ export interface CrmContactpersoonInput {
   email?: string;
   telefoon?: string;
   mobiel?: string;
+  linkedin_url?: string;
+  beslisrol?: string;
+  relatiesterkte?: string;
   primair?: boolean;
   opmerkingen?: string;
+  laatste_contact_datum?: string;
+  volgende_actie?: string;
 }

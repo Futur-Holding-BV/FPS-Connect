@@ -37,6 +37,13 @@ import Onderhoud from "@/pages/onderhoud/index";
 import Gebruikers from "@/pages/gebruikers/index";
 import CrmKlanten from "@/pages/crm/index";
 import CrmKlantDetail from "@/pages/crm/detail";
+import CrmOrganisaties from "@/pages/crm/organisaties";
+import CrmProjectkansen from "@/pages/crm/projectkansen";
+import CrmConcurrenten from "@/pages/crm/concurrenten";
+import CrmMarktintelligentie from "@/pages/crm/marktintelligentie";
+import CrmContactpersonen from "@/pages/crm/contactpersonen";
+import InboxOverzicht from "@/pages/inbox/index";
+import InboxDetail from "@/pages/inbox/detail";
 import Abonnementen from "@/pages/abonnementen/index";
 import LoginPogingen from "@/pages/beheer/login-pogingen";
 import HelpdeskBeheer from "@/pages/beheer/helpdesk";
@@ -202,9 +209,18 @@ function ConnectPortal() {
         <Route path="/berichten" component={BerichtenPagina} />
         <Route path="/toolbox" component={ToolboxPagina} />
 
-        {/* ── Relaties ── */}
-        <Route path="/crm" component={CrmKlanten} />
+        {/* ── Relaties / CRM ── */}
+        <Route path="/crm/organisaties" component={CrmOrganisaties} />
+        <Route path="/crm/projectkansen" component={CrmProjectkansen} />
+        <Route path="/crm/concurrenten" component={CrmConcurrenten} />
+        <Route path="/crm/marktintelligentie" component={CrmMarktintelligentie} />
+        <Route path="/crm/contactpersonen" component={CrmContactpersonen} />
         <Route path="/crm/:id" component={CrmKlantDetail} />
+        <Route path="/crm" component={CrmKlanten} />
+
+        {/* ── Inbox ── */}
+        <Route path="/inbox/:id" component={InboxDetail} />
+        <Route path="/inbox" component={InboxOverzicht} />
 
         {/* ── HRM ── statische /personeel/* paden vóór dynamisch /:id */}
         <Route path="/personeel/verlof" component={VerlofOverzichtPagina} />

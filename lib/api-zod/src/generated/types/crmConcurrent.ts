@@ -6,32 +6,29 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface CrmContactpersoon {
+export interface CrmConcurrent {
   id: number;
-  /** @nullable */
-  klant_id: number | null;
   naam: string;
   /** @nullable */
-  functie?: string | null;
-  /** @nullable */
-  email?: string | null;
-  /** @nullable */
-  telefoon?: string | null;
-  /** @nullable */
-  mobiel?: string | null;
+  website?: string | null;
   /** @nullable */
   linkedin_url?: string | null;
   /** @nullable */
-  beslisrol?: string | null;
+  regio?: string | null;
   /** @nullable */
-  relatiesterkte?: string | null;
-  primair: boolean;
+  bekende_klanten?: string | null;
+  /** @nullable */
+  bekende_projecttypes?: string | null;
+  /** @nullable */
+  sterke_punten?: string | null;
+  /** @nullable */
+  zwakke_punten?: string | null;
+  /** @nullable */
+  where_we_encounter?: string | null;
   /** @nullable */
   opmerkingen?: string | null;
   /** @nullable */
-  laatste_contact_datum?: string | null;
-  /** @nullable */
-  volgende_actie?: string | null;
+  ai_samenvatting?: string | null;
   aangemaakt_op: string;
   bijgewerkt_op: string;
 }

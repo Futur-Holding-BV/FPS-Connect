@@ -5,6 +5,5 @@
  * FPS Brandpreventie - Platform voor brandpreventieve gebouwvoorzieningen
  * OpenAPI spec version: 0.1.0
  */
-import type { CrmOrganisatie } from './crmOrganisatie';
 
-export type CrmKlant = CrmOrganisatie;
+export type InboxItemAuditlogItem = { [key: string]: unknown };

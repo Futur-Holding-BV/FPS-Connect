@@ -8,14 +8,19 @@
 
 export interface CrmKlantInput {
   naam: string;
+  type?: string;
   kvk?: string;
   adres?: string;
   postcode?: string;
   stad?: string;
+  regio?: string;
   telefoon?: string;
   email?: string;
   website?: string;
+  linkedin_url?: string;
   branche?: string;
   status?: string;
+  relatie_status?: string;
+  voorkeur_fps_bedrijf?: string;
   opmerkingen?: string;
 }

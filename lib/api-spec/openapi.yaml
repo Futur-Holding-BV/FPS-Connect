@@ -4676,6 +4676,499 @@ paths:
         "403":
           description: Geen toegang
 
+  /crm/dashboard:
+    get:
+      operationId: getCrmDashboard
+      tags: [crm]
+      summary: CRM Dashboard statistieken
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CrmDashboard"
+
+  /crm/contactpersonen:
+    get:
+      operationId: listCrmContactpersonenAll
+      tags: [crm]
+      summary: Alle contactpersonen
+      parameters:
+        - in: query
+          name: q
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CrmContactpersoon"
+
+  /crm/projectkansen:
+    get:
+      operationId: listCrmProjectkansen
+      tags: [crm]
+      summary: Projectkansen ophalen
+      parameters:
+        - in: query
+          name: fase
+          schema:
+            type: string
+        - in: query
+          name: klant_id
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CrmProjectkans"
+    post:
+      operationId: createCrmProjectkans
+      tags: [crm]
+      summary: Projectkans aanmaken
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CrmProjectkansInput"
+      responses:
+        "201":
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CrmProjectkans"
+
+  /crm/projectkansen/{id}:
+    get:
+      operationId: getCrmProjectkans
+      tags: [crm]
+      summary: Projectkans ophalen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CrmProjectkans"
+        "404":
+          description: Niet gevonden
+    patch:
+      operationId: updateCrmProjectkans
+      tags: [crm]
+      summary: Projectkans bijwerken
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CrmProjectkansInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CrmProjectkans"
+    delete:
+      operationId: deleteCrmProjectkans
+      tags: [crm]
+      summary: Projectkans verwijderen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Verwijderd
+
+  /crm/concurrenten:
+    get:
+      operationId: listCrmConcurrenten
+      tags: [crm]
+      summary: Concurrenten ophalen
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CrmConcurrent"
+    post:
+      operationId: createCrmConcurrent
+      tags: [crm]
+      summary: Concurrent aanmaken
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CrmConcurrentInput"
+      responses:
+        "201":
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CrmConcurrent"
+
+  /crm/concurrenten/{id}:
+    get:
+      operationId: getCrmConcurrent
+      tags: [crm]
+      summary: Concurrent ophalen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CrmConcurrent"
+    patch:
+      operationId: updateCrmConcurrent
+      tags: [crm]
+      summary: Concurrent bijwerken
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CrmConcurrentInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CrmConcurrent"
+    delete:
+      operationId: deleteCrmConcurrent
+      tags: [crm]
+      summary: Concurrent verwijderen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Verwijderd
+
+  /crm/marktintelligentie:
+    get:
+      operationId: listCrmMarktintelligentie
+      tags: [crm]
+      summary: Marktinformatie ophalen
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CrmMarktintelligentie"
+    post:
+      operationId: createCrmMarktintelligentie
+      tags: [crm]
+      summary: Marktinformatie toevoegen
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CrmMarktintelligentieInput"
+      responses:
+        "201":
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CrmMarktintelligentie"
+
+  /crm/marktintelligentie/{id}:
+    patch:
+      operationId: updateCrmMarktintelligentie
+      tags: [crm]
+      summary: Marktinformatie bijwerken
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CrmMarktintelligentieInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CrmMarktintelligentie"
+    delete:
+      operationId: deleteCrmMarktintelligentie
+      tags: [crm]
+      summary: Marktinformatie verwijderen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Verwijderd
+
+  /inbox/stats:
+    get:
+      operationId: getInboxStats
+      tags: [inbox]
+      summary: Inbox statistieken
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InboxStats"
+
+  /inbox/items:
+    get:
+      operationId: listInboxItems
+      tags: [inbox]
+      summary: Inbox items ophalen
+      parameters:
+        - in: query
+          name: status
+          schema:
+            type: string
+        - in: query
+          name: bestemming
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/InboxItem"
+    post:
+      operationId: createInboxItem
+      tags: [inbox]
+      summary: Document registreren in inbox
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InboxItemInput"
+      responses:
+        "201":
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InboxItem"
+
+  /inbox/items/{id}:
+    get:
+      operationId: getInboxItem
+      tags: [inbox]
+      summary: Inbox item ophalen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InboxItem"
+        "404":
+          description: Niet gevonden
+    patch:
+      operationId: updateInboxItem
+      tags: [inbox]
+      summary: Inbox item bijwerken
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InboxItemPatch"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InboxItem"
+    delete:
+      operationId: deleteInboxItem
+      tags: [inbox]
+      summary: Inbox item verwijderen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Verwijderd
+
+  /inbox/items/{id}/goedkeuren:
+    post:
+      operationId: goedkeurenInboxItem
+      tags: [inbox]
+      summary: Inbox item goedkeuren
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InboxGoedkeurenBody"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InboxItem"
+
+  /inbox/items/{id}/afwijzen:
+    post:
+      operationId: afwijzenInboxItem
+      tags: [inbox]
+      summary: Inbox item afwijzen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InboxAfwijzenBody"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InboxItem"
+
+  /inbox/items/{id}/verplaatsen:
+    post:
+      operationId: verplaatsenInboxItem
+      tags: [inbox]
+      summary: Inbox item verplaatsen naar module
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InboxVerplaatsenBody"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InboxItem"
+
+  /inbox/items/{id}/ter-beoordeling:
+    post:
+      operationId: terBeoordelingInboxItem
+      tags: [inbox]
+      summary: Inbox item ter beoordeling stellen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InboxItem"
+
   /gebouwen/{id}/emails:
     get:
       operationId: listGebouwEmails
@@ -9081,7 +9574,7 @@ components:
           type: string
 
     # ── CRM ───────────────────────────────────────────────────────────────
-    CrmKlant:
+    CrmOrganisatie:
       type: object
       required: [id, naam, status, aangemaakt_op, bijgewerkt_op]
       properties:
@@ -9089,6 +9582,8 @@ components:
           type: integer
         naam:
           type: string
+        type:
+          type: ["string", "null"]
         kvk:
           type: ["string", "null"]
         adres:
@@ -9097,22 +9592,41 @@ components:
           type: ["string", "null"]
         stad:
           type: ["string", "null"]
+        regio:
+          type: ["string", "null"]
         telefoon:
           type: ["string", "null"]
         email:
           type: ["string", "null"]
         website:
           type: ["string", "null"]
+        linkedin_url:
+          type: ["string", "null"]
         branche:
           type: ["string", "null"]
         status:
           type: string
+        relatie_status:
+          type: ["string", "null"]
+        voorkeur_fps_bedrijf:
+          type: ["string", "null"]
         opmerkingen:
           type: ["string", "null"]
+        contactpersonen:
+          type: array
+          items:
+            $ref: "#/components/schemas/CrmContactpersoon"
+        projectkansen:
+          type: array
+          items:
+            $ref: "#/components/schemas/CrmProjectkans"
         aangemaakt_op:
           type: string
         bijgewerkt_op:
           type: string
+
+    CrmKlant:
+      $ref: "#/components/schemas/CrmOrganisatie"
 
     CrmKlantInput:
       type: object
@@ -9120,6 +9634,8 @@ components:
       properties:
         naam:
           type: string
+        type:
+          type: string
         kvk:
           type: string
         adres:
@@ -9128,15 +9644,23 @@ components:
           type: string
         stad:
           type: string
+        regio:
+          type: string
         telefoon:
           type: string
         email:
           type: string
         website:
           type: string
+        linkedin_url:
+          type: string
         branche:
           type: string
         status:
+          type: string
+        relatie_status:
+          type: string
+        voorkeur_fps_bedrijf:
           type: string
         opmerkingen:
           type: string
@@ -9148,7 +9672,7 @@ components:
         id:
           type: integer
         klant_id:
-          type: integer
+          type: ["integer", "null"]
         naam:
           type: string
         functie:
@@ -9159,9 +9683,19 @@ components:
           type: ["string", "null"]
         mobiel:
           type: ["string", "null"]
+        linkedin_url:
+          type: ["string", "null"]
+        beslisrol:
+          type: ["string", "null"]
+        relatiesterkte:
+          type: ["string", "null"]
         primair:
           type: boolean
         opmerkingen:
+          type: ["string", "null"]
+        laatste_contact_datum:
+          type: ["string", "null"]
+        volgende_actie:
           type: ["string", "null"]
         aangemaakt_op:
           type: string
@@ -9182,9 +9716,19 @@ components:
           type: string
         mobiel:
           type: string
+        linkedin_url:
+          type: string
+        beslisrol:
+          type: string
+        relatiesterkte:
+          type: string
         primair:
           type: boolean
         opmerkingen:
+          type: string
+        laatste_contact_datum:
+          type: string
+        volgende_actie:
           type: string
 
     CrmOpdracht:
@@ -9367,6 +9911,372 @@ components:
         vervaldatum:
           type: string
         opmerkingen:
+          type: string
+
+    # ── CRM NIEUW ────────────────────────────────────────────────────────
+    CrmDashboard:
+      type: object
+      required: [totaal_organisaties, open_kansen, totaal_pijplijn_gewogen]
+      properties:
+        totaal_organisaties:
+          type: integer
+        open_kansen:
+          type: integer
+        totaal_pijplijn_gewogen:
+          type: integer
+        gewonnen_dit_jaar:
+          type: integer
+        verloren_dit_jaar:
+          type: integer
+        key_accounts:
+          type: integer
+        warme_prospects:
+          type: integer
+        geen_contact_60_dagen:
+          type: integer
+        concurrenten_getraceerd:
+          type: integer
+        volgende_acties:
+          type: array
+          items:
+            type: object
+        open_kansen_top:
+          type: array
+          items:
+            $ref: "#/components/schemas/CrmProjectkans"
+
+    CrmProjectkans:
+      type: object
+      required: [id, klant_id, titel, fase, aangemaakt_op, bijgewerkt_op]
+      properties:
+        id:
+          type: integer
+        klant_id:
+          type: integer
+        gebouw_id:
+          type: ["integer", "null"]
+        organisatie_naam:
+          type: ["string", "null"]
+        titel:
+          type: string
+        kans_type:
+          type: ["string", "null"]
+        fase:
+          type: string
+        waarde:
+          type: ["number", "null"]
+        kans:
+          type: ["integer", "null"]
+        verwachte_datum:
+          type: ["string", "null"]
+        verantwoordelijke_id:
+          type: ["integer", "null"]
+        concurrenten_betrokken:
+          type: ["string", "null"]
+        volgende_actie:
+          type: ["string", "null"]
+        ai_samenvatting:
+          type: ["string", "null"]
+        opmerkingen:
+          type: ["string", "null"]
+        aangemaakt_op:
+          type: string
+        bijgewerkt_op:
+          type: string
+
+    CrmProjectkansInput:
+      type: object
+      required: [klant_id, titel]
+      properties:
+        klant_id:
+          type: integer
+        gebouw_id:
+          type: integer
+        titel:
+          type: string
+        kans_type:
+          type: string
+        fase:
+          type: string
+        waarde:
+          type: number
+        kans:
+          type: integer
+        verwachte_datum:
+          type: string
+        verantwoordelijke_id:
+          type: integer
+        concurrenten_betrokken:
+          type: string
+        volgende_actie:
+          type: string
+        opmerkingen:
+          type: string
+
+    CrmConcurrent:
+      type: object
+      required: [id, naam, aangemaakt_op, bijgewerkt_op]
+      properties:
+        id:
+          type: integer
+        naam:
+          type: string
+        website:
+          type: ["string", "null"]
+        linkedin_url:
+          type: ["string", "null"]
+        regio:
+          type: ["string", "null"]
+        bekende_klanten:
+          type: ["string", "null"]
+        bekende_projecttypes:
+          type: ["string", "null"]
+        sterke_punten:
+          type: ["string", "null"]
+        zwakke_punten:
+          type: ["string", "null"]
+        where_we_encounter:
+          type: ["string", "null"]
+        opmerkingen:
+          type: ["string", "null"]
+        ai_samenvatting:
+          type: ["string", "null"]
+        aangemaakt_op:
+          type: string
+        bijgewerkt_op:
+          type: string
+
+    CrmConcurrentInput:
+      type: object
+      required: [naam]
+      properties:
+        naam:
+          type: string
+        website:
+          type: string
+        linkedin_url:
+          type: string
+        regio:
+          type: string
+        bekende_klanten:
+          type: string
+        bekende_projecttypes:
+          type: string
+        sterke_punten:
+          type: string
+        zwakke_punten:
+          type: string
+        where_we_encounter:
+          type: string
+        opmerkingen:
+          type: string
+
+    CrmMarktintelligentie:
+      type: object
+      required: [id, type, titel, aangemaakt_op, bijgewerkt_op]
+      properties:
+        id:
+          type: integer
+        type:
+          type: string
+        organisatie_id:
+          type: ["integer", "null"]
+        concurrent_id:
+          type: ["integer", "null"]
+        titel:
+          type: string
+        inhoud:
+          type: ["string", "null"]
+        bron:
+          type: ["string", "null"]
+        regio:
+          type: ["string", "null"]
+        datum:
+          type: ["string", "null"]
+        aangemaakt_op:
+          type: string
+        bijgewerkt_op:
+          type: string
+
+    CrmMarktintelligentieInput:
+      type: object
+      required: [titel]
+      properties:
+        type:
+          type: string
+        organisatie_id:
+          type: integer
+        concurrent_id:
+          type: integer
+        titel:
+          type: string
+        inhoud:
+          type: string
+        bron:
+          type: string
+        regio:
+          type: string
+        datum:
+          type: string
+
+    # ── INBOX ──────────────────────────────────────────────────────────────
+    InboxStats:
+      type: object
+      required: [totaal, nieuw, ter_beoordeling, goedgekeurd, verplaatst, afgewezen]
+      properties:
+        totaal:
+          type: integer
+        nieuw:
+          type: integer
+        ter_beoordeling:
+          type: integer
+        goedgekeurd:
+          type: integer
+        verplaatst:
+          type: integer
+        afgewezen:
+          type: integer
+        snagstream_rapporten:
+          type: integer
+        laag_betrouwbaarheid:
+          type: integer
+
+    InboxItem:
+      type: object
+      required: [id, bestandsnaam, bestandspad, status, aangemaakt_op]
+      properties:
+        id:
+          type: integer
+        bestandsnaam:
+          type: string
+        bestandspad:
+          type: string
+        bestandsgrootte:
+          type: ["integer", "null"]
+        mimetype:
+          type: ["string", "null"]
+        geupload_door:
+          type: ["integer", "null"]
+        geupload_op:
+          type: ["string", "null"]
+        status:
+          type: string
+        document_categorie:
+          type: ["string", "null"]
+        bestemming:
+          type: ["string", "null"]
+        gekoppelde_entiteit_type:
+          type: ["string", "null"]
+        gekoppelde_entiteit_id:
+          type: ["integer", "null"]
+        gekoppelde_entiteit_naam:
+          type: ["string", "null"]
+        ai_betrouwbaarheid:
+          type: ["string", "null"]
+        ai_samenvatting:
+          type: ["string", "null"]
+        ai_redenering:
+          type: ["string", "null"]
+        ai_volgende_actie:
+          type: ["string", "null"]
+        mogelijk_duplicaat:
+          type: boolean
+        goedgekeurd_door:
+          type: ["integer", "null"]
+        goedgekeurd_op:
+          type: ["string", "null"]
+        afgewezen_reden:
+          type: ["string", "null"]
+        verplaatst_op:
+          type: ["string", "null"]
+        opmerkingen:
+          type: ["string", "null"]
+        bijgewerkt_op:
+          type: ["string", "null"]
+        snagstream_opdrachtgever:
+          type: ["string", "null"]
+        snagstream_gebouw:
+          type: ["string", "null"]
+        snagstream_project:
+          type: ["string", "null"]
+        snagstream_rapportdatum:
+          type: ["string", "null"]
+        snagstream_rapporttype:
+          type: ["string", "null"]
+        snagstream_status:
+          type: ["string", "null"]
+        auditlog:
+          type: array
+          items:
+            type: object
+
+    InboxItemInput:
+      type: object
+      required: [bestandsnaam]
+      properties:
+        bestandsnaam:
+          type: string
+        bestandspad:
+          type: string
+        bestandsgrootte:
+          type: integer
+        mimetype:
+          type: string
+        opmerkingen:
+          type: string
+
+    InboxItemPatch:
+      type: object
+      properties:
+        document_categorie:
+          type: string
+        bestemming:
+          type: string
+        opmerkingen:
+          type: string
+        gekoppelde_entiteit_type:
+          type: string
+        gekoppelde_entiteit_id:
+          type: integer
+        gekoppelde_entiteit_naam:
+          type: string
+        snagstream_opdrachtgever:
+          type: string
+        snagstream_gebouw:
+          type: string
+        snagstream_project:
+          type: string
+        snagstream_rapportdatum:
+          type: string
+        snagstream_rapporttype:
+          type: string
+        snagstream_status:
+          type: string
+
+    InboxGoedkeurenBody:
+      type: object
+      properties:
+        opmerkingen:
+          type: string
+
+    InboxAfwijzenBody:
+      type: object
+      required: [reden]
+      properties:
+        reden:
+          type: string
+
+    InboxVerplaatsenBody:
+      type: object
+      required: [bestemming]
+      properties:
+        bestemming:
+          type: string
+        gekoppelde_entiteit_type:
+          type: string
+        gekoppelde_entiteit_id:
+          type: integer
+        gekoppelde_entiteit_naam:
           type: string
 
     # ── E-MAILARCHIEF ─────────────────────────────────────────────────────

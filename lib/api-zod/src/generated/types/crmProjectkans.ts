@@ -6,32 +6,33 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface CrmContactpersoon {
+export interface CrmProjectkans {
   id: number;
+  klant_id: number;
   /** @nullable */
-  klant_id: number | null;
-  naam: string;
+  gebouw_id?: number | null;
   /** @nullable */
-  functie?: string | null;
+  organisatie_naam?: string | null;
+  titel: string;
   /** @nullable */
-  email?: string | null;
+  kans_type?: string | null;
+  fase: string;
   /** @nullable */
-  telefoon?: string | null;
+  waarde?: number | null;
   /** @nullable */
-  mobiel?: string | null;
+  kans?: number | null;
   /** @nullable */
-  linkedin_url?: string | null;
+  verwachte_datum?: string | null;
   /** @nullable */
-  beslisrol?: string | null;
+  verantwoordelijke_id?: number | null;
   /** @nullable */
-  relatiesterkte?: string | null;
-  primair: boolean;
-  /** @nullable */
-  opmerkingen?: string | null;
-  /** @nullable */
-  laatste_contact_datum?: string | null;
+  concurrenten_betrokken?: string | null;
   /** @nullable */
   volgende_actie?: string | null;
+  /** @nullable */
+  ai_samenvatting?: string | null;
+  /** @nullable */
+  opmerkingen?: string | null;
   aangemaakt_op: string;
   bijgewerkt_op: string;
 }

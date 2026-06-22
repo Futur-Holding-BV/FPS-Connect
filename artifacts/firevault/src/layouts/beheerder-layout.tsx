@@ -14,6 +14,7 @@ import {
   Calculator, CalendarDays, LayoutDashboard, BarChart3, CreditCard, MessageSquare, HardHat,
   Trophy, HardDrive, ClipboardList, Smartphone, Plus, Hammer, PackageCheck,
   BookOpen, HardDriveUpload, CalendarCheck2, Settings2, ArchiveRestore,
+  Inbox, Building2, Target, Handshake, Newspaper,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { GebruikerMenu } from "@/components/gebruiker-menu";
@@ -340,12 +341,76 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
                       <SidebarMenuItem>
                         <SidebarMenuButton
                           asChild
-                          isActive={location === "/crm" || location.startsWith("/crm/")}
+                          isActive={location === "/crm" && !location.startsWith("/crm/")}
                         >
                           <Link href="/crm">
                             <Contact />
-                            <span>Relaties</span>
-                            <InUitvoering />
+                            <span>CRM Dashboard</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    )}
+                    {toonCrm && (
+                      <SidebarMenuItem>
+                        <SidebarMenuButton
+                          asChild
+                          isActive={location === "/crm/organisaties" || location.startsWith("/crm/organisaties")}
+                        >
+                          <Link href="/crm/organisaties">
+                            <Building2 />
+                            <span>Organisaties</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    )}
+                    {toonCrm && (
+                      <SidebarMenuItem>
+                        <SidebarMenuButton
+                          asChild
+                          isActive={location === "/crm/projectkansen"}
+                        >
+                          <Link href="/crm/projectkansen">
+                            <Target />
+                            <span>Projectkansen</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    )}
+                    {toonCrm && (
+                      <SidebarMenuItem>
+                        <SidebarMenuButton
+                          asChild
+                          isActive={location === "/crm/concurrenten"}
+                        >
+                          <Link href="/crm/concurrenten">
+                            <Handshake />
+                            <span>Concurrenten</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    )}
+                    {toonCrm && (
+                      <SidebarMenuItem>
+                        <SidebarMenuButton
+                          asChild
+                          isActive={location === "/crm/marktintelligentie"}
+                        >
+                          <Link href="/crm/marktintelligentie">
+                            <Newspaper />
+                            <span>Marktinzicht</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    )}
+                    {toonCrm && (
+                      <SidebarMenuItem>
+                        <SidebarMenuButton
+                          asChild
+                          isActive={location === "/inbox" || location.startsWith("/inbox/")}
+                        >
+                          <Link href="/inbox">
+                            <Inbox />
+                            <span>Slim Uploadpunt</span>
                           </Link>
                         </SidebarMenuButton>
                       </SidebarMenuItem>
