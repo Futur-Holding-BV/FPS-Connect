@@ -186,6 +186,7 @@ export * from './listLabelsParams';
 export * from './listModCalculatiesParams';
 export * from './listMuisGebeurtenissenParams';
 export * from './listOnderhoudParams';
+export * from './listOpnamePlattegrondItemsParams';
 export * from './listOpnamesParams';
 export * from './listPlanningAfwezigheidParams';
 export * from './listPlanningItemsParams';

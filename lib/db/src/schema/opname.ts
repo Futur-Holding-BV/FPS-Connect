@@ -31,6 +31,8 @@ export const opnameItemsTable = pgTable("opname_items", {
   prioriteit:      text("prioriteit").notNull().default("normaal"), // laag | normaal | hoog
   notities:        text("notities"),
   afgerond:        boolean("afgerond").notNull().default(false),
+  tekeningX:       integer("tekening_x"),
+  tekeningY:       integer("tekening_y"),
   aangemaaktOp:    timestamp("aangemaakt_op").notNull().defaultNow(),
   bijgewerktOp:    timestamp("bijgewerkt_op").notNull().defaultNow(),
 });

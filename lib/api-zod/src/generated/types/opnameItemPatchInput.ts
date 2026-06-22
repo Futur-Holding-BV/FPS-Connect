@@ -18,4 +18,6 @@ export interface OpnameItemPatchInput {
   prioriteit?: string;
   notities?: string | null;
   afgerond?: boolean;
+  tekening_x?: number | null;
+  tekening_y?: number | null;
 }

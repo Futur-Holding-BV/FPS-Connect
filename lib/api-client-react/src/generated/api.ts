@@ -160,6 +160,7 @@ import type {
   ListModCalculatiesParams,
   ListMuisGebeurtenissenParams,
   ListOnderhoudParams,
+  ListOpnamePlattegrondItemsParams,
   ListOpnamesParams,
   ListPlanningAfwezigheidParams,
   ListPlanningItemsParams,
@@ -30557,6 +30558,90 @@ export const useCreateOpnameFotoUploadUrl = <TError = ErrorType<unknown>,
       > => {
       return useMutation(getCreateOpnameFotoUploadUrlMutationOptions(options));
     }
+
+export const getListOpnamePlattegrondItemsUrl = (params: ListOpnamePlattegrondItemsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/opname/plattegrond-items?${stringifiedParams}` : `/api/opname/plattegrond-items`
+}
+
+/**
+ * @summary Opname-items met tekening-positie op een verdieping (voor plattegrond-laag)
+ */
+export const listOpnamePlattegrondItems = async (params: ListOpnamePlattegrondItemsParams, options?: RequestInit): Promise<OpnameItem[]> => {
+
+  return customFetch<OpnameItem[]>(getListOpnamePlattegrondItemsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListOpnamePlattegrondItemsQueryKey = (params?: ListOpnamePlattegrondItemsParams,) => {
+    return [
+    `/api/opname/plattegrond-items`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListOpnamePlattegrondItemsQueryOptions = <TData = Awaited<ReturnType<typeof listOpnamePlattegrondItems>>, TError = ErrorType<unknown>>(params: ListOpnamePlattegrondItemsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listOpnamePlattegrondItems>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListOpnamePlattegrondItemsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listOpnamePlattegrondItems>>> = ({ signal }) => listOpnamePlattegrondItems(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listOpnamePlattegrondItems>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListOpnamePlattegrondItemsQueryResult = NonNullable<Awaited<ReturnType<typeof listOpnamePlattegrondItems>>>
+export type ListOpnamePlattegrondItemsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Opname-items met tekening-positie op een verdieping (voor plattegrond-laag)
+ */
+
+export function useListOpnamePlattegrondItems<TData = Awaited<ReturnType<typeof listOpnamePlattegrondItems>>, TError = ErrorType<unknown>>(
+ params: ListOpnamePlattegrondItemsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listOpnamePlattegrondItems>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListOpnamePlattegrondItemsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
 
 export const getDeleteOpnameFotoUrl = (fotoId: number,) => {
 

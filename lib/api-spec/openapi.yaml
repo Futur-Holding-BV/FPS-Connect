@@ -8625,6 +8625,28 @@ paths:
               schema:
                 $ref: '#/components/schemas/OpnameFotoUploadResponse'
 
+  /opname/plattegrond-items:
+    get:
+      operationId: listOpnamePlattegrondItems
+      summary: Opname-items met tekening-positie op een verdieping (voor plattegrond-laag)
+      tags: [opname]
+      security: [{ cookieAuth: [] }, { bearerAuth: [] }]
+      parameters:
+        - in: query
+          name: verdieping_id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Lijst van gepositioneerde opname-items voor deze verdieping
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/OpnameItem'
+
   /opname/fotos/{fotoId}:
     delete:
       operationId: deleteOpnameFoto
@@ -15259,6 +15281,12 @@ components:
           nullable: true
         afgerond:
           type: boolean
+        tekening_x:
+          type: integer
+          nullable: true
+        tekening_y:
+          type: integer
+          nullable: true
         fotos:
           type: array
           items:
@@ -15380,6 +15408,12 @@ components:
           nullable: true
         afgerond:
           type: boolean
+        tekening_x:
+          type: integer
+          nullable: true
+        tekening_y:
+          type: integer
+          nullable: true
 
     OpnameFotoInput:
       type: object

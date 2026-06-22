@@ -10130,6 +10130,8 @@ export const GetOpnameResponse = zod.object({
   "prioriteit": zod.string(),
   "notities": zod.string().nullish(),
   "afgerond": zod.boolean(),
+  "tekening_x": zod.number().nullish(),
+  "tekening_y": zod.number().nullish(),
   "fotos": zod.array(zod.object({
   "id": zod.number(),
   "item_id": zod.number(),
@@ -10184,6 +10186,8 @@ export const UpdateOpnameResponse = zod.object({
   "prioriteit": zod.string(),
   "notities": zod.string().nullish(),
   "afgerond": zod.boolean(),
+  "tekening_x": zod.number().nullish(),
+  "tekening_y": zod.number().nullish(),
   "fotos": zod.array(zod.object({
   "id": zod.number(),
   "item_id": zod.number(),
@@ -10241,6 +10245,8 @@ export const SluitOpnameAfResponse = zod.object({
   "prioriteit": zod.string(),
   "notities": zod.string().nullish(),
   "afgerond": zod.boolean(),
+  "tekening_x": zod.number().nullish(),
+  "tekening_y": zod.number().nullish(),
   "fotos": zod.array(zod.object({
   "id": zod.number(),
   "item_id": zod.number(),
@@ -10293,6 +10299,8 @@ export const ListOpnameItemsResponseItem = zod.object({
   "prioriteit": zod.string(),
   "notities": zod.string().nullish(),
   "afgerond": zod.boolean(),
+  "tekening_x": zod.number().nullish(),
+  "tekening_y": zod.number().nullish(),
   "fotos": zod.array(zod.object({
   "id": zod.number(),
   "item_id": zod.number(),
@@ -10353,6 +10361,8 @@ export const GetOpnameItemResponse = zod.object({
   "prioriteit": zod.string(),
   "notities": zod.string().nullish(),
   "afgerond": zod.boolean(),
+  "tekening_x": zod.number().nullish(),
+  "tekening_y": zod.number().nullish(),
   "fotos": zod.array(zod.object({
   "id": zod.number(),
   "item_id": zod.number(),
@@ -10384,7 +10394,9 @@ export const UpdateOpnameItemBody = zod.object({
   "afmetingen": zod.string().nullish(),
   "prioriteit": zod.string().optional(),
   "notities": zod.string().nullish(),
-  "afgerond": zod.boolean().optional()
+  "afgerond": zod.boolean().optional(),
+  "tekening_x": zod.number().nullish(),
+  "tekening_y": zod.number().nullish()
 })
 
 export const UpdateOpnameItemResponse = zod.object({
@@ -10402,6 +10414,8 @@ export const UpdateOpnameItemResponse = zod.object({
   "prioriteit": zod.string(),
   "notities": zod.string().nullish(),
   "afgerond": zod.boolean(),
+  "tekening_x": zod.number().nullish(),
+  "tekening_y": zod.number().nullish(),
   "fotos": zod.array(zod.object({
   "id": zod.number(),
   "item_id": zod.number(),
@@ -10439,6 +10453,44 @@ export const CreateOpnameFotoUploadUrlBody = zod.object({
 })
 
 export const CreateOpnameFotoUploadUrlResponse = zod.void()
+
+
+/**
+ * @summary Opname-items met tekening-positie op een verdieping (voor plattegrond-laag)
+ */
+export const ListOpnamePlattegrondItemsQueryParams = zod.object({
+  "verdieping_id": zod.coerce.number()
+})
+
+export const ListOpnamePlattegrondItemsResponseItem = zod.object({
+  "id": zod.number(),
+  "opname_id": zod.number(),
+  "spot_type": zod.string(),
+  "ruimte": zod.string().nullish(),
+  "verdieping_id": zod.number().nullish(),
+  "verdieping_naam": zod.string().nullish(),
+  "beschrijving": zod.string().nullish(),
+  "actie": zod.string(),
+  "bereikbaarheid": zod.string(),
+  "aantal": zod.number(),
+  "afmetingen": zod.string().nullish(),
+  "prioriteit": zod.string(),
+  "notities": zod.string().nullish(),
+  "afgerond": zod.boolean(),
+  "tekening_x": zod.number().nullish(),
+  "tekening_y": zod.number().nullish(),
+  "fotos": zod.array(zod.object({
+  "id": zod.number(),
+  "item_id": zod.number(),
+  "object_path": zod.string(),
+  "url": zod.string().nullish(),
+  "bijschrift": zod.string().nullish(),
+  "aangemaakt_op": zod.coerce.date()
+})),
+  "aangemaakt_op": zod.coerce.date(),
+  "bijgewerkt_op": zod.coerce.date()
+})
+export const ListOpnamePlattegrondItemsResponse = zod.array(ListOpnamePlattegrondItemsResponseItem)
 
 
 /**

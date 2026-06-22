@@ -22,6 +22,8 @@ export interface OpnameItem {
   prioriteit: string;
   notities?: string | null;
   afgerond: boolean;
+  tekening_x?: number | null;
+  tekening_y?: number | null;
   fotos: OpnameFoto[];
   aangemaakt_op: Date;
   bijgewerkt_op: Date;

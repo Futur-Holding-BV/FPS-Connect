@@ -31,6 +31,8 @@ import {
   useAssignClusterMonteur,
   useAiSpotvoorstel,
   useBewaarSpotAiVoorstel,
+  useListOpnamePlattegrondItems,
+  useUpdateOpnameItem,
 } from "@workspace/api-client-react";
 import type { SpotAiVoorstelResultaat } from "@workspace/api-client-react";
 import { useUpload } from "@workspace/object-storage-web";
@@ -40,7 +42,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Plus, X, ZoomIn, ZoomOut, RotateCcw, Map, FileText, Trash2, Image as ImageIcon, Loader2, Spline, Check, Move, Archive, ArchiveRestore, Boxes, Pencil, Layers, UserCheck, Sparkles, TriangleAlert } from "lucide-react";
+import { ArrowLeft, Plus, X, ZoomIn, ZoomOut, RotateCcw, Map, FileText, Trash2, Image as ImageIcon, Loader2, Spline, Check, Move, Archive, ArchiveRestore, Boxes, Pencil, Layers, UserCheck, Sparkles, TriangleAlert, ClipboardList } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { ApplicatiePicker } from "@/components/applicatie-picker";
 import { ToepassingMultiSelect } from "@/components/toepassing-multi-select";
@@ -555,6 +557,11 @@ export default function Plattegrond() {
   >(null);
   useEffect(() => { logoBoxRef.current = logoBox; }, [logoBox]);
 
+  // Opname-laag
+  const [toonOpnameLaag, setToonOpnameLaag] = useState(false);
+  const [geselecteerdOpnameItemId, setGeselecteerdOpnameItemId] = useState<number | null>(null);
+  const [opnameVerplaatsModus, setOpnameVerplaatsModus] = useState(false);
+
   const { gebruiker } = useAuth();
   // isBeheerder volgt de EFFECTIEVE rol ("bekijken als" toont de teamlid-weergave);
   // bewerkrechten komen uit de echte bevoegdheden-matrix. Backend dwingt schrijven
@@ -567,6 +574,8 @@ export default function Plattegrond() {
   // uit een rolnaam. De rol-enum kent alleen nog hoofdbeheerder/gebruiker/klant,
   // dus rol-string-gating liet de bewerkbalk verdwijnen voor gewone gebruikers.
   const magBewerken = heeftNiveau("voorzieningen", 3);
+  const magOpnameLaag = heeftNiveau("opname", 1);
+  const magOpnameLaagBewerken = heeftNiveau("opname", 2);
 
   const queryClient = useQueryClient();
   const { data: verdieping } = useGetVerdieping(Number(verdiepingId));
@@ -585,6 +594,12 @@ export default function Plattegrond() {
   const { data: scheidingen, refetch: refetchScheidingen } = useListScheidingen(Number(verdiepingId));
   const maakScheiding = useCreateScheiding();
   const verwijderScheiding = useDeleteScheiding();
+
+  // Opname-laag: posities van opname-items op de huidige verdieping.
+  const { data: opnameLaagItems, refetch: refetchOpnameLaag } = useListOpnamePlattegrondItems(
+    { verdieping_id: Number(verdiepingId) },
+  );
+  const updateOpnameItemMut = useUpdateOpnameItem();
 
   // Logische clusters van dit gebouw (over alle verdiepingen; filtering op weergave
   // gebeurt impliciet doordat alleen spots van deze verdieping worden getekend).
@@ -885,6 +900,15 @@ export default function Plattegrond() {
       void plaatsSerieSpot(klemX, klemY);
       return;
     }
+    if (opnameVerplaatsModus && geselecteerdOpnameItemId != null) {
+      const klemX = Math.round(Math.min(W, Math.max(0, svgX)));
+      const klemY = Math.round(Math.min(H, Math.max(0, svgY)));
+      updateOpnameItemMut.mutate(
+        { itemId: geselecteerdOpnameItemId, data: { tekening_x: klemX, tekening_y: klemY } },
+        { onSuccess: () => { void refetchOpnameLaag(); setOpnameVerplaatsModus(false); } },
+      );
+      return;
+    }
     if (!plaatsenModus) return;
     const klemX = Math.min(W, Math.max(0, svgX));
     const klemY = Math.min(H, Math.max(0, svgY));
@@ -909,7 +933,7 @@ export default function Plattegrond() {
     aiSessieRef.current += 1;
     wandPlafondHandmatigRef.current = false;
     setNieuwDialoog(true);
-  }, [plaatsenModus, serieModus, serieMethode, serieLijnStart, serieAantal, serieRijen, serieKolommen, tekenModus, verplaatsModus, geselecteerdId, view, W, H, volgendSpot, gebruiker, monteurs]);
+  }, [plaatsenModus, serieModus, serieMethode, serieLijnStart, serieAantal, serieRijen, serieKolommen, tekenModus, verplaatsModus, geselecteerdId, opnameVerplaatsModus, geselecteerdOpnameItemId, updateOpnameItemMut, refetchOpnameLaag, view, W, H, volgendSpot, gebruiker, monteurs]);
 
   // Bouwt de POST-payload voor één serie-spot uit het actuele sjabloon. Het
   // objectnummer blijft leeg zodat de server het genereert (geen botsing bij
@@ -1444,6 +1468,26 @@ export default function Plattegrond() {
             </Button>
           )}
 
+          {magOpnameLaag && (
+            <Button
+              variant={toonOpnameLaag ? "default" : "outline"}
+              size="sm"
+              className="h-8"
+              onClick={() => {
+                const nieuw = !toonOpnameLaag;
+                setToonOpnameLaag(nieuw);
+                if (!nieuw) {
+                  setGeselecteerdOpnameItemId(null);
+                  setOpnameVerplaatsModus(false);
+                }
+              }}
+              title="Opname-laag tonen op de tekening"
+            >
+              <ClipboardList className="h-4 w-4 mr-1" />
+              Opname-laag
+            </Button>
+          )}
+
           {magBewerken && (
             <>
               <Button
@@ -1533,6 +1577,16 @@ export default function Plattegrond() {
           </span>
           <Button size="sm" variant="default" onClick={stopSerie}>
             <Check className="h-4 w-4 mr-1" />Klaar ({serieTeller})
+          </Button>
+        </div>
+      )}
+
+      {/* Opname-laag verplaats hint */}
+      {opnameVerplaatsModus && (
+        <div className="bg-slate-900/10 border border-slate-900/20 rounded-md px-3 py-2 mb-2 text-sm text-slate-900 font-medium flex items-center justify-between flex-shrink-0">
+          <span>Klik op de tekening om het opname-item op die positie te plaatsen.</span>
+          <Button size="sm" variant="outline" onClick={() => setOpnameVerplaatsModus(false)}>
+            <X className="h-4 w-4 mr-1" />Annuleren
           </Button>
         </div>
       )}
@@ -1713,6 +1767,116 @@ export default function Plattegrond() {
                   />
                 ),
               )}
+
+              {/* Opname-laag — zwart/wit markers boven uitvoeringsspot-kleuren, onder het logo */}
+              {toonOpnameLaag && (opnameLaagItems ?? []).map((item: any) => {
+                if (item.tekening_x == null || item.tekening_y == null) return null;
+                const x = item.tekening_x as number;
+                const y = item.tekening_y as number;
+                const r = 14 / view.zoom;
+                const isGeselecteerd = geselecteerdOpnameItemId === item.id;
+                const afkorting = (item.spot_type as string).slice(0, 2).toUpperCase();
+                return (
+                  <g
+                    key={`oi-${item.id}`}
+                    transform={`translate(${x},${y})`}
+                    style={{ cursor: magOpnameLaagBewerken ? "pointer" : "default" }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (geselecteerdOpnameItemId === item.id) {
+                        setGeselecteerdOpnameItemId(null);
+                        setOpnameVerplaatsModus(false);
+                      } else {
+                        setGeselecteerdOpnameItemId(item.id);
+                        setOpnameVerplaatsModus(false);
+                      }
+                    }}
+                  >
+                    <circle
+                      cx={0}
+                      cy={0}
+                      r={r}
+                      fill="white"
+                      stroke={isGeselecteerd ? "#111827" : "#374151"}
+                      strokeWidth={isGeselecteerd ? 2.5 / view.zoom : 1.5 / view.zoom}
+                      strokeDasharray={isGeselecteerd ? undefined : `${4 / view.zoom} ${3 / view.zoom}`}
+                    />
+                    <text
+                      x={0}
+                      y={0}
+                      dominantBaseline="central"
+                      textAnchor="middle"
+                      fontSize={9 / view.zoom}
+                      fontWeight="600"
+                      fill="#111827"
+                      style={{ pointerEvents: "none", userSelect: "none" }}
+                    >
+                      {afkorting}
+                    </text>
+                  </g>
+                );
+              })}
+
+              {/* Opname-item popup (geselecteerd) */}
+              {toonOpnameLaag && geselecteerdOpnameItemId != null && (() => {
+                const item = (opnameLaagItems ?? []).find((i: any) => i.id === geselecteerdOpnameItemId);
+                if (!item || item.tekening_x == null || item.tekening_y == null) return null;
+                const px = (item.tekening_x as number) * view.zoom + view.x;
+                const py = (item.tekening_y as number) * view.zoom + view.y;
+                return (
+                  <foreignObject
+                    x={0}
+                    y={0}
+                    width={1}
+                    height={1}
+                    style={{ overflow: "visible" }}
+                    transform={`translate(${item.tekening_x},${item.tekening_y})`}
+                  >
+                    <div
+                      style={{
+                        position: "absolute",
+                        left: `${16 / view.zoom}px`,
+                        top: `${-(40 / view.zoom)}px`,
+                        width: `${180 / view.zoom}px`,
+                        background: "white",
+                        border: "1px solid #374151",
+                        borderRadius: `${6 / view.zoom}px`,
+                        padding: `${6 / view.zoom}px ${8 / view.zoom}px`,
+                        fontSize: `${10 / view.zoom}px`,
+                        boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+                        pointerEvents: "auto",
+                      }}
+                    >
+                      <div style={{ fontWeight: 700, marginBottom: `${3 / view.zoom}px`, color: "#111827" }}>
+                        {item.spot_type}
+                        {item.ruimte && <span style={{ fontWeight: 400, color: "#6b7280", marginLeft: `${4 / view.zoom}px` }}>{item.ruimte}</span>}
+                      </div>
+                      {item.beschrijving && (
+                        <div style={{ color: "#374151", marginBottom: `${3 / view.zoom}px` }}>{item.beschrijving}</div>
+                      )}
+                      {magOpnameLaagBewerken && (
+                        <div style={{ display: "flex", gap: `${4 / view.zoom}px`, marginTop: `${4 / view.zoom}px` }}>
+                          <button
+                            style={{
+                              fontSize: `${9 / view.zoom}px`,
+                              padding: `${2 / view.zoom}px ${6 / view.zoom}px`,
+                              background: "#111827",
+                              color: "white",
+                              border: "none",
+                              borderRadius: `${3 / view.zoom}px`,
+                              cursor: "pointer",
+                            }}
+                            onClick={(e) => { e.stopPropagation(); setOpnameVerplaatsModus(true); }}
+                          >
+                            Verplaatsen
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </foreignObject>
+                );
+                void px; void py;
+              })()}
 
               {/* Logo — als laatste getekend zodat het bovenop spots/lijnen ligt en versleepbaar blijft */}
               {pdfBeeld && logoBox && (() => {
