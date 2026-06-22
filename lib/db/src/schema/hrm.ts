@@ -93,6 +93,8 @@ export const medewerkersTable = pgTable("medewerkers", {
   rijbewijsVervaldatum: text("rijbewijs_vervaldatum"),
   // CV / werkachtergrond (vrij tekstveld)
   cvTekst: text("cv_tekst"),
+  // BSN — verplicht voor loonadministratie; strikt vertrouwelijk
+  bsn: text("bsn"),
   actief: boolean("actief").notNull().default(true),
   opmerkingen: text("opmerkingen"),
   aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),

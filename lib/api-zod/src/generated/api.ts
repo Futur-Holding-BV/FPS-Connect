@@ -8223,6 +8223,106 @@ export const DeletePlanningItemResponse = zod.void()
 
 
 /**
+ * @summary Werkorders van vandaag voor de ingelogde medewerker
+ */
+export const GetWerkdagVandaagResponseItem = zod.object({
+  "id": zod.number(),
+  "titel": zod.string(),
+  "omschrijving": zod.string().nullish(),
+  "medewerker_id": zod.number().nullish(),
+  "medewerker_naam": zod.string().nullish(),
+  "gebouw_id": zod.number().nullish(),
+  "gebouw_naam": zod.string().nullish(),
+  "project_naam": zod.string().nullish(),
+  "datum_start": zod.string(),
+  "datum_eind": zod.string(),
+  "tijd_start": zod.string().nullish(),
+  "tijd_eind": zod.string().nullish(),
+  "uren": zod.number(),
+  "status": zod.string(),
+  "uitvoering_status": zod.string().describe('gepland | bezig | pauze | gereed'),
+  "type": zod.string(),
+  "opdracht_type": zod.string().nullish().describe('hoofdopdracht of meerwerk'),
+  "locaties": zod.string().nullish(),
+  "werknummer": zod.string().nullish(),
+  "notities": zod.string().nullish(),
+  "dag_notities": zod.string().nullish(),
+  "aangemaakt_op": zod.string().optional()
+})
+export const GetWerkdagVandaagResponse = zod.array(GetWerkdagVandaagResponseItem)
+
+
+/**
+ * @summary Werkorder detail ophalen
+ */
+export const GetWerkdagItemParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetWerkdagItemResponse = zod.object({
+  "id": zod.number(),
+  "titel": zod.string(),
+  "omschrijving": zod.string().nullish(),
+  "medewerker_id": zod.number().nullish(),
+  "medewerker_naam": zod.string().nullish(),
+  "gebouw_id": zod.number().nullish(),
+  "gebouw_naam": zod.string().nullish(),
+  "project_naam": zod.string().nullish(),
+  "datum_start": zod.string(),
+  "datum_eind": zod.string(),
+  "tijd_start": zod.string().nullish(),
+  "tijd_eind": zod.string().nullish(),
+  "uren": zod.number(),
+  "status": zod.string(),
+  "uitvoering_status": zod.string().describe('gepland | bezig | pauze | gereed'),
+  "type": zod.string(),
+  "opdracht_type": zod.string().nullish().describe('hoofdopdracht of meerwerk'),
+  "locaties": zod.string().nullish(),
+  "werknummer": zod.string().nullish(),
+  "notities": zod.string().nullish(),
+  "dag_notities": zod.string().nullish(),
+  "aangemaakt_op": zod.string().optional()
+})
+
+
+/**
+ * @summary Uitvoeringsstatus van werkorder bijwerken
+ */
+export const UpdateWerkdagItemStatusParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateWerkdagItemStatusBody = zod.object({
+  "uitvoering_status": zod.string().describe('gepland | bezig | pauze | gereed')
+})
+
+export const UpdateWerkdagItemStatusResponse = zod.object({
+  "id": zod.number(),
+  "titel": zod.string(),
+  "omschrijving": zod.string().nullish(),
+  "medewerker_id": zod.number().nullish(),
+  "medewerker_naam": zod.string().nullish(),
+  "gebouw_id": zod.number().nullish(),
+  "gebouw_naam": zod.string().nullish(),
+  "project_naam": zod.string().nullish(),
+  "datum_start": zod.string(),
+  "datum_eind": zod.string(),
+  "tijd_start": zod.string().nullish(),
+  "tijd_eind": zod.string().nullish(),
+  "uren": zod.number(),
+  "status": zod.string(),
+  "uitvoering_status": zod.string().describe('gepland | bezig | pauze | gereed'),
+  "type": zod.string(),
+  "opdracht_type": zod.string().nullish().describe('hoofdopdracht of meerwerk'),
+  "locaties": zod.string().nullish(),
+  "werknummer": zod.string().nullish(),
+  "notities": zod.string().nullish(),
+  "dag_notities": zod.string().nullish(),
+  "aangemaakt_op": zod.string().optional()
+})
+
+
+/**
  * @summary Afwezigheid ophalen
  */
 export const ListPlanningAfwezigheidQueryParams = zod.object({

@@ -311,6 +311,8 @@ import type {
   WeekStaatAfwijzenInput,
   WeekStaatInput,
   WeekStaatPatch,
+  WerkdagItem,
+  WerkdagStatusInput,
   Werkgever,
   WerkgeverInput,
   Ziekmelding,
@@ -24189,6 +24191,231 @@ export const useDeletePlanningItem = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getDeletePlanningItemMutationOptions(options));
+    }
+
+export const getGetWerkdagVandaagUrl = () => {
+
+
+
+
+  return `/api/modules/werkdag/vandaag`
+}
+
+/**
+ * @summary Werkorders van vandaag voor de ingelogde medewerker
+ */
+export const getWerkdagVandaag = async ( options?: RequestInit): Promise<WerkdagItem[]> => {
+
+  return customFetch<WerkdagItem[]>(getGetWerkdagVandaagUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetWerkdagVandaagQueryKey = () => {
+    return [
+    `/api/modules/werkdag/vandaag`
+    ] as const;
+    }
+
+
+export const getGetWerkdagVandaagQueryOptions = <TData = Awaited<ReturnType<typeof getWerkdagVandaag>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getWerkdagVandaag>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetWerkdagVandaagQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getWerkdagVandaag>>> = ({ signal }) => getWerkdagVandaag({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getWerkdagVandaag>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetWerkdagVandaagQueryResult = NonNullable<Awaited<ReturnType<typeof getWerkdagVandaag>>>
+export type GetWerkdagVandaagQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Werkorders van vandaag voor de ingelogde medewerker
+ */
+
+export function useGetWerkdagVandaag<TData = Awaited<ReturnType<typeof getWerkdagVandaag>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getWerkdagVandaag>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetWerkdagVandaagQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetWerkdagItemUrl = (id: number,) => {
+
+
+
+
+  return `/api/modules/werkdag/items/${id}`
+}
+
+/**
+ * @summary Werkorder detail ophalen
+ */
+export const getWerkdagItem = async (id: number, options?: RequestInit): Promise<WerkdagItem> => {
+
+  return customFetch<WerkdagItem>(getGetWerkdagItemUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetWerkdagItemQueryKey = (id: number,) => {
+    return [
+    `/api/modules/werkdag/items/${id}`
+    ] as const;
+    }
+
+
+export const getGetWerkdagItemQueryOptions = <TData = Awaited<ReturnType<typeof getWerkdagItem>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getWerkdagItem>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetWerkdagItemQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getWerkdagItem>>> = ({ signal }) => getWerkdagItem(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getWerkdagItem>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetWerkdagItemQueryResult = NonNullable<Awaited<ReturnType<typeof getWerkdagItem>>>
+export type GetWerkdagItemQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Werkorder detail ophalen
+ */
+
+export function useGetWerkdagItem<TData = Awaited<ReturnType<typeof getWerkdagItem>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getWerkdagItem>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetWerkdagItemQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getUpdateWerkdagItemStatusUrl = (id: number,) => {
+
+
+
+
+  return `/api/modules/werkdag/items/${id}/status`
+}
+
+/**
+ * @summary Uitvoeringsstatus van werkorder bijwerken
+ */
+export const updateWerkdagItemStatus = async (id: number,
+    werkdagStatusInput: WerkdagStatusInput, options?: RequestInit): Promise<WerkdagItem> => {
+
+  return customFetch<WerkdagItem>(getUpdateWerkdagItemStatusUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(werkdagStatusInput)
+  }
+);}
+
+
+
+
+export const getUpdateWerkdagItemStatusMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateWerkdagItemStatus>>, TError,{id: number;data: BodyType<WerkdagStatusInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateWerkdagItemStatus>>, TError,{id: number;data: BodyType<WerkdagStatusInput>}, TContext> => {
+
+const mutationKey = ['updateWerkdagItemStatus'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateWerkdagItemStatus>>, {id: number;data: BodyType<WerkdagStatusInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateWerkdagItemStatus(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateWerkdagItemStatusMutationResult = NonNullable<Awaited<ReturnType<typeof updateWerkdagItemStatus>>>
+    export type UpdateWerkdagItemStatusMutationBody = BodyType<WerkdagStatusInput>
+    export type UpdateWerkdagItemStatusMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Uitvoeringsstatus van werkorder bijwerken
+ */
+export const useUpdateWerkdagItemStatus = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateWerkdagItemStatus>>, TError,{id: number;data: BodyType<WerkdagStatusInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateWerkdagItemStatus>>,
+        TError,
+        {id: number;data: BodyType<WerkdagStatusInput>},
+        TContext
+      > => {
+      return useMutation(getUpdateWerkdagItemStatusMutationOptions(options));
     }
 
 export const getListPlanningAfwezigheidUrl = (params?: ListPlanningAfwezigheidParams,) => {

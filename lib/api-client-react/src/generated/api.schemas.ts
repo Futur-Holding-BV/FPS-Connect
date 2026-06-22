@@ -4302,6 +4302,38 @@ export interface OpnameFotoUploadResponse {
   foto: OpnameFoto;
 }
 
+export interface WerkdagItem {
+  id: number;
+  titel: string;
+  omschrijving?: string | null;
+  medewerker_id?: number | null;
+  medewerker_naam?: string | null;
+  gebouw_id?: number | null;
+  gebouw_naam?: string | null;
+  project_naam?: string | null;
+  datum_start: string;
+  datum_eind: string;
+  tijd_start?: string | null;
+  tijd_eind?: string | null;
+  uren: number;
+  status: string;
+  /** gepland | bezig | pauze | gereed */
+  uitvoering_status: string;
+  type: string;
+  /** hoofdopdracht of meerwerk */
+  opdracht_type?: string | null;
+  locaties?: string | null;
+  werknummer?: string | null;
+  notities?: string | null;
+  dag_notities?: string | null;
+  aangemaakt_op?: string;
+}
+
+export interface WerkdagStatusInput {
+  /** gepland | bezig | pauze | gereed */
+  uitvoering_status: string;
+}
+
 export type GetRecenteActiviteitParams = {
 limit?: number;
 };

@@ -23,6 +23,7 @@ export const planningItemsTable = pgTable("planning_items", {
   tijdsloten: text("tijdsloten"),
   dagNotities: text("dag_notities"),
   notities: text("notities"),
+  uitvoeringStatus: text("uitvoering_status").notNull().default("gepland"),
   aangemaaktDoorId: integer("aangemaakt_door_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
   aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
   bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),

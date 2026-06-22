@@ -71,6 +71,8 @@ function RootLayoutNav() {
       <Stack.Screen name="opname/index" />
       <Stack.Screen name="opname/[id]" />
       <Stack.Screen name="opname/item/[itemId]" />
+      <Stack.Screen name="werkdag/index" />
+      <Stack.Screen name="werkdag/[id]" />
     </Stack>
   );
 }

@@ -6855,6 +6855,65 @@ paths:
         '204':
           description: Verwijderd
 
+  /modules/werkdag/vandaag:
+    get:
+      operationId: getWerkdagVandaag
+      summary: Werkorders van vandaag voor de ingelogde medewerker
+      tags: [Werkdag]
+      responses:
+        '200':
+          description: Lijst werkorders
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/WerkdagItem'
+
+  /modules/werkdag/items/{id}:
+    get:
+      operationId: getWerkdagItem
+      summary: Werkorder detail ophalen
+      tags: [Werkdag]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Werkorder detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WerkdagItem'
+
+  /modules/werkdag/items/{id}/status:
+    patch:
+      operationId: updateWerkdagItemStatus
+      summary: Uitvoeringsstatus van werkorder bijwerken
+      tags: [Werkdag]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WerkdagStatusInput'
+      responses:
+        '200':
+          description: Bijgewerkte werkorder
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WerkdagItem'
+
   /modules/planning/afwezigheid:
     get:
       operationId: listPlanningAfwezigheid
@@ -15080,3 +15139,75 @@ components:
           type: string
         foto:
           $ref: '#/components/schemas/OpnameFoto'
+
+    WerkdagItem:
+      type: object
+      required: [id, titel, datum_start, datum_eind, uren, status, uitvoering_status, type]
+      properties:
+        id:
+          type: integer
+        titel:
+          type: string
+        omschrijving:
+          type: string
+          nullable: true
+        medewerker_id:
+          type: integer
+          nullable: true
+        medewerker_naam:
+          type: string
+          nullable: true
+        gebouw_id:
+          type: integer
+          nullable: true
+        gebouw_naam:
+          type: string
+          nullable: true
+        project_naam:
+          type: string
+          nullable: true
+        datum_start:
+          type: string
+        datum_eind:
+          type: string
+        tijd_start:
+          type: string
+          nullable: true
+        tijd_eind:
+          type: string
+          nullable: true
+        uren:
+          type: number
+        status:
+          type: string
+        uitvoering_status:
+          type: string
+          description: "gepland | bezig | pauze | gereed"
+        type:
+          type: string
+        opdracht_type:
+          type: string
+          nullable: true
+          description: "hoofdopdracht of meerwerk"
+        locaties:
+          type: string
+          nullable: true
+        werknummer:
+          type: string
+          nullable: true
+        notities:
+          type: string
+          nullable: true
+        dag_notities:
+          type: string
+          nullable: true
+        aangemaakt_op:
+          type: string
+
+    WerkdagStatusInput:
+      type: object
+      required: [uitvoering_status]
+      properties:
+        uitvoering_status:
+          type: string
+          description: "gepland | bezig | pauze | gereed"

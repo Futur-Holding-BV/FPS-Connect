@@ -373,6 +373,8 @@ export * from './weekStaat';
 export * from './weekStaatAfwijzenInput';
 export * from './weekStaatInput';
 export * from './weekStaatPatch';
+export * from './werkdagItem';
+export * from './werkdagStatusInput';
 export * from './werkgever';
 export * from './werkgeverInput';
 export * from './ziekmelding';
