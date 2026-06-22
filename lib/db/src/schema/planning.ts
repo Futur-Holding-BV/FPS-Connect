@@ -17,6 +17,8 @@ export const planningItemsTable = pgTable("planning_items", {
   uren: real("uren").notNull().default(8),
   status: text("status").notNull().default("concept"),
   type: text("type").notNull().default("intern"),
+  opdrachtType: text("opdracht_type"),
+  locaties: text("locaties"),
   werknummer: text("werknummer"),
   tijdsloten: text("tijdsloten"),
   dagNotities: text("dag_notities"),
@@ -36,6 +38,28 @@ export const planningAfwezigheidTable = pgTable("planning_afwezigheid", {
   status: text("status").notNull().default("aangevraagd"),
   goedgekeurdDoorId: integer("goedgekeurd_door_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
   aangemaaktDoorId: integer("aangemaakt_door_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
+  aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
+  bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
+});
+
+export const projectBegrotingenTable = pgTable("project_begrotingen", {
+  id: serial("id").primaryKey(),
+  gebouwId: integer("gebouw_id").references(() => gebouwenTable.id, { onDelete: "cascade" }),
+  werknummer: text("werknummer"),
+  hoofdUrenBegroot: real("hoofd_uren_begroot").notNull().default(0),
+  meerwerkUrenBegroot: real("meerwerk_uren_begroot").notNull().default(0),
+  omschrijving: text("omschrijving"),
+  aangemaaktDoorId: integer("aangemaakt_door_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
+  aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
+  bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
+});
+
+export const planningMeerwerkTable = pgTable("planning_meerwerk", {
+  id: serial("id").primaryKey(),
+  planningItemId: integer("planning_item_id").notNull().references(() => planningItemsTable.id, { onDelete: "cascade" }),
+  meerwerkNummer: text("meerwerk_nummer"),
+  omschrijving: text("omschrijving"),
+  status: text("status").notNull().default("concept"),
   aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
   bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
 });

@@ -6930,6 +6930,184 @@ paths:
         '204':
           description: Verwijderd
 
+  /modules/planning/begrotingen:
+    get:
+      operationId: listProjectBegrotingen
+      summary: Projectbegrotingen ophalen
+      tags: [PlanningModule]
+      parameters:
+        - in: query
+          name: gebouw_id
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ProjectBegroting'
+    post:
+      operationId: createProjectBegroting
+      summary: Projectbegroting aanmaken
+      tags: [PlanningModule]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProjectBegrotingInput'
+      responses:
+        '201':
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectBegroting'
+
+  /modules/planning/begrotingen/{id}:
+    patch:
+      operationId: updateProjectBegroting
+      summary: Projectbegroting bijwerken
+      tags: [PlanningModule]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProjectBegrotingInput'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectBegroting'
+    delete:
+      operationId: deleteProjectBegroting
+      summary: Projectbegroting verwijderen
+      tags: [PlanningModule]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Verwijderd
+
+  /modules/planning/meerwerk:
+    get:
+      operationId: listPlanningMeerwerk
+      summary: Meerwerk ophalen
+      tags: [PlanningModule]
+      parameters:
+        - in: query
+          name: planning_item_id
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PlanningMeerwerk'
+    post:
+      operationId: createPlanningMeerwerk
+      summary: Meerwerk aanmaken
+      tags: [PlanningModule]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PlanningMeerwerkInput'
+      responses:
+        '201':
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlanningMeerwerk'
+
+  /modules/planning/meerwerk/{id}:
+    patch:
+      operationId: updatePlanningMeerwerk
+      summary: Meerwerk bijwerken
+      tags: [PlanningModule]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PlanningMeerwerkInput'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlanningMeerwerk'
+    delete:
+      operationId: deletePlanningMeerwerk
+      summary: Meerwerk verwijderen
+      tags: [PlanningModule]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Verwijderd
+
+  /modules/planning/nacalculatie:
+    get:
+      operationId: getPlanningNacalculatie
+      summary: Nacalculatie per project ophalen
+      tags: [PlanningModule]
+      parameters:
+        - in: query
+          name: van
+          schema:
+            type: string
+        - in: query
+          name: tot
+          schema:
+            type: string
+        - in: query
+          name: gebouw_id
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/NacalculatieRegel'
+
   /modules/calculaties:
     get:
       operationId: listModCalculaties
@@ -13491,6 +13669,14 @@ components:
         notities:
           type: string
           nullable: true
+        opdracht_type:
+          type: string
+          nullable: true
+          description: "hoofdopdracht of meerwerk"
+        locaties:
+          type: string
+          nullable: true
+          description: "JSON-array met bouwnummers/locaties"
         aangemaakt_op:
           type: string
 
@@ -13541,6 +13727,12 @@ components:
         notities:
           type: string
           nullable: true
+        opdracht_type:
+          type: string
+          nullable: true
+        locaties:
+          type: string
+          nullable: true
 
     PlanningAfwezigheid:
       type: object
@@ -13584,6 +13776,106 @@ components:
           nullable: true
         status:
           type: string
+
+    ProjectBegroting:
+      type: object
+      required: [id, hoofd_uren_begroot, meerwerk_uren_begroot]
+      properties:
+        id:
+          type: integer
+        gebouw_id:
+          type: integer
+          nullable: true
+        gebouw_naam:
+          type: string
+          nullable: true
+        werknummer:
+          type: string
+          nullable: true
+        hoofd_uren_begroot:
+          type: number
+        meerwerk_uren_begroot:
+          type: number
+        omschrijving:
+          type: string
+          nullable: true
+        aangemaakt_op:
+          type: string
+
+    ProjectBegrotingInput:
+      type: object
+      required: [hoofd_uren_begroot, meerwerk_uren_begroot]
+      properties:
+        gebouw_id:
+          type: integer
+          nullable: true
+        werknummer:
+          type: string
+          nullable: true
+        hoofd_uren_begroot:
+          type: number
+        meerwerk_uren_begroot:
+          type: number
+        omschrijving:
+          type: string
+          nullable: true
+
+    PlanningMeerwerk:
+      type: object
+      required: [id, planning_item_id, status]
+      properties:
+        id:
+          type: integer
+        planning_item_id:
+          type: integer
+        meerwerk_nummer:
+          type: string
+          nullable: true
+        omschrijving:
+          type: string
+          nullable: true
+        status:
+          type: string
+        aangemaakt_op:
+          type: string
+
+    PlanningMeerwerkInput:
+      type: object
+      required: [planning_item_id, status]
+      properties:
+        planning_item_id:
+          type: integer
+        meerwerk_nummer:
+          type: string
+          nullable: true
+        omschrijving:
+          type: string
+          nullable: true
+        status:
+          type: string
+
+    NacalculatieRegel:
+      type: object
+      required: [gebouw_id, hoofd_uren_gepland, meerwerk_uren_gepland, totaal_uren_werkelijk]
+      properties:
+        gebouw_id:
+          type: integer
+        gebouw_naam:
+          type: string
+          nullable: true
+        werknummer:
+          type: string
+          nullable: true
+        hoofd_uren_begroot:
+          type: number
+        meerwerk_uren_begroot:
+          type: number
+        hoofd_uren_gepland:
+          type: number
+        meerwerk_uren_gepland:
+          type: number
+        totaal_uren_werkelijk:
+          type: number
 
     ModCalcTarief:
       type: object

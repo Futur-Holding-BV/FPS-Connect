@@ -24,4 +24,6 @@ export interface PlanningItemInput {
   status: string;
   type: string;
   notities?: string | null;
+  opdracht_type?: string | null;
+  locaties?: string | null;
 }

@@ -3627,6 +3627,10 @@ export interface PlanningItem {
   tijdsloten?: string | null;
   dag_notities?: string | null;
   notities?: string | null;
+  /** hoofdopdracht of meerwerk */
+  opdracht_type?: string | null;
+  /** JSON-array met bouwnummers/locaties */
+  locaties?: string | null;
   aangemaakt_op?: string;
 }
 
@@ -3648,6 +3652,8 @@ export interface PlanningItemInput {
   status: string;
   type: string;
   notities?: string | null;
+  opdracht_type?: string | null;
+  locaties?: string | null;
 }
 
 export interface PlanningAfwezigheid {
@@ -3669,6 +3675,52 @@ export interface PlanningAfwezigheidInput {
   datum_eind: string;
   omschrijving?: string | null;
   status?: string;
+}
+
+export interface ProjectBegroting {
+  id: number;
+  gebouw_id?: number | null;
+  gebouw_naam?: string | null;
+  werknummer?: string | null;
+  hoofd_uren_begroot: number;
+  meerwerk_uren_begroot: number;
+  omschrijving?: string | null;
+  aangemaakt_op?: string;
+}
+
+export interface ProjectBegrotingInput {
+  gebouw_id?: number | null;
+  werknummer?: string | null;
+  hoofd_uren_begroot: number;
+  meerwerk_uren_begroot: number;
+  omschrijving?: string | null;
+}
+
+export interface PlanningMeerwerk {
+  id: number;
+  planning_item_id: number;
+  meerwerk_nummer?: string | null;
+  omschrijving?: string | null;
+  status: string;
+  aangemaakt_op?: string;
+}
+
+export interface PlanningMeerwerkInput {
+  planning_item_id: number;
+  meerwerk_nummer?: string | null;
+  omschrijving?: string | null;
+  status: string;
+}
+
+export interface NacalculatieRegel {
+  gebouw_id: number;
+  gebouw_naam?: string | null;
+  werknummer?: string | null;
+  hoofd_uren_begroot?: number;
+  meerwerk_uren_begroot?: number;
+  hoofd_uren_gepland: number;
+  meerwerk_uren_gepland: number;
+  totaal_uren_werkelijk: number;
 }
 
 export interface ModCalcTarief {
@@ -4446,6 +4498,20 @@ medewerker_id?: number;
 
 export type ListPlanningAfwezigheidParams = {
 medewerker_id?: number;
+};
+
+export type ListProjectBegrotingenParams = {
+gebouw_id?: number;
+};
+
+export type ListPlanningMeerwerkParams = {
+planning_item_id?: number;
+};
+
+export type GetPlanningNacalculatieParams = {
+van?: string;
+tot?: string;
+gebouw_id?: number;
 };
 
 export type ListModCalculatiesParams = {

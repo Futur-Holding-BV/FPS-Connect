@@ -27,5 +27,9 @@ export interface PlanningItem {
   tijdsloten?: string | null;
   dag_notities?: string | null;
   notities?: string | null;
+  /** hoofdopdracht of meerwerk */
+  opdracht_type?: string | null;
+  /** JSON-array met bouwnummers/locaties */
+  locaties?: string | null;
   aangemaakt_op?: string;
 }

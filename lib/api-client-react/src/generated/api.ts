@@ -126,6 +126,7 @@ import type {
   GereedschapMeldingInput,
   GetGebouwGevelbeeld200,
   GetMijnWeekUrenParams,
+  GetPlanningNacalculatieParams,
   GetRecenteActiviteitParams,
   GetVervaldagenParams,
   GetZiekmeldingenStatistiekenParams,
@@ -163,6 +164,8 @@ import type {
   ListPlanningAfwezigheidParams,
   ListPlanningItemsParams,
   ListPlanningMedewerkersParams,
+  ListPlanningMeerwerkParams,
+  ListProjectBegrotingenParams,
   ListRapportenParams,
   ListTestrapportenParams,
   ListToolboxBerichtenParams,
@@ -198,6 +201,7 @@ import type {
   ModuleBeoordelingInput,
   MuisGebeurtenis,
   MuisGebeurtenisBatch,
+  NacalculatieRegel,
   Offerte,
   OfferteHoofdstuk,
   OfferteHoofdstukInput,
@@ -231,12 +235,16 @@ import type {
   PlanningItem,
   PlanningItemInput,
   PlanningMedewerker,
+  PlanningMeerwerk,
+  PlanningMeerwerkInput,
   PlattegrondAiAnalyseInput,
   PlattegrondAiAnalyseResultaat,
   Profiel,
   ProfielInput,
   ProfielToepassen200,
   ProfielenAanvullen200,
+  ProjectBegroting,
+  ProjectBegrotingInput,
   Rapport,
   RapportDefinitief,
   RapportInput,
@@ -24477,6 +24485,680 @@ export const useDeletePlanningAfwezigheid = <TError = ErrorType<unknown>,
       > => {
       return useMutation(getDeletePlanningAfwezigheidMutationOptions(options));
     }
+
+export const getListProjectBegrotingenUrl = (params?: ListProjectBegrotingenParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/modules/planning/begrotingen?${stringifiedParams}` : `/api/modules/planning/begrotingen`
+}
+
+/**
+ * @summary Projectbegrotingen ophalen
+ */
+export const listProjectBegrotingen = async (params?: ListProjectBegrotingenParams, options?: RequestInit): Promise<ProjectBegroting[]> => {
+
+  return customFetch<ProjectBegroting[]>(getListProjectBegrotingenUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListProjectBegrotingenQueryKey = (params?: ListProjectBegrotingenParams,) => {
+    return [
+    `/api/modules/planning/begrotingen`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListProjectBegrotingenQueryOptions = <TData = Awaited<ReturnType<typeof listProjectBegrotingen>>, TError = ErrorType<unknown>>(params?: ListProjectBegrotingenParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listProjectBegrotingen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListProjectBegrotingenQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listProjectBegrotingen>>> = ({ signal }) => listProjectBegrotingen(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listProjectBegrotingen>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListProjectBegrotingenQueryResult = NonNullable<Awaited<ReturnType<typeof listProjectBegrotingen>>>
+export type ListProjectBegrotingenQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Projectbegrotingen ophalen
+ */
+
+export function useListProjectBegrotingen<TData = Awaited<ReturnType<typeof listProjectBegrotingen>>, TError = ErrorType<unknown>>(
+ params?: ListProjectBegrotingenParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listProjectBegrotingen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListProjectBegrotingenQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateProjectBegrotingUrl = () => {
+
+
+
+
+  return `/api/modules/planning/begrotingen`
+}
+
+/**
+ * @summary Projectbegroting aanmaken
+ */
+export const createProjectBegroting = async (projectBegrotingInput: ProjectBegrotingInput, options?: RequestInit): Promise<ProjectBegroting> => {
+
+  return customFetch<ProjectBegroting>(getCreateProjectBegrotingUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(projectBegrotingInput)
+  }
+);}
+
+
+
+
+export const getCreateProjectBegrotingMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createProjectBegroting>>, TError,{data: BodyType<ProjectBegrotingInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createProjectBegroting>>, TError,{data: BodyType<ProjectBegrotingInput>}, TContext> => {
+
+const mutationKey = ['createProjectBegroting'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createProjectBegroting>>, {data: BodyType<ProjectBegrotingInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createProjectBegroting(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateProjectBegrotingMutationResult = NonNullable<Awaited<ReturnType<typeof createProjectBegroting>>>
+    export type CreateProjectBegrotingMutationBody = BodyType<ProjectBegrotingInput>
+    export type CreateProjectBegrotingMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Projectbegroting aanmaken
+ */
+export const useCreateProjectBegroting = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createProjectBegroting>>, TError,{data: BodyType<ProjectBegrotingInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createProjectBegroting>>,
+        TError,
+        {data: BodyType<ProjectBegrotingInput>},
+        TContext
+      > => {
+      return useMutation(getCreateProjectBegrotingMutationOptions(options));
+    }
+
+export const getUpdateProjectBegrotingUrl = (id: number,) => {
+
+
+
+
+  return `/api/modules/planning/begrotingen/${id}`
+}
+
+/**
+ * @summary Projectbegroting bijwerken
+ */
+export const updateProjectBegroting = async (id: number,
+    projectBegrotingInput: ProjectBegrotingInput, options?: RequestInit): Promise<ProjectBegroting> => {
+
+  return customFetch<ProjectBegroting>(getUpdateProjectBegrotingUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(projectBegrotingInput)
+  }
+);}
+
+
+
+
+export const getUpdateProjectBegrotingMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateProjectBegroting>>, TError,{id: number;data: BodyType<ProjectBegrotingInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateProjectBegroting>>, TError,{id: number;data: BodyType<ProjectBegrotingInput>}, TContext> => {
+
+const mutationKey = ['updateProjectBegroting'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateProjectBegroting>>, {id: number;data: BodyType<ProjectBegrotingInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateProjectBegroting(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateProjectBegrotingMutationResult = NonNullable<Awaited<ReturnType<typeof updateProjectBegroting>>>
+    export type UpdateProjectBegrotingMutationBody = BodyType<ProjectBegrotingInput>
+    export type UpdateProjectBegrotingMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Projectbegroting bijwerken
+ */
+export const useUpdateProjectBegroting = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateProjectBegroting>>, TError,{id: number;data: BodyType<ProjectBegrotingInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateProjectBegroting>>,
+        TError,
+        {id: number;data: BodyType<ProjectBegrotingInput>},
+        TContext
+      > => {
+      return useMutation(getUpdateProjectBegrotingMutationOptions(options));
+    }
+
+export const getDeleteProjectBegrotingUrl = (id: number,) => {
+
+
+
+
+  return `/api/modules/planning/begrotingen/${id}`
+}
+
+/**
+ * @summary Projectbegroting verwijderen
+ */
+export const deleteProjectBegroting = async (id: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteProjectBegrotingUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteProjectBegrotingMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteProjectBegroting>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteProjectBegroting>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deleteProjectBegroting'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteProjectBegroting>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteProjectBegroting(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteProjectBegrotingMutationResult = NonNullable<Awaited<ReturnType<typeof deleteProjectBegroting>>>
+
+    export type DeleteProjectBegrotingMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Projectbegroting verwijderen
+ */
+export const useDeleteProjectBegroting = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteProjectBegroting>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteProjectBegroting>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeleteProjectBegrotingMutationOptions(options));
+    }
+
+export const getListPlanningMeerwerkUrl = (params?: ListPlanningMeerwerkParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/modules/planning/meerwerk?${stringifiedParams}` : `/api/modules/planning/meerwerk`
+}
+
+/**
+ * @summary Meerwerk ophalen
+ */
+export const listPlanningMeerwerk = async (params?: ListPlanningMeerwerkParams, options?: RequestInit): Promise<PlanningMeerwerk[]> => {
+
+  return customFetch<PlanningMeerwerk[]>(getListPlanningMeerwerkUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListPlanningMeerwerkQueryKey = (params?: ListPlanningMeerwerkParams,) => {
+    return [
+    `/api/modules/planning/meerwerk`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListPlanningMeerwerkQueryOptions = <TData = Awaited<ReturnType<typeof listPlanningMeerwerk>>, TError = ErrorType<unknown>>(params?: ListPlanningMeerwerkParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listPlanningMeerwerk>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListPlanningMeerwerkQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listPlanningMeerwerk>>> = ({ signal }) => listPlanningMeerwerk(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listPlanningMeerwerk>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListPlanningMeerwerkQueryResult = NonNullable<Awaited<ReturnType<typeof listPlanningMeerwerk>>>
+export type ListPlanningMeerwerkQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Meerwerk ophalen
+ */
+
+export function useListPlanningMeerwerk<TData = Awaited<ReturnType<typeof listPlanningMeerwerk>>, TError = ErrorType<unknown>>(
+ params?: ListPlanningMeerwerkParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listPlanningMeerwerk>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListPlanningMeerwerkQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreatePlanningMeerwerkUrl = () => {
+
+
+
+
+  return `/api/modules/planning/meerwerk`
+}
+
+/**
+ * @summary Meerwerk aanmaken
+ */
+export const createPlanningMeerwerk = async (planningMeerwerkInput: PlanningMeerwerkInput, options?: RequestInit): Promise<PlanningMeerwerk> => {
+
+  return customFetch<PlanningMeerwerk>(getCreatePlanningMeerwerkUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(planningMeerwerkInput)
+  }
+);}
+
+
+
+
+export const getCreatePlanningMeerwerkMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createPlanningMeerwerk>>, TError,{data: BodyType<PlanningMeerwerkInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createPlanningMeerwerk>>, TError,{data: BodyType<PlanningMeerwerkInput>}, TContext> => {
+
+const mutationKey = ['createPlanningMeerwerk'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createPlanningMeerwerk>>, {data: BodyType<PlanningMeerwerkInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createPlanningMeerwerk(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreatePlanningMeerwerkMutationResult = NonNullable<Awaited<ReturnType<typeof createPlanningMeerwerk>>>
+    export type CreatePlanningMeerwerkMutationBody = BodyType<PlanningMeerwerkInput>
+    export type CreatePlanningMeerwerkMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Meerwerk aanmaken
+ */
+export const useCreatePlanningMeerwerk = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createPlanningMeerwerk>>, TError,{data: BodyType<PlanningMeerwerkInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createPlanningMeerwerk>>,
+        TError,
+        {data: BodyType<PlanningMeerwerkInput>},
+        TContext
+      > => {
+      return useMutation(getCreatePlanningMeerwerkMutationOptions(options));
+    }
+
+export const getUpdatePlanningMeerwerkUrl = (id: number,) => {
+
+
+
+
+  return `/api/modules/planning/meerwerk/${id}`
+}
+
+/**
+ * @summary Meerwerk bijwerken
+ */
+export const updatePlanningMeerwerk = async (id: number,
+    planningMeerwerkInput: PlanningMeerwerkInput, options?: RequestInit): Promise<PlanningMeerwerk> => {
+
+  return customFetch<PlanningMeerwerk>(getUpdatePlanningMeerwerkUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(planningMeerwerkInput)
+  }
+);}
+
+
+
+
+export const getUpdatePlanningMeerwerkMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updatePlanningMeerwerk>>, TError,{id: number;data: BodyType<PlanningMeerwerkInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updatePlanningMeerwerk>>, TError,{id: number;data: BodyType<PlanningMeerwerkInput>}, TContext> => {
+
+const mutationKey = ['updatePlanningMeerwerk'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updatePlanningMeerwerk>>, {id: number;data: BodyType<PlanningMeerwerkInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updatePlanningMeerwerk(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdatePlanningMeerwerkMutationResult = NonNullable<Awaited<ReturnType<typeof updatePlanningMeerwerk>>>
+    export type UpdatePlanningMeerwerkMutationBody = BodyType<PlanningMeerwerkInput>
+    export type UpdatePlanningMeerwerkMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Meerwerk bijwerken
+ */
+export const useUpdatePlanningMeerwerk = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updatePlanningMeerwerk>>, TError,{id: number;data: BodyType<PlanningMeerwerkInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updatePlanningMeerwerk>>,
+        TError,
+        {id: number;data: BodyType<PlanningMeerwerkInput>},
+        TContext
+      > => {
+      return useMutation(getUpdatePlanningMeerwerkMutationOptions(options));
+    }
+
+export const getDeletePlanningMeerwerkUrl = (id: number,) => {
+
+
+
+
+  return `/api/modules/planning/meerwerk/${id}`
+}
+
+/**
+ * @summary Meerwerk verwijderen
+ */
+export const deletePlanningMeerwerk = async (id: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeletePlanningMeerwerkUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeletePlanningMeerwerkMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deletePlanningMeerwerk>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deletePlanningMeerwerk>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deletePlanningMeerwerk'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deletePlanningMeerwerk>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deletePlanningMeerwerk(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeletePlanningMeerwerkMutationResult = NonNullable<Awaited<ReturnType<typeof deletePlanningMeerwerk>>>
+
+    export type DeletePlanningMeerwerkMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Meerwerk verwijderen
+ */
+export const useDeletePlanningMeerwerk = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deletePlanningMeerwerk>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deletePlanningMeerwerk>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeletePlanningMeerwerkMutationOptions(options));
+    }
+
+export const getGetPlanningNacalculatieUrl = (params?: GetPlanningNacalculatieParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/modules/planning/nacalculatie?${stringifiedParams}` : `/api/modules/planning/nacalculatie`
+}
+
+/**
+ * @summary Nacalculatie per project ophalen
+ */
+export const getPlanningNacalculatie = async (params?: GetPlanningNacalculatieParams, options?: RequestInit): Promise<NacalculatieRegel[]> => {
+
+  return customFetch<NacalculatieRegel[]>(getGetPlanningNacalculatieUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetPlanningNacalculatieQueryKey = (params?: GetPlanningNacalculatieParams,) => {
+    return [
+    `/api/modules/planning/nacalculatie`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetPlanningNacalculatieQueryOptions = <TData = Awaited<ReturnType<typeof getPlanningNacalculatie>>, TError = ErrorType<unknown>>(params?: GetPlanningNacalculatieParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPlanningNacalculatie>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetPlanningNacalculatieQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getPlanningNacalculatie>>> = ({ signal }) => getPlanningNacalculatie(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getPlanningNacalculatie>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetPlanningNacalculatieQueryResult = NonNullable<Awaited<ReturnType<typeof getPlanningNacalculatie>>>
+export type GetPlanningNacalculatieQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Nacalculatie per project ophalen
+ */
+
+export function useGetPlanningNacalculatie<TData = Awaited<ReturnType<typeof getPlanningNacalculatie>>, TError = ErrorType<unknown>>(
+ params?: GetPlanningNacalculatieParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPlanningNacalculatie>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetPlanningNacalculatieQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
 
 export const getListModCalculatiesUrl = (params?: ListModCalculatiesParams,) => {
   const normalizedParams = new URLSearchParams();

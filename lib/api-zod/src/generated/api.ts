@@ -8087,6 +8087,8 @@ export const ListPlanningItemsResponseItem = zod.object({
   "tijdsloten": zod.string().nullish().describe('JSON string met huisnummer per tijdslot, bijv. {\"07:30\":\"47\",\"08:30\":\"47\"}'),
   "dag_notities": zod.string().nullish(),
   "notities": zod.string().nullish(),
+  "opdracht_type": zod.string().nullish().describe('hoofdopdracht of meerwerk'),
+  "locaties": zod.string().nullish().describe('JSON-array met bouwnummers\/locaties'),
   "aangemaakt_op": zod.string().optional()
 })
 export const ListPlanningItemsResponse = zod.array(ListPlanningItemsResponseItem)
@@ -8111,7 +8113,9 @@ export const CreatePlanningItemBody = zod.object({
   "uren": zod.number(),
   "status": zod.string(),
   "type": zod.string(),
-  "notities": zod.string().nullish()
+  "notities": zod.string().nullish(),
+  "opdracht_type": zod.string().nullish(),
+  "locaties": zod.string().nullish()
 })
 
 export const CreatePlanningItemResponse = zod.void()
@@ -8144,6 +8148,8 @@ export const GetPlanningItemResponse = zod.object({
   "tijdsloten": zod.string().nullish().describe('JSON string met huisnummer per tijdslot, bijv. {\"07:30\":\"47\",\"08:30\":\"47\"}'),
   "dag_notities": zod.string().nullish(),
   "notities": zod.string().nullish(),
+  "opdracht_type": zod.string().nullish().describe('hoofdopdracht of meerwerk'),
+  "locaties": zod.string().nullish().describe('JSON-array met bouwnummers\/locaties'),
   "aangemaakt_op": zod.string().optional()
 })
 
@@ -8171,7 +8177,9 @@ export const UpdatePlanningItemBody = zod.object({
   "uren": zod.number(),
   "status": zod.string(),
   "type": zod.string(),
-  "notities": zod.string().nullish()
+  "notities": zod.string().nullish(),
+  "opdracht_type": zod.string().nullish(),
+  "locaties": zod.string().nullish()
 })
 
 export const UpdatePlanningItemResponse = zod.object({
@@ -8194,6 +8202,8 @@ export const UpdatePlanningItemResponse = zod.object({
   "tijdsloten": zod.string().nullish().describe('JSON string met huisnummer per tijdslot, bijv. {\"07:30\":\"47\",\"08:30\":\"47\"}'),
   "dag_notities": zod.string().nullish(),
   "notities": zod.string().nullish(),
+  "opdracht_type": zod.string().nullish().describe('hoofdopdracht of meerwerk'),
+  "locaties": zod.string().nullish().describe('JSON-array met bouwnummers\/locaties'),
   "aangemaakt_op": zod.string().optional()
 })
 
@@ -8281,6 +8291,164 @@ export const DeletePlanningAfwezigheidParams = zod.object({
 })
 
 export const DeletePlanningAfwezigheidResponse = zod.void()
+
+
+/**
+ * @summary Projectbegrotingen ophalen
+ */
+export const ListProjectBegrotingenQueryParams = zod.object({
+  "gebouw_id": zod.coerce.number().optional()
+})
+
+export const ListProjectBegrotingenResponseItem = zod.object({
+  "id": zod.number(),
+  "gebouw_id": zod.number().nullish(),
+  "gebouw_naam": zod.string().nullish(),
+  "werknummer": zod.string().nullish(),
+  "hoofd_uren_begroot": zod.number(),
+  "meerwerk_uren_begroot": zod.number(),
+  "omschrijving": zod.string().nullish(),
+  "aangemaakt_op": zod.string().optional()
+})
+export const ListProjectBegrotingenResponse = zod.array(ListProjectBegrotingenResponseItem)
+
+
+/**
+ * @summary Projectbegroting aanmaken
+ */
+export const CreateProjectBegrotingBody = zod.object({
+  "gebouw_id": zod.number().nullish(),
+  "werknummer": zod.string().nullish(),
+  "hoofd_uren_begroot": zod.number(),
+  "meerwerk_uren_begroot": zod.number(),
+  "omschrijving": zod.string().nullish()
+})
+
+export const CreateProjectBegrotingResponse = zod.void()
+
+
+/**
+ * @summary Projectbegroting bijwerken
+ */
+export const UpdateProjectBegrotingParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateProjectBegrotingBody = zod.object({
+  "gebouw_id": zod.number().nullish(),
+  "werknummer": zod.string().nullish(),
+  "hoofd_uren_begroot": zod.number(),
+  "meerwerk_uren_begroot": zod.number(),
+  "omschrijving": zod.string().nullish()
+})
+
+export const UpdateProjectBegrotingResponse = zod.object({
+  "id": zod.number(),
+  "gebouw_id": zod.number().nullish(),
+  "gebouw_naam": zod.string().nullish(),
+  "werknummer": zod.string().nullish(),
+  "hoofd_uren_begroot": zod.number(),
+  "meerwerk_uren_begroot": zod.number(),
+  "omschrijving": zod.string().nullish(),
+  "aangemaakt_op": zod.string().optional()
+})
+
+
+/**
+ * @summary Projectbegroting verwijderen
+ */
+export const DeleteProjectBegrotingParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteProjectBegrotingResponse = zod.void()
+
+
+/**
+ * @summary Meerwerk ophalen
+ */
+export const ListPlanningMeerwerkQueryParams = zod.object({
+  "planning_item_id": zod.coerce.number().optional()
+})
+
+export const ListPlanningMeerwerkResponseItem = zod.object({
+  "id": zod.number(),
+  "planning_item_id": zod.number(),
+  "meerwerk_nummer": zod.string().nullish(),
+  "omschrijving": zod.string().nullish(),
+  "status": zod.string(),
+  "aangemaakt_op": zod.string().optional()
+})
+export const ListPlanningMeerwerkResponse = zod.array(ListPlanningMeerwerkResponseItem)
+
+
+/**
+ * @summary Meerwerk aanmaken
+ */
+export const CreatePlanningMeerwerkBody = zod.object({
+  "planning_item_id": zod.number(),
+  "meerwerk_nummer": zod.string().nullish(),
+  "omschrijving": zod.string().nullish(),
+  "status": zod.string()
+})
+
+export const CreatePlanningMeerwerkResponse = zod.void()
+
+
+/**
+ * @summary Meerwerk bijwerken
+ */
+export const UpdatePlanningMeerwerkParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdatePlanningMeerwerkBody = zod.object({
+  "planning_item_id": zod.number(),
+  "meerwerk_nummer": zod.string().nullish(),
+  "omschrijving": zod.string().nullish(),
+  "status": zod.string()
+})
+
+export const UpdatePlanningMeerwerkResponse = zod.object({
+  "id": zod.number(),
+  "planning_item_id": zod.number(),
+  "meerwerk_nummer": zod.string().nullish(),
+  "omschrijving": zod.string().nullish(),
+  "status": zod.string(),
+  "aangemaakt_op": zod.string().optional()
+})
+
+
+/**
+ * @summary Meerwerk verwijderen
+ */
+export const DeletePlanningMeerwerkParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeletePlanningMeerwerkResponse = zod.void()
+
+
+/**
+ * @summary Nacalculatie per project ophalen
+ */
+export const GetPlanningNacalculatieQueryParams = zod.object({
+  "van": zod.coerce.string().optional(),
+  "tot": zod.coerce.string().optional(),
+  "gebouw_id": zod.coerce.number().optional()
+})
+
+export const GetPlanningNacalculatieResponseItem = zod.object({
+  "gebouw_id": zod.number(),
+  "gebouw_naam": zod.string().nullish(),
+  "werknummer": zod.string().nullish(),
+  "hoofd_uren_begroot": zod.number().optional(),
+  "meerwerk_uren_begroot": zod.number().optional(),
+  "hoofd_uren_gepland": zod.number(),
+  "meerwerk_uren_gepland": zod.number(),
+  "totaal_uren_werkelijk": zod.number()
+})
+export const GetPlanningNacalculatieResponse = zod.array(GetPlanningNacalculatieResponseItem)
 
 
 /**
