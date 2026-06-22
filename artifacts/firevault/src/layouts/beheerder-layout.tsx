@@ -90,7 +90,7 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
 
   const defaultSidebarOpen = (() => {
     if (typeof window === "undefined") return true;
-    const cookie = document.cookie.split("; ").find((c) => c.startsWith("sidebar_state="));
+    const cookie = document.cookie.split("; ").find((c) => c.startsWith("sidebar_v2="));
     if (cookie) return cookie.split("=")[1] === "true";
     return true;
   })();
