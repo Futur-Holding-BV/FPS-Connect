@@ -188,7 +188,7 @@ async function mapVoorziening(v: typeof voorzieningenTable.$inferSelect) {
 // GET /voorzieningen
 router.get("/voorzieningen", lezenVoorzieningen, async (req, res) => {
   try {
-    const { gebouw_id, verdieping_id, type, status, gearchiveerd, classificatie, zoek, pagina, per_pagina } = req.query;
+    const { gebouw_id, verdieping_id, type, status, gearchiveerd, classificatie, zoek, aangemaakt_van, aangemaakt_tot, pagina, per_pagina } = req.query;
     let all = await db.select().from(voorzieningenTable);
 
     // Beperkte gebruikers zien alleen voorzieningen in hun toegewezen gebouwen.
@@ -208,6 +208,14 @@ router.get("/voorzieningen", lezenVoorzieningen, async (req, res) => {
     if (type) all = all.filter((v) => v.type === type);
     if (status) all = all.filter((v) => v.status === status);
     if (classificatie) all = all.filter((v) => v.classificatie === classificatie);
+    if (aangemaakt_van) {
+      const van = new Date(`${aangemaakt_van as string}T00:00:00`);
+      all = all.filter((v) => new Date(v.aangemaaktOp) >= van);
+    }
+    if (aangemaakt_tot) {
+      const tot = new Date(`${aangemaakt_tot as string}T23:59:59.999`);
+      all = all.filter((v) => new Date(v.aangemaaktOp) <= tot);
+    }
     if (zoek) {
       const z = (zoek as string).toLowerCase();
       all = all.filter(

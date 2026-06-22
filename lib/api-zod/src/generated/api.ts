@@ -1272,6 +1272,8 @@ export const ListVoorzieningenQueryParams = zod.object({
   "classificatie": zod.coerce.string().optional(),
   "alleen_te_controleren": zod.coerce.boolean().optional(),
   "zoek": zod.coerce.string().optional(),
+  "aangemaakt_van": zod.date().optional().describe('Filter spots aangemaakt op of na deze datum (YYYY-MM-DD)'),
+  "aangemaakt_tot": zod.date().optional().describe('Filter spots aangemaakt op of voor deze datum (YYYY-MM-DD)'),
   "pagina": zod.coerce.number().default(listVoorzieningenQueryPaginaDefault),
   "per_pagina": zod.coerce.number().default(listVoorzieningenQueryPerPaginaDefault)
 })

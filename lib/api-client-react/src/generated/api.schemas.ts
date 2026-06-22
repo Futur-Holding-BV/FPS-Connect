@@ -4451,6 +4451,14 @@ gearchiveerd?: boolean;
 classificatie?: string;
 alleen_te_controleren?: boolean;
 zoek?: string;
+/**
+ * Filter spots aangemaakt op of na deze datum (YYYY-MM-DD)
+ */
+aangemaakt_van?: string;
+/**
+ * Filter spots aangemaakt op of voor deze datum (YYYY-MM-DD)
+ */
+aangemaakt_tot?: string;
 pagina?: number;
 per_pagina?: number;
 };

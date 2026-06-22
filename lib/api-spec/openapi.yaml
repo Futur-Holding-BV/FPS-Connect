@@ -1201,6 +1201,18 @@ paths:
           schema:
             type: string
         - in: query
+          name: aangemaakt_van
+          schema:
+            type: string
+            format: date
+          description: "Filter spots aangemaakt op of na deze datum (YYYY-MM-DD)"
+        - in: query
+          name: aangemaakt_tot
+          schema:
+            type: string
+            format: date
+          description: "Filter spots aangemaakt op of voor deze datum (YYYY-MM-DD)"
+        - in: query
           name: pagina
           schema:
             type: integer

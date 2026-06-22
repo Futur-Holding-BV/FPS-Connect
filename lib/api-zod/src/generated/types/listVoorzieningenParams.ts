@@ -15,6 +15,14 @@ gearchiveerd?: boolean;
 classificatie?: string;
 alleen_te_controleren?: boolean;
 zoek?: string;
+/**
+ * Filter spots aangemaakt op of na deze datum (YYYY-MM-DD)
+ */
+aangemaakt_van?: Date;
+/**
+ * Filter spots aangemaakt op of voor deze datum (YYYY-MM-DD)
+ */
+aangemaakt_tot?: Date;
 pagina?: number;
 per_pagina?: number;
 };

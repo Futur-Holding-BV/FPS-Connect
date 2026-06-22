@@ -26,7 +26,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Search, AlertCircle, Boxes, Pencil, Trash2 } from "lucide-react";
+import { Plus, Search, AlertCircle, Boxes, Pencil, Trash2, Calendar, X } from "lucide-react";
 import { Link } from "wouter";
 import { Badge } from "@/components/ui/badge";
 import { useVoorkeur } from "@/hooks/use-voorkeur";
@@ -79,6 +79,8 @@ export default function Voorzieningen() {
     "voorzieningen_alleen_voorbereid",
     false,
   );
+  const [aanmaakVan, setAanmaakVan] = useVoorkeur("voorzieningen_aanmaak_van", "");
+  const [aanmaakTot, setAanmaakTot] = useVoorkeur("voorzieningen_aanmaak_tot", "");
 
   const teControlerenAantal = useMemo(
     () => (voorzieningenLijst?.items ?? []).filter((v) => (v as any).ai_te_controleren).length,
@@ -90,17 +92,33 @@ export default function Voorzieningen() {
     [voorzieningenLijst],
   );
 
+  const datumFilterActief = aanmaakVan !== "" || aanmaakTot !== "";
+
   const gefilterd = useMemo(() => {
     const term = zoek.trim().toLowerCase();
     let items = voorzieningenLijst?.items ?? [];
     if (alleenTeControleren) items = items.filter((v) => (v as any).ai_te_controleren);
     if (alleenVoorbereid) items = items.filter((v) => v.status === "voorbereid");
+    if (aanmaakVan) {
+      const van = new Date(`${aanmaakVan}T00:00:00`);
+      items = items.filter((v) => {
+        const d = (v as any).aangemaakt_op ? new Date((v as any).aangemaakt_op) : null;
+        return d != null && d >= van;
+      });
+    }
+    if (aanmaakTot) {
+      const tot = new Date(`${aanmaakTot}T23:59:59.999`);
+      items = items.filter((v) => {
+        const d = (v as any).aangemaakt_op ? new Date((v as any).aangemaakt_op) : null;
+        return d != null && d <= tot;
+      });
+    }
     if (!term) return items;
     return items.filter((v) =>
       [v.objectnummer, v.type, v.gebouw_naam, v.status]
         .some((veld) => (veld ?? "").toLowerCase().includes(term)),
     );
-  }, [voorzieningenLijst, zoek, alleenTeControleren, alleenVoorbereid]);
+  }, [voorzieningenLijst, zoek, alleenTeControleren, alleenVoorbereid, aanmaakVan, aanmaakTot]);
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
@@ -147,6 +165,49 @@ export default function Voorzieningen() {
         </div>
       </div>
 
+      {/* Datum-filter balk */}
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Calendar className="h-4 w-4" />
+          <span className="font-medium text-foreground">Aanmaakdatum</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="text-xs text-muted-foreground">van</span>
+          <Input
+            type="date"
+            value={aanmaakVan}
+            onChange={(e) => setAanmaakVan(e.target.value)}
+            className="h-8 w-36 text-xs"
+            max={aanmaakTot || undefined}
+          />
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="text-xs text-muted-foreground">tot</span>
+          <Input
+            type="date"
+            value={aanmaakTot}
+            onChange={(e) => setAanmaakTot(e.target.value)}
+            className="h-8 w-36 text-xs"
+            min={aanmaakVan || undefined}
+          />
+        </div>
+        {datumFilterActief && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 text-xs text-muted-foreground hover:text-foreground"
+            onClick={() => { setAanmaakVan(""); setAanmaakTot(""); }}
+          >
+            <X className="h-3.5 w-3.5 mr-1" />Wissen
+          </Button>
+        )}
+        {datumFilterActief && (
+          <span className="text-xs text-muted-foreground">
+            {gefilterd.length} spot{gefilterd.length !== 1 ? "s" : ""} in periode
+          </span>
+        )}
+      </div>
+
       <Card>
         <CardContent className="p-0">
           <div className="overflow-x-auto">
@@ -158,12 +219,13 @@ export default function Voorzieningen() {
                   <th className="px-6 py-3">{t("voorzieningen.gebouw")}</th>
                   <th className="px-6 py-3">Cluster</th>
                   <th className="px-6 py-3">Status</th>
+                  <th className="px-6 py-3">Aangemaakt</th>
                   <th className="px-6 py-3 text-right">Acties</th>
                 </tr>
               </thead>
               <tbody>
                 {isLoading ? (
-                  <tr><td colSpan={6} className="px-6 py-4 text-center">Laden...</td></tr>
+                  <tr><td colSpan={7} className="px-6 py-4 text-center">Laden...</td></tr>
                 ) : (
                   gefilterd.map(v => (
                     <tr key={v.id} className="border-b last:border-0 hover:bg-muted/50">
@@ -213,6 +275,11 @@ export default function Voorzieningen() {
                           {STATUSLABEL[v.status ?? "concept"] ?? v.status}
                         </Badge>
                       </td>
+                      <td className="px-6 py-4 text-muted-foreground whitespace-nowrap">
+                        {(v as any).aangemaakt_op
+                          ? new Date((v as any).aangemaakt_op).toLocaleDateString("nl-NL", { day: "2-digit", month: "2-digit", year: "numeric" })
+                          : "—"}
+                      </td>
                       <td className="px-6 py-4 text-right">
                         <Link href={`/voorzieningen/${v.id}`}>
                           <Button variant="ghost" size="sm">Details</Button>
@@ -222,7 +289,7 @@ export default function Voorzieningen() {
                   ))
                 )}
                 {!isLoading && !gefilterd.length && (
-                  <tr><td colSpan={6} className="px-6 py-8 text-center text-muted-foreground">Geen spots gevonden.</td></tr>
+                  <tr><td colSpan={7} className="px-6 py-8 text-center text-muted-foreground">Geen spots gevonden.</td></tr>
                 )}
               </tbody>
             </table>
