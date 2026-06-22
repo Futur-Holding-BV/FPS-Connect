@@ -8,11 +8,12 @@ import {
   SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarTrigger,
 } from "@/components/ui/sidebar";
 import {
-  ShieldCheck, Building, Wrench, Users, Search, Home,
-  ShieldAlert, LifeBuoy, MessageSquarePlus, Activity, Contact, Info, BookOpen, Clock,
+  ShieldCheck, Building, Wrench, Users, Home,
+  ShieldAlert, LifeBuoy, MessageSquarePlus, Activity, Contact, Info, Clock,
   FolderOpen, FileText, ListChecks, Files, LayoutTemplate, Mail,
   Calculator, CalendarDays, LayoutDashboard, BarChart3, CreditCard, MessageSquare, HardHat,
-  Trophy, HardDrive, ClipboardList, Smartphone,
+  Trophy, HardDrive, ClipboardList, Smartphone, Plus, Hammer, PackageCheck,
+  BookOpen, HardDriveUpload,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { GebruikerMenu } from "@/components/gebruiker-menu";
@@ -21,25 +22,11 @@ import { useRol } from "@/context/rol-context";
 import { featureFlags } from "@/lib/feature-flags";
 import { cn } from "@/lib/utils";
 
-type Omgeving = "connect" | "one" | "beheer";
+type Omgeving = "connect" | "one";
 const OMGEVING_SLEUTEL = "fps.omgeving";
 
 function omgevingVanLocatie(loc: string): Omgeving | null {
   if (loc.startsWith("/one/")) return "one";
-  if (
-    loc === "/gebruikers" || loc.startsWith("/gebruikers/") ||
-    loc === "/beheer/profielen" ||
-    loc === "/beheer/login-pogingen" ||
-    loc === "/beheer/mail" ||
-    loc === "/beheer/documentopmaak" ||
-    loc === "/beheer/helpdesk" ||
-    loc === "/beheer/feedback" ||
-    loc === "/beheer/heatmaps" ||
-    loc === "/beheer/ontwikkelstatus" ||
-    loc === "/beheer/projectstatus" ||
-    loc === "/beheer/backup" ||
-    loc === "/beheer/pwa-test"
-  ) return "beheer";
   return null;
 }
 
@@ -50,27 +37,25 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
   const { rol } = useRol();
   const isHoofdbeheerder = rol === "hoofdbeheerder";
 
-  const toonGebouwen   = heeftNiveau("gebouwen", 1);
-  const toonInspecties = false;
-  const toonOnderhoud  = false;
-  const toonCrm        = heeftNiveau("crm", 1);
-  const toonBibliotheek = heeftNiveau("bibliotheek", 1);
-  const toonGebruikers = heeftNiveau("gebruikers", 1);
-  const toonSysteem    = heeftNiveau("systeem", 1);
-  const toonPersoneel  = heeftNiveau("personeel", 1);
+  const toonGebouwen      = heeftNiveau("gebouwen", 1);
+  const toonCrm           = heeftNiveau("crm", 1);
+  const toonBibliotheek   = heeftNiveau("bibliotheek", 1);
+  const toonGebruikers    = heeftNiveau("gebruikers", 1);
+  const toonSysteem       = heeftNiveau("systeem", 1);
+  const toonPersoneel     = heeftNiveau("personeel", 1);
   const toonGereedschappen = heeftNiveau("gereedschappen", 1);
-  const toonDossiers   = heeftNiveau("dossiers", 1);
-  const toonOpname     = heeftNiveau("gebouwen", 1);
-  const toonOffertes   = heeftNiveau("offertes", 1);
+  const toonDossiers      = heeftNiveau("dossiers", 1);
+  const toonOpname        = heeftNiveau("gebouwen", 1);
+  const toonOffertes      = heeftNiveau("offertes", 1);
+  const toonOnderhoud     = heeftNiveau("gebouwen", 1);
 
-  const heeftOne    = isHoofdbeheerder;
-  const heeftBeheer = toonGebruikers || toonSysteem;
-  const aantalOmgevingen = 1 + (heeftOne ? 1 : 0) + (heeftBeheer ? 1 : 0);
+  const heeftOne = isHoofdbeheerder;
+  const aantalOmgevingen = 1 + (heeftOne ? 1 : 0);
 
   const [opgeslagenKeuze, setOpgeslagenKeuze] = useState<Omgeving>(() => {
     if (typeof localStorage !== "undefined") {
       const v = localStorage.getItem(OMGEVING_SLEUTEL);
-      if (v === "connect" || v === "one" || v === "beheer") return v as Omgeving;
+      if (v === "connect" || v === "one") return v as Omgeving;
     }
     return "connect";
   });
@@ -84,11 +69,9 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
     }
   }
 
-  const projectenActief =
+  const gebouwenActief =
     location === "/gebouwen" || location.startsWith("/gebouwen/") ||
     location === "/voorzieningen" || location.startsWith("/voorzieningen/");
-
-  const defaultSidebarOpen = true;
 
   function InUitvoering() {
     return (
@@ -105,8 +88,8 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
   function OngelezenBerichtenBadge() {
     const { data: gesprekken, refetch } = useListChatGesprekken();
     useEffect(() => {
-      const t = setInterval(() => void refetch(), 30000);
-      return () => clearInterval(t);
+      const timer = setInterval(() => void refetch(), 30000);
+      return () => clearInterval(timer);
     }, [refetch]);
     const totaal = (gesprekken ?? []).reduce(
       (som, g) => som + (g.ongelezen_aantal ?? 0),
@@ -121,7 +104,7 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
   }
 
   return (
-    <SidebarProvider defaultOpen={defaultSidebarOpen}>
+    <SidebarProvider defaultOpen={true}>
       <Sidebar variant="inset" collapsible="icon">
         <SidebarHeader className="py-3">
           <div className="flex items-center px-2 gap-2 group-data-[collapsible=icon]:justify-center">
@@ -159,19 +142,6 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
                   One
                 </button>
               )}
-              {heeftBeheer && (
-                <button
-                  onClick={() => kiesOmgeving("beheer")}
-                  className={cn(
-                    "flex-1 text-[11px] font-semibold py-1.5 px-1 rounded transition-colors",
-                    actieveOmgeving === "beheer"
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-muted text-muted-foreground hover:bg-muted/80",
-                  )}
-                >
-                  Beheer
-                </button>
-              )}
             </div>
           )}
         </SidebarHeader>
@@ -181,6 +151,7 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
           {/* ══════════ FPS CONNECT ══════════ */}
           {actieveOmgeving === "connect" && (
             <>
+              {/* Dashboard */}
               <SidebarGroup>
                 <SidebarGroupContent>
                   <SidebarMenu>
@@ -192,70 +163,29 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
                         </Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
-
-                    {toonGebouwen && (
-                      <SidebarMenuItem>
-                        <SidebarMenuButton asChild isActive={projectenActief}>
-                          <Link href="/gebouwen">
-                            <Building />
-                            <span>{t("nav.gebouwen")}</span>
-                          </Link>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                    )}
-
-                    {toonInspecties && (
-                      <SidebarMenuItem>
-                        <SidebarMenuButton
-                          asChild
-                          isActive={location === "/inspecties" || location.startsWith("/inspecties/")}
-                        >
-                          <Link href="/inspecties">
-                            <Search />
-                            <span>{t("nav.inspecties")}</span>
-                            <InUitvoering />
-                          </Link>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                    )}
-
-                    {toonOnderhoud && (
-                      <SidebarMenuItem>
-                        <SidebarMenuButton
-                          asChild
-                          isActive={location === "/onderhoud" || location.startsWith("/onderhoud/")}
-                        >
-                          <Link href="/onderhoud">
-                            <Wrench />
-                            <span>{t("nav.onderhoud")}</span>
-                            <InUitvoering />
-                          </Link>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                    )}
-
                   </SidebarMenu>
                 </SidebarGroupContent>
               </SidebarGroup>
 
-              {toonBibliotheek && (
+              {/* Gebouwen */}
+              {toonGebouwen && (
                 <SidebarGroup>
-                  <SidebarGroupLabel>Bibliotheek</SidebarGroupLabel>
+                  <SidebarGroupLabel>Gebouwen</SidebarGroupLabel>
                   <SidebarGroupContent>
                     <SidebarMenu>
                       <SidebarMenuItem>
-                        <SidebarMenuButton
-                          asChild
-                          isActive={
-                            location === "/beheer/bibliotheek" ||
-                            location.startsWith("/beheer/bibliotheek/") ||
-                            location.startsWith("/beheer/toepassingen") ||
-                            location.startsWith("/beheer/applicaties")
-                          }
-                        >
-                          <Link href="/beheer/bibliotheek">
-                            <BookOpen />
-                            <span>Bibliotheek</span>
+                        <SidebarMenuButton asChild isActive={gebouwenActief}>
+                          <Link href="/gebouwen">
+                            <Building />
+                            <span>Alle gebouwen</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                      <SidebarMenuItem>
+                        <SidebarMenuButton asChild>
+                          <Link href="/gebouwen">
+                            <Plus />
+                            <span>Nieuw gebouw</span>
                           </Link>
                         </SidebarMenuButton>
                       </SidebarMenuItem>
@@ -264,6 +194,7 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
                 </SidebarGroup>
               )}
 
+              {/* CWU */}
               <SidebarGroup>
                 <SidebarGroupLabel>CWU</SidebarGroupLabel>
                 <SidebarGroupContent>
@@ -276,39 +207,78 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
                         >
                           <Link href="/opname">
                             <ClipboardList />
-                            <span>Opname</span>
+                            <span>Opnames</span>
                           </Link>
                         </SidebarMenuButton>
                       </SidebarMenuItem>
                     )}
-                    {featureFlags.calculatie && (
-                      <SidebarMenuItem>
+                    <SidebarMenuItem>
+                      {featureFlags.calculatie ? (
                         <SidebarMenuButton
                           asChild
                           isActive={location === "/modules/calculatie" || location.startsWith("/modules/calculatie/")}
                         >
                           <Link href="/modules/calculatie">
                             <Calculator />
-                            <span>Calculatie</span>
+                            <span>Calculaties</span>
                           </Link>
                         </SidebarMenuButton>
-                      </SidebarMenuItem>
-                    )}
-                    {toonOffertes && (
+                      ) : (
+                        <SidebarMenuButton disabled>
+                          <Calculator />
+                          <span>Calculaties</span>
+                          <InUitvoering />
+                        </SidebarMenuButton>
+                      )}
+                    </SidebarMenuItem>
+                    <SidebarMenuItem>
+                      <SidebarMenuButton disabled>
+                        <Hammer />
+                        <span>Werkvoorbereiding</span>
+                        <InUitvoering />
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                    <SidebarMenuItem>
+                      <SidebarMenuButton disabled>
+                        <HardHat />
+                        <span>Uitvoering</span>
+                        <InUitvoering />
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              </SidebarGroup>
+
+              {/* Werkstroom — standalone modules */}
+              <SidebarGroup>
+                <SidebarGroupContent>
+                  <SidebarMenu>
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={location === "/rapporten" || location.startsWith("/rapporten/")}
+                      >
+                        <Link href="/rapporten">
+                          <PackageCheck />
+                          <span>Oplevering</span>
+                          <InUitvoering />
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                    {toonOnderhoud && (
                       <SidebarMenuItem>
                         <SidebarMenuButton
                           asChild
-                          isActive={location === "/offertes" || location.startsWith("/offertes/")}
+                          isActive={location === "/onderhoud" || location.startsWith("/onderhoud/")}
                         >
-                          <Link href="/offertes">
-                            <FileText />
-                            <span>{t("nav.offertes")}</span>
-                            <InUitvoering />
+                          <Link href="/onderhoud">
+                            <Wrench />
+                            <span>Onderhoud</span>
                           </Link>
                         </SidebarMenuButton>
                       </SidebarMenuItem>
                     )}
-                    {featureFlags.planning && (
+                    {featureFlags.planning ? (
                       <SidebarMenuItem>
                         <SidebarMenuButton
                           asChild
@@ -320,16 +290,36 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
                           </Link>
                         </SidebarMenuButton>
                       </SidebarMenuItem>
+                    ) : (
+                      <SidebarMenuItem>
+                        <SidebarMenuButton disabled>
+                          <CalendarDays />
+                          <span>Planning</span>
+                          <InUitvoering />
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
                     )}
-                    {(toonPersoneel || isHoofdbeheerder) && (
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={location === "/documenten" || location.startsWith("/documenten/")}
+                      >
+                        <Link href="/documenten">
+                          <Files />
+                          <span>Documenten</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                    {toonDossiers && (
                       <SidebarMenuItem>
                         <SidebarMenuButton
                           asChild
-                          isActive={location === "/uren" || location.startsWith("/uren/")}
+                          isActive={location === "/dossiers" || location.startsWith("/dossiers/")}
                         >
-                          <Link href="/uren">
-                            <Clock />
-                            <span>Urenregistratie</span>
+                          <Link href="/dossiers">
+                            <FolderOpen />
+                            <span>{t("nav.dossiers")}</span>
+                            <InUitvoering />
                           </Link>
                         </SidebarMenuButton>
                       </SidebarMenuItem>
@@ -338,8 +328,8 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
                 </SidebarGroupContent>
               </SidebarGroup>
 
+              {/* Communicatie */}
               <SidebarGroup>
-                <SidebarGroupLabel>Communicatie</SidebarGroupLabel>
                 <SidebarGroupContent>
                   <SidebarMenu>
                     <SidebarMenuItem>
@@ -354,13 +344,28 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
                         </Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
+                    {toonCrm && (
+                      <SidebarMenuItem>
+                        <SidebarMenuButton
+                          asChild
+                          isActive={location === "/crm" || location.startsWith("/crm/")}
+                        >
+                          <Link href="/crm">
+                            <Contact />
+                            <span>Relaties</span>
+                            <InUitvoering />
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    )}
                   </SidebarMenu>
                 </SidebarGroupContent>
               </SidebarGroup>
 
-              {(toonPersoneel || toonGereedschappen || toonDossiers || toonCrm || isHoofdbeheerder) && (
+              {/* HRM */}
+              {(toonPersoneel || toonGereedschappen || isHoofdbeheerder) && (
                 <SidebarGroup>
-                  <SidebarGroupLabel>Organisatie</SidebarGroupLabel>
+                  <SidebarGroupLabel>HRM</SidebarGroupLabel>
                   <SidebarGroupContent>
                     <SidebarMenu>
                       {toonPersoneel && (
@@ -394,6 +399,19 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
                         <SidebarMenuItem>
                           <SidebarMenuButton
                             asChild
+                            isActive={location === "/uren" || location.startsWith("/uren/")}
+                          >
+                            <Link href="/uren">
+                              <Clock />
+                              <span>Urenregistratie</span>
+                            </Link>
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                      )}
+                      {(toonPersoneel || isHoofdbeheerder) && (
+                        <SidebarMenuItem>
+                          <SidebarMenuButton
+                            asChild
                             isActive={location === "/hall-of-fame"}
                           >
                             <Link href="/hall-of-fame">
@@ -403,30 +421,54 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
                           </SidebarMenuButton>
                         </SidebarMenuItem>
                       )}
-                      {toonCrm && (
+                    </SidebarMenu>
+                  </SidebarGroupContent>
+                </SidebarGroup>
+              )}
+
+              {/* Beheer */}
+              {(toonGebruikers || toonSysteem || toonBibliotheek) && (
+                <SidebarGroup>
+                  <SidebarGroupLabel>Beheer</SidebarGroupLabel>
+                  <SidebarGroupContent>
+                    <SidebarMenu>
+                      {toonGebruikers && (
                         <SidebarMenuItem>
                           <SidebarMenuButton
                             asChild
-                            isActive={location === "/crm" || location.startsWith("/crm/")}
+                            isActive={location === "/gebruikers" || location.startsWith("/gebruikers/")}
                           >
-                            <Link href="/crm">
-                              <Contact />
-                              <span>{t("nav.crm")}</span>
-                              <InUitvoering />
+                            <Link href="/gebruikers">
+                              <Users />
+                              <span>{t("nav.gebruikers")}</span>
                             </Link>
                           </SidebarMenuButton>
                         </SidebarMenuItem>
                       )}
-                      {toonDossiers && (
+                      {toonBibliotheek && (
                         <SidebarMenuItem>
                           <SidebarMenuButton
                             asChild
-                            isActive={location === "/dossiers" || location.startsWith("/dossiers/")}
+                            isActive={
+                              location === "/beheer/bibliotheek" ||
+                              location.startsWith("/beheer/bibliotheek/") ||
+                              location.startsWith("/beheer/toepassingen") ||
+                              location.startsWith("/beheer/applicaties")
+                            }
                           >
-                            <Link href="/dossiers">
-                              <FolderOpen />
-                              <span>{t("nav.dossiers")}</span>
-                              <InUitvoering />
+                            <Link href="/beheer/bibliotheek">
+                              <BookOpen />
+                              <span>Bibliotheek</span>
+                            </Link>
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                      )}
+                      {isHoofdbeheerder && (
+                        <SidebarMenuItem>
+                          <SidebarMenuButton asChild isActive={location === "/beheer/profielen"}>
+                            <Link href="/beheer/profielen">
+                              <ShieldCheck />
+                              <span>Profielen</span>
                             </Link>
                           </SidebarMenuButton>
                         </SidebarMenuItem>
@@ -435,15 +477,107 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
                         <SidebarMenuItem>
                           <SidebarMenuButton
                             asChild
-                            isActive={location === "/toolbox" || location.startsWith("/toolbox/")}
+                            isActive={location === "/beheer/documentopmaak"}
                           >
-                            <Link href="/toolbox">
-                              <HardHat />
-                              <span>Toolbox</span>
+                            <Link href="/beheer/documentopmaak">
+                              <LayoutTemplate />
+                              <span>Documentopmaak</span>
                             </Link>
                           </SidebarMenuButton>
                         </SidebarMenuItem>
                       )}
+                      {toonSysteem && (
+                        <>
+                          <SidebarMenuItem>
+                            <SidebarMenuButton asChild isActive={location === "/beheer/login-pogingen"}>
+                              <Link href="/beheer/login-pogingen">
+                                <ShieldAlert />
+                                <span>Login-pogingen</span>
+                              </Link>
+                            </SidebarMenuButton>
+                          </SidebarMenuItem>
+                          <SidebarMenuItem>
+                            <SidebarMenuButton asChild isActive={location === "/beheer/mail"}>
+                              <Link href="/beheer/mail">
+                                <Mail />
+                                <span>Mailinstellingen</span>
+                              </Link>
+                            </SidebarMenuButton>
+                          </SidebarMenuItem>
+                          <SidebarMenuItem>
+                            <SidebarMenuButton asChild isActive={location === "/beheer/helpdesk"}>
+                              <Link href="/beheer/helpdesk">
+                                <LifeBuoy />
+                                <span>Helpdesk</span>
+                              </Link>
+                            </SidebarMenuButton>
+                          </SidebarMenuItem>
+                          <SidebarMenuItem>
+                            <SidebarMenuButton asChild isActive={location === "/beheer/feedback"}>
+                              <Link href="/beheer/feedback">
+                                <MessageSquarePlus />
+                                <span>Feedback</span>
+                              </Link>
+                            </SidebarMenuButton>
+                          </SidebarMenuItem>
+                          <SidebarMenuItem>
+                            <SidebarMenuButton asChild isActive={location === "/beheer/heatmaps"}>
+                              <Link href="/beheer/heatmaps">
+                                <Activity />
+                                <span>Heatmaps</span>
+                              </Link>
+                            </SidebarMenuButton>
+                          </SidebarMenuItem>
+                          <SidebarMenuItem>
+                            <SidebarMenuButton asChild isActive={location === "/beheer/ontwikkelstatus"}>
+                              <Link href="/beheer/ontwikkelstatus">
+                                <ListChecks />
+                                <span>Ontwikkelstatus</span>
+                              </Link>
+                            </SidebarMenuButton>
+                          </SidebarMenuItem>
+                          <SidebarMenuItem>
+                            <SidebarMenuButton asChild isActive={location === "/beheer/projectstatus"}>
+                              <Link href="/beheer/projectstatus">
+                                <BarChart3 />
+                                <span>Projectstatus</span>
+                              </Link>
+                            </SidebarMenuButton>
+                          </SidebarMenuItem>
+                          <SidebarMenuItem>
+                            <SidebarMenuButton asChild isActive={location === "/beheer/backup"}>
+                              <Link href="/beheer/backup">
+                                <HardDrive />
+                                <span>Back-up &amp; Herstel</span>
+                              </Link>
+                            </SidebarMenuButton>
+                          </SidebarMenuItem>
+                          <SidebarMenuItem>
+                            <SidebarMenuButton asChild isActive={location === "/toolbox" || location.startsWith("/toolbox/")}>
+                              <Link href="/toolbox">
+                                <HardDriveUpload />
+                                <span>Toolbox</span>
+                              </Link>
+                            </SidebarMenuButton>
+                          </SidebarMenuItem>
+                        </>
+                      )}
+                      <SidebarMenuItem>
+                        <SidebarMenuButton asChild isActive={location === "/beheer/pwa-test"}>
+                          <Link href="/beheer/pwa-test">
+                            <Smartphone />
+                            <span>Mobiele test</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                      <SidebarMenuItem>
+                        <SidebarMenuButton asChild isActive={location === "/info"}>
+                          <Link href="/info">
+                            <Info />
+                            <span>{t("nav.info")}</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
                     </SidebarMenu>
                   </SidebarGroupContent>
                 </SidebarGroup>
@@ -505,131 +639,6 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
                       <Link href="/one/abonnementen">
                         <CreditCard />
                         <span>Abonnementen</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </SidebarGroup>
-          )}
-
-          {/* ══════════ BEHEER ══════════ */}
-          {actieveOmgeving === "beheer" && heeftBeheer && (
-            <SidebarGroup>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  {toonGebruikers && (
-                    <SidebarMenuItem>
-                      <SidebarMenuButton
-                        asChild
-                        isActive={location === "/gebruikers" || location.startsWith("/gebruikers/")}
-                      >
-                        <Link href="/gebruikers">
-                          <Users />
-                          <span>{t("nav.gebruikers")}</span>
-                        </Link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  )}
-                  {isHoofdbeheerder && (
-                    <SidebarMenuItem>
-                      <SidebarMenuButton asChild isActive={location === "/beheer/profielen"}>
-                        <Link href="/beheer/profielen">
-                          <ShieldCheck />
-                          <span>Profielen</span>
-                        </Link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  )}
-                  {toonSysteem && (
-                    <>
-                      <SidebarMenuItem>
-                        <SidebarMenuButton asChild isActive={location === "/beheer/login-pogingen"}>
-                          <Link href="/beheer/login-pogingen">
-                            <ShieldAlert />
-                            <span>Login-pogingen</span>
-                          </Link>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                      <SidebarMenuItem>
-                        <SidebarMenuButton asChild isActive={location === "/beheer/mail"}>
-                          <Link href="/beheer/mail">
-                            <Mail />
-                            <span>Mailinstellingen</span>
-                          </Link>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                      <SidebarMenuItem>
-                        <SidebarMenuButton asChild isActive={location === "/beheer/documentopmaak"}>
-                          <Link href="/beheer/documentopmaak">
-                            <LayoutTemplate />
-                            <span>Documentopmaak</span>
-                          </Link>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                      <SidebarMenuItem>
-                        <SidebarMenuButton asChild isActive={location === "/beheer/helpdesk"}>
-                          <Link href="/beheer/helpdesk">
-                            <LifeBuoy />
-                            <span>Helpdesk</span>
-                          </Link>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                      <SidebarMenuItem>
-                        <SidebarMenuButton asChild isActive={location === "/beheer/feedback"}>
-                          <Link href="/beheer/feedback">
-                            <MessageSquarePlus />
-                            <span>Feedback</span>
-                          </Link>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                      <SidebarMenuItem>
-                        <SidebarMenuButton asChild isActive={location === "/beheer/heatmaps"}>
-                          <Link href="/beheer/heatmaps">
-                            <Activity />
-                            <span>Heatmaps</span>
-                          </Link>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                      <SidebarMenuItem>
-                        <SidebarMenuButton asChild isActive={location === "/beheer/ontwikkelstatus"}>
-                          <Link href="/beheer/ontwikkelstatus">
-                            <ListChecks />
-                            <span>Ontwikkelstatus</span>
-                          </Link>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                      <SidebarMenuItem>
-                        <SidebarMenuButton asChild isActive={location === "/beheer/projectstatus"}>
-                          <Link href="/beheer/projectstatus">
-                            <BarChart3 />
-                            <span>Projectstatus</span>
-                          </Link>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                      <SidebarMenuItem>
-                        <SidebarMenuButton asChild isActive={location === "/beheer/backup"}>
-                          <Link href="/beheer/backup">
-                            <HardDrive />
-                            <span>Back-up &amp; Herstel</span>
-                          </Link>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                    </>
-                  )}
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={location === "/beheer/pwa-test"}>
-                      <Link href="/beheer/pwa-test">
-                        <Smartphone />
-                        <span>Mobiele test</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={location === "/info"}>
-                      <Link href="/info">
-                        <Info />
-                        <span>{t("nav.info")}</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
