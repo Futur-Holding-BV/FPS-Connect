@@ -4,6 +4,7 @@ import { gebruikersTable } from "./gebruikers";
 import { medewerkersTable } from "./hrm";
 import { planningItemsTable } from "./planning";
 import { documentenTable } from "./documenten";
+import { projectenTable } from "./projecten";
 
 // Dagelijkse urenregistraties — één rij per medewerker per dagdeel/project.
 // Meerdere rijen per dag zijn mogelijk (bijv. ochtend project A, middag project B).
@@ -13,6 +14,7 @@ export const urenRegistratiesTable = pgTable("uren_registraties", {
   datum: text("datum").notNull(),                                         // "YYYY-MM-DD"
   medewerkerId: integer("medewerker_id").notNull().references(() => medewerkersTable.id, { onDelete: "cascade" }),
   gebouwId: integer("gebouw_id").references(() => gebouwenTable.id, { onDelete: "set null" }),
+  projectId: integer("project_id").references(() => projectenTable.id, { onDelete: "set null" }),
   projectNaam: text("project_naam"),                                       // vrij tekst als geen gebouw_id
   werkzaamheden: text("werkzaamheden"),
   beginTijd: text("begin_tijd").notNull(),                                 // "HH:MM"

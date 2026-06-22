@@ -8,6 +8,7 @@
 
 export interface ProjectBegroting {
   id: number;
+  project_id?: number | null;
   gebouw_id?: number | null;
   gebouw_naam?: string | null;
   werknummer?: string | null;

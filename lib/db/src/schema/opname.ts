@@ -6,7 +6,7 @@ import { gebruikersTable } from "./gebruikers";
 // Opname — een veldopname van een gebouw door de projectleider
 export const opnamesTable = pgTable("opnames", {
   id:               serial("id").primaryKey(),
-  gebouwId:         integer("gebouw_id").notNull().references(() => gebouwenTable.id, { onDelete: "cascade" }),
+  gebouwId:         integer("gebouw_id").references(() => gebouwenTable.id, { onDelete: "set null" }),
   naam:             text("naam").notNull(),
   datum:            text("datum").notNull(),           // ISO-datum (YYYY-MM-DD)
   status:           text("status").notNull().default("concept"),  // concept | definitief

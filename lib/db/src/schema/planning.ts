@@ -2,6 +2,7 @@ import { pgTable, serial, text, integer, real, boolean, timestamp } from "drizzl
 import { gebouwenTable } from "./gebouwen";
 import { gebruikersTable } from "./gebruikers";
 import { medewerkersTable } from "./hrm";
+import { projectenTable } from "./projecten";
 
 export const planningItemsTable = pgTable("planning_items", {
   id: serial("id").primaryKey(),
@@ -9,6 +10,7 @@ export const planningItemsTable = pgTable("planning_items", {
   omschrijving: text("omschrijving"),
   medewerkerId: integer("medewerker_id").references(() => medewerkersTable.id, { onDelete: "set null" }),
   gebouwId: integer("gebouw_id").references(() => gebouwenTable.id, { onDelete: "set null" }),
+  projectId: integer("project_id").references(() => projectenTable.id, { onDelete: "set null" }),
   projectNaam: text("project_naam"),
   datumStart: text("datum_start").notNull(),
   datumEind: text("datum_eind").notNull(),
@@ -45,6 +47,7 @@ export const planningAfwezigheidTable = pgTable("planning_afwezigheid", {
 
 export const projectBegrotingenTable = pgTable("project_begrotingen", {
   id: serial("id").primaryKey(),
+  projectId: integer("project_id").references(() => projectenTable.id, { onDelete: "set null" }),
   gebouwId: integer("gebouw_id").references(() => gebouwenTable.id, { onDelete: "cascade" }),
   werknummer: text("werknummer"),
   hoofdUrenBegroot: real("hoofd_uren_begroot").notNull().default(0),

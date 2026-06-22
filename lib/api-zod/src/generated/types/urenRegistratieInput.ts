@@ -10,6 +10,7 @@ export interface UrenRegistratieInput {
   datum: string;
   medewerker_id?: number;
   gebouw_id?: number | null;
+  project_id?: number | null;
   project_naam?: string | null;
   werkzaamheden?: string | null;
   begin_tijd: string;

@@ -11,6 +11,7 @@ export interface PlanningItemInput {
   omschrijving?: string | null;
   medewerker_id?: number | null;
   gebouw_id?: number | null;
+  project_id?: number | null;
   project_naam?: string | null;
   werknummer?: string | null;
   /** JSON string met huisnummer per tijdslot */

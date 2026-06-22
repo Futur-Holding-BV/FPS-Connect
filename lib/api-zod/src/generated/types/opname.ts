@@ -9,7 +9,7 @@ import type { OpnameItem } from './opnameItem';
 
 export interface Opname {
   id: number;
-  gebouw_id: number;
+  gebouw_id?: number | null;
   gebouw_naam?: string | null;
   naam: string;
   datum: string;

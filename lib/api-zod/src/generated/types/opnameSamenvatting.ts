@@ -8,7 +8,7 @@
 
 export interface OpnameSamenvatting {
   id: number;
-  gebouw_id: number;
+  gebouw_id?: number | null;
   gebouw_naam?: string | null;
   naam: string;
   datum: string;

@@ -41,6 +41,8 @@ tags:
     description: Gereedschapregistratie, bruikleenovereenkomsten en meldingen (FPS Connect)
   - name: uren
     description: Urenregistratie, weekstaten en ADV-berekening (FPS Connect)
+  - name: projecten
+    description: Projecten — centrale uitvoeringsentiteit (Enterprise Blueprint v1.1)
 
 paths:
   /healthz:
@@ -8233,6 +8235,111 @@ paths:
         '204':
           description: Gemarkeerd
 
+  # ── PROJECTEN ────────────────────────────────────────────────────────────
+  /projecten:
+    get:
+      operationId: listProjecten
+      summary: Projecten ophalen
+      tags: [projecten]
+      parameters:
+        - in: query
+          name: crm_klant_id
+          schema:
+            type: integer
+        - in: query
+          name: gebouw_id
+          schema:
+            type: integer
+        - in: query
+          name: status
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Project'
+    post:
+      operationId: createProject
+      summary: Nieuw project aanmaken
+      tags: [projecten]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProjectInput'
+      responses:
+        '201':
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+
+  /projecten/{id}:
+    get:
+      operationId: getProject
+      summary: Project detail
+      tags: [projecten]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+        '404':
+          description: Niet gevonden
+    patch:
+      operationId: updateProject
+      summary: Project bijwerken
+      tags: [projecten]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProjectPatchInput'
+      responses:
+        '200':
+          description: Bijgewerkt
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+        '404':
+          description: Niet gevonden
+    delete:
+      operationId: deleteProject
+      summary: Project verwijderen
+      tags: [projecten]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Verwijderd
+
   /opname:
     get:
       operationId: listOpnames
@@ -13698,6 +13805,9 @@ components:
         gebouw_naam:
           type: string
           nullable: true
+        project_id:
+          type: integer
+          nullable: true
         project_naam:
           type: string
           nullable: true
@@ -13754,6 +13864,9 @@ components:
           type: integer
           nullable: true
         gebouw_id:
+          type: integer
+          nullable: true
+        project_id:
           type: integer
           nullable: true
         project_naam:
@@ -13844,6 +13957,9 @@ components:
       properties:
         id:
           type: integer
+        project_id:
+          type: integer
+          nullable: true
         gebouw_id:
           type: integer
           nullable: true
@@ -13867,6 +13983,9 @@ components:
       type: object
       required: [hoofd_uren_begroot, meerwerk_uren_begroot]
       properties:
+        project_id:
+          type: integer
+          nullable: true
         gebouw_id:
           type: integer
           nullable: true
@@ -14178,6 +14297,9 @@ components:
         gebouw_naam:
           type: string
           nullable: true
+        project_id:
+          type: integer
+          nullable: true
         project_naam:
           type: string
           nullable: true
@@ -14231,6 +14353,9 @@ components:
         medewerker_id:
           type: integer
         gebouw_id:
+          type: integer
+          nullable: true
+        project_id:
           type: integer
           nullable: true
         project_naam:
@@ -14894,14 +15019,124 @@ components:
           type: string
           nullable: true
 
+    Project:
+      type: object
+      required: [id, naam, status, aangemaakt_op, bijgewerkt_op]
+      properties:
+        id:
+          type: integer
+        naam:
+          type: string
+        werknummer:
+          type: string
+          nullable: true
+        status:
+          type: string
+          description: concept | actief | afgerond | geannuleerd
+        werkmaatschappij:
+          type: string
+          nullable: true
+        omschrijving:
+          type: string
+          nullable: true
+        crm_klant_id:
+          type: integer
+          nullable: true
+        crm_klant_naam:
+          type: string
+          nullable: true
+        gebouw_id:
+          type: integer
+          nullable: true
+        gebouw_naam:
+          type: string
+          nullable: true
+        start_datum:
+          type: string
+          nullable: true
+        eind_datum:
+          type: string
+          nullable: true
+        aangemaakt_door_naam:
+          type: string
+          nullable: true
+        aangemaakt_op:
+          type: string
+          format: date-time
+        bijgewerkt_op:
+          type: string
+          format: date-time
+
+    ProjectInput:
+      type: object
+      required: [naam]
+      properties:
+        naam:
+          type: string
+        werknummer:
+          type: string
+          nullable: true
+        status:
+          type: string
+          nullable: true
+        werkmaatschappij:
+          type: string
+          nullable: true
+        omschrijving:
+          type: string
+          nullable: true
+        crm_klant_id:
+          type: integer
+          nullable: true
+        gebouw_id:
+          type: integer
+          nullable: true
+        start_datum:
+          type: string
+          nullable: true
+        eind_datum:
+          type: string
+          nullable: true
+
+    ProjectPatchInput:
+      type: object
+      properties:
+        naam:
+          type: string
+        werknummer:
+          type: string
+          nullable: true
+        status:
+          type: string
+          nullable: true
+        werkmaatschappij:
+          type: string
+          nullable: true
+        omschrijving:
+          type: string
+          nullable: true
+        crm_klant_id:
+          type: integer
+          nullable: true
+        gebouw_id:
+          type: integer
+          nullable: true
+        start_datum:
+          type: string
+          nullable: true
+        eind_datum:
+          type: string
+          nullable: true
+
     OpnameSamenvatting:
       type: object
-      required: [id, gebouw_id, naam, datum, status, aantal_items, aangemaakt_op, bijgewerkt_op]
+      required: [id, naam, datum, status, aantal_items, aangemaakt_op, bijgewerkt_op]
       properties:
         id:
           type: integer
         gebouw_id:
           type: integer
+          nullable: true
         gebouw_naam:
           type: string
           nullable: true
@@ -14928,12 +15163,13 @@ components:
 
     Opname:
       type: object
-      required: [id, gebouw_id, naam, datum, status, items, aangemaakt_op, bijgewerkt_op]
+      required: [id, naam, datum, status, items, aangemaakt_op, bijgewerkt_op]
       properties:
         id:
           type: integer
         gebouw_id:
           type: integer
+          nullable: true
         gebouw_naam:
           type: string
           nullable: true
@@ -15031,10 +15267,11 @@ components:
 
     OpnameInput:
       type: object
-      required: [gebouw_id, naam, datum]
+      required: [naam, datum]
       properties:
         gebouw_id:
           type: integer
+          nullable: true
         naam:
           type: string
         datum:

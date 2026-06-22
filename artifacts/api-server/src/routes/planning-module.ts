@@ -36,6 +36,7 @@ function mapItem(item: typeof planningItemsTable.$inferSelect, medewerkNaam: str
     medewerker_naam: medewerkNaam ?? null,
     gebouw_id: item.gebouwId ?? null,
     gebouw_naam: gebouwNaam ?? null,
+    project_id: item.projectId ?? null,
     project_naam: item.projectNaam ?? null,
     datum_start: item.datumStart,
     datum_eind: item.datumEind,
@@ -152,7 +153,7 @@ router.get("/modules/planning/items", lezenPlanning, async (req, res) => {
 router.post("/modules/planning/items", aanmakenPlanning, async (req, res) => {
   try {
     const {
-      titel, omschrijving, medewerker_id, gebouw_id, project_naam,
+      titel, omschrijving, medewerker_id, gebouw_id, project_id, project_naam,
       datum_start, datum_eind, tijd_start, tijd_eind, uren,
       status = "concept", type = "uitvoering", notities,
       werknummer, dag_notities, opdracht_type, locaties,
@@ -171,6 +172,7 @@ router.post("/modules/planning/items", aanmakenPlanning, async (req, res) => {
       omschrijving:   omschrijving  ? String(omschrijving)  : null,
       medewerkerId:   medewerker_id ? Number(medewerker_id) : null,
       gebouwId:       gebouw_id     ? Number(gebouw_id)     : null,
+      projectId:      project_id    ? Number(project_id)    : null,
       projectNaam:    project_naam  ? String(project_naam)  : null,
       datumStart:     String(datum_start),
       datumEind:      String(datum_eind),
@@ -226,6 +228,7 @@ router.patch("/modules/planning/items/:id", schrijvenPlanning, async (req, res) 
     if (body.omschrijving  !== undefined) update.omschrijving = body.omschrijving  ? String(body.omschrijving)  : null;
     if (body.medewerker_id !== undefined) update.medewerkerId = body.medewerker_id ? Number(body.medewerker_id) : null;
     if (body.gebouw_id     !== undefined) update.gebouwId     = body.gebouw_id     ? Number(body.gebouw_id)     : null;
+    if (body.project_id    !== undefined) update.projectId    = body.project_id    ? Number(body.project_id)    : null;
     if (body.project_naam  !== undefined) update.projectNaam  = body.project_naam  ? String(body.project_naam)  : null;
     if (body.datum_start   !== undefined) update.datumStart   = String(body.datum_start);
     if (body.datum_eind    !== undefined) update.datumEind    = String(body.datum_eind);

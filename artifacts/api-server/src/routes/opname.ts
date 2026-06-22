@@ -132,21 +132,21 @@ router.get("/opname", requireAuth, async (req, res) => {
 
 router.post("/opname", requireAuth, async (req, res) => {
   const { gebouw_id, naam, datum, notities } = req.body as {
-    gebouw_id: number;
+    gebouw_id?: number | null;
     naam: string;
     datum: string;
     notities?: string;
   };
 
-  if (!gebouw_id || !naam || !datum) {
-    res.status(400).json({ fout: "gebouw_id, naam en datum zijn verplicht" });
+  if (!naam || !datum) {
+    res.status(400).json({ fout: "naam en datum zijn verplicht" });
     return;
   }
 
   const [nieuw] = await db
     .insert(opnamesTable)
     .values({
-      gebouwId: gebouw_id,
+      gebouwId: gebouw_id ?? null,
       naam,
       datum,
       notities: notities ?? null,

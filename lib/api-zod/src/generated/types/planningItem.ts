@@ -14,6 +14,7 @@ export interface PlanningItem {
   medewerker_naam?: string | null;
   gebouw_id?: number | null;
   gebouw_naam?: string | null;
+  project_id?: number | null;
   project_naam?: string | null;
   datum_start: string;
   datum_eind: string;

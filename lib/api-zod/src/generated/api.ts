@@ -8079,6 +8079,7 @@ export const ListPlanningItemsResponseItem = zod.object({
   "medewerker_naam": zod.string().nullish(),
   "gebouw_id": zod.number().nullish(),
   "gebouw_naam": zod.string().nullish(),
+  "project_id": zod.number().nullish(),
   "project_naam": zod.string().nullish(),
   "datum_start": zod.string(),
   "datum_eind": zod.string(),
@@ -8106,6 +8107,7 @@ export const CreatePlanningItemBody = zod.object({
   "omschrijving": zod.string().nullish(),
   "medewerker_id": zod.number().nullish(),
   "gebouw_id": zod.number().nullish(),
+  "project_id": zod.number().nullish(),
   "project_naam": zod.string().nullish(),
   "werknummer": zod.string().nullish(),
   "tijdsloten": zod.string().nullish().describe('JSON string met huisnummer per tijdslot'),
@@ -8140,6 +8142,7 @@ export const GetPlanningItemResponse = zod.object({
   "medewerker_naam": zod.string().nullish(),
   "gebouw_id": zod.number().nullish(),
   "gebouw_naam": zod.string().nullish(),
+  "project_id": zod.number().nullish(),
   "project_naam": zod.string().nullish(),
   "datum_start": zod.string(),
   "datum_eind": zod.string(),
@@ -8170,6 +8173,7 @@ export const UpdatePlanningItemBody = zod.object({
   "omschrijving": zod.string().nullish(),
   "medewerker_id": zod.number().nullish(),
   "gebouw_id": zod.number().nullish(),
+  "project_id": zod.number().nullish(),
   "project_naam": zod.string().nullish(),
   "werknummer": zod.string().nullish(),
   "tijdsloten": zod.string().nullish().describe('JSON string met huisnummer per tijdslot'),
@@ -8194,6 +8198,7 @@ export const UpdatePlanningItemResponse = zod.object({
   "medewerker_naam": zod.string().nullish(),
   "gebouw_id": zod.number().nullish(),
   "gebouw_naam": zod.string().nullish(),
+  "project_id": zod.number().nullish(),
   "project_naam": zod.string().nullish(),
   "datum_start": zod.string(),
   "datum_eind": zod.string(),
@@ -8406,6 +8411,7 @@ export const ListProjectBegrotingenQueryParams = zod.object({
 
 export const ListProjectBegrotingenResponseItem = zod.object({
   "id": zod.number(),
+  "project_id": zod.number().nullish(),
   "gebouw_id": zod.number().nullish(),
   "gebouw_naam": zod.string().nullish(),
   "werknummer": zod.string().nullish(),
@@ -8421,6 +8427,7 @@ export const ListProjectBegrotingenResponse = zod.array(ListProjectBegrotingenRe
  * @summary Projectbegroting aanmaken
  */
 export const CreateProjectBegrotingBody = zod.object({
+  "project_id": zod.number().nullish(),
   "gebouw_id": zod.number().nullish(),
   "werknummer": zod.string().nullish(),
   "hoofd_uren_begroot": zod.number(),
@@ -8439,6 +8446,7 @@ export const UpdateProjectBegrotingParams = zod.object({
 })
 
 export const UpdateProjectBegrotingBody = zod.object({
+  "project_id": zod.number().nullish(),
   "gebouw_id": zod.number().nullish(),
   "werknummer": zod.string().nullish(),
   "hoofd_uren_begroot": zod.number(),
@@ -8448,6 +8456,7 @@ export const UpdateProjectBegrotingBody = zod.object({
 
 export const UpdateProjectBegrotingResponse = zod.object({
   "id": zod.number(),
+  "project_id": zod.number().nullish(),
   "gebouw_id": zod.number().nullish(),
   "gebouw_naam": zod.string().nullish(),
   "werknummer": zod.string().nullish(),
@@ -8922,6 +8931,7 @@ export const ListUrenResponseItem = zod.object({
   "medewerker_naam": zod.string().nullish(),
   "gebouw_id": zod.number().nullish(),
   "gebouw_naam": zod.string().nullish(),
+  "project_id": zod.number().nullish(),
   "project_naam": zod.string().nullish(),
   "werkzaamheden": zod.string().nullish(),
   "begin_tijd": zod.string(),
@@ -8950,6 +8960,7 @@ export const CreateUrenRegistratieBody = zod.object({
   "datum": zod.string(),
   "medewerker_id": zod.number().optional(),
   "gebouw_id": zod.number().nullish(),
+  "project_id": zod.number().nullish(),
   "project_naam": zod.string().nullish(),
   "werkzaamheden": zod.string().nullish(),
   "begin_tijd": zod.string(),
@@ -8983,6 +8994,7 @@ export const GetMijnWeekUrenResponse = zod.object({
   "medewerker_naam": zod.string().nullish(),
   "gebouw_id": zod.number().nullish(),
   "gebouw_naam": zod.string().nullish(),
+  "project_id": zod.number().nullish(),
   "project_naam": zod.string().nullish(),
   "werkzaamheden": zod.string().nullish(),
   "begin_tijd": zod.string(),
@@ -9029,6 +9041,7 @@ export const GetUrenRegistratieResponse = zod.object({
   "medewerker_naam": zod.string().nullish(),
   "gebouw_id": zod.number().nullish(),
   "gebouw_naam": zod.string().nullish(),
+  "project_id": zod.number().nullish(),
   "project_naam": zod.string().nullish(),
   "werkzaamheden": zod.string().nullish(),
   "begin_tijd": zod.string(),
@@ -9060,6 +9073,7 @@ export const UpdateUrenRegistratieBody = zod.object({
   "datum": zod.string(),
   "medewerker_id": zod.number().optional(),
   "gebouw_id": zod.number().nullish(),
+  "project_id": zod.number().nullish(),
   "project_naam": zod.string().nullish(),
   "werkzaamheden": zod.string().nullish(),
   "begin_tijd": zod.string(),
@@ -9076,6 +9090,7 @@ export const UpdateUrenRegistratieResponse = zod.object({
   "medewerker_naam": zod.string().nullish(),
   "gebouw_id": zod.number().nullish(),
   "gebouw_naam": zod.string().nullish(),
+  "project_id": zod.number().nullish(),
   "project_naam": zod.string().nullish(),
   "werkzaamheden": zod.string().nullish(),
   "begin_tijd": zod.string(),
@@ -9926,6 +9941,127 @@ export const MarkeerChatGelezenResponse = zod.void()
 
 
 /**
+ * @summary Projecten ophalen
+ */
+export const ListProjectenQueryParams = zod.object({
+  "crm_klant_id": zod.coerce.number().optional(),
+  "gebouw_id": zod.coerce.number().optional(),
+  "status": zod.coerce.string().optional()
+})
+
+export const ListProjectenResponseItem = zod.object({
+  "id": zod.number(),
+  "naam": zod.string(),
+  "werknummer": zod.string().nullish(),
+  "status": zod.string().describe('concept | actief | afgerond | geannuleerd'),
+  "werkmaatschappij": zod.string().nullish(),
+  "omschrijving": zod.string().nullish(),
+  "crm_klant_id": zod.number().nullish(),
+  "crm_klant_naam": zod.string().nullish(),
+  "gebouw_id": zod.number().nullish(),
+  "gebouw_naam": zod.string().nullish(),
+  "start_datum": zod.string().nullish(),
+  "eind_datum": zod.string().nullish(),
+  "aangemaakt_door_naam": zod.string().nullish(),
+  "aangemaakt_op": zod.coerce.date(),
+  "bijgewerkt_op": zod.coerce.date()
+})
+export const ListProjectenResponse = zod.array(ListProjectenResponseItem)
+
+
+/**
+ * @summary Nieuw project aanmaken
+ */
+export const CreateProjectBody = zod.object({
+  "naam": zod.string(),
+  "werknummer": zod.string().nullish(),
+  "status": zod.string().nullish(),
+  "werkmaatschappij": zod.string().nullish(),
+  "omschrijving": zod.string().nullish(),
+  "crm_klant_id": zod.number().nullish(),
+  "gebouw_id": zod.number().nullish(),
+  "start_datum": zod.string().nullish(),
+  "eind_datum": zod.string().nullish()
+})
+
+export const CreateProjectResponse = zod.void()
+
+
+/**
+ * @summary Project detail
+ */
+export const GetProjectParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetProjectResponse = zod.object({
+  "id": zod.number(),
+  "naam": zod.string(),
+  "werknummer": zod.string().nullish(),
+  "status": zod.string().describe('concept | actief | afgerond | geannuleerd'),
+  "werkmaatschappij": zod.string().nullish(),
+  "omschrijving": zod.string().nullish(),
+  "crm_klant_id": zod.number().nullish(),
+  "crm_klant_naam": zod.string().nullish(),
+  "gebouw_id": zod.number().nullish(),
+  "gebouw_naam": zod.string().nullish(),
+  "start_datum": zod.string().nullish(),
+  "eind_datum": zod.string().nullish(),
+  "aangemaakt_door_naam": zod.string().nullish(),
+  "aangemaakt_op": zod.coerce.date(),
+  "bijgewerkt_op": zod.coerce.date()
+})
+
+
+/**
+ * @summary Project bijwerken
+ */
+export const UpdateProjectParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateProjectBody = zod.object({
+  "naam": zod.string().optional(),
+  "werknummer": zod.string().nullish(),
+  "status": zod.string().nullish(),
+  "werkmaatschappij": zod.string().nullish(),
+  "omschrijving": zod.string().nullish(),
+  "crm_klant_id": zod.number().nullish(),
+  "gebouw_id": zod.number().nullish(),
+  "start_datum": zod.string().nullish(),
+  "eind_datum": zod.string().nullish()
+})
+
+export const UpdateProjectResponse = zod.object({
+  "id": zod.number(),
+  "naam": zod.string(),
+  "werknummer": zod.string().nullish(),
+  "status": zod.string().describe('concept | actief | afgerond | geannuleerd'),
+  "werkmaatschappij": zod.string().nullish(),
+  "omschrijving": zod.string().nullish(),
+  "crm_klant_id": zod.number().nullish(),
+  "crm_klant_naam": zod.string().nullish(),
+  "gebouw_id": zod.number().nullish(),
+  "gebouw_naam": zod.string().nullish(),
+  "start_datum": zod.string().nullish(),
+  "eind_datum": zod.string().nullish(),
+  "aangemaakt_door_naam": zod.string().nullish(),
+  "aangemaakt_op": zod.coerce.date(),
+  "bijgewerkt_op": zod.coerce.date()
+})
+
+
+/**
+ * @summary Project verwijderen
+ */
+export const DeleteProjectParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteProjectResponse = zod.void()
+
+
+/**
  * @summary Opnames (optioneel gefilterd op gebouw)
  */
 export const ListOpnamesQueryParams = zod.object({
@@ -9935,7 +10071,7 @@ export const ListOpnamesQueryParams = zod.object({
 
 export const ListOpnamesResponseItem = zod.object({
   "id": zod.number(),
-  "gebouw_id": zod.number(),
+  "gebouw_id": zod.number().nullish(),
   "gebouw_naam": zod.string().nullish(),
   "naam": zod.string(),
   "datum": zod.string(),
@@ -9953,7 +10089,7 @@ export const ListOpnamesResponse = zod.array(ListOpnamesResponseItem)
  * @summary Nieuwe opname aanmaken
  */
 export const CreateOpnameBody = zod.object({
-  "gebouw_id": zod.number(),
+  "gebouw_id": zod.number().nullish(),
   "naam": zod.string(),
   "datum": zod.string(),
   "notities": zod.string().nullish()
@@ -9971,7 +10107,7 @@ export const GetOpnameParams = zod.object({
 
 export const GetOpnameResponse = zod.object({
   "id": zod.number(),
-  "gebouw_id": zod.number(),
+  "gebouw_id": zod.number().nullish(),
   "gebouw_naam": zod.string().nullish(),
   "naam": zod.string(),
   "datum": zod.string(),
@@ -10025,7 +10161,7 @@ export const UpdateOpnameBody = zod.object({
 
 export const UpdateOpnameResponse = zod.object({
   "id": zod.number(),
-  "gebouw_id": zod.number(),
+  "gebouw_id": zod.number().nullish(),
   "gebouw_naam": zod.string().nullish(),
   "naam": zod.string(),
   "datum": zod.string(),
@@ -10082,7 +10218,7 @@ export const SluitOpnameAfParams = zod.object({
 
 export const SluitOpnameAfResponse = zod.object({
   "id": zod.number(),
-  "gebouw_id": zod.number(),
+  "gebouw_id": zod.number().nullish(),
   "gebouw_naam": zod.string().nullish(),
   "naam": zod.string(),
   "datum": zod.string(),

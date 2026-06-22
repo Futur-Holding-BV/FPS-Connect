@@ -6,11 +6,14 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface ProjectBegrotingInput {
-  project_id?: number | null;
-  gebouw_id?: number | null;
+export interface ProjectInput {
+  naam: string;
   werknummer?: string | null;
-  hoofd_uren_begroot: number;
-  meerwerk_uren_begroot: number;
+  status?: string | null;
+  werkmaatschappij?: string | null;
   omschrijving?: string | null;
+  crm_klant_id?: number | null;
+  gebouw_id?: number | null;
+  start_datum?: string | null;
+  eind_datum?: string | null;
 }

@@ -3615,6 +3615,7 @@ export interface PlanningItem {
   medewerker_naam?: string | null;
   gebouw_id?: number | null;
   gebouw_naam?: string | null;
+  project_id?: number | null;
   project_naam?: string | null;
   datum_start: string;
   datum_eind: string;
@@ -3640,6 +3641,7 @@ export interface PlanningItemInput {
   omschrijving?: string | null;
   medewerker_id?: number | null;
   gebouw_id?: number | null;
+  project_id?: number | null;
   project_naam?: string | null;
   werknummer?: string | null;
   /** JSON string met huisnummer per tijdslot */
@@ -3680,6 +3682,7 @@ export interface PlanningAfwezigheidInput {
 
 export interface ProjectBegroting {
   id: number;
+  project_id?: number | null;
   gebouw_id?: number | null;
   gebouw_naam?: string | null;
   werknummer?: string | null;
@@ -3690,6 +3693,7 @@ export interface ProjectBegroting {
 }
 
 export interface ProjectBegrotingInput {
+  project_id?: number | null;
   gebouw_id?: number | null;
   werknummer?: string | null;
   hoofd_uren_begroot: number;
@@ -3834,6 +3838,7 @@ export interface UrenRegistratie {
   medewerker_naam?: string | null;
   gebouw_id?: number | null;
   gebouw_naam?: string | null;
+  project_id?: number | null;
   project_naam?: string | null;
   werkzaamheden?: string | null;
   begin_tijd: string;
@@ -3857,6 +3862,7 @@ export interface UrenRegistratieInput {
   datum: string;
   medewerker_id?: number;
   gebouw_id?: number | null;
+  project_id?: number | null;
   project_naam?: string | null;
   werkzaamheden?: string | null;
   begin_tijd: string;
@@ -4192,9 +4198,52 @@ export interface ChatBerichtInput {
   bijlage_type?: string | null;
 }
 
+export interface Project {
+  id: number;
+  naam: string;
+  werknummer?: string | null;
+  /** concept | actief | afgerond | geannuleerd */
+  status: string;
+  werkmaatschappij?: string | null;
+  omschrijving?: string | null;
+  crm_klant_id?: number | null;
+  crm_klant_naam?: string | null;
+  gebouw_id?: number | null;
+  gebouw_naam?: string | null;
+  start_datum?: string | null;
+  eind_datum?: string | null;
+  aangemaakt_door_naam?: string | null;
+  aangemaakt_op: string;
+  bijgewerkt_op: string;
+}
+
+export interface ProjectInput {
+  naam: string;
+  werknummer?: string | null;
+  status?: string | null;
+  werkmaatschappij?: string | null;
+  omschrijving?: string | null;
+  crm_klant_id?: number | null;
+  gebouw_id?: number | null;
+  start_datum?: string | null;
+  eind_datum?: string | null;
+}
+
+export interface ProjectPatchInput {
+  naam?: string;
+  werknummer?: string | null;
+  status?: string | null;
+  werkmaatschappij?: string | null;
+  omschrijving?: string | null;
+  crm_klant_id?: number | null;
+  gebouw_id?: number | null;
+  start_datum?: string | null;
+  eind_datum?: string | null;
+}
+
 export interface OpnameSamenvatting {
   id: number;
-  gebouw_id: number;
+  gebouw_id?: number | null;
   gebouw_naam?: string | null;
   naam: string;
   datum: string;
@@ -4237,7 +4286,7 @@ export interface OpnameItem {
 
 export interface Opname {
   id: number;
-  gebouw_id: number;
+  gebouw_id?: number | null;
   gebouw_naam?: string | null;
   naam: string;
   datum: string;
@@ -4250,7 +4299,7 @@ export interface Opname {
 }
 
 export interface OpnameInput {
-  gebouw_id: number;
+  gebouw_id?: number | null;
   naam: string;
   datum: string;
   notities?: string | null;
@@ -4588,6 +4637,12 @@ categorie?: string;
  * Alleen gereedschappen op naam van deze medewerker
  */
 medewerker_id?: number;
+};
+
+export type ListProjectenParams = {
+crm_klant_id?: number;
+gebouw_id?: number;
+status?: string;
 };
 
 export type ListOpnamesParams = {

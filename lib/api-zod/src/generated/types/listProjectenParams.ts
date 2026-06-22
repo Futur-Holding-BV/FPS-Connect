@@ -6,9 +6,8 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface OpnameInput {
-  gebouw_id?: number | null;
-  naam: string;
-  datum: string;
-  notities?: string | null;
-}
+export type ListProjectenParams = {
+crm_klant_id?: number;
+gebouw_id?: number;
+status?: string;
+};
