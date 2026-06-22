@@ -141,13 +141,13 @@ function WerkorderKaart({
 
       {/* Opdracht type */}
       {item.opdracht_type ? (
-        <Text style={{ color: c.muted, fontSize: 12, marginTop: 6 }}>
+        <Text style={{ color: c.mutedForeground, fontSize: 12, marginTop: 6 }}>
           {item.opdracht_type === "meerwerk" ? "Meerwerk" : "Hoofdopdracht"}
         </Text>
       ) : null}
 
       <View style={{ flexDirection: "row", justifyContent: "flex-end", marginTop: 8 }}>
-        <Ionicons name="chevron-forward" size={16} color={c.muted} />
+        <Ionicons name="chevron-forward" size={16} color={c.mutedForeground} />
       </View>
     </Pressable>
   );
