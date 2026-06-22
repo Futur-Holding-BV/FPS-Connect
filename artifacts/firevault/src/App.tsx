@@ -1,4 +1,4 @@
-import { Switch, Route, Router as WouterRouter } from "wouter";
+import { Switch, Route, Router as WouterRouter, Redirect } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Loader2, Lock } from "lucide-react";
 import { featureFlags } from "@/lib/feature-flags";
@@ -68,10 +68,6 @@ import UrenPagina from "@/pages/uren/index";
 import WeekstatenPaginaComponent from "@/pages/uren/weekstaten";
 import ToolboxPagina from "@/pages/toolbox/index";
 import BerichtenPagina from "@/pages/berichten/index";
-import ConnectPlanning from "@/pages/connect/planning";
-import ConnectCalculatie from "@/pages/connect/calculatie";
-import ConnectCalculatieDetail from "@/pages/connect/calculatie-detail";
-import ConnectHrm from "@/pages/connect/hrm";
 import ModulesCalculatie from "@/pages/modules/calculatie/index";
 import ModulesCalculatieNieuw from "@/pages/modules/calculatie/nieuw";
 import ModulesCalculatieDetail from "@/pages/modules/calculatie/detail";
@@ -107,33 +103,120 @@ function ModuleNietBeschikbaar({ naam }: { naam: string }) {
 const PlanningNietBeschikbaar = () => <ModuleNietBeschikbaar naam="Planning" />;
 const CalculatieNietBeschikbaar = () => <ModuleNietBeschikbaar naam="Calculatie" />;
 
-function BeheerderPortal() {
+/**
+ * Dashboard adapteert op basis van rol en bevoegdheden.
+ * Beheerder-gericht profiel → BeheerderDashboard; anders → MonteurDashboard.
+ */
+function AdaptieveDashboard() {
+  const { rol, bevoegdheden } = useRol();
+  const rolStr = rol as string;
+  if (rolStr === "hoofdbeheerder" || rolStr === "beheerder") return <BeheerderDashboard />;
+  const isBeheerGericht =
+    (bevoegdheden.gebouwen ?? 0) >= 1 ||
+    (bevoegdheden.personeel ?? 0) >= 1 ||
+    (bevoegdheden.planning ?? 0) >= 1;
+  return isBeheerGericht ? <BeheerderDashboard /> : <MonteurDashboard />;
+}
+
+/**
+ * ConnectPortal — enkel portaal voor alle interne FPS Connect-gebruikers.
+ * Rolonderscheid (wat zichtbaar is) wordt afgehandeld via bevoegdheden in de
+ * individuele pagina's en de sidebar; niet via duplicate route-sets.
+ */
+function ConnectPortal() {
   return (
     <BeheerderLayout>
       <Switch>
-        <Route path="/" component={BeheerderDashboard} />
+        {/* ── Hoofdpagina ── */}
+        <Route path="/" component={AdaptieveDashboard} />
+
+        {/* ── Gebouwen (centrale entiteit) ── */}
         <Route path="/gebouwen" component={Gebouwen} />
         <Route path="/gebouwen/:id" component={GebouwDetail} />
         <Route path="/gebouwen/:id/plattegrond/:verdiepingId" component={Plattegrond} />
+
+        {/* ── Spots / Voorzieningen ── */}
         <Route path="/voorzieningen" component={Voorzieningen} />
         <Route path="/voorzieningen/nieuw" component={VoorzieningNieuw} />
         <Route path="/voorzieningen/:id/qr" component={VoorzieningQr} />
         <Route path="/voorzieningen/:id" component={VoorzieningDetail} />
+
+        {/* ── Inspecties (legacy, read-only) ── */}
         <Route path="/inspecties" component={Inspecties} />
         <Route path="/inspecties/:id" component={InspectieDetail} />
+
+        {/* ── CWU: Calculatie & Werkvoorbereiding & Uitvoering ── */}
+        <Route path="/opname" component={OpnamePagina} />
+        <Route path="/opname/:id" component={OpnameDetailPagina} />
+        <Route
+          path="/modules/calculatie/nieuw"
+          component={featureFlags.calculatie ? ModulesCalculatieNieuw : CalculatieNietBeschikbaar}
+        />
+        <Route
+          path="/modules/calculatie/:id"
+          component={featureFlags.calculatie ? ModulesCalculatieDetail : CalculatieNietBeschikbaar}
+        />
+        <Route
+          path="/modules/calculatie"
+          component={featureFlags.calculatie ? ModulesCalculatie : CalculatieNietBeschikbaar}
+        />
+        {/* Verouderd pad — redirect naar geconsolideerde module */}
+        <Route path="/connect/calculatie/:id">
+          {(params) => <Redirect to={`/modules/calculatie/${params.id}`} />}
+        </Route>
+        <Route path="/connect/calculatie">
+          <Redirect to="/modules/calculatie" />
+        </Route>
+
+        {/* ── Oplevering & Onderhoud ── */}
+        <Route path="/rapporten" component={RapportenPagina} />
         <Route path="/onderhoud" component={Onderhoud} />
-        <Route path="/gebruikers" component={Gebruikers} />
+
+        {/* ── Planning ── */}
+        <Route
+          path="/modules/planning/medewerkers"
+          component={featureFlags.planning ? ModulesPlanningMedewerkers : PlanningNietBeschikbaar}
+        />
+        <Route
+          path="/modules/planning/afwezigheid"
+          component={featureFlags.planning ? ModulesPlanningAfwezigheid : PlanningNietBeschikbaar}
+        />
+        <Route
+          path="/modules/planning"
+          component={featureFlags.planning ? ModulesPlanning : PlanningNietBeschikbaar}
+        />
+        {/* Verouderd pad — redirect naar geconsolideerde module */}
+        <Route path="/connect/planning">
+          <Redirect to="/modules/planning" />
+        </Route>
+
+        {/* ── Documenten & Dossiers ── */}
+        <Route path="/documenten" component={DocumentenPagina} />
+        <Route path="/dossiers" component={DossiersPagina} />
+
+        {/* ── Communicatie ── */}
+        <Route path="/berichten" component={BerichtenPagina} />
+        <Route path="/toolbox" component={ToolboxPagina} />
+
+        {/* ── Relaties ── */}
         <Route path="/crm" component={CrmKlanten} />
         <Route path="/crm/:id" component={CrmKlantDetail} />
+
+        {/* ── HRM ── */}
         <Route path="/personeel" component={PersoneelPagina} />
         <Route path="/personeel/:id" component={MedewerkerDetailPagina} />
         <Route path="/gereedschappen" component={GereedschappenPagina} />
         <Route path="/gereedschappen/:id" component={GereedschapDetailPagina} />
+        <Route path="/uren" component={UrenPagina} />
+        <Route path="/weekstaten" component={WeekstatenPagina} />
         <Route path="/hall-of-fame" component={HallOfFamePagina} />
-        <Route path="/dossiers" component={DossiersPagina} />
-        <Route path="/opname" component={OpnamePagina} />
-        <Route path="/opname/:id" component={OpnameDetailPagina} />
-        <Route path="/offertes" component={OffertesPagina} />
+        {/* Verouderd pad — redirect naar personeel */}
+        <Route path="/connect/hrm">
+          <Redirect to="/personeel" />
+        </Route>
+
+        {/* ── Beheer ── */}
+        <Route path="/gebruikers" component={Gebruikers} />
         <Route path="/abonnementen" component={Abonnementen} />
         <Route path="/beheer/toepassingen" component={ToepassingenBeheer} />
         <Route path="/beheer/bibliotheek" component={Bibliotheek} />
@@ -148,27 +231,15 @@ function BeheerderPortal() {
         <Route path="/beheer/backup" component={BackupBeheer} />
         <Route path="/beheer/projectstatus" component={ProjectstatusPagina} />
         <Route path="/beheer/pwa-test" component={PwaTest} />
-        <Route path="/documenten" component={DocumentenPagina} />
-        <Route path="/uren" component={UrenPagina} />
-        <Route path="/weekstaten" component={WeekstatenPagina} />
-        <Route path="/rapporten" component={RapportenPagina} />
-        <Route path="/toolbox" component={ToolboxPagina} />
-        <Route path="/berichten" component={BerichtenPagina} />
-        <Route path="/connect/planning" component={featureFlags.planning ? ConnectPlanning : PlanningNietBeschikbaar} />
-        <Route path="/connect/calculatie/:id" component={featureFlags.calculatie ? ConnectCalculatieDetail : CalculatieNietBeschikbaar} />
-        <Route path="/connect/calculatie" component={featureFlags.calculatie ? ConnectCalculatie : CalculatieNietBeschikbaar} />
-        <Route path="/connect/hrm" component={ConnectHrm} />
-        <Route path="/modules/calculatie/nieuw" component={featureFlags.calculatie ? ModulesCalculatieNieuw : CalculatieNietBeschikbaar} />
-        <Route path="/modules/calculatie/:id" component={featureFlags.calculatie ? ModulesCalculatieDetail : CalculatieNietBeschikbaar} />
-        <Route path="/modules/calculatie" component={featureFlags.calculatie ? ModulesCalculatie : CalculatieNietBeschikbaar} />
-        <Route path="/modules/planning/medewerkers" component={featureFlags.planning ? ModulesPlanningMedewerkers : PlanningNietBeschikbaar} />
-        <Route path="/modules/planning/afwezigheid" component={featureFlags.planning ? ModulesPlanningAfwezigheid : PlanningNietBeschikbaar} />
-        <Route path="/modules/planning" component={featureFlags.planning ? ModulesPlanning : PlanningNietBeschikbaar} />
+
+        {/* ── FPS ONE (klantportaal, via omgevingsswitch) ── */}
         <Route path="/one/dashboard" component={OneDashboard} />
         <Route path="/one/gebouwen" component={OneGebouwen} />
         <Route path="/one/documenten" component={OneDocumenten} />
         <Route path="/one/rapporten" component={OneRapporten} />
         <Route path="/one/abonnementen" component={OneAbonnementen} />
+
+        {/* ── Overig ── */}
         <Route path="/info" component={InfoPagina} />
         <Route component={NotFound} />
       </Switch>
@@ -213,80 +284,6 @@ function KlantPortal() {
   );
 }
 
-function PermissieDashboard() {
-  const { bevoegdheden } = useRol();
-  const isBeheerGericht = (bevoegdheden.gebouwen ?? 0) >= 1 || (bevoegdheden.personeel ?? 0) >= 1 || (bevoegdheden.planning ?? 0) >= 1;
-  return isBeheerGericht ? <BeheerderDashboard /> : <MonteurDashboard />;
-}
-
-function PermissiePortal() {
-  return (
-    <BeheerderLayout>
-      <Switch>
-        <Route path="/" component={PermissieDashboard} />
-        <Route path="/gebouwen" component={Gebouwen} />
-        <Route path="/gebouwen/:id" component={GebouwDetail} />
-        <Route path="/gebouwen/:id/plattegrond/:verdiepingId" component={Plattegrond} />
-        <Route path="/voorzieningen" component={Voorzieningen} />
-        <Route path="/voorzieningen/nieuw" component={VoorzieningNieuw} />
-        <Route path="/voorzieningen/:id/qr" component={VoorzieningQr} />
-        <Route path="/voorzieningen/:id" component={VoorzieningDetail} />
-        <Route path="/inspecties" component={Inspecties} />
-        <Route path="/inspecties/:id" component={InspectieDetail} />
-        <Route path="/onderhoud" component={Onderhoud} />
-        <Route path="/gebruikers" component={Gebruikers} />
-        <Route path="/crm" component={CrmKlanten} />
-        <Route path="/crm/:id" component={CrmKlantDetail} />
-        <Route path="/personeel" component={PersoneelPagina} />
-        <Route path="/personeel/:id" component={MedewerkerDetailPagina} />
-        <Route path="/gereedschappen" component={GereedschappenPagina} />
-        <Route path="/gereedschappen/:id" component={GereedschapDetailPagina} />
-        <Route path="/dossiers" component={DossiersPagina} />
-        <Route path="/opname" component={OpnamePagina} />
-        <Route path="/opname/:id" component={OpnameDetailPagina} />
-        <Route path="/offertes" component={OffertesPagina} />
-        <Route path="/abonnementen" component={Abonnementen} />
-        <Route path="/beheer/toepassingen" component={ToepassingenBeheer} />
-        <Route path="/beheer/bibliotheek" component={Bibliotheek} />
-        <Route path="/beheer/login-pogingen" component={LoginPogingen} />
-        <Route path="/beheer/helpdesk" component={HelpdeskBeheer} />
-        <Route path="/beheer/feedback" component={FeedbackBeheer} />
-        <Route path="/beheer/heatmaps" component={Heatmaps} />
-        <Route path="/beheer/profielen" component={ProfielenBeheer} />
-        <Route path="/beheer/ontwikkelstatus" component={Ontwikkelstatus} />
-        <Route path="/beheer/documentopmaak" component={DocumentopmaakBeheer} />
-        <Route path="/beheer/mail" component={MailBeheer} />
-        <Route path="/beheer/backup" component={BackupBeheer} />
-        <Route path="/beheer/projectstatus" component={ProjectstatusPagina} />
-        <Route path="/beheer/pwa-test" component={PwaTest} />
-        <Route path="/documenten" component={DocumentenPagina} />
-        <Route path="/uren" component={UrenPagina} />
-        <Route path="/weekstaten" component={WeekstatenPagina} />
-        <Route path="/rapporten" component={RapportenPagina} />
-        <Route path="/toolbox" component={ToolboxPagina} />
-        <Route path="/berichten" component={BerichtenPagina} />
-        <Route path="/connect/planning" component={featureFlags.planning ? ConnectPlanning : PlanningNietBeschikbaar} />
-        <Route path="/connect/calculatie/:id" component={featureFlags.calculatie ? ConnectCalculatieDetail : CalculatieNietBeschikbaar} />
-        <Route path="/connect/calculatie" component={featureFlags.calculatie ? ConnectCalculatie : CalculatieNietBeschikbaar} />
-        <Route path="/connect/hrm" component={ConnectHrm} />
-        <Route path="/modules/calculatie/nieuw" component={featureFlags.calculatie ? ModulesCalculatieNieuw : CalculatieNietBeschikbaar} />
-        <Route path="/modules/calculatie/:id" component={featureFlags.calculatie ? ModulesCalculatieDetail : CalculatieNietBeschikbaar} />
-        <Route path="/modules/calculatie" component={featureFlags.calculatie ? ModulesCalculatie : CalculatieNietBeschikbaar} />
-        <Route path="/modules/planning/medewerkers" component={featureFlags.planning ? ModulesPlanningMedewerkers : PlanningNietBeschikbaar} />
-        <Route path="/modules/planning/afwezigheid" component={featureFlags.planning ? ModulesPlanningAfwezigheid : PlanningNietBeschikbaar} />
-        <Route path="/modules/planning" component={featureFlags.planning ? ModulesPlanning : PlanningNietBeschikbaar} />
-        <Route path="/one/dashboard" component={OneDashboard} />
-        <Route path="/one/gebouwen" component={OneGebouwen} />
-        <Route path="/one/documenten" component={OneDocumenten} />
-        <Route path="/one/rapporten" component={OneRapporten} />
-        <Route path="/one/abonnementen" component={OneAbonnementen} />
-        <Route path="/info" component={InfoPagina} />
-        <Route component={NotFound} />
-      </Switch>
-    </BeheerderLayout>
-  );
-}
-
 function GeenToegang() {
   const { uitloggen } = useAuth();
   return (
@@ -310,16 +307,25 @@ function GeenToegang() {
 
 function Portalen() {
   const { rol, bevoegdheden } = useRol();
+  // Cast naar string zodat legacy-rollen (beheerder/monteur/controleur) die nog
+  // in de database kunnen staan ook matchen — T016 converteert ze naar "gebruiker".
+  const rolStr = rol as string;
 
-  if (rol === "hoofdbeheerder") return <BeheerderPortal />;
-  if (rol === "klant") return <KlantPortal />;
-  if (rol === "gebruiker") {
+  // Interne FPS Connect gebruikers
+  if (rolStr === "hoofdbeheerder" || rolStr === "beheerder") return <ConnectPortal />;
+
+  // Klant-portaal
+  if (rolStr === "klant") return <KlantPortal />;
+
+  // Gebruiker met bevoegdhedenmatrix
+  if (rolStr === "gebruiker") {
     const heeftToegang = Object.values(bevoegdheden).some((n) => n > 0);
-    return heeftToegang ? <PermissiePortal /> : <GeenToegang />;
+    return heeftToegang ? <ConnectPortal /> : <GeenToegang />;
   }
-  // Legacy rollen — worden in T016 omgezet naar "gebruiker"
-  if (rol === "beheerder") return <BeheerderPortal />;
-  if (rol === "monteur" || rol === "controleur") return <MonteurPortal />;
+
+  // Legacy: monteur/controleur — worden in T016 omgezet naar "gebruiker"
+  if (rolStr === "monteur" || rolStr === "controleur") return <MonteurPortal />;
+
   return <GeenToegang />;
 }
 
