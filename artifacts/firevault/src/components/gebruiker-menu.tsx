@@ -127,7 +127,7 @@ export function GebruikerMenu() {
               <Button
                 variant="outline"
                 size="sm"
-                className="w-full gap-2 group-data-[collapsible=icon]:px-0"
+                className="w-full gap-2 group-data-[collapsible=icon]:px-0 bg-sidebar-accent/30 text-sidebar-foreground border-sidebar-border hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
                 title={t("menu.taal")}
               >
                 <Languages className="h-4 w-4 flex-shrink-0" />
@@ -156,7 +156,7 @@ export function GebruikerMenu() {
             variant="outline"
             size="sm"
             onClick={() => { resetDialoog(); setWachtwoordOpen(true); }}
-            className="flex-1 gap-2 group-data-[collapsible=icon]:px-0 group-data-[collapsible=icon]:flex-none"
+            className="flex-1 gap-2 group-data-[collapsible=icon]:px-0 group-data-[collapsible=icon]:flex-none bg-sidebar-accent/30 text-sidebar-foreground border-sidebar-border hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
             title={t("menu.wachtwoordWijzigen")}
           >
             <KeyRound className="h-4 w-4 flex-shrink-0" />
@@ -166,7 +166,7 @@ export function GebruikerMenu() {
             variant="outline"
             size="sm"
             onClick={() => void uitloggen()}
-            className="flex-1 gap-2 group-data-[collapsible=icon]:px-0 group-data-[collapsible=icon]:flex-none"
+            className="flex-1 gap-2 group-data-[collapsible=icon]:px-0 group-data-[collapsible=icon]:flex-none bg-sidebar-accent/30 text-sidebar-foreground border-sidebar-border hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
             title={t("menu.uitloggen")}
           >
             <LogOut className="h-4 w-4 flex-shrink-0" />
@@ -323,7 +323,7 @@ function BekijkenAlsSelector({
       </p>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="outline" size="sm" className="w-full justify-between gap-2">
+          <Button variant="outline" size="sm" className="w-full justify-between gap-2 bg-sidebar-accent/30 text-sidebar-foreground border-sidebar-border hover:bg-sidebar-accent/50 hover:text-sidebar-foreground">
             <span className="flex items-center gap-2 truncate">
               <Eye className="h-4 w-4 flex-shrink-0" />
               <span className="truncate">{triggerLabel}</span>
