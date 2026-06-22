@@ -165,4 +165,133 @@ test("FPS startmenu: login, waaier en doorlinken", async ({ page }) => {
       await expect(page.getByTestId("radiaal-fps")).toBeVisible();
     }
   });
+
+  // ── Diepere schermen ────────────────────────────────────────────────────────
+  // Na de bovenstaande lus staat het startscherm open (FPS-knop zichtbaar).
+  // Elk volgend blok navigeert naar een vervolgscherm en controleert dat het
+  // scherm zijn eigen inhoud rendert. De controles zijn data-onafhankelijk:
+  // óf een kop/inhoud verschijnt, óf de bijbehorende lege-staat.
+
+  await test.step("dieper: gebouw-detail na klikken op gebouwkaart", async () => {
+    await zorgWaaierOpen(page);
+    await page.getByTestId("radiaal-gebouwen").click();
+    await expect(page).toHaveURL(/\/gebouwen(\b|\?|$)/);
+    await expect(page.getByPlaceholder("Zoek gebouw, adres of stad…")).toBeVisible({
+      timeout: INHOUD_TIMEOUT,
+    });
+
+    const eersteSpotsBadge = page.getByText(/\d+\s+spots?\b/).filter({ visible: true }).first();
+    const leegStaatGebouwen = zichtbareTekst(page, "Geen gebouwen gevonden");
+
+    // Wacht tot de lijst (of de lege staat) geladen is.
+    await expect(eersteSpotsBadge.or(leegStaatGebouwen.first())).toBeVisible({
+      timeout: INHOUD_TIMEOUT,
+    });
+
+    const heeftKaarten = (await eersteSpotsBadge.count()) > 0;
+    if (heeftKaarten) {
+      await eersteSpotsBadge.click();
+      await expect(page).toHaveURL(/\/gebouw\/\d+/, { timeout: INHOUD_TIMEOUT });
+
+      // Subkop is altijd aanwezig in het detail-scherm.
+      await expect(
+        zichtbareTekst(page, "Kies een verdieping om de plattegrond te openen").first(),
+      ).toBeVisible({ timeout: INHOUD_TIMEOUT });
+
+      // Verdiepingenlijst óf lege staat.
+      const verdiepingRij = page.getByText(/\d+\s+voorzieningen?\b/).filter({ visible: true });
+      const geenVerdiepingen = zichtbareTekst(page, "Dit gebouw heeft nog geen verdiepingen.");
+      await expect(verdiepingRij.first().or(geenVerdiepingen.first())).toBeVisible({
+        timeout: INHOUD_TIMEOUT,
+      });
+
+      await page.goBack(); // terug naar /gebouwen
+    }
+
+    await page.goBack(); // terug naar root
+    await expect(page.getByTestId("radiaal-fps")).toBeVisible({ timeout: INHOUD_TIMEOUT });
+  });
+
+  await test.step("dieper: documentenlijst via Documenten-knop op gebouwenscherm", async () => {
+    await zorgWaaierOpen(page);
+    await page.getByTestId("radiaal-gebouwen").click();
+    await expect(page).toHaveURL(/\/gebouwen(\b|\?|$)/);
+    await expect(page.getByPlaceholder("Zoek gebouw, adres of stad…")).toBeVisible({
+      timeout: INHOUD_TIMEOUT,
+    });
+
+    // "Documenten"-knop staat in de koptekst van het gebouwenscherm.
+    await zichtbareTekst(page, "Documenten").first().click();
+    await expect(page).toHaveURL(/\/documenten(\b|\?|$)/, { timeout: INHOUD_TIMEOUT });
+
+    // Zoekbalk is altijd aanwezig ongeacht de data.
+    await expect(
+      page.getByPlaceholder("Zoek op naam, fabrikant of rapportnummer…"),
+    ).toBeVisible({ timeout: INHOUD_TIMEOUT });
+
+    // Lijst: document-kaart (toont "Actueel") óf lege staat.
+    const documentKaart = page.getByText("Actueel").filter({ visible: true }).first();
+    const leegStaatDocumenten = zichtbareTekst(page, "Geen documenten gevonden.");
+    await expect(documentKaart.or(leegStaatDocumenten.first())).toBeVisible({
+      timeout: INHOUD_TIMEOUT,
+    });
+
+    await page.goBack(); // terug naar /gebouwen
+    await page.goBack(); // terug naar root
+    await expect(page.getByTestId("radiaal-fps")).toBeVisible({ timeout: INHOUD_TIMEOUT });
+  });
+
+  await test.step("dieper: hrm-opleidingen toont trainingen-scherm", async () => {
+    await zorgWaaierOpen(page);
+    await page.getByTestId("radiaal-personeel").click();
+    await expect(page).toHaveURL(/\/hrm(\b|\?|$)/);
+    await expect(zichtbareTekst(page, "Medewerkers").first()).toBeVisible({
+      timeout: INHOUD_TIMEOUT,
+    });
+
+    // "Opleidingen"-navigatiekaart op het HRM-dashboard.
+    await zichtbareTekst(page, "Opleidingen").first().click();
+    await expect(page).toHaveURL(/\/hrm\/opleidingen(\b|\?|$)/, { timeout: INHOUD_TIMEOUT });
+
+    // Subkop altijd aanwezig — dit bewijst dat het scherm gemount en geladen heeft.
+    // Consistent met de aanpak van controleerPersoneel: we controleren de kop,
+    // niet de lijstinhoud (die is data-afhankelijk en niet deterministisch).
+    await expect(zichtbareTekst(page, "Trainingen en certificaten").first()).toBeVisible({
+      timeout: INHOUD_TIMEOUT,
+    });
+
+    await page.goBack(); // terug naar /hrm
+    await page.goBack(); // terug naar root
+    await expect(page.getByTestId("radiaal-fps")).toBeVisible({ timeout: INHOUD_TIMEOUT });
+  });
+
+  await test.step("dieper: hrm-kennisbank toont vaste kennisartikelen", async () => {
+    await zorgWaaierOpen(page);
+    await page.getByTestId("radiaal-personeel").click();
+    await expect(page).toHaveURL(/\/hrm(\b|\?|$)/);
+    await expect(zichtbareTekst(page, "Medewerkers").first()).toBeVisible({
+      timeout: INHOUD_TIMEOUT,
+    });
+
+    // "Kennisbank"-navigatiekaart op het HRM-dashboard.
+    await zichtbareTekst(page, "Kennisbank").first().click();
+    await expect(page).toHaveURL(/\/hrm\/kennisbank(\b|\?|$)/, { timeout: INHOUD_TIMEOUT });
+
+    // Schermkop altijd aanwezig.
+    await expect(zichtbareTekst(page, "Kennisbank").first()).toBeVisible({
+      timeout: INHOUD_TIMEOUT,
+    });
+
+    // Vaste statische artikelen zijn altijd aanwezig (geen API-afhankelijkheid).
+    await expect(zichtbareTekst(page, "Brandwerende doorvoeringen").first()).toBeVisible({
+      timeout: INHOUD_TIMEOUT,
+    });
+    await expect(zichtbareTekst(page, "Veilig werken op locatie").first()).toBeVisible({
+      timeout: INHOUD_TIMEOUT,
+    });
+
+    await page.goBack(); // terug naar /hrm
+    await page.goBack(); // terug naar root
+    await expect(page.getByTestId("radiaal-fps")).toBeVisible({ timeout: INHOUD_TIMEOUT });
+  });
 });
