@@ -5,7 +5,7 @@ import { useListChatGesprekken } from "@workspace/api-client-react";
 import {
   SidebarProvider, Sidebar, SidebarHeader, SidebarContent, SidebarFooter,
   SidebarGroup, SidebarGroupLabel, SidebarGroupContent,
-  SidebarMenu, SidebarMenuItem, SidebarMenuButton,
+  SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarTrigger,
 } from "@/components/ui/sidebar";
 import {
   ShieldCheck, Building, Wrench, Users, Search, Home,
@@ -88,12 +88,7 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
     location === "/gebouwen" || location.startsWith("/gebouwen/") ||
     location === "/voorzieningen" || location.startsWith("/voorzieningen/");
 
-  const defaultSidebarOpen = (() => {
-    if (typeof window === "undefined") return true;
-    const cookie = document.cookie.split("; ").find((c) => c.startsWith("sidebar_v2="));
-    if (cookie) return cookie.split("=")[1] === "true";
-    return true;
-  })();
+  const defaultSidebarOpen = true;
 
   function InUitvoering() {
     return (
@@ -129,12 +124,13 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
     <SidebarProvider defaultOpen={defaultSidebarOpen}>
       <Sidebar variant="inset" collapsible="icon">
         <SidebarHeader className="py-3">
-          <div className="flex items-center px-2 gap-2.5 group-data-[collapsible=icon]:justify-center">
+          <div className="flex items-center px-2 gap-2 group-data-[collapsible=icon]:justify-center">
             <img
               src="/logo-fps-connect.png"
               alt="FPS Connect"
-              className="h-8 w-auto group-data-[collapsible=icon]:h-7 flex-shrink-0"
+              className="h-8 w-auto flex-shrink-0 group-data-[collapsible=icon]:hidden"
             />
+            <SidebarTrigger className="ml-auto shrink-0 group-data-[collapsible=icon]:ml-0" />
           </div>
 
           {aantalOmgevingen > 1 && (
