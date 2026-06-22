@@ -88,8 +88,12 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
     location === "/gebouwen" || location.startsWith("/gebouwen/") ||
     location === "/voorzieningen" || location.startsWith("/voorzieningen/");
 
-  const defaultSidebarOpen =
-    typeof window !== "undefined" ? window.innerWidth >= 900 : true;
+  const defaultSidebarOpen = (() => {
+    if (typeof window === "undefined") return true;
+    const cookie = document.cookie.split("; ").find((c) => c.startsWith("sidebar_state="));
+    if (cookie) return cookie.split("=")[1] === "true";
+    return window.innerWidth >= 900;
+  })();
 
   function InUitvoering() {
     return (
