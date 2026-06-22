@@ -31,6 +31,7 @@ import { eq, desc, and, ne, inArray, or, isNull, gte, lte, sql } from "drizzle-o
 import { requireBevoegdheid } from "../middlewares/auth";
 import { stelOpleidingenVoor } from "../services/opleiding-ai";
 import { maakOpenAiClient } from "../lib/openai";
+import { logger } from "../lib/logger";
 
 const router = Router();
 
@@ -782,7 +783,7 @@ router.get("/medewerkers/:id", lezen, async (req, res) => {
 
 router.patch("/medewerkers/:id", schrijven, async (req, res) => {
   try {
-    const { naam, gebruiker_id, email, telefoon, mobiel, werkmaatschappij, functie_id, cao, dienstverband, bedrijf_uitzendbureau, contracturen_per_week, in_dienst_sinds, uit_dienst_per, noodcontact_naam, noodcontact_telefoon, geboortedatum, geboorteplaats, adres, postcode, woonplaats, rijbewijs, rijbewijs_vervaldatum, cv_tekst, actief, opmerkingen } = req.body;
+    const { naam, gebruiker_id, email, telefoon, mobiel, werkmaatschappij, functie_id, cao, dienstverband, bedrijf_uitzendbureau, contracturen_per_week, deeltijd_percentage, in_dienst_sinds, uit_dienst_per, noodcontact_naam, noodcontact_telefoon, geboortedatum, geboorteplaats, adres, postcode, woonplaats, rijbewijs, rijbewijs_vervaldatum, cv_tekst, actief, opmerkingen } = req.body;
     // Voorkom dat één account aan twee medewerkers gekoppeld raakt (onboarding blokkeert
     // dit al; hier ook bij profielwijziging, want er is geen unieke DB-constraint).
     if (gebruiker_id != null) {
@@ -810,6 +811,7 @@ router.patch("/medewerkers/:id", schrijven, async (req, res) => {
         dienstverband,
         bedrijfUitzendbureau: bedrijf_uitzendbureau !== undefined ? (bedrijf_uitzendbureau || null) : undefined,
         contracturenPerWeek: contracturen_per_week !== undefined ? contracturen_per_week : undefined,
+        deeltijdPercentage: deeltijd_percentage !== undefined ? (deeltijd_percentage === null ? null : Number(deeltijd_percentage)) : undefined,
         inDienstSinds: in_dienst_sinds,
         uitDienstPer: uit_dienst_per,
         noodcontactNaam: noodcontact_naam,
@@ -1373,12 +1375,18 @@ async function pasVerlofSaldoAan(uitvoerder: SaldoUitvoerder, medewerkerId: numb
     )
     .for("update");
   if (!s) return;
+  const oudOpgenomen = s.opgenomenUren;
+  const oudSaldo = s.saldoUren;
   const opgenomen = Math.round((s.opgenomenUren + deltaUren) * 10) / 10;
   const saldo = Math.round((s.beginsaldoUren + s.opgebouwdUren - opgenomen) * 10) / 10;
   await uitvoerder
     .update(verlofSaldiTable)
     .set({ opgenomenUren: opgenomen, saldoUren: saldo, bijgewerktOp: new Date() })
     .where(eq(verlofSaldiTable.id, s.id));
+  logger.info(
+    { saldo_id: s.id, medewerker_id: medewerkerId, verlofsoort_id: verlofsoortId, jaar, delta_uren: deltaUren, oud_opgenomen: oudOpgenomen, nieuw_opgenomen: opgenomen, oud_saldo: oudSaldo, nieuw_saldo: saldo },
+    "verlof-saldo mutatie",
+  );
 }
 
 const jaarVanDatum = (d: string) => {
@@ -2060,14 +2068,18 @@ router.get("/capaciteit/bezetting", lezen, async (req, res) => {
     const weekEindStr = dagen[4].datum;
     const weekStartStr = dagen[0].datum;
 
-    // Actieve medewerkers en hun contracturen
+    // Actieve medewerkers met functie en werkmaatschappij voor granulaire breakdown
     const medewerkers = await db
       .select({
         id: medewerkersTable.id,
         naam: medewerkersTable.naam,
         contracturenPerWeek: medewerkersTable.contracturenPerWeek,
+        werkmaatschappij: medewerkersTable.werkmaatschappij,
+        functieId: medewerkersTable.functieId,
+        functieNaam: functiesTable.naam,
       })
       .from(medewerkersTable)
+      .leftJoin(functiesTable, eq(medewerkersTable.functieId, functiesTable.id))
       .where(eq(medewerkersTable.actief, true));
     const aantalMedewerkers = medewerkers.length;
     const totaalContractUren = medewerkers.reduce((s, m) => s + (m.contracturenPerWeek ?? 0), 0);
@@ -2151,6 +2163,31 @@ router.get("/capaciteit/bezetting", lezen, async (req, res) => {
       };
     });
 
+    // Breakdown per functie: medewerkers + contracturen die de week op verlof gaan
+    const goedgekeurdeVerlofIdSet = new Set(verlofRijen.map((v) => v.medewerkerId));
+    const ziekIdSet = new Set(ziekRijen.map((z) => z.medewerkerId));
+
+    const functieBuckets = new Map<string, { functie_naam: string | null; medewerkers: number; contract_uren_per_week: number; op_verlof: number; ziek: number }>();
+    const werkmaatschappijBuckets = new Map<string, { werkmaatschappij: string; medewerkers: number; contract_uren_per_week: number; op_verlof: number; ziek: number }>();
+
+    for (const m of medewerkers) {
+      const fSleutel = String(m.functieId ?? "geen");
+      if (!functieBuckets.has(fSleutel)) functieBuckets.set(fSleutel, { functie_naam: m.functieNaam ?? null, medewerkers: 0, contract_uren_per_week: 0, op_verlof: 0, ziek: 0 });
+      const fb = functieBuckets.get(fSleutel)!;
+      fb.medewerkers++;
+      fb.contract_uren_per_week += m.contracturenPerWeek ?? 0;
+      if (goedgekeurdeVerlofIdSet.has(m.id)) fb.op_verlof++;
+      if (ziekIdSet.has(m.id)) fb.ziek++;
+
+      const wSleutel = m.werkmaatschappij ?? "onbekend";
+      if (!werkmaatschappijBuckets.has(wSleutel)) werkmaatschappijBuckets.set(wSleutel, { werkmaatschappij: wSleutel, medewerkers: 0, contract_uren_per_week: 0, op_verlof: 0, ziek: 0 });
+      const wb = werkmaatschappijBuckets.get(wSleutel)!;
+      wb.medewerkers++;
+      wb.contract_uren_per_week += m.contracturenPerWeek ?? 0;
+      if (goedgekeurdeVerlofIdSet.has(m.id)) wb.op_verlof++;
+      if (ziekIdSet.has(m.id)) wb.ziek++;
+    }
+
     res.json({
       week_start: weekStartStr,
       week_eind: weekEindStr,
@@ -2158,6 +2195,8 @@ router.get("/capaciteit/bezetting", lezen, async (req, res) => {
       totaal_medewerkers: aantalMedewerkers,
       totaal_contract_uren_per_week: Math.round(totaalContractUren * 10) / 10,
       dagen: dagoverzicht,
+      per_functie: Array.from(functieBuckets.values()).map((b) => ({ ...b, contract_uren_per_week: Math.round(b.contract_uren_per_week * 10) / 10 })),
+      per_werkmaatschappij: Array.from(werkmaatschappijBuckets.values()).map((b) => ({ ...b, contract_uren_per_week: Math.round(b.contract_uren_per_week * 10) / 10 })),
     });
   } catch (err) {
     req.log.error(err);
@@ -2236,17 +2275,28 @@ router.post("/hrm/capaciteit-analyse", alleenBeheerder, async (req, res) => {
         ),
       );
 
+    // AVG-pseudonimisering: persoonsgegevens (namen) worden vervangen door
+    // geanonimiseerde sleutels (M-1, M-2 ...) voordat de data OpenAI bereikt.
+    // De mapping wordt lokaal bewaard en nooit extern verzonden.
+    const pseudoMap = new Map<string, string>();
+    let pseudoTeller = 1;
+    const pseudoniem = (naam: string | null | undefined): string => {
+      if (!naam) return "onbekend";
+      if (!pseudoMap.has(naam)) pseudoMap.set(naam, `M-${pseudoTeller++}`);
+      return pseudoMap.get(naam)!;
+    };
+
     const client = maakOpenAiClient();
-    const systeemPrompt = `Je bent een capaciteitsplanner voor een installatiebedrijf. Analyseer de verlof-, ziekte- en saldogegevens en geef korte, praktische signalen terug als JSON object met veld "signalen" (array). Elk signaal heeft: type (capaciteit_laag|verlof_ophoping|saldo_verloopt|ziektetrend), prioriteit (hoog|midden|laag), onderwerp (string, max 60 tekens), toelichting (string, max 200 tekens), en aanbeveling (string, max 150 tekens). Maximaal 6 signalen. Reageer ALLEEN in JSON.`;
+    const systeemPrompt = `Je bent een capaciteitsplanner voor een installatiebedrijf. Analyseer de verlof-, ziekte- en saldogegevens en geef korte, praktische signalen terug als JSON object met veld "signalen" (array). Elk signaal heeft: type (capaciteit_laag|verlof_ophoping|saldo_verloopt|ziektetrend), prioriteit (hoog|midden|laag), onderwerp (string, max 60 tekens), toelichting (string, max 200 tekens), en aanbeveling (string, max 150 tekens). Maximaal 6 signalen. Namen zijn geanonimiseerd (M-1 e.d.). Reageer ALLEEN in JSON.`;
     const gebruikersTekst = JSON.stringify({
       periode: { start: startStr, eind: eindStr },
       medewerkers: medewerkers.length,
       totaal_contracturen_per_week: medewerkers.reduce((s, m) => s + (m.contracturenPerWeek ?? 0), 0),
       verlof_aangevraagd: verlof.filter((v) => v.status === "aangevraagd").length,
       verlof_goedgekeurd: verlof.filter((v) => v.status === "goedgekeurd").length,
-      verlof_top5: verlof.slice(0, 5).map((v) => ({ medewerker: v.medewerkerNaam, soort: v.verlofsoortNaam, start: v.startDatum, eind: v.eindDatum, uren: v.aantalUren })),
+      verlof_top5: verlof.slice(0, 5).map((v) => ({ medewerker: pseudoniem(v.medewerkerNaam), soort: v.verlofsoortNaam, start: v.startDatum, eind: v.eindDatum, uren: v.aantalUren })),
       actief_ziek: ziekmeldingen.filter((z) => z.status !== "hersteld").length,
-      verlopende_saldi: verlopendeSaldi.slice(0, 8).map((v) => ({ medewerker: v.medewerkerNaam, soort: v.verlofsoortNaam, uren: v.saldoUren, verloopt: v.vervaltOp })),
+      verlopende_saldi: verlopendeSaldi.slice(0, 8).map((v) => ({ medewerker: pseudoniem(v.medewerkerNaam), soort: v.verlofsoortNaam, uren: v.saldoUren, verloopt: v.vervaltOp })),
     });
 
     const voltooiing = await client.chat.completions.create({
