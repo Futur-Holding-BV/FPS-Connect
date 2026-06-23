@@ -296,6 +296,7 @@ import type {
   PlattegrondAiAnalyseResultaat,
   PortaalAfwijzenInput,
   PortaalHandtekeningInput,
+  PortaalOptioneelWerkInput,
   PortaalOfferte,
   PortaalTrackingInput,
   PortaalVraagInput,
