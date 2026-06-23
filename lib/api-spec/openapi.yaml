@@ -5210,6 +5210,27 @@ paths:
               schema:
                 $ref: "#/components/schemas/InboxItem"
 
+  /inbox/offerte-aanvraag:
+    post:
+      operationId: verwerkInboxOfferteavanvraag
+      tags: [inbox]
+      summary: Offerte-aanvraag uploaden en AI laten verwerken
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: "#/components/schemas/InboxOfferteavanvraagInput"
+      responses:
+        "201":
+          description: Aanvraag verwerkt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InboxOfferteverwerkingResultaat"
+        "400":
+          description: Ongeldige invoer
+
   /gebouwen/{id}/emails:
     get:
       operationId: listGebouwEmails
@@ -10750,6 +10771,41 @@ components:
           type: array
           items:
             type: object
+
+    InboxOfferteavanvraagInput:
+      type: object
+      required: [werkmaatschappij_id]
+      properties:
+        werkmaatschappij_id:
+          type: integer
+
+    InboxOfferteverwerkingResultaat:
+      type: object
+      required: [inbox_item]
+      properties:
+        inbox_item:
+          $ref: "#/components/schemas/InboxItem"
+        offerte_id:
+          type: ["integer", "null"]
+        offerte_titel:
+          type: ["string", "null"]
+        gebouw_id:
+          type: ["integer", "null"]
+        gebouw_naam:
+          type: ["string", "null"]
+        opname_id:
+          type: ["integer", "null"]
+        ai_samenvatting:
+          type: ["string", "null"]
+        aangemaakt:
+          type: object
+          properties:
+            offerte:
+              type: boolean
+            gebouw:
+              type: boolean
+            opname:
+              type: boolean
 
     InboxItemInput:
       type: object

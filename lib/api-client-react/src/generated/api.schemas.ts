@@ -468,6 +468,33 @@ export interface InboxItem {
   auditlog?: InboxItemAuditlogItem[];
 }
 
+export interface InboxOfferteavanvraagInput {
+  werkmaatschappij_id: number;
+}
+
+export type InboxOfferteverwerkingResultaatAangemaakt = {
+  offerte?: boolean;
+  gebouw?: boolean;
+  opname?: boolean;
+};
+
+export interface InboxOfferteverwerkingResultaat {
+  inbox_item: InboxItem;
+  /** @nullable */
+  offerte_id?: number | null;
+  /** @nullable */
+  offerte_titel?: string | null;
+  /** @nullable */
+  gebouw_id?: number | null;
+  /** @nullable */
+  gebouw_naam?: string | null;
+  /** @nullable */
+  opname_id?: number | null;
+  /** @nullable */
+  ai_samenvatting?: string | null;
+  aangemaakt?: InboxOfferteverwerkingResultaatAangemaakt;
+}
+
 export interface InboxItemInput {
   bestandsnaam: string;
   bestandspad?: string;

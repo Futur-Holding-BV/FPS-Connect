@@ -156,6 +156,8 @@ import type {
   InboxItem,
   InboxItemInput,
   InboxItemPatch,
+  InboxOfferteavanvraagInput,
+  InboxOfferteverwerkingResultaat,
   InboxStats,
   InboxVerplaatsenBody,
   Inspectie,
@@ -18137,6 +18139,78 @@ export const useTerBeoordelingInboxItem = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getTerBeoordelingInboxItemMutationOptions(options));
+    }
+
+export const getVerwerkInboxOfferteavanvraagUrl = () => {
+
+
+
+
+  return `/api/inbox/offerte-aanvraag`
+}
+
+/**
+ * @summary Offerte-aanvraag uploaden en AI laten verwerken
+ */
+export const verwerkInboxOfferteavanvraag = async (inboxOfferteavanvraagInput: InboxOfferteavanvraagInput, options?: RequestInit): Promise<InboxOfferteverwerkingResultaat> => {
+    const formData = new FormData();
+formData.append(`werkmaatschappij_id`, inboxOfferteavanvraagInput.werkmaatschappij_id.toString())
+
+  return customFetch<InboxOfferteverwerkingResultaat>(getVerwerkInboxOfferteavanvraagUrl(),
+  {
+    ...options,
+    method: 'POST'
+    ,
+    body: formData
+  }
+);}
+
+
+
+
+export const getVerwerkInboxOfferteavanvraagMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof verwerkInboxOfferteavanvraag>>, TError,{data: BodyType<InboxOfferteavanvraagInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof verwerkInboxOfferteavanvraag>>, TError,{data: BodyType<InboxOfferteavanvraagInput>}, TContext> => {
+
+const mutationKey = ['verwerkInboxOfferteavanvraag'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof verwerkInboxOfferteavanvraag>>, {data: BodyType<InboxOfferteavanvraagInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  verwerkInboxOfferteavanvraag(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type VerwerkInboxOfferteavanvraagMutationResult = NonNullable<Awaited<ReturnType<typeof verwerkInboxOfferteavanvraag>>>
+    export type VerwerkInboxOfferteavanvraagMutationBody = BodyType<InboxOfferteavanvraagInput>
+    export type VerwerkInboxOfferteavanvraagMutationError = ErrorType<void>
+
+    /**
+ * @summary Offerte-aanvraag uploaden en AI laten verwerken
+ */
+export const useVerwerkInboxOfferteavanvraag = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof verwerkInboxOfferteavanvraag>>, TError,{data: BodyType<InboxOfferteavanvraagInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof verwerkInboxOfferteavanvraag>>,
+        TError,
+        {data: BodyType<InboxOfferteavanvraagInput>},
+        TContext
+      > => {
+      return useMutation(getVerwerkInboxOfferteavanvraagMutationOptions(options));
     }
 
 export const getListGebouwEmailsUrl = (id: number,) => {

@@ -6517,6 +6517,16 @@ export const TerBeoordelingInboxItemResponse = zod.object({
 
 
 /**
+ * @summary Offerte-aanvraag uploaden en AI laten verwerken
+ */
+export const VerwerkInboxOfferteavanvraagBody = zod.object({
+  "werkmaatschappij_id": zod.number()
+})
+
+export const VerwerkInboxOfferteavanvraagResponse = zod.void()
+
+
+/**
  * @summary E-mailarchief van een gebouw
  */
 export const ListGebouwEmailsParams = zod.object({

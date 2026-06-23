@@ -1,8 +1,18 @@
 import { Router } from "express";
+import multer from "multer";
 import { db } from "@workspace/db";
-import { inboxItemsTable, inboxAuditLogTable } from "@workspace/db";
-import { eq, desc, and, inArray, count } from "drizzle-orm";
+import {
+  inboxItemsTable,
+  inboxAuditLogTable,
+  gebouwenTable,
+  offertesTable,
+  opnamesTable,
+  werkgeversTable,
+} from "@workspace/db";
+import { eq, desc } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
+import { parseEmailBestand } from "../services/email-ai";
+import { heeftOpenAi, maakOpenAiClient } from "../lib/openai";
 
 const router = Router();
 
@@ -439,6 +449,269 @@ router.post("/inbox/items/:id/ter-beoordeling", schrijven, async (req, res) => {
     res.status(500).json({ error: "Interne serverfout" });
   }
 });
+
+// ── OFFERTE-AANVRAAG UPLOADEN & AI VERWERKEN ─────────────────────────────────
+const upload = multer({ storage: multer.memoryStorage() });
+
+interface AiAanvraagExtractie {
+  opdrachtgever: string | null;
+  contactpersoon: string | null;
+  contactpersoon_email: string | null;
+  contactpersoon_telefoon: string | null;
+  gebouw_naam: string | null;
+  adres: string | null;
+  stad: string | null;
+  postcode: string | null;
+  beschrijving_werkzaamheden: string | null;
+  offerte_titel: string | null;
+  samenvatting: string | null;
+}
+
+async function extraheerAanvraagVeldenMetAi(
+  emailTekst: string,
+  onderwerp: string | null,
+  afzender: string | null,
+): Promise<AiAanvraagExtractie> {
+  if (!heeftOpenAi()) {
+    return {
+      opdrachtgever: afzender ?? null,
+      contactpersoon: null,
+      contactpersoon_email: afzender ?? null,
+      contactpersoon_telefoon: null,
+      gebouw_naam: null,
+      adres: null,
+      stad: null,
+      postcode: null,
+      beschrijving_werkzaamheden: emailTekst.slice(0, 400),
+      offerte_titel: onderwerp ?? "Offerte-aanvraag",
+      samenvatting: emailTekst.slice(0, 200),
+    };
+  }
+
+  const client = maakOpenAiClient();
+  const prompt = `Je bent een assistent voor een brandpreventie-bedrijf. Extraheer de volgende gegevens uit de offerte-aanvraag e-mail en geef ze terug als JSON. Gebruik null als een veld niet gevonden kan worden.
+
+E-mail onderwerp: ${onderwerp ?? "(geen)"}
+Afzender: ${afzender ?? "(onbekend)"}
+Inhoud:
+${emailTekst.slice(0, 3000)}
+
+Geef JSON terug met exact deze velden:
+{
+  "opdrachtgever": "naam van de organisatie/opdrachtgever",
+  "contactpersoon": "naam van de contactpersoon",
+  "contactpersoon_email": "e-mailadres contactpersoon",
+  "contactpersoon_telefoon": "telefoonnummer",
+  "gebouw_naam": "naam van het gebouw of project",
+  "adres": "straat + huisnummer",
+  "stad": "stad/gemeente",
+  "postcode": "postcode",
+  "beschrijving_werkzaamheden": "samenvatting van gevraagde werkzaamheden (max 300 tekens)",
+  "offerte_titel": "korte duidelijke titel voor de offerte (max 80 tekens)",
+  "samenvatting": "beknopte samenvatting van de aanvraag (max 200 tekens)"
+}`;
+
+  try {
+    const resp = await client.chat.completions.create({
+      model: "gpt-4o",
+      messages: [{ role: "user", content: prompt }],
+      response_format: { type: "json_object" },
+      max_completion_tokens: 800,
+    });
+    const tekst = resp.choices[0]?.message?.content ?? "{}";
+    return JSON.parse(tekst) as AiAanvraagExtractie;
+  } catch {
+    return {
+      opdrachtgever: afzender ?? null,
+      contactpersoon: null,
+      contactpersoon_email: afzender ?? null,
+      contactpersoon_telefoon: null,
+      gebouw_naam: null,
+      adres: null,
+      stad: null,
+      postcode: null,
+      beschrijving_werkzaamheden: emailTekst.slice(0, 400),
+      offerte_titel: onderwerp ?? "Offerte-aanvraag",
+      samenvatting: emailTekst.slice(0, 200),
+    };
+  }
+}
+
+router.post(
+  "/inbox/offerte-aanvraag",
+  schrijven,
+  upload.fields([
+    { name: "email", maxCount: 1 },
+    { name: "bijlagen", maxCount: 10 },
+  ]),
+  async (req, res) => {
+    try {
+      const werkmaatschappijId = req.body?.werkmaatschappij_id
+        ? parseInt(String(req.body.werkmaatschappij_id), 10)
+        : null;
+
+      if (!werkmaatschappijId || isNaN(werkmaatschappijId)) {
+        return res.status(400).json({ error: "werkmaatschappij_id is verplicht" });
+      }
+
+      const files = req.files as Record<string, Express.Multer.File[]> | undefined;
+      const emailBestand = files?.["email"]?.[0] ?? null;
+
+      const gebruikerId = req.session.userId ?? null;
+
+      const [werkgever] = await db
+        .select({ id: werkgeversTable.id, naam: werkgeversTable.naam })
+        .from(werkgeversTable)
+        .where(eq(werkgeversTable.id, werkmaatschappijId));
+
+      if (!werkgever) {
+        return res.status(400).json({ error: "Werkmaatschappij niet gevonden" });
+      }
+
+      let ai: AiAanvraagExtractie = {
+        opdrachtgever: null,
+        contactpersoon: null,
+        contactpersoon_email: null,
+        contactpersoon_telefoon: null,
+        gebouw_naam: null,
+        adres: null,
+        stad: null,
+        postcode: null,
+        beschrijving_werkzaamheden: null,
+        offerte_titel: "Offerte-aanvraag",
+        samenvatting: null,
+      };
+
+      let emailBestandsnaam = "(geen e-mail)";
+
+      if (emailBestand) {
+        emailBestandsnaam = emailBestand.originalname;
+        try {
+          const geparseerd = await parseEmailBestand(
+            emailBestand.originalname,
+            emailBestand.buffer,
+          );
+          ai = await extraheerAanvraagVeldenMetAi(
+            geparseerd.inhoudTekst ?? "",
+            geparseerd.onderwerp,
+            geparseerd.afzender,
+          );
+        } catch (parseErr) {
+          req.log.warn({ parseErr }, "E-mail parsen mislukt — velden leeg");
+        }
+      }
+
+      const vandaag = new Date().toISOString().slice(0, 10);
+      const offerteNummer = `AO-${Date.now()}`;
+
+      let aangemaaktGebouwId: number | null = null;
+      let aangemaaktGebouwNaam: string | null = null;
+      let aangemaaktOpnameId: number | null = null;
+
+      if (ai.adres) {
+        const gebouwNaam =
+          ai.gebouw_naam ??
+          ([ai.opdrachtgever, ai.adres].filter(Boolean).join(" — ") ||
+            "Nieuw gebouw");
+
+        const [gebouw] = await db
+          .insert(gebouwenTable)
+          .values({
+            naam: gebouwNaam,
+            adres: ai.adres,
+            stad: ai.stad ?? undefined,
+            postcode: ai.postcode ?? undefined,
+            werkgeverId: werkmaatschappijId,
+          })
+          .returning();
+
+        aangemaaktGebouwId = gebouw.id;
+        aangemaaktGebouwNaam = gebouw.naam;
+      }
+
+      const offerteTitel = ai.offerte_titel ?? onderwerp(emailBestandsnaam);
+
+      const [offerte] = await db
+        .insert(offertesTable)
+        .values({
+          offertenummer: offerteNummer,
+          titel: offerteTitel,
+          opdrachtgever: ai.opdrachtgever ?? undefined,
+          gebouwId: aangemaaktGebouwId ?? undefined,
+          onsKenmerk: werkgever.naam,
+          status: "concept",
+          portaalStatus: "concept",
+          aangemaaktDoorId: gebruikerId ?? undefined,
+        })
+        .returning();
+
+      if (aangemaaktGebouwId) {
+        const [opname] = await db
+          .insert(opnamesTable)
+          .values({
+            naam: `Opname — ${ai.opdrachtgever ?? offerteTitel}`,
+            datum: vandaag,
+            gebouwId: aangemaaktGebouwId,
+            notities: ai.beschrijving_werkzaamheden ?? undefined,
+            aangemaaktDoorId: gebruikerId ?? undefined,
+          })
+          .returning();
+        aangemaaktOpnameId = opname.id;
+      }
+
+      const [inboxItem] = await db
+        .insert(inboxItemsTable)
+        .values({
+          bestandsnaam: emailBestandsnaam,
+          bestandspad: `inbox/offerte-aanvraag/${Date.now()}_${emailBestandsnaam}`,
+          bestandsgrootte: emailBestand?.size ?? null,
+          mimetype: emailBestand?.mimetype ?? null,
+          geuploadDoor: gebruikerId,
+          status: "geanalyseerd",
+          documentCategorie: "offerte_aanvraag",
+          bestemming: "Offertes",
+          aiBetrouwbaarheid: heeftOpenAi() ? "hoog" : "midden",
+          aiSamenvatting: ai.samenvatting ?? `Offerte-aanvraag van ${ai.opdrachtgever ?? "onbekend"}`,
+          aiRedenering: `Werkmaatschappij: ${werkgever.naam}. Offerte ${offerteNummer} aangemaakt.`,
+          aiVolgendeActie: "Offerte bekijken en uitwerken",
+          gekoppeldeEntiteitType: "offerte",
+          gekoppeldeEntiteitId: offerte.id,
+          gekoppeldeEntiteitNaam: offerteTitel,
+          opmerkingen: ai.beschrijving_werkzaamheden ?? null,
+        })
+        .returning();
+
+      await db.insert(inboxAuditLogTable).values({
+        inboxItemId: inboxItem.id,
+        actie: "geregistreerd",
+        gebruikerId,
+        details: `Offerte-aanvraag verwerkt. Offerte ${offerteNummer} aangemaakt${aangemaaktGebouwId ? `, gebouw #${aangemaaktGebouwId}` : ""}${aangemaaktOpnameId ? `, opname #${aangemaaktOpnameId}` : ""}.`,
+      });
+
+      res.status(201).json({
+        inbox_item: mapItem(inboxItem),
+        offerte_id: offerte.id,
+        offerte_titel: offerteTitel,
+        gebouw_id: aangemaaktGebouwId,
+        gebouw_naam: aangemaaktGebouwNaam,
+        opname_id: aangemaaktOpnameId,
+        ai_samenvatting: ai.samenvatting,
+        aangemaakt: {
+          offerte: true,
+          gebouw: aangemaaktGebouwId !== null,
+          opname: aangemaaktOpnameId !== null,
+        },
+      });
+    } catch (err) {
+      req.log.error(err);
+      res.status(500).json({ error: "Interne serverfout" });
+    }
+  },
+);
+
+function onderwerp(bestandsnaam: string): string {
+  return bestandsnaam.replace(/\.[^.]+$/, "").replace(/[_-]+/g, " ").trim() || "Offerte-aanvraag";
+}
 
 // ── VERWIJDEREN ───────────────────────────────────────────────────────────────
 router.delete("/inbox/items/:id", schrijven, async (req, res) => {
