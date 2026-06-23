@@ -4891,6 +4891,27 @@ export interface WerkdagStatusInput {
   uitvoering_status: string;
 }
 
+export interface MijnMedewerkerProfiel {
+  id: number;
+  naam: string;
+  werkmaatschappij: string;
+  dienstverband: string;
+  functie_naam?: string | null;
+  in_dienst_sinds?: string | null;
+  email?: string | null;
+  telefoon?: string | null;
+  mobiel?: string | null;
+}
+
+export interface MijnPrivacyGegevens {
+  id: number;
+  naam: string;
+  email: string;
+  rol: string;
+  aangemaaktOp: string;
+  medewerker?: MijnMedewerkerProfiel | null;
+}
+
 export type GetRecenteActiviteitParams = {
 limit?: number;
 };
@@ -4961,6 +4982,11 @@ per_pagina?: number;
 
 export type ListVoorzieningTypesParams = {
 inclusief_inactief?: boolean;
+};
+
+export type ListMijnActiviteitenParams = {
+limit?: number;
+offset?: number;
 };
 
 export type ListToolboxBerichtenParams = {

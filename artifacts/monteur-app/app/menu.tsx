@@ -116,6 +116,19 @@ export default function MenuScherm() {
             </Text>
           </Pressable>
           <Pressable
+            onPress={() => router.push("/privacy")}
+            style={{
+              paddingHorizontal: 14,
+              paddingVertical: 9,
+              borderRadius: 10,
+              backgroundColor: "rgba(255,255,255,0.12)",
+            }}
+          >
+            <Text style={{ color: c.darkForeground, fontFamily: "Inter_600SemiBold", fontSize: 14 }}>
+              Privacy
+            </Text>
+          </Pressable>
+          <Pressable
             onPress={uitloggen}
             style={{
               paddingHorizontal: 14,

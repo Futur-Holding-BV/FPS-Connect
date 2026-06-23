@@ -58,6 +58,8 @@ import MailBeheer from "@/pages/beheer/mail";
 import BackupBeheer from "@/pages/beheer/backup";
 import ProjectstatusPagina from "@/pages/beheer/projectstatus";
 import PwaTest from "@/pages/beheer/pwa-test";
+import PrivacyCentrum from "@/pages/mijn/privacy";
+import BeheerPrivacy from "@/pages/beheer/privacy";
 import OpnamePagina from "@/pages/opname/index";
 import OpnameDetailPagina from "@/pages/opname/detail";
 import InfoPagina from "@/pages/info/index";
@@ -255,6 +257,8 @@ function ConnectPortal() {
         <Route path="/beheer/backup" component={BackupBeheer} />
         <Route path="/beheer/projectstatus" component={ProjectstatusPagina} />
         <Route path="/beheer/pwa-test" component={PwaTest} />
+        <Route path="/beheer/privacy" component={BeheerPrivacy} />
+        <Route path="/mijn/privacy" component={PrivacyCentrum} />
 
         {/* ── FPS ONE (klantportaal, via omgevingsswitch) ── */}
         <Route path="/one/dashboard" component={OneDashboard} />

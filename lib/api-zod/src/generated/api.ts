@@ -2186,6 +2186,52 @@ export const CreateMijnVerlofaanvraagResponse = zod.void()
 
 
 /**
+ * @summary Privacy-overzicht van de ingelogde gebruiker (eigen profiel + gekoppeld medewerker, zonder BSN)
+ */
+export const GetMijnPrivacyGegevensResponse = zod.object({
+  "id": zod.number(),
+  "naam": zod.string(),
+  "email": zod.string(),
+  "rol": zod.string(),
+  "aangemaaktOp": zod.string(),
+  "medewerker": zod.object({
+  "id": zod.number(),
+  "naam": zod.string(),
+  "werkmaatschappij": zod.string(),
+  "dienstverband": zod.string(),
+  "functie_naam": zod.string().nullish(),
+  "in_dienst_sinds": zod.string().nullish(),
+  "email": zod.string().nullish(),
+  "telefoon": zod.string().nullish(),
+  "mobiel": zod.string().nullish()
+}).nullish()
+})
+
+
+/**
+ * @summary Eigen activiteitenlog van de ingelogde gebruiker (max 50 regels)
+ */
+export const listMijnActiviteitenQueryLimitDefault = 50;
+export const listMijnActiviteitenQueryOffsetDefault = 0;
+
+export const ListMijnActiviteitenQueryParams = zod.object({
+  "limit": zod.coerce.number().default(listMijnActiviteitenQueryLimitDefault),
+  "offset": zod.coerce.number().default(listMijnActiviteitenQueryOffsetDefault)
+})
+
+export const ListMijnActiviteitenResponseItem = zod.object({
+  "id": zod.number(),
+  "type": zod.string(),
+  "omschrijving": zod.string(),
+  "tijdstip": zod.string(),
+  "gebouw_naam": zod.string().nullish(),
+  "voorziening_nummer": zod.string().nullish(),
+  "gebruiker_naam": zod.string().nullish()
+})
+export const ListMijnActiviteitenResponse = zod.array(ListMijnActiviteitenResponseItem)
+
+
+/**
  * @summary Overzicht van aan de ingelogde monteur toegewezen spots, gegroepeerd per gebouw
  */
 export const GetMijnWerkResponseItem = zod.object({

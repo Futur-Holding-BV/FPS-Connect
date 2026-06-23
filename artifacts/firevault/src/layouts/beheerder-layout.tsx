@@ -669,6 +669,14 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
                               </Link>
                             </SidebarMenuButton>
                           </SidebarMenuItem>
+                          <SidebarMenuItem>
+                            <SidebarMenuButton asChild isActive={location === "/beheer/privacy"}>
+                              <Link href="/beheer/privacy">
+                                <ShieldCheck />
+                                <span>Privacy AVG-matrix</span>
+                              </Link>
+                            </SidebarMenuButton>
+                          </SidebarMenuItem>
                         </>
                       )}
                       <SidebarMenuItem>

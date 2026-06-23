@@ -187,6 +187,7 @@ import type {
   ListInspectiesParams,
   ListJaarAfsluitingRegelsParams,
   ListLabelsParams,
+  ListMijnActiviteitenParams,
   ListModCalculatiesParams,
   ListMuisGebeurtenissenParams,
   ListOnderhoudParams,
@@ -220,6 +221,7 @@ import type {
   MedewerkerOnboardingInput,
   MedewerkerOpleiding,
   MedewerkerOpleidingInput,
+  MijnPrivacyGegevens,
   MijnWerkGebouw,
   ModCalcHeader,
   ModCalcHeaderDetail,
@@ -5937,6 +5939,167 @@ export const useCreateMijnVerlofaanvraag = <TError = ErrorType<void>,
       > => {
       return useMutation(getCreateMijnVerlofaanvraagMutationOptions(options));
     }
+
+export const getGetMijnPrivacyGegevensUrl = () => {
+
+
+
+
+  return `/api/mijn/privacy-gegevens`
+}
+
+/**
+ * @summary Privacy-overzicht van de ingelogde gebruiker (eigen profiel + gekoppeld medewerker, zonder BSN)
+ */
+export const getMijnPrivacyGegevens = async ( options?: RequestInit): Promise<MijnPrivacyGegevens> => {
+
+  return customFetch<MijnPrivacyGegevens>(getGetMijnPrivacyGegevensUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetMijnPrivacyGegevensQueryKey = () => {
+    return [
+    `/api/mijn/privacy-gegevens`
+    ] as const;
+    }
+
+
+export const getGetMijnPrivacyGegevensQueryOptions = <TData = Awaited<ReturnType<typeof getMijnPrivacyGegevens>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMijnPrivacyGegevens>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetMijnPrivacyGegevensQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getMijnPrivacyGegevens>>> = ({ signal }) => getMijnPrivacyGegevens({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getMijnPrivacyGegevens>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetMijnPrivacyGegevensQueryResult = NonNullable<Awaited<ReturnType<typeof getMijnPrivacyGegevens>>>
+export type GetMijnPrivacyGegevensQueryError = ErrorType<void>
+
+
+/**
+ * @summary Privacy-overzicht van de ingelogde gebruiker (eigen profiel + gekoppeld medewerker, zonder BSN)
+ */
+
+export function useGetMijnPrivacyGegevens<TData = Awaited<ReturnType<typeof getMijnPrivacyGegevens>>, TError = ErrorType<void>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMijnPrivacyGegevens>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetMijnPrivacyGegevensQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getListMijnActiviteitenUrl = (params?: ListMijnActiviteitenParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/mijn/activiteiten?${stringifiedParams}` : `/api/mijn/activiteiten`
+}
+
+/**
+ * @summary Eigen activiteitenlog van de ingelogde gebruiker (max 50 regels)
+ */
+export const listMijnActiviteiten = async (params?: ListMijnActiviteitenParams, options?: RequestInit): Promise<Activiteit[]> => {
+
+  return customFetch<Activiteit[]>(getListMijnActiviteitenUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListMijnActiviteitenQueryKey = (params?: ListMijnActiviteitenParams,) => {
+    return [
+    `/api/mijn/activiteiten`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListMijnActiviteitenQueryOptions = <TData = Awaited<ReturnType<typeof listMijnActiviteiten>>, TError = ErrorType<unknown>>(params?: ListMijnActiviteitenParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listMijnActiviteiten>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListMijnActiviteitenQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listMijnActiviteiten>>> = ({ signal }) => listMijnActiviteiten(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listMijnActiviteiten>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListMijnActiviteitenQueryResult = NonNullable<Awaited<ReturnType<typeof listMijnActiviteiten>>>
+export type ListMijnActiviteitenQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Eigen activiteitenlog van de ingelogde gebruiker (max 50 regels)
+ */
+
+export function useListMijnActiviteiten<TData = Awaited<ReturnType<typeof listMijnActiviteiten>>, TError = ErrorType<unknown>>(
+ params?: ListMijnActiviteitenParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listMijnActiviteiten>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListMijnActiviteitenQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
 
 export const getGetMijnWerkUrl = () => {
 

@@ -17145,3 +17145,49 @@ components:
         uitvoering_status:
           type: string
           description: "gepland | bezig | pauze | gereed"
+
+    MijnPrivacyGegevens:
+      type: object
+      required: [id, naam, email, rol, aangemaaktOp]
+      properties:
+        id:
+          type: integer
+        naam:
+          type: string
+        email:
+          type: string
+        rol:
+          type: string
+        aangemaaktOp:
+          type: string
+        medewerker:
+          $ref: "#/components/schemas/MijnMedewerkerProfiel"
+          nullable: true
+
+    MijnMedewerkerProfiel:
+      type: object
+      required: [id, naam, werkmaatschappij, dienstverband]
+      properties:
+        id:
+          type: integer
+        naam:
+          type: string
+        werkmaatschappij:
+          type: string
+        dienstverband:
+          type: string
+        functie_naam:
+          type: string
+          nullable: true
+        in_dienst_sinds:
+          type: string
+          nullable: true
+        email:
+          type: string
+          nullable: true
+        telefoon:
+          type: string
+          nullable: true
+        mobiel:
+          type: string
+          nullable: true

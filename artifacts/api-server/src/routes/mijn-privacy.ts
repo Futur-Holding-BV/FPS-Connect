@@ -81,7 +81,20 @@ mijnPrivacyRouter.get("/mijn/activiteiten", requireAuth, async (req, res) => {
     .limit(limit)
     .offset(offset);
 
-  return res.json(rijen);
+  return res.json(
+    rijen.map((a) => ({
+      id: a.id,
+      type: a.type,
+      omschrijving: a.omschrijving,
+      gebouw_id: a.gebouwId,
+      gebouw_naam: a.gebouwNaam,
+      voorziening_id: a.voorzieningId,
+      voorziening_nummer: a.voorzieningNummer,
+      gebruiker_id: a.gebruikerId,
+      gebruiker_naam: a.gebruikerNaam,
+      tijdstip: a.tijdstip instanceof Date ? a.tijdstip.toISOString() : a.tijdstip,
+    })),
+  );
 });
 
 export default mijnPrivacyRouter;
