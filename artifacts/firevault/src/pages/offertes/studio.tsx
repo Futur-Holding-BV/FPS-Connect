@@ -8,6 +8,7 @@ import {
   useUpdateOfferteSectie,
   useDeleteOfferteSectie,
   useListOfferteRegels,
+  useUpdateOfferteRegel,
   useListOfferteUitgangspunten,
   useListOfferteVersies,
   useCreateOfferteVersie,
@@ -110,6 +111,7 @@ export default function ProposalStudio() {
   const maakSectie = useCreateOfferteSectie();
   const werkSectie = useUpdateOfferteSectie();
   const verwijderSectie = useDeleteOfferteSectie();
+  const werkRegel = useUpdateOfferteRegel();
   const maakVersie = useCreateOfferteVersie();
   const maakBijlage = useCreateOfferteBijlage();
   const verwijderBijlage = useDeleteOfferteBijlage();
@@ -127,6 +129,8 @@ export default function ProposalStudio() {
   const [versieSamenvatting, setVersieSamenvatting] = useState("");
   const [bijlageDialoogOpen, setBijlageDialoogOpen] = useState(false);
   const [bijlageForm, setBijlageForm] = useState({ naam: "", bijlage_type: "overig", beschrijving: "", url: "" });
+  const [bewerkRegelId, setBewerkRegelId] = useState<number | null>(null);
+  const [bewerkPrijs, setBewerkPrijs] = useState("");
   const [initialiserend, setInitialiserend] = useState(false);
 
   const gesorteerdeSecties = [...(secties ?? [])].sort((a, b) => a.volgorde - b.volgorde);
@@ -318,6 +322,37 @@ export default function ProposalStudio() {
     }
   }
 
+  async function slaRegelPrijsOp(regelId: number) {
+    const prijs = parseFloat(bewerkPrijs.replace(",", "."));
+    if (isNaN(prijs)) {
+      toast({ title: "Ongeldige prijs", variant: "destructive" });
+      return;
+    }
+    const huidig = (regels ?? []).find((r) => r.id === regelId);
+    if (!huidig) return;
+    try {
+      await werkRegel.mutateAsync({
+        id: regelId,
+        data: {
+          maatregel: huidig.maatregel,
+          categorie: huidig.categorie ?? undefined,
+          snag_referentie: huidig.snag_referentie ?? undefined,
+          voorziening_id: huidig.voorziening_id ?? undefined,
+          ruimte: huidig.ruimte ?? undefined,
+          uitgangspunten: huidig.uitgangspunten ?? undefined,
+          eenheid: huidig.eenheid ?? undefined,
+          aantal: huidig.aantal ?? undefined,
+          prijs_per_eenheid: prijs,
+        },
+      });
+      await queryClient.invalidateQueries({ queryKey: getListOfferteRegelsQueryKey(offerteId) });
+      setBewerkRegelId(null);
+      toast({ title: "Prijs bijgewerkt" });
+    } catch {
+      toast({ title: "Opslaan mislukt", variant: "destructive" });
+    }
+  }
+
   if (offerteLoading) {
     return (
       <div className="max-w-7xl mx-auto space-y-4 p-4">
@@ -452,6 +487,7 @@ export default function ProposalStudio() {
             <Tabs defaultValue="studio">
               <TabsList className="mb-4">
                 <TabsTrigger value="studio"><BookOpen className="h-3.5 w-3.5 mr-1.5" />Studio</TabsTrigger>
+                <TabsTrigger value="prijzen"><span className="mr-1.5">&#8364;</span>Prijzen</TabsTrigger>
                 <TabsTrigger value="voorbeeld"><Eye className="h-3.5 w-3.5 mr-1.5" />Voorbeeld</TabsTrigger>
                 <TabsTrigger value="bijlagen"><Paperclip className="h-3.5 w-3.5 mr-1.5" />Bijlagen</TabsTrigger>
                 <TabsTrigger value="versies"><Clock className="h-3.5 w-3.5 mr-1.5" />Versies</TabsTrigger>
@@ -524,6 +560,22 @@ export default function ProposalStudio() {
                     </div>
                   </div>
                 )}
+              </TabsContent>
+
+              <TabsContent value="prijzen">
+                <PrijzenTab
+                  regels={regels ?? []}
+                  offerte={offerte}
+                  bewerkRegelId={bewerkRegelId}
+                  bewerkPrijs={bewerkPrijs}
+                  setBewerkRegelId={(id, huidigePrijs) => {
+                    setBewerkRegelId(id);
+                    setBewerkPrijs(id !== null ? String(huidigePrijs ?? "") : "");
+                  }}
+                  setBewerkPrijs={setBewerkPrijs}
+                  slaRegelPrijsOp={slaRegelPrijsOp}
+                  werkRegelPending={werkRegel.isPending}
+                />
               </TabsContent>
 
               <TabsContent value="voorbeeld">
@@ -752,6 +804,153 @@ export default function ProposalStudio() {
         bijlagen={bijlagen ?? []}
       />
     </>
+  );
+}
+
+function PrijzenTab({
+  regels,
+  offerte,
+  bewerkRegelId,
+  bewerkPrijs,
+  setBewerkRegelId,
+  setBewerkPrijs,
+  slaRegelPrijsOp,
+  werkRegelPending,
+}: {
+  regels: any[];
+  offerte: any;
+  bewerkRegelId: number | null;
+  bewerkPrijs: string;
+  setBewerkRegelId: (id: number | null, huidigePrijs?: number) => void;
+  setBewerkPrijs: (v: string) => void;
+  slaRegelPrijsOp: (id: number) => Promise<void>;
+  werkRegelPending: boolean;
+}) {
+  const maatregelen = regels.filter((r) => r.categorie !== "algemene_kosten");
+  const algemeenKosten = regels.filter((r) => r.categorie === "algemene_kosten");
+  const subtotaalMaatregelen = maatregelen.reduce((s, r) => s + (r.kosten ?? 0), 0);
+  const subtotaalAlgemeen = algemeenKosten.reduce((s, r) => s + (r.kosten ?? 0), 0);
+  const totaal = subtotaalMaatregelen + subtotaalAlgemeen;
+  const btw = totaal * ((offerte?.btw_percentage ?? 21) / 100);
+  const inclBtw = totaal + btw;
+
+  if (regels.length === 0) {
+    return (
+      <Card>
+        <CardContent className="py-12 text-center text-muted-foreground space-y-2">
+          <p>Nog geen begrotingsregels. Gebruik "Uit spots voorbereiden" op de offertenlijstpagina om regels automatisch aan te maken.</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  function RegelRij({ r }: { r: any }) {
+    const isBewerken = bewerkRegelId === r.id;
+    return (
+      <tr className="border-b hover:bg-muted/30 transition-colors">
+        <td className="py-2 px-3">
+          <div className="font-medium text-sm">{r.maatregel}</div>
+          {r.ruimte && <div className="text-xs text-muted-foreground">{r.ruimte}</div>}
+          {r.snag_referentie && <div className="text-xs text-muted-foreground">{r.snag_referentie}</div>}
+        </td>
+        <td className="py-2 px-3 text-right text-sm text-muted-foreground whitespace-nowrap">{r.eenheid}</td>
+        <td className="py-2 px-3 text-right text-sm">{r.aantal}</td>
+        <td className="py-2 px-3 text-right">
+          {isBewerken ? (
+            <div className="flex items-center gap-1 justify-end">
+              <Input
+                className="w-24 h-7 text-right text-sm"
+                value={bewerkPrijs}
+                onChange={(e) => setBewerkPrijs(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") slaRegelPrijsOp(r.id);
+                  if (e.key === "Escape") setBewerkRegelId(null);
+                }}
+                autoFocus
+              />
+              <Button size="icon" className="h-7 w-7" onClick={() => slaRegelPrijsOp(r.id)} disabled={werkRegelPending}>
+                <Check className="h-3 w-3" />
+              </Button>
+              <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setBewerkRegelId(null)}>
+                <X className="h-3 w-3" />
+              </Button>
+            </div>
+          ) : (
+            <button
+              className="text-sm hover:underline hover:text-primary text-right w-full"
+              onClick={() => setBewerkRegelId(r.id, r.prijs_per_eenheid)}
+              title="Klik om prijs te bewerken"
+            >
+              {euro(r.prijs_per_eenheid)}
+            </button>
+          )}
+        </td>
+        <td className="py-2 px-3 text-right text-sm font-medium">{euro(r.kosten ?? 0)}</td>
+      </tr>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <p className="text-xs text-muted-foreground">Klik op een prijs om deze te bewerken.</p>
+      <div className="overflow-auto rounded-lg border">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="bg-muted/50 border-b">
+              <th className="py-2 px-3 text-left font-semibold">Maatregel</th>
+              <th className="py-2 px-3 text-right font-semibold">Eenheid</th>
+              <th className="py-2 px-3 text-right font-semibold">Aantal</th>
+              <th className="py-2 px-3 text-right font-semibold">Prijs/eenheid</th>
+              <th className="py-2 px-3 text-right font-semibold">Totaal</th>
+            </tr>
+          </thead>
+          <tbody>
+            {maatregelen.length > 0 && (
+              <>
+                <tr className="bg-muted/20">
+                  <td colSpan={5} className="py-1.5 px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                    Maatregelen
+                  </td>
+                </tr>
+                {maatregelen.map((r) => <RegelRij key={r.id} r={r} />)}
+                <tr className="bg-muted/10">
+                  <td colSpan={4} className="py-1.5 px-3 text-right text-xs text-muted-foreground">Subtotaal maatregelen</td>
+                  <td className="py-1.5 px-3 text-right text-sm font-semibold">{euro(subtotaalMaatregelen)}</td>
+                </tr>
+              </>
+            )}
+            {algemeenKosten.length > 0 && (
+              <>
+                <tr className="bg-muted/20">
+                  <td colSpan={5} className="py-1.5 px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                    Algemene kosten
+                  </td>
+                </tr>
+                {algemeenKosten.map((r) => <RegelRij key={r.id} r={r} />)}
+                <tr className="bg-muted/10">
+                  <td colSpan={4} className="py-1.5 px-3 text-right text-xs text-muted-foreground">Subtotaal algemene kosten</td>
+                  <td className="py-1.5 px-3 text-right text-sm font-semibold">{euro(subtotaalAlgemeen)}</td>
+                </tr>
+              </>
+            )}
+          </tbody>
+          <tfoot>
+            <tr className="border-t-2">
+              <td colSpan={4} className="py-2 px-3 text-right text-sm font-semibold">Totaal excl. btw</td>
+              <td className="py-2 px-3 text-right font-bold">{euro(totaal)}</td>
+            </tr>
+            <tr>
+              <td colSpan={4} className="py-1 px-3 text-right text-xs text-muted-foreground">Btw {offerte?.btw_percentage ?? 21}%</td>
+              <td className="py-1 px-3 text-right text-sm">{euro(btw)}</td>
+            </tr>
+            <tr className="bg-primary text-primary-foreground">
+              <td colSpan={4} className="py-2.5 px-3 text-right font-bold">Totaal incl. btw</td>
+              <td className="py-2.5 px-3 text-right font-bold text-base">{euro(inclBtw)}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
   );
 }
 

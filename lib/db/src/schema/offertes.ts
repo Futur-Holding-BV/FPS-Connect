@@ -67,6 +67,7 @@ export const offertesTable = pgTable("offertes", {
   bedragExclBtw: real("bedrag_excl_btw").notNull().default(0),
   btwPercentage: real("btw_percentage").notNull().default(21),
   bedragInclBtw: real("bedrag_incl_btw").notNull().default(0),
+  kleurthema: text("kleurthema").default("fps-oranje"),
   status: text("status").notNull().default("concept"),
   aangemaaktDoorId: integer("aangemaakt_door_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
   aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),

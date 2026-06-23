@@ -736,9 +736,33 @@ router.post("/offerte-secties/:id/ai-schrijven", schrijven, async (req, res) => 
       .map((s) => `${s.titel}: ${(s.inhoud ?? "").slice(0, 200)}`)
       .join("\n");
 
+    // Haal begrotingsregels op voor context
+    const regelsRows = await db
+      .select({ maatregel: offerteRegelsTable.maatregel, ruimte: offerteRegelsTable.ruimte, aantal: offerteRegelsTable.aantal, eenheid: offerteRegelsTable.eenheid, kosten: offerteRegelsTable.kosten })
+      .from(offerteRegelsTable)
+      .where(eq(offerteRegelsTable.offerteId, sectie.offerteId))
+      .orderBy(desc(offerteRegelsTable.kosten))
+      .limit(8);
+
+    const totaalBedrag = regelsRows.reduce((som, r) => som + (r.kosten ?? 0), 0);
+    const regelsSamenvatting = regelsRows.length > 0
+      ? regelsRows.map((r) => `- ${r.maatregel}${r.ruimte ? ` (${r.ruimte})` : ""}: ${r.aantal} ${r.eenheid}`).join("\n")
+      : "";
+
+    // Haal uitgangspunten op voor context
+    const uitgangspuntenRows = await db
+      .select({ tekst: offerteUitgangspuntenTable.tekst, type: offerteUitgangspuntenTable.type })
+      .from(offerteUitgangspuntenTable)
+      .where(eq(offerteUitgangspuntenTable.offerteId, sectie.offerteId))
+      .limit(10);
+
+    const uitgangspuntenSamenvatting = uitgangspuntenRows.length > 0
+      ? uitgangspuntenRows.map((u) => `- [${u.type}] ${u.tekst}`).join("\n")
+      : "";
+
     const contextExtra = (req.body as { context_extra?: string }).context_extra ?? "";
 
-    const systeemPrompt = `Je bent een professionele offerte-schrijver voor FPS Brandpreventie, een Nederlands bedrijf gespecialiseerd in brandwerende voorzieningen en brandpreventie-inspectie. Je schrijft helder, zakelijk en professioneel Nederlands. Gebruik geen emojis. Schrijf in de eerste persoon meervoud (wij/onze). Houd de tekst bondig maar volledig.`;
+    const systeemPrompt = `Je bent een professionele offerte-schrijver voor FPS Brandpreventie, een Nederlands bedrijf gespecialiseerd in brandwerende voorzieningen en brandpreventie-inspectie. Je schrijft helder, zakelijk en professioneel Nederlands. Gebruik geen emojis. Schrijf in de eerste persoon meervoud (wij/onze). Houd de tekst bondig maar volledig. Verwijs concreet naar de maatregelen en objecten in de offerte.`;
 
     const gebruikersPrompt = `Schrijf de sectie "${sectie.titel}" (type: ${sectie.sectieType}) voor de offerte.
 
@@ -748,10 +772,12 @@ Offertegegevens:
 - Gebouw: ${offerte?.gebouwNaam ?? ""}
 - Klant: ${offerte?.klantNaam ?? ""}
 - Datum: ${offerte?.datum ?? ""}
+${regelsSamenvatting ? `\nBegrotingsregels (top-8 op kosten, totaal ca. €${Math.round(totaalBedrag).toLocaleString("nl-NL")}):\n${regelsSamenvatting}` : ""}
+${uitgangspuntenSamenvatting ? `\nUitgangspunten en voorbehouden:\n${uitgangspuntenSamenvatting}` : ""}
 ${andereSectieSamenvatting ? `\nAndere secties (ter context):\n${andereSectieSamenvatting}` : ""}
 ${contextExtra ? `\nAanvullende context: ${contextExtra}` : ""}
 
-Schrijf een professionele, overtuigende tekst voor deze sectie. Gebruik alinea's. Maximaal 300 woorden.`;
+Schrijf een professionele, overtuigende tekst voor deze sectie. Gebruik alinea's. Verwijs naar specifieke maatregelen en omstandigheden uit de context. Maximaal 350 woorden.`;
 
     const client = maakOpenAiClient();
     const completion = await client.chat.completions.create({
