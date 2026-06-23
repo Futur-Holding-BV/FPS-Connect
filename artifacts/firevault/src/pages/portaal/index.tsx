@@ -300,14 +300,7 @@ export default function PortaalPagina({ token }: PortaalPaginaProps) {
 
         {(o.secties ?? []).length > 0 && (
           <div className="space-y-4">
-            {(o.secties as Array<{
-              id: number;
-              sectie_type: string;
-              volgorde: number;
-              actief?: boolean;
-              titel?: string | null;
-              inhoud?: string | null;
-            }>)
+            {o.secties
               .filter((s) => s.actief !== false)
               .sort((a, b) => a.volgorde - b.volgorde)
               .map((s) => (
@@ -342,7 +335,7 @@ export default function PortaalPagina({ token }: PortaalPaginaProps) {
           </CardContent>
         </Card>
 
-        {((o as any).optionele_regels ?? []).length > 0 && !isGesloten && (
+        {(o.optionele_regels ?? []).length > 0 && !isGesloten && (
           <Card>
             <CardContent className="p-5 space-y-4">
               <div>
@@ -352,15 +345,7 @@ export default function PortaalPagina({ token }: PortaalPaginaProps) {
                 </p>
               </div>
               <div className="space-y-2">
-                {((o as any).optionele_regels as Array<{
-                  id: number;
-                  maatregel: string;
-                  ruimte?: string | null;
-                  eenheid: string;
-                  aantal: number;
-                  kosten: number;
-                  optioneel_geselecteerd: boolean;
-                }>).map((r) => (
+                {o.optionele_regels.map((r) => (
                   <label
                     key={r.id}
                     className="flex items-start gap-3 p-3 rounded-lg border cursor-pointer hover:bg-muted/30 transition-colors"
@@ -396,7 +381,7 @@ export default function PortaalPagina({ token }: PortaalPaginaProps) {
           </Card>
         )}
 
-        {((o as any).bijlagen ?? []).length > 0 && (
+        {(o.bijlagen ?? []).length > 0 && (
           <Card>
             <CardContent className="p-5 space-y-3">
               <div className="flex items-center gap-2">
@@ -404,13 +389,7 @@ export default function PortaalPagina({ token }: PortaalPaginaProps) {
                 <h2 className="font-semibold">Bijlagen</h2>
               </div>
               <div className="space-y-2">
-                {((o as any).bijlagen as Array<{
-                  id: number;
-                  bijlage_type: string;
-                  naam: string;
-                  beschrijving?: string | null;
-                  url?: string | null;
-                }>).map((b) => (
+                {o.bijlagen.map((b) => (
                   <div key={b.id} className="flex items-center gap-3 p-3 rounded-lg border">
                     <div className="flex-1 min-w-0">
                       <div className="font-medium text-sm">{b.naam}</div>
