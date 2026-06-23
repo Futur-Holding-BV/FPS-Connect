@@ -4494,6 +4494,7 @@ export interface ModCalcHeader {
   omschrijving?: string | null;
   opmerkingen?: string | null;
   opslag_ak: number;
+  opslag_abk: number;
   opslag_risico: number;
   opslag_winst: number;
   korting: number;
@@ -4517,6 +4518,14 @@ export interface ModCalcRegel {
   totaal: number;
   volgorde: number;
   opmerkingen?: string | null;
+  regelnummer?: string | null;
+  mu_per_eenheid: number;
+  arbeids_tarief: number;
+  onderaanneming_bedrag: number;
+  is_staartkosten: boolean;
+  materiaal_totaal: number;
+  mu_totaal: number;
+  arbeidsloon: number;
 }
 
 export type ModCalcHeaderDetail = ModCalcHeader & {
@@ -4533,6 +4542,7 @@ export interface ModCalcHeaderInput {
   omschrijving?: string | null;
   opmerkingen?: string | null;
   opslag_ak?: number;
+  opslag_abk?: number;
   opslag_risico?: number;
   opslag_winst?: number;
   korting?: number;
@@ -4547,6 +4557,11 @@ export interface ModCalcRegelInput {
   tarief: number;
   volgorde?: number;
   opmerkingen?: string | null;
+  regelnummer?: string | null;
+  mu_per_eenheid?: number;
+  arbeids_tarief?: number;
+  onderaanneming_bedrag?: number;
+  is_staartkosten?: boolean;
 }
 
 export interface UrenRegistratie {

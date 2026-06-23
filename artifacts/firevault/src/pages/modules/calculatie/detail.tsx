@@ -32,6 +32,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
 import {
   ArrowLeft, Plus, Pencil, Trash2, Copy, ChevronRight, FileText,
+  LayoutList, Users, Eye,
 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -75,6 +76,8 @@ const CATEGORIE_KLEUR: Record<string, string> = {
   overig: "bg-slate-50 text-slate-600",
 };
 
+const EENHEDEN = ["st", "pst", "m1", "m2", "m3", "uur", "dag", "week", "lump_sum"];
+
 function formatBedrag(n: number | null | undefined) {
   if (n == null) return "—";
   return new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR" }).format(n);
@@ -82,6 +85,11 @@ function formatBedrag(n: number | null | undefined) {
 
 function formatBedragKort(n: number) {
   return new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR", minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(n);
+}
+
+function fmt2(n: number) {
+  if (n === 0) return "—";
+  return new Intl.NumberFormat("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n);
 }
 
 type RegelRow = {
@@ -97,6 +105,14 @@ type RegelRow = {
   totaal: number;
   volgorde: number;
   opmerkingen?: string | null;
+  regelnummer?: string | null;
+  mu_per_eenheid: number;
+  arbeids_tarief: number;
+  onderaanneming_bedrag: number;
+  is_staartkosten: boolean;
+  materiaal_totaal: number;
+  mu_totaal: number;
+  arbeidsloon: number;
 };
 
 type RegelForm = {
@@ -106,18 +122,30 @@ type RegelForm = {
   eenheid: string;
   hoeveelheid: string;
   tarief: string;
+  mu_per_eenheid: string;
+  arbeids_tarief: string;
+  onderaanneming_bedrag: string;
+  is_staartkosten: boolean;
   opmerkingen: string;
+  regelnummer: string;
 };
 
 const LEGE_REGEL: RegelForm = {
-  categorie: "arbeid",
+  categorie: "materiaal",
   omschrijving: "",
   normtijd_id: "",
   eenheid: "st",
   hoeveelheid: "1",
   tarief: "0",
+  mu_per_eenheid: "0",
+  arbeids_tarief: "0",
+  onderaanneming_bedrag: "0",
+  is_staartkosten: false,
   opmerkingen: "",
+  regelnummer: "",
 };
+
+type Weergave = "intern" | "directie" | "klant";
 
 export default function ModulesCalculatieDetail() {
   const [, params] = useRoute("/modules/calculatie/:id");
@@ -157,6 +185,7 @@ export default function ModulesCalculatieDetail() {
   const updateRegelMut = useUpdateModCalcRegel({ mutation: { onSuccess: invalidate } });
   const deleteRegelMut = useDeleteModCalcRegel({ mutation: { onSuccess: invalidate } });
 
+  const [weergave, setWeergave] = useState<Weergave>("intern");
   const [teVerwijderen, setTeVerwijderen] = useState(false);
   const [regelDialoog, setRegelDialoog] = useState<"nieuw" | number | null>(null);
   const [regelForm, setRegelForm] = useState<RegelForm>(LEGE_REGEL);
@@ -164,11 +193,11 @@ export default function ModulesCalculatieDetail() {
   const [headerForm, setHeaderForm] = useState({
     naam: "", referentie: "", klant_naam: "", project_naam: "",
     status: "", omschrijving: "", opmerkingen: "",
-    opslag_ak: 15, opslag_risico: 5, opslag_winst: 10, korting: 0,
+    opslag_ak: 15, opslag_abk: 10, opslag_risico: 5, opslag_winst: 10, korting: 0,
   });
 
-  function openNieuweRegel() {
-    setRegelForm(LEGE_REGEL);
+  function openNieuweRegel(staartkosten = false) {
+    setRegelForm({ ...LEGE_REGEL, is_staartkosten: staartkosten });
     setRegelDialoog("nieuw");
   }
 
@@ -180,7 +209,12 @@ export default function ModulesCalculatieDetail() {
       eenheid: r.eenheid,
       hoeveelheid: String(r.hoeveelheid),
       tarief: String(r.tarief),
+      mu_per_eenheid: String(r.mu_per_eenheid ?? 0),
+      arbeids_tarief: String(r.arbeids_tarief ?? 0),
+      onderaanneming_bedrag: String(r.onderaanneming_bedrag ?? 0),
+      is_staartkosten: r.is_staartkosten ?? false,
       opmerkingen: r.opmerkingen ?? "",
+      regelnummer: r.regelnummer ?? "",
     });
     setRegelDialoog(r.id);
   }
@@ -196,6 +230,7 @@ export default function ModulesCalculatieDetail() {
       omschrijving: data.omschrijving ?? "",
       opmerkingen: data.opmerkingen ?? "",
       opslag_ak: data.opslag_ak,
+      opslag_abk: data.opslag_abk ?? 10,
       opslag_risico: data.opslag_risico,
       opslag_winst: data.opslag_winst,
       korting: data.korting,
@@ -205,7 +240,10 @@ export default function ModulesCalculatieDetail() {
 
   function handleRegelOpslaan() {
     const hv = parseFloat(regelForm.hoeveelheid) || 0;
-    const t = parseFloat(regelForm.tarief) || 0;
+    const t  = parseFloat(regelForm.tarief) || 0;
+    const mu = parseFloat(regelForm.mu_per_eenheid) || 0;
+    const at = parseFloat(regelForm.arbeids_tarief) || 0;
+    const ob = parseFloat(regelForm.onderaanneming_bedrag) || 0;
     const payload = {
       categorie: regelForm.categorie,
       omschrijving: regelForm.omschrijving,
@@ -213,7 +251,12 @@ export default function ModulesCalculatieDetail() {
       eenheid: regelForm.eenheid,
       hoeveelheid: hv,
       tarief: t,
+      mu_per_eenheid: mu,
+      arbeids_tarief: at,
+      onderaanneming_bedrag: ob,
+      is_staartkosten: regelForm.is_staartkosten,
       opmerkingen: regelForm.opmerkingen || null,
+      regelnummer: regelForm.regelnummer || null,
     };
     if (regelDialoog === "nieuw") {
       createRegelMut.mutate({ id, data: payload });
@@ -226,25 +269,6 @@ export default function ModulesCalculatieDetail() {
   function handleStatusWijzigen(nieuweStatus: string) {
     if (!data) return;
     updateMut.mutate({ id, data: { naam: data.naam, status: nieuweStatus } });
-  }
-
-  function handleNormtijdKiezen(normtijdId: string) {
-    if (!normtijdId) {
-      setRegelForm((f) => ({ ...f, normtijd_id: "" }));
-      return;
-    }
-    const nt = normtijden.find((n) => String(n.id) === normtijdId);
-    if (nt) {
-      const huidigTarief = parseFloat(regelForm.tarief) || 0;
-      setRegelForm((f) => ({
-        ...f,
-        normtijd_id: normtijdId,
-        omschrijving: f.omschrijving || nt.omschrijving,
-        eenheid: nt.eenheid,
-        hoeveelheid: String(f.hoeveelheid || 1),
-        tarief: huidigTarief > 0 ? f.tarief : String(nt.uren_per_eenheid),
-      }));
-    }
   }
 
   if (isLoading) {
@@ -266,25 +290,34 @@ export default function ModulesCalculatieDetail() {
   }
 
   const regels: RegelRow[] = (data.regels ?? []) as RegelRow[];
-  const subtotaal = regels.reduce((s, r) => s + r.totaal, 0);
-  const akBedrag = subtotaal * (data.opslag_ak / 100);
+  const directeRegels = regels.filter((r) => !r.is_staartkosten).sort((a, b) => a.volgorde - b.volgorde);
+  const staartRegels  = regels.filter((r) => r.is_staartkosten).sort((a, b) => a.volgorde - b.volgorde);
+
+  const subtotaalDirect = directeRegels.reduce((s, r) => s + r.totaal, 0);
+  const subtotaalStaart = staartRegels.reduce((s, r) => s + r.totaal, 0);
+  const subtotaal = subtotaalDirect + subtotaalStaart;
+
+  const opslagAbk = data.opslag_abk ?? 10;
+  const akBedrag     = subtotaal * (data.opslag_ak / 100);
+  const abkBedrag    = subtotaal * (opslagAbk / 100);
   const risicoBedrag = subtotaal * (data.opslag_risico / 100);
-  const winstBedrag = subtotaal * (data.opslag_winst / 100);
-  const voorKorting = subtotaal + akBedrag + risicoBedrag + winstBedrag;
+  const winstBedrag  = subtotaal * (data.opslag_winst / 100);
+  const voorKorting  = subtotaal + akBedrag + abkBedrag + risicoBedrag + winstBedrag;
   const kortingBedrag = voorKorting * (data.korting / 100);
-  const totaal = voorKorting - kortingBedrag;
-  const totaalBtw = totaal * 1.21;
+  const totaal       = voorKorting - kortingBedrag;
+  const totaalBtw    = totaal * 1.21;
+  const marge        = totaal > 0 ? Math.round(((totaal - subtotaal) / totaal) * 100 * 10) / 10 : 0;
 
   const regelsByCategorie = Object.entries(CATEGORIE_LABEL).map(([cat, label]) => ({
     categorie: cat,
     label,
-    regels: regels.filter((r) => r.categorie === cat).sort((a, b) => a.volgorde - b.volgorde),
+    regels: directeRegels.filter((r) => r.categorie === cat),
   })).filter((g) => g.regels.length > 0);
 
   const volgendStatussen = STATUS_WORKFLOW[data.status] ?? [];
 
   return (
-    <div className="p-6 space-y-5 max-w-7xl mx-auto">
+    <div className="p-6 space-y-5 max-w-[1400px] mx-auto">
       {/* Koptekst */}
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-3">
@@ -327,17 +360,12 @@ export default function ModulesCalculatieDetail() {
             <Pencil className="h-3.5 w-3.5 mr-1.5" />
             Bewerken
           </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => dupliceerMut.mutate({ id })}
-          >
+          <Button variant="outline" size="sm" onClick={() => dupliceerMut.mutate({ id })}>
             <Copy className="h-3.5 w-3.5 mr-1.5" />
             Dupliceren
           </Button>
           <Button
-            variant="outline"
-            size="sm"
+            variant="outline" size="sm"
             className="text-destructive hover:text-destructive"
             onClick={() => setTeVerwijderen(true)}
           >
@@ -346,13 +374,13 @@ export default function ModulesCalculatieDetail() {
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-5">
+      <div className="grid grid-cols-4 gap-5">
         {/* Hoofdinhoud */}
-        <div className="col-span-2 space-y-5">
+        <div className="col-span-3 space-y-5">
           {/* Projectgegevens */}
           <Card>
             <CardContent className="pt-5">
-              <div className="grid grid-cols-3 gap-4 text-sm">
+              <div className="grid grid-cols-4 gap-4 text-sm">
                 {data.klant_naam && (
                   <div>
                     <p className="text-xs text-muted-foreground mb-0.5">Klant</p>
@@ -373,7 +401,7 @@ export default function ModulesCalculatieDetail() {
                 )}
                 {data.aangemaakt_door_naam && (
                   <div>
-                    <p className="text-xs text-muted-foreground mb-0.5">Aangemaakt door</p>
+                    <p className="text-xs text-muted-foreground mb-0.5">Calculator</p>
                     <p className="font-medium">{data.aangemaakt_door_naam}</p>
                   </div>
                 )}
@@ -384,105 +412,95 @@ export default function ModulesCalculatieDetail() {
             </CardContent>
           </Card>
 
-          {/* Regels */}
+          {/* Calculatieregels */}
           <Card>
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-base">Calculatieregels</CardTitle>
-                <Button size="sm" onClick={openNieuweRegel}>
-                  <Plus className="h-3.5 w-3.5 mr-1.5" />
-                  Regel toevoegen
-                </Button>
+                <div className="flex items-center gap-3">
+                  {/* Weergave toggle */}
+                  <div className="flex rounded-md border overflow-hidden text-xs">
+                    {(["intern", "directie", "klant"] as Weergave[]).map((v) => (
+                      <button
+                        key={v}
+                        onClick={() => setWeergave(v)}
+                        className={`px-3 py-1.5 flex items-center gap-1.5 transition-colors ${
+                          weergave === v
+                            ? "bg-slate-900 text-white"
+                            : "bg-white text-slate-600 hover:bg-slate-50"
+                        }`}
+                      >
+                        {v === "intern" && <LayoutList className="h-3 w-3" />}
+                        {v === "directie" && <Eye className="h-3 w-3" />}
+                        {v === "klant" && <Users className="h-3 w-3" />}
+                        {v === "intern" ? "Intern" : v === "directie" ? "Directie" : "Klant"}
+                      </button>
+                    ))}
+                  </div>
+                  <Button size="sm" onClick={() => openNieuweRegel(false)}>
+                    <Plus className="h-3.5 w-3.5 mr-1.5" />
+                    Regel toevoegen
+                  </Button>
+                </div>
               </div>
             </CardHeader>
             <CardContent className="p-0">
               {regels.length === 0 ? (
                 <div className="py-12 text-center text-muted-foreground">
                   <p className="text-sm">Nog geen regels toegevoegd.</p>
-                  <Button size="sm" variant="outline" className="mt-3" onClick={openNieuweRegel}>
+                  <Button size="sm" variant="outline" className="mt-3" onClick={() => openNieuweRegel(false)}>
                     <Plus className="h-3.5 w-3.5 mr-1.5" />
                     Eerste regel toevoegen
                   </Button>
                 </div>
+              ) : weergave === "intern" ? (
+                <InternView
+                  regelsByCategorie={regelsByCategorie}
+                  staartRegels={staartRegels}
+                  onBewerken={openBewerkenRegel}
+                  onVerwijderen={(r) => deleteRegelMut.mutate({ id, regelId: r.id })}
+                  onNieuweStaart={() => openNieuweRegel(true)}
+                />
+              ) : weergave === "directie" ? (
+                <DirectieView
+                  regelsByCategorie={regelsByCategorie}
+                  staartRegels={staartRegels}
+                  subtotaal={subtotaal}
+                  subtotaalStaart={subtotaalStaart}
+                  akBedrag={akBedrag}
+                  abkBedrag={abkBedrag}
+                  risicoBedrag={risicoBedrag}
+                  winstBedrag={winstBedrag}
+                  kortingBedrag={kortingBedrag}
+                  totaal={totaal}
+                  marge={marge}
+                  opslagAk={data.opslag_ak}
+                  opslagAbk={opslagAbk}
+                  opslagRisico={data.opslag_risico}
+                  opslagWinst={data.opslag_winst}
+                  korting={data.korting}
+                />
               ) : (
-                <div>
-                  {regelsByCategorie.map(({ categorie, label, regels: catRegels }) => (
-                    <div key={categorie}>
-                      <div className={`px-6 py-2 text-xs font-semibold uppercase tracking-wide ${CATEGORIE_KLEUR[categorie]}`}>
-                        {label}
-                      </div>
-                      <table className="w-full text-sm">
-                        <colgroup>
-                          <col className="w-[40%]" />
-                          <col className="w-[10%]" />
-                          <col className="w-[12%]" />
-                          <col className="w-[12%]" />
-                          <col className="w-[14%]" />
-                          <col className="w-[12%]" />
-                        </colgroup>
-                        <thead>
-                          <tr className="border-b text-xs text-muted-foreground">
-                            <th className="px-6 py-2 text-left font-normal">Omschrijving</th>
-                            <th className="px-3 py-2 text-center font-normal">Eenheid</th>
-                            <th className="px-3 py-2 text-right font-normal">Hoeveelheid</th>
-                            <th className="px-3 py-2 text-right font-normal">Tarief</th>
-                            <th className="px-3 py-2 text-right font-normal">Totaal</th>
-                            <th className="px-3 py-2" />
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y">
-                          {catRegels.map((r) => (
-                            <tr key={r.id} className="hover:bg-slate-50 transition-colors group">
-                              <td className="px-6 py-2.5">
-                                <p className="font-medium text-slate-800">{r.omschrijving}</p>
-                                {r.normtijd_code && (
-                                  <p className="text-xs text-muted-foreground">{r.normtijd_code}</p>
-                                )}
-                                {r.opmerkingen && (
-                                  <p className="text-xs text-muted-foreground italic">{r.opmerkingen}</p>
-                                )}
-                              </td>
-                              <td className="px-3 py-2.5 text-center text-muted-foreground">{r.eenheid}</td>
-                              <td className="px-3 py-2.5 text-right tabular-nums">{r.hoeveelheid}</td>
-                              <td className="px-3 py-2.5 text-right tabular-nums">{formatBedrag(r.tarief)}</td>
-                              <td className="px-3 py-2.5 text-right tabular-nums font-medium">{formatBedrag(r.totaal)}</td>
-                              <td className="px-3 py-2.5 text-right">
-                                <div className="flex gap-1 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
-                                  <Button
-                                    variant="ghost" size="icon" className="h-6 w-6"
-                                    onClick={() => openBewerkenRegel(r)}
-                                  >
-                                    <Pencil className="h-3.5 w-3.5" />
-                                  </Button>
-                                  <Button
-                                    variant="ghost" size="icon" className="h-6 w-6 text-destructive"
-                                    onClick={() => deleteRegelMut.mutate({ id, regelId: r.id })}
-                                  >
-                                    <Trash2 className="h-3.5 w-3.5" />
-                                  </Button>
-                                </div>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  ))}
-                </div>
+                <KlantView
+                  regels={regels}
+                  totaal={totaal}
+                  totaalBtw={totaalBtw}
+                />
               )}
             </CardContent>
           </Card>
         </div>
 
-        {/* Rechterpaneel: opslagen + totalen */}
+        {/* Rechterpaneel */}
         <div className="space-y-4">
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-base">Opslagen</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3 text-sm">
+            <CardContent className="space-y-2.5 text-sm">
               {[
-                { label: "Algemene kosten", pct: data.opslag_ak, bedrag: akBedrag },
+                { label: "AK", pct: data.opslag_ak, bedrag: akBedrag },
+                { label: "ABK", pct: opslagAbk, bedrag: abkBedrag },
                 { label: "Risico", pct: data.opslag_risico, bedrag: risicoBedrag },
                 { label: "Winst", pct: data.opslag_winst, bedrag: winstBedrag },
               ].map(({ label, pct, bedrag }) => (
@@ -503,12 +521,18 @@ export default function ModulesCalculatieDetail() {
           <Card className="border-slate-300">
             <CardContent className="pt-5 space-y-2 text-sm">
               <div className="flex justify-between text-muted-foreground">
-                <span>Subtotaal</span>
-                <span className="tabular-nums">{formatBedrag(subtotaal)}</span>
+                <span>Directe kosten</span>
+                <span className="tabular-nums">{formatBedrag(subtotaalDirect)}</span>
               </div>
+              {subtotaalStaart > 0 && (
+                <div className="flex justify-between text-muted-foreground">
+                  <span>Staartkosten</span>
+                  <span className="tabular-nums">{formatBedrag(subtotaalStaart)}</span>
+                </div>
+              )}
               <div className="flex justify-between text-muted-foreground">
                 <span>Opslagen</span>
-                <span className="tabular-nums">{formatBedrag(akBedrag + risicoBedrag + winstBedrag - kortingBedrag)}</span>
+                <span className="tabular-nums">{formatBedrag(akBedrag + abkBedrag + risicoBedrag + winstBedrag - kortingBedrag)}</span>
               </div>
               <Separator />
               <div className="flex justify-between font-semibold text-base">
@@ -522,6 +546,10 @@ export default function ModulesCalculatieDetail() {
               <div className="flex justify-between font-semibold text-primary">
                 <span>Totaal incl. BTW</span>
                 <span className="tabular-nums">{formatBedragKort(totaalBtw)}</span>
+              </div>
+              <div className="flex justify-between text-xs text-muted-foreground pt-1 border-t">
+                <span>Marge</span>
+                <span>{marge}%</span>
               </div>
             </CardContent>
           </Card>
@@ -541,10 +569,12 @@ export default function ModulesCalculatieDetail() {
 
       {/* Regelsdialoog */}
       <Dialog open={regelDialoog !== null} onOpenChange={() => setRegelDialoog(null)}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>
-              {regelDialoog === "nieuw" ? "Regel toevoegen" : "Regel bewerken"}
+              {regelDialoog === "nieuw"
+                ? regelForm.is_staartkosten ? "Staartkostenregel toevoegen" : "Calculatieregel toevoegen"
+                : "Regel bewerken"}
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
@@ -565,7 +595,16 @@ export default function ModulesCalculatieDetail() {
               </div>
               <div className="space-y-1.5">
                 <Label>Normtijd (optioneel)</Label>
-                <Select value={regelForm.normtijd_id} onValueChange={handleNormtijdKiezen}>
+                <Select value={regelForm.normtijd_id} onValueChange={(v) => {
+                  if (!v) { setRegelForm((f) => ({ ...f, normtijd_id: "" })); return; }
+                  const nt = normtijden.find((n) => String(n.id) === v);
+                  if (nt) setRegelForm((f) => ({
+                    ...f, normtijd_id: v,
+                    omschrijving: f.omschrijving || nt.omschrijving,
+                    eenheid: nt.eenheid,
+                    mu_per_eenheid: String(nt.uren_per_eenheid),
+                  }));
+                }}>
                   <SelectTrigger><SelectValue placeholder="Kies normtijd..." /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="">Geen normtijd</SelectItem>
@@ -579,13 +618,23 @@ export default function ModulesCalculatieDetail() {
               </div>
             </div>
 
-            <div className="space-y-1.5">
-              <Label>Omschrijving *</Label>
-              <Input
-                value={regelForm.omschrijving}
-                onChange={(e) => setRegelForm((f) => ({ ...f, omschrijving: e.target.value }))}
-                placeholder="Beschrijving van de werkzaamheid of het materiaal"
-              />
+            <div className="grid grid-cols-3 gap-3">
+              <div className="space-y-1.5 col-span-2">
+                <Label>Omschrijving *</Label>
+                <Input
+                  value={regelForm.omschrijving}
+                  onChange={(e) => setRegelForm((f) => ({ ...f, omschrijving: e.target.value }))}
+                  placeholder="Beschrijving van de werkzaamheid of het materiaal"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Regelnummer</Label>
+                <Input
+                  value={regelForm.regelnummer}
+                  onChange={(e) => setRegelForm((f) => ({ ...f, regelnummer: e.target.value }))}
+                  placeholder="bijv. 1.17"
+                />
+              </div>
             </div>
 
             <div className="grid grid-cols-3 gap-3">
@@ -597,7 +646,7 @@ export default function ModulesCalculatieDetail() {
                 >
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {["st", "uur", "m", "m2", "m3", "dag", "lump_sum"].map((e) => (
+                    {EENHEDEN.map((e) => (
                       <SelectItem key={e} value={e}>{e}</SelectItem>
                     ))}
                   </SelectContent>
@@ -606,25 +655,44 @@ export default function ModulesCalculatieDetail() {
               <div className="space-y-1.5">
                 <Label>Hoeveelheid</Label>
                 <Input
-                  type="number"
-                  step="0.01"
-                  min="0"
+                  type="number" step="0.01" min="0"
                   value={regelForm.hoeveelheid}
                   onChange={(e) => setRegelForm((f) => ({ ...f, hoeveelheid: e.target.value }))}
                 />
               </div>
               <div className="space-y-1.5">
-                <Label>Tarief (€)</Label>
+                <Label>Materiaalprijs (€/eenheid)</Label>
+                <Input
+                  type="number" step="0.01" min="0"
+                  value={regelForm.tarief}
+                  onChange={(e) => setRegelForm((f) => ({ ...f, tarief: e.target.value }))}
+                  placeholder="0,00"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-3">
+              <div className="space-y-1.5">
+                <Label>MU per eenheid (uur)</Label>
+                <Input
+                  type="number" step="0.01" min="0"
+                  value={regelForm.mu_per_eenheid}
+                  onChange={(e) => setRegelForm((f) => ({ ...f, mu_per_eenheid: e.target.value }))}
+                  placeholder="0,00"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Arbeidstarief (€/uur)</Label>
                 <Select
                   value=""
                   onValueChange={(v) => {
                     const tar = tarieven.find((t) => String(t.id) === v);
-                    if (tar) setRegelForm((f) => ({ ...f, tarief: String(tar.tarief) }));
+                    if (tar) setRegelForm((f) => ({ ...f, arbeids_tarief: String(tar.tarief) }));
                   }}
                 >
                   <SelectTrigger className="mb-1"><SelectValue placeholder="Kies tarief..." /></SelectTrigger>
                   <SelectContent>
-                    {tarieven.map((t) => (
+                    {tarieven.filter((t) => t.categorie === "arbeid").map((t) => (
                       <SelectItem key={t.id} value={String(t.id)}>
                         {t.naam} — {formatBedrag(t.tarief)}/{t.eenheid}
                       </SelectItem>
@@ -632,24 +700,62 @@ export default function ModulesCalculatieDetail() {
                   </SelectContent>
                 </Select>
                 <Input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={regelForm.tarief}
-                  onChange={(e) => setRegelForm((f) => ({ ...f, tarief: e.target.value }))}
+                  type="number" step="0.01" min="0"
+                  value={regelForm.arbeids_tarief}
+                  onChange={(e) => setRegelForm((f) => ({ ...f, arbeids_tarief: e.target.value }))}
                   placeholder="Handmatig invullen"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Onderaanneming (€)</Label>
+                <Input
+                  type="number" step="0.01" min="0"
+                  value={regelForm.onderaanneming_bedrag}
+                  onChange={(e) => setRegelForm((f) => ({ ...f, onderaanneming_bedrag: e.target.value }))}
+                  placeholder="0,00"
                 />
               </div>
             </div>
 
-            {regelForm.hoeveelheid && regelForm.tarief && (
-              <div className="rounded-md bg-slate-50 border px-4 py-2.5 text-sm flex justify-between">
-                <span className="text-muted-foreground">Totaal</span>
-                <span className="font-semibold">
-                  {formatBedrag((parseFloat(regelForm.hoeveelheid) || 0) * (parseFloat(regelForm.tarief) || 0))}
-                </span>
-              </div>
-            )}
+            {/* Live totaalberekening */}
+            {(() => {
+              const hv = parseFloat(regelForm.hoeveelheid) || 0;
+              const t  = parseFloat(regelForm.tarief) || 0;
+              const mu = parseFloat(regelForm.mu_per_eenheid) || 0;
+              const at = parseFloat(regelForm.arbeids_tarief) || 0;
+              const ob = parseFloat(regelForm.onderaanneming_bedrag) || 0;
+              const matTotaal = hv * t;
+              const muTot     = hv * mu;
+              const arbeid    = muTot * at;
+              const totaal    = matTotaal + arbeid + ob;
+              if (totaal === 0) return null;
+              return (
+                <div className="rounded-md bg-slate-50 border px-4 py-3 text-sm grid grid-cols-4 gap-2">
+                  {matTotaal > 0 && (
+                    <div>
+                      <p className="text-xs text-muted-foreground">Materiaal</p>
+                      <p className="font-medium">{formatBedrag(matTotaal)}</p>
+                    </div>
+                  )}
+                  {arbeid > 0 && (
+                    <div>
+                      <p className="text-xs text-muted-foreground">Arbeid ({fmt2(muTot)} MU)</p>
+                      <p className="font-medium">{formatBedrag(arbeid)}</p>
+                    </div>
+                  )}
+                  {ob > 0 && (
+                    <div>
+                      <p className="text-xs text-muted-foreground">Onderaanneming</p>
+                      <p className="font-medium">{formatBedrag(ob)}</p>
+                    </div>
+                  )}
+                  <div>
+                    <p className="text-xs text-muted-foreground">Regeltotaal</p>
+                    <p className="font-semibold text-base">{formatBedrag(totaal)}</p>
+                  </div>
+                </div>
+              );
+            })()}
 
             <div className="space-y-1.5">
               <Label>Opmerkingen</Label>
@@ -674,7 +780,7 @@ export default function ModulesCalculatieDetail() {
 
       {/* Bewerken header dialoog */}
       <Dialog open={bewerkenDialoog} onOpenChange={setBewerkenDialoog}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-xl">
           <DialogHeader>
             <DialogTitle>Calculatie bewerken</DialogTitle>
           </DialogHeader>
@@ -716,15 +822,17 @@ export default function ModulesCalculatieDetail() {
               <Label>Opmerkingen (intern)</Label>
               <Textarea rows={2} value={headerForm.opmerkingen} onChange={(e) => setHeaderForm((f) => ({ ...f, opmerkingen: e.target.value }))} />
             </div>
-            <div className="grid grid-cols-4 gap-2">
+            <p className="text-xs font-medium text-muted-foreground pt-1">Opslagen (%)</p>
+            <div className="grid grid-cols-5 gap-2">
               {[
-                { field: "opslag_ak", label: "AK (%)" },
-                { field: "opslag_risico", label: "Risico (%)" },
-                { field: "opslag_winst", label: "Winst (%)" },
-                { field: "korting", label: "Korting (%)" },
+                { field: "opslag_ak",     label: "AK" },
+                { field: "opslag_abk",    label: "ABK" },
+                { field: "opslag_risico", label: "Risico" },
+                { field: "opslag_winst",  label: "Winst" },
+                { field: "korting",       label: "Korting" },
               ].map(({ field, label }) => (
                 <div key={field} className="space-y-1.5">
-                  <Label className="text-xs">{label}</Label>
+                  <Label className="text-xs">{label} (%)</Label>
                   <Input
                     type="number" step="0.5" min="0" max="100"
                     value={headerForm[field as keyof typeof headerForm]}
@@ -769,6 +877,295 @@ export default function ModulesCalculatieDetail() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+    </div>
+  );
+}
+
+// ── Intern view ─────────────────────────────────────────────────────────────
+
+function InternView({
+  regelsByCategorie,
+  staartRegels,
+  onBewerken,
+  onVerwijderen,
+  onNieuweStaart,
+}: {
+  regelsByCategorie: Array<{ categorie: string; label: string; regels: RegelRow[] }>;
+  staartRegels: RegelRow[];
+  onBewerken: (r: RegelRow) => void;
+  onVerwijderen: (r: RegelRow) => void;
+  onNieuweStaart: () => void;
+}) {
+  return (
+    <div>
+      {regelsByCategorie.map(({ categorie, label, regels: catRegels }) => (
+        <div key={categorie}>
+          <div className={`px-4 py-1.5 text-xs font-semibold uppercase tracking-wide ${CATEGORIE_KLEUR[categorie]}`}>
+            {label}
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs min-w-[900px]">
+              <thead>
+                <tr className="border-b text-muted-foreground">
+                  <th className="px-4 py-1.5 text-left font-normal w-[22%]">Omschrijving</th>
+                  <th className="px-2 py-1.5 text-center font-normal w-[5%]">EH</th>
+                  <th className="px-2 py-1.5 text-right font-normal w-[6%]">Aantal</th>
+                  <th className="px-2 py-1.5 text-right font-normal w-[8%]">Mat.prijs</th>
+                  <th className="px-2 py-1.5 text-right font-normal w-[8%]">Materiaal</th>
+                  <th className="px-2 py-1.5 text-right font-normal w-[7%]">MU/EH</th>
+                  <th className="px-2 py-1.5 text-right font-normal w-[7%]">MU totaal</th>
+                  <th className="px-2 py-1.5 text-right font-normal w-[8%]">Arbeid</th>
+                  <th className="px-2 py-1.5 text-right font-normal w-[8%]">Ondernm.</th>
+                  <th className="px-2 py-1.5 text-right font-normal w-[8%]">Totaal</th>
+                  <th className="px-2 py-1.5 w-[8%]" />
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                {catRegels.map((r) => (
+                  <tr key={r.id} className="hover:bg-slate-50 group">
+                    <td className="px-4 py-2">
+                      <p className="font-medium text-slate-800">{r.omschrijving}</p>
+                      {r.regelnummer && <p className="text-muted-foreground">{r.regelnummer}</p>}
+                      {r.normtijd_code && <p className="text-muted-foreground">{r.normtijd_code}</p>}
+                    </td>
+                    <td className="px-2 py-2 text-center text-muted-foreground">{r.eenheid}</td>
+                    <td className="px-2 py-2 text-right tabular-nums">{r.hoeveelheid}</td>
+                    <td className="px-2 py-2 text-right tabular-nums">{r.tarief > 0 ? formatBedrag(r.tarief) : "—"}</td>
+                    <td className="px-2 py-2 text-right tabular-nums">{r.materiaal_totaal > 0 ? formatBedrag(r.materiaal_totaal) : "—"}</td>
+                    <td className="px-2 py-2 text-right tabular-nums">{r.mu_per_eenheid > 0 ? fmt2(r.mu_per_eenheid) : "—"}</td>
+                    <td className="px-2 py-2 text-right tabular-nums">{r.mu_totaal > 0 ? fmt2(r.mu_totaal) : "—"}</td>
+                    <td className="px-2 py-2 text-right tabular-nums">{r.arbeidsloon > 0 ? formatBedrag(r.arbeidsloon) : "—"}</td>
+                    <td className="px-2 py-2 text-right tabular-nums">{r.onderaanneming_bedrag > 0 ? formatBedrag(r.onderaanneming_bedrag) : "—"}</td>
+                    <td className="px-2 py-2 text-right tabular-nums font-medium">{formatBedrag(r.totaal)}</td>
+                    <td className="px-2 py-2 text-right">
+                      <div className="flex gap-1 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => onBewerken(r)}>
+                          <Pencil className="h-3 w-3" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => onVerwijderen(r)}>
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ))}
+
+      {/* Staartkosten */}
+      <div className="border-t mt-1">
+        <div className="flex items-center justify-between px-4 py-1.5 bg-slate-100">
+          <span className="text-xs font-semibold uppercase tracking-wide text-slate-600">Staartkosten</span>
+          <Button variant="ghost" size="sm" className="h-6 text-xs" onClick={onNieuweStaart}>
+            <Plus className="h-3 w-3 mr-1" />
+            Staartkost toevoegen
+          </Button>
+        </div>
+        {staartRegels.length === 0 ? (
+          <p className="text-xs text-muted-foreground px-4 py-3">
+            Geen staartkosten — projectleiding, transport, steiger, schaftwagen, enz.
+          </p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs min-w-[900px]">
+              <tbody className="divide-y">
+                {staartRegels.map((r) => (
+                  <tr key={r.id} className="hover:bg-slate-50 group">
+                    <td className="px-4 py-2 w-[22%]">
+                      <p className="font-medium text-slate-800">{r.omschrijving}</p>
+                      {r.regelnummer && <p className="text-muted-foreground">{r.regelnummer}</p>}
+                    </td>
+                    <td className="px-2 py-2 text-center text-muted-foreground w-[5%]">{r.eenheid}</td>
+                    <td className="px-2 py-2 text-right tabular-nums w-[6%]">{r.hoeveelheid}</td>
+                    <td className="px-2 py-2 text-right tabular-nums w-[8%]">{r.tarief > 0 ? formatBedrag(r.tarief) : "—"}</td>
+                    <td className="px-2 py-2 text-right tabular-nums w-[8%]">{r.materiaal_totaal > 0 ? formatBedrag(r.materiaal_totaal) : "—"}</td>
+                    <td className="px-2 py-2 text-right tabular-nums w-[7%]">{r.mu_per_eenheid > 0 ? fmt2(r.mu_per_eenheid) : "—"}</td>
+                    <td className="px-2 py-2 text-right tabular-nums w-[7%]">{r.mu_totaal > 0 ? fmt2(r.mu_totaal) : "—"}</td>
+                    <td className="px-2 py-2 text-right tabular-nums w-[8%]">{r.arbeidsloon > 0 ? formatBedrag(r.arbeidsloon) : "—"}</td>
+                    <td className="px-2 py-2 text-right tabular-nums w-[8%]">{r.onderaanneming_bedrag > 0 ? formatBedrag(r.onderaanneming_bedrag) : "—"}</td>
+                    <td className="px-2 py-2 text-right tabular-nums font-medium w-[8%]">{formatBedrag(r.totaal)}</td>
+                    <td className="px-2 py-2 text-right w-[8%]">
+                      <div className="flex gap-1 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => onBewerken(r)}>
+                          <Pencil className="h-3 w-3" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => onVerwijderen(r)}>
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── Directie view ────────────────────────────────────────────────────────────
+
+function DirectieView({
+  regelsByCategorie,
+  staartRegels,
+  subtotaal,
+  subtotaalStaart,
+  akBedrag, abkBedrag, risicoBedrag, winstBedrag, kortingBedrag,
+  totaal, marge,
+  opslagAk, opslagAbk, opslagRisico, opslagWinst, korting,
+}: {
+  regelsByCategorie: Array<{ categorie: string; label: string; regels: RegelRow[] }>;
+  staartRegels: RegelRow[];
+  subtotaal: number; subtotaalStaart: number;
+  akBedrag: number; abkBedrag: number; risicoBedrag: number; winstBedrag: number; kortingBedrag: number;
+  totaal: number; marge: number;
+  opslagAk: number; opslagAbk: number; opslagRisico: number; opslagWinst: number; korting: number;
+}) {
+  return (
+    <div className="p-5 space-y-4">
+      <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
+        Kostprijsoverzicht — vertrouwelijk
+      </div>
+      <table className="w-full text-sm">
+        <tbody className="divide-y">
+          {regelsByCategorie.map(({ categorie, label, regels }) => {
+            const cat_totaal = regels.reduce((s, r) => s + r.totaal, 0);
+            const mat = regels.reduce((s, r) => s + (r.materiaal_totaal ?? 0), 0);
+            const arb = regels.reduce((s, r) => s + (r.arbeidsloon ?? 0), 0);
+            const ond = regels.reduce((s, r) => s + (r.onderaanneming_bedrag ?? 0), 0);
+            const mu  = regels.reduce((s, r) => s + (r.mu_totaal ?? 0), 0);
+            return (
+              <tr key={categorie} className="hover:bg-slate-50">
+                <td className="py-2 text-slate-700 font-medium w-1/3">{label}</td>
+                <td className="py-2 text-right tabular-nums text-muted-foreground text-xs">
+                  {mu > 0 && `${fmt2(mu)} MU`}
+                </td>
+                <td className="py-2 text-right tabular-nums text-muted-foreground text-xs">
+                  {mat > 0 && `mat ${formatBedrag(mat)}`}
+                </td>
+                <td className="py-2 text-right tabular-nums text-muted-foreground text-xs">
+                  {arb > 0 && `arb ${formatBedrag(arb)}`}
+                </td>
+                <td className="py-2 text-right tabular-nums text-muted-foreground text-xs">
+                  {ond > 0 && `ond ${formatBedrag(ond)}`}
+                </td>
+                <td className="py-2 pl-4 text-right tabular-nums font-medium">{formatBedrag(cat_totaal)}</td>
+              </tr>
+            );
+          })}
+          {subtotaalStaart > 0 && (
+            <tr className="hover:bg-slate-50">
+              <td className="py-2 text-slate-700 font-medium">Staartkosten</td>
+              <td colSpan={4} />
+              <td className="py-2 pl-4 text-right tabular-nums font-medium">{formatBedrag(subtotaalStaart)}</td>
+            </tr>
+          )}
+          <tr className="font-semibold">
+            <td className="py-2 text-slate-900">Subtotaal directe kosten</td>
+            <td colSpan={4} />
+            <td className="py-2 pl-4 text-right tabular-nums">{formatBedrag(subtotaal)}</td>
+          </tr>
+          {[
+            { label: `AK (${opslagAk}%)`, bedrag: akBedrag },
+            { label: `ABK (${opslagAbk}%)`, bedrag: abkBedrag },
+            { label: `Risico (${opslagRisico}%)`, bedrag: risicoBedrag },
+            { label: `Winst (${opslagWinst}%)`, bedrag: winstBedrag },
+          ].map(({ label, bedrag }) => (
+            <tr key={label} className="text-muted-foreground">
+              <td className="py-1.5 pl-3">+ {label}</td>
+              <td colSpan={4} />
+              <td className="py-1.5 pl-4 text-right tabular-nums">{formatBedrag(bedrag)}</td>
+            </tr>
+          ))}
+          {korting > 0 && (
+            <tr className="text-green-700">
+              <td className="py-1.5 pl-3">- Korting ({korting}%)</td>
+              <td colSpan={4} />
+              <td className="py-1.5 pl-4 text-right tabular-nums">- {formatBedrag(kortingBedrag)}</td>
+            </tr>
+          )}
+          <tr className="font-bold text-base border-t-2">
+            <td className="py-3">Verkoopprijs excl. BTW</td>
+            <td colSpan={4} />
+            <td className="py-3 pl-4 text-right tabular-nums text-primary">{formatBedrag(totaal)}</td>
+          </tr>
+        </tbody>
+      </table>
+      <div className="flex justify-end">
+        <div className="rounded-md bg-slate-50 border px-5 py-3 text-sm">
+          <span className="text-muted-foreground">Marge: </span>
+          <span className="font-semibold">{marge}%</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Klant view ────────────────────────────────────────────────────────────────
+
+function KlantView({
+  regels,
+  totaal,
+  totaalBtw,
+}: {
+  regels: RegelRow[];
+  totaal: number;
+  totaalBtw: number;
+}) {
+  const zichtbaar = regels.filter((r) => !r.is_staartkosten);
+  return (
+    <div>
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="border-b text-xs text-muted-foreground">
+            <th className="px-6 py-2 text-left font-normal">Omschrijving</th>
+            <th className="px-3 py-2 text-center font-normal">Eenheid</th>
+            <th className="px-3 py-2 text-right font-normal">Aantal</th>
+            <th className="px-3 py-2 text-right font-normal">Bedrag</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y">
+          {zichtbaar.map((r) => (
+            <tr key={r.id} className="hover:bg-slate-50">
+              <td className="px-6 py-2.5">
+                <p className="font-medium text-slate-800">{r.omschrijving}</p>
+                {r.regelnummer && <p className="text-xs text-muted-foreground">{r.regelnummer}</p>}
+              </td>
+              <td className="px-3 py-2.5 text-center text-muted-foreground">{r.eenheid}</td>
+              <td className="px-3 py-2.5 text-right tabular-nums">{r.hoeveelheid}</td>
+              <td className="px-3 py-2.5 text-right tabular-nums font-medium">{formatBedrag(r.totaal)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <div className="border-t px-6 py-4 space-y-1.5 text-sm">
+        <div className="flex justify-between text-muted-foreground">
+          <span>Subtotaal werkzaamheden</span>
+          <span className="tabular-nums">{formatBedrag(zichtbaar.reduce((s, r) => s + r.totaal, 0))}</span>
+        </div>
+        <div className="flex justify-between text-muted-foreground">
+          <span>Opslagen en beheerkosten</span>
+          <span className="tabular-nums">{formatBedrag(totaal - zichtbaar.reduce((s, r) => s + r.totaal, 0))}</span>
+        </div>
+        <Separator className="my-1" />
+        <div className="flex justify-between font-semibold">
+          <span>Totaal excl. BTW</span>
+          <span className="tabular-nums">{formatBedrag(totaal)}</span>
+        </div>
+        <div className="flex justify-between text-muted-foreground">
+          <span>BTW (21%)</span>
+          <span className="tabular-nums">{formatBedrag(totaalBtw - totaal)}</span>
+        </div>
+        <div className="flex justify-between font-bold text-base">
+          <span>Totaal incl. BTW</span>
+          <span className="tabular-nums">{formatBedrag(totaalBtw)}</span>
+        </div>
+      </div>
     </div>
   );
 }

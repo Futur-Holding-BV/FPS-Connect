@@ -16748,7 +16748,7 @@ components:
 
     ModCalcHeader:
       type: object
-      required: [id, naam, status, opslag_ak, opslag_risico, opslag_winst, korting, aangemaakt_op]
+      required: [id, naam, status, opslag_ak, opslag_abk, opslag_risico, opslag_winst, korting, aangemaakt_op]
       properties:
         id:
           type: integer
@@ -16778,6 +16778,8 @@ components:
           type: string
           nullable: true
         opslag_ak:
+          type: number
+        opslag_abk:
           type: number
         opslag_risico:
           type: number
@@ -16844,6 +16846,8 @@ components:
           nullable: true
         opslag_ak:
           type: number
+        opslag_abk:
+          type: number
         opslag_risico:
           type: number
         opslag_winst:
@@ -16882,6 +16886,23 @@ components:
         opmerkingen:
           type: string
           nullable: true
+        regelnummer:
+          type: string
+          nullable: true
+        mu_per_eenheid:
+          type: number
+        arbeids_tarief:
+          type: number
+        onderaanneming_bedrag:
+          type: number
+        is_staartkosten:
+          type: boolean
+        materiaal_totaal:
+          type: number
+        mu_totaal:
+          type: number
+        arbeidsloon:
+          type: number
 
     ModCalcRegelInput:
       type: object
@@ -16905,6 +16926,17 @@ components:
         opmerkingen:
           type: string
           nullable: true
+        regelnummer:
+          type: string
+          nullable: true
+        mu_per_eenheid:
+          type: number
+        arbeids_tarief:
+          type: number
+        onderaanneming_bedrag:
+          type: number
+        is_staartkosten:
+          type: boolean
 
     UrenRegistratie:
       type: object
