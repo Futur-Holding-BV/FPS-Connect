@@ -14,7 +14,7 @@
 //    eenheid (st/m2/deur/m1/pst), aantal, prijs per eenheid, excl/incl btw.
 //  - Risicoanalyse/uitgangspunten/voorbehouden: per snag meer-/minderwerk,
 //    adviezen en condities.
-import { pgTable, serial, text, integer, real, boolean, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, integer, real, boolean, timestamp, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { gebouwenTable } from "./gebouwen";
@@ -109,20 +109,68 @@ export const offerteUitgangspuntenTable = pgTable("offerte_uitgangspunten", {
   bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
 });
 
+// Offerte-secties — tekstblokken voor de Proposal Studio.
+// sectie_type: aanbiedingsbrief | projectomschrijving | aanpak | team | planning | voorwaarden | slotwoord | vrij
+export const offerteSectiesTable = pgTable("offerte_secties", {
+  id: serial("id").primaryKey(),
+  offerteId: integer("offerte_id").notNull().references(() => offertesTable.id, { onDelete: "cascade" }),
+  sectieType: text("sectie_type").notNull().default("vrij"),
+  volgorde: integer("volgorde").notNull().default(0),
+  actief: boolean("actief").notNull().default(true),
+  titel: text("titel").notNull().default(""),
+  inhoud: text("inhoud"),
+  aiGegenereerd: boolean("ai_gegenereerd").notNull().default(false),
+  aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
+  bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
+});
+
+// Versie-snapshots van een offerte (handmatig aangemaakt door gebruiker).
+export const offerteVersiesTable = pgTable("offerte_versies", {
+  id: serial("id").primaryKey(),
+  offerteId: integer("offerte_id").notNull().references(() => offertesTable.id, { onDelete: "cascade" }),
+  versienummer: integer("versienummer").notNull().default(1),
+  snapshot: jsonb("snapshot"),
+  samenvatting: text("samenvatting"),
+  aangemaaktDoorId: integer("aangemaakt_door_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
+  aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
+});
+
+// Bijlagen/verwijzingen bij een offerte (links, certificaten, foto's, tekeningen).
+export const offerteBijlagenTable = pgTable("offerte_bijlagen", {
+  id: serial("id").primaryKey(),
+  offerteId: integer("offerte_id").notNull().references(() => offertesTable.id, { onDelete: "cascade" }),
+  bijlageType: text("bijlage_type").notNull().default("overig"),
+  naam: text("naam").notNull().default(""),
+  beschrijving: text("beschrijving"),
+  url: text("url"),
+  volgorde: integer("volgorde").notNull().default(0),
+  aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
+  bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
+});
+
 export const insertOfferteSjabloonSchema = createInsertSchema(offerteSjablonenTable).omit({ id: true, aangemaaktOp: true, bijgewerktOp: true });
 export const insertOfferteHoofdstukSchema = createInsertSchema(offerteHoofdstukkenTable).omit({ id: true, aangemaaktOp: true, bijgewerktOp: true });
 export const insertOfferteSchema = createInsertSchema(offertesTable).omit({ id: true, aangemaaktOp: true, bijgewerktOp: true });
 export const insertOfferteRegelSchema = createInsertSchema(offerteRegelsTable).omit({ id: true, aangemaaktOp: true, bijgewerktOp: true });
 export const insertOfferteUitgangspuntSchema = createInsertSchema(offerteUitgangspuntenTable).omit({ id: true, aangemaaktOp: true, bijgewerktOp: true });
+export const insertOfferteSectieSchema = createInsertSchema(offerteSectiesTable).omit({ id: true, aangemaaktOp: true, bijgewerktOp: true });
+export const insertOfferteVersieSchema = createInsertSchema(offerteVersiesTable).omit({ id: true, aangemaaktOp: true });
+export const insertOfferteBijlageSchema = createInsertSchema(offerteBijlagenTable).omit({ id: true, aangemaaktOp: true, bijgewerktOp: true });
 
 export type InsertOfferteSjabloon = z.infer<typeof insertOfferteSjabloonSchema>;
 export type InsertOfferteHoofdstuk = z.infer<typeof insertOfferteHoofdstukSchema>;
 export type InsertOfferte = z.infer<typeof insertOfferteSchema>;
 export type InsertOfferteRegel = z.infer<typeof insertOfferteRegelSchema>;
 export type InsertOfferteUitgangspunt = z.infer<typeof insertOfferteUitgangspuntSchema>;
+export type InsertOfferteSectie = z.infer<typeof insertOfferteSectieSchema>;
+export type InsertOfferteVersie = z.infer<typeof insertOfferteVersieSchema>;
+export type InsertOfferteBijlage = z.infer<typeof insertOfferteBijlageSchema>;
 
 export type OfferteSjabloon = typeof offerteSjablonenTable.$inferSelect;
 export type OfferteHoofdstuk = typeof offerteHoofdstukkenTable.$inferSelect;
 export type Offerte = typeof offertesTable.$inferSelect;
 export type OfferteRegel = typeof offerteRegelsTable.$inferSelect;
 export type OfferteUitgangspunt = typeof offerteUitgangspuntenTable.$inferSelect;
+export type OfferteSectie = typeof offerteSectiesTable.$inferSelect;
+export type OfferteVersie = typeof offerteVersiesTable.$inferSelect;
+export type OfferteBijlage = typeof offerteBijlagenTable.$inferSelect;

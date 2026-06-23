@@ -12,6 +12,9 @@ import {
   offertesTable,
   offerteRegelsTable,
   offerteUitgangspuntenTable,
+  offerteSectiesTable,
+  offerteVersiesTable,
+  offerteBijlagenTable,
   voorzieningenTable,
   crmKlantenTable,
   gebouwenTable,
@@ -19,6 +22,7 @@ import {
 } from "@workspace/db";
 import { eq, desc } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
+import { maakOpenAiClient, heeftOpenAi } from "../lib/openai";
 
 const router = Router();
 
@@ -523,6 +527,387 @@ router.patch("/offerte-uitgangspunten/:id", schrijven, async (req, res) => {
 router.delete("/offerte-uitgangspunten/:id", schrijven, async (req, res) => {
   try {
     await db.delete(offerteUitgangspuntenTable).where(eq(offerteUitgangspuntenTable.id, parseId(req.params.id)));
+    res.status(204).send();
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// ── Proposal Studio: secties ─────────────────────────────────────────────────
+
+const SECTIE_LABELS: Record<string, string> = {
+  aanbiedingsbrief: "Aanbiedingsbrief",
+  projectomschrijving: "Projectomschrijving",
+  aanpak: "Aanpak en methodiek",
+  team: "Team en organisatie",
+  planning: "Planning",
+  voorwaarden: "Algemene voorwaarden",
+  slotwoord: "Slotwoord",
+  vrij: "Vrije sectie",
+};
+
+const STANDAARD_SECTIES = [
+  { sectieType: "aanbiedingsbrief", titel: "Aanbiedingsbrief", volgorde: 0 },
+  { sectieType: "projectomschrijving", titel: "Projectomschrijving", volgorde: 1 },
+  { sectieType: "aanpak", titel: "Aanpak en methodiek", volgorde: 2 },
+  { sectieType: "voorwaarden", titel: "Algemene voorwaarden", volgorde: 3 },
+  { sectieType: "slotwoord", titel: "Slotwoord", volgorde: 4 },
+];
+
+function mapSectie(s: typeof offerteSectiesTable.$inferSelect) {
+  return {
+    id: s.id,
+    offerte_id: s.offerteId,
+    sectie_type: s.sectieType,
+    volgorde: s.volgorde,
+    actief: s.actief,
+    titel: s.titel,
+    inhoud: s.inhoud,
+    ai_gegenereerd: s.aiGegenereerd,
+    aangemaakt_op: iso(s.aangemaaktOp),
+    bijgewerkt_op: iso(s.bijgewerktOp),
+  };
+}
+
+function mapVersie(
+  v: typeof offerteVersiesTable.$inferSelect,
+  naam?: string | null,
+) {
+  return {
+    id: v.id,
+    offerte_id: v.offerteId,
+    versienummer: v.versienummer,
+    samenvatting: v.samenvatting,
+    aangemaakt_door_id: v.aangemaaktDoorId,
+    aangemaakt_door_naam: naam ?? null,
+    aangemaakt_op: iso(v.aangemaaktOp),
+  };
+}
+
+function mapBijlage(b: typeof offerteBijlagenTable.$inferSelect) {
+  return {
+    id: b.id,
+    offerte_id: b.offerteId,
+    bijlage_type: b.bijlageType,
+    naam: b.naam,
+    beschrijving: b.beschrijving,
+    url: b.url,
+    volgorde: b.volgorde,
+    aangemaakt_op: iso(b.aangemaaktOp),
+    bijgewerkt_op: iso(b.bijgewerktOp),
+  };
+}
+
+// GET /offertes/:id/secties
+router.get("/offertes/:id/secties", lezen, async (req, res) => {
+  try {
+    const offerteId = parseId(req.params.id);
+    const rijen = await db
+      .select()
+      .from(offerteSectiesTable)
+      .where(eq(offerteSectiesTable.offerteId, offerteId))
+      .orderBy(offerteSectiesTable.volgorde);
+    res.json(rijen.map(mapSectie));
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// POST /offertes/:id/secties
+router.post("/offertes/:id/secties", schrijven, async (req, res) => {
+  try {
+    const offerteId = parseId(req.params.id);
+    const { sectie_type, volgorde, actief, titel, inhoud } = req.body;
+    if (!titel && !sectie_type) return res.status(400).json({ error: "titel is verplicht" });
+    const titelEff = titel || (SECTIE_LABELS[sectie_type ?? "vrij"] ?? "Sectie");
+    const [s] = await db
+      .insert(offerteSectiesTable)
+      .values({
+        offerteId,
+        sectieType: sectie_type ?? "vrij",
+        volgorde: volgorde ?? 0,
+        actief: actief !== false,
+        titel: titelEff,
+        inhoud: inhoud ?? null,
+      })
+      .returning();
+    res.status(201).json(mapSectie(s));
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// POST /offertes/:id/secties/initialiseren — standaardsecties aanmaken als er nog geen zijn
+router.post("/offertes/:id/secties/initialiseren", schrijven, async (req, res) => {
+  try {
+    const offerteId = parseId(req.params.id);
+    const bestaande = await db
+      .select({ id: offerteSectiesTable.id })
+      .from(offerteSectiesTable)
+      .where(eq(offerteSectiesTable.offerteId, offerteId));
+    if (bestaande.length > 0) {
+      const rijen = await db
+        .select()
+        .from(offerteSectiesTable)
+        .where(eq(offerteSectiesTable.offerteId, offerteId))
+        .orderBy(offerteSectiesTable.volgorde);
+      return res.json(rijen.map(mapSectie));
+    }
+    const aangemaakt = await db
+      .insert(offerteSectiesTable)
+      .values(STANDAARD_SECTIES.map((s) => ({ offerteId, ...s })))
+      .returning();
+    res.status(201).json(aangemaakt.map(mapSectie));
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// PATCH /offerte-secties/:id
+router.patch("/offerte-secties/:id", schrijven, async (req, res) => {
+  try {
+    const { sectie_type, volgorde, actief, titel, inhoud, ai_gegenereerd } = req.body;
+    const [s] = await db
+      .update(offerteSectiesTable)
+      .set({
+        ...(sectie_type !== undefined && { sectieType: sectie_type }),
+        ...(volgorde !== undefined && { volgorde }),
+        ...(actief !== undefined && { actief }),
+        ...(titel !== undefined && { titel }),
+        ...(inhoud !== undefined && { inhoud }),
+        ...(ai_gegenereerd !== undefined && { aiGegenereerd: ai_gegenereerd }),
+        bijgewerktOp: new Date(),
+      })
+      .where(eq(offerteSectiesTable.id, parseId(req.params.id)))
+      .returning();
+    if (!s) return res.status(404).json({ error: "Sectie niet gevonden" });
+    res.json(mapSectie(s));
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// DELETE /offerte-secties/:id
+router.delete("/offerte-secties/:id", schrijven, async (req, res) => {
+  try {
+    await db.delete(offerteSectiesTable).where(eq(offerteSectiesTable.id, parseId(req.params.id)));
+    res.status(204).send();
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// POST /offerte-secties/:id/ai-schrijven
+router.post("/offerte-secties/:id/ai-schrijven", schrijven, async (req, res) => {
+  if (!heeftOpenAi()) return res.status(503).json({ error: "AI niet beschikbaar" });
+  try {
+    const sectieId = parseId(req.params.id);
+    const [sectie] = await db.select().from(offerteSectiesTable).where(eq(offerteSectiesTable.id, sectieId));
+    if (!sectie) return res.status(404).json({ error: "Sectie niet gevonden" });
+
+    const [offerte] = await db
+      .select({
+        id: offertesTable.id,
+        titel: offertesTable.titel,
+        opdrachtgever: offertesTable.opdrachtgever,
+        gebouwNaam: gebouwenTable.naam,
+        klantNaam: crmKlantenTable.naam,
+        datum: offertesTable.datum,
+        voorwaarden: offertesTable.voorwaarden,
+      })
+      .from(offertesTable)
+      .leftJoin(gebouwenTable, eq(offertesTable.gebouwId, gebouwenTable.id))
+      .leftJoin(crmKlantenTable, eq(offertesTable.klantId, crmKlantenTable.id))
+      .where(eq(offertesTable.id, sectie.offerteId));
+
+    const andereSectiesRows = await db
+      .select({ titel: offerteSectiesTable.titel, inhoud: offerteSectiesTable.inhoud, sectieType: offerteSectiesTable.sectieType })
+      .from(offerteSectiesTable)
+      .where(eq(offerteSectiesTable.offerteId, sectie.offerteId));
+
+    const andereSectieSamenvatting = andereSectiesRows
+      .filter((s) => s.sectieType !== sectie.sectieType && s.inhoud)
+      .map((s) => `${s.titel}: ${(s.inhoud ?? "").slice(0, 200)}`)
+      .join("\n");
+
+    const contextExtra = (req.body as { context_extra?: string }).context_extra ?? "";
+
+    const systeemPrompt = `Je bent een professionele offerte-schrijver voor FPS Brandpreventie, een Nederlands bedrijf gespecialiseerd in brandwerende voorzieningen en brandpreventie-inspectie. Je schrijft helder, zakelijk en professioneel Nederlands. Gebruik geen emojis. Schrijf in de eerste persoon meervoud (wij/onze). Houd de tekst bondig maar volledig.`;
+
+    const gebruikersPrompt = `Schrijf de sectie "${sectie.titel}" (type: ${sectie.sectieType}) voor de offerte.
+
+Offertegegevens:
+- Offertetitel: ${offerte?.titel ?? ""}
+- Opdrachtgever: ${offerte?.opdrachtgever ?? ""}
+- Gebouw: ${offerte?.gebouwNaam ?? ""}
+- Klant: ${offerte?.klantNaam ?? ""}
+- Datum: ${offerte?.datum ?? ""}
+${andereSectieSamenvatting ? `\nAndere secties (ter context):\n${andereSectieSamenvatting}` : ""}
+${contextExtra ? `\nAanvullende context: ${contextExtra}` : ""}
+
+Schrijf een professionele, overtuigende tekst voor deze sectie. Gebruik alinea's. Maximaal 300 woorden.`;
+
+    const client = maakOpenAiClient();
+    const completion = await client.chat.completions.create({
+      model: "gpt-5",
+      max_completion_tokens: 1024,
+      messages: [
+        { role: "system", content: systeemPrompt },
+        { role: "user", content: gebruikersPrompt },
+      ],
+    });
+
+    const tekst = completion.choices[0]?.message?.content ?? "";
+    res.json({ tekst });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// ── Proposal Studio: versies ──────────────────────────────────────────────────
+
+// GET /offertes/:id/versies
+router.get("/offertes/:id/versies", lezen, async (req, res) => {
+  try {
+    const offerteId = parseId(req.params.id);
+    const rijen = await db
+      .select({
+        versie: offerteVersiesTable,
+        naam: gebruikersTable.naam,
+      })
+      .from(offerteVersiesTable)
+      .leftJoin(gebruikersTable, eq(offerteVersiesTable.aangemaaktDoorId, gebruikersTable.id))
+      .where(eq(offerteVersiesTable.offerteId, offerteId))
+      .orderBy(desc(offerteVersiesTable.versienummer));
+    res.json(rijen.map((r) => mapVersie(r.versie, r.naam)));
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// POST /offertes/:id/versies
+router.post("/offertes/:id/versies", schrijven, async (req, res) => {
+  try {
+    const offerteId = parseId(req.params.id);
+    const gebruikerId = (req.session as { gebruikerId?: number }).gebruikerId ?? null;
+    const { samenvatting } = req.body;
+
+    const [offerte] = await db.select().from(offertesTable).where(eq(offertesTable.id, offerteId));
+    if (!offerte) return res.status(404).json({ error: "Offerte niet gevonden" });
+
+    const secties = await db.select().from(offerteSectiesTable).where(eq(offerteSectiesTable.offerteId, offerteId)).orderBy(offerteSectiesTable.volgorde);
+    const regels = await db.select().from(offerteRegelsTable).where(eq(offerteRegelsTable.offerteId, offerteId)).orderBy(offerteRegelsTable.volgorde);
+
+    const bestaande = await db
+      .select({ versienummer: offerteVersiesTable.versienummer })
+      .from(offerteVersiesTable)
+      .where(eq(offerteVersiesTable.offerteId, offerteId))
+      .orderBy(desc(offerteVersiesTable.versienummer))
+      .limit(1);
+    const volgendVersienummer = (bestaande[0]?.versienummer ?? 0) + 1;
+
+    const snapshot = { offerte, secties, regels };
+
+    const [v] = await db
+      .insert(offerteVersiesTable)
+      .values({
+        offerteId,
+        versienummer: volgendVersienummer,
+        snapshot,
+        samenvatting: samenvatting ?? null,
+        aangemaaktDoorId: gebruikerId,
+      })
+      .returning();
+
+    const gebruiker = gebruikerId
+      ? await db.select({ naam: gebruikersTable.naam }).from(gebruikersTable).where(eq(gebruikersTable.id, gebruikerId)).then((r) => r[0])
+      : null;
+
+    res.status(201).json(mapVersie(v, gebruiker?.naam));
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// ── Proposal Studio: bijlagen ─────────────────────────────────────────────────
+
+// GET /offertes/:id/bijlagen
+router.get("/offertes/:id/bijlagen", lezen, async (req, res) => {
+  try {
+    const offerteId = parseId(req.params.id);
+    const rijen = await db
+      .select()
+      .from(offerteBijlagenTable)
+      .where(eq(offerteBijlagenTable.offerteId, offerteId))
+      .orderBy(offerteBijlagenTable.volgorde);
+    res.json(rijen.map(mapBijlage));
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// POST /offertes/:id/bijlagen
+router.post("/offertes/:id/bijlagen", schrijven, async (req, res) => {
+  try {
+    const offerteId = parseId(req.params.id);
+    const { bijlage_type, naam, beschrijving, url, volgorde } = req.body;
+    if (!naam) return res.status(400).json({ error: "naam is verplicht" });
+    const [b] = await db
+      .insert(offerteBijlagenTable)
+      .values({
+        offerteId,
+        bijlageType: bijlage_type ?? "overig",
+        naam,
+        beschrijving: beschrijving ?? null,
+        url: url ?? null,
+        volgorde: volgorde ?? 0,
+      })
+      .returning();
+    res.status(201).json(mapBijlage(b));
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// PATCH /offerte-bijlagen/:id
+router.patch("/offerte-bijlagen/:id", schrijven, async (req, res) => {
+  try {
+    const { bijlage_type, naam, beschrijving, url, volgorde } = req.body;
+    const [b] = await db
+      .update(offerteBijlagenTable)
+      .set({
+        ...(bijlage_type !== undefined && { bijlageType: bijlage_type }),
+        ...(naam !== undefined && { naam }),
+        ...(beschrijving !== undefined && { beschrijving }),
+        ...(url !== undefined && { url }),
+        ...(volgorde !== undefined && { volgorde }),
+        bijgewerktOp: new Date(),
+      })
+      .where(eq(offerteBijlagenTable.id, parseId(req.params.id)))
+      .returning();
+    if (!b) return res.status(404).json({ error: "Bijlage niet gevonden" });
+    res.json(mapBijlage(b));
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// DELETE /offerte-bijlagen/:id
+router.delete("/offerte-bijlagen/:id", schrijven, async (req, res) => {
+  try {
+    await db.delete(offerteBijlagenTable).where(eq(offerteBijlagenTable.id, parseId(req.params.id)));
     res.status(204).send();
   } catch (err) {
     req.log.error(err);

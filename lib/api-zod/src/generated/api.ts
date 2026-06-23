@@ -9136,6 +9136,213 @@ export const DeleteOfferteUitgangspuntResponse = zod.void()
 
 
 /**
+ * @summary Secties van een offerte (Proposal Studio)
+ */
+export const ListOfferteSectiesParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ListOfferteSectiesResponseItem = zod.object({
+  "id": zod.number(),
+  "offerte_id": zod.number(),
+  "sectie_type": zod.string(),
+  "volgorde": zod.number(),
+  "actief": zod.boolean(),
+  "titel": zod.string(),
+  "inhoud": zod.string().nullish(),
+  "ai_gegenereerd": zod.boolean(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+export const ListOfferteSectiesResponse = zod.array(ListOfferteSectiesResponseItem)
+
+
+/**
+ * @summary Sectie toevoegen
+ */
+export const CreateOfferteSectieParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const CreateOfferteSectieBody = zod.object({
+  "sectie_type": zod.string().optional(),
+  "volgorde": zod.number().optional(),
+  "actief": zod.boolean().optional(),
+  "titel": zod.string().optional(),
+  "inhoud": zod.string().optional(),
+  "ai_gegenereerd": zod.boolean().optional()
+})
+
+export const CreateOfferteSectieResponse = zod.void()
+
+
+/**
+ * @summary Sectie bijwerken
+ */
+export const UpdateOfferteSectieParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateOfferteSectieBody = zod.object({
+  "sectie_type": zod.string().optional(),
+  "volgorde": zod.number().optional(),
+  "actief": zod.boolean().optional(),
+  "titel": zod.string().optional(),
+  "inhoud": zod.string().optional(),
+  "ai_gegenereerd": zod.boolean().optional()
+})
+
+export const UpdateOfferteSectieResponse = zod.object({
+  "id": zod.number(),
+  "offerte_id": zod.number(),
+  "sectie_type": zod.string(),
+  "volgorde": zod.number(),
+  "actief": zod.boolean(),
+  "titel": zod.string(),
+  "inhoud": zod.string().nullish(),
+  "ai_gegenereerd": zod.boolean(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+
+
+/**
+ * @summary Sectie verwijderen
+ */
+export const DeleteOfferteSectieParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteOfferteSectieResponse = zod.void()
+
+
+/**
+ * @summary AI-voorstel voor sektietekst genereren
+ */
+export const AiSchrijfOfferteSectieParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const AiSchrijfOfferteSectieBody = zod.object({
+  "context_extra": zod.string().optional()
+})
+
+export const AiSchrijfOfferteSectieResponse = zod.object({
+  "tekst": zod.string()
+})
+
+
+/**
+ * @summary Versiehistorie van een offerte
+ */
+export const ListOfferteVersiesParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ListOfferteVersiesResponseItem = zod.object({
+  "id": zod.number(),
+  "offerte_id": zod.number(),
+  "versienummer": zod.number(),
+  "samenvatting": zod.string().nullish(),
+  "aangemaakt_door_id": zod.number().nullish(),
+  "aangemaakt_door_naam": zod.string().nullish(),
+  "aangemaakt_op": zod.string()
+})
+export const ListOfferteVersiesResponse = zod.array(ListOfferteVersiesResponseItem)
+
+
+/**
+ * @summary Versie-snapshot opslaan
+ */
+export const CreateOfferteVersieParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const CreateOfferteVersieBody = zod.object({
+  "samenvatting": zod.string().optional()
+})
+
+export const CreateOfferteVersieResponse = zod.void()
+
+
+/**
+ * @summary Bijlagen van een offerte
+ */
+export const ListOfferteBijlagenParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ListOfferteBijlagenResponseItem = zod.object({
+  "id": zod.number(),
+  "offerte_id": zod.number(),
+  "bijlage_type": zod.string(),
+  "naam": zod.string(),
+  "beschrijving": zod.string().nullish(),
+  "url": zod.string().nullish(),
+  "volgorde": zod.number(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+export const ListOfferteBijlagenResponse = zod.array(ListOfferteBijlagenResponseItem)
+
+
+/**
+ * @summary Bijlage toevoegen
+ */
+export const CreateOfferteBijlageParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const CreateOfferteBijlageBody = zod.object({
+  "bijlage_type": zod.string().optional(),
+  "naam": zod.string(),
+  "beschrijving": zod.string().optional(),
+  "url": zod.string().optional(),
+  "volgorde": zod.number().optional()
+})
+
+export const CreateOfferteBijlageResponse = zod.void()
+
+
+/**
+ * @summary Bijlage bijwerken
+ */
+export const UpdateOfferteBijlageParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateOfferteBijlageBody = zod.object({
+  "bijlage_type": zod.string().optional(),
+  "naam": zod.string(),
+  "beschrijving": zod.string().optional(),
+  "url": zod.string().optional(),
+  "volgorde": zod.number().optional()
+})
+
+export const UpdateOfferteBijlageResponse = zod.object({
+  "id": zod.number(),
+  "offerte_id": zod.number(),
+  "bijlage_type": zod.string(),
+  "naam": zod.string(),
+  "beschrijving": zod.string().nullish(),
+  "url": zod.string().nullish(),
+  "volgorde": zod.number(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+
+
+/**
+ * @summary Bijlage verwijderen
+ */
+export const DeleteOfferteBijlageParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteOfferteBijlageResponse = zod.void()
+
+
+/**
  * @summary Configuratiestatus van de mailkoppeling
  */
 export const GetMailStatusResponse = zod.object({

@@ -3806,6 +3806,76 @@ export interface OfferteUitgangspuntInput {
   ai_voorstel?: boolean;
 }
 
+export interface OfferteSectie {
+  id: number;
+  offerte_id: number;
+  sectie_type: string;
+  volgorde: number;
+  actief: boolean;
+  titel: string;
+  /** @nullable */
+  inhoud?: string | null;
+  ai_gegenereerd: boolean;
+  aangemaakt_op: string;
+  bijgewerkt_op: string;
+}
+
+export interface OfferteSectieInput {
+  sectie_type?: string;
+  volgorde?: number;
+  actief?: boolean;
+  titel?: string;
+  inhoud?: string;
+  ai_gegenereerd?: boolean;
+}
+
+export interface OfferteAiSchrijvenInput {
+  context_extra?: string;
+}
+
+export interface OfferteAiSchrijvenResultaat {
+  tekst: string;
+}
+
+export interface OfferteVersie {
+  id: number;
+  offerte_id: number;
+  versienummer: number;
+  /** @nullable */
+  samenvatting?: string | null;
+  /** @nullable */
+  aangemaakt_door_id?: number | null;
+  /** @nullable */
+  aangemaakt_door_naam?: string | null;
+  aangemaakt_op: string;
+}
+
+export interface OfferteVersieInput {
+  samenvatting?: string;
+}
+
+export interface OfferteBijlage {
+  id: number;
+  offerte_id: number;
+  bijlage_type: string;
+  naam: string;
+  /** @nullable */
+  beschrijving?: string | null;
+  /** @nullable */
+  url?: string | null;
+  volgorde: number;
+  aangemaakt_op: string;
+  bijgewerkt_op: string;
+}
+
+export interface OfferteBijlageInput {
+  bijlage_type?: string;
+  naam: string;
+  beschrijving?: string;
+  url?: string;
+  volgorde?: number;
+}
+
 export interface Calculatie {
   id: number;
   naam: string;

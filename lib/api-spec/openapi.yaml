@@ -7330,6 +7330,242 @@ paths:
         "204":
           description: Verwijderd
 
+  # ── PROPOSAL STUDIO ────────────────────────────────────────────────────────
+  /offertes/{id}/secties:
+    get:
+      operationId: listOfferteSecties
+      tags: [offertes]
+      summary: Secties van een offerte (Proposal Studio)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/OfferteSectie"
+    post:
+      operationId: createOfferteSectie
+      tags: [offertes]
+      summary: Sectie toevoegen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OfferteSectieInput"
+      responses:
+        "201":
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OfferteSectie"
+
+  /offerte-secties/{id}:
+    patch:
+      operationId: updateOfferteSectie
+      tags: [offertes]
+      summary: Sectie bijwerken
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OfferteSectieInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OfferteSectie"
+    delete:
+      operationId: deleteOfferteSectie
+      tags: [offertes]
+      summary: Sectie verwijderen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Verwijderd
+
+  /offerte-secties/{id}/ai-schrijven:
+    post:
+      operationId: aiSchrijfOfferteSectie
+      tags: [offertes]
+      summary: AI-voorstel voor sektietekst genereren
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OfferteAiSchrijvenInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OfferteAiSchrijvenResultaat"
+        "503":
+          description: AI niet beschikbaar
+
+  /offertes/{id}/versies:
+    get:
+      operationId: listOfferteVersies
+      tags: [offertes]
+      summary: Versiehistorie van een offerte
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/OfferteVersie"
+    post:
+      operationId: createOfferteVersie
+      tags: [offertes]
+      summary: Versie-snapshot opslaan
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OfferteVersieInput"
+      responses:
+        "201":
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OfferteVersie"
+
+  /offertes/{id}/bijlagen:
+    get:
+      operationId: listOfferteBijlagen
+      tags: [offertes]
+      summary: Bijlagen van een offerte
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/OfferteBijlage"
+    post:
+      operationId: createOfferteBijlage
+      tags: [offertes]
+      summary: Bijlage toevoegen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OfferteBijlageInput"
+      responses:
+        "201":
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OfferteBijlage"
+
+  /offerte-bijlagen/{id}:
+    patch:
+      operationId: updateOfferteBijlage
+      tags: [offertes]
+      summary: Bijlage bijwerken
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OfferteBijlageInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OfferteBijlage"
+    delete:
+      operationId: deleteOfferteBijlage
+      tags: [offertes]
+      summary: Bijlage verwijderen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Verwijderd
+
   # ── MAIL ──────────────────────────────────────────────────────────────────
   /mail/status:
     get:
@@ -14953,6 +15189,123 @@ components:
           type: integer
         ai_voorstel:
           type: boolean
+
+    OfferteSectie:
+      type: object
+      required: [id, offerte_id, sectie_type, volgorde, actief, titel, ai_gegenereerd, aangemaakt_op, bijgewerkt_op]
+      properties:
+        id:
+          type: integer
+        offerte_id:
+          type: integer
+        sectie_type:
+          type: string
+        volgorde:
+          type: integer
+        actief:
+          type: boolean
+        titel:
+          type: string
+        inhoud:
+          type: ["string", "null"]
+        ai_gegenereerd:
+          type: boolean
+        aangemaakt_op:
+          type: string
+        bijgewerkt_op:
+          type: string
+
+    OfferteSectieInput:
+      type: object
+      properties:
+        sectie_type:
+          type: string
+        volgorde:
+          type: integer
+        actief:
+          type: boolean
+        titel:
+          type: string
+        inhoud:
+          type: string
+        ai_gegenereerd:
+          type: boolean
+
+    OfferteAiSchrijvenInput:
+      type: object
+      properties:
+        context_extra:
+          type: string
+
+    OfferteAiSchrijvenResultaat:
+      type: object
+      required: [tekst]
+      properties:
+        tekst:
+          type: string
+
+    OfferteVersie:
+      type: object
+      required: [id, offerte_id, versienummer, aangemaakt_op]
+      properties:
+        id:
+          type: integer
+        offerte_id:
+          type: integer
+        versienummer:
+          type: integer
+        samenvatting:
+          type: ["string", "null"]
+        aangemaakt_door_id:
+          type: ["integer", "null"]
+        aangemaakt_door_naam:
+          type: ["string", "null"]
+        aangemaakt_op:
+          type: string
+
+    OfferteVersieInput:
+      type: object
+      properties:
+        samenvatting:
+          type: string
+
+    OfferteBijlage:
+      type: object
+      required: [id, offerte_id, bijlage_type, naam, volgorde, aangemaakt_op, bijgewerkt_op]
+      properties:
+        id:
+          type: integer
+        offerte_id:
+          type: integer
+        bijlage_type:
+          type: string
+        naam:
+          type: string
+        beschrijving:
+          type: ["string", "null"]
+        url:
+          type: ["string", "null"]
+        volgorde:
+          type: integer
+        aangemaakt_op:
+          type: string
+        bijgewerkt_op:
+          type: string
+
+    OfferteBijlageInput:
+      type: object
+      required: [naam]
+      properties:
+        bijlage_type:
+          type: string
+        naam:
+          type: string
+        beschrijving:
+          type: string
+        url:
+          type: string
+        volgorde:
+          type: integer
 
     Calculatie:
       type: object

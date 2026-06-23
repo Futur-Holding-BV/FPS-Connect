@@ -23,7 +23,8 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
-import { FileText, Plus, Search, Sparkles } from "lucide-react";
+import { FileText, Plus, Search, Sparkles, PenLine } from "lucide-react";
+import { Link } from "wouter";
 
 const STATUS_KLEUR: Record<string, string> = {
   concept: "bg-amber-100 text-amber-800 border-amber-200",
@@ -154,11 +155,18 @@ export default function OffertesPagina() {
                   {o.gebouw_naam && <div>Gebouw: {o.gebouw_naam}</div>}
                 </div>
                 <div className="text-sm font-medium">{euro(o.bedrag_excl_btw)} <span className="text-xs text-muted-foreground">excl. btw</span></div>
-                {o.gebouw_id && o.status === "concept" && (
-                  <Button size="sm" variant="outline" onClick={() => bereidVoorUitSpots(o.id)} disabled={uitSpots.isPending}>
-                    <Sparkles className="h-3.5 w-3.5" /> Uit spots voorbereiden
-                  </Button>
-                )}
+                <div className="flex gap-2 flex-wrap">
+                  <Link href={`/offertes/${o.id}`}>
+                    <Button size="sm" variant="outline" className="text-primary border-primary/30 hover:bg-primary/5">
+                      <PenLine className="h-3.5 w-3.5" /> Studio openen
+                    </Button>
+                  </Link>
+                  {o.gebouw_id && o.status === "concept" && (
+                    <Button size="sm" variant="outline" onClick={() => bereidVoorUitSpots(o.id)} disabled={uitSpots.isPending}>
+                      <Sparkles className="h-3.5 w-3.5" /> Uit spots
+                    </Button>
+                  )}
+                </div>
               </CardContent>
             </Card>
           ))}

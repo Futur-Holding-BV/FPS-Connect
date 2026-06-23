@@ -74,6 +74,7 @@ import GereedschapDetailPagina from "@/pages/gereedschappen/detail";
 import HallOfFamePagina from "@/pages/hall-of-fame";
 import DossiersPagina from "@/pages/dossiers/index";
 import OffertesPagina from "@/pages/offertes/index";
+import ProposalStudio from "@/pages/offertes/studio";
 import DocumentenPagina from "@/pages/documenten/index";
 import { OndersteuningWidget } from "@/components/ondersteuning-widget";
 import RapportenPagina from "@/pages/rapporten/index";
@@ -202,6 +203,9 @@ function ConnectPortal() {
         <Route path="/connect/planning">
           <Redirect to="/modules/planning" />
         </Route>
+
+        {/* ── Offertes ── */}
+        <Route path="/offertes/:id" component={ProposalStudio} />
 
         {/* ── Documenten & Dossiers ── */}
         <Route path="/documenten" component={DocumentenPagina} />

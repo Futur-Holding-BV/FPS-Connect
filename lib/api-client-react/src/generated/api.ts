@@ -238,15 +238,23 @@ import type {
   MuisGebeurtenisBatch,
   NacalculatieRegel,
   Offerte,
+  OfferteAiSchrijvenInput,
+  OfferteAiSchrijvenResultaat,
+  OfferteBijlage,
+  OfferteBijlageInput,
   OfferteHoofdstuk,
   OfferteHoofdstukInput,
   OfferteInput,
   OfferteRegel,
   OfferteRegelInput,
+  OfferteSectie,
+  OfferteSectieInput,
   OfferteSjabloon,
   OfferteSjabloonInput,
   OfferteUitgangspunt,
   OfferteUitgangspuntInput,
+  OfferteVersie,
+  OfferteVersieInput,
   OnboardingFout,
   OnderhoudInput,
   OnderhoudUpdate,
@@ -26105,6 +26113,803 @@ export const useDeleteOfferteUitgangspunt = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getDeleteOfferteUitgangspuntMutationOptions(options));
+    }
+
+export const getListOfferteSectiesUrl = (id: number,) => {
+
+
+
+
+  return `/api/offertes/${id}/secties`
+}
+
+/**
+ * @summary Secties van een offerte (Proposal Studio)
+ */
+export const listOfferteSecties = async (id: number, options?: RequestInit): Promise<OfferteSectie[]> => {
+
+  return customFetch<OfferteSectie[]>(getListOfferteSectiesUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListOfferteSectiesQueryKey = (id: number,) => {
+    return [
+    `/api/offertes/${id}/secties`
+    ] as const;
+    }
+
+
+export const getListOfferteSectiesQueryOptions = <TData = Awaited<ReturnType<typeof listOfferteSecties>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listOfferteSecties>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListOfferteSectiesQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listOfferteSecties>>> = ({ signal }) => listOfferteSecties(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listOfferteSecties>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListOfferteSectiesQueryResult = NonNullable<Awaited<ReturnType<typeof listOfferteSecties>>>
+export type ListOfferteSectiesQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Secties van een offerte (Proposal Studio)
+ */
+
+export function useListOfferteSecties<TData = Awaited<ReturnType<typeof listOfferteSecties>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listOfferteSecties>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListOfferteSectiesQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateOfferteSectieUrl = (id: number,) => {
+
+
+
+
+  return `/api/offertes/${id}/secties`
+}
+
+/**
+ * @summary Sectie toevoegen
+ */
+export const createOfferteSectie = async (id: number,
+    offerteSectieInput: OfferteSectieInput, options?: RequestInit): Promise<OfferteSectie> => {
+
+  return customFetch<OfferteSectie>(getCreateOfferteSectieUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(offerteSectieInput)
+  }
+);}
+
+
+
+
+export const getCreateOfferteSectieMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createOfferteSectie>>, TError,{id: number;data: BodyType<OfferteSectieInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createOfferteSectie>>, TError,{id: number;data: BodyType<OfferteSectieInput>}, TContext> => {
+
+const mutationKey = ['createOfferteSectie'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createOfferteSectie>>, {id: number;data: BodyType<OfferteSectieInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  createOfferteSectie(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateOfferteSectieMutationResult = NonNullable<Awaited<ReturnType<typeof createOfferteSectie>>>
+    export type CreateOfferteSectieMutationBody = BodyType<OfferteSectieInput>
+    export type CreateOfferteSectieMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Sectie toevoegen
+ */
+export const useCreateOfferteSectie = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createOfferteSectie>>, TError,{id: number;data: BodyType<OfferteSectieInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createOfferteSectie>>,
+        TError,
+        {id: number;data: BodyType<OfferteSectieInput>},
+        TContext
+      > => {
+      return useMutation(getCreateOfferteSectieMutationOptions(options));
+    }
+
+export const getUpdateOfferteSectieUrl = (id: number,) => {
+
+
+
+
+  return `/api/offerte-secties/${id}`
+}
+
+/**
+ * @summary Sectie bijwerken
+ */
+export const updateOfferteSectie = async (id: number,
+    offerteSectieInput: OfferteSectieInput, options?: RequestInit): Promise<OfferteSectie> => {
+
+  return customFetch<OfferteSectie>(getUpdateOfferteSectieUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(offerteSectieInput)
+  }
+);}
+
+
+
+
+export const getUpdateOfferteSectieMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateOfferteSectie>>, TError,{id: number;data: BodyType<OfferteSectieInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateOfferteSectie>>, TError,{id: number;data: BodyType<OfferteSectieInput>}, TContext> => {
+
+const mutationKey = ['updateOfferteSectie'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateOfferteSectie>>, {id: number;data: BodyType<OfferteSectieInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateOfferteSectie(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateOfferteSectieMutationResult = NonNullable<Awaited<ReturnType<typeof updateOfferteSectie>>>
+    export type UpdateOfferteSectieMutationBody = BodyType<OfferteSectieInput>
+    export type UpdateOfferteSectieMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Sectie bijwerken
+ */
+export const useUpdateOfferteSectie = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateOfferteSectie>>, TError,{id: number;data: BodyType<OfferteSectieInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateOfferteSectie>>,
+        TError,
+        {id: number;data: BodyType<OfferteSectieInput>},
+        TContext
+      > => {
+      return useMutation(getUpdateOfferteSectieMutationOptions(options));
+    }
+
+export const getDeleteOfferteSectieUrl = (id: number,) => {
+
+
+
+
+  return `/api/offerte-secties/${id}`
+}
+
+/**
+ * @summary Sectie verwijderen
+ */
+export const deleteOfferteSectie = async (id: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteOfferteSectieUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteOfferteSectieMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteOfferteSectie>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteOfferteSectie>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deleteOfferteSectie'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteOfferteSectie>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteOfferteSectie(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteOfferteSectieMutationResult = NonNullable<Awaited<ReturnType<typeof deleteOfferteSectie>>>
+
+    export type DeleteOfferteSectieMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Sectie verwijderen
+ */
+export const useDeleteOfferteSectie = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteOfferteSectie>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteOfferteSectie>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeleteOfferteSectieMutationOptions(options));
+    }
+
+export const getAiSchrijfOfferteSectieUrl = (id: number,) => {
+
+
+
+
+  return `/api/offerte-secties/${id}/ai-schrijven`
+}
+
+/**
+ * @summary AI-voorstel voor sektietekst genereren
+ */
+export const aiSchrijfOfferteSectie = async (id: number,
+    offerteAiSchrijvenInput: OfferteAiSchrijvenInput, options?: RequestInit): Promise<OfferteAiSchrijvenResultaat> => {
+
+  return customFetch<OfferteAiSchrijvenResultaat>(getAiSchrijfOfferteSectieUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(offerteAiSchrijvenInput)
+  }
+);}
+
+
+
+
+export const getAiSchrijfOfferteSectieMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof aiSchrijfOfferteSectie>>, TError,{id: number;data: BodyType<OfferteAiSchrijvenInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof aiSchrijfOfferteSectie>>, TError,{id: number;data: BodyType<OfferteAiSchrijvenInput>}, TContext> => {
+
+const mutationKey = ['aiSchrijfOfferteSectie'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof aiSchrijfOfferteSectie>>, {id: number;data: BodyType<OfferteAiSchrijvenInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  aiSchrijfOfferteSectie(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AiSchrijfOfferteSectieMutationResult = NonNullable<Awaited<ReturnType<typeof aiSchrijfOfferteSectie>>>
+    export type AiSchrijfOfferteSectieMutationBody = BodyType<OfferteAiSchrijvenInput>
+    export type AiSchrijfOfferteSectieMutationError = ErrorType<void>
+
+    /**
+ * @summary AI-voorstel voor sektietekst genereren
+ */
+export const useAiSchrijfOfferteSectie = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof aiSchrijfOfferteSectie>>, TError,{id: number;data: BodyType<OfferteAiSchrijvenInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof aiSchrijfOfferteSectie>>,
+        TError,
+        {id: number;data: BodyType<OfferteAiSchrijvenInput>},
+        TContext
+      > => {
+      return useMutation(getAiSchrijfOfferteSectieMutationOptions(options));
+    }
+
+export const getListOfferteVersiesUrl = (id: number,) => {
+
+
+
+
+  return `/api/offertes/${id}/versies`
+}
+
+/**
+ * @summary Versiehistorie van een offerte
+ */
+export const listOfferteVersies = async (id: number, options?: RequestInit): Promise<OfferteVersie[]> => {
+
+  return customFetch<OfferteVersie[]>(getListOfferteVersiesUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListOfferteVersiesQueryKey = (id: number,) => {
+    return [
+    `/api/offertes/${id}/versies`
+    ] as const;
+    }
+
+
+export const getListOfferteVersiesQueryOptions = <TData = Awaited<ReturnType<typeof listOfferteVersies>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listOfferteVersies>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListOfferteVersiesQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listOfferteVersies>>> = ({ signal }) => listOfferteVersies(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listOfferteVersies>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListOfferteVersiesQueryResult = NonNullable<Awaited<ReturnType<typeof listOfferteVersies>>>
+export type ListOfferteVersiesQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Versiehistorie van een offerte
+ */
+
+export function useListOfferteVersies<TData = Awaited<ReturnType<typeof listOfferteVersies>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listOfferteVersies>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListOfferteVersiesQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateOfferteVersieUrl = (id: number,) => {
+
+
+
+
+  return `/api/offertes/${id}/versies`
+}
+
+/**
+ * @summary Versie-snapshot opslaan
+ */
+export const createOfferteVersie = async (id: number,
+    offerteVersieInput: OfferteVersieInput, options?: RequestInit): Promise<OfferteVersie> => {
+
+  return customFetch<OfferteVersie>(getCreateOfferteVersieUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(offerteVersieInput)
+  }
+);}
+
+
+
+
+export const getCreateOfferteVersieMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createOfferteVersie>>, TError,{id: number;data: BodyType<OfferteVersieInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createOfferteVersie>>, TError,{id: number;data: BodyType<OfferteVersieInput>}, TContext> => {
+
+const mutationKey = ['createOfferteVersie'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createOfferteVersie>>, {id: number;data: BodyType<OfferteVersieInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  createOfferteVersie(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateOfferteVersieMutationResult = NonNullable<Awaited<ReturnType<typeof createOfferteVersie>>>
+    export type CreateOfferteVersieMutationBody = BodyType<OfferteVersieInput>
+    export type CreateOfferteVersieMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Versie-snapshot opslaan
+ */
+export const useCreateOfferteVersie = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createOfferteVersie>>, TError,{id: number;data: BodyType<OfferteVersieInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createOfferteVersie>>,
+        TError,
+        {id: number;data: BodyType<OfferteVersieInput>},
+        TContext
+      > => {
+      return useMutation(getCreateOfferteVersieMutationOptions(options));
+    }
+
+export const getListOfferteBijlagenUrl = (id: number,) => {
+
+
+
+
+  return `/api/offertes/${id}/bijlagen`
+}
+
+/**
+ * @summary Bijlagen van een offerte
+ */
+export const listOfferteBijlagen = async (id: number, options?: RequestInit): Promise<OfferteBijlage[]> => {
+
+  return customFetch<OfferteBijlage[]>(getListOfferteBijlagenUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListOfferteBijlagenQueryKey = (id: number,) => {
+    return [
+    `/api/offertes/${id}/bijlagen`
+    ] as const;
+    }
+
+
+export const getListOfferteBijlagenQueryOptions = <TData = Awaited<ReturnType<typeof listOfferteBijlagen>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listOfferteBijlagen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListOfferteBijlagenQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listOfferteBijlagen>>> = ({ signal }) => listOfferteBijlagen(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listOfferteBijlagen>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListOfferteBijlagenQueryResult = NonNullable<Awaited<ReturnType<typeof listOfferteBijlagen>>>
+export type ListOfferteBijlagenQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Bijlagen van een offerte
+ */
+
+export function useListOfferteBijlagen<TData = Awaited<ReturnType<typeof listOfferteBijlagen>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listOfferteBijlagen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListOfferteBijlagenQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateOfferteBijlageUrl = (id: number,) => {
+
+
+
+
+  return `/api/offertes/${id}/bijlagen`
+}
+
+/**
+ * @summary Bijlage toevoegen
+ */
+export const createOfferteBijlage = async (id: number,
+    offerteBijlageInput: OfferteBijlageInput, options?: RequestInit): Promise<OfferteBijlage> => {
+
+  return customFetch<OfferteBijlage>(getCreateOfferteBijlageUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(offerteBijlageInput)
+  }
+);}
+
+
+
+
+export const getCreateOfferteBijlageMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createOfferteBijlage>>, TError,{id: number;data: BodyType<OfferteBijlageInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createOfferteBijlage>>, TError,{id: number;data: BodyType<OfferteBijlageInput>}, TContext> => {
+
+const mutationKey = ['createOfferteBijlage'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createOfferteBijlage>>, {id: number;data: BodyType<OfferteBijlageInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  createOfferteBijlage(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateOfferteBijlageMutationResult = NonNullable<Awaited<ReturnType<typeof createOfferteBijlage>>>
+    export type CreateOfferteBijlageMutationBody = BodyType<OfferteBijlageInput>
+    export type CreateOfferteBijlageMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Bijlage toevoegen
+ */
+export const useCreateOfferteBijlage = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createOfferteBijlage>>, TError,{id: number;data: BodyType<OfferteBijlageInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createOfferteBijlage>>,
+        TError,
+        {id: number;data: BodyType<OfferteBijlageInput>},
+        TContext
+      > => {
+      return useMutation(getCreateOfferteBijlageMutationOptions(options));
+    }
+
+export const getUpdateOfferteBijlageUrl = (id: number,) => {
+
+
+
+
+  return `/api/offerte-bijlagen/${id}`
+}
+
+/**
+ * @summary Bijlage bijwerken
+ */
+export const updateOfferteBijlage = async (id: number,
+    offerteBijlageInput: OfferteBijlageInput, options?: RequestInit): Promise<OfferteBijlage> => {
+
+  return customFetch<OfferteBijlage>(getUpdateOfferteBijlageUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(offerteBijlageInput)
+  }
+);}
+
+
+
+
+export const getUpdateOfferteBijlageMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateOfferteBijlage>>, TError,{id: number;data: BodyType<OfferteBijlageInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateOfferteBijlage>>, TError,{id: number;data: BodyType<OfferteBijlageInput>}, TContext> => {
+
+const mutationKey = ['updateOfferteBijlage'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateOfferteBijlage>>, {id: number;data: BodyType<OfferteBijlageInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateOfferteBijlage(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateOfferteBijlageMutationResult = NonNullable<Awaited<ReturnType<typeof updateOfferteBijlage>>>
+    export type UpdateOfferteBijlageMutationBody = BodyType<OfferteBijlageInput>
+    export type UpdateOfferteBijlageMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Bijlage bijwerken
+ */
+export const useUpdateOfferteBijlage = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateOfferteBijlage>>, TError,{id: number;data: BodyType<OfferteBijlageInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateOfferteBijlage>>,
+        TError,
+        {id: number;data: BodyType<OfferteBijlageInput>},
+        TContext
+      > => {
+      return useMutation(getUpdateOfferteBijlageMutationOptions(options));
+    }
+
+export const getDeleteOfferteBijlageUrl = (id: number,) => {
+
+
+
+
+  return `/api/offerte-bijlagen/${id}`
+}
+
+/**
+ * @summary Bijlage verwijderen
+ */
+export const deleteOfferteBijlage = async (id: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteOfferteBijlageUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteOfferteBijlageMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteOfferteBijlage>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteOfferteBijlage>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deleteOfferteBijlage'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteOfferteBijlage>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteOfferteBijlage(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteOfferteBijlageMutationResult = NonNullable<Awaited<ReturnType<typeof deleteOfferteBijlage>>>
+
+    export type DeleteOfferteBijlageMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Bijlage verwijderen
+ */
+export const useDeleteOfferteBijlage = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteOfferteBijlage>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteOfferteBijlage>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeleteOfferteBijlageMutationOptions(options));
     }
 
 export const getGetMailStatusUrl = () => {
