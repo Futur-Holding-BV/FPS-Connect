@@ -12,8 +12,10 @@ import {
   offerteBijlagenTable,
   offerteVersiesTable,
   projectenTable,
+  gebruikersTable,
 } from "@workspace/db";
 import { eq, desc } from "drizzle-orm";
+import { stuurKlantvraagNotificatie } from "../services/email";
 
 const router = Router();
 
@@ -167,6 +169,59 @@ router.post("/portaal/:token/vraag", async (req, res) => {
       .returning();
 
     res.status(201).json({ id: nieuw.id });
+
+    // Notificatiemail — fire-and-forget, blokkeert de respons niet.
+    (async () => {
+      try {
+        const [offerte] = await db
+          .select({
+            id: offertesTable.id,
+            offertenummer: offertesTable.offertenummer,
+            titel: offertesTable.titel,
+            behandeldDoorId: offertesTable.behandeldDoorId,
+          })
+          .from(offertesTable)
+          .where(eq(offertesTable.id, tokenRecord.offerteId));
+
+        if (!offerte) return;
+
+        let naarEmail: string;
+        let naarNaam: string | null = null;
+
+        if (offerte.behandeldDoorId) {
+          const [beheerder] = await db
+            .select({ email: gebruikersTable.email, naam: gebruikersTable.naam })
+            .from(gebruikersTable)
+            .where(eq(gebruikersTable.id, offerte.behandeldDoorId));
+          if (beheerder) {
+            naarEmail = beheerder.email;
+            naarNaam = beheerder.naam;
+          } else {
+            naarEmail = process.env.MAIL_MAILBOX ?? "app@fpsbrandpreventie.nl";
+          }
+        } else {
+          naarEmail = process.env.MAIL_MAILBOX ?? "app@fpsbrandpreventie.nl";
+        }
+
+        const domein = (process.env.REPLIT_DOMAINS ?? "").split(",")[0]?.trim();
+        const connectUrl = domein
+          ? `https://${domein}/offertes/${offerte.id}`
+          : `https://fpsbrandpreventie.nl/offertes/${offerte.id}`;
+
+        await stuurKlantvraagNotificatie({
+          naarEmail,
+          naarNaam,
+          bezoekerNaam,
+          vraagTekst: vraag,
+          offerteId: offerte.id,
+          offertenummer: offerte.offertenummer,
+          offerteTitel: offerte.titel,
+          connectUrl,
+        });
+      } catch (mailErr) {
+        req.log.warn(mailErr, "Klantvraag-notificatie mislukt (niet-kritiek)");
+      }
+    })();
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Interne serverfout" });

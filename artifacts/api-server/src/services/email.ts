@@ -51,7 +51,7 @@ export class MailFout extends Error {
   }
 }
 
-export type MailSoort = "test" | "uitnodiging" | "wachtwoord_reset" | "offerte";
+export type MailSoort = "test" | "uitnodiging" | "wachtwoord_reset" | "offerte" | "klantvraag";
 
 // ── Configuratie-helpers ─────────────────────────────────────────────────────
 export function isGeconfigureerd(): boolean {
@@ -77,6 +77,15 @@ export function mailConfiguratie() {
 
 function knip(tekst: string, max = 500): string {
   return tekst.length > max ? `${tekst.slice(0, max)}…` : tekst;
+}
+
+function escapeHtml(tekst: string): string {
+  return tekst
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 }
 
 // Defensief: Microsoft echoot normaliter geen geheimen terug, maar upstream
@@ -482,6 +491,72 @@ export async function verstuurWachtwoordResetMail(opties: {
     html,
     soort: "wachtwoord_reset",
   });
+}
+
+/**
+ * Stuurt een notificatiemail naar de behandelend beheerder (of algemene postbus)
+ * als een klant een nieuwe vraag stelt via het offerte-portaal.
+ * Gooit nooit — mislukkingen worden gelogd en stilzwijgend genegeerd.
+ */
+export async function stuurKlantvraagNotificatie(opties: {
+  naarEmail: string;
+  naarNaam?: string | null;
+  bezoekerNaam: string | null;
+  vraagTekst: string;
+  offerteId: number;
+  offertenummer: string | null;
+  offerteTitel: string;
+  connectUrl: string;
+}): Promise<void> {
+  const {
+    naarEmail,
+    naarNaam,
+    bezoekerNaam,
+    vraagTekst,
+    offerteId,
+    offertenummer,
+    offerteTitel,
+    connectUrl,
+  } = opties;
+
+  if (!isGeconfigureerd()) {
+    logger.warn(
+      { offerteId },
+      "E-mailservice niet geconfigureerd — klantvraag-notificatie niet verstuurd",
+    );
+    return;
+  }
+
+  const offerteLabel = offertenummer
+    ? `offerte ${escapeHtml(offertenummer)}`
+    : `offerte #${offerteId}`;
+  const bezoekerLabel = escapeHtml(bezoekerNaam ?? "onbekende bezoeker");
+  const onderwerp = `Nieuwe vraag via portaal — ${offertenummer ?? `#${offerteId}`}`;
+
+  const html = mailShell({
+    titel: onderwerp,
+    kopje: "Nieuwe klantvraag ontvangen",
+    paragrafen: [
+      `Via het klantportaal van <strong>${escapeHtml(offerteTitel)}</strong> (${offerteLabel}) heeft <strong>${bezoekerLabel}</strong> een nieuwe vraag gesteld:`,
+      `<blockquote style="margin:0 0 16px;padding:12px 16px;background:#f4f4f5;border-left:4px solid #F23B0D;border-radius:4px;font-style:italic;color:#3f3f46;">${escapeHtml(knip(vraagTekst, 2000))}</blockquote>`,
+      "Open de offerte in FPS Connect om de vraag te bekijken en te beantwoorden.",
+    ],
+    knop: { label: "Bekijk offerte in FPS Connect", link: connectUrl },
+    voettekst:
+      "Dit bericht is automatisch gegenereerd door FPS Connect &bull; U ontvangt dit omdat u als behandelaar op deze offerte staat.",
+  });
+
+  try {
+    await verstuurMail({
+      naarEmail,
+      naarNaam: naarNaam ?? undefined,
+      onderwerp,
+      html,
+      soort: "klantvraag",
+    });
+  } catch (err) {
+    logger.warn({ err, offerteId }, "Klantvraag-notificatiemail mislukt (niet-kritiek)");
+  }
 }
 
 /**
