@@ -1791,6 +1791,47 @@ paths:
         "404":
           description: Geen medewerker gekoppeld aan dit account
 
+  /mijn/privacy-gegevens:
+    get:
+      operationId: getMijnPrivacyGegevens
+      tags: [mijn]
+      summary: Privacy-overzicht van de ingelogde gebruiker (eigen profiel + gekoppeld medewerker, zonder BSN)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MijnPrivacyGegevens"
+        "401":
+          description: Niet ingelogd
+
+  /mijn/activiteiten:
+    get:
+      operationId: listMijnActiviteiten
+      tags: [mijn]
+      summary: Eigen activiteitenlog van de ingelogde gebruiker (max 50 regels)
+      parameters:
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 50
+        - in: query
+          name: offset
+          schema:
+            type: integer
+            default: 0
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Activiteit"
+
   /mijn-werk:
     get:
       operationId: getMijnWerk
