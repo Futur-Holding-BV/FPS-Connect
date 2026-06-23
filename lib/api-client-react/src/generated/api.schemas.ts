@@ -4051,6 +4051,10 @@ export interface PortaalAfwijzenInput {
   reden?: string;
 }
 
+export interface PortaalOptioneelWerkInput {
+  geselecteerd: Record<string, boolean>;
+}
+
 export interface OfferteBijlageInput {
   bijlage_type?: string;
   naam: string;

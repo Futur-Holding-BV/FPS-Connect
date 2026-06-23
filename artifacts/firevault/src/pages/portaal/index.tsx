@@ -6,6 +6,7 @@ import {
   useCreatePortaalVraag,
   useOndertekenenPortaal,
   useAfwijzenPortaal,
+  useSavePortaalOptioneelWerk,
   getGetPortaalQueryKey,
 } from "@workspace/api-client-react";
 import type { PortaalOfferte } from "@workspace/api-client-react";
@@ -42,6 +43,7 @@ export default function PortaalPagina({ token }: PortaalPaginaProps) {
   const stelVraag = useCreatePortaalVraag();
   const onderteken = useOndertekenenPortaal();
   const afwijs = useAfwijzenPortaal();
+  const slaOpOptioneelWerk = useSavePortaalOptioneelWerk();
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const tekenRef = useRef(false);
@@ -75,16 +77,12 @@ export default function PortaalPagina({ token }: PortaalPaginaProps) {
     }
     if (offerte) {
       const initSelectie: Record<number, boolean> = {};
-      for (const r of (offerte as any).optionele_regels ?? []) {
+      for (const r of offerte.optionele_regels ?? []) {
         initSelectie[r.id] = r.optioneel_geselecteerd ?? true;
       }
       setOptioneelSelectie(initSelectie);
     }
   }, [offerte]);
-
-  const BASE = typeof window !== "undefined"
-    ? (document.querySelector("base")?.href?.replace(/\/$/, "") ?? "")
-    : "";
 
   async function downloadPdf() {
     trackEvent.mutate({ token, data: { event: "pdf_gedownload" } });
@@ -98,12 +96,10 @@ export default function PortaalPagina({ token }: PortaalPaginaProps) {
   async function slaOptioneelWerkOp() {
     setOptioneelBezig(true);
     try {
-      const resp = await fetch(`${BASE}/api/portaal/${token}/optioneel-werk`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ geselecteerd: optioneelSelectie }),
+      await slaOpOptioneelWerk.mutateAsync({
+        token,
+        data: { geselecteerd: optioneelSelectie },
       });
-      if (!resp.ok) throw new Error();
       setOptioneelBewaard(true);
     } catch {
       // noop

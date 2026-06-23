@@ -7901,6 +7901,33 @@ paths:
         "410":
           description: Token verlopen — uitnodiging is niet meer geldig
 
+  /portaal/{token}/optioneel-werk:
+    post:
+      operationId: savePortaalOptioneelWerk
+      tags: [portaal]
+      summary: Selectie van optionele regelposten opslaan (publiek)
+      parameters:
+        - in: path
+          name: token
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PortaalOptioneelWerkInput"
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Ongeldig invoer
+        "404":
+          description: Token niet gevonden
+        "410":
+          description: Token verlopen — uitnodiging is niet meer geldig
+
   # ── MAIL ──────────────────────────────────────────────────────────────────
   /mail/status:
     get:
@@ -15813,9 +15840,72 @@ components:
         aangemaakt_op:
           type: string
 
+    PortaalOfferteSectiesItem:
+      type: object
+      required: [id, sectie_type, volgorde]
+      properties:
+        id:
+          type: integer
+        sectie_type:
+          type: string
+        volgorde:
+          type: integer
+        actief:
+          type: boolean
+        titel:
+          type: ["string", "null"]
+        inhoud:
+          type: ["string", "null"]
+
+    PortaalOfferteBijlagenItem:
+      type: object
+      required: [id, bijlage_type, naam]
+      properties:
+        id:
+          type: integer
+        bijlage_type:
+          type: string
+        naam:
+          type: string
+        beschrijving:
+          type: ["string", "null"]
+        url:
+          type: ["string", "null"]
+
+    PortaalOptioneleRegelItem:
+      type: object
+      required: [id, maatregel, eenheid, aantal, prijs_per_eenheid, kosten, optioneel_geselecteerd]
+      properties:
+        id:
+          type: integer
+        maatregel:
+          type: string
+        ruimte:
+          type: ["string", "null"]
+        eenheid:
+          type: string
+        aantal:
+          type: number
+        prijs_per_eenheid:
+          type: number
+        kosten:
+          type: number
+        optioneel_geselecteerd:
+          type: boolean
+
+    PortaalOptioneelWerkInput:
+      type: object
+      required: [geselecteerd]
+      properties:
+        geselecteerd:
+          type: object
+          additionalProperties:
+            type: boolean
+          description: Map van regel-id (string) naar boolean (geselecteerd of niet)
+
     PortaalOfferte:
       type: object
-      required: [id, titel, geldigheid_dagen, bedrag_excl_btw, btw_percentage, bedrag_incl_btw, portaal_status, ondertekend, secties, bijlagen]
+      required: [id, titel, geldigheid_dagen, bedrag_excl_btw, btw_percentage, bedrag_incl_btw, portaal_status, ondertekend, secties, bijlagen, optionele_regels]
       properties:
         id:
           type: integer
@@ -15844,11 +15934,15 @@ components:
         secties:
           type: array
           items:
-            type: object
+            $ref: "#/components/schemas/PortaalOfferteSectiesItem"
         bijlagen:
           type: array
           items:
-            type: object
+            $ref: "#/components/schemas/PortaalOfferteBijlagenItem"
+        optionele_regels:
+          type: array
+          items:
+            $ref: "#/components/schemas/PortaalOptioneleRegelItem"
 
     PortaalHandtekeningInput:
       type: object

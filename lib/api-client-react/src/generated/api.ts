@@ -27955,6 +27955,75 @@ export const useAfwijzenPortaal = <TError = ErrorType<void>,
       return useMutation(getAfwijzenPortaalMutationOptions(options));
     }
 
+export const getSavePortaalOptioneelWerkUrl = (token: string,) => {
+
+
+
+
+  return `/api/portaal/${token}/optioneel-werk`
+}
+
+/**
+ * @summary Optioneel werk selectie opslaan (publiek)
+ */
+export const savePortaalOptioneelWerk = async (token: string,
+    portaalOptioneelWerkInput: PortaalOptioneelWerkInput, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getSavePortaalOptioneelWerkUrl(token),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(portaalOptioneelWerkInput)
+  }
+);}
+
+
+
+
+export const getSavePortaalOptioneelWerkMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof savePortaalOptioneelWerk>>, TError,{token: string;data: BodyType<PortaalOptioneelWerkInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof savePortaalOptioneelWerk>>, TError,{token: string;data: BodyType<PortaalOptioneelWerkInput>}, TContext> => {
+
+const mutationKey = ['savePortaalOptioneelWerk'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof savePortaalOptioneelWerk>>, {token: string;data: BodyType<PortaalOptioneelWerkInput>}> = (props) => {
+          const {token,data} = props ?? {};
+
+          return  savePortaalOptioneelWerk(token,data,requestOptions)
+        }
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SavePortaalOptioneelWerkMutationResult = NonNullable<Awaited<ReturnType<typeof savePortaalOptioneelWerk>>>
+    export type SavePortaalOptioneelWerkMutationBody = BodyType<PortaalOptioneelWerkInput>
+    export type SavePortaalOptioneelWerkMutationError = ErrorType<void>
+
+    /**
+ * @summary Optioneel werk selectie opslaan (publiek)
+ */
+export const useSavePortaalOptioneelWerk = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof savePortaalOptioneelWerk>>, TError,{token: string;data: BodyType<PortaalOptioneelWerkInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof savePortaalOptioneelWerk>>,
+        TError,
+        {token: string;data: BodyType<PortaalOptioneelWerkInput>},
+        TContext
+      > => {
+      return useMutation(getSavePortaalOptioneelWerkMutationOptions(options));
+    }
+
 export const getGetMailStatusUrl = () => {
 
 
