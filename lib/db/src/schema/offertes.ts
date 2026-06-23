@@ -93,6 +93,8 @@ export const offerteRegelsTable = pgTable("offerte_regels", {
   kosten: real("kosten").notNull().default(0),
   volgorde: integer("volgorde").notNull().default(0),
   aiVoorstel: boolean("ai_voorstel").notNull().default(false),
+  isOptioneel: boolean("is_optioneel").notNull().default(false),
+  optioneelGeselecteerd: boolean("optioneel_geselecteerd").notNull().default(true),
   aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
   bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
 });

@@ -330,6 +330,19 @@ export default function ProposalStudio() {
     }
   }
 
+  async function toggleRegelOptioneel(regelId: number, huidig: boolean) {
+    try {
+      await werkRegel.mutateAsync({
+        id: regelId,
+        data: { is_optioneel: !huidig } as any,
+      });
+      await queryClient.invalidateQueries({ queryKey: getListOfferteRegelsQueryKey(offerteId) });
+      toast({ title: !huidig ? "Gemarkeerd als optioneel" : "Optioneel ongedaan gemaakt" });
+    } catch {
+      toast({ title: "Wijzigen mislukt", variant: "destructive" });
+    }
+  }
+
   async function slaRegelPrijsOp(regelId: number) {
     const prijs = parseFloat(bewerkPrijs.replace(",", "."));
     if (isNaN(prijs)) {
@@ -592,6 +605,7 @@ export default function ProposalStudio() {
                   setBewerkPrijs={setBewerkPrijs}
                   slaRegelPrijsOp={slaRegelPrijsOp}
                   werkRegelPending={werkRegel.isPending}
+                  toggleOptioneel={toggleRegelOptioneel}
                 />
               </TabsContent>
 
@@ -843,6 +857,7 @@ function PrijzenTab({
   setBewerkPrijs,
   slaRegelPrijsOp,
   werkRegelPending,
+  toggleOptioneel,
 }: {
   regels: any[];
   offerte: any;
@@ -852,6 +867,7 @@ function PrijzenTab({
   setBewerkPrijs: (v: string) => void;
   slaRegelPrijsOp: (id: number) => Promise<void>;
   werkRegelPending: boolean;
+  toggleOptioneel: (id: number, huidig: boolean) => Promise<void>;
 }) {
   const maatregelen = regels.filter((r) => r.categorie !== "algemene_kosten");
   const algemeenKosten = regels.filter((r) => r.categorie === "algemene_kosten");
@@ -874,11 +890,23 @@ function PrijzenTab({
   function RegelRij({ r }: { r: any }) {
     const isBewerken = bewerkRegelId === r.id;
     return (
-      <tr className="border-b hover:bg-muted/30 transition-colors">
+      <tr className={`border-b hover:bg-muted/30 transition-colors${r.is_optioneel ? " bg-amber-50/40" : ""}`}>
         <td className="py-2 px-3">
-          <div className="font-medium text-sm">{r.maatregel}</div>
-          {r.ruimte && <div className="text-xs text-muted-foreground">{r.ruimte}</div>}
-          {r.snag_referentie && <div className="text-xs text-muted-foreground">{r.snag_referentie}</div>}
+          <div className="flex items-start gap-2">
+            <button
+              title={r.is_optioneel ? "Optioneel — klik om verplicht te maken" : "Klik om optioneel te maken"}
+              className={`mt-0.5 flex-shrink-0 h-4 w-4 rounded border transition-colors ${r.is_optioneel ? "bg-amber-400 border-amber-500 text-white" : "border-muted-foreground/40 hover:border-amber-400"}`}
+              onClick={() => toggleOptioneel(r.id, !!r.is_optioneel)}
+            >
+              {r.is_optioneel && <Check className="h-3 w-3" />}
+            </button>
+            <div>
+              <div className="font-medium text-sm">{r.maatregel}</div>
+              {r.is_optioneel && <div className="text-xs text-amber-700">Optioneel</div>}
+              {r.ruimte && <div className="text-xs text-muted-foreground">{r.ruimte}</div>}
+              {r.snag_referentie && <div className="text-xs text-muted-foreground">{r.snag_referentie}</div>}
+            </div>
+          </div>
         </td>
         <td className="py-2 px-3 text-right text-sm text-muted-foreground whitespace-nowrap">{r.eenheid}</td>
         <td className="py-2 px-3 text-right text-sm">{r.aantal}</td>
@@ -919,7 +947,7 @@ function PrijzenTab({
 
   return (
     <div className="space-y-4">
-      <p className="text-xs text-muted-foreground">Klik op een prijs om deze te bewerken.</p>
+      <p className="text-xs text-muted-foreground">Klik op een prijs om deze te bewerken. Gebruik het vakje links van een regel om hem als optioneel te markeren — optionele posten zijn zichtbaar in het klantportaal met een keuzeoptie.</p>
       <div className="overflow-auto rounded-lg border">
         <table className="w-full text-sm">
           <thead>

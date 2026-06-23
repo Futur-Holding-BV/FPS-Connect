@@ -3789,6 +3789,8 @@ export interface OfferteRegel {
   kosten: number;
   volgorde: number;
   ai_voorstel: boolean;
+  is_optioneel: boolean;
+  optioneel_geselecteerd: boolean;
   aangemaakt_op: string;
   bijgewerkt_op: string;
 }
@@ -3807,6 +3809,7 @@ export interface OfferteRegelInput {
   kosten?: number;
   volgorde?: number;
   ai_voorstel?: boolean;
+  is_optioneel?: boolean;
 }
 
 export interface OfferteUitgangspunt {
@@ -3971,9 +3974,38 @@ export interface OfferteTrackingEvent {
   aangemaakt_op: string;
 }
 
-export type PortaalOfferteSectiesItem = { [key: string]: unknown };
+export interface PortaalOfferteSectiesItem {
+  id: number;
+  sectie_type: string;
+  volgorde: number;
+  actief?: boolean;
+  /** @nullable */
+  titel?: string | null;
+  /** @nullable */
+  inhoud?: string | null;
+}
 
-export type PortaalOfferteBijlagenItem = { [key: string]: unknown };
+export interface PortaalOfferteBijlagenItem {
+  id: number;
+  bijlage_type: string;
+  naam: string;
+  /** @nullable */
+  beschrijving?: string | null;
+  /** @nullable */
+  url?: string | null;
+}
+
+export interface PortaalOptioneleRegelItem {
+  id: number;
+  maatregel: string;
+  /** @nullable */
+  ruimte?: string | null;
+  eenheid: string;
+  aantal: number;
+  prijs_per_eenheid: number;
+  kosten: number;
+  optioneel_geselecteerd: boolean;
+}
 
 export interface PortaalOfferte {
   id: number;
@@ -3994,6 +4026,7 @@ export interface PortaalOfferte {
   ondertekend: boolean;
   secties: PortaalOfferteSectiesItem[];
   bijlagen: PortaalOfferteBijlagenItem[];
+  optionele_regels: PortaalOptioneleRegelItem[];
 }
 
 export interface PortaalHandtekeningInput {

@@ -11,10 +11,11 @@ import {
   offerteSectiesTable,
   offerteBijlagenTable,
   offerteVersiesTable,
+  offerteRegelsTable,
   projectenTable,
   gebruikersTable,
 } from "@workspace/db";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, and } from "drizzle-orm";
 import { stuurKlantvraagNotificatie } from "../services/email";
 
 const router = Router();
@@ -66,6 +67,12 @@ router.get("/portaal/:token", async (req, res) => {
       .where(eq(offerteBijlagenTable.offerteId, offerte.id))
       .orderBy(offerteBijlagenTable.volgorde);
 
+    const optioneleRegels = await db
+      .select()
+      .from(offerteRegelsTable)
+      .where(and(eq(offerteRegelsTable.offerteId, offerte.id), eq(offerteRegelsTable.isOptioneel, true)))
+      .orderBy(offerteRegelsTable.volgorde);
+
     const [handtekening] = await db
       .select()
       .from(offerteHandtekeningenTable)
@@ -113,6 +120,16 @@ router.get("/portaal/:token", async (req, res) => {
         beschrijving: b.beschrijving,
         url: b.url,
       })),
+      optionele_regels: optioneleRegels.map((r) => ({
+        id: r.id,
+        maatregel: r.maatregel,
+        ruimte: r.ruimte,
+        eenheid: r.eenheid,
+        aantal: r.aantal,
+        prijs_per_eenheid: r.prijsPerEenheid,
+        kosten: r.kosten,
+        optioneel_geselecteerd: r.optioneelGeselecteerd,
+      })),
     });
   } catch (err) {
     req.log.error(err);
@@ -137,6 +154,49 @@ router.patch("/portaal/:token/tracking", async (req, res) => {
     await db.insert(offerteTrackingTable).values({
       offerteId: tokenRecord.offerteId,
       event,
+      portaalToken: req.params.token,
+      ip: String(req.ip ?? "").slice(0, 45),
+    });
+
+    res.json({ ok: true });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// POST /portaal/:token/optioneel-werk — klant bevestigt welke optionele posten hij wil
+router.post("/portaal/:token/optioneel-werk", async (req, res) => {
+  try {
+    const tokenResultaat = await valideerToken(req.params.token);
+    if (!tokenResultaat.gevonden)
+      return res.status(404).json({ error: "Portaallink niet gevonden." });
+    if (tokenResultaat.verlopen)
+      return res.status(410).json({ error: "Uw uitnodiging is verlopen." });
+    const tokenRecord = tokenResultaat.record;
+
+    const geselecteerd: Record<string, boolean> = req.body?.geselecteerd ?? {};
+    if (typeof geselecteerd !== "object" || Array.isArray(geselecteerd))
+      return res.status(400).json({ error: "geselecteerd moet een object zijn met regel-id's als sleutels." });
+
+    for (const [rawId, waarde] of Object.entries(geselecteerd)) {
+      const regelId = parseInt(rawId, 10);
+      if (isNaN(regelId) || typeof waarde !== "boolean") continue;
+      await db
+        .update(offerteRegelsTable)
+        .set({ optioneelGeselecteerd: waarde, bijgewerktOp: new Date() })
+        .where(
+          and(
+            eq(offerteRegelsTable.id, regelId),
+            eq(offerteRegelsTable.offerteId, tokenRecord.offerteId),
+            eq(offerteRegelsTable.isOptioneel, true),
+          ),
+        );
+    }
+
+    await db.insert(offerteTrackingTable).values({
+      offerteId: tokenRecord.offerteId,
+      event: "bekeken",
       portaalToken: req.params.token,
       ip: String(req.ip ?? "").slice(0, 45),
     });

@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
-import { FileText, Plus, Search, Sparkles, PenLine, TrendingUp, CheckCircle, Send, Eye } from "lucide-react";
+import { FileText, Plus, Search, Sparkles, PenLine, TrendingUp, CheckCircle, Send, Eye, Clock } from "lucide-react";
 import { Link } from "wouter";
 
 const STATUS_KLEUR: Record<string, string> = {
@@ -141,7 +141,7 @@ export default function OffertesPagina() {
       </div>
 
       {analytics && (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
           <Card>
             <CardContent className="p-4 flex items-center gap-3">
               <Send className="h-5 w-5 text-blue-600 shrink-0" />
@@ -175,6 +175,19 @@ export default function OffertesPagina() {
               <div>
                 <div className="text-2xl font-bold">{analytics.conversie_procent.toFixed(0)}%</div>
                 <div className="text-xs text-muted-foreground">Conversie</div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4 flex items-center gap-3">
+              <Clock className="h-5 w-5 text-amber-600 shrink-0" />
+              <div>
+                <div className="text-2xl font-bold">
+                  {(analytics as any).gemiddelde_doorlooptijd_dagen > 0
+                    ? `${(analytics as any).gemiddelde_doorlooptijd_dagen}d`
+                    : "—"}
+                </div>
+                <div className="text-xs text-muted-foreground">Gem. doorlooptijd</div>
               </div>
             </CardContent>
           </Card>

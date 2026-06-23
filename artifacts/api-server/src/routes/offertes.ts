@@ -328,6 +328,14 @@ router.get("/offertes/analytics", lezen, async (req, res) => {
 
     const conversie = totaal > 0 ? Math.round((ondertekend / totaal) * 100) : 0;
 
+    // Gemiddelde doorlooptijd (aangemaakt → ondertekend) in dagen
+    const doorlooptijdRij = await db.execute(
+      sql`SELECT AVG(EXTRACT(EPOCH FROM (h.aangemaakt_op - o.aangemaakt_op)) / 86400)::numeric AS gem_dagen
+          FROM offertes o
+          JOIN offerte_handtekeningen h ON h.offerte_id = o.id`
+    );
+    const gemDagen = Number((doorlooptijdRij.rows[0] as any)?.gem_dagen ?? 0);
+
     const recenteHandtekeningen = await db
       .select({
         offerteId: offertesTable.id,
@@ -349,6 +357,7 @@ router.get("/offertes/analytics", lezen, async (req, res) => {
       afgewezen,
       conversie_procent: conversie,
       gemiddelde_waarde: Math.round(gemWaarde * 100) / 100,
+      gemiddelde_doorlooptijd_dagen: Math.round(gemDagen * 10) / 10,
       recente_offertes: recenteHandtekeningen.map((o) => ({
         id: o.offerteId,
         offertenummer: o.offertenummer,
@@ -435,6 +444,8 @@ const mapRegel = (r: typeof offerteRegelsTable.$inferSelect) => ({
   kosten: r.kosten,
   volgorde: r.volgorde,
   ai_voorstel: r.aiVoorstel,
+  is_optioneel: r.isOptioneel,
+  optioneel_geselecteerd: r.optioneelGeselecteerd,
   aangemaakt_op: iso(r.aangemaaktOp),
   bijgewerkt_op: iso(r.bijgewerktOp),
 });
@@ -485,7 +496,7 @@ router.post("/offertes/:id/regels", schrijven, async (req, res) => {
 
 router.patch("/offerte-regels/:id", schrijven, async (req, res) => {
   try {
-    const { maatregel, categorie, snag_referentie, voorziening_id, ruimte, uitgangspunten, eenheid, aantal, prijs_per_eenheid, kosten, volgorde, ai_voorstel } = req.body;
+    const { maatregel, categorie, snag_referentie, voorziening_id, ruimte, uitgangspunten, eenheid, aantal, prijs_per_eenheid, kosten, volgorde, ai_voorstel, is_optioneel } = req.body;
     const berekendeKosten = kosten != null ? kosten : (aantal ?? 0) * (prijs_per_eenheid ?? 0);
     const [r] = await db
       .update(offerteRegelsTable)
@@ -502,6 +513,7 @@ router.patch("/offerte-regels/:id", schrijven, async (req, res) => {
         kosten: berekendeKosten,
         volgorde,
         aiVoorstel: ai_voorstel,
+        ...(is_optioneel !== undefined ? { isOptioneel: is_optioneel } : {}),
         bijgewerktOp: new Date(),
       })
       .where(eq(offerteRegelsTable.id, parseId(req.params.id)))

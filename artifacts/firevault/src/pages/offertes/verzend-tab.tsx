@@ -36,19 +36,23 @@ function datumLabel(iso: string) {
 }
 
 const EVENT_LABEL: Record<string, string> = {
-  geopend: "Geopend",
-  getekend: "Ondertekend",
+  portaal_bekeken: "Portaal geopend",
+  bekeken: "Bekeken",
+  pdf_gedownload: "PDF gedownload",
+  bijlage_gedownload: "Bijlage gedownload",
+  ondertekend: "Ondertekend",
   afgewezen: "Afgewezen",
   vraag_gesteld: "Vraag gesteld",
   vraag_beantwoord: "Vraag beantwoord",
-  gelezen: "Gelezen",
+  verzonden: "E-mail verzonden",
 };
 
 function eventBadge(event: string) {
-  if (event === "getekend") return <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200">{EVENT_LABEL[event] ?? event}</Badge>;
+  if (event === "ondertekend") return <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200">{EVENT_LABEL[event] ?? event}</Badge>;
   if (event === "afgewezen") return <Badge className="bg-rose-100 text-rose-800 border-rose-200">{EVENT_LABEL[event] ?? event}</Badge>;
   if (event === "vraag_gesteld") return <Badge className="bg-blue-100 text-blue-800 border-blue-200">{EVENT_LABEL[event] ?? event}</Badge>;
   if (event === "vraag_beantwoord") return <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200">{EVENT_LABEL[event] ?? event}</Badge>;
+  if (event === "pdf_gedownload" || event === "bijlage_gedownload") return <Badge className="bg-purple-100 text-purple-800 border-purple-200">{EVENT_LABEL[event] ?? event}</Badge>;
   return <Badge variant="outline">{EVENT_LABEL[event] ?? event}</Badge>;
 }
 
@@ -142,8 +146,18 @@ export function VerzendTab({ offerteId, opdrachtgever, titel, vragen, vragenLade
       toast({ title: "E-mail, onderwerp en tekst zijn verplicht", variant: "destructive" });
       return;
     }
-    const activToken = (tokens ?? [])[0];
-    const portaalLink = activToken ? `${baseUrl}/portaal/${activToken.token}` : undefined;
+    const actieveTokens = (tokens ?? []).filter((t: OffertePortaalToken) => new Date(t.verloopt_op) > new Date());
+    let portaalToken = actieveTokens[0];
+    if (!portaalToken) {
+      try {
+        portaalToken = await maakToken.mutateAsync({ id: offerteId });
+        await qc.invalidateQueries({ queryKey: getListOffertePortaalTokensQueryKey(offerteId) });
+      } catch {
+        toast({ title: "Portaallink aanmaken mislukt", variant: "destructive" });
+        return;
+      }
+    }
+    const portaalLink = `${baseUrl}/portaal/${portaalToken.token}`;
     try {
       await verzend.mutateAsync({
         id: offerteId,

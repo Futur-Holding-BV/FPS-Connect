@@ -16,7 +16,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, CheckCircle, XCircle, MessageSquare, PenLine, AlertTriangle } from "lucide-react";
+import { Loader2, CheckCircle, XCircle, MessageSquare, PenLine, AlertTriangle, Printer, Paperclip } from "lucide-react";
 
 function euro(n: number) {
   return new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR" }).format(n ?? 0);
@@ -62,14 +62,55 @@ export default function PortaalPagina({ token }: PortaalPaginaProps) {
   const [afwijsReden, setAfwijsReden] = useState("");
   const [afwijsOpen, setAfwijsOpen] = useState(false);
 
+  const [optioneelSelectie, setOptioneelSelectie] = useState<Record<number, boolean>>({});
+  const [optioneelBewaard, setOptioneelBewaard] = useState(false);
+  const [optioneelBezig, setOptioneelBezig] = useState(false);
+
   const heeftGespoord = useRef(false);
 
   useEffect(() => {
     if (offerte && !heeftGespoord.current) {
       heeftGespoord.current = true;
-      trackEvent.mutate({ token, data: { event: "geopend" } });
+      trackEvent.mutate({ token, data: { event: "bekeken" } });
+    }
+    if (offerte) {
+      const initSelectie: Record<number, boolean> = {};
+      for (const r of (offerte as any).optionele_regels ?? []) {
+        initSelectie[r.id] = r.optioneel_geselecteerd ?? true;
+      }
+      setOptioneelSelectie(initSelectie);
     }
   }, [offerte]);
+
+  const BASE = typeof window !== "undefined"
+    ? (document.querySelector("base")?.href?.replace(/\/$/, "") ?? "")
+    : "";
+
+  async function downloadPdf() {
+    trackEvent.mutate({ token, data: { event: "pdf_gedownload" } });
+    window.print();
+  }
+
+  async function trackBijlageDownload() {
+    trackEvent.mutate({ token, data: { event: "bijlage_gedownload" } });
+  }
+
+  async function slaOptioneelWerkOp() {
+    setOptioneelBezig(true);
+    try {
+      const resp = await fetch(`${BASE}/api/portaal/${token}/optioneel-werk`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ geselecteerd: optioneelSelectie }),
+      });
+      if (!resp.ok) throw new Error();
+      setOptioneelBewaard(true);
+    } catch {
+      // noop
+    } finally {
+      setOptioneelBezig(false);
+    }
+  }
 
   const tekenStart = useCallback((e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
@@ -225,18 +266,24 @@ export default function PortaalPagina({ token }: PortaalPaginaProps) {
             </div>
             <span className="font-semibold text-foreground text-sm">FPS Brandpreventie</span>
           </div>
-          <Badge
-            variant="outline"
-            className={
-              o.portaal_status === "ondertekend" || handtekeningFase === "voltooid"
-                ? "bg-emerald-100 text-emerald-800 border-emerald-200"
-                : o.portaal_status === "afgewezen" || handtekeningFase === "afgewezen"
-                ? "bg-rose-100 text-rose-800 border-rose-200"
-                : "bg-blue-100 text-blue-800 border-blue-200"
-            }
-          >
-            {PORTAAL_STATUS_LABEL[o.portaal_status] ?? o.portaal_status}
-          </Badge>
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="sm" onClick={downloadPdf} className="text-muted-foreground">
+              <Printer className="h-4 w-4" />
+              <span className="hidden sm:inline">PDF</span>
+            </Button>
+            <Badge
+              variant="outline"
+              className={
+                o.portaal_status === "ondertekend" || handtekeningFase === "voltooid"
+                  ? "bg-emerald-100 text-emerald-800 border-emerald-200"
+                  : o.portaal_status === "afgewezen" || handtekeningFase === "afgewezen"
+                  ? "bg-rose-100 text-rose-800 border-rose-200"
+                  : "bg-blue-100 text-blue-800 border-blue-200"
+              }
+            >
+              {PORTAAL_STATUS_LABEL[o.portaal_status] ?? o.portaal_status}
+            </Badge>
+          </div>
         </div>
       </header>
 
@@ -255,44 +302,24 @@ export default function PortaalPagina({ token }: PortaalPaginaProps) {
           <div className="space-y-4">
             {(o.secties as Array<{
               id: number;
-              type: string;
-              naam: string;
+              sectie_type: string;
+              volgorde: number;
+              actief?: boolean;
+              titel?: string | null;
               inhoud?: string | null;
-              regels?: Array<{ id: number; omschrijving?: string | null; aantal?: number | null; eenheidsprijs?: number | null; totaalprijs?: number | null }>;
-            }>).map((s) => (
-              <Card key={s.id}>
-                <CardContent className="p-5 space-y-3">
-                  <h2 className="font-semibold">{s.naam}</h2>
-                  {s.type === "tekst" && s.inhoud && (
-                    <p className="text-sm text-muted-foreground whitespace-pre-wrap">{s.inhoud}</p>
-                  )}
-                  {s.type === "regels" && (s.regels ?? []).length > 0 && (
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-sm">
-                        <thead>
-                          <tr className="border-b text-muted-foreground text-xs">
-                            <th className="text-left pb-2 pr-4 font-medium">Omschrijving</th>
-                            <th className="text-right pb-2 pr-4 font-medium">Aantal</th>
-                            <th className="text-right pb-2 pr-4 font-medium">Eenheidsprijs</th>
-                            <th className="text-right pb-2 font-medium">Totaal</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {s.regels!.map((r) => (
-                            <tr key={r.id} className="border-b last:border-0">
-                              <td className="py-2 pr-4">{r.omschrijving ?? "—"}</td>
-                              <td className="py-2 pr-4 text-right">{r.aantal ?? "—"}</td>
-                              <td className="py-2 pr-4 text-right">{r.eenheidsprijs != null ? euro(r.eenheidsprijs) : "—"}</td>
-                              <td className="py-2 text-right font-medium">{r.totaalprijs != null ? euro(r.totaalprijs) : "—"}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            ))}
+            }>)
+              .filter((s) => s.actief !== false)
+              .sort((a, b) => a.volgorde - b.volgorde)
+              .map((s) => (
+                <Card key={s.id}>
+                  <CardContent className="p-5 space-y-3">
+                    {s.titel && <h2 className="font-semibold">{s.titel}</h2>}
+                    {s.inhoud && (
+                      <p className="text-sm text-muted-foreground whitespace-pre-wrap">{s.inhoud}</p>
+                    )}
+                  </CardContent>
+                </Card>
+              ))}
           </div>
         )}
 
@@ -314,6 +341,101 @@ export default function PortaalPagina({ token }: PortaalPaginaProps) {
             </div>
           </CardContent>
         </Card>
+
+        {((o as any).optionele_regels ?? []).length > 0 && !isGesloten && (
+          <Card>
+            <CardContent className="p-5 space-y-4">
+              <div>
+                <h2 className="font-semibold">Optioneel werk</h2>
+                <p className="text-sm text-muted-foreground">
+                  Vink aan welke optionele posten u wilt meenemen. Uw selectie wordt bewaard.
+                </p>
+              </div>
+              <div className="space-y-2">
+                {((o as any).optionele_regels as Array<{
+                  id: number;
+                  maatregel: string;
+                  ruimte?: string | null;
+                  eenheid: string;
+                  aantal: number;
+                  kosten: number;
+                  optioneel_geselecteerd: boolean;
+                }>).map((r) => (
+                  <label
+                    key={r.id}
+                    className="flex items-start gap-3 p-3 rounded-lg border cursor-pointer hover:bg-muted/30 transition-colors"
+                  >
+                    <input
+                      type="checkbox"
+                      className="mt-0.5 h-4 w-4 accent-primary"
+                      checked={optioneelSelectie[r.id] ?? r.optioneel_geselecteerd}
+                      onChange={(e) =>
+                        setOptioneelSelectie((prev) => ({ ...prev, [r.id]: e.target.checked }))
+                      }
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium text-sm">{r.maatregel}</div>
+                      {r.ruimte && (
+                        <div className="text-xs text-muted-foreground">{r.ruimte}</div>
+                      )}
+                    </div>
+                    <div className="text-sm font-medium text-right flex-shrink-0">{euro(r.kosten)}</div>
+                  </label>
+                ))}
+              </div>
+              <div className="flex items-center gap-3">
+                <Button size="sm" onClick={slaOptioneelWerkOp} disabled={optioneelBezig}>
+                  {optioneelBezig ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle className="h-3.5 w-3.5" />}
+                  {optioneelBezig ? "Bezig…" : "Selectie bevestigen"}
+                </Button>
+                {optioneelBewaard && (
+                  <span className="text-sm text-emerald-700">Selectie opgeslagen</span>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {((o as any).bijlagen ?? []).length > 0 && (
+          <Card>
+            <CardContent className="p-5 space-y-3">
+              <div className="flex items-center gap-2">
+                <Paperclip className="h-4 w-4 text-primary" />
+                <h2 className="font-semibold">Bijlagen</h2>
+              </div>
+              <div className="space-y-2">
+                {((o as any).bijlagen as Array<{
+                  id: number;
+                  bijlage_type: string;
+                  naam: string;
+                  beschrijving?: string | null;
+                  url?: string | null;
+                }>).map((b) => (
+                  <div key={b.id} className="flex items-center gap-3 p-3 rounded-lg border">
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium text-sm">{b.naam}</div>
+                      {b.beschrijving && (
+                        <div className="text-xs text-muted-foreground">{b.beschrijving}</div>
+                      )}
+                    </div>
+                    <Badge variant="outline" className="text-xs flex-shrink-0">{b.bijlage_type}</Badge>
+                    {b.url && (
+                      <a
+                        href={b.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        onClick={trackBijlageDownload}
+                        className="text-xs text-primary hover:underline flex-shrink-0"
+                      >
+                        Openen
+                      </a>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {handtekeningFase === "voltooid" || (o.portaal_status === "ondertekend" && !isGesloten) ? (
           <Card>
