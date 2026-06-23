@@ -3741,6 +3741,8 @@ export interface Offerte {
   status: string;
   portaal_status?: string;
   /** @nullable */
+  auto_project_id?: number | null;
+  /** @nullable */
   aangemaakt_door_id?: number | null;
   aangemaakt_op: string;
   bijgewerkt_op: string;

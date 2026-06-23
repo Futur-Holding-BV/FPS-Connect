@@ -42,6 +42,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   ArrowLeft, Sparkles, ChevronUp, ChevronDown, Eye, Printer, Plus,
   Trash2, BookOpen, Clock, Paperclip, Check, X, GripVertical, ToggleLeft, ToggleRight, Send,
+  FolderOpen,
 } from "lucide-react";
 import { VerzendTab } from "./verzend-tab";
 import { useToast } from "@/hooks/use-toast";
@@ -406,6 +407,25 @@ export default function ProposalStudio() {
       `}</style>
 
       <div className="max-w-7xl mx-auto space-y-4">
+        {offerte.portaal_status === "ondertekend" && offerte.auto_project_id && (
+          <div className="flex items-center gap-3 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3">
+            <FolderOpen className="h-5 w-5 text-emerald-600 shrink-0" />
+            <div className="flex-1">
+              <span className="text-sm font-medium text-emerald-800">Project geopend</span>
+              <span className="text-sm text-emerald-700"> — deze offerte is ondertekend en omgezet naar een project.</span>
+            </div>
+            {offerte.gebouw_id ? (
+              <Link href={`/gebouwen/${offerte.gebouw_id}`}>
+                <Button size="sm" variant="outline" className="border-emerald-300 text-emerald-700 hover:bg-emerald-100 shrink-0">
+                  Ga naar project
+                </Button>
+              </Link>
+            ) : (
+              <span className="text-xs text-emerald-600 shrink-0">Geen gebouw gekoppeld</span>
+            )}
+          </div>
+        )}
+
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <div className="flex items-center gap-3">
             <Link href="/offertes">

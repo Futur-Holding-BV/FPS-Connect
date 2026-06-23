@@ -21,6 +21,7 @@ import { gebouwenTable } from "./gebouwen";
 import { gebruikersTable } from "./gebruikers";
 import { crmKlantenTable } from "./crm";
 import { voorzieningenTable } from "./voorzieningen";
+import { projectenTable } from "./projecten";
 
 // Offertesjabloon — vaste structuur per werkmaatschappij (bv. FPS Bouw).
 export const offerteSjablonenTable = pgTable("offerte_sjablonen", {
@@ -71,6 +72,7 @@ export const offertesTable = pgTable("offertes", {
   calculatieId: integer("calculatie_id"),
   status: text("status").notNull().default("concept"),
   portaalStatus: text("portaal_status").notNull().default("concept"),
+  autoProjectId: integer("auto_project_id").references(() => projectenTable.id, { onDelete: "set null" }),
   aangemaaktDoorId: integer("aangemaakt_door_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
   aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
   bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),

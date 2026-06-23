@@ -8817,6 +8817,7 @@ export const ListOffertesResponseItem = zod.object({
   "bedrag_incl_btw": zod.number(),
   "status": zod.string(),
   "portaal_status": zod.string().optional(),
+  "auto_project_id": zod.number().nullish(),
   "aangemaakt_door_id": zod.number().nullish(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
@@ -8880,6 +8881,7 @@ export const GetOfferteResponse = zod.object({
   "bedrag_incl_btw": zod.number(),
   "status": zod.string(),
   "portaal_status": zod.string().optional(),
+  "auto_project_id": zod.number().nullish(),
   "aangemaakt_door_id": zod.number().nullish(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
@@ -8936,6 +8938,7 @@ export const UpdateOfferteResponse = zod.object({
   "bedrag_incl_btw": zod.number(),
   "status": zod.string(),
   "portaal_status": zod.string().optional(),
+  "auto_project_id": zod.number().nullish(),
   "aangemaakt_door_id": zod.number().nullish(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()

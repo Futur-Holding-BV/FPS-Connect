@@ -15456,6 +15456,8 @@ components:
           type: string
         portaal_status:
           type: string
+        auto_project_id:
+          type: ["integer", "null"]
         aangemaakt_door_id:
           type: ["integer", "null"]
         aangemaakt_op:

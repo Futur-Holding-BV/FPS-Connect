@@ -14,9 +14,11 @@ import {
   offerteRegelsTable,
   projectenTable,
   gebruikersTable,
+  gebouwenTable,
 } from "@workspace/db";
-import { eq, desc, and } from "drizzle-orm";
+import { eq, and, gt, desc } from "drizzle-orm";
 import { stuurKlantvraagNotificatie } from "../services/email";
+import { logActiviteit } from "../lib/activiteit";
 
 const router = Router();
 
@@ -339,8 +341,15 @@ router.post("/portaal/:token/ondertekenen", async (req, res) => {
 
     await db
       .update(offertesTable)
-      .set({ portaalStatus: "ondertekend", status: "ondertekend", bijgewerktOp: nu })
+      .set({ portaalStatus: "ondertekend", status: "geaccepteerd", bijgewerktOp: nu })
       .where(eq(offertesTable.id, offerte.id));
+
+    if (offerte.gebouwId != null) {
+      await db
+        .update(gebouwenTable)
+        .set({ projectStatus: "opdracht_in_uitvoering", bijgewerktOp: nu })
+        .where(eq(gebouwenTable.id, offerte.gebouwId));
+    }
 
     let projectId: number | null = null;
     try {
@@ -360,6 +369,17 @@ router.post("/portaal/:token/ondertekenen", async (req, res) => {
         })
         .returning();
       projectId = project.id;
+
+      await db
+        .update(offertesTable)
+        .set({ autoProjectId: projectId, bijgewerktOp: new Date() })
+        .where(eq(offertesTable.id, offerte.id));
+
+      await logActiviteit({
+        type: "project_aangemaakt",
+        omschrijving: `Project aangemaakt na ondertekening offerte ${offerte.offertenummer ?? offerte.id}: ${offerte.titel}`,
+        gebouwId: offerte.gebouwId ?? null,
+      });
     } catch (projectErr) {
       req.log.warn(projectErr, "Project aanmaken mislukt na ondertekening");
     }
