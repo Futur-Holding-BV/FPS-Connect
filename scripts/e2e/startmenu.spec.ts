@@ -134,7 +134,7 @@ test("FPS startmenu: login, waaier en doorlinken", async ({ page }) => {
   });
 
   await test.step("header en vijf menu-items zichtbaar", async () => {
-    await expect(page.getByText("E2E Test Monteur")).toBeVisible();
+    await expect(zichtbareTekst(page, "E2E Test Monteur").first()).toBeVisible();
     for (const sleutel of SLEUTELS) {
       await expect(page.getByTestId(`radiaal-${sleutel}`)).toBeVisible();
     }
