@@ -3,7 +3,6 @@ import { Link } from "wouter";
 import {
   useGetInboxStats,
   useListInboxItems,
-  useCreateInboxItem,
   useListWerkgevers,
   getListInboxItemsQueryKey,
   getGetInboxStatsQueryKey,
@@ -96,7 +95,8 @@ export default function InboxPagina() {
   const { data: stats } = useGetInboxStats();
   const { data: items = [], isLoading } = useListInboxItems(statusFilter && statusFilter !== "open" && statusFilter !== "alle" ? { status: statusFilter } : {});
   const { data: werkgevers = [] } = useListWerkgevers();
-  const registreer = useCreateInboxItem();
+  const [registreerBestand, setRegistreerBestand] = useState<File | null>(null);
+  const [isRegistreerBezig, setIsRegistreerBezig] = useState(false);
 
   const openStatussen = ["nieuw", "geanalyseerd", "ter_beoordeling"];
   const gefilterd = statusFilter === "open"
@@ -104,16 +104,42 @@ export default function InboxPagina() {
     : statusFilter === "alle" ? (items as InboxItem[]) : (items as InboxItem[]).filter((i) => i.status === statusFilter);
 
   async function handleRegistreren() {
-    if (!velden.bestandsnaam.trim()) { toast({ title: "Bestandsnaam is verplicht", variant: "destructive" }); return; }
+    if (!registreerBestand && !velden.bestandsnaam.trim()) {
+      toast({ title: "Kies een bestand of voer een bestandsnaam in", variant: "destructive" });
+      return;
+    }
+    setIsRegistreerBezig(true);
     try {
-      await registreer.mutateAsync({ data: { bestandsnaam: velden.bestandsnaam, mimetype: velden.mimetype || undefined, bestandsgrootte: velden.bestandsgrootte ? parseInt(velden.bestandsgrootte) : undefined, opmerkingen: velden.opmerkingen || undefined } });
+      const form = new FormData();
+      if (registreerBestand) {
+        form.append("bestand", registreerBestand);
+      } else {
+        form.append("bestandsnaam", velden.bestandsnaam);
+        form.append("mimetype", velden.mimetype);
+        if (velden.bestandsgrootte) form.append("bestandsgrootte", velden.bestandsgrootte);
+      }
+      if (velden.opmerkingen) form.append("opmerkingen", velden.opmerkingen);
+
+      const resp = await fetch("/api/inbox/items", {
+        method: "POST",
+        body: form,
+        credentials: "include",
+      });
+      if (!resp.ok) {
+        const fout = await resp.json().catch(() => ({ error: "Fout bij uploaden" }));
+        throw new Error((fout as { error?: string }).error ?? "Fout bij uploaden");
+      }
+
       await qc.invalidateQueries({ queryKey: getListInboxItemsQueryKey() });
       await qc.invalidateQueries({ queryKey: getGetInboxStatsQueryKey() });
       setRegistrerenOpen(false);
+      setRegistreerBestand(null);
       setVelden({ bestandsnaam: "", mimetype: "application/pdf", bestandsgrootte: "", opmerkingen: "" });
-      toast({ title: "Document geregistreerd — AI-classificatie uitgevoerd" });
-    } catch {
-      toast({ title: "Fout bij registreren", variant: "destructive" });
+      toast({ title: "Document geüpload — AI-classificatie uitgevoerd" });
+    } catch (err) {
+      toast({ title: err instanceof Error ? err.message : "Fout bij registreren", variant: "destructive" });
+    } finally {
+      setIsRegistreerBezig(false);
     }
   }
 
@@ -679,6 +705,7 @@ export default function InboxPagina() {
                   jpg: "image/jpeg", jpeg: "image/jpeg", png: "image/png", txt: "text/plain",
                   eml: "message/rfc822", msg: "application/vnd.ms-outlook",
                 };
+                setRegistreerBestand(f);
                 setVelden((v) => ({
                   ...v,
                   bestandsnaam: f.name,
@@ -700,7 +727,7 @@ export default function InboxPagina() {
                     <span className="text-muted-foreground text-xs">({formatBytes(parseInt(velden.bestandsgrootte))})</span>
                   )}
                   <button
-                    onClick={(e) => { e.stopPropagation(); setVelden((v) => ({ ...v, bestandsnaam: "", bestandsgrootte: "" })); }}
+                    onClick={(e) => { e.stopPropagation(); setRegistreerBestand(null); setVelden((v) => ({ ...v, bestandsnaam: "", bestandsgrootte: "" })); }}
                     className="text-muted-foreground hover:text-destructive"
                   >
                     <X className="w-3.5 h-3.5" />
@@ -757,8 +784,8 @@ export default function InboxPagina() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setRegistrerenOpen(false)}>Annuleren</Button>
-            <Button onClick={handleRegistreren} disabled={registreer.isPending} className="gap-1.5">
-              {registreer.isPending ? "Analyseren..." : <><Upload className="w-3.5 h-3.5" /> Registreren</>}
+            <Button onClick={handleRegistreren} disabled={isRegistreerBezig} className="gap-1.5">
+              {isRegistreerBezig ? "Uploaden..." : <><Upload className="w-3.5 h-3.5" /> Registreren</>}
             </Button>
           </DialogFooter>
         </DialogContent>

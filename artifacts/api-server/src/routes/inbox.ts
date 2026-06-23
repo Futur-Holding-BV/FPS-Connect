@@ -13,6 +13,28 @@ import { eq, desc } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
 import { parseEmailBestand } from "../services/email-ai";
 import { heeftOpenAi, maakOpenAiClient } from "../lib/openai";
+import { ObjectStorageService } from "../lib/objectStorage";
+
+const objectStorage = new ObjectStorageService();
+
+/** Pad in object storage op basis van AI-categorie.
+ * snagstream → algemeen/snagstream/
+ * overig     → algemeen/inbox/{categorie}/
+ */
+function opslagSubPath(categorie: string, bestandsnaam: string): string {
+  const ts = Date.now();
+  const veilig = bestandsnaam.replace(/[^a-zA-Z0-9._-]/g, "_").slice(0, 120);
+  const map: Record<string, string> = {
+    snagstream_rapport: "algemeen/snagstream",
+    offerte_document:   "algemeen/inbox/offertes",
+    factuur:            "algemeen/inbox/facturen",
+    oplevering_rapport: "algemeen/inbox/opleveringen",
+    contract:           "algemeen/inbox/contracten",
+    email:              "algemeen/inbox/emails",
+  };
+  const dir = map[categorie] ?? "algemeen/inbox/overig";
+  return `${dir}/${ts}_${veilig}`;
+}
 
 const router = Router();
 
@@ -251,23 +273,44 @@ router.get("/inbox/items", lezen, async (req, res) => {
   }
 });
 
-// ── REGISTREER DOCUMENT (mock upload: body = metadata) ────────────────────────
-router.post("/inbox/items", schrijven, async (req, res) => {
+// ── REGISTREER DOCUMENT (multipart: bestand verplicht of metadata-only fallback) ──
+const uploadEnkel = multer({ storage: multer.memoryStorage(), limits: { fileSize: 50 * 1024 * 1024 } });
+
+router.post("/inbox/items", schrijven, uploadEnkel.single("bestand"), async (req, res) => {
   try {
-    const { bestandsnaam, bestandspad, bestandsgrootte, mimetype, opmerkingen } = req.body;
+    const bestand = req.file ?? null;
+    const bestandsnaam: string = bestand?.originalname ?? (req.body.bestandsnaam as string | undefined) ?? "";
     if (!bestandsnaam) return res.status(400).json({ error: "bestandsnaam is verplicht" });
-    const pad = bestandspad ?? `inbox/${Date.now()}_${bestandsnaam}`;
+
+    const mimetype: string = bestand?.mimetype ?? (req.body.mimetype as string | undefined) ?? "application/octet-stream";
+    const bestandsgrootte: number | null = bestand?.size ?? (req.body.bestandsgrootte ? parseInt(req.body.bestandsgrootte as string, 10) : null);
+    const opmerkingen: string | null = (req.body.opmerkingen as string | undefined) ?? null;
     const gebruikerId = req.session.userId ?? null;
 
     const ai = classificeerMockAI(bestandsnaam, mimetype);
+
+    // Upload het bestand naar object storage als bytes aanwezig zijn
+    let bestandspad: string;
+    if (bestand) {
+      const subPath = opslagSubPath(ai.document_categorie, bestandsnaam);
+      try {
+        bestandspad = await objectStorage.uploadBestand(subPath, bestand.buffer, mimetype);
+      } catch {
+        req.log.warn("Object storage niet beschikbaar — pad zonder upload opslaan");
+        bestandspad = `/objects/${subPath}`;
+      }
+    } else {
+      // Metadata-only fallback (backward compatibility)
+      bestandspad = (req.body.bestandspad as string | undefined) ?? `inbox/${Date.now()}_${bestandsnaam}`;
+    }
 
     const [item] = await db
       .insert(inboxItemsTable)
       .values({
         bestandsnaam,
-        bestandspad: pad,
-        bestandsgrootte: bestandsgrootte ?? null,
-        mimetype: mimetype ?? null,
+        bestandspad,
+        bestandsgrootte,
+        mimetype,
         geuploadDoor: gebruikerId,
         status: "geanalyseerd",
         documentCategorie: ai.document_categorie,
@@ -282,7 +325,7 @@ router.post("/inbox/items", schrijven, async (req, res) => {
         snagstreamRapportdatum: ai.snagstream_rapportdatum,
         snagstreamRapporttype: ai.snagstream_rapporttype,
         snagstreamStatus: ai.snagstream_status,
-        opmerkingen: opmerkingen ?? null,
+        opmerkingen,
       })
       .returning();
 
@@ -290,7 +333,9 @@ router.post("/inbox/items", schrijven, async (req, res) => {
       inboxItemId: item.id,
       actie: "geregistreerd",
       gebruikerId,
-      details: `Bestand "${bestandsnaam}" geregistreerd. AI-categorie: ${ai.document_categorie} (${ai.ai_betrouwbaarheid})`,
+      details: bestand
+        ? `Bestand "${bestandsnaam}" geüpload naar ${bestandspad}. AI-categorie: ${ai.document_categorie} (${ai.ai_betrouwbaarheid})`
+        : `Bestand "${bestandsnaam}" geregistreerd (metadata). AI-categorie: ${ai.document_categorie} (${ai.ai_betrouwbaarheid})`,
     });
 
     res.status(201).json(mapItem(item));
@@ -663,7 +708,14 @@ router.post(
         .insert(inboxItemsTable)
         .values({
           bestandsnaam: emailBestandsnaam,
-          bestandspad: `inbox/offerte-aanvraag/${Date.now()}_${emailBestandsnaam}`,
+          bestandspad: await (async () => {
+            if (emailBestand?.buffer) {
+              const subPath = opslagSubPath("email", emailBestandsnaam);
+              try { return await objectStorage.uploadBestand(subPath, emailBestand.buffer, emailBestand.mimetype ?? "application/octet-stream"); }
+              catch { return `/objects/${subPath}`; }
+            }
+            return `inbox/offerte-aanvraag/${Date.now()}_${emailBestandsnaam}`;
+          })(),
           bestandsgrootte: emailBestand?.size ?? null,
           mimetype: emailBestand?.mimetype ?? null,
           geuploadDoor: gebruikerId,

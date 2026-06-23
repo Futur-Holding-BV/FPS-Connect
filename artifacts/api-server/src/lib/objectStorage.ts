@@ -330,6 +330,40 @@ export class ObjectStorageService {
     });
   }
 
+  // ── Inbox bestanden (server-side upload) ─────────────────────────────────────
+
+  /**
+   * Upload een inboxbestand vanuit een Buffer direct naar object storage.
+   * subPath is het pad relatief aan de root, bv. "algemeen/snagstream/123_naam.pdf".
+   * Retourneert het genormaliseerde /objects/{subPath} om in de DB op te slaan.
+   */
+  async uploadBestand(
+    subPath: string,
+    data: Buffer,
+    contentType = "application/octet-stream",
+  ): Promise<string> {
+    if (isS3Mode()) {
+      const { PutObjectCommand } = await import("@aws-sdk/client-s3");
+      await getS3Client().send(
+        new PutObjectCommand({
+          Bucket: getS3Bucket(),
+          Key: subPath,
+          Body: data,
+          ContentType: contentType,
+        }),
+      );
+      return `/objects/${subPath}`;
+    }
+
+    // GCS-backend
+    const privateObjectDir = this.getPrivateObjectDir();
+    const fullPath = `${privateObjectDir}/${subPath}`;
+    const { bucketName, objectName } = parseGCSObjectPath(fullPath);
+    const file = getGcsStorage().bucket(bucketName).file(objectName);
+    await file.save(data, { contentType, resumable: false });
+    return `/objects/${subPath}`;
+  }
+
   // ── Back-up bestanden (server-side upload/download) ──────────────────────────
 
   /**
