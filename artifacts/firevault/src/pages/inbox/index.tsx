@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { Link } from "wouter";
 import {
   useGetInboxStats,
@@ -87,8 +87,11 @@ export default function InboxPagina() {
     fout: null,
   });
   const [dropActief, setDropActief] = useState(false);
+  const [paginaDragActief, setPaginaDragActief] = useState(false);
   const emailInputRef = useRef<HTMLInputElement>(null);
   const bijlagenInputRef = useRef<HTMLInputElement>(null);
+  const paginaInputRef = useRef<HTMLInputElement>(null);
+  const registreerInputRef = useRef<HTMLInputElement>(null);
 
   const { data: stats } = useGetInboxStats();
   const { data: items = [], isLoading } = useListInboxItems(statusFilter && statusFilter !== "open" && statusFilter !== "alle" ? { status: statusFilter } : {});
@@ -118,6 +121,68 @@ export default function InboxPagina() {
     setAanvraag({ stap: "werkmaatschappij", werkmaatschappijId: "", emailBestand: null, bijlagen: [], resultaat: null, fout: null });
     setDropActief(false);
   }
+
+  function verwerkPaginaDrop(bestanden: FileList | File[]) {
+    const lijst = Array.from(bestanden);
+    if (lijst.length === 0) return;
+    const eerste = lijst[0];
+    const naam = eerste.name.toLowerCase();
+    const isEmail = naam.endsWith(".eml") || naam.endsWith(".msg") || eerste.type === "message/rfc822";
+    if (isEmail) {
+      resetAanvraag();
+      setAanvraag((a) => ({ ...a, emailBestand: eerste, bijlagen: lijst.slice(1) }));
+      setAanvraagOpen(true);
+    } else {
+      const ext = naam.split(".").pop() ?? "";
+      const mimeMap: Record<string, string> = {
+        pdf: "application/pdf",
+        doc: "application/msword",
+        docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        xls: "application/vnd.ms-excel",
+        xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        jpg: "image/jpeg",
+        jpeg: "image/jpeg",
+        png: "image/png",
+        txt: "text/plain",
+      };
+      setVelden({
+        bestandsnaam: eerste.name,
+        mimetype: eerste.type || mimeMap[ext] || "application/octet-stream",
+        bestandsgrootte: String(eerste.size),
+        opmerkingen: "",
+      });
+      setRegistrerenOpen(true);
+    }
+  }
+
+  useEffect(() => {
+    let teller = 0;
+    function onDragEnter(e: DragEvent) {
+      if (e.dataTransfer?.types.includes("Files")) { teller++; setPaginaDragActief(true); }
+    }
+    function onDragLeave() {
+      teller = Math.max(0, teller - 1);
+      if (teller === 0) setPaginaDragActief(false);
+    }
+    function onDragOver(e: DragEvent) { e.preventDefault(); }
+    function onDrop(e: DragEvent) {
+      e.preventDefault();
+      teller = 0;
+      setPaginaDragActief(false);
+      if (e.dataTransfer?.files?.length) verwerkPaginaDrop(e.dataTransfer.files);
+    }
+    document.addEventListener("dragenter", onDragEnter);
+    document.addEventListener("dragleave", onDragLeave);
+    document.addEventListener("dragover", onDragOver);
+    document.addEventListener("drop", onDrop);
+    return () => {
+      document.removeEventListener("dragenter", onDragEnter);
+      document.removeEventListener("dragleave", onDragLeave);
+      document.removeEventListener("dragover", onDragOver);
+      document.removeEventListener("drop", onDrop);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [aanvraagOpen, registrerenOpen]);
 
   function sluitAanvraag() {
     setAanvraagOpen(false);
@@ -176,6 +241,26 @@ export default function InboxPagina() {
 
   return (
     <div className="p-6 space-y-6 max-w-5xl mx-auto">
+      {/* Page-level drag overlay */}
+      {paginaDragActief && (
+        <div className="fixed inset-0 z-50 bg-primary/10 border-4 border-dashed border-primary rounded-2xl pointer-events-none flex items-center justify-center">
+          <div className="bg-white rounded-xl shadow-lg px-10 py-8 flex flex-col items-center gap-3">
+            <Upload className="w-12 h-12 text-primary" />
+            <p className="text-lg font-semibold text-primary">Loslaten om te uploaden</p>
+            <p className="text-sm text-muted-foreground">E-mailbestand (.eml/.msg) → offerte-aanvraag<br />Overig bestand → document registreren</p>
+          </div>
+        </div>
+      )}
+
+      {/* Hidden file input for drop zone click */}
+      <input
+        ref={paginaInputRef}
+        type="file"
+        className="hidden"
+        multiple
+        onChange={(e) => { if (e.target.files?.length) verwerkPaginaDrop(e.target.files); e.target.value = ""; }}
+      />
+
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">
@@ -229,6 +314,18 @@ export default function InboxPagina() {
             )}
           </Button>
         ))}
+      </div>
+
+      {/* Zichtbare sleep-zone */}
+      <div
+        className="border-2 border-dashed border-border rounded-xl p-6 text-center cursor-pointer hover:border-primary/50 hover:bg-muted/30 transition-colors"
+        onClick={() => paginaInputRef.current?.click()}
+      >
+        <Upload className="w-8 h-8 mx-auto text-muted-foreground opacity-40 mb-2" />
+        <p className="text-sm font-medium text-muted-foreground">Sleep een bestand hierin of klik om te kiezen</p>
+        <p className="text-xs text-muted-foreground mt-1 opacity-70">
+          E-mail (.eml, .msg) → offerte-aanvraag &nbsp;·&nbsp; Overig bestand → document registreren
+        </p>
       </div>
 
       {isLoading ? (
@@ -565,6 +662,59 @@ export default function InboxPagina() {
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
+            {/* Bestandskiezer */}
+            <input
+              ref={registreerInputRef}
+              type="file"
+              className="hidden"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (!f) return;
+                const ext = f.name.split(".").pop()?.toLowerCase() ?? "";
+                const mimeMap: Record<string, string> = {
+                  pdf: "application/pdf", doc: "application/msword",
+                  docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                  xls: "application/vnd.ms-excel",
+                  xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                  jpg: "image/jpeg", jpeg: "image/jpeg", png: "image/png", txt: "text/plain",
+                  eml: "message/rfc822", msg: "application/vnd.ms-outlook",
+                };
+                setVelden((v) => ({
+                  ...v,
+                  bestandsnaam: f.name,
+                  mimetype: f.type || mimeMap[ext] || "application/octet-stream",
+                  bestandsgrootte: String(f.size),
+                }));
+                e.target.value = "";
+              }}
+            />
+            <div
+              className="border-2 border-dashed border-border rounded-lg p-4 text-center cursor-pointer hover:border-primary/50 hover:bg-muted/30 transition-colors"
+              onClick={() => registreerInputRef.current?.click()}
+            >
+              {velden.bestandsnaam ? (
+                <div className="flex items-center justify-center gap-2 text-sm">
+                  <FileText className="w-4 h-4 text-primary" />
+                  <span className="font-medium truncate max-w-[260px]">{velden.bestandsnaam}</span>
+                  {velden.bestandsgrootte && (
+                    <span className="text-muted-foreground text-xs">({formatBytes(parseInt(velden.bestandsgrootte))})</span>
+                  )}
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setVelden((v) => ({ ...v, bestandsnaam: "", bestandsgrootte: "" })); }}
+                    className="text-muted-foreground hover:text-destructive"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ) : (
+                <div className="text-muted-foreground">
+                  <Upload className="w-6 h-6 mx-auto mb-1 opacity-50" />
+                  <p className="text-xs">Sleep een bestand of klik om te kiezen</p>
+                  <p className="text-xs opacity-60 mt-0.5">Bestandsnaam en type worden automatisch ingevuld</p>
+                </div>
+              )}
+            </div>
+
             <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-800">
               <p className="font-medium flex items-center gap-1.5"><Sparkles className="w-3.5 h-3.5" /> AI-classificatie</p>
               <p className="mt-1">Na registratie analyseert het systeem de bestandsnaam automatisch en stelt een categorie en bestemming voor.</p>
@@ -577,7 +727,6 @@ export default function InboxPagina() {
                 className="mt-1"
                 placeholder="bijv. snagstream_rapport_2026.pdf"
               />
-              <p className="text-xs text-muted-foreground mt-1">De bestandsnaam wordt gebruikt voor AI-classificatie.</p>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
