@@ -27623,7 +27623,7 @@ export const patchPortaalTracking = async (token: string,
 
 
 
-export const getPatchPortaalTrackingMutationOptions = <TError = ErrorType<unknown>,
+export const getPatchPortaalTrackingMutationOptions = <TError = ErrorType<void>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof patchPortaalTracking>>, TError,{token: string;data: BodyType<PortaalTrackingInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
 ): UseMutationOptions<Awaited<ReturnType<typeof patchPortaalTracking>>, TError,{token: string;data: BodyType<PortaalTrackingInput>}, TContext> => {
 
@@ -27652,12 +27652,12 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type PatchPortaalTrackingMutationResult = NonNullable<Awaited<ReturnType<typeof patchPortaalTracking>>>
     export type PatchPortaalTrackingMutationBody = BodyType<PortaalTrackingInput>
-    export type PatchPortaalTrackingMutationError = ErrorType<unknown>
+    export type PatchPortaalTrackingMutationError = ErrorType<void>
 
     /**
  * @summary Tracking-event registreren (publiek)
  */
-export const usePatchPortaalTracking = <TError = ErrorType<unknown>,
+export const usePatchPortaalTracking = <TError = ErrorType<void>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof patchPortaalTracking>>, TError,{token: string;data: BodyType<PortaalTrackingInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof patchPortaalTracking>>,
@@ -27694,7 +27694,7 @@ export const createPortaalVraag = async (token: string,
 
 
 
-export const getCreatePortaalVraagMutationOptions = <TError = ErrorType<unknown>,
+export const getCreatePortaalVraagMutationOptions = <TError = ErrorType<void>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createPortaalVraag>>, TError,{token: string;data: BodyType<PortaalVraagInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
 ): UseMutationOptions<Awaited<ReturnType<typeof createPortaalVraag>>, TError,{token: string;data: BodyType<PortaalVraagInput>}, TContext> => {
 
@@ -27723,12 +27723,12 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type CreatePortaalVraagMutationResult = NonNullable<Awaited<ReturnType<typeof createPortaalVraag>>>
     export type CreatePortaalVraagMutationBody = BodyType<PortaalVraagInput>
-    export type CreatePortaalVraagMutationError = ErrorType<unknown>
+    export type CreatePortaalVraagMutationError = ErrorType<void>
 
     /**
  * @summary Klantvraag indienen (publiek)
  */
-export const useCreatePortaalVraag = <TError = ErrorType<unknown>,
+export const useCreatePortaalVraag = <TError = ErrorType<void>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createPortaalVraag>>, TError,{token: string;data: BodyType<PortaalVraagInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof createPortaalVraag>>,
@@ -27765,7 +27765,7 @@ export const ondertekenenPortaal = async (token: string,
 
 
 
-export const getOndertekenenPortaalMutationOptions = <TError = ErrorType<unknown>,
+export const getOndertekenenPortaalMutationOptions = <TError = ErrorType<void>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof ondertekenenPortaal>>, TError,{token: string;data: BodyType<PortaalHandtekeningInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
 ): UseMutationOptions<Awaited<ReturnType<typeof ondertekenenPortaal>>, TError,{token: string;data: BodyType<PortaalHandtekeningInput>}, TContext> => {
 
@@ -27794,12 +27794,12 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type OndertekenenPortaalMutationResult = NonNullable<Awaited<ReturnType<typeof ondertekenenPortaal>>>
     export type OndertekenenPortaalMutationBody = BodyType<PortaalHandtekeningInput>
-    export type OndertekenenPortaalMutationError = ErrorType<unknown>
+    export type OndertekenenPortaalMutationError = ErrorType<void>
 
     /**
  * @summary Offerte digitaal ondertekenen (publiek)
  */
-export const useOndertekenenPortaal = <TError = ErrorType<unknown>,
+export const useOndertekenenPortaal = <TError = ErrorType<void>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof ondertekenenPortaal>>, TError,{token: string;data: BodyType<PortaalHandtekeningInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof ondertekenenPortaal>>,
@@ -27836,7 +27836,7 @@ export const afwijzenPortaal = async (token: string,
 
 
 
-export const getAfwijzenPortaalMutationOptions = <TError = ErrorType<unknown>,
+export const getAfwijzenPortaalMutationOptions = <TError = ErrorType<void>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof afwijzenPortaal>>, TError,{token: string;data?: BodyType<PortaalAfwijzenInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
 ): UseMutationOptions<Awaited<ReturnType<typeof afwijzenPortaal>>, TError,{token: string;data?: BodyType<PortaalAfwijzenInput>}, TContext> => {
 
@@ -27865,12 +27865,12 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type AfwijzenPortaalMutationResult = NonNullable<Awaited<ReturnType<typeof afwijzenPortaal>>>
     export type AfwijzenPortaalMutationBody = BodyType<PortaalAfwijzenInput> | undefined
-    export type AfwijzenPortaalMutationError = ErrorType<unknown>
+    export type AfwijzenPortaalMutationError = ErrorType<void>
 
     /**
  * @summary Offerte afwijzen (publiek)
  */
-export const useAfwijzenPortaal = <TError = ErrorType<unknown>,
+export const useAfwijzenPortaal = <TError = ErrorType<void>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof afwijzenPortaal>>, TError,{token: string;data?: BodyType<PortaalAfwijzenInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof afwijzenPortaal>>,

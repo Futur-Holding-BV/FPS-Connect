@@ -7756,7 +7756,9 @@ paths:
               schema:
                 $ref: "#/components/schemas/PortaalOfferte"
         "404":
-          description: Token niet gevonden of verlopen
+          description: Token niet gevonden
+        "410":
+          description: Token verlopen — uitnodiging is niet meer geldig
 
   /portaal/{token}/tracking:
     patch:
@@ -7778,6 +7780,10 @@ paths:
       responses:
         "200":
           description: OK
+        "404":
+          description: Token niet gevonden
+        "410":
+          description: Token verlopen — uitnodiging is niet meer geldig
 
   /portaal/{token}/vraag:
     post:
@@ -7799,6 +7805,10 @@ paths:
       responses:
         "201":
           description: Aangemaakt
+        "404":
+          description: Token niet gevonden
+        "410":
+          description: Token verlopen — uitnodiging is niet meer geldig
 
   /portaal/{token}/ondertekenen:
     post:
@@ -7829,6 +7839,10 @@ paths:
                     type: boolean
                   project_id:
                     type: ["integer", "null"]
+        "404":
+          description: Token niet gevonden
+        "410":
+          description: Token verlopen — uitnodiging is niet meer geldig
 
   /portaal/{token}/afwijzen:
     post:
@@ -7850,6 +7864,10 @@ paths:
       responses:
         "200":
           description: OK
+        "404":
+          description: Token niet gevonden
+        "410":
+          description: Token verlopen — uitnodiging is niet meer geldig
 
   # ── MAIL ──────────────────────────────────────────────────────────────────
   /mail/status:

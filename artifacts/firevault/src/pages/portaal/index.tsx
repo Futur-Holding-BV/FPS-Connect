@@ -36,7 +36,7 @@ interface PortaalPaginaProps {
 
 export default function PortaalPagina({ token }: PortaalPaginaProps) {
   const qc = useQueryClient();
-  const { data: offerte, isLoading, isError } = useGetPortaal(token);
+  const { data: offerte, isLoading, isError, error } = useGetPortaal(token);
 
   const trackEvent = usePatchPortaalTracking();
   const stelVraag = useCreatePortaalVraag();
@@ -175,13 +175,25 @@ export default function PortaalPagina({ token }: PortaalPaginaProps) {
   }
 
   if (isError || !offerte) {
+    const isVerlopen = isError && error && "status" in error && (error as { status: number }).status === 410;
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Card className="max-w-sm w-full mx-4">
           <CardContent className="py-12 text-center space-y-3">
             <AlertTriangle className="h-10 w-10 mx-auto text-amber-500" />
-            <p className="font-semibold">Link niet gevonden of verlopen</p>
-            <p className="text-sm text-muted-foreground">Neem contact op met de afzender voor een nieuwe uitnodiging.</p>
+            {isVerlopen ? (
+              <>
+                <p className="font-semibold">Uw uitnodiging is verlopen</p>
+                <p className="text-sm text-muted-foreground">
+                  Vraag een nieuwe link aan bij de afzender.
+                </p>
+              </>
+            ) : (
+              <>
+                <p className="font-semibold">Link niet gevonden</p>
+                <p className="text-sm text-muted-foreground">Neem contact op met de afzender voor een nieuwe uitnodiging.</p>
+              </>
+            )}
           </CardContent>
         </Card>
       </div>
