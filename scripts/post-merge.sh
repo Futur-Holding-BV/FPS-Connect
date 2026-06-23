@@ -6,4 +6,7 @@ pnpm install --frozen-lockfile
 # tijdens een merge (non-TTY) af op de defensieve "truncate?"-prompt bij een naam-mismatch,
 # waardoor geen enkele additieve wijziging wordt toegepast. Hernoemen is niet-destructief.
 pnpm --filter @workspace/db run reconcile
-pnpm --filter @workspace/db run push
+# --force: sla interactieve data-loss prompts over (non-TTY omgeving). Stale kolommen
+# die Drizzle wil droppen worden vooraf handmatig via directe SQL verwijderd zodat
+# --force nooit onbedoeld echte data verwijdert.
+pnpm --filter @workspace/db run push-force
