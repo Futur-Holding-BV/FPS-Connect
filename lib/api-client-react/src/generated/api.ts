@@ -31504,6 +31504,57 @@ export const useDupliceerModCalculatie = <TError = ErrorType<unknown>,
       return useMutation(getDupliceerModCalculatieMutationOptions(options));
     }
 
+export const getMaakOfferteVanCalculatieUrl = (id: number,) => {
+  return `/api/modules/calculaties/${id}/maak-offerte`
+}
+
+/**
+ * @summary Genereer offerte vanuit calculatie
+ */
+export const maakOfferteVanCalculatie = async (id: number, options?: RequestInit): Promise<{offerte_id: number}> => {
+  return customFetch<{offerte_id: number}>(getMaakOfferteVanCalculatieUrl(id), {
+    ...options,
+    method: 'POST'
+  });
+}
+
+export const getMaakOfferteVanCalculatieMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof maakOfferteVanCalculatie>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof maakOfferteVanCalculatie>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['maakOfferteVanCalculatie'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof maakOfferteVanCalculatie>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+          return maakOfferteVanCalculatie(id, requestOptions)
+        }
+
+  return { mutationFn, ...mutationOptions }
+}
+
+export type MaakOfferteVanCalculatieMutationResult = NonNullable<Awaited<ReturnType<typeof maakOfferteVanCalculatie>>>
+
+export type MaakOfferteVanCalculatieMutationError = ErrorType<unknown>
+
+/**
+ * @summary Genereer offerte vanuit calculatie
+ */
+export const useMaakOfferteVanCalculatie = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof maakOfferteVanCalculatie>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof maakOfferteVanCalculatie>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getMaakOfferteVanCalculatieMutationOptions(options));
+    }
+
 export const getListModCalcRegelsUrl = (id: number,) => {
 
 

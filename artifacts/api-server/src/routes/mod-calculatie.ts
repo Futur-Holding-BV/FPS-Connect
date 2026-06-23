@@ -9,6 +9,8 @@ import {
   modCalcNormtijdenTable,
   gebouwenTable,
   gebruikersTable,
+  offertesTable,
+  offerteRegelsTable,
 } from "@workspace/db";
 import { eq, desc, asc, ilike, or } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
@@ -479,6 +481,147 @@ router.delete("/modules/calculaties/:id/regels/:regelId", schrijvenCalc, async (
     const regelId = parseId(req.params["regelId"]);
     await db.delete(modCalcRegelsTable).where(eq(modCalcRegelsTable.id, regelId));
     res.status(204).end();
+  } catch (e) {
+    req.log.error(e);
+    res.status(500).json({ error: "Interne fout" });
+  }
+});
+
+// ── Maak offerte vanuit calculatie ─────────────────────────────────────────
+// Leest de mod_calc_headers + regels en genereert een concept-offerte met
+// bijbehorende offerte_regels. Arbeid/materiaal/etc. worden maatregel-regels;
+// AK, risico, winst en korting worden algemene_kosten-regels.
+router.post("/modules/calculaties/:id/maak-offerte", schrijvenCalc, async (req, res) => {
+  try {
+    const id = parseId(req.params["id"]);
+
+    // Haal header op
+    const [header] = await db
+      .select()
+      .from(modCalcHeadersTable)
+      .where(eq(modCalcHeadersTable.id, id));
+    if (!header) return res.status(404).json({ error: "Calculatie niet gevonden" });
+
+    // Haal regels op
+    const regels = await db
+      .select()
+      .from(modCalcRegelsTable)
+      .where(eq(modCalcRegelsTable.calculatieId, id))
+      .orderBy(asc(modCalcRegelsTable.volgorde));
+
+    // Bereken totalen
+    const subtotaal = regels.reduce((s, r) => s + (r.totaal ?? 0), 0);
+    const akBedrag    = Math.round(subtotaal * (header.opslagAk / 100) * 100) / 100;
+    const risicoBedrag = Math.round(subtotaal * (header.opslagRisico / 100) * 100) / 100;
+    const winstBedrag  = Math.round(subtotaal * (header.opslagWinst / 100) * 100) / 100;
+    const totaalVoorKorting = subtotaal + akBedrag + risicoBedrag + winstBedrag;
+    const kortingBedrag = Math.round(totaalVoorKorting * (header.korting / 100) * 100) / 100;
+    const bedragExcl = Math.round((totaalVoorKorting - kortingBedrag) * 100) / 100;
+    const bedragIncl = Math.round(bedragExcl * 1.21 * 100) / 100;
+
+    // Gebouwnaam ophalen voor de titel
+    let gebouwNaam: string | null = null;
+    if (header.gebouwId) {
+      const [g] = await db.select({ naam: gebouwenTable.naam }).from(gebouwenTable).where(eq(gebouwenTable.id, header.gebouwId));
+      gebouwNaam = g?.naam ?? null;
+    }
+
+    const vandaag = new Date().toLocaleDateString("nl-NL", { day: "2-digit", month: "2-digit", year: "numeric" });
+    const titel = gebouwNaam ? `${header.naam} — ${gebouwNaam}` : header.naam;
+
+    // Maak offerte aan
+    const [offerte] = await db
+      .insert(offertesTable)
+      .values({
+        titel,
+        gebouwId: header.gebouwId ?? null,
+        opdrachtgever: header.klantNaam ?? null,
+        onsKenmerk: header.referentie ?? null,
+        uwKenmerk: `CALC-${header.id}`,
+        datum: vandaag,
+        geldigheidDagen: 30,
+        bedragExclBtw: bedragExcl,
+        btwPercentage: 21,
+        bedragInclBtw: bedragIncl,
+        calculatieId: header.id,
+        status: "concept",
+        aangemaaktDoorId: req.session.userId ?? null,
+      } as typeof offertesTable.$inferInsert)
+      .returning();
+
+    // Maak offerte_regels aan vanuit calculatieregels (als maatregel-regels)
+    let volgorde = 1;
+    for (const r of regels) {
+      await db.insert(offerteRegelsTable).values({
+        offerteId: offerte.id,
+        categorie: "maatregel",
+        maatregel: r.omschrijving,
+        uitgangspunten: r.categorie !== "arbeid" ? r.categorie.charAt(0).toUpperCase() + r.categorie.slice(1) : null,
+        eenheid: r.eenheid,
+        aantal: r.hoeveelheid,
+        prijsPerEenheid: r.tarief,
+        kosten: r.totaal,
+        volgorde: volgorde++,
+      });
+    }
+
+    // AK/ABK-opslag als algemene_kosten-regel
+    if (header.opslagAk > 0) {
+      await db.insert(offerteRegelsTable).values({
+        offerteId: offerte.id,
+        categorie: "algemene_kosten",
+        maatregel: `AK/ABK (${header.opslagAk}%)`,
+        eenheid: "ls",
+        aantal: 1,
+        prijsPerEenheid: akBedrag,
+        kosten: akBedrag,
+        volgorde: volgorde++,
+      });
+    }
+
+    // Risico-opslag
+    if (header.opslagRisico > 0) {
+      await db.insert(offerteRegelsTable).values({
+        offerteId: offerte.id,
+        categorie: "algemene_kosten",
+        maatregel: `Risico-opslag (${header.opslagRisico}%)`,
+        eenheid: "ls",
+        aantal: 1,
+        prijsPerEenheid: risicoBedrag,
+        kosten: risicoBedrag,
+        volgorde: volgorde++,
+      });
+    }
+
+    // Winst & risico
+    if (header.opslagWinst > 0) {
+      await db.insert(offerteRegelsTable).values({
+        offerteId: offerte.id,
+        categorie: "algemene_kosten",
+        maatregel: `Winst & risico (${header.opslagWinst}%)`,
+        eenheid: "ls",
+        aantal: 1,
+        prijsPerEenheid: winstBedrag,
+        kosten: winstBedrag,
+        volgorde: volgorde++,
+      });
+    }
+
+    // Korting (als negatief bedrag)
+    if (header.korting > 0) {
+      await db.insert(offerteRegelsTable).values({
+        offerteId: offerte.id,
+        categorie: "algemene_kosten",
+        maatregel: `Korting (${header.korting}%)`,
+        eenheid: "ls",
+        aantal: 1,
+        prijsPerEenheid: -kortingBedrag,
+        kosten: -kortingBedrag,
+        volgorde: volgorde++,
+      });
+    }
+
+    res.status(201).json({ offerte_id: offerte.id });
   } catch (e) {
     req.log.error(e);
     res.status(500).json({ error: "Interne fout" });

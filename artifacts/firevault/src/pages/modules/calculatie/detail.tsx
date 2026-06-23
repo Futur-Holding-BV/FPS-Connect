@@ -5,6 +5,7 @@ import {
   useUpdateModCalculatie,
   useDeleteModCalculatie,
   useDupliceerModCalculatie,
+  useMaakOfferteVanCalculatie,
   useCreateModCalcRegel,
   useUpdateModCalcRegel,
   useDeleteModCalcRegel,
@@ -30,7 +31,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
 import {
-  ArrowLeft, Plus, Pencil, Trash2, Copy, ChevronRight,
+  ArrowLeft, Plus, Pencil, Trash2, Copy, ChevronRight, FileText,
 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -144,6 +145,14 @@ export default function ModulesCalculatieDetail() {
       },
     },
   });
+  const maakOfferteMut = useMaakOfferteVanCalculatie({
+    mutation: {
+      onSuccess: (d) => {
+        navigate(`/offertes/${d.offerte_id}`);
+      },
+    },
+  });
+
   const createRegelMut = useCreateModCalcRegel({ mutation: { onSuccess: invalidate } });
   const updateRegelMut = useUpdateModCalcRegel({ mutation: { onSuccess: invalidate } });
   const deleteRegelMut = useDeleteModCalcRegel({ mutation: { onSuccess: invalidate } });
@@ -306,6 +315,14 @@ export default function ModulesCalculatieDetail() {
               {s !== "verloren" && <ChevronRight className="h-3.5 w-3.5 ml-1" />}
             </Button>
           ))}
+          <Button
+            size="sm"
+            onClick={() => maakOfferteMut.mutate({ id })}
+            disabled={maakOfferteMut.isPending}
+          >
+            <FileText className="h-3.5 w-3.5 mr-1.5" />
+            {maakOfferteMut.isPending ? "Bezig..." : "Maak offerte"}
+          </Button>
           <Button variant="outline" size="sm" onClick={openBewerkenHeader}>
             <Pencil className="h-3.5 w-3.5 mr-1.5" />
             Bewerken
