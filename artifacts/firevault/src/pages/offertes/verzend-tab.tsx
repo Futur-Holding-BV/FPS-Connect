@@ -6,7 +6,6 @@ import {
   useCreateOfferteAiEmail,
   useVerzendOfferte,
   useListOfferteTracking,
-  useListOfferteVragen,
   useBeantwoordOfferteVraag,
   getListOffertePortaalTokensQueryKey,
   getListOfferteTrackingQueryKey,
@@ -57,6 +56,8 @@ interface VerzendTabProps {
   offerteId: number;
   opdrachtgever?: string | null;
   titel: string;
+  vragen?: OfferteVraag[];
+  vragenLaden?: boolean;
 }
 
 interface AntwoordForm {
@@ -65,13 +66,12 @@ interface AntwoordForm {
   naam: string;
 }
 
-export function VerzendTab({ offerteId, opdrachtgever, titel }: VerzendTabProps) {
+export function VerzendTab({ offerteId, opdrachtgever, titel, vragen, vragenLaden }: VerzendTabProps) {
   const { toast } = useToast();
   const qc = useQueryClient();
 
   const { data: tokens, isLoading: tokensLaden } = useListOffertePortaalTokens(offerteId);
   const { data: tracking, isLoading: trackingLaden } = useListOfferteTracking(offerteId);
-  const { data: vragen, isLoading: vragenLaden } = useListOfferteVragen(offerteId);
 
   const maakToken = useCreateOffertePortaalToken();
   const aiEmail = useCreateOfferteAiEmail();

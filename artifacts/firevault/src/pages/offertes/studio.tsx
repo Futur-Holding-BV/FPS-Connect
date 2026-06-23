@@ -15,12 +15,14 @@ import {
   useListOfferteBijlagen,
   useCreateOfferteBijlage,
   useDeleteOfferteBijlage,
+  useListOfferteVragen,
   getGetOfferteQueryKey,
   getListOfferteVersiesQueryKey,
   getListOfferteBijlagenQueryKey,
   getListOfferteSectiesQueryKey,
   getListOfferteRegelsQueryKey,
   getListOfferteUitgangspuntenQueryKey,
+  getListOfferteVragenQueryKey,
 } from "@workspace/api-client-react";
 import type { OfferteSectie } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
@@ -108,6 +110,11 @@ export default function ProposalStudio() {
   const { data: bijlagen } = useListOfferteBijlagen(offerteId, {
     query: { queryKey: getListOfferteBijlagenQueryKey(offerteId), enabled: !!offerteId },
   });
+  const { data: vragen, isLoading: vragenLaden } = useListOfferteVragen(offerteId, {
+    query: { queryKey: getListOfferteVragenQueryKey(offerteId), enabled: !!offerteId },
+  });
+
+  const aantalOnbeantwoord = (vragen ?? []).filter((v) => v.antwoord === null || v.antwoord === undefined).length;
 
   const maakSectie = useCreateOfferteSectie();
   const werkSectie = useUpdateOfferteSectie();
@@ -492,7 +499,15 @@ export default function ProposalStudio() {
                 <TabsTrigger value="voorbeeld"><Eye className="h-3.5 w-3.5 mr-1.5" />Voorbeeld</TabsTrigger>
                 <TabsTrigger value="bijlagen"><Paperclip className="h-3.5 w-3.5 mr-1.5" />Bijlagen</TabsTrigger>
                 <TabsTrigger value="versies"><Clock className="h-3.5 w-3.5 mr-1.5" />Versies</TabsTrigger>
-                <TabsTrigger value="verzenden"><Send className="h-3.5 w-3.5 mr-1.5" />Verzenden</TabsTrigger>
+                <TabsTrigger value="verzenden" className="relative">
+                  <Send className="h-3.5 w-3.5 mr-1.5" />
+                  Verzenden
+                  {aantalOnbeantwoord > 0 && (
+                    <span className="ml-1.5 inline-flex items-center justify-center rounded-full bg-rose-600 text-white text-[10px] font-bold leading-none h-4 min-w-4 px-1">
+                      {aantalOnbeantwoord}
+                    </span>
+                  )}
+                </TabsTrigger>
               </TabsList>
 
               <TabsContent value="studio">
@@ -691,6 +706,8 @@ export default function ProposalStudio() {
                   offerteId={offerte.id}
                   opdrachtgever={offerte.opdrachtgever}
                   titel={offerte.titel}
+                  vragen={vragen}
+                  vragenLaden={vragenLaden}
                 />
               </TabsContent>
             </Tabs>
