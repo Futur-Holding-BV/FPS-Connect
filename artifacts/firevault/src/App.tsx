@@ -13,6 +13,7 @@ import LoginPagina from "@/pages/auth/login";
 import ActivatiePagina from "@/pages/uitnodiging/index";
 import WachtwoordVergetenPagina from "@/pages/auth/wachtwoord-vergeten";
 import WachtwoordResetPagina from "@/pages/auth/wachtwoord-reset";
+import PortaalPagina from "@/pages/portaal/index";
 
 import BeheerderLayout from "@/layouts/beheerder-layout";
 import MonteurLayout from "@/layouts/monteur-layout";
@@ -369,6 +370,10 @@ function Gate() {
   if (pad.startsWith("/uitnodiging/")) {
     const token = pad.replace("/uitnodiging/", "");
     return <ActivatiePagina token={token} />;
+  }
+  if (pad.startsWith("/portaal/")) {
+    const token = pad.replace("/portaal/", "");
+    return <PortaalPagina token={token} />;
   }
   if (pad === "/wachtwoord-vergeten") {
     return <WachtwoordVergetenPagina />;

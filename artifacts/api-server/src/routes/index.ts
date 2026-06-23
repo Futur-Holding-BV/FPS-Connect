@@ -22,6 +22,7 @@ import profielenRouter from "./profielen";
 import hrmRouter from "./hrm";
 import dossiersRouter from "./dossiers";
 import offertesRouter from "./offertes";
+import portaalRouter from "./portaal";
 import mailRouter from "./mail";
 import calculatiesRouter from "./calculaties";
 import rapportenRouter from "./rapporten";
@@ -47,6 +48,7 @@ const router: IRouter = Router();
 router.use(healthRouter);
 router.use(authRouter);
 router.use(uitnodigingRouter);
+router.use(portaalRouter);
 // Vanaf hier vereist alles een geldige sessie
 router.use(requireAuth);
 

@@ -6,6 +6,7 @@ import {
   useOfferteRegelsUitSpots,
   useListGebouwen,
   useListCrmKlanten,
+  useGetOfferteAnalytics,
   getListOffertesQueryKey,
 } from "@workspace/api-client-react";
 import type { OfferteInput } from "@workspace/api-client-react";
@@ -23,7 +24,7 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
-import { FileText, Plus, Search, Sparkles, PenLine } from "lucide-react";
+import { FileText, Plus, Search, Sparkles, PenLine, TrendingUp, CheckCircle, Send, Eye } from "lucide-react";
 import { Link } from "wouter";
 
 const STATUS_KLEUR: Record<string, string> = {
@@ -45,12 +46,27 @@ const LEEG: OfferteInput = {
   btw_percentage: 21,
 };
 
+const PORTAAL_STATUS_KLEUR: Record<string, string> = {
+  verzonden: "bg-blue-100 text-blue-800 border-blue-200",
+  bekeken: "bg-indigo-100 text-indigo-800 border-indigo-200",
+  ondertekend: "bg-emerald-100 text-emerald-800 border-emerald-200",
+  afgewezen: "bg-rose-100 text-rose-800 border-rose-200",
+};
+
+const PORTAAL_STATUS_LABEL: Record<string, string> = {
+  verzonden: "Verzonden",
+  bekeken: "Bekeken",
+  ondertekend: "Ondertekend",
+  afgewezen: "Afgewezen",
+};
+
 export default function OffertesPagina() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { data: offertes, isLoading } = useListOffertes();
   const { data: gebouwen } = useListGebouwen();
   const { data: klanten } = useListCrmKlanten();
+  const { data: analytics } = useGetOfferteAnalytics();
   const maakOfferte = useCreateOfferte();
   const uitSpots = useOfferteRegelsUitSpots();
 
@@ -124,6 +140,47 @@ export default function OffertesPagina() {
         </Button>
       </div>
 
+      {analytics && (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <Card>
+            <CardContent className="p-4 flex items-center gap-3">
+              <Send className="h-5 w-5 text-blue-600 shrink-0" />
+              <div>
+                <div className="text-2xl font-bold">{analytics.verzonden}</div>
+                <div className="text-xs text-muted-foreground">Verzonden</div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4 flex items-center gap-3">
+              <Eye className="h-5 w-5 text-indigo-600 shrink-0" />
+              <div>
+                <div className="text-2xl font-bold">{analytics.bekeken}</div>
+                <div className="text-xs text-muted-foreground">Bekeken</div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4 flex items-center gap-3">
+              <CheckCircle className="h-5 w-5 text-emerald-600 shrink-0" />
+              <div>
+                <div className="text-2xl font-bold">{analytics.ondertekend}</div>
+                <div className="text-xs text-muted-foreground">Ondertekend</div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4 flex items-center gap-3">
+              <TrendingUp className="h-5 w-5 text-primary shrink-0" />
+              <div>
+                <div className="text-2xl font-bold">{analytics.conversie_procent.toFixed(0)}%</div>
+                <div className="text-xs text-muted-foreground">Conversie</div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
       <div className="relative max-w-sm">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input placeholder="Zoek op titel, opdrachtgever of nummer…" value={zoek} onChange={(e) => setZoek(e.target.value)} className="pl-9" />
@@ -148,7 +205,14 @@ export default function OffertesPagina() {
                     <div className="font-semibold truncate">{o.titel}</div>
                     {o.offertenummer && <div className="text-xs text-muted-foreground">{o.offertenummer}</div>}
                   </div>
-                  <Badge variant="outline" className={STATUS_KLEUR[o.status] ?? ""}>{o.status}</Badge>
+                  <div className="flex flex-col gap-1 items-end">
+                    <Badge variant="outline" className={STATUS_KLEUR[o.status] ?? ""}>{o.status}</Badge>
+                    {(o as { portaal_status?: string }).portaal_status && (o as { portaal_status?: string }).portaal_status !== "concept" && (
+                      <Badge variant="outline" className={PORTAAL_STATUS_KLEUR[(o as { portaal_status?: string }).portaal_status!] ?? ""}>
+                        {PORTAAL_STATUS_LABEL[(o as { portaal_status?: string }).portaal_status!] ?? (o as { portaal_status?: string }).portaal_status}
+                      </Badge>
+                    )}
+                  </div>
                 </div>
                 <div className="text-xs text-muted-foreground space-y-0.5">
                   {o.opdrachtgever && <div>{o.opdrachtgever}</div>}

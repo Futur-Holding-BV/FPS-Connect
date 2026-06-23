@@ -7566,6 +7566,270 @@ paths:
         "204":
           description: Verwijderd
 
+  # ── Offerte portaal & analytics ──────────────────────────────────────────
+  /offertes/analytics:
+    get:
+      operationId: getOfferteAnalytics
+      tags: [offertes]
+      summary: Offerte-analytics ophalen
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OfferteAnalytics"
+
+  /offertes/{id}/portaal-tokens:
+    get:
+      operationId: listOffertePortaalTokens
+      tags: [offertes]
+      summary: Portaaltokens van een offerte
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/OffertePortaalToken"
+
+  /offertes/{id}/portaal-token:
+    post:
+      operationId: createOffertePortaalToken
+      tags: [offertes]
+      summary: Nieuw portaaltoken aanmaken
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OffertePortaalTokenInput"
+      responses:
+        "201":
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OffertePortaalToken"
+
+  /offertes/{id}/ai-email:
+    post:
+      operationId: createOfferteAiEmail
+      tags: [offertes]
+      summary: AI-emailvoorstel genereren
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OfferteEmailVoorstel"
+
+  /offertes/{id}/verzenden:
+    post:
+      operationId: verzendOfferte
+      tags: [offertes]
+      summary: Offerte per e-mail verzenden
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OfferteVerzendenInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+
+  /offertes/{id}/vragen:
+    get:
+      operationId: listOfferteVragen
+      tags: [offertes]
+      summary: Klantvragen van een offerte
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/OfferteVraag"
+
+  /offertes/{id}/tracking:
+    get:
+      operationId: listOfferteTracking
+      tags: [offertes]
+      summary: Tracking-events van een offerte
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/OfferteTrackingEvent"
+
+  # ── Klantportaal (publiek, geen authenticatie) ─────────────────────────────
+  /portaal/{token}:
+    get:
+      operationId: getPortaal
+      tags: [portaal]
+      summary: Offerte via portaaltoken ophalen (publiek)
+      parameters:
+        - in: path
+          name: token
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PortaalOfferte"
+        "404":
+          description: Token niet gevonden of verlopen
+
+  /portaal/{token}/tracking:
+    patch:
+      operationId: patchPortaalTracking
+      tags: [portaal]
+      summary: Tracking-event registreren (publiek)
+      parameters:
+        - in: path
+          name: token
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PortaalTrackingInput"
+      responses:
+        "200":
+          description: OK
+
+  /portaal/{token}/vraag:
+    post:
+      operationId: createPortaalVraag
+      tags: [portaal]
+      summary: Klantvraag indienen (publiek)
+      parameters:
+        - in: path
+          name: token
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PortaalVraagInput"
+      responses:
+        "201":
+          description: Aangemaakt
+
+  /portaal/{token}/ondertekenen:
+    post:
+      operationId: ondertekenenPortaal
+      tags: [portaal]
+      summary: Offerte digitaal ondertekenen (publiek)
+      parameters:
+        - in: path
+          name: token
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PortaalHandtekeningInput"
+      responses:
+        "201":
+          description: Ondertekend
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                  project_id:
+                    type: ["integer", "null"]
+
+  /portaal/{token}/afwijzen:
+    post:
+      operationId: afwijzenPortaal
+      tags: [portaal]
+      summary: Offerte afwijzen (publiek)
+      parameters:
+        - in: path
+          name: token
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PortaalAfwijzenInput"
+      responses:
+        "200":
+          description: OK
+
   # ── MAIL ──────────────────────────────────────────────────────────────────
   /mail/status:
     get:
@@ -15036,6 +15300,8 @@ components:
           type: number
         status:
           type: string
+        portaal_status:
+          type: string
         aangemaakt_door_id:
           type: ["integer", "null"]
         aangemaakt_op:
@@ -15290,6 +15556,192 @@ components:
         aangemaakt_op:
           type: string
         bijgewerkt_op:
+          type: string
+
+    # ── Portaal & analytics schema's ──────────────────────────────────────────
+    OfferteAnalytics:
+      type: object
+      required: [totaal, concept, verzonden, bekeken, ondertekend, afgewezen, conversie_procent, gemiddelde_waarde, recente_offertes]
+      properties:
+        totaal:
+          type: integer
+        concept:
+          type: integer
+        verzonden:
+          type: integer
+        bekeken:
+          type: integer
+        ondertekend:
+          type: integer
+        afgewezen:
+          type: integer
+        conversie_procent:
+          type: number
+        gemiddelde_waarde:
+          type: number
+        recente_offertes:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+              offertenummer:
+                type: ["string", "null"]
+              titel:
+                type: string
+              bedrag_incl_btw:
+                type: number
+              portaal_status:
+                type: string
+
+    OffertePortaalToken:
+      type: object
+      required: [id, token, verloopt_op, aangemaakt_op]
+      properties:
+        id:
+          type: integer
+        token:
+          type: string
+        verloopt_op:
+          type: string
+        aangemaakt_op:
+          type: string
+
+    OffertePortaalTokenInput:
+      type: object
+      properties:
+        geldig_dagen:
+          type: integer
+
+    OfferteEmailVoorstel:
+      type: object
+      required: [onderwerp, begroeting, samenvatting, call_to_action, afsluiting]
+      properties:
+        onderwerp:
+          type: string
+        begroeting:
+          type: string
+        samenvatting:
+          type: string
+        call_to_action:
+          type: string
+        afsluiting:
+          type: string
+
+    OfferteVerzendenInput:
+      type: object
+      required: [naar_email, onderwerp, tekst]
+      properties:
+        naar_email:
+          type: string
+        naar_naam:
+          type: string
+        onderwerp:
+          type: string
+        tekst:
+          type: string
+        portaal_link:
+          type: string
+
+    OfferteVraag:
+      type: object
+      required: [id, vraag, aangemaakt_op]
+      properties:
+        id:
+          type: integer
+        bezoeker_naam:
+          type: ["string", "null"]
+        vraag:
+          type: string
+        antwoord:
+          type: ["string", "null"]
+        aangemaakt_op:
+          type: string
+
+    OfferteTrackingEvent:
+      type: object
+      required: [id, event, aangemaakt_op]
+      properties:
+        id:
+          type: integer
+        event:
+          type: string
+        portaal_token:
+          type: ["string", "null"]
+        aangemaakt_op:
+          type: string
+
+    PortaalOfferte:
+      type: object
+      required: [id, titel, geldigheid_dagen, bedrag_excl_btw, btw_percentage, bedrag_incl_btw, portaal_status, ondertekend, secties, bijlagen]
+      properties:
+        id:
+          type: integer
+        offertenummer:
+          type: ["string", "null"]
+        titel:
+          type: string
+        opdrachtgever:
+          type: ["string", "null"]
+        datum:
+          type: ["string", "null"]
+        geldigheid_dagen:
+          type: integer
+        bedrag_excl_btw:
+          type: number
+        btw_percentage:
+          type: number
+        bedrag_incl_btw:
+          type: number
+        kleurthema:
+          type: ["string", "null"]
+        portaal_status:
+          type: string
+        ondertekend:
+          type: boolean
+        secties:
+          type: array
+          items:
+            type: object
+        bijlagen:
+          type: array
+          items:
+            type: object
+
+    PortaalHandtekeningInput:
+      type: object
+      required: [naam, handtekening_data_url]
+      properties:
+        naam:
+          type: string
+        bedrijf:
+          type: string
+        functie:
+          type: string
+        handtekening_data_url:
+          type: string
+
+    PortaalVraagInput:
+      type: object
+      required: [vraag]
+      properties:
+        naam:
+          type: string
+        vraag:
+          type: string
+
+    PortaalTrackingInput:
+      type: object
+      required: [event]
+      properties:
+        event:
+          type: string
+
+    PortaalAfwijzenInput:
+      type: object
+      properties:
+        reden:
           type: string
 
     OfferteBijlageInput:

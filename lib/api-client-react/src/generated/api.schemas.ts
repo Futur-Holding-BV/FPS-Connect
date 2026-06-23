@@ -3712,6 +3712,7 @@ export interface Offerte {
   btw_percentage: number;
   bedrag_incl_btw: number;
   status: string;
+  portaal_status?: string;
   /** @nullable */
   aangemaakt_door_id?: number | null;
   aangemaakt_op: string;
@@ -3866,6 +3867,117 @@ export interface OfferteBijlage {
   volgorde: number;
   aangemaakt_op: string;
   bijgewerkt_op: string;
+}
+
+export type OfferteAnalyticsRecenteOffertesItem = {
+  id?: number;
+  /** @nullable */
+  offertenummer?: string | null;
+  titel?: string;
+  bedrag_incl_btw?: number;
+  portaal_status?: string;
+};
+
+export interface OfferteAnalytics {
+  totaal: number;
+  concept: number;
+  verzonden: number;
+  bekeken: number;
+  ondertekend: number;
+  afgewezen: number;
+  conversie_procent: number;
+  gemiddelde_waarde: number;
+  recente_offertes: OfferteAnalyticsRecenteOffertesItem[];
+}
+
+export interface OffertePortaalToken {
+  id: number;
+  token: string;
+  verloopt_op: string;
+  aangemaakt_op: string;
+}
+
+export interface OffertePortaalTokenInput {
+  geldig_dagen?: number;
+}
+
+export interface OfferteEmailVoorstel {
+  onderwerp: string;
+  begroeting: string;
+  samenvatting: string;
+  call_to_action: string;
+  afsluiting: string;
+}
+
+export interface OfferteVerzendenInput {
+  naar_email: string;
+  naar_naam?: string;
+  onderwerp: string;
+  tekst: string;
+  portaal_link?: string;
+}
+
+export interface OfferteVraag {
+  id: number;
+  /** @nullable */
+  bezoeker_naam?: string | null;
+  vraag: string;
+  /** @nullable */
+  antwoord?: string | null;
+  aangemaakt_op: string;
+}
+
+export interface OfferteTrackingEvent {
+  id: number;
+  event: string;
+  /** @nullable */
+  portaal_token?: string | null;
+  aangemaakt_op: string;
+}
+
+export type PortaalOfferteSectiesItem = { [key: string]: unknown };
+
+export type PortaalOfferteBijlagenItem = { [key: string]: unknown };
+
+export interface PortaalOfferte {
+  id: number;
+  /** @nullable */
+  offertenummer?: string | null;
+  titel: string;
+  /** @nullable */
+  opdrachtgever?: string | null;
+  /** @nullable */
+  datum?: string | null;
+  geldigheid_dagen: number;
+  bedrag_excl_btw: number;
+  btw_percentage: number;
+  bedrag_incl_btw: number;
+  /** @nullable */
+  kleurthema?: string | null;
+  portaal_status: string;
+  ondertekend: boolean;
+  secties: PortaalOfferteSectiesItem[];
+  bijlagen: PortaalOfferteBijlagenItem[];
+}
+
+export interface PortaalHandtekeningInput {
+  naam: string;
+  bedrijf?: string;
+  functie?: string;
+  handtekening_data_url: string;
+}
+
+export interface PortaalVraagInput {
+  naam?: string;
+  vraag: string;
+}
+
+export interface PortaalTrackingInput {
+  event: string;
+}
+
+export interface PortaalAfwijzenInput {
+  reden?: string;
 }
 
 export interface OfferteBijlageInput {
@@ -5230,6 +5342,16 @@ actief?: boolean;
 
 export type GetZiekmeldingenStatistiekenParams = {
 jaar?: number;
+};
+
+export type VerzendOfferte200 = {
+  ok?: boolean;
+};
+
+export type OndertekenenPortaal201 = {
+  ok?: boolean;
+  /** @nullable */
+  project_id?: number | null;
 };
 
 export type AiCalculatieRegels200 = {

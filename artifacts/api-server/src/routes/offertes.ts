@@ -15,14 +15,20 @@ import {
   offerteSectiesTable,
   offerteVersiesTable,
   offerteBijlagenTable,
+  offertePortaalTokensTable,
+  offerteEmailLogTable,
+  offerteTrackingTable,
+  offerteVragenTable,
   voorzieningenTable,
   crmKlantenTable,
   gebouwenTable,
   gebruikersTable,
 } from "@workspace/db";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, count, sql } from "drizzle-orm";
+import { randomBytes } from "crypto";
 import { requireBevoegdheid } from "../middlewares/auth";
 import { maakOpenAiClient, heeftOpenAi } from "../lib/openai";
+import { verstuurMail } from "../services/email";
 
 const router = Router();
 
@@ -290,6 +296,67 @@ router.post("/offertes", schrijven, async (req, res) => {
       })
       .returning();
     res.status(201).json(await offerteNaarJson(o));
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// ── Analytics ─────────────────────────────────────────────────────────────────
+// MOET vóór /offertes/:id staan (Express matcht letterlijk pad eerder dan parameter).
+router.get("/offertes/analytics", lezen, async (req, res) => {
+  try {
+    const rijen = await db
+      .select({ portaalStatus: offertesTable.portaalStatus, count: count() })
+      .from(offertesTable)
+      .groupBy(offertesTable.portaalStatus);
+
+    const tellerMap: Record<string, number> = {};
+    for (const r of rijen) tellerMap[r.portaalStatus] = Number(r.count);
+
+    const totaal = Object.values(tellerMap).reduce((a, b) => a + b, 0);
+    const ondertekend = tellerMap["ondertekend"] ?? 0;
+    const afgewezen = tellerMap["afgewezen"] ?? 0;
+    const verzonden = tellerMap["verzonden"] ?? 0;
+    const bekeken = tellerMap["bekeken"] ?? 0;
+    const concept = tellerMap["concept"] ?? 0;
+
+    const waardeSom = await db
+      .select({ gemWaarde: sql<number>`avg(bedrag_incl_btw)` })
+      .from(offertesTable);
+    const gemWaarde = Number(waardeSom[0]?.gemWaarde ?? 0);
+
+    const conversie = totaal > 0 ? Math.round((ondertekend / totaal) * 100) : 0;
+
+    const recenteHandtekeningen = await db
+      .select({
+        offerteId: offertesTable.id,
+        offertenummer: offertesTable.offertenummer,
+        titel: offertesTable.titel,
+        bedragInclBtw: offertesTable.bedragInclBtw,
+        portaalStatus: offertesTable.portaalStatus,
+      })
+      .from(offertesTable)
+      .orderBy(desc(offertesTable.bijgewerktOp))
+      .limit(10);
+
+    res.json({
+      totaal,
+      concept,
+      verzonden,
+      bekeken,
+      ondertekend,
+      afgewezen,
+      conversie_procent: conversie,
+      gemiddelde_waarde: Math.round(gemWaarde * 100) / 100,
+      recente_offertes: recenteHandtekeningen.map((o) => ({
+        id: o.offerteId,
+        offertenummer: o.offertenummer,
+        titel: o.titel,
+        bedrag_incl_btw: o.bedragInclBtw,
+        portaal_status: o.portaalStatus,
+      })),
+    });
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Interne serverfout" });
@@ -991,6 +1058,233 @@ router.post("/offertes/:id/uit-spots", schrijven, async (req, res) => {
     }
 
     res.status(201).json({ aangemaakt: nieuw.length, overgeslagen: spots.length - teMaken.length, regels: nieuw.map(mapRegel) });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// ── Portaal-token aanmaken ───────────────────────────────────────────────────
+router.post("/offertes/:id/portaal-token", schrijven, async (req, res) => {
+  try {
+    const offerteId = parseId(req.params.id);
+    const [offerte] = await db.select().from(offertesTable).where(eq(offertesTable.id, offerteId));
+    if (!offerte) return res.status(404).json({ error: "Offerte niet gevonden" });
+
+    const token = randomBytes(32).toString("hex");
+    const geldigDagen = Number(req.body?.geldig_dagen ?? 30);
+    const verlooptOp = new Date(Date.now() + geldigDagen * 24 * 60 * 60 * 1000);
+
+    const [row] = await db
+      .insert(offertePortaalTokensTable)
+      .values({ offerteId, token, verlooptOp })
+      .returning();
+
+    res.status(201).json({
+      id: row.id,
+      token: row.token,
+      verloopt_op: row.verlooptOp.toISOString(),
+    });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// ── Bestaande portaal-tokens ophalen ─────────────────────────────────────────
+router.get("/offertes/:id/portaal-tokens", lezen, async (req, res) => {
+  try {
+    const offerteId = parseId(req.params.id);
+    const tokens = await db
+      .select()
+      .from(offertePortaalTokensTable)
+      .where(eq(offertePortaalTokensTable.offerteId, offerteId))
+      .orderBy(desc(offertePortaalTokensTable.aangemaaktOp));
+
+    res.json(
+      tokens.map((t) => ({
+        id: t.id,
+        token: t.token,
+        verloopt_op: t.verlooptOp.toISOString(),
+        aangemaakt_op: t.aangemaaktOp.toISOString(),
+      })),
+    );
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// ── Vragen ophalen (admin) ────────────────────────────────────────────────────
+router.get("/offertes/:id/vragen", lezen, async (req, res) => {
+  try {
+    const offerteId = parseId(req.params.id);
+    const vragen = await db
+      .select()
+      .from(offerteVragenTable)
+      .where(eq(offerteVragenTable.offerteId, offerteId))
+      .orderBy(desc(offerteVragenTable.aangemaaktOp));
+
+    res.json(
+      vragen.map((v) => ({
+        id: v.id,
+        bezoeker_naam: v.bezoekerNaam,
+        vraag: v.vraag,
+        antwoord: v.antwoord,
+        aangemaakt_op: v.aangemaaktOp.toISOString(),
+      })),
+    );
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// ── Tracking ophalen (admin) ──────────────────────────────────────────────────
+router.get("/offertes/:id/tracking", lezen, async (req, res) => {
+  try {
+    const offerteId = parseId(req.params.id);
+    const events = await db
+      .select()
+      .from(offerteTrackingTable)
+      .where(eq(offerteTrackingTable.offerteId, offerteId))
+      .orderBy(desc(offerteTrackingTable.aangemaaktOp));
+
+    res.json(
+      events.map((e) => ({
+        id: e.id,
+        event: e.event,
+        portaal_token: e.portaalToken,
+        aangemaakt_op: e.aangemaaktOp.toISOString(),
+      })),
+    );
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// ── AI e-mailvoorstel ─────────────────────────────────────────────────────────
+router.post("/offertes/:id/ai-email", schrijven, async (req, res) => {
+  try {
+    const offerteId = parseId(req.params.id);
+    const [offerte] = await db.select().from(offertesTable).where(eq(offertesTable.id, offerteId));
+    if (!offerte) return res.status(404).json({ error: "Offerte niet gevonden" });
+
+    if (!heeftOpenAi()) {
+      return res.json({
+        onderwerp: `Offerte ${offerte.offertenummer ?? offerte.id} — ${offerte.titel}`,
+        begroeting: `Geachte heer/mevrouw,`,
+        samenvatting: `Bijgevoegd vindt u onze offerte voor ${offerte.titel}.`,
+        call_to_action: `U kunt de offerte online bekijken en ondertekenen via de bijgevoegde link.`,
+        afsluiting: `Met vriendelijke groet,`,
+      });
+    }
+
+    const ai = maakOpenAiClient();
+    const completion = await ai.chat.completions.create({
+      model: "gpt-4o",
+      max_tokens: 600,
+      messages: [
+        {
+          role: "system",
+          content:
+            "Je bent een professionele tekstschrijver voor FPS Brandpreventie. Schrijf zakelijke maar vriendelijke e-mailteksten in het Nederlands.",
+        },
+        {
+          role: "user",
+          content: `Schrijf een begeleidende e-mail voor de volgende offerte:
+Titel: ${offerte.titel}
+Offertenummer: ${offerte.offertenummer ?? "—"}
+Opdrachtgever: ${offerte.opdrachtgever ?? "—"}
+Bedrag incl. btw: €${offerte.bedragInclBtw.toLocaleString("nl-NL", { minimumFractionDigits: 2 })}
+Geldigheid: ${offerte.geldigheidDagen} dagen
+
+Geef als JSON terug: { onderwerp, begroeting, samenvatting, call_to_action, afsluiting }`,
+        },
+      ],
+    });
+
+    const raw = completion.choices[0]?.message?.content ?? "{}";
+    const match = raw.match(/\{[\s\S]*\}/);
+    const parsed = match ? JSON.parse(match[0]) : {};
+
+    res.json({
+      onderwerp: parsed.onderwerp ?? `Offerte ${offerte.offertenummer ?? offerte.id}`,
+      begroeting: parsed.begroeting ?? "Geachte heer/mevrouw,",
+      samenvatting: parsed.samenvatting ?? "",
+      call_to_action: parsed.call_to_action ?? "",
+      afsluiting: parsed.afsluiting ?? "Met vriendelijke groet,",
+    });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// ── Offerte verzenden via e-mail ──────────────────────────────────────────────
+router.post("/offertes/:id/verzenden", schrijven, async (req, res) => {
+  try {
+    const offerteId = parseId(req.params.id);
+    const [offerte] = await db.select().from(offertesTable).where(eq(offertesTable.id, offerteId));
+    if (!offerte) return res.status(404).json({ error: "Offerte niet gevonden" });
+
+    const naarEmail = String(req.body?.naar_email ?? "").trim();
+    const naarNaam = String(req.body?.naar_naam ?? "").trim() || null;
+    const onderwerp = String(req.body?.onderwerp ?? "").trim() || `Offerte ${offerte.offertenummer ?? offerteId}`;
+    const tekst = String(req.body?.tekst ?? "").trim();
+    const portaalLink = String(req.body?.portaal_link ?? "").trim();
+
+    if (!naarEmail) return res.status(400).json({ error: "Ontvangersmailadres is verplicht." });
+
+    const html = `<!DOCTYPE html>
+<html lang="nl">
+<head><meta charset="UTF-8"></head>
+<body style="font-family:Arial,sans-serif;color:#212631;max-width:600px;margin:0 auto;padding:20px">
+  <div style="text-align:center;margin-bottom:24px">
+    <div style="background:#F23B0D;color:#fff;font-size:22px;font-weight:bold;padding:16px 24px;border-radius:8px">FPS Brandpreventie</div>
+  </div>
+  <p>${tekst.replace(/\n/g, "<br>")}</p>
+  ${portaalLink ? `<div style="text-align:center;margin:32px 0">
+    <a href="${portaalLink}" style="background:#F23B0D;color:#fff;padding:14px 28px;text-decoration:none;border-radius:6px;font-weight:bold;display:inline-block">
+      Offerte bekijken en ondertekenen
+    </a>
+  </div>` : ""}
+  <hr style="border:none;border-top:1px solid #e5e7eb;margin:32px 0">
+  <p style="font-size:12px;color:#6b7280">FPS Brandpreventie — Uw partner in brandveiligheid</p>
+</body>
+</html>`;
+
+    await verstuurMail({
+      naarEmail,
+      naarNaam,
+      onderwerp,
+      html,
+      soort: "offerte",
+      verstuurdDoorId: req.session.userId ?? null,
+    });
+
+    await db.insert(offerteEmailLogTable).values({
+      offerteId,
+      ontvanger: naarEmail,
+      onderwerp,
+      status: "verzonden",
+      portaalToken: portaalLink.split("/portaal/")[1]?.split("?")[0] ?? null,
+    });
+
+    await db
+      .update(offertesTable)
+      .set({ portaalStatus: "verzonden", bijgewerktOp: new Date() })
+      .where(eq(offertesTable.id, offerteId));
+
+    await db.insert(offerteTrackingTable).values({
+      offerteId,
+      event: "verzonden",
+      portaalToken: null,
+      ip: null,
+    });
+
+    res.json({ ok: true });
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Interne serverfout" });

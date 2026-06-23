@@ -42,6 +42,7 @@ export interface Offerte {
   btw_percentage: number;
   bedrag_incl_btw: number;
   status: string;
+  portaal_status?: string;
   /** @nullable */
   aangemaakt_door_id?: number | null;
   aangemaakt_op: string;

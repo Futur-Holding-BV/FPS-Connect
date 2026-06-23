@@ -8806,6 +8806,7 @@ export const ListOffertesResponseItem = zod.object({
   "btw_percentage": zod.number(),
   "bedrag_incl_btw": zod.number(),
   "status": zod.string(),
+  "portaal_status": zod.string().optional(),
   "aangemaakt_door_id": zod.number().nullish(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
@@ -8868,6 +8869,7 @@ export const GetOfferteResponse = zod.object({
   "btw_percentage": zod.number(),
   "bedrag_incl_btw": zod.number(),
   "status": zod.string(),
+  "portaal_status": zod.string().optional(),
   "aangemaakt_door_id": zod.number().nullish(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
@@ -8923,6 +8925,7 @@ export const UpdateOfferteResponse = zod.object({
   "btw_percentage": zod.number(),
   "bedrag_incl_btw": zod.number(),
   "status": zod.string(),
+  "portaal_status": zod.string().optional(),
   "aangemaakt_door_id": zod.number().nullish(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
@@ -9340,6 +9343,216 @@ export const DeleteOfferteBijlageParams = zod.object({
 })
 
 export const DeleteOfferteBijlageResponse = zod.void()
+
+
+/**
+ * @summary Offerte-analytics ophalen
+ */
+export const GetOfferteAnalyticsResponse = zod.object({
+  "totaal": zod.number(),
+  "concept": zod.number(),
+  "verzonden": zod.number(),
+  "bekeken": zod.number(),
+  "ondertekend": zod.number(),
+  "afgewezen": zod.number(),
+  "conversie_procent": zod.number(),
+  "gemiddelde_waarde": zod.number(),
+  "recente_offertes": zod.array(zod.object({
+  "id": zod.number().optional(),
+  "offertenummer": zod.string().nullish(),
+  "titel": zod.string().optional(),
+  "bedrag_incl_btw": zod.number().optional(),
+  "portaal_status": zod.string().optional()
+}))
+})
+
+
+/**
+ * @summary Portaaltokens van een offerte
+ */
+export const ListOffertePortaalTokensParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ListOffertePortaalTokensResponseItem = zod.object({
+  "id": zod.number(),
+  "token": zod.string(),
+  "verloopt_op": zod.string(),
+  "aangemaakt_op": zod.string()
+})
+export const ListOffertePortaalTokensResponse = zod.array(ListOffertePortaalTokensResponseItem)
+
+
+/**
+ * @summary Nieuw portaaltoken aanmaken
+ */
+export const CreateOffertePortaalTokenParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const CreateOffertePortaalTokenBody = zod.object({
+  "geldig_dagen": zod.number().optional()
+})
+
+export const CreateOffertePortaalTokenResponse = zod.void()
+
+
+/**
+ * @summary AI-emailvoorstel genereren
+ */
+export const CreateOfferteAiEmailParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const CreateOfferteAiEmailResponse = zod.object({
+  "onderwerp": zod.string(),
+  "begroeting": zod.string(),
+  "samenvatting": zod.string(),
+  "call_to_action": zod.string(),
+  "afsluiting": zod.string()
+})
+
+
+/**
+ * @summary Offerte per e-mail verzenden
+ */
+export const VerzendOfferteParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const VerzendOfferteBody = zod.object({
+  "naar_email": zod.string(),
+  "naar_naam": zod.string().optional(),
+  "onderwerp": zod.string(),
+  "tekst": zod.string(),
+  "portaal_link": zod.string().optional()
+})
+
+export const VerzendOfferteResponse = zod.object({
+  "ok": zod.boolean().optional()
+})
+
+
+/**
+ * @summary Klantvragen van een offerte
+ */
+export const ListOfferteVragenParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ListOfferteVragenResponseItem = zod.object({
+  "id": zod.number(),
+  "bezoeker_naam": zod.string().nullish(),
+  "vraag": zod.string(),
+  "antwoord": zod.string().nullish(),
+  "aangemaakt_op": zod.string()
+})
+export const ListOfferteVragenResponse = zod.array(ListOfferteVragenResponseItem)
+
+
+/**
+ * @summary Tracking-events van een offerte
+ */
+export const ListOfferteTrackingParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ListOfferteTrackingResponseItem = zod.object({
+  "id": zod.number(),
+  "event": zod.string(),
+  "portaal_token": zod.string().nullish(),
+  "aangemaakt_op": zod.string()
+})
+export const ListOfferteTrackingResponse = zod.array(ListOfferteTrackingResponseItem)
+
+
+/**
+ * @summary Offerte via portaaltoken ophalen (publiek)
+ */
+export const GetPortaalParams = zod.object({
+  "token": zod.coerce.string()
+})
+
+export const GetPortaalResponse = zod.object({
+  "id": zod.number(),
+  "offertenummer": zod.string().nullish(),
+  "titel": zod.string(),
+  "opdrachtgever": zod.string().nullish(),
+  "datum": zod.string().nullish(),
+  "geldigheid_dagen": zod.number(),
+  "bedrag_excl_btw": zod.number(),
+  "btw_percentage": zod.number(),
+  "bedrag_incl_btw": zod.number(),
+  "kleurthema": zod.string().nullish(),
+  "portaal_status": zod.string(),
+  "ondertekend": zod.boolean(),
+  "secties": zod.array(zod.object({
+
+}).passthrough()),
+  "bijlagen": zod.array(zod.object({
+
+}).passthrough())
+})
+
+
+/**
+ * @summary Tracking-event registreren (publiek)
+ */
+export const PatchPortaalTrackingParams = zod.object({
+  "token": zod.coerce.string()
+})
+
+export const PatchPortaalTrackingBody = zod.object({
+  "event": zod.string()
+})
+
+export const PatchPortaalTrackingResponse = zod.unknown()
+
+
+/**
+ * @summary Klantvraag indienen (publiek)
+ */
+export const CreatePortaalVraagParams = zod.object({
+  "token": zod.coerce.string()
+})
+
+export const CreatePortaalVraagBody = zod.object({
+  "naam": zod.string().optional(),
+  "vraag": zod.string()
+})
+
+export const CreatePortaalVraagResponse = zod.void()
+
+
+/**
+ * @summary Offerte digitaal ondertekenen (publiek)
+ */
+export const OndertekenenPortaalParams = zod.object({
+  "token": zod.coerce.string()
+})
+
+export const OndertekenenPortaalBody = zod.object({
+  "naam": zod.string(),
+  "bedrijf": zod.string().optional(),
+  "functie": zod.string().optional(),
+  "handtekening_data_url": zod.string()
+})
+
+export const OndertekenenPortaalResponse = zod.void()
+
+
+/**
+ * @summary Offerte afwijzen (publiek)
+ */
+export const AfwijzenPortaalParams = zod.object({
+  "token": zod.coerce.string()
+})
+
+export const AfwijzenPortaalBody = zod.object({
+  "reden": zod.string().optional()
+})
+
+export const AfwijzenPortaalResponse = zod.unknown()
 
 
 /**

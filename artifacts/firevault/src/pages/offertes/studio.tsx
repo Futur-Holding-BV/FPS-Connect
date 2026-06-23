@@ -39,8 +39,9 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   ArrowLeft, Sparkles, ChevronUp, ChevronDown, Eye, Printer, Plus,
-  Trash2, BookOpen, Clock, Paperclip, Check, X, GripVertical, ToggleLeft, ToggleRight,
+  Trash2, BookOpen, Clock, Paperclip, Check, X, GripVertical, ToggleLeft, ToggleRight, Send,
 } from "lucide-react";
+import { VerzendTab } from "./verzend-tab";
 import { useToast } from "@/hooks/use-toast";
 
 const STATUS_KLEUR: Record<string, string> = {
@@ -491,6 +492,7 @@ export default function ProposalStudio() {
                 <TabsTrigger value="voorbeeld"><Eye className="h-3.5 w-3.5 mr-1.5" />Voorbeeld</TabsTrigger>
                 <TabsTrigger value="bijlagen"><Paperclip className="h-3.5 w-3.5 mr-1.5" />Bijlagen</TabsTrigger>
                 <TabsTrigger value="versies"><Clock className="h-3.5 w-3.5 mr-1.5" />Versies</TabsTrigger>
+                <TabsTrigger value="verzenden"><Send className="h-3.5 w-3.5 mr-1.5" />Verzenden</TabsTrigger>
               </TabsList>
 
               <TabsContent value="studio">
@@ -682,6 +684,14 @@ export default function ProposalStudio() {
                     </div>
                   )}
                 </div>
+              </TabsContent>
+
+              <TabsContent value="verzenden">
+                <VerzendTab
+                  offerteId={offerte.id}
+                  opdrachtgever={offerte.opdrachtgever}
+                  titel={offerte.titel}
+                />
               </TabsContent>
             </Tabs>
           </div>

@@ -240,26 +240,34 @@ import type {
   Offerte,
   OfferteAiSchrijvenInput,
   OfferteAiSchrijvenResultaat,
+  OfferteAnalytics,
   OfferteBijlage,
   OfferteBijlageInput,
+  OfferteEmailVoorstel,
   OfferteHoofdstuk,
   OfferteHoofdstukInput,
   OfferteInput,
+  OffertePortaalToken,
+  OffertePortaalTokenInput,
   OfferteRegel,
   OfferteRegelInput,
   OfferteSectie,
   OfferteSectieInput,
   OfferteSjabloon,
   OfferteSjabloonInput,
+  OfferteTrackingEvent,
   OfferteUitgangspunt,
   OfferteUitgangspuntInput,
   OfferteVersie,
   OfferteVersieInput,
+  OfferteVerzendenInput,
+  OfferteVraag,
   OnboardingFout,
   OnderhoudInput,
   OnderhoudUpdate,
   OnderhoudVoltooien,
   Onderhoudstaak,
+  OndertekenenPortaal201,
   Opleiding,
   OpleidingInput,
   OpleidingenVoorstelResultaat,
@@ -283,6 +291,11 @@ import type {
   PlanningMeerwerkInput,
   PlattegrondAiAnalyseInput,
   PlattegrondAiAnalyseResultaat,
+  PortaalAfwijzenInput,
+  PortaalHandtekeningInput,
+  PortaalOfferte,
+  PortaalTrackingInput,
+  PortaalVraagInput,
   Profiel,
   ProfielInput,
   ProfielToepassen200,
@@ -344,6 +357,7 @@ import type {
   Verlofsoort,
   VerlofsoortInput,
   Vervaldag,
+  VerzendOfferte200,
   VolgendSpotnummer,
   Voorziening,
   VoorzieningDetail,
@@ -26910,6 +26924,887 @@ export const useDeleteOfferteBijlage = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getDeleteOfferteBijlageMutationOptions(options));
+    }
+
+export const getGetOfferteAnalyticsUrl = () => {
+
+
+
+
+  return `/api/offertes/analytics`
+}
+
+/**
+ * @summary Offerte-analytics ophalen
+ */
+export const getOfferteAnalytics = async ( options?: RequestInit): Promise<OfferteAnalytics> => {
+
+  return customFetch<OfferteAnalytics>(getGetOfferteAnalyticsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetOfferteAnalyticsQueryKey = () => {
+    return [
+    `/api/offertes/analytics`
+    ] as const;
+    }
+
+
+export const getGetOfferteAnalyticsQueryOptions = <TData = Awaited<ReturnType<typeof getOfferteAnalytics>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getOfferteAnalytics>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetOfferteAnalyticsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getOfferteAnalytics>>> = ({ signal }) => getOfferteAnalytics({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getOfferteAnalytics>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetOfferteAnalyticsQueryResult = NonNullable<Awaited<ReturnType<typeof getOfferteAnalytics>>>
+export type GetOfferteAnalyticsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Offerte-analytics ophalen
+ */
+
+export function useGetOfferteAnalytics<TData = Awaited<ReturnType<typeof getOfferteAnalytics>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getOfferteAnalytics>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetOfferteAnalyticsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getListOffertePortaalTokensUrl = (id: number,) => {
+
+
+
+
+  return `/api/offertes/${id}/portaal-tokens`
+}
+
+/**
+ * @summary Portaaltokens van een offerte
+ */
+export const listOffertePortaalTokens = async (id: number, options?: RequestInit): Promise<OffertePortaalToken[]> => {
+
+  return customFetch<OffertePortaalToken[]>(getListOffertePortaalTokensUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListOffertePortaalTokensQueryKey = (id: number,) => {
+    return [
+    `/api/offertes/${id}/portaal-tokens`
+    ] as const;
+    }
+
+
+export const getListOffertePortaalTokensQueryOptions = <TData = Awaited<ReturnType<typeof listOffertePortaalTokens>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listOffertePortaalTokens>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListOffertePortaalTokensQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listOffertePortaalTokens>>> = ({ signal }) => listOffertePortaalTokens(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listOffertePortaalTokens>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListOffertePortaalTokensQueryResult = NonNullable<Awaited<ReturnType<typeof listOffertePortaalTokens>>>
+export type ListOffertePortaalTokensQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Portaaltokens van een offerte
+ */
+
+export function useListOffertePortaalTokens<TData = Awaited<ReturnType<typeof listOffertePortaalTokens>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listOffertePortaalTokens>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListOffertePortaalTokensQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateOffertePortaalTokenUrl = (id: number,) => {
+
+
+
+
+  return `/api/offertes/${id}/portaal-token`
+}
+
+/**
+ * @summary Nieuw portaaltoken aanmaken
+ */
+export const createOffertePortaalToken = async (id: number,
+    offertePortaalTokenInput?: OffertePortaalTokenInput, options?: RequestInit): Promise<OffertePortaalToken> => {
+
+  return customFetch<OffertePortaalToken>(getCreateOffertePortaalTokenUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(offertePortaalTokenInput)
+  }
+);}
+
+
+
+
+export const getCreateOffertePortaalTokenMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createOffertePortaalToken>>, TError,{id: number;data?: BodyType<OffertePortaalTokenInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createOffertePortaalToken>>, TError,{id: number;data?: BodyType<OffertePortaalTokenInput>}, TContext> => {
+
+const mutationKey = ['createOffertePortaalToken'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createOffertePortaalToken>>, {id: number;data?: BodyType<OffertePortaalTokenInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  createOffertePortaalToken(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateOffertePortaalTokenMutationResult = NonNullable<Awaited<ReturnType<typeof createOffertePortaalToken>>>
+    export type CreateOffertePortaalTokenMutationBody = BodyType<OffertePortaalTokenInput> | undefined
+    export type CreateOffertePortaalTokenMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Nieuw portaaltoken aanmaken
+ */
+export const useCreateOffertePortaalToken = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createOffertePortaalToken>>, TError,{id: number;data?: BodyType<OffertePortaalTokenInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createOffertePortaalToken>>,
+        TError,
+        {id: number;data?: BodyType<OffertePortaalTokenInput>},
+        TContext
+      > => {
+      return useMutation(getCreateOffertePortaalTokenMutationOptions(options));
+    }
+
+export const getCreateOfferteAiEmailUrl = (id: number,) => {
+
+
+
+
+  return `/api/offertes/${id}/ai-email`
+}
+
+/**
+ * @summary AI-emailvoorstel genereren
+ */
+export const createOfferteAiEmail = async (id: number, options?: RequestInit): Promise<OfferteEmailVoorstel> => {
+
+  return customFetch<OfferteEmailVoorstel>(getCreateOfferteAiEmailUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getCreateOfferteAiEmailMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createOfferteAiEmail>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createOfferteAiEmail>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['createOfferteAiEmail'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createOfferteAiEmail>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  createOfferteAiEmail(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateOfferteAiEmailMutationResult = NonNullable<Awaited<ReturnType<typeof createOfferteAiEmail>>>
+
+    export type CreateOfferteAiEmailMutationError = ErrorType<unknown>
+
+    /**
+ * @summary AI-emailvoorstel genereren
+ */
+export const useCreateOfferteAiEmail = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createOfferteAiEmail>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createOfferteAiEmail>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getCreateOfferteAiEmailMutationOptions(options));
+    }
+
+export const getVerzendOfferteUrl = (id: number,) => {
+
+
+
+
+  return `/api/offertes/${id}/verzenden`
+}
+
+/**
+ * @summary Offerte per e-mail verzenden
+ */
+export const verzendOfferte = async (id: number,
+    offerteVerzendenInput: OfferteVerzendenInput, options?: RequestInit): Promise<VerzendOfferte200> => {
+
+  return customFetch<VerzendOfferte200>(getVerzendOfferteUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(offerteVerzendenInput)
+  }
+);}
+
+
+
+
+export const getVerzendOfferteMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof verzendOfferte>>, TError,{id: number;data: BodyType<OfferteVerzendenInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof verzendOfferte>>, TError,{id: number;data: BodyType<OfferteVerzendenInput>}, TContext> => {
+
+const mutationKey = ['verzendOfferte'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof verzendOfferte>>, {id: number;data: BodyType<OfferteVerzendenInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  verzendOfferte(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type VerzendOfferteMutationResult = NonNullable<Awaited<ReturnType<typeof verzendOfferte>>>
+    export type VerzendOfferteMutationBody = BodyType<OfferteVerzendenInput>
+    export type VerzendOfferteMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Offerte per e-mail verzenden
+ */
+export const useVerzendOfferte = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof verzendOfferte>>, TError,{id: number;data: BodyType<OfferteVerzendenInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof verzendOfferte>>,
+        TError,
+        {id: number;data: BodyType<OfferteVerzendenInput>},
+        TContext
+      > => {
+      return useMutation(getVerzendOfferteMutationOptions(options));
+    }
+
+export const getListOfferteVragenUrl = (id: number,) => {
+
+
+
+
+  return `/api/offertes/${id}/vragen`
+}
+
+/**
+ * @summary Klantvragen van een offerte
+ */
+export const listOfferteVragen = async (id: number, options?: RequestInit): Promise<OfferteVraag[]> => {
+
+  return customFetch<OfferteVraag[]>(getListOfferteVragenUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListOfferteVragenQueryKey = (id: number,) => {
+    return [
+    `/api/offertes/${id}/vragen`
+    ] as const;
+    }
+
+
+export const getListOfferteVragenQueryOptions = <TData = Awaited<ReturnType<typeof listOfferteVragen>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listOfferteVragen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListOfferteVragenQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listOfferteVragen>>> = ({ signal }) => listOfferteVragen(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listOfferteVragen>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListOfferteVragenQueryResult = NonNullable<Awaited<ReturnType<typeof listOfferteVragen>>>
+export type ListOfferteVragenQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Klantvragen van een offerte
+ */
+
+export function useListOfferteVragen<TData = Awaited<ReturnType<typeof listOfferteVragen>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listOfferteVragen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListOfferteVragenQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getListOfferteTrackingUrl = (id: number,) => {
+
+
+
+
+  return `/api/offertes/${id}/tracking`
+}
+
+/**
+ * @summary Tracking-events van een offerte
+ */
+export const listOfferteTracking = async (id: number, options?: RequestInit): Promise<OfferteTrackingEvent[]> => {
+
+  return customFetch<OfferteTrackingEvent[]>(getListOfferteTrackingUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListOfferteTrackingQueryKey = (id: number,) => {
+    return [
+    `/api/offertes/${id}/tracking`
+    ] as const;
+    }
+
+
+export const getListOfferteTrackingQueryOptions = <TData = Awaited<ReturnType<typeof listOfferteTracking>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listOfferteTracking>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListOfferteTrackingQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listOfferteTracking>>> = ({ signal }) => listOfferteTracking(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listOfferteTracking>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListOfferteTrackingQueryResult = NonNullable<Awaited<ReturnType<typeof listOfferteTracking>>>
+export type ListOfferteTrackingQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Tracking-events van een offerte
+ */
+
+export function useListOfferteTracking<TData = Awaited<ReturnType<typeof listOfferteTracking>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listOfferteTracking>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListOfferteTrackingQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetPortaalUrl = (token: string,) => {
+
+
+
+
+  return `/api/portaal/${token}`
+}
+
+/**
+ * @summary Offerte via portaaltoken ophalen (publiek)
+ */
+export const getPortaal = async (token: string, options?: RequestInit): Promise<PortaalOfferte> => {
+
+  return customFetch<PortaalOfferte>(getGetPortaalUrl(token),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetPortaalQueryKey = (token: string,) => {
+    return [
+    `/api/portaal/${token}`
+    ] as const;
+    }
+
+
+export const getGetPortaalQueryOptions = <TData = Awaited<ReturnType<typeof getPortaal>>, TError = ErrorType<void>>(token: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPortaal>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetPortaalQueryKey(token);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getPortaal>>> = ({ signal }) => getPortaal(token, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: token !== null && token !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getPortaal>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetPortaalQueryResult = NonNullable<Awaited<ReturnType<typeof getPortaal>>>
+export type GetPortaalQueryError = ErrorType<void>
+
+
+/**
+ * @summary Offerte via portaaltoken ophalen (publiek)
+ */
+
+export function useGetPortaal<TData = Awaited<ReturnType<typeof getPortaal>>, TError = ErrorType<void>>(
+ token: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPortaal>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetPortaalQueryOptions(token,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getPatchPortaalTrackingUrl = (token: string,) => {
+
+
+
+
+  return `/api/portaal/${token}/tracking`
+}
+
+/**
+ * @summary Tracking-event registreren (publiek)
+ */
+export const patchPortaalTracking = async (token: string,
+    portaalTrackingInput: PortaalTrackingInput, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getPatchPortaalTrackingUrl(token),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(portaalTrackingInput)
+  }
+);}
+
+
+
+
+export const getPatchPortaalTrackingMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof patchPortaalTracking>>, TError,{token: string;data: BodyType<PortaalTrackingInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof patchPortaalTracking>>, TError,{token: string;data: BodyType<PortaalTrackingInput>}, TContext> => {
+
+const mutationKey = ['patchPortaalTracking'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof patchPortaalTracking>>, {token: string;data: BodyType<PortaalTrackingInput>}> = (props) => {
+          const {token,data} = props ?? {};
+
+          return  patchPortaalTracking(token,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PatchPortaalTrackingMutationResult = NonNullable<Awaited<ReturnType<typeof patchPortaalTracking>>>
+    export type PatchPortaalTrackingMutationBody = BodyType<PortaalTrackingInput>
+    export type PatchPortaalTrackingMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Tracking-event registreren (publiek)
+ */
+export const usePatchPortaalTracking = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof patchPortaalTracking>>, TError,{token: string;data: BodyType<PortaalTrackingInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof patchPortaalTracking>>,
+        TError,
+        {token: string;data: BodyType<PortaalTrackingInput>},
+        TContext
+      > => {
+      return useMutation(getPatchPortaalTrackingMutationOptions(options));
+    }
+
+export const getCreatePortaalVraagUrl = (token: string,) => {
+
+
+
+
+  return `/api/portaal/${token}/vraag`
+}
+
+/**
+ * @summary Klantvraag indienen (publiek)
+ */
+export const createPortaalVraag = async (token: string,
+    portaalVraagInput: PortaalVraagInput, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getCreatePortaalVraagUrl(token),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(portaalVraagInput)
+  }
+);}
+
+
+
+
+export const getCreatePortaalVraagMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createPortaalVraag>>, TError,{token: string;data: BodyType<PortaalVraagInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createPortaalVraag>>, TError,{token: string;data: BodyType<PortaalVraagInput>}, TContext> => {
+
+const mutationKey = ['createPortaalVraag'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createPortaalVraag>>, {token: string;data: BodyType<PortaalVraagInput>}> = (props) => {
+          const {token,data} = props ?? {};
+
+          return  createPortaalVraag(token,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreatePortaalVraagMutationResult = NonNullable<Awaited<ReturnType<typeof createPortaalVraag>>>
+    export type CreatePortaalVraagMutationBody = BodyType<PortaalVraagInput>
+    export type CreatePortaalVraagMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Klantvraag indienen (publiek)
+ */
+export const useCreatePortaalVraag = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createPortaalVraag>>, TError,{token: string;data: BodyType<PortaalVraagInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createPortaalVraag>>,
+        TError,
+        {token: string;data: BodyType<PortaalVraagInput>},
+        TContext
+      > => {
+      return useMutation(getCreatePortaalVraagMutationOptions(options));
+    }
+
+export const getOndertekenenPortaalUrl = (token: string,) => {
+
+
+
+
+  return `/api/portaal/${token}/ondertekenen`
+}
+
+/**
+ * @summary Offerte digitaal ondertekenen (publiek)
+ */
+export const ondertekenenPortaal = async (token: string,
+    portaalHandtekeningInput: PortaalHandtekeningInput, options?: RequestInit): Promise<OndertekenenPortaal201> => {
+
+  return customFetch<OndertekenenPortaal201>(getOndertekenenPortaalUrl(token),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(portaalHandtekeningInput)
+  }
+);}
+
+
+
+
+export const getOndertekenenPortaalMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof ondertekenenPortaal>>, TError,{token: string;data: BodyType<PortaalHandtekeningInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof ondertekenenPortaal>>, TError,{token: string;data: BodyType<PortaalHandtekeningInput>}, TContext> => {
+
+const mutationKey = ['ondertekenenPortaal'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof ondertekenenPortaal>>, {token: string;data: BodyType<PortaalHandtekeningInput>}> = (props) => {
+          const {token,data} = props ?? {};
+
+          return  ondertekenenPortaal(token,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type OndertekenenPortaalMutationResult = NonNullable<Awaited<ReturnType<typeof ondertekenenPortaal>>>
+    export type OndertekenenPortaalMutationBody = BodyType<PortaalHandtekeningInput>
+    export type OndertekenenPortaalMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Offerte digitaal ondertekenen (publiek)
+ */
+export const useOndertekenenPortaal = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof ondertekenenPortaal>>, TError,{token: string;data: BodyType<PortaalHandtekeningInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof ondertekenenPortaal>>,
+        TError,
+        {token: string;data: BodyType<PortaalHandtekeningInput>},
+        TContext
+      > => {
+      return useMutation(getOndertekenenPortaalMutationOptions(options));
+    }
+
+export const getAfwijzenPortaalUrl = (token: string,) => {
+
+
+
+
+  return `/api/portaal/${token}/afwijzen`
+}
+
+/**
+ * @summary Offerte afwijzen (publiek)
+ */
+export const afwijzenPortaal = async (token: string,
+    portaalAfwijzenInput?: PortaalAfwijzenInput, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getAfwijzenPortaalUrl(token),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(portaalAfwijzenInput)
+  }
+);}
+
+
+
+
+export const getAfwijzenPortaalMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof afwijzenPortaal>>, TError,{token: string;data?: BodyType<PortaalAfwijzenInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof afwijzenPortaal>>, TError,{token: string;data?: BodyType<PortaalAfwijzenInput>}, TContext> => {
+
+const mutationKey = ['afwijzenPortaal'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof afwijzenPortaal>>, {token: string;data?: BodyType<PortaalAfwijzenInput>}> = (props) => {
+          const {token,data} = props ?? {};
+
+          return  afwijzenPortaal(token,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AfwijzenPortaalMutationResult = NonNullable<Awaited<ReturnType<typeof afwijzenPortaal>>>
+    export type AfwijzenPortaalMutationBody = BodyType<PortaalAfwijzenInput> | undefined
+    export type AfwijzenPortaalMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Offerte afwijzen (publiek)
+ */
+export const useAfwijzenPortaal = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof afwijzenPortaal>>, TError,{token: string;data?: BodyType<PortaalAfwijzenInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof afwijzenPortaal>>,
+        TError,
+        {token: string;data?: BodyType<PortaalAfwijzenInput>},
+        TContext
+      > => {
+      return useMutation(getAfwijzenPortaalMutationOptions(options));
     }
 
 export const getGetMailStatusUrl = () => {

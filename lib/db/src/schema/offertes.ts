@@ -14,7 +14,7 @@
 //    eenheid (st/m2/deur/m1/pst), aantal, prijs per eenheid, excl/incl btw.
 //  - Risicoanalyse/uitgangspunten/voorbehouden: per snag meer-/minderwerk,
 //    adviezen en condities.
-import { pgTable, serial, text, integer, real, boolean, timestamp, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, integer, real, boolean, timestamp, jsonb, index } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { gebouwenTable } from "./gebouwen";
@@ -69,6 +69,7 @@ export const offertesTable = pgTable("offertes", {
   bedragInclBtw: real("bedrag_incl_btw").notNull().default(0),
   kleurthema: text("kleurthema").default("fps-oranje"),
   status: text("status").notNull().default("concept"),
+  portaalStatus: text("portaal_status").notNull().default("concept"),
   aangemaaktDoorId: integer("aangemaakt_door_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
   aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
   bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
@@ -148,6 +149,64 @@ export const offerteBijlagenTable = pgTable("offerte_bijlagen", {
   aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
   bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
 });
+
+// ── Portaal & ondertekening ───────────────────────────────────────────────────
+// Eénmalige token-links voor de klantenportaalpagina.
+export const offertePortaalTokensTable = pgTable("offerte_portaal_tokens", {
+  id:          serial("id").primaryKey(),
+  offerteId:   integer("offerte_id").notNull().references(() => offertesTable.id, { onDelete: "cascade" }),
+  token:       text("token").notNull().unique(),
+  verlooptOp:  timestamp("verloopt_op").notNull(),
+  aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
+}, (t) => [index("idx_portaal_tokens_token").on(t.token)]);
+
+// Vastgelegde digitale handtekeningen (onveranderbaar bewijs).
+export const offerteHandtekeningenTable = pgTable("offerte_handtekeningen", {
+  id:             serial("id").primaryKey(),
+  offerteId:      integer("offerte_id").notNull().references(() => offertesTable.id, { onDelete: "restrict" }),
+  naam:           text("naam").notNull(),
+  bedrijf:        text("bedrijf"),
+  functie:        text("functie"),
+  datum:          text("datum").notNull(),
+  ip:             text("ip"),
+  handtekeningDataUrl: text("handtekening_data_url").notNull(),
+  versienummer:   integer("versienummer").notNull().default(1),
+  portaalToken:   text("portaal_token"),
+  aangemaaktOp:   timestamp("aangemaakt_op").notNull().defaultNow(),
+});
+
+// Vragen van bezoekers via de portaalpagina.
+export const offerteVragenTable = pgTable("offerte_vragen", {
+  id:           serial("id").primaryKey(),
+  offerteId:    integer("offerte_id").notNull().references(() => offertesTable.id, { onDelete: "cascade" }),
+  bezoekerNaam: text("bezoeker_naam"),
+  vraag:        text("vraag").notNull(),
+  antwoord:     text("antwoord"),
+  aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
+  bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
+});
+
+// Log van verstuurde offerte-e-mails.
+export const offerteEmailLogTable = pgTable("offerte_email_log", {
+  id:           serial("id").primaryKey(),
+  offerteId:    integer("offerte_id").notNull().references(() => offertesTable.id, { onDelete: "cascade" }),
+  ontvanger:    text("ontvanger").notNull(),
+  onderwerp:    text("onderwerp").notNull(),
+  status:       text("status").notNull().default("verzonden"),
+  portaalToken: text("portaal_token"),
+  aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
+  bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
+});
+
+// Tracking-events per portaalbezoek.
+export const offerteTrackingTable = pgTable("offerte_tracking", {
+  id:           serial("id").primaryKey(),
+  offerteId:    integer("offerte_id").notNull().references(() => offertesTable.id, { onDelete: "cascade" }),
+  event:        text("event").notNull(),
+  portaalToken: text("portaal_token"),
+  ip:           text("ip"),
+  aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
+}, (t) => [index("idx_offerte_tracking_offerte").on(t.offerteId)]);
 
 export const insertOfferteSjabloonSchema = createInsertSchema(offerteSjablonenTable).omit({ id: true, aangemaaktOp: true, bijgewerktOp: true });
 export const insertOfferteHoofdstukSchema = createInsertSchema(offerteHoofdstukkenTable).omit({ id: true, aangemaaktOp: true, bijgewerktOp: true });
