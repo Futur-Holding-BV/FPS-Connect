@@ -9,29 +9,34 @@ import { bovenInset } from "@/components/ui";
 
 const SECTIES = [
   {
+    titel: "Connect is niet ontworpen om u te controleren",
+    tekst:
+      "FPS Monteur legt uw acties vast om projecten en gebouwveiligheid bij te houden. Dit is niet bedoeld om individueel gedrag of prestaties van medewerkers te monitoren. De activiteitenregistratie dient uitsluitend voor het herstellen van fouten en het bijhouden van wijzigingen.",
+    accent: true,
+  },
+  {
+    titel: "Connect AI — ondersteunt, beslist nooit",
+    tekst:
+      "FPS Connect gebruikt AI om foto's van spots te analyseren en documentvalidatie te ondersteunen. De AI doet altijd een voorstel — u of uw collega bevestigt. De AI neemt nooit zelfstandig een beslissing over een spot of project en geeft geen oordeel over uw prestaties of geschiktheid.",
+    accent: false,
+  },
+  {
     titel: "Uw gegevens in FPS Monteur",
     tekst:
-      "FPS Monteur verwerkt uw naam, e-mailadres en rolgegevens uitsluitend voor de uitvoering van brandpreventieve inspectie- en onderhoudswerkzaamheden. De app toont alleen gegevens die relevant zijn voor uw dagelijkse werkzaamheden.",
-  },
-  {
-    titel: "Wat wordt opgeslagen",
-    tekst:
-      "De app slaat uw sessie-informatie lokaal op voor veilige toegang (bearer-token). Foto's die u maakt van spots worden versleuteld naar de beveiligde opslag van FPS Connect gestuurd. Locatiegegevens worden niet opgeslagen of verwerkt.",
-  },
-  {
-    titel: "Uw rechten",
-    tekst:
-      "U heeft het recht op inzage, correctie en wissing van uw persoonsgegevens. Voor vragen of verzoeken kunt u contact opnemen met uw projectleider of de beheerder van FPS Connect binnen uw organisatie.",
+      "De app gebruikt uw naam, e-mailadres en rolgegevens voor toegang tot uw projecten. Foto's die u maakt van spots worden versleuteld verstuurd naar de beveiligde opslag van FPS Connect. De app slaat geen GPS-locaties of rijroutes op.",
+    accent: false,
   },
   {
     titel: "Beveiliging",
     tekst:
-      "Toegang tot de app is beveiligd met gebruikersnaam, wachtwoord en tweestapsverificatie (TOTP). Alle communicatie met FPS Connect verloopt via een versleutelde HTTPS-verbinding.",
+      "Uw toegang is beveiligd met gebruikersnaam, wachtwoord en een authenticator-app (tweestapsverificatie). Alle communicatie met FPS Connect verloopt via een versleutelde HTTPS-verbinding.",
+    accent: false,
   },
   {
-    titel: "Contact",
+    titel: "Uw rechten",
     tekst:
-      "Voor privacyvragen kunt u terecht bij uw leidinggevende of de FPS Connect-beheerder. Een uitgebreider privacyoverzicht is beschikbaar via FPS Connect op het web (Mijn privacy).",
+      "U kunt uw gegevens inzien via FPS Connect op het web (menu: Privacy). Voor correctie of verwijdering van gegevens neemt u contact op met uw projectleider of de beheerder van FPS Connect.",
+    accent: false,
   },
 ];
 
@@ -61,10 +66,10 @@ export default function PrivacyScherm() {
         </Pressable>
         <View style={{ flex: 1 }}>
           <Text style={{ color: c.foreground, fontSize: 17, fontFamily: "Inter_700Bold" }}>
-            Privacy
+            Privacy &amp; transparantie
           </Text>
           <Text style={{ color: c.mutedForeground, fontSize: 12, fontFamily: "Inter_400Regular" }}>
-            Transparantie over uw gegevens
+            Hoe FPS Monteur uw gegevens gebruikt
           </Text>
         </View>
         <View
@@ -111,9 +116,33 @@ export default function PrivacyScherm() {
             <Text style={{ color: c.foreground, fontSize: 15, fontFamily: "Inter_600SemiBold" }}>
               {gebruiker.naam}
             </Text>
-            <Text style={{ color: c.mutedForeground, fontSize: 13, fontFamily: "Inter_400Regular", marginTop: 2 }}>
+            <Text
+              style={{ color: c.mutedForeground, fontSize: 13, fontFamily: "Inter_400Regular", marginTop: 2 }}
+            >
               {gebruiker.email}
             </Text>
+            {gebruiker.rol && (
+              <View
+                style={{
+                  marginTop: 8,
+                  alignSelf: "flex-start",
+                  paddingHorizontal: 8,
+                  paddingVertical: 3,
+                  borderRadius: 6,
+                  backgroundColor: c.primary + "18",
+                }}
+              >
+                <Text
+                  style={{ color: c.primary, fontSize: 11, fontFamily: "Inter_600SemiBold", textTransform: "capitalize" }}
+                >
+                  {gebruiker.rol === "hoofdbeheerder"
+                    ? "Hoofdbeheerder"
+                    : gebruiker.rol === "gebruiker"
+                    ? "Gebruiker"
+                    : gebruiker.rol}
+                </Text>
+              </View>
+            )}
           </View>
         )}
 
@@ -121,24 +150,32 @@ export default function PrivacyScherm() {
           <View
             key={i}
             style={{
-              backgroundColor: c.card,
+              backgroundColor: s.accent ? c.primary + "0D" : c.card,
               borderRadius: 12,
               padding: 16,
               marginBottom: 12,
               borderWidth: 1,
-              borderColor: c.border,
+              borderColor: s.accent ? c.primary + "33" : c.border,
             }}
           >
-            <Text
-              style={{
-                color: c.foreground,
-                fontSize: 14,
-                fontFamily: "Inter_600SemiBold",
-                marginBottom: 6,
-              }}
-            >
-              {s.titel}
-            </Text>
+            <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 8, marginBottom: 6 }}>
+              <Ionicons
+                name={s.accent ? "shield-checkmark" : i === 1 ? "sparkles" : "information-circle"}
+                size={16}
+                color={s.accent ? c.primary : c.mutedForeground}
+                style={{ marginTop: 1 }}
+              />
+              <Text
+                style={{
+                  color: s.accent ? c.primary : c.foreground,
+                  fontSize: 14,
+                  fontFamily: "Inter_600SemiBold",
+                  flex: 1,
+                }}
+              >
+                {s.titel}
+              </Text>
+            </View>
             <Text
               style={{
                 color: c.mutedForeground,

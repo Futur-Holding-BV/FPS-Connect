@@ -5,6 +5,8 @@
  * FPS Brandpreventie - Platform voor brandpreventieve gebouwvoorzieningen
  * OpenAPI spec version: 0.1.0
  */
+import type { MijnOpleiding } from './mijnOpleiding';
+import type { MijnVerlofsaldo } from './mijnVerlofsaldo';
 
 export interface MijnMedewerkerProfiel {
   id: number;
@@ -16,4 +18,6 @@ export interface MijnMedewerkerProfiel {
   email?: string | null;
   telefoon?: string | null;
   mobiel?: string | null;
+  verlofsaldi: MijnVerlofsaldo[];
+  opleidingen: MijnOpleiding[];
 }

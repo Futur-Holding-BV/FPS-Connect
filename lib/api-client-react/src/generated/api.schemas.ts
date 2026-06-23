@@ -4891,6 +4891,24 @@ export interface WerkdagStatusInput {
   uitvoering_status: string;
 }
 
+export interface MijnVerlofsaldo {
+  verlofsoort: string;
+  jaar: number;
+  saldo_uren: number;
+  opgebouwd_uren: number;
+  opgenomen_uren: number;
+  vervalt_op?: string | null;
+}
+
+export interface MijnOpleiding {
+  naam: string;
+  type: string;
+  niveau?: string | null;
+  behaald_op?: string | null;
+  verloopt_op?: string | null;
+  status: string;
+}
+
 export interface MijnMedewerkerProfiel {
   id: number;
   naam: string;
@@ -4901,6 +4919,8 @@ export interface MijnMedewerkerProfiel {
   email?: string | null;
   telefoon?: string | null;
   mobiel?: string | null;
+  verlofsaldi: MijnVerlofsaldo[];
+  opleidingen: MijnOpleiding[];
 }
 
 export interface MijnPrivacyGegevens {

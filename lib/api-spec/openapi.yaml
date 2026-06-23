@@ -17166,7 +17166,7 @@ components:
 
     MijnMedewerkerProfiel:
       type: object
-      required: [id, naam, werkmaatschappij, dienstverband]
+      required: [id, naam, werkmaatschappij, dienstverband, verlofsaldi, opleidingen]
       properties:
         id:
           type: integer
@@ -17191,3 +17191,49 @@ components:
         mobiel:
           type: string
           nullable: true
+        verlofsaldi:
+          type: array
+          items:
+            $ref: "#/components/schemas/MijnVerlofsaldo"
+        opleidingen:
+          type: array
+          items:
+            $ref: "#/components/schemas/MijnOpleiding"
+
+    MijnVerlofsaldo:
+      type: object
+      required: [verlofsoort, jaar, saldo_uren, opgebouwd_uren, opgenomen_uren]
+      properties:
+        verlofsoort:
+          type: string
+        jaar:
+          type: integer
+        saldo_uren:
+          type: number
+        opgebouwd_uren:
+          type: number
+        opgenomen_uren:
+          type: number
+        vervalt_op:
+          type: string
+          nullable: true
+
+    MijnOpleiding:
+      type: object
+      required: [naam, type, status]
+      properties:
+        naam:
+          type: string
+        type:
+          type: string
+        niveau:
+          type: string
+          nullable: true
+        behaald_op:
+          type: string
+          nullable: true
+        verloopt_op:
+          type: string
+          nullable: true
+        status:
+          type: string

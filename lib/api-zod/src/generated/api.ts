@@ -2203,7 +2203,23 @@ export const GetMijnPrivacyGegevensResponse = zod.object({
   "in_dienst_sinds": zod.string().nullish(),
   "email": zod.string().nullish(),
   "telefoon": zod.string().nullish(),
-  "mobiel": zod.string().nullish()
+  "mobiel": zod.string().nullish(),
+  "verlofsaldi": zod.array(zod.object({
+  "verlofsoort": zod.string(),
+  "jaar": zod.number(),
+  "saldo_uren": zod.number(),
+  "opgebouwd_uren": zod.number(),
+  "opgenomen_uren": zod.number(),
+  "vervalt_op": zod.string().nullish()
+})),
+  "opleidingen": zod.array(zod.object({
+  "naam": zod.string(),
+  "type": zod.string(),
+  "niveau": zod.string().nullish(),
+  "behaald_op": zod.string().nullish(),
+  "verloopt_op": zod.string().nullish(),
+  "status": zod.string()
+}))
 }).nullish()
 })
 

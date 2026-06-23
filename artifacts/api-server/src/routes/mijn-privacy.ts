@@ -5,6 +5,10 @@ import {
   medewerkersTable,
   functiesTable,
   activiteitenTable,
+  verlofSaldiTable,
+  verlofsoortenTable,
+  medewerkerOpleidingenTable,
+  opleidingenTable,
 } from "@workspace/db";
 import { eq, desc } from "drizzle-orm";
 import { requireAuth } from "../middlewares/auth.js";
@@ -44,6 +48,45 @@ mijnPrivacyRouter.get("/mijn/privacy-gegevens", requireAuth, async (req, res) =>
     .leftJoin(functiesTable, eq(medewerkersTable.functieId, functiesTable.id))
     .where(eq(medewerkersTable.gebruikerId, userId));
 
+  let verlofsaldi: object[] = [];
+  let opleidingen: object[] = [];
+
+  if (medewerkerRij) {
+    const huidigJaar = new Date().getFullYear();
+
+    const saldoRijen = await db
+      .select({
+        verlofsoort: verlofsoortenTable.naam,
+        jaar: verlofSaldiTable.jaar,
+        saldo_uren: verlofSaldiTable.saldoUren,
+        opgebouwd_uren: verlofSaldiTable.opgebouwdUren,
+        opgenomen_uren: verlofSaldiTable.opgenomenUren,
+        vervalt_op: verlofSaldiTable.vervaltOp,
+      })
+      .from(verlofSaldiTable)
+      .innerJoin(verlofsoortenTable, eq(verlofSaldiTable.verlofsoortId, verlofsoortenTable.id))
+      .where(eq(verlofSaldiTable.medewerkerId, medewerkerRij.id))
+      .orderBy(desc(verlofSaldiTable.jaar));
+
+    verlofsaldi = saldoRijen.filter((s) => s.jaar === huidigJaar || s.jaar === huidigJaar - 1);
+
+    const opleidingRijen = await db
+      .select({
+        naam: opleidingenTable.naam,
+        type: opleidingenTable.type,
+        niveau: opleidingenTable.niveau,
+        behaald_op: medewerkerOpleidingenTable.behaaldOp,
+        verloopt_op: medewerkerOpleidingenTable.verlooptOp,
+        status: medewerkerOpleidingenTable.status,
+      })
+      .from(medewerkerOpleidingenTable)
+      .innerJoin(opleidingenTable, eq(medewerkerOpleidingenTable.opleidingId, opleidingenTable.id))
+      .where(eq(medewerkerOpleidingenTable.medewerkerId, medewerkerRij.id))
+      .orderBy(desc(medewerkerOpleidingenTable.behaaldOp));
+
+    opleidingen = opleidingRijen;
+  }
+
   return res.json({
     id: gebruiker.id,
     naam: gebruiker.naam,
@@ -61,6 +104,8 @@ mijnPrivacyRouter.get("/mijn/privacy-gegevens", requireAuth, async (req, res) =>
           telefoon: medewerkerRij.telefoon ?? null,
           mobiel: medewerkerRij.mobiel ?? null,
           functie_naam: medewerkerRij.functie_naam ?? null,
+          verlofsaldi,
+          opleidingen,
         }
       : null,
   });
