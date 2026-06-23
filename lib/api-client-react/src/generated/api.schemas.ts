@@ -3954,6 +3954,13 @@ export interface OfferteVraag {
   aangemaakt_op: string;
 }
 
+export interface OfferteVraagAntwoordInput {
+  antwoord: string;
+  /** Klant-e-mailadres voor antwoordnotificatie (optioneel) */
+  naar_email?: string;
+  naar_naam?: string;
+}
+
 export interface OfferteTrackingEvent {
   id: number;
   event: string;

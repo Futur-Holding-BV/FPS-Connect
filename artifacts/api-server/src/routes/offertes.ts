@@ -1140,6 +1140,87 @@ router.get("/offertes/:id/vragen", lezen, async (req, res) => {
   }
 });
 
+// ── Vraag beantwoorden (admin) ────────────────────────────────────────────────
+router.patch("/offertes/:id/vragen/:vraagId", schrijven, async (req, res) => {
+  try {
+    const offerteId = parseId(req.params.id);
+    const vraagId = parseId(req.params.vraagId);
+    const antwoord = String(req.body?.antwoord ?? "").trim();
+    const naarEmail = String(req.body?.naar_email ?? "").trim() || null;
+    const naarNaam = String(req.body?.naar_naam ?? "").trim() || null;
+
+    if (!antwoord) return res.status(400).json({ error: "Antwoord is verplicht." });
+
+    const [vraag] = await db
+      .select()
+      .from(offerteVragenTable)
+      .where(eq(offerteVragenTable.id, vraagId));
+
+    if (!vraag || vraag.offerteId !== offerteId) {
+      return res.status(404).json({ error: "Vraag niet gevonden." });
+    }
+
+    const [bijgewerkt] = await db
+      .update(offerteVragenTable)
+      .set({ antwoord, bijgewerktOp: new Date() })
+      .where(eq(offerteVragenTable.id, vraagId))
+      .returning();
+
+    await db.insert(offerteTrackingTable).values({
+      offerteId,
+      event: "vraag_beantwoord",
+      portaalToken: null,
+      ip: null,
+    });
+
+    if (naarEmail) {
+      const [offerte] = await db
+        .select()
+        .from(offertesTable)
+        .where(eq(offertesTable.id, offerteId));
+
+      const html = `<!DOCTYPE html>
+<html lang="nl">
+<head><meta charset="UTF-8"></head>
+<body style="font-family:Arial,sans-serif;color:#212631;max-width:600px;margin:0 auto;padding:20px">
+  <div style="text-align:center;margin-bottom:24px">
+    <div style="background:#F23B0D;color:#fff;font-size:22px;font-weight:bold;padding:16px 24px;border-radius:8px">FPS Brandpreventie</div>
+  </div>
+  <p>Uw vraag over offerte <strong>${offerte?.offertenummer ?? offerte?.titel ?? `#${offerteId}`}</strong> is beantwoord:</p>
+  <div style="background:#f9fafb;border-left:4px solid #F23B0D;padding:12px 16px;margin:16px 0;border-radius:0 6px 6px 0">
+    <p style="font-size:13px;color:#6b7280;margin:0 0 4px 0">Uw vraag:</p>
+    <p style="margin:0 0 12px 0">${vraag.vraag}</p>
+    <p style="font-size:13px;color:#6b7280;margin:0 0 4px 0">Ons antwoord:</p>
+    <p style="margin:0;font-weight:500">${antwoord}</p>
+  </div>
+  <hr style="border:none;border-top:1px solid #e5e7eb;margin:32px 0">
+  <p style="font-size:12px;color:#6b7280">FPS Brandpreventie — Uw partner in brandveiligheid</p>
+</body>
+</html>`;
+
+      await verstuurMail({
+        naarEmail,
+        naarNaam,
+        onderwerp: `Antwoord op uw vraag — ${offerte?.offertenummer ?? offerte?.titel ?? `Offerte #${offerteId}`}`,
+        html,
+        soort: "offerte",
+        verstuurdDoorId: req.session.userId ?? null,
+      });
+    }
+
+    res.json({
+      id: bijgewerkt!.id,
+      bezoeker_naam: bijgewerkt!.bezoekerNaam,
+      vraag: bijgewerkt!.vraag,
+      antwoord: bijgewerkt!.antwoord,
+      aangemaakt_op: bijgewerkt!.aangemaaktOp.toISOString(),
+    });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
 // ── Tracking ophalen (admin) ──────────────────────────────────────────────────
 router.get("/offertes/:id/tracking", lezen, async (req, res) => {
   try {

@@ -264,6 +264,7 @@ import type {
   OfferteVersieInput,
   OfferteVerzendenInput,
   OfferteVraag,
+  OfferteVraagAntwoordInput,
   OnboardingFout,
   OnderhoudInput,
   OnderhoudUpdate,
@@ -27442,6 +27443,79 @@ export function useListOfferteVragen<TData = Awaited<ReturnType<typeof listOffer
 
 
 
+
+export const getBeantwoordOfferteVraagUrl = (id: number,
+    vraagId: number,) => {
+
+
+
+
+  return `/api/offertes/${id}/vragen/${vraagId}`
+}
+
+/**
+ * @summary Klantvraag beantwoorden (admin)
+ */
+export const beantwoordOfferteVraag = async (id: number,
+    vraagId: number,
+    offerteVraagAntwoordInput: OfferteVraagAntwoordInput, options?: RequestInit): Promise<OfferteVraag> => {
+
+  return customFetch<OfferteVraag>(getBeantwoordOfferteVraagUrl(id,vraagId),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(offerteVraagAntwoordInput)
+  }
+);}
+
+
+
+
+export const getBeantwoordOfferteVraagMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof beantwoordOfferteVraag>>, TError,{id: number;vraagId: number;data: BodyType<OfferteVraagAntwoordInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof beantwoordOfferteVraag>>, TError,{id: number;vraagId: number;data: BodyType<OfferteVraagAntwoordInput>}, TContext> => {
+
+const mutationKey = ['beantwoordOfferteVraag'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof beantwoordOfferteVraag>>, {id: number;vraagId: number;data: BodyType<OfferteVraagAntwoordInput>}> = (props) => {
+          const {id,vraagId,data} = props ?? {};
+
+          return  beantwoordOfferteVraag(id,vraagId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type BeantwoordOfferteVraagMutationResult = NonNullable<Awaited<ReturnType<typeof beantwoordOfferteVraag>>>
+    export type BeantwoordOfferteVraagMutationBody = BodyType<OfferteVraagAntwoordInput>
+    export type BeantwoordOfferteVraagMutationError = ErrorType<void>
+
+    /**
+ * @summary Klantvraag beantwoorden (admin)
+ */
+export const useBeantwoordOfferteVraag = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof beantwoordOfferteVraag>>, TError,{id: number;vraagId: number;data: BodyType<OfferteVraagAntwoordInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof beantwoordOfferteVraag>>,
+        TError,
+        {id: number;vraagId: number;data: BodyType<OfferteVraagAntwoordInput>},
+        TContext
+      > => {
+      return useMutation(getBeantwoordOfferteVraagMutationOptions(options));
+    }
 
 export const getListOfferteTrackingUrl = (id: number,) => {
 

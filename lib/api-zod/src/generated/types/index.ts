@@ -306,6 +306,7 @@ export * from './offerteVersie';
 export * from './offerteVersieInput';
 export * from './offerteVerzendenInput';
 export * from './offerteVraag';
+export * from './offerteVraagAntwoordInput';
 export * from './onboardingFout';
 export * from './onderhoudInput';
 export * from './onderhoudstaak';

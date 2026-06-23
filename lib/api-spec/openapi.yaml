@@ -7715,6 +7715,38 @@ paths:
                 items:
                   $ref: "#/components/schemas/OfferteVraag"
 
+  /offertes/{id}/vragen/{vraagId}:
+    patch:
+      operationId: beantwoordOfferteVraag
+      tags: [offertes]
+      summary: Klantvraag beantwoorden (admin)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+        - in: path
+          name: vraagId
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OfferteVraagAntwoordInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OfferteVraag"
+        "404":
+          description: Niet gevonden
+
   /offertes/{id}/tracking:
     get:
       operationId: listOfferteTracking
@@ -15731,6 +15763,18 @@ components:
         antwoord:
           type: ["string", "null"]
         aangemaakt_op:
+          type: string
+
+    OfferteVraagAntwoordInput:
+      type: object
+      required: [antwoord]
+      properties:
+        antwoord:
+          type: string
+        naar_email:
+          type: string
+          description: Klant-e-mailadres voor antwoordnotificatie (optioneel)
+        naar_naam:
           type: string
 
     OfferteTrackingEvent:

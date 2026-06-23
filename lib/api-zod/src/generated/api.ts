@@ -9461,6 +9461,29 @@ export const ListOfferteVragenResponse = zod.array(ListOfferteVragenResponseItem
 
 
 /**
+ * @summary Klantvraag beantwoorden (admin)
+ */
+export const BeantwoordOfferteVraagParams = zod.object({
+  "id": zod.coerce.number(),
+  "vraagId": zod.coerce.number()
+})
+
+export const BeantwoordOfferteVraagBody = zod.object({
+  "antwoord": zod.string(),
+  "naar_email": zod.string().optional().describe('Klant-e-mailadres voor antwoordnotificatie (optioneel)'),
+  "naar_naam": zod.string().optional()
+})
+
+export const BeantwoordOfferteVraagResponse = zod.object({
+  "id": zod.number(),
+  "bezoeker_naam": zod.string().nullish(),
+  "vraag": zod.string(),
+  "antwoord": zod.string().nullish(),
+  "aangemaakt_op": zod.string()
+})
+
+
+/**
  * @summary Tracking-events van een offerte
  */
 export const ListOfferteTrackingParams = zod.object({

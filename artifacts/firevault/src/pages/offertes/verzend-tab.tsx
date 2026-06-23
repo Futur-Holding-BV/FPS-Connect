@@ -7,8 +7,10 @@ import {
   useVerzendOfferte,
   useListOfferteTracking,
   useListOfferteVragen,
+  useBeantwoordOfferteVraag,
   getListOffertePortaalTokensQueryKey,
   getListOfferteTrackingQueryKey,
+  getListOfferteVragenQueryKey,
 } from "@workspace/api-client-react";
 import type {
   OffertePortaalToken,
@@ -25,7 +27,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import {
-  Link2, Copy, Plus, Send, Sparkles, Clock, MessageSquare, CheckCircle, Eye, AlertCircle,
+  Link2, Copy, Plus, Send, Sparkles, Clock, MessageSquare, CheckCircle, Eye, AlertCircle, Reply,
 } from "lucide-react";
 
 function datumLabel(iso: string) {
@@ -39,6 +41,7 @@ const EVENT_LABEL: Record<string, string> = {
   getekend: "Ondertekend",
   afgewezen: "Afgewezen",
   vraag_gesteld: "Vraag gesteld",
+  vraag_beantwoord: "Vraag beantwoord",
   gelezen: "Gelezen",
 };
 
@@ -46,6 +49,7 @@ function eventBadge(event: string) {
   if (event === "getekend") return <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200">{EVENT_LABEL[event] ?? event}</Badge>;
   if (event === "afgewezen") return <Badge className="bg-rose-100 text-rose-800 border-rose-200">{EVENT_LABEL[event] ?? event}</Badge>;
   if (event === "vraag_gesteld") return <Badge className="bg-blue-100 text-blue-800 border-blue-200">{EVENT_LABEL[event] ?? event}</Badge>;
+  if (event === "vraag_beantwoord") return <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200">{EVENT_LABEL[event] ?? event}</Badge>;
   return <Badge variant="outline">{EVENT_LABEL[event] ?? event}</Badge>;
 }
 
@@ -53,6 +57,12 @@ interface VerzendTabProps {
   offerteId: number;
   opdrachtgever?: string | null;
   titel: string;
+}
+
+interface AntwoordForm {
+  tekst: string;
+  email: string;
+  naam: string;
 }
 
 export function VerzendTab({ offerteId, opdrachtgever, titel }: VerzendTabProps) {
@@ -66,6 +76,7 @@ export function VerzendTab({ offerteId, opdrachtgever, titel }: VerzendTabProps)
   const maakToken = useCreateOffertePortaalToken();
   const aiEmail = useCreateOfferteAiEmail();
   const verzend = useVerzendOfferte();
+  const beantwoord = useBeantwoordOfferteVraag();
 
   const [emailVoorstel, setEmailVoorstel] = useState<OfferteEmailVoorstel | null>(null);
   const [emailForm, setEmailForm] = useState({
@@ -75,7 +86,21 @@ export function VerzendTab({ offerteId, opdrachtgever, titel }: VerzendTabProps)
     tekst: "",
   });
 
+  const [openAntwoord, setOpenAntwoord] = useState<number | null>(null);
+  const [antwoordForms, setAntwoordForms] = useState<Record<number, AntwoordForm>>({});
+
   const baseUrl = `${window.location.origin}${import.meta.env.BASE_URL.replace(/\/$/, "")}`;
+
+  function getAntwoordForm(vraagId: number): AntwoordForm {
+    return antwoordForms[vraagId] ?? { tekst: "", email: "", naam: "" };
+  }
+
+  function setAntwoordForm(vraagId: number, patch: Partial<AntwoordForm>) {
+    setAntwoordForms((prev) => ({
+      ...prev,
+      [vraagId]: { ...getAntwoordForm(vraagId), ...patch },
+    }));
+  }
 
   async function nieuwPortaalLink() {
     try {
@@ -136,6 +161,36 @@ export function VerzendTab({ offerteId, opdrachtgever, titel }: VerzendTabProps)
       setEmailVoorstel(null);
     } catch {
       toast({ title: "Verzenden mislukt", variant: "destructive" });
+    }
+  }
+
+  async function slaAntwoordOp(vraagId: number) {
+    const form = getAntwoordForm(vraagId);
+    if (!form.tekst.trim()) {
+      toast({ title: "Antwoord mag niet leeg zijn", variant: "destructive" });
+      return;
+    }
+    try {
+      await beantwoord.mutateAsync({
+        id: offerteId,
+        vraagId,
+        data: {
+          antwoord: form.tekst.trim(),
+          naar_email: form.email.trim() || undefined,
+          naar_naam: form.naam.trim() || undefined,
+        },
+      });
+      await qc.invalidateQueries({ queryKey: getListOfferteVragenQueryKey(offerteId) });
+      await qc.invalidateQueries({ queryKey: getListOfferteTrackingQueryKey(offerteId) });
+      toast({ title: form.email.trim() ? "Antwoord opgeslagen en e-mail verstuurd" : "Antwoord opgeslagen" });
+      setOpenAntwoord(null);
+      setAntwoordForms((prev) => {
+        const next = { ...prev };
+        delete next[vraagId];
+        return next;
+      });
+    } catch {
+      toast({ title: "Opslaan mislukt", variant: "destructive" });
     }
   }
 
@@ -309,18 +364,98 @@ export function VerzendTab({ offerteId, opdrachtgever, titel }: VerzendTabProps)
           ) : (
             <div className="space-y-3">
               {(vragen ?? []).map((v: OfferteVraag) => (
-                <div key={v.id} className="rounded-md border p-3 space-y-1.5">
-                  <div className="flex items-center gap-2">
-                    {v.antwoord ? (
-                      <CheckCircle className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
-                    ) : (
-                      <AlertCircle className="h-3.5 w-3.5 text-amber-600 shrink-0" />
+                <div key={v.id} className="rounded-md border p-3 space-y-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      {v.antwoord ? (
+                        <CheckCircle className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+                      ) : (
+                        <AlertCircle className="h-3.5 w-3.5 text-amber-600 shrink-0" />
+                      )}
+                      <span className="text-xs text-muted-foreground truncate">
+                        {v.bezoeker_naam ?? "Klant"} — {datumLabel(v.aangemaakt_op)}
+                      </span>
+                    </div>
+                    {!v.antwoord && openAntwoord !== v.id && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 shrink-0"
+                        onClick={() => setOpenAntwoord(v.id)}
+                      >
+                        <Reply className="h-3.5 w-3.5" />
+                        Antwoorden
+                      </Button>
                     )}
-                    <span className="text-xs text-muted-foreground">{v.bezoeker_naam ?? "Klant"} — {datumLabel(v.aangemaakt_op)}</span>
+                    {v.antwoord && openAntwoord !== v.id && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-7 shrink-0 text-muted-foreground"
+                        onClick={() => {
+                          setAntwoordForm(v.id, { tekst: v.antwoord ?? "" });
+                          setOpenAntwoord(v.id);
+                        }}
+                      >
+                        Bewerken
+                      </Button>
+                    )}
                   </div>
+
                   <p className="text-sm font-medium">{v.vraag}</p>
-                  {v.antwoord && (
+
+                  {v.antwoord && openAntwoord !== v.id && (
                     <p className="text-sm text-muted-foreground pl-3 border-l-2 border-primary/30">{v.antwoord}</p>
+                  )}
+
+                  {openAntwoord === v.id && (
+                    <div className="space-y-3 pt-1 border-t mt-2">
+                      <div className="space-y-1.5">
+                        <Label className="text-xs">Antwoord *</Label>
+                        <Textarea
+                          value={getAntwoordForm(v.id).tekst}
+                          onChange={(e) => setAntwoordForm(v.id, { tekst: e.target.value })}
+                          rows={3}
+                          placeholder="Typ hier uw antwoord…"
+                          autoFocus
+                        />
+                      </div>
+                      <div className="grid gap-2 sm:grid-cols-2">
+                        <div className="space-y-1.5">
+                          <Label className="text-xs">E-mail klant voor notificatie (optioneel)</Label>
+                          <Input
+                            type="email"
+                            value={getAntwoordForm(v.id).email}
+                            onChange={(e) => setAntwoordForm(v.id, { email: e.target.value })}
+                            placeholder="klant@bedrijf.nl"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label className="text-xs">Naam (optioneel)</Label>
+                          <Input
+                            value={getAntwoordForm(v.id).naam}
+                            onChange={(e) => setAntwoordForm(v.id, { naam: e.target.value })}
+                            placeholder={v.bezoeker_naam ?? ""}
+                          />
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-end gap-2">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => setOpenAntwoord(null)}
+                        >
+                          Annuleren
+                        </Button>
+                        <Button
+                          size="sm"
+                          onClick={() => slaAntwoordOp(v.id)}
+                          disabled={beantwoord.isPending}
+                        >
+                          {beantwoord.isPending ? "Opslaan…" : "Opslaan"}
+                        </Button>
+                      </div>
+                    </div>
                   )}
                 </div>
               ))}
