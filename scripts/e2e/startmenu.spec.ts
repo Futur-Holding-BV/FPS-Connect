@@ -336,4 +336,80 @@ test("FPS startmenu: login, waaier en doorlinken", async ({ page }) => {
     await page.goBack(); // terug naar root
     await expect(page.getByTestId("radiaal-fps")).toBeVisible({ timeout: INHOUD_TIMEOUT });
   });
+
+  await test.step("verlofformulier: aanvraagformulier vangt invoerfouten af", async () => {
+    await zorgWaaierOpen(page);
+    await page.getByTestId("radiaal-personeel").click();
+    await expect(page).toHaveURL(/\/hrm(\b|\?|$)/);
+    await expect(zichtbareTekst(page, "Medewerkers").first()).toBeVisible({
+      timeout: INHOUD_TIMEOUT,
+    });
+
+    await zichtbareTekst(page, "Verlof").first().click();
+    await expect(page).toHaveURL(/\/hrm\/verlof(\b|\?|$)/, { timeout: INHOUD_TIMEOUT });
+
+    // Wacht tot het verlofscherm volledig geladen is.
+    await expect(zichtbareTekst(page, "Verlofsaldo").first()).toBeVisible({
+      timeout: INHOUD_TIMEOUT,
+    });
+
+    // Open het aanvraagformulier.
+    await page.getByTestId("verlof-aanvragen-knop").click();
+    await expect(zichtbareTekst(page, "Verlofaanvraag indienen").first()).toBeVisible({
+      timeout: INHOUD_TIMEOUT,
+    });
+
+    // Scenario 1: indienen zonder verlofsoort → exact de foutmelding in de fout-container.
+    await page.getByTestId("verlof-indienen-knop").click();
+    await expect(page.getByTestId("verlof-formulier-fout")).toBeVisible({
+      timeout: INHOUD_TIMEOUT,
+    });
+    await expect(
+      page.getByTestId("verlof-formulier-fout").getByText("Kies een verlofsoort."),
+    ).toBeVisible({ timeout: INHOUD_TIMEOUT });
+
+    // Scenario 2: verlofsoort kiezen + ongeldige datum → datumfout.
+    // Conditioneel: alleen uitvoerbaar als er verlofsoorten in de catalog staan.
+    await page.getByTestId("verlof-soort-picker-knop").click();
+    await expect(zichtbareTekst(page, "Verlofsoort kiezen").first()).toBeVisible({
+      timeout: INHOUD_TIMEOUT,
+    });
+
+    const geenSoorten = zichtbareTekst(page, "Geen verlofsoorten beschikbaar");
+    const heeftGeenSoorten = (await geenSoorten.count()) > 0;
+
+    if (!heeftGeenSoorten) {
+      // Klik de eerste beschikbare verlofsoort-rij (testID patroon verlof-soort-rij-{id}).
+      const eersteRij = page.getByTestId(/^verlof-soort-rij-/).first();
+      await expect(eersteRij).toBeVisible({ timeout: INHOUD_TIMEOUT });
+      await eersteRij.click();
+
+      // Picker sluit; verlofsoort is nu geselecteerd.
+      await expect(zichtbareTekst(page, "Verlofsoort kiezen").first()).toHaveCount(0);
+
+      // Vul een ongeldige startdatum in.
+      await page.getByTestId("verlof-startdatum-input").fill("geen-datum");
+
+      // Indienen → datumfout: exact de melding uit de formuliervalidatie.
+      await page.getByTestId("verlof-indienen-knop").click();
+      await expect(page.getByTestId("verlof-formulier-fout")).toBeVisible({
+        timeout: INHOUD_TIMEOUT,
+      });
+      await expect(
+        page.getByTestId("verlof-formulier-fout").getByText("Vul een geldige startdatum in (JJJJ-MM-DD)."),
+      ).toBeVisible({ timeout: INHOUD_TIMEOUT });
+    } else {
+      // Geen verlofsoorten beschikbaar in de catalog; sluit de picker via het ×-knopje.
+      await page.getByText("×").filter({ visible: true }).first().click();
+      await expect(zichtbareTekst(page, "Verlofsoort kiezen").first()).toHaveCount(0);
+    }
+
+    // Sluit de hoofd-modal via het ×-knopje.
+    await page.getByText("×").filter({ visible: true }).first().click();
+    await expect(zichtbareTekst(page, "Verlofaanvraag indienen").first()).toHaveCount(0);
+
+    await page.goBack(); // terug naar /hrm
+    await page.goBack(); // terug naar root
+    await expect(page.getByTestId("radiaal-fps")).toBeVisible({ timeout: INHOUD_TIMEOUT });
+  });
 });

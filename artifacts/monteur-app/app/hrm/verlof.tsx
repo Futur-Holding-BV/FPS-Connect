@@ -257,6 +257,7 @@ export default function VerlofScherm() {
               Aanvragen
             </Text>
             <Pressable
+              testID="verlof-aanvragen-knop"
               onPress={openModal}
               style={({ pressed }) => ({
                 backgroundColor: c.primary,
@@ -366,7 +367,7 @@ export default function VerlofScherm() {
             </View>
 
             {formulierFout ? (
-              <View style={{ backgroundColor: "#fee2e2", borderRadius: 8, padding: 12 }}>
+              <View testID="verlof-formulier-fout" style={{ backgroundColor: "#fee2e2", borderRadius: 8, padding: 12 }}>
                 <Text style={{ color: "#991b1b", fontSize: 13, fontFamily: "Inter_400Regular" }}>{formulierFout}</Text>
               </View>
             ) : null}
@@ -376,6 +377,7 @@ export default function VerlofScherm() {
                 VERLOFSOORT
               </Text>
               <Pressable
+                testID="verlof-soort-picker-knop"
                 onPress={() => setSoortPickerOpen(true)}
                 style={({ pressed }) => ({
                   borderWidth: 1,
@@ -408,6 +410,7 @@ export default function VerlofScherm() {
                   STARTDATUM
                 </Text>
                 <TextInput
+                  testID="verlof-startdatum-input"
                   value={startDatum}
                   onChangeText={setStartDatum}
                   placeholder="JJJJ-MM-DD"
@@ -505,6 +508,7 @@ export default function VerlofScherm() {
             </View>
 
             <Pressable
+              testID="verlof-indienen-knop"
               onPress={indienen}
               disabled={bezigIndienen}
               style={({ pressed }) => ({
@@ -567,6 +571,7 @@ export default function VerlofScherm() {
               ItemSeparatorComponent={() => <View style={{ height: 1, backgroundColor: c.border }} />}
               renderItem={({ item }) => (
                 <Pressable
+                  testID={`verlof-soort-rij-${item.id}`}
                   onPress={() => {
                     setVerlofsoortId(item.id);
                     setSoortPickerOpen(false);
