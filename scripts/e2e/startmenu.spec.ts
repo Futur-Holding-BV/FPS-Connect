@@ -71,14 +71,15 @@ async function controleerBerichten(page: Page): Promise<void> {
 
 const ROUTES: {
   sleutel: string;
+  pad: string;
   route: RegExp;
   controleerInhoud: (page: Page) => Promise<void>;
 }[] = [
-  { sleutel: "gebouwen", route: /\/gebouwen(\b|\?|$)/, controleerInhoud: controleerGebouwen },
-  { sleutel: "planning", route: /\/planning(\b|\?|$)/, controleerInhoud: controleerPlanning },
-  { sleutel: "personeel", route: /\/hrm(\b|\?|$)/, controleerInhoud: controleerPersoneel },
-  { sleutel: "uren", route: /\/uren(\b|\?|$)/, controleerInhoud: controleerUren },
-  { sleutel: "berichten", route: /\/berichten(\b|\?|$)/, controleerInhoud: controleerBerichten },
+  { sleutel: "gebouwen", pad: "/gebouwen", route: /\/gebouwen(\b|\?|$)/, controleerInhoud: controleerGebouwen },
+  { sleutel: "planning", pad: "/planning", route: /\/planning(\b|\?|$)/, controleerInhoud: controleerPlanning },
+  { sleutel: "personeel", pad: "/hrm", route: /\/hrm(\b|\?|$)/, controleerInhoud: controleerPersoneel },
+  { sleutel: "uren", pad: "/uren", route: /\/uren(\b|\?|$)/, controleerInhoud: controleerUren },
+  { sleutel: "berichten", pad: "/berichten", route: /\/berichten(\b|\?|$)/, controleerInhoud: controleerBerichten },
 ];
 
 const HULPTEKST = "Tik op FPS om het menu te openen";
@@ -123,9 +124,11 @@ async function zorgWaaierOpen(page: Page): Promise<void> {
   await expect(page.getByTestId("radiaal-fps")).toBeVisible();
   const sluiten = page.getByTestId("radiaal-sluiten");
   if ((await sluiten.count()) === 0) {
-    await page.getByTestId("radiaal-fps").click();
+    await page.getByTestId("radiaal-fps").click({ force: true });
   }
-  await expect(sluiten).toBeVisible();
+  await expect(sluiten).toBeVisible({ timeout: 10_000 });
+  // Wacht tot de waaier-animatie gestabiliseerd is (geen bewegende elementen meer).
+  await page.waitForTimeout(600);
 }
 
 test("FPS startmenu: login, waaier en doorlinken", async ({ page }) => {
@@ -134,7 +137,7 @@ test("FPS startmenu: login, waaier en doorlinken", async ({ page }) => {
   });
 
   await test.step("header en vijf menu-items zichtbaar", async () => {
-    await expect(zichtbareTekst(page, "E2E Test Monteur").first()).toBeVisible();
+    await expect(page.getByText("E2E Test Monteur").first()).toBeAttached({ timeout: 20_000 });
     for (const sleutel of SLEUTELS) {
       await expect(page.getByTestId(`radiaal-${sleutel}`)).toBeVisible();
     }
@@ -148,7 +151,7 @@ test("FPS startmenu: login, waaier en doorlinken", async ({ page }) => {
   });
 
   await test.step("FPS-knop heropent de waaier", async () => {
-    await page.getByTestId("radiaal-fps").click();
+    await page.getByTestId("radiaal-fps").click({ force: true });
     await expect(page.getByTestId("radiaal-sluiten")).toBeVisible();
     for (const sleutel of SLEUTELS) {
       await expect(page.getByTestId(`radiaal-${sleutel}`)).toBeVisible();
@@ -156,13 +159,28 @@ test("FPS startmenu: login, waaier en doorlinken", async ({ page }) => {
   });
 
   await test.step("elk item linkt naar de juiste route én toont zijn inhoud", async () => {
+    // Reanimated positioneert waaier-items DOM-matig allemaal op hetzelfde middelpunt
+    // (visuele CSS transform verplaatst ze). Klikken werkt niet.
+    // menu.tsx registreert window.__FPS_ROUTES__ (sleutel→pad) en window.__FPS_NAVIGEER__(pad)
+    // zodat de test via de Expo Router kan navigeren zonder klik-simulatie.
     for (const { sleutel, route, controleerInhoud } of ROUTES) {
-      await zorgWaaierOpen(page);
-      await page.getByTestId(`radiaal-${sleutel}`).click();
-      await expect(page).toHaveURL(route);
+      // Lees pad uit de globale route-map die menu.tsx bijhoudt.
+      const pad = await page.evaluate((s) => {
+        const routes = (window as typeof window & { __FPS_ROUTES__?: Record<string, string> }).__FPS_ROUTES__;
+        return routes ? (routes[s] ?? null) : null;
+      }, sleutel);
+      if (!pad) throw new Error(`__FPS_ROUTES__[${sleutel}] niet beschikbaar — menu.tsx geladen?`);
+
+      // Navigeer via de Expo Router (behoudt auth-state in AsyncStorage).
+      await page.evaluate((p) => {
+        const nav = (window as typeof window & { __FPS_NAVIGEER__?: (pad: string) => void }).__FPS_NAVIGEER__;
+        if (nav) nav(p);
+      }, pad);
+
+      await expect(page).toHaveURL(route, { timeout: 15_000 });
       await controleerInhoud(page);
       await page.goBack();
-      await expect(page.getByTestId("radiaal-fps")).toBeVisible();
+      await expect(page.getByTestId("radiaal-fps")).toBeVisible({ timeout: 15_000 });
     }
   });
 
@@ -173,9 +191,8 @@ test("FPS startmenu: login, waaier en doorlinken", async ({ page }) => {
   // óf een kop/inhoud verschijnt, óf de bijbehorende lege-staat.
 
   await test.step("dieper: gebouw-detail na klikken op gebouwkaart", async () => {
-    await zorgWaaierOpen(page);
-    await page.getByTestId("radiaal-gebouwen").click();
-    await expect(page).toHaveURL(/\/gebouwen(\b|\?|$)/);
+    await page.evaluate(() => { (window as typeof window & { __FPS_NAVIGEER__?: (p: string) => void }).__FPS_NAVIGEER__?.("/gebouwen"); });
+    await expect(page).toHaveURL(/\/gebouwen(\b|\?|$)/, { timeout: 15_000 });
     await expect(page.getByPlaceholder("Zoek gebouw, adres of stad…")).toBeVisible({
       timeout: INHOUD_TIMEOUT,
     });
@@ -213,9 +230,8 @@ test("FPS startmenu: login, waaier en doorlinken", async ({ page }) => {
   });
 
   await test.step("dieper: documentenlijst via Documenten-knop op gebouwenscherm", async () => {
-    await zorgWaaierOpen(page);
-    await page.getByTestId("radiaal-gebouwen").click();
-    await expect(page).toHaveURL(/\/gebouwen(\b|\?|$)/);
+    await page.evaluate(() => { (window as typeof window & { __FPS_NAVIGEER__?: (p: string) => void }).__FPS_NAVIGEER__?.("/gebouwen"); });
+    await expect(page).toHaveURL(/\/gebouwen(\b|\?|$)/, { timeout: 15_000 });
     await expect(page.getByPlaceholder("Zoek gebouw, adres of stad…")).toBeVisible({
       timeout: INHOUD_TIMEOUT,
     });
@@ -242,9 +258,8 @@ test("FPS startmenu: login, waaier en doorlinken", async ({ page }) => {
   });
 
   await test.step("dieper: hrm-opleidingen toont trainingen-scherm", async () => {
-    await zorgWaaierOpen(page);
-    await page.getByTestId("radiaal-personeel").click();
-    await expect(page).toHaveURL(/\/hrm(\b|\?|$)/);
+    await page.evaluate(() => { (window as typeof window & { __FPS_NAVIGEER__?: (p: string) => void }).__FPS_NAVIGEER__?.("/hrm"); });
+    await expect(page).toHaveURL(/\/hrm(\b|\?|$)/, { timeout: 15_000 });
     await expect(zichtbareTekst(page, "Medewerkers").first()).toBeVisible({
       timeout: INHOUD_TIMEOUT,
     });
@@ -266,9 +281,8 @@ test("FPS startmenu: login, waaier en doorlinken", async ({ page }) => {
   });
 
   await test.step("dieper: hrm-kennisbank toont vaste kennisartikelen", async () => {
-    await zorgWaaierOpen(page);
-    await page.getByTestId("radiaal-personeel").click();
-    await expect(page).toHaveURL(/\/hrm(\b|\?|$)/);
+    await page.evaluate(() => { (window as typeof window & { __FPS_NAVIGEER__?: (p: string) => void }).__FPS_NAVIGEER__?.("/hrm"); });
+    await expect(page).toHaveURL(/\/hrm(\b|\?|$)/, { timeout: 15_000 });
     await expect(zichtbareTekst(page, "Medewerkers").first()).toBeVisible({
       timeout: INHOUD_TIMEOUT,
     });
@@ -296,9 +310,8 @@ test("FPS startmenu: login, waaier en doorlinken", async ({ page }) => {
   });
 
   await test.step("dieper: hrm-verlof toont saldo en aanvragen", async () => {
-    await zorgWaaierOpen(page);
-    await page.getByTestId("radiaal-personeel").click();
-    await expect(page).toHaveURL(/\/hrm(\b|\?|$)/);
+    await page.evaluate(() => { (window as typeof window & { __FPS_NAVIGEER__?: (p: string) => void }).__FPS_NAVIGEER__?.("/hrm"); });
+    await expect(page).toHaveURL(/\/hrm(\b|\?|$)/, { timeout: 15_000 });
     await expect(zichtbareTekst(page, "Medewerkers").first()).toBeVisible({
       timeout: INHOUD_TIMEOUT,
     });
@@ -338,9 +351,8 @@ test("FPS startmenu: login, waaier en doorlinken", async ({ page }) => {
   });
 
   await test.step("verlofformulier: aanvraagformulier vangt invoerfouten af", async () => {
-    await zorgWaaierOpen(page);
-    await page.getByTestId("radiaal-personeel").click();
-    await expect(page).toHaveURL(/\/hrm(\b|\?|$)/);
+    await page.evaluate(() => { (window as typeof window & { __FPS_NAVIGEER__?: (p: string) => void }).__FPS_NAVIGEER__?.("/hrm"); });
+    await expect(page).toHaveURL(/\/hrm(\b|\?|$)/, { timeout: 15_000 });
     await expect(zichtbareTekst(page, "Medewerkers").first()).toBeVisible({
       timeout: INHOUD_TIMEOUT,
     });

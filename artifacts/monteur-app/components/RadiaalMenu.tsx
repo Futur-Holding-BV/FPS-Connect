@@ -110,7 +110,10 @@ function RadiaalItem({
         style={{ flex: 1, alignItems: "center", justifyContent: "center" }}
         pointerEvents="box-none"
       >
-        <Animated.View style={[{ alignItems: "center", width: ITEM_GROOTTE + 28 }, omhulselStijl]}>
+        <Animated.View
+          pointerEvents="box-none"
+          style={[{ alignItems: "center", width: ITEM_GROOTTE + 28 }, omhulselStijl]}
+        >
           <Pressable testID={`radiaal-${actie.sleutel}`} onPress={() => onKies(actie)}>
             <Animated.View
               style={[
@@ -154,6 +157,7 @@ function RadiaalItem({
           </Pressable>
           <Animated.Text
             numberOfLines={1}
+            pointerEvents="none"
             style={[
               { marginTop: 7, fontFamily: "Inter_600SemiBold", fontSize: 12.5, textAlign: "center" },
               labelStijl,

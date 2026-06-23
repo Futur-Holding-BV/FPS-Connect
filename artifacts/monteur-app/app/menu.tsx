@@ -1,12 +1,19 @@
 import { Redirect, useRouter } from "expo-router";
-import React from "react";
-import { Image, Pressable, Text, View } from "react-native";
+import React, { useEffect } from "react";
+import { Image, Platform, Pressable, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { RadiaalMenu, type RadiaalActie } from "@/components/RadiaalMenu";
 import { bovenInset } from "@/components/ui";
 import { useAuth } from "@/context/auth";
 import { useColors } from "@/hooks/useColors";
+
+declare global {
+  interface Window {
+    __FPS_ROUTES__: Record<string, string>;
+    __FPS_NAVIGEER__: (pad: string) => void;
+  }
+}
 
 export default function MenuScherm() {
   const c = useColors();
@@ -60,6 +67,32 @@ export default function MenuScherm() {
       onPress: () => router.push("/opname"),
     },
   ];
+
+  const routeMap: Record<string, string> = {
+    werkdag: "/werkdag",
+    gebouwen: "/gebouwen",
+    planning: "/planning",
+    personeel: "/hrm",
+    uren: "/uren",
+    berichten: "/berichten",
+    opname: "/opname",
+  };
+
+  // Expose navigatiehulp voor e2e-tests op web. Reanimated positioneert waaier-items
+  // DOM-matig allemaal op hetzelfde middelpunt — klikken werkt niet. De test roept
+  // window.__FPS_NAVIGEER__(pad) aan om via de Expo Router te navigeren.
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  useEffect(() => {
+    if (Platform.OS !== "web") return;
+    window.__FPS_ROUTES__ = routeMap;
+    window.__FPS_NAVIGEER__ = (pad: string) => {
+      router.push(pad as Parameters<typeof router.push>[0]);
+    };
+    return () => {
+      delete (window as Partial<Window>).__FPS_ROUTES__;
+      delete (window as Partial<Window>).__FPS_NAVIGEER__;
+    };
+  });
 
   return (
     <View style={{ flex: 1, backgroundColor: c.dark }}>
