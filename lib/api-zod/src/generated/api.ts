@@ -9453,6 +9453,7 @@ export const ListOfferteVragenParams = zod.object({
 export const ListOfferteVragenResponseItem = zod.object({
   "id": zod.number(),
   "bezoeker_naam": zod.string().nullish(),
+  "bezoeker_email": zod.string().nullish(),
   "vraag": zod.string(),
   "antwoord": zod.string().nullish(),
   "aangemaakt_op": zod.string()
@@ -9477,6 +9478,7 @@ export const BeantwoordOfferteVraagBody = zod.object({
 export const BeantwoordOfferteVraagResponse = zod.object({
   "id": zod.number(),
   "bezoeker_naam": zod.string().nullish(),
+  "bezoeker_email": zod.string().nullish(),
   "vraag": zod.string(),
   "antwoord": zod.string().nullish(),
   "aangemaakt_op": zod.string()
@@ -9551,6 +9553,7 @@ export const CreatePortaalVraagParams = zod.object({
 
 export const CreatePortaalVraagBody = zod.object({
   "naam": zod.string().optional(),
+  "email": zod.string().optional().describe('E-mailadres van de bezoeker (optioneel, voor antwoordnotificatie)'),
   "vraag": zod.string()
 })
 

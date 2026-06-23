@@ -3948,6 +3948,8 @@ export interface OfferteVraag {
   id: number;
   /** @nullable */
   bezoeker_naam?: string | null;
+  /** @nullable */
+  bezoeker_email?: string | null;
   vraag: string;
   /** @nullable */
   antwoord?: string | null;
@@ -4003,6 +4005,8 @@ export interface PortaalHandtekeningInput {
 
 export interface PortaalVraagInput {
   naam?: string;
+  /** E-mailadres van de bezoeker (optioneel, voor antwoordnotificatie) */
+  email?: string;
   vraag: string;
 }
 

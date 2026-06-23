@@ -1129,6 +1129,7 @@ router.get("/offertes/:id/vragen", lezen, async (req, res) => {
       vragen.map((v) => ({
         id: v.id,
         bezoeker_naam: v.bezoekerNaam,
+        bezoeker_email: v.bezoekerEmail,
         vraag: v.vraag,
         antwoord: v.antwoord,
         aangemaakt_op: v.aangemaaktOp.toISOString(),

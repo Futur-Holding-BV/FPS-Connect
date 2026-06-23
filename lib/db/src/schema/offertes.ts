@@ -177,13 +177,14 @@ export const offerteHandtekeningenTable = pgTable("offerte_handtekeningen", {
 
 // Vragen van bezoekers via de portaalpagina.
 export const offerteVragenTable = pgTable("offerte_vragen", {
-  id:           serial("id").primaryKey(),
-  offerteId:    integer("offerte_id").notNull().references(() => offertesTable.id, { onDelete: "cascade" }),
-  bezoekerNaam: text("bezoeker_naam"),
-  vraag:        text("vraag").notNull(),
-  antwoord:     text("antwoord"),
-  aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
-  bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
+  id:             serial("id").primaryKey(),
+  offerteId:      integer("offerte_id").notNull().references(() => offertesTable.id, { onDelete: "cascade" }),
+  bezoekerNaam:   text("bezoeker_naam"),
+  bezoekerEmail:  text("bezoeker_email"),
+  vraag:          text("vraag").notNull(),
+  antwoord:       text("antwoord"),
+  aangemaaktOp:   timestamp("aangemaakt_op").notNull().defaultNow(),
+  bijgewerktOp:   timestamp("bijgewerkt_op").notNull().defaultNow(),
 });
 
 // Log van verstuurde offerte-e-mails.

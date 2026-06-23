@@ -8,5 +8,7 @@
 
 export interface PortaalVraagInput {
   naam?: string;
+  /** E-mailadres van de bezoeker (optioneel, voor antwoordnotificatie) */
+  email?: string;
   vraag: string;
 }

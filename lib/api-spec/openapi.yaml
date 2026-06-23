@@ -15758,6 +15758,8 @@ components:
           type: integer
         bezoeker_naam:
           type: ["string", "null"]
+        bezoeker_email:
+          type: ["string", "null"]
         vraag:
           type: string
         antwoord:
@@ -15846,6 +15848,9 @@ components:
       properties:
         naam:
           type: string
+        email:
+          type: string
+          description: E-mailadres van de bezoeker (optioneel, voor antwoordnotificatie)
         vraag:
           type: string
 

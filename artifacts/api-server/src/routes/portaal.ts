@@ -159,10 +159,11 @@ router.post("/portaal/:token/vraag", async (req, res) => {
     const vraag = String(req.body?.vraag ?? "").trim();
     if (!vraag) return res.status(400).json({ error: "Vraag mag niet leeg zijn." });
     const bezoekerNaam = String(req.body?.naam ?? "").trim() || null;
+    const bezoekerEmail = String(req.body?.email ?? "").trim() || null;
 
     const [nieuw] = await db
       .insert(offerteVragenTable)
-      .values({ offerteId: tokenRecord.offerteId, bezoekerNaam, vraag })
+      .values({ offerteId: tokenRecord.offerteId, bezoekerNaam, bezoekerEmail, vraag })
       .returning();
 
     res.status(201).json({ id: nieuw.id });

@@ -381,7 +381,10 @@ export function VerzendTab({ offerteId, opdrachtgever, titel }: VerzendTabProps)
                         size="sm"
                         variant="outline"
                         className="h-7 shrink-0"
-                        onClick={() => setOpenAntwoord(v.id)}
+                        onClick={() => {
+                          setAntwoordForm(v.id, { email: v.bezoeker_email ?? "", naam: v.bezoeker_naam ?? "" });
+                          setOpenAntwoord(v.id);
+                        }}
                       >
                         <Reply className="h-3.5 w-3.5" />
                         Antwoorden
@@ -393,7 +396,7 @@ export function VerzendTab({ offerteId, opdrachtgever, titel }: VerzendTabProps)
                         variant="ghost"
                         className="h-7 shrink-0 text-muted-foreground"
                         onClick={() => {
-                          setAntwoordForm(v.id, { tekst: v.antwoord ?? "" });
+                          setAntwoordForm(v.id, { tekst: v.antwoord ?? "", email: v.bezoeker_email ?? "", naam: v.bezoeker_naam ?? "" });
                           setOpenAntwoord(v.id);
                         }}
                       >

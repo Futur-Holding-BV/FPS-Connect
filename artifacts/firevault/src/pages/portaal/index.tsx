@@ -54,6 +54,7 @@ export default function PortaalPagina({ token }: PortaalPaginaProps) {
 
   const [vraagOpen, setVraagOpen] = useState(false);
   const [vraagNaam, setVraagNaam] = useState("");
+  const [vraagEmail, setVraagEmail] = useState("");
   const [vraagTekst, setVraagTekst] = useState("");
   const [vraagVerstuurd, setVraagVerstuurd] = useState(false);
 
@@ -155,10 +156,18 @@ export default function PortaalPagina({ token }: PortaalPaginaProps) {
     if (!vraagTekst.trim()) return;
     setBezig(true);
     try {
-      await stelVraag.mutateAsync({ token, data: { naam: vraagNaam.trim() || undefined, vraag: vraagTekst.trim() } });
+      await stelVraag.mutateAsync({
+        token,
+        data: {
+          naam: vraagNaam.trim() || undefined,
+          email: vraagEmail.trim() || undefined,
+          vraag: vraagTekst.trim(),
+        },
+      });
       setVraagVerstuurd(true);
       setVraagOpen(false);
       setVraagTekst("");
+      setVraagEmail("");
     } catch {
       // noop
     } finally {
@@ -468,9 +477,20 @@ export default function PortaalPagina({ token }: PortaalPaginaProps) {
             )}
             {vraagOpen && !vraagVerstuurd && (
               <div className="space-y-3">
-                <div className="space-y-1.5">
-                  <Label>Uw naam (optioneel)</Label>
-                  <Input value={vraagNaam} onChange={(e) => setVraagNaam(e.target.value)} />
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="space-y-1.5">
+                    <Label>Uw naam (optioneel)</Label>
+                    <Input value={vraagNaam} onChange={(e) => setVraagNaam(e.target.value)} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>E-mailadres (optioneel)</Label>
+                    <Input
+                      type="email"
+                      value={vraagEmail}
+                      onChange={(e) => setVraagEmail(e.target.value)}
+                      placeholder="u@bedrijf.nl"
+                    />
+                  </div>
                 </div>
                 <div className="space-y-1.5">
                   <Label>Vraag *</Label>
