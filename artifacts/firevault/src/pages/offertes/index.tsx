@@ -225,6 +225,11 @@ export default function OffertesPagina() {
                         {PORTAAL_STATUS_LABEL[(o as { portaal_status?: string }).portaal_status!] ?? (o as { portaal_status?: string }).portaal_status}
                       </Badge>
                     )}
+                    {(o as { ai_acceptatiescore?: string }).ai_acceptatiescore === "hoog" && (
+                      <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 gap-1">
+                        <Sparkles className="h-3 w-3" /> AI hoog
+                      </Badge>
+                    )}
                   </div>
                 </div>
                 <div className="text-xs text-muted-foreground space-y-0.5">

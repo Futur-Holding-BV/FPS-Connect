@@ -42,6 +42,7 @@ async function buildAll() {
       "bufferutil",
       "utf-8-validate",
       "ssh2",
+      "pdfkit",
       "cpu-features",
       "dtrace-provider",
       "isolated-vm",

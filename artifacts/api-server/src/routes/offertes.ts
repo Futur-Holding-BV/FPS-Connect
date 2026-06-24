@@ -5,6 +5,7 @@
 // offerteverzending. /offertes/:id/uit-spots leest de spots van het gekoppelde
 // gebouw en zet die om naar concept-begrotingsregels (mens beslist, AI niet).
 import { Router } from "express";
+import PDFDocument from "pdfkit";
 import {
   db,
   offerteSjablonenTable,
@@ -248,6 +249,23 @@ router.get("/offertes", lezen, async (req, res) => {
       .leftJoin(crmKlantenTable, eq(offertesTable.klantId, crmKlantenTable.id))
       .leftJoin(gebruikersTable, eq(offertesTable.behandeldDoorId, gebruikersTable.id))
       .orderBy(desc(offertesTable.aangemaaktOp));
+
+    // Per-offerte AI acceptatiescore (aandeel door AI voorgestelde regels).
+    const aiScoreRijen = await db
+      .select({
+        offerteId: offerteRegelsTable.offerteId,
+        totaal: sql<number>`count(*)::int`,
+        aiAantal: sql<number>`count(*) filter (where ${offerteRegelsTable.aiVoorstel} = true)::int`,
+      })
+      .from(offerteRegelsTable)
+      .groupBy(offerteRegelsTable.offerteId);
+    const aiScoreMap = new Map<number, "laag" | "midden" | "hoog">();
+    for (const s of aiScoreRijen) {
+      if (!s.offerteId || s.totaal === 0) continue;
+      const ratio = s.aiAantal / s.totaal;
+      aiScoreMap.set(s.offerteId, ratio >= 0.67 ? "hoog" : ratio >= 0.34 ? "midden" : "laag");
+    }
+
     res.json(
       rijen.map((r) => ({
         id: r.o.id,
@@ -276,6 +294,7 @@ router.get("/offertes", lezen, async (req, res) => {
         aangemaakt_door_id: r.o.aangemaaktDoorId,
         aangemaakt_op: iso(r.o.aangemaaktOp),
         bijgewerkt_op: iso(r.o.bijgewerktOp),
+        ai_acceptatiescore: aiScoreMap.get(r.o.id) ?? null,
       })),
     );
   } catch (err) {
@@ -1471,26 +1490,45 @@ router.post("/offertes/:id/verzenden", schrijven, async (req, res) => {
 
     const portaalToken = portaalLink.split("/portaal/")[1]?.split("?")[0] ?? null;
 
-    // Bijlagen: HTML-samenvatting van de offerte als meegestuurde bijlage.
+    // Bijlagen: PDF-samenvatting van de offerte als meegestuurde bijlage.
     const regels = await db
       .select({ maatregel: offerteRegelsTable.maatregel, aantal: offerteRegelsTable.aantal, eenheid: offerteRegelsTable.eenheid, kosten: offerteRegelsTable.kosten })
       .from(offerteRegelsTable)
       .where(eq(offerteRegelsTable.offerteId, offerteId))
       .orderBy(offerteRegelsTable.volgorde);
-    const regelHtml = regels
-      .map((r) => `<tr><td style="padding:4px 8px">${escapeHtml(r.maatregel ?? "")}</td><td style="padding:4px 8px;text-align:right">${r.aantal ?? ""} ${escapeHtml(r.eenheid ?? "")}</td><td style="padding:4px 8px;text-align:right">&euro;&nbsp;${Number(r.kosten ?? 0).toFixed(2)}</td></tr>`)
-      .join("");
-    const samenvattingHtml = `<!DOCTYPE html><html lang="nl"><head><meta charset="UTF-8"><title>Offerte ${escapeHtml(offerte.offertenummer ?? String(offerteId))}</title></head>
-<body style="font-family:Arial,sans-serif;color:#212631;max-width:700px;margin:0 auto;padding:24px">
-<div style="background:#F23B0D;color:#fff;padding:16px 24px;border-radius:8px;margin-bottom:24px"><h1 style="margin:0;font-size:20px">FPS Brandpreventie</h1></div>
-<h2 style="margin:0 0 4px">${escapeHtml(offerte.titel ?? "Offerte")}</h2>
-<p style="margin:0 0 4px;color:#6b7280">Offertenummer: ${escapeHtml(offerte.offertenummer ?? String(offerteId))}</p>
-<p style="margin:0 0 16px;color:#6b7280">Datum: ${offerte.datum ? new Date(offerte.datum).toLocaleDateString("nl-NL") : "—"}</p>
-${regels.length > 0 ? `<table style="width:100%;border-collapse:collapse;margin-bottom:16px"><thead><tr style="background:#f3f4f6"><th style="padding:6px 8px;text-align:left">Omschrijving</th><th style="padding:6px 8px;text-align:right">Aantal</th><th style="padding:6px 8px;text-align:right">Bedrag</th></tr></thead><tbody>${regelHtml}</tbody></table>` : ""}
-<p style="margin:0;font-weight:bold">Totaal excl. BTW: &euro;&nbsp;${Number(offerte.bedragExclBtw ?? 0).toFixed(2)}</p>
-<p style="margin:4px 0;font-weight:bold">Totaal incl. BTW (${offerte.btwPercentage ?? 21}%): &euro;&nbsp;${Number(offerte.bedragInclBtw ?? 0).toFixed(2)}</p>
-<p style="margin-top:24px;font-size:12px;color:#6b7280">FPS Brandpreventie — Uw partner in brandveiligheid</p>
-</body></html>`;
+
+    const pdfBuffer = await new Promise<Buffer>((resolve, reject) => {
+      const doc = new PDFDocument({ margin: 50, size: "A4" });
+      const chunks: Buffer[] = [];
+      doc.on("data", (c: Buffer) => chunks.push(c));
+      doc.on("end", () => resolve(Buffer.concat(chunks)));
+      doc.on("error", reject);
+      doc.fontSize(18).font("Helvetica-Bold").text("FPS Brandpreventie", { align: "center" });
+      doc.moveDown(0.3);
+      doc.fontSize(13).font("Helvetica-Bold").text(offerte.titel ?? "Offerte");
+      doc.fontSize(10).font("Helvetica")
+        .text(`Offertenummer: ${offerte.offertenummer ?? String(offerteId)}`)
+        .text(`Datum: ${offerte.datum ? new Date(offerte.datum).toLocaleDateString("nl-NL") : "—"}`)
+        .text(`Opdrachtgever: ${offerte.opdrachtgever ?? "—"}`);
+      doc.moveDown();
+      if (regels.length > 0) {
+        doc.font("Helvetica-Bold").fontSize(11).text("Begrotingsregels:");
+        doc.moveDown(0.3);
+        for (const r of regels) {
+          doc.font("Helvetica").fontSize(10).text(
+            `\u2022 ${r.maatregel ?? ""} \u2014 ${r.aantal ?? ""} ${r.eenheid ?? ""} \u2014 \u20AC${Number(r.kosten ?? 0).toFixed(2)}`,
+            { indent: 10 },
+          );
+        }
+        doc.moveDown();
+      }
+      doc.font("Helvetica-Bold").fontSize(11)
+        .text(`Totaal excl. BTW: \u20AC${Number(offerte.bedragExclBtw ?? 0).toFixed(2)}`)
+        .text(`Totaal incl. BTW (${offerte.btwPercentage ?? 21}%): \u20AC${Number(offerte.bedragInclBtw ?? 0).toFixed(2)}`);
+      doc.moveDown(2);
+      doc.fontSize(9).font("Helvetica").fillColor("#6b7280").text("FPS Brandpreventie \u2014 Uw partner in brandveiligheid", { align: "center" });
+      doc.end();
+    });
 
     const html = `<!DOCTYPE html>
 <html lang="nl">
@@ -1519,9 +1557,9 @@ ${regels.length > 0 ? `<table style="width:100%;border-collapse:collapse;margin-
       verstuurdDoorId: req.session.userId ?? null,
       bijlagen: [
         {
-          naam: `offerte-${offerte.offertenummer ?? offerteId}.html`,
-          contentType: "text/html",
-          inhoud: Buffer.from(samenvattingHtml, "utf-8"),
+          naam: `offerte-${offerte.offertenummer ?? offerteId}.pdf`,
+          contentType: "application/pdf",
+          inhoud: pdfBuffer,
         },
       ],
     });

@@ -150,7 +150,7 @@ router.patch("/portaal/:token/tracking", async (req, res) => {
     const tokenRecord = tokenResultaat.record;
 
     const event = String(req.body?.event ?? "");
-    const toegestaan = ["bekeken", "pdf_gedownload", "bijlage_gedownload"];
+    const toegestaan = ["pdf_gedownload", "bijlage_gedownload"];
     if (!toegestaan.includes(event)) return res.status(400).json({ error: "Ongeldig event." });
 
     await db.insert(offerteTrackingTable).values({
@@ -177,6 +177,10 @@ router.post("/portaal/:token/optioneel-werk", async (req, res) => {
       return res.status(410).json({ error: "Uw uitnodiging is verlopen." });
     const tokenRecord = tokenResultaat.record;
 
+    const [offerte] = await db.select({ portaalStatus: offertesTable.portaalStatus }).from(offertesTable).where(eq(offertesTable.id, tokenRecord.offerteId));
+    if (offerte?.portaalStatus === "ondertekend" || offerte?.portaalStatus === "afgewezen")
+      return res.status(409).json({ error: "De offerte is al afgesloten en kan niet meer worden gewijzigd." });
+
     const geselecteerd: Record<string, boolean> = req.body?.geselecteerd ?? {};
     if (typeof geselecteerd !== "object" || Array.isArray(geselecteerd))
       return res.status(400).json({ error: "geselecteerd moet een object zijn met regel-id's als sleutels." });
@@ -195,13 +199,6 @@ router.post("/portaal/:token/optioneel-werk", async (req, res) => {
           ),
         );
     }
-
-    await db.insert(offerteTrackingTable).values({
-      offerteId: tokenRecord.offerteId,
-      event: "bekeken",
-      portaalToken: req.params.token,
-      ip: String(req.ip ?? "").slice(0, 45),
-    });
 
     res.json({ ok: true });
   } catch (err) {
