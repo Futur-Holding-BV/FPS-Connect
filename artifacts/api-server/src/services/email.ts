@@ -192,11 +192,14 @@ async function leesGraphFout(res: Response): Promise<MailFout> {
   return classificeerGraphFout(res.status, code, bericht);
 }
 
+export type MailBijlage = { naam: string; contentType: string; inhoud: Buffer };
+
 async function verstuurViaGraph(opties: {
   naarEmail: string;
   naarNaam?: string | null;
   onderwerp: string;
   html: string;
+  bijlagen?: MailBijlage[];
 }): Promise<void> {
   const token = await haalAccessToken();
   const graphUrl = `https://graph.microsoft.com/v1.0/users/${encodeURIComponent(
@@ -212,6 +215,16 @@ async function verstuurViaGraph(opties: {
       from: { emailAddress: { address: MAIL_FROM, name: AFZENDER_NAAM } },
       // Antwoorden komen terug in de gedeelde postbus, niet op het noreply-alias.
       replyTo: [{ emailAddress: { address: MAIL_MAILBOX, name: "FPS Connect" } }],
+      ...(opties.bijlagen && opties.bijlagen.length > 0
+        ? {
+            attachments: opties.bijlagen.map((b) => ({
+              "@odata.type": "#microsoft.graph.fileAttachment",
+              name: b.naam,
+              contentType: b.contentType,
+              contentBytes: b.inhoud.toString("base64"),
+            })),
+          }
+        : {}),
     },
     saveToSentItems: false,
   };
@@ -292,6 +305,7 @@ export async function verstuurMail(opties: {
   html: string;
   soort: MailSoort;
   verstuurdDoorId?: number | null;
+  bijlagen?: MailBijlage[];
 }): Promise<void> {
   const basis = {
     naarEmail: opties.naarEmail,
@@ -305,7 +319,7 @@ export async function verstuurMail(opties: {
     throw new MailFout("niet_geconfigureerd");
   }
   try {
-    await verstuurViaGraph(opties);
+    await verstuurViaGraph({ ...opties, bijlagen: opties.bijlagen });
   } catch (err) {
     const fout =
       err instanceof MailFout

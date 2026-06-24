@@ -352,6 +352,44 @@ router.get("/offertes/analytics", lezen, async (req, res) => {
     );
     const gemDagen = Number((doorlooptijdRij.rows[0] as any)?.gem_dagen ?? 0);
 
+    // Vervallen: verzonden offertes waarvan het portaaltoken verlopen is
+    const vervallenRij = await db.execute(
+      sql`SELECT COUNT(DISTINCT o.id)::int AS n
+          FROM offertes o
+          JOIN offerte_portaal_tokens t ON t.offerte_id = o.id
+          WHERE o.portaal_status = 'verzonden'
+            AND t.verloopt_op < NOW()`
+    );
+    const vervallen = Number((vervallenRij.rows[0] as any)?.n ?? 0);
+
+    // AI-acceptatiescore: percentage regels dat als AI-voorstel is aangemaakt
+    const aiRij = await db.execute(
+      sql`SELECT
+            COUNT(*) FILTER (WHERE ai_voorstel = true)::int AS ai_regels,
+            COUNT(*)::int AS totaal_regels
+          FROM offerte_regels`
+    );
+    const aiRegels = Number((aiRij.rows[0] as any)?.ai_regels ?? 0);
+    const totaalRegels = Number((aiRij.rows[0] as any)?.totaal_regels ?? 0);
+    const aiAcceptatieScore = totaalRegels > 0 ? Math.round((aiRegels / totaalRegels) * 100) : 0;
+
+    // Top 5 offertes met meeste bijlage-downloads (event = 'bijlage_gedownload')
+    const bijlageDownloadsRij = await db.execute(
+      sql`SELECT t.offerte_id, o.offertenummer, o.titel, COUNT(*)::int AS downloads
+          FROM offerte_tracking t
+          JOIN offertes o ON o.id = t.offerte_id
+          WHERE t.event = 'bijlage_gedownload'
+          GROUP BY t.offerte_id, o.offertenummer, o.titel
+          ORDER BY downloads DESC
+          LIMIT 5`
+    );
+    const topBijlagen = (bijlageDownloadsRij.rows as any[]).map((r) => ({
+      offerte_id: Number(r.offerte_id),
+      offertenummer: r.offertenummer ?? null,
+      titel: r.titel ?? null,
+      downloads: Number(r.downloads),
+    }));
+
     const recenteHandtekeningen = await db
       .select({
         offerteId: offertesTable.id,
@@ -371,9 +409,12 @@ router.get("/offertes/analytics", lezen, async (req, res) => {
       bekeken,
       ondertekend,
       afgewezen,
+      vervallen,
       conversie_procent: conversie,
       gemiddelde_waarde: Math.round(gemWaarde * 100) / 100,
       gemiddelde_doorlooptijd_dagen: Math.round(gemDagen * 10) / 10,
+      ai_acceptatie_score: aiAcceptatieScore,
+      top_bijlagen: topBijlagen,
       recente_offertes: recenteHandtekeningen.map((o) => ({
         id: o.offerteId,
         offertenummer: o.offertenummer,
@@ -739,6 +780,7 @@ router.get("/offertes/:id/secties", lezen, async (req, res) => {
 router.post("/offertes/:id/secties", schrijven, async (req, res) => {
   try {
     const offerteId = parseId(req.params.id);
+    if (await isOfferteBlokkeerd(offerteId)) return res.status(409).json({ error: "Ondertekende of afgewezen offerte kan niet worden gewijzigd." });
     const { sectie_type, volgorde, actief, titel, inhoud } = req.body;
     if (!titel && !sectie_type) return res.status(400).json({ error: "titel is verplicht" });
     const titelEff = titel || (SECTIE_LABELS[sectie_type ?? "vrij"] ?? "Sectie");
@@ -764,6 +806,7 @@ router.post("/offertes/:id/secties", schrijven, async (req, res) => {
 router.post("/offertes/:id/secties/initialiseren", schrijven, async (req, res) => {
   try {
     const offerteId = parseId(req.params.id);
+    if (await isOfferteBlokkeerd(offerteId)) return res.status(409).json({ error: "Ondertekende of afgewezen offerte kan niet worden gewijzigd." });
     const bestaande = await db
       .select({ id: offerteSectiesTable.id })
       .from(offerteSectiesTable)
@@ -790,6 +833,13 @@ router.post("/offertes/:id/secties/initialiseren", schrijven, async (req, res) =
 // PATCH /offerte-secties/:id
 router.patch("/offerte-secties/:id", schrijven, async (req, res) => {
   try {
+    const sectieId = parseId(req.params.id);
+    const [bestaandeSectie] = await db
+      .select({ offerteId: offerteSectiesTable.offerteId })
+      .from(offerteSectiesTable)
+      .where(eq(offerteSectiesTable.id, sectieId));
+    if (!bestaandeSectie) return res.status(404).json({ error: "Sectie niet gevonden" });
+    if (await isOfferteBlokkeerd(bestaandeSectie.offerteId)) return res.status(409).json({ error: "Ondertekende of afgewezen offerte kan niet worden gewijzigd." });
     const { sectie_type, volgorde, actief, titel, inhoud, ai_gegenereerd } = req.body;
     const [s] = await db
       .update(offerteSectiesTable)
@@ -802,7 +852,7 @@ router.patch("/offerte-secties/:id", schrijven, async (req, res) => {
         ...(ai_gegenereerd !== undefined && { aiGegenereerd: ai_gegenereerd }),
         bijgewerktOp: new Date(),
       })
-      .where(eq(offerteSectiesTable.id, parseId(req.params.id)))
+      .where(eq(offerteSectiesTable.id, sectieId))
       .returning();
     if (!s) return res.status(404).json({ error: "Sectie niet gevonden" });
     res.json(mapSectie(s));
@@ -815,7 +865,14 @@ router.patch("/offerte-secties/:id", schrijven, async (req, res) => {
 // DELETE /offerte-secties/:id
 router.delete("/offerte-secties/:id", schrijven, async (req, res) => {
   try {
-    await db.delete(offerteSectiesTable).where(eq(offerteSectiesTable.id, parseId(req.params.id)));
+    const sectieId = parseId(req.params.id);
+    const [bestaandeSectie] = await db
+      .select({ offerteId: offerteSectiesTable.offerteId })
+      .from(offerteSectiesTable)
+      .where(eq(offerteSectiesTable.id, sectieId));
+    if (!bestaandeSectie) return res.status(404).json({ error: "Sectie niet gevonden" });
+    if (await isOfferteBlokkeerd(bestaandeSectie.offerteId)) return res.status(409).json({ error: "Ondertekende of afgewezen offerte kan niet worden gewijzigd." });
+    await db.delete(offerteSectiesTable).where(eq(offerteSectiesTable.id, sectieId));
     res.status(204).send();
   } catch (err) {
     req.log.error(err);
@@ -830,6 +887,7 @@ router.post("/offerte-secties/:id/ai-schrijven", schrijven, async (req, res) => 
     const sectieId = parseId(req.params.id);
     const [sectie] = await db.select().from(offerteSectiesTable).where(eq(offerteSectiesTable.id, sectieId));
     if (!sectie) return res.status(404).json({ error: "Sectie niet gevonden" });
+    if (await isOfferteBlokkeerd(sectie.offerteId)) return res.status(409).json({ error: "Ondertekende of afgewezen offerte kan niet worden gewijzigd." });
 
     const [offerte] = await db
       .select({
@@ -948,6 +1006,7 @@ router.post("/offertes/:id/versies", schrijven, async (req, res) => {
 
     const [offerte] = await db.select().from(offertesTable).where(eq(offertesTable.id, offerteId));
     if (!offerte) return res.status(404).json({ error: "Offerte niet gevonden" });
+    if (await isOfferteBlokkeerd(offerteId)) return res.status(409).json({ error: "Ondertekende of afgewezen offerte kan niet worden gewijzigd." });
 
     const secties = await db.select().from(offerteSectiesTable).where(eq(offerteSectiesTable.offerteId, offerteId)).orderBy(offerteSectiesTable.volgorde);
     const regels = await db.select().from(offerteRegelsTable).where(eq(offerteRegelsTable.offerteId, offerteId)).orderBy(offerteRegelsTable.volgorde);
@@ -1006,6 +1065,7 @@ router.get("/offertes/:id/bijlagen", lezen, async (req, res) => {
 router.post("/offertes/:id/bijlagen", schrijven, async (req, res) => {
   try {
     const offerteId = parseId(req.params.id);
+    if (await isOfferteBlokkeerd(offerteId)) return res.status(409).json({ error: "Ondertekende of afgewezen offerte kan niet worden gewijzigd." });
     const { bijlage_type, naam, beschrijving, url, volgorde } = req.body;
     if (!naam) return res.status(400).json({ error: "naam is verplicht" });
     const [b] = await db
@@ -1029,6 +1089,13 @@ router.post("/offertes/:id/bijlagen", schrijven, async (req, res) => {
 // PATCH /offerte-bijlagen/:id
 router.patch("/offerte-bijlagen/:id", schrijven, async (req, res) => {
   try {
+    const bijlageId = parseId(req.params.id);
+    const [bestaandeBijlage] = await db
+      .select({ offerteId: offerteBijlagenTable.offerteId })
+      .from(offerteBijlagenTable)
+      .where(eq(offerteBijlagenTable.id, bijlageId));
+    if (!bestaandeBijlage) return res.status(404).json({ error: "Bijlage niet gevonden" });
+    if (await isOfferteBlokkeerd(bestaandeBijlage.offerteId)) return res.status(409).json({ error: "Ondertekende of afgewezen offerte kan niet worden gewijzigd." });
     const { bijlage_type, naam, beschrijving, url, volgorde } = req.body;
     const [b] = await db
       .update(offerteBijlagenTable)
@@ -1040,7 +1107,7 @@ router.patch("/offerte-bijlagen/:id", schrijven, async (req, res) => {
         ...(volgorde !== undefined && { volgorde }),
         bijgewerktOp: new Date(),
       })
-      .where(eq(offerteBijlagenTable.id, parseId(req.params.id)))
+      .where(eq(offerteBijlagenTable.id, bijlageId))
       .returning();
     if (!b) return res.status(404).json({ error: "Bijlage niet gevonden" });
     res.json(mapBijlage(b));
@@ -1053,7 +1120,14 @@ router.patch("/offerte-bijlagen/:id", schrijven, async (req, res) => {
 // DELETE /offerte-bijlagen/:id
 router.delete("/offerte-bijlagen/:id", schrijven, async (req, res) => {
   try {
-    await db.delete(offerteBijlagenTable).where(eq(offerteBijlagenTable.id, parseId(req.params.id)));
+    const bijlageId = parseId(req.params.id);
+    const [bestaandeBijlage] = await db
+      .select({ offerteId: offerteBijlagenTable.offerteId })
+      .from(offerteBijlagenTable)
+      .where(eq(offerteBijlagenTable.id, bijlageId));
+    if (!bestaandeBijlage) return res.status(404).json({ error: "Bijlage niet gevonden" });
+    if (await isOfferteBlokkeerd(bestaandeBijlage.offerteId)) return res.status(409).json({ error: "Ondertekende of afgewezen offerte kan niet worden gewijzigd." });
+    await db.delete(offerteBijlagenTable).where(eq(offerteBijlagenTable.id, bijlageId));
     res.status(204).send();
   } catch (err) {
     req.log.error(err);
@@ -1071,6 +1145,7 @@ router.post("/offertes/:id/uit-spots", schrijven, async (req, res) => {
     const [offerte] = await db.select().from(offertesTable).where(eq(offertesTable.id, offerteId));
     if (!offerte) return res.status(404).json({ error: "Offerte niet gevonden" });
     if (offerte.gebouwId == null) return res.status(400).json({ error: "Koppel eerst een gebouw aan de offerte." });
+    if (await isOfferteBlokkeerd(offerteId)) return res.status(409).json({ error: "Ondertekende of afgewezen offerte kan niet worden gewijzigd." });
 
     const spots = await db
       .select()
@@ -1361,16 +1436,61 @@ Geef als JSON terug: { onderwerp, begroeting, samenvatting, call_to_action, afsl
 router.post("/offertes/:id/verzenden", schrijven, async (req, res) => {
   try {
     const offerteId = parseId(req.params.id);
-    const [offerte] = await db.select().from(offertesTable).where(eq(offertesTable.id, offerteId));
+    const [offerte] = await db
+      .select({
+        id: offertesTable.id,
+        offertenummer: offertesTable.offertenummer,
+        titel: offertesTable.titel,
+        opdrachtgever: offertesTable.opdrachtgever,
+        datum: offertesTable.datum,
+        bedragExclBtw: offertesTable.bedragExclBtw,
+        bedragInclBtw: offertesTable.bedragInclBtw,
+        btwPercentage: offertesTable.btwPercentage,
+        portaalStatus: offertesTable.portaalStatus,
+      })
+      .from(offertesTable)
+      .where(eq(offertesTable.id, offerteId));
     if (!offerte) return res.status(404).json({ error: "Offerte niet gevonden" });
 
     const naarEmail = String(req.body?.naar_email ?? "").trim();
     const naarNaam = String(req.body?.naar_naam ?? "").trim() || null;
     const onderwerp = String(req.body?.onderwerp ?? "").trim() || `Offerte ${offerte.offertenummer ?? offerteId}`;
     const tekst = String(req.body?.tekst ?? "").trim();
-    const portaalLink = String(req.body?.portaal_link ?? "").trim();
+    let portaalLink = String(req.body?.portaal_link ?? "").trim();
 
     if (!naarEmail) return res.status(400).json({ error: "Ontvangersmailadres is verplicht." });
+
+    // Genereer server-side een portaal-token als de aanroeper er geen meestuurt.
+    if (!portaalLink) {
+      const nieuweToken = randomBytes(32).toString("hex");
+      const verlooptOp = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+      await db.insert(offertePortaalTokensTable).values({ offerteId, token: nieuweToken, verlooptOp });
+      const host = (process.env.REPLIT_DOMAINS ?? "").split(",")[0]?.trim() ?? req.get("host") ?? "";
+      portaalLink = host ? `https://${host}/portaal/${nieuweToken}` : `/portaal/${nieuweToken}`;
+    }
+
+    const portaalToken = portaalLink.split("/portaal/")[1]?.split("?")[0] ?? null;
+
+    // Bijlagen: HTML-samenvatting van de offerte als meegestuurde bijlage.
+    const regels = await db
+      .select({ maatregel: offerteRegelsTable.maatregel, aantal: offerteRegelsTable.aantal, eenheid: offerteRegelsTable.eenheid, kosten: offerteRegelsTable.kosten })
+      .from(offerteRegelsTable)
+      .where(eq(offerteRegelsTable.offerteId, offerteId))
+      .orderBy(offerteRegelsTable.volgorde);
+    const regelHtml = regels
+      .map((r) => `<tr><td style="padding:4px 8px">${escapeHtml(r.maatregel ?? "")}</td><td style="padding:4px 8px;text-align:right">${r.aantal ?? ""} ${escapeHtml(r.eenheid ?? "")}</td><td style="padding:4px 8px;text-align:right">&euro;&nbsp;${Number(r.kosten ?? 0).toFixed(2)}</td></tr>`)
+      .join("");
+    const samenvattingHtml = `<!DOCTYPE html><html lang="nl"><head><meta charset="UTF-8"><title>Offerte ${escapeHtml(offerte.offertenummer ?? String(offerteId))}</title></head>
+<body style="font-family:Arial,sans-serif;color:#212631;max-width:700px;margin:0 auto;padding:24px">
+<div style="background:#F23B0D;color:#fff;padding:16px 24px;border-radius:8px;margin-bottom:24px"><h1 style="margin:0;font-size:20px">FPS Brandpreventie</h1></div>
+<h2 style="margin:0 0 4px">${escapeHtml(offerte.titel ?? "Offerte")}</h2>
+<p style="margin:0 0 4px;color:#6b7280">Offertenummer: ${escapeHtml(offerte.offertenummer ?? String(offerteId))}</p>
+<p style="margin:0 0 16px;color:#6b7280">Datum: ${offerte.datum ? new Date(offerte.datum).toLocaleDateString("nl-NL") : "—"}</p>
+${regels.length > 0 ? `<table style="width:100%;border-collapse:collapse;margin-bottom:16px"><thead><tr style="background:#f3f4f6"><th style="padding:6px 8px;text-align:left">Omschrijving</th><th style="padding:6px 8px;text-align:right">Aantal</th><th style="padding:6px 8px;text-align:right">Bedrag</th></tr></thead><tbody>${regelHtml}</tbody></table>` : ""}
+<p style="margin:0;font-weight:bold">Totaal excl. BTW: &euro;&nbsp;${Number(offerte.bedragExclBtw ?? 0).toFixed(2)}</p>
+<p style="margin:4px 0;font-weight:bold">Totaal incl. BTW (${offerte.btwPercentage ?? 21}%): &euro;&nbsp;${Number(offerte.bedragInclBtw ?? 0).toFixed(2)}</p>
+<p style="margin-top:24px;font-size:12px;color:#6b7280">FPS Brandpreventie — Uw partner in brandveiligheid</p>
+</body></html>`;
 
     const html = `<!DOCTYPE html>
 <html lang="nl">
@@ -1380,11 +1500,11 @@ router.post("/offertes/:id/verzenden", schrijven, async (req, res) => {
     <div style="background:#F23B0D;color:#fff;font-size:22px;font-weight:bold;padding:16px 24px;border-radius:8px">FPS Brandpreventie</div>
   </div>
   <p>${escapeHtml(tekst).replace(/\n/g, "<br>")}</p>
-  ${portaalLink ? `<div style="text-align:center;margin:32px 0">
-    <a href="${portaalLink.startsWith("https://") ? portaalLink.replace(/"/g, "%22") : "#"}" style="background:#F23B0D;color:#fff;padding:14px 28px;text-decoration:none;border-radius:6px;font-weight:bold;display:inline-block">
+  <div style="text-align:center;margin:32px 0">
+    <a href="${portaalLink.startsWith("https://") ? portaalLink.replace(/"/g, "%22") : `#`}" style="background:#F23B0D;color:#fff;padding:14px 28px;text-decoration:none;border-radius:6px;font-weight:bold;display:inline-block">
       Offerte bekijken en ondertekenen
     </a>
-  </div>` : ""}
+  </div>
   <hr style="border:none;border-top:1px solid #e5e7eb;margin:32px 0">
   <p style="font-size:12px;color:#6b7280">FPS Brandpreventie — Uw partner in brandveiligheid</p>
 </body>
@@ -1397,6 +1517,13 @@ router.post("/offertes/:id/verzenden", schrijven, async (req, res) => {
       html,
       soort: "offerte",
       verstuurdDoorId: req.session.userId ?? null,
+      bijlagen: [
+        {
+          naam: `offerte-${offerte.offertenummer ?? offerteId}.html`,
+          contentType: "text/html",
+          inhoud: Buffer.from(samenvattingHtml, "utf-8"),
+        },
+      ],
     });
 
     await db.insert(offerteEmailLogTable).values({
@@ -1404,7 +1531,7 @@ router.post("/offertes/:id/verzenden", schrijven, async (req, res) => {
       ontvanger: naarEmail,
       onderwerp,
       status: "verzonden",
-      portaalToken: portaalLink.split("/portaal/")[1]?.split("?")[0] ?? null,
+      portaalToken,
     });
 
     await db
@@ -1419,7 +1546,7 @@ router.post("/offertes/:id/verzenden", schrijven, async (req, res) => {
       ip: null,
     });
 
-    res.json({ ok: true });
+    res.json({ ok: true, portaal_link: portaalLink });
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Interne serverfout" });
