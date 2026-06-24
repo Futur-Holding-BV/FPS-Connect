@@ -384,6 +384,12 @@ router.post("/portaal/:token/ondertekenen", async (req, res) => {
       req.log.warn(projectErr, "Project aanmaken mislukt na ondertekening");
     }
 
+    await logActiviteit({
+      type: "offerte_geaccepteerd",
+      omschrijving: `Offerte ${offerte.offertenummer ?? offerte.id} (${offerte.titel}) ondertekend door ${naam}${bedrijf ? ` (${bedrijf})` : ""}`,
+      gebouwId: offerte.gebouwId ?? null,
+    });
+
     await db.insert(offerteTrackingTable).values({
       offerteId: offerte.id,
       event: "ondertekend",
