@@ -51,7 +51,7 @@ export class MailFout extends Error {
   }
 }
 
-export type MailSoort = "test" | "uitnodiging" | "wachtwoord_reset" | "offerte" | "klantvraag";
+export type MailSoort = "test" | "uitnodiging" | "wachtwoord_reset" | "offerte" | "klantvraag" | "ondertekening";
 
 // ── Configuratie-helpers ─────────────────────────────────────────────────────
 export function isGeconfigureerd(): boolean {
@@ -570,6 +570,93 @@ export async function stuurKlantvraagNotificatie(opties: {
     });
   } catch (err) {
     logger.warn({ err, offerteId }, "Klantvraag-notificatiemail mislukt (niet-kritiek)");
+  }
+}
+
+/**
+ * Stuurt een notificatiemail naar de behandelend beheerder (of algemene postbus)
+ * zodra een klant een offerte heeft ondertekend via het portaal.
+ * Gooit nooit — mislukkingen worden gelogd en stilzwijgend genegeerd.
+ */
+export async function stuurOndertekeningNotificatie(opties: {
+  naarEmail: string;
+  naarNaam?: string | null;
+  ondertekendDoor: string;
+  ondertekendOp: Date;
+  offerteId: number;
+  offertenummer: string | null;
+  offerteTitel: string;
+  opdrachtgever: string | null;
+  connectUrl: string;
+}): Promise<void> {
+  const {
+    naarEmail,
+    naarNaam,
+    ondertekendDoor,
+    ondertekendOp,
+    offerteId,
+    offertenummer,
+    offerteTitel,
+    opdrachtgever,
+    connectUrl,
+  } = opties;
+
+  if (!isGeconfigureerd()) {
+    logger.warn(
+      { offerteId },
+      "E-mailservice niet geconfigureerd — ondertekening-notificatie niet verstuurd",
+    );
+    return;
+  }
+
+  const offerteLabel = offertenummer
+    ? `offerte ${escapeHtml(offertenummer)}`
+    : `offerte #${offerteId}`;
+
+  const datumTijd = ondertekendOp.toLocaleString("nl-NL", {
+    timeZone: "Europe/Amsterdam",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
+  const onderwerp = `Offerte ondertekend — ${offertenummer ?? `#${offerteId}`}`;
+
+  const paragrafen: string[] = [
+    `<strong>${escapeHtml(offerteTitel)}</strong> (${offerteLabel}) is zojuist ondertekend.`,
+  ];
+
+  if (opdrachtgever) {
+    paragrafen.push(`<strong>Opdrachtgever:</strong> ${escapeHtml(opdrachtgever)}`);
+  }
+
+  paragrafen.push(
+    `<strong>Ondertekend door:</strong> ${escapeHtml(ondertekendDoor)}`,
+    `<strong>Datum en tijd:</strong> ${datumTijd}`,
+    "Open de offerte in FPS Connect voor de volgende stappen.",
+  );
+
+  const html = mailShell({
+    titel: onderwerp,
+    kopje: "Offerte ondertekend",
+    paragrafen,
+    knop: { label: "Bekijk offerte in FPS Connect", link: connectUrl },
+    voettekst:
+      "Dit bericht is automatisch gegenereerd door FPS Connect &bull; U ontvangt dit omdat u als behandelaar op deze offerte staat.",
+  });
+
+  try {
+    await verstuurMail({
+      naarEmail,
+      naarNaam: naarNaam ?? undefined,
+      onderwerp,
+      html,
+      soort: "ondertekening",
+    });
+  } catch (err) {
+    logger.warn({ err, offerteId }, "Ondertekening-notificatiemail mislukt (niet-kritiek)");
   }
 }
 

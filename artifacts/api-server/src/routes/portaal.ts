@@ -17,7 +17,7 @@ import {
   gebouwenTable,
 } from "@workspace/db";
 import { eq, and, gt, desc, ne, or, isNull } from "drizzle-orm";
-import { stuurKlantvraagNotificatie } from "../services/email";
+import { stuurKlantvraagNotificatie, stuurOndertekeningNotificatie } from "../services/email";
 import { logActiviteit } from "../lib/activiteit";
 
 const router = Router();
@@ -442,6 +442,48 @@ router.post("/portaal/:token/ondertekenen", async (req, res) => {
     });
 
     res.status(201).json({ ok: true, project_id: projectId });
+
+    // Notificatiemail — fire-and-forget, blokkeert de respons niet.
+    (async () => {
+      try {
+        let naarEmail: string;
+        let naarNaam: string | null = null;
+
+        if (offerte.behandeldDoorId) {
+          const [beheerder] = await db
+            .select({ email: gebruikersTable.email, naam: gebruikersTable.naam })
+            .from(gebruikersTable)
+            .where(eq(gebruikersTable.id, offerte.behandeldDoorId));
+          if (beheerder) {
+            naarEmail = beheerder.email;
+            naarNaam = beheerder.naam;
+          } else {
+            naarEmail = process.env.MAIL_MAILBOX ?? "app@fpsbrandpreventie.nl";
+          }
+        } else {
+          naarEmail = process.env.MAIL_MAILBOX ?? "app@fpsbrandpreventie.nl";
+        }
+
+        const domein = (process.env.REPLIT_DOMAINS ?? "").split(",")[0]?.trim();
+        const connectUrl = domein
+          ? `https://${domein}/offertes/${offerte.id}`
+          : `https://fpsbrandpreventie.nl/offertes/${offerte.id}`;
+
+        await stuurOndertekeningNotificatie({
+          naarEmail,
+          naarNaam,
+          ondertekendDoor: naam,
+          ondertekendOp: nu,
+          offerteId: offerte.id,
+          offertenummer: offerte.offertenummer,
+          offerteTitel: offerte.titel,
+          opdrachtgever: offerte.opdrachtgever ?? bedrijf,
+          connectUrl,
+        });
+      } catch (mailErr) {
+        req.log.warn(mailErr, "Ondertekening-notificatie mislukt (niet-kritiek)");
+      }
+    })();
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Interne serverfout" });
