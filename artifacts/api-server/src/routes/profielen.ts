@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { db, profielenTable, gebruikersTable } from "@workspace/db";
 import { asc, eq } from "drizzle-orm";
-import { MODULE_IDS, MAX_NIVEAU, bevoegdhedenGelijk } from "@workspace/permissies";
+import { MODULE_IDS, MAX_NIVEAU, bevoegdhedenGelijk, PRESETS } from "@workspace/permissies";
 import { requireBevoegdheid, requireRol } from "../middlewares/auth";
 
 const router = Router();
@@ -146,6 +146,29 @@ router.post("/profielen", requireRol("hoofdbeheerder"), async (req, res) => {
 // niet (0 == ontbrekend); de sleutel wordt alleen expliciet vastgelegd zodat
 // nieuwe modules niet stil ontbreken. Moet vóór /profielen/:id staan zodat
 // "aanvullen" niet als id wordt geïnterpreteerd.
+// POST /profielen/synchroniseer-standaard — maakt ontbrekende systeem-presets aan vanuit PRESETS.
+// Moet vóór /profielen/:id staan zodat "synchroniseer-standaard" niet als id wordt geïnterpreteerd.
+router.post("/profielen/synchroniseer-standaard", requireRol("hoofdbeheerder"), async (req, res) => {
+  try {
+    const bestaand = await db.select({ naam: profielenTable.naam }).from(profielenTable);
+    const bestaandeNamen = new Set(bestaand.map((p) => p.naam));
+    let aangemaakt = 0;
+    for (const preset of PRESETS) {
+      if (bestaandeNamen.has(preset.naam)) continue;
+      await db.insert(profielenTable).values({
+        naam: preset.naam,
+        bevoegdheden: preset.bevoegdheden,
+        systeem: true,
+      });
+      aangemaakt++;
+    }
+    res.json({ aangemaakt });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
 router.post("/profielen/aanvullen", requireRol("hoofdbeheerder"), async (req, res) => {
   try {
     const profielen = await db.select().from(profielenTable);

@@ -61,6 +61,7 @@ import ProjectstatusPagina from "@/pages/beheer/projectstatus";
 import PwaTest from "@/pages/beheer/pwa-test";
 import PrivacyCentrum from "@/pages/mijn/privacy";
 import BeheerPrivacy from "@/pages/beheer/privacy";
+import RollenRechtenBeheer from "@/pages/beheer/rollen-rechten";
 import OpnamePagina from "@/pages/opname/index";
 import OpnameDetailPagina from "@/pages/opname/detail";
 import InfoPagina from "@/pages/info/index";
@@ -256,6 +257,7 @@ function ConnectPortal() {
         <Route path="/beheer/feedback" component={FeedbackBeheer} />
         <Route path="/beheer/heatmaps" component={Heatmaps} />
         <Route path="/beheer/profielen" component={ProfielenBeheer} />
+        <Route path="/beheer/rollen-rechten" component={RollenRechtenBeheer} />
         <Route path="/beheer/ontwikkelstatus" component={Ontwikkelstatus} />
         <Route path="/beheer/documentopmaak" component={DocumentopmaakBeheer} />
         <Route path="/beheer/mail" component={MailBeheer} />

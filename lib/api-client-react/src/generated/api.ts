@@ -12980,6 +12980,45 @@ export const useProfielenAanvullen = <TError = ErrorType<unknown>,
       return useMutation(getProfielenAanvullenMutationOptions(options));
     }
 
+export const getSynchroniseerStandaardProfielenUrl = () => {
+  return `/api/profielen/synchroniseer-standaard`;
+};
+
+export const synchroniseerStandaardProfielen = async (options?: RequestInit): Promise<{ aangemaakt: number }> => {
+  return customFetch<{ aangemaakt: number }>(getSynchroniseerStandaardProfielenUrl(),
+    { method: 'POST', ...options }
+  );
+};
+
+export const getSynchroniseerStandaardProfielenMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof synchroniseerStandaardProfielen>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof synchroniseerStandaardProfielen>>, TError,void, TContext> => {
+const mutationKey = ['synchroniseerStandaardProfielen'];
+const { mutation: mutationOptions, request: requestOptions } = options ?? {};
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof synchroniseerStandaardProfielen>>, void> = () => {
+          return  synchroniseerStandaardProfielen(requestOptions)
+        }
+        return { mutationKey, mutationFn, ...mutationOptions}
+      }
+
+    export type SynchroniseerStandaardProfielenMutationResult = NonNullable<Awaited<ReturnType<typeof synchroniseerStandaardProfielen>>>
+
+    export type SynchroniseerStandaardProfielenMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Ontbrekende standaardprofielen aanmaken vanuit PRESETS (hoofdbeheerder)
+ */
+export const useSynchroniseerStandaardProfielen = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof synchroniseerStandaardProfielen>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof synchroniseerStandaardProfielen>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getSynchroniseerStandaardProfielenMutationOptions(options));
+    }
+
 export const getUpdateProfielUrl = (id: number,) => {
 
 

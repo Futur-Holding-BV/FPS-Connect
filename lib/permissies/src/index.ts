@@ -257,6 +257,35 @@ export const PRESETS: Preset[] = [
       offertes: 4, dossiers: 2, crm: 1, calculaties: 4,
     }),
   },
+  {
+    naam: "Directie",
+    bevoegdheden: matrix({
+      gebouwen: 2, voorzieningen: 2, inspecties: 2, onderhoud: 2,
+      rapportages: 4, bibliotheek: 2, crm: 4, abonnementen: 4,
+      personeel: 2, dossiers: 2, offertes: 2, calculaties: 1, planning: 2,
+    }),
+  },
+  {
+    naam: "Administratie",
+    bevoegdheden: matrix({
+      gebouwen: 2, inspecties: 1, onderhoud: 2, rapportages: 3,
+      crm: 2, personeel: 2, dossiers: 3, offertes: 1, planning: 1,
+    }),
+  },
+  {
+    naam: "Onderhoudsmonteur",
+    bevoegdheden: matrix({
+      gebouwen: 1, voorzieningen: 2, inspecties: 2, onderhoud: 4,
+      rapportages: 1, bibliotheek: 1, planning: 1, toolbox: 1,
+    }),
+  },
+  {
+    naam: "Externe inhuur",
+    bevoegdheden: matrix({
+      gebouwen: 1, voorzieningen: 2, inspecties: 1, onderhoud: 2,
+      rapportages: 1, bibliotheek: 1, toolbox: 1,
+    }),
+  },
 ];
 
 // ── Migratie / fallback ────────────────────────────────────────────────────
