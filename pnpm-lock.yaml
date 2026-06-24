@@ -188,6 +188,9 @@ importers:
       '@types/pdf-parse':
         specifier: ^1.1.5
         version: 1.1.5
+      '@types/pdfkit':
+        specifier: ^0.17.6
+        version: 0.17.6
       '@workspace/api-zod':
         specifier: workspace:*
         version: link:../../lib/api-zod
@@ -279,9 +282,6 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 25.9.2
-      '@types/pdfkit':
-        specifier: ^0.17.6
-        version: 0.17.6
       '@types/qrcode':
         specifier: ^1.5.6
         version: 1.5.6
