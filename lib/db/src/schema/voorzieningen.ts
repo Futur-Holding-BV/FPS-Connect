@@ -209,6 +209,40 @@ export const insertConstructieTemplateSchema = createInsertSchema(constructieTem
 export type InsertConstructieTemplate = z.infer<typeof insertConstructieTemplateSchema>;
 export type ConstructieTemplateRecord = typeof constructieTemplatesTable.$inferSelect;
 
+// ── SPOT STATUS CONFIGURATIE (per-omgeving aan/uit, weergavenaam) ────────────
+// Administreert welke statuscodes in de UI beschikbaar zijn. De calculatie-
+// statussen staan standaard op actief=false en worden pas ingeschakeld
+// wanneer de Calculatie-module live gaat. Seed-data wordt via een SQL-migratie
+// geladen (zie scripts/src/seed-spot-status-configuratie.ts).
+export const spotStatusConfiguratieTable = pgTable("spot_status_configuratie", {
+  statusCode: text("status_code").primaryKey(),
+  weergaveNaam: text("weergave_naam").notNull(),
+  volgorde: integer("volgorde").notNull().default(0),
+  actief: boolean("actief").notNull().default(true),
+  faseGroep: text("fase_groep").notNull().default("operationeel"),
+  bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
+});
+export type SpotStatusConfiguratie = typeof spotStatusConfiguratieTable.$inferSelect;
+
+// ── SPOT DOSSIERS (fase-specifieke dossierkaarten per spot) ─────────────────
+// Elke spot kan meerdere dossiertypen hebben (opname, ai, calculatie,
+// werkbegroting, uitvoering, oplevering). Het type is uniek per voorziening.
+// De data-jsonb bevat fase-specifieke velden; de structuur evolueert per fase.
+export const spotDossiersTable = pgTable("spot_dossiers", {
+  id: serial("id").primaryKey(),
+  voorzieningId: integer("voorziening_id").notNull().references(() => voorzieningenTable.id, { onDelete: "cascade" }),
+  type: text("type").notNull(),
+  status: text("status").notNull().default("concept"),
+  data: jsonb("data").notNull().default({}),
+  aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
+  bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
+}, (t) => ({
+  uniekPaar: unique().on(t.voorzieningId, t.type),
+}));
+export const insertSpotDossierSchema = createInsertSchema(spotDossiersTable).omit({ id: true, aangemaaktOp: true, bijgewerktOp: true });
+export type InsertSpotDossier = z.infer<typeof insertSpotDossierSchema>;
+export type SpotDossier = typeof spotDossiersTable.$inferSelect;
+
 // ── CLUSTERS (logische groepering van spots, bv. schacht of strook) ──────────
 // Een beheerder maakt een benoemd cluster en koppelt spots eraan (voorzieningen.cluster_id).
 // verdiepingId optioneel: een cluster kan op één verdieping liggen of gebouwbreed zijn.

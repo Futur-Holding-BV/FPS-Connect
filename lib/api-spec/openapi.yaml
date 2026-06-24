@@ -1537,6 +1537,131 @@ paths:
         "404":
           description: Niet gevonden
 
+  # ── SPOT STATUS CONFIGURATIE ─────────────────────────────────────────────
+  /spot-status-configuratie:
+    get:
+      operationId: listSpotStatusConfiguratie
+      tags: [voorzieningen]
+      summary: Lijst van alle spot-statusconfiguraties
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SpotStatusConfiguratie"
+
+  /spot-status-configuratie/{statusCode}:
+    patch:
+      operationId: updateSpotStatusConfiguratie
+      tags: [voorzieningen]
+      summary: Spot-statusconfiguratie bijwerken (weergavenaam, actief, volgorde)
+      parameters:
+        - in: path
+          name: statusCode
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SpotStatusConfiguratieUpdate"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpotStatusConfiguratie"
+        "404":
+          description: Niet gevonden
+        "409":
+          description: Conflict (bijv. calculatie-module niet ingeschakeld)
+
+  # ── SPOT TIJDLIJN ─────────────────────────────────────────────────────────
+  /voorzieningen/{id}/tijdlijn:
+    get:
+      operationId: getVoorzieningTijdlijn
+      tags: [voorzieningen]
+      summary: Chronologische tijdlijn van alle activiteiten op een spot
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TijdlijnItem"
+        "404":
+          description: Niet gevonden
+
+  # ── SPOT DOSSIERS ─────────────────────────────────────────────────────────
+  /voorzieningen/{id}/dossiers:
+    get:
+      operationId: listSpotDossiers
+      tags: [voorzieningen]
+      summary: Alle dossierkaarten van een spot ophalen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SpotDossierItem"
+        "404":
+          description: Niet gevonden
+
+  /voorzieningen/{id}/dossiers/{type}:
+    patch:
+      operationId: updateSpotDossier
+      tags: [voorzieningen]
+      summary: Dossierkaart van een spot bijwerken (data en/of status)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+        - in: path
+          name: type
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SpotDossierUpdate"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpotDossierItem"
+        "404":
+          description: Niet gevonden
+
   /voorziening-types:
     get:
       operationId: listVoorzieningTypes
@@ -12010,6 +12135,12 @@ components:
             - afgekeurd
             - in_onderhoud
             - vervallen
+            - in_calculatie
+            - calculatie_akkoord
+            - offerte
+            - opdracht
+            - werkbegroting
+            - inkoop
         classificatie:
           type: string
           enum: ["30", "60", "90", "120"]
@@ -12424,6 +12555,82 @@ components:
       properties:
         monteur_id:
           type: ["integer", "null"]
+
+    # ── SPOT STATUS CONFIGURATIE ─────────────────────────────────────────────
+    SpotStatusConfiguratie:
+      type: object
+      required: [status_code, weergave_naam, volgorde, actief, fase_groep]
+      properties:
+        status_code:
+          type: string
+        weergave_naam:
+          type: string
+        volgorde:
+          type: integer
+        actief:
+          type: boolean
+        fase_groep:
+          type: string
+        bijgewerkt_op:
+          type: string
+
+    SpotStatusConfiguratieUpdate:
+      type: object
+      properties:
+        weergave_naam:
+          type: string
+        actief:
+          type: boolean
+        volgorde:
+          type: integer
+
+    # ── SPOT TIJDLIJN ─────────────────────────────────────────────────────────
+    TijdlijnItem:
+      type: object
+      required: [id, type, omschrijving, tijdstip]
+      properties:
+        id:
+          type: integer
+        type:
+          type: string
+        omschrijving:
+          type: string
+        tijdstip:
+          type: string
+        gebruiker_naam:
+          type: ["string", "null"]
+        gebruiker_id:
+          type: ["integer", "null"]
+
+    # ── SPOT DOSSIERS ─────────────────────────────────────────────────────────
+    SpotDossierItem:
+      type: object
+      required: [id, voorziening_id, type, status, data, aangemaakt_op, bijgewerkt_op]
+      properties:
+        id:
+          type: integer
+        voorziening_id:
+          type: integer
+        type:
+          type: string
+        status:
+          type: string
+        data:
+          type: object
+          additionalProperties: true
+        aangemaakt_op:
+          type: string
+        bijgewerkt_op:
+          type: string
+
+    SpotDossierUpdate:
+      type: object
+      properties:
+        status:
+          type: string
+        data:
+          type: object
+          additionalProperties: true
 
     StatusUpdate:
       type: object

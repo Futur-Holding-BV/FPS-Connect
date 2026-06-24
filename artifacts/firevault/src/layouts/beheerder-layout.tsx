@@ -621,6 +621,19 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
                           </SidebarMenuButton>
                         </SidebarMenuItem>
                       )}
+                      {isHoofdbeheerder && (
+                        <SidebarMenuItem>
+                          <SidebarMenuButton
+                            asChild
+                            isActive={location === "/beheer/spotconfiguratie"}
+                          >
+                            <Link href="/beheer/spotconfiguratie">
+                              <Settings2 />
+                              <span>Spotconfiguratie</span>
+                            </Link>
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                      )}
                       {toonSysteem && (
                         <>
                           <SidebarMenuItem>

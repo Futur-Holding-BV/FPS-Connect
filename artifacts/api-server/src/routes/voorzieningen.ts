@@ -12,6 +12,8 @@ import {
   scheidingenTable,
   clustersTable,
   spotAiVoorstellenTable,
+  spotDossiersTable,
+  activiteitenTable,
   type SpotAiVoorstelSnapshot,
   type SpotAiGekozen,
 } from "@workspace/db";
@@ -1216,5 +1218,118 @@ router.get("/voorzieningen/:id/onderdelen", lezenVoorzieningen, async (req, res)
     return res.status(500).json({ error: "Interne serverfout" });
   }
 });
+
+// GET /voorzieningen/:id/tijdlijn
+router.get("/voorzieningen/:id/tijdlijn", lezenVoorzieningen, async (req, res) => {
+  try {
+    const id = parseInt(String(req.params.id));
+    if (!(await magBijGebouw(req.session.userId!, await gebouwIdVanVoorziening(id)))) {
+      return res.status(403).json({ error: "Geen toegang tot deze voorziening" });
+    }
+    const rows = await db
+      .select()
+      .from(activiteitenTable)
+      .where(eq(activiteitenTable.voorzieningId, id))
+      .orderBy(sql`${activiteitenTable.tijdstip} DESC`)
+      .limit(100);
+    return res.json(
+      rows.map((r) => ({
+        id: r.id,
+        type: r.type,
+        omschrijving: r.omschrijving,
+        tijdstip: r.tijdstip?.toISOString(),
+        gebruiker_naam: r.gebruikerNaam ?? null,
+        gebruiker_id: r.gebruikerId ?? null,
+      }))
+    );
+  } catch (err) {
+    req.log.error(err);
+    return res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// GET /voorzieningen/:id/dossiers
+router.get("/voorzieningen/:id/dossiers", lezenVoorzieningen, async (req, res) => {
+  try {
+    const id = parseInt(String(req.params.id));
+    if (!(await magBijGebouw(req.session.userId!, await gebouwIdVanVoorziening(id)))) {
+      return res.status(403).json({ error: "Geen toegang tot deze voorziening" });
+    }
+    const rows = await db
+      .select()
+      .from(spotDossiersTable)
+      .where(eq(spotDossiersTable.voorzieningId, id));
+    return res.json(
+      rows.map((r) => ({
+        id: r.id,
+        voorziening_id: r.voorzieningId,
+        type: r.type,
+        status: r.status,
+        data: r.data,
+        aangemaakt_op: r.aangemaaktOp?.toISOString(),
+        bijgewerkt_op: r.bijgewerktOp?.toISOString(),
+      }))
+    );
+  } catch (err) {
+    req.log.error(err);
+    return res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// PATCH /voorzieningen/:id/dossiers/:type
+router.patch(
+  "/voorzieningen/:id/dossiers/:type",
+  requireBevoegdheid("voorzieningen", 2),
+  async (req, res) => {
+    try {
+      const id = parseInt(String(req.params.id));
+      const { type } = req.params;
+      if (!(await magBijGebouw(req.session.userId!, await gebouwIdVanVoorziening(id)))) {
+        return res.status(403).json({ error: "Geen toegang tot deze voorziening" });
+      }
+      const { status, data } = req.body as { status?: string; data?: Record<string, unknown> };
+
+      const bestaande = await db
+        .select()
+        .from(spotDossiersTable)
+        .where(and(eq(spotDossiersTable.voorzieningId, id), eq(spotDossiersTable.type, type)));
+
+      let row;
+      if (bestaande.length > 0) {
+        const statusUpdate = status !== undefined ? { status } : {};
+        const dataUpdate = data !== undefined ? { data: data as typeof spotDossiersTable.$inferInsert["data"] } : {};
+        [row] = await db
+          .update(spotDossiersTable)
+          .set({ ...statusUpdate, ...dataUpdate, bijgewerktOp: new Date() })
+          .where(and(eq(spotDossiersTable.voorzieningId, id), eq(spotDossiersTable.type, type)))
+          .returning();
+      } else {
+        [row] = await db
+          .insert(spotDossiersTable)
+          .values({
+            voorzieningId: id,
+            type,
+            status: status ?? "concept",
+            data: data ?? {},
+          })
+          .returning();
+      }
+
+      if (!row) return res.status(500).json({ error: "Opslaan mislukt" });
+      return res.json({
+        id: row.id,
+        voorziening_id: row.voorzieningId,
+        type: row.type,
+        status: row.status,
+        data: row.data,
+        aangemaakt_op: row.aangemaaktOp?.toISOString(),
+        bijgewerkt_op: row.bijgewerktOp?.toISOString(),
+      });
+    } catch (err) {
+      req.log.error(err);
+      return res.status(500).json({ error: "Interne serverfout" });
+    }
+  }
+);
 
 export default router;

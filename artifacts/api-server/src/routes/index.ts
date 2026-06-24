@@ -40,6 +40,7 @@ import backupsRouter from "./backups";
 import opnameRouter from "./opname";
 import werkdagRouter from "./werkdag";
 import projectenRouter from "./projecten";
+import spotStatusConfiguratieRouter from "./spot-status-configuratie";
 import { requireAuth } from "../middlewares/auth";
 
 const router: IRouter = Router();
@@ -89,5 +90,6 @@ router.use(backupsRouter);
 router.use(opnameRouter);
 router.use(werkdagRouter);
 router.use(projectenRouter);
+router.use(spotStatusConfiguratieRouter);
 
 export default router;

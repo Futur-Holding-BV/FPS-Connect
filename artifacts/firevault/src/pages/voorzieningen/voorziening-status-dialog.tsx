@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useUpdateVoorzieningStatus } from "@workspace/api-client-react";
+import { useUpdateVoorzieningStatus, useListSpotStatusConfiguratie } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   Dialog,
@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/select";
 import { AlertCircle } from "lucide-react";
 
-const STATUS_OPTIES = [
+const FALLBACK_OPTIES = [
   { value: "concept", label: "Concept" },
   { value: "voorbereid", label: "Voorbereid" },
   { value: "in_uitvoering", label: "In uitvoering" },
@@ -30,7 +30,6 @@ const STATUS_OPTIES = [
   { value: "opgeleverd", label: "Opgeleverd" },
   { value: "goedgekeurd", label: "Gereed" },
   { value: "afgekeurd", label: "Afgekeurd" },
-  { value: "in_onderhoud", label: "In onderhoud" },
 ];
 
 interface Props {
@@ -43,6 +42,15 @@ interface Props {
 export function VoorzieningStatusDialog({ voorzieningId, huidigeStatus, open, onOpenChange }: Props) {
   const queryClient = useQueryClient();
   const wijzigStatus = useUpdateVoorzieningStatus();
+  const { data: geconfigureerdeStatussen } = useListSpotStatusConfiguratie({
+    query: { queryKey: ["/api/spot-status-configuratie"] },
+  });
+
+  const statusOpties = geconfigureerdeStatussen
+    ? geconfigureerdeStatussen
+        .filter((s) => s.actief)
+        .map((s) => ({ value: s.status_code, label: s.weergave_naam }))
+    : FALLBACK_OPTIES;
 
   const [status, setStatus] = useState(huidigeStatus);
   const [opmerkingen, setOpmerkingen] = useState("");
@@ -88,7 +96,7 @@ export function VoorzieningStatusDialog({ voorzieningId, huidigeStatus, open, on
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {STATUS_OPTIES.map((s) => (
+                {statusOpties.map((s) => (
                   <SelectItem key={s.value} value={s.value}>
                     {s.label}
                   </SelectItem>

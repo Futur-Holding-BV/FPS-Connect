@@ -7,6 +7,8 @@ import {
   useGetSpotAiVoorstel,
   getGetSpotAiVoorstelQueryKey,
   useBevestigSpotAiControle,
+  useListSpotDossiers,
+  useGetVoorzieningTijdlijn,
 } from "@workspace/api-client-react";
 import type { Label } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,7 +16,11 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label as FormLabel } from "@/components/ui/label";
-import { ArrowLeft, Building, Calendar, User, Package, MapPin, QrCode, CheckCircle, AlertCircle, Clock, Pencil, Tag, Sparkles } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  ArrowLeft, Building, Calendar, User, Package, MapPin, QrCode,
+  CheckCircle, AlertCircle, Clock, Pencil, Tag, Sparkles, FolderOpen, History, FileText,
+} from "lucide-react";
 import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
 import { VoorzieningStatusDialog } from "./voorziening-status-dialog";
 import { VoorzieningBewerkenDialog } from "./voorziening-bewerken-dialog";
@@ -29,6 +35,12 @@ const statusKleur: Record<string, string> = {
   goedgekeurd: "bg-green-100 text-green-800 border-green-200",
   afgekeurd: "bg-red-100 text-red-800 border-red-200",
   in_onderhoud: "bg-orange-100 text-orange-800 border-orange-200",
+  in_calculatie: "bg-cyan-100 text-cyan-800 border-cyan-200",
+  calculatie_akkoord: "bg-emerald-100 text-emerald-800 border-emerald-200",
+  offerte: "bg-sky-100 text-sky-800 border-sky-200",
+  opdracht: "bg-indigo-100 text-indigo-800 border-indigo-200",
+  werkbegroting: "bg-fuchsia-100 text-fuchsia-800 border-fuchsia-200",
+  inkoop: "bg-rose-100 text-rose-800 border-rose-200",
 };
 
 const statusLabel: Record<string, string> = {
@@ -41,6 +53,12 @@ const statusLabel: Record<string, string> = {
   goedgekeurd: "Gereed",
   afgekeurd: "Afgekeurd",
   in_onderhoud: "In onderhoud",
+  in_calculatie: "In calculatie",
+  calculatie_akkoord: "Calculatie akkoord",
+  offerte: "Offerte",
+  opdracht: "Opdracht",
+  werkbegroting: "Werkbegroting",
+  inkoop: "Inkoop",
 };
 
 const typeLabel: Record<string, string> = {
@@ -56,6 +74,22 @@ const typeLabel: Record<string, string> = {
   schuifdeur: "Schuifdeur",
   puiconstructie: "Puiconstructie",
   dakdoorvoer: "Dakdoorvoer",
+};
+
+const dossierTypeLabel: Record<string, string> = {
+  opname: "Opname",
+  ai: "AI-analyse",
+  calculatie: "Calculatie",
+  werkbegroting: "Werkbegroting",
+  uitvoering: "Uitvoering",
+  oplevering: "Oplevering",
+};
+
+const dossierStatusKleur: Record<string, string> = {
+  concept: "bg-gray-100 text-gray-700",
+  in_uitvoering: "bg-blue-100 text-blue-800",
+  gereed: "bg-green-100 text-green-800",
+  afgekeurd: "bg-red-100 text-red-800",
 };
 
 function AiControlePaneel({ voorzieningId, labels }: { voorzieningId: number; labels: Label[] }) {
@@ -223,14 +257,15 @@ export default function VoorzieningDetail() {
   const { data: voorziening, isLoading } = useGetVoorziening(Number(id), {
     query: { enabled: !!id, queryKey: getGetVoorzieningQueryKey(Number(id)) },
   });
+  const { data: dossiers = [] } = useListSpotDossiers(Number(id), {
+    query: { enabled: !!id, queryKey: [`/api/voorzieningen/${id}/dossiers`] },
+  });
+  const { data: tijdlijn = [] } = useGetVoorzieningTijdlijn(Number(id), {
+    query: { enabled: !!id, queryKey: [`/api/voorzieningen/${id}/tijdlijn`] },
+  });
   const [statusOpen, setStatusOpen] = useState(false);
   const [bewerkenOpen, setBewerkenOpen] = useState(false);
-  // Spots bewerken (status, foto's, gegevens) komt uit de bevoegdheden-matrix
-  // (Spots-module, niveau 3 "Aanmaken en wijzigen"), niet uit een rolnaam — de
-  // rol-enum kent alleen nog hoofdbeheerder/gebruiker/klant.
   const magBewerken = heeftNiveau("voorzieningen", 3);
-  // AI-controle bevestigen vereist volledig beheer (niveau 4) op de spots-module,
-  // zodat een monteur (niveau 3) zijn eigen afwijking niet zelf kan bevestigen.
   const magControleren = heeftNiveau("voorzieningen", 4);
 
   if (isLoading) {
@@ -253,8 +288,6 @@ export default function VoorzieningDetail() {
     );
   }
 
-  // Brand-/rookwerendheid wordt niet meer per spot gekozen. Leid de waarde af uit
-  // de testnorm van een gekoppelde toepassing; val terug op legacy spot-velden.
   const toepassingen: any[] = Array.isArray((voorziening as any).labels)
     ? (voorziening as any).labels
     : [];
@@ -275,6 +308,7 @@ export default function VoorzieningDetail() {
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
+      {/* Header */}
       <div className="flex items-center gap-4">
         <Link href="/voorzieningen">
           <Button variant="outline" size="icon"><ArrowLeft className="h-4 w-4" /></Button>
@@ -284,7 +318,7 @@ export default function VoorzieningDetail() {
             <h1 className="text-2xl font-bold tracking-tight">{voorziening.objectnummer}</h1>
             <Badge variant="outline" className={statusKleur[voorziening.status ?? "concept"]}>
               {voorziening.status === "goedgekeurd" ? <CheckCircle className="h-3 w-3 mr-1" /> : voorziening.status === "afgekeurd" ? <AlertCircle className="h-3 w-3 mr-1" /> : <Clock className="h-3 w-3 mr-1" />}
-              {statusLabel[voorziening.status ?? "concept"]}
+              {statusLabel[voorziening.status ?? "concept"] ?? voorziening.status}
             </Badge>
           </div>
           <p className="text-muted-foreground mt-0.5">
@@ -306,6 +340,7 @@ export default function VoorzieningDetail() {
         </div>
       </div>
 
+      {/* AI-controle banner */}
       {magControleren && (voorziening as any).ai_te_controleren && (
         <AiControlePaneel
           voorzieningId={voorziening.id}
@@ -313,211 +348,353 @@ export default function VoorzieningDetail() {
         />
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-        <div className="xl:col-span-2 space-y-6">
+      {/* Tabs */}
+      <Tabs defaultValue="overzicht">
+        <TabsList>
+          <TabsTrigger value="overzicht">
+            <Building className="h-4 w-4 mr-2" /> Overzicht
+          </TabsTrigger>
+          <TabsTrigger value="dossiers">
+            <FolderOpen className="h-4 w-4 mr-2" /> Dossiers
+            {dossiers.length > 0 && (
+              <span className="ml-1.5 rounded-full bg-primary/10 text-primary text-xs px-1.5 py-0.5 font-medium">
+                {dossiers.length}
+              </span>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="tijdlijn">
+            <History className="h-4 w-4 mr-2" /> Tijdlijn
+          </TabsTrigger>
+          <TabsTrigger value="documenten">
+            <FileText className="h-4 w-4 mr-2" /> Documenten
+          </TabsTrigger>
+        </TabsList>
 
-          {/* Locatie */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2">
-                <MapPin className="h-4 w-4" /> Locatie
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="grid grid-cols-2 gap-4 text-sm">
-              <div>
-                <div className="text-muted-foreground">Gebouw</div>
-                <div className="font-medium">{voorziening.gebouw_naam ?? "—"}</div>
-              </div>
-              <div>
-                <div className="text-muted-foreground">Verdieping</div>
-                <div className="font-medium">{voorziening.verdieping_naam ?? "—"}</div>
-              </div>
-              <div>
-                <div className="text-muted-foreground">Ruimte</div>
-                <div className="font-medium">{voorziening.ruimte ?? "—"}</div>
-              </div>
-              <div>
-                <div className="text-muted-foreground">Locatieomschrijving</div>
-                <div className="font-medium">{voorziening.locatie_omschrijving ?? "—"}</div>
-              </div>
-              <div>
-                <div className="text-muted-foreground">Cluster</div>
-                <div className="font-medium">{(voorziening as any).cluster_naam ?? "—"}</div>
-              </div>
-              {(voorziening.locatie_x || voorziening.locatie_y) && (
-                <div className="col-span-2">
-                  <div className="text-muted-foreground">Coördinaten (plattegrond)</div>
-                  <div className="font-medium font-mono">X: {voorziening.locatie_x} / Y: {voorziening.locatie_y}</div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Materialen & Opmerkingen */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2">
-                <Package className="h-4 w-4" /> Materialen & Details
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3 text-sm">
-              <div>
-                <div className="text-muted-foreground">Toegepaste materialen</div>
-                <div className="font-medium mt-0.5">{voorziening.materialen ?? "Niet geregistreerd"}</div>
-              </div>
-              {voorziening.opmerkingen && (
-                <div>
-                  <div className="text-muted-foreground">Opmerkingen</div>
-                  <div className="font-medium mt-0.5 text-muted-foreground italic">{voorziening.opmerkingen}</div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Toepassingen */}
-          {Array.isArray((voorziening as any).labels) && (voorziening as any).labels.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base flex items-center gap-2">
-                  <Tag className="h-4 w-4" /> Toepassingen
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex flex-wrap gap-2">
-                  {((voorziening as any).labels as Label[]).map((l) => (
-                    <div
-                      key={l.id}
-                      className="border rounded-md px-3 py-1.5 text-sm bg-muted/30"
-                    >
-                      <span className="font-medium">{l.naam}</span>
-                      {l.fabrikant && (
-                        <span className="text-muted-foreground ml-2 text-xs">
-                          {l.fabrikant}
-                        </span>
-                      )}
-                      {l.testnorm && (
-                        <Badge
-                          variant="outline"
-                          className="ml-2 text-[10px] px-1 py-0"
-                        >
-                          {l.testnorm}
-                        </Badge>
-                      )}
+        {/* ── OVERZICHT ── */}
+        <TabsContent value="overzicht" className="mt-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+            <div className="xl:col-span-2 space-y-6">
+              {/* Locatie */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <MapPin className="h-4 w-4" /> Locatie
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <div className="text-muted-foreground">Gebouw</div>
+                    <div className="font-medium">{voorziening.gebouw_naam ?? "—"}</div>
+                  </div>
+                  <div>
+                    <div className="text-muted-foreground">Verdieping</div>
+                    <div className="font-medium">{voorziening.verdieping_naam ?? "—"}</div>
+                  </div>
+                  <div>
+                    <div className="text-muted-foreground">Ruimte</div>
+                    <div className="font-medium">{voorziening.ruimte ?? "—"}</div>
+                  </div>
+                  <div>
+                    <div className="text-muted-foreground">Locatieomschrijving</div>
+                    <div className="font-medium">{voorziening.locatie_omschrijving ?? "—"}</div>
+                  </div>
+                  <div>
+                    <div className="text-muted-foreground">Cluster</div>
+                    <div className="font-medium">{(voorziening as any).cluster_naam ?? "—"}</div>
+                  </div>
+                  {(voorziening.locatie_x || voorziening.locatie_y) && (
+                    <div className="col-span-2">
+                      <div className="text-muted-foreground">Coördinaten (plattegrond)</div>
+                      <div className="font-medium font-mono">X: {voorziening.locatie_x} / Y: {voorziening.locatie_y}</div>
                     </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
+                  )}
+                </CardContent>
+              </Card>
 
-          {/* Inspecties */}
-          {Array.isArray((voorziening as any).inspecties) && (voorziening as any).inspecties.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Inspecties</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {(voorziening as any).inspecties.map((i: any) => (
-                    <div key={i.id} className="flex items-center justify-between border-b last:border-0 pb-2 last:pb-0">
-                      <div>
-                        <div className="font-medium text-sm">{i.type}</div>
-                        <div className="text-xs text-muted-foreground">{i.geplande_datum ? new Date(i.geplande_datum).toLocaleDateString("nl-NL") : "—"}</div>
-                      </div>
-                      <Badge variant="outline" className="text-xs">{i.status}</Badge>
+              {/* Materialen */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Package className="h-4 w-4" /> Materialen & Details
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3 text-sm">
+                  <div>
+                    <div className="text-muted-foreground">Toegepaste materialen</div>
+                    <div className="font-medium mt-0.5">{voorziening.materialen ?? "Niet geregistreerd"}</div>
+                  </div>
+                  {voorziening.opmerkingen && (
+                    <div>
+                      <div className="text-muted-foreground">Opmerkingen</div>
+                      <div className="font-medium mt-0.5 text-muted-foreground italic">{voorziening.opmerkingen}</div>
                     </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-        </div>
+                  )}
+                </CardContent>
+              </Card>
 
-        <div className="space-y-4">
-          {/* QR & Nummers */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2">
-                <QrCode className="h-4 w-4" /> Identificatie
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3 text-sm">
-              <div>
-                <div className="text-muted-foreground">Objectnummer</div>
-                <div className="font-mono font-semibold">{voorziening.objectnummer}</div>
-              </div>
-              {voorziening.qr_code && (
-                <div>
-                  <div className="text-muted-foreground">QR-code</div>
-                  <div className="font-mono text-xs bg-muted p-2 rounded mt-1">{voorziening.qr_code}</div>
-                </div>
+              {/* Toepassingen */}
+              {toepassingen.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <Tag className="h-4 w-4" /> Toepassingen
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex flex-wrap gap-2">
+                      {(toepassingen as Label[]).map((l) => (
+                        <div key={l.id} className="border rounded-md px-3 py-1.5 text-sm bg-muted/30">
+                          <span className="font-medium">{l.naam}</span>
+                          {l.fabrikant && (
+                            <span className="text-muted-foreground ml-2 text-xs">{l.fabrikant}</span>
+                          )}
+                          {l.testnorm && (
+                            <Badge variant="outline" className="ml-2 text-[10px] px-1 py-0">{l.testnorm}</Badge>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
               )}
-              <div>
-                <div className="text-muted-foreground">Brand-/rookwerendheid</div>
-                <div className="font-semibold">{meetwaarde ?? "—"}</div>
-              </div>
-            </CardContent>
-          </Card>
 
-          {/* Personeel */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2">
-                <User className="h-4 w-4" /> Verantwoordelijken
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3 text-sm">
-              <div>
-                <div className="text-muted-foreground">Monteur</div>
-                <div className="font-medium">{voorziening.monteur_naam ?? "—"}</div>
-              </div>
-              <div>
-                <div className="text-muted-foreground">Onderhoudscontroleur</div>
-                <div className="font-medium">{voorziening.controleur_naam ?? "—"}</div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Datums */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2">
-                <Calendar className="h-4 w-4" /> Datums
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3 text-sm">
-              <div>
-                <div className="text-muted-foreground">Installatiedatum</div>
-                <div className="font-medium">
-                  {voorziening.installatie_datum ? new Date(voorziening.installatie_datum).toLocaleDateString("nl-NL") : "—"}
-                </div>
-              </div>
-              <div>
-                <div className="text-muted-foreground">Volgende inspectie</div>
-                <div className={`font-medium ${voorziening.volgende_inspectie ? "text-foreground" : "text-muted-foreground"}`}>
-                  {voorziening.volgende_inspectie ? new Date(voorziening.volgende_inspectie).toLocaleDateString("nl-NL") : "—"}
-                </div>
-              </div>
-              <div>
-                <div className="text-muted-foreground">Aangemaakt op</div>
-                <div className="font-medium">{new Date(voorziening.aangemaakt_op).toLocaleDateString("nl-NL")}</div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Acties */}
-          {magBewerken && (
-            <div className="space-y-2">
-              <Button className="w-full" variant="default" onClick={() => setStatusOpen(true)}>
-                Status Bijwerken
-              </Button>
-              <Button className="w-full" variant="outline" onClick={() => setBewerkenOpen(true)}>
-                Spot Bewerken
-              </Button>
+              {/* Inspecties */}
+              {Array.isArray((voorziening as any).inspecties) && (voorziening as any).inspecties.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base">Inspecties</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      {(voorziening as any).inspecties.map((i: any) => (
+                        <div key={i.id} className="flex items-center justify-between border-b last:border-0 pb-2 last:pb-0">
+                          <div>
+                            <div className="font-medium text-sm">{i.type}</div>
+                            <div className="text-xs text-muted-foreground">
+                              {i.geplande_datum ? new Date(i.geplande_datum).toLocaleDateString("nl-NL") : "—"}
+                            </div>
+                          </div>
+                          <Badge variant="outline" className="text-xs">{i.status}</Badge>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
             </div>
-          )}
-        </div>
-      </div>
+
+            <div className="space-y-4">
+              {/* Identificatie */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <QrCode className="h-4 w-4" /> Identificatie
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3 text-sm">
+                  <div>
+                    <div className="text-muted-foreground">Objectnummer</div>
+                    <div className="font-mono font-semibold">{voorziening.objectnummer}</div>
+                  </div>
+                  {voorziening.qr_code && (
+                    <div>
+                      <div className="text-muted-foreground">QR-code</div>
+                      <div className="font-mono text-xs bg-muted p-2 rounded mt-1">{voorziening.qr_code}</div>
+                    </div>
+                  )}
+                  <div>
+                    <div className="text-muted-foreground">Brand-/rookwerendheid</div>
+                    <div className="font-semibold">{meetwaarde ?? "—"}</div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Verantwoordelijken */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <User className="h-4 w-4" /> Verantwoordelijken
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3 text-sm">
+                  <div>
+                    <div className="text-muted-foreground">Monteur</div>
+                    <div className="font-medium">{voorziening.monteur_naam ?? "—"}</div>
+                  </div>
+                  <div>
+                    <div className="text-muted-foreground">Onderhoudscontroleur</div>
+                    <div className="font-medium">{voorziening.controleur_naam ?? "—"}</div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Datums */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Calendar className="h-4 w-4" /> Datums
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3 text-sm">
+                  <div>
+                    <div className="text-muted-foreground">Installatiedatum</div>
+                    <div className="font-medium">
+                      {voorziening.installatie_datum ? new Date(voorziening.installatie_datum).toLocaleDateString("nl-NL") : "—"}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-muted-foreground">Volgende inspectie</div>
+                    <div className={`font-medium ${voorziening.volgende_inspectie ? "text-foreground" : "text-muted-foreground"}`}>
+                      {voorziening.volgende_inspectie ? new Date(voorziening.volgende_inspectie).toLocaleDateString("nl-NL") : "—"}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-muted-foreground">Aangemaakt op</div>
+                    <div className="font-medium">{new Date(voorziening.aangemaakt_op).toLocaleDateString("nl-NL")}</div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Acties */}
+              {magBewerken && (
+                <div className="space-y-2">
+                  <Button className="w-full" variant="default" onClick={() => setStatusOpen(true)}>
+                    Status bijwerken
+                  </Button>
+                  <Button className="w-full" variant="outline" onClick={() => setBewerkenOpen(true)}>
+                    Spot bewerken
+                  </Button>
+                </div>
+              )}
+            </div>
+          </div>
+        </TabsContent>
+
+        {/* ── DOSSIERS ── */}
+        <TabsContent value="dossiers" className="mt-6">
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-semibold">Spot-dossiers</h2>
+                <p className="text-sm text-muted-foreground">
+                  Fase-specifieke dossierkaarten voor deze spot.
+                </p>
+              </div>
+            </div>
+
+            {dossiers.length === 0 ? (
+              <Card>
+                <CardContent className="py-12 text-center">
+                  <FolderOpen className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
+                  <div className="text-sm text-muted-foreground">
+                    Nog geen dossiers aangemaakt voor deze spot.
+                  </div>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {dossiers.map((dossier) => (
+                  <Card key={dossier.id}>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-base flex items-center justify-between">
+                        <span>{dossierTypeLabel[dossier.type] ?? dossier.type}</span>
+                        <span className={`text-xs rounded-full px-2 py-0.5 font-medium ${dossierStatusKleur[dossier.status] ?? "bg-gray-100 text-gray-700"}`}>
+                          {dossier.status}
+                        </span>
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="text-sm text-muted-foreground space-y-1">
+                      <div>Aangemaakt: {new Date(dossier.aangemaakt_op).toLocaleDateString("nl-NL")}</div>
+                      <div>Bijgewerkt: {new Date(dossier.bijgewerkt_op).toLocaleDateString("nl-NL")}</div>
+                      {Object.keys(dossier.data ?? {}).length > 0 && (
+                        <div className="mt-2 pt-2 border-t">
+                          <div className="text-xs font-medium text-foreground mb-1">Gegevens</div>
+                          <pre className="text-xs bg-muted rounded p-2 overflow-auto max-h-32">
+                            {JSON.stringify(dossier.data, null, 2)}
+                          </pre>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </div>
+        </TabsContent>
+
+        {/* ── TIJDLIJN ── */}
+        <TabsContent value="tijdlijn" className="mt-6">
+          <div className="space-y-4">
+            <div>
+              <h2 className="text-lg font-semibold">Tijdlijn</h2>
+              <p className="text-sm text-muted-foreground">Alle activiteiten en wijzigingen op deze spot.</p>
+            </div>
+
+            {tijdlijn.length === 0 ? (
+              <Card>
+                <CardContent className="py-12 text-center">
+                  <History className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
+                  <div className="text-sm text-muted-foreground">Nog geen activiteiten geregistreerd.</div>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="relative">
+                <div className="absolute left-4 top-0 bottom-0 w-px bg-border" />
+                <div className="space-y-4 pl-10">
+                  {tijdlijn.map((item, idx) => (
+                    <div key={item.id} className="relative">
+                      <div className="absolute -left-6 top-1 h-3 w-3 rounded-full border-2 border-primary bg-background" />
+                      <div className="rounded-lg border bg-card p-3 shadow-sm">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="text-sm font-medium">{item.omschrijving}</div>
+                          <div className="text-xs text-muted-foreground whitespace-nowrap shrink-0">
+                            {new Date(item.tijdstip).toLocaleString("nl-NL", {
+                              day: "2-digit", month: "2-digit", year: "numeric",
+                              hour: "2-digit", minute: "2-digit",
+                            })}
+                          </div>
+                        </div>
+                        {item.gebruiker_naam && (
+                          <div className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+                            <User className="h-3 w-3" /> {item.gebruiker_naam}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </TabsContent>
+
+        {/* ── DOCUMENTEN ── */}
+        <TabsContent value="documenten" className="mt-6">
+          <div className="space-y-4">
+            <div>
+              <h2 className="text-lg font-semibold">Documenten</h2>
+              <p className="text-sm text-muted-foreground">
+                Documenten gekoppeld aan het gebouw van deze spot zijn beschikbaar via de Documentenbibliotheek.
+              </p>
+            </div>
+            <Card>
+              <CardContent className="py-12 text-center">
+                <FileText className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
+                <div className="text-sm text-muted-foreground mb-4">
+                  Spot-niveau documentkoppelingen zijn beschikbaar via het gebouwdossier.
+                </div>
+                {voorziening.gebouw_naam && (
+                  <Link href={`/gebouwen?zoek=${encodeURIComponent(voorziening.gebouw_naam)}`}>
+                    <Button variant="outline" size="sm">
+                      Naar gebouwdossier
+                    </Button>
+                  </Link>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+      </Tabs>
 
       {magBewerken && (
         <>

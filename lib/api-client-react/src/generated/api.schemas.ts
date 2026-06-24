@@ -5552,3 +5552,42 @@ export type ListOpnamePlattegrondItemsParams = {
 verdieping_id: number;
 };
 
+export interface SpotStatusConfiguratie {
+  status_code: string;
+  weergave_naam: string;
+  volgorde: number;
+  actief: boolean;
+  fase_groep: string;
+  bijgewerkt_op?: string;
+}
+
+export interface SpotStatusConfiguratieUpdate {
+  weergave_naam?: string;
+  actief?: boolean;
+  volgorde?: number;
+}
+
+export interface TijdlijnItem {
+  id: number;
+  type: string;
+  omschrijving: string;
+  tijdstip: string;
+  gebruiker_naam?: string | null;
+  gebruiker_id?: number | null;
+}
+
+export interface SpotDossierItem {
+  id: number;
+  voorziening_id: number;
+  type: string;
+  status: string;
+  data: Record<string, unknown>;
+  aangemaakt_op: string;
+  bijgewerkt_op: string;
+}
+
+export interface SpotDossierUpdate {
+  status?: string;
+  data?: Record<string, unknown>;
+}
+

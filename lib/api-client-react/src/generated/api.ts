@@ -323,8 +323,13 @@ import type {
   SpotAiVoorstelPersistInput,
   SpotAiVoorstelRecord,
   SpotAiVoorstelResultaat,
+  SpotDossierItem,
+  SpotDossierUpdate,
+  SpotStatusConfiguratie,
+  SpotStatusConfiguratieUpdate,
   SpotsInzicht,
   StatusUpdate,
+  TijdlijnItem,
   StatusVerdeling,
   TaalWijzigen,
   Tekening,
@@ -32454,6 +32459,170 @@ export const getListWeekStatenQueryKey = (params?: ListWeekStatenParams,) => {
     ] as const;
     }
 
+
+// ── SPOT STATUS CONFIGURATIE ──────────────────────────────────────────────────
+
+export const getListSpotStatusConfiguratieUrl = () => {
+  return `/api/spot-status-configuratie`
+}
+
+export const listSpotStatusConfiguratie = async (options?: RequestInit): Promise<SpotStatusConfiguratie[]> => {
+  return customFetch<SpotStatusConfiguratie[]>(getListSpotStatusConfiguratieUrl(), {
+    ...options,
+    method: 'GET',
+  });
+}
+
+export const getListSpotStatusConfiguratieQueryKey = () => {
+  return [`/api/spot-status-configuratie`] as const;
+}
+
+export const getListSpotStatusConfiguratieQueryOptions = <TData = Awaited<ReturnType<typeof listSpotStatusConfiguratie>>, TError = ErrorType<unknown>>(options?: { query?: UseQueryOptions<Awaited<ReturnType<typeof listSpotStatusConfiguratie>>, TError, TData>, request?: SecondParameter<typeof customFetch> }) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+  const queryKey = queryOptions?.queryKey ?? getListSpotStatusConfiguratieQueryKey();
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listSpotStatusConfiguratie>>> = ({ signal }) => listSpotStatusConfiguratie({ signal, ...requestOptions });
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<Awaited<ReturnType<typeof listSpotStatusConfiguratie>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListSpotStatusConfiguratieQueryResult = NonNullable<Awaited<ReturnType<typeof listSpotStatusConfiguratie>>>
+export type ListSpotStatusConfiguratieQueryError = ErrorType<unknown>
+
+export function useListSpotStatusConfiguratie<TData = Awaited<ReturnType<typeof listSpotStatusConfiguratie>>, TError = ErrorType<unknown>>(options?: { query?: UseQueryOptions<Awaited<ReturnType<typeof listSpotStatusConfiguratie>>, TError, TData>, request?: SecondParameter<typeof customFetch> }): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListSpotStatusConfiguratieQueryOptions(options);
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & { queryKey: QueryKey };
+  query.queryKey = queryOptions.queryKey;
+  return query;
+}
+
+export const getUpdateSpotStatusConfiguratieUrl = (statusCode: string) => {
+  return `/api/spot-status-configuratie/${statusCode}`
+}
+
+export const updateSpotStatusConfiguratie = async (statusCode: string, spotStatusConfiguratieUpdate: SpotStatusConfiguratieUpdate, options?: RequestInit): Promise<SpotStatusConfiguratie> => {
+  return customFetch<SpotStatusConfiguratie>(getUpdateSpotStatusConfiguratieUrl(statusCode), {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(spotStatusConfiguratieUpdate),
+  });
+}
+
+export const getUpdateSpotStatusConfiguratieMutationOptions = <TError = ErrorType<unknown>, TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof updateSpotStatusConfiguratie>>, TError, { statusCode: string; data: BodyType<SpotStatusConfiguratieUpdate> }, TContext>, request?: SecondParameter<typeof customFetch> }): UseMutationOptions<Awaited<ReturnType<typeof updateSpotStatusConfiguratie>>, TError, { statusCode: string; data: BodyType<SpotStatusConfiguratieUpdate> }, TContext> => {
+  const mutationKey = ['updateSpotStatusConfiguratie'];
+  const { mutation: mutationOptions, request: requestOptions } = options ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ? options : { ...options, mutation: { ...options.mutation, mutationKey } } : { mutation: { mutationKey }, request: undefined };
+  const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateSpotStatusConfiguratie>>, { statusCode: string; data: BodyType<SpotStatusConfiguratieUpdate> }> = (props) => {
+    const { statusCode, data } = props ?? {};
+    return updateSpotStatusConfiguratie(statusCode, data, requestOptions);
+  };
+  return { mutationFn, ...mutationOptions };
+}
+
+export type UpdateSpotStatusConfiguratieMutationResult = NonNullable<Awaited<ReturnType<typeof updateSpotStatusConfiguratie>>>
+export type UpdateSpotStatusConfiguratieMutationBody = BodyType<SpotStatusConfiguratieUpdate>
+export type UpdateSpotStatusConfiguratieMutationError = ErrorType<unknown>
+
+export const useUpdateSpotStatusConfiguratie = <TError = ErrorType<unknown>, TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof updateSpotStatusConfiguratie>>, TError, { statusCode: string; data: BodyType<SpotStatusConfiguratieUpdate> }, TContext>, request?: SecondParameter<typeof customFetch> }): UseMutationResult<Awaited<ReturnType<typeof updateSpotStatusConfiguratie>>, TError, { statusCode: string; data: BodyType<SpotStatusConfiguratieUpdate> }, TContext> => {
+  return useMutation(getUpdateSpotStatusConfiguratieMutationOptions(options));
+}
+
+// ── VOORZIENING TIJDLIJN ──────────────────────────────────────────────────────
+
+export const getGetVoorzieningTijdlijnUrl = (id: number) => {
+  return `/api/voorzieningen/${id}/tijdlijn`
+}
+
+export const getVoorzieningTijdlijn = async (id: number, options?: RequestInit): Promise<TijdlijnItem[]> => {
+  return customFetch<TijdlijnItem[]>(getGetVoorzieningTijdlijnUrl(id), {
+    ...options,
+    method: 'GET',
+  });
+}
+
+export const getGetVoorzieningTijdlijnQueryKey = (id: number) => {
+  return [`/api/voorzieningen/${id}/tijdlijn`] as const;
+}
+
+export const getGetVoorzieningTijdlijnQueryOptions = <TData = Awaited<ReturnType<typeof getVoorzieningTijdlijn>>, TError = ErrorType<unknown>>(id: number, options?: { query?: UseQueryOptions<Awaited<ReturnType<typeof getVoorzieningTijdlijn>>, TError, TData>, request?: SecondParameter<typeof customFetch> }) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+  const queryKey = queryOptions?.queryKey ?? getGetVoorzieningTijdlijnQueryKey(id);
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getVoorzieningTijdlijn>>> = ({ signal }) => getVoorzieningTijdlijn(id, { signal, ...requestOptions });
+  return { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions } as UseQueryOptions<Awaited<ReturnType<typeof getVoorzieningTijdlijn>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetVoorzieningTijdlijnQueryResult = NonNullable<Awaited<ReturnType<typeof getVoorzieningTijdlijn>>>
+export type GetVoorzieningTijdlijnQueryError = ErrorType<unknown>
+
+export function useGetVoorzieningTijdlijn<TData = Awaited<ReturnType<typeof getVoorzieningTijdlijn>>, TError = ErrorType<unknown>>(id: number, options?: { query?: UseQueryOptions<Awaited<ReturnType<typeof getVoorzieningTijdlijn>>, TError, TData>, request?: SecondParameter<typeof customFetch> }): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetVoorzieningTijdlijnQueryOptions(id, options);
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & { queryKey: QueryKey };
+  query.queryKey = queryOptions.queryKey;
+  return query;
+}
+
+// ── SPOT DOSSIERS ─────────────────────────────────────────────────────────────
+
+export const getListSpotDossiersUrl = (id: number) => {
+  return `/api/voorzieningen/${id}/dossiers`
+}
+
+export const listSpotDossiers = async (id: number, options?: RequestInit): Promise<SpotDossierItem[]> => {
+  return customFetch<SpotDossierItem[]>(getListSpotDossiersUrl(id), {
+    ...options,
+    method: 'GET',
+  });
+}
+
+export const getListSpotDossiersQueryKey = (id: number) => {
+  return [`/api/voorzieningen/${id}/dossiers`] as const;
+}
+
+export const getListSpotDossiersQueryOptions = <TData = Awaited<ReturnType<typeof listSpotDossiers>>, TError = ErrorType<unknown>>(id: number, options?: { query?: UseQueryOptions<Awaited<ReturnType<typeof listSpotDossiers>>, TError, TData>, request?: SecondParameter<typeof customFetch> }) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+  const queryKey = queryOptions?.queryKey ?? getListSpotDossiersQueryKey(id);
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listSpotDossiers>>> = ({ signal }) => listSpotDossiers(id, { signal, ...requestOptions });
+  return { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions } as UseQueryOptions<Awaited<ReturnType<typeof listSpotDossiers>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListSpotDossiersQueryResult = NonNullable<Awaited<ReturnType<typeof listSpotDossiers>>>
+export type ListSpotDossiersQueryError = ErrorType<unknown>
+
+export function useListSpotDossiers<TData = Awaited<ReturnType<typeof listSpotDossiers>>, TError = ErrorType<unknown>>(id: number, options?: { query?: UseQueryOptions<Awaited<ReturnType<typeof listSpotDossiers>>, TError, TData>, request?: SecondParameter<typeof customFetch> }): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListSpotDossiersQueryOptions(id, options);
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & { queryKey: QueryKey };
+  query.queryKey = queryOptions.queryKey;
+  return query;
+}
+
+export const getUpdateSpotDossierUrl = (id: number, type: string) => {
+  return `/api/voorzieningen/${id}/dossiers/${type}`
+}
+
+export const updateSpotDossier = async (id: number, type: string, spotDossierUpdate: SpotDossierUpdate, options?: RequestInit): Promise<SpotDossierItem> => {
+  return customFetch<SpotDossierItem>(getUpdateSpotDossierUrl(id, type), {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(spotDossierUpdate),
+  });
+}
+
+export const getUpdateSpotDossierMutationOptions = <TError = ErrorType<unknown>, TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof updateSpotDossier>>, TError, { id: number; type: string; data: BodyType<SpotDossierUpdate> }, TContext>, request?: SecondParameter<typeof customFetch> }): UseMutationOptions<Awaited<ReturnType<typeof updateSpotDossier>>, TError, { id: number; type: string; data: BodyType<SpotDossierUpdate> }, TContext> => {
+  const mutationKey = ['updateSpotDossier'];
+  const { mutation: mutationOptions, request: requestOptions } = options ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ? options : { ...options, mutation: { ...options.mutation, mutationKey } } : { mutation: { mutationKey }, request: undefined };
+  const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateSpotDossier>>, { id: number; type: string; data: BodyType<SpotDossierUpdate> }> = (props) => {
+    const { id, type, data } = props ?? {};
+    return updateSpotDossier(id, type, data, requestOptions);
+  };
+  return { mutationFn, ...mutationOptions };
+}
+
+export type UpdateSpotDossierMutationResult = NonNullable<Awaited<ReturnType<typeof updateSpotDossier>>>
+export type UpdateSpotDossierMutationBody = BodyType<SpotDossierUpdate>
+export type UpdateSpotDossierMutationError = ErrorType<unknown>
+
+export const useUpdateSpotDossier = <TError = ErrorType<unknown>, TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof updateSpotDossier>>, TError, { id: number; type: string; data: BodyType<SpotDossierUpdate> }, TContext>, request?: SecondParameter<typeof customFetch> }): UseMutationResult<Awaited<ReturnType<typeof updateSpotDossier>>, TError, { id: number; type: string; data: BodyType<SpotDossierUpdate> }, TContext> => {
+  return useMutation(getUpdateSpotDossierMutationOptions(options));
+}
 
 export const getListWeekStatenQueryOptions = <TData = Awaited<ReturnType<typeof listWeekStaten>>, TError = ErrorType<unknown>>(params?: ListWeekStatenParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listWeekStaten>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
