@@ -16,7 +16,7 @@ import {
   gebruikersTable,
   gebouwenTable,
 } from "@workspace/db";
-import { eq, and, gt, desc } from "drizzle-orm";
+import { eq, and, gt, desc, ne, or, isNull } from "drizzle-orm";
 import { stuurKlantvraagNotificatie } from "../services/email";
 import { logActiviteit } from "../lib/activiteit";
 
@@ -302,8 +302,6 @@ router.post("/portaal/:token/ondertekenen", async (req, res) => {
       .from(offertesTable)
       .where(eq(offertesTable.id, tokenRecord.offerteId));
     if (!offerte) return res.status(404).json({ error: "Offerte niet gevonden." });
-    if (offerte.portaalStatus === "ondertekend")
-      return res.status(409).json({ error: "Offerte is al ondertekend." });
 
     const naam = String(req.body?.naam ?? "").trim();
     const bedrijf = String(req.body?.bedrijf ?? "").trim() || null;
@@ -316,69 +314,118 @@ router.post("/portaal/:token/ondertekenen", async (req, res) => {
     const nu = new Date();
     const datum = nu.toISOString().slice(0, 10);
 
-    const versies = await db
-      .select({ versienummer: offerteVersiesTable.versienummer })
-      .from(offerteVersiesTable)
-      .where(eq(offerteVersiesTable.offerteId, offerte.id))
-      .orderBy(desc(offerteVersiesTable.versienummer))
-      .limit(1);
-    const versienummer = versies[0]?.versienummer ?? 1;
+    // Alles in één transactie: als een stap mislukt rolt de hele operatie terug
+    // en blijft de offerte in de vorige toestand. Zo kan er nooit een
+    // portaal_status="ondertekend" zonder bijbehorende handtekening/project zijn.
+    let reeds_ondertekend = false;
+    let projectId: number | null = null;
 
-    await db.insert(offerteHandtekeningenTable).values({
-      offerteId: offerte.id,
-      naam,
-      bedrijf,
-      functie,
-      datum,
-      ip: String(req.ip ?? "").slice(0, 45),
-      handtekeningDataUrl,
-      versienummer,
-      portaalToken: req.params.token,
-    });
+    try {
+      projectId = await db.transaction(async (tx) => {
+        // 1. Atomisch claimverzoek: UPDATE ... WHERE portaal_status != 'ondertekend'
+        //    (null-safe: OR portaal_status IS NULL voor legacy rijen).
+        //    PostgreSQL vergrendelt de rij zodat een concurrent verzoek wacht en
+        //    daarna 0 rijen vindt → automatisch 409.
+        const [bijgewerkt] = await tx
+          .update(offertesTable)
+          .set({ portaalStatus: "ondertekend", status: "geaccepteerd", bijgewerktOp: nu })
+          .where(and(
+            eq(offertesTable.id, offerte.id),
+            or(ne(offertesTable.portaalStatus, "ondertekend"), isNull(offertesTable.portaalStatus)),
+          ))
+          .returning({ id: offertesTable.id });
 
-    await db
-      .update(offertesTable)
-      .set({ portaalStatus: "ondertekend", status: "geaccepteerd", bijgewerktOp: nu })
-      .where(eq(offertesTable.id, offerte.id));
+        if (!bijgewerkt) {
+          reeds_ondertekend = true;
+          // Gooi een fout om de transactie af te breken zonder 500-log te triggeren.
+          throw new Error("REEDS_ONDERTEKEND");
+        }
 
-    if (offerte.gebouwId != null) {
-      await db
-        .update(gebouwenTable)
-        .set({ projectStatus: "opdracht_in_uitvoering", bijgewerktOp: nu })
-        .where(eq(gebouwenTable.id, offerte.gebouwId));
+        // 2. Versienummer ophalen.
+        const versies = await tx
+          .select({ versienummer: offerteVersiesTable.versienummer })
+          .from(offerteVersiesTable)
+          .where(eq(offerteVersiesTable.offerteId, offerte.id))
+          .orderBy(desc(offerteVersiesTable.versienummer))
+          .limit(1);
+        const versienummer = versies[0]?.versienummer ?? 1;
+
+        // 3. Handtekening opslaan (binnen transactie — rolt terug bij fout).
+        await tx.insert(offerteHandtekeningenTable).values({
+          offerteId: offerte.id,
+          naam,
+          bedrijf,
+          functie,
+          datum,
+          ip: String(req.ip ?? "").slice(0, 45),
+          handtekeningDataUrl,
+          versienummer,
+          portaalToken: req.params.token,
+        });
+
+        // 4. Gebouwstatus bijwerken.
+        if (offerte.gebouwId != null) {
+          await tx
+            .update(gebouwenTable)
+            .set({ projectStatus: "opdracht_in_uitvoering", bijgewerktOp: nu })
+            .where(eq(gebouwenTable.id, offerte.gebouwId));
+        }
+
+        // 5. Project aanmaken en koppelen — EERST controleren of auto_project_id
+        //    al gezet is (legacy data / herhaalde pogingen). Pas als het NULL is
+        //    wordt er een project ingevoegd; anders wordt het bestaande project
+        //    teruggegeven. Zo kan één offerte nooit een orphan project veroorzaken.
+        const [huidigOfferte] = await tx
+          .select({ autoProjectId: offertesTable.autoProjectId })
+          .from(offertesTable)
+          .where(eq(offertesTable.id, offerte.id));
+
+        if (huidigOfferte?.autoProjectId != null) {
+          req.log.warn({ offerteId: offerte.id, bestaandProjectId: huidigOfferte.autoProjectId },
+            "auto_project_id al gezet bij ondertekening; geen nieuw project aangemaakt");
+          return huidigOfferte.autoProjectId;
+        }
+
+        const werknummer = offerte.offertenummer
+          ? `PRJ-${offerte.offertenummer}`
+          : `PRJ-${offerte.id}-${datum.replace(/-/g, "")}`;
+        const [project] = await tx
+          .insert(projectenTable)
+          .values({
+            naam: offerte.titel,
+            werknummer,
+            status: "actief",
+            omschrijving: `Automatisch aangemaakt na ondertekening offerte ${offerte.offertenummer ?? offerte.id}.`,
+            crmKlantId: offerte.klantId ?? null,
+            gebouwId: offerte.gebouwId ?? null,
+            aangemaaktDoorId: null,
+          })
+          .returning();
+
+        await tx
+          .update(offertesTable)
+          .set({ autoProjectId: project.id, bijgewerktOp: new Date() })
+          .where(and(eq(offertesTable.id, offerte.id), isNull(offertesTable.autoProjectId)));
+
+        return project.id;
+      });
+    } catch (txErr: unknown) {
+      if (reeds_ondertekend) {
+        return res.status(409).json({ error: "Offerte is al ondertekend." });
+      }
+      throw txErr;
     }
 
-    let projectId: number | null = null;
-    try {
-      const werknummer = offerte.offertenummer
-        ? `PRJ-${offerte.offertenummer}`
-        : `PRJ-${offerte.id}-${datum.replace(/-/g, "")}`;
-      const [project] = await db
-        .insert(projectenTable)
-        .values({
-          naam: offerte.titel,
-          werknummer,
-          status: "actief",
-          omschrijving: `Automatisch aangemaakt na ondertekening offerte ${offerte.offertenummer ?? offerte.id}.`,
-          crmKlantId: offerte.klantId ?? null,
+    if (projectId != null) {
+      try {
+        await logActiviteit({
+          type: "project_aangemaakt",
+          omschrijving: `Project aangemaakt na ondertekening offerte ${offerte.offertenummer ?? offerte.id}: ${offerte.titel}`,
           gebouwId: offerte.gebouwId ?? null,
-          aangemaaktDoorId: null,
-        })
-        .returning();
-      projectId = project.id;
-
-      await db
-        .update(offertesTable)
-        .set({ autoProjectId: projectId, bijgewerktOp: new Date() })
-        .where(eq(offertesTable.id, offerte.id));
-
-      await logActiviteit({
-        type: "project_aangemaakt",
-        omschrijving: `Project aangemaakt na ondertekening offerte ${offerte.offertenummer ?? offerte.id}: ${offerte.titel}`,
-        gebouwId: offerte.gebouwId ?? null,
-      });
-    } catch (projectErr) {
-      req.log.warn(projectErr, "Project aanmaken mislukt na ondertekening");
+        });
+      } catch (logErr) {
+        req.log.warn(logErr, "Activiteit loggen mislukt na ondertekening (niet-kritiek)");
+      }
     }
 
     await logActiviteit({

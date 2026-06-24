@@ -14,7 +14,7 @@
 //    eenheid (st/m2/deur/m1/pst), aantal, prijs per eenheid, excl/incl btw.
 //  - Risicoanalyse/uitgangspunten/voorbehouden: per snag meer-/minderwerk,
 //    adviezen en condities.
-import { pgTable, serial, text, integer, real, boolean, timestamp, jsonb, index } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, integer, real, boolean, timestamp, jsonb, index, uniqueIndex } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { gebouwenTable } from "./gebouwen";
@@ -76,7 +76,9 @@ export const offertesTable = pgTable("offertes", {
   aangemaaktDoorId: integer("aangemaakt_door_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
   aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
   bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
-});
+}, (t) => [
+  uniqueIndex("uq_offertes_auto_project_id").on(t.autoProjectId),
+]);
 
 // Begrotingsregels (prijzenblad). categorie = maatregel | algemene_kosten.
 // voorzieningId koppelt een regel aan een spot (Spot -> Calculatie -> Offerte).
