@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
-import { FileText, Plus, Search, Sparkles, PenLine, TrendingUp, CheckCircle, Send, Eye, Clock } from "lucide-react";
+import { FileText, Plus, Search, Sparkles, PenLine, TrendingUp, CheckCircle, Send, Eye, Clock, FolderOpen } from "lucide-react";
 import { Link } from "wouter";
 
 const STATUS_KLEUR: Record<string, string> = {
@@ -229,6 +229,14 @@ export default function OffertesPagina() {
                       <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 gap-1">
                         <Sparkles className="h-3 w-3" /> AI hoog
                       </Badge>
+                    )}
+                    {o.portaal_status === "ondertekend" && o.auto_project_id && (
+                      <Link href={`/gebouwen/${o.auto_project_id}`}>
+                        <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-300 cursor-pointer hover:bg-emerald-100 gap-1">
+                          <FolderOpen className="h-3 w-3" />
+                          Project geopend
+                        </Badge>
+                      </Link>
                     )}
                   </div>
                 </div>
