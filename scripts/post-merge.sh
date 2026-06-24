@@ -14,3 +14,8 @@ pnpm --filter @workspace/db run reconcile
 # die Drizzle wil droppen worden vooraf handmatig via directe SQL verwijderd zodat
 # --force nooit onbedoeld echte data verwijdert.
 pnpm --filter @workspace/db run push-force
+# Stap 4: Schema-healthcheck — voert een lees-only SELECT uit op de kerntabellen om te
+# bevestigen dat alle kritieke kolommen daadwerkelijk aanwezig zijn in de database.
+# Faalt met exit 1 en een duidelijke foutmelding als een tabel of kolom ontbreekt.
+# De merge wordt alleen groen gerapporteerd als deze stap slaagt.
+pnpm --filter @workspace/db run schema-healthcheck
