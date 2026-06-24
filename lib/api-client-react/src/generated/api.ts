@@ -287,6 +287,8 @@ import type {
   OpnameSpotsAanmakenResultaat,
   PlanningAfwezigheid,
   PlanningAfwezigheidInput,
+  PlanningDiagnose,
+  PlanningDiagnoseOorzaak,
   PlanningItem,
   PlanningItemInput,
   PlanningMedewerker,
@@ -36068,3 +36070,45 @@ export const useDeleteOpnameFoto = <TError = ErrorType<unknown>,
       return useMutation(getDeleteOpnameFotoMutationOptions(options));
     }
 
+
+export const getPlanningDiagnoseUrl = () => `/api/modules/planning/diagnose`;
+
+export const getPlanningDiagnose = async (options?: RequestInit): Promise<PlanningDiagnose> => {
+  return customFetch<PlanningDiagnose>(getPlanningDiagnoseUrl(), { ...options });
+};
+
+export const getGetPlanningDiagnoseQueryKey = () =>
+  [`/api/modules/planning/diagnose`] as const;
+
+export const getGetPlanningDiagnoseQueryOptions = <
+  TData = Awaited<ReturnType<typeof getPlanningDiagnose>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<Awaited<ReturnType<typeof getPlanningDiagnose>>, TError, TData>;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+  const queryKey = queryOptions?.queryKey ?? getGetPlanningDiagnoseQueryKey();
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getPlanningDiagnose>>> = ({ signal }) =>
+    getPlanningDiagnose({ signal, ...requestOptions });
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getPlanningDiagnose>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetPlanningDiagnoseQueryResult = NonNullable<Awaited<ReturnType<typeof getPlanningDiagnose>>>;
+export type GetPlanningDiagnoseQueryError = ErrorType<unknown>;
+
+export function useGetPlanningDiagnose<
+  TData = Awaited<ReturnType<typeof getPlanningDiagnose>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<Awaited<ReturnType<typeof getPlanningDiagnose>>, TError, TData>;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetPlanningDiagnoseQueryOptions(options);
+  const query = useQuery(queryOptions);
+  return { ...query, queryKey: queryOptions.queryKey };
+}

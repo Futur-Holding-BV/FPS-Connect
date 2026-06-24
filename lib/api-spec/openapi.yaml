@@ -8232,6 +8232,19 @@ paths:
                 items:
                   $ref: '#/components/schemas/PlanningMedewerker'
 
+  /modules/planning/diagnose:
+    get:
+      operationId: getPlanningDiagnose
+      summary: Diagnose waarom medewerkers niet zichtbaar zijn in planning
+      tags: [PlanningModule]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlanningDiagnose'
+
   /modules/planning/items:
     get:
       operationId: listPlanningItems
@@ -16498,6 +16511,30 @@ components:
           nullable: true
         actief:
           type: boolean
+
+    PlanningDiagnoseOorzaak:
+      type: object
+      required: [reden, aantal, omschrijving]
+      properties:
+        reden:
+          type: string
+        aantal:
+          type: integer
+        omschrijving:
+          type: string
+
+    PlanningDiagnose:
+      type: object
+      required: [totaal_in_hrm, zichtbaar_in_planning, oorzaken]
+      properties:
+        totaal_in_hrm:
+          type: integer
+        zichtbaar_in_planning:
+          type: integer
+        oorzaken:
+          type: array
+          items:
+            $ref: '#/components/schemas/PlanningDiagnoseOorzaak'
 
     PlanningItem:
       type: object

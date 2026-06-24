@@ -13,7 +13,7 @@ import {
   planningMeerwerkTable,
   urenRegistratiesTable,
 } from "@workspace/db";
-import { eq, and, gte, lte, desc, asc, inArray, sql } from "drizzle-orm";
+import { eq, and, gte, lte, desc, asc, inArray, sql, isNull } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
 
 const router = Router();
@@ -103,6 +103,46 @@ router.get("/modules/planning/medewerkers", lezenPlanning, async (req, res) => {
       functie: r.functieNaam ?? null,
       functie_uitvoerend: r.functieUitvoerend ?? true,
     })));
+  } catch (e) {
+    req.log.error(e);
+    res.status(500).json({ error: "Interne fout" });
+  }
+});
+
+// ── Diagnose: waarom zijn er geen medewerkers zichtbaar in de planning ──────
+router.get("/modules/planning/diagnose", lezenPlanning, async (req, res) => {
+  try {
+    const [[totaalRij], [zichtbaarRij], [zonderFunctieRij], [geenUitvoerendeRolRij], [nietActiefRij]] =
+      await Promise.all([
+        db.select({ count: sql<number>`cast(count(*) as int)` }).from(medewerkersTable),
+        db.select({ count: sql<number>`cast(count(*) as int)` })
+          .from(medewerkersTable)
+          .innerJoin(functiesTable, eq(medewerkersTable.functieId, functiesTable.id))
+          .where(and(eq(medewerkersTable.actief, true), eq(functiesTable.uitvoerend, true))),
+        db.select({ count: sql<number>`cast(count(*) as int)` })
+          .from(medewerkersTable)
+          .where(and(eq(medewerkersTable.actief, true), isNull(medewerkersTable.functieId))),
+        db.select({ count: sql<number>`cast(count(*) as int)` })
+          .from(medewerkersTable)
+          .innerJoin(functiesTable, eq(medewerkersTable.functieId, functiesTable.id))
+          .where(and(eq(medewerkersTable.actief, true), eq(functiesTable.uitvoerend, false))),
+        db.select({ count: sql<number>`cast(count(*) as int)` })
+          .from(medewerkersTable)
+          .where(eq(medewerkersTable.actief, false)),
+      ]);
+
+    const totaal           = totaalRij?.count           ?? 0;
+    const zichtbaar        = zichtbaarRij?.count        ?? 0;
+    const zonderFunctie    = zonderFunctieRij?.count    ?? 0;
+    const geenUitvoerend   = geenUitvoerendeRolRij?.count ?? 0;
+    const nietActief       = nietActiefRij?.count       ?? 0;
+
+    const oorzaken: { reden: string; aantal: number; omschrijving: string }[] = [];
+    if (zonderFunctie  > 0) oorzaken.push({ reden: "geen_functie_gekoppeld", aantal: zonderFunctie,  omschrijving: "Medewerkers zonder functie in het functiehuis" });
+    if (geenUitvoerend > 0) oorzaken.push({ reden: "geen_uitvoerende_rol",   aantal: geenUitvoerend, omschrijving: "Medewerkers met een kantoor- of niet-uitvoerende functie" });
+    if (nietActief     > 0) oorzaken.push({ reden: "niet_actief",            aantal: nietActief,     omschrijving: "Medewerkers die als inactief zijn gemarkeerd" });
+
+    res.json({ totaal_in_hrm: totaal, zichtbaar_in_planning: zichtbaar, oorzaken });
   } catch (e) {
     req.log.error(e);
     res.status(500).json({ error: "Interne fout" });

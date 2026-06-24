@@ -4364,6 +4364,18 @@ export interface PlanningMedewerker {
   actief?: boolean;
 }
 
+export interface PlanningDiagnoseOorzaak {
+  reden: string;
+  aantal: number;
+  omschrijving: string;
+}
+
+export interface PlanningDiagnose {
+  totaal_in_hrm: number;
+  zichtbaar_in_planning: number;
+  oorzaken: PlanningDiagnoseOorzaak[];
+}
+
 export interface PlanningItem {
   id: number;
   titel: string;
