@@ -103,6 +103,7 @@ export const crmCommercieelTable = pgTable("crm_commercieel", {
   waarde: real("waarde"),
   kans: integer("kans").default(50),
   verwachteDatum: text("verwachte_datum"),
+  verwachteSluitdatum: text("verwachte_sluitdatum"), // legacy — data migreren naar verwachte_datum, daarna verwijderen
   verantwoordelijkeId: integer("verantwoordelijke_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
   concurrentenBetrokken: text("concurrenten_betrokken"),
   volgendeActie: text("volgende_actie"),
