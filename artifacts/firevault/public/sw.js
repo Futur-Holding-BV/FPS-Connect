@@ -1,5 +1,18 @@
-// FPS Connect Service Worker v1
-const CACHE = "fps-connect-v1";
+// FPS Connect Service Worker v2
+// - Cachet nooit Vite dev-bestanden (HMR tokens zijn sessie-specifiek)
+// - Navigatie: network-first met cache-update (altijd verse HTML-shell)
+// - Statische assets: stale-while-revalidate (snel + automatisch vernieuwd)
+// - API: altijd netwerk, nooit cache
+const CACHE = "fps-connect-v2";
+
+function isViteDevBestand(url) {
+  return (
+    url.pathname.startsWith("/@") ||
+    url.pathname.startsWith("/src/") ||
+    url.search.includes("t=") ||
+    url.search.includes("v=")
+  );
+}
 
 self.addEventListener("install", () => {
   self.skipWaiting();
@@ -20,32 +33,46 @@ self.addEventListener("fetch", (e) => {
   const { request } = e;
   const url = new URL(request.url);
 
-  // API-verzoeken: altijd direct naar netwerk, nooit cachen
-  if (url.pathname.startsWith("/api/")) {
-    return;
-  }
+  // API-verzoeken: altijd netwerk, nooit cachen
+  if (url.pathname.startsWith("/api/")) return;
 
-  // Navigatie (HTML): network-first, fallback naar gecachete shell
+  // Vite dev-bestanden: nooit cachen (HMR tokens zijn sessie-specifiek)
+  if (isViteDevBestand(url)) return;
+
+  // Navigatie (HTML-shell): network-first, sla op in cache als fallback
   if (request.mode === "navigate") {
     e.respondWith(
-      fetch(request).catch(() =>
-        caches.match("/").then((c) => c ?? new Response("Offline", { status: 503 }))
-      )
+      fetch(request)
+        .then((res) => {
+          if (res.ok) {
+            const clone = res.clone();
+            caches.open(CACHE).then((c) => c.put(request, clone));
+          }
+          return res;
+        })
+        .catch(() =>
+          caches
+            .match(request)
+            .then((c) => c ?? caches.match("/"))
+            .then((c) => c ?? new Response("Offline — controleer verbinding", { status: 503 }))
+        )
     );
     return;
   }
 
-  // Statische assets (JS, CSS, afbeeldingen): cache-first
+  // Statische assets (fonts, icons, afbeeldingen): stale-while-revalidate
+  // Serveert direct uit cache (snel) en herlaadt op de achtergrond (actueel).
   e.respondWith(
-    caches.match(request).then((cached) => {
-      if (cached) return cached;
-      return fetch(request).then((res) => {
-        if (res.ok && url.origin === self.location.origin) {
-          const clone = res.clone();
-          caches.open(CACHE).then((c) => c.put(request, clone));
-        }
-        return res;
-      });
-    })
+    caches.open(CACHE).then((cache) =>
+      cache.match(request).then((cached) => {
+        const netwerk = fetch(request).then((res) => {
+          if (res.ok && url.origin === self.location.origin) {
+            cache.put(request, res.clone());
+          }
+          return res;
+        });
+        return cached ?? netwerk;
+      })
+    )
   );
 });

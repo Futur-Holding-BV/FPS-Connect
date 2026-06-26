@@ -2,7 +2,7 @@
   "name": "FPS Connect",
   "short_name": "FPS Connect",
   "description": "FPS Connect — brandpreventie uitvoeringsplanning",
-  "start_url": "/connect/planning",
+  "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "background_color": "#212631",
