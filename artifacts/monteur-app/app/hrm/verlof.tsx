@@ -5,6 +5,7 @@ import {
   useListMijnVerlofsoorten,
   type VerlofAanvraagInput,
 } from "@workspace/api-client-react";
+import DateTimePicker, { type DateTimePickerEvent } from "@react-native-community/datetimepicker";
 import { Redirect, useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
@@ -58,10 +59,65 @@ function datumWeergave(iso: string) {
   return d.toLocaleDateString("nl-NL", { day: "numeric", month: "short", year: "numeric" });
 }
 
+function isoVanDate(d: Date): string {
+  const jaar = d.getFullYear();
+  const maand = String(d.getMonth() + 1).padStart(2, "0");
+  const dag = String(d.getDate()).padStart(2, "0");
+  return `${jaar}-${maand}-${dag}`;
+}
+
 function isGeldigeDatum(s: string): boolean {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return false;
   const d = new Date(s);
   return !Number.isNaN(d.getTime());
+}
+
+function DatumKnop({
+  label,
+  waarde,
+  onPress,
+  c,
+  testID,
+}: {
+  label: string;
+  waarde: string;
+  onPress: () => void;
+  c: ReturnType<typeof useColors>;
+  testID?: string;
+}) {
+  return (
+    <View style={{ gap: 4 }}>
+      <Text style={{ color: c.mutedForeground, fontSize: 12, fontFamily: "Inter_600SemiBold" }}>
+        {label}
+      </Text>
+      <Pressable
+        testID={testID}
+        onPress={onPress}
+        style={({ pressed }) => ({
+          borderWidth: 1,
+          borderColor: c.border,
+          borderRadius: 8,
+          paddingHorizontal: 14,
+          paddingVertical: 12,
+          backgroundColor: pressed ? c.muted : c.background,
+          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "space-between",
+        })}
+      >
+        <Text
+          style={{
+            color: waarde ? c.foreground : c.mutedForeground,
+            fontSize: 15,
+            fontFamily: "Inter_400Regular",
+          }}
+        >
+          {waarde ? datumWeergave(waarde) : "Kies datum…"}
+        </Text>
+        <Text style={{ color: c.mutedForeground, fontSize: 18 }}>{"📅"}</Text>
+      </Pressable>
+    </View>
+  );
 }
 
 export default function VerlofScherm() {
@@ -85,10 +141,38 @@ export default function VerlofScherm() {
   const [reden, setReden] = useState("");
   const [formulierFout, setFormulierFout] = useState<string | null>(null);
 
+  // Native datumkiezer state
+  const [activePicker, setActivePicker] = useState<"start" | "eind" | null>(null);
+  const [pickerDatum, setPickerDatum] = useState<Date>(new Date());
+
   if (!token) return <Redirect href="/login" />;
 
   const huidigJaarSaldi = (saldi ?? []).filter((s) => s.jaar === HUIDIG_JAAR);
   const gekozenSoortNaam = verlofsoorten?.find((s) => s.id === verlofsoortId)?.naam ?? null;
+
+  function openDatumPicker(veld: "start" | "eind") {
+    const huidig = veld === "start" ? startDatum : eindDatum;
+    setPickerDatum(isGeldigeDatum(huidig) ? new Date(huidig) : new Date());
+    setActivePicker(veld);
+  }
+
+  function onPickerChange(_event: DateTimePickerEvent, geselecteerd?: Date) {
+    if (Platform.OS === "android") {
+      setActivePicker(null);
+    }
+    if (geselecteerd) {
+      const iso = isoVanDate(geselecteerd);
+      if (activePicker === "start") setStartDatum(iso);
+      else if (activePicker === "eind") setEindDatum(iso);
+    }
+  }
+
+  function bevestigIosPicker() {
+    const iso = isoVanDate(pickerDatum);
+    if (activePicker === "start") setStartDatum(iso);
+    else if (activePicker === "eind") setEindDatum(iso);
+    setActivePicker(null);
+  }
 
   function resetFormulier() {
     setVerlofsoortId(null);
@@ -115,11 +199,11 @@ export default function VerlofScherm() {
       return;
     }
     if (!isGeldigeDatum(startDatum)) {
-      setFormulierFout("Vul een geldige startdatum in (JJJJ-MM-DD).");
+      setFormulierFout("Kies een geldige startdatum.");
       return;
     }
     if (!isGeldigeDatum(eindDatum)) {
-      setFormulierFout("Vul een geldige einddatum in (JJJJ-MM-DD).");
+      setFormulierFout("Kies een geldige einddatum.");
       return;
     }
     if (eindDatum < startDatum) {
@@ -340,6 +424,7 @@ export default function VerlofScherm() {
         </ScrollView>
       )}
 
+      {/* Verlofaanvraag modal */}
       <Modal visible={modalOpen} animationType="slide" transparent onRequestClose={sluitModal}>
         <View style={{ flex: 1 }}>
           <TouchableWithoutFeedback onPress={sluitModal}>
@@ -372,6 +457,7 @@ export default function VerlofScherm() {
               </View>
             ) : null}
 
+            {/* Verlofsoort */}
             <View style={{ gap: 4 }}>
               <Text style={{ color: c.mutedForeground, fontSize: 12, fontFamily: "Inter_600SemiBold" }}>
                 VERLOFSOORT
@@ -404,58 +490,39 @@ export default function VerlofScherm() {
               </Pressable>
             </View>
 
+            {/* Datums naast elkaar */}
             <View style={{ flexDirection: "row", gap: 12 }}>
-              <View style={{ flex: 1, gap: 4 }}>
-                <Text style={{ color: c.mutedForeground, fontSize: 12, fontFamily: "Inter_600SemiBold" }}>
-                  STARTDATUM
-                </Text>
-                <TextInput
+              <View style={{ flex: 1 }}>
+                <DatumKnop
+                  label="STARTDATUM"
+                  waarde={startDatum}
+                  onPress={() => openDatumPicker("start")}
+                  c={c}
                   testID="verlof-startdatum-input"
-                  value={startDatum}
-                  onChangeText={setStartDatum}
-                  placeholder="JJJJ-MM-DD"
-                  placeholderTextColor={c.mutedForeground}
-                  keyboardType="numbers-and-punctuation"
-                  maxLength={10}
-                  style={{
-                    borderWidth: 1,
-                    borderColor: c.border,
-                    borderRadius: 8,
-                    paddingHorizontal: 14,
-                    paddingVertical: 12,
-                    color: c.foreground,
-                    fontSize: 15,
-                    fontFamily: "Inter_400Regular",
-                    backgroundColor: c.background,
-                  }}
                 />
               </View>
-              <View style={{ flex: 1, gap: 4 }}>
-                <Text style={{ color: c.mutedForeground, fontSize: 12, fontFamily: "Inter_600SemiBold" }}>
-                  EINDDATUM
-                </Text>
-                <TextInput
-                  value={eindDatum}
-                  onChangeText={setEindDatum}
-                  placeholder="JJJJ-MM-DD"
-                  placeholderTextColor={c.mutedForeground}
-                  keyboardType="numbers-and-punctuation"
-                  maxLength={10}
-                  style={{
-                    borderWidth: 1,
-                    borderColor: c.border,
-                    borderRadius: 8,
-                    paddingHorizontal: 14,
-                    paddingVertical: 12,
-                    color: c.foreground,
-                    fontSize: 15,
-                    fontFamily: "Inter_400Regular",
-                    backgroundColor: c.background,
-                  }}
+              <View style={{ flex: 1 }}>
+                <DatumKnop
+                  label="EINDDATUM"
+                  waarde={eindDatum}
+                  onPress={() => openDatumPicker("eind")}
+                  c={c}
                 />
               </View>
             </View>
 
+            {/* Android: inline DateTimePicker (toont als dialog) */}
+            {Platform.OS === "android" && activePicker !== null ? (
+              <DateTimePicker
+                value={pickerDatum}
+                mode="date"
+                display="default"
+                onChange={onPickerChange}
+                locale="nl-NL"
+              />
+            ) : null}
+
+            {/* Aantal uren */}
             <View style={{ gap: 4 }}>
               <Text style={{ color: c.mutedForeground, fontSize: 12, fontFamily: "Inter_600SemiBold" }}>
                 AANTAL UREN (OPTIONEEL)
@@ -480,6 +547,7 @@ export default function VerlofScherm() {
               />
             </View>
 
+            {/* Reden */}
             <View style={{ gap: 4 }}>
               <Text style={{ color: c.mutedForeground, fontSize: 12, fontFamily: "Inter_600SemiBold" }}>
                 REDEN (OPTIONEEL)
@@ -532,6 +600,55 @@ export default function VerlofScherm() {
         </View>
       </Modal>
 
+      {/* iOS datum picker modal */}
+      {Platform.OS === "ios" && activePicker !== null ? (
+        <Modal visible transparent animationType="slide" onRequestClose={() => setActivePicker(null)}>
+          <View style={{ flex: 1 }}>
+            <TouchableWithoutFeedback onPress={() => setActivePicker(null)}>
+              <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.45)" }} />
+            </TouchableWithoutFeedback>
+            <View
+              style={{
+                backgroundColor: c.card,
+                borderTopLeftRadius: 20,
+                borderTopRightRadius: 20,
+                paddingBottom: insets.bottom + 20,
+              }}
+            >
+              <View
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  paddingHorizontal: 20,
+                  paddingTop: 16,
+                  paddingBottom: 8,
+                }}
+              >
+                <Pressable onPress={() => setActivePicker(null)}>
+                  <Text style={{ color: c.primary, fontSize: 16, fontFamily: "Inter_400Regular" }}>Annuleren</Text>
+                </Pressable>
+                <Text style={{ color: c.foreground, fontSize: 16, fontFamily: "Inter_700Bold" }}>
+                  {activePicker === "start" ? "Startdatum" : "Einddatum"}
+                </Text>
+                <Pressable onPress={bevestigIosPicker}>
+                  <Text style={{ color: c.primary, fontSize: 16, fontFamily: "Inter_700Bold" }}>Gereed</Text>
+                </Pressable>
+              </View>
+              <DateTimePicker
+                value={pickerDatum}
+                mode="date"
+                display="spinner"
+                onChange={(_e, d) => { if (d) setPickerDatum(d); }}
+                locale="nl-NL"
+                style={{ width: "100%" }}
+              />
+            </View>
+          </View>
+        </Modal>
+      ) : null}
+
+      {/* Verlofsoort picker */}
       <Modal visible={soortPickerOpen} animationType="slide" transparent onRequestClose={() => setSoortPickerOpen(false)}>
         <View style={{ flex: 1 }}>
           <TouchableWithoutFeedback onPress={() => setSoortPickerOpen(false)}>
@@ -596,7 +713,7 @@ export default function VerlofScherm() {
                     ) : null}
                   </View>
                   {verlofsoortId === item.id ? (
-                    <Text style={{ color: c.primary, fontSize: 18, marginLeft: 8 }}>✓</Text>
+                    <Text style={{ color: c.primary, fontSize: 18 }}>✓</Text>
                   ) : null}
                 </Pressable>
               )}

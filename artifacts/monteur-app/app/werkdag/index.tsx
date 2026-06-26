@@ -1,13 +1,15 @@
-import { useGetWerkdagVandaag } from "@workspace/api-client-react";
-import type { WerkdagItem } from "@workspace/api-client-react";
+import { useGetMijnWerk, useGetWerkdagVandaag } from "@workspace/api-client-react";
+import type { MijnWerkGebouw, WerkdagItem } from "@workspace/api-client-react";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, Redirect, useRouter } from "expo-router";
 import React, { useCallback } from "react";
 import {
   ActivityIndicator,
   FlatList,
+  Linking,
   Pressable,
   RefreshControl,
+  SectionList,
   Text,
   View,
 } from "react-native";
@@ -17,18 +19,18 @@ import { bovenInset } from "@/components/ui";
 import { useAuth } from "@/context/auth";
 import { useColors } from "@/hooks/useColors";
 
-const UITVOERING_LABEL: Record<string, string> = {
-  gepland: "Gepland",
-  bezig: "In uitvoering",
-  pauze: "Pauze",
-  gereed: "Gereed",
-};
-
 const UITVOERING_KLEUR: Record<string, string> = {
   gepland: "#6b7280",
   bezig: "#F23B0D",
   pauze: "#d97706",
   gereed: "#16a34a",
+};
+
+const UITVOERING_LABEL: Record<string, string> = {
+  gepland: "Gepland",
+  bezig: "In uitvoering",
+  pauze: "Pauze",
+  gereed: "Gereed",
 };
 
 function vandaagNederlands(): string {
@@ -39,116 +41,197 @@ function vandaagNederlands(): string {
   });
 }
 
-function StatusBadge({ status }: { status: string }) {
+function StatusDot({ status }: { status: string }) {
   const kleur = UITVOERING_KLEUR[status] ?? "#6b7280";
-  const label = UITVOERING_LABEL[status] ?? status;
   return (
     <View
       style={{
-        backgroundColor: kleur + "22",
-        borderWidth: 1,
-        borderColor: kleur,
-        borderRadius: 6,
-        paddingHorizontal: 8,
-        paddingVertical: 2,
-        alignSelf: "flex-start",
+        width: 8,
+        height: 8,
+        borderRadius: 4,
+        backgroundColor: kleur,
+        marginTop: 2,
+        flexShrink: 0,
       }}
-    >
-      <Text style={{ color: kleur, fontSize: 11, fontFamily: "Inter_600SemiBold" }}>
-        {label}
-      </Text>
-    </View>
+    />
   );
 }
 
-function WerkorderKaart({
+function WerkorderRij({
   item,
   onPress,
-  borderKleur,
 }: {
   item: WerkdagItem;
   onPress: () => void;
-  borderKleur: string;
 }) {
   const c = useColors();
-  const randKleur = UITVOERING_KLEUR[item.uitvoering_status] ?? borderKleur;
+  const kleur = UITVOERING_KLEUR[item.uitvoering_status] ?? "#6b7280";
+  const label = UITVOERING_LABEL[item.uitvoering_status] ?? item.uitvoering_status;
+
   return (
     <Pressable
       onPress={onPress}
       style={({ pressed }) => ({
-        backgroundColor: pressed ? c.secondary : c.card,
-        borderRadius: 12,
-        borderLeftWidth: 4,
-        borderLeftColor: randKleur,
-        marginHorizontal: 16,
-        marginBottom: 12,
-        padding: 16,
-        shadowColor: "#000",
-        shadowOpacity: 0.06,
-        shadowRadius: 6,
-        shadowOffset: { width: 0, height: 2 },
-        elevation: 2,
+        flexDirection: "row",
+        alignItems: "flex-start",
+        gap: 12,
+        paddingVertical: 14,
+        paddingHorizontal: 16,
+        backgroundColor: pressed ? c.muted : "transparent",
       })}
     >
-      {/* Tijdregel */}
-      <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 8, gap: 6 }}>
-        <Ionicons name="time-outline" size={14} color={c.mutedForeground} />
-        <Text style={{ color: c.mutedForeground, fontSize: 13, fontFamily: "Inter_400Regular" }}>
-          {item.tijd_start ?? "–"}
-          {item.tijd_eind ? ` – ${item.tijd_eind}` : ""}
-          {item.uren ? `  ·  ${item.uren} u` : ""}
-        </Text>
-        <View style={{ flex: 1 }} />
-        <StatusBadge status={item.uitvoering_status} />
+      <View style={{ width: 48, alignItems: "flex-end", paddingTop: 2, flexShrink: 0 }}>
+        {item.tijd_start ? (
+          <Text
+            style={{ color: c.mutedForeground, fontSize: 12, fontFamily: "Inter_400Regular" }}
+          >
+            {item.tijd_start}
+          </Text>
+        ) : (
+          <Text style={{ color: c.border, fontSize: 12 }}>–</Text>
+        )}
       </View>
 
-      {/* Projectnaam + werknummer */}
-      <Text
-        style={{
-          color: c.text,
-          fontSize: 15,
-          fontFamily: "Inter_600SemiBold",
-          marginBottom: 4,
-        }}
-        numberOfLines={2}
-      >
-        {item.project_naam ?? item.titel}
-        {item.werknummer ? `  #${item.werknummer}` : ""}
-      </Text>
+      <View style={{ paddingTop: 4, flexShrink: 0 }}>
+        <StatusDot status={item.uitvoering_status} />
+        {item.tijd_eind ? (
+          <View
+            style={{
+              width: 1,
+              flex: 1,
+              backgroundColor: c.border,
+              alignSelf: "center",
+              marginTop: 4,
+              minHeight: 20,
+            }}
+          />
+        ) : null}
+      </View>
 
-      {/* Locatie */}
-      {item.locaties ? (
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 4, marginBottom: 4 }}>
-          <Ionicons name="location-outline" size={13} color={c.mutedForeground} />
+      <View style={{ flex: 1 }}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 2 }}>
           <Text
-            style={{ color: c.mutedForeground, fontSize: 13, fontFamily: "Inter_400Regular" }}
+            style={{
+              color: c.foreground,
+              fontSize: 14,
+              fontFamily: "Inter_600SemiBold",
+              flex: 1,
+            }}
+            numberOfLines={2}
+          >
+            {item.project_naam ?? item.titel}
+            {item.werknummer ? `  #${item.werknummer}` : ""}
+          </Text>
+          <View
+            style={{
+              backgroundColor: kleur + "22",
+              borderRadius: 4,
+              paddingHorizontal: 6,
+              paddingVertical: 2,
+              flexShrink: 0,
+            }}
+          >
+            <Text style={{ color: kleur, fontSize: 10, fontFamily: "Inter_600SemiBold" }}>
+              {label}
+            </Text>
+          </View>
+        </View>
+
+        {item.locaties ? (
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+            <Ionicons name="location-outline" size={12} color={c.mutedForeground} />
+            <Text
+              style={{ color: c.mutedForeground, fontSize: 12, fontFamily: "Inter_400Regular" }}
+              numberOfLines={1}
+            >
+              {item.locaties}
+            </Text>
+          </View>
+        ) : null}
+
+        {item.omschrijving ? (
+          <Text
+            style={{
+              color: c.mutedForeground,
+              fontSize: 12,
+              fontFamily: "Inter_400Regular",
+              marginTop: 2,
+            }}
             numberOfLines={1}
           >
-            {item.locaties}
+            {item.omschrijving}
           </Text>
-        </View>
-      ) : null}
-
-      {/* Werkzaamheden */}
-      {item.omschrijving ? (
-        <Text
-          style={{ color: c.mutedForeground, fontSize: 13, fontFamily: "Inter_400Regular", marginTop: 2 }}
-          numberOfLines={2}
-        >
-          {item.omschrijving}
-        </Text>
-      ) : null}
-
-      {/* Opdracht type */}
-      {item.opdracht_type ? (
-        <Text style={{ color: c.mutedForeground, fontSize: 12, marginTop: 6 }}>
-          {item.opdracht_type === "meerwerk" ? "Meerwerk" : "Hoofdopdracht"}
-        </Text>
-      ) : null}
-
-      <View style={{ flexDirection: "row", justifyContent: "flex-end", marginTop: 8 }}>
-        <Ionicons name="chevron-forward" size={16} color={c.mutedForeground} />
+        ) : null}
       </View>
+
+      <Ionicons
+        name="chevron-forward"
+        size={14}
+        color={c.border}
+        style={{ paddingTop: 2, flexShrink: 0 }}
+      />
+    </Pressable>
+  );
+}
+
+function LocatiePill({
+  gebouw,
+  router,
+  c,
+}: {
+  gebouw: MijnWerkGebouw;
+  router: ReturnType<typeof useRouter>;
+  c: ReturnType<typeof useColors>;
+}) {
+  return (
+    <Pressable
+      onPress={() => router.push(`/gebouw/${gebouw.gebouw_id}`)}
+      style={({ pressed }) => ({
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 8,
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: c.border,
+        backgroundColor: pressed ? c.muted : c.card,
+        marginRight: 8,
+      })}
+    >
+      <View
+        style={{
+          width: 24,
+          height: 24,
+          borderRadius: 12,
+          backgroundColor: c.primary,
+          alignItems: "center",
+          justifyContent: "center",
+          flexShrink: 0,
+        }}
+      >
+        <Ionicons name="business-outline" size={12} color="#fff" />
+      </View>
+      <View style={{ maxWidth: 140 }}>
+        <Text
+          style={{ color: c.foreground, fontSize: 13, fontFamily: "Inter_600SemiBold" }}
+          numberOfLines={1}
+        >
+          {gebouw.gebouw_naam}
+        </Text>
+        {(gebouw.adres || gebouw.stad) ? (
+          <Text
+            style={{ color: c.mutedForeground, fontSize: 11, fontFamily: "Inter_400Regular" }}
+            numberOfLines={1}
+          >
+            {gebouw.adres}
+            {gebouw.stad ? `, ${gebouw.stad}` : ""}
+          </Text>
+        ) : null}
+      </View>
+      <Text style={{ color: c.mutedForeground, fontSize: 11, fontFamily: "Inter_400Regular" }}>
+        {gebouw.spots.length} spots
+      </Text>
     </Pressable>
   );
 }
@@ -163,154 +246,246 @@ export default function WerkdagScherm() {
 
   const {
     data: werkorders = [],
-    isLoading,
-    isError,
-    refetch,
-    isRefetching,
+    isLoading: ladenWerkorders,
+    isError: foutWerkorders,
+    refetch: herlaadWerkorders,
+    isRefetching: herladenWerkorders,
   } = useGetWerkdagVandaag();
+
+  const {
+    data: mijnWerk,
+    isLoading: ladenWerk,
+    refetch: herlaadWerk,
+    isRefetching: herladenWerk,
+  } = useGetMijnWerk();
 
   useFocusEffect(
     useCallback(() => {
-      refetch();
-    }, [refetch]),
+      void herlaadWerkorders();
+      void herlaadWerk();
+    }, [herlaadWerkorders, herlaadWerk]),
   );
+
+  const locaties = mijnWerk ?? [];
+  const isHerladen = herladenWerkorders || herladenWerk;
+  const isLaden = ladenWerkorders || ladenWerk;
 
   return (
     <View style={{ flex: 1, backgroundColor: c.background }}>
       {/* Header */}
       <View
         style={{
-          paddingTop: bovenInset(insets) + 8,
+          paddingTop: bovenInset(insets) + 10,
           paddingHorizontal: 20,
-          paddingBottom: 16,
+          paddingBottom: 14,
           backgroundColor: c.dark,
-          flexDirection: "row",
-          alignItems: "flex-end",
-          justifyContent: "space-between",
         }}
       >
-        <View>
-          <Text
-            style={{
-              color: c.tint,
-              fontSize: 11,
-              fontFamily: "Inter_600SemiBold",
-              letterSpacing: 1,
-              textTransform: "uppercase",
-              marginBottom: 2,
-            }}
-          >
-            {vandaagNederlands()}
-          </Text>
-          <Text
-            style={{
-              color: "#fff",
-              fontSize: 22,
-              fontFamily: "Inter_700Bold",
-            }}
-          >
-            Mijn werkdag
-          </Text>
-        </View>
-        <Pressable
-          onPress={() => router.back()}
-          style={{ padding: 8 }}
-          hitSlop={8}
+        <Text
+          style={{
+            color: c.primary,
+            fontSize: 10,
+            fontFamily: "Inter_600SemiBold",
+            letterSpacing: 1,
+            textTransform: "uppercase",
+            marginBottom: 2,
+          }}
         >
-          <Ionicons name="close" size={22} color="#fff" />
-        </Pressable>
+          {vandaagNederlands()}
+        </Text>
+        <Text
+          style={{ color: "#fff", fontSize: 20, fontFamily: "Inter_700Bold" }}
+        >
+          Mijn werkdag
+        </Text>
       </View>
 
-      {/* Inhoud */}
-      {isLoading ? (
+      {isLaden ? (
         <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
           <ActivityIndicator color={c.tint} size="large" />
-        </View>
-      ) : isError ? (
-        <View style={{ flex: 1, justifyContent: "center", alignItems: "center", padding: 32 }}>
-          <Ionicons name="alert-circle-outline" size={40} color={c.mutedForeground} />
-          <Text
-            style={{
-              color: c.mutedForeground,
-              fontSize: 15,
-              textAlign: "center",
-              marginTop: 12,
-              fontFamily: "Inter_400Regular",
-            }}
-          >
-            Kon werkorders niet laden. Controleer de verbinding.
-          </Text>
-          <Pressable
-            onPress={() => refetch()}
-            style={{
-              marginTop: 16,
-              backgroundColor: c.tint,
-              borderRadius: 8,
-              paddingHorizontal: 20,
-              paddingVertical: 10,
-            }}
-          >
-            <Text style={{ color: "#fff", fontFamily: "Inter_600SemiBold" }}>Opnieuw proberen</Text>
-          </Pressable>
-        </View>
-      ) : werkorders.length === 0 ? (
-        <View style={{ flex: 1, justifyContent: "center", alignItems: "center", padding: 32 }}>
-          <Ionicons name="calendar-outline" size={48} color={c.muted} />
-          <Text
-            style={{
-              color: c.text,
-              fontSize: 17,
-              fontFamily: "Inter_600SemiBold",
-              marginTop: 16,
-              textAlign: "center",
-            }}
-          >
-            Geen werkorders voor vandaag
-          </Text>
-          <Text
-            style={{
-              color: c.muted,
-              fontSize: 14,
-              fontFamily: "Inter_400Regular",
-              marginTop: 8,
-              textAlign: "center",
-            }}
-          >
-            Er staan vandaag geen werkorders voor jou gepland.
-          </Text>
         </View>
       ) : (
         <FlatList
           data={werkorders}
-          keyExtractor={(item) => String(item.id)}
-          contentContainerStyle={{ paddingTop: 16, paddingBottom: 32 }}
+          keyExtractor={(item) => `wo-${item.id}`}
           refreshControl={
             <RefreshControl
-              refreshing={isRefetching}
-              onRefresh={refetch}
-              tintColor={c.accent}
+              refreshing={isHerladen}
+              onRefresh={() => { void herlaadWerkorders(); void herlaadWerk(); }}
+              tintColor={c.primary}
             />
           }
           ListHeaderComponent={
-            <Text
-              style={{
-                color: c.muted,
-                fontSize: 12,
-                fontFamily: "Inter_400Regular",
-                marginHorizontal: 16,
-                marginBottom: 8,
-              }}
-            >
-              {werkorders.length} werkorder{werkorders.length !== 1 ? "s" : ""} vandaag
-            </Text>
+            <View>
+              {/* Routeplanning balk */}
+              <Pressable
+                onPress={() => router.push("/planning")}
+                style={({ pressed }) => ({
+                  flexDirection: "row",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  paddingHorizontal: 16,
+                  paddingVertical: 12,
+                  backgroundColor: pressed ? c.muted : c.card,
+                  borderBottomWidth: 1,
+                  borderBottomColor: c.border,
+                })}
+              >
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                  <View
+                    style={{
+                      width: 32,
+                      height: 32,
+                      borderRadius: 8,
+                      backgroundColor: c.primary + "1A",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <Ionicons name="navigate-outline" size={16} color={c.primary} />
+                  </View>
+                  <View>
+                    <Text
+                      style={{ color: c.foreground, fontSize: 13, fontFamily: "Inter_600SemiBold" }}
+                    >
+                      Routeplanning
+                    </Text>
+                    {locaties.length > 0 ? (
+                      <Text
+                        style={{
+                          color: c.mutedForeground,
+                          fontSize: 11,
+                          fontFamily: "Inter_400Regular",
+                        }}
+                      >
+                        {locaties.length} locatie{locaties.length !== 1 ? "s" : ""} vandaag
+                      </Text>
+                    ) : ladenWerk ? (
+                      <Text
+                        style={{
+                          color: c.mutedForeground,
+                          fontSize: 11,
+                          fontFamily: "Inter_400Regular",
+                        }}
+                      >
+                        Laden…
+                      </Text>
+                    ) : (
+                      <Text
+                        style={{
+                          color: c.mutedForeground,
+                          fontSize: 11,
+                          fontFamily: "Inter_400Regular",
+                        }}
+                      >
+                        Geen locaties ingepland
+                      </Text>
+                    )}
+                  </View>
+                </View>
+                <Ionicons name="chevron-forward" size={16} color={c.mutedForeground} />
+              </Pressable>
+
+              {/* Locatie-pills (horizontaal scrollen) */}
+              {locaties.length > 0 ? (
+                <FlatList
+                  data={locaties}
+                  keyExtractor={(g) => `loc-${g.gebouw_id}`}
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 10 }}
+                  renderItem={({ item }) => (
+                    <LocatiePill gebouw={item} router={router} c={c} />
+                  )}
+                />
+              ) : null}
+
+              {/* Sectie kop werkorders */}
+              <View
+                style={{
+                  paddingHorizontal: 16,
+                  paddingTop: 16,
+                  paddingBottom: 6,
+                  borderTopWidth: locaties.length > 0 ? 1 : 0,
+                  borderTopColor: c.border,
+                }}
+              >
+                <Text
+                  style={{
+                    color: c.mutedForeground,
+                    fontSize: 11,
+                    fontFamily: "Inter_600SemiBold",
+                    textTransform: "uppercase",
+                    letterSpacing: 0.5,
+                  }}
+                >
+                  {werkorders.length > 0
+                    ? `${werkorders.length} werkorder${werkorders.length !== 1 ? "s" : ""} vandaag`
+                    : "Werkorders vandaag"}
+                </Text>
+              </View>
+            </View>
           }
+          ListEmptyComponent={
+            foutWerkorders ? (
+              <View style={{ padding: 24, alignItems: "center", gap: 12 }}>
+                <Ionicons name="alert-circle-outline" size={36} color={c.mutedForeground} />
+                <Text
+                  style={{
+                    color: c.mutedForeground,
+                    fontSize: 14,
+                    textAlign: "center",
+                    fontFamily: "Inter_400Regular",
+                  }}
+                >
+                  Werkorders konden niet worden geladen.
+                </Text>
+                <Pressable
+                  onPress={() => void herlaadWerkorders()}
+                  style={{
+                    backgroundColor: c.primary,
+                    borderRadius: 8,
+                    paddingHorizontal: 16,
+                    paddingVertical: 9,
+                  }}
+                >
+                  <Text style={{ color: "#fff", fontFamily: "Inter_600SemiBold", fontSize: 13 }}>
+                    Opnieuw proberen
+                  </Text>
+                </Pressable>
+              </View>
+            ) : (
+              <View style={{ padding: 24, alignItems: "center", gap: 8 }}>
+                <Ionicons name="calendar-outline" size={36} color={c.border} />
+                <Text
+                  style={{
+                    color: c.mutedForeground,
+                    fontSize: 14,
+                    textAlign: "center",
+                    fontFamily: "Inter_400Regular",
+                  }}
+                >
+                  Geen werkorders voor vandaag.
+                </Text>
+              </View>
+            )
+          }
+          ItemSeparatorComponent={() => (
+            <View
+              style={{
+                height: 1,
+                backgroundColor: c.border,
+                marginLeft: 76,
+              }}
+            />
+          )}
           renderItem={({ item }) => (
-            <WerkorderKaart
+            <WerkorderRij
               item={item}
-              borderKleur={c.accent}
               onPress={() => router.push(`/werkdag/${item.id}`)}
             />
           )}
+          contentContainerStyle={{ paddingBottom: insets.bottom + 32 }}
         />
       )}
     </View>
