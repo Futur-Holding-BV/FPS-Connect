@@ -15,6 +15,7 @@ export * from './achievementControleerResponse';
 export * from './activiteit';
 export * from './aiAnalyseToolboxBerichten200';
 export * from './aiCalculatieRegels200';
+export * from './aiModCalcRegels200';
 export * from './appInstellingen';
 export * from './appInstellingenInput';
 export * from './applicatieLabelsInput';

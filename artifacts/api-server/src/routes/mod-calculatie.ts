@@ -14,6 +14,7 @@ import {
 } from "@workspace/db";
 import { eq, desc, asc, ilike, or } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
+import { heeftOpenAi, maakOpenAiClient } from "../lib/openai";
 
 const router = Router();
 const iso = (d: Date) => d.toISOString();
@@ -110,6 +111,8 @@ function mapRegel(r: typeof modCalcRegelsTable.$inferSelect, normtijdCode?: stri
     arbeids_tarief: at,
     onderaanneming_bedrag: ob,
     is_staartkosten: (r as any).isStaartkosten ?? false,
+    hoofdstuk: (r as any).hoofdstuk ?? "Overige werkzaamheden",
+    klanttekst: (r as any).klanttekst ?? null,
     materiaal_totaal: materiaalTotaal,
     mu_totaal: muTotaal,
     arbeidsloon,
@@ -480,7 +483,7 @@ router.post("/modules/calculaties/:id/regels", schrijvenCalc, async (req, res) =
 
     const body = req.body as Record<string, unknown>;
     const { categorie = "arbeid", omschrijving, normtijd_id, eenheid = "st", volgorde = 0, opmerkingen,
-      regelnummer, is_staartkosten = false } = body;
+      regelnummer, is_staartkosten = false, hoofdstuk = "Overige werkzaamheden", klanttekst } = body;
     if (!omschrijving) return res.status(400).json({ error: "omschrijving is verplicht" });
 
     const { hv, t, mu, at, ob, totaal } = berekenRegelTotaal(body);
@@ -501,6 +504,8 @@ router.post("/modules/calculaties/:id/regels", schrijvenCalc, async (req, res) =
       arbeidsTarief: at,
       onderaannemingBedrag: ob,
       isStaartkosten: Boolean(is_staartkosten),
+      hoofdstuk: String(hoofdstuk),
+      klanttekst: klanttekst ? String(klanttekst) : null,
     } as typeof modCalcRegelsTable.$inferInsert).returning();
 
     res.status(201).json(mapRegel(row));
@@ -529,6 +534,8 @@ router.patch("/modules/calculaties/:id/regels/:regelId", schrijvenCalc, async (r
     if (body.opmerkingen !== undefined) update.opmerkingen = body.opmerkingen ? String(body.opmerkingen) : null;
     if (body.regelnummer !== undefined) (update as any).regelnummer = body.regelnummer ? String(body.regelnummer) : null;
     if (body.is_staartkosten !== undefined) (update as any).isStaartkosten = Boolean(body.is_staartkosten);
+    if (body.hoofdstuk !== undefined) (update as any).hoofdstuk = String(body.hoofdstuk);
+    if (body.klanttekst !== undefined) (update as any).klanttekst = body.klanttekst ? String(body.klanttekst) : null;
     update.hoeveelheid = hv;
     update.tarief = t;
     (update as any).muPerEenheid = mu;
@@ -552,6 +559,98 @@ router.delete("/modules/calculaties/:id/regels/:regelId", schrijvenCalc, async (
   } catch (e) {
     req.log.error(e);
     res.status(500).json({ error: "Interne fout" });
+  }
+});
+
+// ── AI-voorstel calculatieregels ───────────────────────────────────────────
+router.post("/modules/calculaties/:id/ai-regels", lezenCalc, async (req, res) => {
+  try {
+    const id = parseId(req.params["id"]);
+    const [header] = await db.select().from(modCalcHeadersTable).where(eq(modCalcHeadersTable.id, id));
+    if (!header) return res.status(404).json({ error: "Calculatie niet gevonden" });
+
+    const bestaandeRegels = await db.select().from(modCalcRegelsTable)
+      .where(eq(modCalcRegelsTable.calculatieId, id))
+      .orderBy(asc(modCalcRegelsTable.volgorde));
+
+    let gebouwInfo = "";
+    if (header.gebouwId) {
+      const [g] = await db.select().from(gebouwenTable).where(eq(gebouwenTable.id, header.gebouwId));
+      if (g) gebouwInfo = `Gebouw: ${g.naam}, ${g.adres ?? ""} ${g.stad ?? ""}. Bouwjaar: ${(g as any).bouwjaar ?? "onbekend"}. Type: ${(g as any).gebouwType ?? "onbekend"}.`;
+    }
+
+    const normtijden = await db.select().from(modCalcNormtijdenTable).where(eq(modCalcNormtijdenTable.actief, true)).limit(30);
+    const normtijdLijst = normtijden.map((n) => `${n.code}: ${n.omschrijving} (${n.urenPerEenheid} uur/${n.eenheid})`).join("\n");
+
+    const bestaandeLijst = bestaandeRegels.length > 0
+      ? bestaandeRegels.map((r) => `- ${(r as any).hoofdstuk ?? "Overige"} | ${r.categorie} | ${r.omschrijving} | ${r.hoeveelheid} ${r.eenheid}`).join("\n")
+      : "(geen)";
+
+    const HOOFDSTUKKEN = ["Brandwerende doorvoeringen", "Deuren en kozijnen", "Wanden en plafonds", "Schachten", "Onderhoud", "Overige werkzaamheden"];
+    const CATEGORIEEN = ["arbeid", "materiaal", "onderaanneming", "materieel", "overig"];
+
+    const prompt = `Je bent een calculatie-expert brandpreventie voor het Nederlandse bedrijf FPS Brandpreventie.
+${gebouwInfo}
+Project: ${header.naam}${header.projectNaam ? ` (${header.projectNaam})` : ""}${header.omschrijving ? `\nOmschrijving: ${header.omschrijving}` : ""}
+
+Beschikbare normtijden (selecteer er max 3):
+${normtijdLijst || "(geen normtijden beschikbaar)"}
+
+Al aanwezige regels (voeg geen duplicaten toe):
+${bestaandeLijst}
+
+Geef 6-12 concrete calculatieregels als JSON. Groepeer per brandpreventief onderdeel.
+Gebruik exacte veldnamen. Geef ook max 3 korte waarschuwingen als er ontbrekende posten, lage hoeveelheden of risico's zijn.
+
+JSON formaat (ALLEEN dit object teruggeven, geen uitleg):
+{
+  "regels": [
+    {
+      "hoofdstuk": "${HOOFDSTUKKEN[0]}",
+      "categorie": "arbeid",
+      "omschrijving": "Omschrijving van de werkzaamheid",
+      "eenheid": "st",
+      "hoeveelheid": 10,
+      "tarief": 0,
+      "mu_per_eenheid": 0.5,
+      "arbeids_tarief": 65,
+      "onderaanneming_bedrag": 0,
+      "is_staartkosten": false,
+      "klanttekst": "Tekst voor in de offerte"
+    }
+  ],
+  "waarschuwingen": ["Controleer hoeveelheid doorvoeringen op tekening"]
+}
+
+Toegestane hoofdstukken: ${HOOFDSTUKKEN.join(", ")}
+Toegestane categorieën: ${CATEGORIEEN.join(", ")}`;
+
+    if (!heeftOpenAi()) {
+      return res.json({ regels: [], waarschuwingen: ["AI is niet beschikbaar in deze omgeving."] });
+    }
+
+    const openai = maakOpenAiClient();
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [{ role: "user", content: prompt }],
+      max_completion_tokens: 2000,
+    });
+
+    const raw = (completion.choices[0]?.message?.content ?? "{}").trim();
+    let regels: unknown[] = [];
+    let waarschuwingen: string[] = [];
+    try {
+      const parsed = JSON.parse(raw.startsWith("```") ? raw.replace(/```json?\n?/g, "").replace(/```/g, "") : raw) as Record<string, unknown>;
+      regels = Array.isArray(parsed["regels"]) ? (parsed["regels"] as unknown[]) : [];
+      waarschuwingen = Array.isArray(parsed["waarschuwingen"]) ? (parsed["waarschuwingen"] as string[]) : [];
+    } catch {
+      regels = [];
+    }
+
+    res.json({ regels, waarschuwingen });
+  } catch (e) {
+    req.log.error(e);
+    res.status(500).json({ error: "AI-voorstel mislukt" });
   }
 });
 

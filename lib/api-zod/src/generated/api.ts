@@ -10718,6 +10718,8 @@ export const GetModCalculatieParams = zod.object({
   "id": zod.coerce.number()
 })
 
+export const getModCalculatieResponseTwoRegelsItemHoofdstukDefault = `Overige werkzaamheden`;
+
 export const GetModCalculatieResponse = zod.object({
   "id": zod.number(),
   "naam": zod.string(),
@@ -10758,6 +10760,8 @@ export const GetModCalculatieResponse = zod.object({
   "arbeids_tarief": zod.number().optional(),
   "onderaanneming_bedrag": zod.number().optional(),
   "is_staartkosten": zod.boolean().optional(),
+  "hoofdstuk": zod.string().default(getModCalculatieResponseTwoRegelsItemHoofdstukDefault),
+  "klanttekst": zod.string().nullish(),
   "materiaal_totaal": zod.number().optional(),
   "mu_totaal": zod.number().optional(),
   "arbeidsloon": zod.number().optional()
@@ -10849,6 +10853,8 @@ export const ListModCalcRegelsParams = zod.object({
   "id": zod.coerce.number()
 })
 
+export const listModCalcRegelsResponseHoofdstukDefault = `Overige werkzaamheden`;
+
 export const ListModCalcRegelsResponseItem = zod.object({
   "id": zod.number(),
   "calculatie_id": zod.number(),
@@ -10867,6 +10873,8 @@ export const ListModCalcRegelsResponseItem = zod.object({
   "arbeids_tarief": zod.number().optional(),
   "onderaanneming_bedrag": zod.number().optional(),
   "is_staartkosten": zod.boolean().optional(),
+  "hoofdstuk": zod.string().default(listModCalcRegelsResponseHoofdstukDefault),
+  "klanttekst": zod.string().nullish(),
   "materiaal_totaal": zod.number().optional(),
   "mu_totaal": zod.number().optional(),
   "arbeidsloon": zod.number().optional()
@@ -10894,7 +10902,9 @@ export const CreateModCalcRegelBody = zod.object({
   "mu_per_eenheid": zod.number().optional(),
   "arbeids_tarief": zod.number().optional(),
   "onderaanneming_bedrag": zod.number().optional(),
-  "is_staartkosten": zod.boolean().optional()
+  "is_staartkosten": zod.boolean().optional(),
+  "hoofdstuk": zod.string().optional(),
+  "klanttekst": zod.string().nullish()
 })
 
 export const CreateModCalcRegelResponse = zod.void()
@@ -10921,8 +10931,12 @@ export const UpdateModCalcRegelBody = zod.object({
   "mu_per_eenheid": zod.number().optional(),
   "arbeids_tarief": zod.number().optional(),
   "onderaanneming_bedrag": zod.number().optional(),
-  "is_staartkosten": zod.boolean().optional()
+  "is_staartkosten": zod.boolean().optional(),
+  "hoofdstuk": zod.string().optional(),
+  "klanttekst": zod.string().nullish()
 })
+
+export const updateModCalcRegelResponseHoofdstukDefault = `Overige werkzaamheden`;
 
 export const UpdateModCalcRegelResponse = zod.object({
   "id": zod.number(),
@@ -10942,6 +10956,8 @@ export const UpdateModCalcRegelResponse = zod.object({
   "arbeids_tarief": zod.number().optional(),
   "onderaanneming_bedrag": zod.number().optional(),
   "is_staartkosten": zod.boolean().optional(),
+  "hoofdstuk": zod.string().default(updateModCalcRegelResponseHoofdstukDefault),
+  "klanttekst": zod.string().nullish(),
   "materiaal_totaal": zod.number().optional(),
   "mu_totaal": zod.number().optional(),
   "arbeidsloon": zod.number().optional()
@@ -10957,6 +10973,35 @@ export const DeleteModCalcRegelParams = zod.object({
 })
 
 export const DeleteModCalcRegelResponse = zod.void()
+
+
+/**
+ * @summary AI-voorstel calculatieregels genereren
+ */
+export const AiModCalcRegelsParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const AiModCalcRegelsResponse = zod.object({
+  "regels": zod.array(zod.object({
+  "categorie": zod.string(),
+  "omschrijving": zod.string(),
+  "normtijd_id": zod.number().nullish(),
+  "eenheid": zod.string(),
+  "hoeveelheid": zod.number(),
+  "tarief": zod.number(),
+  "volgorde": zod.number().optional(),
+  "opmerkingen": zod.string().nullish(),
+  "regelnummer": zod.string().nullish(),
+  "mu_per_eenheid": zod.number().optional(),
+  "arbeids_tarief": zod.number().optional(),
+  "onderaanneming_bedrag": zod.number().optional(),
+  "is_staartkosten": zod.boolean().optional(),
+  "hoofdstuk": zod.string().optional(),
+  "klanttekst": zod.string().nullish()
+})),
+  "waarschuwingen": zod.array(zod.string())
+})
 
 
 /**

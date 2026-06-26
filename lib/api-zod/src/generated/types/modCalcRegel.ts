@@ -24,6 +24,8 @@ export interface ModCalcRegel {
   arbeids_tarief?: number;
   onderaanneming_bedrag?: number;
   is_staartkosten?: boolean;
+  hoofdstuk?: string;
+  klanttekst?: string | null;
   materiaal_totaal?: number;
   mu_totaal?: number;
   arbeidsloon?: number;

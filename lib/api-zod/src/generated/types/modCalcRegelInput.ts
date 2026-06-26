@@ -20,4 +20,6 @@ export interface ModCalcRegelInput {
   arbeids_tarief?: number;
   onderaanneming_bedrag?: number;
   is_staartkosten?: boolean;
+  hoofdstuk?: string;
+  klanttekst?: string | null;
 }

@@ -60,6 +60,8 @@ export const modCalcRegelsTable = pgTable("mod_calc_regels", {
   arbeidsTarief: real("arbeids_tarief").notNull().default(0),
   onderaannemingBedrag: real("onderaanneming_bedrag").notNull().default(0),
   isStaartkosten: boolean("is_staartkosten").notNull().default(false),
+  hoofdstuk: text("hoofdstuk").notNull().default("Overige werkzaamheden"),
+  klanttekst: text("klanttekst"),
   aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
   bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
 });

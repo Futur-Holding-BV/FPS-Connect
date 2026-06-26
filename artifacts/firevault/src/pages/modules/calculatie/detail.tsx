@@ -11,6 +11,7 @@ import {
   useDeleteModCalcRegel,
   useListModCalcNormtijden,
   useListModCalcTarieven,
+  useAiModCalcRegels,
 } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -32,7 +33,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
 import {
   ArrowLeft, Plus, Pencil, Trash2, Copy, ChevronRight, FileText,
-  LayoutList, Users, Eye,
+  LayoutList, Users, Eye, Sparkles, Wrench, CheckCircle2, X,
 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -92,6 +93,15 @@ function fmt2(n: number) {
   return new Intl.NumberFormat("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n);
 }
 
+const HOOFDSTUK_OPTIES = [
+  "Brandwerende doorvoeringen",
+  "Deuren en kozijnen",
+  "Wanden en plafonds",
+  "Schachten",
+  "Onderhoud",
+  "Overige werkzaamheden",
+] as const;
+
 type RegelRow = {
   id: number;
   calculatie_id: number;
@@ -110,6 +120,8 @@ type RegelRow = {
   arbeids_tarief: number;
   onderaanneming_bedrag: number;
   is_staartkosten: boolean;
+  hoofdstuk: string;
+  klanttekst?: string | null;
   materiaal_totaal: number;
   mu_totaal: number;
   arbeidsloon: number;
@@ -128,6 +140,8 @@ type RegelForm = {
   is_staartkosten: boolean;
   opmerkingen: string;
   regelnummer: string;
+  hoofdstuk: string;
+  klanttekst: string;
 };
 
 const LEGE_REGEL: RegelForm = {
@@ -143,9 +157,11 @@ const LEGE_REGEL: RegelForm = {
   is_staartkosten: false,
   opmerkingen: "",
   regelnummer: "",
+  hoofdstuk: "Overige werkzaamheden",
+  klanttekst: "",
 };
 
-type Weergave = "intern" | "directie" | "klant";
+type Weergave = "intern" | "directie" | "klant" | "monteur";
 
 export default function ModulesCalculatieDetail() {
   const [, params] = useRoute("/modules/calculatie/:id");
@@ -190,6 +206,35 @@ export default function ModulesCalculatieDetail() {
   const [regelDialoog, setRegelDialoog] = useState<"nieuw" | number | null>(null);
   const [regelForm, setRegelForm] = useState<RegelForm>(LEGE_REGEL);
   const [bewerkenDialoog, setBewerkenDialoog] = useState(false);
+  const [aiPaneel, setAiPaneel] = useState(false);
+  const [aiVoorstellen, setAiVoorstellen] = useState<RegelForm[]>([]);
+  const [aiWaarschuwingen, setAiWaarschuwingen] = useState<string[]>([]);
+
+  const aiMut = useAiModCalcRegels({
+    mutation: {
+      onSuccess: (d) => {
+        const regels = (d.regels ?? []).map((r) => ({
+          categorie: r.categorie ?? "materiaal",
+          omschrijving: r.omschrijving ?? "",
+          normtijd_id: "",
+          eenheid: r.eenheid ?? "st",
+          hoeveelheid: String(r.hoeveelheid ?? 1),
+          tarief: String(r.tarief ?? 0),
+          mu_per_eenheid: String(r.mu_per_eenheid ?? 0),
+          arbeids_tarief: String(r.arbeids_tarief ?? 0),
+          onderaanneming_bedrag: String(r.onderaanneming_bedrag ?? 0),
+          is_staartkosten: r.is_staartkosten ?? false,
+          opmerkingen: "",
+          regelnummer: "",
+          hoofdstuk: r.hoofdstuk ?? "Overige werkzaamheden",
+          klanttekst: r.klanttekst ?? "",
+        }));
+        setAiVoorstellen(regels);
+        setAiWaarschuwingen((d.waarschuwingen ?? []) as string[]);
+        setAiPaneel(true);
+      },
+    },
+  });
   const [headerForm, setHeaderForm] = useState({
     naam: "", referentie: "", klant_naam: "", project_naam: "",
     status: "", omschrijving: "", opmerkingen: "",
@@ -215,6 +260,8 @@ export default function ModulesCalculatieDetail() {
       is_staartkosten: r.is_staartkosten ?? false,
       opmerkingen: r.opmerkingen ?? "",
       regelnummer: r.regelnummer ?? "",
+      hoofdstuk: r.hoofdstuk ?? "Overige werkzaamheden",
+      klanttekst: r.klanttekst ?? "",
     });
     setRegelDialoog(r.id);
   }
@@ -257,6 +304,8 @@ export default function ModulesCalculatieDetail() {
       is_staartkosten: regelForm.is_staartkosten,
       opmerkingen: regelForm.opmerkingen || null,
       regelnummer: regelForm.regelnummer || null,
+      hoofdstuk: regelForm.hoofdstuk || "Overige werkzaamheden",
+      klanttekst: regelForm.klanttekst || null,
     };
     if (regelDialoog === "nieuw") {
       createRegelMut.mutate({ id, data: payload });
@@ -312,6 +361,11 @@ export default function ModulesCalculatieDetail() {
     categorie: cat,
     label,
     regels: directeRegels.filter((r) => r.categorie === cat),
+  })).filter((g) => g.regels.length > 0);
+
+  const regelsByHoofdstuk = HOOFDSTUK_OPTIES.map((h) => ({
+    hoofdstuk: h,
+    regels: directeRegels.filter((r) => (r.hoofdstuk ?? "Overige werkzaamheden") === h),
   })).filter((g) => g.regels.length > 0);
 
   const volgendStatussen = STATUS_WORKFLOW[data.status] ?? [];
@@ -420,7 +474,7 @@ export default function ModulesCalculatieDetail() {
                 <div className="flex items-center gap-3">
                   {/* Weergave toggle */}
                   <div className="flex rounded-md border overflow-hidden text-xs">
-                    {(["intern", "directie", "klant"] as Weergave[]).map((v) => (
+                    {(["intern", "directie", "klant", "monteur"] as Weergave[]).map((v) => (
                       <button
                         key={v}
                         onClick={() => setWeergave(v)}
@@ -433,7 +487,8 @@ export default function ModulesCalculatieDetail() {
                         {v === "intern" && <LayoutList className="h-3 w-3" />}
                         {v === "directie" && <Eye className="h-3 w-3" />}
                         {v === "klant" && <Users className="h-3 w-3" />}
-                        {v === "intern" ? "Intern" : v === "directie" ? "Directie" : "Klant"}
+                        {v === "monteur" && <Wrench className="h-3 w-3" />}
+                        {v === "intern" ? "Intern" : v === "directie" ? "Directie" : v === "klant" ? "Klant" : "Monteur"}
                       </button>
                     ))}
                   </div>
@@ -455,7 +510,7 @@ export default function ModulesCalculatieDetail() {
                 </div>
               ) : weergave === "intern" ? (
                 <InternView
-                  regelsByCategorie={regelsByCategorie}
+                  regelsByHoofdstuk={regelsByHoofdstuk}
                   staartRegels={staartRegels}
                   onBewerken={openBewerkenRegel}
                   onVerwijderen={(r) => deleteRegelMut.mutate({ id, regelId: r.id })}
@@ -480,12 +535,14 @@ export default function ModulesCalculatieDetail() {
                   opslagWinst={data.opslag_winst}
                   korting={data.korting}
                 />
-              ) : (
+              ) : weergave === "klant" ? (
                 <KlantView
                   regels={regels}
                   totaal={totaal}
                   totaalBtw={totaalBtw}
                 />
+              ) : (
+                <MonteurView regels={directeRegels} staartRegels={staartRegels} />
               )}
             </CardContent>
           </Card>
@@ -493,6 +550,77 @@ export default function ModulesCalculatieDetail() {
 
         {/* Rechterpaneel */}
         <div className="space-y-4">
+
+          {/* AI-voorstel paneel */}
+          <Card>
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Sparkles className="h-4 w-4 text-amber-500" />
+                  AI-voorstel
+                </CardTitle>
+                {aiPaneel && (
+                  <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setAiPaneel(false)}>
+                    <X className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {!aiPaneel ? (
+                <Button variant="outline" className="w-full" size="sm"
+                  onClick={() => aiMut.mutate({ id })} disabled={aiMut.isPending}>
+                  <Sparkles className="h-3.5 w-3.5 mr-1.5" />
+                  {aiMut.isPending ? "Analyseren..." : "Genereer AI-voorstel"}
+                </Button>
+              ) : (
+                <div className="space-y-3">
+                  {aiWaarschuwingen.length > 0 && (
+                    <div className="rounded-md bg-amber-50 border border-amber-200 p-3 text-xs space-y-1">
+                      {aiWaarschuwingen.map((w, i) => (
+                        <p key={i} className="text-amber-700">{w}</p>
+                      ))}
+                    </div>
+                  )}
+                  <p className="text-xs text-muted-foreground">{aiVoorstellen.length} regels voorgesteld — klik op een regel om toe te voegen.</p>
+                  <div className="space-y-1.5 max-h-72 overflow-y-auto">
+                    {aiVoorstellen.map((r, i) => (
+                      <div key={i} className="flex items-start gap-2 p-2 rounded border text-xs hover:bg-slate-50 group">
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-slate-800 leading-tight">{r.omschrijving}</p>
+                          <p className="text-muted-foreground mt-0.5">{r.hoofdstuk}</p>
+                          <p className="text-muted-foreground">{r.hoeveelheid} {r.eenheid} · {CATEGORIE_LABEL[r.categorie] ?? r.categorie}</p>
+                        </div>
+                        <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0 text-green-600 opacity-0 group-hover:opacity-100 transition-opacity"
+                          title="Toevoegen aan calculatie"
+                          onClick={() => createRegelMut.mutate({ id, data: {
+                            categorie: r.categorie,
+                            omschrijving: r.omschrijving,
+                            eenheid: r.eenheid,
+                            hoeveelheid: parseFloat(r.hoeveelheid) || 1,
+                            tarief: parseFloat(r.tarief) || 0,
+                            mu_per_eenheid: parseFloat(r.mu_per_eenheid) || 0,
+                            arbeids_tarief: parseFloat(r.arbeids_tarief) || 0,
+                            onderaanneming_bedrag: parseFloat(r.onderaanneming_bedrag) || 0,
+                            is_staartkosten: r.is_staartkosten,
+                            hoofdstuk: r.hoofdstuk,
+                            klanttekst: r.klanttekst || null,
+                          } })}>
+                          <CheckCircle2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                  <Button variant="outline" size="sm" className="w-full text-xs"
+                    onClick={() => aiMut.mutate({ id })} disabled={aiMut.isPending}>
+                    <Sparkles className="h-3 w-3 mr-1" />
+                    Opnieuw genereren
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-base">Opslagen</CardTitle>
@@ -757,12 +885,36 @@ export default function ModulesCalculatieDetail() {
               );
             })()}
 
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label>Hoofdstuk</Label>
+                <Select
+                  value={regelForm.hoofdstuk || "Overige werkzaamheden"}
+                  onValueChange={(v) => setRegelForm((f) => ({ ...f, hoofdstuk: v }))}
+                >
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {HOOFDSTUK_OPTIES.map((h) => (
+                      <SelectItem key={h} value={h}>{h}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Opmerkingen</Label>
+                <Input
+                  value={regelForm.opmerkingen}
+                  onChange={(e) => setRegelForm((f) => ({ ...f, opmerkingen: e.target.value }))}
+                  placeholder="Interne notitie bij deze regel"
+                />
+              </div>
+            </div>
             <div className="space-y-1.5">
-              <Label>Opmerkingen</Label>
+              <Label>Klanttekst</Label>
               <Input
-                value={regelForm.opmerkingen}
-                onChange={(e) => setRegelForm((f) => ({ ...f, opmerkingen: e.target.value }))}
-                placeholder="Interne notitie bij deze regel"
+                value={regelForm.klanttekst ?? ""}
+                onChange={(e) => setRegelForm((f) => ({ ...f, klanttekst: e.target.value }))}
+                placeholder="Tekst die zichtbaar is voor de klant in de offerte"
               />
             </div>
           </div>
@@ -881,16 +1033,71 @@ export default function ModulesCalculatieDetail() {
   );
 }
 
+// ── Monteur view ─────────────────────────────────────────────────────────────
+
+function MonteurView({ regels, staartRegels }: { regels: RegelRow[]; staartRegels: RegelRow[] }) {
+  const alleRegels = [...regels, ...staartRegels];
+  const byHoofdstuk = HOOFDSTUK_OPTIES.map((h) => ({
+    hoofdstuk: h,
+    regels: alleRegels.filter((r) => (r.hoofdstuk ?? "Overige werkzaamheden") === h),
+  })).filter((g) => g.regels.length > 0);
+
+  return (
+    <div className="divide-y">
+      {byHoofdstuk.map(({ hoofdstuk, regels: hRegels }) => {
+        const totalMu = hRegels.reduce((s, r) => s + r.mu_totaal, 0);
+        return (
+          <div key={hoofdstuk}>
+            <div className="px-4 py-2 bg-slate-50 flex items-center justify-between">
+              <span className="text-xs font-semibold uppercase tracking-wide text-slate-700">{hoofdstuk}</span>
+              <span className="text-xs text-muted-foreground tabular-nums">{fmt2(totalMu)} MU</span>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs min-w-[500px]">
+                <thead>
+                  <tr className="border-b text-muted-foreground">
+                    <th className="px-4 py-1.5 text-left font-normal">Omschrijving</th>
+                    <th className="px-2 py-1.5 text-center font-normal w-[8%]">EH</th>
+                    <th className="px-2 py-1.5 text-right font-normal w-[8%]">Aantal</th>
+                    <th className="px-2 py-1.5 text-right font-normal w-[10%]">MU totaal</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  {hRegels.map((r) => (
+                    <tr key={r.id} className="hover:bg-slate-50">
+                      <td className="px-4 py-2">
+                        <p className="font-medium text-slate-800">{r.omschrijving}</p>
+                        {r.klanttekst && <p className="text-muted-foreground mt-0.5">{r.klanttekst}</p>}
+                        {r.normtijd_code && <p className="text-muted-foreground">{r.normtijd_code}</p>}
+                      </td>
+                      <td className="px-2 py-2 text-center text-muted-foreground">{r.eenheid}</td>
+                      <td className="px-2 py-2 text-right tabular-nums">{r.hoeveelheid}</td>
+                      <td className="px-2 py-2 text-right tabular-nums font-medium">{r.mu_totaal > 0 ? fmt2(r.mu_totaal) : "—"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        );
+      })}
+      {alleRegels.length === 0 && (
+        <p className="text-xs text-muted-foreground px-4 py-6 text-center">Geen regels gevonden.</p>
+      )}
+    </div>
+  );
+}
+
 // ── Intern view ─────────────────────────────────────────────────────────────
 
 function InternView({
-  regelsByCategorie,
+  regelsByHoofdstuk,
   staartRegels,
   onBewerken,
   onVerwijderen,
   onNieuweStaart,
 }: {
-  regelsByCategorie: Array<{ categorie: string; label: string; regels: RegelRow[] }>;
+  regelsByHoofdstuk: Array<{ hoofdstuk: string; regels: RegelRow[] }>;
   staartRegels: RegelRow[];
   onBewerken: (r: RegelRow) => void;
   onVerwijderen: (r: RegelRow) => void;
@@ -898,10 +1105,10 @@ function InternView({
 }) {
   return (
     <div>
-      {regelsByCategorie.map(({ categorie, label, regels: catRegels }) => (
-        <div key={categorie}>
-          <div className={`px-4 py-1.5 text-xs font-semibold uppercase tracking-wide ${CATEGORIE_KLEUR[categorie]}`}>
-            {label}
+      {regelsByHoofdstuk.map(({ hoofdstuk, regels: hRegels }) => (
+        <div key={hoofdstuk}>
+          <div className="px-4 py-1.5 text-xs font-semibold uppercase tracking-wide bg-slate-100 text-slate-700">
+            {hoofdstuk}
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-xs min-w-[900px]">
@@ -921,7 +1128,7 @@ function InternView({
                 </tr>
               </thead>
               <tbody className="divide-y">
-                {catRegels.map((r) => (
+                {hRegels.map((r) => (
                   <tr key={r.id} className="hover:bg-slate-50 group">
                     <td className="px-4 py-2">
                       <p className="font-medium text-slate-800">{r.omschrijving}</p>

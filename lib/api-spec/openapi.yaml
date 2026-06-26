@@ -9136,6 +9136,37 @@ paths:
         '204':
           description: Verwijderd
 
+  /modules/calculaties/{id}/ai-regels:
+    post:
+      operationId: aiModCalcRegels
+      summary: AI-voorstel calculatieregels genereren
+      tags: [CalulatieModule]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: AI-voorstellen voor calculatieregels
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [regels, waarschuwingen]
+                properties:
+                  regels:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ModCalcRegelInput'
+                  waarschuwingen:
+                    type: array
+                    items:
+                      type: string
+        '404':
+          description: Calculatie niet gevonden
+
   /uren:
     get:
       operationId: listUren
@@ -17299,6 +17330,12 @@ components:
           type: number
         is_staartkosten:
           type: boolean
+        hoofdstuk:
+          type: string
+          default: 'Overige werkzaamheden'
+        klanttekst:
+          type: string
+          nullable: true
         materiaal_totaal:
           type: number
         mu_totaal:
@@ -17339,6 +17376,11 @@ components:
           type: number
         is_staartkosten:
           type: boolean
+        hoofdstuk:
+          type: string
+        klanttekst:
+          type: string
+          nullable: true
 
     UrenRegistratie:
       type: object

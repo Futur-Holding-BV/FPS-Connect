@@ -4660,6 +4660,8 @@ export interface ModCalcRegel {
   arbeids_tarief?: number;
   onderaanneming_bedrag?: number;
   is_staartkosten?: boolean;
+  hoofdstuk?: string;
+  klanttekst?: string | null;
   materiaal_totaal?: number;
   mu_totaal?: number;
   arbeidsloon?: number;
@@ -4699,6 +4701,8 @@ export interface ModCalcRegelInput {
   arbeids_tarief?: number;
   onderaanneming_bedrag?: number;
   is_staartkosten?: boolean;
+  hoofdstuk?: string;
+  klanttekst?: string | null;
 }
 
 export interface UrenRegistratie {
@@ -5587,6 +5591,11 @@ gebouw_id?: number;
 export type ListModCalculatiesParams = {
 status?: string;
 zoek?: string;
+};
+
+export type AiModCalcRegels200 = {
+  regels: ModCalcRegelInput[];
+  waarschuwingen: string[];
 };
 
 export type ListUrenParams = {
