@@ -10,6 +10,7 @@ import {
 } from "@workspace/api-client-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import {
@@ -173,22 +174,22 @@ export default function Voorzieningen() {
         </div>
         <div className="flex items-center gap-1.5">
           <span className="text-xs text-muted-foreground">van</span>
-          <Input
-            type="date"
+          <DatePicker
             value={aanmaakVan}
-            onChange={(e) => setAanmaakVan(e.target.value)}
+            onChange={setAanmaakVan}
             className="h-8 w-36 text-xs"
             max={aanmaakTot || undefined}
+            placeholder="Van"
           />
         </div>
         <div className="flex items-center gap-1.5">
           <span className="text-xs text-muted-foreground">tot</span>
-          <Input
-            type="date"
+          <DatePicker
             value={aanmaakTot}
-            onChange={(e) => setAanmaakTot(e.target.value)}
+            onChange={setAanmaakTot}
             className="h-8 w-36 text-xs"
             min={aanmaakVan || undefined}
+            placeholder="Tot"
           />
         </div>
         {datumFilterActief && (

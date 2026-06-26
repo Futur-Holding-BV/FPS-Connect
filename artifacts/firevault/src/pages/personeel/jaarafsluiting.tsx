@@ -13,6 +13,7 @@ import type { JaarAfsluitingRegel } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
@@ -355,7 +356,7 @@ export default function JaarAfsluitingPagina() {
               </div>
               <div className="space-y-1.5">
                 <Label>Vervaldatum overgedragen uren</Label>
-                <Input type="date" value={form.overdracht_verval_datum} onChange={(e) => setForm((f) => ({ ...f, overdracht_verval_datum: e.target.value }))} />
+                <DatePicker value={form.overdracht_verval_datum} onChange={(v) => setForm((f) => ({ ...f, overdracht_verval_datum: v }))} />
               </div>
             </div>
             <div className="space-y-1.5">

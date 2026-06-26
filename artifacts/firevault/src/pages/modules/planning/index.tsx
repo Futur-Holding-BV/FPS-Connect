@@ -14,6 +14,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -897,10 +898,9 @@ export default function ModulesPlanning() {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1.5">
                     <Label>Datum</Label>
-                    <Input
-                      type="date"
+                    <DatePicker
                       value={dialoog.datum}
-                      onChange={(e) => setDialoog((d) => d ? { ...d, datum: e.target.value } : d)}
+                      onChange={(v) => setDialoog((d) => d ? { ...d, datum: v } : d)}
                     />
                   </div>
                   <div className="space-y-1.5">

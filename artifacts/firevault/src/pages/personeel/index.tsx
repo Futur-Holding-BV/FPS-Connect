@@ -54,6 +54,7 @@ import { useRol } from "@/context/rol-context";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
@@ -1321,7 +1322,7 @@ export default function PersoneelPagina() {
             </div>
             <div className="space-y-1.5">
               <Label>In dienst sinds</Label>
-              <Input type="date" value={medewerkerForm.in_dienst_sinds ?? ""} onChange={(e) => setMedewerkerForm({ ...medewerkerForm, in_dienst_sinds: e.target.value })} />
+              <DatePicker value={medewerkerForm.in_dienst_sinds ?? ""} onChange={(v) => setMedewerkerForm({ ...medewerkerForm, in_dienst_sinds: v })} />
             </div>
           </div>
           <DialogFooter>
@@ -1424,7 +1425,7 @@ export default function PersoneelPagina() {
             </div>
             <div className="space-y-1.5">
               <Label>In dienst sinds *</Label>
-              <Input type="date" value={onboardForm.in_dienst_sinds} onChange={(e) => setOnboardForm({ ...onboardForm, in_dienst_sinds: e.target.value })} />
+              <DatePicker value={onboardForm.in_dienst_sinds} onChange={(v) => setOnboardForm({ ...onboardForm, in_dienst_sinds: v })} />
             </div>
             <div className="space-y-1.5">
               <Label>Dienstverband</Label>
@@ -1859,18 +1860,16 @@ export default function PersoneelPagina() {
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label>Startdatum *</Label>
-                <Input
-                  type="date"
+                <DatePicker
                   value={ziekForm.start_datum}
-                  onChange={(e) => setZiekForm({ ...ziekForm, start_datum: e.target.value })}
+                  onChange={(v) => setZiekForm({ ...ziekForm, start_datum: v })}
                 />
               </div>
               <div className="space-y-1.5">
                 <Label>Einddatum (herstel)</Label>
-                <Input
-                  type="date"
+                <DatePicker
                   value={ziekForm.eind_datum ?? ""}
-                  onChange={(e) => setZiekForm({ ...ziekForm, eind_datum: e.target.value || undefined })}
+                  onChange={(v) => setZiekForm({ ...ziekForm, eind_datum: v || undefined })}
                 />
               </div>
             </div>

@@ -11,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -347,19 +348,17 @@ export default function PlanningAfwezigheid() {
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <Label>Van *</Label>
-                  <Input
-                    type="date"
+                  <DatePicker
                     value={dialoog.datum_start}
-                    onChange={(e) => setDialoog((d) => d ? { ...d, datum_start: e.target.value } : d)}
+                    onChange={(v) => setDialoog((d) => d ? { ...d, datum_start: v } : d)}
                   />
                 </div>
                 <div className="space-y-1.5">
                   <Label>Tot en met *</Label>
-                  <Input
-                    type="date"
+                  <DatePicker
                     value={dialoog.datum_eind}
                     min={dialoog.datum_start}
-                    onChange={(e) => setDialoog((d) => d ? { ...d, datum_eind: e.target.value } : d)}
+                    onChange={(v) => setDialoog((d) => d ? { ...d, datum_eind: v } : d)}
                   />
                 </div>
               </div>

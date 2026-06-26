@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Label as UiLabel } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -300,11 +301,10 @@ export function VoorzieningBewerkenDialog({
 
             <div>
               <UiLabel htmlFor="bw-inst">Installatiedatum</UiLabel>
-              <Input
+              <DatePicker
                 id="bw-inst"
-                type="date"
                 value={velden.installatie_datum}
-                onChange={set("installatie_datum")}
+                onChange={(v) => setVelden((f) => ({ ...f, installatie_datum: v }))}
               />
               <p className="text-xs text-muted-foreground mt-1">
                 Standaard de datum van vandaag.

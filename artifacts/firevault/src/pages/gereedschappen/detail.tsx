@@ -17,6 +17,7 @@ import { useListMedewerkers } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -455,18 +456,16 @@ export default function GereedschapDetailPagina() {
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
                 <Label>Laatste keuring</Label>
-                <Input
-                  type="date"
+                <DatePicker
                   value={bewerkFormulier.laatste_keuring ?? ""}
-                  onChange={(e) => setBewerkFormulier((f) => ({ ...f, laatste_keuring: e.target.value || null }))}
+                  onChange={(v) => setBewerkFormulier((f) => ({ ...f, laatste_keuring: v || null }))}
                 />
               </div>
               <div className="space-y-1">
                 <Label>Volgende keuring</Label>
-                <Input
-                  type="date"
+                <DatePicker
                   value={bewerkFormulier.volgende_keuring ?? ""}
-                  onChange={(e) => setBewerkFormulier((f) => ({ ...f, volgende_keuring: e.target.value || null }))}
+                  onChange={(v) => setBewerkFormulier((f) => ({ ...f, volgende_keuring: v || null }))}
                 />
               </div>
             </div>
@@ -512,10 +511,9 @@ export default function GereedschapDetailPagina() {
             </div>
             <div className="space-y-1">
               <Label>Datum uitgifte</Label>
-              <Input
-                type="date"
+              <DatePicker
                 value={bruikleenForm.datum_uitgifte}
-                onChange={(e) => setBruikleenForm((f) => ({ ...f, datum_uitgifte: e.target.value }))}
+                onChange={(v) => setBruikleenForm((f) => ({ ...f, datum_uitgifte: v }))}
               />
             </div>
             <div className="space-y-1">
@@ -564,10 +562,9 @@ export default function GereedschapDetailPagina() {
           <div className="space-y-4 py-2">
             <div className="space-y-1">
               <Label>Datum inname</Label>
-              <Input
-                type="date"
+              <DatePicker
                 value={innameFormulier.datum_inname}
-                onChange={(e) => setInnameFormulier((f) => ({ ...f, datum_inname: e.target.value }))}
+                onChange={(v) => setInnameFormulier((f) => ({ ...f, datum_inname: v }))}
               />
             </div>
             <div className="space-y-1">
@@ -645,10 +642,9 @@ export default function GereedschapDetailPagina() {
             </div>
             <div className="space-y-1">
               <Label>Datum melding</Label>
-              <Input
-                type="date"
+              <DatePicker
                 value={meldingForm.datum_melding}
-                onChange={(e) => setMeldingForm((f) => ({ ...f, datum_melding: e.target.value }))}
+                onChange={(v) => setMeldingForm((f) => ({ ...f, datum_melding: v }))}
               />
             </div>
             <label className="flex items-center gap-2 text-sm cursor-pointer">

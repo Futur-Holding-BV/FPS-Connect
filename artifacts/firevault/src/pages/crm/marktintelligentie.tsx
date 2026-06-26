@@ -14,6 +14,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -238,7 +239,7 @@ export default function MarktintelligentiePagina() {
             </div>
             <div>
               <Label>Datum</Label>
-              <Input value={velden.datum} onChange={(e) => setVelden((v) => ({ ...v, datum: e.target.value }))} className="mt-1" type="date" />
+              <DatePicker value={velden.datum} onChange={(v) => setVelden((vv) => ({ ...vv, datum: v }))} className="mt-1" />
             </div>
           </div>
           <DialogFooter>

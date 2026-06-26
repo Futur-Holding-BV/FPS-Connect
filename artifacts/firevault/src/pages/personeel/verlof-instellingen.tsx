@@ -15,6 +15,7 @@ import type { VerlofInstellingen, Feestdag } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -413,7 +414,7 @@ export default function VerlofInstellingenPagina() {
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label>Datum</Label>
-                <Input type="date" value={fdForm.datum} onChange={(e) => setFdForm((f) => ({ ...f, datum: e.target.value }))} />
+                <DatePicker value={fdForm.datum} onChange={(v) => setFdForm((f) => ({ ...f, datum: v }))} />
               </div>
               <div className="space-y-1.5">
                 <Label>Jaar</Label>

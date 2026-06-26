@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Label } from "@/components/ui/label";
 import {
   BarChart,
@@ -241,20 +242,18 @@ export default function CapaciteitsplanningPagina() {
           <div className="flex items-end gap-3">
             <div className="space-y-1.5">
               <Label className="text-xs">Periode start</Label>
-              <Input
-                type="date"
+              <DatePicker
                 className="h-8 text-sm"
                 value={aiPeriodeStart}
-                onChange={(e) => setAiPeriodeStart(e.target.value)}
+                onChange={setAiPeriodeStart}
               />
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs">Periode eind</Label>
-              <Input
-                type="date"
+              <DatePicker
                 className="h-8 text-sm"
                 value={aiPeriodeEind}
-                onChange={(e) => setAiPeriodeEind(e.target.value)}
+                onChange={setAiPeriodeEind}
               />
             </div>
             <Button

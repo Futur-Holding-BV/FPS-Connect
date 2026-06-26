@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState, type ReactNode } from "react";
+import { DatePicker } from "@/components/ui/date-picker";
 import * as pdfjsLib from "pdfjs-dist";
 import pdfWorkerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 import { useQueryClient } from "@tanstack/react-query";
@@ -1034,11 +1035,10 @@ function DocumentDetail({
             <div className="flex flex-wrap items-end gap-3">
               <div className="min-w-48">
                 <UiLabel htmlFor="doc-geldig-tot">Geldig tot</UiLabel>
-                <Input
+                <DatePicker
                   id="doc-geldig-tot"
-                  type="date"
                   value={geldigTot}
-                  onChange={(e) => setGeldigTot(e.target.value)}
+                  onChange={setGeldigTot}
                   disabled={!magBeheren}
                 />
               </div>

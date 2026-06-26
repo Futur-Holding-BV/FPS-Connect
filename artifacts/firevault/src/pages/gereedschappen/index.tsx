@@ -6,6 +6,7 @@ import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Badge } from "@/components/ui/badge";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -299,10 +300,9 @@ export default function GereedschappenPagina() {
               </div>
               <div className="space-y-1">
                 <Label>Aankoopdatum</Label>
-                <Input
-                  type="date"
+                <DatePicker
                   value={formulier.aankoopdatum ?? ""}
-                  onChange={(e) => setFormulier((f) => ({ ...f, aankoopdatum: e.target.value || null }))}
+                  onChange={(v) => setFormulier((f) => ({ ...f, aankoopdatum: v || null }))}
                 />
               </div>
             </div>

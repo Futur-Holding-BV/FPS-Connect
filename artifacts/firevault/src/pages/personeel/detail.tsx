@@ -46,6 +46,7 @@ import { useRol } from "@/context/rol-context";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
@@ -1008,11 +1009,11 @@ export default function MedewerkerDetailPagina() {
               </div>
               <div className="space-y-1.5">
                 <Label>In dienst sinds</Label>
-                <Input type="date" value={profielForm.in_dienst_sinds ?? ""} onChange={(e) => setProfielForm({ ...profielForm, in_dienst_sinds: e.target.value || undefined })} />
+                <DatePicker value={profielForm.in_dienst_sinds ?? ""} onChange={(v) => setProfielForm({ ...profielForm, in_dienst_sinds: v || undefined })} />
               </div>
               <div className="space-y-1.5">
                 <Label>Uit dienst per</Label>
-                <Input type="date" value={profielForm.uit_dienst_per ?? ""} onChange={(e) => setProfielForm({ ...profielForm, uit_dienst_per: e.target.value || undefined })} />
+                <DatePicker value={profielForm.uit_dienst_per ?? ""} onChange={(v) => setProfielForm({ ...profielForm, uit_dienst_per: v || undefined })} />
               </div>
               <div className="space-y-1.5">
                 <Label>Noodcontact naam</Label>
@@ -1029,7 +1030,7 @@ export default function MedewerkerDetailPagina() {
               </div>
               <div className="space-y-1.5">
                 <Label>Geboortedatum</Label>
-                <Input type="date" value={profielForm.geboortedatum ?? ""} onChange={(e) => setProfielForm({ ...profielForm, geboortedatum: e.target.value || undefined })} />
+                <DatePicker value={profielForm.geboortedatum ?? ""} onChange={(v) => setProfielForm({ ...profielForm, geboortedatum: v || undefined })} />
               </div>
               <div className="space-y-1.5">
                 <Label>Geboorteplaats</Label>
@@ -1063,7 +1064,7 @@ export default function MedewerkerDetailPagina() {
               </div>
               <div className="space-y-1.5">
                 <Label>Geldig tot</Label>
-                <Input type="date" value={profielForm.rijbewijs_vervaldatum ?? ""} onChange={(e) => setProfielForm({ ...profielForm, rijbewijs_vervaldatum: e.target.value || undefined })} />
+                <DatePicker value={profielForm.rijbewijs_vervaldatum ?? ""} onChange={(v) => setProfielForm({ ...profielForm, rijbewijs_vervaldatum: v || undefined })} />
               </div>
 
               {/* Achtergrond / CV */}
@@ -1133,11 +1134,11 @@ export default function MedewerkerDetailPagina() {
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label>Behaald op</Label>
-                <Input type="date" value={opleidingForm.behaald_op ?? ""} onChange={(e) => setOpleidingForm({ ...opleidingForm, behaald_op: e.target.value || null })} />
+                <DatePicker value={opleidingForm.behaald_op ?? ""} onChange={(v) => setOpleidingForm({ ...opleidingForm, behaald_op: v || null })} />
               </div>
               <div className="space-y-1.5">
                 <Label>Verloopt op</Label>
-                <Input type="date" value={opleidingForm.verloopt_op ?? ""} onChange={(e) => setOpleidingForm({ ...opleidingForm, verloopt_op: e.target.value || null })} />
+                <DatePicker value={opleidingForm.verloopt_op ?? ""} onChange={(v) => setOpleidingForm({ ...opleidingForm, verloopt_op: v || null })} />
               </div>
             </div>
             <div className="space-y-1.5">
@@ -1179,7 +1180,7 @@ export default function MedewerkerDetailPagina() {
               </div>
               <div className="space-y-1.5">
                 <Label>Vastgesteld op</Label>
-                <Input type="date" value={bekwaamForm.vastgesteld_op ?? ""} onChange={(e) => setBekwaamForm({ ...bekwaamForm, vastgesteld_op: e.target.value || null })} />
+                <DatePicker value={bekwaamForm.vastgesteld_op ?? ""} onChange={(v) => setBekwaamForm({ ...bekwaamForm, vastgesteld_op: v || null })} />
               </div>
             </div>
             <div className="space-y-1.5">
@@ -1217,11 +1218,11 @@ export default function MedewerkerDetailPagina() {
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label>Begindatum *</Label>
-                <Input type="date" value={aanvraagForm.start_datum} onChange={(e) => setAanvraagForm({ ...aanvraagForm, start_datum: e.target.value })} />
+                <DatePicker value={aanvraagForm.start_datum} onChange={(v) => setAanvraagForm({ ...aanvraagForm, start_datum: v })} />
               </div>
               <div className="space-y-1.5">
                 <Label>Einddatum *</Label>
-                <Input type="date" value={aanvraagForm.eind_datum} onChange={(e) => setAanvraagForm({ ...aanvraagForm, eind_datum: e.target.value })} />
+                <DatePicker value={aanvraagForm.eind_datum} onChange={(v) => setAanvraagForm({ ...aanvraagForm, eind_datum: v })} />
               </div>
             </div>
             <div className="space-y-1.5">

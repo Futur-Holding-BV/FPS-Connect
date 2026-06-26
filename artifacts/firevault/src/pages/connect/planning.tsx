@@ -19,6 +19,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -291,7 +292,7 @@ function PlanningBlokDialog({
             </div>
             <div className="space-y-1.5">
               <Label>Datum</Label>
-              <Input type="date" value={datum} onChange={(e) => setDatum(e.target.value)} />
+              <DatePicker value={datum} onChange={setDatum} />
             </div>
             <div className="space-y-1.5">
               <Label>Gebouw / project</Label>

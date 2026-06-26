@@ -40,6 +40,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowLeft, Plus, X, ZoomIn, ZoomOut, RotateCcw, Map, FileText, Trash2, Image as ImageIcon, Loader2, Spline, Check, Move, Archive, ArchiveRestore, Boxes, Pencil, Layers, UserCheck, Sparkles, TriangleAlert, ClipboardList } from "lucide-react";
@@ -2303,11 +2304,10 @@ export default function Plattegrond() {
               {/* Installatiedatum */}
               <div>
                 <Label htmlFor="nw-datum">Installatiedatum</Label>
-                <Input
+                <DatePicker
                   id="nw-datum"
-                  type="date"
                   value={nieuwForm.installatie_datum}
-                  onChange={(e) => setNieuwForm((f) => ({ ...f, installatie_datum: e.target.value }))}
+                  onChange={(v) => setNieuwForm((f) => ({ ...f, installatie_datum: v }))}
                 />
               </div>
 
