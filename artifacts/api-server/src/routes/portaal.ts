@@ -15,6 +15,7 @@ import {
   projectenTable,
   gebruikersTable,
   gebouwenTable,
+  crmCommunicatieTable,
 } from "@workspace/db";
 import { eq, and, gt, desc, ne, or, isNull } from "drizzle-orm";
 import { stuurKlantvraagNotificatie, stuurOndertekeningNotificatie } from "../services/email";
@@ -336,6 +337,8 @@ router.post("/portaal/:token/ondertekenen", async (req, res) => {
       .from(offertesTable)
       .where(eq(offertesTable.id, tokenRecord.offerteId));
     if (!offerte) return res.status(404).json({ error: "Offerte niet gevonden." });
+    if (offerte.portaalStatus === "afgewezen")
+      return res.status(409).json({ error: "Afgewezen offerte kan niet meer worden ondertekend." });
 
     const naam = String(req.body?.naam ?? "").trim();
     const bedrijf = String(req.body?.bedrijf ?? "").trim() || null;
@@ -365,7 +368,13 @@ router.post("/portaal/:token/ondertekenen", async (req, res) => {
           .set({ portaalStatus: "ondertekend", status: "geaccepteerd", bijgewerktOp: nu })
           .where(and(
             eq(offertesTable.id, offerte.id),
-            or(ne(offertesTable.portaalStatus, "ondertekend"), isNull(offertesTable.portaalStatus)),
+            or(
+              isNull(offertesTable.portaalStatus),
+              and(
+                ne(offertesTable.portaalStatus, "ondertekend"),
+                ne(offertesTable.portaalStatus, "afgewezen"),
+              ),
+            ),
           ))
           .returning({ id: offertesTable.id });
 
@@ -467,6 +476,20 @@ router.post("/portaal/:token/ondertekenen", async (req, res) => {
       omschrijving: `Offerte ${offerte.offertenummer ?? offerte.id} (${offerte.titel}) ondertekend door ${naam}${bedrijf ? ` (${bedrijf})` : ""}`,
       gebouwId: offerte.gebouwId ?? null,
     });
+
+    if (offerte.klantId != null) {
+      try {
+        await db.insert(crmCommunicatieTable).values({
+          klantId: offerte.klantId,
+          type: "offerte",
+          onderwerp: `Offerte geaccepteerd: ${offerte.titel}`,
+          inhoud: `Offerte ${offerte.offertenummer ?? offerte.id} ondertekend door ${naam}${bedrijf ? ` (${bedrijf})` : ""}${functie ? `, ${functie}` : ""}.`,
+          datum,
+        });
+      } catch (crmErr) {
+        req.log.warn(crmErr, "CRM-activiteit loggen mislukt na ondertekening (niet-kritiek)");
+      }
+    }
 
     await db.insert(offerteTrackingTable).values({
       offerteId: offerte.id,
