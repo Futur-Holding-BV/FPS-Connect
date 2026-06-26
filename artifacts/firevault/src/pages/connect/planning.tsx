@@ -295,10 +295,10 @@ function PlanningBlokDialog({
             </div>
             <div className="space-y-1.5">
               <Label>Gebouw / project</Label>
-              <Select value={gebouwId} onValueChange={setGebouwId}>
+              <Select value={gebouwId || "__geen__"} onValueChange={(v) => setGebouwId(v === "__geen__" ? "" : v)}>
                 <SelectTrigger><SelectValue placeholder="Kies gebouw" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">— geen koppeling —</SelectItem>
+                  <SelectItem value="__geen__">— geen koppeling —</SelectItem>
                   {gebouwen.map((g) => (
                     <SelectItem key={g.id} value={String(g.id)}>{g.naam}</SelectItem>
                   ))}
@@ -456,48 +456,48 @@ function Filterbalk({
 
   return (
     <div className="flex flex-wrap gap-2">
-      <Select value={wmFilter} onValueChange={setWmFilter}>
+      <Select value={wmFilter || "__alle__"} onValueChange={(v) => setWmFilter(v === "__alle__" ? "" : v)}>
         <SelectTrigger className="w-44 h-8 text-xs">
           <SelectValue placeholder="Alle werkmaatschappijen" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="">Alle werkmaatschappijen</SelectItem>
+          <SelectItem value="__alle__">Alle werkmaatschappijen</SelectItem>
           {werkmaatschappijen.map((w) => (
             <SelectItem key={w!} value={w!}>{w}</SelectItem>
           ))}
         </SelectContent>
       </Select>
 
-      <Select value={dvFilter} onValueChange={setDvFilter}>
+      <Select value={dvFilter || "__alle__"} onValueChange={(v) => setDvFilter(v === "__alle__" ? "" : v)}>
         <SelectTrigger className="w-40 h-8 text-xs">
           <SelectValue placeholder="Dienstverband" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="">Alle dienstverbanden</SelectItem>
+          <SelectItem value="__alle__">Alle dienstverbanden</SelectItem>
           {dienstverbanden.map((d) => (
             <SelectItem key={d!} value={d!}>{d}</SelectItem>
           ))}
         </SelectContent>
       </Select>
 
-      <Select value={projectFilter} onValueChange={setProjectFilter}>
+      <Select value={projectFilter || "__alle__"} onValueChange={(v) => setProjectFilter(v === "__alle__" ? "" : v)}>
         <SelectTrigger className="w-48 h-8 text-xs">
           <SelectValue placeholder="Alle projecten" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="">Alle projecten</SelectItem>
+          <SelectItem value="__alle__">Alle projecten</SelectItem>
           {gebouwen.map((g) => (
             <SelectItem key={g.id} value={String(g.id)}>{g.naam}</SelectItem>
           ))}
         </SelectContent>
       </Select>
 
-      <Select value={statusFilter} onValueChange={setStatusFilter}>
+      <Select value={statusFilter || "__alle__"} onValueChange={(v) => setStatusFilter(v === "__alle__" ? "" : v)}>
         <SelectTrigger className="w-36 h-8 text-xs">
           <SelectValue placeholder="Alle statussen" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="">Alle statussen</SelectItem>
+          <SelectItem value="__alle__">Alle statussen</SelectItem>
           <SelectItem value="concept">Concept</SelectItem>
           <SelectItem value="ingepland">Ingepland</SelectItem>
           <SelectItem value="bevestigd">Bevestigd</SelectItem>
@@ -505,12 +505,12 @@ function Filterbalk({
         </SelectContent>
       </Select>
 
-      <Select value={opdrachtFilter} onValueChange={setOpdrachtFilter}>
+      <Select value={opdrachtFilter || "__alle__"} onValueChange={(v) => setOpdrachtFilter(v === "__alle__" ? "" : v)}>
         <SelectTrigger className="w-40 h-8 text-xs">
           <SelectValue placeholder="Hoofd / meerwerk" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="">Hoofd- en meerwerk</SelectItem>
+          <SelectItem value="__alle__">Hoofd- en meerwerk</SelectItem>
           <SelectItem value="hoofdopdracht">Alleen hoofdopdracht</SelectItem>
           <SelectItem value="meerwerk">Alleen meerwerk</SelectItem>
         </SelectContent>

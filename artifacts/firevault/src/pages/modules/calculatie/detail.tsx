@@ -596,7 +596,7 @@ export default function ModulesCalculatieDetail() {
               <div className="space-y-1.5">
                 <Label>Normtijd (optioneel)</Label>
                 <Select value={regelForm.normtijd_id} onValueChange={(v) => {
-                  if (!v) { setRegelForm((f) => ({ ...f, normtijd_id: "" })); return; }
+                  if (!v || v === "__geen__") { setRegelForm((f) => ({ ...f, normtijd_id: "" })); return; }
                   const nt = normtijden.find((n) => String(n.id) === v);
                   if (nt) setRegelForm((f) => ({
                     ...f, normtijd_id: v,
@@ -607,7 +607,7 @@ export default function ModulesCalculatieDetail() {
                 }}>
                   <SelectTrigger><SelectValue placeholder="Kies normtijd..." /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Geen normtijd</SelectItem>
+                    <SelectItem value="__geen__">Geen normtijd</SelectItem>
                     {normtijden.map((n) => (
                       <SelectItem key={n.id} value={String(n.id)}>
                         {n.code} — {n.omschrijving}

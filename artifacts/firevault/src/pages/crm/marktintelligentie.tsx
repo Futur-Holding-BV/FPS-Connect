@@ -145,20 +145,20 @@ export default function MarktintelligentiePagina() {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label>Gerelateerde organisatie</Label>
-                <Select value={velden.organisatie_id} onValueChange={(val) => setVelden((v) => ({ ...v, organisatie_id: val }))}>
+                <Select value={velden.organisatie_id || "__geen__"} onValueChange={(val) => setVelden((v) => ({ ...v, organisatie_id: val === "__geen__" ? "" : val }))}>
                   <SelectTrigger className="mt-1"><SelectValue placeholder="Geen" /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Geen</SelectItem>
+                    <SelectItem value="__geen__">Geen</SelectItem>
                     {(orgs as CrmOrganisatie[]).map((o) => <SelectItem key={o.id} value={String(o.id)}>{o.naam}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
               <div>
                 <Label>Gerelateerde concurrent</Label>
-                <Select value={velden.concurrent_id} onValueChange={(val) => setVelden((v) => ({ ...v, concurrent_id: val }))}>
+                <Select value={velden.concurrent_id || "__geen__"} onValueChange={(val) => setVelden((v) => ({ ...v, concurrent_id: val === "__geen__" ? "" : val }))}>
                   <SelectTrigger className="mt-1"><SelectValue placeholder="Geen" /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Geen</SelectItem>
+                    <SelectItem value="__geen__">Geen</SelectItem>
                     {(concurrenten as CrmConcurrent[]).map((c) => <SelectItem key={c.id} value={String(c.id)}>{c.naam}</SelectItem>)}
                   </SelectContent>
                 </Select>

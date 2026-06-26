@@ -236,10 +236,10 @@ export default function OrganisatiesPagina() {
             </div>
             <div>
               <Label>Voorkeur FPS bedrijf</Label>
-              <Select value={velden.voorkeur_fps_bedrijf} onValueChange={(val) => setVelden((v) => ({ ...v, voorkeur_fps_bedrijf: val }))}>
+              <Select value={velden.voorkeur_fps_bedrijf || "__geen__"} onValueChange={(val) => setVelden((v) => ({ ...v, voorkeur_fps_bedrijf: val === "__geen__" ? "" : val }))}>
                 <SelectTrigger className="mt-1"><SelectValue placeholder="Selecteer..." /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Geen voorkeur</SelectItem>
+                  <SelectItem value="__geen__">Geen voorkeur</SelectItem>
                   <SelectItem value="FPS Brandpreventie">FPS Brandpreventie</SelectItem>
                   <SelectItem value="FPS Bouw">FPS Bouw</SelectItem>
                   <SelectItem value="FPS Onderhoud">FPS Onderhoud</SelectItem>

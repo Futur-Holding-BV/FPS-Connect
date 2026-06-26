@@ -21,7 +21,7 @@ export default function ModulesCalculatieNieuw() {
     naam: "",
     referentie: "",
     klant_naam: "",
-    gebouw_id: "",
+    gebouw_id: "__geen__",
     project_naam: "",
     status: "concept",
     omschrijving: "",
@@ -51,7 +51,7 @@ export default function ModulesCalculatieNieuw() {
         naam: form.naam,
         referentie: form.referentie || undefined,
         klant_naam: form.klant_naam || undefined,
-        gebouw_id: form.gebouw_id ? Number(form.gebouw_id) : undefined,
+        gebouw_id: form.gebouw_id && form.gebouw_id !== "__geen__" ? Number(form.gebouw_id) : undefined,
         project_naam: form.project_naam || undefined,
         status: form.status,
         omschrijving: form.omschrijving || undefined,
@@ -146,7 +146,7 @@ export default function ModulesCalculatieNieuw() {
                     <SelectValue placeholder="Selecteer gebouw..." />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Geen gebouw</SelectItem>
+                    <SelectItem value="__geen__">Geen gebouw</SelectItem>
                     {gebouwen.map((g) => (
                       <SelectItem key={g.id} value={String(g.id)}>
                         {g.naam} — {g.stad ?? g.adres}

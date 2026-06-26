@@ -227,6 +227,19 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
                         </SidebarMenuButton>
                       )}
                     </SidebarMenuItem>
+                    {toonOffertes && (
+                      <SidebarMenuItem>
+                        <SidebarMenuButton
+                          asChild
+                          isActive={location === "/offertes" || location.startsWith("/offertes/")}
+                        >
+                          <Link href="/offertes">
+                            <FileText />
+                            <span>Offertes</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    )}
                     <SidebarMenuItem>
                       <SidebarMenuButton disabled>
                         <Hammer />
