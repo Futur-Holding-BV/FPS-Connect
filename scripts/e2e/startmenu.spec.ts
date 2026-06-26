@@ -399,16 +399,14 @@ test("FPS startmenu: login, waaier en doorlinken", async ({ page }) => {
       // Picker sluit; verlofsoort is nu geselecteerd.
       await expect(zichtbareTekst(page, "Verlofsoort kiezen").first()).toHaveCount(0);
 
-      // Vul een ongeldige startdatum in.
-      await page.getByTestId("verlof-startdatum-input").fill("geen-datum");
-
-      // Indienen → datumfout: exact de melding uit de formuliervalidatie.
+      // Geen datum gekozen (datumveld is nu een klikbare knop, geen tekstinvoer).
+      // Indienen zonder datum → datumfout.
       await page.getByTestId("verlof-indienen-knop").click();
       await expect(page.getByTestId("verlof-formulier-fout")).toBeVisible({
         timeout: INHOUD_TIMEOUT,
       });
       await expect(
-        page.getByTestId("verlof-formulier-fout").getByText("Vul een geldige startdatum in (JJJJ-MM-DD)."),
+        page.getByTestId("verlof-formulier-fout").getByText("Kies een geldige startdatum."),
       ).toBeVisible({ timeout: INHOUD_TIMEOUT });
     } else {
       // Geen verlofsoorten beschikbaar in de catalog; sluit de picker via het ×-knopje.
