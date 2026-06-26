@@ -296,19 +296,26 @@ export default function PortaalPagina({ token }: PortaalPaginaProps) {
         </div>
 
         {(o.secties ?? []).length > 0 && (
-          <div className="space-y-4">
+          <div className="space-y-6">
             {o.secties
               .filter((s) => s.actief !== false)
               .sort((a, b) => a.volgorde - b.volgorde)
               .map((s) => (
-                <Card key={s.id}>
-                  <CardContent className="p-5 space-y-3">
-                    {s.titel && <h2 className="font-semibold">{s.titel}</h2>}
-                    {s.inhoud && (
-                      <p className="text-sm text-muted-foreground whitespace-pre-wrap">{s.inhoud}</p>
-                    )}
-                  </CardContent>
-                </Card>
+                <div key={s.id}>
+                  {s.titel && (
+                    <h2 style={{
+                      fontSize: 16, fontWeight: 700, color: "#F23B0D",
+                      borderBottom: "2px solid #F23B0D", paddingBottom: 6, marginBottom: 12,
+                    }}>
+                      {s.titel}
+                    </h2>
+                  )}
+                  {s.inhoud && (
+                    <div style={{ fontSize: 14, lineHeight: 1.75, color: "#334155", whiteSpace: "pre-wrap" }}>
+                      {s.inhoud}
+                    </div>
+                  )}
+                </div>
               ))}
           </div>
         )}
@@ -415,10 +422,16 @@ export default function PortaalPagina({ token }: PortaalPaginaProps) {
 
         {handtekeningFase === "voltooid" || (o.portaal_status === "ondertekend" && !isGesloten) ? (
           <Card>
-            <CardContent className="py-10 text-center space-y-3">
+            <CardContent className="py-10 text-center space-y-4">
               <CheckCircle className="h-12 w-12 mx-auto text-emerald-600" />
-              <p className="font-semibold text-lg">Offerte geaccepteerd</p>
-              <p className="text-sm text-muted-foreground">Bedankt voor uw akkoord. Wij nemen spoedig contact met u op.</p>
+              <div>
+                <p className="font-semibold text-lg">Offerte geaccepteerd</p>
+                <p className="text-sm text-muted-foreground">Bedankt voor uw akkoord. Wij nemen spoedig contact met u op.</p>
+              </div>
+              <Button variant="outline" size="sm" onClick={downloadPdf}>
+                <Printer className="h-4 w-4 mr-2" />
+                Download getekende offerte (PDF)
+              </Button>
             </CardContent>
           </Card>
         ) : handtekeningFase === "afgewezen" || (o.portaal_status === "afgewezen" && !isGesloten) ? (
@@ -495,7 +508,7 @@ export default function PortaalPagina({ token }: PortaalPaginaProps) {
                   )}
 
                   {handtekeningFase === "naam" && (
-                    <div className="space-y-3">
+                    <div className="space-y-4">
                       <div className="space-y-1.5">
                         <Label>Volledige naam *</Label>
                         <Input value={sigNaam} onChange={(e) => setSigNaam(e.target.value)} placeholder="Voor- en achternaam" />
@@ -510,6 +523,26 @@ export default function PortaalPagina({ token }: PortaalPaginaProps) {
                           <Input value={sigFunctie} onChange={(e) => setSigFunctie(e.target.value)} />
                         </div>
                       </div>
+                      {/* Samenvatting vóór bevestiging */}
+                      {sigNaam.trim() && (
+                        <div className="rounded-lg border bg-slate-50 p-4 space-y-2 text-sm">
+                          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Samenvatting akkoord</p>
+                          <div className="grid grid-cols-2 gap-1 text-slate-700">
+                            <span className="text-muted-foreground">Offerte</span>
+                            <span className="font-medium">{o.titel}</span>
+                            <span className="text-muted-foreground">Bedrag</span>
+                            <span className="font-medium">{euro(o.bedrag_incl_btw)} incl. btw</span>
+                            {o.datum && (
+                              <>
+                                <span className="text-muted-foreground">Datum</span>
+                                <span>{new Date(o.datum).toLocaleDateString("nl-NL")}</span>
+                              </>
+                            )}
+                            <span className="text-muted-foreground">Ondertekenaar</span>
+                            <span>{sigNaam.trim()}{sigFunctie ? `, ${sigFunctie.trim()}` : ""}{sigBedrijf ? ` (${sigBedrijf.trim()})` : ""}</span>
+                          </div>
+                        </div>
+                      )}
                       <div className="flex gap-2">
                         <Button variant="outline" size="sm" onClick={() => setHandtekeningFase("tekenen")}>Terug</Button>
                         <Button
@@ -518,7 +551,7 @@ export default function PortaalPagina({ token }: PortaalPaginaProps) {
                           disabled={!sigNaam.trim() || bezig}
                         >
                           {bezig ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle className="h-3.5 w-3.5" />}
-                          {bezig ? "Bezig…" : "Akkoord geven"}
+                          {bezig ? "Bezig…" : "Definitief akkoord geven"}
                         </Button>
                       </div>
                     </div>

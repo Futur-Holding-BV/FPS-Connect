@@ -42,7 +42,7 @@ async function isOfferteBlokkeerd(offerteId: number): Promise<boolean> {
     .select({ portaalStatus: offertesTable.portaalStatus })
     .from(offertesTable)
     .where(eq(offertesTable.id, offerteId));
-  return o?.portaalStatus === "ondertekend";
+  return o?.portaalStatus === "ondertekend" || o?.portaalStatus === "afgewezen";
 }
 
 const lezen = requireBevoegdheid("offertes", 1);
