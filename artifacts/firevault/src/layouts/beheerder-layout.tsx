@@ -171,17 +171,64 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
                 </SidebarGroupContent>
               </SidebarGroup>
 
-              {/* Gebouwen */}
-              {toonGebouwen && (
+              {/* Acquisitie */}
+              {toonCrm && (
                 <SidebarGroup>
-                  <SidebarGroupLabel>Gebouwen</SidebarGroupLabel>
+                  <SidebarGroupLabel>Acquisitie</SidebarGroupLabel>
                   <SidebarGroupContent>
                     <SidebarMenu>
                       <SidebarMenuItem>
-                        <SidebarMenuButton asChild isActive={gebouwenActief}>
-                          <Link href="/gebouwen">
-                            <Building />
-                            <span>Alle gebouwen</span>
+                        <SidebarMenuButton
+                          asChild
+                          isActive={location === "/crm" && !location.startsWith("/crm/")}
+                        >
+                          <Link href="/crm">
+                            <Contact />
+                            <span>Klanten</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                      <SidebarMenuItem>
+                        <SidebarMenuButton
+                          asChild
+                          isActive={location === "/crm/organisaties" || location.startsWith("/crm/organisaties")}
+                        >
+                          <Link href="/crm/organisaties">
+                            <Building2 />
+                            <span>Organisaties</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                      <SidebarMenuItem>
+                        <SidebarMenuButton
+                          asChild
+                          isActive={location === "/crm/projectkansen"}
+                        >
+                          <Link href="/crm/projectkansen">
+                            <Target />
+                            <span>Projectkansen</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                      <SidebarMenuItem>
+                        <SidebarMenuButton
+                          asChild
+                          isActive={location === "/crm/concurrenten"}
+                        >
+                          <Link href="/crm/concurrenten">
+                            <Handshake />
+                            <span>Concurrenten</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                      <SidebarMenuItem>
+                        <SidebarMenuButton
+                          asChild
+                          isActive={location === "/crm/marktintelligentie"}
+                        >
+                          <Link href="/crm/marktintelligentie">
+                            <Newspaper />
+                            <span>Marktinzicht</span>
                           </Link>
                         </SidebarMenuButton>
                       </SidebarMenuItem>
@@ -190,11 +237,21 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
                 </SidebarGroup>
               )}
 
-              {/* CWU */}
+              {/* Projectvoorbereiding */}
               <SidebarGroup>
-                <SidebarGroupLabel>CWU</SidebarGroupLabel>
+                <SidebarGroupLabel>Projectvoorbereiding</SidebarGroupLabel>
                 <SidebarGroupContent>
                   <SidebarMenu>
+                    {toonGebouwen && (
+                      <SidebarMenuItem>
+                        <SidebarMenuButton asChild isActive={gebouwenActief}>
+                          <Link href="/gebouwen">
+                            <Building />
+                            <span>Alle gebouwen</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    )}
                     {toonOpname && (
                       <SidebarMenuItem>
                         <SidebarMenuButton
@@ -240,6 +297,15 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
                         </SidebarMenuButton>
                       </SidebarMenuItem>
                     )}
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              </SidebarGroup>
+
+              {/* Uitvoering */}
+              <SidebarGroup>
+                <SidebarGroupLabel>Uitvoering</SidebarGroupLabel>
+                <SidebarGroupContent>
+                  <SidebarMenu>
                     <SidebarMenuItem>
                       <SidebarMenuButton disabled>
                         <Hammer />
@@ -247,46 +313,6 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
                         <InUitvoering />
                       </SidebarMenuButton>
                     </SidebarMenuItem>
-                    <SidebarMenuItem>
-                      <SidebarMenuButton disabled>
-                        <HardHat />
-                        <span>Uitvoering</span>
-                        <InUitvoering />
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  </SidebarMenu>
-                </SidebarGroupContent>
-              </SidebarGroup>
-
-              {/* Werkstroom — standalone modules */}
-              <SidebarGroup>
-                <SidebarGroupContent>
-                  <SidebarMenu>
-                    <SidebarMenuItem>
-                      <SidebarMenuButton
-                        asChild
-                        isActive={location === "/rapporten" || location.startsWith("/rapporten/")}
-                      >
-                        <Link href="/rapporten">
-                          <PackageCheck />
-                          <span>Oplevering</span>
-                          <InUitvoering />
-                        </Link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                    {toonOnderhoud && (
-                      <SidebarMenuItem>
-                        <SidebarMenuButton
-                          asChild
-                          isActive={location === "/onderhoud" || location.startsWith("/onderhoud/")}
-                        >
-                          <Link href="/onderhoud">
-                            <Wrench />
-                            <span>Onderhoud</span>
-                          </Link>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                    )}
                     {featureFlags.planning ? (
                       <SidebarMenuItem>
                         <SidebarMenuButton
@@ -309,16 +335,46 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
                       </SidebarMenuItem>
                     )}
                     <SidebarMenuItem>
+                      <SidebarMenuButton disabled>
+                        <HardHat />
+                        <span>Uitvoering</span>
+                        <InUitvoering />
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              </SidebarGroup>
+
+              {/* Oplevering */}
+              <SidebarGroup>
+                <SidebarGroupLabel>Oplevering</SidebarGroupLabel>
+                <SidebarGroupContent>
+                  <SidebarMenu>
+                    <SidebarMenuItem>
                       <SidebarMenuButton
                         asChild
-                        isActive={location === "/documenten" || location.startsWith("/documenten/")}
+                        isActive={location === "/rapporten" || location.startsWith("/rapporten/")}
                       >
-                        <Link href="/documenten">
-                          <Files />
-                          <span>Documenten</span>
+                        <Link href="/rapporten">
+                          <PackageCheck />
+                          <span>Opleverrapportage</span>
+                          <InUitvoering />
                         </Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
+                    {toonOnderhoud && (
+                      <SidebarMenuItem>
+                        <SidebarMenuButton
+                          asChild
+                          isActive={location === "/onderhoud" || location.startsWith("/onderhoud/")}
+                        >
+                          <Link href="/onderhoud">
+                            <Wrench />
+                            <span>Onderhoud</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    )}
                     {toonDossiers && (
                       <SidebarMenuItem>
                         <SidebarMenuButton
@@ -333,12 +389,24 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
                         </SidebarMenuButton>
                       </SidebarMenuItem>
                     )}
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={location === "/documenten" || location.startsWith("/documenten/")}
+                      >
+                        <Link href="/documenten">
+                          <Files />
+                          <span>Documenten</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
                   </SidebarMenu>
                 </SidebarGroupContent>
               </SidebarGroup>
 
               {/* Communicatie */}
               <SidebarGroup>
+                <SidebarGroupLabel>Communicatie</SidebarGroupLabel>
                 <SidebarGroupContent>
                   <SidebarMenu>
                     <SidebarMenuItem>
@@ -364,71 +432,6 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
                         </Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
-                    {toonCrm && (
-                      <SidebarMenuItem>
-                        <SidebarMenuButton
-                          asChild
-                          isActive={location === "/crm" && !location.startsWith("/crm/")}
-                        >
-                          <Link href="/crm">
-                            <Contact />
-                            <span>CRM Dashboard</span>
-                          </Link>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                    )}
-                    {toonCrm && (
-                      <SidebarMenuItem>
-                        <SidebarMenuButton
-                          asChild
-                          isActive={location === "/crm/organisaties" || location.startsWith("/crm/organisaties")}
-                        >
-                          <Link href="/crm/organisaties">
-                            <Building2 />
-                            <span>Organisaties</span>
-                          </Link>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                    )}
-                    {toonCrm && (
-                      <SidebarMenuItem>
-                        <SidebarMenuButton
-                          asChild
-                          isActive={location === "/crm/projectkansen"}
-                        >
-                          <Link href="/crm/projectkansen">
-                            <Target />
-                            <span>Projectkansen</span>
-                          </Link>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                    )}
-                    {toonCrm && (
-                      <SidebarMenuItem>
-                        <SidebarMenuButton
-                          asChild
-                          isActive={location === "/crm/concurrenten"}
-                        >
-                          <Link href="/crm/concurrenten">
-                            <Handshake />
-                            <span>Concurrenten</span>
-                          </Link>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                    )}
-                    {toonCrm && (
-                      <SidebarMenuItem>
-                        <SidebarMenuButton
-                          asChild
-                          isActive={location === "/crm/marktintelligentie"}
-                        >
-                          <Link href="/crm/marktintelligentie">
-                            <Newspaper />
-                            <span>Marktinzicht</span>
-                          </Link>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                    )}
                     {toonCrm && (
                       <SidebarMenuItem>
                         <SidebarMenuButton
