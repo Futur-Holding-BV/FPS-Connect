@@ -17,7 +17,6 @@ import {
   Inbox, Building2, Target, Handshake, Newspaper, CalendarRange, KeyRound,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { GebruikerMenu } from "@/components/gebruiker-menu";
 import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
 import { useRol } from "@/context/rol-context";
@@ -115,12 +114,10 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
               alt="FPS Connect"
               className="h-8 w-auto flex-shrink-0 group-data-[collapsible=icon]:hidden"
             />
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <SidebarTrigger className="ml-auto shrink-0 group-data-[collapsible=icon]:ml-0" />
-              </TooltipTrigger>
-              <TooltipContent side="right">Menu in-/uitklappen</TooltipContent>
-            </Tooltip>
+            <SidebarTrigger
+              className="ml-auto shrink-0 group-data-[collapsible=icon]:ml-0"
+              title="Menu in-/uitklappen"
+            />
           </div>
 
           {aantalOmgevingen > 1 && (
