@@ -407,14 +407,14 @@ export default function ProposalStudio() {
       `}</style>
 
       <div className="max-w-7xl mx-auto space-y-4">
-        {offerte.auto_project_id && (
+        {offerte.auto_project_id && offerte.gebouw_id && (
           <div className="flex items-center gap-3 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3">
             <FolderOpen className="h-5 w-5 text-emerald-600 shrink-0" />
             <div className="flex-1">
               <span className="text-sm font-medium text-emerald-800">Project geopend</span>
               <span className="text-sm text-emerald-700"> — deze offerte is omgezet naar een project.</span>
             </div>
-            <Link href={`/gebouwen/${offerte.auto_project_id}`}>
+            <Link href={`/gebouwen/${offerte.gebouw_id}`}>
               <Button size="sm" variant="outline" className="border-emerald-300 text-emerald-700 hover:bg-emerald-100 shrink-0">
                 Ga naar project
               </Button>

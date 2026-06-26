@@ -499,7 +499,10 @@ router.patch("/offertes/:id", schrijven, async (req, res) => {
 
 router.delete("/offertes/:id", schrijven, async (req, res) => {
   try {
-    await db.delete(offertesTable).where(eq(offertesTable.id, parseId(req.params.id)));
+    const offerteId = parseId(req.params.id);
+    if (await isOfferteBlokkeerd(offerteId))
+      return res.status(409).json({ error: "Ondertekende of afgewezen offerte kan niet worden verwijderd." });
+    await db.delete(offertesTable).where(eq(offertesTable.id, offerteId));
     res.status(204).send();
   } catch (err) {
     req.log.error(err);
