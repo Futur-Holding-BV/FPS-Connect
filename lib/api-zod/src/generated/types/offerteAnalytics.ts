@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { OfferteAnalyticsRecenteOffertesItem } from './offerteAnalyticsRecenteOffertesItem';
+import type { OfferteAnalyticsTopBijlagenItem } from './offerteAnalyticsTopBijlagenItem';
 
 export interface OfferteAnalytics {
   totaal: number;
@@ -14,7 +15,11 @@ export interface OfferteAnalytics {
   bekeken: number;
   ondertekend: number;
   afgewezen: number;
+  vervallen: number;
   conversie_procent: number;
   gemiddelde_waarde: number;
+  gemiddelde_doorlooptijd_dagen: number;
+  ai_acceptatie_score: number;
+  top_bijlagen: OfferteAnalyticsTopBijlagenItem[];
   recente_offertes: OfferteAnalyticsRecenteOffertesItem[];
 }

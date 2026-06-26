@@ -139,6 +139,40 @@ router.get("/portaal/:token", async (req, res) => {
   }
 });
 
+// GET /portaal/:token/pixel — tracking pixel voor e-mailopening (geopend-event)
+router.get("/portaal/:token/pixel", async (req, res) => {
+  try {
+    const tokenResultaat = await valideerToken(req.params.token);
+    if (tokenResultaat.gevonden && !tokenResultaat.verlopen) {
+      const tokenRecord = tokenResultaat.record;
+      // Registreer alleen als er de afgelopen 24 uur nog geen geopend-event was
+      const { count: sql_count } = await import("drizzle-orm");
+      const [al] = await db
+        .select({ n: sql_count() })
+        .from(offerteTrackingTable)
+        .where(
+          and(
+            eq(offerteTrackingTable.offerteId, tokenRecord.offerteId),
+            eq(offerteTrackingTable.event, "geopend"),
+          ),
+        );
+      if (Number(al?.n ?? 0) === 0) {
+        await db.insert(offerteTrackingTable).values({
+          offerteId: tokenRecord.offerteId,
+          event: "geopend",
+          portaalToken: req.params.token,
+          ip: String(req.ip ?? "").slice(0, 45),
+        });
+      }
+    }
+  } catch {
+    // tracking mag nooit de pixel-respons blokkeren
+  }
+  // 1×1 transparante GIF
+  const pixel = Buffer.from("R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7", "base64");
+  res.set("Content-Type", "image/gif").set("Cache-Control", "no-store").send(pixel);
+});
+
 // PATCH /portaal/:token/tracking — publiek
 router.patch("/portaal/:token/tracking", async (req, res) => {
   try {

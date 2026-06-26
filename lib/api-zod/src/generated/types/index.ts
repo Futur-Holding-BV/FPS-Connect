@@ -287,6 +287,7 @@ export * from './offerteAiSchrijvenInput';
 export * from './offerteAiSchrijvenResultaat';
 export * from './offerteAnalytics';
 export * from './offerteAnalyticsRecenteOffertesItem';
+export * from './offerteAnalyticsTopBijlagenItem';
 export * from './offerteBijlage';
 export * from './offerteBijlageInput';
 export * from './offerteEmailVoorstel';

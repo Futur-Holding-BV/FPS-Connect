@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
-import { FileText, Plus, Search, Sparkles, PenLine, TrendingUp, CheckCircle, Send, Eye, Clock, FolderOpen } from "lucide-react";
+import { FileText, Plus, Search, Sparkles, PenLine, TrendingUp, CheckCircle, Send, Eye, Clock, FolderOpen, XCircle, AlertTriangle, Download, Euro } from "lucide-react";
 import { Link } from "wouter";
 
 const STATUS_KLEUR: Record<string, string> = {
@@ -141,56 +141,105 @@ export default function OffertesPagina() {
       </div>
 
       {analytics && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-          <Card>
-            <CardContent className="p-4 flex items-center gap-3">
-              <Send className="h-5 w-5 text-blue-600 shrink-0" />
-              <div>
-                <div className="text-2xl font-bold">{analytics.verzonden}</div>
-                <div className="text-xs text-muted-foreground">Verzonden</div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4 flex items-center gap-3">
-              <Eye className="h-5 w-5 text-indigo-600 shrink-0" />
-              <div>
-                <div className="text-2xl font-bold">{analytics.bekeken}</div>
-                <div className="text-xs text-muted-foreground">Bekeken</div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4 flex items-center gap-3">
-              <CheckCircle className="h-5 w-5 text-emerald-600 shrink-0" />
-              <div>
-                <div className="text-2xl font-bold">{analytics.ondertekend}</div>
-                <div className="text-xs text-muted-foreground">Ondertekend</div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4 flex items-center gap-3">
-              <TrendingUp className="h-5 w-5 text-primary shrink-0" />
-              <div>
-                <div className="text-2xl font-bold">{analytics.conversie_procent.toFixed(0)}%</div>
-                <div className="text-xs text-muted-foreground">Conversie</div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4 flex items-center gap-3">
-              <Clock className="h-5 w-5 text-amber-600 shrink-0" />
-              <div>
-                <div className="text-2xl font-bold">
-                  {(analytics as any).gemiddelde_doorlooptijd_dagen > 0
-                    ? `${(analytics as any).gemiddelde_doorlooptijd_dagen}d`
-                    : "—"}
+        <div className="space-y-3">
+          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
+            <Card>
+              <CardContent className="p-3 flex items-center gap-2">
+                <Send className="h-4 w-4 text-blue-600 shrink-0" />
+                <div>
+                  <div className="text-xl font-bold">{analytics.verzonden}</div>
+                  <div className="text-xs text-muted-foreground">Verzonden</div>
                 </div>
-                <div className="text-xs text-muted-foreground">Gem. doorlooptijd</div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-3 flex items-center gap-2">
+                <Eye className="h-4 w-4 text-indigo-600 shrink-0" />
+                <div>
+                  <div className="text-xl font-bold">{analytics.bekeken}</div>
+                  <div className="text-xs text-muted-foreground">Bekeken</div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-3 flex items-center gap-2">
+                <CheckCircle className="h-4 w-4 text-emerald-600 shrink-0" />
+                <div>
+                  <div className="text-xl font-bold">{analytics.ondertekend}</div>
+                  <div className="text-xs text-muted-foreground">Geaccepteerd</div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-3 flex items-center gap-2">
+                <XCircle className="h-4 w-4 text-rose-600 shrink-0" />
+                <div>
+                  <div className="text-xl font-bold">{analytics.afgewezen}</div>
+                  <div className="text-xs text-muted-foreground">Afgewezen</div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-3 flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0" />
+                <div>
+                  <div className="text-xl font-bold">{analytics.vervallen}</div>
+                  <div className="text-xs text-muted-foreground">Vervallen</div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-3 flex items-center gap-2">
+                <TrendingUp className="h-4 w-4 text-primary shrink-0" />
+                <div>
+                  <div className="text-xl font-bold">{analytics.conversie_procent.toFixed(0)}%</div>
+                  <div className="text-xs text-muted-foreground">Conversie</div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-3 flex items-center gap-2">
+                <Euro className="h-4 w-4 text-emerald-600 shrink-0" />
+                <div>
+                  <div className="text-xl font-bold">{analytics.gemiddelde_waarde > 0 ? euro(analytics.gemiddelde_waarde) : "—"}</div>
+                  <div className="text-xs text-muted-foreground">Gem. waarde</div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-3 flex items-center gap-2">
+                <Clock className="h-4 w-4 text-amber-600 shrink-0" />
+                <div>
+                  <div className="text-xl font-bold">
+                    {analytics.gemiddelde_doorlooptijd_dagen > 0
+                      ? `${analytics.gemiddelde_doorlooptijd_dagen}d`
+                      : "—"}
+                  </div>
+                  <div className="text-xs text-muted-foreground">Gem. doorlooptijd</div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+          {analytics.top_bijlagen.length > 0 && (
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <Download className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm font-medium">Meest gedownloade bijlagen</span>
+                </div>
+                <div className="space-y-1.5">
+                  {analytics.top_bijlagen.map((b, i) => (
+                    <div key={i} className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground truncate max-w-[70%]">
+                        {b.offertenummer ? `${b.offertenummer} — ` : ""}{b.titel ?? "Onbekend"}
+                      </span>
+                      <span className="font-medium shrink-0">{b.downloads}×</span>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
       )}
 

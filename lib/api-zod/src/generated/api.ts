@@ -9481,8 +9481,17 @@ export const GetOfferteAnalyticsResponse = zod.object({
   "bekeken": zod.number(),
   "ondertekend": zod.number(),
   "afgewezen": zod.number(),
+  "vervallen": zod.number(),
   "conversie_procent": zod.number(),
   "gemiddelde_waarde": zod.number(),
+  "gemiddelde_doorlooptijd_dagen": zod.number(),
+  "ai_acceptatie_score": zod.number(),
+  "top_bijlagen": zod.array(zod.object({
+  "offerte_id": zod.number().optional(),
+  "offertenummer": zod.string().nullish(),
+  "titel": zod.string().nullish(),
+  "downloads": zod.number().optional()
+})),
   "recente_offertes": zod.array(zod.object({
   "id": zod.number().optional(),
   "offertenummer": zod.string().nullish(),

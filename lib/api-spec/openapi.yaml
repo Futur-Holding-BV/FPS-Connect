@@ -15980,7 +15980,7 @@ components:
     # ── Portaal & analytics schema's ──────────────────────────────────────────
     OfferteAnalytics:
       type: object
-      required: [totaal, concept, verzonden, bekeken, ondertekend, afgewezen, conversie_procent, gemiddelde_waarde, recente_offertes]
+      required: [totaal, concept, verzonden, bekeken, ondertekend, afgewezen, vervallen, conversie_procent, gemiddelde_waarde, gemiddelde_doorlooptijd_dagen, ai_acceptatie_score, top_bijlagen, recente_offertes]
       properties:
         totaal:
           type: integer
@@ -15994,10 +15994,29 @@ components:
           type: integer
         afgewezen:
           type: integer
+        vervallen:
+          type: integer
         conversie_procent:
           type: number
         gemiddelde_waarde:
           type: number
+        gemiddelde_doorlooptijd_dagen:
+          type: number
+        ai_acceptatie_score:
+          type: integer
+        top_bijlagen:
+          type: array
+          items:
+            type: object
+            properties:
+              offerte_id:
+                type: integer
+              offertenummer:
+                type: ["string", "null"]
+              titel:
+                type: ["string", "null"]
+              downloads:
+                type: integer
         recente_offertes:
           type: array
           items:

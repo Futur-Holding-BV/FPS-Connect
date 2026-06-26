@@ -73,7 +73,8 @@ export default function PortaalPagina({ token }: PortaalPaginaProps) {
   useEffect(() => {
     if (offerte && !heeftGespoord.current) {
       heeftGespoord.current = true;
-      trackEvent.mutate({ token, data: { event: "bekeken" } });
+      // portaal_bekeken wordt server-side geregistreerd bij de GET-aanvraag zelf —
+      // geen apart PATCH-event nodig hier (zou 400 geven).
     }
     if (offerte) {
       const initSelectie: Record<number, boolean> = {};

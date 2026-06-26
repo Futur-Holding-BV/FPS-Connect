@@ -3964,6 +3964,15 @@ export interface OfferteBijlage {
   bijgewerkt_op: string;
 }
 
+export type OfferteAnalyticsTopBijlagenItem = {
+  offerte_id?: number;
+  /** @nullable */
+  offertenummer?: string | null;
+  /** @nullable */
+  titel?: string | null;
+  downloads?: number;
+};
+
 export type OfferteAnalyticsRecenteOffertesItem = {
   id?: number;
   /** @nullable */
@@ -3980,8 +3989,12 @@ export interface OfferteAnalytics {
   bekeken: number;
   ondertekend: number;
   afgewezen: number;
+  vervallen: number;
   conversie_procent: number;
   gemiddelde_waarde: number;
+  gemiddelde_doorlooptijd_dagen: number;
+  ai_acceptatie_score: number;
+  top_bijlagen: OfferteAnalyticsTopBijlagenItem[];
   recente_offertes: OfferteAnalyticsRecenteOffertesItem[];
 }
 

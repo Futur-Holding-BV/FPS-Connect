@@ -1530,6 +1530,9 @@ router.post("/offertes/:id/verzenden", schrijven, async (req, res) => {
       doc.end();
     });
 
+    const host = portaalLink.startsWith("https://") ? portaalLink.split("/portaal/")[0] : "";
+    const pixelUrl = host && portaalToken ? `${host}/portaal/${portaalToken}/pixel` : "";
+
     const html = `<!DOCTYPE html>
 <html lang="nl">
 <head><meta charset="UTF-8"></head>
@@ -1545,6 +1548,7 @@ router.post("/offertes/:id/verzenden", schrijven, async (req, res) => {
   </div>
   <hr style="border:none;border-top:1px solid #e5e7eb;margin:32px 0">
   <p style="font-size:12px;color:#6b7280">FPS Brandpreventie — Uw partner in brandveiligheid</p>
+  ${pixelUrl ? `<img src="${pixelUrl}" width="1" height="1" style="display:none;border:0" alt="">` : ""}
 </body>
 </html>`;
 
@@ -1579,8 +1583,8 @@ router.post("/offertes/:id/verzenden", schrijven, async (req, res) => {
 
     await db.insert(offerteTrackingTable).values({
       offerteId,
-      event: "verzonden",
-      portaalToken: null,
+      event: "bezorgd",
+      portaalToken: portaalToken ?? null,
       ip: null,
     });
 
