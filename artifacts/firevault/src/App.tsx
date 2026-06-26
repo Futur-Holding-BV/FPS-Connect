@@ -209,6 +209,7 @@ function ConnectPortal() {
         </Route>
 
         {/* ── Offertes ── */}
+        <Route path="/offertes" component={OffertesPagina} />
         <Route path="/offertes/:id" component={ProposalStudio} />
 
         {/* ── Documenten & Dossiers ── */}

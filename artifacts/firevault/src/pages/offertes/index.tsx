@@ -230,8 +230,8 @@ export default function OffertesPagina() {
                         <Sparkles className="h-3 w-3" /> AI hoog
                       </Badge>
                     )}
-                    {o.portaal_status === "ondertekend" && o.auto_project_id && (
-                      <Link href={`/gebouwen/${o.auto_project_id}`}>
+                    {o.portaal_status === "ondertekend" && o.gebouw_id && (
+                      <Link href={`/gebouwen/${o.gebouw_id}`}>
                         <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-300 cursor-pointer hover:bg-emerald-100 gap-1">
                           <FolderOpen className="h-3 w-3" />
                           Project geopend
