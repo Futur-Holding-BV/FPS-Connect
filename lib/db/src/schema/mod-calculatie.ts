@@ -1,4 +1,4 @@
-import { pgTable, serial, text, integer, real, boolean, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, integer, real, boolean, timestamp, jsonb } from "drizzle-orm/pg-core";
 import { gebouwenTable } from "./gebouwen";
 import { gebruikersTable } from "./gebruikers";
 
@@ -21,6 +21,33 @@ export const modCalcNormtijdenTable = pgTable("mod_calc_normtijden", {
   eenheid: text("eenheid").notNull().default("st"),
   urenPerEenheid: real("uren_per_eenheid").notNull().default(0),
   actief: boolean("actief").notNull().default(true),
+});
+
+export const modCalcLeveranciersTable = pgTable("mod_calc_leveranciers", {
+  id: serial("id").primaryKey(),
+  naam: text("naam").notNull(),
+  contactpersoon: text("contactpersoon"),
+  email: text("email"),
+  telefoon: text("telefoon"),
+  website: text("website"),
+  notities: text("notities"),
+  actief: boolean("actief").notNull().default(true),
+  aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
+  bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
+});
+
+export const modCalcArtekelenTable = pgTable("mod_calc_artikelen", {
+  id: serial("id").primaryKey(),
+  leverancierId: integer("leverancier_id").references(() => modCalcLeveranciersTable.id, { onDelete: "set null" }),
+  artikelcode: text("artikelcode"),
+  omschrijving: text("omschrijving").notNull(),
+  eenheid: text("eenheid").notNull().default("st"),
+  inkoopprijs: real("inkoopprijs").notNull().default(0),
+  verkoopprijs: real("verkoopprijs").notNull().default(0),
+  categorie: text("categorie").notNull().default("materiaal"),
+  actief: boolean("actief").notNull().default(true),
+  aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
+  bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
 });
 
 export const modCalcHeadersTable = pgTable("mod_calc_headers", {
@@ -49,6 +76,7 @@ export const modCalcRegelsTable = pgTable("mod_calc_regels", {
   categorie: text("categorie").notNull().default("arbeid"),
   omschrijving: text("omschrijving").notNull(),
   normtijdId: integer("normtijd_id").references(() => modCalcNormtijdenTable.id, { onDelete: "set null" }),
+  artikelId: integer("artikel_id").references(() => modCalcArtekelenTable.id, { onDelete: "set null" }),
   eenheid: text("eenheid").notNull().default("st"),
   hoeveelheid: real("hoeveelheid").notNull().default(0),
   tarief: real("tarief").notNull().default(0),
@@ -64,4 +92,14 @@ export const modCalcRegelsTable = pgTable("mod_calc_regels", {
   klanttekst: text("klanttekst"),
   aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
   bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
+});
+
+export const modCalcVersiesTable = pgTable("mod_calc_versies", {
+  id: serial("id").primaryKey(),
+  calculatieId: integer("calculatie_id").notNull().references(() => modCalcHeadersTable.id, { onDelete: "cascade" }),
+  versienummer: integer("versienummer").notNull().default(1),
+  label: text("label"),
+  snapshot: jsonb("snapshot").notNull().$type<Record<string, unknown>>(),
+  aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
+  aangemaaktDoorId: integer("aangemaakt_door_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
 });

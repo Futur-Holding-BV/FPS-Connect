@@ -20,7 +20,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Plus, Search, MoreHorizontal, Copy, Trash2, Calculator, TrendingUp } from "lucide-react";
+import { Plus, Search, MoreHorizontal, Copy, Trash2, Calculator, TrendingUp, Building2 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 
 const STATUS_LABEL: Record<string, string> = {
@@ -94,10 +94,16 @@ export default function ModulesCalculatie() {
             Kostprijsbegrotingen voor brandpreventie- en bouwwerkzaamheden
           </p>
         </div>
-        <Button onClick={() => navigate("/modules/calculatie/nieuw")}>
-          <Plus className="h-4 w-4 mr-2" />
-          Nieuwe calculatie
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => navigate("/modules/calculatie/leveranciers")}>
+            <Building2 className="h-4 w-4 mr-2" />
+            Leveranciers & artikelen
+          </Button>
+          <Button onClick={() => navigate("/modules/calculatie/nieuw")}>
+            <Plus className="h-4 w-4 mr-2" />
+            Nieuwe calculatie
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-3 gap-4">

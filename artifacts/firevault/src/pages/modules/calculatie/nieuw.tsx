@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useCreateModCalculatie } from "@workspace/api-client-react";
 import { useListGebouwen } from "@workspace/api-client-react";
@@ -34,8 +34,25 @@ export default function ModulesCalculatieNieuw() {
     korting: 0,
   });
 
+  const [klantNaamHandmatig, setKlantNaamHandmatig] = useState(false);
+
   const { data: gebouwenData } = useListGebouwen();
   const gebouwen = Array.isArray(gebouwenData) ? gebouwenData : [];
+
+  useEffect(() => {
+    if (klantNaamHandmatig) return;
+    if (form.gebouw_id === "__geen__") {
+      setForm((f) => ({ ...f, klant_naam: "" }));
+      return;
+    }
+    const gebouw = gebouwen.find((g) => String(g.id) === form.gebouw_id);
+    if (!gebouw) return;
+    const partijen = (gebouw as any).partijen as { type: string; naam: string }[] | undefined;
+    const opdrachtgever = partijen?.find((p) => p.type === "opdrachtgever");
+    if (opdrachtgever) {
+      setForm((f) => ({ ...f, klant_naam: opdrachtgever.naam }));
+    }
+  }, [form.gebouw_id, gebouwen, klantNaamHandmatig]);
 
   const createMut = useCreateModCalculatie({
     mutation: {
@@ -131,12 +148,42 @@ export default function ModulesCalculatieNieuw() {
                   </SelectContent>
                 </Select>
               </div>
+              <div className="col-span-2 space-y-1.5">
+                <Label htmlFor="gebouw">Gekoppeld gebouw (optioneel)</Label>
+                <Select
+                  value={form.gebouw_id}
+                  onValueChange={(v) => {
+                    setKlantNaamHandmatig(false);
+                    setField("gebouw_id", v);
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecteer gebouw..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__geen__">Geen gebouw</SelectItem>
+                    {gebouwen.map((g) => (
+                      <SelectItem key={g.id} value={String(g.id)}>
+                        {g.naam} — {(g as any).stad ?? (g as any).adres}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
               <div className="space-y-1.5">
-                <Label htmlFor="klant_naam">Klantnaam</Label>
+                <Label htmlFor="klant_naam">
+                  Opdrachtgever
+                  {!klantNaamHandmatig && form.gebouw_id !== "__geen__" && form.klant_naam && (
+                    <span className="ml-1.5 text-xs text-muted-foreground">(uit gebouw)</span>
+                  )}
+                </Label>
                 <Input
                   id="klant_naam"
                   value={form.klant_naam}
-                  onChange={(e) => setField("klant_naam", e.target.value)}
+                  onChange={(e) => {
+                    setKlantNaamHandmatig(true);
+                    setField("klant_naam", e.target.value);
+                  }}
                   placeholder="Naam van de opdrachtgever"
                 />
               </div>
@@ -148,22 +195,6 @@ export default function ModulesCalculatieNieuw() {
                   onChange={(e) => setField("project_naam", e.target.value)}
                   placeholder="Bijv. Renovatie Kantoorpand Y"
                 />
-              </div>
-              <div className="col-span-2 space-y-1.5">
-                <Label htmlFor="gebouw">Gekoppeld gebouw (optioneel)</Label>
-                <Select value={form.gebouw_id} onValueChange={(v) => setField("gebouw_id", v)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecteer gebouw..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="__geen__">Geen gebouw</SelectItem>
-                    {gebouwen.map((g) => (
-                      <SelectItem key={g.id} value={String(g.id)}>
-                        {g.naam} — {g.stad ?? g.adres}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
               </div>
               <div className="col-span-2 space-y-1.5">
                 <Label htmlFor="omschrijving">Omschrijving</Label>
@@ -184,12 +215,13 @@ export default function ModulesCalculatieNieuw() {
             <CardTitle className="text-base">Opslagen</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-4 gap-4">
+            <div className="grid grid-cols-5 gap-4">
               {[
-                { field: "opslag_ak", label: "Alg. kosten (%)" },
+                { field: "opslag_ak",    label: "AK (%)" },
+                { field: "opslag_abk",   label: "ABK (%)" },
                 { field: "opslag_risico", label: "Risico (%)" },
                 { field: "opslag_winst", label: "Winst (%)" },
-                { field: "korting", label: "Korting (%)" },
+                { field: "korting",      label: "Korting (%)" },
               ].map(({ field, label }) => (
                 <div key={field} className="space-y-1.5">
                   <Label htmlFor={field}>{label}</Label>

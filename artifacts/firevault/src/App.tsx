@@ -89,6 +89,8 @@ import BerichtenPagina from "@/pages/berichten/index";
 import ModulesCalculatie from "@/pages/modules/calculatie/index";
 import ModulesCalculatieNieuw from "@/pages/modules/calculatie/nieuw";
 import ModulesCalculatieDetail from "@/pages/modules/calculatie/detail";
+import ModulesCalculatieLeveranciers from "@/pages/modules/calculatie/leveranciers";
+import ModulesCalculatiePrint from "@/pages/modules/calculatie/print";
 import ModulesPlanning from "@/pages/modules/planning/index";
 import ModulesPlanningMedewerkers from "@/pages/modules/planning/medewerkers";
 import ModulesPlanningAfwezigheid from "@/pages/modules/planning/afwezigheid";
@@ -169,6 +171,10 @@ function ConnectPortal() {
         <Route
           path="/modules/calculatie/nieuw"
           component={featureFlags.calculatie ? ModulesCalculatieNieuw : CalculatieNietBeschikbaar}
+        />
+        <Route
+          path="/modules/calculatie/leveranciers"
+          component={featureFlags.calculatie ? ModulesCalculatieLeveranciers : CalculatieNietBeschikbaar}
         />
         <Route
           path="/modules/calculatie/:id"
@@ -409,6 +415,7 @@ function Gate() {
     <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
       <Switch>
         <Route path="/gebouwen/:id/print" component={GebouwPrint} />
+        <Route path="/modules/calculatie/:id/print" component={ModulesCalculatiePrint} />
         <Route>
           <AchievementProvider>
             <Portalen />

@@ -34,8 +34,9 @@ import { Separator } from "@/components/ui/separator";
 import {
   ArrowLeft, Plus, Pencil, Trash2, Copy, ChevronRight, FileText,
   LayoutList, Users, Eye, Sparkles, Wrench, CheckCircle2, X,
+  Printer, History, Save,
 } from "lucide-react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, useQuery } from "@tanstack/react-query";
 
 const STATUS_LABEL: Record<string, string> = {
   concept: "Concept",
@@ -209,6 +210,32 @@ export default function ModulesCalculatieDetail() {
   const [aiPaneel, setAiPaneel] = useState(false);
   const [aiVoorstellen, setAiVoorstellen] = useState<RegelForm[]>([]);
   const [aiWaarschuwingen, setAiWaarschuwingen] = useState<string[]>([]);
+  const [versieDialoog, setVersieDialoog] = useState(false);
+  const [versieOpslaanDialoog, setVersieOpslaanDialoog] = useState(false);
+  const [versieLabel, setVersieLabel] = useState("");
+  const [versieOpslaanBezig, setVersieOpslaanBezig] = useState(false);
+
+  const { data: versieData, refetch: versiesHerladen } = useQuery<{ id: number; versienummer: number; label: string | null; aangemaakt_op: string }[]>({
+    queryKey: ["calc-versies", id],
+    queryFn: () => fetch(`/api/modules/calculaties/${id}/versies`).then((r) => r.json()),
+    enabled: versieDialoog,
+  });
+
+  async function handleVersieOpslaan() {
+    setVersieOpslaanBezig(true);
+    try {
+      await fetch(`/api/modules/calculaties/${id}/versie-opslaan`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ label: versieLabel.trim() || undefined }),
+      });
+      setVersieOpslaanDialoog(false);
+      setVersieLabel("");
+      versiesHerladen();
+    } finally {
+      setVersieOpslaanBezig(false);
+    }
+  }
 
   const aiMut = useAiModCalcRegels({
     mutation: {
@@ -417,6 +444,21 @@ export default function ModulesCalculatieDetail() {
           <Button variant="outline" size="sm" onClick={() => dupliceerMut.mutate({ id })}>
             <Copy className="h-3.5 w-3.5 mr-1.5" />
             Dupliceren
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => setVersieOpslaanDialoog(true)}>
+            <Save className="h-3.5 w-3.5 mr-1.5" />
+            Versie opslaan
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => setVersieDialoog(true)}>
+            <History className="h-3.5 w-3.5 mr-1.5" />
+            Versies
+          </Button>
+          <Button
+            variant="outline" size="sm"
+            onClick={() => window.open(`/modules/calculatie/${id}/print`, "_blank")}
+          >
+            <Printer className="h-3.5 w-3.5 mr-1.5" />
+            Afdrukken
           </Button>
           <Button
             variant="outline" size="sm"
@@ -1029,6 +1071,78 @@ export default function ModulesCalculatieDetail() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* ── Versie opslaan dialoog ── */}
+      <Dialog open={versieOpslaanDialoog} onOpenChange={(o) => !o && setVersieOpslaanDialoog(false)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Versie opslaan</DialogTitle>
+          </DialogHeader>
+          <div className="py-2 space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Sla de huidige staat van de calculatie op als versie. U kunt later versies vergelijken.
+            </p>
+            <div className="space-y-1.5">
+              <Label>Label (optioneel)</Label>
+              <Input
+                value={versieLabel}
+                onChange={(e) => setVersieLabel(e.target.value)}
+                placeholder="Bijv. Versie na klantoverleg"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setVersieOpslaanDialoog(false)}>Annuleren</Button>
+            <Button onClick={handleVersieOpslaan} disabled={versieOpslaanBezig}>
+              <Save className="h-4 w-4 mr-1.5" />
+              {versieOpslaanBezig ? "Opslaan..." : "Opslaan als versie"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Versiegeschiedenis dialoog ── */}
+      <Dialog open={versieDialoog} onOpenChange={setVersieDialoog}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Versiegeschiedenis</DialogTitle>
+          </DialogHeader>
+          <div className="py-2">
+            {!versieData || versieData.length === 0 ? (
+              <div className="text-center text-sm text-muted-foreground py-8">
+                Nog geen versies opgeslagen. Klik op "Versie opslaan" om de huidige staat vast te leggen.
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {versieData.map((v) => (
+                  <div key={v.id} className="flex items-center justify-between p-3 rounded-lg border bg-slate-50">
+                    <div>
+                      <p className="font-medium text-sm">{v.label ?? `Versie ${v.versienummer}`}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {new Date(v.aangemaakt_op).toLocaleString("nl-NL", {
+                          day: "2-digit", month: "2-digit", year: "numeric",
+                          hour: "2-digit", minute: "2-digit",
+                        })}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-xs text-muted-foreground bg-white border rounded px-2 py-0.5">
+                        v{v.versienummer}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div className="mt-4 pt-3 border-t">
+              <Button size="sm" onClick={() => { setVersieDialoog(false); setVersieOpslaanDialoog(true); }}>
+                <Save className="h-3.5 w-3.5 mr-1.5" />
+                Nieuwe versie opslaan
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

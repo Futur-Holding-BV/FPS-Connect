@@ -7,12 +7,16 @@ import {
   modCalcRegelsTable,
   modCalcTarievenTable,
   modCalcNormtijdenTable,
+  modCalcLeveranciersTable,
+  modCalcArtekelenTable,
+  modCalcVersiesTable,
   gebouwenTable,
   gebruikersTable,
+  voorzieningenTable,
   offertesTable,
   offerteRegelsTable,
 } from "@workspace/db";
-import { eq, desc, asc, ilike, or } from "drizzle-orm";
+import { eq, desc, asc, ilike, or, count, sql } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
 import { heeftOpenAi, maakOpenAiClient } from "../lib/openai";
 
@@ -569,19 +573,36 @@ router.post("/modules/calculaties/:id/ai-regels", lezenCalc, async (req, res) =>
     const [header] = await db.select().from(modCalcHeadersTable).where(eq(modCalcHeadersTable.id, id));
     if (!header) return res.status(404).json({ error: "Calculatie niet gevonden" });
 
-    const bestaandeRegels = await db.select().from(modCalcRegelsTable)
-      .where(eq(modCalcRegelsTable.calculatieId, id))
-      .orderBy(asc(modCalcRegelsTable.volgorde));
+    const [bestaandeRegels, normtijden, tarieven] = await Promise.all([
+      db.select().from(modCalcRegelsTable).where(eq(modCalcRegelsTable.calculatieId, id)).orderBy(asc(modCalcRegelsTable.volgorde)),
+      db.select().from(modCalcNormtijdenTable).where(eq(modCalcNormtijdenTable.actief, true)).limit(40),
+      db.select().from(modCalcTarievenTable).where(eq(modCalcTarievenTable.actief, true)).orderBy(asc(modCalcTarievenTable.categorie), asc(modCalcTarievenTable.naam)),
+    ]);
 
     let gebouwInfo = "";
+    let spotenInfo = "";
     if (header.gebouwId) {
-      const [g] = await db.select().from(gebouwenTable).where(eq(gebouwenTable.id, header.gebouwId));
-      if (g) gebouwInfo = `Gebouw: ${g.naam}, ${g.adres ?? ""} ${g.stad ?? ""}. Bouwjaar: ${(g as any).bouwjaar ?? "onbekend"}. Type: ${(g as any).gebouwType ?? "onbekend"}.`;
+      const [[g], spotRows] = await Promise.all([
+        db.select().from(gebouwenTable).where(eq(gebouwenTable.id, header.gebouwId)).limit(1),
+        db.select({ type: voorzieningenTable.type, aantal: count() })
+          .from(voorzieningenTable)
+          .where(eq(voorzieningenTable.gebouwId, header.gebouwId))
+          .groupBy(voorzieningenTable.type),
+      ]);
+      if (g) gebouwInfo = `Gebouw: ${g.naam}, ${(g as any).adres ?? ""} ${(g as any).stad ?? ""}. Bouwjaar: ${(g as any).bouwjaar ?? "onbekend"}. Type: ${(g as any).gebouwType ?? "onbekend"}.`;
+      if (spotRows.length > 0) {
+        spotenInfo = "Aanwezige spots (werkelijke aantallen uit de database):\n" +
+          spotRows.map((s) => `- ${s.type}: ${s.aantal} stuks`).join("\n");
+      }
     }
 
-    const normtijden = await db.select().from(modCalcNormtijdenTable).where(eq(modCalcNormtijdenTable.actief, true)).limit(30);
     const normtijdLijst = normtijden.map((n) => `${n.code}: ${n.omschrijving} (${n.urenPerEenheid} uur/${n.eenheid})`).join("\n");
 
+    const tarievenLijst = tarieven.length > 0
+      ? tarieven.map((t) => `[${t.categorie}] ${t.naam}: €${t.tarief}/${t.eenheid}`).join("\n")
+      : "(geen tarieven geconfigureerd — schat op basis van marktprijzen)";
+
+    const standaardArbeidstarief = tarieven.find((t) => t.categorie === "arbeid")?.tarief ?? 65;
     const bestaandeLijst = bestaandeRegels.length > 0
       ? bestaandeRegels.map((r) => `- ${(r as any).hoofdstuk ?? "Overige"} | ${r.categorie} | ${r.omschrijving} | ${r.hoeveelheid} ${r.eenheid}`).join("\n")
       : "(geen)";
@@ -592,15 +613,20 @@ router.post("/modules/calculaties/:id/ai-regels", lezenCalc, async (req, res) =>
     const prompt = `Je bent een calculatie-expert brandpreventie voor het Nederlandse bedrijf FPS Brandpreventie.
 ${gebouwInfo}
 Project: ${header.naam}${header.projectNaam ? ` (${header.projectNaam})` : ""}${header.omschrijving ? `\nOmschrijving: ${header.omschrijving}` : ""}
-
-Beschikbare normtijden (selecteer er max 3):
+${spotenInfo ? `\n${spotenInfo}` : ""}
+Beschikbare normtijden (gebruik de exacte code als normtijd_code, max 3 selecteren):
 ${normtijdLijst || "(geen normtijden beschikbaar)"}
+
+Beschikbare tarieven uit de database (gebruik deze prijzen in de calculatie):
+${tarievenLijst}
 
 Al aanwezige regels (voeg geen duplicaten toe):
 ${bestaandeLijst}
 
-Geef 6-12 concrete calculatieregels als JSON. Groepeer per brandpreventief onderdeel.
-Gebruik exacte veldnamen. Geef ook max 3 korte waarschuwingen als er ontbrekende posten, lage hoeveelheden of risico's zijn.
+Geef 6-12 concrete calculatieregels als JSON. Gebruik de aanwezige spotaantallen als basis voor hoeveelheden.
+Gebruik de beschikbare tarieven voor materiaal (tarief) en arbeid (arbeids_tarief). 
+Vul hoeveelheden realistisch in op basis van de spotdata.
+Geef ook max 3 korte waarschuwingen bij ontbrekende posten, lage hoeveelheden of risico's.
 
 JSON formaat (ALLEEN dit object teruggeven, geen uitleg):
 {
@@ -613,7 +639,7 @@ JSON formaat (ALLEEN dit object teruggeven, geen uitleg):
       "hoeveelheid": 10,
       "tarief": 0,
       "mu_per_eenheid": 0.5,
-      "arbeids_tarief": 65,
+      "arbeids_tarief": ${standaardArbeidstarief},
       "onderaanneming_bedrag": 0,
       "is_staartkosten": false,
       "klanttekst": "Tekst voor in de offerte"
@@ -743,6 +769,363 @@ router.post("/modules/calculaties/:id/maak-offerte", schrijvenCalc, async (req, 
   } catch (e) {
     req.log.error(e);
     res.status(500).json({ error: "Interne fout" });
+  }
+});
+
+// ── Versie opslaan ────────────────────────────────────────────────────────
+router.post("/modules/calculaties/:id/versie-opslaan", schrijvenCalc, async (req, res) => {
+  try {
+    const id = parseId(req.params["id"]);
+    const [header] = await db.select().from(modCalcHeadersTable).where(eq(modCalcHeadersTable.id, id));
+    if (!header) return res.status(404).json({ error: "Calculatie niet gevonden" });
+
+    const regels = await db.select().from(modCalcRegelsTable)
+      .where(eq(modCalcRegelsTable.calculatieId, id))
+      .orderBy(asc(modCalcRegelsTable.volgorde));
+
+    const [bestaandeVersies] = await db.select({ max: sql<number>`coalesce(max(versienummer),0)` })
+      .from(modCalcVersiesTable)
+      .where(eq(modCalcVersiesTable.calculatieId, id));
+
+    const volgendNummer = (bestaandeVersies?.max ?? 0) + 1;
+    const label = (req.body as Record<string, unknown>).label as string | undefined;
+
+    const snapshot = {
+      header: {
+        naam: header.naam, referentie: header.referentie, klantNaam: header.klantNaam,
+        projectNaam: header.projectNaam, status: header.status, omschrijving: header.omschrijving,
+        opslagAk: header.opslagAk, opslagAbk: header.opslagAbk, opslagRisico: header.opslagRisico,
+        opslagWinst: header.opslagWinst, korting: header.korting,
+      },
+      regels: regels.map((r) => ({
+        categorie: r.categorie, omschrijving: r.omschrijving, eenheid: r.eenheid,
+        hoeveelheid: r.hoeveelheid, tarief: r.tarief, muPerEenheid: r.muPerEenheid,
+        arbeidsTarief: r.arbeidsTarief, onderaannemingBedrag: r.onderaannemingBedrag,
+        totaal: r.totaal, isStaartkosten: r.isStaartkosten, hoofdstuk: r.hoofdstuk,
+      })),
+    };
+
+    const [versie] = await db.insert(modCalcVersiesTable).values({
+      calculatieId: id,
+      versienummer: volgendNummer,
+      label: label ?? `Versie ${volgendNummer}`,
+      snapshot: snapshot as Record<string, unknown>,
+      aangemaaktDoorId: req.session.userId ?? null,
+    }).returning();
+
+    res.status(201).json({
+      id: versie.id,
+      versienummer: versie.versienummer,
+      label: versie.label,
+      aangemaakt_op: iso(versie.aangemaaktOp),
+    });
+  } catch (e) {
+    req.log.error(e);
+    res.status(500).json({ error: "Interne fout" });
+  }
+});
+
+router.get("/modules/calculaties/:id/versies", lezenCalc, async (req, res) => {
+  try {
+    const id = parseId(req.params["id"]);
+    const rows = await db.select({
+      id: modCalcVersiesTable.id,
+      versienummer: modCalcVersiesTable.versienummer,
+      label: modCalcVersiesTable.label,
+      aangemaaktOp: modCalcVersiesTable.aangemaaktOp,
+      aangemaaktDoorId: modCalcVersiesTable.aangemaaktDoorId,
+    }).from(modCalcVersiesTable)
+      .where(eq(modCalcVersiesTable.calculatieId, id))
+      .orderBy(desc(modCalcVersiesTable.versienummer));
+
+    res.json(rows.map((v) => ({
+      id: v.id,
+      versienummer: v.versienummer,
+      label: v.label,
+      aangemaakt_op: iso(v.aangemaaktOp),
+    })));
+  } catch (e) {
+    req.log.error(e);
+    res.status(500).json({ error: "Interne fout" });
+  }
+});
+
+router.get("/modules/calculaties/:id/versies/:versieId", lezenCalc, async (req, res) => {
+  try {
+    const versieId = parseId(req.params["versieId"]);
+    const [v] = await db.select().from(modCalcVersiesTable).where(eq(modCalcVersiesTable.id, versieId));
+    if (!v) return res.status(404).json({ error: "Versie niet gevonden" });
+    res.json({
+      id: v.id,
+      versienummer: v.versienummer,
+      label: v.label,
+      snapshot: v.snapshot,
+      aangemaakt_op: iso(v.aangemaaktOp),
+    });
+  } catch (e) {
+    req.log.error(e);
+    res.status(500).json({ error: "Interne fout" });
+  }
+});
+
+// ── Print-data endpoint ────────────────────────────────────────────────────
+router.get("/modules/calculaties/:id/print-data", lezenCalc, async (req, res) => {
+  try {
+    const id = parseId(req.params["id"]);
+    const [header] = await db.select().from(modCalcHeadersTable).where(eq(modCalcHeadersTable.id, id));
+    if (!header) return res.status(404).json({ error: "Calculatie niet gevonden" });
+
+    const regels = await db.select().from(modCalcRegelsTable)
+      .where(eq(modCalcRegelsTable.calculatieId, id))
+      .orderBy(asc(modCalcRegelsTable.volgorde));
+
+    let gebouwNaam: string | null = null;
+    if (header.gebouwId) {
+      const [g] = await db.select({ naam: gebouwenTable.naam }).from(gebouwenTable).where(eq(gebouwenTable.id, header.gebouwId));
+      gebouwNaam = g?.naam ?? null;
+    }
+
+    const subtotaal = regels.filter((r) => !r.isStaartkosten).reduce((s, r) => s + (r.totaal ?? 0), 0);
+    const staarttotaal = regels.filter((r) => r.isStaartkosten).reduce((s, r) => s + (r.totaal ?? 0), 0);
+    const opslagAbk = header.opslagAbk ?? 10;
+    const akBedrag = Math.round(subtotaal * (header.opslagAk / 100) * 100) / 100;
+    const abkBedrag = Math.round(subtotaal * (opslagAbk / 100) * 100) / 100;
+    const risicoBedrag = Math.round(subtotaal * (header.opslagRisico / 100) * 100) / 100;
+    const winstBedrag = Math.round(subtotaal * (header.opslagWinst / 100) * 100) / 100;
+    const voorKorting = subtotaal + staarttotaal + akBedrag + abkBedrag + risicoBedrag + winstBedrag;
+    const kortingBedrag = Math.round(voorKorting * (header.korting / 100) * 100) / 100;
+    const eindtotaal = voorKorting - kortingBedrag;
+
+    res.json({
+      header: {
+        id: header.id, naam: header.naam, referentie: header.referentie,
+        klant_naam: header.klantNaam, project_naam: header.projectNaam,
+        status: header.status, omschrijving: header.omschrijving,
+        opslag_ak: header.opslagAk, opslag_abk: opslagAbk,
+        opslag_risico: header.opslagRisico, opslag_winst: header.opslagWinst,
+        korting: header.korting, gebouw_naam: gebouwNaam,
+        aangemaakt_op: iso(header.aangemaaktOp),
+      },
+      regels: regels.map((r) => ({
+        id: r.id, categorie: r.categorie, omschrijving: r.omschrijving,
+        eenheid: r.eenheid, hoeveelheid: r.hoeveelheid, tarief: r.tarief,
+        mu_per_eenheid: r.muPerEenheid, arbeids_tarief: r.arbeidsTarief,
+        onderaanneming_bedrag: r.onderaannemingBedrag, totaal: r.totaal,
+        is_staartkosten: r.isStaartkosten, hoofdstuk: r.hoofdstuk,
+        regelnummer: r.regelnummer,
+      })),
+      totalen: {
+        subtotaal, staarttotaal, ak_bedrag: akBedrag, abk_bedrag: abkBedrag,
+        risico_bedrag: risicoBedrag, winst_bedrag: winstBedrag,
+        korting_bedrag: kortingBedrag, eindtotaal,
+        excl_btw: eindtotaal, incl_btw: Math.round(eindtotaal * 1.21 * 100) / 100,
+      },
+    });
+  } catch (e) {
+    req.log.error(e);
+    res.status(500).json({ error: "Interne fout" });
+  }
+});
+
+// ── Leveranciers ──────────────────────────────────────────────────────────
+router.get("/modules/calculaties/leveranciers", lezenCalc, async (req, res) => {
+  try {
+    const rows = await db.select().from(modCalcLeveranciersTable).orderBy(asc(modCalcLeveranciersTable.naam));
+    res.json(rows.map((r) => ({
+      id: r.id, naam: r.naam, contactpersoon: r.contactpersoon, email: r.email,
+      telefoon: r.telefoon, website: r.website, notities: r.notities, actief: r.actief,
+    })));
+  } catch (e) {
+    req.log.error(e);
+    res.status(500).json({ error: "Interne fout" });
+  }
+});
+
+router.post("/modules/calculaties/leveranciers", schrijvenCalc, async (req, res) => {
+  try {
+    const body = req.body as Record<string, unknown>;
+    if (!body.naam) return res.status(400).json({ error: "naam is verplicht" });
+    const [row] = await db.insert(modCalcLeveranciersTable).values({
+      naam: String(body.naam),
+      contactpersoon: body.contactpersoon ? String(body.contactpersoon) : null,
+      email: body.email ? String(body.email) : null,
+      telefoon: body.telefoon ? String(body.telefoon) : null,
+      website: body.website ? String(body.website) : null,
+      notities: body.notities ? String(body.notities) : null,
+    }).returning();
+    res.status(201).json({ id: row.id, naam: row.naam, contactpersoon: row.contactpersoon, email: row.email, telefoon: row.telefoon, website: row.website, notities: row.notities, actief: row.actief });
+  } catch (e) {
+    req.log.error(e);
+    res.status(500).json({ error: "Interne fout" });
+  }
+});
+
+router.patch("/modules/calculaties/leveranciers/:id", schrijvenCalc, async (req, res) => {
+  try {
+    const id = parseId(req.params["id"]);
+    const body = req.body as Record<string, unknown>;
+    const update: Partial<typeof modCalcLeveranciersTable.$inferInsert> = { bijgewerktOp: new Date() };
+    if (body.naam !== undefined) update.naam = String(body.naam);
+    if (body.contactpersoon !== undefined) update.contactpersoon = body.contactpersoon ? String(body.contactpersoon) : null;
+    if (body.email !== undefined) update.email = body.email ? String(body.email) : null;
+    if (body.telefoon !== undefined) update.telefoon = body.telefoon ? String(body.telefoon) : null;
+    if (body.website !== undefined) update.website = body.website ? String(body.website) : null;
+    if (body.notities !== undefined) update.notities = body.notities ? String(body.notities) : null;
+    if (body.actief !== undefined) update.actief = Boolean(body.actief);
+    const [row] = await db.update(modCalcLeveranciersTable).set(update).where(eq(modCalcLeveranciersTable.id, id)).returning();
+    if (!row) return res.status(404).json({ error: "Niet gevonden" });
+    res.json({ id: row.id, naam: row.naam, contactpersoon: row.contactpersoon, email: row.email, telefoon: row.telefoon, website: row.website, notities: row.notities, actief: row.actief });
+  } catch (e) {
+    req.log.error(e);
+    res.status(500).json({ error: "Interne fout" });
+  }
+});
+
+router.delete("/modules/calculaties/leveranciers/:id", verwijderenCalc, async (req, res) => {
+  try {
+    const id = parseId(req.params["id"]);
+    await db.delete(modCalcLeveranciersTable).where(eq(modCalcLeveranciersTable.id, id));
+    res.status(204).end();
+  } catch (e) {
+    req.log.error(e);
+    res.status(500).json({ error: "Interne fout" });
+  }
+});
+
+// ── Artikelen ─────────────────────────────────────────────────────────────
+router.get("/modules/calculaties/artikelen", lezenCalc, async (req, res) => {
+  try {
+    const zoek = typeof req.query["zoek"] === "string" ? req.query["zoek"].trim() : "";
+    const leverancierId = typeof req.query["leverancier_id"] === "string" ? parseInt(req.query["leverancier_id"], 10) : null;
+
+    let query = db.select({
+      id: modCalcArtekelenTable.id,
+      leverancier_id: modCalcArtekelenTable.leverancierId,
+      leverancier_naam: modCalcLeveranciersTable.naam,
+      artikelcode: modCalcArtekelenTable.artikelcode,
+      omschrijving: modCalcArtekelenTable.omschrijving,
+      eenheid: modCalcArtekelenTable.eenheid,
+      inkoopprijs: modCalcArtekelenTable.inkoopprijs,
+      verkoopprijs: modCalcArtekelenTable.verkoopprijs,
+      categorie: modCalcArtekelenTable.categorie,
+      actief: modCalcArtekelenTable.actief,
+    }).from(modCalcArtekelenTable)
+      .leftJoin(modCalcLeveranciersTable, eq(modCalcArtekelenTable.leverancierId, modCalcLeveranciersTable.id))
+      .$dynamic();
+
+    const filters = [eq(modCalcArtekelenTable.actief, true)];
+    if (zoek) filters.push(ilike(modCalcArtekelenTable.omschrijving, `%${zoek}%`));
+    if (leverancierId && !isNaN(leverancierId)) filters.push(eq(modCalcArtekelenTable.leverancierId, leverancierId));
+    if (filters.length > 0) {
+      query = query.where(filters.length === 1 ? filters[0]! : sql`${filters[0]} AND ${filters[1]}`) as typeof query;
+    }
+
+    const rows = await query.orderBy(asc(modCalcArtekelenTable.omschrijving)).limit(200);
+    res.json(rows);
+  } catch (e) {
+    req.log.error(e);
+    res.status(500).json({ error: "Interne fout" });
+  }
+});
+
+router.post("/modules/calculaties/artikelen", schrijvenCalc, async (req, res) => {
+  try {
+    const body = req.body as Record<string, unknown>;
+    if (!body.omschrijving) return res.status(400).json({ error: "omschrijving is verplicht" });
+    const [row] = await db.insert(modCalcArtekelenTable).values({
+      leverancierId: body.leverancier_id ? Number(body.leverancier_id) : null,
+      artikelcode: body.artikelcode ? String(body.artikelcode) : null,
+      omschrijving: String(body.omschrijving),
+      eenheid: body.eenheid ? String(body.eenheid) : "st",
+      inkoopprijs: Number(body.inkoopprijs ?? 0),
+      verkoopprijs: Number(body.verkoopprijs ?? 0),
+      categorie: body.categorie ? String(body.categorie) : "materiaal",
+    }).returning();
+    res.status(201).json({ id: row.id, leverancier_id: row.leverancierId, artikelcode: row.artikelcode, omschrijving: row.omschrijving, eenheid: row.eenheid, inkoopprijs: row.inkoopprijs, verkoopprijs: row.verkoopprijs, categorie: row.categorie, actief: row.actief });
+  } catch (e) {
+    req.log.error(e);
+    res.status(500).json({ error: "Interne fout" });
+  }
+});
+
+router.patch("/modules/calculaties/artikelen/:id", schrijvenCalc, async (req, res) => {
+  try {
+    const id = parseId(req.params["id"]);
+    const body = req.body as Record<string, unknown>;
+    const update: Partial<typeof modCalcArtekelenTable.$inferInsert> = { bijgewerktOp: new Date() };
+    if (body.leverancier_id !== undefined) update.leverancierId = body.leverancier_id ? Number(body.leverancier_id) : null;
+    if (body.artikelcode !== undefined) update.artikelcode = body.artikelcode ? String(body.artikelcode) : null;
+    if (body.omschrijving !== undefined) update.omschrijving = String(body.omschrijving);
+    if (body.eenheid !== undefined) update.eenheid = String(body.eenheid);
+    if (body.inkoopprijs !== undefined) update.inkoopprijs = Number(body.inkoopprijs);
+    if (body.verkoopprijs !== undefined) update.verkoopprijs = Number(body.verkoopprijs);
+    if (body.categorie !== undefined) update.categorie = String(body.categorie);
+    if (body.actief !== undefined) update.actief = Boolean(body.actief);
+    const [row] = await db.update(modCalcArtekelenTable).set(update).where(eq(modCalcArtekelenTable.id, id)).returning();
+    if (!row) return res.status(404).json({ error: "Niet gevonden" });
+    res.json({ id: row.id, leverancier_id: row.leverancierId, artikelcode: row.artikelcode, omschrijving: row.omschrijving, eenheid: row.eenheid, inkoopprijs: row.inkoopprijs, verkoopprijs: row.verkoopprijs, categorie: row.categorie, actief: row.actief });
+  } catch (e) {
+    req.log.error(e);
+    res.status(500).json({ error: "Interne fout" });
+  }
+});
+
+router.delete("/modules/calculaties/artikelen/:id", verwijderenCalc, async (req, res) => {
+  try {
+    const id = parseId(req.params["id"]);
+    await db.delete(modCalcArtekelenTable).where(eq(modCalcArtekelenTable.id, id));
+    res.status(204).end();
+  } catch (e) {
+    req.log.error(e);
+    res.status(500).json({ error: "Interne fout" });
+  }
+});
+
+// ── CSV import artikelen ───────────────────────────────────────────────────
+// Verwacht CSV: artikelcode;omschrijving;eenheid;inkoopprijs;verkoopprijs;categorie;leverancier_naam
+router.post("/modules/calculaties/artikelen/import-csv", schrijvenCalc, async (req, res) => {
+  try {
+    const body = req.body as Record<string, unknown>;
+    const csv = typeof body.csv === "string" ? body.csv : "";
+    if (!csv.trim()) return res.status(400).json({ error: "Geen CSV-data ontvangen" });
+
+    const regels = csv.split(/\r?\n/).map((r) => r.trim()).filter((r) => r && !r.startsWith("artikelcode"));
+    let aangemaakt = 0;
+    let fouten: string[] = [];
+
+    for (const regel of regels) {
+      const delen = regel.split(";");
+      const [artikelcode, omschrijving, eenheid, inkoopRaw, verkoopRaw, categorie, leverancierNaam] = delen;
+      if (!omschrijving?.trim()) { fouten.push(`Lege omschrijving op rij: ${regel}`); continue; }
+
+      let leverancierId: number | null = null;
+      if (leverancierNaam?.trim()) {
+        const [bestaande] = await db.select({ id: modCalcLeveranciersTable.id }).from(modCalcLeveranciersTable)
+          .where(ilike(modCalcLeveranciersTable.naam, leverancierNaam.trim())).limit(1);
+        if (bestaande) {
+          leverancierId = bestaande.id;
+        } else {
+          const [nieuw] = await db.insert(modCalcLeveranciersTable).values({ naam: leverancierNaam.trim() }).returning();
+          leverancierId = nieuw.id;
+        }
+      }
+
+      await db.insert(modCalcArtekelenTable).values({
+        artikelcode: artikelcode?.trim() || null,
+        omschrijving: omschrijving.trim(),
+        eenheid: eenheid?.trim() || "st",
+        inkoopprijs: parseFloat((inkoopRaw ?? "0").replace(",", ".")) || 0,
+        verkoopprijs: parseFloat((verkoopRaw ?? "0").replace(",", ".")) || 0,
+        categorie: categorie?.trim() || "materiaal",
+        leverancierId,
+      });
+      aangemaakt++;
+    }
+
+    res.json({ aangemaakt, fouten });
+  } catch (e) {
+    req.log.error(e);
+    res.status(500).json({ error: "Import mislukt" });
   }
 });
 
