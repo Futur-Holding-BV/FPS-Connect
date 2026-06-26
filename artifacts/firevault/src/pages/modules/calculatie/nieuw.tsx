@@ -34,7 +34,8 @@ export default function ModulesCalculatieNieuw() {
     korting: 0,
   });
 
-  const { data: gebouwen = [] } = useListGebouwen({}, { query: { queryKey: ["gebouwen-calc"] } });
+  const { data: gebouwenData } = useListGebouwen();
+  const gebouwen = Array.isArray(gebouwenData) ? gebouwenData : [];
 
   const createMut = useCreateModCalculatie({
     mutation: {
