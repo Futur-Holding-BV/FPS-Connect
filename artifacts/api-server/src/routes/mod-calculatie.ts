@@ -302,7 +302,7 @@ router.post("/modules/calculaties", aanmakenCalc, async (req, res) => {
       opslagRisico: Number(opslag_risico),
       opslagWinst: Number(opslag_winst),
       korting: Number(korting),
-      aangemaaktDoorId: (req as any).session?.gebruikerId ?? null,
+      aangemaaktDoorId: req.session.userId ?? null,
     } as typeof modCalcHeadersTable.$inferInsert).returning();
 
     res.status(201).json(mapHeader(row, { subtotaal: 0, totaalNaOpslagen: 0 }));
@@ -418,7 +418,7 @@ router.post("/modules/calculaties/:id/dupliceer", aanmakenCalc, async (req, res)
       opslagRisico: original.opslagRisico,
       opslagWinst: original.opslagWinst,
       korting: original.korting,
-      aangemaaktDoorId: (req as any).session?.gebruikerId ?? null,
+      aangemaaktDoorId: req.session.userId ?? null,
     } as typeof modCalcHeadersTable.$inferInsert).returning();
 
     const origRegels = await db.select().from(modCalcRegelsTable)

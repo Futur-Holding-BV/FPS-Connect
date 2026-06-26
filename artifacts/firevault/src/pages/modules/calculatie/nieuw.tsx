@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useLocation } from "wouter";
 import { useCreateModCalculatie } from "@workspace/api-client-react";
 import { useListGebouwen } from "@workspace/api-client-react";
+import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,6 +17,7 @@ import { useQueryClient } from "@tanstack/react-query";
 export default function ModulesCalculatieNieuw() {
   const [, navigate] = useLocation();
   const queryClient = useQueryClient();
+  const { toast } = useToast();
 
   const [form, setForm] = useState({
     naam: "",
@@ -39,6 +41,13 @@ export default function ModulesCalculatieNieuw() {
       onSuccess: (data) => {
         queryClient.invalidateQueries({ queryKey: ["mod-calculaties"] });
         navigate(`/modules/calculatie/${data.id}`);
+      },
+      onError: () => {
+        toast({
+          title: "Fout bij aanmaken",
+          description: "De calculatie kon niet worden aangemaakt. Probeer het opnieuw.",
+          variant: "destructive",
+        });
       },
     },
   });
