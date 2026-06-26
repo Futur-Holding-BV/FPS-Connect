@@ -11,7 +11,7 @@ export const werkInboxTokensTable = pgTable("werk_inbox_tokens", {
   accessTokenEnc:  text("access_token_enc").notNull(),
   refreshTokenEnc: text("refresh_token_enc").notNull(),
   verlooptOp:      timestamp("verloopt_op").notNull(),
-  scope:           text("scope").notNull().default("Mail.Read Mail.ReadShared offline_access"),
+  scope:           text("scope").notNull().default("Mail.Read offline_access"),
   aangemaaktOp:    timestamp("aangemaakt_op").notNull().defaultNow(),
   bijgewerktOp:    timestamp("bijgewerkt_op").notNull().defaultNow(),
 }, (t) => [

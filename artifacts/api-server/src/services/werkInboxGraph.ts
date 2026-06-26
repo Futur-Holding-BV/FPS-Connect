@@ -18,7 +18,7 @@ const TENANT_ID  = process.env["AZURE_TENANT_ID"];
 const CLIENT_ID  = process.env["AZURE_CLIENT_ID_NEW"];
 const CLIENT_SECRET = process.env["AZURE_CLIENT_SECRET"];
 
-export const DELEGATED_SCOPES = "Mail.Read Mail.ReadShared offline_access User.Read";
+export const DELEGATED_SCOPES = "Mail.Read offline_access User.Read";
 
 const SESSION_SECRET = process.env["SESSION_SECRET"] ?? "fps-default-secret-change-me";
 
