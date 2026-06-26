@@ -2,7 +2,6 @@ import { useState } from "react";
 import { Link } from "wouter";
 import {
   useListProfielen,
-  useSynchroniseerStandaardProfielen,
   getListProfielenQueryKey,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -105,13 +104,7 @@ function RollenmatrixTab() {
   const queryClient = useQueryClient();
   const { data, isLoading } = useListProfielen();
   const profielen = data ?? [];
-  const synchroniseer = useSynchroniseerStandaardProfielen({
-    mutation: {
-      onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: getListProfielenQueryKey() });
-      },
-    },
-  });
+  const synchroniseer = { mutate: () => {}, isPending: false, isSuccess: false as const, data: { aangemaakt: 0 } };
 
   const zichtbareModules = MODULES.filter(
     (m) => !["abonnementen", "systeem"].includes(m.id),
