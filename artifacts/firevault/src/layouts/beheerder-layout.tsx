@@ -844,8 +844,15 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
         </SidebarFooter>
       </Sidebar>
 
-      <main className="flex-1 min-h-screen overflow-auto bg-background p-3 md:p-4 xl:p-6">
-        {children}
+      <main className="flex-1 min-h-screen overflow-auto bg-background">
+        {/* Mobiele topbalk — alleen zichtbaar onder md, geeft toegang tot het menu */}
+        <div className="sticky top-0 z-10 flex items-center gap-3 px-3 py-2 bg-background border-b border-border md:hidden">
+          <SidebarTrigger title="Menu openen" />
+          <img src="/logo-fps-connect.png" alt="FPS Connect" className="h-6 w-auto" />
+        </div>
+        <div className="p-3 md:p-4 xl:p-6">
+          {children}
+        </div>
       </main>
     </SidebarProvider>
   );

@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import {
   SidebarProvider, Sidebar, SidebarHeader, SidebarContent, SidebarFooter,
   SidebarGroup, SidebarGroupLabel, SidebarGroupContent,
-  SidebarMenu, SidebarMenuItem, SidebarMenuButton,
+  SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { ShieldCheck, Home, Wrench, Search, Building, Map, Info } from "lucide-react";
 import { useRol } from "@/context/rol-context";
@@ -76,8 +76,14 @@ export default function MonteurLayout({ children }: { children: React.ReactNode 
         </SidebarFooter>
       </Sidebar>
 
-      <main className="flex-1 min-h-screen overflow-auto bg-background p-3 md:p-4 xl:p-6">
-        {children}
+      <main className="flex-1 min-h-screen overflow-auto bg-background">
+        <div className="sticky top-0 z-10 flex items-center gap-3 px-3 py-2 bg-background border-b border-border md:hidden">
+          <SidebarTrigger title="Menu openen" />
+          <img src="/logo-fps-connect.png" alt="FPS Connect" className="h-6 w-auto" />
+        </div>
+        <div className="p-3 md:p-4 xl:p-6">
+          {children}
+        </div>
       </main>
     </SidebarProvider>
   );
