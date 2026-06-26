@@ -40,7 +40,7 @@ function berekenNettoUren(begin: string, eind: string, pauzeMin: number): number
   const [bH, bM] = begin.split(":").map(Number);
   const [eH, eM] = eind.split(":").map(Number);
   const totMin = (eH * 60 + eM) - (bH * 60 + bM);
-  return Math.max(0, Math.round((totMin - pauzeMin) * 10) / 10) / 10;
+  return Math.max(0, Math.round(((totMin - pauzeMin) / 60) * 10) / 10);
 }
 
 const ADV_FACTOR = 2 / 40;

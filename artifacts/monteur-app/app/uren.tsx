@@ -228,7 +228,7 @@ function UrenFormulier({ datum, bestaand, planningItem, planningItemsVanWeek = [
   const startPauze = bestaand?.pauze_minuten ?? 30;
 
   const [urenType, setUrenType] = useState<"project" | "intern">(startType);
-  const [begin, setBegin] = useState(bestaand?.begin_tijd ?? planningItem?.tijd_start ?? planningItem?.begin_tijd ?? "07:00");
+  const [begin, setBegin] = useState(bestaand?.begin_tijd ?? planningItem?.tijd_start ?? planningItem?.begin_tijd ?? "07:30");
   const [eind, setEind] = useState(bestaand?.eind_tijd ?? planningItem?.tijd_eind ?? planningItem?.eind_tijd ?? "16:00");
   const [gebouwId, setGebouwId] = useState<number | null>(startGebouwId);
   const [project, setProject] = useState(startProject);
