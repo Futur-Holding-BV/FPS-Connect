@@ -6,13 +6,11 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface PortaalOfferteSectiesItem {
-  id: number;
-  sectie_type: string;
+export interface SpotStatusConfiguratie {
+  status_code: string;
+  weergave_naam: string;
   volgorde: number;
-  actief?: boolean;
-  /** @nullable */
-  titel?: string | null;
-  /** @nullable */
-  inhoud?: string | null;
+  actief: boolean;
+  fase_groep: string;
+  bijgewerkt_op?: string;
 }

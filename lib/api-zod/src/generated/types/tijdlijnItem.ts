@@ -6,12 +6,13 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface PortaalOfferteBijlagenItem {
+export interface TijdlijnItem {
   id: number;
-  bijlage_type: string;
-  naam: string;
+  type: string;
+  omschrijving: string;
+  tijdstip: string;
   /** @nullable */
-  beschrijving?: string | null;
+  gebruiker_naam?: string | null;
   /** @nullable */
-  url?: string | null;
+  gebruiker_id?: number | null;
 }

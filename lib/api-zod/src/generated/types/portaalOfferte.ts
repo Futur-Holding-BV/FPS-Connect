@@ -7,6 +7,7 @@
  */
 import type { PortaalOfferteBijlagenItem } from './portaalOfferteBijlagenItem';
 import type { PortaalOfferteSectiesItem } from './portaalOfferteSectiesItem';
+import type { PortaalOptioneleRegelItem } from './portaalOptioneleRegelItem';
 
 export interface PortaalOfferte {
   id: number;
@@ -27,4 +28,5 @@ export interface PortaalOfferte {
   ondertekend: boolean;
   secties: PortaalOfferteSectiesItem[];
   bijlagen: PortaalOfferteBijlagenItem[];
+  optionele_regels: PortaalOptioneleRegelItem[];
 }

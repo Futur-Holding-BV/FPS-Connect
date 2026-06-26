@@ -16,6 +16,7 @@ export interface ModCalcHeaderInput {
   omschrijving?: string | null;
   opmerkingen?: string | null;
   opslag_ak?: number;
+  opslag_abk?: number;
   opslag_risico?: number;
   opslag_winst?: number;
   korting?: number;

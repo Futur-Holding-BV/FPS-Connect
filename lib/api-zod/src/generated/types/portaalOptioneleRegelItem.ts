@@ -6,12 +6,14 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface PortaalOfferteBijlagenItem {
+export interface PortaalOptioneleRegelItem {
   id: number;
-  bijlage_type: string;
-  naam: string;
+  maatregel: string;
   /** @nullable */
-  beschrijving?: string | null;
-  /** @nullable */
-  url?: string | null;
+  ruimte?: string | null;
+  eenheid: string;
+  aantal: number;
+  prijs_per_eenheid: number;
+  kosten: number;
+  optioneel_geselecteerd: boolean;
 }

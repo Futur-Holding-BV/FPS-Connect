@@ -15,4 +15,9 @@ export interface ModCalcRegelInput {
   tarief: number;
   volgorde?: number;
   opmerkingen?: string | null;
+  regelnummer?: string | null;
+  mu_per_eenheid?: number;
+  arbeids_tarief?: number;
+  onderaanneming_bedrag?: number;
+  is_staartkosten?: boolean;
 }

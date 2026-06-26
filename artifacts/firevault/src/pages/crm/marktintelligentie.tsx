@@ -4,9 +4,10 @@ import {
   useListCrmKlanten,
   useListCrmConcurrenten,
   useCreateCrmMarktintelligentie,
+  useScanCrmMarktintelligentieAi,
   getListCrmMarktintelligentieQueryKey,
 } from "@workspace/api-client-react";
-import type { CrmMarktintelligentie, CrmOrganisatie, CrmConcurrent } from "@workspace/api-client-react";
+import type { CrmMarktintelligentie, CrmOrganisatie, CrmConcurrent, CrmMarktintelligentieVoorstel } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { Card, CardContent } from "@/components/ui/card";
@@ -17,9 +18,10 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
-import { Newspaper, Plus, ArrowLeft, Calendar, Globe, Building2, Handshake } from "lucide-react";
+import { Newspaper, Plus, ArrowLeft, Calendar, Globe, Building2, Handshake, Sparkles, Loader2, Check } from "lucide-react";
 
 const TYPES = [
   { value: "nieuws", label: "Nieuws", kleur: "bg-blue-100 text-blue-700 border-blue-200" },
@@ -36,10 +38,16 @@ export default function MarktintelligentiePagina() {
   const [typeFilter, setTypeFilter] = useState<string>("alle");
   const [nieuwOpen, setNieuwOpen] = useState(false);
 
+  const [scanSheet, setScanSheet] = useState(false);
+  const [voorstellen, setVoorstellen] = useState<CrmMarktintelligentieVoorstel[]>([]);
+  const [geselecteerd, setGeselecteerd] = useState<Set<number>>(new Set());
+  const [opslaanBezig, setOpslaanBezig] = useState(false);
+
   const { data: items = [], isLoading } = useListCrmMarktintelligentie();
   const { data: orgs = [] } = useListCrmKlanten();
   const { data: concurrenten = [] } = useListCrmConcurrenten();
   const aanmaken = useCreateCrmMarktintelligentie();
+  const scan = useScanCrmMarktintelligentieAi();
 
   const gefilterd = typeFilter === "alle" ? (items as CrmMarktintelligentie[]) : (items as CrmMarktintelligentie[]).filter((i) => i.type === typeFilter);
   const orgMap = new Map((orgs as CrmOrganisatie[]).map((o) => [o.id, o.naam]));
@@ -62,6 +70,54 @@ export default function MarktintelligentiePagina() {
     }
   }
 
+  async function handleAiScan() {
+    setScanSheet(true);
+    setVoorstellen([]);
+    setGeselecteerd(new Set());
+    try {
+      const resultaten = await scan.mutateAsync();
+      setVoorstellen(resultaten);
+      setGeselecteerd(new Set(resultaten.map((_, i) => i)));
+    } catch {
+      toast({ title: "AI-scan mislukt — controleer of AI beschikbaar is", variant: "destructive" });
+      setScanSheet(false);
+    }
+  }
+
+  function toggleSelectie(i: number) {
+    setGeselecteerd((prev) => {
+      const s = new Set(prev);
+      s.has(i) ? s.delete(i) : s.add(i);
+      return s;
+    });
+  }
+
+  async function handleSlaOpGeselecteerde() {
+    setOpslaanBezig(true);
+    const teOpslaan = voorstellen.filter((_, i) => geselecteerd.has(i));
+    try {
+      for (const v of teOpslaan) {
+        await aanmaken.mutateAsync({
+          data: {
+            type: v.type,
+            titel: v.titel,
+            inhoud: v.inhoud ?? undefined,
+            bron: v.bron ?? undefined,
+            regio: v.regio ?? undefined,
+            datum: v.datum ?? undefined,
+          },
+        });
+      }
+      await qc.invalidateQueries({ queryKey: getListCrmMarktintelligentieQueryKey() });
+      setScanSheet(false);
+      toast({ title: `${teOpslaan.length} ${teOpslaan.length === 1 ? "signaal" : "signalen"} opgeslagen` });
+    } catch {
+      toast({ title: "Fout bij opslaan", variant: "destructive" });
+    } finally {
+      setOpslaanBezig(false);
+    }
+  }
+
   return (
     <div className="p-6 space-y-4 max-w-4xl mx-auto">
       <div className="flex items-center gap-3">
@@ -72,6 +128,10 @@ export default function MarktintelligentiePagina() {
           <h1 className="text-xl font-bold">Marktinzicht</h1>
           <p className="text-xs text-muted-foreground">{gefilterd.length} signalen & berichten</p>
         </div>
+        <Button variant="outline" size="sm" className="gap-1.5" onClick={handleAiScan} disabled={scan.isPending}>
+          <Sparkles className="w-4 h-4 text-amber-500" />
+          AI-scan
+        </Button>
         <Button onClick={() => setNieuwOpen(true)} size="sm" className="gap-1">
           <Plus className="w-4 h-4" /> Toevoegen
         </Button>
@@ -92,6 +152,9 @@ export default function MarktintelligentiePagina() {
         <div className="text-center py-16">
           <Newspaper className="w-10 h-10 mx-auto text-muted-foreground opacity-40 mb-3" />
           <p className="text-sm text-muted-foreground">Geen marktinformatie beschikbaar.</p>
+          <Button variant="outline" size="sm" className="mt-4 gap-1.5" onClick={handleAiScan} disabled={scan.isPending}>
+            <Sparkles className="w-4 h-4 text-amber-500" /> AI-scan starten
+          </Button>
         </div>
       ) : (
         <div className="space-y-3">
@@ -123,6 +186,7 @@ export default function MarktintelligentiePagina() {
         </div>
       )}
 
+      {/* Handmatig toevoegen */}
       <Dialog open={nieuwOpen} onOpenChange={setNieuwOpen}>
         <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
           <DialogHeader><DialogTitle>Marktinformatie toevoegen</DialogTitle></DialogHeader>
@@ -183,6 +247,100 @@ export default function MarktintelligentiePagina() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* AI-scan review sheet */}
+      <Sheet open={scanSheet} onOpenChange={setScanSheet}>
+        <SheetContent className="w-full sm:max-w-xl flex flex-col gap-0 p-0">
+          <SheetHeader className="px-6 pt-6 pb-4 border-b">
+            <SheetTitle className="flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-amber-500" />
+              AI-marktintelligentie
+            </SheetTitle>
+            <p className="text-xs text-muted-foreground">
+              AI scant het internet en vakbladen op nieuws, aanbestedingen en concurrentiebewegingen. Selecteer wat je wilt opslaan.
+            </p>
+          </SheetHeader>
+
+          <div className="flex-1 overflow-y-auto px-6 py-4">
+            {scan.isPending ? (
+              <div className="flex flex-col items-center justify-center py-20 gap-3">
+                <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+                <p className="text-sm text-muted-foreground">Markt aan het scannen...</p>
+                <p className="text-xs text-muted-foreground">Dit kan 15-30 seconden duren</p>
+              </div>
+            ) : voorstellen.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16">
+                <p className="text-sm text-muted-foreground">Geen resultaten gevonden.</p>
+              </div>
+            ) : (
+              <>
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-xs text-muted-foreground">{geselecteerd.size} van {voorstellen.length} geselecteerd</p>
+                  <div className="flex gap-1">
+                    <Button variant="ghost" size="sm" className="h-7 text-xs px-2" onClick={() => setGeselecteerd(new Set(voorstellen.map((_, i) => i)))}>Alles</Button>
+                    <Button variant="ghost" size="sm" className="h-7 text-xs px-2" onClick={() => setGeselecteerd(new Set())}>Geen</Button>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  {voorstellen.map((v, i) => {
+                    const geselecteerdItem = geselecteerd.has(i);
+                    return (
+                      <button
+                        key={i}
+                        type="button"
+                        className={`w-full text-left p-3 rounded-lg border transition-colors ${geselecteerdItem ? "border-primary bg-primary/5" : "border-border bg-muted/20 opacity-60"}`}
+                        onClick={() => toggleSelectie(i)}
+                      >
+                        <div className="flex items-start gap-2.5">
+                          <div className={`w-4 h-4 mt-0.5 rounded border-2 flex-shrink-0 flex items-center justify-center transition-colors ${geselecteerdItem ? "border-primary bg-primary" : "border-muted-foreground"}`}>
+                            {geselecteerdItem && <Check className="w-2.5 h-2.5 text-primary-foreground" />}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              <Badge variant="outline" className={`text-xs shrink-0 ${typeInfo(v.type).kleur}`}>{typeInfo(v.type).label}</Badge>
+                            </div>
+                            <p className="text-sm font-medium leading-snug">{v.titel}</p>
+                            {v.inhoud && <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{v.inhoud}</p>}
+                            <div className="flex items-center gap-3 mt-1.5 flex-wrap">
+                              {v.regio && <span className="text-xs text-muted-foreground">{v.regio}</span>}
+                              {v.bron && (
+                                <span className="text-xs text-muted-foreground flex items-center gap-1">
+                                  <Globe className="w-3 h-3" />
+                                  {v.bron_url ? (
+                                    <a href={v.bron_url} target="_blank" rel="noopener noreferrer" className="hover:underline" onClick={(e) => e.stopPropagation()}>{v.bron}</a>
+                                  ) : v.bron}
+                                </span>
+                              )}
+                              {v.datum && <span className="text-xs text-muted-foreground flex items-center gap-1"><Calendar className="w-3 h-3" />{v.datum}</span>}
+                            </div>
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </>
+            )}
+          </div>
+
+          {!scan.isPending && voorstellen.length > 0 && (
+            <SheetFooter className="px-6 py-4 border-t flex gap-2">
+              <Button variant="outline" className="flex-1" onClick={() => setScanSheet(false)}>Annuleren</Button>
+              <Button
+                className="flex-1"
+                onClick={handleSlaOpGeselecteerde}
+                disabled={geselecteerd.size === 0 || opslaanBezig}
+              >
+                {opslaanBezig ? (
+                  <><Loader2 className="w-4 h-4 animate-spin mr-2" />Bezig...</>
+                ) : (
+                  `Opslaan (${geselecteerd.size})`
+                )}
+              </Button>
+            </SheetFooter>
+          )}
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }

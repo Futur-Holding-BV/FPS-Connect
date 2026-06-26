@@ -75,6 +75,7 @@ import type {
   CrmKlantInput,
   CrmMarktintelligentie,
   CrmMarktintelligentieInput,
+  CrmMarktintelligentieVoorstel,
   CrmOpdracht,
   CrmOpdrachtInput,
   CrmOrganisatie,
@@ -213,6 +214,7 @@ import type {
   LoginInput,
   LoginPoging,
   LoginResultaat,
+  MaakOfferteResult,
   MailActieResultaat,
   MailLogregel,
   MailStatus,
@@ -288,7 +290,6 @@ import type {
   PlanningAfwezigheid,
   PlanningAfwezigheidInput,
   PlanningDiagnose,
-  PlanningDiagnoseOorzaak,
   PlanningItem,
   PlanningItemInput,
   PlanningMedewerker,
@@ -298,8 +299,8 @@ import type {
   PlattegrondAiAnalyseResultaat,
   PortaalAfwijzenInput,
   PortaalHandtekeningInput,
-  PortaalOptioneelWerkInput,
   PortaalOfferte,
+  PortaalOptioneelWerkInput,
   PortaalTrackingInput,
   PortaalVraagInput,
   Profiel,
@@ -315,6 +316,7 @@ import type {
   RapportDefinitief,
   RapportInput,
   RapportPatch,
+  ScanCrmMarktintelligentieAi503,
   Scheiding,
   ScheidingInput,
   ScheidingUpdate,
@@ -329,7 +331,6 @@ import type {
   SpotStatusConfiguratieUpdate,
   SpotsInzicht,
   StatusUpdate,
-  TijdlijnItem,
   StatusVerdeling,
   TaalWijzigen,
   Tekening,
@@ -340,6 +341,7 @@ import type {
   Testrapport,
   TestrapportInput,
   TestrapportUpdate,
+  TijdlijnItem,
   ToewijsbareGebruiker,
   Toewijzing,
   ToewijzingInput,
@@ -5009,6 +5011,381 @@ export const useBevestigSpotAiControle = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getBevestigSpotAiControleMutationOptions(options));
+    }
+
+export const getListSpotStatusConfiguratieUrl = () => {
+
+
+
+
+  return `/api/spot-status-configuratie`
+}
+
+/**
+ * @summary Lijst van alle spot-statusconfiguraties
+ */
+export const listSpotStatusConfiguratie = async ( options?: RequestInit): Promise<SpotStatusConfiguratie[]> => {
+
+  return customFetch<SpotStatusConfiguratie[]>(getListSpotStatusConfiguratieUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListSpotStatusConfiguratieQueryKey = () => {
+    return [
+    `/api/spot-status-configuratie`
+    ] as const;
+    }
+
+
+export const getListSpotStatusConfiguratieQueryOptions = <TData = Awaited<ReturnType<typeof listSpotStatusConfiguratie>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listSpotStatusConfiguratie>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListSpotStatusConfiguratieQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listSpotStatusConfiguratie>>> = ({ signal }) => listSpotStatusConfiguratie({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listSpotStatusConfiguratie>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListSpotStatusConfiguratieQueryResult = NonNullable<Awaited<ReturnType<typeof listSpotStatusConfiguratie>>>
+export type ListSpotStatusConfiguratieQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Lijst van alle spot-statusconfiguraties
+ */
+
+export function useListSpotStatusConfiguratie<TData = Awaited<ReturnType<typeof listSpotStatusConfiguratie>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listSpotStatusConfiguratie>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListSpotStatusConfiguratieQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getUpdateSpotStatusConfiguratieUrl = (statusCode: string,) => {
+
+
+
+
+  return `/api/spot-status-configuratie/${statusCode}`
+}
+
+/**
+ * @summary Spot-statusconfiguratie bijwerken (weergavenaam, actief, volgorde)
+ */
+export const updateSpotStatusConfiguratie = async (statusCode: string,
+    spotStatusConfiguratieUpdate: SpotStatusConfiguratieUpdate, options?: RequestInit): Promise<SpotStatusConfiguratie> => {
+
+  return customFetch<SpotStatusConfiguratie>(getUpdateSpotStatusConfiguratieUrl(statusCode),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(spotStatusConfiguratieUpdate)
+  }
+);}
+
+
+
+
+export const getUpdateSpotStatusConfiguratieMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateSpotStatusConfiguratie>>, TError,{statusCode: string;data: BodyType<SpotStatusConfiguratieUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateSpotStatusConfiguratie>>, TError,{statusCode: string;data: BodyType<SpotStatusConfiguratieUpdate>}, TContext> => {
+
+const mutationKey = ['updateSpotStatusConfiguratie'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateSpotStatusConfiguratie>>, {statusCode: string;data: BodyType<SpotStatusConfiguratieUpdate>}> = (props) => {
+          const {statusCode,data} = props ?? {};
+
+          return  updateSpotStatusConfiguratie(statusCode,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateSpotStatusConfiguratieMutationResult = NonNullable<Awaited<ReturnType<typeof updateSpotStatusConfiguratie>>>
+    export type UpdateSpotStatusConfiguratieMutationBody = BodyType<SpotStatusConfiguratieUpdate>
+    export type UpdateSpotStatusConfiguratieMutationError = ErrorType<void>
+
+    /**
+ * @summary Spot-statusconfiguratie bijwerken (weergavenaam, actief, volgorde)
+ */
+export const useUpdateSpotStatusConfiguratie = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateSpotStatusConfiguratie>>, TError,{statusCode: string;data: BodyType<SpotStatusConfiguratieUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateSpotStatusConfiguratie>>,
+        TError,
+        {statusCode: string;data: BodyType<SpotStatusConfiguratieUpdate>},
+        TContext
+      > => {
+      return useMutation(getUpdateSpotStatusConfiguratieMutationOptions(options));
+    }
+
+export const getGetVoorzieningTijdlijnUrl = (id: number,) => {
+
+
+
+
+  return `/api/voorzieningen/${id}/tijdlijn`
+}
+
+/**
+ * @summary Chronologische tijdlijn van alle activiteiten op een spot
+ */
+export const getVoorzieningTijdlijn = async (id: number, options?: RequestInit): Promise<TijdlijnItem[]> => {
+
+  return customFetch<TijdlijnItem[]>(getGetVoorzieningTijdlijnUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetVoorzieningTijdlijnQueryKey = (id: number,) => {
+    return [
+    `/api/voorzieningen/${id}/tijdlijn`
+    ] as const;
+    }
+
+
+export const getGetVoorzieningTijdlijnQueryOptions = <TData = Awaited<ReturnType<typeof getVoorzieningTijdlijn>>, TError = ErrorType<void>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getVoorzieningTijdlijn>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetVoorzieningTijdlijnQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getVoorzieningTijdlijn>>> = ({ signal }) => getVoorzieningTijdlijn(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getVoorzieningTijdlijn>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetVoorzieningTijdlijnQueryResult = NonNullable<Awaited<ReturnType<typeof getVoorzieningTijdlijn>>>
+export type GetVoorzieningTijdlijnQueryError = ErrorType<void>
+
+
+/**
+ * @summary Chronologische tijdlijn van alle activiteiten op een spot
+ */
+
+export function useGetVoorzieningTijdlijn<TData = Awaited<ReturnType<typeof getVoorzieningTijdlijn>>, TError = ErrorType<void>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getVoorzieningTijdlijn>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetVoorzieningTijdlijnQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getListSpotDossiersUrl = (id: number,) => {
+
+
+
+
+  return `/api/voorzieningen/${id}/dossiers`
+}
+
+/**
+ * @summary Alle dossierkaarten van een spot ophalen
+ */
+export const listSpotDossiers = async (id: number, options?: RequestInit): Promise<SpotDossierItem[]> => {
+
+  return customFetch<SpotDossierItem[]>(getListSpotDossiersUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListSpotDossiersQueryKey = (id: number,) => {
+    return [
+    `/api/voorzieningen/${id}/dossiers`
+    ] as const;
+    }
+
+
+export const getListSpotDossiersQueryOptions = <TData = Awaited<ReturnType<typeof listSpotDossiers>>, TError = ErrorType<void>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listSpotDossiers>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListSpotDossiersQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listSpotDossiers>>> = ({ signal }) => listSpotDossiers(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listSpotDossiers>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListSpotDossiersQueryResult = NonNullable<Awaited<ReturnType<typeof listSpotDossiers>>>
+export type ListSpotDossiersQueryError = ErrorType<void>
+
+
+/**
+ * @summary Alle dossierkaarten van een spot ophalen
+ */
+
+export function useListSpotDossiers<TData = Awaited<ReturnType<typeof listSpotDossiers>>, TError = ErrorType<void>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listSpotDossiers>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListSpotDossiersQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getUpdateSpotDossierUrl = (id: number,
+    type: string,) => {
+
+
+
+
+  return `/api/voorzieningen/${id}/dossiers/${type}`
+}
+
+/**
+ * @summary Dossierkaart van een spot bijwerken (data en/of status)
+ */
+export const updateSpotDossier = async (id: number,
+    type: string,
+    spotDossierUpdate: SpotDossierUpdate, options?: RequestInit): Promise<SpotDossierItem> => {
+
+  return customFetch<SpotDossierItem>(getUpdateSpotDossierUrl(id,type),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(spotDossierUpdate)
+  }
+);}
+
+
+
+
+export const getUpdateSpotDossierMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateSpotDossier>>, TError,{id: number;type: string;data: BodyType<SpotDossierUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateSpotDossier>>, TError,{id: number;type: string;data: BodyType<SpotDossierUpdate>}, TContext> => {
+
+const mutationKey = ['updateSpotDossier'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateSpotDossier>>, {id: number;type: string;data: BodyType<SpotDossierUpdate>}> = (props) => {
+          const {id,type,data} = props ?? {};
+
+          return  updateSpotDossier(id,type,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateSpotDossierMutationResult = NonNullable<Awaited<ReturnType<typeof updateSpotDossier>>>
+    export type UpdateSpotDossierMutationBody = BodyType<SpotDossierUpdate>
+    export type UpdateSpotDossierMutationError = ErrorType<void>
+
+    /**
+ * @summary Dossierkaart van een spot bijwerken (data en/of status)
+ */
+export const useUpdateSpotDossier = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateSpotDossier>>, TError,{id: number;type: string;data: BodyType<SpotDossierUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateSpotDossier>>,
+        TError,
+        {id: number;type: string;data: BodyType<SpotDossierUpdate>},
+        TContext
+      > => {
+      return useMutation(getUpdateSpotDossierMutationOptions(options));
     }
 
 export const getListVoorzieningTypesUrl = (params?: ListVoorzieningTypesParams,) => {
@@ -12985,45 +13362,6 @@ export const useProfielenAanvullen = <TError = ErrorType<unknown>,
       return useMutation(getProfielenAanvullenMutationOptions(options));
     }
 
-export const getSynchroniseerStandaardProfielenUrl = () => {
-  return `/api/profielen/synchroniseer-standaard`;
-};
-
-export const synchroniseerStandaardProfielen = async (options?: RequestInit): Promise<{ aangemaakt: number }> => {
-  return customFetch<{ aangemaakt: number }>(getSynchroniseerStandaardProfielenUrl(),
-    { method: 'POST', ...options }
-  );
-};
-
-export const getSynchroniseerStandaardProfielenMutationOptions = <TError = ErrorType<unknown>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof synchroniseerStandaardProfielen>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof synchroniseerStandaardProfielen>>, TError,void, TContext> => {
-const mutationKey = ['synchroniseerStandaardProfielen'];
-const { mutation: mutationOptions, request: requestOptions } = options ?? {};
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof synchroniseerStandaardProfielen>>, void> = () => {
-          return  synchroniseerStandaardProfielen(requestOptions)
-        }
-        return { mutationKey, mutationFn, ...mutationOptions}
-      }
-
-    export type SynchroniseerStandaardProfielenMutationResult = NonNullable<Awaited<ReturnType<typeof synchroniseerStandaardProfielen>>>
-
-    export type SynchroniseerStandaardProfielenMutationError = ErrorType<unknown>
-
-    /**
- * @summary Ontbrekende standaardprofielen aanmaken vanuit PRESETS (hoofdbeheerder)
- */
-export const useSynchroniseerStandaardProfielen = <TError = ErrorType<unknown>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof synchroniseerStandaardProfielen>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
- ): UseMutationResult<
-        Awaited<ReturnType<typeof synchroniseerStandaardProfielen>>,
-        TError,
-        void,
-        TContext
-      > => {
-      return useMutation(getSynchroniseerStandaardProfielenMutationOptions(options));
-    }
-
 export const getUpdateProfielUrl = (id: number,) => {
 
 
@@ -17314,6 +17652,76 @@ export const useCreateCrmMarktintelligentie = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getCreateCrmMarktintelligentieMutationOptions(options));
+    }
+
+export const getScanCrmMarktintelligentieAiUrl = () => {
+
+
+
+
+  return `/api/crm/marktintelligentie/ai-scan`
+}
+
+/**
+ * @summary AI marktintelligentie scan
+ */
+export const scanCrmMarktintelligentieAi = async ( options?: RequestInit): Promise<CrmMarktintelligentieVoorstel[]> => {
+
+  return customFetch<CrmMarktintelligentieVoorstel[]>(getScanCrmMarktintelligentieAiUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getScanCrmMarktintelligentieAiMutationOptions = <TError = ErrorType<ScanCrmMarktintelligentieAi503>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof scanCrmMarktintelligentieAi>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof scanCrmMarktintelligentieAi>>, TError,void, TContext> => {
+
+const mutationKey = ['scanCrmMarktintelligentieAi'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof scanCrmMarktintelligentieAi>>, void> = () => {
+
+
+          return  scanCrmMarktintelligentieAi(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ScanCrmMarktintelligentieAiMutationResult = NonNullable<Awaited<ReturnType<typeof scanCrmMarktintelligentieAi>>>
+
+    export type ScanCrmMarktintelligentieAiMutationError = ErrorType<ScanCrmMarktintelligentieAi503>
+
+    /**
+ * @summary AI marktintelligentie scan
+ */
+export const useScanCrmMarktintelligentieAi = <TError = ErrorType<ScanCrmMarktintelligentieAi503>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof scanCrmMarktintelligentieAi>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof scanCrmMarktintelligentieAi>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getScanCrmMarktintelligentieAiMutationOptions(options));
     }
 
 export const getUpdateCrmMarktintelligentieUrl = (id: number,) => {
@@ -28011,7 +28419,7 @@ export const getSavePortaalOptioneelWerkUrl = (token: string,) => {
 }
 
 /**
- * @summary Optioneel werk selectie opslaan (publiek)
+ * @summary Selectie van optionele regelposten opslaan (publiek)
  */
 export const savePortaalOptioneelWerk = async (token: string,
     portaalOptioneelWerkInput: PortaalOptioneelWerkInput, options?: RequestInit): Promise<void> => {
@@ -28051,6 +28459,8 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
 
 
+
+
   return  { mutationFn, ...mutationOptions }}
 
     export type SavePortaalOptioneelWerkMutationResult = NonNullable<Awaited<ReturnType<typeof savePortaalOptioneelWerk>>>
@@ -28058,7 +28468,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
     export type SavePortaalOptioneelWerkMutationError = ErrorType<void>
 
     /**
- * @summary Optioneel werk selectie opslaan (publiek)
+ * @summary Selectie van optionele regelposten opslaan (publiek)
  */
 export const useSavePortaalOptioneelWerk = <TError = ErrorType<void>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof savePortaalOptioneelWerk>>, TError,{token: string;data: BodyType<PortaalOptioneelWerkInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
@@ -29165,6 +29575,83 @@ export function useListPlanningMedewerkers<TData = Awaited<ReturnType<typeof lis
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getListPlanningMedewerkersQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetPlanningDiagnoseUrl = () => {
+
+
+
+
+  return `/api/modules/planning/diagnose`
+}
+
+/**
+ * @summary Diagnose waarom medewerkers niet zichtbaar zijn in planning
+ */
+export const getPlanningDiagnose = async ( options?: RequestInit): Promise<PlanningDiagnose> => {
+
+  return customFetch<PlanningDiagnose>(getGetPlanningDiagnoseUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetPlanningDiagnoseQueryKey = () => {
+    return [
+    `/api/modules/planning/diagnose`
+    ] as const;
+    }
+
+
+export const getGetPlanningDiagnoseQueryOptions = <TData = Awaited<ReturnType<typeof getPlanningDiagnose>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPlanningDiagnose>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetPlanningDiagnoseQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getPlanningDiagnose>>> = ({ signal }) => getPlanningDiagnose({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getPlanningDiagnose>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetPlanningDiagnoseQueryResult = NonNullable<Awaited<ReturnType<typeof getPlanningDiagnose>>>
+export type GetPlanningDiagnoseQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Diagnose waarom medewerkers niet zichtbaar zijn in planning
+ */
+
+export function useGetPlanningDiagnose<TData = Awaited<ReturnType<typeof getPlanningDiagnose>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPlanningDiagnose>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetPlanningDiagnoseQueryOptions(options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
@@ -31621,20 +32108,31 @@ export const useDupliceerModCalculatie = <TError = ErrorType<unknown>,
     }
 
 export const getMaakOfferteVanCalculatieUrl = (id: number,) => {
+
+
+
+
   return `/api/modules/calculaties/${id}/maak-offerte`
 }
 
 /**
  * @summary Genereer offerte vanuit calculatie
  */
-export const maakOfferteVanCalculatie = async (id: number, options?: RequestInit): Promise<{offerte_id: number}> => {
-  return customFetch<{offerte_id: number}>(getMaakOfferteVanCalculatieUrl(id), {
+export const maakOfferteVanCalculatie = async (id: number, options?: RequestInit): Promise<MaakOfferteResult> => {
+
+  return customFetch<MaakOfferteResult>(getMaakOfferteVanCalculatieUrl(id),
+  {
     ...options,
     method: 'POST'
-  });
-}
 
-export const getMaakOfferteVanCalculatieMutationOptions = <TError = ErrorType<unknown>,
+
+  }
+);}
+
+
+
+
+export const getMaakOfferteVanCalculatieMutationOptions = <TError = ErrorType<void>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof maakOfferteVanCalculatie>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
 ): UseMutationOptions<Awaited<ReturnType<typeof maakOfferteVanCalculatie>>, TError,{id: number}, TContext> => {
 
@@ -31645,22 +32143,30 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       : {...options, mutation: {...options.mutation, mutationKey}}
       : {mutation: { mutationKey, }, request: undefined};
 
+
+
+
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof maakOfferteVanCalculatie>>, {id: number}> = (props) => {
           const {id} = props ?? {};
-          return maakOfferteVanCalculatie(id, requestOptions)
+
+          return  maakOfferteVanCalculatie(id,requestOptions)
         }
 
-  return { mutationFn, ...mutationOptions }
-}
 
-export type MaakOfferteVanCalculatieMutationResult = NonNullable<Awaited<ReturnType<typeof maakOfferteVanCalculatie>>>
 
-export type MaakOfferteVanCalculatieMutationError = ErrorType<unknown>
 
-/**
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type MaakOfferteVanCalculatieMutationResult = NonNullable<Awaited<ReturnType<typeof maakOfferteVanCalculatie>>>
+
+    export type MaakOfferteVanCalculatieMutationError = ErrorType<void>
+
+    /**
  * @summary Genereer offerte vanuit calculatie
  */
-export const useMaakOfferteVanCalculatie = <TError = ErrorType<unknown>,
+export const useMaakOfferteVanCalculatie = <TError = ErrorType<void>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof maakOfferteVanCalculatie>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof maakOfferteVanCalculatie>>,
@@ -32459,170 +32965,6 @@ export const getListWeekStatenQueryKey = (params?: ListWeekStatenParams,) => {
     ] as const;
     }
 
-
-// ── SPOT STATUS CONFIGURATIE ──────────────────────────────────────────────────
-
-export const getListSpotStatusConfiguratieUrl = () => {
-  return `/api/spot-status-configuratie`
-}
-
-export const listSpotStatusConfiguratie = async (options?: RequestInit): Promise<SpotStatusConfiguratie[]> => {
-  return customFetch<SpotStatusConfiguratie[]>(getListSpotStatusConfiguratieUrl(), {
-    ...options,
-    method: 'GET',
-  });
-}
-
-export const getListSpotStatusConfiguratieQueryKey = () => {
-  return [`/api/spot-status-configuratie`] as const;
-}
-
-export const getListSpotStatusConfiguratieQueryOptions = <TData = Awaited<ReturnType<typeof listSpotStatusConfiguratie>>, TError = ErrorType<unknown>>(options?: { query?: UseQueryOptions<Awaited<ReturnType<typeof listSpotStatusConfiguratie>>, TError, TData>, request?: SecondParameter<typeof customFetch> }) => {
-  const { query: queryOptions, request: requestOptions } = options ?? {};
-  const queryKey = queryOptions?.queryKey ?? getListSpotStatusConfiguratieQueryKey();
-  const queryFn: QueryFunction<Awaited<ReturnType<typeof listSpotStatusConfiguratie>>> = ({ signal }) => listSpotStatusConfiguratie({ signal, ...requestOptions });
-  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<Awaited<ReturnType<typeof listSpotStatusConfiguratie>>, TError, TData> & { queryKey: QueryKey }
-}
-
-export type ListSpotStatusConfiguratieQueryResult = NonNullable<Awaited<ReturnType<typeof listSpotStatusConfiguratie>>>
-export type ListSpotStatusConfiguratieQueryError = ErrorType<unknown>
-
-export function useListSpotStatusConfiguratie<TData = Awaited<ReturnType<typeof listSpotStatusConfiguratie>>, TError = ErrorType<unknown>>(options?: { query?: UseQueryOptions<Awaited<ReturnType<typeof listSpotStatusConfiguratie>>, TError, TData>, request?: SecondParameter<typeof customFetch> }): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
-  const queryOptions = getListSpotStatusConfiguratieQueryOptions(options);
-  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & { queryKey: QueryKey };
-  query.queryKey = queryOptions.queryKey;
-  return query;
-}
-
-export const getUpdateSpotStatusConfiguratieUrl = (statusCode: string) => {
-  return `/api/spot-status-configuratie/${statusCode}`
-}
-
-export const updateSpotStatusConfiguratie = async (statusCode: string, spotStatusConfiguratieUpdate: SpotStatusConfiguratieUpdate, options?: RequestInit): Promise<SpotStatusConfiguratie> => {
-  return customFetch<SpotStatusConfiguratie>(getUpdateSpotStatusConfiguratieUrl(statusCode), {
-    ...options,
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(spotStatusConfiguratieUpdate),
-  });
-}
-
-export const getUpdateSpotStatusConfiguratieMutationOptions = <TError = ErrorType<unknown>, TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof updateSpotStatusConfiguratie>>, TError, { statusCode: string; data: BodyType<SpotStatusConfiguratieUpdate> }, TContext>, request?: SecondParameter<typeof customFetch> }): UseMutationOptions<Awaited<ReturnType<typeof updateSpotStatusConfiguratie>>, TError, { statusCode: string; data: BodyType<SpotStatusConfiguratieUpdate> }, TContext> => {
-  const mutationKey = ['updateSpotStatusConfiguratie'];
-  const { mutation: mutationOptions, request: requestOptions } = options ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ? options : { ...options, mutation: { ...options.mutation, mutationKey } } : { mutation: { mutationKey }, request: undefined };
-  const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateSpotStatusConfiguratie>>, { statusCode: string; data: BodyType<SpotStatusConfiguratieUpdate> }> = (props) => {
-    const { statusCode, data } = props ?? {};
-    return updateSpotStatusConfiguratie(statusCode, data, requestOptions);
-  };
-  return { mutationFn, ...mutationOptions };
-}
-
-export type UpdateSpotStatusConfiguratieMutationResult = NonNullable<Awaited<ReturnType<typeof updateSpotStatusConfiguratie>>>
-export type UpdateSpotStatusConfiguratieMutationBody = BodyType<SpotStatusConfiguratieUpdate>
-export type UpdateSpotStatusConfiguratieMutationError = ErrorType<unknown>
-
-export const useUpdateSpotStatusConfiguratie = <TError = ErrorType<unknown>, TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof updateSpotStatusConfiguratie>>, TError, { statusCode: string; data: BodyType<SpotStatusConfiguratieUpdate> }, TContext>, request?: SecondParameter<typeof customFetch> }): UseMutationResult<Awaited<ReturnType<typeof updateSpotStatusConfiguratie>>, TError, { statusCode: string; data: BodyType<SpotStatusConfiguratieUpdate> }, TContext> => {
-  return useMutation(getUpdateSpotStatusConfiguratieMutationOptions(options));
-}
-
-// ── VOORZIENING TIJDLIJN ──────────────────────────────────────────────────────
-
-export const getGetVoorzieningTijdlijnUrl = (id: number) => {
-  return `/api/voorzieningen/${id}/tijdlijn`
-}
-
-export const getVoorzieningTijdlijn = async (id: number, options?: RequestInit): Promise<TijdlijnItem[]> => {
-  return customFetch<TijdlijnItem[]>(getGetVoorzieningTijdlijnUrl(id), {
-    ...options,
-    method: 'GET',
-  });
-}
-
-export const getGetVoorzieningTijdlijnQueryKey = (id: number) => {
-  return [`/api/voorzieningen/${id}/tijdlijn`] as const;
-}
-
-export const getGetVoorzieningTijdlijnQueryOptions = <TData = Awaited<ReturnType<typeof getVoorzieningTijdlijn>>, TError = ErrorType<unknown>>(id: number, options?: { query?: UseQueryOptions<Awaited<ReturnType<typeof getVoorzieningTijdlijn>>, TError, TData>, request?: SecondParameter<typeof customFetch> }) => {
-  const { query: queryOptions, request: requestOptions } = options ?? {};
-  const queryKey = queryOptions?.queryKey ?? getGetVoorzieningTijdlijnQueryKey(id);
-  const queryFn: QueryFunction<Awaited<ReturnType<typeof getVoorzieningTijdlijn>>> = ({ signal }) => getVoorzieningTijdlijn(id, { signal, ...requestOptions });
-  return { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions } as UseQueryOptions<Awaited<ReturnType<typeof getVoorzieningTijdlijn>>, TError, TData> & { queryKey: QueryKey }
-}
-
-export type GetVoorzieningTijdlijnQueryResult = NonNullable<Awaited<ReturnType<typeof getVoorzieningTijdlijn>>>
-export type GetVoorzieningTijdlijnQueryError = ErrorType<unknown>
-
-export function useGetVoorzieningTijdlijn<TData = Awaited<ReturnType<typeof getVoorzieningTijdlijn>>, TError = ErrorType<unknown>>(id: number, options?: { query?: UseQueryOptions<Awaited<ReturnType<typeof getVoorzieningTijdlijn>>, TError, TData>, request?: SecondParameter<typeof customFetch> }): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
-  const queryOptions = getGetVoorzieningTijdlijnQueryOptions(id, options);
-  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & { queryKey: QueryKey };
-  query.queryKey = queryOptions.queryKey;
-  return query;
-}
-
-// ── SPOT DOSSIERS ─────────────────────────────────────────────────────────────
-
-export const getListSpotDossiersUrl = (id: number) => {
-  return `/api/voorzieningen/${id}/dossiers`
-}
-
-export const listSpotDossiers = async (id: number, options?: RequestInit): Promise<SpotDossierItem[]> => {
-  return customFetch<SpotDossierItem[]>(getListSpotDossiersUrl(id), {
-    ...options,
-    method: 'GET',
-  });
-}
-
-export const getListSpotDossiersQueryKey = (id: number) => {
-  return [`/api/voorzieningen/${id}/dossiers`] as const;
-}
-
-export const getListSpotDossiersQueryOptions = <TData = Awaited<ReturnType<typeof listSpotDossiers>>, TError = ErrorType<unknown>>(id: number, options?: { query?: UseQueryOptions<Awaited<ReturnType<typeof listSpotDossiers>>, TError, TData>, request?: SecondParameter<typeof customFetch> }) => {
-  const { query: queryOptions, request: requestOptions } = options ?? {};
-  const queryKey = queryOptions?.queryKey ?? getListSpotDossiersQueryKey(id);
-  const queryFn: QueryFunction<Awaited<ReturnType<typeof listSpotDossiers>>> = ({ signal }) => listSpotDossiers(id, { signal, ...requestOptions });
-  return { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions } as UseQueryOptions<Awaited<ReturnType<typeof listSpotDossiers>>, TError, TData> & { queryKey: QueryKey }
-}
-
-export type ListSpotDossiersQueryResult = NonNullable<Awaited<ReturnType<typeof listSpotDossiers>>>
-export type ListSpotDossiersQueryError = ErrorType<unknown>
-
-export function useListSpotDossiers<TData = Awaited<ReturnType<typeof listSpotDossiers>>, TError = ErrorType<unknown>>(id: number, options?: { query?: UseQueryOptions<Awaited<ReturnType<typeof listSpotDossiers>>, TError, TData>, request?: SecondParameter<typeof customFetch> }): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
-  const queryOptions = getListSpotDossiersQueryOptions(id, options);
-  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & { queryKey: QueryKey };
-  query.queryKey = queryOptions.queryKey;
-  return query;
-}
-
-export const getUpdateSpotDossierUrl = (id: number, type: string) => {
-  return `/api/voorzieningen/${id}/dossiers/${type}`
-}
-
-export const updateSpotDossier = async (id: number, type: string, spotDossierUpdate: SpotDossierUpdate, options?: RequestInit): Promise<SpotDossierItem> => {
-  return customFetch<SpotDossierItem>(getUpdateSpotDossierUrl(id, type), {
-    ...options,
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(spotDossierUpdate),
-  });
-}
-
-export const getUpdateSpotDossierMutationOptions = <TError = ErrorType<unknown>, TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof updateSpotDossier>>, TError, { id: number; type: string; data: BodyType<SpotDossierUpdate> }, TContext>, request?: SecondParameter<typeof customFetch> }): UseMutationOptions<Awaited<ReturnType<typeof updateSpotDossier>>, TError, { id: number; type: string; data: BodyType<SpotDossierUpdate> }, TContext> => {
-  const mutationKey = ['updateSpotDossier'];
-  const { mutation: mutationOptions, request: requestOptions } = options ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ? options : { ...options, mutation: { ...options.mutation, mutationKey } } : { mutation: { mutationKey }, request: undefined };
-  const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateSpotDossier>>, { id: number; type: string; data: BodyType<SpotDossierUpdate> }> = (props) => {
-    const { id, type, data } = props ?? {};
-    return updateSpotDossier(id, type, data, requestOptions);
-  };
-  return { mutationFn, ...mutationOptions };
-}
-
-export type UpdateSpotDossierMutationResult = NonNullable<Awaited<ReturnType<typeof updateSpotDossier>>>
-export type UpdateSpotDossierMutationBody = BodyType<SpotDossierUpdate>
-export type UpdateSpotDossierMutationError = ErrorType<unknown>
-
-export const useUpdateSpotDossier = <TError = ErrorType<unknown>, TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof updateSpotDossier>>, TError, { id: number; type: string; data: BodyType<SpotDossierUpdate> }, TContext>, request?: SecondParameter<typeof customFetch> }): UseMutationResult<Awaited<ReturnType<typeof updateSpotDossier>>, TError, { id: number; type: string; data: BodyType<SpotDossierUpdate> }, TContext> => {
-  return useMutation(getUpdateSpotDossierMutationOptions(options));
-}
 
 export const getListWeekStatenQueryOptions = <TData = Awaited<ReturnType<typeof listWeekStaten>>, TError = ErrorType<unknown>>(params?: ListWeekStatenParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listWeekStaten>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
@@ -36278,45 +36620,3 @@ export const useDeleteOpnameFoto = <TError = ErrorType<unknown>,
       return useMutation(getDeleteOpnameFotoMutationOptions(options));
     }
 
-
-export const getPlanningDiagnoseUrl = () => `/api/modules/planning/diagnose`;
-
-export const getPlanningDiagnose = async (options?: RequestInit): Promise<PlanningDiagnose> => {
-  return customFetch<PlanningDiagnose>(getPlanningDiagnoseUrl(), { ...options });
-};
-
-export const getGetPlanningDiagnoseQueryKey = () =>
-  [`/api/modules/planning/diagnose`] as const;
-
-export const getGetPlanningDiagnoseQueryOptions = <
-  TData = Awaited<ReturnType<typeof getPlanningDiagnose>>,
-  TError = ErrorType<unknown>,
->(options?: {
-  query?: UseQueryOptions<Awaited<ReturnType<typeof getPlanningDiagnose>>, TError, TData>;
-  request?: SecondParameter<typeof customFetch>;
-}) => {
-  const { query: queryOptions, request: requestOptions } = options ?? {};
-  const queryKey = queryOptions?.queryKey ?? getGetPlanningDiagnoseQueryKey();
-  const queryFn: QueryFunction<Awaited<ReturnType<typeof getPlanningDiagnose>>> = ({ signal }) =>
-    getPlanningDiagnose({ signal, ...requestOptions });
-  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
-    Awaited<ReturnType<typeof getPlanningDiagnose>>,
-    TError,
-    TData
-  > & { queryKey: QueryKey };
-};
-
-export type GetPlanningDiagnoseQueryResult = NonNullable<Awaited<ReturnType<typeof getPlanningDiagnose>>>;
-export type GetPlanningDiagnoseQueryError = ErrorType<unknown>;
-
-export function useGetPlanningDiagnose<
-  TData = Awaited<ReturnType<typeof getPlanningDiagnose>>,
-  TError = ErrorType<unknown>,
->(options?: {
-  query?: UseQueryOptions<Awaited<ReturnType<typeof getPlanningDiagnose>>, TError, TData>;
-  request?: SecondParameter<typeof customFetch>;
-}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
-  const queryOptions = getGetPlanningDiagnoseQueryOptions(options);
-  const query = useQuery(queryOptions);
-  return { ...query, queryKey: queryOptions.queryKey };
-}

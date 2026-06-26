@@ -5092,6 +5092,30 @@ paths:
               schema:
                 $ref: "#/components/schemas/CrmMarktintelligentie"
 
+  /crm/marktintelligentie/ai-scan:
+    post:
+      operationId: scanCrmMarktintelligentieAi
+      tags: [crm]
+      summary: AI marktintelligentie scan
+      responses:
+        "200":
+          description: Voorgestelde signalen
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CrmMarktintelligentieVoorstel"
+        "503":
+          description: AI niet beschikbaar
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+
   /crm/marktintelligentie/{id}:
     patch:
       operationId: updateCrmMarktintelligentie
@@ -10895,6 +10919,25 @@ components:
           type: string
         bijgewerkt_op:
           type: string
+
+    CrmMarktintelligentieVoorstel:
+      type: object
+      required: [type, titel]
+      properties:
+        type:
+          type: string
+        titel:
+          type: string
+        inhoud:
+          type: ["string", "null"]
+        bron:
+          type: ["string", "null"]
+        bron_url:
+          type: ["string", "null"]
+        regio:
+          type: ["string", "null"]
+        datum:
+          type: ["string", "null"]
 
     CrmMarktintelligentieInput:
       type: object

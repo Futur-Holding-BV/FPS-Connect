@@ -14,6 +14,7 @@ import {
 } from "@workspace/db";
 import { eq, desc, ilike, or, and, count } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
+import { heeftOpenAi, maakOpenAiClient } from "../lib/openai";
 
 const router = Router();
 
@@ -474,6 +475,62 @@ router.get("/crm/marktintelligentie", lezen, async (req, res) => {
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+router.post("/crm/marktintelligentie/ai-scan", lezen, async (req, res) => {
+  if (!heeftOpenAi()) return res.status(503).json({ error: "AI niet beschikbaar" });
+  const client = maakOpenAiClient();
+  const vandaag = new Date().toISOString().slice(0, 10);
+
+  const systeemPrompt = `Je bent een marktintelligentie-assistent voor FPS Brandpreventie, een Nederlands bedrijf gespecialiseerd in brandveiligheid en brandpreventieve voorzieningen (branddeuren, doorvoeringen, brandkleppen, coating, manchetten). Vandaag is het ${vandaag}. Genereer realistische marktinformatie op basis van actuele trends in brandpreventie, bouw en utiliteit in Nederland.`;
+
+  const gebruikerPrompt = `Zoek en genereer 6 tot 8 actuele marktintelligentie-signalen voor een brandpreventiebedrijf werkzaam in Nederland. Gebruik realistische Nederlandse organisaties (woningcorporaties zoals Ymere, Woonstad Rotterdam, Vestia, gemeenten, aannemers), bronnen (Cobouw, TenderNed, BNR Nieuwsradio, Bouwend Nederland, LinkedIn, AD, Vastgoedjournaal, NOS) en regio's (Nederlandse provincies of steden).
+
+Signaaltypen:
+- nieuws: algemeen marktnieuws, bouwprojecten, regelgeving, normwijzigingen (NEN, WBDBO, brandveiligheid)
+- aanbesteding: openbare aanbestedingen voor brandpreventie- of onderhoudsopdrachten
+- concurrentie: bewegingen van concurrenten (nieuwe vestigingen, overnames, certificeringen)
+- kans: kansen voor FPS (renovatieprogramma's, nieuwbouwprojecten, samenwerkingen)
+- risico: risico's (prijsdruk, arbeidstekort, regelgevingswijzigingen, marktaandeel)
+- overig: overig relevant marktnieuws
+
+Retourneer ALLEEN valide JSON zonder extra toelichting:
+{"signalen": [{"type": "nieuws|aanbesteding|concurrentie|kans|risico|overig", "titel": "max 80 tekens", "inhoud": "korte samenvatting max 200 tekens", "bron": "naam van de bron", "bron_url": "https://...", "regio": "Nederlandse provincie of stad", "datum": "YYYY-MM-DD"}, ...]}`;
+
+  // Probeer Responses API met web zoeken voor actueel nieuws
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const webResp = await (client as any).responses.create({
+      model: "gpt-4o",
+      tools: [{ type: "web_search_preview" }],
+      input: `${systeemPrompt}\n\n${gebruikerPrompt}`,
+      text: { format: { type: "json_object" } },
+    });
+    const tekst: string = webResp.output_text ?? "";
+    const parsed = JSON.parse(tekst);
+    return res.json(parsed.signalen ?? []);
+  } catch (webErr) {
+    req.log.warn({ err: webErr }, "Web search niet beschikbaar, fallback naar kennismodel");
+  }
+
+  // Fallback: chat completions op basis van marktkennis
+  try {
+    const completion = await client.chat.completions.create({
+      model: "gpt-4o",
+      response_format: { type: "json_object" },
+      messages: [
+        { role: "system", content: systeemPrompt },
+        { role: "user", content: gebruikerPrompt },
+      ],
+      max_tokens: 2000,
+    });
+    const tekst = completion.choices[0]?.message?.content ?? "{}";
+    const parsed = JSON.parse(tekst);
+    res.json(parsed.signalen ?? []);
+  } catch (err) {
+    req.log.error(err);
+    res.status(503).json({ error: "AI niet beschikbaar" });
   }
 });
 

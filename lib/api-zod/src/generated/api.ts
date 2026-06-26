@@ -1284,7 +1284,7 @@ export const ListVoorzieningenResponse = zod.object({
   "objectnummer": zod.string(),
   "qr_code": zod.string().nullish(),
   "type": zod.string(),
-  "status": zod.enum(['concept', 'voorbereid', 'in_uitvoering', 'wacht_op_akkoord', 'meerwerk_financieel', 'opgeleverd', 'goedgekeurd', 'afgekeurd', 'in_onderhoud', 'vervallen']),
+  "status": zod.enum(['concept', 'voorbereid', 'in_uitvoering', 'wacht_op_akkoord', 'meerwerk_financieel', 'opgeleverd', 'goedgekeurd', 'afgekeurd', 'in_onderhoud', 'vervallen', 'in_calculatie', 'calculatie_akkoord', 'offerte', 'opdracht', 'werkbegroting', 'inkoop']),
   "classificatie": zod.enum(['30', '60', '90', '120']),
   "gebouw_id": zod.number(),
   "gebouw_naam": zod.string().nullish(),
@@ -1516,7 +1516,7 @@ export const UpdateVoorzieningResponse = zod.object({
   "objectnummer": zod.string(),
   "qr_code": zod.string().nullish(),
   "type": zod.string(),
-  "status": zod.enum(['concept', 'voorbereid', 'in_uitvoering', 'wacht_op_akkoord', 'meerwerk_financieel', 'opgeleverd', 'goedgekeurd', 'afgekeurd', 'in_onderhoud', 'vervallen']),
+  "status": zod.enum(['concept', 'voorbereid', 'in_uitvoering', 'wacht_op_akkoord', 'meerwerk_financieel', 'opgeleverd', 'goedgekeurd', 'afgekeurd', 'in_onderhoud', 'vervallen', 'in_calculatie', 'calculatie_akkoord', 'offerte', 'opdracht', 'werkbegroting', 'inkoop']),
   "classificatie": zod.enum(['30', '60', '90', '120']),
   "gebouw_id": zod.number(),
   "gebouw_naam": zod.string().nullish(),
@@ -1625,7 +1625,7 @@ export const UpdateVoorzieningStatusResponse = zod.object({
   "objectnummer": zod.string(),
   "qr_code": zod.string().nullish(),
   "type": zod.string(),
-  "status": zod.enum(['concept', 'voorbereid', 'in_uitvoering', 'wacht_op_akkoord', 'meerwerk_financieel', 'opgeleverd', 'goedgekeurd', 'afgekeurd', 'in_onderhoud', 'vervallen']),
+  "status": zod.enum(['concept', 'voorbereid', 'in_uitvoering', 'wacht_op_akkoord', 'meerwerk_financieel', 'opgeleverd', 'goedgekeurd', 'afgekeurd', 'in_onderhoud', 'vervallen', 'in_calculatie', 'calculatie_akkoord', 'offerte', 'opdracht', 'werkbegroting', 'inkoop']),
   "classificatie": zod.enum(['30', '60', '90', '120']),
   "gebouw_id": zod.number(),
   "gebouw_naam": zod.string().nullish(),
@@ -1678,7 +1678,7 @@ export const ArchiveerVoorzieningResponse = zod.object({
   "objectnummer": zod.string(),
   "qr_code": zod.string().nullish(),
   "type": zod.string(),
-  "status": zod.enum(['concept', 'voorbereid', 'in_uitvoering', 'wacht_op_akkoord', 'meerwerk_financieel', 'opgeleverd', 'goedgekeurd', 'afgekeurd', 'in_onderhoud', 'vervallen']),
+  "status": zod.enum(['concept', 'voorbereid', 'in_uitvoering', 'wacht_op_akkoord', 'meerwerk_financieel', 'opgeleverd', 'goedgekeurd', 'afgekeurd', 'in_onderhoud', 'vervallen', 'in_calculatie', 'calculatie_akkoord', 'offerte', 'opdracht', 'werkbegroting', 'inkoop']),
   "classificatie": zod.enum(['30', '60', '90', '120']),
   "gebouw_id": zod.number(),
   "gebouw_naam": zod.string().nullish(),
@@ -1727,7 +1727,7 @@ export const ListSpotOnderdelenResponseItem = zod.object({
   "objectnummer": zod.string(),
   "qr_code": zod.string().nullish(),
   "type": zod.string(),
-  "status": zod.enum(['concept', 'voorbereid', 'in_uitvoering', 'wacht_op_akkoord', 'meerwerk_financieel', 'opgeleverd', 'goedgekeurd', 'afgekeurd', 'in_onderhoud', 'vervallen']),
+  "status": zod.enum(['concept', 'voorbereid', 'in_uitvoering', 'wacht_op_akkoord', 'meerwerk_financieel', 'opgeleverd', 'goedgekeurd', 'afgekeurd', 'in_onderhoud', 'vervallen', 'in_calculatie', 'calculatie_akkoord', 'offerte', 'opdracht', 'werkbegroting', 'inkoop']),
   "classificatie": zod.enum(['30', '60', '90', '120']),
   "gebouw_id": zod.number(),
   "gebouw_naam": zod.string().nullish(),
@@ -1928,6 +1928,104 @@ export const BevestigSpotAiControleResponse = zod.object({
   "beheerder_bevestigd_op": zod.string().nullish(),
   "herkomst": zod.string().nullish().describe('gebouwspecifiek of generiek (null = nog niet beoordeeld)'),
   "aangemaakt_op": zod.string().nullish()
+})
+
+
+/**
+ * @summary Lijst van alle spot-statusconfiguraties
+ */
+export const ListSpotStatusConfiguratieResponseItem = zod.object({
+  "status_code": zod.string(),
+  "weergave_naam": zod.string(),
+  "volgorde": zod.number(),
+  "actief": zod.boolean(),
+  "fase_groep": zod.string(),
+  "bijgewerkt_op": zod.string().optional()
+})
+export const ListSpotStatusConfiguratieResponse = zod.array(ListSpotStatusConfiguratieResponseItem)
+
+
+/**
+ * @summary Spot-statusconfiguratie bijwerken (weergavenaam, actief, volgorde)
+ */
+export const UpdateSpotStatusConfiguratieParams = zod.object({
+  "statusCode": zod.coerce.string()
+})
+
+export const UpdateSpotStatusConfiguratieBody = zod.object({
+  "weergave_naam": zod.string().optional(),
+  "actief": zod.boolean().optional(),
+  "volgorde": zod.number().optional()
+})
+
+export const UpdateSpotStatusConfiguratieResponse = zod.object({
+  "status_code": zod.string(),
+  "weergave_naam": zod.string(),
+  "volgorde": zod.number(),
+  "actief": zod.boolean(),
+  "fase_groep": zod.string(),
+  "bijgewerkt_op": zod.string().optional()
+})
+
+
+/**
+ * @summary Chronologische tijdlijn van alle activiteiten op een spot
+ */
+export const GetVoorzieningTijdlijnParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetVoorzieningTijdlijnResponseItem = zod.object({
+  "id": zod.number(),
+  "type": zod.string(),
+  "omschrijving": zod.string(),
+  "tijdstip": zod.string(),
+  "gebruiker_naam": zod.string().nullish(),
+  "gebruiker_id": zod.number().nullish()
+})
+export const GetVoorzieningTijdlijnResponse = zod.array(GetVoorzieningTijdlijnResponseItem)
+
+
+/**
+ * @summary Alle dossierkaarten van een spot ophalen
+ */
+export const ListSpotDossiersParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ListSpotDossiersResponseItem = zod.object({
+  "id": zod.number(),
+  "voorziening_id": zod.number(),
+  "type": zod.string(),
+  "status": zod.string(),
+  "data": zod.record(zod.string(), zod.unknown()),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+export const ListSpotDossiersResponse = zod.array(ListSpotDossiersResponseItem)
+
+
+/**
+ * @summary Dossierkaart van een spot bijwerken (data en/of status)
+ */
+export const UpdateSpotDossierParams = zod.object({
+  "id": zod.coerce.number(),
+  "type": zod.coerce.string()
+})
+
+export const UpdateSpotDossierBody = zod.object({
+  "status": zod.string().optional(),
+  "data": zod.record(zod.string(), zod.unknown()).optional()
+})
+
+export const UpdateSpotDossierResponse = zod.object({
+  "id": zod.number(),
+  "voorziening_id": zod.number(),
+  "type": zod.string(),
+  "status": zod.string(),
+  "data": zod.record(zod.string(), zod.unknown()),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
 })
 
 
@@ -4053,7 +4151,7 @@ export const GetInspectieResponse = zod.object({
   "objectnummer": zod.string(),
   "qr_code": zod.string().nullish(),
   "type": zod.string(),
-  "status": zod.enum(['concept', 'voorbereid', 'in_uitvoering', 'wacht_op_akkoord', 'meerwerk_financieel', 'opgeleverd', 'goedgekeurd', 'afgekeurd', 'in_onderhoud', 'vervallen']),
+  "status": zod.enum(['concept', 'voorbereid', 'in_uitvoering', 'wacht_op_akkoord', 'meerwerk_financieel', 'opgeleverd', 'goedgekeurd', 'afgekeurd', 'in_onderhoud', 'vervallen', 'in_calculatie', 'calculatie_akkoord', 'offerte', 'opdracht', 'werkbegroting', 'inkoop']),
   "classificatie": zod.enum(['30', '60', '90', '120']),
   "gebouw_id": zod.number(),
   "gebouw_naam": zod.string().nullish(),
@@ -6092,6 +6190,21 @@ export const CreateCrmMarktintelligentieBody = zod.object({
 })
 
 export const CreateCrmMarktintelligentieResponse = zod.void()
+
+
+/**
+ * @summary AI marktintelligentie scan
+ */
+export const ScanCrmMarktintelligentieAiResponseItem = zod.object({
+  "type": zod.string(),
+  "titel": zod.string(),
+  "inhoud": zod.string().nullish(),
+  "bron": zod.string().nullish(),
+  "bron_url": zod.string().nullish(),
+  "regio": zod.string().nullish(),
+  "datum": zod.string().nullish()
+})
+export const ScanCrmMarktintelligentieAiResponse = zod.array(ScanCrmMarktintelligentieAiResponseItem)
 
 
 /**
@@ -9525,11 +9638,30 @@ export const GetPortaalResponse = zod.object({
   "portaal_status": zod.string(),
   "ondertekend": zod.boolean(),
   "secties": zod.array(zod.object({
-
-}).passthrough()),
+  "id": zod.number(),
+  "sectie_type": zod.string(),
+  "volgorde": zod.number(),
+  "actief": zod.boolean().optional(),
+  "titel": zod.string().nullish(),
+  "inhoud": zod.string().nullish()
+})),
   "bijlagen": zod.array(zod.object({
-
-}).passthrough())
+  "id": zod.number(),
+  "bijlage_type": zod.string(),
+  "naam": zod.string(),
+  "beschrijving": zod.string().nullish(),
+  "url": zod.string().nullish()
+})),
+  "optionele_regels": zod.array(zod.object({
+  "id": zod.number(),
+  "maatregel": zod.string(),
+  "ruimte": zod.string().nullish(),
+  "eenheid": zod.string(),
+  "aantal": zod.number(),
+  "prijs_per_eenheid": zod.number(),
+  "kosten": zod.number(),
+  "optioneel_geselecteerd": zod.boolean()
+}))
 })
 
 
@@ -9592,6 +9724,20 @@ export const AfwijzenPortaalBody = zod.object({
 })
 
 export const AfwijzenPortaalResponse = zod.unknown()
+
+
+/**
+ * @summary Selectie van optionele regelposten opslaan (publiek)
+ */
+export const SavePortaalOptioneelWerkParams = zod.object({
+  "token": zod.coerce.string()
+})
+
+export const SavePortaalOptioneelWerkBody = zod.object({
+  "geselecteerd": zod.record(zod.string(), zod.boolean()).describe('Map van regel-id (string) naar boolean (geselecteerd of niet)')
+})
+
+export const SavePortaalOptioneelWerkResponse = zod.unknown()
 
 
 /**
@@ -9890,6 +10036,20 @@ export const ListPlanningMedewerkersResponseItem = zod.object({
   "actief": zod.boolean().optional()
 })
 export const ListPlanningMedewerkersResponse = zod.array(ListPlanningMedewerkersResponseItem)
+
+
+/**
+ * @summary Diagnose waarom medewerkers niet zichtbaar zijn in planning
+ */
+export const GetPlanningDiagnoseResponse = zod.object({
+  "totaal_in_hrm": zod.number(),
+  "zichtbaar_in_planning": zod.number(),
+  "oorzaken": zod.array(zod.object({
+  "reden": zod.string(),
+  "aantal": zod.number(),
+  "omschrijving": zod.string()
+}))
+})
 
 
 /**
@@ -10414,6 +10574,7 @@ export const ListModCalculatiesResponseItem = zod.object({
   "omschrijving": zod.string().nullish(),
   "opmerkingen": zod.string().nullish(),
   "opslag_ak": zod.number(),
+  "opslag_abk": zod.number(),
   "opslag_risico": zod.number(),
   "opslag_winst": zod.number(),
   "korting": zod.number(),
@@ -10439,6 +10600,7 @@ export const CreateModCalculatieBody = zod.object({
   "omschrijving": zod.string().nullish(),
   "opmerkingen": zod.string().nullish(),
   "opslag_ak": zod.number().optional(),
+  "opslag_abk": zod.number().optional(),
   "opslag_risico": zod.number().optional(),
   "opslag_winst": zod.number().optional(),
   "korting": zod.number().optional()
@@ -10559,6 +10721,7 @@ export const GetModCalculatieResponse = zod.object({
   "omschrijving": zod.string().nullish(),
   "opmerkingen": zod.string().nullish(),
   "opslag_ak": zod.number(),
+  "opslag_abk": zod.number(),
   "opslag_risico": zod.number(),
   "opslag_winst": zod.number(),
   "korting": zod.number(),
@@ -10580,7 +10743,15 @@ export const GetModCalculatieResponse = zod.object({
   "tarief": zod.number(),
   "totaal": zod.number(),
   "volgorde": zod.number(),
-  "opmerkingen": zod.string().nullish()
+  "opmerkingen": zod.string().nullish(),
+  "regelnummer": zod.string().nullish(),
+  "mu_per_eenheid": zod.number().optional(),
+  "arbeids_tarief": zod.number().optional(),
+  "onderaanneming_bedrag": zod.number().optional(),
+  "is_staartkosten": zod.boolean().optional(),
+  "materiaal_totaal": zod.number().optional(),
+  "mu_totaal": zod.number().optional(),
+  "arbeidsloon": zod.number().optional()
 })).optional()
 }))
 
@@ -10602,6 +10773,7 @@ export const UpdateModCalculatieBody = zod.object({
   "omschrijving": zod.string().nullish(),
   "opmerkingen": zod.string().nullish(),
   "opslag_ak": zod.number().optional(),
+  "opslag_abk": zod.number().optional(),
   "opslag_risico": zod.number().optional(),
   "opslag_winst": zod.number().optional(),
   "korting": zod.number().optional()
@@ -10619,6 +10791,7 @@ export const UpdateModCalculatieResponse = zod.object({
   "omschrijving": zod.string().nullish(),
   "opmerkingen": zod.string().nullish(),
   "opslag_ak": zod.number(),
+  "opslag_abk": zod.number(),
   "opslag_risico": zod.number(),
   "opslag_winst": zod.number(),
   "korting": zod.number(),
@@ -10651,6 +10824,16 @@ export const DupliceerModCalculatieResponse = zod.void()
 
 
 /**
+ * @summary Genereer offerte vanuit calculatie
+ */
+export const MaakOfferteVanCalculatieParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const MaakOfferteVanCalculatieResponse = zod.void()
+
+
+/**
  * @summary Calculatieregels ophalen
  */
 export const ListModCalcRegelsParams = zod.object({
@@ -10669,7 +10852,15 @@ export const ListModCalcRegelsResponseItem = zod.object({
   "tarief": zod.number(),
   "totaal": zod.number(),
   "volgorde": zod.number(),
-  "opmerkingen": zod.string().nullish()
+  "opmerkingen": zod.string().nullish(),
+  "regelnummer": zod.string().nullish(),
+  "mu_per_eenheid": zod.number().optional(),
+  "arbeids_tarief": zod.number().optional(),
+  "onderaanneming_bedrag": zod.number().optional(),
+  "is_staartkosten": zod.boolean().optional(),
+  "materiaal_totaal": zod.number().optional(),
+  "mu_totaal": zod.number().optional(),
+  "arbeidsloon": zod.number().optional()
 })
 export const ListModCalcRegelsResponse = zod.array(ListModCalcRegelsResponseItem)
 
@@ -10689,7 +10880,12 @@ export const CreateModCalcRegelBody = zod.object({
   "hoeveelheid": zod.number(),
   "tarief": zod.number(),
   "volgorde": zod.number().optional(),
-  "opmerkingen": zod.string().nullish()
+  "opmerkingen": zod.string().nullish(),
+  "regelnummer": zod.string().nullish(),
+  "mu_per_eenheid": zod.number().optional(),
+  "arbeids_tarief": zod.number().optional(),
+  "onderaanneming_bedrag": zod.number().optional(),
+  "is_staartkosten": zod.boolean().optional()
 })
 
 export const CreateModCalcRegelResponse = zod.void()
@@ -10711,7 +10907,12 @@ export const UpdateModCalcRegelBody = zod.object({
   "hoeveelheid": zod.number(),
   "tarief": zod.number(),
   "volgorde": zod.number().optional(),
-  "opmerkingen": zod.string().nullish()
+  "opmerkingen": zod.string().nullish(),
+  "regelnummer": zod.string().nullish(),
+  "mu_per_eenheid": zod.number().optional(),
+  "arbeids_tarief": zod.number().optional(),
+  "onderaanneming_bedrag": zod.number().optional(),
+  "is_staartkosten": zod.boolean().optional()
 })
 
 export const UpdateModCalcRegelResponse = zod.object({
@@ -10726,7 +10927,15 @@ export const UpdateModCalcRegelResponse = zod.object({
   "tarief": zod.number(),
   "totaal": zod.number(),
   "volgorde": zod.number(),
-  "opmerkingen": zod.string().nullish()
+  "opmerkingen": zod.string().nullish(),
+  "regelnummer": zod.string().nullish(),
+  "mu_per_eenheid": zod.number().optional(),
+  "arbeids_tarief": zod.number().optional(),
+  "onderaanneming_bedrag": zod.number().optional(),
+  "is_staartkosten": zod.boolean().optional(),
+  "materiaal_totaal": zod.number().optional(),
+  "mu_totaal": zod.number().optional(),
+  "arbeidsloon": zod.number().optional()
 })
 
 

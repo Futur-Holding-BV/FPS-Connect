@@ -20,4 +20,10 @@ export const VoorzieningStatus = {
   afgekeurd: 'afgekeurd',
   in_onderhoud: 'in_onderhoud',
   vervallen: 'vervallen',
+  in_calculatie: 'in_calculatie',
+  calculatie_akkoord: 'calculatie_akkoord',
+  offerte: 'offerte',
+  opdracht: 'opdracht',
+  werkbegroting: 'werkbegroting',
+  inkoop: 'inkoop',
 } as const;

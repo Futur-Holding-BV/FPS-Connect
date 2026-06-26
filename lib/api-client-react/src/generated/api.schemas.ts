@@ -385,6 +385,21 @@ export interface CrmMarktintelligentie {
   bijgewerkt_op: string;
 }
 
+export interface CrmMarktintelligentieVoorstel {
+  type: string;
+  titel: string;
+  /** @nullable */
+  inhoud?: string | null;
+  /** @nullable */
+  bron?: string | null;
+  /** @nullable */
+  bron_url?: string | null;
+  /** @nullable */
+  regio?: string | null;
+  /** @nullable */
+  datum?: string | null;
+}
+
 export interface CrmMarktintelligentieInput {
   type?: string;
   organisatie_id?: number;
@@ -1208,6 +1223,12 @@ export const VoorzieningStatus = {
   afgekeurd: 'afgekeurd',
   in_onderhoud: 'in_onderhoud',
   vervallen: 'vervallen',
+  in_calculatie: 'in_calculatie',
+  calculatie_akkoord: 'calculatie_akkoord',
+  offerte: 'offerte',
+  opdracht: 'opdracht',
+  werkbegroting: 'werkbegroting',
+  inkoop: 'inkoop',
 } as const;
 
 export type VoorzieningClassificatie = typeof VoorzieningClassificatie[keyof typeof VoorzieningClassificatie];
@@ -1673,6 +1694,51 @@ export interface ClusterUpdate {
 export interface ClusterMonteurInput {
   /** @nullable */
   monteur_id: number | null;
+}
+
+export interface SpotStatusConfiguratie {
+  status_code: string;
+  weergave_naam: string;
+  volgorde: number;
+  actief: boolean;
+  fase_groep: string;
+  bijgewerkt_op?: string;
+}
+
+export interface SpotStatusConfiguratieUpdate {
+  weergave_naam?: string;
+  actief?: boolean;
+  volgorde?: number;
+}
+
+export interface TijdlijnItem {
+  id: number;
+  type: string;
+  omschrijving: string;
+  tijdstip: string;
+  /** @nullable */
+  gebruiker_naam?: string | null;
+  /** @nullable */
+  gebruiker_id?: number | null;
+}
+
+export type SpotDossierItemData = { [key: string]: unknown };
+
+export interface SpotDossierItem {
+  id: number;
+  voorziening_id: number;
+  type: string;
+  status: string;
+  data: SpotDossierItemData;
+  aangemaakt_op: string;
+  bijgewerkt_op: string;
+}
+
+export type SpotDossierUpdateData = { [key: string]: unknown };
+
+export interface SpotDossierUpdate {
+  status?: string;
+  data?: SpotDossierUpdateData;
 }
 
 export interface StatusUpdate {
@@ -3791,8 +3857,6 @@ export interface OfferteRegel {
   kosten: number;
   volgorde: number;
   ai_voorstel: boolean;
-  is_optioneel: boolean;
-  optioneel_geselecteerd: boolean;
   aangemaakt_op: string;
   bijgewerkt_op: string;
 }
@@ -3811,7 +3875,6 @@ export interface OfferteRegelInput {
   kosten?: number;
   volgorde?: number;
   ai_voorstel?: boolean;
-  is_optioneel?: boolean;
 }
 
 export interface OfferteUitgangspunt {
@@ -4009,6 +4072,16 @@ export interface PortaalOptioneleRegelItem {
   optioneel_geselecteerd: boolean;
 }
 
+/**
+ * Map van regel-id (string) naar boolean (geselecteerd of niet)
+ */
+export type PortaalOptioneelWerkInputGeselecteerd = {[key: string]: boolean};
+
+export interface PortaalOptioneelWerkInput {
+  /** Map van regel-id (string) naar boolean (geselecteerd of niet) */
+  geselecteerd: PortaalOptioneelWerkInputGeselecteerd;
+}
+
 export interface PortaalOfferte {
   id: number;
   /** @nullable */
@@ -4051,10 +4124,6 @@ export interface PortaalTrackingInput {
 
 export interface PortaalAfwijzenInput {
   reden?: string;
-}
-
-export interface PortaalOptioneelWerkInput {
-  geselecteerd: Record<string, boolean>;
 }
 
 export interface OfferteBijlageInput {
@@ -4556,6 +4625,10 @@ export interface ModCalcHeader {
   bijgewerkt_op?: string;
 }
 
+export interface MaakOfferteResult {
+  offerte_id: number;
+}
+
 export interface ModCalcRegel {
   id: number;
   calculatie_id: number;
@@ -4570,13 +4643,13 @@ export interface ModCalcRegel {
   volgorde: number;
   opmerkingen?: string | null;
   regelnummer?: string | null;
-  mu_per_eenheid: number;
-  arbeids_tarief: number;
-  onderaanneming_bedrag: number;
-  is_staartkosten: boolean;
-  materiaal_totaal: number;
-  mu_totaal: number;
-  arbeidsloon: number;
+  mu_per_eenheid?: number;
+  arbeids_tarief?: number;
+  onderaanneming_bedrag?: number;
+  is_staartkosten?: boolean;
+  materiaal_totaal?: number;
+  mu_totaal?: number;
+  arbeidsloon?: number;
 }
 
 export type ModCalcHeaderDetail = ModCalcHeader & {
@@ -5403,6 +5476,10 @@ fase?: string;
 klant_id?: number;
 };
 
+export type ScanCrmMarktintelligentieAi503 = {
+  error?: string;
+};
+
 export type ListInboxItemsParams = {
 status?: string;
 bestemming?: string;
@@ -5551,43 +5628,4 @@ status?: string;
 export type ListOpnamePlattegrondItemsParams = {
 verdieping_id: number;
 };
-
-export interface SpotStatusConfiguratie {
-  status_code: string;
-  weergave_naam: string;
-  volgorde: number;
-  actief: boolean;
-  fase_groep: string;
-  bijgewerkt_op?: string;
-}
-
-export interface SpotStatusConfiguratieUpdate {
-  weergave_naam?: string;
-  actief?: boolean;
-  volgorde?: number;
-}
-
-export interface TijdlijnItem {
-  id: number;
-  type: string;
-  omschrijving: string;
-  tijdstip: string;
-  gebruiker_naam?: string | null;
-  gebruiker_id?: number | null;
-}
-
-export interface SpotDossierItem {
-  id: number;
-  voorziening_id: number;
-  type: string;
-  status: string;
-  data: Record<string, unknown>;
-  aangemaakt_op: string;
-  bijgewerkt_op: string;
-}
-
-export interface SpotDossierUpdate {
-  status?: string;
-  data?: Record<string, unknown>;
-}
 
