@@ -1,6 +1,8 @@
+import { useListToolboxBerichten } from "@workspace/api-client-react";
+import type { ToolboxBericht } from "@workspace/api-client-react";
 import { Redirect, useRouter } from "expo-router";
-import React from "react";
-import { Pressable, ScrollView, Text, View } from "react-native";
+import React, { useState } from "react";
+import { ActivityIndicator, Pressable, ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { bovenInset } from "@/components/ui";
@@ -8,42 +10,60 @@ import { useAuth } from "@/context/auth";
 import { useColors } from "@/hooks/useColors";
 import { useResponsive } from "@/hooks/useResponsive";
 
-type Artikel = { titel: string; punten: string[] };
+function datumLabel(iso: string): string {
+  return new Date(iso).toLocaleDateString("nl-NL", { day: "numeric", month: "long", year: "numeric" });
+}
 
-const ARTIKELEN: Artikel[] = [
-  {
-    titel: "Brandwerende doorvoeringen",
-    punten: [
-      "Controleer altijd of de toegepaste oplossing past bij de wand- of vloerconstructie.",
-      "Gebruik uitsluitend producten met een geldig testrapport of ETA voor de situatie.",
-      "Leg de afwerking per spot vast met een duidelijke foto.",
-    ],
-  },
-  {
-    titel: "Brand- en rookscheidingen",
-    punten: [
-      "De werendheid volgt uit de testnorm van de gekoppelde toepassing.",
-      "Onderbrekingen in een scheiding moeten met een passende toepassing worden hersteld.",
-      "Twijfel je over de classificatie? Overleg met de uitvoerder voordat je afwerkt.",
-    ],
-  },
-  {
-    titel: "Veilig werken op locatie",
-    punten: [
-      "Draag de voorgeschreven persoonlijke beschermingsmiddelen.",
-      "Meld bijzonderheden of onveilige situaties direct bij je uitvoerder.",
-      "Houd vluchtwegen en blusmiddelen tijdens het werk altijd vrij.",
-    ],
-  },
-  {
-    titel: "Registratie en oplevering",
-    punten: [
-      "Werk spots bij zodra een afwerking gereed is, inclusief foto.",
-      "Synchroniseer je werk zodra je weer online bent.",
-      "Een volledige registratie is de basis voor de opleverrapportage.",
-    ],
-  },
-];
+function BerichtKaart({ bericht, c }: { bericht: ToolboxBericht; c: ReturnType<typeof useColors> }) {
+  const [uitgevouwen, setUitgevouwen] = useState(false);
+
+  return (
+    <Pressable
+      onPress={() => setUitgevouwen((v) => !v)}
+      style={({ pressed }) => ({
+        backgroundColor: c.card,
+        borderRadius: c.radius,
+        borderWidth: 1,
+        borderColor: uitgevouwen ? c.primary : c.border,
+        padding: 18,
+        opacity: pressed ? 0.88 : 1,
+      })}
+    >
+      <View style={{ flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
+        <View style={{ flex: 1 }}>
+          <Text style={{ color: c.foreground, fontSize: 15, fontFamily: "Inter_700Bold", lineHeight: 21 }}>
+            {bericht.titel}
+          </Text>
+          {bericht.gepubliceerd_op && (
+            <Text style={{ color: c.mutedForeground, fontSize: 12, fontFamily: "Inter_400Regular", marginTop: 3 }}>
+              {datumLabel(bericht.gepubliceerd_op)}
+            </Text>
+          )}
+        </View>
+        <Text style={{ color: c.primary, fontSize: 18, fontFamily: "Inter_600SemiBold", lineHeight: 24 }}>
+          {uitgevouwen ? "−" : "+"}
+        </Text>
+      </View>
+
+      {!uitgevouwen && bericht.inhoud ? (
+        <Text
+          style={{ color: c.mutedForeground, fontSize: 13, fontFamily: "Inter_400Regular", marginTop: 8, lineHeight: 19 }}
+          numberOfLines={2}
+        >
+          {bericht.inhoud}
+        </Text>
+      ) : null}
+
+      {uitgevouwen && bericht.inhoud ? (
+        <Text
+          style={{ color: c.foreground, fontSize: 14, fontFamily: "Inter_400Regular", marginTop: 10, lineHeight: 22 }}
+        >
+          {bericht.inhoud}
+        </Text>
+      ) : null}
+    </Pressable>
+  );
+}
 
 export default function KennisbankScherm() {
   const c = useColors();
@@ -52,7 +72,14 @@ export default function KennisbankScherm() {
   const { leesMaxBreedte, inhoudMaxBreedte } = useResponsive();
   const { token } = useAuth();
 
+  const { data: berichten, isLoading } = useListToolboxBerichten(
+    {},
+    { query: { queryKey: ["toolbox-berichten-kennisbank"] } }
+  );
+
   if (!token) return <Redirect href="/login" />;
+
+  const zichtbaar = (berichten ?? []).filter((b) => b.gepubliceerd && !b.gearchiveerd);
 
   return (
     <View style={{ flex: 1, backgroundColor: c.background }}>
@@ -63,47 +90,35 @@ export default function KennisbankScherm() {
           </Pressable>
           <Text style={{ color: c.darkForeground, fontSize: 20, fontFamily: "Inter_700Bold" }}>Kennisbank</Text>
           <Text style={{ color: c.darkMuted, fontSize: 13, marginTop: 2, fontFamily: "Inter_400Regular" }}>
-            Naslag en veilig werken
+            Werkafspraken, handboeken en toolboxen
           </Text>
         </View>
       </View>
 
       <ScrollView
-        contentContainerStyle={{ padding: 16, gap: 14, paddingBottom: insets.bottom + 32, width: "100%", maxWidth: leesMaxBreedte, alignSelf: "center" }}
+        contentContainerStyle={{
+          padding: 16,
+          gap: 12,
+          paddingBottom: insets.bottom + 32,
+          width: "100%",
+          maxWidth: leesMaxBreedte,
+          alignSelf: "center",
+        }}
       >
-        {ARTIKELEN.map((artikel) => (
-          <View
-            key={artikel.titel}
-            style={{
-              backgroundColor: c.card,
-              borderRadius: c.radius,
-              borderWidth: 1,
-              borderColor: c.border,
-              padding: 18,
-            }}
-          >
-            <Text style={{ color: c.foreground, fontSize: 16, fontFamily: "Inter_700Bold", marginBottom: 10 }}>
-              {artikel.titel}
+        {isLoading ? (
+          <ActivityIndicator size="large" color={c.primary} style={{ marginTop: 32 }} />
+        ) : zichtbaar.length === 0 ? (
+          <View style={{ alignItems: "center", paddingTop: 48, gap: 8 }}>
+            <Text style={{ color: c.mutedForeground, fontSize: 15, fontFamily: "Inter_600SemiBold" }}>
+              Nog geen berichten geplaatst
             </Text>
-            <View style={{ gap: 6 }}>
-              {artikel.punten.map((punt, i) => (
-                <Text
-                  key={i}
-                  style={{ color: c.mutedForeground, fontSize: 14, lineHeight: 21, fontFamily: "Inter_400Regular" }}
-                >
-                  {"\u2022  "}
-                  {punt}
-                </Text>
-              ))}
-            </View>
+            <Text style={{ color: c.mutedForeground, fontSize: 13, fontFamily: "Inter_400Regular", textAlign: "center" }}>
+              Werkafspraken, veiligheidshandboeken en toolboxen verschijnen hier zodra ze zijn gepubliceerd.
+            </Text>
           </View>
-        ))}
-
-        <Text
-          style={{ textAlign: "center", color: c.mutedForeground, fontSize: 12, fontFamily: "Inter_400Regular", paddingTop: 4 }}
-        >
-          Naslag dient als hulpmiddel. Volg altijd de geldende wet- en regelgeving en de instructies van je uitvoerder.
-        </Text>
+        ) : (
+          zichtbaar.map((b) => <BerichtKaart key={b.id} bericht={b} c={c} />)
+        )}
       </ScrollView>
     </View>
   );
