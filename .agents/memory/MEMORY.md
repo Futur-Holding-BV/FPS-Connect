@@ -76,3 +76,5 @@
 - [Back-up & Herstel systeem](backup-systeem.md) — backup_records tabel; ObjectStorageService.uploadBackupFile/downloadBackupFile; backupService.ts (pg_dump+gzip+sha256); dagelijks 03:00 via recursieve setTimeout; restore vereist "HERSTEL BEVESTIGEN" + hoofdbeheerder.
 - [FPS Connect PWA](fps-pwa.md) — manifest+SW in firevault/public; icons PNG via ImageMagick; QR via /api/auth/pwa-qr (qrcode pkg); René id=11 is_hoofdtester=true.
 - [Werkdag-module patroon](werkdag-module.md) — planning_items=work orders; uitvoering_status via SQL ALTER (geen drizzle push); medewerker opzoeken via gebruiker_id in sessie; useFocusEffect voor refresh bij terugkeer.
+- [SidebarTrigger tooltip-patroon](sidebar-trigger-tooltip.md) — TooltipTrigger asChild op SidebarTrigger breekt rendering (geen forwardRef); gebruik native title-attribuut op SidebarTrigger voor hover-hint.
+- [Canvas viewport vs. sidebar zichtbaarheid](canvas-sidebar-viewport.md) — firevault-iframe staat op Canvas positie (-974,-551) bij 1920x1080; sidebar (x=0..250) valt buiten het Canvas-viewport als dat bij (0,0) begint; gebruik Preview-pane voor volledige app-weergave.
