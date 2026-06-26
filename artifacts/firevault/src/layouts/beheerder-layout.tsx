@@ -328,6 +328,17 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
                     <SidebarMenuItem>
                       <SidebarMenuButton
                         asChild
+                        isActive={location === "/werk-inbox" || location.startsWith("/werk-inbox/")}
+                      >
+                        <Link href="/werk-inbox">
+                          <Inbox />
+                          <span>Werk-inbox</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        asChild
                         isActive={location === "/berichten" || location.startsWith("/berichten/")}
                       >
                         <Link href="/berichten">

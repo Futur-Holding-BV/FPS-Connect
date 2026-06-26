@@ -45,6 +45,7 @@ import CrmMarktintelligentie from "@/pages/crm/marktintelligentie";
 import CrmContactpersonen from "@/pages/crm/contactpersonen";
 import InboxOverzicht from "@/pages/inbox/index";
 import InboxDetail from "@/pages/inbox/detail";
+import WerkInboxPagina from "@/pages/werk-inbox/index";
 import Abonnementen from "@/pages/abonnementen/index";
 import LoginPogingen from "@/pages/beheer/login-pogingen";
 import HelpdeskBeheer from "@/pages/beheer/helpdesk";
@@ -230,6 +231,9 @@ function ConnectPortal() {
         {/* ── Inbox ── */}
         <Route path="/inbox/:id" component={InboxDetail} />
         <Route path="/inbox" component={InboxOverzicht} />
+
+        {/* ── Werk-inbox ── */}
+        <Route path="/werk-inbox" component={WerkInboxPagina} />
 
         {/* ── HRM ── statische /personeel/* paden vóór dynamisch /:id */}
         <Route path="/personeel/verlof" component={VerlofOverzichtPagina} />

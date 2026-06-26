@@ -1,0 +1,92 @@
+import {
+  pgTable, serial, text, integer, boolean, timestamp, index, unique,
+} from "drizzle-orm/pg-core";
+import { gebruikersTable } from "./gebruikers";
+
+// ─── Microsoft OAuth tokens per gebruiker ─────────────────────────────────────
+export const werkInboxTokensTable = pgTable("werk_inbox_tokens", {
+  id:              serial("id").primaryKey(),
+  gebruikerId:     integer("gebruiker_id").notNull().references(() => gebruikersTable.id, { onDelete: "cascade" }),
+  microsoftEmail:  text("microsoft_email").notNull(),
+  accessTokenEnc:  text("access_token_enc").notNull(),
+  refreshTokenEnc: text("refresh_token_enc").notNull(),
+  verlooptOp:      timestamp("verloopt_op").notNull(),
+  scope:           text("scope").notNull().default("Mail.Read Mail.ReadShared offline_access"),
+  aangemaaktOp:    timestamp("aangemaakt_op").notNull().defaultNow(),
+  bijgewerktOp:    timestamp("bijgewerkt_op").notNull().defaultNow(),
+}, (t) => [
+  unique("werk_inbox_tokens_gebruiker_uq").on(t.gebruikerId),
+]);
+
+// ─── Geconfigureerde mailboxen per gebruiker ──────────────────────────────────
+export const werkInboxMailboxenTable = pgTable("werk_inbox_mailboxen", {
+  id:           serial("id").primaryKey(),
+  gebruikerId:  integer("gebruiker_id").notNull().references(() => gebruikersTable.id, { onDelete: "cascade" }),
+  emailAdres:   text("email_adres").notNull(),
+  label:        text("label"),
+  volgorde:     integer("volgorde").notNull().default(0),
+  actief:       boolean("actief").notNull().default(true),
+  aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
+}, (t) => [
+  unique("werk_inbox_mailboxen_gebruiker_adres_uq").on(t.gebruikerId, t.emailAdres),
+  index("werk_inbox_mailboxen_gebruiker_idx").on(t.gebruikerId),
+]);
+
+// ─── Mail metadata (dedup op message_id) ──────────────────────────────────────
+export const werkInboxMailsTable = pgTable("werk_inbox_mails", {
+  id:                  serial("id").primaryKey(),
+  messageId:           text("message_id").notNull(),
+  gebruikerId:         integer("gebruiker_id").notNull().references(() => gebruikersTable.id, { onDelete: "cascade" }),
+  mailboxAdres:        text("mailbox_adres").notNull(),
+  onderwerp:           text("onderwerp").notNull().default(""),
+  afzenderNaam:        text("afzender_naam"),
+  afzenderEmail:       text("afzender_email").notNull().default(""),
+  ontvangenOp:         timestamp("ontvangen_op").notNull(),
+  snippet:             text("snippet"),
+  heeftBijlage:        boolean("heeft_bijlage").notNull().default(false),
+  isGelezenMs:         boolean("is_gelezen_ms").notNull().default(false),
+  verwerktOp:          timestamp("verwerkt_op"),
+  gesynchroniseerdOp:  timestamp("gesynchroniseerd_op").notNull().defaultNow(),
+  bijgewerktOp:        timestamp("bijgewerkt_op").notNull().defaultNow(),
+}, (t) => [
+  unique("werk_inbox_mails_gebruiker_message_uq").on(t.gebruikerId, t.messageId),
+  index("werk_inbox_mails_gebruiker_idx").on(t.gebruikerId),
+  index("werk_inbox_mails_mailbox_idx").on(t.gebruikerId, t.mailboxAdres),
+  index("werk_inbox_mails_ontvangen_idx").on(t.gebruikerId, t.ontvangenOp),
+]);
+
+// ─── Interne notities per mail ────────────────────────────────────────────────
+export const werkInboxNotitiesTable = pgTable("werk_inbox_notities", {
+  id:          serial("id").primaryKey(),
+  messageId:   text("message_id").notNull(),
+  gebruikerId: integer("gebruiker_id").notNull().references(() => gebruikersTable.id, { onDelete: "cascade" }),
+  tekst:       text("tekst").notNull(),
+  aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
+  bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
+}, (t) => [
+  index("werk_inbox_notities_message_idx").on(t.messageId, t.gebruikerId),
+]);
+
+// ─── Koppelingen mail ↔ FPS-entiteit ─────────────────────────────────────────
+export const werkInboxKoppelingenTable = pgTable("werk_inbox_koppelingen", {
+  id:           serial("id").primaryKey(),
+  messageId:    text("message_id").notNull(),
+  gebruikerId:  integer("gebruiker_id").notNull().references(() => gebruikersTable.id, { onDelete: "cascade" }),
+  entityType:   text("entity_type").notNull(),
+  entityId:     integer("entity_id").notNull(),
+  entityLabel:  text("entity_label"),
+  aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
+}, (t) => [
+  unique("werk_inbox_koppelingen_uq").on(t.messageId, t.gebruikerId, t.entityType, t.entityId),
+  index("werk_inbox_koppelingen_message_idx").on(t.messageId, t.gebruikerId),
+]);
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+export type WerkInboxToken      = typeof werkInboxTokensTable.$inferSelect;
+export type WerkInboxMailbox    = typeof werkInboxMailboxenTable.$inferSelect;
+export type WerkInboxMail       = typeof werkInboxMailsTable.$inferSelect;
+export type WerkInboxNotitie    = typeof werkInboxNotitiesTable.$inferSelect;
+export type WerkInboxKoppeling  = typeof werkInboxKoppelingenTable.$inferSelect;
+
+export const WERK_INBOX_ENTITY_TYPES = ["klant", "gebouw", "project", "calculatie", "planning", "offerte"] as const;
+export type WerkInboxEntityType = typeof WERK_INBOX_ENTITY_TYPES[number];
