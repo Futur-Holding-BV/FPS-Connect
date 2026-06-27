@@ -12,6 +12,7 @@ import { useResponsive } from "@/hooks/useResponsive";
 
 const APP_VERSIE = "1.0.0";
 const APP_UITGEBRACHT_OP = "2026-06-08";
+const APP_NAAM = "FPS Monteur";
 const APP_LEVERANCIER = "FPS Brandpreventie";
 
 type Wijziging = { versie: string; datum: string; punten: string[] };
@@ -376,7 +377,7 @@ export default function InfoScherm() {
                 Applicatie
               </Text>
               <Text style={{ color: c.foreground, fontSize: 13, fontFamily: "Inter_600SemiBold" }}>
-                {APP_LEVERANCIER}
+                {APP_NAAM}
               </Text>
             </View>
             <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
@@ -415,7 +416,7 @@ export default function InfoScherm() {
 
         <Kaart titel="Veiligheidsdisclaimer">
           <Alinea>
-            De informatie en registraties in {APP_LEVERANCIER} zijn bedoeld als ondersteunend
+            De informatie en registraties in {APP_NAAM} zijn bedoeld als ondersteunend
             hulpmiddel bij het beheer van brandveiligheidsvoorzieningen. De applicatie geeft
             geen garantie over de daadwerkelijke brandveiligheid van een gebouw of installatie.
           </Alinea>
@@ -435,7 +436,7 @@ export default function InfoScherm() {
 
         <Kaart titel="Juridische verantwoordelijkheid">
           <Alinea>
-            {APP_LEVERANCIER} is een hulpmiddel voor het registreren, beheren en inspecteren
+            {APP_NAAM} is een hulpmiddel voor het registreren, beheren en inspecteren
             van brandpreventieve gebouwvoorzieningen. De applicatie ondersteunt bij het
             vastleggen en plannen van werkzaamheden, maar vervangt niet het professionele
             oordeel van bevoegde inspecteurs, monteurs of de verantwoordelijke gebouweigenaar.
@@ -443,8 +444,7 @@ export default function InfoScherm() {
           <Alinea>
             De gebruiker en de gebouweigenaar blijven te allen tijde zelf verantwoordelijk voor
             het naleven van de geldende wet- en regelgeving op het gebied van brandveiligheid,
-            waaronder het Bouwbesluit en de van toepassing zijnde NEN-normen. {APP_LEVERANCIER}
-            aanvaardt geen aansprakelijkheid voor schade die voortvloeit uit onjuiste,
+            waaronder het Bouwbesluit en de van toepassing zijnde NEN-normen. {APP_LEVERANCIER} aanvaardt geen aansprakelijkheid voor schade die voortvloeit uit onjuiste,
             onvolledige of verouderde gegevens, noch uit beslissingen die op basis van de in de
             applicatie getoonde informatie zijn genomen.
           </Alinea>
