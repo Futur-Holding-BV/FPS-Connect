@@ -233,7 +233,6 @@ export default function ModulesPlanning() {
   const [opslaan, setOpslaan] = useState(false);
   const [toolboxAdvies, setToolboxAdvies] = useState<Array<{ id: number; titel: string; categorie: string; reden: string }> | null>(null);
   const [filterWerkmaatschappij, setFilterWerkmaatschappij] = useState<string>("alle");
-  const [filterDienstverband, setFilterDienstverband] = useState<string>("alle");
   const [filterAlleenUitvoerend, setFilterAlleenUitvoerend] = useState(false);
 
   const queryClient = useQueryClient();
@@ -255,11 +254,10 @@ export default function ModulesPlanning() {
   const medewerkersParams = {
     ...(filterAlleenUitvoerend ? { alleen_uitvoerend: true } : {}),
     ...(filterWerkmaatschappij !== "alle" ? { werkmaatschappij: filterWerkmaatschappij } : {}),
-    ...(filterDienstverband !== "alle" ? { dienstverband: filterDienstverband } : {}),
   };
   const { data: medewerkers = [], isLoading: medewerkersLoading, refetch: refetchMedewerkers } = useListPlanningMedewerkers(
     medewerkersParams,
-    { query: { queryKey: ["planning-medewerkers", filterAlleenUitvoerend, filterWerkmaatschappij, filterDienstverband] } }
+    { query: { queryKey: ["planning-medewerkers", filterAlleenUitvoerend, filterWerkmaatschappij] } }
   );
   const { data: afwezigheid = [] } = useListPlanningAfwezigheid(
     {},
@@ -534,20 +532,6 @@ export default function ModulesPlanning() {
                 <SelectItem value="FPS Bouw">FPS Bouw</SelectItem>
               </SelectContent>
             </Select>
-            <Select value={filterDienstverband} onValueChange={setFilterDienstverband}>
-              <SelectTrigger className="h-8 text-xs w-40">
-                <SelectValue placeholder="Dienstverband" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="alle">Alle dienstverbanden</SelectItem>
-                <SelectItem value="vast">Vast</SelectItem>
-                <SelectItem value="tijdelijk">Tijdelijk</SelectItem>
-                <SelectItem value="zzp">ZZP</SelectItem>
-                <SelectItem value="uitzend">Uitzend</SelectItem>
-                <SelectItem value="inhuur">Inhuur</SelectItem>
-                <SelectItem value="onderaannemer">Onderaannemer</SelectItem>
-              </SelectContent>
-            </Select>
             <button
               className={`flex items-center gap-1.5 rounded border px-2.5 py-1 text-xs transition-colors ${filterAlleenUitvoerend ? "border-primary bg-primary/10 text-primary font-medium" : "border-slate-200 bg-white text-muted-foreground hover:border-slate-300"}`}
               onClick={() => setFilterAlleenUitvoerend((v) => !v)}
@@ -555,10 +539,10 @@ export default function ModulesPlanning() {
             >
               Alleen uitvoerend
             </button>
-            {(filterWerkmaatschappij !== "alle" || filterDienstverband !== "alle" || filterAlleenUitvoerend) && (
+            {(filterWerkmaatschappij !== "alle" || filterAlleenUitvoerend) && (
               <button
                 className="text-xs text-muted-foreground underline hover:text-slate-700"
-                onClick={() => { setFilterWerkmaatschappij("alle"); setFilterDienstverband("alle"); setFilterAlleenUitvoerend(false); }}
+                onClick={() => { setFilterWerkmaatschappij("alle"); setFilterAlleenUitvoerend(false); }}
                 type="button"
               >
                 Wis filters
