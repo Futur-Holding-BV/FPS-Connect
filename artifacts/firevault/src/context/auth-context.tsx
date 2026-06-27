@@ -5,6 +5,7 @@ import {
   getGetHuidigeGebruikerQueryKey,
   logout as logoutRequest,
   type AuthGebruiker,
+  ApiError,
 } from "@workspace/api-client-react";
 import { useTaal } from "@/context/taal-context";
 import { isGeldigeTaal } from "@/i18n/talen";
@@ -52,15 +53,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const meKey = getGetHuidigeGebruikerQueryKey();
 
-  const { data, isLoading, isError } = useQuery({
+  const { data, isPending, isError, error } = useQuery({
     queryKey: meKey,
     queryFn: () => getHuidigeGebruiker(),
-    retry: false,
-    staleTime: 5 * 60 * 1000,
+    retry: (failureCount, err) => {
+      if (err instanceof ApiError && err.status === 401) return false;
+      return failureCount < 2;
+    },
+    retryDelay: 3000,
+    staleTime: 15 * 60 * 1000,
     refetchOnWindowFocus: true,
   });
 
-  const gebruiker = isError ? null : (data ?? null);
+  const isEchte401 = isError && error instanceof ApiError && error.status === 401;
+  const gebruiker = isEchte401 ? null : (data ?? null);
 
   useEffect(() => {
     if (gebruiker?.taal && isGeldigeTaal(gebruiker.taal)) {
@@ -103,7 +109,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     <AuthContext.Provider
       value={{
         gebruiker,
-        isLoading,
+        isLoading: isPending,
         isAuthenticated: gebruiker !== null,
         herlaad,
         uitloggen,
