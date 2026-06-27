@@ -43,6 +43,8 @@ tags:
     description: Urenregistratie, weekstaten en ADV-berekening (FPS Connect)
   - name: projecten
     description: Projecten — centrale uitvoeringsentiteit (Enterprise Blueprint v1.1)
+  - name: snagstream
+    description: Snagstream PDF-archief — import, AI-uitlezing, koppeling en overname als Connect-spot
 
 paths:
   /healthz:
@@ -11193,6 +11195,186 @@ paths:
               schema:
                 $ref: '#/components/schemas/VeiligheidDashboard'
 
+  /snagstream/upload-url:
+    post:
+      operationId: requestSnagstreamUploadUrl
+      summary: Presigned upload-URL aanvragen voor Snagstream PDF
+      tags: [snagstream]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SnagstreamUploadUrlInput'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SnagstreamUploadUrlResponse'
+
+  /snagstream/rapporten:
+    get:
+      operationId: listSnagstreamRapporten
+      summary: Snagstream-archief ophalen
+      tags: [snagstream]
+      parameters:
+        - in: query
+          name: gebouw_id
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SnagstreamRapport'
+    post:
+      operationId: createSnagstreamRapport
+      summary: Snagstream PDF-rapport toevoegen aan archief
+      tags: [snagstream]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SnagstreamRapportInput'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SnagstreamRapport'
+
+  /snagstream/rapporten/{id}:
+    get:
+      operationId: getSnagstreamRapport
+      summary: Snagstream rapport detail ophalen
+      tags: [snagstream]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SnagstreamRapport'
+    patch:
+      operationId: updateSnagstreamRapport
+      summary: Rapport koppelen aan gebouw of status bijwerken
+      tags: [snagstream]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SnagstreamRapportPatch'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SnagstreamRapport'
+    delete:
+      operationId: deleteSnagstreamRapport
+      summary: Rapport verwijderen uit archief
+      tags: [snagstream]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: No Content
+
+  /snagstream/rapporten/{id}/ai-uitlezen:
+    post:
+      operationId: aiUitlezenSnagstreamRapport
+      summary: AI leest Snagstream PDF uit en herkent snags
+      tags: [snagstream]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SnagstreamRapport'
+
+  /snagstream/rapporten/{id}/snags:
+    get:
+      operationId: listSnagstreamSnags
+      summary: Snags van een Snagstream rapport ophalen
+      tags: [snagstream]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SnagstreamSnag'
+
+  /snagstream/snags/{id}/overnemen:
+    post:
+      operationId: overnemenSnagstreamSnag
+      summary: Snag overnemen als Connect-spot (na controle)
+      tags: [snagstream]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SnagstreamOvernemenInput'
+      responses:
+        '201':
+          description: Created — Connect-spot aangemaakt
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [voorziening_id]
+                properties:
+                  voorziening_id:
+                    type: integer
+
 
 components:
   schemas:
@@ -20268,4 +20450,195 @@ components:
           type: integer
         acties_verlopen:
           type: integer
+
+    SnagstreamRapport:
+      type: object
+      required: [id, bestandsnaam, pdf_url, status, aangemaakt_op, bijgewerkt_op]
+      properties:
+        id:
+          type: integer
+        bestandsnaam:
+          type: string
+        pdf_url:
+          type: string
+        rapportdatum:
+          type: string
+          nullable: true
+        opdrachtgever:
+          type: string
+          nullable: true
+        project_naam:
+          type: string
+          nullable: true
+        status:
+          type: string
+        gebouw_id:
+          type: integer
+          nullable: true
+        gebouw_naam:
+          type: string
+          nullable: true
+        ai_metadata:
+          type: object
+          nullable: true
+          additionalProperties: true
+        uploader_naam:
+          type: string
+          nullable: true
+        snag_count:
+          type: integer
+        aangemaakt_op:
+          type: string
+        bijgewerkt_op:
+          type: string
+
+    SnagstreamRapportInput:
+      type: object
+      required: [bestandsnaam, pdf_url]
+      properties:
+        bestandsnaam:
+          type: string
+        pdf_url:
+          type: string
+        rapportdatum:
+          type: string
+          nullable: true
+        opdrachtgever:
+          type: string
+          nullable: true
+        project_naam:
+          type: string
+          nullable: true
+        gebouw_id:
+          type: integer
+          nullable: true
+
+    SnagstreamRapportPatch:
+      type: object
+      properties:
+        gebouw_id:
+          type: integer
+          nullable: true
+        status:
+          type: string
+          nullable: true
+        rapportdatum:
+          type: string
+          nullable: true
+        opdrachtgever:
+          type: string
+          nullable: true
+        project_naam:
+          type: string
+          nullable: true
+
+    SnagstreamSnag:
+      type: object
+      required: [id, rapport_id, overgenomen, aangemaakt_op]
+      properties:
+        id:
+          type: integer
+        rapport_id:
+          type: integer
+        snagnummer:
+          type: string
+          nullable: true
+        verdieping:
+          type: string
+          nullable: true
+        ruimte:
+          type: string
+          nullable: true
+        omschrijving:
+          type: string
+          nullable: true
+        type_naam:
+          type: string
+          nullable: true
+        applicatie_naam:
+          type: string
+          nullable: true
+        label_naam:
+          type: string
+          nullable: true
+        toepassing_naam:
+          type: string
+          nullable: true
+        classificatie:
+          type: string
+          nullable: true
+        status_origineel:
+          type: string
+          nullable: true
+        opmerkingen:
+          type: string
+          nullable: true
+        foto_url:
+          type: string
+          nullable: true
+        pdf_pagina:
+          type: integer
+          nullable: true
+        pdf_x:
+          type: number
+          nullable: true
+        pdf_y:
+          type: number
+          nullable: true
+        confidence_scores:
+          type: object
+          nullable: true
+          additionalProperties: true
+        overgenomen:
+          type: boolean
+        overgenomen_als_voorziening_id:
+          type: integer
+          nullable: true
+        aangemaakt_op:
+          type: string
+
+    SnagstreamOvernemenInput:
+      type: object
+      required: [gebouw_id, verdieping_id]
+      properties:
+        gebouw_id:
+          type: integer
+        verdieping_id:
+          type: integer
+        type_naam:
+          type: string
+          nullable: true
+        applicatie_naam:
+          type: string
+          nullable: true
+        label_naam:
+          type: string
+          nullable: true
+        ruimte:
+          type: string
+          nullable: true
+        omschrijving:
+          type: string
+          nullable: true
+        foto_url:
+          type: string
+          nullable: true
+
+    SnagstreamUploadUrlInput:
+      type: object
+      required: [bestandsnaam, bestandsgrootte]
+      properties:
+        bestandsnaam:
+          type: string
+        bestandsgrootte:
+          type: integer
+
+    SnagstreamUploadUrlResponse:
+      type: object
+      required: [upload_url, object_path]
+      properties:
+        upload_url:
+          type: string
+        object_path:
+          type: string
 

@@ -16,7 +16,7 @@ import {
   Trophy, HardDrive, ClipboardList, Smartphone, Plus, Hammer, PackageCheck,
   BookOpen, HardDriveUpload, CalendarCheck2, Settings2, ArchiveRestore,
   Inbox, Building2, Target, Handshake, Newspaper, CalendarRange, KeyRound,
-  ClipboardCheck, AlertTriangle,
+  ClipboardCheck, AlertTriangle, FileArchive,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { GebruikerMenu } from "@/components/gebruiker-menu";
@@ -52,6 +52,7 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
   const toonOffertes      = heeftNiveau("offertes", 1);
   const toonOnderhoud     = heeftNiveau("gebouwen", 1);
   const toonToolboxen     = heeftNiveau("toolbox", 1);
+  const toonSnagstream    = heeftNiveau("bibliotheek", 1);
 
   const heeftOne = isHoofdbeheerder;
   const aantalOmgevingen = 1 + (heeftOne ? 1 : 0);
@@ -492,6 +493,28 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
                           <Link href="/veiligheid/meldingen">
                             <AlertTriangle />
                             <span>Meldingen</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    </SidebarMenu>
+                  </SidebarGroupContent>
+                </SidebarGroup>
+              )}
+
+              {/* Snagstream */}
+              {toonSnagstream && (
+                <SidebarGroup>
+                  <SidebarGroupLabel>Archief</SidebarGroupLabel>
+                  <SidebarGroupContent>
+                    <SidebarMenu>
+                      <SidebarMenuItem>
+                        <SidebarMenuButton
+                          asChild
+                          isActive={location === "/snagstream" || location.startsWith("/snagstream/")}
+                        >
+                          <Link href="/snagstream">
+                            <FileArchive />
+                            <span>Snagstream archief</span>
                           </Link>
                         </SidebarMenuButton>
                       </SidebarMenuItem>

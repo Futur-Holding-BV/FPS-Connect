@@ -13854,3 +13854,205 @@ export const GetVeiligheidDashboardResponse = zod.object({
 })
 
 
+/**
+ * @summary Presigned upload-URL aanvragen voor Snagstream PDF
+ */
+export const RequestSnagstreamUploadUrlBody = zod.object({
+  "bestandsnaam": zod.string(),
+  "bestandsgrootte": zod.number()
+})
+
+export const RequestSnagstreamUploadUrlResponse = zod.object({
+  "upload_url": zod.string(),
+  "object_path": zod.string()
+})
+
+
+/**
+ * @summary Snagstream-archief ophalen
+ */
+export const ListSnagstreamRapportenQueryParams = zod.object({
+  "gebouw_id": zod.coerce.number().optional()
+})
+
+export const ListSnagstreamRapportenResponseItem = zod.object({
+  "id": zod.number(),
+  "bestandsnaam": zod.string(),
+  "pdf_url": zod.string(),
+  "rapportdatum": zod.string().nullish(),
+  "opdrachtgever": zod.string().nullish(),
+  "project_naam": zod.string().nullish(),
+  "status": zod.string(),
+  "gebouw_id": zod.number().nullish(),
+  "gebouw_naam": zod.string().nullish(),
+  "ai_metadata": zod.record(zod.string(), zod.unknown()).nullish(),
+  "uploader_naam": zod.string().nullish(),
+  "snag_count": zod.number().optional(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+export const ListSnagstreamRapportenResponse = zod.array(ListSnagstreamRapportenResponseItem)
+
+
+/**
+ * @summary Snagstream PDF-rapport toevoegen aan archief
+ */
+export const CreateSnagstreamRapportBody = zod.object({
+  "bestandsnaam": zod.string(),
+  "pdf_url": zod.string(),
+  "rapportdatum": zod.string().nullish(),
+  "opdrachtgever": zod.string().nullish(),
+  "project_naam": zod.string().nullish(),
+  "gebouw_id": zod.number().nullish()
+})
+
+export const CreateSnagstreamRapportResponse = zod.void()
+
+
+/**
+ * @summary Snagstream rapport detail ophalen
+ */
+export const GetSnagstreamRapportParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetSnagstreamRapportResponse = zod.object({
+  "id": zod.number(),
+  "bestandsnaam": zod.string(),
+  "pdf_url": zod.string(),
+  "rapportdatum": zod.string().nullish(),
+  "opdrachtgever": zod.string().nullish(),
+  "project_naam": zod.string().nullish(),
+  "status": zod.string(),
+  "gebouw_id": zod.number().nullish(),
+  "gebouw_naam": zod.string().nullish(),
+  "ai_metadata": zod.record(zod.string(), zod.unknown()).nullish(),
+  "uploader_naam": zod.string().nullish(),
+  "snag_count": zod.number().optional(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+
+
+/**
+ * @summary Rapport koppelen aan gebouw of status bijwerken
+ */
+export const UpdateSnagstreamRapportParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateSnagstreamRapportBody = zod.object({
+  "gebouw_id": zod.number().nullish(),
+  "status": zod.string().nullish(),
+  "rapportdatum": zod.string().nullish(),
+  "opdrachtgever": zod.string().nullish(),
+  "project_naam": zod.string().nullish()
+})
+
+export const UpdateSnagstreamRapportResponse = zod.object({
+  "id": zod.number(),
+  "bestandsnaam": zod.string(),
+  "pdf_url": zod.string(),
+  "rapportdatum": zod.string().nullish(),
+  "opdrachtgever": zod.string().nullish(),
+  "project_naam": zod.string().nullish(),
+  "status": zod.string(),
+  "gebouw_id": zod.number().nullish(),
+  "gebouw_naam": zod.string().nullish(),
+  "ai_metadata": zod.record(zod.string(), zod.unknown()).nullish(),
+  "uploader_naam": zod.string().nullish(),
+  "snag_count": zod.number().optional(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+
+
+/**
+ * @summary Rapport verwijderen uit archief
+ */
+export const DeleteSnagstreamRapportParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteSnagstreamRapportResponse = zod.void()
+
+
+/**
+ * @summary AI leest Snagstream PDF uit en herkent snags
+ */
+export const AiUitlezenSnagstreamRapportParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const AiUitlezenSnagstreamRapportResponse = zod.object({
+  "id": zod.number(),
+  "bestandsnaam": zod.string(),
+  "pdf_url": zod.string(),
+  "rapportdatum": zod.string().nullish(),
+  "opdrachtgever": zod.string().nullish(),
+  "project_naam": zod.string().nullish(),
+  "status": zod.string(),
+  "gebouw_id": zod.number().nullish(),
+  "gebouw_naam": zod.string().nullish(),
+  "ai_metadata": zod.record(zod.string(), zod.unknown()).nullish(),
+  "uploader_naam": zod.string().nullish(),
+  "snag_count": zod.number().optional(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+
+
+/**
+ * @summary Snags van een Snagstream rapport ophalen
+ */
+export const ListSnagstreamSnagsParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ListSnagstreamSnagsResponseItem = zod.object({
+  "id": zod.number(),
+  "rapport_id": zod.number(),
+  "snagnummer": zod.string().nullish(),
+  "verdieping": zod.string().nullish(),
+  "ruimte": zod.string().nullish(),
+  "omschrijving": zod.string().nullish(),
+  "type_naam": zod.string().nullish(),
+  "applicatie_naam": zod.string().nullish(),
+  "label_naam": zod.string().nullish(),
+  "toepassing_naam": zod.string().nullish(),
+  "classificatie": zod.string().nullish(),
+  "status_origineel": zod.string().nullish(),
+  "opmerkingen": zod.string().nullish(),
+  "foto_url": zod.string().nullish(),
+  "pdf_pagina": zod.number().nullish(),
+  "pdf_x": zod.number().nullish(),
+  "pdf_y": zod.number().nullish(),
+  "confidence_scores": zod.record(zod.string(), zod.unknown()).nullish(),
+  "overgenomen": zod.boolean(),
+  "overgenomen_als_voorziening_id": zod.number().nullish(),
+  "aangemaakt_op": zod.string()
+})
+export const ListSnagstreamSnagsResponse = zod.array(ListSnagstreamSnagsResponseItem)
+
+
+/**
+ * @summary Snag overnemen als Connect-spot (na controle)
+ */
+export const OvernemenSnagstreamSnagParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const OvernemenSnagstreamSnagBody = zod.object({
+  "gebouw_id": zod.number(),
+  "verdieping_id": zod.number(),
+  "type_naam": zod.string().nullish(),
+  "applicatie_naam": zod.string().nullish(),
+  "label_naam": zod.string().nullish(),
+  "ruimte": zod.string().nullish(),
+  "omschrijving": zod.string().nullish(),
+  "foto_url": zod.string().nullish()
+})
+
+export const OvernemenSnagstreamSnagResponse = zod.void()
+
+

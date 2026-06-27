@@ -44,6 +44,7 @@ import spotStatusConfiguratieRouter from "./spot-status-configuratie";
 import werkInboxRouter from "./werk-inbox";
 import veiligheidRouter from "./veiligheid";
 import opdrachtenRouter from "./opdrachten";
+import snagstreamRouter from "./snagstream";
 import { requireAuth } from "../middlewares/auth";
 
 const router: IRouter = Router();
@@ -97,5 +98,6 @@ router.use(spotStatusConfiguratieRouter);
 router.use(werkInboxRouter);
 router.use(veiligheidRouter);
 router.use(opdrachtenRouter);
+router.use(snagstreamRouter);
 
 export default router;

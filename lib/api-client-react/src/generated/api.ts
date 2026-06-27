@@ -208,6 +208,7 @@ import type {
   ListProjectBegrotingenParams,
   ListProjectenParams,
   ListRapportenParams,
+  ListSnagstreamRapportenParams,
   ListTestrapportenParams,
   ListToolboxBerichtenParams,
   ListUrenParams,
@@ -297,6 +298,7 @@ import type {
   OpnamePatchInput,
   OpnameSamenvatting,
   OpnameSpotsAanmakenResultaat,
+  OvernemenSnagstreamSnag201,
   PlanningAfwezigheid,
   PlanningAfwezigheidInput,
   PlanningDiagnose,
@@ -331,6 +333,13 @@ import type {
   Scheiding,
   ScheidingInput,
   ScheidingUpdate,
+  SnagstreamOvernemenInput,
+  SnagstreamRapport,
+  SnagstreamRapportInput,
+  SnagstreamRapportPatch,
+  SnagstreamSnag,
+  SnagstreamUploadUrlInput,
+  SnagstreamUploadUrlResponse,
   SpotAiControleInput,
   SpotAiVoorstelInput,
   SpotAiVoorstelPersistInput,
@@ -39957,4 +39966,664 @@ export function useGetVeiligheidDashboard<TData = Awaited<ReturnType<typeof getV
 
 
 
+
+export const getRequestSnagstreamUploadUrlUrl = () => {
+
+
+
+
+  return `/api/snagstream/upload-url`
+}
+
+/**
+ * @summary Presigned upload-URL aanvragen voor Snagstream PDF
+ */
+export const requestSnagstreamUploadUrl = async (snagstreamUploadUrlInput: SnagstreamUploadUrlInput, options?: RequestInit): Promise<SnagstreamUploadUrlResponse> => {
+
+  return customFetch<SnagstreamUploadUrlResponse>(getRequestSnagstreamUploadUrlUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(snagstreamUploadUrlInput)
+  }
+);}
+
+
+
+
+export const getRequestSnagstreamUploadUrlMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof requestSnagstreamUploadUrl>>, TError,{data: BodyType<SnagstreamUploadUrlInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof requestSnagstreamUploadUrl>>, TError,{data: BodyType<SnagstreamUploadUrlInput>}, TContext> => {
+
+const mutationKey = ['requestSnagstreamUploadUrl'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof requestSnagstreamUploadUrl>>, {data: BodyType<SnagstreamUploadUrlInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  requestSnagstreamUploadUrl(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RequestSnagstreamUploadUrlMutationResult = NonNullable<Awaited<ReturnType<typeof requestSnagstreamUploadUrl>>>
+    export type RequestSnagstreamUploadUrlMutationBody = BodyType<SnagstreamUploadUrlInput>
+    export type RequestSnagstreamUploadUrlMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Presigned upload-URL aanvragen voor Snagstream PDF
+ */
+export const useRequestSnagstreamUploadUrl = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof requestSnagstreamUploadUrl>>, TError,{data: BodyType<SnagstreamUploadUrlInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof requestSnagstreamUploadUrl>>,
+        TError,
+        {data: BodyType<SnagstreamUploadUrlInput>},
+        TContext
+      > => {
+      return useMutation(getRequestSnagstreamUploadUrlMutationOptions(options));
+    }
+
+export const getListSnagstreamRapportenUrl = (params?: ListSnagstreamRapportenParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/snagstream/rapporten?${stringifiedParams}` : `/api/snagstream/rapporten`
+}
+
+/**
+ * @summary Snagstream-archief ophalen
+ */
+export const listSnagstreamRapporten = async (params?: ListSnagstreamRapportenParams, options?: RequestInit): Promise<SnagstreamRapport[]> => {
+
+  return customFetch<SnagstreamRapport[]>(getListSnagstreamRapportenUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListSnagstreamRapportenQueryKey = (params?: ListSnagstreamRapportenParams,) => {
+    return [
+    `/api/snagstream/rapporten`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListSnagstreamRapportenQueryOptions = <TData = Awaited<ReturnType<typeof listSnagstreamRapporten>>, TError = ErrorType<unknown>>(params?: ListSnagstreamRapportenParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listSnagstreamRapporten>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListSnagstreamRapportenQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listSnagstreamRapporten>>> = ({ signal }) => listSnagstreamRapporten(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listSnagstreamRapporten>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListSnagstreamRapportenQueryResult = NonNullable<Awaited<ReturnType<typeof listSnagstreamRapporten>>>
+export type ListSnagstreamRapportenQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Snagstream-archief ophalen
+ */
+
+export function useListSnagstreamRapporten<TData = Awaited<ReturnType<typeof listSnagstreamRapporten>>, TError = ErrorType<unknown>>(
+ params?: ListSnagstreamRapportenParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listSnagstreamRapporten>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListSnagstreamRapportenQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateSnagstreamRapportUrl = () => {
+
+
+
+
+  return `/api/snagstream/rapporten`
+}
+
+/**
+ * @summary Snagstream PDF-rapport toevoegen aan archief
+ */
+export const createSnagstreamRapport = async (snagstreamRapportInput: SnagstreamRapportInput, options?: RequestInit): Promise<SnagstreamRapport> => {
+
+  return customFetch<SnagstreamRapport>(getCreateSnagstreamRapportUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(snagstreamRapportInput)
+  }
+);}
+
+
+
+
+export const getCreateSnagstreamRapportMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createSnagstreamRapport>>, TError,{data: BodyType<SnagstreamRapportInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createSnagstreamRapport>>, TError,{data: BodyType<SnagstreamRapportInput>}, TContext> => {
+
+const mutationKey = ['createSnagstreamRapport'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createSnagstreamRapport>>, {data: BodyType<SnagstreamRapportInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createSnagstreamRapport(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateSnagstreamRapportMutationResult = NonNullable<Awaited<ReturnType<typeof createSnagstreamRapport>>>
+    export type CreateSnagstreamRapportMutationBody = BodyType<SnagstreamRapportInput>
+    export type CreateSnagstreamRapportMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Snagstream PDF-rapport toevoegen aan archief
+ */
+export const useCreateSnagstreamRapport = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createSnagstreamRapport>>, TError,{data: BodyType<SnagstreamRapportInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createSnagstreamRapport>>,
+        TError,
+        {data: BodyType<SnagstreamRapportInput>},
+        TContext
+      > => {
+      return useMutation(getCreateSnagstreamRapportMutationOptions(options));
+    }
+
+export const getGetSnagstreamRapportUrl = (id: number,) => {
+
+
+
+
+  return `/api/snagstream/rapporten/${id}`
+}
+
+/**
+ * @summary Snagstream rapport detail ophalen
+ */
+export const getSnagstreamRapport = async (id: number, options?: RequestInit): Promise<SnagstreamRapport> => {
+
+  return customFetch<SnagstreamRapport>(getGetSnagstreamRapportUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetSnagstreamRapportQueryKey = (id: number,) => {
+    return [
+    `/api/snagstream/rapporten/${id}`
+    ] as const;
+    }
+
+
+export const getGetSnagstreamRapportQueryOptions = <TData = Awaited<ReturnType<typeof getSnagstreamRapport>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSnagstreamRapport>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetSnagstreamRapportQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getSnagstreamRapport>>> = ({ signal }) => getSnagstreamRapport(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getSnagstreamRapport>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetSnagstreamRapportQueryResult = NonNullable<Awaited<ReturnType<typeof getSnagstreamRapport>>>
+export type GetSnagstreamRapportQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Snagstream rapport detail ophalen
+ */
+
+export function useGetSnagstreamRapport<TData = Awaited<ReturnType<typeof getSnagstreamRapport>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSnagstreamRapport>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetSnagstreamRapportQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getUpdateSnagstreamRapportUrl = (id: number,) => {
+
+
+
+
+  return `/api/snagstream/rapporten/${id}`
+}
+
+/**
+ * @summary Rapport koppelen aan gebouw of status bijwerken
+ */
+export const updateSnagstreamRapport = async (id: number,
+    snagstreamRapportPatch: SnagstreamRapportPatch, options?: RequestInit): Promise<SnagstreamRapport> => {
+
+  return customFetch<SnagstreamRapport>(getUpdateSnagstreamRapportUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(snagstreamRapportPatch)
+  }
+);}
+
+
+
+
+export const getUpdateSnagstreamRapportMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateSnagstreamRapport>>, TError,{id: number;data: BodyType<SnagstreamRapportPatch>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateSnagstreamRapport>>, TError,{id: number;data: BodyType<SnagstreamRapportPatch>}, TContext> => {
+
+const mutationKey = ['updateSnagstreamRapport'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateSnagstreamRapport>>, {id: number;data: BodyType<SnagstreamRapportPatch>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateSnagstreamRapport(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateSnagstreamRapportMutationResult = NonNullable<Awaited<ReturnType<typeof updateSnagstreamRapport>>>
+    export type UpdateSnagstreamRapportMutationBody = BodyType<SnagstreamRapportPatch>
+    export type UpdateSnagstreamRapportMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Rapport koppelen aan gebouw of status bijwerken
+ */
+export const useUpdateSnagstreamRapport = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateSnagstreamRapport>>, TError,{id: number;data: BodyType<SnagstreamRapportPatch>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateSnagstreamRapport>>,
+        TError,
+        {id: number;data: BodyType<SnagstreamRapportPatch>},
+        TContext
+      > => {
+      return useMutation(getUpdateSnagstreamRapportMutationOptions(options));
+    }
+
+export const getDeleteSnagstreamRapportUrl = (id: number,) => {
+
+
+
+
+  return `/api/snagstream/rapporten/${id}`
+}
+
+/**
+ * @summary Rapport verwijderen uit archief
+ */
+export const deleteSnagstreamRapport = async (id: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteSnagstreamRapportUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteSnagstreamRapportMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteSnagstreamRapport>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteSnagstreamRapport>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deleteSnagstreamRapport'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteSnagstreamRapport>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteSnagstreamRapport(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteSnagstreamRapportMutationResult = NonNullable<Awaited<ReturnType<typeof deleteSnagstreamRapport>>>
+
+    export type DeleteSnagstreamRapportMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Rapport verwijderen uit archief
+ */
+export const useDeleteSnagstreamRapport = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteSnagstreamRapport>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteSnagstreamRapport>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeleteSnagstreamRapportMutationOptions(options));
+    }
+
+export const getAiUitlezenSnagstreamRapportUrl = (id: number,) => {
+
+
+
+
+  return `/api/snagstream/rapporten/${id}/ai-uitlezen`
+}
+
+/**
+ * @summary AI leest Snagstream PDF uit en herkent snags
+ */
+export const aiUitlezenSnagstreamRapport = async (id: number, options?: RequestInit): Promise<SnagstreamRapport> => {
+
+  return customFetch<SnagstreamRapport>(getAiUitlezenSnagstreamRapportUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getAiUitlezenSnagstreamRapportMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof aiUitlezenSnagstreamRapport>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof aiUitlezenSnagstreamRapport>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['aiUitlezenSnagstreamRapport'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof aiUitlezenSnagstreamRapport>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  aiUitlezenSnagstreamRapport(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AiUitlezenSnagstreamRapportMutationResult = NonNullable<Awaited<ReturnType<typeof aiUitlezenSnagstreamRapport>>>
+
+    export type AiUitlezenSnagstreamRapportMutationError = ErrorType<unknown>
+
+    /**
+ * @summary AI leest Snagstream PDF uit en herkent snags
+ */
+export const useAiUitlezenSnagstreamRapport = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof aiUitlezenSnagstreamRapport>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof aiUitlezenSnagstreamRapport>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getAiUitlezenSnagstreamRapportMutationOptions(options));
+    }
+
+export const getListSnagstreamSnagsUrl = (id: number,) => {
+
+
+
+
+  return `/api/snagstream/rapporten/${id}/snags`
+}
+
+/**
+ * @summary Snags van een Snagstream rapport ophalen
+ */
+export const listSnagstreamSnags = async (id: number, options?: RequestInit): Promise<SnagstreamSnag[]> => {
+
+  return customFetch<SnagstreamSnag[]>(getListSnagstreamSnagsUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListSnagstreamSnagsQueryKey = (id: number,) => {
+    return [
+    `/api/snagstream/rapporten/${id}/snags`
+    ] as const;
+    }
+
+
+export const getListSnagstreamSnagsQueryOptions = <TData = Awaited<ReturnType<typeof listSnagstreamSnags>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listSnagstreamSnags>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListSnagstreamSnagsQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listSnagstreamSnags>>> = ({ signal }) => listSnagstreamSnags(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listSnagstreamSnags>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListSnagstreamSnagsQueryResult = NonNullable<Awaited<ReturnType<typeof listSnagstreamSnags>>>
+export type ListSnagstreamSnagsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Snags van een Snagstream rapport ophalen
+ */
+
+export function useListSnagstreamSnags<TData = Awaited<ReturnType<typeof listSnagstreamSnags>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listSnagstreamSnags>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListSnagstreamSnagsQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getOvernemenSnagstreamSnagUrl = (id: number,) => {
+
+
+
+
+  return `/api/snagstream/snags/${id}/overnemen`
+}
+
+/**
+ * @summary Snag overnemen als Connect-spot (na controle)
+ */
+export const overnemenSnagstreamSnag = async (id: number,
+    snagstreamOvernemenInput: SnagstreamOvernemenInput, options?: RequestInit): Promise<OvernemenSnagstreamSnag201> => {
+
+  return customFetch<OvernemenSnagstreamSnag201>(getOvernemenSnagstreamSnagUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(snagstreamOvernemenInput)
+  }
+);}
+
+
+
+
+export const getOvernemenSnagstreamSnagMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof overnemenSnagstreamSnag>>, TError,{id: number;data: BodyType<SnagstreamOvernemenInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof overnemenSnagstreamSnag>>, TError,{id: number;data: BodyType<SnagstreamOvernemenInput>}, TContext> => {
+
+const mutationKey = ['overnemenSnagstreamSnag'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof overnemenSnagstreamSnag>>, {id: number;data: BodyType<SnagstreamOvernemenInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  overnemenSnagstreamSnag(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type OvernemenSnagstreamSnagMutationResult = NonNullable<Awaited<ReturnType<typeof overnemenSnagstreamSnag>>>
+    export type OvernemenSnagstreamSnagMutationBody = BodyType<SnagstreamOvernemenInput>
+    export type OvernemenSnagstreamSnagMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Snag overnemen als Connect-spot (na controle)
+ */
+export const useOvernemenSnagstreamSnag = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof overnemenSnagstreamSnag>>, TError,{id: number;data: BodyType<SnagstreamOvernemenInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof overnemenSnagstreamSnag>>,
+        TError,
+        {id: number;data: BodyType<SnagstreamOvernemenInput>},
+        TContext
+      > => {
+      return useMutation(getOvernemenSnagstreamSnagMutationOptions(options));
+    }
 

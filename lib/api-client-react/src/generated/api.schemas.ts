@@ -5716,6 +5716,89 @@ export interface VeiligheidDashboard {
   acties_verlopen?: number;
 }
 
+export type SnagstreamRapportAiMetadata = { [key: string]: unknown } | null;
+
+export interface SnagstreamRapport {
+  id: number;
+  bestandsnaam: string;
+  pdf_url: string;
+  rapportdatum?: string | null;
+  opdrachtgever?: string | null;
+  project_naam?: string | null;
+  status: string;
+  gebouw_id?: number | null;
+  gebouw_naam?: string | null;
+  ai_metadata?: SnagstreamRapportAiMetadata;
+  uploader_naam?: string | null;
+  snag_count?: number;
+  aangemaakt_op: string;
+  bijgewerkt_op: string;
+}
+
+export interface SnagstreamRapportInput {
+  bestandsnaam: string;
+  pdf_url: string;
+  rapportdatum?: string | null;
+  opdrachtgever?: string | null;
+  project_naam?: string | null;
+  gebouw_id?: number | null;
+}
+
+export interface SnagstreamRapportPatch {
+  gebouw_id?: number | null;
+  status?: string | null;
+  rapportdatum?: string | null;
+  opdrachtgever?: string | null;
+  project_naam?: string | null;
+}
+
+export type SnagstreamSnagConfidenceScores = { [key: string]: unknown } | null;
+
+export interface SnagstreamSnag {
+  id: number;
+  rapport_id: number;
+  snagnummer?: string | null;
+  verdieping?: string | null;
+  ruimte?: string | null;
+  omschrijving?: string | null;
+  type_naam?: string | null;
+  applicatie_naam?: string | null;
+  label_naam?: string | null;
+  toepassing_naam?: string | null;
+  classificatie?: string | null;
+  status_origineel?: string | null;
+  opmerkingen?: string | null;
+  foto_url?: string | null;
+  pdf_pagina?: number | null;
+  pdf_x?: number | null;
+  pdf_y?: number | null;
+  confidence_scores?: SnagstreamSnagConfidenceScores;
+  overgenomen: boolean;
+  overgenomen_als_voorziening_id?: number | null;
+  aangemaakt_op: string;
+}
+
+export interface SnagstreamOvernemenInput {
+  gebouw_id: number;
+  verdieping_id: number;
+  type_naam?: string | null;
+  applicatie_naam?: string | null;
+  label_naam?: string | null;
+  ruimte?: string | null;
+  omschrijving?: string | null;
+  foto_url?: string | null;
+}
+
+export interface SnagstreamUploadUrlInput {
+  bestandsnaam: string;
+  bestandsgrootte: number;
+}
+
+export interface SnagstreamUploadUrlResponse {
+  upload_url: string;
+  object_path: string;
+}
+
 export type GetRecenteActiviteitParams = {
 limit?: number;
 };
@@ -6077,5 +6160,13 @@ export type GetVeiligheidLmrasUploadUrl200 = {
 export type GetVeiligheidMeldingenUploadUrl200 = {
   upload_url: string;
   object_path: string;
+};
+
+export type ListSnagstreamRapportenParams = {
+gebouw_id?: number;
+};
+
+export type OvernemenSnagstreamSnag201 = {
+  voorziening_id: number;
 };
 
