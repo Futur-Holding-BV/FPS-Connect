@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useLocation } from "wouter";
+import { useLocation, useSearch } from "wouter";
 import { useCreateModCalculatie } from "@workspace/api-client-react";
 import { useListGebouwen } from "@workspace/api-client-react";
 import { useToast } from "@/hooks/use-toast";
@@ -16,14 +16,17 @@ import { useQueryClient } from "@tanstack/react-query";
 
 export default function ModulesCalculatieNieuw() {
   const [, navigate] = useLocation();
+  const search = useSearch();
   const queryClient = useQueryClient();
   const { toast } = useToast();
+
+  const vooringevuldGebouwId = new URLSearchParams(search).get("gebouw_id") ?? "__geen__";
 
   const [form, setForm] = useState({
     naam: "",
     referentie: "",
     klant_naam: "",
-    gebouw_id: "__geen__",
+    gebouw_id: vooringevuldGebouwId,
     project_naam: "",
     status: "concept",
     omschrijving: "",

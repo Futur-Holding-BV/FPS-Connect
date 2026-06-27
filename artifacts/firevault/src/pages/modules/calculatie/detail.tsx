@@ -37,6 +37,7 @@ import {
   Printer, History, Save,
 } from "lucide-react";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 
 const STATUS_LABEL: Record<string, string> = {
@@ -205,6 +206,7 @@ export default function ModulesCalculatieDetail() {
   const id = params?.id ? parseInt(params.id, 10) : 0;
 
   const queryClient = useQueryClient();
+  const { toast } = useToast();
   const invalidate = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ["mod-calculatie", id] });
   }, [queryClient, id]);
@@ -215,21 +217,34 @@ export default function ModulesCalculatieDetail() {
   const { data: normtijden = [] } = useListModCalcNormtijden({ query: { queryKey: ["mod-calc-normtijden"] } });
   const { data: tarieven = [] } = useListModCalcTarieven({ query: { queryKey: ["mod-calc-tarieven"] } });
 
-  const updateMut = useUpdateModCalculatie({ mutation: { onSuccess: invalidate } });
-  const deleteMut = useDeleteModCalculatie({ mutation: { onSuccess: () => navigate("/modules/calculatie") } });
+  const updateMut = useUpdateModCalculatie({
+    mutation: {
+      onSuccess: invalidate,
+      onError: () => toast({ title: "Opslaan mislukt", description: "De wijziging kon niet worden opgeslagen.", variant: "destructive" }),
+    },
+  });
+  const deleteMut = useDeleteModCalculatie({
+    mutation: {
+      onSuccess: () => navigate("/modules/calculatie"),
+      onError: () => toast({ title: "Verwijderen mislukt", description: "De calculatie kon niet worden verwijderd.", variant: "destructive" }),
+    },
+  });
   const dupliceerMut = useDupliceerModCalculatie({
     mutation: {
       onSuccess: (d) => {
         queryClient.invalidateQueries({ queryKey: ["mod-calculaties"] });
         navigate(`/modules/calculatie/${d.id}`);
       },
+      onError: () => toast({ title: "Dupliceren mislukt", description: "De calculatie kon niet worden gedupliceerd.", variant: "destructive" }),
     },
   });
   const maakOfferteMut = useMaakOfferteVanCalculatie({
     mutation: {
       onSuccess: (d) => {
+        toast({ title: "Offerte aangemaakt", description: "De offerte is aangemaakt op basis van de calculatie." });
         navigate(`/offertes/${d.offerte_id}`);
       },
+      onError: () => toast({ title: "Offerte aanmaken mislukt", description: "De offerte kon niet worden aangemaakt. Controleer of de API-server draait.", variant: "destructive" }),
     },
   });
 

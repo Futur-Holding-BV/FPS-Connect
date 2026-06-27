@@ -14,6 +14,8 @@ import {
   useArchiveerGebouw,
   useListGekoppeldeDocumenten,
   useUpdateGebouw,
+  useListModCalculaties,
+  useListOffertes,
   type Document,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -63,6 +65,9 @@ import {
   Sparkles,
   Archive,
   Download,
+  Calculator,
+  Euro,
+  Plus,
 } from "lucide-react";
 import { useAuth } from "@/context/auth-context";
 import { useRol } from "@/context/rol-context";
@@ -83,6 +88,22 @@ import GebouwRapporten from "./gebouw-rapporten";
 
 const BEHEERDER_ROLLEN = ["beheerder", "hoofdbeheerder"];
 const TEAM_UITGESLOTEN_ROLLEN = ["hoofdbeheerder", "klant"];
+
+const CALC_STATUS_LABEL: Record<string, string> = {
+  concept: "Concept",
+  intern_akkoord: "Intern akkoord",
+  aangeboden: "Aangeboden",
+  gewonnen: "Gewonnen",
+  verloren: "Verloren",
+};
+
+const OFFERTE_STATUS_LABEL: Record<string, string> = {
+  concept: "Concept",
+  verzonden: "Verzonden",
+  geaccepteerd: "Geaccepteerd",
+  afgewezen: "Afgewezen",
+  vervallen: "Vervallen",
+};
 
 const PROJECT_STATUS_CONFIG: Record<string, { label: string; className: string }> = {
   offerte_aanvraag: {
@@ -324,6 +345,11 @@ export default function GebouwDetail() {
   const archiveerMutatie = useArchiveerGebouw();
   const updateGebouw = useUpdateGebouw();
   const { toast } = useToast();
+
+  const { data: alleCalculaties = [] } = useListModCalculaties(undefined, { query: { queryKey: ["mod-calculaties"] } });
+  const gebouwCalcs = (Array.isArray(alleCalculaties) ? alleCalculaties : []).filter((c: any) => c.gebouw_id === gebouwId);
+  const { data: alleOffertes = [] } = useListOffertes();
+  const gebouwOffertes = (Array.isArray(alleOffertes) ? alleOffertes : []).filter((o: any) => o.gebouw_id === gebouwId);
 
   const [gekozenGebruikerId, setGekozenGebruikerId] = useState<string>("");
   const [gekozenProjectRol, setGekozenProjectRol] = useState<string>("");
@@ -633,7 +659,7 @@ export default function GebouwDetail() {
           ════════════════════════════════════════════════════ */}
       <Tabs value={segment} onValueChange={setSegment} className="w-full">
         <div className="flex items-start justify-between gap-4">
-          <TabsList className="grid w-full max-w-3xl min-w-0 grid-cols-4">
+          <TabsList className="grid w-full max-w-4xl min-w-0 grid-cols-5">
             <TabsTrigger value="project" className="gap-1.5">
               <Building2 className="h-4 w-4 shrink-0" />
               <span className="hidden sm:inline">Project &amp; Gebouw</span>
@@ -650,6 +676,10 @@ export default function GebouwDetail() {
             <TabsTrigger value="rapporten" className="gap-1.5">
               <FileText className="h-4 w-4 shrink-0" />
               <span className="hidden sm:inline">Rapporten</span>
+            </TabsTrigger>
+            <TabsTrigger value="calculaties" className="gap-1.5">
+              <Calculator className="h-4 w-4 shrink-0" />
+              <span className="hidden sm:inline">Calculaties</span>
             </TabsTrigger>
           </TabsList>
 
@@ -1163,6 +1193,103 @@ export default function GebouwDetail() {
           ════════════════════════════════════════════════════ */}
       <TabsContent value="rapporten" className="space-y-4 mt-6">
         <GebouwRapporten gebouwId={gebouwId} isBeheerder={isBeheerder} />
+      </TabsContent>
+
+      {/* ════════════════════════════════════════════════════
+          SEGMENT 5 — Calculaties & Offertes
+          ════════════════════════════════════════════════════ */}
+      <TabsContent value="calculaties" className="space-y-6 mt-6">
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Calculator className="h-4 w-4" />
+                Calculaties
+              </CardTitle>
+              <Button size="sm" asChild>
+                <Link href={`/modules/calculatie/nieuw?gebouw_id=${gebouwId}`}>
+                  <Plus className="h-3.5 w-3.5 mr-1.5" />
+                  Nieuwe calculatie
+                </Link>
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent className="p-0">
+            {gebouwCalcs.length === 0 ? (
+              <div className="py-10 text-center text-muted-foreground text-sm">
+                <Calculator className="h-8 w-8 mx-auto mb-2 opacity-20" />
+                <p>Geen calculaties gekoppeld aan dit gebouw</p>
+              </div>
+            ) : (
+              <div className="divide-y">
+                {gebouwCalcs.map((c: any) => (
+                  <Link key={c.id} href={`/modules/calculatie/${c.id}`}>
+                    <div className="flex items-center gap-3 px-6 py-3 hover:bg-muted/50 cursor-pointer transition-colors">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{c.naam}</p>
+                        {c.klant_naam && <p className="text-xs text-muted-foreground">{c.klant_naam}</p>}
+                      </div>
+                      <Badge variant="outline" className="text-xs shrink-0">
+                        {CALC_STATUS_LABEL[c.status] ?? c.status}
+                      </Badge>
+                      {c.totaal_na_opslagen != null && (
+                        <span className="text-sm font-medium tabular-nums shrink-0">
+                          {new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR", minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(c.totaal_na_opslagen)}
+                        </span>
+                      )}
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Euro className="h-4 w-4" />
+                Offertes
+              </CardTitle>
+              <Button size="sm" variant="outline" asChild>
+                <Link href="/offertes">
+                  Alle offertes
+                </Link>
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent className="p-0">
+            {gebouwOffertes.length === 0 ? (
+              <div className="py-10 text-center text-muted-foreground text-sm">
+                <Euro className="h-8 w-8 mx-auto mb-2 opacity-20" />
+                <p>Geen offertes gekoppeld aan dit gebouw</p>
+              </div>
+            ) : (
+              <div className="divide-y">
+                {gebouwOffertes.map((o: any) => (
+                  <Link key={o.id} href={`/offertes/${o.id}`}>
+                    <div className="flex items-center gap-3 px-6 py-3 hover:bg-muted/50 cursor-pointer transition-colors">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{o.titel}</p>
+                        {o.opdrachtgever && <p className="text-xs text-muted-foreground">{o.opdrachtgever}</p>}
+                      </div>
+                      <Badge variant="outline" className="text-xs shrink-0">
+                        {OFFERTE_STATUS_LABEL[o.status] ?? o.status}
+                      </Badge>
+                      {o.bedrag_excl_btw != null && (
+                        <span className="text-sm font-medium tabular-nums shrink-0">
+                          {new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR", minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(o.bedrag_excl_btw)}
+                          <span className="text-xs text-muted-foreground ml-1">excl.</span>
+                        </span>
+                      )}
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </TabsContent>
       </Tabs>
 
