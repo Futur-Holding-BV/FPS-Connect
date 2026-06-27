@@ -1063,7 +1063,7 @@ export default function UrenScherm() {
             </View>
             {advUren > 0 && (
               <View>
-                <Text style={{ color: c.darkMuted, fontSize: 11, fontFamily: "Inter_400Regular" }}>ADV opgebouwd</Text>
+                <Text style={{ color: c.darkMuted, fontSize: 11, fontFamily: "Inter_400Regular" }}>deze week ADV opgebouwd</Text>
                 <Text style={{ color: c.primary, fontSize: 20, fontFamily: "Inter_700Bold" }}>
                   {formatUren(advUren)}
                 </Text>
