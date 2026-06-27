@@ -37,6 +37,7 @@ import {
   Printer, History, Save,
 } from "lucide-react";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
+import { cn } from "@/lib/utils";
 
 const STATUS_LABEL: Record<string, string> = {
   concept: "Concept",
@@ -62,11 +63,24 @@ const STATUS_WORKFLOW: Record<string, string[]> = {
   verloren: ["concept"],
 };
 
+const KOSTENSOORT_OPTIES = [
+  { value: "arbeid",        label: "Arbeid" },
+  { value: "materiaal",     label: "Materiaal" },
+  { value: "materieel",     label: "Materieel" },
+  { value: "onderaanneming",label: "Onderaanneming" },
+  { value: "opslag",        label: "Opslag / toeslag" },
+  { value: "stelpost",      label: "Stelpost" },
+  { value: "regiepost",     label: "Regiepost" },
+];
+
 const CATEGORIE_LABEL: Record<string, string> = {
   arbeid: "Arbeid",
   materiaal: "Materiaal",
   onderaanneming: "Onderaanneming",
   materieel: "Materieel",
+  opslag: "Opslag / toeslag",
+  stelpost: "Stelpost",
+  regiepost: "Regiepost",
   overig: "Overig",
 };
 
@@ -75,6 +89,9 @@ const CATEGORIE_KLEUR: Record<string, string> = {
   materiaal: "bg-green-50 text-green-700",
   onderaanneming: "bg-purple-50 text-purple-700",
   materieel: "bg-orange-50 text-orange-700",
+  opslag: "bg-amber-50 text-amber-700",
+  stelpost: "bg-cyan-50 text-cyan-700",
+  regiepost: "bg-pink-50 text-pink-700",
   overig: "bg-slate-50 text-slate-600",
 };
 
@@ -96,12 +113,18 @@ function fmt2(n: number) {
 
 const HOOFDSTUK_OPTIES = [
   "Brandwerende doorvoeringen",
+  "Brandwerende deuren",
+  "Brandwerende beglazing",
+  "Bouwkundig herstel",
+  "Sloopwerk",
+  "Aftimmerwerk",
+  "Schilderwerk",
   "Deuren en kozijnen",
   "Wanden en plafonds",
   "Schachten",
   "Onderhoud",
   "Overige werkzaamheden",
-] as const;
+];
 
 type RegelRow = {
   id: number;
@@ -148,7 +171,7 @@ type RegelForm = {
 };
 
 const LEGE_REGEL: RegelForm = {
-  categorie: "materiaal",
+  categorie: "arbeid",
   omschrijving: "",
   normtijd_id: "",
   eenheid: "st",
@@ -839,45 +862,81 @@ export default function ModulesCalculatieDetail() {
 
       {/* Regelsdialoog */}
       <Dialog open={regelDialoog !== null} onOpenChange={() => setRegelDialoog(null)}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
               {regelDialoog === "nieuw"
-                ? regelForm.is_staartkosten ? "Staartkostenregel toevoegen" : "Calculatieregel toevoegen"
+                ? regelForm.is_staartkosten ? "Staartkostenregel toevoegen"
+                : regelForm.is_bouwplaatskosten ? "Bouwplaatskostenregel toevoegen"
+                : "Calculatieregel toevoegen"
                 : "Regel bewerken"}
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
-            <div className="grid grid-cols-2 gap-3">
+
+            {/* 1. Hoofdstuk — alleen bij reguliere werkregels */}
+            {!regelForm.is_staartkosten && !regelForm.is_bouwplaatskosten && (
               <div className="space-y-1.5">
-                <Label>Categorie</Label>
+                <Label>Hoofdstuk</Label>
                 <Select
-                  value={regelForm.categorie}
-                  onValueChange={(v) => setRegelForm((f) => ({ ...f, categorie: v }))}
+                  value={regelForm.hoofdstuk || "Overige werkzaamheden"}
+                  onValueChange={(v) => setRegelForm((f) => ({ ...f, hoofdstuk: v }))}
                 >
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {Object.entries(CATEGORIE_LABEL).map(([k, v]) => (
-                      <SelectItem key={k} value={k}>{v}</SelectItem>
+                    {HOOFDSTUK_OPTIES.map((h) => (
+                      <SelectItem key={h} value={h}>{h}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
+            )}
+
+            {/* 2. Kostensoort */}
+            <div className="space-y-1.5">
+              <Label>Kostensoort</Label>
+              <div className="flex flex-wrap gap-1.5">
+                {KOSTENSOORT_OPTIES.map((ks) => (
+                  <button
+                    key={ks.value}
+                    type="button"
+                    onClick={() => setRegelForm((f) => ({ ...f, categorie: ks.value }))}
+                    className={cn(
+                      "rounded-md border px-3 py-1 text-xs font-medium transition-colors",
+                      regelForm.categorie === ks.value
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "border-input text-muted-foreground hover:border-primary/50 hover:text-foreground"
+                    )}
+                  >
+                    {ks.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* 3. Normregel — optioneel, alleen bij arbeid/regiepost */}
+            {(regelForm.categorie === "arbeid" || regelForm.categorie === "regiepost") && normtijden.length > 0 && (
               <div className="space-y-1.5">
-                <Label>Normtijd (optioneel)</Label>
-                <Select value={regelForm.normtijd_id} onValueChange={(v) => {
-                  if (!v || v === "__geen__") { setRegelForm((f) => ({ ...f, normtijd_id: "" })); return; }
-                  const nt = normtijden.find((n) => String(n.id) === v);
-                  if (nt) setRegelForm((f) => ({
-                    ...f, normtijd_id: v,
-                    omschrijving: f.omschrijving || nt.omschrijving,
-                    eenheid: nt.eenheid,
-                    mu_per_eenheid: String(nt.uren_per_eenheid),
-                  }));
-                }}>
-                  <SelectTrigger><SelectValue placeholder="Kies normtijd..." /></SelectTrigger>
+                <Label>
+                  Normregel{" "}
+                  <span className="font-normal text-muted-foreground text-xs">(optioneel)</span>
+                </Label>
+                <Select
+                  value={regelForm.normtijd_id || "__geen__"}
+                  onValueChange={(v) => {
+                    if (!v || v === "__geen__") { setRegelForm((f) => ({ ...f, normtijd_id: "" })); return; }
+                    const nt = normtijden.find((n) => String(n.id) === v);
+                    if (nt) setRegelForm((f) => ({
+                      ...f, normtijd_id: v,
+                      omschrijving: f.omschrijving || nt.omschrijving,
+                      eenheid: nt.eenheid,
+                      mu_per_eenheid: String(nt.uren_per_eenheid),
+                    }));
+                  }}
+                >
+                  <SelectTrigger><SelectValue placeholder="Kies normregel..." /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="__geen__">Geen normtijd</SelectItem>
+                    <SelectItem value="__geen__">Geen normregel (vrije invoer)</SelectItem>
                     {normtijden.map((n) => (
                       <SelectItem key={n.id} value={String(n.id)}>
                         {n.code} — {n.omschrijving}
@@ -886,27 +945,28 @@ export default function ModulesCalculatieDetail() {
                   </SelectContent>
                 </Select>
               </div>
+            )}
+
+            {/* 4. Omschrijving */}
+            <div className="space-y-1.5">
+              <Label>
+                Omschrijving <span className="text-destructive">*</span>
+              </Label>
+              <Input
+                value={regelForm.omschrijving}
+                onChange={(e) => setRegelForm((f) => ({ ...f, omschrijving: e.target.value }))}
+                placeholder={
+                  regelForm.categorie === "arbeid" ? "Bijv. Brandwerende doorvoering afdichten" :
+                  regelForm.categorie === "materiaal" ? "Bijv. Brandwerende kit 310ml" :
+                  regelForm.categorie === "onderaanneming" ? "Bijv. Schilderwerk herstelwerkzaamheden" :
+                  regelForm.categorie === "stelpost" ? "Bijv. Stelpost onvoorzien" :
+                  regelForm.categorie === "opslag" ? "Bijv. Materiaalopslag 10%" :
+                  "Omschrijving van de werkzaamheid of het materiaal"
+                }
+              />
             </div>
 
-            <div className="grid grid-cols-3 gap-3">
-              <div className="space-y-1.5 col-span-2">
-                <Label>Omschrijving *</Label>
-                <Input
-                  value={regelForm.omschrijving}
-                  onChange={(e) => setRegelForm((f) => ({ ...f, omschrijving: e.target.value }))}
-                  placeholder="Beschrijving van de werkzaamheid of het materiaal"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Regelnummer</Label>
-                <Input
-                  value={regelForm.regelnummer}
-                  onChange={(e) => setRegelForm((f) => ({ ...f, regelnummer: e.target.value }))}
-                  placeholder="bijv. 1.17"
-                />
-              </div>
-            </div>
-
+            {/* 5+6. Eenheid · Hoeveelheid · Regelnummer */}
             <div className="grid grid-cols-3 gap-3">
               <div className="space-y-1.5">
                 <Label>Eenheid</Label>
@@ -931,7 +991,94 @@ export default function ModulesCalculatieDetail() {
                 />
               </div>
               <div className="space-y-1.5">
-                <Label>Materiaalprijs (€/eenheid)</Label>
+                <Label>Regelnummer</Label>
+                <Input
+                  value={regelForm.regelnummer}
+                  onChange={(e) => setRegelForm((f) => ({ ...f, regelnummer: e.target.value }))}
+                  placeholder="bijv. 1.17"
+                />
+              </div>
+            </div>
+
+            {/* Arbeid / Regiepost — arbeidsvelden */}
+            {(regelForm.categorie === "arbeid" || regelForm.categorie === "regiepost") && (
+              <div className="rounded-md bg-blue-50/60 border border-blue-100 p-3 space-y-3">
+                <div className="space-y-1.5">
+                  <Label>MU per eenheid (uur)</Label>
+                  <Input
+                    type="number" step="0.01" min="0"
+                    value={regelForm.mu_per_eenheid}
+                    onChange={(e) => setRegelForm((f) => ({ ...f, mu_per_eenheid: e.target.value }))}
+                    placeholder="0,00"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Arbeidstarief</Label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {tarieven.filter((t) => t.categorie === "arbeid").map((t) => {
+                      const geselecteerd = parseFloat(regelForm.arbeids_tarief) === t.tarief;
+                      return (
+                        <button
+                          key={t.id}
+                          type="button"
+                          onClick={() => setRegelForm((f) => ({ ...f, arbeids_tarief: String(t.tarief) }))}
+                          className={cn(
+                            "rounded border px-3 py-1.5 text-xs font-medium transition-colors",
+                            geselecteerd
+                              ? "bg-blue-600 text-white border-blue-600"
+                              : "bg-white text-slate-700 border-slate-200 hover:border-blue-300"
+                          )}
+                        >
+                          {t.naam} — {formatBedrag(t.tarief)}/u
+                        </button>
+                      );
+                    })}
+                    {(() => {
+                      const isStandaard = tarieven
+                        .filter((t) => t.categorie === "arbeid")
+                        .some((t) => parseFloat(regelForm.arbeids_tarief) === t.tarief);
+                      return (
+                        <button
+                          type="button"
+                          onClick={() => setRegelForm((f) => ({ ...f, arbeids_tarief: "" }))}
+                          className={cn(
+                            "rounded border px-3 py-1.5 text-xs font-medium transition-colors",
+                            !isStandaard
+                              ? "bg-blue-600 text-white border-blue-600"
+                              : "bg-white text-slate-700 border-slate-200 hover:border-blue-300"
+                          )}
+                        >
+                          Aangepast
+                        </button>
+                      );
+                    })()}
+                  </div>
+                  {!tarieven
+                    .filter((t) => t.categorie === "arbeid")
+                    .some((t) => parseFloat(regelForm.arbeids_tarief) === t.tarief) && (
+                    <Input
+                      type="number" step="0.01" min="0"
+                      value={regelForm.arbeids_tarief}
+                      onChange={(e) => setRegelForm((f) => ({ ...f, arbeids_tarief: e.target.value }))}
+                      placeholder="Aangepast tarief (€/uur)"
+                    />
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Materiaal / Materieel / Opslag / Stelpost — tariefveld */}
+            {(regelForm.categorie === "materiaal" ||
+              regelForm.categorie === "materieel" ||
+              regelForm.categorie === "opslag" ||
+              regelForm.categorie === "stelpost") && (
+              <div className="rounded-md bg-green-50/60 border border-green-100 p-3 space-y-1.5">
+                <Label>
+                  {regelForm.categorie === "opslag" ? "Opslagbedrag (€ per eenheid)" :
+                   regelForm.categorie === "stelpost" ? "Stelpostbedrag (€ per eenheid)" :
+                   regelForm.categorie === "materieel" ? "Huurprijs (€ per eenheid)" :
+                   "Materiaalprijs (€ per eenheid)"}
+                </Label>
                 <Input
                   type="number" step="0.01" min="0"
                   value={regelForm.tarief}
@@ -939,45 +1086,12 @@ export default function ModulesCalculatieDetail() {
                   placeholder="0,00"
                 />
               </div>
-            </div>
+            )}
 
-            <div className="grid grid-cols-3 gap-3">
-              <div className="space-y-1.5">
-                <Label>MU per eenheid (uur)</Label>
-                <Input
-                  type="number" step="0.01" min="0"
-                  value={regelForm.mu_per_eenheid}
-                  onChange={(e) => setRegelForm((f) => ({ ...f, mu_per_eenheid: e.target.value }))}
-                  placeholder="0,00"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Arbeidstarief (€/uur)</Label>
-                <Select
-                  value=""
-                  onValueChange={(v) => {
-                    const tar = tarieven.find((t) => String(t.id) === v);
-                    if (tar) setRegelForm((f) => ({ ...f, arbeids_tarief: String(tar.tarief) }));
-                  }}
-                >
-                  <SelectTrigger className="mb-1"><SelectValue placeholder="Kies tarief..." /></SelectTrigger>
-                  <SelectContent>
-                    {tarieven.filter((t) => t.categorie === "arbeid").map((t) => (
-                      <SelectItem key={t.id} value={String(t.id)}>
-                        {t.naam} — {formatBedrag(t.tarief)}/{t.eenheid}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Input
-                  type="number" step="0.01" min="0"
-                  value={regelForm.arbeids_tarief}
-                  onChange={(e) => setRegelForm((f) => ({ ...f, arbeids_tarief: e.target.value }))}
-                  placeholder="Handmatig invullen"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Onderaanneming (€)</Label>
+            {/* Onderaanneming — bedragveld */}
+            {regelForm.categorie === "onderaanneming" && (
+              <div className="rounded-md bg-purple-50/60 border border-purple-100 p-3 space-y-1.5">
+                <Label>Onderaanneming bedrag (€ totaal)</Label>
                 <Input
                   type="number" step="0.01" min="0"
                   value={regelForm.onderaanneming_bedrag}
@@ -985,9 +1099,9 @@ export default function ModulesCalculatieDetail() {
                   placeholder="0,00"
                 />
               </div>
-            </div>
+            )}
 
-            {/* Live totaalberekening */}
+            {/* Live regelopbouw */}
             {(() => {
               const hv = parseFloat(regelForm.hoeveelheid) || 0;
               const t  = parseFloat(regelForm.tarief) || 0;
@@ -1000,63 +1114,62 @@ export default function ModulesCalculatieDetail() {
               const totaal    = matTotaal + arbeid + ob;
               if (totaal === 0) return null;
               return (
-                <div className="rounded-md bg-slate-50 border px-4 py-3 text-sm grid grid-cols-4 gap-2">
-                  {matTotaal > 0 && (
-                    <div>
-                      <p className="text-xs text-muted-foreground">Materiaal</p>
-                      <p className="font-medium">{formatBedrag(matTotaal)}</p>
-                    </div>
+                <div className="rounded-md bg-slate-50 border px-4 py-3 text-sm space-y-1.5">
+                  <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Regelopbouw</p>
+                  {(regelForm.categorie === "arbeid" || regelForm.categorie === "regiepost") && mu > 0 && at > 0 && (
+                    <p className="text-xs text-slate-600">
+                      {fmt2(hv)} {regelForm.eenheid} &times; {fmt2(mu)} MU &times; {formatBedrag(at)}/u
+                      {" = "}
+                      <span className="font-semibold text-slate-800">{formatBedrag(arbeid)}</span>
+                    </p>
                   )}
-                  {arbeid > 0 && (
-                    <div>
-                      <p className="text-xs text-muted-foreground">Arbeid ({fmt2(muTot)} MU)</p>
-                      <p className="font-medium">{formatBedrag(arbeid)}</p>
-                    </div>
+                  {(regelForm.categorie === "materiaal" ||
+                    regelForm.categorie === "materieel" ||
+                    regelForm.categorie === "stelpost" ||
+                    regelForm.categorie === "opslag") && t > 0 && (
+                    <p className="text-xs text-slate-600">
+                      {fmt2(hv)} {regelForm.eenheid} &times; {formatBedrag(t)}/eenheid
+                      {" = "}
+                      <span className="font-semibold text-slate-800">{formatBedrag(matTotaal)}</span>
+                    </p>
                   )}
-                  {ob > 0 && (
-                    <div>
-                      <p className="text-xs text-muted-foreground">Onderaanneming</p>
-                      <p className="font-medium">{formatBedrag(ob)}</p>
-                    </div>
+                  {regelForm.categorie === "onderaanneming" && ob > 0 && (
+                    <p className="text-xs text-slate-600">
+                      Onderaanneming:{" "}
+                      <span className="font-semibold text-slate-800">{formatBedrag(ob)}</span>
+                    </p>
                   )}
-                  <div>
-                    <p className="text-xs text-muted-foreground">Regeltotaal</p>
-                    <p className="font-semibold text-base">{formatBedrag(totaal)}</p>
+                  <div className="flex items-center justify-between pt-1 border-t border-slate-200">
+                    <span className="text-xs text-muted-foreground">Regeltotaal</span>
+                    <span className="font-semibold">{formatBedrag(totaal)}</span>
                   </div>
                 </div>
               );
             })()}
 
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label>Hoofdstuk</Label>
-                <Select
-                  value={regelForm.hoofdstuk || "Overige werkzaamheden"}
-                  onValueChange={(v) => setRegelForm((f) => ({ ...f, hoofdstuk: v }))}
-                >
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {HOOFDSTUK_OPTIES.map((h) => (
-                      <SelectItem key={h} value={h}>{h}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1.5">
-                <Label>Opmerkingen</Label>
-                <Input
-                  value={regelForm.opmerkingen}
-                  onChange={(e) => setRegelForm((f) => ({ ...f, opmerkingen: e.target.value }))}
-                  placeholder="Interne notitie bij deze regel"
-                />
-              </div>
-            </div>
+            <Separator />
+
+            {/* Klanttekst offerte */}
             <div className="space-y-1.5">
-              <Label>Klanttekst</Label>
-              <Input
+              <Label>Klanttekst offerte</Label>
+              <p className="text-xs text-muted-foreground">Zichtbaar op de offerte voor de klant.</p>
+              <Textarea
                 value={regelForm.klanttekst ?? ""}
                 onChange={(e) => setRegelForm((f) => ({ ...f, klanttekst: e.target.value }))}
                 placeholder="Tekst die zichtbaar is voor de klant in de offerte"
+                rows={2}
+                className="resize-none text-sm"
+              />
+            </div>
+
+            {/* Interne notitie */}
+            <div className="space-y-1.5">
+              <Label>Interne notitie</Label>
+              <p className="text-xs text-muted-foreground">Alleen zichtbaar voor FPS, niet op de offerte.</p>
+              <Input
+                value={regelForm.opmerkingen}
+                onChange={(e) => setRegelForm((f) => ({ ...f, opmerkingen: e.target.value }))}
+                placeholder="Bijv. let op afwijkende situatie, speciale monteur nodig"
               />
             </div>
           </div>
