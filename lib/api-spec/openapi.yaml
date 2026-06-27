@@ -8002,6 +8002,196 @@ paths:
                 items:
                   $ref: "#/components/schemas/OfferteTrackingEvent"
 
+  # ── Opdrachten ────────────────────────────────────────────────────────────
+
+  /offertes/{id}/maak-opdracht:
+    post:
+      operationId: maakOpdracht
+      tags: [opdrachten]
+      summary: Offerte omzetten naar opdracht + werkbegroting
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MaakOpdrachtInput"
+      responses:
+        "201":
+          description: Opdracht aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Opdracht"
+
+  /opdrachten:
+    get:
+      operationId: listOpdrachten
+      tags: [opdrachten]
+      summary: Lijst van opdrachten
+      parameters:
+        - in: query
+          name: gebouw_id
+          schema:
+            type: integer
+        - in: query
+          name: status
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Opdracht"
+
+  /opdrachten/{id}:
+    get:
+      operationId: getOpdracht
+      tags: [opdrachten]
+      summary: Opdracht detail
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Opdracht"
+    patch:
+      operationId: updateOpdracht
+      tags: [opdrachten]
+      summary: Opdracht bijwerken (status/omschrijving)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OpdrachtPatch"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Opdracht"
+
+  /opdrachten/{id}/werkbegroting:
+    get:
+      operationId: getWerkbegroting
+      tags: [opdrachten]
+      summary: Werkbegroting van opdracht ophalen (incl. regels)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Werkbegroting"
+
+  /opdrachten/{id}/werkbegroting/vaststellen:
+    post:
+      operationId: vaststellenWerkbegroting
+      tags: [opdrachten]
+      summary: Werkbegroting vaststellen (projectleider)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Werkbegroting"
+
+  /opdrachten/{id}/werkbegroting/ai-analyse:
+    post:
+      operationId: aiAnalyseWerkbegroting
+      tags: [opdrachten]
+      summary: AI-analyse uitvoeren op werkbegroting (inkoop + arbeid optimalisatie)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Werkbegroting"
+
+  /opdrachten/{id}/nacalculatie:
+    get:
+      operationId: getNacalculatie
+      tags: [opdrachten]
+      summary: Nacalculatie — calculatie vs werkbegroting vs verbruikte uren
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OpdrachtNacalculatie"
+
+  /opdrachten/{id}/planning-uren:
+    get:
+      operationId: listOpdrachtPlanningUren
+      tags: [opdrachten]
+      summary: Geplande uren per medewerker voor deze opdracht
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PlanningUrenRegel"
+
   # ── Klantportaal (publiek, geen authenticatie) ─────────────────────────────
   /portaal/{token}:
     get:
@@ -16878,6 +17068,186 @@ components:
           type: string
           description: Klant-e-mailadres voor antwoordnotificatie (optioneel)
         naar_naam:
+          type: string
+
+    Opdracht:
+      type: object
+      required: [id, titel, status, aangemaakt_op, bijgewerkt_op]
+      properties:
+        id:
+          type: integer
+        offerte_id:
+          type: ["integer", "null"]
+        calculatie_id:
+          type: ["integer", "null"]
+        gebouw_id:
+          type: ["integer", "null"]
+        project_id:
+          type: ["integer", "null"]
+        titel:
+          type: string
+        werknummer:
+          type: ["string", "null"]
+        opdrachtgever:
+          type: ["string", "null"]
+        omschrijving:
+          type: ["string", "null"]
+        status:
+          type: string
+        aangemaakt_op:
+          type: string
+        bijgewerkt_op:
+          type: string
+        begroting_id:
+          type: ["integer", "null"]
+        begroting_status:
+          type: ["string", "null"]
+        begroting_totaal_arbeid_uren:
+          type: ["number", "null"]
+
+    MaakOpdrachtInput:
+      type: object
+      properties:
+        calculatie_id:
+          type: integer
+        titel:
+          type: string
+        werknummer:
+          type: string
+        omschrijving:
+          type: string
+
+    OpdrachtPatch:
+      type: object
+      properties:
+        status:
+          type: string
+        omschrijving:
+          type: string
+        werknummer:
+          type: string
+
+    WerkbegrotingRegel:
+      type: object
+      required: [id, begroting_id, categorie, omschrijving, eenheid, hoeveelheid, tarief, totaal, hoofdstuk]
+      properties:
+        id:
+          type: integer
+        begroting_id:
+          type: integer
+        calc_regel_id:
+          type: ["integer", "null"]
+        categorie:
+          type: string
+        omschrijving:
+          type: string
+        eenheid:
+          type: string
+        hoeveelheid:
+          type: number
+        tarief:
+          type: number
+        totaal:
+          type: number
+        hoofdstuk:
+          type: string
+        ai_inkoop_voorstel:
+          type: ["string", "null"]
+        ai_arbeid_voorstel:
+          type: ["string", "null"]
+
+    Werkbegroting:
+      type: object
+      required: [id, status, totaal_arbeid_uren, totaal_materiaal_bedrag, hoofd_uren_begroot, regels]
+      properties:
+        id:
+          type: integer
+        opdracht_id:
+          type: ["integer", "null"]
+        calculatie_id:
+          type: ["integer", "null"]
+        gebouw_id:
+          type: ["integer", "null"]
+        werknummer:
+          type: ["string", "null"]
+        hoofd_uren_begroot:
+          type: number
+        totaal_arbeid_uren:
+          type: number
+        totaal_materiaal_bedrag:
+          type: number
+        omschrijving:
+          type: ["string", "null"]
+        status:
+          type: string
+        vastgesteld_op:
+          type: ["string", "null"]
+        ai_analyse:
+          type: ["object", "null"]
+        ai_analyse_op:
+          type: ["string", "null"]
+        aangemaakt_op:
+          type: string
+        bijgewerkt_op:
+          type: string
+        regels:
+          type: array
+          items:
+            $ref: "#/components/schemas/WerkbegrotingRegel"
+
+    OpdrachtNacalculatieRegel:
+      type: object
+      required: [categorie, calculatie_uren, begroting_uren, verbruikte_uren]
+      properties:
+        categorie:
+          type: string
+        omschrijving:
+          type: string
+        calculatie_uren:
+          type: number
+        begroting_uren:
+          type: number
+        verbruikte_uren:
+          type: number
+        verschil_begroting_vs_verbruikt:
+          type: number
+
+    OpdrachtNacalculatie:
+      type: object
+      required: [opdracht_id, calculatie_arbeid_uren, begroting_arbeid_uren, verbruikte_uren, planning_uren, regels]
+      properties:
+        opdracht_id:
+          type: integer
+        calculatie_arbeid_uren:
+          type: number
+        begroting_arbeid_uren:
+          type: number
+        planning_uren:
+          type: number
+        verbruikte_uren:
+          type: number
+        verschil:
+          type: number
+        regels:
+          type: array
+          items:
+            $ref: "#/components/schemas/OpdrachtNacalculatieRegel"
+
+    PlanningUrenRegel:
+      type: object
+      required: [planning_item_id, medewerker_naam, datum, uren]
+      properties:
+        planning_item_id:
+          type: integer
+        medewerker_naam:
+          type: string
+        medewerker_id:
+          type: integer
+        datum:
+          type: string
+        uren:
+          type: number
+        status:
           type: string
 
     OfferteTrackingEvent:

@@ -4118,6 +4118,125 @@ export interface OfferteVraagAntwoordInput {
   naar_naam?: string;
 }
 
+export interface Opdracht {
+  id: number;
+  /** @nullable */
+  offerte_id?: number | null;
+  /** @nullable */
+  calculatie_id?: number | null;
+  /** @nullable */
+  gebouw_id?: number | null;
+  /** @nullable */
+  project_id?: number | null;
+  titel: string;
+  /** @nullable */
+  werknummer?: string | null;
+  /** @nullable */
+  opdrachtgever?: string | null;
+  /** @nullable */
+  omschrijving?: string | null;
+  status: string;
+  aangemaakt_op: string;
+  bijgewerkt_op: string;
+  /** @nullable */
+  begroting_id?: number | null;
+  /** @nullable */
+  begroting_status?: string | null;
+  /** @nullable */
+  begroting_totaal_arbeid_uren?: number | null;
+}
+
+export interface MaakOpdrachtInput {
+  calculatie_id?: number;
+  titel?: string;
+  werknummer?: string;
+  omschrijving?: string;
+}
+
+export interface OpdrachtPatch {
+  status?: string;
+  omschrijving?: string;
+  werknummer?: string;
+}
+
+export interface WerkbegrotingRegel {
+  id: number;
+  begroting_id: number;
+  /** @nullable */
+  calc_regel_id?: number | null;
+  categorie: string;
+  omschrijving: string;
+  eenheid: string;
+  hoeveelheid: number;
+  tarief: number;
+  totaal: number;
+  hoofdstuk: string;
+  /** @nullable */
+  ai_inkoop_voorstel?: string | null;
+  /** @nullable */
+  ai_arbeid_voorstel?: string | null;
+}
+
+/**
+ * @nullable
+ */
+export type WerkbegrotingAiAnalyse = { [key: string]: unknown } | null;
+
+export interface Werkbegroting {
+  id: number;
+  /** @nullable */
+  opdracht_id?: number | null;
+  /** @nullable */
+  calculatie_id?: number | null;
+  /** @nullable */
+  gebouw_id?: number | null;
+  /** @nullable */
+  werknummer?: string | null;
+  hoofd_uren_begroot: number;
+  totaal_arbeid_uren: number;
+  totaal_materiaal_bedrag: number;
+  /** @nullable */
+  omschrijving?: string | null;
+  status: string;
+  /** @nullable */
+  vastgesteld_op?: string | null;
+  /** @nullable */
+  ai_analyse?: WerkbegrotingAiAnalyse;
+  /** @nullable */
+  ai_analyse_op?: string | null;
+  aangemaakt_op?: string;
+  bijgewerkt_op?: string;
+  regels: WerkbegrotingRegel[];
+}
+
+export interface OpdrachtNacalculatieRegel {
+  categorie: string;
+  omschrijving?: string;
+  calculatie_uren: number;
+  begroting_uren: number;
+  verbruikte_uren: number;
+  verschil_begroting_vs_verbruikt?: number;
+}
+
+export interface OpdrachtNacalculatie {
+  opdracht_id: number;
+  calculatie_arbeid_uren: number;
+  begroting_arbeid_uren: number;
+  planning_uren: number;
+  verbruikte_uren: number;
+  verschil?: number;
+  regels: OpdrachtNacalculatieRegel[];
+}
+
+export interface PlanningUrenRegel {
+  planning_item_id: number;
+  medewerker_naam: string;
+  medewerker_id?: number;
+  datum: string;
+  uren: number;
+  status?: string;
+}
+
 export interface OfferteTrackingEvent {
   id: number;
   event: string;
@@ -5833,6 +5952,11 @@ jaar?: number;
 
 export type VerzendOfferte200 = {
   ok?: boolean;
+};
+
+export type ListOpdrachtenParams = {
+gebouw_id?: number;
+status?: string;
 };
 
 export type OndertekenenPortaal201 = {

@@ -9759,6 +9759,278 @@ export const ListOfferteTrackingResponse = zod.array(ListOfferteTrackingResponse
 
 
 /**
+ * @summary Offerte omzetten naar opdracht + werkbegroting
+ */
+export const MaakOpdrachtParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const MaakOpdrachtBody = zod.object({
+  "calculatie_id": zod.number().optional(),
+  "titel": zod.string().optional(),
+  "werknummer": zod.string().optional(),
+  "omschrijving": zod.string().optional()
+})
+
+export const MaakOpdrachtResponse = zod.void()
+
+
+/**
+ * @summary Lijst van opdrachten
+ */
+export const ListOpdrachtenQueryParams = zod.object({
+  "gebouw_id": zod.coerce.number().optional(),
+  "status": zod.coerce.string().optional()
+})
+
+export const ListOpdrachtenResponseItem = zod.object({
+  "id": zod.number(),
+  "offerte_id": zod.number().nullish(),
+  "calculatie_id": zod.number().nullish(),
+  "gebouw_id": zod.number().nullish(),
+  "project_id": zod.number().nullish(),
+  "titel": zod.string(),
+  "werknummer": zod.string().nullish(),
+  "opdrachtgever": zod.string().nullish(),
+  "omschrijving": zod.string().nullish(),
+  "status": zod.string(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string(),
+  "begroting_id": zod.number().nullish(),
+  "begroting_status": zod.string().nullish(),
+  "begroting_totaal_arbeid_uren": zod.number().nullish()
+})
+export const ListOpdrachtenResponse = zod.array(ListOpdrachtenResponseItem)
+
+
+/**
+ * @summary Opdracht detail
+ */
+export const GetOpdrachtParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetOpdrachtResponse = zod.object({
+  "id": zod.number(),
+  "offerte_id": zod.number().nullish(),
+  "calculatie_id": zod.number().nullish(),
+  "gebouw_id": zod.number().nullish(),
+  "project_id": zod.number().nullish(),
+  "titel": zod.string(),
+  "werknummer": zod.string().nullish(),
+  "opdrachtgever": zod.string().nullish(),
+  "omschrijving": zod.string().nullish(),
+  "status": zod.string(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string(),
+  "begroting_id": zod.number().nullish(),
+  "begroting_status": zod.string().nullish(),
+  "begroting_totaal_arbeid_uren": zod.number().nullish()
+})
+
+
+/**
+ * @summary Opdracht bijwerken (status/omschrijving)
+ */
+export const UpdateOpdrachtParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateOpdrachtBody = zod.object({
+  "status": zod.string().optional(),
+  "omschrijving": zod.string().optional(),
+  "werknummer": zod.string().optional()
+})
+
+export const UpdateOpdrachtResponse = zod.object({
+  "id": zod.number(),
+  "offerte_id": zod.number().nullish(),
+  "calculatie_id": zod.number().nullish(),
+  "gebouw_id": zod.number().nullish(),
+  "project_id": zod.number().nullish(),
+  "titel": zod.string(),
+  "werknummer": zod.string().nullish(),
+  "opdrachtgever": zod.string().nullish(),
+  "omschrijving": zod.string().nullish(),
+  "status": zod.string(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string(),
+  "begroting_id": zod.number().nullish(),
+  "begroting_status": zod.string().nullish(),
+  "begroting_totaal_arbeid_uren": zod.number().nullish()
+})
+
+
+/**
+ * @summary Werkbegroting van opdracht ophalen (incl. regels)
+ */
+export const GetWerkbegrotingParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetWerkbegrotingResponse = zod.object({
+  "id": zod.number(),
+  "opdracht_id": zod.number().nullish(),
+  "calculatie_id": zod.number().nullish(),
+  "gebouw_id": zod.number().nullish(),
+  "werknummer": zod.string().nullish(),
+  "hoofd_uren_begroot": zod.number(),
+  "totaal_arbeid_uren": zod.number(),
+  "totaal_materiaal_bedrag": zod.number(),
+  "omschrijving": zod.string().nullish(),
+  "status": zod.string(),
+  "vastgesteld_op": zod.string().nullish(),
+  "ai_analyse": zod.object({
+
+}).passthrough().nullish(),
+  "ai_analyse_op": zod.string().nullish(),
+  "aangemaakt_op": zod.string().optional(),
+  "bijgewerkt_op": zod.string().optional(),
+  "regels": zod.array(zod.object({
+  "id": zod.number(),
+  "begroting_id": zod.number(),
+  "calc_regel_id": zod.number().nullish(),
+  "categorie": zod.string(),
+  "omschrijving": zod.string(),
+  "eenheid": zod.string(),
+  "hoeveelheid": zod.number(),
+  "tarief": zod.number(),
+  "totaal": zod.number(),
+  "hoofdstuk": zod.string(),
+  "ai_inkoop_voorstel": zod.string().nullish(),
+  "ai_arbeid_voorstel": zod.string().nullish()
+}))
+})
+
+
+/**
+ * @summary Werkbegroting vaststellen (projectleider)
+ */
+export const VaststellenWerkbegrotingParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const VaststellenWerkbegrotingResponse = zod.object({
+  "id": zod.number(),
+  "opdracht_id": zod.number().nullish(),
+  "calculatie_id": zod.number().nullish(),
+  "gebouw_id": zod.number().nullish(),
+  "werknummer": zod.string().nullish(),
+  "hoofd_uren_begroot": zod.number(),
+  "totaal_arbeid_uren": zod.number(),
+  "totaal_materiaal_bedrag": zod.number(),
+  "omschrijving": zod.string().nullish(),
+  "status": zod.string(),
+  "vastgesteld_op": zod.string().nullish(),
+  "ai_analyse": zod.object({
+
+}).passthrough().nullish(),
+  "ai_analyse_op": zod.string().nullish(),
+  "aangemaakt_op": zod.string().optional(),
+  "bijgewerkt_op": zod.string().optional(),
+  "regels": zod.array(zod.object({
+  "id": zod.number(),
+  "begroting_id": zod.number(),
+  "calc_regel_id": zod.number().nullish(),
+  "categorie": zod.string(),
+  "omschrijving": zod.string(),
+  "eenheid": zod.string(),
+  "hoeveelheid": zod.number(),
+  "tarief": zod.number(),
+  "totaal": zod.number(),
+  "hoofdstuk": zod.string(),
+  "ai_inkoop_voorstel": zod.string().nullish(),
+  "ai_arbeid_voorstel": zod.string().nullish()
+}))
+})
+
+
+/**
+ * @summary AI-analyse uitvoeren op werkbegroting (inkoop + arbeid optimalisatie)
+ */
+export const AiAnalyseWerkbegrotingParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const AiAnalyseWerkbegrotingResponse = zod.object({
+  "id": zod.number(),
+  "opdracht_id": zod.number().nullish(),
+  "calculatie_id": zod.number().nullish(),
+  "gebouw_id": zod.number().nullish(),
+  "werknummer": zod.string().nullish(),
+  "hoofd_uren_begroot": zod.number(),
+  "totaal_arbeid_uren": zod.number(),
+  "totaal_materiaal_bedrag": zod.number(),
+  "omschrijving": zod.string().nullish(),
+  "status": zod.string(),
+  "vastgesteld_op": zod.string().nullish(),
+  "ai_analyse": zod.object({
+
+}).passthrough().nullish(),
+  "ai_analyse_op": zod.string().nullish(),
+  "aangemaakt_op": zod.string().optional(),
+  "bijgewerkt_op": zod.string().optional(),
+  "regels": zod.array(zod.object({
+  "id": zod.number(),
+  "begroting_id": zod.number(),
+  "calc_regel_id": zod.number().nullish(),
+  "categorie": zod.string(),
+  "omschrijving": zod.string(),
+  "eenheid": zod.string(),
+  "hoeveelheid": zod.number(),
+  "tarief": zod.number(),
+  "totaal": zod.number(),
+  "hoofdstuk": zod.string(),
+  "ai_inkoop_voorstel": zod.string().nullish(),
+  "ai_arbeid_voorstel": zod.string().nullish()
+}))
+})
+
+
+/**
+ * @summary Nacalculatie — calculatie vs werkbegroting vs verbruikte uren
+ */
+export const GetNacalculatieParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetNacalculatieResponse = zod.object({
+  "opdracht_id": zod.number(),
+  "calculatie_arbeid_uren": zod.number(),
+  "begroting_arbeid_uren": zod.number(),
+  "planning_uren": zod.number(),
+  "verbruikte_uren": zod.number(),
+  "verschil": zod.number().optional(),
+  "regels": zod.array(zod.object({
+  "categorie": zod.string(),
+  "omschrijving": zod.string().optional(),
+  "calculatie_uren": zod.number(),
+  "begroting_uren": zod.number(),
+  "verbruikte_uren": zod.number(),
+  "verschil_begroting_vs_verbruikt": zod.number().optional()
+}))
+})
+
+
+/**
+ * @summary Geplande uren per medewerker voor deze opdracht
+ */
+export const ListOpdrachtPlanningUrenParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ListOpdrachtPlanningUrenResponseItem = zod.object({
+  "planning_item_id": zod.number(),
+  "medewerker_naam": zod.string(),
+  "medewerker_id": zod.number().optional(),
+  "datum": zod.string(),
+  "uren": zod.number(),
+  "status": zod.string().optional()
+})
+export const ListOpdrachtPlanningUrenResponse = zod.array(ListOpdrachtPlanningUrenResponseItem)
+
+
+/**
  * @summary Offerte via portaaltoken ophalen (publiek)
  */
 export const GetPortaalParams = zod.object({

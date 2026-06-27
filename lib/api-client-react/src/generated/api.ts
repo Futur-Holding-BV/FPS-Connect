@@ -198,6 +198,7 @@ import type {
   ListModCalculatiesParams,
   ListMuisGebeurtenissenParams,
   ListOnderhoudParams,
+  ListOpdrachtenParams,
   ListOpnamePlattegrondItemsParams,
   ListOpnamesParams,
   ListPlanningAfwezigheidParams,
@@ -219,6 +220,7 @@ import type {
   LoginPoging,
   LoginResultaat,
   MaakOfferteResult,
+  MaakOpdrachtInput,
   MailActieResultaat,
   MailLogregel,
   MailStatus,
@@ -278,6 +280,9 @@ import type {
   OnderhoudVoltooien,
   Onderhoudstaak,
   OndertekenenPortaal201,
+  Opdracht,
+  OpdrachtNacalculatie,
+  OpdrachtPatch,
   Opleiding,
   OpleidingInput,
   OpleidingenVoorstelResultaat,
@@ -300,6 +305,7 @@ import type {
   PlanningMedewerker,
   PlanningMeerwerk,
   PlanningMeerwerkInput,
+  PlanningUrenRegel,
   PlattegrondAiAnalyseInput,
   PlattegrondAiAnalyseResultaat,
   PortaalAfwijzenInput,
@@ -410,6 +416,7 @@ import type {
   WeekStaatAfwijzenInput,
   WeekStaatInput,
   WeekStaatPatch,
+  Werkbegroting,
   WerkdagItem,
   WerkdagStatusInput,
   Werkgever,
@@ -28423,6 +28430,680 @@ export function useListOfferteTracking<TData = Awaited<ReturnType<typeof listOff
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getListOfferteTrackingQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getMaakOpdrachtUrl = (id: number,) => {
+
+
+
+
+  return `/api/offertes/${id}/maak-opdracht`
+}
+
+/**
+ * @summary Offerte omzetten naar opdracht + werkbegroting
+ */
+export const maakOpdracht = async (id: number,
+    maakOpdrachtInput?: MaakOpdrachtInput, options?: RequestInit): Promise<Opdracht> => {
+
+  return customFetch<Opdracht>(getMaakOpdrachtUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(maakOpdrachtInput)
+  }
+);}
+
+
+
+
+export const getMaakOpdrachtMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof maakOpdracht>>, TError,{id: number;data?: BodyType<MaakOpdrachtInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof maakOpdracht>>, TError,{id: number;data?: BodyType<MaakOpdrachtInput>}, TContext> => {
+
+const mutationKey = ['maakOpdracht'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof maakOpdracht>>, {id: number;data?: BodyType<MaakOpdrachtInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  maakOpdracht(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type MaakOpdrachtMutationResult = NonNullable<Awaited<ReturnType<typeof maakOpdracht>>>
+    export type MaakOpdrachtMutationBody = BodyType<MaakOpdrachtInput> | undefined
+    export type MaakOpdrachtMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Offerte omzetten naar opdracht + werkbegroting
+ */
+export const useMaakOpdracht = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof maakOpdracht>>, TError,{id: number;data?: BodyType<MaakOpdrachtInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof maakOpdracht>>,
+        TError,
+        {id: number;data?: BodyType<MaakOpdrachtInput>},
+        TContext
+      > => {
+      return useMutation(getMaakOpdrachtMutationOptions(options));
+    }
+
+export const getListOpdrachtenUrl = (params?: ListOpdrachtenParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/opdrachten?${stringifiedParams}` : `/api/opdrachten`
+}
+
+/**
+ * @summary Lijst van opdrachten
+ */
+export const listOpdrachten = async (params?: ListOpdrachtenParams, options?: RequestInit): Promise<Opdracht[]> => {
+
+  return customFetch<Opdracht[]>(getListOpdrachtenUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListOpdrachtenQueryKey = (params?: ListOpdrachtenParams,) => {
+    return [
+    `/api/opdrachten`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListOpdrachtenQueryOptions = <TData = Awaited<ReturnType<typeof listOpdrachten>>, TError = ErrorType<unknown>>(params?: ListOpdrachtenParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listOpdrachten>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListOpdrachtenQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listOpdrachten>>> = ({ signal }) => listOpdrachten(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listOpdrachten>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListOpdrachtenQueryResult = NonNullable<Awaited<ReturnType<typeof listOpdrachten>>>
+export type ListOpdrachtenQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Lijst van opdrachten
+ */
+
+export function useListOpdrachten<TData = Awaited<ReturnType<typeof listOpdrachten>>, TError = ErrorType<unknown>>(
+ params?: ListOpdrachtenParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listOpdrachten>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListOpdrachtenQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetOpdrachtUrl = (id: number,) => {
+
+
+
+
+  return `/api/opdrachten/${id}`
+}
+
+/**
+ * @summary Opdracht detail
+ */
+export const getOpdracht = async (id: number, options?: RequestInit): Promise<Opdracht> => {
+
+  return customFetch<Opdracht>(getGetOpdrachtUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetOpdrachtQueryKey = (id: number,) => {
+    return [
+    `/api/opdrachten/${id}`
+    ] as const;
+    }
+
+
+export const getGetOpdrachtQueryOptions = <TData = Awaited<ReturnType<typeof getOpdracht>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getOpdracht>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetOpdrachtQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getOpdracht>>> = ({ signal }) => getOpdracht(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getOpdracht>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetOpdrachtQueryResult = NonNullable<Awaited<ReturnType<typeof getOpdracht>>>
+export type GetOpdrachtQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Opdracht detail
+ */
+
+export function useGetOpdracht<TData = Awaited<ReturnType<typeof getOpdracht>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getOpdracht>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetOpdrachtQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getUpdateOpdrachtUrl = (id: number,) => {
+
+
+
+
+  return `/api/opdrachten/${id}`
+}
+
+/**
+ * @summary Opdracht bijwerken (status/omschrijving)
+ */
+export const updateOpdracht = async (id: number,
+    opdrachtPatch: OpdrachtPatch, options?: RequestInit): Promise<Opdracht> => {
+
+  return customFetch<Opdracht>(getUpdateOpdrachtUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(opdrachtPatch)
+  }
+);}
+
+
+
+
+export const getUpdateOpdrachtMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateOpdracht>>, TError,{id: number;data: BodyType<OpdrachtPatch>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateOpdracht>>, TError,{id: number;data: BodyType<OpdrachtPatch>}, TContext> => {
+
+const mutationKey = ['updateOpdracht'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateOpdracht>>, {id: number;data: BodyType<OpdrachtPatch>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateOpdracht(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateOpdrachtMutationResult = NonNullable<Awaited<ReturnType<typeof updateOpdracht>>>
+    export type UpdateOpdrachtMutationBody = BodyType<OpdrachtPatch>
+    export type UpdateOpdrachtMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Opdracht bijwerken (status/omschrijving)
+ */
+export const useUpdateOpdracht = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateOpdracht>>, TError,{id: number;data: BodyType<OpdrachtPatch>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateOpdracht>>,
+        TError,
+        {id: number;data: BodyType<OpdrachtPatch>},
+        TContext
+      > => {
+      return useMutation(getUpdateOpdrachtMutationOptions(options));
+    }
+
+export const getGetWerkbegrotingUrl = (id: number,) => {
+
+
+
+
+  return `/api/opdrachten/${id}/werkbegroting`
+}
+
+/**
+ * @summary Werkbegroting van opdracht ophalen (incl. regels)
+ */
+export const getWerkbegroting = async (id: number, options?: RequestInit): Promise<Werkbegroting> => {
+
+  return customFetch<Werkbegroting>(getGetWerkbegrotingUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetWerkbegrotingQueryKey = (id: number,) => {
+    return [
+    `/api/opdrachten/${id}/werkbegroting`
+    ] as const;
+    }
+
+
+export const getGetWerkbegrotingQueryOptions = <TData = Awaited<ReturnType<typeof getWerkbegroting>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getWerkbegroting>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetWerkbegrotingQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getWerkbegroting>>> = ({ signal }) => getWerkbegroting(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getWerkbegroting>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetWerkbegrotingQueryResult = NonNullable<Awaited<ReturnType<typeof getWerkbegroting>>>
+export type GetWerkbegrotingQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Werkbegroting van opdracht ophalen (incl. regels)
+ */
+
+export function useGetWerkbegroting<TData = Awaited<ReturnType<typeof getWerkbegroting>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getWerkbegroting>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetWerkbegrotingQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getVaststellenWerkbegrotingUrl = (id: number,) => {
+
+
+
+
+  return `/api/opdrachten/${id}/werkbegroting/vaststellen`
+}
+
+/**
+ * @summary Werkbegroting vaststellen (projectleider)
+ */
+export const vaststellenWerkbegroting = async (id: number, options?: RequestInit): Promise<Werkbegroting> => {
+
+  return customFetch<Werkbegroting>(getVaststellenWerkbegrotingUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getVaststellenWerkbegrotingMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof vaststellenWerkbegroting>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof vaststellenWerkbegroting>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['vaststellenWerkbegroting'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof vaststellenWerkbegroting>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  vaststellenWerkbegroting(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type VaststellenWerkbegrotingMutationResult = NonNullable<Awaited<ReturnType<typeof vaststellenWerkbegroting>>>
+
+    export type VaststellenWerkbegrotingMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Werkbegroting vaststellen (projectleider)
+ */
+export const useVaststellenWerkbegroting = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof vaststellenWerkbegroting>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof vaststellenWerkbegroting>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getVaststellenWerkbegrotingMutationOptions(options));
+    }
+
+export const getAiAnalyseWerkbegrotingUrl = (id: number,) => {
+
+
+
+
+  return `/api/opdrachten/${id}/werkbegroting/ai-analyse`
+}
+
+/**
+ * @summary AI-analyse uitvoeren op werkbegroting (inkoop + arbeid optimalisatie)
+ */
+export const aiAnalyseWerkbegroting = async (id: number, options?: RequestInit): Promise<Werkbegroting> => {
+
+  return customFetch<Werkbegroting>(getAiAnalyseWerkbegrotingUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getAiAnalyseWerkbegrotingMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof aiAnalyseWerkbegroting>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof aiAnalyseWerkbegroting>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['aiAnalyseWerkbegroting'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof aiAnalyseWerkbegroting>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  aiAnalyseWerkbegroting(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AiAnalyseWerkbegrotingMutationResult = NonNullable<Awaited<ReturnType<typeof aiAnalyseWerkbegroting>>>
+
+    export type AiAnalyseWerkbegrotingMutationError = ErrorType<unknown>
+
+    /**
+ * @summary AI-analyse uitvoeren op werkbegroting (inkoop + arbeid optimalisatie)
+ */
+export const useAiAnalyseWerkbegroting = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof aiAnalyseWerkbegroting>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof aiAnalyseWerkbegroting>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getAiAnalyseWerkbegrotingMutationOptions(options));
+    }
+
+export const getGetNacalculatieUrl = (id: number,) => {
+
+
+
+
+  return `/api/opdrachten/${id}/nacalculatie`
+}
+
+/**
+ * @summary Nacalculatie — calculatie vs werkbegroting vs verbruikte uren
+ */
+export const getNacalculatie = async (id: number, options?: RequestInit): Promise<OpdrachtNacalculatie> => {
+
+  return customFetch<OpdrachtNacalculatie>(getGetNacalculatieUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetNacalculatieQueryKey = (id: number,) => {
+    return [
+    `/api/opdrachten/${id}/nacalculatie`
+    ] as const;
+    }
+
+
+export const getGetNacalculatieQueryOptions = <TData = Awaited<ReturnType<typeof getNacalculatie>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getNacalculatie>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetNacalculatieQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getNacalculatie>>> = ({ signal }) => getNacalculatie(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getNacalculatie>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetNacalculatieQueryResult = NonNullable<Awaited<ReturnType<typeof getNacalculatie>>>
+export type GetNacalculatieQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Nacalculatie — calculatie vs werkbegroting vs verbruikte uren
+ */
+
+export function useGetNacalculatie<TData = Awaited<ReturnType<typeof getNacalculatie>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getNacalculatie>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetNacalculatieQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getListOpdrachtPlanningUrenUrl = (id: number,) => {
+
+
+
+
+  return `/api/opdrachten/${id}/planning-uren`
+}
+
+/**
+ * @summary Geplande uren per medewerker voor deze opdracht
+ */
+export const listOpdrachtPlanningUren = async (id: number, options?: RequestInit): Promise<PlanningUrenRegel[]> => {
+
+  return customFetch<PlanningUrenRegel[]>(getListOpdrachtPlanningUrenUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListOpdrachtPlanningUrenQueryKey = (id: number,) => {
+    return [
+    `/api/opdrachten/${id}/planning-uren`
+    ] as const;
+    }
+
+
+export const getListOpdrachtPlanningUrenQueryOptions = <TData = Awaited<ReturnType<typeof listOpdrachtPlanningUren>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listOpdrachtPlanningUren>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListOpdrachtPlanningUrenQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listOpdrachtPlanningUren>>> = ({ signal }) => listOpdrachtPlanningUren(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listOpdrachtPlanningUren>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListOpdrachtPlanningUrenQueryResult = NonNullable<Awaited<ReturnType<typeof listOpdrachtPlanningUren>>>
+export type ListOpdrachtPlanningUrenQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Geplande uren per medewerker voor deze opdracht
+ */
+
+export function useListOpdrachtPlanningUren<TData = Awaited<ReturnType<typeof listOpdrachtPlanningUren>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listOpdrachtPlanningUren>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListOpdrachtPlanningUrenQueryOptions(id,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

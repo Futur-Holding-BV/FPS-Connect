@@ -5,6 +5,7 @@ import { medewerkersTable } from "./hrm";
 import { planningItemsTable } from "./planning";
 import { documentenTable } from "./documenten";
 import { projectenTable } from "./projecten";
+import { opdrachtenTable } from "./opdrachten";
 
 // Dagelijkse urenregistraties — één rij per medewerker per dagdeel/project.
 // Meerdere rijen per dag zijn mogelijk (bijv. ochtend project A, middag project B).
@@ -25,6 +26,7 @@ export const urenRegistratiesTable = pgTable("uren_registraties", {
   // Workflow
   status: text("status").notNull().default("concept"),                     // concept | ingediend | goedgekeurd | afgewezen
   planningItemId: integer("planning_item_id").references(() => planningItemsTable.id, { onDelete: "set null" }),
+  opdrachtId: integer("opdracht_id").references(() => opdrachtenTable.id, { onDelete: "set null" }),
   ingediendOp: timestamp("ingediend_op"),
   goedgekeurdDoorId: integer("goedgekeurd_door_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
   goedgekeurdOp: timestamp("goedgekeurd_op"),

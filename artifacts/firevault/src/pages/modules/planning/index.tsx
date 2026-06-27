@@ -10,6 +10,7 @@ import {
   useListGebouwen,
   useGetPlanningDiagnose,
   usePostVeiligheidToolboxenKoppelingSuggestie,
+  useListOpdrachten,
 } from "@workspace/api-client-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -268,6 +269,15 @@ export default function ModulesPlanning() {
     { query: { queryKey: ["gebouwen-planning"] } }
   );
 
+  const { data: actieveOpdrachten = [] } = useListOpdrachten(
+    { status: "actief" } as Parameters<typeof useListOpdrachten>[0],
+    { query: { queryKey: ["opdrachten-actief"] } }
+  );
+  const openstaandeOpdrachten = actieveOpdrachten.filter(
+    (o) => (o as unknown as Record<string, unknown>).begroting_status === "vastgesteld"
+      && !((o as unknown as Record<string, unknown>).begroting_totaal_arbeid_uren === 0 || (o as unknown as Record<string, unknown>).begroting_totaal_arbeid_uren === null)
+  );
+
   const createMut = useCreatePlanningItem({
     mutation: {
       onSuccess: () => queryClient.invalidateQueries({ queryKey: ["planning-items"] }),
@@ -517,6 +527,30 @@ export default function ModulesPlanning() {
             Projecten
           </button>
         </div>
+
+        {/* Openstaande opdrachten banner */}
+        {openstaandeOpdrachten.length > 0 && (
+          <div className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
+            <Briefcase className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-amber-800">
+                {openstaandeOpdrachten.length === 1 ? "1 opdracht" : `${openstaandeOpdrachten.length} opdrachten`} nog niet volledig ingepland
+              </p>
+              <div className="mt-1.5 flex flex-wrap gap-2">
+                {openstaandeOpdrachten.slice(0, 5).map((o) => (
+                  <Link key={o.id} href={`/opdrachten/${o.id}`}>
+                    <span className="inline-flex items-center gap-1 text-xs bg-white border border-amber-200 rounded px-2 py-0.5 text-amber-800 hover:bg-amber-100 cursor-pointer">
+                      {(o as unknown as Record<string, unknown>).titel as string}
+                    </span>
+                  </Link>
+                ))}
+                {openstaandeOpdrachten.length > 5 && (
+                  <span className="text-xs text-amber-700">+{openstaandeOpdrachten.length - 5} meer</span>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Filterbar (medewerkers-tab) */}
         {activeTab === "medewerkers" && (

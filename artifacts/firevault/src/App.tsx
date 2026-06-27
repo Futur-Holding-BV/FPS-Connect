@@ -80,6 +80,7 @@ import DossiersPagina from "@/pages/dossiers/index";
 import OffertesPagina from "@/pages/offertes/index";
 import ProposalStudio from "@/pages/offertes/studio";
 import OffertePrintPagina from "@/pages/offertes/print";
+import OpdrachtDetailPagina from "@/pages/opdrachten/detail";
 import DocumentenPagina from "@/pages/documenten/index";
 import { OndersteuningWidget } from "@/components/ondersteuning-widget";
 import RapportenPagina from "@/pages/rapporten/index";
@@ -218,10 +219,11 @@ function ConnectPortal() {
           <Redirect to="/modules/planning" />
         </Route>
 
-        {/* ── Offertes ── */}
+        {/* ── Offertes & Opdrachten ── */}
         <Route path="/offertes" component={OffertesPagina} />
         <Route path="/offertes/:id/print" component={OffertePrintPagina} />
         <Route path="/offertes/:id" component={ProposalStudio} />
+        <Route path="/opdrachten/:id" component={OpdrachtDetailPagina} />
 
         {/* ── Documenten & Dossiers ── */}
         <Route path="/documenten" component={DocumentenPagina} />

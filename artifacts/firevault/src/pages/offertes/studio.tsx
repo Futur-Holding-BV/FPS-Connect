@@ -25,6 +25,9 @@ import {
   getListOfferteRegelsQueryKey,
   getListOfferteUitgangspuntenQueryKey,
   getListOfferteVragenQueryKey,
+  useMaakOpdracht,
+  useListOpdrachten,
+  getListOpdrachtenQueryKey,
 } from "@workspace/api-client-react";
 import type { OfferteSectie } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
@@ -44,7 +47,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   ArrowLeft, Sparkles, ChevronUp, ChevronDown, Eye, Printer, Plus,
   Trash2, BookOpen, Clock, Paperclip, Check, X, GripVertical, ToggleLeft, ToggleRight, Send,
-  FolderOpen, CreditCard, FileText,
+  FolderOpen, CreditCard, FileText, Hammer,
 } from "lucide-react";
 import { VerzendTab } from "./verzend-tab";
 import { useToast } from "@/hooks/use-toast";
@@ -129,6 +132,34 @@ export default function ProposalStudio() {
   const maakVersie = useCreateOfferteVersie();
   const maakBijlage = useCreateOfferteBijlage();
   const verwijderBijlage = useDeleteOfferteBijlage();
+
+  const opdrachtenParams = { offerte_id: offerteId } as Record<string, unknown>;
+  const { data: bestaandeOpdrachten } = useListOpdrachten(
+    opdrachtenParams as Parameters<typeof useListOpdrachten>[0],
+    { query: { queryKey: getListOpdrachtenQueryKey(opdrachtenParams as Parameters<typeof getListOpdrachtenQueryKey>[0]), enabled: !!offerteId && !!offerte } }
+  );
+  const bestaandeOpdracht = bestaandeOpdrachten?.[0] ?? null;
+
+  const [maakOpdrachtDialoog, setMaakOpdrachtDialoog] = useState(false);
+
+  const maakOpdrachtMutatie = useMaakOpdracht({
+    mutation: {
+      onSuccess: (data) => {
+        void queryClient.invalidateQueries({ queryKey: getListOpdrachtenQueryKey(opdrachtenParams as Parameters<typeof getListOpdrachtenQueryKey>[0]) });
+        toast({ title: "Opdracht aangemaakt" });
+        setMaakOpdrachtDialoog(false);
+        window.location.href = `/opdrachten/${data.id}`;
+      },
+      onError: (err: unknown) => {
+        const status = (err as { response?: { status?: number } })?.response?.status;
+        if (status === 409) {
+          toast({ title: "Er bestaat al een opdracht voor deze offerte", variant: "destructive" });
+        } else {
+          toast({ title: "Aanmaken mislukt", variant: "destructive" });
+        }
+      },
+    },
+  });
 
   const [activeSectieId, setActiveSectieId] = useState<number | null>(null);
   const [localInhoud, setLocalInhoud] = useState("");
@@ -472,6 +503,32 @@ export default function ProposalStudio() {
             </Link>
           </div>
         )}
+
+        {bestaandeOpdracht ? (
+          <div className="flex items-center gap-3 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3">
+            <Hammer className="h-5 w-5 text-blue-600 shrink-0" />
+            <div className="flex-1">
+              <span className="text-sm font-medium text-blue-800">Opdracht aangemaakt</span>
+              <span className="text-sm text-blue-700"> — werkbegroting en planningskoppeling zijn beschikbaar.</span>
+            </div>
+            <Link href={`/opdrachten/${bestaandeOpdracht.id}`}>
+              <Button size="sm" variant="outline" className="border-blue-300 text-blue-700 hover:bg-blue-100 shrink-0">
+                Ga naar opdracht
+              </Button>
+            </Link>
+          </div>
+        ) : (offerte as unknown as Record<string, unknown>).portaal_status && ["akkoord", "ondertekend"].includes(String((offerte as unknown as Record<string, unknown>).portaal_status)) ? (
+          <div className="flex items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
+            <Hammer className="h-5 w-5 text-amber-600 shrink-0" />
+            <div className="flex-1">
+              <span className="text-sm font-medium text-amber-800">Offerte geaccepteerd</span>
+              <span className="text-sm text-amber-700"> — zet om naar een uitvoeropdracht met werkbegroting.</span>
+            </div>
+            <Button size="sm" variant="outline" className="border-amber-300 text-amber-700 hover:bg-amber-100 shrink-0" onClick={() => setMaakOpdrachtDialoog(true)}>
+              <Hammer className="h-3.5 w-3.5" /> Maak opdracht
+            </Button>
+          </div>
+        ) : null}
 
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <div className="flex items-center gap-3">
@@ -917,6 +974,31 @@ export default function ProposalStudio() {
           </div>
         </div>
       </div>
+
+      <Dialog open={maakOpdrachtDialoog} onOpenChange={setMaakOpdrachtDialoog}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Opdracht aanmaken</DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Hiermee wordt een uitvoeropdracht aangemaakt op basis van deze offerte.
+              De werkbegroting wordt automatisch gevuld vanuit de calculatie (zonder opslagen/winst).
+            </p>
+            <div className="rounded-md border bg-muted/40 px-3 py-2 text-sm">
+              <span className="font-medium">{offerte.titel}</span>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setMaakOpdrachtDialoog(false)}>Annuleren</Button>
+            <Button
+              disabled={maakOpdrachtMutatie.isPending}
+              onClick={() => maakOpdrachtMutatie.mutate({ id: offerteId })}
+            >
+              <Hammer className="h-3.5 w-3.5" />
+              {maakOpdrachtMutatie.isPending ? "Aanmaken..." : "Aanmaken"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={sectieDialoogOpen} onOpenChange={setSectieDialoogOpen}>
         <DialogContent>
