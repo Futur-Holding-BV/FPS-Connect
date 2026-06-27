@@ -5,6 +5,7 @@
  * FPS Brandpreventie - Platform voor brandpreventieve gebouwvoorzieningen
  * OpenAPI spec version: 0.1.0
  */
+import type { OfferteFactuurSchema } from './offerteFactuurSchema';
 
 export interface Offerte {
   id: number;
@@ -38,6 +39,15 @@ export interface Offerte {
   geldigheid_dagen: number;
   /** @nullable */
   voorwaarden?: string | null;
+  betalingstermijn_dagen?: number;
+  /** @nullable */
+  betaalwijze?: string | null;
+  /** @nullable */
+  factuur_schema?: OfferteFactuurSchema;
+  /** @nullable */
+  voorwaarden_set_id?: number | null;
+  /** @nullable */
+  voorwaarden_snapshot?: string | null;
   bedrag_excl_btw: number;
   btw_percentage: number;
   bedrag_incl_btw: number;

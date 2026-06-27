@@ -8750,6 +8750,7 @@ export const ListOfferteSjablonenResponseItem = zod.object({
   "naam": zod.string(),
   "omschrijving": zod.string().nullish(),
   "werkmaatschappij": zod.string(),
+  "doelgroep": zod.string(),
   "actief": zod.boolean(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
@@ -8764,6 +8765,7 @@ export const CreateOfferteSjabloonBody = zod.object({
   "naam": zod.string(),
   "omschrijving": zod.string().optional(),
   "werkmaatschappij": zod.string().optional(),
+  "doelgroep": zod.string().optional(),
   "actief": zod.boolean().optional()
 })
 
@@ -8782,6 +8784,7 @@ export const GetOfferteSjabloonResponse = zod.object({
   "naam": zod.string(),
   "omschrijving": zod.string().nullish(),
   "werkmaatschappij": zod.string(),
+  "doelgroep": zod.string(),
   "actief": zod.boolean(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
@@ -8799,6 +8802,7 @@ export const UpdateOfferteSjabloonBody = zod.object({
   "naam": zod.string(),
   "omschrijving": zod.string().optional(),
   "werkmaatschappij": zod.string().optional(),
+  "doelgroep": zod.string().optional(),
   "actief": zod.boolean().optional()
 })
 
@@ -8807,6 +8811,7 @@ export const UpdateOfferteSjabloonResponse = zod.object({
   "naam": zod.string(),
   "omschrijving": zod.string().nullish(),
   "werkmaatschappij": zod.string(),
+  "doelgroep": zod.string(),
   "actief": zod.boolean(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
@@ -8905,6 +8910,69 @@ export const DeleteOfferteHoofdstukResponse = zod.void()
 
 
 /**
+ * @summary Voorwaardensets ophalen
+ */
+export const ListVoorwaardenSetsResponseItem = zod.object({
+  "id": zod.number(),
+  "naam": zod.string(),
+  "versie": zod.string(),
+  "tekst": zod.string(),
+  "actief": zod.boolean(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+export const ListVoorwaardenSetsResponse = zod.array(ListVoorwaardenSetsResponseItem)
+
+
+/**
+ * @summary Voorwaardenset aanmaken
+ */
+export const CreateVoorwaardenSetBody = zod.object({
+  "naam": zod.string(),
+  "versie": zod.string().optional(),
+  "tekst": zod.string().optional(),
+  "actief": zod.boolean().optional()
+})
+
+export const CreateVoorwaardenSetResponse = zod.void()
+
+
+/**
+ * @summary Voorwaardenset bijwerken
+ */
+export const UpdateVoorwaardenSetParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateVoorwaardenSetBody = zod.object({
+  "naam": zod.string(),
+  "versie": zod.string().optional(),
+  "tekst": zod.string().optional(),
+  "actief": zod.boolean().optional()
+})
+
+export const UpdateVoorwaardenSetResponse = zod.object({
+  "id": zod.number(),
+  "naam": zod.string(),
+  "versie": zod.string(),
+  "tekst": zod.string(),
+  "actief": zod.boolean(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+
+
+/**
+ * @summary Voorwaardenset verwijderen
+ */
+export const DeleteVoorwaardenSetParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteVoorwaardenSetResponse = zod.void()
+
+
+/**
  * @summary Offertes ophalen
  */
 export const ListOffertesResponseItem = zod.object({
@@ -8925,6 +8993,13 @@ export const ListOffertesResponseItem = zod.object({
   "datum": zod.string().nullish(),
   "geldigheid_dagen": zod.number(),
   "voorwaarden": zod.string().nullish(),
+  "betalingstermijn_dagen": zod.number().optional(),
+  "betaalwijze": zod.string().nullish(),
+  "factuur_schema": zod.object({
+
+}).passthrough().nullish(),
+  "voorwaarden_set_id": zod.number().nullish(),
+  "voorwaarden_snapshot": zod.string().nullish(),
   "bedrag_excl_btw": zod.number(),
   "btw_percentage": zod.number(),
   "bedrag_incl_btw": zod.number(),
@@ -8955,6 +9030,12 @@ export const CreateOfferteBody = zod.object({
   "datum": zod.string().optional(),
   "geldigheid_dagen": zod.number().optional(),
   "voorwaarden": zod.string().optional(),
+  "betalingstermijn_dagen": zod.number().optional(),
+  "betaalwijze": zod.string().optional(),
+  "factuur_schema": zod.object({
+
+}).passthrough().optional(),
+  "voorwaarden_set_id": zod.number().nullish(),
   "bedrag_excl_btw": zod.number().optional(),
   "btw_percentage": zod.number().optional(),
   "bedrag_incl_btw": zod.number().optional(),
@@ -8989,6 +9070,13 @@ export const GetOfferteResponse = zod.object({
   "datum": zod.string().nullish(),
   "geldigheid_dagen": zod.number(),
   "voorwaarden": zod.string().nullish(),
+  "betalingstermijn_dagen": zod.number().optional(),
+  "betaalwijze": zod.string().nullish(),
+  "factuur_schema": zod.object({
+
+}).passthrough().nullish(),
+  "voorwaarden_set_id": zod.number().nullish(),
+  "voorwaarden_snapshot": zod.string().nullish(),
   "bedrag_excl_btw": zod.number(),
   "btw_percentage": zod.number(),
   "bedrag_incl_btw": zod.number(),
@@ -9022,6 +9110,12 @@ export const UpdateOfferteBody = zod.object({
   "datum": zod.string().optional(),
   "geldigheid_dagen": zod.number().optional(),
   "voorwaarden": zod.string().optional(),
+  "betalingstermijn_dagen": zod.number().optional(),
+  "betaalwijze": zod.string().optional(),
+  "factuur_schema": zod.object({
+
+}).passthrough().optional(),
+  "voorwaarden_set_id": zod.number().nullish(),
   "bedrag_excl_btw": zod.number().optional(),
   "btw_percentage": zod.number().optional(),
   "bedrag_incl_btw": zod.number().optional(),
@@ -9046,6 +9140,13 @@ export const UpdateOfferteResponse = zod.object({
   "datum": zod.string().nullish(),
   "geldigheid_dagen": zod.number(),
   "voorwaarden": zod.string().nullish(),
+  "betalingstermijn_dagen": zod.number().optional(),
+  "betaalwijze": zod.string().nullish(),
+  "factuur_schema": zod.object({
+
+}).passthrough().nullish(),
+  "voorwaarden_set_id": zod.number().nullish(),
+  "voorwaarden_snapshot": zod.string().nullish(),
   "bedrag_excl_btw": zod.number(),
   "btw_percentage": zod.number(),
   "bedrag_incl_btw": zod.number(),

@@ -373,6 +373,8 @@ import type {
   Vervaldag,
   VerzendOfferte200,
   VolgendSpotnummer,
+  VoorwaardenSet,
+  VoorwaardenSetInput,
   Voorziening,
   VoorzieningDetail,
   VoorzieningInput,
@@ -25645,6 +25647,294 @@ export const useDeleteOfferteHoofdstuk = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getDeleteOfferteHoofdstukMutationOptions(options));
+    }
+
+export const getListVoorwaardenSetsUrl = () => {
+
+
+
+
+  return `/api/offerte-voorwaarden-sets`
+}
+
+/**
+ * @summary Voorwaardensets ophalen
+ */
+export const listVoorwaardenSets = async ( options?: RequestInit): Promise<VoorwaardenSet[]> => {
+
+  return customFetch<VoorwaardenSet[]>(getListVoorwaardenSetsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListVoorwaardenSetsQueryKey = () => {
+    return [
+    `/api/offerte-voorwaarden-sets`
+    ] as const;
+    }
+
+
+export const getListVoorwaardenSetsQueryOptions = <TData = Awaited<ReturnType<typeof listVoorwaardenSets>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listVoorwaardenSets>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListVoorwaardenSetsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listVoorwaardenSets>>> = ({ signal }) => listVoorwaardenSets({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listVoorwaardenSets>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListVoorwaardenSetsQueryResult = NonNullable<Awaited<ReturnType<typeof listVoorwaardenSets>>>
+export type ListVoorwaardenSetsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Voorwaardensets ophalen
+ */
+
+export function useListVoorwaardenSets<TData = Awaited<ReturnType<typeof listVoorwaardenSets>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listVoorwaardenSets>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListVoorwaardenSetsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateVoorwaardenSetUrl = () => {
+
+
+
+
+  return `/api/offerte-voorwaarden-sets`
+}
+
+/**
+ * @summary Voorwaardenset aanmaken
+ */
+export const createVoorwaardenSet = async (voorwaardenSetInput: VoorwaardenSetInput, options?: RequestInit): Promise<VoorwaardenSet> => {
+
+  return customFetch<VoorwaardenSet>(getCreateVoorwaardenSetUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(voorwaardenSetInput)
+  }
+);}
+
+
+
+
+export const getCreateVoorwaardenSetMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createVoorwaardenSet>>, TError,{data: BodyType<VoorwaardenSetInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createVoorwaardenSet>>, TError,{data: BodyType<VoorwaardenSetInput>}, TContext> => {
+
+const mutationKey = ['createVoorwaardenSet'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createVoorwaardenSet>>, {data: BodyType<VoorwaardenSetInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createVoorwaardenSet(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateVoorwaardenSetMutationResult = NonNullable<Awaited<ReturnType<typeof createVoorwaardenSet>>>
+    export type CreateVoorwaardenSetMutationBody = BodyType<VoorwaardenSetInput>
+    export type CreateVoorwaardenSetMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Voorwaardenset aanmaken
+ */
+export const useCreateVoorwaardenSet = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createVoorwaardenSet>>, TError,{data: BodyType<VoorwaardenSetInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createVoorwaardenSet>>,
+        TError,
+        {data: BodyType<VoorwaardenSetInput>},
+        TContext
+      > => {
+      return useMutation(getCreateVoorwaardenSetMutationOptions(options));
+    }
+
+export const getUpdateVoorwaardenSetUrl = (id: number,) => {
+
+
+
+
+  return `/api/offerte-voorwaarden-sets/${id}`
+}
+
+/**
+ * @summary Voorwaardenset bijwerken
+ */
+export const updateVoorwaardenSet = async (id: number,
+    voorwaardenSetInput: VoorwaardenSetInput, options?: RequestInit): Promise<VoorwaardenSet> => {
+
+  return customFetch<VoorwaardenSet>(getUpdateVoorwaardenSetUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(voorwaardenSetInput)
+  }
+);}
+
+
+
+
+export const getUpdateVoorwaardenSetMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateVoorwaardenSet>>, TError,{id: number;data: BodyType<VoorwaardenSetInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateVoorwaardenSet>>, TError,{id: number;data: BodyType<VoorwaardenSetInput>}, TContext> => {
+
+const mutationKey = ['updateVoorwaardenSet'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateVoorwaardenSet>>, {id: number;data: BodyType<VoorwaardenSetInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateVoorwaardenSet(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateVoorwaardenSetMutationResult = NonNullable<Awaited<ReturnType<typeof updateVoorwaardenSet>>>
+    export type UpdateVoorwaardenSetMutationBody = BodyType<VoorwaardenSetInput>
+    export type UpdateVoorwaardenSetMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Voorwaardenset bijwerken
+ */
+export const useUpdateVoorwaardenSet = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateVoorwaardenSet>>, TError,{id: number;data: BodyType<VoorwaardenSetInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateVoorwaardenSet>>,
+        TError,
+        {id: number;data: BodyType<VoorwaardenSetInput>},
+        TContext
+      > => {
+      return useMutation(getUpdateVoorwaardenSetMutationOptions(options));
+    }
+
+export const getDeleteVoorwaardenSetUrl = (id: number,) => {
+
+
+
+
+  return `/api/offerte-voorwaarden-sets/${id}`
+}
+
+/**
+ * @summary Voorwaardenset verwijderen
+ */
+export const deleteVoorwaardenSet = async (id: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteVoorwaardenSetUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteVoorwaardenSetMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteVoorwaardenSet>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteVoorwaardenSet>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deleteVoorwaardenSet'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteVoorwaardenSet>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteVoorwaardenSet(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteVoorwaardenSetMutationResult = NonNullable<Awaited<ReturnType<typeof deleteVoorwaardenSet>>>
+
+    export type DeleteVoorwaardenSetMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Voorwaardenset verwijderen
+ */
+export const useDeleteVoorwaardenSet = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteVoorwaardenSet>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteVoorwaardenSet>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeleteVoorwaardenSetMutationOptions(options));
     }
 
 export const getListOffertesUrl = () => {

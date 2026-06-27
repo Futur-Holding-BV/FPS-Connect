@@ -3727,12 +3727,30 @@ export interface DossierDocumentInput {
   versie?: number;
 }
 
+export interface VoorwaardenSet {
+  id: number;
+  naam: string;
+  versie: string;
+  tekst: string;
+  actief: boolean;
+  aangemaakt_op: string;
+  bijgewerkt_op: string;
+}
+
+export interface VoorwaardenSetInput {
+  naam: string;
+  versie?: string;
+  tekst?: string;
+  actief?: boolean;
+}
+
 export interface OfferteSjabloon {
   id: number;
   naam: string;
   /** @nullable */
   omschrijving?: string | null;
   werkmaatschappij: string;
+  doelgroep: string;
   actief: boolean;
   aangemaakt_op: string;
   bijgewerkt_op: string;
@@ -3742,6 +3760,7 @@ export interface OfferteSjabloonInput {
   naam: string;
   omschrijving?: string;
   werkmaatschappij?: string;
+  doelgroep?: string;
   actief?: boolean;
 }
 
@@ -3768,6 +3787,11 @@ export interface OfferteHoofdstukInput {
   ai_veld?: boolean;
   ai_hint?: string;
 }
+
+/**
+ * @nullable
+ */
+export type OfferteFactuurSchema = { [key: string]: unknown } | null;
 
 export interface Offerte {
   id: number;
@@ -3801,6 +3825,15 @@ export interface Offerte {
   geldigheid_dagen: number;
   /** @nullable */
   voorwaarden?: string | null;
+  betalingstermijn_dagen?: number;
+  /** @nullable */
+  betaalwijze?: string | null;
+  /** @nullable */
+  factuur_schema?: OfferteFactuurSchema;
+  /** @nullable */
+  voorwaarden_set_id?: number | null;
+  /** @nullable */
+  voorwaarden_snapshot?: string | null;
   bedrag_excl_btw: number;
   btw_percentage: number;
   bedrag_incl_btw: number;
@@ -3813,6 +3846,8 @@ export interface Offerte {
   aangemaakt_op: string;
   bijgewerkt_op: string;
 }
+
+export type OfferteInputFactuurSchema = { [key: string]: unknown };
 
 export interface OfferteInput {
   titel: string;
@@ -3832,6 +3867,11 @@ export interface OfferteInput {
   datum?: string;
   geldigheid_dagen?: number;
   voorwaarden?: string;
+  betalingstermijn_dagen?: number;
+  betaalwijze?: string;
+  factuur_schema?: OfferteInputFactuurSchema;
+  /** @nullable */
+  voorwaarden_set_id?: number | null;
   bedrag_excl_btw?: number;
   btw_percentage?: number;
   bedrag_incl_btw?: number;

@@ -23,12 +23,26 @@ import { crmKlantenTable } from "./crm";
 import { voorzieningenTable } from "./voorzieningen";
 import { projectenTable } from "./projecten";
 
+// Voorwaardenbibliotheek — herbruikbare sets met algemene voorwaarden.
+// Bij verzenden wordt de tekst gekopieerd naar offertes.voorwaarden_snapshot.
+export const offerteVoorwaardenSetsTable = pgTable("offerte_voorwaarden_sets", {
+  id: serial("id").primaryKey(),
+  naam: text("naam").notNull(),
+  versie: text("versie").notNull().default("1.0"),
+  tekst: text("tekst").notNull().default(""),
+  actief: boolean("actief").notNull().default(true),
+  aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
+  bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
+});
+
 // Offertesjabloon — vaste structuur per werkmaatschappij (bv. FPS Bouw).
+// doelgroep: algemeen | vve | aannemer | overig
 export const offerteSjablonenTable = pgTable("offerte_sjablonen", {
   id: serial("id").primaryKey(),
   naam: text("naam").notNull(),
   omschrijving: text("omschrijving"),
   werkmaatschappij: text("werkmaatschappij").notNull().default("FPS Bouw"),
+  doelgroep: text("doelgroep").notNull().default("algemeen"),
   actief: boolean("actief").notNull().default(true),
   aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
   bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
@@ -70,6 +84,13 @@ export const offertesTable = pgTable("offertes", {
   bedragInclBtw: real("bedrag_incl_btw").notNull().default(0),
   kleurthema: text("kleurthema").default("fps-oranje"),
   calculatieId: integer("calculatie_id"),
+  // Betaalcondities
+  betalingstermijnDagen: integer("betalingstermijn_dagen").notNull().default(30),
+  betaalwijze: text("betaalwijze"),
+  factuurSchema: jsonb("factuur_schema"),
+  // Voorwaardenbibliotheek-koppeling
+  voorwaardenSetId: integer("voorwaarden_set_id").references(() => offerteVoorwaardenSetsTable.id, { onDelete: "set null" }),
+  voorwaardenSnapshot: text("voorwaarden_snapshot"),
   status: text("status").notNull().default("concept"),
   portaalStatus: text("portaal_status").notNull().default("concept"),
   autoProjectId: integer("auto_project_id").references(() => projectenTable.id, { onDelete: "set null" }),
@@ -216,6 +237,7 @@ export const offerteTrackingTable = pgTable("offerte_tracking", {
   aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
 }, (t) => [index("idx_offerte_tracking_offerte").on(t.offerteId)]);
 
+export const insertOfferteVoorwaardenSetSchema = createInsertSchema(offerteVoorwaardenSetsTable).omit({ id: true, aangemaaktOp: true, bijgewerktOp: true });
 export const insertOfferteSjabloonSchema = createInsertSchema(offerteSjablonenTable).omit({ id: true, aangemaaktOp: true, bijgewerktOp: true });
 export const insertOfferteHoofdstukSchema = createInsertSchema(offerteHoofdstukkenTable).omit({ id: true, aangemaaktOp: true, bijgewerktOp: true });
 export const insertOfferteSchema = createInsertSchema(offertesTable).omit({ id: true, aangemaaktOp: true, bijgewerktOp: true });
@@ -225,6 +247,7 @@ export const insertOfferteSectieSchema = createInsertSchema(offerteSectiesTable)
 export const insertOfferteVersieSchema = createInsertSchema(offerteVersiesTable).omit({ id: true, aangemaaktOp: true });
 export const insertOfferteBijlageSchema = createInsertSchema(offerteBijlagenTable).omit({ id: true, aangemaaktOp: true, bijgewerktOp: true });
 
+export type InsertOfferteVoorwaardenSet = z.infer<typeof insertOfferteVoorwaardenSetSchema>;
 export type InsertOfferteSjabloon = z.infer<typeof insertOfferteSjabloonSchema>;
 export type InsertOfferteHoofdstuk = z.infer<typeof insertOfferteHoofdstukSchema>;
 export type InsertOfferte = z.infer<typeof insertOfferteSchema>;
@@ -234,6 +257,7 @@ export type InsertOfferteSectie = z.infer<typeof insertOfferteSectieSchema>;
 export type InsertOfferteVersie = z.infer<typeof insertOfferteVersieSchema>;
 export type InsertOfferteBijlage = z.infer<typeof insertOfferteBijlageSchema>;
 
+export type OfferteVoorwaardenSet = typeof offerteVoorwaardenSetsTable.$inferSelect;
 export type OfferteSjabloon = typeof offerteSjablonenTable.$inferSelect;
 export type OfferteHoofdstuk = typeof offerteHoofdstukkenTable.$inferSelect;
 export type Offerte = typeof offertesTable.$inferSelect;

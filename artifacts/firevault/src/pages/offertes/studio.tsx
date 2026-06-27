@@ -3,6 +3,8 @@ import { useParams, Link } from "wouter";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   useGetOfferte,
+  useUpdateOfferte,
+  useListVoorwaardenSets,
   useListOfferteSecties,
   useCreateOfferteSectie,
   useUpdateOfferteSectie,
@@ -42,7 +44,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   ArrowLeft, Sparkles, ChevronUp, ChevronDown, Eye, Printer, Plus,
   Trash2, BookOpen, Clock, Paperclip, Check, X, GripVertical, ToggleLeft, ToggleRight, Send,
-  FolderOpen,
+  FolderOpen, CreditCard, FileText,
 } from "lucide-react";
 import { VerzendTab } from "./verzend-tab";
 import { useToast } from "@/hooks/use-toast";
@@ -117,6 +119,9 @@ export default function ProposalStudio() {
 
   const aantalOnbeantwoord = (vragen ?? []).filter((v) => v.antwoord === null || v.antwoord === undefined).length;
 
+  const werkOfferte = useUpdateOfferte();
+  const { data: voorwaardenSets } = useListVoorwaardenSets();
+
   const maakSectie = useCreateOfferteSectie();
   const werkSectie = useUpdateOfferteSectie();
   const verwijderSectie = useDeleteOfferteSectie();
@@ -142,8 +147,54 @@ export default function ProposalStudio() {
   const [bewerkPrijs, setBewerkPrijs] = useState("");
   const [initialiserend, setInitialiserend] = useState(false);
 
+  const [conditiesForm, setConditiesForm] = useState({
+    betalingstermijn_dagen: 30,
+    betaalwijze: "",
+    factuur_schema_tekst: "",
+    voorwaarden_set_id: undefined as number | undefined,
+    vrije_voorwaarden: "",
+  });
+  const [conditiesOpgeslagen, setConditiesOpgeslagen] = useState(false);
+
   const gesorteerdeSecties = [...(secties ?? [])].sort((a, b) => a.volgorde - b.volgorde);
   const activeSectie = gesorteerdeSecties.find((s) => s.id === activeSectieId) ?? null;
+
+  useEffect(() => {
+    if (offerte) {
+      setConditiesForm({
+        betalingstermijn_dagen: (offerte as any).betalingstermijn_dagen ?? 30,
+        betaalwijze: (offerte as any).betaalwijze ?? "",
+        factuur_schema_tekst: (offerte as any).factuur_schema ? JSON.stringify((offerte as any).factuur_schema, null, 2) : "",
+        voorwaarden_set_id: (offerte as any).voorwaarden_set_id ?? undefined,
+        vrije_voorwaarden: (offerte as any).voorwaarden ?? "",
+      });
+    }
+  }, [offerte?.id]);
+
+  async function slaConditiesOp() {
+    try {
+      let factuurSchema: object | undefined;
+      if (conditiesForm.factuur_schema_tekst.trim()) {
+        try { factuurSchema = JSON.parse(conditiesForm.factuur_schema_tekst); } catch { /* negeer parse-fout */ }
+      }
+      await werkOfferte.mutateAsync({
+        id: offerteId,
+        data: {
+          betalingstermijn_dagen: conditiesForm.betalingstermijn_dagen,
+          betaalwijze: conditiesForm.betaalwijze || undefined,
+          factuur_schema: factuurSchema,
+          voorwaarden_set_id: conditiesForm.voorwaarden_set_id ?? null,
+          voorwaarden: conditiesForm.vrije_voorwaarden || undefined,
+        } as any,
+      });
+      await queryClient.invalidateQueries({ queryKey: getGetOfferteQueryKey(offerteId) });
+      setConditiesOpgeslagen(true);
+      setTimeout(() => setConditiesOpgeslagen(false), 2000);
+      toast({ title: "Betaalcondities opgeslagen" });
+    } catch {
+      toast({ title: "Opslaan mislukt", variant: "destructive" });
+    }
+  }
 
   useEffect(() => {
     if (gesorteerdeSecties.length > 0 && !activeSectieId) {
@@ -522,9 +573,10 @@ export default function ProposalStudio() {
 
           <div className="flex-1 min-w-0">
             <Tabs defaultValue="studio">
-              <TabsList className="mb-4">
+              <TabsList className="mb-4 flex-wrap">
                 <TabsTrigger value="studio"><BookOpen className="h-3.5 w-3.5 mr-1.5" />Studio</TabsTrigger>
                 <TabsTrigger value="prijzen"><span className="mr-1.5">&#8364;</span>Prijzen</TabsTrigger>
+                <TabsTrigger value="condities"><CreditCard className="h-3.5 w-3.5 mr-1.5" />Condities</TabsTrigger>
                 <TabsTrigger value="voorbeeld"><Eye className="h-3.5 w-3.5 mr-1.5" />Voorbeeld</TabsTrigger>
                 <TabsTrigger value="bijlagen"><Paperclip className="h-3.5 w-3.5 mr-1.5" />Bijlagen</TabsTrigger>
                 <TabsTrigger value="versies"><Clock className="h-3.5 w-3.5 mr-1.5" />Versies</TabsTrigger>
@@ -625,10 +677,128 @@ export default function ProposalStudio() {
                 />
               </TabsContent>
 
+              <TabsContent value="condities">
+                <div className="space-y-5">
+                  <Card>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm flex items-center gap-2">
+                        <CreditCard className="h-4 w-4" /> Betaalcondities
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-1.5">
+                          <Label>Betalingstermijn (dagen)</Label>
+                          <Input
+                            type="number"
+                            min={0}
+                            value={conditiesForm.betalingstermijn_dagen}
+                            onChange={(e) => setConditiesForm((f) => ({ ...f, betalingstermijn_dagen: Number(e.target.value) }))}
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label>Betaalwijze</Label>
+                          <Select
+                            value={conditiesForm.betaalwijze || "geen"}
+                            onValueChange={(v) => setConditiesForm((f) => ({ ...f, betaalwijze: v === "geen" ? "" : v }))}
+                          >
+                            <SelectTrigger><SelectValue placeholder="Kies..." /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="geen">Niet opgegeven</SelectItem>
+                              <SelectItem value="overboeking">Overboeking</SelectItem>
+                              <SelectItem value="incasso">Automatische incasso</SelectItem>
+                              <SelectItem value="contant">Contant</SelectItem>
+                              <SelectItem value="pin">Pinbetaling</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="flex items-center gap-1.5">
+                          Factuurschema
+                          <span className="text-xs text-muted-foreground font-normal">(JSON — bijv. termijnen)</span>
+                        </Label>
+                        <Textarea
+                          value={conditiesForm.factuur_schema_tekst}
+                          onChange={(e) => setConditiesForm((f) => ({ ...f, factuur_schema_tekst: e.target.value }))}
+                          placeholder={'{\n  "termijnen": [\n    { "beschrijving": "Bij opdracht", "percentage": 30 },\n    { "beschrijving": "Bij oplevering", "percentage": 70 }\n  ]\n}'}
+                          className="font-mono text-xs min-h-[100px]"
+                        />
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm flex items-center gap-2">
+                        <FileText className="h-4 w-4" /> Algemene voorwaarden
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      {(voorwaardenSets ?? []).length > 0 && (
+                        <div className="space-y-1.5">
+                          <Label>Kies uit de bibliotheek</Label>
+                          <Select
+                            value={conditiesForm.voorwaarden_set_id ? String(conditiesForm.voorwaarden_set_id) : "geen"}
+                            onValueChange={(v) => {
+                              const id = v === "geen" ? undefined : Number(v);
+                              const set = (voorwaardenSets ?? []).find((s) => s.id === id);
+                              setConditiesForm((f) => ({
+                                ...f,
+                                voorwaarden_set_id: id,
+                                vrije_voorwaarden: set ? set.tekst : f.vrije_voorwaarden,
+                              }));
+                            }}
+                          >
+                            <SelectTrigger><SelectValue placeholder="Geen voorwaardenset" /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="geen">Vrije tekst (geen set)</SelectItem>
+                              {(voorwaardenSets ?? []).filter((s) => s.actief).map((s) => (
+                                <SelectItem key={s.id} value={String(s.id)}>
+                                  {s.naam} {s.versie ? `(v${s.versie})` : ""}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          {conditiesForm.voorwaarden_set_id && (
+                            <p className="text-xs text-muted-foreground">
+                              Bij verzenden wordt de tekst van de geselecteerde set vastgelegd als onveranderbare snapshot.
+                            </p>
+                          )}
+                        </div>
+                      )}
+                      <div className="space-y-1.5">
+                        <Label>{conditiesForm.voorwaarden_set_id ? "Voorwaardentekst (preview uit set)" : "Vrije voorwaardentekst"}</Label>
+                        <Textarea
+                          value={conditiesForm.vrije_voorwaarden}
+                          onChange={(e) => setConditiesForm((f) => ({ ...f, vrije_voorwaarden: e.target.value, voorwaarden_set_id: undefined }))}
+                          placeholder="Bijv. Op al onze leveringen zijn de Algemene Voorwaarden van FPS Brandpreventie van toepassing..."
+                          className="min-h-[160px]"
+                        />
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <div className="flex justify-end">
+                    <Button onClick={slaConditiesOp} disabled={werkOfferte.isPending}>
+                      {conditiesOpgeslagen ? <><Check className="h-3.5 w-3.5" /> Opgeslagen</> : werkOfferte.isPending ? "Bezig..." : "Condities opslaan"}
+                    </Button>
+                  </div>
+                </div>
+              </TabsContent>
+
               <TabsContent value="voorbeeld">
-                <div className="flex justify-end mb-3">
-                  <Button variant="outline" size="sm" onClick={() => window.print()}>
-                    <Printer className="h-3.5 w-3.5" /> Afdrukken als PDF
+                <div className="flex justify-end mb-3 gap-2">
+                  <a
+                    href={`/offertes/${offerteId}/print`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 rounded-md border bg-background px-3 py-1.5 text-sm font-medium shadow-sm hover:bg-accent hover:text-accent-foreground transition-colors"
+                  >
+                    <Printer className="h-3.5 w-3.5" /> DDS afdrukken
+                  </a>
+                  <Button variant="ghost" size="sm" onClick={() => window.print()}>
+                    <Printer className="h-3.5 w-3.5" /> Eenvoudig afdrukken
                   </Button>
                 </div>
                 <OfferteVoorbeeldInline
@@ -738,6 +908,9 @@ export default function ProposalStudio() {
                   titel={offerte.titel}
                   vragen={vragen}
                   vragenLaden={vragenLaden}
+                  secties={gesorteerdeSecties}
+                  regels={regels ?? []}
+                  bijlagenAantal={(bijlagen ?? []).length}
                 />
               </TabsContent>
             </Tabs>

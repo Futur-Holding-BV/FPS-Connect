@@ -8,6 +8,7 @@ import { Router } from "express";
 import PDFDocument from "pdfkit";
 import {
   db,
+  offerteVoorwaardenSetsTable,
   offerteSjablonenTable,
   offerteHoofdstukkenTable,
   offertesTable,
@@ -54,12 +55,81 @@ function parseId(v: unknown): number {
   return parseInt(String(v), 10);
 }
 
+// ── Voorwaardenbibliotheek ───────────────────────────────────────────────────
+const mapVoorwaardenSet = (s: typeof offerteVoorwaardenSetsTable.$inferSelect) => ({
+  id: s.id,
+  naam: s.naam,
+  versie: s.versie,
+  tekst: s.tekst,
+  actief: s.actief,
+  aangemaakt_op: iso(s.aangemaaktOp),
+  bijgewerkt_op: iso(s.bijgewerktOp),
+});
+
+router.get("/offerte-voorwaarden-sets", lezen, async (req, res) => {
+  try {
+    const rijen = await db.select().from(offerteVoorwaardenSetsTable).orderBy(offerteVoorwaardenSetsTable.naam);
+    res.json(rijen.map(mapVoorwaardenSet));
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+router.post("/offerte-voorwaarden-sets", schrijven, async (req, res) => {
+  try {
+    const { naam, versie, tekst, actief } = req.body;
+    if (!naam) return res.status(400).json({ error: "naam is verplicht" });
+    const [s] = await db
+      .insert(offerteVoorwaardenSetsTable)
+      .values({ naam, versie: versie || "1.0", tekst: tekst || "", actief: actief ?? true })
+      .returning();
+    res.status(201).json(mapVoorwaardenSet(s));
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+router.patch("/offerte-voorwaarden-sets/:id", schrijven, async (req, res) => {
+  try {
+    const { naam, versie, tekst, actief } = req.body;
+    const [s] = await db
+      .update(offerteVoorwaardenSetsTable)
+      .set({
+        ...(naam !== undefined && { naam }),
+        ...(versie !== undefined && { versie }),
+        ...(tekst !== undefined && { tekst }),
+        ...(actief !== undefined && { actief }),
+        bijgewerktOp: new Date(),
+      })
+      .where(eq(offerteVoorwaardenSetsTable.id, parseId(req.params.id)))
+      .returning();
+    if (!s) return res.status(404).json({ error: "Voorwaardenset niet gevonden" });
+    res.json(mapVoorwaardenSet(s));
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+router.delete("/offerte-voorwaarden-sets/:id", schrijven, async (req, res) => {
+  try {
+    await db.delete(offerteVoorwaardenSetsTable).where(eq(offerteVoorwaardenSetsTable.id, parseId(req.params.id)));
+    res.status(204).send();
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
 // ── Sjablonen ───────────────────────────────────────────────────────────────
 const mapSjabloon = (s: typeof offerteSjablonenTable.$inferSelect) => ({
   id: s.id,
   naam: s.naam,
   omschrijving: s.omschrijving,
   werkmaatschappij: s.werkmaatschappij,
+  doelgroep: s.doelgroep,
   actief: s.actief,
   aangemaakt_op: iso(s.aangemaaktOp),
   bijgewerkt_op: iso(s.bijgewerktOp),
@@ -77,11 +147,11 @@ router.get("/offerte-sjablonen", lezen, async (req, res) => {
 
 router.post("/offerte-sjablonen", schrijven, async (req, res) => {
   try {
-    const { naam, omschrijving, werkmaatschappij, actief } = req.body;
+    const { naam, omschrijving, werkmaatschappij, doelgroep, actief } = req.body;
     if (!naam) return res.status(400).json({ error: "naam is verplicht" });
     const [s] = await db
       .insert(offerteSjablonenTable)
-      .values({ naam, omschrijving, werkmaatschappij: werkmaatschappij || "FPS Bouw", actief: actief ?? true })
+      .values({ naam, omschrijving, werkmaatschappij: werkmaatschappij || "FPS Bouw", doelgroep: doelgroep || "algemeen", actief: actief ?? true })
       .returning();
     res.status(201).json(mapSjabloon(s));
   } catch (err) {
@@ -92,10 +162,10 @@ router.post("/offerte-sjablonen", schrijven, async (req, res) => {
 
 router.patch("/offerte-sjablonen/:id", schrijven, async (req, res) => {
   try {
-    const { naam, omschrijving, werkmaatschappij, actief } = req.body;
+    const { naam, omschrijving, werkmaatschappij, doelgroep, actief } = req.body;
     const [s] = await db
       .update(offerteSjablonenTable)
-      .set({ naam, omschrijving, werkmaatschappij, actief, bijgewerktOp: new Date() })
+      .set({ naam, omschrijving, werkmaatschappij, doelgroep, actief, bijgewerktOp: new Date() })
       .where(eq(offerteSjablonenTable.id, parseId(req.params.id)))
       .returning();
     if (!s) return res.status(404).json({ error: "Sjabloon niet gevonden" });
@@ -228,6 +298,11 @@ async function offerteNaarJson(o: typeof offertesTable.$inferSelect) {
     datum: o.datum,
     geldigheid_dagen: o.geldigheidDagen,
     voorwaarden: o.voorwaarden,
+    betalingstermijn_dagen: o.betalingstermijnDagen,
+    betaalwijze: o.betaalwijze,
+    factuur_schema: o.factuurSchema,
+    voorwaarden_set_id: o.voorwaardenSetId,
+    voorwaarden_snapshot: o.voorwaardenSnapshot,
     bedrag_excl_btw: o.bedragExclBtw,
     btw_percentage: o.btwPercentage,
     bedrag_incl_btw: o.bedragInclBtw,
@@ -305,7 +380,7 @@ router.get("/offertes", lezen, async (req, res) => {
 
 router.post("/offertes", schrijven, async (req, res) => {
   try {
-    const { titel, offertenummer, gebouw_id, klant_id, sjabloon_id, opdrachtgever, ons_kenmerk, uw_kenmerk, uw_brief_van, behandeld_door_id, datum, geldigheid_dagen, voorwaarden, bedrag_excl_btw, btw_percentage, bedrag_incl_btw, status } = req.body;
+    const { titel, offertenummer, gebouw_id, klant_id, sjabloon_id, opdrachtgever, ons_kenmerk, uw_kenmerk, uw_brief_van, behandeld_door_id, datum, geldigheid_dagen, voorwaarden, betalingstermijn_dagen, betaalwijze, factuur_schema, voorwaarden_set_id, bedrag_excl_btw, btw_percentage, bedrag_incl_btw, status } = req.body;
     if (!titel) return res.status(400).json({ error: "titel is verplicht" });
     const [o] = await db
       .insert(offertesTable)
@@ -323,6 +398,10 @@ router.post("/offertes", schrijven, async (req, res) => {
         datum,
         geldigheidDagen: geldigheid_dagen ?? 30,
         voorwaarden,
+        betalingstermijnDagen: betalingstermijn_dagen ?? 30,
+        betaalwijze: betaalwijze ?? null,
+        factuurSchema: factuur_schema ?? null,
+        voorwaardenSetId: voorwaarden_set_id ?? null,
         bedragExclBtw: bedrag_excl_btw ?? 0,
         btwPercentage: btw_percentage ?? 21,
         bedragInclBtw: bedrag_incl_btw ?? 0,
@@ -464,27 +543,31 @@ router.patch("/offertes/:id", schrijven, async (req, res) => {
     const offerteId = parseId(req.params.id);
     if (await isOfferteBlokkeerd(offerteId))
       return res.status(409).json({ error: "Ondertekende offerte kan niet meer worden gewijzigd." });
-    const { titel, offertenummer, gebouw_id, klant_id, sjabloon_id, opdrachtgever, ons_kenmerk, uw_kenmerk, uw_brief_van, behandeld_door_id, datum, geldigheid_dagen, voorwaarden, bedrag_excl_btw, btw_percentage, bedrag_incl_btw, status } = req.body;
+    const { titel, offertenummer, gebouw_id, klant_id, sjabloon_id, opdrachtgever, ons_kenmerk, uw_kenmerk, uw_brief_van, behandeld_door_id, datum, geldigheid_dagen, voorwaarden, betalingstermijn_dagen, betaalwijze, factuur_schema, voorwaarden_set_id, bedrag_excl_btw, btw_percentage, bedrag_incl_btw, status } = req.body;
     const [o] = await db
       .update(offertesTable)
       .set({
-        titel,
-        offertenummer,
-        gebouwId: gebouw_id ?? null,
-        klantId: klant_id ?? null,
-        sjabloonId: sjabloon_id ?? null,
-        opdrachtgever,
-        onsKenmerk: ons_kenmerk,
-        uwKenmerk: uw_kenmerk,
-        uwBriefVan: uw_brief_van,
-        behandeldDoorId: behandeld_door_id ?? null,
-        datum,
-        geldigheidDagen: geldigheid_dagen,
-        voorwaarden,
-        bedragExclBtw: bedrag_excl_btw,
-        btwPercentage: btw_percentage,
-        bedragInclBtw: bedrag_incl_btw,
-        status,
+        ...(titel !== undefined && { titel }),
+        ...(offertenummer !== undefined && { offertenummer }),
+        ...(gebouw_id !== undefined && { gebouwId: gebouw_id }),
+        ...(klant_id !== undefined && { klantId: klant_id }),
+        ...(sjabloon_id !== undefined && { sjabloonId: sjabloon_id }),
+        ...(opdrachtgever !== undefined && { opdrachtgever }),
+        ...(ons_kenmerk !== undefined && { onsKenmerk: ons_kenmerk }),
+        ...(uw_kenmerk !== undefined && { uwKenmerk: uw_kenmerk }),
+        ...(uw_brief_van !== undefined && { uwBriefVan: uw_brief_van }),
+        ...(behandeld_door_id !== undefined && { behandeldDoorId: behandeld_door_id }),
+        ...(datum !== undefined && { datum }),
+        ...(geldigheid_dagen !== undefined && { geldigheidDagen: geldigheid_dagen }),
+        ...(voorwaarden !== undefined && { voorwaarden }),
+        ...(betalingstermijn_dagen !== undefined && { betalingstermijnDagen: betalingstermijn_dagen }),
+        ...(betaalwijze !== undefined && { betaalwijze }),
+        ...(factuur_schema !== undefined && { factuurSchema: factuur_schema }),
+        ...(voorwaarden_set_id !== undefined && { voorwaardenSetId: voorwaarden_set_id }),
+        ...(bedrag_excl_btw !== undefined && { bedragExclBtw: bedrag_excl_btw }),
+        ...(btw_percentage !== undefined && { btwPercentage: btw_percentage }),
+        ...(bedrag_incl_btw !== undefined && { bedragInclBtw: bedrag_incl_btw }),
+        ...(status !== undefined && { status }),
         bijgewerktOp: new Date(),
       })
       .where(eq(offertesTable.id, offerteId))
@@ -1469,6 +1552,8 @@ router.post("/offertes/:id/verzenden", schrijven, async (req, res) => {
         bedragInclBtw: offertesTable.bedragInclBtw,
         btwPercentage: offertesTable.btwPercentage,
         portaalStatus: offertesTable.portaalStatus,
+        voorwaardenSetId: offertesTable.voorwaardenSetId,
+        voorwaarden: offertesTable.voorwaarden,
       })
       .from(offertesTable)
       .where(eq(offertesTable.id, offerteId));
@@ -1579,9 +1664,25 @@ router.post("/offertes/:id/verzenden", schrijven, async (req, res) => {
       portaalToken,
     });
 
+    // Bevries voorwaarden-snapshot bij verzenden
+    let voorwaardenSnapshot: string | undefined;
+    if (offerte.voorwaardenSetId) {
+      const [set] = await db
+        .select({ tekst: offerteVoorwaardenSetsTable.tekst })
+        .from(offerteVoorwaardenSetsTable)
+        .where(eq(offerteVoorwaardenSetsTable.id, offerte.voorwaardenSetId));
+      voorwaardenSnapshot = set?.tekst;
+    } else if (offerte.voorwaarden) {
+      voorwaardenSnapshot = offerte.voorwaarden;
+    }
+
     await db
       .update(offertesTable)
-      .set({ portaalStatus: "verzonden", bijgewerktOp: new Date() })
+      .set({
+        portaalStatus: "verzonden",
+        bijgewerktOp: new Date(),
+        ...(voorwaardenSnapshot !== undefined && { voorwaardenSnapshot }),
+      })
       .where(eq(offertesTable.id, offerteId));
 
     await db.insert(offerteTrackingTable).values({

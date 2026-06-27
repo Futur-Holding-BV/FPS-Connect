@@ -7,6 +7,7 @@ import {
   useListGebouwen,
   useListCrmKlanten,
   useGetOfferteAnalytics,
+  useListOfferteSjablonen,
   getListOffertesQueryKey,
 } from "@workspace/api-client-react";
 import type { OfferteInput } from "@workspace/api-client-react";
@@ -39,6 +40,13 @@ function euro(bedrag: number) {
   return new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR" }).format(bedrag ?? 0);
 }
 
+const DOELGROEP_OPTIES = [
+  { value: "algemeen", label: "Algemeen" },
+  { value: "vve", label: "VvE / appartementencomplex" },
+  { value: "aannemer", label: "Aannemer / bouwpartner" },
+  { value: "overig", label: "Overig" },
+];
+
 const LEEG: OfferteInput = {
   titel: "",
   opdrachtgever: "",
@@ -67,15 +75,21 @@ export default function OffertesPagina() {
   const { data: gebouwen } = useListGebouwen();
   const { data: klanten } = useListCrmKlanten();
   const { data: analytics } = useGetOfferteAnalytics();
+  const { data: sjablonen } = useListOfferteSjablonen();
   const maakOfferte = useCreateOfferte();
   const uitSpots = useOfferteRegelsUitSpots();
 
   const [zoek, setZoek] = useState("");
+  const [doelgroepFilter, setDoelgroepFilter] = useState("alle");
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState<OfferteInput>(LEEG);
+  const [gekozenDoelgroep, setGekozenDoelgroep] = useState("algemeen");
 
   const geselecteerdeKlant = (klanten ?? []).find((k) => k.id === form.klant_id) ?? null;
   const geselecteerdGebouw = (gebouwen ?? []).find((g) => g.id === form.gebouw_id) ?? null;
+  const gefilterdeSjablonen = (sjablonen ?? []).filter(
+    (s) => s.actief && (gekozenDoelgroep === "algemeen" || s.doelgroep === gekozenDoelgroep || s.doelgroep === "algemeen")
+  );
 
   const gefilterd = (offertes ?? []).filter((o) => {
     const t = zoek.trim().toLowerCase();
@@ -243,9 +257,22 @@ export default function OffertesPagina() {
         </div>
       )}
 
-      <div className="relative max-w-sm">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input placeholder="Zoek op titel, opdrachtgever of nummer…" value={zoek} onChange={(e) => setZoek(e.target.value)} className="pl-9" />
+      <div className="flex items-center gap-3 flex-wrap">
+        <div className="relative max-w-sm flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input placeholder="Zoek op titel, opdrachtgever of nummer…" value={zoek} onChange={(e) => setZoek(e.target.value)} className="pl-9" />
+        </div>
+        <Select value={doelgroepFilter} onValueChange={setDoelgroepFilter}>
+          <SelectTrigger className="w-48">
+            <SelectValue placeholder="Alle doelgroepen" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="alle">Alle doelgroepen</SelectItem>
+            {DOELGROEP_OPTIES.map((d) => (
+              <SelectItem key={d.value} value={d.value}>{d.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       {isLoading ? (
@@ -405,9 +432,38 @@ export default function OffertesPagina() {
               />
             </div>
             <div className="sm:col-span-2 space-y-1.5">
-              <Label>Voorwaarden</Label>
-              <Textarea value={form.voorwaarden ?? ""} onChange={(e) => setForm({ ...form, voorwaarden: e.target.value })} />
+              <Label>Doelgroep</Label>
+              <Select
+                value={gekozenDoelgroep}
+                onValueChange={(v) => {
+                  setGekozenDoelgroep(v);
+                  setForm((f) => ({ ...f, sjabloon_id: undefined }));
+                }}
+              >
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {DOELGROEP_OPTIES.map((d) => (
+                    <SelectItem key={d.value} value={d.value}>{d.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
+            {gefilterdeSjablonen.length > 0 && (
+              <div className="sm:col-span-2 space-y-1.5">
+                <Label>Sjabloon (optioneel)</Label>
+                <Select
+                  value={form.sjabloon_id ? String(form.sjabloon_id) : undefined}
+                  onValueChange={(v) => setForm((f) => ({ ...f, sjabloon_id: v ? Number(v) : undefined }))}
+                >
+                  <SelectTrigger><SelectValue placeholder="Geen sjabloon" /></SelectTrigger>
+                  <SelectContent>
+                    {gefilterdeSjablonen.map((s) => (
+                      <SelectItem key={s.id} value={String(s.id)}>{s.naam}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpen(false)}>Annuleren</Button>

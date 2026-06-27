@@ -6,10 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface OfferteSjabloonInput {
-  naam: string;
-  omschrijving?: string;
-  werkmaatschappij?: string;
-  doelgroep?: string;
-  actief?: boolean;
-}
+/**
+ * @nullable
+ */
+export type OfferteFactuurSchema = { [key: string]: unknown } | null;

@@ -27,6 +27,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import {
   Link2, Copy, Plus, Send, Sparkles, Clock, MessageSquare, CheckCircle, Eye, AlertCircle, Reply,
+  FileText, List, Paperclip,
 } from "lucide-react";
 
 function datumLabel(iso: string) {
@@ -56,12 +57,29 @@ function eventBadge(event: string) {
   return <Badge variant="outline">{EVENT_LABEL[event] ?? event}</Badge>;
 }
 
+interface VerzendSectie {
+  id: number;
+  titel: string;
+  actief: boolean;
+  type?: string;
+}
+
+interface VerzendRegel {
+  id: number;
+  maatregel: string;
+  kosten: number;
+  is_optioneel?: boolean;
+}
+
 interface VerzendTabProps {
   offerteId: number;
   opdrachtgever?: string | null;
   titel: string;
   vragen?: OfferteVraag[];
   vragenLaden?: boolean;
+  secties?: VerzendSectie[];
+  regels?: VerzendRegel[];
+  bijlagenAantal?: number;
 }
 
 interface AntwoordForm {
@@ -70,7 +88,7 @@ interface AntwoordForm {
   naam: string;
 }
 
-export function VerzendTab({ offerteId, opdrachtgever, titel, vragen, vragenLaden }: VerzendTabProps) {
+export function VerzendTab({ offerteId, opdrachtgever, titel, vragen, vragenLaden, secties, regels, bijlagenAantal }: VerzendTabProps) {
   const { toast } = useToast();
   const qc = useQueryClient();
 
@@ -208,8 +226,76 @@ export function VerzendTab({ offerteId, opdrachtgever, titel, vragen, vragenLade
     }
   }
 
+  const actieveSecties = (secties ?? []).filter((s) => s.actief);
+  const verplichtRegels = (regels ?? []).filter((r) => !r.is_optioneel);
+  const optioneleRegels = (regels ?? []).filter((r) => r.is_optioneel);
+  const totaalBedrag = (regels ?? []).reduce((s, r) => s + (r.kosten ?? 0), 0);
+
   return (
     <div className="space-y-6">
+      {(secties !== undefined || regels !== undefined) && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <FileText className="h-4 w-4 text-primary" />
+              Inhoudsoverzicht — wat de klant te zien krijgt
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {actieveSecties.length > 0 && (
+              <div>
+                <div className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+                  <List className="h-3.5 w-3.5" /> Secties ({actieveSecties.length})
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {actieveSecties.map((s) => (
+                    <Badge key={s.id} variant="outline" className="text-xs">{s.titel}</Badge>
+                  ))}
+                </div>
+                {(secties ?? []).filter((s) => !s.actief).length > 0 && (
+                  <p className="text-xs text-muted-foreground mt-1.5">
+                    {(secties ?? []).filter((s) => !s.actief).length} sectie(s) verborgen en niet zichtbaar voor de klant.
+                  </p>
+                )}
+              </div>
+            )}
+
+            {regels !== undefined && (
+              <div>
+                <div className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+                  <span className="font-mono">&#8364;</span> Begrotingsregels
+                </div>
+                <div className="text-sm space-y-0.5">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Verplichte regels</span>
+                    <span className="font-medium">{verplichtRegels.length}</span>
+                  </div>
+                  {optioneleRegels.length > 0 && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Optionele regels</span>
+                      <span className="font-medium">{optioneleRegels.length}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between pt-1 border-t">
+                    <span className="text-muted-foreground">Totaal excl. btw</span>
+                    <span className="font-semibold">
+                      {new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR" }).format(totaalBedrag)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {bijlagenAantal !== undefined && bijlagenAantal > 0 && (
+              <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                <Paperclip className="h-3.5 w-3.5" />
+                {bijlagenAantal} bijlage(n) meegestuurd
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-base flex items-center gap-2">

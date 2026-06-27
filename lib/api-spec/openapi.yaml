@@ -7226,6 +7226,76 @@ paths:
         "204":
           description: Verwijderd
 
+  /offerte-voorwaarden-sets:
+    get:
+      operationId: listVoorwaardenSets
+      tags: [offertes]
+      summary: Voorwaardensets ophalen
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/VoorwaardenSet"
+    post:
+      operationId: createVoorwaardenSet
+      tags: [offertes]
+      summary: Voorwaardenset aanmaken
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VoorwaardenSetInput"
+      responses:
+        "201":
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VoorwaardenSet"
+
+  /offerte-voorwaarden-sets/{id}:
+    patch:
+      operationId: updateVoorwaardenSet
+      tags: [offertes]
+      summary: Voorwaardenset bijwerken
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VoorwaardenSetInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VoorwaardenSet"
+    delete:
+      operationId: deleteVoorwaardenSet
+      tags: [offertes]
+      summary: Voorwaardenset verwijderen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Verwijderd
+
   /offertes:
     get:
       operationId: listOffertes
@@ -15628,9 +15698,41 @@ components:
           type: integer
 
     # ── Offertes ──────────────────────────────────────────────────────────
+    VoorwaardenSet:
+      type: object
+      required: [id, naam, versie, tekst, actief, aangemaakt_op, bijgewerkt_op]
+      properties:
+        id:
+          type: integer
+        naam:
+          type: string
+        versie:
+          type: string
+        tekst:
+          type: string
+        actief:
+          type: boolean
+        aangemaakt_op:
+          type: string
+        bijgewerkt_op:
+          type: string
+
+    VoorwaardenSetInput:
+      type: object
+      required: [naam]
+      properties:
+        naam:
+          type: string
+        versie:
+          type: string
+        tekst:
+          type: string
+        actief:
+          type: boolean
+
     OfferteSjabloon:
       type: object
-      required: [id, naam, werkmaatschappij, actief, aangemaakt_op, bijgewerkt_op]
+      required: [id, naam, werkmaatschappij, doelgroep, actief, aangemaakt_op, bijgewerkt_op]
       properties:
         id:
           type: integer
@@ -15639,6 +15741,8 @@ components:
         omschrijving:
           type: ["string", "null"]
         werkmaatschappij:
+          type: string
+        doelgroep:
           type: string
         actief:
           type: boolean
@@ -15656,6 +15760,8 @@ components:
         omschrijving:
           type: string
         werkmaatschappij:
+          type: string
+        doelgroep:
           type: string
         actief:
           type: boolean
@@ -15740,6 +15846,16 @@ components:
           type: integer
         voorwaarden:
           type: ["string", "null"]
+        betalingstermijn_dagen:
+          type: integer
+        betaalwijze:
+          type: ["string", "null"]
+        factuur_schema:
+          type: ["object", "null"]
+        voorwaarden_set_id:
+          type: ["integer", "null"]
+        voorwaarden_snapshot:
+          type: ["string", "null"]
         bedrag_excl_btw:
           type: number
         btw_percentage:
@@ -15789,6 +15905,14 @@ components:
           type: integer
         voorwaarden:
           type: string
+        betalingstermijn_dagen:
+          type: integer
+        betaalwijze:
+          type: string
+        factuur_schema:
+          type: object
+        voorwaarden_set_id:
+          type: ["integer", "null"]
         bedrag_excl_btw:
           type: number
         btw_percentage:

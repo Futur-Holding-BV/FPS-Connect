@@ -12,6 +12,7 @@ export interface OfferteSjabloon {
   /** @nullable */
   omschrijving?: string | null;
   werkmaatschappij: string;
+  doelgroep: string;
   actief: boolean;
   aangemaakt_op: string;
   bijgewerkt_op: string;

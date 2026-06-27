@@ -6,10 +6,12 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface OfferteSjabloonInput {
+export interface VoorwaardenSet {
+  id: number;
   naam: string;
-  omschrijving?: string;
-  werkmaatschappij?: string;
-  doelgroep?: string;
-  actief?: boolean;
+  versie: string;
+  tekst: string;
+  actief: boolean;
+  aangemaakt_op: string;
+  bijgewerkt_op: string;
 }
