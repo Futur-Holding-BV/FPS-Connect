@@ -319,6 +319,209 @@ router.post("/modules/calculaties", aanmakenCalc, async (req, res) => {
   }
 });
 
+// ── Leveranciers ──────────────────────────────────────────────────────────
+router.get("/modules/calculaties/leveranciers", lezenCalc, async (req, res) => {
+  try {
+    const rows = await db.select().from(modCalcLeveranciersTable).orderBy(asc(modCalcLeveranciersTable.naam));
+    res.json(rows.map((r) => ({
+      id: r.id, naam: r.naam, contactpersoon: r.contactpersoon, email: r.email,
+      telefoon: r.telefoon, website: r.website, notities: r.notities, actief: r.actief,
+    })));
+  } catch (e) {
+    req.log.error(e);
+    res.status(500).json({ error: "Interne fout" });
+  }
+});
+
+router.post("/modules/calculaties/leveranciers", schrijvenCalc, async (req, res) => {
+  try {
+    const body = req.body as Record<string, unknown>;
+    if (!body.naam) return res.status(400).json({ error: "naam is verplicht" });
+    const [row] = await db.insert(modCalcLeveranciersTable).values({
+      naam: String(body.naam),
+      contactpersoon: body.contactpersoon ? String(body.contactpersoon) : null,
+      email: body.email ? String(body.email) : null,
+      telefoon: body.telefoon ? String(body.telefoon) : null,
+      website: body.website ? String(body.website) : null,
+      notities: body.notities ? String(body.notities) : null,
+    }).returning();
+    res.status(201).json({ id: row.id, naam: row.naam, contactpersoon: row.contactpersoon, email: row.email, telefoon: row.telefoon, website: row.website, notities: row.notities, actief: row.actief });
+  } catch (e) {
+    req.log.error(e);
+    res.status(500).json({ error: "Interne fout" });
+  }
+});
+
+router.patch("/modules/calculaties/leveranciers/:id", schrijvenCalc, async (req, res) => {
+  try {
+    const id = parseId(req.params["id"]);
+    const body = req.body as Record<string, unknown>;
+    const update: Partial<typeof modCalcLeveranciersTable.$inferInsert> = { bijgewerktOp: new Date() };
+    if (body.naam !== undefined) update.naam = String(body.naam);
+    if (body.contactpersoon !== undefined) update.contactpersoon = body.contactpersoon ? String(body.contactpersoon) : null;
+    if (body.email !== undefined) update.email = body.email ? String(body.email) : null;
+    if (body.telefoon !== undefined) update.telefoon = body.telefoon ? String(body.telefoon) : null;
+    if (body.website !== undefined) update.website = body.website ? String(body.website) : null;
+    if (body.notities !== undefined) update.notities = body.notities ? String(body.notities) : null;
+    if (body.actief !== undefined) update.actief = Boolean(body.actief);
+    const [row] = await db.update(modCalcLeveranciersTable).set(update).where(eq(modCalcLeveranciersTable.id, id)).returning();
+    if (!row) return res.status(404).json({ error: "Niet gevonden" });
+    res.json({ id: row.id, naam: row.naam, contactpersoon: row.contactpersoon, email: row.email, telefoon: row.telefoon, website: row.website, notities: row.notities, actief: row.actief });
+  } catch (e) {
+    req.log.error(e);
+    res.status(500).json({ error: "Interne fout" });
+  }
+});
+
+router.delete("/modules/calculaties/leveranciers/:id", verwijderenCalc, async (req, res) => {
+  try {
+    const id = parseId(req.params["id"]);
+    await db.delete(modCalcLeveranciersTable).where(eq(modCalcLeveranciersTable.id, id));
+    res.status(204).end();
+  } catch (e) {
+    req.log.error(e);
+    res.status(500).json({ error: "Interne fout" });
+  }
+});
+
+// ── Artikelen ─────────────────────────────────────────────────────────────
+router.get("/modules/calculaties/artikelen", lezenCalc, async (req, res) => {
+  try {
+    const zoek = typeof req.query["zoek"] === "string" ? req.query["zoek"].trim() : "";
+    const leverancierId = typeof req.query["leverancier_id"] === "string" ? parseInt(req.query["leverancier_id"], 10) : null;
+
+    let query = db.select({
+      id: modCalcArtekelenTable.id,
+      leverancier_id: modCalcArtekelenTable.leverancierId,
+      leverancier_naam: modCalcLeveranciersTable.naam,
+      artikelcode: modCalcArtekelenTable.artikelcode,
+      omschrijving: modCalcArtekelenTable.omschrijving,
+      eenheid: modCalcArtekelenTable.eenheid,
+      inkoopprijs: modCalcArtekelenTable.inkoopprijs,
+      verkoopprijs: modCalcArtekelenTable.verkoopprijs,
+      categorie: modCalcArtekelenTable.categorie,
+      actief: modCalcArtekelenTable.actief,
+    }).from(modCalcArtekelenTable)
+      .leftJoin(modCalcLeveranciersTable, eq(modCalcArtekelenTable.leverancierId, modCalcLeveranciersTable.id))
+      .$dynamic();
+
+    const filters = [eq(modCalcArtekelenTable.actief, true)];
+    if (zoek) filters.push(ilike(modCalcArtekelenTable.omschrijving, `%${zoek}%`));
+    if (leverancierId && !isNaN(leverancierId)) filters.push(eq(modCalcArtekelenTable.leverancierId, leverancierId));
+    if (filters.length > 0) {
+      query = query.where(filters.length === 1 ? filters[0]! : sql`${filters[0]} AND ${filters[1]}`) as typeof query;
+    }
+
+    const rows = await query.orderBy(asc(modCalcArtekelenTable.omschrijving)).limit(200);
+    res.json(rows);
+  } catch (e) {
+    req.log.error(e);
+    res.status(500).json({ error: "Interne fout" });
+  }
+});
+
+router.post("/modules/calculaties/artikelen", schrijvenCalc, async (req, res) => {
+  try {
+    const body = req.body as Record<string, unknown>;
+    if (!body.omschrijving) return res.status(400).json({ error: "omschrijving is verplicht" });
+    const [row] = await db.insert(modCalcArtekelenTable).values({
+      leverancierId: body.leverancier_id ? Number(body.leverancier_id) : null,
+      artikelcode: body.artikelcode ? String(body.artikelcode) : null,
+      omschrijving: String(body.omschrijving),
+      eenheid: body.eenheid ? String(body.eenheid) : "st",
+      inkoopprijs: Number(body.inkoopprijs ?? 0),
+      verkoopprijs: Number(body.verkoopprijs ?? 0),
+      categorie: body.categorie ? String(body.categorie) : "materiaal",
+    }).returning();
+    res.status(201).json({ id: row.id, leverancier_id: row.leverancierId, artikelcode: row.artikelcode, omschrijving: row.omschrijving, eenheid: row.eenheid, inkoopprijs: row.inkoopprijs, verkoopprijs: row.verkoopprijs, categorie: row.categorie, actief: row.actief });
+  } catch (e) {
+    req.log.error(e);
+    res.status(500).json({ error: "Interne fout" });
+  }
+});
+
+router.patch("/modules/calculaties/artikelen/:id", schrijvenCalc, async (req, res) => {
+  try {
+    const id = parseId(req.params["id"]);
+    const body = req.body as Record<string, unknown>;
+    const update: Partial<typeof modCalcArtekelenTable.$inferInsert> = { bijgewerktOp: new Date() };
+    if (body.leverancier_id !== undefined) update.leverancierId = body.leverancier_id ? Number(body.leverancier_id) : null;
+    if (body.artikelcode !== undefined) update.artikelcode = body.artikelcode ? String(body.artikelcode) : null;
+    if (body.omschrijving !== undefined) update.omschrijving = String(body.omschrijving);
+    if (body.eenheid !== undefined) update.eenheid = String(body.eenheid);
+    if (body.inkoopprijs !== undefined) update.inkoopprijs = Number(body.inkoopprijs);
+    if (body.verkoopprijs !== undefined) update.verkoopprijs = Number(body.verkoopprijs);
+    if (body.categorie !== undefined) update.categorie = String(body.categorie);
+    if (body.actief !== undefined) update.actief = Boolean(body.actief);
+    const [row] = await db.update(modCalcArtekelenTable).set(update).where(eq(modCalcArtekelenTable.id, id)).returning();
+    if (!row) return res.status(404).json({ error: "Niet gevonden" });
+    res.json({ id: row.id, leverancier_id: row.leverancierId, artikelcode: row.artikelcode, omschrijving: row.omschrijving, eenheid: row.eenheid, inkoopprijs: row.inkoopprijs, verkoopprijs: row.verkoopprijs, categorie: row.categorie, actief: row.actief });
+  } catch (e) {
+    req.log.error(e);
+    res.status(500).json({ error: "Interne fout" });
+  }
+});
+
+router.delete("/modules/calculaties/artikelen/:id", verwijderenCalc, async (req, res) => {
+  try {
+    const id = parseId(req.params["id"]);
+    await db.delete(modCalcArtekelenTable).where(eq(modCalcArtekelenTable.id, id));
+    res.status(204).end();
+  } catch (e) {
+    req.log.error(e);
+    res.status(500).json({ error: "Interne fout" });
+  }
+});
+
+// ── CSV import artikelen ───────────────────────────────────────────────────
+// Verwacht CSV: artikelcode;omschrijving;eenheid;inkoopprijs;verkoopprijs;categorie;leverancier_naam
+router.post("/modules/calculaties/artikelen/import-csv", schrijvenCalc, async (req, res) => {
+  try {
+    const body = req.body as Record<string, unknown>;
+    const csv = typeof body.csv === "string" ? body.csv : "";
+    if (!csv.trim()) return res.status(400).json({ error: "Geen CSV-data ontvangen" });
+
+    const regels = csv.split(/\r?\n/).map((r) => r.trim()).filter((r) => r && !r.startsWith("artikelcode"));
+    let aangemaakt = 0;
+    let fouten: string[] = [];
+
+    for (const regel of regels) {
+      const delen = regel.split(";");
+      const [artikelcode, omschrijving, eenheid, inkoopRaw, verkoopRaw, categorie, leverancierNaam] = delen;
+      if (!omschrijving?.trim()) { fouten.push(`Lege omschrijving op rij: ${regel}`); continue; }
+
+      let leverancierId: number | null = null;
+      if (leverancierNaam?.trim()) {
+        const [bestaande] = await db.select({ id: modCalcLeveranciersTable.id }).from(modCalcLeveranciersTable)
+          .where(ilike(modCalcLeveranciersTable.naam, leverancierNaam.trim())).limit(1);
+        if (bestaande) {
+          leverancierId = bestaande.id;
+        } else {
+          const [nieuw] = await db.insert(modCalcLeveranciersTable).values({ naam: leverancierNaam.trim() }).returning();
+          leverancierId = nieuw.id;
+        }
+      }
+
+      await db.insert(modCalcArtekelenTable).values({
+        artikelcode: artikelcode?.trim() || null,
+        omschrijving: omschrijving.trim(),
+        eenheid: eenheid?.trim() || "st",
+        inkoopprijs: parseFloat((inkoopRaw ?? "0").replace(",", ".")) || 0,
+        verkoopprijs: parseFloat((verkoopRaw ?? "0").replace(",", ".")) || 0,
+        categorie: categorie?.trim() || "materiaal",
+        leverancierId,
+      });
+      aangemaakt++;
+    }
+
+    res.json({ aangemaakt, fouten });
+  } catch (e) {
+    req.log.error(e);
+    res.status(500).json({ error: "Import mislukt" });
+  }
+});
+
+// ── Calculatie detail ──────────────────────────────────────────────────────
 router.get("/modules/calculaties/:id", lezenCalc, async (req, res) => {
   try {
     const id = parseId(req.params["id"]);
@@ -924,208 +1127,6 @@ router.get("/modules/calculaties/:id/print-data", lezenCalc, async (req, res) =>
   } catch (e) {
     req.log.error(e);
     res.status(500).json({ error: "Interne fout" });
-  }
-});
-
-// ── Leveranciers ──────────────────────────────────────────────────────────
-router.get("/modules/calculaties/leveranciers", lezenCalc, async (req, res) => {
-  try {
-    const rows = await db.select().from(modCalcLeveranciersTable).orderBy(asc(modCalcLeveranciersTable.naam));
-    res.json(rows.map((r) => ({
-      id: r.id, naam: r.naam, contactpersoon: r.contactpersoon, email: r.email,
-      telefoon: r.telefoon, website: r.website, notities: r.notities, actief: r.actief,
-    })));
-  } catch (e) {
-    req.log.error(e);
-    res.status(500).json({ error: "Interne fout" });
-  }
-});
-
-router.post("/modules/calculaties/leveranciers", schrijvenCalc, async (req, res) => {
-  try {
-    const body = req.body as Record<string, unknown>;
-    if (!body.naam) return res.status(400).json({ error: "naam is verplicht" });
-    const [row] = await db.insert(modCalcLeveranciersTable).values({
-      naam: String(body.naam),
-      contactpersoon: body.contactpersoon ? String(body.contactpersoon) : null,
-      email: body.email ? String(body.email) : null,
-      telefoon: body.telefoon ? String(body.telefoon) : null,
-      website: body.website ? String(body.website) : null,
-      notities: body.notities ? String(body.notities) : null,
-    }).returning();
-    res.status(201).json({ id: row.id, naam: row.naam, contactpersoon: row.contactpersoon, email: row.email, telefoon: row.telefoon, website: row.website, notities: row.notities, actief: row.actief });
-  } catch (e) {
-    req.log.error(e);
-    res.status(500).json({ error: "Interne fout" });
-  }
-});
-
-router.patch("/modules/calculaties/leveranciers/:id", schrijvenCalc, async (req, res) => {
-  try {
-    const id = parseId(req.params["id"]);
-    const body = req.body as Record<string, unknown>;
-    const update: Partial<typeof modCalcLeveranciersTable.$inferInsert> = { bijgewerktOp: new Date() };
-    if (body.naam !== undefined) update.naam = String(body.naam);
-    if (body.contactpersoon !== undefined) update.contactpersoon = body.contactpersoon ? String(body.contactpersoon) : null;
-    if (body.email !== undefined) update.email = body.email ? String(body.email) : null;
-    if (body.telefoon !== undefined) update.telefoon = body.telefoon ? String(body.telefoon) : null;
-    if (body.website !== undefined) update.website = body.website ? String(body.website) : null;
-    if (body.notities !== undefined) update.notities = body.notities ? String(body.notities) : null;
-    if (body.actief !== undefined) update.actief = Boolean(body.actief);
-    const [row] = await db.update(modCalcLeveranciersTable).set(update).where(eq(modCalcLeveranciersTable.id, id)).returning();
-    if (!row) return res.status(404).json({ error: "Niet gevonden" });
-    res.json({ id: row.id, naam: row.naam, contactpersoon: row.contactpersoon, email: row.email, telefoon: row.telefoon, website: row.website, notities: row.notities, actief: row.actief });
-  } catch (e) {
-    req.log.error(e);
-    res.status(500).json({ error: "Interne fout" });
-  }
-});
-
-router.delete("/modules/calculaties/leveranciers/:id", verwijderenCalc, async (req, res) => {
-  try {
-    const id = parseId(req.params["id"]);
-    await db.delete(modCalcLeveranciersTable).where(eq(modCalcLeveranciersTable.id, id));
-    res.status(204).end();
-  } catch (e) {
-    req.log.error(e);
-    res.status(500).json({ error: "Interne fout" });
-  }
-});
-
-// ── Artikelen ─────────────────────────────────────────────────────────────
-router.get("/modules/calculaties/artikelen", lezenCalc, async (req, res) => {
-  try {
-    const zoek = typeof req.query["zoek"] === "string" ? req.query["zoek"].trim() : "";
-    const leverancierId = typeof req.query["leverancier_id"] === "string" ? parseInt(req.query["leverancier_id"], 10) : null;
-
-    let query = db.select({
-      id: modCalcArtekelenTable.id,
-      leverancier_id: modCalcArtekelenTable.leverancierId,
-      leverancier_naam: modCalcLeveranciersTable.naam,
-      artikelcode: modCalcArtekelenTable.artikelcode,
-      omschrijving: modCalcArtekelenTable.omschrijving,
-      eenheid: modCalcArtekelenTable.eenheid,
-      inkoopprijs: modCalcArtekelenTable.inkoopprijs,
-      verkoopprijs: modCalcArtekelenTable.verkoopprijs,
-      categorie: modCalcArtekelenTable.categorie,
-      actief: modCalcArtekelenTable.actief,
-    }).from(modCalcArtekelenTable)
-      .leftJoin(modCalcLeveranciersTable, eq(modCalcArtekelenTable.leverancierId, modCalcLeveranciersTable.id))
-      .$dynamic();
-
-    const filters = [eq(modCalcArtekelenTable.actief, true)];
-    if (zoek) filters.push(ilike(modCalcArtekelenTable.omschrijving, `%${zoek}%`));
-    if (leverancierId && !isNaN(leverancierId)) filters.push(eq(modCalcArtekelenTable.leverancierId, leverancierId));
-    if (filters.length > 0) {
-      query = query.where(filters.length === 1 ? filters[0]! : sql`${filters[0]} AND ${filters[1]}`) as typeof query;
-    }
-
-    const rows = await query.orderBy(asc(modCalcArtekelenTable.omschrijving)).limit(200);
-    res.json(rows);
-  } catch (e) {
-    req.log.error(e);
-    res.status(500).json({ error: "Interne fout" });
-  }
-});
-
-router.post("/modules/calculaties/artikelen", schrijvenCalc, async (req, res) => {
-  try {
-    const body = req.body as Record<string, unknown>;
-    if (!body.omschrijving) return res.status(400).json({ error: "omschrijving is verplicht" });
-    const [row] = await db.insert(modCalcArtekelenTable).values({
-      leverancierId: body.leverancier_id ? Number(body.leverancier_id) : null,
-      artikelcode: body.artikelcode ? String(body.artikelcode) : null,
-      omschrijving: String(body.omschrijving),
-      eenheid: body.eenheid ? String(body.eenheid) : "st",
-      inkoopprijs: Number(body.inkoopprijs ?? 0),
-      verkoopprijs: Number(body.verkoopprijs ?? 0),
-      categorie: body.categorie ? String(body.categorie) : "materiaal",
-    }).returning();
-    res.status(201).json({ id: row.id, leverancier_id: row.leverancierId, artikelcode: row.artikelcode, omschrijving: row.omschrijving, eenheid: row.eenheid, inkoopprijs: row.inkoopprijs, verkoopprijs: row.verkoopprijs, categorie: row.categorie, actief: row.actief });
-  } catch (e) {
-    req.log.error(e);
-    res.status(500).json({ error: "Interne fout" });
-  }
-});
-
-router.patch("/modules/calculaties/artikelen/:id", schrijvenCalc, async (req, res) => {
-  try {
-    const id = parseId(req.params["id"]);
-    const body = req.body as Record<string, unknown>;
-    const update: Partial<typeof modCalcArtekelenTable.$inferInsert> = { bijgewerktOp: new Date() };
-    if (body.leverancier_id !== undefined) update.leverancierId = body.leverancier_id ? Number(body.leverancier_id) : null;
-    if (body.artikelcode !== undefined) update.artikelcode = body.artikelcode ? String(body.artikelcode) : null;
-    if (body.omschrijving !== undefined) update.omschrijving = String(body.omschrijving);
-    if (body.eenheid !== undefined) update.eenheid = String(body.eenheid);
-    if (body.inkoopprijs !== undefined) update.inkoopprijs = Number(body.inkoopprijs);
-    if (body.verkoopprijs !== undefined) update.verkoopprijs = Number(body.verkoopprijs);
-    if (body.categorie !== undefined) update.categorie = String(body.categorie);
-    if (body.actief !== undefined) update.actief = Boolean(body.actief);
-    const [row] = await db.update(modCalcArtekelenTable).set(update).where(eq(modCalcArtekelenTable.id, id)).returning();
-    if (!row) return res.status(404).json({ error: "Niet gevonden" });
-    res.json({ id: row.id, leverancier_id: row.leverancierId, artikelcode: row.artikelcode, omschrijving: row.omschrijving, eenheid: row.eenheid, inkoopprijs: row.inkoopprijs, verkoopprijs: row.verkoopprijs, categorie: row.categorie, actief: row.actief });
-  } catch (e) {
-    req.log.error(e);
-    res.status(500).json({ error: "Interne fout" });
-  }
-});
-
-router.delete("/modules/calculaties/artikelen/:id", verwijderenCalc, async (req, res) => {
-  try {
-    const id = parseId(req.params["id"]);
-    await db.delete(modCalcArtekelenTable).where(eq(modCalcArtekelenTable.id, id));
-    res.status(204).end();
-  } catch (e) {
-    req.log.error(e);
-    res.status(500).json({ error: "Interne fout" });
-  }
-});
-
-// ── CSV import artikelen ───────────────────────────────────────────────────
-// Verwacht CSV: artikelcode;omschrijving;eenheid;inkoopprijs;verkoopprijs;categorie;leverancier_naam
-router.post("/modules/calculaties/artikelen/import-csv", schrijvenCalc, async (req, res) => {
-  try {
-    const body = req.body as Record<string, unknown>;
-    const csv = typeof body.csv === "string" ? body.csv : "";
-    if (!csv.trim()) return res.status(400).json({ error: "Geen CSV-data ontvangen" });
-
-    const regels = csv.split(/\r?\n/).map((r) => r.trim()).filter((r) => r && !r.startsWith("artikelcode"));
-    let aangemaakt = 0;
-    let fouten: string[] = [];
-
-    for (const regel of regels) {
-      const delen = regel.split(";");
-      const [artikelcode, omschrijving, eenheid, inkoopRaw, verkoopRaw, categorie, leverancierNaam] = delen;
-      if (!omschrijving?.trim()) { fouten.push(`Lege omschrijving op rij: ${regel}`); continue; }
-
-      let leverancierId: number | null = null;
-      if (leverancierNaam?.trim()) {
-        const [bestaande] = await db.select({ id: modCalcLeveranciersTable.id }).from(modCalcLeveranciersTable)
-          .where(ilike(modCalcLeveranciersTable.naam, leverancierNaam.trim())).limit(1);
-        if (bestaande) {
-          leverancierId = bestaande.id;
-        } else {
-          const [nieuw] = await db.insert(modCalcLeveranciersTable).values({ naam: leverancierNaam.trim() }).returning();
-          leverancierId = nieuw.id;
-        }
-      }
-
-      await db.insert(modCalcArtekelenTable).values({
-        artikelcode: artikelcode?.trim() || null,
-        omschrijving: omschrijving.trim(),
-        eenheid: eenheid?.trim() || "st",
-        inkoopprijs: parseFloat((inkoopRaw ?? "0").replace(",", ".")) || 0,
-        verkoopprijs: parseFloat((verkoopRaw ?? "0").replace(",", ".")) || 0,
-        categorie: categorie?.trim() || "materiaal",
-        leverancierId,
-      });
-      aangemaakt++;
-    }
-
-    res.json({ aangemaakt, fouten });
-  } catch (e) {
-    req.log.error(e);
-    res.status(500).json({ error: "Import mislukt" });
   }
 });
 
