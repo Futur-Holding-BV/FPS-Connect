@@ -46,8 +46,8 @@ async function controleerGebouwen(page: Page): Promise<void> {
 
 async function controleerPersoneel(page: Page): Promise<void> {
   await expect(zichtbareTekst(page, "Personeel").first()).toBeVisible({ timeout: INHOUD_TIMEOUT });
-  // HRM-overzichtskaarten verschijnen ongeacht de aantallen.
-  await expect(zichtbareTekst(page, "Medewerkers").first()).toBeVisible({ timeout: INHOUD_TIMEOUT });
+  // Certificaatkaart verschijnt altijd voor de ingelogde medewerker.
+  await expect(zichtbareTekst(page, "Mijn veiligheidscertificaten").first()).toBeVisible({ timeout: INHOUD_TIMEOUT });
 }
 
 async function controleerPlanning(page: Page): Promise<void> {
