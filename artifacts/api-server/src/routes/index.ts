@@ -42,6 +42,7 @@ import werkdagRouter from "./werkdag";
 import projectenRouter from "./projecten";
 import spotStatusConfiguratieRouter from "./spot-status-configuratie";
 import werkInboxRouter from "./werk-inbox";
+import veiligheidRouter from "./veiligheid";
 import { requireAuth } from "../middlewares/auth";
 
 const router: IRouter = Router();
@@ -93,5 +94,6 @@ router.use(werkdagRouter);
 router.use(projectenRouter);
 router.use(spotStatusConfiguratieRouter);
 router.use(werkInboxRouter);
+router.use(veiligheidRouter);
 
 export default router;

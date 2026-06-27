@@ -5383,6 +5383,97 @@ export interface MijnPrivacyGegevens {
   medewerker?: MijnMedewerkerProfiel | null;
 }
 
+export interface VeiligheidAfronding {
+  id: number;
+  toolbox_id: number;
+  gebruiker_id: number;
+  gebruiker_naam?: string | null;
+  score: number;
+  max_score: number;
+  geslaagd?: boolean;
+  handtekening?: string | null;
+  bevestigd_op: string;
+  geldig_tot?: string | null;
+}
+
+export interface VeiligheidToolbox {
+  id: number;
+  titel: string;
+  categorie: string;
+  moeilijkheid: string;
+  geschatte_leestijd?: number | null;
+  gepubliceerd: boolean;
+  verplicht: boolean;
+  doelgroep: string;
+  min_score?: number;
+  geldigheid_maanden?: number;
+  tags?: string[];
+  ai_verwerkt_op?: string | null;
+  aangemaakt_op: string;
+  bijgewerkt_op?: string;
+  aangemaakt_door_naam?: string | null;
+  afronding_count?: number;
+  mijn_afronding?: VeiligheidAfronding | null;
+}
+
+export type VeiligheidToolboxVraagOptiesItem = {
+  tekst?: string;
+  correct?: boolean;
+};
+
+export interface VeiligheidToolboxVraag {
+  id: number;
+  toolbox_id: number;
+  volgorde: number;
+  vraag: string;
+  opties: VeiligheidToolboxVraagOptiesItem[];
+  uitleg?: string | null;
+}
+
+export type VeiligheidToolboxDetail = VeiligheidToolbox & ({
+  intro?: string | null;
+  ai_samenvatting?: string | null;
+  ai_risicos?: string[];
+  ai_maatregelen?: string[];
+  ai_fouten?: string[];
+  ai_stoppen?: string | null;
+  pdf_pad?: string | null;
+  video_url?: string | null;
+  afbeeldingen?: string[];
+  zoekwoorden?: string[];
+  vragen?: VeiligheidToolboxVraag[];
+});
+
+export type VeiligheidToolboxInputVragenItemOptiesItem = { [key: string]: unknown };
+
+export type VeiligheidToolboxInputVragenItem = {
+  vraag?: string;
+  opties?: VeiligheidToolboxInputVragenItemOptiesItem[];
+  uitleg?: string | null;
+};
+
+export interface VeiligheidToolboxInput {
+  titel: string;
+  categorie?: string;
+  moeilijkheid?: string;
+  geschatte_leestijd?: number | null;
+  intro?: string | null;
+  gepubliceerd?: boolean;
+  verplicht?: boolean;
+  doelgroep?: string;
+  min_score?: number;
+  geldigheid_maanden?: number;
+  pdf_pad?: string | null;
+  video_url?: string | null;
+  vragen?: VeiligheidToolboxInputVragenItem[];
+  tags?: string[];
+}
+
+export interface VeiligheidAfrondingInput {
+  antwoorden: number[];
+  handtekening: string;
+}
+
 export type GetRecenteActiviteitParams = {
 limit?: number;
 };
@@ -5724,5 +5815,10 @@ status?: string;
 
 export type ListOpnamePlattegrondItemsParams = {
 verdieping_id: number;
+};
+
+export type GetVeiligheidToolboxenParams = {
+categorie?: string;
+gepubliceerd?: boolean;
 };
 

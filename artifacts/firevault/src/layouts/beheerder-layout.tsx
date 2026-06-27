@@ -49,6 +49,7 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
   const toonOpname        = heeftNiveau("gebouwen", 1);
   const toonOffertes      = heeftNiveau("offertes", 1);
   const toonOnderhoud     = heeftNiveau("gebouwen", 1);
+  const toonToolboxen     = heeftNiveau("toolbox", 1);
 
   const heeftOne = isHoofdbeheerder;
   const aantalOmgevingen = 1 + (heeftOne ? 1 : 0);
@@ -452,6 +453,28 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
                   </SidebarMenu>
                 </SidebarGroupContent>
               </SidebarGroup>
+
+              {/* Veiligheid */}
+              {toonToolboxen && (
+                <SidebarGroup>
+                  <SidebarGroupLabel>Veiligheid</SidebarGroupLabel>
+                  <SidebarGroupContent>
+                    <SidebarMenu>
+                      <SidebarMenuItem>
+                        <SidebarMenuButton
+                          asChild
+                          isActive={location === "/veiligheid/toolboxen" || location.startsWith("/veiligheid/toolboxen/")}
+                        >
+                          <Link href="/veiligheid/toolboxen">
+                            <ShieldCheck />
+                            <span>Toolbox Center</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    </SidebarMenu>
+                  </SidebarGroupContent>
+                </SidebarGroup>
+              )}
 
               {/* HRM */}
               {(toonPersoneel || toonGereedschappen || isHoofdbeheerder) && (

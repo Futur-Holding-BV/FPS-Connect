@@ -10478,6 +10478,197 @@ paths:
           description: Verwijderd
 
 
+  /veiligheid/toolboxen:
+    get:
+      summary: Lijst veiligheid toolboxen
+      tags: [Veiligheid]
+      parameters:
+        - in: query
+          name: categorie
+          schema:
+            type: string
+        - in: query
+          name: gepubliceerd
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/VeiligheidToolbox'
+    post:
+      summary: Toolbox aanmaken
+      tags: [Veiligheid]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VeiligheidToolboxInput'
+      responses:
+        '201':
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VeiligheidToolbox'
+
+  /veiligheid/toolboxen/{id}:
+    get:
+      summary: Toolbox detail
+      tags: [Veiligheid]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VeiligheidToolboxDetail'
+    patch:
+      summary: Toolbox bijwerken
+      tags: [Veiligheid]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VeiligheidToolboxInput'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VeiligheidToolboxDetail'
+    delete:
+      summary: Toolbox verwijderen
+      tags: [Veiligheid]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Verwijderd
+
+  /veiligheid/toolboxen/{id}/publiceren:
+    post:
+      summary: Toolbox publiceren
+      tags: [Veiligheid]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VeiligheidToolbox'
+
+  /veiligheid/toolboxen/{id}/ai-analyse:
+    post:
+      summary: AI analyse starten voor toolbox
+      tags: [Veiligheid]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VeiligheidToolboxDetail'
+
+  /veiligheid/toolboxen/{id}/afronden:
+    post:
+      summary: Toolbox afronden (quiz + bevestiging)
+      tags: [Veiligheid]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VeiligheidAfrondingInput'
+      responses:
+        '201':
+          description: Afronding geregistreerd
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VeiligheidAfronding'
+
+  /veiligheid/toolboxen/{id}/afrondingen:
+    get:
+      summary: Afrondingen per toolbox (beheerder)
+      tags: [Veiligheid]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/VeiligheidAfronding'
+
+  /veiligheid/toolboxen/{id}/mijn-afronding:
+    get:
+      summary: Mijn meest recente afronding van deze toolbox
+      tags: [Veiligheid]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VeiligheidAfronding'
+                nullable: true
+
+
 components:
   schemas:
     MailStatus:
@@ -18887,3 +19078,209 @@ components:
           nullable: true
         status:
           type: string
+
+    VeiligheidToolbox:
+      type: object
+      required: [id, titel, categorie, moeilijkheid, gepubliceerd, verplicht, doelgroep, aangemaakt_op]
+      properties:
+        id:
+          type: integer
+        titel:
+          type: string
+        categorie:
+          type: string
+        moeilijkheid:
+          type: string
+        geschatte_leestijd:
+          type: integer
+          nullable: true
+        gepubliceerd:
+          type: boolean
+        verplicht:
+          type: boolean
+        doelgroep:
+          type: string
+        min_score:
+          type: integer
+        geldigheid_maanden:
+          type: integer
+        tags:
+          type: array
+          items:
+            type: string
+        ai_verwerkt_op:
+          type: string
+          nullable: true
+        aangemaakt_op:
+          type: string
+        bijgewerkt_op:
+          type: string
+        aangemaakt_door_naam:
+          type: string
+          nullable: true
+        afronding_count:
+          type: integer
+        mijn_afronding:
+          $ref: '#/components/schemas/VeiligheidAfronding'
+          nullable: true
+
+    VeiligheidToolboxVraag:
+      type: object
+      required: [id, toolbox_id, volgorde, vraag, opties]
+      properties:
+        id:
+          type: integer
+        toolbox_id:
+          type: integer
+        volgorde:
+          type: integer
+        vraag:
+          type: string
+        opties:
+          type: array
+          items:
+            type: object
+            properties:
+              tekst:
+                type: string
+              correct:
+                type: boolean
+        uitleg:
+          type: string
+          nullable: true
+
+    VeiligheidToolboxDetail:
+      allOf:
+        - $ref: '#/components/schemas/VeiligheidToolbox'
+        - type: object
+          properties:
+            intro:
+              type: string
+              nullable: true
+            ai_samenvatting:
+              type: string
+              nullable: true
+            ai_risicos:
+              type: array
+              items:
+                type: string
+            ai_maatregelen:
+              type: array
+              items:
+                type: string
+            ai_fouten:
+              type: array
+              items:
+                type: string
+            ai_stoppen:
+              type: string
+              nullable: true
+            pdf_pad:
+              type: string
+              nullable: true
+            video_url:
+              type: string
+              nullable: true
+            afbeeldingen:
+              type: array
+              items:
+                type: string
+            zoekwoorden:
+              type: array
+              items:
+                type: string
+            vragen:
+              type: array
+              items:
+                $ref: '#/components/schemas/VeiligheidToolboxVraag'
+
+    VeiligheidToolboxInput:
+      type: object
+      required: [titel]
+      properties:
+        titel:
+          type: string
+        categorie:
+          type: string
+        moeilijkheid:
+          type: string
+        geschatte_leestijd:
+          type: integer
+          nullable: true
+        intro:
+          type: string
+          nullable: true
+        gepubliceerd:
+          type: boolean
+        verplicht:
+          type: boolean
+        doelgroep:
+          type: string
+        min_score:
+          type: integer
+        geldigheid_maanden:
+          type: integer
+        pdf_pad:
+          type: string
+          nullable: true
+        video_url:
+          type: string
+          nullable: true
+        vragen:
+          type: array
+          items:
+            type: object
+            properties:
+              vraag:
+                type: string
+              opties:
+                type: array
+                items:
+                  type: object
+              uitleg:
+                type: string
+                nullable: true
+        tags:
+          type: array
+          items:
+            type: string
+
+    VeiligheidAfrondingInput:
+      type: object
+      required: [antwoorden, handtekening]
+      properties:
+        antwoorden:
+          type: array
+          items:
+            type: integer
+        handtekening:
+          type: string
+
+    VeiligheidAfronding:
+      type: object
+      required: [id, toolbox_id, gebruiker_id, score, max_score, bevestigd_op]
+      properties:
+        id:
+          type: integer
+        toolbox_id:
+          type: integer
+        gebruiker_id:
+          type: integer
+        gebruiker_naam:
+          type: string
+          nullable: true
+        score:
+          type: integer
+        max_score:
+          type: integer
+        geslaagd:
+          type: boolean
+        handtekening:
+          type: string
+          nullable: true
+        bevestigd_op:
+          type: string
+        geldig_tot:
+          type: string
+          nullable: true
+

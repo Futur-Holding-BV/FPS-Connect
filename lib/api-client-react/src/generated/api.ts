@@ -143,6 +143,7 @@ import type {
   GetMijnWeekUrenParams,
   GetPlanningNacalculatieParams,
   GetRecenteActiviteitParams,
+  GetVeiligheidToolboxenParams,
   GetVerlofOverzichtParams,
   GetVervaldagenParams,
   GetZiekmeldingenStatistiekenParams,
@@ -358,6 +359,11 @@ import type {
   UploadUrlResponse,
   UrenRegistratie,
   UrenRegistratieInput,
+  VeiligheidAfronding,
+  VeiligheidAfrondingInput,
+  VeiligheidToolbox,
+  VeiligheidToolboxDetail,
+  VeiligheidToolboxInput,
   Verdieping,
   VerdiepingInput,
   VerdiepingUpdate,
@@ -37198,4 +37204,741 @@ export const useDeleteOpnameFoto = <TError = ErrorType<unknown>,
       > => {
       return useMutation(getDeleteOpnameFotoMutationOptions(options));
     }
+
+export const getGetVeiligheidToolboxenUrl = (params?: GetVeiligheidToolboxenParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/veiligheid/toolboxen?${stringifiedParams}` : `/api/veiligheid/toolboxen`
+}
+
+/**
+ * @summary Lijst veiligheid toolboxen
+ */
+export const getVeiligheidToolboxen = async (params?: GetVeiligheidToolboxenParams, options?: RequestInit): Promise<VeiligheidToolbox[]> => {
+
+  return customFetch<VeiligheidToolbox[]>(getGetVeiligheidToolboxenUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetVeiligheidToolboxenQueryKey = (params?: GetVeiligheidToolboxenParams,) => {
+    return [
+    `/api/veiligheid/toolboxen`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetVeiligheidToolboxenQueryOptions = <TData = Awaited<ReturnType<typeof getVeiligheidToolboxen>>, TError = ErrorType<unknown>>(params?: GetVeiligheidToolboxenParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getVeiligheidToolboxen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetVeiligheidToolboxenQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getVeiligheidToolboxen>>> = ({ signal }) => getVeiligheidToolboxen(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getVeiligheidToolboxen>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetVeiligheidToolboxenQueryResult = NonNullable<Awaited<ReturnType<typeof getVeiligheidToolboxen>>>
+export type GetVeiligheidToolboxenQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Lijst veiligheid toolboxen
+ */
+
+export function useGetVeiligheidToolboxen<TData = Awaited<ReturnType<typeof getVeiligheidToolboxen>>, TError = ErrorType<unknown>>(
+ params?: GetVeiligheidToolboxenParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getVeiligheidToolboxen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetVeiligheidToolboxenQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getPostVeiligheidToolboxenUrl = () => {
+
+
+
+
+  return `/api/veiligheid/toolboxen`
+}
+
+/**
+ * @summary Toolbox aanmaken
+ */
+export const postVeiligheidToolboxen = async (veiligheidToolboxInput: VeiligheidToolboxInput, options?: RequestInit): Promise<VeiligheidToolbox> => {
+
+  return customFetch<VeiligheidToolbox>(getPostVeiligheidToolboxenUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(veiligheidToolboxInput)
+  }
+);}
+
+
+
+
+export const getPostVeiligheidToolboxenMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postVeiligheidToolboxen>>, TError,{data: BodyType<VeiligheidToolboxInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof postVeiligheidToolboxen>>, TError,{data: BodyType<VeiligheidToolboxInput>}, TContext> => {
+
+const mutationKey = ['postVeiligheidToolboxen'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postVeiligheidToolboxen>>, {data: BodyType<VeiligheidToolboxInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  postVeiligheidToolboxen(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PostVeiligheidToolboxenMutationResult = NonNullable<Awaited<ReturnType<typeof postVeiligheidToolboxen>>>
+    export type PostVeiligheidToolboxenMutationBody = BodyType<VeiligheidToolboxInput>
+    export type PostVeiligheidToolboxenMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Toolbox aanmaken
+ */
+export const usePostVeiligheidToolboxen = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postVeiligheidToolboxen>>, TError,{data: BodyType<VeiligheidToolboxInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof postVeiligheidToolboxen>>,
+        TError,
+        {data: BodyType<VeiligheidToolboxInput>},
+        TContext
+      > => {
+      return useMutation(getPostVeiligheidToolboxenMutationOptions(options));
+    }
+
+export const getGetVeiligheidToolboxenIdUrl = (id: number,) => {
+
+
+
+
+  return `/api/veiligheid/toolboxen/${id}`
+}
+
+/**
+ * @summary Toolbox detail
+ */
+export const getVeiligheidToolboxenId = async (id: number, options?: RequestInit): Promise<VeiligheidToolboxDetail> => {
+
+  return customFetch<VeiligheidToolboxDetail>(getGetVeiligheidToolboxenIdUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetVeiligheidToolboxenIdQueryKey = (id: number,) => {
+    return [
+    `/api/veiligheid/toolboxen/${id}`
+    ] as const;
+    }
+
+
+export const getGetVeiligheidToolboxenIdQueryOptions = <TData = Awaited<ReturnType<typeof getVeiligheidToolboxenId>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getVeiligheidToolboxenId>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetVeiligheidToolboxenIdQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getVeiligheidToolboxenId>>> = ({ signal }) => getVeiligheidToolboxenId(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getVeiligheidToolboxenId>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetVeiligheidToolboxenIdQueryResult = NonNullable<Awaited<ReturnType<typeof getVeiligheidToolboxenId>>>
+export type GetVeiligheidToolboxenIdQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Toolbox detail
+ */
+
+export function useGetVeiligheidToolboxenId<TData = Awaited<ReturnType<typeof getVeiligheidToolboxenId>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getVeiligheidToolboxenId>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetVeiligheidToolboxenIdQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getPatchVeiligheidToolboxenIdUrl = (id: number,) => {
+
+
+
+
+  return `/api/veiligheid/toolboxen/${id}`
+}
+
+/**
+ * @summary Toolbox bijwerken
+ */
+export const patchVeiligheidToolboxenId = async (id: number,
+    veiligheidToolboxInput: VeiligheidToolboxInput, options?: RequestInit): Promise<VeiligheidToolboxDetail> => {
+
+  return customFetch<VeiligheidToolboxDetail>(getPatchVeiligheidToolboxenIdUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(veiligheidToolboxInput)
+  }
+);}
+
+
+
+
+export const getPatchVeiligheidToolboxenIdMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof patchVeiligheidToolboxenId>>, TError,{id: number;data: BodyType<VeiligheidToolboxInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof patchVeiligheidToolboxenId>>, TError,{id: number;data: BodyType<VeiligheidToolboxInput>}, TContext> => {
+
+const mutationKey = ['patchVeiligheidToolboxenId'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof patchVeiligheidToolboxenId>>, {id: number;data: BodyType<VeiligheidToolboxInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  patchVeiligheidToolboxenId(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PatchVeiligheidToolboxenIdMutationResult = NonNullable<Awaited<ReturnType<typeof patchVeiligheidToolboxenId>>>
+    export type PatchVeiligheidToolboxenIdMutationBody = BodyType<VeiligheidToolboxInput>
+    export type PatchVeiligheidToolboxenIdMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Toolbox bijwerken
+ */
+export const usePatchVeiligheidToolboxenId = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof patchVeiligheidToolboxenId>>, TError,{id: number;data: BodyType<VeiligheidToolboxInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof patchVeiligheidToolboxenId>>,
+        TError,
+        {id: number;data: BodyType<VeiligheidToolboxInput>},
+        TContext
+      > => {
+      return useMutation(getPatchVeiligheidToolboxenIdMutationOptions(options));
+    }
+
+export const getDeleteVeiligheidToolboxenIdUrl = (id: number,) => {
+
+
+
+
+  return `/api/veiligheid/toolboxen/${id}`
+}
+
+/**
+ * @summary Toolbox verwijderen
+ */
+export const deleteVeiligheidToolboxenId = async (id: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteVeiligheidToolboxenIdUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteVeiligheidToolboxenIdMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteVeiligheidToolboxenId>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteVeiligheidToolboxenId>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deleteVeiligheidToolboxenId'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteVeiligheidToolboxenId>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteVeiligheidToolboxenId(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteVeiligheidToolboxenIdMutationResult = NonNullable<Awaited<ReturnType<typeof deleteVeiligheidToolboxenId>>>
+
+    export type DeleteVeiligheidToolboxenIdMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Toolbox verwijderen
+ */
+export const useDeleteVeiligheidToolboxenId = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteVeiligheidToolboxenId>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteVeiligheidToolboxenId>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeleteVeiligheidToolboxenIdMutationOptions(options));
+    }
+
+export const getPostVeiligheidToolboxenIdPublicerenUrl = (id: number,) => {
+
+
+
+
+  return `/api/veiligheid/toolboxen/${id}/publiceren`
+}
+
+/**
+ * @summary Toolbox publiceren
+ */
+export const postVeiligheidToolboxenIdPubliceren = async (id: number, options?: RequestInit): Promise<VeiligheidToolbox> => {
+
+  return customFetch<VeiligheidToolbox>(getPostVeiligheidToolboxenIdPublicerenUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getPostVeiligheidToolboxenIdPublicerenMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postVeiligheidToolboxenIdPubliceren>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof postVeiligheidToolboxenIdPubliceren>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['postVeiligheidToolboxenIdPubliceren'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postVeiligheidToolboxenIdPubliceren>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  postVeiligheidToolboxenIdPubliceren(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PostVeiligheidToolboxenIdPublicerenMutationResult = NonNullable<Awaited<ReturnType<typeof postVeiligheidToolboxenIdPubliceren>>>
+
+    export type PostVeiligheidToolboxenIdPublicerenMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Toolbox publiceren
+ */
+export const usePostVeiligheidToolboxenIdPubliceren = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postVeiligheidToolboxenIdPubliceren>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof postVeiligheidToolboxenIdPubliceren>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getPostVeiligheidToolboxenIdPublicerenMutationOptions(options));
+    }
+
+export const getPostVeiligheidToolboxenIdAiAnalyseUrl = (id: number,) => {
+
+
+
+
+  return `/api/veiligheid/toolboxen/${id}/ai-analyse`
+}
+
+/**
+ * @summary AI analyse starten voor toolbox
+ */
+export const postVeiligheidToolboxenIdAiAnalyse = async (id: number, options?: RequestInit): Promise<VeiligheidToolboxDetail> => {
+
+  return customFetch<VeiligheidToolboxDetail>(getPostVeiligheidToolboxenIdAiAnalyseUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getPostVeiligheidToolboxenIdAiAnalyseMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postVeiligheidToolboxenIdAiAnalyse>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof postVeiligheidToolboxenIdAiAnalyse>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['postVeiligheidToolboxenIdAiAnalyse'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postVeiligheidToolboxenIdAiAnalyse>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  postVeiligheidToolboxenIdAiAnalyse(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PostVeiligheidToolboxenIdAiAnalyseMutationResult = NonNullable<Awaited<ReturnType<typeof postVeiligheidToolboxenIdAiAnalyse>>>
+
+    export type PostVeiligheidToolboxenIdAiAnalyseMutationError = ErrorType<unknown>
+
+    /**
+ * @summary AI analyse starten voor toolbox
+ */
+export const usePostVeiligheidToolboxenIdAiAnalyse = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postVeiligheidToolboxenIdAiAnalyse>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof postVeiligheidToolboxenIdAiAnalyse>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getPostVeiligheidToolboxenIdAiAnalyseMutationOptions(options));
+    }
+
+export const getPostVeiligheidToolboxenIdAfrondenUrl = (id: number,) => {
+
+
+
+
+  return `/api/veiligheid/toolboxen/${id}/afronden`
+}
+
+/**
+ * @summary Toolbox afronden (quiz + bevestiging)
+ */
+export const postVeiligheidToolboxenIdAfronden = async (id: number,
+    veiligheidAfrondingInput: VeiligheidAfrondingInput, options?: RequestInit): Promise<VeiligheidAfronding> => {
+
+  return customFetch<VeiligheidAfronding>(getPostVeiligheidToolboxenIdAfrondenUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(veiligheidAfrondingInput)
+  }
+);}
+
+
+
+
+export const getPostVeiligheidToolboxenIdAfrondenMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postVeiligheidToolboxenIdAfronden>>, TError,{id: number;data: BodyType<VeiligheidAfrondingInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof postVeiligheidToolboxenIdAfronden>>, TError,{id: number;data: BodyType<VeiligheidAfrondingInput>}, TContext> => {
+
+const mutationKey = ['postVeiligheidToolboxenIdAfronden'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postVeiligheidToolboxenIdAfronden>>, {id: number;data: BodyType<VeiligheidAfrondingInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  postVeiligheidToolboxenIdAfronden(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PostVeiligheidToolboxenIdAfrondenMutationResult = NonNullable<Awaited<ReturnType<typeof postVeiligheidToolboxenIdAfronden>>>
+    export type PostVeiligheidToolboxenIdAfrondenMutationBody = BodyType<VeiligheidAfrondingInput>
+    export type PostVeiligheidToolboxenIdAfrondenMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Toolbox afronden (quiz + bevestiging)
+ */
+export const usePostVeiligheidToolboxenIdAfronden = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postVeiligheidToolboxenIdAfronden>>, TError,{id: number;data: BodyType<VeiligheidAfrondingInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof postVeiligheidToolboxenIdAfronden>>,
+        TError,
+        {id: number;data: BodyType<VeiligheidAfrondingInput>},
+        TContext
+      > => {
+      return useMutation(getPostVeiligheidToolboxenIdAfrondenMutationOptions(options));
+    }
+
+export const getGetVeiligheidToolboxenIdAfrondingenUrl = (id: number,) => {
+
+
+
+
+  return `/api/veiligheid/toolboxen/${id}/afrondingen`
+}
+
+/**
+ * @summary Afrondingen per toolbox (beheerder)
+ */
+export const getVeiligheidToolboxenIdAfrondingen = async (id: number, options?: RequestInit): Promise<VeiligheidAfronding[]> => {
+
+  return customFetch<VeiligheidAfronding[]>(getGetVeiligheidToolboxenIdAfrondingenUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetVeiligheidToolboxenIdAfrondingenQueryKey = (id: number,) => {
+    return [
+    `/api/veiligheid/toolboxen/${id}/afrondingen`
+    ] as const;
+    }
+
+
+export const getGetVeiligheidToolboxenIdAfrondingenQueryOptions = <TData = Awaited<ReturnType<typeof getVeiligheidToolboxenIdAfrondingen>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getVeiligheidToolboxenIdAfrondingen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetVeiligheidToolboxenIdAfrondingenQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getVeiligheidToolboxenIdAfrondingen>>> = ({ signal }) => getVeiligheidToolboxenIdAfrondingen(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getVeiligheidToolboxenIdAfrondingen>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetVeiligheidToolboxenIdAfrondingenQueryResult = NonNullable<Awaited<ReturnType<typeof getVeiligheidToolboxenIdAfrondingen>>>
+export type GetVeiligheidToolboxenIdAfrondingenQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Afrondingen per toolbox (beheerder)
+ */
+
+export function useGetVeiligheidToolboxenIdAfrondingen<TData = Awaited<ReturnType<typeof getVeiligheidToolboxenIdAfrondingen>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getVeiligheidToolboxenIdAfrondingen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetVeiligheidToolboxenIdAfrondingenQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetVeiligheidToolboxenIdMijnAfrondingUrl = (id: number,) => {
+
+
+
+
+  return `/api/veiligheid/toolboxen/${id}/mijn-afronding`
+}
+
+/**
+ * @summary Mijn meest recente afronding van deze toolbox
+ */
+export const getVeiligheidToolboxenIdMijnAfronding = async (id: number, options?: RequestInit): Promise<VeiligheidAfronding | null> => {
+
+  return customFetch<VeiligheidAfronding | null>(getGetVeiligheidToolboxenIdMijnAfrondingUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetVeiligheidToolboxenIdMijnAfrondingQueryKey = (id: number,) => {
+    return [
+    `/api/veiligheid/toolboxen/${id}/mijn-afronding`
+    ] as const;
+    }
+
+
+export const getGetVeiligheidToolboxenIdMijnAfrondingQueryOptions = <TData = Awaited<ReturnType<typeof getVeiligheidToolboxenIdMijnAfronding>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getVeiligheidToolboxenIdMijnAfronding>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetVeiligheidToolboxenIdMijnAfrondingQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getVeiligheidToolboxenIdMijnAfronding>>> = ({ signal }) => getVeiligheidToolboxenIdMijnAfronding(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getVeiligheidToolboxenIdMijnAfronding>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetVeiligheidToolboxenIdMijnAfrondingQueryResult = NonNullable<Awaited<ReturnType<typeof getVeiligheidToolboxenIdMijnAfronding>>>
+export type GetVeiligheidToolboxenIdMijnAfrondingQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Mijn meest recente afronding van deze toolbox
+ */
+
+export function useGetVeiligheidToolboxenIdMijnAfronding<TData = Awaited<ReturnType<typeof getVeiligheidToolboxenIdMijnAfronding>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getVeiligheidToolboxenIdMijnAfronding>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetVeiligheidToolboxenIdMijnAfrondingQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
 

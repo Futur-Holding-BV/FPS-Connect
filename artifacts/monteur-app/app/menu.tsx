@@ -56,6 +56,12 @@ export default function MenuScherm() {
       onPress: () => router.push("/uren"),
     },
     {
+      sleutel: "toolboxen",
+      label: "Toolboxen",
+      icoon: "shield-checkmark",
+      onPress: () => router.push("/toolboxen"),
+    },
+    {
       sleutel: "berichten",
       label: "Berichten",
       icoon: "chatbubbles",
@@ -75,6 +81,7 @@ export default function MenuScherm() {
     planning: "/planning",
     personeel: "/hrm",
     uren: "/uren",
+    toolboxen: "/toolboxen",
     berichten: "/berichten",
     opname: "/opname",
   };

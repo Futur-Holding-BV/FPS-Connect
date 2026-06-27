@@ -27,3 +27,4 @@ export * from "./backups";
 export * from "./opname";
 export * from "./inbox";
 export * from "./werk-inbox";
+export * from "./veiligheid";
