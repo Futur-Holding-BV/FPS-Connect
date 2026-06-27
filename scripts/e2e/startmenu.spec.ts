@@ -260,7 +260,7 @@ test("FPS startmenu: login, waaier en doorlinken", async ({ page }) => {
   await test.step("dieper: hrm-opleidingen toont trainingen-scherm", async () => {
     await page.evaluate(() => { (window as typeof window & { __FPS_NAVIGEER__?: (p: string) => void }).__FPS_NAVIGEER__?.("/hrm"); });
     await expect(page).toHaveURL(/\/hrm(\b|\?|$)/, { timeout: 15_000 });
-    await expect(zichtbareTekst(page, "Medewerkers").first()).toBeVisible({
+    await expect(zichtbareTekst(page, "Mijn veiligheidscertificaten").first()).toBeVisible({
       timeout: INHOUD_TIMEOUT,
     });
 
@@ -283,7 +283,7 @@ test("FPS startmenu: login, waaier en doorlinken", async ({ page }) => {
   await test.step("dieper: hrm-kennisbank toont vaste kennisartikelen", async () => {
     await page.evaluate(() => { (window as typeof window & { __FPS_NAVIGEER__?: (p: string) => void }).__FPS_NAVIGEER__?.("/hrm"); });
     await expect(page).toHaveURL(/\/hrm(\b|\?|$)/, { timeout: 15_000 });
-    await expect(zichtbareTekst(page, "Medewerkers").first()).toBeVisible({
+    await expect(zichtbareTekst(page, "Mijn veiligheidscertificaten").first()).toBeVisible({
       timeout: INHOUD_TIMEOUT,
     });
 
@@ -312,7 +312,7 @@ test("FPS startmenu: login, waaier en doorlinken", async ({ page }) => {
   await test.step("dieper: hrm-verlof toont saldo en aanvragen", async () => {
     await page.evaluate(() => { (window as typeof window & { __FPS_NAVIGEER__?: (p: string) => void }).__FPS_NAVIGEER__?.("/hrm"); });
     await expect(page).toHaveURL(/\/hrm(\b|\?|$)/, { timeout: 15_000 });
-    await expect(zichtbareTekst(page, "Medewerkers").first()).toBeVisible({
+    await expect(zichtbareTekst(page, "Mijn veiligheidscertificaten").first()).toBeVisible({
       timeout: INHOUD_TIMEOUT,
     });
 
@@ -353,7 +353,7 @@ test("FPS startmenu: login, waaier en doorlinken", async ({ page }) => {
   await test.step("verlofformulier: aanvraagformulier vangt invoerfouten af", async () => {
     await page.evaluate(() => { (window as typeof window & { __FPS_NAVIGEER__?: (p: string) => void }).__FPS_NAVIGEER__?.("/hrm"); });
     await expect(page).toHaveURL(/\/hrm(\b|\?|$)/, { timeout: 15_000 });
-    await expect(zichtbareTekst(page, "Medewerkers").first()).toBeVisible({
+    await expect(zichtbareTekst(page, "Mijn veiligheidscertificaten").first()).toBeVisible({
       timeout: INHOUD_TIMEOUT,
     });
 
