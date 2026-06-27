@@ -22,6 +22,9 @@ export interface WeekStaat {
   goedgekeurd_door_naam?: string | null;
   goedgekeurd_op?: string | null;
   document_id?: number | null;
+  vergrendeld?: boolean;
+  vergrendeld_op?: string | null;
+  vergrendeld_door_naam?: string | null;
   aangemaakt_op: string;
   bijgewerkt_op: string;
 }

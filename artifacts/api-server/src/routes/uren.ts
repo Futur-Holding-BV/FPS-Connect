@@ -95,6 +95,7 @@ function mapWeekStaat(
   extra?: {
     medewerkerNaam?: string | null;
     goedgekeurdDoorNaam?: string | null;
+    vergrendeldDoorNaam?: string | null;
   }
 ) {
   return {
@@ -113,9 +114,30 @@ function mapWeekStaat(
     goedgekeurd_door_naam: extra?.goedgekeurdDoorNaam ?? null,
     goedgekeurd_op: w.goedgekeurdOp?.toISOString() ?? null,
     document_id: w.documentId ?? null,
+    vergrendeld: w.vergrendeld,
+    vergrendeld_op: w.vergrendeldOp?.toISOString() ?? null,
+    vergrendeld_door_naam: extra?.vergrendeldDoorNaam ?? null,
     aangemaakt_op: w.aangemaaktOp.toISOString(),
     bijgewerkt_op: w.bijgewerktOp.toISOString(),
   };
+}
+
+async function isWeekVergrendeld(medId: number, datum: string): Promise<boolean> {
+  const d = new Date(datum + "T00:00:00Z");
+  const jaar = d.getUTCFullYear();
+  const week = isoWeekNummer(d);
+  const [ws] = await db
+    .select({ vergrendeld: weekStatenTable.vergrendeld })
+    .from(weekStatenTable)
+    .where(
+      and(
+        eq(weekStatenTable.medewerkerId, medId),
+        eq(weekStatenTable.jaar, jaar),
+        eq(weekStatenTable.weekNummer, week)
+      )
+    )
+    .limit(1);
+  return ws?.vergrendeld ?? false;
 }
 
 async function medewerkerId(gebruikerId: number): Promise<number | null> {
@@ -309,6 +331,10 @@ router.post("/uren", requireAuth, async (req, res) => {
 
   const nettoUren = berekenNettoUren(begin_tijd, eind_tijd, Number(pauze_minuten));
 
+  if (!isManager && await isWeekVergrendeld(mid, datum)) {
+    return res.status(409).json({ error: "Deze week is vergrendeld door HRM en kan niet worden gewijzigd" });
+  }
+
   const [rij] = await db
     .insert(urenRegistratiesTable)
     .values({
@@ -385,6 +411,10 @@ router.patch("/uren/:id", requireAuth, async (req, res) => {
     return res.status(409).json({ error: "Goedgekeurde uren kunnen niet worden gewijzigd" });
   }
 
+  if (!isManager && await isWeekVergrendeld(bestaand.medewerkerId, bestaand.datum)) {
+    return res.status(409).json({ error: "Deze week is vergrendeld door HRM en kan niet worden gewijzigd" });
+  }
+
   const {
     datum,
     gebouw_id,
@@ -445,6 +475,10 @@ router.delete("/uren/:id", requireAuth, async (req, res) => {
 
   if (bestaand.status === "goedgekeurd" && !isManager) {
     return res.status(409).json({ error: "Goedgekeurde uren kunnen niet worden verwijderd" });
+  }
+
+  if (!isManager && await isWeekVergrendeld(bestaand.medewerkerId, bestaand.datum)) {
+    return res.status(409).json({ error: "Deze week is vergrendeld door HRM en kan niet worden gewijzigd" });
   }
 
   await db.delete(urenRegistratiesTable).where(eq(urenRegistratiesTable.id, id));
@@ -781,6 +815,54 @@ router.post("/weekstaten/:id/afwijzen", requireAuth, async (req, res) => {
       afwijzingReden: reden,
       bijgewerktOp: new Date(),
     })
+    .where(eq(weekStatenTable.id, id))
+    .returning();
+
+  res.json(mapWeekStaat(rij));
+});
+
+// ── POST /weekstaten/:id/vergrendelen ─────────────────────────────────────────
+router.post("/weekstaten/:id/vergrendelen", requireAuth, async (req, res) => {
+  const id = Number(req.params.id);
+  const userId = req.session.userId!;
+  const info = await gebruikerInfo(userId);
+
+  const isManager = ((info?.bevoegdheden as Record<string, number> | null)?.uren ?? 0) >= 2 || info?.rol === "hoofdbeheerder";
+  if (!isManager) return res.status(403).json({ error: "Geen bevoegdheid" });
+
+  const [bestaand] = await db.select().from(weekStatenTable).where(eq(weekStatenTable.id, id)).limit(1);
+  if (!bestaand) return res.status(404).json({ error: "Niet gevonden" });
+
+  const vergrendeldDoor = await db
+    .select({ naam: gebruikersTable.naam })
+    .from(gebruikersTable)
+    .where(eq(gebruikersTable.id, userId))
+    .limit(1);
+
+  const [rij] = await db
+    .update(weekStatenTable)
+    .set({ vergrendeld: true, vergrendeldOp: new Date(), vergrendeldDoorId: userId, bijgewerktOp: new Date() })
+    .where(eq(weekStatenTable.id, id))
+    .returning();
+
+  res.json(mapWeekStaat(rij, { vergrendeldDoorNaam: vergrendeldDoor[0]?.naam ?? null }));
+});
+
+// ── POST /weekstaten/:id/ontgrendelen ─────────────────────────────────────────
+router.post("/weekstaten/:id/ontgrendelen", requireAuth, async (req, res) => {
+  const id = Number(req.params.id);
+  const userId = req.session.userId!;
+  const info = await gebruikerInfo(userId);
+
+  const isManager = ((info?.bevoegdheden as Record<string, number> | null)?.uren ?? 0) >= 2 || info?.rol === "hoofdbeheerder";
+  if (!isManager) return res.status(403).json({ error: "Geen bevoegdheid" });
+
+  const [bestaand] = await db.select().from(weekStatenTable).where(eq(weekStatenTable.id, id)).limit(1);
+  if (!bestaand) return res.status(404).json({ error: "Niet gevonden" });
+
+  const [rij] = await db
+    .update(weekStatenTable)
+    .set({ vergrendeld: false, vergrendeldOp: null, vergrendeldDoorId: null, bijgewerktOp: new Date() })
     .where(eq(weekStatenTable.id, id))
     .returning();
 

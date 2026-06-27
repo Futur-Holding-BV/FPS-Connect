@@ -54,6 +54,10 @@ export const weekStatenTable = pgTable("week_staten", {
   goedgekeurdDoorId: integer("goedgekeurd_door_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
   goedgekeurdOp: timestamp("goedgekeurd_op"),
   documentId: integer("document_id").references(() => documentenTable.id, { onDelete: "set null" }),
+  // Vergrendeling — HRM kan week op slot zetten zodat monteur niet meer kan muteren
+  vergrendeld: boolean("vergrendeld").notNull().default(false),
+  vergrendeldOp: timestamp("vergrendeld_op"),
+  vergrendeldDoorId: integer("vergrendeld_door_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
   aangemaaktDoorId: integer("aangemaakt_door_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
   aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
   bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),

@@ -3,12 +3,14 @@ import {
   useListWeekStaten,
   useWeekStaatGoedkeuren,
   useWeekStaatAfwijzen,
+  useVergrendelWeekStaat,
+  useOntgrendelWeekStaat,
   useListMedewerkers,
   useGetWeekStaat,
 } from "@workspace/api-client-react";
 import type { WeekStaat } from "@workspace/api-client-react";
 import {
-  Card, CardContent, CardHeader, CardTitle,
+  Card, CardContent,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -22,7 +24,7 @@ import {
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { CheckCircle2, XCircle, Eye, ChevronLeft, ChevronRight, CalendarDays } from "lucide-react";
+import { CheckCircle2, XCircle, Eye, ChevronLeft, ChevronRight, CalendarDays, Lock, Unlock } from "lucide-react";
 import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
 
 function isoWeek(datum: Date): number {
@@ -71,6 +73,8 @@ function WeekStaatDetailDialog({
 
   const goedkeuren = useWeekStaatGoedkeuren();
   const afwijzen = useWeekStaatAfwijzen();
+  const vergrendelen = useVergrendelWeekStaat();
+  const ontgrendelen = useOntgrendelWeekStaat();
   const [afwijzingReden, setAfwijzingReden] = useState("");
   const [toontAfwijzingForm, setToontAfwijzingForm] = useState(false);
 
@@ -219,6 +223,43 @@ function WeekStaatDetailDialog({
               )}
             </div>
           )}
+
+          {isManager && (
+            <div className="pt-2 border-t">
+              {(ws as any).vergrendeld ? (
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2 text-sm text-amber-700">
+                    <Lock className="h-4 w-4" />
+                    <span>
+                      Vergrendeld{(ws as any).vergrendeld_door_naam ? ` door ${(ws as any).vergrendeld_door_naam}` : ""}
+                      {(ws as any).vergrendeld_op
+                        ? ` op ${new Date((ws as any).vergrendeld_op).toLocaleDateString("nl-NL", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}`
+                        : ""}
+                    </span>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => ontgrendelen.mutate({ id: ws.id }, { onSuccess: onClose })}
+                    disabled={ontgrendelen.isPending}
+                  >
+                    <Unlock className="h-4 w-4 mr-1" />
+                    Ontgrendelen
+                  </Button>
+                </div>
+              ) : (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => vergrendelen.mutate({ id: ws.id }, { onSuccess: onClose })}
+                  disabled={vergrendelen.isPending}
+                >
+                  <Lock className="h-4 w-4 mr-1" />
+                  Week vergrendelen
+                </Button>
+              )}
+            </div>
+          )}
         </div>
 
         <DialogFooter>
@@ -316,7 +357,12 @@ export default function WeekstatenPagina({ inline = false }: { inline?: boolean 
               <TableBody>
                 {weekstaten.map((w) => (
                   <TableRow key={w.id}>
-                    <TableCell className="font-medium">W{w.week_nummer} {w.jaar}</TableCell>
+                    <TableCell className="font-medium">
+                      <span className="flex items-center gap-1.5">
+                        {(w as any).vergrendeld && <Lock className="h-3.5 w-3.5 text-amber-600" />}
+                        W{w.week_nummer} {w.jaar}
+                      </span>
+                    </TableCell>
                     <TableCell className="text-sm">{w.medewerker_naam ?? "—"}</TableCell>
                     <TableCell className="text-right font-mono text-sm">{formatUren(w.totaal_uren)}</TableCell>
                     <TableCell className="text-right text-sm text-muted-foreground">

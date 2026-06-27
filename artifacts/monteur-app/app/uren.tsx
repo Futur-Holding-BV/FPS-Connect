@@ -712,6 +712,7 @@ function DagKaart({
   planningLijst,
   c,
   inhoudMaxBreedte,
+  vergrendeld,
   onToevoegen,
   onBewerken,
   onVerwijderen,
@@ -722,6 +723,7 @@ function DagKaart({
   planningLijst: any[];
   c: ReturnType<typeof useColors>;
   inhoudMaxBreedte: number | undefined;
+  vergrendeld: boolean;
   onToevoegen: (datum: string, planning?: any) => void;
   onBewerken: (uren: UrenRegistratie) => void;
   onVerwijderen: (id: number) => void;
@@ -780,19 +782,21 @@ function DagKaart({
               {formatUren(dagTotaal)}
             </Text>
           )}
-          <Pressable
-            onPress={() => onToevoegen(datum)}
-            style={{
-              width: 30,
-              height: 30,
-              borderRadius: 15,
-              backgroundColor: c.primary + "20",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            <Ionicons name="add" size={18} color={c.primary} />
-          </Pressable>
+          {!vergrendeld && (
+            <Pressable
+              onPress={() => onToevoegen(datum)}
+              style={{
+                width: 30,
+                height: 30,
+                borderRadius: 15,
+                backgroundColor: c.primary + "20",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <Ionicons name="add" size={18} color={c.primary} />
+            </Pressable>
+          )}
         </View>
       </View>
 
@@ -844,11 +848,11 @@ function DagKaart({
       {urenLijst.map((u) => (
         <Pressable
           key={u.id}
-          onLongPress={() => Alert.alert("Verwijderen", `Uren verwijderen voor ${dagLabel_}?`, [
+          onLongPress={vergrendeld ? undefined : () => Alert.alert("Verwijderen", `Uren verwijderen voor ${dagLabel_}?`, [
             { text: "Annuleren", style: "cancel" },
             { text: "Verwijderen", style: "destructive", onPress: () => onVerwijderen(u.id) },
           ])}
-          onPress={() => onBewerken(u)}
+          onPress={vergrendeld ? undefined : () => onBewerken(u)}
           style={{
             flexDirection: "row",
             alignItems: "center",
@@ -886,21 +890,29 @@ function DagKaart({
       ))}
 
       {urenLijst.length === 0 && planningLijst.length === 0 && (
-        <Pressable
-          onPress={() => onToevoegen(datum)}
-          style={{
-            flexDirection: "row",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 8,
-            paddingVertical: 14,
-          }}
-        >
-          <Ionicons name="add-circle-outline" size={18} color={c.mutedForeground} />
-          <Text style={{ color: c.mutedForeground, fontSize: 13, fontFamily: "Inter_400Regular" }}>
-            Uren toevoegen
-          </Text>
-        </Pressable>
+        vergrendeld ? (
+          <View style={{ paddingVertical: 14, alignItems: "center" }}>
+            <Text style={{ color: c.mutedForeground, fontSize: 13, fontFamily: "Inter_400Regular" }}>
+              Geen uren
+            </Text>
+          </View>
+        ) : (
+          <Pressable
+            onPress={() => onToevoegen(datum)}
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 8,
+              paddingVertical: 14,
+            }}
+          >
+            <Ionicons name="add-circle-outline" size={18} color={c.mutedForeground} />
+            <Text style={{ color: c.mutedForeground, fontSize: 13, fontFamily: "Inter_400Regular" }}>
+              Uren toevoegen
+            </Text>
+          </Pressable>
+        )
       )}
     </View>
   );
@@ -980,11 +992,14 @@ export default function UrenScherm() {
   const planningPerDag = (datum: string) =>
     (data?.planning_items ?? []).filter((p: any) => p.datum === datum);
 
+  const isVergrendeld = (huidigWeekstaat as any)?.vergrendeld === true;
+
   const kanIndienen =
+    !isVergrendeld &&
     totaalUren > 0 &&
     (!huidigWeekstaat || huidigWeekstaat.status === "concept" || huidigWeekstaat.status === "afgewezen");
 
-  const modalOpen = modalDatum !== null || bewerkenUren !== null || planningBevestigen !== null;
+  const modalOpen = !isVergrendeld && (modalDatum !== null || bewerkenUren !== null || planningBevestigen !== null);
   const activeDatum = modalDatum ?? bewerkenUren?.datum ?? planningBevestigen?.datum;
 
   return (
@@ -1055,6 +1070,25 @@ export default function UrenScherm() {
               </View>
             )}
           </View>
+
+          {/* Vergrendeld-banner */}
+          {isVergrendeld && (
+            <View style={{
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 8,
+              marginTop: 12,
+              backgroundColor: "#92400e20",
+              borderRadius: 8,
+              paddingHorizontal: 12,
+              paddingVertical: 8,
+            }}>
+              <Ionicons name="lock-closed" size={15} color="#d97706" />
+              <Text style={{ color: "#d97706", fontSize: 13, fontFamily: "Inter_600SemiBold", flex: 1 }}>
+                Deze week is vergrendeld door HRM
+              </Text>
+            </View>
+          )}
         </View>
       </View>
 
@@ -1075,6 +1109,7 @@ export default function UrenScherm() {
               planningLijst={planningPerDag(datum)}
               c={c}
               inhoudMaxBreedte={inhoudMaxBreedte}
+              vergrendeld={isVergrendeld}
               onToevoegen={(d) => setModalDatum(d)}
               onBewerken={(u) => setBewerkenUren(u)}
               onVerwijderen={handleVerwijderen}

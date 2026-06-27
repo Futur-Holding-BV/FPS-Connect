@@ -9536,6 +9536,44 @@ paths:
               schema:
                 $ref: '#/components/schemas/WeekStaat'
 
+  /weekstaten/{id}/vergrendelen:
+    post:
+      operationId: vergrendelWeekStaat
+      summary: Weekstaat vergrendelen (monteur kan niet meer muteren)
+      tags: [uren]
+      security: [{ cookieAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Vergrendeld
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WeekStaat'
+
+  /weekstaten/{id}/ontgrendelen:
+    post:
+      operationId: ontgrendelWeekStaat
+      summary: Weekstaat ontgrendelen (monteur mag weer muteren)
+      tags: [uren]
+      security: [{ cookieAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Ontgrendeld
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WeekStaat'
+
   /gereedschappen:
     get:
       operationId: listGereedschappen
@@ -17696,6 +17734,14 @@ components:
           nullable: true
         document_id:
           type: integer
+          nullable: true
+        vergrendeld:
+          type: boolean
+        vergrendeld_op:
+          type: string
+          nullable: true
+        vergrendeld_door_naam:
+          type: string
           nullable: true
         aangemaakt_op:
           type: string

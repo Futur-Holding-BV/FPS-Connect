@@ -11368,6 +11368,9 @@ export const ListWeekStatenResponseItem = zod.object({
   "goedgekeurd_door_naam": zod.string().nullish(),
   "goedgekeurd_op": zod.string().nullish(),
   "document_id": zod.number().nullish(),
+  "vergrendeld": zod.boolean().optional(),
+  "vergrendeld_op": zod.string().nullish(),
+  "vergrendeld_door_naam": zod.string().nullish(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
 })
@@ -11410,6 +11413,9 @@ export const GetWeekStaatResponse = zod.object({
   "goedgekeurd_door_naam": zod.string().nullish(),
   "goedgekeurd_op": zod.string().nullish(),
   "document_id": zod.number().nullish(),
+  "vergrendeld": zod.boolean().optional(),
+  "vergrendeld_op": zod.string().nullish(),
+  "vergrendeld_door_naam": zod.string().nullish(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
 })
@@ -11442,6 +11448,9 @@ export const UpdateWeekStaatResponse = zod.object({
   "goedgekeurd_door_naam": zod.string().nullish(),
   "goedgekeurd_op": zod.string().nullish(),
   "document_id": zod.number().nullish(),
+  "vergrendeld": zod.boolean().optional(),
+  "vergrendeld_op": zod.string().nullish(),
+  "vergrendeld_door_naam": zod.string().nullish(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
 })
@@ -11470,6 +11479,9 @@ export const WeekStaatIndienenResponse = zod.object({
   "goedgekeurd_door_naam": zod.string().nullish(),
   "goedgekeurd_op": zod.string().nullish(),
   "document_id": zod.number().nullish(),
+  "vergrendeld": zod.boolean().optional(),
+  "vergrendeld_op": zod.string().nullish(),
+  "vergrendeld_door_naam": zod.string().nullish(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
 })
@@ -11498,6 +11510,9 @@ export const WeekStaatGoedkeurenResponse = zod.object({
   "goedgekeurd_door_naam": zod.string().nullish(),
   "goedgekeurd_op": zod.string().nullish(),
   "document_id": zod.number().nullish(),
+  "vergrendeld": zod.boolean().optional(),
+  "vergrendeld_op": zod.string().nullish(),
+  "vergrendeld_door_naam": zod.string().nullish(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
 })
@@ -11530,6 +11545,71 @@ export const WeekStaatAfwijzenResponse = zod.object({
   "goedgekeurd_door_naam": zod.string().nullish(),
   "goedgekeurd_op": zod.string().nullish(),
   "document_id": zod.number().nullish(),
+  "vergrendeld": zod.boolean().optional(),
+  "vergrendeld_op": zod.string().nullish(),
+  "vergrendeld_door_naam": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+
+
+/**
+ * @summary Weekstaat vergrendelen (monteur kan niet meer muteren)
+ */
+export const VergrendelWeekStaatParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const VergrendelWeekStaatResponse = zod.object({
+  "id": zod.number(),
+  "medewerker_id": zod.number(),
+  "medewerker_naam": zod.string().nullish(),
+  "jaar": zod.number(),
+  "week_nummer": zod.number(),
+  "status": zod.string(),
+  "totaal_uren": zod.number().nullish(),
+  "adv_uren": zod.number().nullish(),
+  "notities": zod.string().nullish(),
+  "afwijzing_reden": zod.string().nullish(),
+  "ingediend_op": zod.string().nullish(),
+  "goedgekeurd_door_id": zod.number().nullish(),
+  "goedgekeurd_door_naam": zod.string().nullish(),
+  "goedgekeurd_op": zod.string().nullish(),
+  "document_id": zod.number().nullish(),
+  "vergrendeld": zod.boolean().optional(),
+  "vergrendeld_op": zod.string().nullish(),
+  "vergrendeld_door_naam": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+
+
+/**
+ * @summary Weekstaat ontgrendelen (monteur mag weer muteren)
+ */
+export const OntgrendelWeekStaatParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const OntgrendelWeekStaatResponse = zod.object({
+  "id": zod.number(),
+  "medewerker_id": zod.number(),
+  "medewerker_naam": zod.string().nullish(),
+  "jaar": zod.number(),
+  "week_nummer": zod.number(),
+  "status": zod.string(),
+  "totaal_uren": zod.number().nullish(),
+  "adv_uren": zod.number().nullish(),
+  "notities": zod.string().nullish(),
+  "afwijzing_reden": zod.string().nullish(),
+  "ingediend_op": zod.string().nullish(),
+  "goedgekeurd_door_id": zod.number().nullish(),
+  "goedgekeurd_door_naam": zod.string().nullish(),
+  "goedgekeurd_op": zod.string().nullish(),
+  "document_id": zod.number().nullish(),
+  "vergrendeld": zod.boolean().optional(),
+  "vergrendeld_op": zod.string().nullish(),
+  "vergrendeld_door_naam": zod.string().nullish(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
 })

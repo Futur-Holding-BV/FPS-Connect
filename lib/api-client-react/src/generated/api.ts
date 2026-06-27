@@ -33878,6 +33878,146 @@ export const useWeekStaatAfwijzen = <TError = ErrorType<unknown>,
       return useMutation(getWeekStaatAfwijzenMutationOptions(options));
     }
 
+export const getVergrendelWeekStaatUrl = (id: number,) => {
+
+
+
+
+  return `/api/weekstaten/${id}/vergrendelen`
+}
+
+/**
+ * @summary Weekstaat vergrendelen (monteur kan niet meer muteren)
+ */
+export const vergrendelWeekStaat = async (id: number, options?: RequestInit): Promise<WeekStaat> => {
+
+  return customFetch<WeekStaat>(getVergrendelWeekStaatUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getVergrendelWeekStaatMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof vergrendelWeekStaat>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof vergrendelWeekStaat>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['vergrendelWeekStaat'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof vergrendelWeekStaat>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  vergrendelWeekStaat(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type VergrendelWeekStaatMutationResult = NonNullable<Awaited<ReturnType<typeof vergrendelWeekStaat>>>
+
+    export type VergrendelWeekStaatMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Weekstaat vergrendelen (monteur kan niet meer muteren)
+ */
+export const useVergrendelWeekStaat = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof vergrendelWeekStaat>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof vergrendelWeekStaat>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getVergrendelWeekStaatMutationOptions(options));
+    }
+
+export const getOntgrendelWeekStaatUrl = (id: number,) => {
+
+
+
+
+  return `/api/weekstaten/${id}/ontgrendelen`
+}
+
+/**
+ * @summary Weekstaat ontgrendelen (monteur mag weer muteren)
+ */
+export const ontgrendelWeekStaat = async (id: number, options?: RequestInit): Promise<WeekStaat> => {
+
+  return customFetch<WeekStaat>(getOntgrendelWeekStaatUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getOntgrendelWeekStaatMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof ontgrendelWeekStaat>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof ontgrendelWeekStaat>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['ontgrendelWeekStaat'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof ontgrendelWeekStaat>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  ontgrendelWeekStaat(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type OntgrendelWeekStaatMutationResult = NonNullable<Awaited<ReturnType<typeof ontgrendelWeekStaat>>>
+
+    export type OntgrendelWeekStaatMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Weekstaat ontgrendelen (monteur mag weer muteren)
+ */
+export const useOntgrendelWeekStaat = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof ontgrendelWeekStaat>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof ontgrendelWeekStaat>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getOntgrendelWeekStaatMutationOptions(options));
+    }
+
 export const getListGereedschappenUrl = (params?: ListGereedschappenParams,) => {
   const normalizedParams = new URLSearchParams();
 
