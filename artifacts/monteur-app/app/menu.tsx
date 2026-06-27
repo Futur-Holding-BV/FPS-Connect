@@ -1,3 +1,4 @@
+import { Ionicons } from "@expo/vector-icons";
 import { Redirect, useRouter } from "expo-router";
 import React, { useEffect } from "react";
 import { Image, Platform, Pressable, Text, View } from "react-native";
@@ -134,45 +135,48 @@ export default function MenuScherm() {
             </Text>
           </View>
         </View>
-        <View style={{ flexDirection: "row", gap: 8, alignItems: "center" }}>
+        <View style={{ flexDirection: "row", gap: 6, alignItems: "center" }}>
           <Pressable
             onPress={() => router.push("/info")}
-            style={{
-              paddingHorizontal: 14,
-              paddingVertical: 9,
-              borderRadius: 10,
-              backgroundColor: "rgba(255,255,255,0.12)",
-            }}
+            accessibilityLabel="Instellingen"
+            style={({ pressed }) => ({
+              width: 40,
+              height: 40,
+              borderRadius: 20,
+              backgroundColor: pressed ? "rgba(255,255,255,0.18)" : "rgba(255,255,255,0.10)",
+              alignItems: "center",
+              justifyContent: "center",
+            })}
           >
-            <Text style={{ color: c.darkForeground, fontFamily: "Inter_600SemiBold", fontSize: 14 }}>
-              Instellingen
-            </Text>
+            <Ionicons name="settings-outline" size={19} color={c.darkForeground} />
           </Pressable>
           <Pressable
             onPress={() => router.push("/privacy")}
-            style={{
-              paddingHorizontal: 14,
-              paddingVertical: 9,
-              borderRadius: 10,
-              backgroundColor: "rgba(255,255,255,0.12)",
-            }}
+            accessibilityLabel="Privacy"
+            style={({ pressed }) => ({
+              width: 40,
+              height: 40,
+              borderRadius: 20,
+              backgroundColor: pressed ? "rgba(255,255,255,0.18)" : "rgba(255,255,255,0.10)",
+              alignItems: "center",
+              justifyContent: "center",
+            })}
           >
-            <Text style={{ color: c.darkForeground, fontFamily: "Inter_600SemiBold", fontSize: 14 }}>
-              Privacy
-            </Text>
+            <Ionicons name="shield-checkmark-outline" size={19} color={c.darkForeground} />
           </Pressable>
           <Pressable
             onPress={uitloggen}
-            style={{
-              paddingHorizontal: 14,
-              paddingVertical: 9,
-              borderRadius: 10,
-              backgroundColor: "rgba(255,255,255,0.12)",
-            }}
+            accessibilityLabel="Uitloggen"
+            style={({ pressed }) => ({
+              width: 40,
+              height: 40,
+              borderRadius: 20,
+              backgroundColor: pressed ? "rgba(255,255,255,0.18)" : "rgba(255,255,255,0.10)",
+              alignItems: "center",
+              justifyContent: "center",
+            })}
           >
-            <Text style={{ color: c.darkForeground, fontFamily: "Inter_600SemiBold", fontSize: 14 }}>
-              Uitloggen
-            </Text>
+            <Ionicons name="log-out-outline" size={19} color={c.darkForeground} />
           </Pressable>
         </View>
       </View>

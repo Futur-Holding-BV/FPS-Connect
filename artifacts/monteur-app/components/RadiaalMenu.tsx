@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
+import { LinearGradient } from "expo-linear-gradient";
 import React, { useEffect, useMemo, useState } from "react";
 import {
   type LayoutChangeEvent,
@@ -330,43 +331,94 @@ export function RadiaalMenu({ acties }: { acties: RadiaalActie[] }) {
               <Pressable
                 testID="radiaal-fps"
                 onPress={opMidden}
-                style={({ pressed }) => [
-                  {
+                style={({ pressed }) => ({
+                  width: MIDDEN_GROOTTE,
+                  height: MIDDEN_GROOTTE,
+                  borderRadius: MIDDEN_GROOTTE / 2,
+                  shadowColor: "#000",
+                  shadowOpacity: pressed ? 0.35 : 0.55,
+                  shadowRadius: pressed ? 14 : 28,
+                  shadowOffset: { width: 0, height: pressed ? 4 : 10 },
+                  elevation: pressed ? 8 : 18,
+                  transform: [{ scale: pressed ? 0.97 : 1 }],
+                })}
+              >
+                <LinearGradient
+                  colors={["#FF6530", "#E02800"]}
+                  start={{ x: 0.25, y: 0 }}
+                  end={{ x: 0.75, y: 1 }}
+                  style={{
                     width: MIDDEN_GROOTTE,
                     height: MIDDEN_GROOTTE,
                     borderRadius: MIDDEN_GROOTTE / 2,
-                    backgroundColor: c.primary,
                     alignItems: "center",
                     justifyContent: "center",
-                    shadowColor: c.primary,
-                    shadowOpacity: 0.45,
-                    shadowRadius: 18,
-                    shadowOffset: { width: 0, height: 8 },
-                    elevation: 10,
-                    borderWidth: 4,
-                    borderColor: "rgba(255,255,255,0.16)",
-                    opacity: pressed ? 0.92 : 1,
-                  },
-                ]}
-              >
-                <Text
-                  style={{
-                    color: "#FFFFFF",
-                    fontFamily: "Inter_700Bold",
-                    fontSize: 30,
-                    letterSpacing: 1,
+                    overflow: "hidden",
+                    borderWidth: 2.5,
+                    borderColor: "rgba(255,255,255,0.22)",
                   }}
                 >
-                  FPS
-                </Text>
-                <View style={{ height: 20, marginTop: 1, justifyContent: "center" }}>
-                  <Animated.View style={[{ position: "absolute", alignSelf: "center" }, chevronStijl]}>
-                    <Ionicons name="chevron-up" size={18} color="rgba(255,255,255,0.92)" />
-                  </Animated.View>
-                  <Animated.View style={[{ position: "absolute", alignSelf: "center" }, vinkStijl]}>
-                    <Ionicons name="checkmark" size={20} color="#FFFFFF" />
-                  </Animated.View>
-                </View>
+                  {/* Glow ring buitenkant */}
+                  <View
+                    style={{
+                      position: "absolute",
+                      top: -3,
+                      left: -3,
+                      right: -3,
+                      bottom: -3,
+                      borderRadius: (MIDDEN_GROOTTE + 6) / 2,
+                      borderWidth: 2,
+                      borderColor: "rgba(255,100,40,0.35)",
+                    }}
+                  />
+                  {/* Glans highlight bovenkant */}
+                  <View
+                    style={{
+                      position: "absolute",
+                      top: 6,
+                      left: 14,
+                      right: 14,
+                      height: MIDDEN_GROOTTE * 0.38,
+                      borderRadius: MIDDEN_GROOTTE * 0.4,
+                      backgroundColor: "rgba(255,255,255,0.28)",
+                      transform: [{ scaleY: 0.65 }],
+                    }}
+                  />
+                  {/* Subtiele donkere rand onderaan voor diepte */}
+                  <View
+                    style={{
+                      position: "absolute",
+                      bottom: 0,
+                      left: 0,
+                      right: 0,
+                      height: MIDDEN_GROOTTE * 0.3,
+                      borderBottomLeftRadius: MIDDEN_GROOTTE / 2,
+                      borderBottomRightRadius: MIDDEN_GROOTTE / 2,
+                      backgroundColor: "rgba(0,0,0,0.18)",
+                    }}
+                  />
+                  <Text
+                    style={{
+                      color: "#FFFFFF",
+                      fontFamily: "Inter_700Bold",
+                      fontSize: 30,
+                      letterSpacing: 1,
+                      textShadowColor: "rgba(0,0,0,0.3)",
+                      textShadowOffset: { width: 0, height: 1 },
+                      textShadowRadius: 3,
+                    }}
+                  >
+                    FPS
+                  </Text>
+                  <View style={{ height: 20, marginTop: 1, justifyContent: "center" }}>
+                    <Animated.View style={[{ position: "absolute", alignSelf: "center" }, chevronStijl]}>
+                      <Ionicons name="chevron-up" size={18} color="rgba(255,255,255,0.92)" />
+                    </Animated.View>
+                    <Animated.View style={[{ position: "absolute", alignSelf: "center" }, vinkStijl]}>
+                      <Ionicons name="checkmark" size={20} color="#FFFFFF" />
+                    </Animated.View>
+                  </View>
+                </LinearGradient>
               </Pressable>
             </View>
           </GestureDetector>
