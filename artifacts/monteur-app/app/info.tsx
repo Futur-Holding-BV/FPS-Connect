@@ -1,7 +1,7 @@
-import { useGetInfoInstellingen } from "@workspace/api-client-react";
+import { useGetInfoInstellingen, useWachtwoordWijzigen } from "@workspace/api-client-react";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
-import { Image, Linking, Platform, Pressable, ScrollView, Switch, Text, View } from "react-native";
+import { Image, KeyboardAvoidingView, Linking, Modal, Platform, Pressable, ScrollView, Switch, Text, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { bovenInset } from "@/components/ui";
@@ -66,6 +66,46 @@ export default function InfoScherm() {
   const { aantalWachtend, aantalMislukt: aantalMisluktSync, isSyncing, syncStatus, forceerSync, wisMislukte } = useSync();
   const [bezigBio, setBezigBio] = useState(false);
   const [bezigSync, setBezigSync] = useState(false);
+
+  const [wwOpen, setWwOpen] = useState(false);
+  const [wwHuidig, setWwHuidig] = useState("");
+  const [wwNieuw, setWwNieuw] = useState("");
+  const [wwBevestig, setWwBevestig] = useState("");
+  const [wwFout, setWwFout] = useState("");
+  const [wwGedaan, setWwGedaan] = useState(false);
+  const wachtwoordWijzigen = useWachtwoordWijzigen();
+
+  function resetWwModal() {
+    setWwHuidig("");
+    setWwNieuw("");
+    setWwBevestig("");
+    setWwFout("");
+    setWwGedaan(false);
+  }
+
+  async function slaWachtwoordOp() {
+    if (!wwHuidig || !wwNieuw || !wwBevestig) {
+      setWwFout("Vul alle velden in.");
+      return;
+    }
+    if (wwNieuw.length < 8) {
+      setWwFout("Nieuw wachtwoord moet minimaal 8 tekens bevatten.");
+      return;
+    }
+    if (wwNieuw !== wwBevestig) {
+      setWwFout("Nieuwe wachtwoorden komen niet overeen.");
+      return;
+    }
+    setWwFout("");
+    try {
+      await wachtwoordWijzigen.mutateAsync({
+        data: { huidig_wachtwoord: wwHuidig, nieuw_wachtwoord: wwNieuw },
+      });
+      setWwGedaan(true);
+    } catch {
+      setWwFout("Huidig wachtwoord is onjuist of er is een serverfout opgetreden.");
+    }
+  }
 
   async function syncNu() {
     if (bezigSync) return;
@@ -267,41 +307,65 @@ export default function InfoScherm() {
         </Kaart>
 
         <Kaart titel="Beveiliging">
-          <View
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              justifyContent: "space-between",
-              gap: 12,
-            }}
-          >
-            <View style={{ flex: 1 }}>
-              <Text style={{ color: c.foreground, fontSize: 15, fontFamily: "Inter_600SemiBold" }}>
-                Snel ontgrendelen
-              </Text>
-              <Text
-                style={{
-                  color: c.mutedForeground,
-                  fontSize: 13,
-                  lineHeight: 19,
-                  fontFamily: "Inter_400Regular",
-                  marginTop: 2,
-                }}
-              >
-                {Platform.OS === "web"
-                  ? "Snel ontgrendelen is alleen beschikbaar in de native app op een iOS- of Android-toestel."
-                  : biometrieBeschikbaar
-                  ? `Open de app voortaan met ${biometrieType} in plaats van opnieuw inloggen. Je sessie blijft veilig opgeslagen op dit toestel.`
-                  : "Stel eerst een vingerafdruk of gezichtsherkenning in op dit toestel om snel ontgrendelen te kunnen gebruiken."}
-              </Text>
+          <View style={{ gap: 14 }}>
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 12,
+              }}
+            >
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: c.foreground, fontSize: 15, fontFamily: "Inter_600SemiBold" }}>
+                  Snel ontgrendelen
+                </Text>
+                <Text
+                  style={{
+                    color: c.mutedForeground,
+                    fontSize: 13,
+                    lineHeight: 19,
+                    fontFamily: "Inter_400Regular",
+                    marginTop: 2,
+                  }}
+                >
+                  {Platform.OS === "web"
+                    ? "Snel ontgrendelen is alleen beschikbaar in de native app op een iOS- of Android-toestel."
+                    : biometrieBeschikbaar
+                    ? `Open de app voortaan met ${biometrieType} in plaats van opnieuw inloggen. Je sessie blijft veilig opgeslagen op dit toestel.`
+                    : "Stel eerst een vingerafdruk of gezichtsherkenning in op dit toestel om snel ontgrendelen te kunnen gebruiken."}
+                </Text>
+              </View>
+              <Switch
+                value={biometrieAan}
+                onValueChange={wisselBiometrie}
+                disabled={!biometrieBeschikbaar || bezigBio}
+                trackColor={{ false: c.border, true: c.primary }}
+                thumbColor="#fff"
+              />
             </View>
-            <Switch
-              value={biometrieAan}
-              onValueChange={wisselBiometrie}
-              disabled={!biometrieBeschikbaar || bezigBio}
-              trackColor={{ false: c.border, true: c.primary }}
-              thumbColor="#fff"
-            />
+
+            <View style={{ height: 1, backgroundColor: c.border }} />
+
+            <Pressable
+              onPress={() => { resetWwModal(); setWwOpen(true); }}
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "space-between",
+                paddingVertical: 2,
+              }}
+            >
+              <View>
+                <Text style={{ color: c.foreground, fontSize: 15, fontFamily: "Inter_600SemiBold" }}>
+                  Wachtwoord wijzigen
+                </Text>
+                <Text style={{ color: c.mutedForeground, fontSize: 13, fontFamily: "Inter_400Regular", marginTop: 2 }}>
+                  Stel een nieuw wachtwoord in voor uw account
+                </Text>
+              </View>
+              <Text style={{ color: c.primary, fontSize: 20, fontFamily: "Inter_400Regular" }}>›</Text>
+            </Pressable>
           </View>
         </Kaart>
 
@@ -493,6 +557,191 @@ export default function InfoScherm() {
           © {new Date().getFullYear()} {APP_LEVERANCIER} · v{APP_VERSIE}
         </Text>
       </ScrollView>
+
+      <Modal
+        visible={wwOpen}
+        transparent
+        animationType="slide"
+        onRequestClose={() => { setWwOpen(false); resetWwModal(); }}
+      >
+        <KeyboardAvoidingView
+          style={{ flex: 1, justifyContent: "flex-end" }}
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+        >
+          <Pressable
+            style={{ flex: 1 }}
+            onPress={() => { setWwOpen(false); resetWwModal(); }}
+          />
+          <View
+            style={{
+              backgroundColor: c.card,
+              borderTopLeftRadius: 20,
+              borderTopRightRadius: 20,
+              padding: 24,
+              paddingBottom: insets.bottom + 24,
+              borderTopWidth: 1,
+              borderTopColor: c.border,
+              gap: 16,
+            }}
+          >
+            <Text style={{ color: c.foreground, fontSize: 18, fontFamily: "Inter_700Bold" }}>
+              Wachtwoord wijzigen
+            </Text>
+
+            {wwGedaan ? (
+              <View style={{ gap: 14 }}>
+                <View
+                  style={{
+                    backgroundColor: "#f0fdf4",
+                    borderRadius: 10,
+                    padding: 14,
+                    borderWidth: 1,
+                    borderColor: "#bbf7d0",
+                  }}
+                >
+                  <Text style={{ color: "#15803d", fontSize: 14, fontFamily: "Inter_600SemiBold" }}>
+                    Wachtwoord succesvol gewijzigd
+                  </Text>
+                  <Text style={{ color: "#166534", fontSize: 13, fontFamily: "Inter_400Regular", marginTop: 4 }}>
+                    Gebruik uw nieuwe wachtwoord bij de volgende aanmelding.
+                  </Text>
+                </View>
+                <Pressable
+                  onPress={() => { setWwOpen(false); resetWwModal(); }}
+                  style={{
+                    backgroundColor: c.primary,
+                    borderRadius: 10,
+                    paddingVertical: 13,
+                    alignItems: "center",
+                  }}
+                >
+                  <Text style={{ color: "#fff", fontSize: 15, fontFamily: "Inter_600SemiBold" }}>
+                    Sluiten
+                  </Text>
+                </Pressable>
+              </View>
+            ) : (
+              <View style={{ gap: 14 }}>
+                <View style={{ gap: 6 }}>
+                  <Text style={{ color: c.mutedForeground, fontSize: 13, fontFamily: "Inter_600SemiBold" }}>
+                    Huidig wachtwoord
+                  </Text>
+                  <TextInput
+                    value={wwHuidig}
+                    onChangeText={setWwHuidig}
+                    secureTextEntry
+                    autoComplete="current-password"
+                    placeholder="Voer huidig wachtwoord in"
+                    placeholderTextColor={c.mutedForeground}
+                    style={{
+                      backgroundColor: c.accent,
+                      borderRadius: 8,
+                      borderWidth: 1,
+                      borderColor: c.border,
+                      paddingHorizontal: 12,
+                      paddingVertical: 11,
+                      color: c.foreground,
+                      fontSize: 15,
+                      fontFamily: "Inter_400Regular",
+                    }}
+                  />
+                </View>
+
+                <View style={{ gap: 6 }}>
+                  <Text style={{ color: c.mutedForeground, fontSize: 13, fontFamily: "Inter_600SemiBold" }}>
+                    Nieuw wachtwoord
+                  </Text>
+                  <TextInput
+                    value={wwNieuw}
+                    onChangeText={setWwNieuw}
+                    secureTextEntry
+                    autoComplete="new-password"
+                    placeholder="Minimaal 8 tekens"
+                    placeholderTextColor={c.mutedForeground}
+                    style={{
+                      backgroundColor: c.accent,
+                      borderRadius: 8,
+                      borderWidth: 1,
+                      borderColor: c.border,
+                      paddingHorizontal: 12,
+                      paddingVertical: 11,
+                      color: c.foreground,
+                      fontSize: 15,
+                      fontFamily: "Inter_400Regular",
+                    }}
+                  />
+                </View>
+
+                <View style={{ gap: 6 }}>
+                  <Text style={{ color: c.mutedForeground, fontSize: 13, fontFamily: "Inter_600SemiBold" }}>
+                    Bevestig nieuw wachtwoord
+                  </Text>
+                  <TextInput
+                    value={wwBevestig}
+                    onChangeText={setWwBevestig}
+                    secureTextEntry
+                    autoComplete="new-password"
+                    placeholder="Herhaal nieuw wachtwoord"
+                    placeholderTextColor={c.mutedForeground}
+                    style={{
+                      backgroundColor: c.accent,
+                      borderRadius: 8,
+                      borderWidth: 1,
+                      borderColor: c.border,
+                      paddingHorizontal: 12,
+                      paddingVertical: 11,
+                      color: c.foreground,
+                      fontSize: 15,
+                      fontFamily: "Inter_400Regular",
+                    }}
+                  />
+                </View>
+
+                {wwFout ? (
+                  <Text style={{ color: "#dc2626", fontSize: 13, fontFamily: "Inter_400Regular" }}>
+                    {wwFout}
+                  </Text>
+                ) : null}
+
+                <View style={{ flexDirection: "row", gap: 10 }}>
+                  <Pressable
+                    onPress={() => { setWwOpen(false); resetWwModal(); }}
+                    style={{
+                      flex: 1,
+                      backgroundColor: c.accent,
+                      borderRadius: 10,
+                      borderWidth: 1,
+                      borderColor: c.border,
+                      paddingVertical: 13,
+                      alignItems: "center",
+                    }}
+                  >
+                    <Text style={{ color: c.foreground, fontSize: 15, fontFamily: "Inter_600SemiBold" }}>
+                      Annuleren
+                    </Text>
+                  </Pressable>
+                  <Pressable
+                    onPress={slaWachtwoordOp}
+                    disabled={wachtwoordWijzigen.isPending}
+                    style={{
+                      flex: 2,
+                      backgroundColor: c.primary,
+                      borderRadius: 10,
+                      paddingVertical: 13,
+                      alignItems: "center",
+                      opacity: wachtwoordWijzigen.isPending ? 0.6 : 1,
+                    }}
+                  >
+                    <Text style={{ color: "#fff", fontSize: 15, fontFamily: "Inter_600SemiBold" }}>
+                      {wachtwoordWijzigen.isPending ? "Bezig..." : "Wachtwoord wijzigen"}
+                    </Text>
+                  </Pressable>
+                </View>
+              </View>
+            )}
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </View>
   );
 }

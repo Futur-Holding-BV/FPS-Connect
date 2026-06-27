@@ -165,25 +165,25 @@ export default function LmraPagina() {
         />
       </View>
       <View style={{ flex: 1 }}>
-        <Text style={{ color: c.text, fontWeight: "600", fontSize: 15 }}>
+        <Text style={{ color: c.foreground, fontWeight: "600", fontSize: 15 }}>
           {item.locatie_omschrijving}
         </Text>
-        <Text style={{ color: c.subtekst, fontSize: 13, marginTop: 2 }} numberOfLines={2}>
+        <Text style={{ color: c.mutedForeground, fontSize: 13, marginTop: 2 }} numberOfLines={2}>
           {item.werkzaamheden}
         </Text>
         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 6 }}>
           {item.medewerker_naam && (
-            <Text style={{ color: c.subtekst, fontSize: 12 }}>{item.medewerker_naam}</Text>
+            <Text style={{ color: c.mutedForeground, fontSize: 12 }}>{item.medewerker_naam}</Text>
           )}
           {item.project_naam && (
-            <View style={{ backgroundColor: c.kaartAchtergrond ?? c.muted, borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 }}>
-              <Text style={{ color: c.subtekst, fontSize: 11 }}>{item.project_naam}</Text>
+            <View style={{ backgroundColor: c.muted, borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 }}>
+              <Text style={{ color: c.mutedForeground, fontSize: 11 }}>{item.project_naam}</Text>
             </View>
           )}
-          <Text style={{ color: c.subtekst, fontSize: 12 }}>{datumLabel(item.aangemaakt_op)}</Text>
+          <Text style={{ color: c.mutedForeground, fontSize: 12 }}>{datumLabel(item.aangemaakt_op)}</Text>
         </View>
         {(item.risicos?.length ?? 0) > 0 && (
-          <Text style={{ color: c.subtekst, fontSize: 12, marginTop: 4 }}>
+          <Text style={{ color: c.mutedForeground, fontSize: 12, marginTop: 4 }}>
             {item.risicos!.length} risico{item.risicos!.length !== 1 ? "'s" : ""}
           </Text>
         )}
@@ -204,13 +204,13 @@ export default function LmraPagina() {
         justifyContent: "space-between",
       }}>
         <View>
-          <Text style={{ color: c.text, fontSize: 20, fontWeight: "700" }}>LMRA</Text>
-          <Text style={{ color: c.subtekst, fontSize: 13 }}>Laatste Minuut Risico Analyse</Text>
+          <Text style={{ color: c.foreground, fontSize: 20, fontWeight: "700" }}>LMRA</Text>
+          <Text style={{ color: c.mutedForeground, fontSize: 13 }}>Laatste Minuut Risico Analyse</Text>
         </View>
         <Pressable
           onPress={() => { setFormulier(leegForm()); setDialoogOpen(true); }}
           style={{
-            backgroundColor: c.oranje,
+            backgroundColor: c.primary,
             borderRadius: 22, width: 44, height: 44,
             alignItems: "center", justifyContent: "center",
           }}
@@ -221,17 +221,17 @@ export default function LmraPagina() {
 
       {isLoading ? (
         <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-          <ActivityIndicator color={c.oranje} size="large" />
+          <ActivityIndicator color={c.primary} size="large" />
         </View>
       ) : (lmras?.length ?? 0) === 0 ? (
         <View style={{ flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 32 }}>
-          <Ionicons name="clipboard-outline" size={48} color={c.subtekst} style={{ marginBottom: 12, opacity: 0.5 }} />
-          <Text style={{ color: c.subtekst, textAlign: "center" }}>
+          <Ionicons name="clipboard-outline" size={48} color={c.mutedForeground} style={{ marginBottom: 12, opacity: 0.5 }} />
+          <Text style={{ color: c.mutedForeground, textAlign: "center" }}>
             Nog geen LMRA's. Registreer de eerste voor aanvang van werkzaamheden.
           </Text>
           <Pressable
             onPress={() => { setFormulier(leegForm()); setDialoogOpen(true); }}
-            style={{ backgroundColor: c.oranje, borderRadius: 8, paddingHorizontal: 20, paddingVertical: 10, marginTop: 16 }}
+            style={{ backgroundColor: c.primary, borderRadius: 8, paddingHorizontal: 20, paddingVertical: 10, marginTop: 16 }}
           >
             <Text style={{ color: "white", fontWeight: "600" }}>Eerste LMRA registreren</Text>
           </Pressable>
@@ -260,24 +260,24 @@ export default function LmraPagina() {
             borderBottomWidth: 1,
             borderBottomColor: c.border,
           }}>
-            <Text style={{ color: c.text, fontSize: 18, fontWeight: "700" }}>Nieuwe LMRA</Text>
+            <Text style={{ color: c.foreground, fontSize: 18, fontWeight: "700" }}>Nieuwe LMRA</Text>
             <Pressable onPress={() => setDialoogOpen(false)}>
-              <Ionicons name="close" size={24} color={c.text} />
+              <Ionicons name="close" size={24} color={c.foreground} />
             </Pressable>
           </View>
           <ScrollView contentContainerStyle={{ padding: 16, gap: 16 }}>
             {/* Locatie */}
             <View>
-              <Text style={{ color: c.subtekst, fontSize: 13, marginBottom: 4 }}>
+              <Text style={{ color: c.mutedForeground, fontSize: 13, marginBottom: 4 }}>
                 Locatie / werkplek *
               </Text>
               <TextInput
                 value={formulier.locatieOmschrijving}
                 onChangeText={(v) => setFormulier((f) => ({ ...f, locatieOmschrijving: v }))}
                 placeholder="Beschrijf de locatie of het werkgebied"
-                placeholderTextColor={c.subtekst}
+                placeholderTextColor={c.mutedForeground}
                 style={{
-                  backgroundColor: c.card, color: c.text, borderRadius: 8,
+                  backgroundColor: c.card, color: c.foreground, borderRadius: 8,
                   borderWidth: 1, borderColor: c.border,
                   paddingHorizontal: 12, paddingVertical: 10, fontSize: 15,
                 }}
@@ -286,18 +286,18 @@ export default function LmraPagina() {
 
             {/* Werkzaamheden */}
             <View>
-              <Text style={{ color: c.subtekst, fontSize: 13, marginBottom: 4 }}>
+              <Text style={{ color: c.mutedForeground, fontSize: 13, marginBottom: 4 }}>
                 Werkzaamheden *
               </Text>
               <TextInput
                 value={formulier.werkzaamheden}
                 onChangeText={(v) => setFormulier((f) => ({ ...f, werkzaamheden: v }))}
                 placeholder="Wat ga je doen?"
-                placeholderTextColor={c.subtekst}
+                placeholderTextColor={c.mutedForeground}
                 multiline
                 numberOfLines={3}
                 style={{
-                  backgroundColor: c.card, color: c.text, borderRadius: 8,
+                  backgroundColor: c.card, color: c.foreground, borderRadius: 8,
                   borderWidth: 1, borderColor: c.border,
                   paddingHorizontal: 12, paddingVertical: 10, fontSize: 15,
                   minHeight: 80, textAlignVertical: "top",
@@ -307,14 +307,14 @@ export default function LmraPagina() {
 
             {/* Project */}
             <View>
-              <Text style={{ color: c.subtekst, fontSize: 13, marginBottom: 4 }}>Project (optioneel)</Text>
+              <Text style={{ color: c.mutedForeground, fontSize: 13, marginBottom: 4 }}>Project (optioneel)</Text>
               <TextInput
                 value={formulier.projectNaam}
                 onChangeText={(v) => setFormulier((f) => ({ ...f, projectNaam: v }))}
                 placeholder="Projectnaam of -nummer"
-                placeholderTextColor={c.subtekst}
+                placeholderTextColor={c.mutedForeground}
                 style={{
-                  backgroundColor: c.card, color: c.text, borderRadius: 8,
+                  backgroundColor: c.card, color: c.foreground, borderRadius: 8,
                   borderWidth: 1, borderColor: c.border,
                   paddingHorizontal: 12, paddingVertical: 10, fontSize: 15,
                 }}
@@ -323,17 +323,17 @@ export default function LmraPagina() {
 
             {/* Risico's */}
             <View>
-              <Text style={{ color: c.subtekst, fontSize: 13, marginBottom: 8 }}>Risico's</Text>
+              <Text style={{ color: c.mutedForeground, fontSize: 13, marginBottom: 8 }}>Risico's</Text>
               <View style={{ flexDirection: "row", gap: 8 }}>
                 <TextInput
                   value={risicoInput}
                   onChangeText={setRisicoInput}
                   placeholder="Beschrijf een risico"
-                  placeholderTextColor={c.subtekst}
+                  placeholderTextColor={c.mutedForeground}
                   onSubmitEditing={() => voegRisicoToe(risicoInput)}
                   returnKeyType="done"
                   style={{
-                    flex: 1, backgroundColor: c.card, color: c.text, borderRadius: 8,
+                    flex: 1, backgroundColor: c.card, color: c.foreground, borderRadius: 8,
                     borderWidth: 1, borderColor: c.border,
                     paddingHorizontal: 12, paddingVertical: 10, fontSize: 14,
                   }}
@@ -341,7 +341,7 @@ export default function LmraPagina() {
                 <Pressable
                   onPress={() => voegRisicoToe(risicoInput)}
                   style={{
-                    backgroundColor: c.oranje, borderRadius: 8, width: 44,
+                    backgroundColor: c.primary, borderRadius: 8, width: 44,
                     alignItems: "center", justifyContent: "center",
                   }}
                 >
@@ -354,9 +354,9 @@ export default function LmraPagina() {
                   backgroundColor: c.card, borderRadius: 8, paddingHorizontal: 10,
                   paddingVertical: 8, marginTop: 6,
                 }}>
-                  <Text style={{ color: c.text, fontSize: 14, flex: 1 }}>{r}</Text>
+                  <Text style={{ color: c.foreground, fontSize: 14, flex: 1 }}>{r}</Text>
                   <Pressable onPress={() => setFormulier((f) => ({ ...f, risicos: f.risicos.filter((_, j) => j !== i) }))}>
-                    <Ionicons name="trash-outline" size={16} color={c.subtekst} />
+                    <Ionicons name="trash-outline" size={16} color={c.mutedForeground} />
                   </Pressable>
                 </View>
               ))}
@@ -366,7 +366,7 @@ export default function LmraPagina() {
                     backgroundColor: c.card, borderRadius: 16, paddingHorizontal: 10,
                     paddingVertical: 5, borderWidth: 1, borderColor: c.border,
                   }}>
-                    <Text style={{ color: c.subtekst, fontSize: 12 }}>+ {s}</Text>
+                    <Text style={{ color: c.mutedForeground, fontSize: 12 }}>+ {s}</Text>
                   </Pressable>
                 ))}
               </View>
@@ -374,17 +374,17 @@ export default function LmraPagina() {
 
             {/* Maatregelen */}
             <View>
-              <Text style={{ color: c.subtekst, fontSize: 13, marginBottom: 8 }}>Beheersmaatregelen</Text>
+              <Text style={{ color: c.mutedForeground, fontSize: 13, marginBottom: 8 }}>Beheersmaatregelen</Text>
               <View style={{ flexDirection: "row", gap: 8 }}>
                 <TextInput
                   value={maatregelInput}
                   onChangeText={setMaatregelInput}
                   placeholder="Voeg een maatregel toe"
-                  placeholderTextColor={c.subtekst}
+                  placeholderTextColor={c.mutedForeground}
                   onSubmitEditing={() => voegMaatregelToe(maatregelInput)}
                   returnKeyType="done"
                   style={{
-                    flex: 1, backgroundColor: c.card, color: c.text, borderRadius: 8,
+                    flex: 1, backgroundColor: c.card, color: c.foreground, borderRadius: 8,
                     borderWidth: 1, borderColor: c.border,
                     paddingHorizontal: 12, paddingVertical: 10, fontSize: 14,
                   }}
@@ -392,7 +392,7 @@ export default function LmraPagina() {
                 <Pressable
                   onPress={() => voegMaatregelToe(maatregelInput)}
                   style={{
-                    backgroundColor: c.oranje, borderRadius: 8, width: 44,
+                    backgroundColor: c.primary, borderRadius: 8, width: 44,
                     alignItems: "center", justifyContent: "center",
                   }}
                 >
@@ -405,9 +405,9 @@ export default function LmraPagina() {
                   backgroundColor: c.card, borderRadius: 8, paddingHorizontal: 10,
                   paddingVertical: 8, marginTop: 6,
                 }}>
-                  <Text style={{ color: c.text, fontSize: 14, flex: 1 }}>{m}</Text>
+                  <Text style={{ color: c.foreground, fontSize: 14, flex: 1 }}>{m}</Text>
                   <Pressable onPress={() => setFormulier((f) => ({ ...f, maatregelen: f.maatregelen.filter((_, j) => j !== i) }))}>
-                    <Ionicons name="trash-outline" size={16} color={c.subtekst} />
+                    <Ionicons name="trash-outline" size={16} color={c.mutedForeground} />
                   </Pressable>
                 </View>
               ))}
@@ -417,7 +417,7 @@ export default function LmraPagina() {
                     backgroundColor: c.card, borderRadius: 16, paddingHorizontal: 10,
                     paddingVertical: 5, borderWidth: 1, borderColor: c.border,
                   }}>
-                    <Text style={{ color: c.subtekst, fontSize: 12 }}>+ {s}</Text>
+                    <Text style={{ color: c.mutedForeground, fontSize: 12 }}>+ {s}</Text>
                   </Pressable>
                 ))}
               </View>
@@ -430,8 +430,8 @@ export default function LmraPagina() {
               borderWidth: 1, borderColor: c.border,
             }}>
               <View style={{ flex: 1 }}>
-                <Text style={{ color: c.text, fontWeight: "600" }}>Veilig om te beginnen?</Text>
-                <Text style={{ color: c.subtekst, fontSize: 13, marginTop: 2 }}>
+                <Text style={{ color: c.foreground, fontWeight: "600" }}>Veilig om te beginnen?</Text>
+                <Text style={{ color: c.mutedForeground, fontSize: 13, marginTop: 2 }}>
                   Zijn alle risico's beheersbaar?
                 </Text>
               </View>
@@ -461,19 +461,19 @@ export default function LmraPagina() {
               style={{
                 flexDirection: "row", gap: 10, alignItems: "flex-start",
                 backgroundColor: c.card, borderRadius: 12, padding: 14,
-                borderWidth: 1, borderColor: formulier.bevestigd ? c.oranje : c.border,
+                borderWidth: 1, borderColor: formulier.bevestigd ? c.primary : c.border,
               }}
             >
               <View style={{
                 width: 22, height: 22, borderRadius: 6, borderWidth: 2,
-                borderColor: formulier.bevestigd ? c.oranje : c.subtekst,
-                backgroundColor: formulier.bevestigd ? c.oranje : "transparent",
+                borderColor: formulier.bevestigd ? c.primary : c.mutedForeground,
+                backgroundColor: formulier.bevestigd ? c.primary : "transparent",
                 alignItems: "center", justifyContent: "center",
                 marginTop: 1,
               }}>
                 {formulier.bevestigd && <Ionicons name="checkmark" size={14} color="white" />}
               </View>
-              <Text style={{ color: c.text, fontSize: 13, flex: 1, lineHeight: 18 }}>
+              <Text style={{ color: c.foreground, fontSize: 13, flex: 1, lineHeight: 18 }}>
                 Ik bevestig dat ik de werkplek heb gecontroleerd, de risico's heb
                 beoordeeld en de beheersmaatregelen heb doorgevoerd of gecommuniceerd.
               </Text>
@@ -483,7 +483,7 @@ export default function LmraPagina() {
               onPress={opslaan}
               disabled={isBezigOpslaan}
               style={{
-                backgroundColor: isBezigOpslaan ? c.subtekst : c.oranje,
+                backgroundColor: isBezigOpslaan ? c.mutedForeground : c.primary,
                 borderRadius: 10, padding: 14,
                 alignItems: "center", marginBottom: 16,
               }}
