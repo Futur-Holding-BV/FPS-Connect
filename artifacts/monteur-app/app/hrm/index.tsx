@@ -66,9 +66,9 @@ export default function HrmDashboard() {
   };
 
   const navKaarten = [
-    { titel: "Verlof", omschrijving: "Saldo bekijken en aanvragen", route: "/hrm/verlof" as const },
-    { titel: "Opleidingen", omschrijving: "Trainingen, certificaten en bekwaamheden", route: "/hrm/opleidingen" as const },
-    { titel: "Kennisbank", omschrijving: "Werkafspraken, handboeken en toolboxen", route: "/hrm/kennisbank" as const },
+    { titel: "Verlof", omschrijving: "Saldo bekijken en aanvragen", route: "/hrm/verlof" as const, testID: "hrm-verlof-navkaart" },
+    { titel: "Opleidingen", omschrijving: "Trainingen, certificaten en bekwaamheden", route: "/hrm/opleidingen" as const, testID: "hrm-opleidingen-navkaart" },
+    { titel: "Kennisbank", omschrijving: "Werkafspraken, handboeken en toolboxen", route: "/hrm/kennisbank" as const, testID: "hrm-kennisbank-navkaart" },
   ];
 
   return (
@@ -155,6 +155,7 @@ export default function HrmDashboard() {
           {navKaarten.map((k) => (
             <Pressable
               key={k.route}
+              testID={k.testID}
               onPress={() => router.push(k.route)}
               style={({ pressed }) => ({
                 backgroundColor: c.card,

@@ -316,8 +316,8 @@ test("FPS startmenu: login, waaier en doorlinken", async ({ page }) => {
       timeout: INHOUD_TIMEOUT,
     });
 
-    // "Verlof"-navigatiekaart op het HRM-dashboard.
-    await zichtbareTekst(page, "Verlof").first().click();
+    // "Verlof"-navigatiekaart op het HRM-dashboard (testID voor betrouwbaar klikken).
+    await page.getByTestId("hrm-verlof-navkaart").click();
     await expect(page).toHaveURL(/\/hrm\/verlof(\b|\?|$)/, { timeout: INHOUD_TIMEOUT });
 
     // Schermkop altijd aanwezig ongeacht de data.
@@ -357,7 +357,7 @@ test("FPS startmenu: login, waaier en doorlinken", async ({ page }) => {
       timeout: INHOUD_TIMEOUT,
     });
 
-    await zichtbareTekst(page, "Verlof").first().click();
+    await page.getByTestId("hrm-verlof-navkaart").click();
     await expect(page).toHaveURL(/\/hrm\/verlof(\b|\?|$)/, { timeout: INHOUD_TIMEOUT });
 
     // Wacht tot het verlofscherm volledig geladen is.
