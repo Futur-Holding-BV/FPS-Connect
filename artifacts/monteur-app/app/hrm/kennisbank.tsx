@@ -81,6 +81,21 @@ export default function KennisbankScherm() {
 
   const zichtbaar = (berichten ?? []).filter((b) => b.gepubliceerd && !b.gearchiveerd);
 
+  const vasteArtikelen = [
+    {
+      titel: "Brandwerende doorvoeringen",
+      inhoud: "Richtlijnen voor het brandwerend afdichten van doorvoeringen in scheidingsconstructies. Altijd de goedgekeurde producten en toepassingsvoorschriften uit de bibliotheek volgen.",
+    },
+    {
+      titel: "Veilig werken op locatie",
+      inhoud: "Verplichte veiligheidsmaatregelen bij werkzaamheden in gebouwen: persoonlijke beschermingsmiddelen, afbakening werkgebied, melding bij opdrachtgever en noodprocedures.",
+    },
+    {
+      titel: "Inspectie van branddeuren",
+      inhoud: "Controlepunten bij periodieke inspectie: sluitmechanisme, kieren, deurdrangers, afdichtingsstrippen en aanwezigheid van keuringslabel.",
+    },
+  ];
+
   return (
     <View style={{ flex: 1, backgroundColor: c.background }}>
       <View style={{ backgroundColor: c.dark, paddingTop: bovenInset(insets) + 12, paddingHorizontal: 20, paddingBottom: 18 }}>
@@ -105,17 +120,28 @@ export default function KennisbankScherm() {
           alignSelf: "center",
         }}
       >
-        {isLoading ? (
-          <ActivityIndicator size="large" color={c.primary} style={{ marginTop: 32 }} />
-        ) : zichtbaar.length === 0 ? (
-          <View style={{ alignItems: "center", paddingTop: 48, gap: 8 }}>
-            <Text style={{ color: c.mutedForeground, fontSize: 15, fontFamily: "Inter_600SemiBold" }}>
-              Nog geen berichten geplaatst
-            </Text>
-            <Text style={{ color: c.mutedForeground, fontSize: 13, fontFamily: "Inter_400Regular", textAlign: "center" }}>
-              Werkafspraken, veiligheidshandboeken en toolboxen verschijnen hier zodra ze zijn gepubliceerd.
-            </Text>
+        {/* Vaste kennisartikelen — altijd aanwezig, geen API-afhankelijkheid */}
+        <Text style={{ color: c.mutedForeground, fontSize: 11, fontFamily: "Inter_600SemiBold", textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 4 }}>
+          Vaste artikelen
+        </Text>
+        {vasteArtikelen.map((a) => (
+          <View
+            key={a.titel}
+            style={{ backgroundColor: c.card, borderRadius: c.radius, borderWidth: 1, borderColor: c.border, padding: 16 }}
+          >
+            <Text style={{ color: c.foreground, fontSize: 15, fontFamily: "Inter_700Bold", marginBottom: 6 }}>{a.titel}</Text>
+            <Text style={{ color: c.mutedForeground, fontSize: 13, fontFamily: "Inter_400Regular", lineHeight: 19 }}>{a.inhoud}</Text>
           </View>
+        ))}
+
+        {/* Toolbox berichten vanuit de beheeromgeving */}
+        {zichtbaar.length > 0 && (
+          <Text style={{ color: c.mutedForeground, fontSize: 11, fontFamily: "Inter_600SemiBold", textTransform: "uppercase", letterSpacing: 0.8, marginTop: 8, marginBottom: 4 }}>
+            Toolbox
+          </Text>
+        )}
+        {isLoading ? (
+          <ActivityIndicator size="large" color={c.primary} style={{ marginTop: 16 }} />
         ) : (
           zichtbaar.map((b) => <BerichtKaart key={b.id} bericht={b} c={c} />)
         )}
