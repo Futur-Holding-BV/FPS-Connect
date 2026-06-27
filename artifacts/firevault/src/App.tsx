@@ -92,6 +92,10 @@ import VeiligheidLmraPagina from "@/pages/veiligheid/lmra";
 import VeiligheidMeldingenPagina from "@/pages/veiligheid/meldingen";
 import SnagstreamArchiefPagina from "@/pages/snagstream/index";
 import SnagstreamDetailPagina from "@/pages/snagstream/detail";
+import FacturenPagina from "@/pages/facturen/index";
+import FactuurDetailPagina from "@/pages/facturen/detail";
+import KlaarVoorExportPagina from "@/pages/facturen/klaar-voor-export";
+import BoekhoudingBeheer from "@/pages/beheer/boekhouding";
 import BerichtenPagina from "@/pages/berichten/index";
 import ModulesCalculatie from "@/pages/modules/calculatie/index";
 import ModulesCalculatieNieuw from "@/pages/modules/calculatie/nieuw";
@@ -239,6 +243,9 @@ function ConnectPortal() {
         {/* ── Snagstream ── */}
         <Route path="/snagstream" component={SnagstreamArchiefPagina} />
         <Route path="/snagstream/:id" component={SnagstreamDetailPagina} />
+        <Route path="/facturen/klaar-voor-export" component={KlaarVoorExportPagina} />
+        <Route path="/facturen/:id" component={FactuurDetailPagina} />
+        <Route path="/facturen" component={FacturenPagina} />
 
         {/* ── Communicatie ── */}
         <Route path="/berichten" component={BerichtenPagina} />
@@ -293,6 +300,7 @@ function ConnectPortal() {
         <Route path="/beheer/spotconfiguratie" component={SpotconfiguratieBeheer} />
         <Route path="/beheer/mail" component={MailBeheer} />
         <Route path="/beheer/backup" component={BackupBeheer} />
+        <Route path="/beheer/boekhouding" component={BoekhoudingBeheer} />
         <Route path="/beheer/projectstatus" component={ProjectstatusPagina} />
         <Route path="/beheer/pwa-test" component={PwaTest} />
         <Route path="/beheer/privacy" component={BeheerPrivacy} />

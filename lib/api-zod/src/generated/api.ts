@@ -14056,3 +14056,489 @@ export const OvernemenSnagstreamSnagBody = zod.object({
 export const OvernemenSnagstreamSnagResponse = zod.void()
 
 
+/**
+ * @summary AccountView instellingen ophalen
+ */
+export const GetAccountviewInstellingenResponse = zod.object({
+  "id": zod.number().optional(),
+  "api_endpoint": zod.string().nullish(),
+  "administratiecode": zod.string().nullish(),
+  "api_gebruiker": zod.string().nullish(),
+  "testmodus": zod.boolean().optional(),
+  "dagboek_inkoop": zod.string().nullish(),
+  "dagboek_verkoop": zod.string().nullish(),
+  "grootboek_standaard": zod.string().nullish(),
+  "btw_codes": zod.record(zod.string(), zod.unknown()).nullish(),
+  "kostenplaatsen": zod.record(zod.string(), zod.unknown()).nullish(),
+  "debiteur_mapping": zod.record(zod.string(), zod.unknown()).nullish(),
+  "crediteur_mapping": zod.record(zod.string(), zod.unknown()).nullish(),
+  "export_actief": zod.boolean().optional(),
+  "bijgewerkt_op": zod.string().optional()
+})
+
+
+/**
+ * @summary AccountView instellingen bijwerken
+ */
+export const UpdateAccountviewInstellingenBody = zod.object({
+  "api_endpoint": zod.string().nullish(),
+  "administratiecode": zod.string().nullish(),
+  "api_gebruiker": zod.string().nullish(),
+  "api_key": zod.string().nullish(),
+  "testmodus": zod.boolean().optional(),
+  "dagboek_inkoop": zod.string().nullish(),
+  "dagboek_verkoop": zod.string().nullish(),
+  "grootboek_standaard": zod.string().nullish(),
+  "btw_codes": zod.record(zod.string(), zod.unknown()).nullish(),
+  "kostenplaatsen": zod.record(zod.string(), zod.unknown()).nullish(),
+  "debiteur_mapping": zod.record(zod.string(), zod.unknown()).nullish(),
+  "crediteur_mapping": zod.record(zod.string(), zod.unknown()).nullish(),
+  "export_actief": zod.boolean().optional()
+})
+
+export const UpdateAccountviewInstellingenResponse = zod.object({
+  "id": zod.number().optional(),
+  "api_endpoint": zod.string().nullish(),
+  "administratiecode": zod.string().nullish(),
+  "api_gebruiker": zod.string().nullish(),
+  "testmodus": zod.boolean().optional(),
+  "dagboek_inkoop": zod.string().nullish(),
+  "dagboek_verkoop": zod.string().nullish(),
+  "grootboek_standaard": zod.string().nullish(),
+  "btw_codes": zod.record(zod.string(), zod.unknown()).nullish(),
+  "kostenplaatsen": zod.record(zod.string(), zod.unknown()).nullish(),
+  "debiteur_mapping": zod.record(zod.string(), zod.unknown()).nullish(),
+  "crediteur_mapping": zod.record(zod.string(), zod.unknown()).nullish(),
+  "export_actief": zod.boolean().optional(),
+  "bijgewerkt_op": zod.string().optional()
+})
+
+
+/**
+ * @summary Facturen ophalen
+ */
+export const ListFacturenQueryParams = zod.object({
+  "status": zod.coerce.string().optional(),
+  "type": zod.coerce.string().optional(),
+  "klaar_voor_export": zod.coerce.boolean().optional()
+})
+
+export const ListFacturenResponseItem = zod.object({
+  "id": zod.number(),
+  "type": zod.string(),
+  "factuurnummer": zod.string().nullish(),
+  "factuurdatum": zod.string().nullish(),
+  "vervaldatum": zod.string().nullish(),
+  "omschrijving": zod.string().nullish(),
+  "relatienaam": zod.string().nullish(),
+  "relatie_code": zod.string().nullish(),
+  "relatie_adres": zod.string().nullish(),
+  "bedrag_excl_btw": zod.string().nullish(),
+  "btw_bedrag": zod.string().nullish(),
+  "bedrag_incl_btw": zod.string().nullish(),
+  "btw_code": zod.string().nullish(),
+  "grootboekrekening": zod.string().nullish(),
+  "kostenplaats": zod.string().nullish(),
+  "dagboek": zod.string().nullish(),
+  "project_code": zod.string().nullish(),
+  "pdf_url": zod.string().nullish(),
+  "bestandsnaam": zod.string().nullish(),
+  "gebouw_id": zod.number().nullish(),
+  "gebouw_naam": zod.string().nullish(),
+  "ai_metadata": zod.record(zod.string(), zod.unknown()).nullish(),
+  "status": zod.string(),
+  "geblokkeerd": zod.boolean(),
+  "blokkering_reden": zod.string().nullish(),
+  "geaccordeerd": zod.boolean(),
+  "geaccordeerd_op": zod.string().nullish(),
+  "geaccordeerd_door_naam": zod.string().nullish(),
+  "accountview_boeking_id": zod.string().nullish(),
+  "accountview_export_op": zod.string().nullish(),
+  "accountview_status": zod.string().nullish(),
+  "accountview_fout": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string().optional()
+})
+export const ListFacturenResponse = zod.array(ListFacturenResponseItem)
+
+
+/**
+ * @summary Factuur aanmaken
+ */
+export const CreateFactuurBody = zod.object({
+  "type": zod.string(),
+  "factuurnummer": zod.string().nullish(),
+  "factuurdatum": zod.string().nullish(),
+  "vervaldatum": zod.string().nullish(),
+  "omschrijving": zod.string().nullish(),
+  "relatienaam": zod.string().nullish(),
+  "relatie_code": zod.string().nullish(),
+  "bedrag_excl_btw": zod.string().nullish(),
+  "btw_bedrag": zod.string().nullish(),
+  "bedrag_incl_btw": zod.string().nullish(),
+  "btw_code": zod.string().nullish(),
+  "grootboekrekening": zod.string().nullish(),
+  "kostenplaats": zod.string().nullish(),
+  "project_code": zod.string().nullish(),
+  "pdf_url": zod.string().nullish(),
+  "bestandsnaam": zod.string().nullish(),
+  "gebouw_id": zod.number().nullish()
+})
+
+export const CreateFactuurResponse = zod.void()
+
+
+/**
+ * @summary Presigned upload URL voor factuur-PDF
+ */
+export const GetFactuurUploadUrlBody = zod.object({
+  "bestandsnaam": zod.string()
+})
+
+export const GetFactuurUploadUrlResponse = zod.object({
+  "upload_url": zod.string(),
+  "object_path": zod.string()
+})
+
+
+/**
+ * @summary Facturen klaar voor AccountView export
+ */
+export const ListFacturenKlaarVoorExportResponseItem = zod.object({
+  "id": zod.number(),
+  "type": zod.string(),
+  "factuurnummer": zod.string().nullish(),
+  "factuurdatum": zod.string().nullish(),
+  "vervaldatum": zod.string().nullish(),
+  "omschrijving": zod.string().nullish(),
+  "relatienaam": zod.string().nullish(),
+  "relatie_code": zod.string().nullish(),
+  "relatie_adres": zod.string().nullish(),
+  "bedrag_excl_btw": zod.string().nullish(),
+  "btw_bedrag": zod.string().nullish(),
+  "bedrag_incl_btw": zod.string().nullish(),
+  "btw_code": zod.string().nullish(),
+  "grootboekrekening": zod.string().nullish(),
+  "kostenplaats": zod.string().nullish(),
+  "dagboek": zod.string().nullish(),
+  "project_code": zod.string().nullish(),
+  "pdf_url": zod.string().nullish(),
+  "bestandsnaam": zod.string().nullish(),
+  "gebouw_id": zod.number().nullish(),
+  "gebouw_naam": zod.string().nullish(),
+  "ai_metadata": zod.record(zod.string(), zod.unknown()).nullish(),
+  "status": zod.string(),
+  "geblokkeerd": zod.boolean(),
+  "blokkering_reden": zod.string().nullish(),
+  "geaccordeerd": zod.boolean(),
+  "geaccordeerd_op": zod.string().nullish(),
+  "geaccordeerd_door_naam": zod.string().nullish(),
+  "accountview_boeking_id": zod.string().nullish(),
+  "accountview_export_op": zod.string().nullish(),
+  "accountview_status": zod.string().nullish(),
+  "accountview_fout": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string().optional()
+})
+export const ListFacturenKlaarVoorExportResponse = zod.array(ListFacturenKlaarVoorExportResponseItem)
+
+
+/**
+ * @summary Factuur ophalen
+ */
+export const GetFactuurParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetFactuurResponse = zod.object({
+  "id": zod.number(),
+  "type": zod.string(),
+  "factuurnummer": zod.string().nullish(),
+  "factuurdatum": zod.string().nullish(),
+  "vervaldatum": zod.string().nullish(),
+  "omschrijving": zod.string().nullish(),
+  "relatienaam": zod.string().nullish(),
+  "relatie_code": zod.string().nullish(),
+  "relatie_adres": zod.string().nullish(),
+  "bedrag_excl_btw": zod.string().nullish(),
+  "btw_bedrag": zod.string().nullish(),
+  "bedrag_incl_btw": zod.string().nullish(),
+  "btw_code": zod.string().nullish(),
+  "grootboekrekening": zod.string().nullish(),
+  "kostenplaats": zod.string().nullish(),
+  "dagboek": zod.string().nullish(),
+  "project_code": zod.string().nullish(),
+  "pdf_url": zod.string().nullish(),
+  "bestandsnaam": zod.string().nullish(),
+  "gebouw_id": zod.number().nullish(),
+  "gebouw_naam": zod.string().nullish(),
+  "ai_metadata": zod.record(zod.string(), zod.unknown()).nullish(),
+  "status": zod.string(),
+  "geblokkeerd": zod.boolean(),
+  "blokkering_reden": zod.string().nullish(),
+  "geaccordeerd": zod.boolean(),
+  "geaccordeerd_op": zod.string().nullish(),
+  "geaccordeerd_door_naam": zod.string().nullish(),
+  "accountview_boeking_id": zod.string().nullish(),
+  "accountview_export_op": zod.string().nullish(),
+  "accountview_status": zod.string().nullish(),
+  "accountview_fout": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string().optional()
+})
+
+
+/**
+ * @summary Factuur bijwerken
+ */
+export const UpdateFactuurParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateFactuurBody = zod.object({
+  "factuurnummer": zod.string().nullish(),
+  "factuurdatum": zod.string().nullish(),
+  "vervaldatum": zod.string().nullish(),
+  "omschrijving": zod.string().nullish(),
+  "relatienaam": zod.string().nullish(),
+  "relatie_code": zod.string().nullish(),
+  "relatie_adres": zod.string().nullish(),
+  "bedrag_excl_btw": zod.string().nullish(),
+  "btw_bedrag": zod.string().nullish(),
+  "bedrag_incl_btw": zod.string().nullish(),
+  "btw_code": zod.string().nullish(),
+  "grootboekrekening": zod.string().nullish(),
+  "kostenplaats": zod.string().nullish(),
+  "dagboek": zod.string().nullish(),
+  "project_code": zod.string().nullish(),
+  "gebouw_id": zod.number().nullish(),
+  "status": zod.string().nullish()
+})
+
+export const UpdateFactuurResponse = zod.object({
+  "id": zod.number(),
+  "type": zod.string(),
+  "factuurnummer": zod.string().nullish(),
+  "factuurdatum": zod.string().nullish(),
+  "vervaldatum": zod.string().nullish(),
+  "omschrijving": zod.string().nullish(),
+  "relatienaam": zod.string().nullish(),
+  "relatie_code": zod.string().nullish(),
+  "relatie_adres": zod.string().nullish(),
+  "bedrag_excl_btw": zod.string().nullish(),
+  "btw_bedrag": zod.string().nullish(),
+  "bedrag_incl_btw": zod.string().nullish(),
+  "btw_code": zod.string().nullish(),
+  "grootboekrekening": zod.string().nullish(),
+  "kostenplaats": zod.string().nullish(),
+  "dagboek": zod.string().nullish(),
+  "project_code": zod.string().nullish(),
+  "pdf_url": zod.string().nullish(),
+  "bestandsnaam": zod.string().nullish(),
+  "gebouw_id": zod.number().nullish(),
+  "gebouw_naam": zod.string().nullish(),
+  "ai_metadata": zod.record(zod.string(), zod.unknown()).nullish(),
+  "status": zod.string(),
+  "geblokkeerd": zod.boolean(),
+  "blokkering_reden": zod.string().nullish(),
+  "geaccordeerd": zod.boolean(),
+  "geaccordeerd_op": zod.string().nullish(),
+  "geaccordeerd_door_naam": zod.string().nullish(),
+  "accountview_boeking_id": zod.string().nullish(),
+  "accountview_export_op": zod.string().nullish(),
+  "accountview_status": zod.string().nullish(),
+  "accountview_fout": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string().optional()
+})
+
+
+/**
+ * @summary Factuur verwijderen
+ */
+export const DeleteFactuurParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteFactuurResponse = zod.void()
+
+
+/**
+ * @summary AI leest financiële gegevens uit de factuur-PDF
+ */
+export const AiUitlezenFactuurParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const AiUitlezenFactuurResponse = zod.object({
+  "id": zod.number(),
+  "type": zod.string(),
+  "factuurnummer": zod.string().nullish(),
+  "factuurdatum": zod.string().nullish(),
+  "vervaldatum": zod.string().nullish(),
+  "omschrijving": zod.string().nullish(),
+  "relatienaam": zod.string().nullish(),
+  "relatie_code": zod.string().nullish(),
+  "relatie_adres": zod.string().nullish(),
+  "bedrag_excl_btw": zod.string().nullish(),
+  "btw_bedrag": zod.string().nullish(),
+  "bedrag_incl_btw": zod.string().nullish(),
+  "btw_code": zod.string().nullish(),
+  "grootboekrekening": zod.string().nullish(),
+  "kostenplaats": zod.string().nullish(),
+  "dagboek": zod.string().nullish(),
+  "project_code": zod.string().nullish(),
+  "pdf_url": zod.string().nullish(),
+  "bestandsnaam": zod.string().nullish(),
+  "gebouw_id": zod.number().nullish(),
+  "gebouw_naam": zod.string().nullish(),
+  "ai_metadata": zod.record(zod.string(), zod.unknown()).nullish(),
+  "status": zod.string(),
+  "geblokkeerd": zod.boolean(),
+  "blokkering_reden": zod.string().nullish(),
+  "geaccordeerd": zod.boolean(),
+  "geaccordeerd_op": zod.string().nullish(),
+  "geaccordeerd_door_naam": zod.string().nullish(),
+  "accountview_boeking_id": zod.string().nullish(),
+  "accountview_export_op": zod.string().nullish(),
+  "accountview_status": zod.string().nullish(),
+  "accountview_fout": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string().optional()
+})
+
+
+/**
+ * @summary Factuur accorderen voor boeking
+ */
+export const AccorderenFactuurParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const AccorderenFactuurResponse = zod.object({
+  "id": zod.number(),
+  "type": zod.string(),
+  "factuurnummer": zod.string().nullish(),
+  "factuurdatum": zod.string().nullish(),
+  "vervaldatum": zod.string().nullish(),
+  "omschrijving": zod.string().nullish(),
+  "relatienaam": zod.string().nullish(),
+  "relatie_code": zod.string().nullish(),
+  "relatie_adres": zod.string().nullish(),
+  "bedrag_excl_btw": zod.string().nullish(),
+  "btw_bedrag": zod.string().nullish(),
+  "bedrag_incl_btw": zod.string().nullish(),
+  "btw_code": zod.string().nullish(),
+  "grootboekrekening": zod.string().nullish(),
+  "kostenplaats": zod.string().nullish(),
+  "dagboek": zod.string().nullish(),
+  "project_code": zod.string().nullish(),
+  "pdf_url": zod.string().nullish(),
+  "bestandsnaam": zod.string().nullish(),
+  "gebouw_id": zod.number().nullish(),
+  "gebouw_naam": zod.string().nullish(),
+  "ai_metadata": zod.record(zod.string(), zod.unknown()).nullish(),
+  "status": zod.string(),
+  "geblokkeerd": zod.boolean(),
+  "blokkering_reden": zod.string().nullish(),
+  "geaccordeerd": zod.boolean(),
+  "geaccordeerd_op": zod.string().nullish(),
+  "geaccordeerd_door_naam": zod.string().nullish(),
+  "accountview_boeking_id": zod.string().nullish(),
+  "accountview_export_op": zod.string().nullish(),
+  "accountview_status": zod.string().nullish(),
+  "accountview_fout": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string().optional()
+})
+
+
+/**
+ * @summary Factuur blokkeren of deblokkeren
+ */
+export const BlokkerenFactuurParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const BlokkerenFactuurBody = zod.object({
+  "geblokkeerd": zod.boolean(),
+  "reden": zod.string().nullish()
+})
+
+export const BlokkerenFactuurResponse = zod.object({
+  "id": zod.number(),
+  "type": zod.string(),
+  "factuurnummer": zod.string().nullish(),
+  "factuurdatum": zod.string().nullish(),
+  "vervaldatum": zod.string().nullish(),
+  "omschrijving": zod.string().nullish(),
+  "relatienaam": zod.string().nullish(),
+  "relatie_code": zod.string().nullish(),
+  "relatie_adres": zod.string().nullish(),
+  "bedrag_excl_btw": zod.string().nullish(),
+  "btw_bedrag": zod.string().nullish(),
+  "bedrag_incl_btw": zod.string().nullish(),
+  "btw_code": zod.string().nullish(),
+  "grootboekrekening": zod.string().nullish(),
+  "kostenplaats": zod.string().nullish(),
+  "dagboek": zod.string().nullish(),
+  "project_code": zod.string().nullish(),
+  "pdf_url": zod.string().nullish(),
+  "bestandsnaam": zod.string().nullish(),
+  "gebouw_id": zod.number().nullish(),
+  "gebouw_naam": zod.string().nullish(),
+  "ai_metadata": zod.record(zod.string(), zod.unknown()).nullish(),
+  "status": zod.string(),
+  "geblokkeerd": zod.boolean(),
+  "blokkering_reden": zod.string().nullish(),
+  "geaccordeerd": zod.boolean(),
+  "geaccordeerd_op": zod.string().nullish(),
+  "geaccordeerd_door_naam": zod.string().nullish(),
+  "accountview_boeking_id": zod.string().nullish(),
+  "accountview_export_op": zod.string().nullish(),
+  "accountview_status": zod.string().nullish(),
+  "accountview_fout": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string().optional()
+})
+
+
+/**
+ * @summary Factuur exporteren naar AccountView
+ */
+export const ExportAccountviewFactuurParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ExportAccountviewFactuurResponse = zod.object({
+  "status": zod.string(),
+  "factuur_id": zod.number(),
+  "boeking_id": zod.string().nullish(),
+  "foutmelding": zod.string().nullish(),
+  "testmodus": zod.boolean().optional()
+})
+
+
+/**
+ * @summary Export-logs van een factuur ophalen
+ */
+export const ListFactuurExportLogsParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ListFactuurExportLogsResponseItem = zod.object({
+  "id": zod.number(),
+  "factuur_id": zod.number(),
+  "gebruiker_id": zod.number().nullish(),
+  "export_op": zod.string(),
+  "testmodus": zod.boolean(),
+  "verzonden_payload": zod.record(zod.string(), zod.unknown()).nullish(),
+  "accountview_response": zod.record(zod.string(), zod.unknown()).nullish(),
+  "http_status": zod.number().nullish(),
+  "status": zod.string(),
+  "accountview_boeking_id": zod.string().nullish(),
+  "foutmelding": zod.string().nullish()
+})
+export const ListFactuurExportLogsResponse = zod.array(ListFactuurExportLogsResponseItem)
+
+

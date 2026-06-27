@@ -5799,6 +5799,169 @@ export interface SnagstreamUploadUrlResponse {
   object_path: string;
 }
 
+export type AccountviewInstellingenBtwCodes = { [key: string]: unknown } | null;
+
+export type AccountviewInstellingenKostenplaatsen = { [key: string]: unknown } | null;
+
+export type AccountviewInstellingenDebiteurMapping = { [key: string]: unknown } | null;
+
+export type AccountviewInstellingenCrediteurMapping = { [key: string]: unknown } | null;
+
+export interface AccountviewInstellingen {
+  id?: number;
+  api_endpoint?: string | null;
+  administratiecode?: string | null;
+  api_gebruiker?: string | null;
+  testmodus?: boolean;
+  dagboek_inkoop?: string | null;
+  dagboek_verkoop?: string | null;
+  grootboek_standaard?: string | null;
+  btw_codes?: AccountviewInstellingenBtwCodes;
+  kostenplaatsen?: AccountviewInstellingenKostenplaatsen;
+  debiteur_mapping?: AccountviewInstellingenDebiteurMapping;
+  crediteur_mapping?: AccountviewInstellingenCrediteurMapping;
+  export_actief?: boolean;
+  bijgewerkt_op?: string;
+}
+
+export type AccountviewInstellingenInputBtwCodes = { [key: string]: unknown } | null;
+
+export type AccountviewInstellingenInputKostenplaatsen = { [key: string]: unknown } | null;
+
+export type AccountviewInstellingenInputDebiteurMapping = { [key: string]: unknown } | null;
+
+export type AccountviewInstellingenInputCrediteurMapping = { [key: string]: unknown } | null;
+
+export interface AccountviewInstellingenInput {
+  api_endpoint?: string | null;
+  administratiecode?: string | null;
+  api_gebruiker?: string | null;
+  api_key?: string | null;
+  testmodus?: boolean;
+  dagboek_inkoop?: string | null;
+  dagboek_verkoop?: string | null;
+  grootboek_standaard?: string | null;
+  btw_codes?: AccountviewInstellingenInputBtwCodes;
+  kostenplaatsen?: AccountviewInstellingenInputKostenplaatsen;
+  debiteur_mapping?: AccountviewInstellingenInputDebiteurMapping;
+  crediteur_mapping?: AccountviewInstellingenInputCrediteurMapping;
+  export_actief?: boolean;
+}
+
+export type FactuurAiMetadata = { [key: string]: unknown } | null;
+
+export interface Factuur {
+  id: number;
+  type: string;
+  factuurnummer?: string | null;
+  factuurdatum?: string | null;
+  vervaldatum?: string | null;
+  omschrijving?: string | null;
+  relatienaam?: string | null;
+  relatie_code?: string | null;
+  relatie_adres?: string | null;
+  bedrag_excl_btw?: string | null;
+  btw_bedrag?: string | null;
+  bedrag_incl_btw?: string | null;
+  btw_code?: string | null;
+  grootboekrekening?: string | null;
+  kostenplaats?: string | null;
+  dagboek?: string | null;
+  project_code?: string | null;
+  pdf_url?: string | null;
+  bestandsnaam?: string | null;
+  gebouw_id?: number | null;
+  gebouw_naam?: string | null;
+  ai_metadata?: FactuurAiMetadata;
+  status: string;
+  geblokkeerd: boolean;
+  blokkering_reden?: string | null;
+  geaccordeerd: boolean;
+  geaccordeerd_op?: string | null;
+  geaccordeerd_door_naam?: string | null;
+  accountview_boeking_id?: string | null;
+  accountview_export_op?: string | null;
+  accountview_status?: string | null;
+  accountview_fout?: string | null;
+  aangemaakt_op: string;
+  bijgewerkt_op?: string;
+}
+
+export interface FactuurInput {
+  type: string;
+  factuurnummer?: string | null;
+  factuurdatum?: string | null;
+  vervaldatum?: string | null;
+  omschrijving?: string | null;
+  relatienaam?: string | null;
+  relatie_code?: string | null;
+  bedrag_excl_btw?: string | null;
+  btw_bedrag?: string | null;
+  bedrag_incl_btw?: string | null;
+  btw_code?: string | null;
+  grootboekrekening?: string | null;
+  kostenplaats?: string | null;
+  project_code?: string | null;
+  pdf_url?: string | null;
+  bestandsnaam?: string | null;
+  gebouw_id?: number | null;
+}
+
+export interface FactuurUpdateInput {
+  factuurnummer?: string | null;
+  factuurdatum?: string | null;
+  vervaldatum?: string | null;
+  omschrijving?: string | null;
+  relatienaam?: string | null;
+  relatie_code?: string | null;
+  relatie_adres?: string | null;
+  bedrag_excl_btw?: string | null;
+  btw_bedrag?: string | null;
+  bedrag_incl_btw?: string | null;
+  btw_code?: string | null;
+  grootboekrekening?: string | null;
+  kostenplaats?: string | null;
+  dagboek?: string | null;
+  project_code?: string | null;
+  gebouw_id?: number | null;
+  status?: string | null;
+}
+
+export interface FactuurUploadUrlInput {
+  bestandsnaam: string;
+}
+
+export interface FactuurBlokkerenInput {
+  geblokkeerd: boolean;
+  reden?: string | null;
+}
+
+export interface AccountviewExportResultaat {
+  status: string;
+  factuur_id: number;
+  boeking_id?: string | null;
+  foutmelding?: string | null;
+  testmodus?: boolean;
+}
+
+export type AccountviewExportLogVerzondenPayload = { [key: string]: unknown } | null;
+
+export type AccountviewExportLogAccountviewResponse = { [key: string]: unknown } | null;
+
+export interface AccountviewExportLog {
+  id: number;
+  factuur_id: number;
+  gebruiker_id?: number | null;
+  export_op: string;
+  testmodus: boolean;
+  verzonden_payload?: AccountviewExportLogVerzondenPayload;
+  accountview_response?: AccountviewExportLogAccountviewResponse;
+  http_status?: number | null;
+  status: string;
+  accountview_boeking_id?: string | null;
+  foutmelding?: string | null;
+}
+
 export type GetRecenteActiviteitParams = {
 limit?: number;
 };
@@ -6168,5 +6331,16 @@ gebouw_id?: number;
 
 export type OvernemenSnagstreamSnag201 = {
   voorziening_id: number;
+};
+
+export type ListFacturenParams = {
+status?: string;
+type?: string;
+klaar_voor_export?: boolean;
+};
+
+export type GetFactuurUploadUrl200 = {
+  upload_url: string;
+  object_path: string;
 };
 

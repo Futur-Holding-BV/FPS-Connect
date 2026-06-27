@@ -92,6 +92,11 @@ export const MODULES = [
     label: "Gereedschappen",
     omschrijving: "Machines, gereedschappen, bruikleenovereenkomsten en meldingen",
   },
+  {
+    id: "financieel",
+    label: "Financieel & Facturatie",
+    omschrijving: "Factuurverwerking, accordering en AccountView-export",
+  },
 ] as const;
 
 export type ModuleId = (typeof MODULES)[number]["id"];

@@ -30,7 +30,7 @@ import type { S3Client } from "@aws-sdk/client-s3";
 // ─── Re-exports ───────────────────────────────────────────────────────────────
 
 export { ObjectNotFoundError, type StorageFile };
-export type BestandType = "foto" | "rapport" | "tekening" | "bijlage" | "algemeen";
+export type BestandType = "foto" | "rapport" | "tekening" | "bijlage" | "algemeen" | "factuur";
 
 // ─── Backend-detectie ─────────────────────────────────────────────────────────
 

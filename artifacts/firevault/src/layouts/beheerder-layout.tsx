@@ -16,7 +16,7 @@ import {
   Trophy, HardDrive, ClipboardList, Smartphone, Plus, Hammer, PackageCheck,
   BookOpen, HardDriveUpload, CalendarCheck2, Settings2, ArchiveRestore,
   Inbox, Building2, Target, Handshake, Newspaper, CalendarRange, KeyRound,
-  ClipboardCheck, AlertTriangle, FileArchive,
+  ClipboardCheck, AlertTriangle, FileArchive, Receipt, ArrowUpRight,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { GebruikerMenu } from "@/components/gebruiker-menu";
@@ -53,6 +53,7 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
   const toonOnderhoud     = heeftNiveau("gebouwen", 1);
   const toonToolboxen     = heeftNiveau("toolbox", 1);
   const toonSnagstream    = heeftNiveau("bibliotheek", 1);
+  const toonFinancieel    = heeftNiveau("financieel", 1);
 
   const heeftOne = isHoofdbeheerder;
   const aantalOmgevingen = 1 + (heeftOne ? 1 : 0);
@@ -501,6 +502,39 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
                 </SidebarGroup>
               )}
 
+              {/* Financieel */}
+              {toonFinancieel && (
+                <SidebarGroup>
+                  <SidebarGroupLabel>Financieel</SidebarGroupLabel>
+                  <SidebarGroupContent>
+                    <SidebarMenu>
+                      <SidebarMenuItem>
+                        <SidebarMenuButton
+                          asChild
+                          isActive={location === "/facturen" || (location.startsWith("/facturen/") && location !== "/facturen/klaar-voor-export")}
+                        >
+                          <Link href="/facturen">
+                            <Receipt />
+                            <span>Factuurverwerking</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                      <SidebarMenuItem>
+                        <SidebarMenuButton
+                          asChild
+                          isActive={location === "/facturen/klaar-voor-export"}
+                        >
+                          <Link href="/facturen/klaar-voor-export">
+                            <ArrowUpRight />
+                            <span>Klaar voor export</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    </SidebarMenu>
+                  </SidebarGroupContent>
+                </SidebarGroup>
+              )}
+
               {/* Snagstream */}
               {toonSnagstream && (
                 <SidebarGroup>
@@ -801,6 +835,14 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
                               <Link href="/beheer/backup">
                                 <HardDrive />
                                 <span>Back-up &amp; Herstel</span>
+                              </Link>
+                            </SidebarMenuButton>
+                          </SidebarMenuItem>
+                          <SidebarMenuItem>
+                            <SidebarMenuButton asChild isActive={location === "/beheer/boekhouding"}>
+                              <Link href="/beheer/boekhouding">
+                                <Receipt />
+                                <span>AccountView-koppeling</span>
                               </Link>
                             </SidebarMenuButton>
                           </SidebarMenuItem>

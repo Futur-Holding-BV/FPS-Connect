@@ -11376,6 +11376,280 @@ paths:
                     type: integer
 
 
+  /instellingen/accountview:
+    get:
+      operationId: getAccountviewInstellingen
+      summary: AccountView instellingen ophalen
+      tags: [Instellingen]
+      responses:
+        "200":
+          description: Instellingen
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccountviewInstellingen"
+    patch:
+      operationId: updateAccountviewInstellingen
+      summary: AccountView instellingen bijwerken
+      tags: [Instellingen]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AccountviewInstellingenInput"
+      responses:
+        "200":
+          description: Bijgewerkt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccountviewInstellingen"
+
+  /facturen:
+    get:
+      operationId: listFacturen
+      summary: Facturen ophalen
+      tags: [Facturen]
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: type
+          in: query
+          schema:
+            type: string
+        - name: klaar_voor_export
+          in: query
+          schema:
+            type: boolean
+      responses:
+        "200":
+          description: Lijst van facturen
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Factuur"
+    post:
+      operationId: createFactuur
+      summary: Factuur aanmaken
+      tags: [Facturen]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FactuurInput"
+      responses:
+        "201":
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Factuur"
+
+  /facturen/upload-url:
+    post:
+      operationId: getFactuurUploadUrl
+      summary: Presigned upload URL voor factuur-PDF
+      tags: [Facturen]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FactuurUploadUrlInput"
+      responses:
+        "200":
+          description: Upload URL
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [upload_url, object_path]
+                properties:
+                  upload_url:
+                    type: string
+                  object_path:
+                    type: string
+
+  /facturen/klaar-voor-export:
+    get:
+      operationId: listFacturenKlaarVoorExport
+      summary: Facturen klaar voor AccountView export
+      tags: [Facturen]
+      responses:
+        "200":
+          description: Lijst van exportklare facturen
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Factuur"
+
+  /facturen/{id}:
+    get:
+      operationId: getFactuur
+      summary: Factuur ophalen
+      tags: [Facturen]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Factuur
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Factuur"
+    patch:
+      operationId: updateFactuur
+      summary: Factuur bijwerken
+      tags: [Facturen]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FactuurUpdateInput"
+      responses:
+        "200":
+          description: Bijgewerkt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Factuur"
+    delete:
+      operationId: deleteFactuur
+      summary: Factuur verwijderen
+      tags: [Facturen]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Verwijderd
+
+  /facturen/{id}/ai-uitlezen:
+    post:
+      operationId: aiUitlezenFactuur
+      summary: AI leest financiële gegevens uit de factuur-PDF
+      tags: [Facturen]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Bijgewerkte factuur
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Factuur"
+
+  /facturen/{id}/accorderen:
+    post:
+      operationId: accorderenFactuur
+      summary: Factuur accorderen voor boeking
+      tags: [Facturen]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Geaccordeerde factuur
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Factuur"
+
+  /facturen/{id}/blokkeren:
+    post:
+      operationId: blokkerenFactuur
+      summary: Factuur blokkeren of deblokkeren
+      tags: [Facturen]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FactuurBlokkerenInput"
+      responses:
+        "200":
+          description: Bijgewerkte factuur
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Factuur"
+
+  /facturen/{id}/export-accountview:
+    post:
+      operationId: exportAccountviewFactuur
+      summary: Factuur exporteren naar AccountView
+      tags: [Facturen]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Exportresultaat
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccountviewExportResultaat"
+
+  /facturen/{id}/export-logs:
+    get:
+      operationId: listFactuurExportLogs
+      summary: Export-logs van een factuur ophalen
+      tags: [Facturen]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Export logs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AccountviewExportLog"
+
+
 components:
   schemas:
     MailStatus:
@@ -20641,4 +20915,375 @@ components:
           type: string
         object_path:
           type: string
+
+    AccountviewInstellingen:
+      type: object
+      properties:
+        id:
+          type: integer
+        api_endpoint:
+          type: string
+          nullable: true
+        administratiecode:
+          type: string
+          nullable: true
+        api_gebruiker:
+          type: string
+          nullable: true
+        testmodus:
+          type: boolean
+        dagboek_inkoop:
+          type: string
+          nullable: true
+        dagboek_verkoop:
+          type: string
+          nullable: true
+        grootboek_standaard:
+          type: string
+          nullable: true
+        btw_codes:
+          type: object
+          additionalProperties: true
+          nullable: true
+        kostenplaatsen:
+          type: object
+          additionalProperties: true
+          nullable: true
+        debiteur_mapping:
+          type: object
+          additionalProperties: true
+          nullable: true
+        crediteur_mapping:
+          type: object
+          additionalProperties: true
+          nullable: true
+        export_actief:
+          type: boolean
+        bijgewerkt_op:
+          type: string
+
+    AccountviewInstellingenInput:
+      type: object
+      properties:
+        api_endpoint:
+          type: string
+          nullable: true
+        administratiecode:
+          type: string
+          nullable: true
+        api_gebruiker:
+          type: string
+          nullable: true
+        api_key:
+          type: string
+          nullable: true
+        testmodus:
+          type: boolean
+        dagboek_inkoop:
+          type: string
+          nullable: true
+        dagboek_verkoop:
+          type: string
+          nullable: true
+        grootboek_standaard:
+          type: string
+          nullable: true
+        btw_codes:
+          type: object
+          additionalProperties: true
+          nullable: true
+        kostenplaatsen:
+          type: object
+          additionalProperties: true
+          nullable: true
+        debiteur_mapping:
+          type: object
+          additionalProperties: true
+          nullable: true
+        crediteur_mapping:
+          type: object
+          additionalProperties: true
+          nullable: true
+        export_actief:
+          type: boolean
+
+    Factuur:
+      type: object
+      required: [id, type, status, geblokkeerd, geaccordeerd, aangemaakt_op]
+      properties:
+        id:
+          type: integer
+        type:
+          type: string
+        factuurnummer:
+          type: string
+          nullable: true
+        factuurdatum:
+          type: string
+          nullable: true
+        vervaldatum:
+          type: string
+          nullable: true
+        omschrijving:
+          type: string
+          nullable: true
+        relatienaam:
+          type: string
+          nullable: true
+        relatie_code:
+          type: string
+          nullable: true
+        relatie_adres:
+          type: string
+          nullable: true
+        bedrag_excl_btw:
+          type: string
+          nullable: true
+        btw_bedrag:
+          type: string
+          nullable: true
+        bedrag_incl_btw:
+          type: string
+          nullable: true
+        btw_code:
+          type: string
+          nullable: true
+        grootboekrekening:
+          type: string
+          nullable: true
+        kostenplaats:
+          type: string
+          nullable: true
+        dagboek:
+          type: string
+          nullable: true
+        project_code:
+          type: string
+          nullable: true
+        pdf_url:
+          type: string
+          nullable: true
+        bestandsnaam:
+          type: string
+          nullable: true
+        gebouw_id:
+          type: integer
+          nullable: true
+        gebouw_naam:
+          type: string
+          nullable: true
+        ai_metadata:
+          type: object
+          additionalProperties: true
+          nullable: true
+        status:
+          type: string
+        geblokkeerd:
+          type: boolean
+        blokkering_reden:
+          type: string
+          nullable: true
+        geaccordeerd:
+          type: boolean
+        geaccordeerd_op:
+          type: string
+          nullable: true
+        geaccordeerd_door_naam:
+          type: string
+          nullable: true
+        accountview_boeking_id:
+          type: string
+          nullable: true
+        accountview_export_op:
+          type: string
+          nullable: true
+        accountview_status:
+          type: string
+          nullable: true
+        accountview_fout:
+          type: string
+          nullable: true
+        aangemaakt_op:
+          type: string
+        bijgewerkt_op:
+          type: string
+
+    FactuurInput:
+      type: object
+      required: [type]
+      properties:
+        type:
+          type: string
+        factuurnummer:
+          type: string
+          nullable: true
+        factuurdatum:
+          type: string
+          nullable: true
+        vervaldatum:
+          type: string
+          nullable: true
+        omschrijving:
+          type: string
+          nullable: true
+        relatienaam:
+          type: string
+          nullable: true
+        relatie_code:
+          type: string
+          nullable: true
+        bedrag_excl_btw:
+          type: string
+          nullable: true
+        btw_bedrag:
+          type: string
+          nullable: true
+        bedrag_incl_btw:
+          type: string
+          nullable: true
+        btw_code:
+          type: string
+          nullable: true
+        grootboekrekening:
+          type: string
+          nullable: true
+        kostenplaats:
+          type: string
+          nullable: true
+        project_code:
+          type: string
+          nullable: true
+        pdf_url:
+          type: string
+          nullable: true
+        bestandsnaam:
+          type: string
+          nullable: true
+        gebouw_id:
+          type: integer
+          nullable: true
+
+    FactuurUpdateInput:
+      type: object
+      properties:
+        factuurnummer:
+          type: string
+          nullable: true
+        factuurdatum:
+          type: string
+          nullable: true
+        vervaldatum:
+          type: string
+          nullable: true
+        omschrijving:
+          type: string
+          nullable: true
+        relatienaam:
+          type: string
+          nullable: true
+        relatie_code:
+          type: string
+          nullable: true
+        relatie_adres:
+          type: string
+          nullable: true
+        bedrag_excl_btw:
+          type: string
+          nullable: true
+        btw_bedrag:
+          type: string
+          nullable: true
+        bedrag_incl_btw:
+          type: string
+          nullable: true
+        btw_code:
+          type: string
+          nullable: true
+        grootboekrekening:
+          type: string
+          nullable: true
+        kostenplaats:
+          type: string
+          nullable: true
+        dagboek:
+          type: string
+          nullable: true
+        project_code:
+          type: string
+          nullable: true
+        gebouw_id:
+          type: integer
+          nullable: true
+        status:
+          type: string
+          nullable: true
+
+    FactuurUploadUrlInput:
+      type: object
+      required: [bestandsnaam]
+      properties:
+        bestandsnaam:
+          type: string
+
+    FactuurBlokkerenInput:
+      type: object
+      required: [geblokkeerd]
+      properties:
+        geblokkeerd:
+          type: boolean
+        reden:
+          type: string
+          nullable: true
+
+    AccountviewExportResultaat:
+      type: object
+      required: [status, factuur_id]
+      properties:
+        status:
+          type: string
+        factuur_id:
+          type: integer
+        boeking_id:
+          type: string
+          nullable: true
+        foutmelding:
+          type: string
+          nullable: true
+        testmodus:
+          type: boolean
+
+    AccountviewExportLog:
+      type: object
+      required: [id, factuur_id, export_op, status, testmodus]
+      properties:
+        id:
+          type: integer
+        factuur_id:
+          type: integer
+        gebruiker_id:
+          type: integer
+          nullable: true
+        export_op:
+          type: string
+        testmodus:
+          type: boolean
+        verzonden_payload:
+          type: object
+          additionalProperties: true
+          nullable: true
+        accountview_response:
+          type: object
+          additionalProperties: true
+          nullable: true
+        http_status:
+          type: integer
+          nullable: true
+        status:
+          type: string
+        accountview_boeking_id:
+          type: string
+          nullable: true
+        foutmelding:
+          type: string
+          nullable: true
 
