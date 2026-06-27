@@ -184,7 +184,7 @@ export function RadiaalMenu({ acties }: { acties: RadiaalActie[] }) {
   const rotatie = useSharedValue(0);
   const vorigeHoek = useSharedValue(0);
 
-  const zichtbaar = acties.slice(0, 6);
+  const zichtbaar = acties.slice(0, 7);
   const totaal = zichtbaar.length;
   const stap = (2 * Math.PI) / totaal;
 
