@@ -26,7 +26,7 @@ import {
   gebouwenTable,
   gebruikersTable,
 } from "@workspace/db";
-import { eq, desc, count, sql } from "drizzle-orm";
+import { eq, desc, count, sql, and, not, inArray } from "drizzle-orm";
 import { randomBytes } from "crypto";
 import { requireBevoegdheid } from "../middlewares/auth";
 import { maakOpenAiClient, heeftOpenAi } from "../lib/openai";
@@ -1558,6 +1558,8 @@ router.post("/offertes/:id/verzenden", schrijven, async (req, res) => {
       .from(offertesTable)
       .where(eq(offertesTable.id, offerteId));
     if (!offerte) return res.status(404).json({ error: "Offerte niet gevonden" });
+    if (offerte.portaalStatus === "ondertekend" || offerte.portaalStatus === "afgewezen")
+      return res.status(409).json({ error: "Een ondertekende of afgewezen offerte kan niet opnieuw worden verzonden." });
 
     const naarEmail = String(req.body?.naar_email ?? "").trim();
     const naarNaam = String(req.body?.naar_naam ?? "").trim() || null;
@@ -1683,7 +1685,12 @@ router.post("/offertes/:id/verzenden", schrijven, async (req, res) => {
         bijgewerktOp: new Date(),
         ...(voorwaardenSnapshot !== undefined && { voorwaardenSnapshot }),
       })
-      .where(eq(offertesTable.id, offerteId));
+      .where(
+        and(
+          eq(offertesTable.id, offerteId),
+          not(inArray(offertesTable.portaalStatus, ["ondertekend", "afgewezen", "vervallen"])),
+        ),
+      );
 
     await db.insert(offerteTrackingTable).values({
       offerteId,
