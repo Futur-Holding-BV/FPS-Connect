@@ -176,9 +176,9 @@ function PlanningLegeStaat({ onVernieuwen }: { onVernieuwen: () => void }) {
   return (
     <CardContent className="py-14 text-center text-muted-foreground">
       <Users className="h-10 w-10 mx-auto mb-3 opacity-20" />
-      <p className="text-sm font-medium text-slate-700">Geen uitvoerende medewerkers zichtbaar</p>
+      <p className="text-sm font-medium text-slate-700">Geen medewerkers zichtbaar</p>
       <p className="text-xs mt-1 text-muted-foreground">
-        Alleen medewerkers met een uitvoerende functie verschijnen hier.
+        Controleer of medewerkers actief zijn in HRM / Personeel.
       </p>
 
       {isLoading ? (

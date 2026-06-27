@@ -13,7 +13,7 @@ import {
   planningMeerwerkTable,
   urenRegistratiesTable,
 } from "@workspace/db";
-import { eq, and, gte, lte, desc, asc, inArray, sql, isNull } from "drizzle-orm";
+import { eq, and, gte, lte, desc, asc, inArray, sql, isNull, type SQL } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
 
 const router = Router();
@@ -55,17 +55,16 @@ function mapItem(item: typeof planningItemsTable.$inferSelect, medewerkNaam: str
 }
 
 // ── Medewerkers voor planning ─────────────────────────────────────────────
-// Altijd gefilterd op uitvoerend=true — geen kantoorpersoneel in de planning.
+// Standaard: alle actieve medewerkers. Optioneel filter: ?alleen_uitvoerend=true.
 
 router.get("/modules/planning/medewerkers", lezenPlanning, async (req, res) => {
   try {
     const wmFilter = typeof req.query.werkmaatschappij === "string" ? req.query.werkmaatschappij : undefined;
     const dvFilter = typeof req.query.dienstverband    === "string" ? req.query.dienstverband    : undefined;
+    const alleenUitvoerend = req.query.alleen_uitvoerend === "true";
 
-    const conditions = [
-      eq(medewerkersTable.actief, true),
-      eq(functiesTable.uitvoerend, true),
-    ];
+    const conditions: SQL[] = [eq(medewerkersTable.actief, true)];
+    if (alleenUitvoerend) conditions.push(eq(functiesTable.uitvoerend, true));
     if (wmFilter) conditions.push(eq(medewerkersTable.werkmaatschappij, wmFilter));
     if (dvFilter) conditions.push(eq(medewerkersTable.dienstverband, dvFilter));
 
@@ -85,7 +84,7 @@ router.get("/modules/planning/medewerkers", lezenPlanning, async (req, res) => {
         functieUitvoerend: functiesTable.uitvoerend,
       })
       .from(medewerkersTable)
-      .innerJoin(functiesTable, eq(medewerkersTable.functieId, functiesTable.id))
+      .leftJoin(functiesTable, eq(medewerkersTable.functieId, functiesTable.id))
       .where(and(...conditions))
       .orderBy(asc(medewerkersTable.naam));
 
