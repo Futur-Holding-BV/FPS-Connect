@@ -10854,6 +10854,7 @@ export const GetModCalculatieParams = zod.object({
 })
 
 export const getModCalculatieResponseTwoRegelsItemHoofdstukDefault = `Overige werkzaamheden`;
+export const getModCalculatieResponseTwoRegelsItemBtwTariefDefault = `21`;
 
 export const GetModCalculatieResponse = zod.object({
   "id": zod.number(),
@@ -10900,6 +10901,7 @@ export const GetModCalculatieResponse = zod.object({
   "is_bouwplaatskosten": zod.boolean().optional(),
   "hoofdstuk": zod.string().default(getModCalculatieResponseTwoRegelsItemHoofdstukDefault),
   "klanttekst": zod.string().nullish(),
+  "btw_tarief": zod.string().default(getModCalculatieResponseTwoRegelsItemBtwTariefDefault).describe('BTW-tarief: \"21\", \"9\", \"verlegd\" of \"0\"'),
   "materiaal_totaal": zod.number().optional(),
   "mu_totaal": zod.number().optional(),
   "arbeidsloon": zod.number().optional()
@@ -10995,6 +10997,7 @@ export const ListModCalcRegelsParams = zod.object({
 })
 
 export const listModCalcRegelsResponseHoofdstukDefault = `Overige werkzaamheden`;
+export const listModCalcRegelsResponseBtwTariefDefault = `21`;
 
 export const ListModCalcRegelsResponseItem = zod.object({
   "id": zod.number(),
@@ -11017,6 +11020,7 @@ export const ListModCalcRegelsResponseItem = zod.object({
   "is_bouwplaatskosten": zod.boolean().optional(),
   "hoofdstuk": zod.string().default(listModCalcRegelsResponseHoofdstukDefault),
   "klanttekst": zod.string().nullish(),
+  "btw_tarief": zod.string().default(listModCalcRegelsResponseBtwTariefDefault).describe('BTW-tarief: \"21\", \"9\", \"verlegd\" of \"0\"'),
   "materiaal_totaal": zod.number().optional(),
   "mu_totaal": zod.number().optional(),
   "arbeidsloon": zod.number().optional()
@@ -11047,7 +11051,8 @@ export const CreateModCalcRegelBody = zod.object({
   "is_staartkosten": zod.boolean().optional(),
   "is_bouwplaatskosten": zod.boolean().optional(),
   "hoofdstuk": zod.string().optional(),
-  "klanttekst": zod.string().nullish()
+  "klanttekst": zod.string().nullish(),
+  "btw_tarief": zod.string().optional().describe('BTW-tarief: \"21\", \"9\", \"verlegd\" of \"0\"')
 })
 
 export const CreateModCalcRegelResponse = zod.void()
@@ -11077,10 +11082,12 @@ export const UpdateModCalcRegelBody = zod.object({
   "is_staartkosten": zod.boolean().optional(),
   "is_bouwplaatskosten": zod.boolean().optional(),
   "hoofdstuk": zod.string().optional(),
-  "klanttekst": zod.string().nullish()
+  "klanttekst": zod.string().nullish(),
+  "btw_tarief": zod.string().optional().describe('BTW-tarief: \"21\", \"9\", \"verlegd\" of \"0\"')
 })
 
 export const updateModCalcRegelResponseHoofdstukDefault = `Overige werkzaamheden`;
+export const updateModCalcRegelResponseBtwTariefDefault = `21`;
 
 export const UpdateModCalcRegelResponse = zod.object({
   "id": zod.number(),
@@ -11103,6 +11110,7 @@ export const UpdateModCalcRegelResponse = zod.object({
   "is_bouwplaatskosten": zod.boolean().optional(),
   "hoofdstuk": zod.string().default(updateModCalcRegelResponseHoofdstukDefault),
   "klanttekst": zod.string().nullish(),
+  "btw_tarief": zod.string().default(updateModCalcRegelResponseBtwTariefDefault).describe('BTW-tarief: \"21\", \"9\", \"verlegd\" of \"0\"'),
   "materiaal_totaal": zod.number().optional(),
   "mu_totaal": zod.number().optional(),
   "arbeidsloon": zod.number().optional()
@@ -11144,7 +11152,8 @@ export const AiModCalcRegelsResponse = zod.object({
   "is_staartkosten": zod.boolean().optional(),
   "is_bouwplaatskosten": zod.boolean().optional(),
   "hoofdstuk": zod.string().optional(),
-  "klanttekst": zod.string().nullish()
+  "klanttekst": zod.string().nullish(),
+  "btw_tarief": zod.string().optional().describe('BTW-tarief: \"21\", \"9\", \"verlegd\" of \"0\"')
 })),
   "waarschuwingen": zod.array(zod.string())
 })

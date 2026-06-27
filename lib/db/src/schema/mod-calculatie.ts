@@ -93,6 +93,7 @@ export const modCalcRegelsTable = pgTable("mod_calc_regels", {
   isBouwplaatskosten: boolean("is_bouwplaatskosten").notNull().default(false),
   hoofdstuk: text("hoofdstuk").notNull().default("Overige werkzaamheden"),
   klanttekst: text("klanttekst"),
+  btwTarief: text("btw_tarief").notNull().default("21"),
   aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
   bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
 });

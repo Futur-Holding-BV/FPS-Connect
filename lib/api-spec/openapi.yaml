@@ -18082,6 +18082,10 @@ components:
         klanttekst:
           type: string
           nullable: true
+        btw_tarief:
+          type: string
+          description: 'BTW-tarief: "21", "9", "verlegd" of "0"'
+          default: '21'
         materiaal_totaal:
           type: number
         mu_totaal:
@@ -18129,6 +18133,9 @@ components:
         klanttekst:
           type: string
           nullable: true
+        btw_tarief:
+          type: string
+          description: 'BTW-tarief: "21", "9", "verlegd" of "0"'
 
     UrenRegistratie:
       type: object

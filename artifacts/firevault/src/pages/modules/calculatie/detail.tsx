@@ -168,7 +168,15 @@ type RegelForm = {
   regelnummer: string;
   hoofdstuk: string;
   klanttekst: string;
+  btw_tarief: string;
 };
+
+const BTW_OPTIES = [
+  { value: "21",      label: "21%",      toelichting: "Standaard tarief" },
+  { value: "9",       label: "9%",       toelichting: "Verlaagd — arbeidsintensief onderhoud/renovatie bestaande woning (> 2 jaar oud)" },
+  { value: "verlegd", label: "Verlegd",  toelichting: "BTW-verlegd — bij B2B onderaanneming in de bouw" },
+  { value: "0",       label: "0%",       toelichting: "Vrijgesteld van BTW" },
+];
 
 const LEGE_REGEL: RegelForm = {
   categorie: "arbeid",
@@ -186,6 +194,7 @@ const LEGE_REGEL: RegelForm = {
   regelnummer: "",
   hoofdstuk: "Overige werkzaamheden",
   klanttekst: "",
+  btw_tarief: "21",
 };
 
 type Weergave = "intern" | "directie" | "klant" | "monteur";
@@ -282,6 +291,7 @@ export default function ModulesCalculatieDetail() {
           regelnummer: "",
           hoofdstuk: r.hoofdstuk ?? "Overige werkzaamheden",
           klanttekst: r.klanttekst ?? "",
+          btw_tarief: (r as any).btw_tarief ?? "21",
         }));
         setAiVoorstellen(regels);
         setAiWaarschuwingen((d.waarschuwingen ?? []) as string[]);
@@ -318,6 +328,7 @@ export default function ModulesCalculatieDetail() {
       regelnummer: r.regelnummer ?? "",
       hoofdstuk: r.hoofdstuk ?? "Overige werkzaamheden",
       klanttekst: r.klanttekst ?? "",
+      btw_tarief: (r as any).btw_tarief ?? "21",
     });
     setRegelDialoog(r.id);
   }
@@ -364,6 +375,7 @@ export default function ModulesCalculatieDetail() {
       regelnummer: regelForm.regelnummer || null,
       hoofdstuk: regelForm.hoofdstuk || "Overige werkzaamheden",
       klanttekst: regelForm.klanttekst || null,
+      btw_tarief: regelForm.btw_tarief || "21",
     };
     if (regelDialoog === "nieuw") {
       createRegelMut.mutate({ id, data: payload });
@@ -900,7 +912,12 @@ export default function ModulesCalculatieDetail() {
                   <button
                     key={ks.value}
                     type="button"
-                    onClick={() => setRegelForm((f) => ({ ...f, categorie: ks.value }))}
+                    onClick={() => setRegelForm((f) => {
+                      const btw = ks.value === "onderaanneming"
+                        ? "verlegd"
+                        : f.btw_tarief === "verlegd" ? "21" : f.btw_tarief;
+                      return { ...f, categorie: ks.value, btw_tarief: btw };
+                    })}
                     className={cn(
                       "rounded-md border px-3 py-1 text-xs font-medium transition-colors",
                       regelForm.categorie === ks.value
@@ -1146,6 +1163,45 @@ export default function ModulesCalculatieDetail() {
                 </div>
               );
             })()}
+
+            {/* BTW-tarief */}
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <Label>BTW</Label>
+                {regelForm.categorie === "onderaanneming" && regelForm.btw_tarief !== "verlegd" && (
+                  <span className="text-[11px] bg-amber-50 text-amber-700 border border-amber-200 rounded px-1.5 py-0.5">
+                    Tip: BTW-verlegd gebruikelijk bij onderaanneming
+                  </span>
+                )}
+                {regelForm.categorie === "arbeid" && regelForm.btw_tarief !== "9" && (
+                  <span className="text-[11px] bg-blue-50 text-blue-700 border border-blue-200 rounded px-1.5 py-0.5">
+                    Tip: 9% mogelijk bij onderhoud/renovatie bestaande woning
+                  </span>
+                )}
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {BTW_OPTIES.map((opt) => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => setRegelForm((f) => ({ ...f, btw_tarief: opt.value }))}
+                    className={cn(
+                      "rounded-md border px-3 py-1 text-xs font-medium transition-colors",
+                      regelForm.btw_tarief === opt.value
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "border-input text-muted-foreground hover:border-primary/50 hover:text-foreground"
+                    )}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+              {BTW_OPTIES.find((o) => o.value === regelForm.btw_tarief) && (
+                <p className="text-[11px] text-muted-foreground">
+                  {BTW_OPTIES.find((o) => o.value === regelForm.btw_tarief)!.toelichting}
+                </p>
+              )}
+            </div>
 
             <Separator />
 

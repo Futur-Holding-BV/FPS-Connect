@@ -158,6 +158,7 @@ function mapRegel(r: typeof modCalcRegelsTable.$inferSelect, normtijdCode?: stri
     is_bouwplaatskosten: r.isBouwplaatskosten ?? false,
     hoofdstuk: r.hoofdstuk ?? "Overige werkzaamheden",
     klanttekst: (r as any).klanttekst ?? null,
+    btw_tarief: (r as any).btwTarief ?? "21",
     materiaal_totaal: materiaalTotaal,
     mu_totaal: muTotaal,
     arbeidsloon,
@@ -769,7 +770,7 @@ router.post("/modules/calculaties/:id/regels", schrijvenCalc, async (req, res) =
     const body = req.body as Record<string, unknown>;
     const { categorie = "arbeid", omschrijving, normtijd_id, eenheid = "st", volgorde = 0, opmerkingen,
       regelnummer, is_staartkosten = false, is_bouwplaatskosten = false,
-      hoofdstuk = "Overige werkzaamheden", klanttekst } = body;
+      hoofdstuk = "Overige werkzaamheden", klanttekst, btw_tarief = "21" } = body;
     if (!omschrijving) return res.status(400).json({ error: "omschrijving is verplicht" });
 
     const { hv, t, mu, at, ob, totaal } = berekenRegelTotaal(body);
@@ -793,6 +794,7 @@ router.post("/modules/calculaties/:id/regels", schrijvenCalc, async (req, res) =
       isBouwplaatskosten: Boolean(is_bouwplaatskosten),
       hoofdstuk: String(hoofdstuk),
       klanttekst: klanttekst ? String(klanttekst) : null,
+      btwTarief: String(btw_tarief),
     } as typeof modCalcRegelsTable.$inferInsert).returning();
 
     res.status(201).json(mapRegel(row));
@@ -824,6 +826,7 @@ router.patch("/modules/calculaties/:id/regels/:regelId", schrijvenCalc, async (r
     if (body.is_bouwplaatskosten !== undefined) update.isBouwplaatskosten = Boolean(body.is_bouwplaatskosten);
     if (body.hoofdstuk !== undefined) (update as any).hoofdstuk = String(body.hoofdstuk);
     if (body.klanttekst !== undefined) (update as any).klanttekst = body.klanttekst ? String(body.klanttekst) : null;
+    if (body.btw_tarief !== undefined) (update as any).btwTarief = String(body.btw_tarief);
     update.hoeveelheid = hv;
     update.tarief = t;
     (update as any).muPerEenheid = mu;

@@ -4739,6 +4739,8 @@ export interface ModCalcRegel {
   is_bouwplaatskosten?: boolean;
   hoofdstuk?: string;
   klanttekst?: string | null;
+  /** BTW-tarief: "21", "9", "verlegd" of "0" */
+  btw_tarief?: string;
   materiaal_totaal?: number;
   mu_totaal?: number;
   arbeidsloon?: number;
@@ -4782,6 +4784,8 @@ export interface ModCalcRegelInput {
   is_bouwplaatskosten?: boolean;
   hoofdstuk?: string;
   klanttekst?: string | null;
+  /** BTW-tarief: "21", "9", "verlegd" of "0" */
+  btw_tarief?: string;
 }
 
 export interface UrenRegistratie {

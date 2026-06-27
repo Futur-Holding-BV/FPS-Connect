@@ -23,4 +23,6 @@ export interface ModCalcRegelInput {
   is_bouwplaatskosten?: boolean;
   hoofdstuk?: string;
   klanttekst?: string | null;
+  /** BTW-tarief: "21", "9", "verlegd" of "0" */
+  btw_tarief?: string;
 }
