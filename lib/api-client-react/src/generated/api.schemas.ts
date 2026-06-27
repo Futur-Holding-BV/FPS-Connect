@@ -5476,6 +5476,21 @@ export interface VeiligheidAfrondingInput {
   handtekening: string;
 }
 
+export interface ToolboxKoppelingSuggestieInput {
+  werkzaamheid: string;
+}
+
+export type ToolboxKoppelingSuggestieResultaatSuggestiesItem = {
+  id: number;
+  titel: string;
+  categorie: string;
+  reden: string;
+};
+
+export interface ToolboxKoppelingSuggestieResultaat {
+  suggesties: ToolboxKoppelingSuggestieResultaatSuggestiesItem[];
+}
+
 export type GetRecenteActiviteitParams = {
 limit?: number;
 };

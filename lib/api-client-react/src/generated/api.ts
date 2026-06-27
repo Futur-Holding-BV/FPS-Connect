@@ -351,6 +351,8 @@ import type {
   ToolboxBericht,
   ToolboxBerichtDetail,
   ToolboxBerichtInput,
+  ToolboxKoppelingSuggestieInput,
+  ToolboxKoppelingSuggestieResultaat,
   TweeFactorSetup,
   UitnodigingActiveren,
   UitnodigingActiveren200,
@@ -37941,4 +37943,74 @@ export function useGetVeiligheidToolboxenIdMijnAfronding<TData = Awaited<ReturnT
 
 
 
+
+export const getPostVeiligheidToolboxenKoppelingSuggestieUrl = () => {
+
+
+
+
+  return `/api/veiligheid/toolboxen/koppeling-suggestie`
+}
+
+/**
+ * @summary AI-koppeling — suggereer relevante toolboxen voor werkzaamheden
+ */
+export const postVeiligheidToolboxenKoppelingSuggestie = async (toolboxKoppelingSuggestieInput: ToolboxKoppelingSuggestieInput, options?: RequestInit): Promise<ToolboxKoppelingSuggestieResultaat> => {
+
+  return customFetch<ToolboxKoppelingSuggestieResultaat>(getPostVeiligheidToolboxenKoppelingSuggestieUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(toolboxKoppelingSuggestieInput)
+  }
+);}
+
+
+
+
+export const getPostVeiligheidToolboxenKoppelingSuggestieMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postVeiligheidToolboxenKoppelingSuggestie>>, TError,{data: BodyType<ToolboxKoppelingSuggestieInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof postVeiligheidToolboxenKoppelingSuggestie>>, TError,{data: BodyType<ToolboxKoppelingSuggestieInput>}, TContext> => {
+
+const mutationKey = ['postVeiligheidToolboxenKoppelingSuggestie'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postVeiligheidToolboxenKoppelingSuggestie>>, {data: BodyType<ToolboxKoppelingSuggestieInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  postVeiligheidToolboxenKoppelingSuggestie(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PostVeiligheidToolboxenKoppelingSuggestieMutationResult = NonNullable<Awaited<ReturnType<typeof postVeiligheidToolboxenKoppelingSuggestie>>>
+    export type PostVeiligheidToolboxenKoppelingSuggestieMutationBody = BodyType<ToolboxKoppelingSuggestieInput>
+    export type PostVeiligheidToolboxenKoppelingSuggestieMutationError = ErrorType<unknown>
+
+    /**
+ * @summary AI-koppeling — suggereer relevante toolboxen voor werkzaamheden
+ */
+export const usePostVeiligheidToolboxenKoppelingSuggestie = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postVeiligheidToolboxenKoppelingSuggestie>>, TError,{data: BodyType<ToolboxKoppelingSuggestieInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof postVeiligheidToolboxenKoppelingSuggestie>>,
+        TError,
+        {data: BodyType<ToolboxKoppelingSuggestieInput>},
+        TContext
+      > => {
+      return useMutation(getPostVeiligheidToolboxenKoppelingSuggestieMutationOptions(options));
+    }
 

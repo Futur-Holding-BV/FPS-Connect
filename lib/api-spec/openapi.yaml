@@ -10668,6 +10668,24 @@ paths:
                 $ref: '#/components/schemas/VeiligheidAfronding'
                 nullable: true
 
+  /veiligheid/toolboxen/koppeling-suggestie:
+    post:
+      summary: AI-koppeling — suggereer relevante toolboxen voor werkzaamheden
+      tags: [Veiligheid]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ToolboxKoppelingSuggestieInput'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ToolboxKoppelingSuggestieResultaat'
+
 
 components:
   schemas:
@@ -19285,4 +19303,30 @@ components:
         geldig_tot:
           type: string
           nullable: true
+
+    ToolboxKoppelingSuggestieInput:
+      type: object
+      required: [werkzaamheid]
+      properties:
+        werkzaamheid:
+          type: string
+
+    ToolboxKoppelingSuggestieResultaat:
+      type: object
+      required: [suggesties]
+      properties:
+        suggesties:
+          type: array
+          items:
+            type: object
+            required: [id, titel, categorie, reden]
+            properties:
+              id:
+                type: integer
+              titel:
+                type: string
+              categorie:
+                type: string
+              reden:
+                type: string
 

@@ -13190,3 +13190,20 @@ export const GetVeiligheidToolboxenIdMijnAfrondingResponse = zod.object({
 }).nullable()
 
 
+/**
+ * @summary AI-koppeling — suggereer relevante toolboxen voor werkzaamheden
+ */
+export const PostVeiligheidToolboxenKoppelingSuggestieBody = zod.object({
+  "werkzaamheid": zod.string()
+})
+
+export const PostVeiligheidToolboxenKoppelingSuggestieResponse = zod.object({
+  "suggesties": zod.array(zod.object({
+  "id": zod.number(),
+  "titel": zod.string(),
+  "categorie": zod.string(),
+  "reden": zod.string()
+}))
+})
+
+

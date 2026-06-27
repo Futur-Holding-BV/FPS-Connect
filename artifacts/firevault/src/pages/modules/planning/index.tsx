@@ -9,6 +9,7 @@ import {
   useDeletePlanningItem,
   useListGebouwen,
   useGetPlanningDiagnose,
+  usePostVeiligheidToolboxenKoppelingSuggestie,
 } from "@workspace/api-client-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -30,7 +31,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   ChevronLeft, ChevronRight, Plus, AlertTriangle, Users, CalendarCheck,
-  Briefcase, Clock, RefreshCw,
+  Briefcase, Clock, RefreshCw, Sparkles, ExternalLink,
 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -230,6 +231,7 @@ export default function ModulesPlanning() {
   const [dialoog, setDialoog] = useState<DialooglItem | null>(null);
   const [bewerkenId, setBewerkenId] = useState<number | null>(null);
   const [opslaan, setOpslaan] = useState(false);
+  const [toolboxAdvies, setToolboxAdvies] = useState<Array<{ id: number; titel: string; categorie: string; reden: string }> | null>(null);
   const [filterWerkmaatschappij, setFilterWerkmaatschappij] = useState<string>("alle");
   const [filterDienstverband, setFilterDienstverband] = useState<string>("alle");
   const [filterAlleenUitvoerend, setFilterAlleenUitvoerend] = useState(false);
@@ -286,6 +288,11 @@ export default function ModulesPlanning() {
       onSuccess: () => queryClient.invalidateQueries({ queryKey: ["planning-items"] }),
     },
   });
+  const toolboxSuggestieMut = usePostVeiligheidToolboxenKoppelingSuggestie({
+    mutation: {
+      onSuccess: (data) => setToolboxAdvies(data.suggesties),
+    },
+  });
 
   // ── Navigatie ───────────────────────────────────────────────────────────
 
@@ -301,6 +308,7 @@ export default function ModulesPlanning() {
     setDialoog(null);
     setBewerkenId(null);
     setOpslaan(false);
+    setToolboxAdvies(null);
   }
 
   // ── Dialoog openen ─────────────────────────────────────────────────────
@@ -1012,6 +1020,61 @@ export default function ModulesPlanning() {
                     onChange={(e) => setDialoog((d) => d ? { ...d, notities: e.target.value } : d)}
                     placeholder="Aanvullende opmerkingen..."
                   />
+                </div>
+
+                {/* Toolbox advies */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label className="flex items-center gap-1.5">
+                      <Sparkles className="h-3.5 w-3.5 text-amber-500" />
+                      Toolbox advies
+                    </Label>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="h-7 text-xs"
+                      disabled={!dialoog.titel || toolboxSuggestieMut.isPending}
+                      onClick={() => {
+                        setToolboxAdvies(null);
+                        toolboxSuggestieMut.mutate({ data: { werkzaamheid: dialoog.titel } });
+                      }}
+                    >
+                      {toolboxSuggestieMut.isPending ? "Analyseren..." : toolboxAdvies ? "Opnieuw" : "Analyseer"}
+                    </Button>
+                  </div>
+                  {toolboxAdvies === null && !toolboxSuggestieMut.isPending && (
+                    <p className="text-xs text-muted-foreground">
+                      Klik op Analyseer om relevante toolboxen te suggereren op basis van de werkzaamheid.
+                    </p>
+                  )}
+                  {toolboxSuggestieMut.isPending && (
+                    <div className="rounded-md border bg-amber-50 p-3 text-xs text-amber-700">
+                      AI analyseert de werkzaamheid...
+                    </div>
+                  )}
+                  {toolboxAdvies && toolboxAdvies.length === 0 && (
+                    <p className="text-xs text-muted-foreground">Geen relevante toolboxen gevonden.</p>
+                  )}
+                  {toolboxAdvies && toolboxAdvies.length > 0 && (
+                    <div className="rounded-md border divide-y bg-amber-50">
+                      {toolboxAdvies.map((t) => (
+                        <div key={t.id} className="flex items-start gap-2 px-3 py-2">
+                          <div className="min-w-0 flex-1">
+                            <p className="text-xs font-medium text-slate-800">{t.titel}</p>
+                            <p className="text-xs text-muted-foreground">{t.reden}</p>
+                          </div>
+                          <Link
+                            href={`/veiligheid/toolboxen/${t.id}`}
+                            className="shrink-0 text-primary hover:text-primary/80"
+                            target="_blank"
+                          >
+                            <ExternalLink className="h-3.5 w-3.5" />
+                          </Link>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             )}

@@ -622,6 +622,75 @@ veiligheidRouter.get("/veiligheid/toolboxen/:id/mijn-afronding", lezenVeiligheid
   }
 });
 
+// ── AI KOPPELING SUGGESTIE ────────────────────────────────────────────────────
+
+veiligheidRouter.post("/veiligheid/toolboxen/koppeling-suggestie", lezenVeiligheid, async (req, res) => {
+  try {
+    if (!heeftOpenAi()) {
+      return res.status(503).json({ error: "AI niet beschikbaar" });
+    }
+    const { werkzaamheid } = req.body ?? {};
+    if (!werkzaamheid || typeof werkzaamheid !== "string") {
+      return res.status(400).json({ error: "werkzaamheid verplicht" });
+    }
+
+    const alleToolboxen = await db
+      .select({
+        id: veiligheidToolboxenTable.id,
+        titel: veiligheidToolboxenTable.titel,
+        categorie: veiligheidToolboxenTable.categorie,
+        zoekwoorden: veiligheidToolboxenTable.zoekwoorden,
+        tags: veiligheidToolboxenTable.tags,
+      })
+      .from(veiligheidToolboxenTable)
+      .orderBy(veiligheidToolboxenTable.categorie, veiligheidToolboxenTable.titel);
+
+    if (alleToolboxen.length === 0) {
+      return res.json({ suggesties: [] });
+    }
+
+    const catalogusTekst = alleToolboxen
+      .map((t) => `ID ${t.id}: ${t.titel} (${t.categorie})`)
+      .join("\n");
+
+    const openai = maakOpenAiClient();
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o",
+      max_tokens: 1000,
+      messages: [
+        {
+          role: "system",
+          content:
+            "Je bent een VCA-veiligheidsadviseur voor een brandpreventiebedrijf. Selecteer uit de toolboxcatalogus de meest relevante toolboxen voor de beschreven werkzaamheid. Geef altijd geldig JSON terug zonder markdown.",
+        },
+        {
+          role: "user",
+          content: `Werkzaamheid: "${werkzaamheid}"\n\nCatalogus:\n${catalogusTekst}\n\nSelecteer 3-6 relevante toolboxen. Formaat:\n{"suggesties":[{"id":1,"titel":"...","categorie":"...","reden":"kort waarom relevant"}]}`,
+        },
+      ],
+    });
+
+    const raw = completion.choices[0].message.content ?? "{}";
+    let parsed: { suggesties?: Array<{ id: number; titel: string; categorie: string; reden: string }> } = {};
+    try {
+      parsed = JSON.parse(raw.replace(/^```json\s*/, "").replace(/\s*```$/, ""));
+    } catch {
+      logger.warn({ raw }, "AI JSON parse mislukt voor koppeling-suggestie");
+    }
+
+    // Valideer IDs tegen de echte catalogus
+    const geldigeIds = new Set(alleToolboxen.map((t) => t.id));
+    const suggesties = (parsed.suggesties ?? [])
+      .filter((s) => geldigeIds.has(s.id))
+      .slice(0, 8);
+
+    res.json({ suggesties });
+  } catch (err) {
+    req.log.error(err, "POST /veiligheid/toolboxen/koppeling-suggestie");
+    res.status(500).json({ error: "Interne fout" });
+  }
+});
+
 // ── UPLOAD URL ────────────────────────────────────────────────────────────────
 
 veiligheidRouter.get("/veiligheid/toolboxen/upload-url", schrijvenVeiligheid, async (req, res) => {
