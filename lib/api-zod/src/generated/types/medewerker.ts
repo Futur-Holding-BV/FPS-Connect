@@ -56,6 +56,21 @@ export interface Medewerker {
   rijbewijs?: string | null;
   /** @nullable */
   rijbewijs_vervaldatum?: string | null;
+  /**
+     * Vervaldatum VCA-certificaat (YYYY-MM-DD)
+     * @nullable
+     */
+  vca_vervaldatum?: string | null;
+  /**
+     * Vervaldatum EHBO-certificaat (YYYY-MM-DD)
+     * @nullable
+     */
+  ehbo_vervaldatum?: string | null;
+  /**
+     * Vervaldatum BHV-certificaat (YYYY-MM-DD)
+     * @nullable
+     */
+  bhv_vervaldatum?: string | null;
   /** @nullable */
   cv_tekst?: string | null;
   actief: boolean;

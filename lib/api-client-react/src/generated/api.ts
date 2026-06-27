@@ -226,6 +226,7 @@ import type {
   MedewerkerOnboardingInput,
   MedewerkerOpleiding,
   MedewerkerOpleidingInput,
+  MijnCertificaten,
   MijnPrivacyGegevens,
   MijnWerkGebouw,
   ModCalcHeader,
@@ -6051,6 +6052,83 @@ export const useDeleteConstructieTemplate = <TError = ErrorType<void>,
       > => {
       return useMutation(getDeleteConstructieTemplateMutationOptions(options));
     }
+
+export const getGetMijnCertificatenUrl = () => {
+
+
+
+
+  return `/api/mijn/certificaten`
+}
+
+/**
+ * @summary VCA/EHBO/BHV vervaldatums van de ingelogde medewerker
+ */
+export const getMijnCertificaten = async ( options?: RequestInit): Promise<MijnCertificaten> => {
+
+  return customFetch<MijnCertificaten>(getGetMijnCertificatenUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetMijnCertificatenQueryKey = () => {
+    return [
+    `/api/mijn/certificaten`
+    ] as const;
+    }
+
+
+export const getGetMijnCertificatenQueryOptions = <TData = Awaited<ReturnType<typeof getMijnCertificaten>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMijnCertificaten>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetMijnCertificatenQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getMijnCertificaten>>> = ({ signal }) => getMijnCertificaten({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getMijnCertificaten>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetMijnCertificatenQueryResult = NonNullable<Awaited<ReturnType<typeof getMijnCertificaten>>>
+export type GetMijnCertificatenQueryError = ErrorType<void>
+
+
+/**
+ * @summary VCA/EHBO/BHV vervaldatums van de ingelogde medewerker
+ */
+
+export function useGetMijnCertificaten<TData = Awaited<ReturnType<typeof getMijnCertificaten>>, TError = ErrorType<void>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMijnCertificaten>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetMijnCertificatenQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
 
 export const getListMijnVerlofsoortenUrl = () => {
 

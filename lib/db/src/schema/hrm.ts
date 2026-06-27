@@ -93,6 +93,10 @@ export const medewerkersTable = pgTable("medewerkers", {
   // Rijbewijs (comma-separated categorieën, bijv. "B, BE, C")
   rijbewijs: text("rijbewijs"),
   rijbewijsVervaldatum: text("rijbewijs_vervaldatum"),
+  // Veiligheidscertificaten (vervaldatum, bijv. "2026-12-31")
+  vcaVervaldatum: text("vca_vervaldatum"),
+  ehboVervaldatum: text("ehbo_vervaldatum"),
+  bhvVervaldatum: text("bhv_vervaldatum"),
   // CV / werkachtergrond (vrij tekstveld)
   cvTekst: text("cv_tekst"),
   // BSN — verplicht voor loonadministratie; strikt vertrouwelijk

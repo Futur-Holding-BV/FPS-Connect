@@ -1850,6 +1850,21 @@ paths:
         "404":
           description: Niet gevonden
 
+  /mijn/certificaten:
+    get:
+      operationId: getMijnCertificaten
+      tags: [mijn]
+      summary: VCA/EHBO/BHV vervaldatums van de ingelogde medewerker
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MijnCertificaten"
+        "404":
+          description: Geen medewerker gekoppeld
+
   /mijn/verlofsoorten:
     get:
       operationId: listMijnVerlofsoorten
@@ -14763,6 +14778,15 @@ components:
           type: ["string", "null"]
         rijbewijs_vervaldatum:
           type: ["string", "null"]
+        vca_vervaldatum:
+          type: ["string", "null"]
+          description: Vervaldatum VCA-certificaat (YYYY-MM-DD)
+        ehbo_vervaldatum:
+          type: ["string", "null"]
+          description: Vervaldatum EHBO-certificaat (YYYY-MM-DD)
+        bhv_vervaldatum:
+          type: ["string", "null"]
+          description: Vervaldatum BHV-certificaat (YYYY-MM-DD)
         cv_tekst:
           type: ["string", "null"]
         actief:
@@ -14825,6 +14849,15 @@ components:
           type: string
         rijbewijs_vervaldatum:
           type: string
+        vca_vervaldatum:
+          type: string
+          description: Vervaldatum VCA-certificaat (YYYY-MM-DD)
+        ehbo_vervaldatum:
+          type: string
+          description: Vervaldatum EHBO-certificaat (YYYY-MM-DD)
+        bhv_vervaldatum:
+          type: string
+          description: Vervaldatum BHV-certificaat (YYYY-MM-DD)
         cv_tekst:
           type: string
         actief:
@@ -14833,6 +14866,21 @@ components:
           type: string
         bedrijf_uitzendbureau:
           type: string
+
+    MijnCertificaten:
+      type: object
+      required: [medewerker_id, naam]
+      properties:
+        medewerker_id:
+          type: integer
+        naam:
+          type: string
+        vca_vervaldatum:
+          type: ["string", "null"]
+        ehbo_vervaldatum:
+          type: ["string", "null"]
+        bhv_vervaldatum:
+          type: ["string", "null"]
 
     MedewerkerOnboardingInput:
       type: object

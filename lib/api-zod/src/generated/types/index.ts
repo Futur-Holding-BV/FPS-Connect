@@ -261,6 +261,7 @@ export * from './medewerkerInput';
 export * from './medewerkerOnboardingInput';
 export * from './medewerkerOpleiding';
 export * from './medewerkerOpleidingInput';
+export * from './mijnCertificaten';
 export * from './mijnMedewerkerProfiel';
 export * from './mijnOpleiding';
 export * from './mijnPrivacyGegevens';

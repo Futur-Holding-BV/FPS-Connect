@@ -1,4 +1,4 @@
-import { useGetHrmStats } from "@workspace/api-client-react";
+import { useGetHrmStats, useGetMijnCertificaten } from "@workspace/api-client-react";
 import { Redirect, useRouter } from "expo-router";
 import React from "react";
 import { ActivityIndicator, Image, Pressable, ScrollView, Text, View } from "react-native";
@@ -9,6 +9,25 @@ import { useAuth } from "@/context/auth";
 import { useColors } from "@/hooks/useColors";
 import { useResponsive } from "@/hooks/useResponsive";
 
+function fmtDatum(datum?: string | null) {
+  if (!datum) return "—";
+  const d = new Date(datum);
+  if (Number.isNaN(d.getTime())) return datum;
+  return d.toLocaleDateString("nl-NL", { day: "2-digit", month: "short", year: "numeric" });
+}
+
+type CertStatus = "verlopen" | "binnenkort" | "geldig" | "onbekend";
+
+function certStatus(datum?: string | null): CertStatus {
+  if (!datum) return "onbekend";
+  const t = new Date(datum).getTime();
+  if (!Number.isFinite(t)) return "onbekend";
+  const nu = Date.now();
+  if (t < nu) return "verlopen";
+  if (t <= nu + 60 * 24 * 60 * 60 * 1000) return "binnenkort";
+  return "geldig";
+}
+
 export default function HrmDashboard() {
   const c = useColors();
   const router = useRouter();
@@ -16,15 +35,35 @@ export default function HrmDashboard() {
   const { inhoudMaxBreedte } = useResponsive();
   const { token, gebruiker } = useAuth();
   const { data: stats, isLoading } = useGetHrmStats();
+  const { data: certificaten } = useGetMijnCertificaten();
 
   if (!token) return <Redirect href="/login" />;
 
   const statItems = [
-    { label: "Medewerkers", waarde: stats?.medewerkers ?? 0 },
     { label: "Actief", waarde: stats?.actief ?? 0 },
-    { label: "Functies", waarde: stats?.functies ?? 0 },
-    { label: "Certificaten verlopen", waarde: stats?.certificaten_verlopen_binnenkort ?? 0 },
+    { label: "Certificaten verlopen binnenkort", waarde: stats?.certificaten_verlopen_binnenkort ?? 0 },
+    { label: "Openstaande verlofaanvragen", waarde: stats?.openstaande_verlofaanvragen ?? 0 },
   ];
+
+  const certs = [
+    { label: "VCA", datum: certificaten?.vca_vervaldatum ?? null },
+    { label: "EHBO", datum: certificaten?.ehbo_vervaldatum ?? null },
+    { label: "BHV", datum: certificaten?.bhv_vervaldatum ?? null },
+  ];
+
+  const statusKleur: Record<CertStatus, string> = {
+    verlopen: "#dc2626",
+    binnenkort: "#d97706",
+    geldig: "#16a34a",
+    onbekend: c.mutedForeground,
+  };
+
+  const statusLabel: Record<CertStatus, string> = {
+    verlopen: "Verlopen",
+    binnenkort: "Binnenkort",
+    geldig: "Geldig",
+    onbekend: "Niet ingevuld",
+  };
 
   const navKaarten = [
     { titel: "Verlof", omschrijving: "Saldo bekijken en aanvragen", route: "/hrm/verlof" as const },
@@ -82,6 +121,34 @@ export default function HrmDashboard() {
             ))}
           </View>
         )}
+
+        {/* Mijn veiligheidscertificaten */}
+        <View style={{ backgroundColor: c.card, borderRadius: c.radius, borderWidth: 1, borderColor: c.border, padding: 16 }}>
+          <Text style={{ color: c.foreground, fontSize: 15, fontFamily: "Inter_700Bold", marginBottom: 12 }}>
+            Mijn veiligheidscertificaten
+          </Text>
+          {certs.map((cert) => {
+            const status = certStatus(cert.datum);
+            return (
+              <View
+                key={cert.label}
+                style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: c.border }}
+              >
+                <Text style={{ color: c.foreground, fontSize: 14, fontFamily: "Inter_600SemiBold", width: 52 }}>
+                  {cert.label}
+                </Text>
+                <Text style={{ color: c.mutedForeground, fontSize: 13, fontFamily: "Inter_400Regular", flex: 1, paddingHorizontal: 8 }}>
+                  {fmtDatum(cert.datum)}
+                </Text>
+                <View style={{ backgroundColor: statusKleur[status] + "1a", borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 }}>
+                  <Text style={{ color: statusKleur[status], fontSize: 12, fontFamily: "Inter_600SemiBold" }}>
+                    {statusLabel[status]}
+                  </Text>
+                </View>
+              </View>
+            );
+          })}
+        </View>
 
         <View style={{ gap: 12 }}>
           {navKaarten.map((k) => (

@@ -116,6 +116,19 @@ function fmtDatum(datum?: string | null) {
   return d.toLocaleDateString("nl-NL", { day: "2-digit", month: "short", year: "numeric" });
 }
 
+function certBadge(datum: string) {
+  const nu = Date.now();
+  const t = new Date(datum).getTime();
+  const over60d = nu + 60 * 24 * 60 * 60 * 1000;
+  const klasse = t < nu ? "text-red-600 font-medium" : t <= over60d ? "text-orange-600 font-medium" : "text-green-700";
+  const label = t < nu ? "Verlopen" : t <= over60d ? "Verloopt binnenkort" : "Geldig";
+  return (
+    <span className={klasse}>
+      {fmtDatum(datum)} <span className="text-xs font-normal opacity-80">({label})</span>
+    </span>
+  );
+}
+
 function uren(n?: number | null) {
   return `${(n ?? 0).toLocaleString("nl-NL", { maximumFractionDigits: 1 })} uur`;
 }
@@ -341,6 +354,9 @@ export default function MedewerkerDetailPagina() {
       woonplaats: medewerker.woonplaats ?? undefined,
       rijbewijs: medewerker.rijbewijs ?? undefined,
       rijbewijs_vervaldatum: medewerker.rijbewijs_vervaldatum ?? undefined,
+      vca_vervaldatum: medewerker.vca_vervaldatum ?? undefined,
+      ehbo_vervaldatum: medewerker.ehbo_vervaldatum ?? undefined,
+      bhv_vervaldatum: medewerker.bhv_vervaldatum ?? undefined,
       cv_tekst: medewerker.cv_tekst ?? undefined,
       actief: medewerker.actief,
       opmerkingen: medewerker.opmerkingen ?? undefined,
@@ -862,7 +878,7 @@ export default function MedewerkerDetailPagina() {
               )}
             </CardContent>
           </Card>
-          {(medewerker.geboortedatum || medewerker.adres || medewerker.rijbewijs) && (
+          {(medewerker.geboortedatum || medewerker.adres || medewerker.rijbewijs || medewerker.vca_vervaldatum || medewerker.ehbo_vervaldatum || medewerker.bhv_vervaldatum) && (
             <Card>
               <CardContent className="p-5">
                 <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Overige gegevens</div>
@@ -889,6 +905,24 @@ export default function MedewerkerDetailPagina() {
                         {medewerker.rijbewijs}
                         {medewerker.rijbewijs_vervaldatum && <div className="text-xs text-muted-foreground">Geldig t/m {fmtDatum(medewerker.rijbewijs_vervaldatum)}</div>}
                       </div>
+                    </div>
+                  )}
+                  {medewerker.vca_vervaldatum && (
+                    <div className="space-y-1">
+                      <div className="text-xs font-medium text-muted-foreground">VCA</div>
+                      <div className="text-sm">{certBadge(medewerker.vca_vervaldatum)}</div>
+                    </div>
+                  )}
+                  {medewerker.ehbo_vervaldatum && (
+                    <div className="space-y-1">
+                      <div className="text-xs font-medium text-muted-foreground">EHBO</div>
+                      <div className="text-sm">{certBadge(medewerker.ehbo_vervaldatum)}</div>
+                    </div>
+                  )}
+                  {medewerker.bhv_vervaldatum && (
+                    <div className="space-y-1">
+                      <div className="text-xs font-medium text-muted-foreground">BHV</div>
+                      <div className="text-sm">{certBadge(medewerker.bhv_vervaldatum)}</div>
                     </div>
                   )}
                 </div>
@@ -1065,6 +1099,23 @@ export default function MedewerkerDetailPagina() {
               <div className="space-y-1.5">
                 <Label>Geldig tot</Label>
                 <DatePicker value={profielForm.rijbewijs_vervaldatum ?? ""} onChange={(v) => setProfielForm({ ...profielForm, rijbewijs_vervaldatum: v || undefined })} />
+              </div>
+
+              {/* Veiligheidscertificaten */}
+              <div className="sm:col-span-2 border-t pt-3 mt-1">
+                <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Veiligheidscertificaten</div>
+              </div>
+              <div className="space-y-1.5">
+                <Label>VCA vervaldatum</Label>
+                <DatePicker value={profielForm.vca_vervaldatum ?? ""} onChange={(v) => setProfielForm({ ...profielForm, vca_vervaldatum: v || undefined })} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>EHBO vervaldatum</Label>
+                <DatePicker value={profielForm.ehbo_vervaldatum ?? ""} onChange={(v) => setProfielForm({ ...profielForm, ehbo_vervaldatum: v || undefined })} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>BHV vervaldatum</Label>
+                <DatePicker value={profielForm.bhv_vervaldatum ?? ""} onChange={(v) => setProfielForm({ ...profielForm, bhv_vervaldatum: v || undefined })} />
               </div>
 
               {/* Achtergrond / CV */}

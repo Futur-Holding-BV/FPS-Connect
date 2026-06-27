@@ -36,6 +36,12 @@ export interface MedewerkerInput {
   woonplaats?: string;
   rijbewijs?: string;
   rijbewijs_vervaldatum?: string;
+  /** Vervaldatum VCA-certificaat (YYYY-MM-DD) */
+  vca_vervaldatum?: string;
+  /** Vervaldatum EHBO-certificaat (YYYY-MM-DD) */
+  ehbo_vervaldatum?: string;
+  /** Vervaldatum BHV-certificaat (YYYY-MM-DD) */
+  bhv_vervaldatum?: string;
   cv_tekst?: string;
   actief?: boolean;
   opmerkingen?: string;

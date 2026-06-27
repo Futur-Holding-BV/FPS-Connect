@@ -536,6 +536,9 @@ async function medewerkerNaarJson(m: typeof medewerkersTable.$inferSelect) {
     woonplaats: m.woonplaats ?? null,
     rijbewijs: m.rijbewijs ?? null,
     rijbewijs_vervaldatum: m.rijbewijsVervaldatum ?? null,
+    vca_vervaldatum: m.vcaVervaldatum ?? null,
+    ehbo_vervaldatum: m.ehboVervaldatum ?? null,
+    bhv_vervaldatum: m.bhvVervaldatum ?? null,
     cv_tekst: m.cvTekst ?? null,
     actief: m.actief,
     opmerkingen: m.opmerkingen,
@@ -578,6 +581,9 @@ router.get("/medewerkers", lezen, async (req, res) => {
         woonplaats: r.m.woonplaats ?? null,
         rijbewijs: r.m.rijbewijs ?? null,
         rijbewijs_vervaldatum: r.m.rijbewijsVervaldatum ?? null,
+        vca_vervaldatum: r.m.vcaVervaldatum ?? null,
+        ehbo_vervaldatum: r.m.ehboVervaldatum ?? null,
+        bhv_vervaldatum: r.m.bhvVervaldatum ?? null,
         cv_tekst: r.m.cvTekst ?? null,
         actief: r.m.actief,
         opmerkingen: r.m.opmerkingen,
@@ -593,7 +599,7 @@ router.get("/medewerkers", lezen, async (req, res) => {
 
 router.post("/medewerkers", schrijven, async (req, res) => {
   try {
-    const { naam, gebruiker_id, email, telefoon, mobiel, werkmaatschappij, functie_id, cao, dienstverband, bedrijf_uitzendbureau, contracturen_per_week, in_dienst_sinds, uit_dienst_per, noodcontact_naam, noodcontact_telefoon, geboortedatum, geboorteplaats, adres, postcode, woonplaats, rijbewijs, rijbewijs_vervaldatum, cv_tekst, actief, opmerkingen } = req.body;
+    const { naam, gebruiker_id, email, telefoon, mobiel, werkmaatschappij, functie_id, cao, dienstverband, bedrijf_uitzendbureau, contracturen_per_week, in_dienst_sinds, uit_dienst_per, noodcontact_naam, noodcontact_telefoon, geboortedatum, geboorteplaats, adres, postcode, woonplaats, rijbewijs, rijbewijs_vervaldatum, vca_vervaldatum, ehbo_vervaldatum, bhv_vervaldatum, cv_tekst, actief, opmerkingen } = req.body;
     if (!naam) return res.status(400).json({ error: "naam is verplicht" });
     const wm = werkmaatschappij || "FPS Brandpreventie";
     const [m] = await db
@@ -622,6 +628,9 @@ router.post("/medewerkers", schrijven, async (req, res) => {
         woonplaats: woonplaats || null,
         rijbewijs: rijbewijs || null,
         rijbewijsVervaldatum: rijbewijs_vervaldatum || null,
+        vcaVervaldatum: vca_vervaldatum || null,
+        ehboVervaldatum: ehbo_vervaldatum || null,
+        bhvVervaldatum: bhv_vervaldatum || null,
         cvTekst: cv_tekst || null,
         actief: actief ?? true,
         opmerkingen,
@@ -783,7 +792,7 @@ router.get("/medewerkers/:id", lezen, async (req, res) => {
 
 router.patch("/medewerkers/:id", schrijven, async (req, res) => {
   try {
-    const { naam, gebruiker_id, email, telefoon, mobiel, werkmaatschappij, functie_id, cao, dienstverband, bedrijf_uitzendbureau, contracturen_per_week, deeltijd_percentage, in_dienst_sinds, uit_dienst_per, noodcontact_naam, noodcontact_telefoon, geboortedatum, geboorteplaats, adres, postcode, woonplaats, rijbewijs, rijbewijs_vervaldatum, cv_tekst, actief, opmerkingen } = req.body;
+    const { naam, gebruiker_id, email, telefoon, mobiel, werkmaatschappij, functie_id, cao, dienstverband, bedrijf_uitzendbureau, contracturen_per_week, deeltijd_percentage, in_dienst_sinds, uit_dienst_per, noodcontact_naam, noodcontact_telefoon, geboortedatum, geboorteplaats, adres, postcode, woonplaats, rijbewijs, rijbewijs_vervaldatum, vca_vervaldatum, ehbo_vervaldatum, bhv_vervaldatum, cv_tekst, actief, opmerkingen } = req.body;
     // Voorkom dat één account aan twee medewerkers gekoppeld raakt (onboarding blokkeert
     // dit al; hier ook bij profielwijziging, want er is geen unieke DB-constraint).
     if (gebruiker_id != null) {
@@ -823,6 +832,9 @@ router.patch("/medewerkers/:id", schrijven, async (req, res) => {
         woonplaats: woonplaats !== undefined ? (woonplaats || null) : undefined,
         rijbewijs: rijbewijs !== undefined ? (rijbewijs || null) : undefined,
         rijbewijsVervaldatum: rijbewijs_vervaldatum !== undefined ? (rijbewijs_vervaldatum || null) : undefined,
+        vcaVervaldatum: vca_vervaldatum !== undefined ? (vca_vervaldatum || null) : undefined,
+        ehboVervaldatum: ehbo_vervaldatum !== undefined ? (ehbo_vervaldatum || null) : undefined,
+        bhvVervaldatum: bhv_vervaldatum !== undefined ? (bhv_vervaldatum || null) : undefined,
         cvTekst: cv_tekst !== undefined ? (cv_tekst || null) : undefined,
         actief,
         opmerkingen,
@@ -2526,6 +2538,35 @@ router.get("/hrm/cao-opties", lezen, async (_req, res) => {
       toelichting: c.toelichting,
     })),
   );
+});
+
+// ── Mijn certificaten ─────────────────────────────────────────────────────────
+router.get("/mijn/certificaten", async (req, res) => {
+  try {
+    const medewerkerId = await getMijnMedewerkerId(req);
+    if (!medewerkerId) return res.status(404).json({ error: "Geen medewerker-koppeling" });
+    const [m] = await db
+      .select({
+        id: medewerkersTable.id,
+        naam: medewerkersTable.naam,
+        vcaVervaldatum: medewerkersTable.vcaVervaldatum,
+        ehboVervaldatum: medewerkersTable.ehboVervaldatum,
+        bhvVervaldatum: medewerkersTable.bhvVervaldatum,
+      })
+      .from(medewerkersTable)
+      .where(eq(medewerkersTable.id, medewerkerId));
+    if (!m) return res.status(404).json({ error: "Niet gevonden" });
+    res.json({
+      medewerker_id: m.id,
+      naam: m.naam,
+      vca_vervaldatum: m.vcaVervaldatum ?? null,
+      ehbo_vervaldatum: m.ehboVervaldatum ?? null,
+      bhv_vervaldatum: m.bhvVervaldatum ?? null,
+    });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
 });
 
 // ── Mijn verlof — self-service, alle geauthenticeerde gebruikers ─────────────

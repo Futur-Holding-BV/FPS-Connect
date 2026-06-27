@@ -3125,6 +3125,21 @@ export interface Medewerker {
   rijbewijs?: string | null;
   /** @nullable */
   rijbewijs_vervaldatum?: string | null;
+  /**
+     * Vervaldatum VCA-certificaat (YYYY-MM-DD)
+     * @nullable
+     */
+  vca_vervaldatum?: string | null;
+  /**
+     * Vervaldatum EHBO-certificaat (YYYY-MM-DD)
+     * @nullable
+     */
+  ehbo_vervaldatum?: string | null;
+  /**
+     * Vervaldatum BHV-certificaat (YYYY-MM-DD)
+     * @nullable
+     */
+  bhv_vervaldatum?: string | null;
   /** @nullable */
   cv_tekst?: string | null;
   actief: boolean;
@@ -3166,10 +3181,27 @@ export interface MedewerkerInput {
   woonplaats?: string;
   rijbewijs?: string;
   rijbewijs_vervaldatum?: string;
+  /** Vervaldatum VCA-certificaat (YYYY-MM-DD) */
+  vca_vervaldatum?: string;
+  /** Vervaldatum EHBO-certificaat (YYYY-MM-DD) */
+  ehbo_vervaldatum?: string;
+  /** Vervaldatum BHV-certificaat (YYYY-MM-DD) */
+  bhv_vervaldatum?: string;
   cv_tekst?: string;
   actief?: boolean;
   opmerkingen?: string;
   bedrijf_uitzendbureau?: string;
+}
+
+export interface MijnCertificaten {
+  medewerker_id: number;
+  naam: string;
+  /** @nullable */
+  vca_vervaldatum?: string | null;
+  /** @nullable */
+  ehbo_vervaldatum?: string | null;
+  /** @nullable */
+  bhv_vervaldatum?: string | null;
 }
 
 export interface MedewerkerOnboardingInput {

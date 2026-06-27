@@ -2202,6 +2202,18 @@ export const DeleteConstructieTemplateResponse = zod.void()
 
 
 /**
+ * @summary VCA/EHBO/BHV vervaldatums van de ingelogde medewerker
+ */
+export const GetMijnCertificatenResponse = zod.object({
+  "medewerker_id": zod.number(),
+  "naam": zod.string(),
+  "vca_vervaldatum": zod.string().nullish(),
+  "ehbo_vervaldatum": zod.string().nullish(),
+  "bhv_vervaldatum": zod.string().nullish()
+})
+
+
+/**
  * @summary Actieve verlofsoorten (beschikbaar bij verlofaanvraag)
  */
 export const ListMijnVerlofsoortenResponseItem = zod.object({
@@ -7289,6 +7301,9 @@ export const ListMedewerkersResponseItem = zod.object({
   "woonplaats": zod.string().nullish(),
   "rijbewijs": zod.string().nullish(),
   "rijbewijs_vervaldatum": zod.string().nullish(),
+  "vca_vervaldatum": zod.string().nullish().describe('Vervaldatum VCA-certificaat (YYYY-MM-DD)'),
+  "ehbo_vervaldatum": zod.string().nullish().describe('Vervaldatum EHBO-certificaat (YYYY-MM-DD)'),
+  "bhv_vervaldatum": zod.string().nullish().describe('Vervaldatum BHV-certificaat (YYYY-MM-DD)'),
   "cv_tekst": zod.string().nullish(),
   "actief": zod.boolean(),
   "opmerkingen": zod.string().nullish(),
@@ -7325,6 +7340,9 @@ export const CreateMedewerkerBody = zod.object({
   "woonplaats": zod.string().optional(),
   "rijbewijs": zod.string().optional(),
   "rijbewijs_vervaldatum": zod.string().optional(),
+  "vca_vervaldatum": zod.string().optional().describe('Vervaldatum VCA-certificaat (YYYY-MM-DD)'),
+  "ehbo_vervaldatum": zod.string().optional().describe('Vervaldatum EHBO-certificaat (YYYY-MM-DD)'),
+  "bhv_vervaldatum": zod.string().optional().describe('Vervaldatum BHV-certificaat (YYYY-MM-DD)'),
   "cv_tekst": zod.string().optional(),
   "actief": zod.boolean().optional(),
   "opmerkingen": zod.string().optional(),
@@ -7392,6 +7410,9 @@ export const GetMedewerkerResponse = zod.object({
   "woonplaats": zod.string().nullish(),
   "rijbewijs": zod.string().nullish(),
   "rijbewijs_vervaldatum": zod.string().nullish(),
+  "vca_vervaldatum": zod.string().nullish().describe('Vervaldatum VCA-certificaat (YYYY-MM-DD)'),
+  "ehbo_vervaldatum": zod.string().nullish().describe('Vervaldatum EHBO-certificaat (YYYY-MM-DD)'),
+  "bhv_vervaldatum": zod.string().nullish().describe('Vervaldatum BHV-certificaat (YYYY-MM-DD)'),
   "cv_tekst": zod.string().nullish(),
   "actief": zod.boolean(),
   "opmerkingen": zod.string().nullish(),
@@ -7431,6 +7452,9 @@ export const UpdateMedewerkerBody = zod.object({
   "woonplaats": zod.string().optional(),
   "rijbewijs": zod.string().optional(),
   "rijbewijs_vervaldatum": zod.string().optional(),
+  "vca_vervaldatum": zod.string().optional().describe('Vervaldatum VCA-certificaat (YYYY-MM-DD)'),
+  "ehbo_vervaldatum": zod.string().optional().describe('Vervaldatum EHBO-certificaat (YYYY-MM-DD)'),
+  "bhv_vervaldatum": zod.string().optional().describe('Vervaldatum BHV-certificaat (YYYY-MM-DD)'),
   "cv_tekst": zod.string().optional(),
   "actief": zod.boolean().optional(),
   "opmerkingen": zod.string().optional(),
@@ -7463,6 +7487,9 @@ export const UpdateMedewerkerResponse = zod.object({
   "woonplaats": zod.string().nullish(),
   "rijbewijs": zod.string().nullish(),
   "rijbewijs_vervaldatum": zod.string().nullish(),
+  "vca_vervaldatum": zod.string().nullish().describe('Vervaldatum VCA-certificaat (YYYY-MM-DD)'),
+  "ehbo_vervaldatum": zod.string().nullish().describe('Vervaldatum EHBO-certificaat (YYYY-MM-DD)'),
+  "bhv_vervaldatum": zod.string().nullish().describe('Vervaldatum BHV-certificaat (YYYY-MM-DD)'),
   "cv_tekst": zod.string().nullish(),
   "actief": zod.boolean(),
   "opmerkingen": zod.string().nullish(),
