@@ -103,6 +103,10 @@ import SepaBestandenPagina from "@/pages/sepa-bestanden/index";
 import MijnSalarisdocumentenPagina from "@/pages/mijn/salarisdocumenten";
 import BoekhoudingBeheer from "@/pages/beheer/boekhouding";
 import GoLivePagina from "@/pages/beheer/go-live";
+import SalarisMutatiesPagina from "@/pages/salaris-mutaties/index";
+import ScabMailPagina from "@/pages/scab-mail/index";
+import BoekhouderPortaalPagina from "@/pages/boekhouder/index";
+import LoonOutputPagina from "@/pages/loon-output/index";
 import BerichtenPagina from "@/pages/berichten/index";
 import ModulesCalculatie from "@/pages/modules/calculatie/index";
 import ModulesCalculatieNieuw from "@/pages/modules/calculatie/nieuw";
@@ -258,6 +262,10 @@ function ConnectPortal() {
         <Route path="/salarisarchief/batch/:id" component={SalarisarchiefBatchDetailPagina} />
         <Route path="/salarisarchief" component={SalarisarchiefPagina} />
         <Route path="/sepa-bestanden" component={SepaBestandenPagina} />
+        <Route path="/salaris-mutaties" component={SalarisMutatiesPagina} />
+        <Route path="/scab-mail" component={ScabMailPagina} />
+        <Route path="/loon-output" component={LoonOutputPagina} />
+        <Route path="/boekhouder" component={BoekhouderPortaalPagina} />
 
         {/* ── Communicatie ── */}
         <Route path="/berichten" component={BerichtenPagina} />

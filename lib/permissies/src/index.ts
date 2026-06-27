@@ -102,6 +102,21 @@ export const MODULES = [
     label: "Salarisarchief & SEPA",
     omschrijving: "Loonstroken, jaaropgaven, SEPA-betaalbestanden en salarisdocumentbeheer",
   },
+  {
+    id: "salaris_mutaties",
+    label: "Salarismutaties",
+    omschrijving: "Salarismutaties per loonperiode verzamelen, controleren en accorderen",
+  },
+  {
+    id: "scab_mail",
+    label: "SCAB Salarismail",
+    omschrijving: "AI-conceptmails aan SCAB voor FPS Bouw en Renovatie salarisverwerking",
+  },
+  {
+    id: "boekhouder_portaal",
+    label: "Boekhouderportaal",
+    omschrijving: "Externe boekhouder: upload/download documenten, mutatieoverzicht, SEPA, jaarrekening",
+  },
 ] as const;
 
 export type ModuleId = (typeof MODULES)[number]["id"];
@@ -296,6 +311,16 @@ export const PRESETS: Preset[] = [
     bevoegdheden: matrix({
       gebouwen: 1, voorzieningen: 2, inspecties: 1, onderhoud: 2,
       rapportages: 1, bibliotheek: 1, toolbox: 1,
+    }),
+  },
+  {
+    naam: "Externe boekhouder",
+    bevoegdheden: matrix({
+      rapportages: 1,
+      financieel: 2,
+      salarisarchief: 2,
+      salaris_mutaties: 1,
+      boekhouder_portaal: 4,
     }),
   },
 ];

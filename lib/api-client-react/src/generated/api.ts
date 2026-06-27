@@ -45,6 +45,9 @@ import type {
   BatchExportResultaat,
   Bekwaamheid,
   BekwaamheidInput,
+  BoekhouderDashboard,
+  BoekhouderUpload,
+  BoekhouderUploadInput,
   BruikleenInput,
   BruikleenOndertekeningInput,
   BruikleenOvereenkomst,
@@ -158,14 +161,19 @@ import type {
   GereedschapInput,
   GereedschapMelding,
   GereedschapMeldingInput,
+  GetBoekhouderDashboardParams,
+  GetBoekhouderUploadsParams,
   GetCapaciteitBezettingParams,
   GetFactuurUploadUrl200,
   GetGebouwGevelbeeld200,
+  GetLoonOutputParams,
   GetMijnWeekUrenParams,
   GetPlanningNacalculatieParams,
   GetRecenteActiviteitParams,
+  GetSalarisMutatiesParams,
   GetSalarisarchiefAuditlogParams,
   GetSalarisarchiefDocumentenParams,
+  GetScabMailsParams,
   GetVeiligheidLmrasUploadUrl200,
   GetVeiligheidMeldingenUploadUrl200,
   GetVeiligheidToolboxenParams,
@@ -255,6 +263,9 @@ import type {
   LoginInput,
   LoginPoging,
   LoginResultaat,
+  LoonOutputBestand,
+  LoonOutputBestandPatch,
+  LoonOutputUploadInput,
   MaakOfferteResult,
   MaakOpdrachtInput,
   MailActieResultaat,
@@ -368,10 +379,18 @@ import type {
   SalarisBatchDetail,
   SalarisBatchPublicerenInput,
   SalarisBatchPublicerenResultaat,
+  SalarisMutatie,
+  SalarisMutatieInput,
+  SalarisMutatiePatch,
   SalarisUploadInput,
   SalarisbestandPatch,
   SalarisbestandRegel,
   SalarisdocumentAuditRegel,
+  ScabMail,
+  ScabMailBijlage,
+  ScabMailBijlageInput,
+  ScabMailGenereerInput,
+  ScabMailPatch,
   ScanCrmMarktintelligentieAi503,
   Scheiding,
   ScheidingInput,
@@ -476,6 +495,7 @@ import type {
   WerkdagStatusInput,
   Werkgever,
   WerkgeverInput,
+  WerkgeverSalarisConfig,
   Ziekmelding,
   ZiekmeldingenInput,
   ZiekmeldingenSelfInput,
@@ -44617,5 +44637,1556 @@ export const usePostBeheerGoLiveLessen = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getPostBeheerGoLiveLessenMutationOptions(options));
+    }
+
+export const getGetSalarisMutatiesUrl = (params?: GetSalarisMutatiesParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/salaris-mutaties?${stringifiedParams}` : `/api/salaris-mutaties`
+}
+
+/**
+ * @summary Salarismutaties lijst
+ */
+export const getSalarisMutaties = async (params?: GetSalarisMutatiesParams, options?: RequestInit): Promise<SalarisMutatie[]> => {
+
+  return customFetch<SalarisMutatie[]>(getGetSalarisMutatiesUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetSalarisMutatiesQueryKey = (params?: GetSalarisMutatiesParams,) => {
+    return [
+    `/api/salaris-mutaties`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetSalarisMutatiesQueryOptions = <TData = Awaited<ReturnType<typeof getSalarisMutaties>>, TError = ErrorType<unknown>>(params?: GetSalarisMutatiesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSalarisMutaties>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetSalarisMutatiesQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getSalarisMutaties>>> = ({ signal }) => getSalarisMutaties(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getSalarisMutaties>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetSalarisMutatiesQueryResult = NonNullable<Awaited<ReturnType<typeof getSalarisMutaties>>>
+export type GetSalarisMutatiesQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Salarismutaties lijst
+ */
+
+export function useGetSalarisMutaties<TData = Awaited<ReturnType<typeof getSalarisMutaties>>, TError = ErrorType<unknown>>(
+ params?: GetSalarisMutatiesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSalarisMutaties>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetSalarisMutatiesQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getPostSalarisMutatiesUrl = () => {
+
+
+
+
+  return `/api/salaris-mutaties`
+}
+
+/**
+ * @summary Salarismutatie aanmaken
+ */
+export const postSalarisMutaties = async (salarisMutatieInput: SalarisMutatieInput, options?: RequestInit): Promise<SalarisMutatie> => {
+
+  return customFetch<SalarisMutatie>(getPostSalarisMutatiesUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(salarisMutatieInput)
+  }
+);}
+
+
+
+
+export const getPostSalarisMutatiesMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postSalarisMutaties>>, TError,{data: BodyType<SalarisMutatieInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof postSalarisMutaties>>, TError,{data: BodyType<SalarisMutatieInput>}, TContext> => {
+
+const mutationKey = ['postSalarisMutaties'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postSalarisMutaties>>, {data: BodyType<SalarisMutatieInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  postSalarisMutaties(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PostSalarisMutatiesMutationResult = NonNullable<Awaited<ReturnType<typeof postSalarisMutaties>>>
+    export type PostSalarisMutatiesMutationBody = BodyType<SalarisMutatieInput>
+    export type PostSalarisMutatiesMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Salarismutatie aanmaken
+ */
+export const usePostSalarisMutaties = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postSalarisMutaties>>, TError,{data: BodyType<SalarisMutatieInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof postSalarisMutaties>>,
+        TError,
+        {data: BodyType<SalarisMutatieInput>},
+        TContext
+      > => {
+      return useMutation(getPostSalarisMutatiesMutationOptions(options));
+    }
+
+export const getGetSalarisMutatiesIdUrl = (id: number,) => {
+
+
+
+
+  return `/api/salaris-mutaties/${id}`
+}
+
+/**
+ * @summary Salarismutatie detail
+ */
+export const getSalarisMutatiesId = async (id: number, options?: RequestInit): Promise<SalarisMutatie> => {
+
+  return customFetch<SalarisMutatie>(getGetSalarisMutatiesIdUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetSalarisMutatiesIdQueryKey = (id: number,) => {
+    return [
+    `/api/salaris-mutaties/${id}`
+    ] as const;
+    }
+
+
+export const getGetSalarisMutatiesIdQueryOptions = <TData = Awaited<ReturnType<typeof getSalarisMutatiesId>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSalarisMutatiesId>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetSalarisMutatiesIdQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getSalarisMutatiesId>>> = ({ signal }) => getSalarisMutatiesId(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getSalarisMutatiesId>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetSalarisMutatiesIdQueryResult = NonNullable<Awaited<ReturnType<typeof getSalarisMutatiesId>>>
+export type GetSalarisMutatiesIdQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Salarismutatie detail
+ */
+
+export function useGetSalarisMutatiesId<TData = Awaited<ReturnType<typeof getSalarisMutatiesId>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSalarisMutatiesId>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetSalarisMutatiesIdQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getPatchSalarisMutatiesIdUrl = (id: number,) => {
+
+
+
+
+  return `/api/salaris-mutaties/${id}`
+}
+
+/**
+ * @summary Salarismutatie bijwerken
+ */
+export const patchSalarisMutatiesId = async (id: number,
+    salarisMutatiePatch: SalarisMutatiePatch, options?: RequestInit): Promise<SalarisMutatie> => {
+
+  return customFetch<SalarisMutatie>(getPatchSalarisMutatiesIdUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(salarisMutatiePatch)
+  }
+);}
+
+
+
+
+export const getPatchSalarisMutatiesIdMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof patchSalarisMutatiesId>>, TError,{id: number;data: BodyType<SalarisMutatiePatch>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof patchSalarisMutatiesId>>, TError,{id: number;data: BodyType<SalarisMutatiePatch>}, TContext> => {
+
+const mutationKey = ['patchSalarisMutatiesId'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof patchSalarisMutatiesId>>, {id: number;data: BodyType<SalarisMutatiePatch>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  patchSalarisMutatiesId(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PatchSalarisMutatiesIdMutationResult = NonNullable<Awaited<ReturnType<typeof patchSalarisMutatiesId>>>
+    export type PatchSalarisMutatiesIdMutationBody = BodyType<SalarisMutatiePatch>
+    export type PatchSalarisMutatiesIdMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Salarismutatie bijwerken
+ */
+export const usePatchSalarisMutatiesId = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof patchSalarisMutatiesId>>, TError,{id: number;data: BodyType<SalarisMutatiePatch>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof patchSalarisMutatiesId>>,
+        TError,
+        {id: number;data: BodyType<SalarisMutatiePatch>},
+        TContext
+      > => {
+      return useMutation(getPatchSalarisMutatiesIdMutationOptions(options));
+    }
+
+export const getGetScabMailsUrl = (params?: GetScabMailsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/scab-mails?${stringifiedParams}` : `/api/scab-mails`
+}
+
+/**
+ * @summary SCAB-mails lijst
+ */
+export const getScabMails = async (params?: GetScabMailsParams, options?: RequestInit): Promise<ScabMail[]> => {
+
+  return customFetch<ScabMail[]>(getGetScabMailsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetScabMailsQueryKey = (params?: GetScabMailsParams,) => {
+    return [
+    `/api/scab-mails`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetScabMailsQueryOptions = <TData = Awaited<ReturnType<typeof getScabMails>>, TError = ErrorType<unknown>>(params?: GetScabMailsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getScabMails>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetScabMailsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getScabMails>>> = ({ signal }) => getScabMails(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getScabMails>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetScabMailsQueryResult = NonNullable<Awaited<ReturnType<typeof getScabMails>>>
+export type GetScabMailsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary SCAB-mails lijst
+ */
+
+export function useGetScabMails<TData = Awaited<ReturnType<typeof getScabMails>>, TError = ErrorType<unknown>>(
+ params?: GetScabMailsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getScabMails>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetScabMailsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getPostScabMailsGenereerUrl = () => {
+
+
+
+
+  return `/api/scab-mails/genereer`
+}
+
+/**
+ * @summary SCAB-conceptmail AI-samenstellen
+ */
+export const postScabMailsGenereer = async (scabMailGenereerInput: ScabMailGenereerInput, options?: RequestInit): Promise<ScabMail> => {
+
+  return customFetch<ScabMail>(getPostScabMailsGenereerUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(scabMailGenereerInput)
+  }
+);}
+
+
+
+
+export const getPostScabMailsGenereerMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postScabMailsGenereer>>, TError,{data: BodyType<ScabMailGenereerInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof postScabMailsGenereer>>, TError,{data: BodyType<ScabMailGenereerInput>}, TContext> => {
+
+const mutationKey = ['postScabMailsGenereer'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postScabMailsGenereer>>, {data: BodyType<ScabMailGenereerInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  postScabMailsGenereer(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PostScabMailsGenereerMutationResult = NonNullable<Awaited<ReturnType<typeof postScabMailsGenereer>>>
+    export type PostScabMailsGenereerMutationBody = BodyType<ScabMailGenereerInput>
+    export type PostScabMailsGenereerMutationError = ErrorType<unknown>
+
+    /**
+ * @summary SCAB-conceptmail AI-samenstellen
+ */
+export const usePostScabMailsGenereer = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postScabMailsGenereer>>, TError,{data: BodyType<ScabMailGenereerInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof postScabMailsGenereer>>,
+        TError,
+        {data: BodyType<ScabMailGenereerInput>},
+        TContext
+      > => {
+      return useMutation(getPostScabMailsGenereerMutationOptions(options));
+    }
+
+export const getGetScabMailsIdUrl = (id: number,) => {
+
+
+
+
+  return `/api/scab-mails/${id}`
+}
+
+/**
+ * @summary SCAB-mail detail
+ */
+export const getScabMailsId = async (id: number, options?: RequestInit): Promise<ScabMail> => {
+
+  return customFetch<ScabMail>(getGetScabMailsIdUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetScabMailsIdQueryKey = (id: number,) => {
+    return [
+    `/api/scab-mails/${id}`
+    ] as const;
+    }
+
+
+export const getGetScabMailsIdQueryOptions = <TData = Awaited<ReturnType<typeof getScabMailsId>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getScabMailsId>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetScabMailsIdQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getScabMailsId>>> = ({ signal }) => getScabMailsId(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getScabMailsId>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetScabMailsIdQueryResult = NonNullable<Awaited<ReturnType<typeof getScabMailsId>>>
+export type GetScabMailsIdQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary SCAB-mail detail
+ */
+
+export function useGetScabMailsId<TData = Awaited<ReturnType<typeof getScabMailsId>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getScabMailsId>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetScabMailsIdQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getPatchScabMailsIdUrl = (id: number,) => {
+
+
+
+
+  return `/api/scab-mails/${id}`
+}
+
+/**
+ * @summary SCAB-mail bijwerken
+ */
+export const patchScabMailsId = async (id: number,
+    scabMailPatch: ScabMailPatch, options?: RequestInit): Promise<ScabMail> => {
+
+  return customFetch<ScabMail>(getPatchScabMailsIdUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(scabMailPatch)
+  }
+);}
+
+
+
+
+export const getPatchScabMailsIdMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof patchScabMailsId>>, TError,{id: number;data: BodyType<ScabMailPatch>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof patchScabMailsId>>, TError,{id: number;data: BodyType<ScabMailPatch>}, TContext> => {
+
+const mutationKey = ['patchScabMailsId'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof patchScabMailsId>>, {id: number;data: BodyType<ScabMailPatch>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  patchScabMailsId(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PatchScabMailsIdMutationResult = NonNullable<Awaited<ReturnType<typeof patchScabMailsId>>>
+    export type PatchScabMailsIdMutationBody = BodyType<ScabMailPatch>
+    export type PatchScabMailsIdMutationError = ErrorType<unknown>
+
+    /**
+ * @summary SCAB-mail bijwerken
+ */
+export const usePatchScabMailsId = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof patchScabMailsId>>, TError,{id: number;data: BodyType<ScabMailPatch>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof patchScabMailsId>>,
+        TError,
+        {id: number;data: BodyType<ScabMailPatch>},
+        TContext
+      > => {
+      return useMutation(getPatchScabMailsIdMutationOptions(options));
+    }
+
+export const getPostScabMailsIdVerzendUrl = (id: number,) => {
+
+
+
+
+  return `/api/scab-mails/${id}/verzend`
+}
+
+/**
+ * @summary SCAB-mail definitief verzenden
+ */
+export const postScabMailsIdVerzend = async (id: number, options?: RequestInit): Promise<ScabMail> => {
+
+  return customFetch<ScabMail>(getPostScabMailsIdVerzendUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getPostScabMailsIdVerzendMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postScabMailsIdVerzend>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof postScabMailsIdVerzend>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['postScabMailsIdVerzend'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postScabMailsIdVerzend>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  postScabMailsIdVerzend(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PostScabMailsIdVerzendMutationResult = NonNullable<Awaited<ReturnType<typeof postScabMailsIdVerzend>>>
+
+    export type PostScabMailsIdVerzendMutationError = ErrorType<unknown>
+
+    /**
+ * @summary SCAB-mail definitief verzenden
+ */
+export const usePostScabMailsIdVerzend = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postScabMailsIdVerzend>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof postScabMailsIdVerzend>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getPostScabMailsIdVerzendMutationOptions(options));
+    }
+
+export const getGetScabMailsIdBijlagenUrl = (id: number,) => {
+
+
+
+
+  return `/api/scab-mails/${id}/bijlagen`
+}
+
+/**
+ * @summary Bijlagen van SCAB-mail
+ */
+export const getScabMailsIdBijlagen = async (id: number, options?: RequestInit): Promise<ScabMailBijlage[]> => {
+
+  return customFetch<ScabMailBijlage[]>(getGetScabMailsIdBijlagenUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetScabMailsIdBijlagenQueryKey = (id: number,) => {
+    return [
+    `/api/scab-mails/${id}/bijlagen`
+    ] as const;
+    }
+
+
+export const getGetScabMailsIdBijlagenQueryOptions = <TData = Awaited<ReturnType<typeof getScabMailsIdBijlagen>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getScabMailsIdBijlagen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetScabMailsIdBijlagenQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getScabMailsIdBijlagen>>> = ({ signal }) => getScabMailsIdBijlagen(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getScabMailsIdBijlagen>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetScabMailsIdBijlagenQueryResult = NonNullable<Awaited<ReturnType<typeof getScabMailsIdBijlagen>>>
+export type GetScabMailsIdBijlagenQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Bijlagen van SCAB-mail
+ */
+
+export function useGetScabMailsIdBijlagen<TData = Awaited<ReturnType<typeof getScabMailsIdBijlagen>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getScabMailsIdBijlagen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetScabMailsIdBijlagenQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getPostScabMailsIdBijlagenUrl = (id: number,) => {
+
+
+
+
+  return `/api/scab-mails/${id}/bijlagen`
+}
+
+/**
+ * @summary Bijlage toevoegen aan SCAB-mail
+ */
+export const postScabMailsIdBijlagen = async (id: number,
+    scabMailBijlageInput: ScabMailBijlageInput, options?: RequestInit): Promise<ScabMailBijlage> => {
+    const formData = new FormData();
+if(scabMailBijlageInput.type !== undefined) {
+ formData.append(`type`, scabMailBijlageInput.type);
+ }
+if(scabMailBijlageInput.omschrijving !== undefined) {
+ formData.append(`omschrijving`, scabMailBijlageInput.omschrijving);
+ }
+if(scabMailBijlageInput.is_gevoelig !== undefined) {
+ formData.append(`is_gevoelig`, scabMailBijlageInput.is_gevoelig.toString())
+ }
+if(scabMailBijlageInput.medewerker_id !== undefined) {
+ formData.append(`medewerker_id`, scabMailBijlageInput.medewerker_id.toString())
+ }
+
+  return customFetch<ScabMailBijlage>(getPostScabMailsIdBijlagenUrl(id),
+  {
+    ...options,
+    method: 'POST'
+    ,
+    body: formData
+  }
+);}
+
+
+
+
+export const getPostScabMailsIdBijlagenMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postScabMailsIdBijlagen>>, TError,{id: number;data: BodyType<ScabMailBijlageInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof postScabMailsIdBijlagen>>, TError,{id: number;data: BodyType<ScabMailBijlageInput>}, TContext> => {
+
+const mutationKey = ['postScabMailsIdBijlagen'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postScabMailsIdBijlagen>>, {id: number;data: BodyType<ScabMailBijlageInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  postScabMailsIdBijlagen(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PostScabMailsIdBijlagenMutationResult = NonNullable<Awaited<ReturnType<typeof postScabMailsIdBijlagen>>>
+    export type PostScabMailsIdBijlagenMutationBody = BodyType<ScabMailBijlageInput>
+    export type PostScabMailsIdBijlagenMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Bijlage toevoegen aan SCAB-mail
+ */
+export const usePostScabMailsIdBijlagen = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postScabMailsIdBijlagen>>, TError,{id: number;data: BodyType<ScabMailBijlageInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof postScabMailsIdBijlagen>>,
+        TError,
+        {id: number;data: BodyType<ScabMailBijlageInput>},
+        TContext
+      > => {
+      return useMutation(getPostScabMailsIdBijlagenMutationOptions(options));
+    }
+
+export const getDeleteScabMailsIdBijlagenBijlageIdUrl = (id: number,
+    bijlageId: number,) => {
+
+
+
+
+  return `/api/scab-mails/${id}/bijlagen/${bijlageId}`
+}
+
+/**
+ * @summary Bijlage verwijderen van SCAB-mail
+ */
+export const deleteScabMailsIdBijlagenBijlageId = async (id: number,
+    bijlageId: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteScabMailsIdBijlagenBijlageIdUrl(id,bijlageId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteScabMailsIdBijlagenBijlageIdMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteScabMailsIdBijlagenBijlageId>>, TError,{id: number;bijlageId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteScabMailsIdBijlagenBijlageId>>, TError,{id: number;bijlageId: number}, TContext> => {
+
+const mutationKey = ['deleteScabMailsIdBijlagenBijlageId'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteScabMailsIdBijlagenBijlageId>>, {id: number;bijlageId: number}> = (props) => {
+          const {id,bijlageId} = props ?? {};
+
+          return  deleteScabMailsIdBijlagenBijlageId(id,bijlageId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteScabMailsIdBijlagenBijlageIdMutationResult = NonNullable<Awaited<ReturnType<typeof deleteScabMailsIdBijlagenBijlageId>>>
+
+    export type DeleteScabMailsIdBijlagenBijlageIdMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Bijlage verwijderen van SCAB-mail
+ */
+export const useDeleteScabMailsIdBijlagenBijlageId = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteScabMailsIdBijlagenBijlageId>>, TError,{id: number;bijlageId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteScabMailsIdBijlagenBijlageId>>,
+        TError,
+        {id: number;bijlageId: number},
+        TContext
+      > => {
+      return useMutation(getDeleteScabMailsIdBijlagenBijlageIdMutationOptions(options));
+    }
+
+export const getGetLoonOutputUrl = (params?: GetLoonOutputParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/loon-output?${stringifiedParams}` : `/api/loon-output`
+}
+
+/**
+ * @summary Loon-outputbestanden lijst
+ */
+export const getLoonOutput = async (params?: GetLoonOutputParams, options?: RequestInit): Promise<LoonOutputBestand[]> => {
+
+  return customFetch<LoonOutputBestand[]>(getGetLoonOutputUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetLoonOutputQueryKey = (params?: GetLoonOutputParams,) => {
+    return [
+    `/api/loon-output`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetLoonOutputQueryOptions = <TData = Awaited<ReturnType<typeof getLoonOutput>>, TError = ErrorType<unknown>>(params?: GetLoonOutputParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getLoonOutput>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetLoonOutputQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getLoonOutput>>> = ({ signal }) => getLoonOutput(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getLoonOutput>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetLoonOutputQueryResult = NonNullable<Awaited<ReturnType<typeof getLoonOutput>>>
+export type GetLoonOutputQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Loon-outputbestanden lijst
+ */
+
+export function useGetLoonOutput<TData = Awaited<ReturnType<typeof getLoonOutput>>, TError = ErrorType<unknown>>(
+ params?: GetLoonOutputParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getLoonOutput>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetLoonOutputQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getPostLoonOutputUrl = () => {
+
+
+
+
+  return `/api/loon-output`
+}
+
+/**
+ * @summary Loon-outputbestand uploaden
+ */
+export const postLoonOutput = async (loonOutputUploadInput: LoonOutputUploadInput, options?: RequestInit): Promise<LoonOutputBestand> => {
+    const formData = new FormData();
+formData.append(`type`, loonOutputUploadInput.type);
+if(loonOutputUploadInput.werkmaatschappij !== undefined) {
+ formData.append(`werkmaatschappij`, loonOutputUploadInput.werkmaatschappij);
+ }
+if(loonOutputUploadInput.werkgever_id !== undefined) {
+ formData.append(`werkgever_id`, loonOutputUploadInput.werkgever_id.toString())
+ }
+if(loonOutputUploadInput.periode_jaar !== undefined) {
+ formData.append(`periode_jaar`, loonOutputUploadInput.periode_jaar.toString())
+ }
+if(loonOutputUploadInput.periode_maand !== undefined) {
+ formData.append(`periode_maand`, loonOutputUploadInput.periode_maand.toString())
+ }
+if(loonOutputUploadInput.medewerker_id !== undefined) {
+ formData.append(`medewerker_id`, loonOutputUploadInput.medewerker_id.toString())
+ }
+if(loonOutputUploadInput.bron !== undefined) {
+ formData.append(`bron`, loonOutputUploadInput.bron);
+ }
+if(loonOutputUploadInput.notities !== undefined) {
+ formData.append(`notities`, loonOutputUploadInput.notities);
+ }
+if(loonOutputUploadInput.upload_batch_ref !== undefined) {
+ formData.append(`upload_batch_ref`, loonOutputUploadInput.upload_batch_ref);
+ }
+
+  return customFetch<LoonOutputBestand>(getPostLoonOutputUrl(),
+  {
+    ...options,
+    method: 'POST'
+    ,
+    body: formData
+  }
+);}
+
+
+
+
+export const getPostLoonOutputMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postLoonOutput>>, TError,{data: BodyType<LoonOutputUploadInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof postLoonOutput>>, TError,{data: BodyType<LoonOutputUploadInput>}, TContext> => {
+
+const mutationKey = ['postLoonOutput'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postLoonOutput>>, {data: BodyType<LoonOutputUploadInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  postLoonOutput(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PostLoonOutputMutationResult = NonNullable<Awaited<ReturnType<typeof postLoonOutput>>>
+    export type PostLoonOutputMutationBody = BodyType<LoonOutputUploadInput>
+    export type PostLoonOutputMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Loon-outputbestand uploaden
+ */
+export const usePostLoonOutput = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postLoonOutput>>, TError,{data: BodyType<LoonOutputUploadInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof postLoonOutput>>,
+        TError,
+        {data: BodyType<LoonOutputUploadInput>},
+        TContext
+      > => {
+      return useMutation(getPostLoonOutputMutationOptions(options));
+    }
+
+export const getPatchLoonOutputIdUrl = (id: number,) => {
+
+
+
+
+  return `/api/loon-output/${id}`
+}
+
+/**
+ * @summary Loon-outputbestand bijwerken
+ */
+export const patchLoonOutputId = async (id: number,
+    loonOutputBestandPatch: LoonOutputBestandPatch, options?: RequestInit): Promise<LoonOutputBestand> => {
+
+  return customFetch<LoonOutputBestand>(getPatchLoonOutputIdUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(loonOutputBestandPatch)
+  }
+);}
+
+
+
+
+export const getPatchLoonOutputIdMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof patchLoonOutputId>>, TError,{id: number;data: BodyType<LoonOutputBestandPatch>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof patchLoonOutputId>>, TError,{id: number;data: BodyType<LoonOutputBestandPatch>}, TContext> => {
+
+const mutationKey = ['patchLoonOutputId'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof patchLoonOutputId>>, {id: number;data: BodyType<LoonOutputBestandPatch>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  patchLoonOutputId(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PatchLoonOutputIdMutationResult = NonNullable<Awaited<ReturnType<typeof patchLoonOutputId>>>
+    export type PatchLoonOutputIdMutationBody = BodyType<LoonOutputBestandPatch>
+    export type PatchLoonOutputIdMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Loon-outputbestand bijwerken
+ */
+export const usePatchLoonOutputId = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof patchLoonOutputId>>, TError,{id: number;data: BodyType<LoonOutputBestandPatch>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof patchLoonOutputId>>,
+        TError,
+        {id: number;data: BodyType<LoonOutputBestandPatch>},
+        TContext
+      > => {
+      return useMutation(getPatchLoonOutputIdMutationOptions(options));
+    }
+
+export const getPostLoonOutputIdPubliceerUrl = (id: number,) => {
+
+
+
+
+  return `/api/loon-output/${id}/publiceer`
+}
+
+/**
+ * @summary Loon-outputbestand publiceren naar medewerker
+ */
+export const postLoonOutputIdPubliceer = async (id: number, options?: RequestInit): Promise<LoonOutputBestand> => {
+
+  return customFetch<LoonOutputBestand>(getPostLoonOutputIdPubliceerUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getPostLoonOutputIdPubliceerMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postLoonOutputIdPubliceer>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof postLoonOutputIdPubliceer>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['postLoonOutputIdPubliceer'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postLoonOutputIdPubliceer>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  postLoonOutputIdPubliceer(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PostLoonOutputIdPubliceerMutationResult = NonNullable<Awaited<ReturnType<typeof postLoonOutputIdPubliceer>>>
+
+    export type PostLoonOutputIdPubliceerMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Loon-outputbestand publiceren naar medewerker
+ */
+export const usePostLoonOutputIdPubliceer = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postLoonOutputIdPubliceer>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof postLoonOutputIdPubliceer>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getPostLoonOutputIdPubliceerMutationOptions(options));
+    }
+
+export const getGetBoekhouderDashboardUrl = (params?: GetBoekhouderDashboardParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/boekhouder/dashboard?${stringifiedParams}` : `/api/boekhouder/dashboard`
+}
+
+/**
+ * @summary Boekhouderportaal dashboard
+ */
+export const getBoekhouderDashboard = async (params?: GetBoekhouderDashboardParams, options?: RequestInit): Promise<BoekhouderDashboard> => {
+
+  return customFetch<BoekhouderDashboard>(getGetBoekhouderDashboardUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetBoekhouderDashboardQueryKey = (params?: GetBoekhouderDashboardParams,) => {
+    return [
+    `/api/boekhouder/dashboard`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetBoekhouderDashboardQueryOptions = <TData = Awaited<ReturnType<typeof getBoekhouderDashboard>>, TError = ErrorType<unknown>>(params?: GetBoekhouderDashboardParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getBoekhouderDashboard>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetBoekhouderDashboardQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getBoekhouderDashboard>>> = ({ signal }) => getBoekhouderDashboard(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getBoekhouderDashboard>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetBoekhouderDashboardQueryResult = NonNullable<Awaited<ReturnType<typeof getBoekhouderDashboard>>>
+export type GetBoekhouderDashboardQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Boekhouderportaal dashboard
+ */
+
+export function useGetBoekhouderDashboard<TData = Awaited<ReturnType<typeof getBoekhouderDashboard>>, TError = ErrorType<unknown>>(
+ params?: GetBoekhouderDashboardParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getBoekhouderDashboard>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetBoekhouderDashboardQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetBoekhouderUploadsUrl = (params?: GetBoekhouderUploadsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/boekhouder/uploads?${stringifiedParams}` : `/api/boekhouder/uploads`
+}
+
+/**
+ * @summary Boekhouder-uploads lijst
+ */
+export const getBoekhouderUploads = async (params?: GetBoekhouderUploadsParams, options?: RequestInit): Promise<BoekhouderUpload[]> => {
+
+  return customFetch<BoekhouderUpload[]>(getGetBoekhouderUploadsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetBoekhouderUploadsQueryKey = (params?: GetBoekhouderUploadsParams,) => {
+    return [
+    `/api/boekhouder/uploads`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetBoekhouderUploadsQueryOptions = <TData = Awaited<ReturnType<typeof getBoekhouderUploads>>, TError = ErrorType<unknown>>(params?: GetBoekhouderUploadsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getBoekhouderUploads>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetBoekhouderUploadsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getBoekhouderUploads>>> = ({ signal }) => getBoekhouderUploads(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getBoekhouderUploads>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetBoekhouderUploadsQueryResult = NonNullable<Awaited<ReturnType<typeof getBoekhouderUploads>>>
+export type GetBoekhouderUploadsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Boekhouder-uploads lijst
+ */
+
+export function useGetBoekhouderUploads<TData = Awaited<ReturnType<typeof getBoekhouderUploads>>, TError = ErrorType<unknown>>(
+ params?: GetBoekhouderUploadsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getBoekhouderUploads>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetBoekhouderUploadsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getPostBoekhouderUploadsUrl = () => {
+
+
+
+
+  return `/api/boekhouder/uploads`
+}
+
+/**
+ * @summary Document uploaden als boekhouder
+ */
+export const postBoekhouderUploads = async (boekhouderUploadInput: BoekhouderUploadInput, options?: RequestInit): Promise<BoekhouderUpload> => {
+    const formData = new FormData();
+formData.append(`map`, boekhouderUploadInput.map);
+if(boekhouderUploadInput.werkgever_id !== undefined) {
+ formData.append(`werkgever_id`, boekhouderUploadInput.werkgever_id.toString())
+ }
+if(boekhouderUploadInput.periode_jaar !== undefined) {
+ formData.append(`periode_jaar`, boekhouderUploadInput.periode_jaar.toString())
+ }
+if(boekhouderUploadInput.periode_maand !== undefined) {
+ formData.append(`periode_maand`, boekhouderUploadInput.periode_maand.toString())
+ }
+if(boekhouderUploadInput.omschrijving !== undefined) {
+ formData.append(`omschrijving`, boekhouderUploadInput.omschrijving);
+ }
+
+  return customFetch<BoekhouderUpload>(getPostBoekhouderUploadsUrl(),
+  {
+    ...options,
+    method: 'POST'
+    ,
+    body: formData
+  }
+);}
+
+
+
+
+export const getPostBoekhouderUploadsMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postBoekhouderUploads>>, TError,{data: BodyType<BoekhouderUploadInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof postBoekhouderUploads>>, TError,{data: BodyType<BoekhouderUploadInput>}, TContext> => {
+
+const mutationKey = ['postBoekhouderUploads'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postBoekhouderUploads>>, {data: BodyType<BoekhouderUploadInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  postBoekhouderUploads(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PostBoekhouderUploadsMutationResult = NonNullable<Awaited<ReturnType<typeof postBoekhouderUploads>>>
+    export type PostBoekhouderUploadsMutationBody = BodyType<BoekhouderUploadInput>
+    export type PostBoekhouderUploadsMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Document uploaden als boekhouder
+ */
+export const usePostBoekhouderUploads = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postBoekhouderUploads>>, TError,{data: BodyType<BoekhouderUploadInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof postBoekhouderUploads>>,
+        TError,
+        {data: BodyType<BoekhouderUploadInput>},
+        TContext
+      > => {
+      return useMutation(getPostBoekhouderUploadsMutationOptions(options));
+    }
+
+export const getPatchWerkgeversIdSalarisConfigUrl = (id: number,) => {
+
+
+
+
+  return `/api/werkgevers/${id}/salaris-config`
+}
+
+/**
+ * @summary Salarisverwerker-instellingen werkgever bijwerken
+ */
+export const patchWerkgeversIdSalarisConfig = async (id: number,
+    werkgeverSalarisConfig: WerkgeverSalarisConfig, options?: RequestInit): Promise<WerkgeverSalarisConfig> => {
+
+  return customFetch<WerkgeverSalarisConfig>(getPatchWerkgeversIdSalarisConfigUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(werkgeverSalarisConfig)
+  }
+);}
+
+
+
+
+export const getPatchWerkgeversIdSalarisConfigMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof patchWerkgeversIdSalarisConfig>>, TError,{id: number;data: BodyType<WerkgeverSalarisConfig>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof patchWerkgeversIdSalarisConfig>>, TError,{id: number;data: BodyType<WerkgeverSalarisConfig>}, TContext> => {
+
+const mutationKey = ['patchWerkgeversIdSalarisConfig'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof patchWerkgeversIdSalarisConfig>>, {id: number;data: BodyType<WerkgeverSalarisConfig>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  patchWerkgeversIdSalarisConfig(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PatchWerkgeversIdSalarisConfigMutationResult = NonNullable<Awaited<ReturnType<typeof patchWerkgeversIdSalarisConfig>>>
+    export type PatchWerkgeversIdSalarisConfigMutationBody = BodyType<WerkgeverSalarisConfig>
+    export type PatchWerkgeversIdSalarisConfigMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Salarisverwerker-instellingen werkgever bijwerken
+ */
+export const usePatchWerkgeversIdSalarisConfig = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof patchWerkgeversIdSalarisConfig>>, TError,{id: number;data: BodyType<WerkgeverSalarisConfig>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof patchWerkgeversIdSalarisConfig>>,
+        TError,
+        {id: number;data: BodyType<WerkgeverSalarisConfig>},
+        TContext
+      > => {
+      return useMutation(getPatchWerkgeversIdSalarisConfigMutationOptions(options));
     }
 

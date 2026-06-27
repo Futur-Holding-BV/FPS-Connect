@@ -9,6 +9,7 @@ export const salarisbatchesTable = pgTable("salarisbatches", {
   omschrijving: text("omschrijving"),
   periodeJaar: integer("periode_jaar"),
   periodeMaand: integer("periode_maand"),
+  werkmaatschappij: text("werkmaatschappij"),
   status: text("status").notNull().default("verwerken"),
   uploaderId: integer("uploader_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
   uploaderNaam: text("uploader_naam"),
@@ -46,6 +47,7 @@ export const salarisbestandenTable = pgTable("salarisbestanden", {
 export const sepaBestandenTable = pgTable("sepa_bestanden", {
   id: serial("id").primaryKey(),
   omschrijving: text("omschrijving"),
+  werkmaatschappij: text("werkmaatschappij"),
   periodeJaar: integer("periode_jaar"),
   periodeMaand: integer("periode_maand"),
   betaaldatum: text("betaaldatum"),

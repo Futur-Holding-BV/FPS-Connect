@@ -15499,3 +15499,537 @@ export const PostBeheerGoLiveLessenBody = zod.object({
 export const PostBeheerGoLiveLessenResponse = zod.void()
 
 
+/**
+ * @summary Salarismutaties lijst
+ */
+export const GetSalarisMutatiesQueryParams = zod.object({
+  "jaar": zod.coerce.number().optional(),
+  "maand": zod.coerce.number().optional(),
+  "werkmaatschappij": zod.coerce.string().optional(),
+  "status": zod.coerce.string().optional(),
+  "medewerker_id": zod.coerce.number().optional()
+})
+
+export const GetSalarisMutatiesResponseItem = zod.object({
+  "id": zod.number(),
+  "medewerker_id": zod.number().nullish(),
+  "medewerker_naam": zod.string().nullish(),
+  "werkmaatschappij": zod.string(),
+  "werkgever_id": zod.number().nullish(),
+  "periode_jaar": zod.number(),
+  "periode_maand": zod.number(),
+  "type": zod.string(),
+  "omschrijving": zod.string().nullish(),
+  "ingangsdatum": zod.string().nullish(),
+  "bron": zod.string(),
+  "bijlage_object_path": zod.string().nullish(),
+  "bijlage_naam": zod.string().nullish(),
+  "bijlage_grootte": zod.number().nullish(),
+  "status": zod.string(),
+  "gecontroleerd": zod.boolean(),
+  "gecontroleerd_door_naam": zod.string().nullish(),
+  "gecontroleerd_op": zod.string().nullish(),
+  "akkoord": zod.boolean().nullish(),
+  "notities": zod.string().nullish(),
+  "aangemaakt_door_naam": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+export const GetSalarisMutatiesResponse = zod.array(GetSalarisMutatiesResponseItem)
+
+
+/**
+ * @summary Salarismutatie aanmaken
+ */
+export const PostSalarisMutatiesBody = zod.object({
+  "medewerker_id": zod.number().nullish(),
+  "werkmaatschappij": zod.string(),
+  "werkgever_id": zod.number().nullish(),
+  "periode_jaar": zod.number(),
+  "periode_maand": zod.number(),
+  "type": zod.string(),
+  "omschrijving": zod.string().nullish(),
+  "ingangsdatum": zod.string().nullish(),
+  "bron": zod.string().optional(),
+  "notities": zod.string().nullish()
+})
+
+export const PostSalarisMutatiesResponse = zod.void()
+
+
+/**
+ * @summary Salarismutatie detail
+ */
+export const GetSalarisMutatiesIdParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetSalarisMutatiesIdResponse = zod.object({
+  "id": zod.number(),
+  "medewerker_id": zod.number().nullish(),
+  "medewerker_naam": zod.string().nullish(),
+  "werkmaatschappij": zod.string(),
+  "werkgever_id": zod.number().nullish(),
+  "periode_jaar": zod.number(),
+  "periode_maand": zod.number(),
+  "type": zod.string(),
+  "omschrijving": zod.string().nullish(),
+  "ingangsdatum": zod.string().nullish(),
+  "bron": zod.string(),
+  "bijlage_object_path": zod.string().nullish(),
+  "bijlage_naam": zod.string().nullish(),
+  "bijlage_grootte": zod.number().nullish(),
+  "status": zod.string(),
+  "gecontroleerd": zod.boolean(),
+  "gecontroleerd_door_naam": zod.string().nullish(),
+  "gecontroleerd_op": zod.string().nullish(),
+  "akkoord": zod.boolean().nullish(),
+  "notities": zod.string().nullish(),
+  "aangemaakt_door_naam": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+
+
+/**
+ * @summary Salarismutatie bijwerken
+ */
+export const PatchSalarisMutatiesIdParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const PatchSalarisMutatiesIdBody = zod.object({
+  "type": zod.string().optional(),
+  "omschrijving": zod.string().nullish(),
+  "ingangsdatum": zod.string().nullish(),
+  "status": zod.string().optional(),
+  "akkoord": zod.boolean().nullish(),
+  "notities": zod.string().nullish()
+})
+
+export const PatchSalarisMutatiesIdResponse = zod.object({
+  "id": zod.number(),
+  "medewerker_id": zod.number().nullish(),
+  "medewerker_naam": zod.string().nullish(),
+  "werkmaatschappij": zod.string(),
+  "werkgever_id": zod.number().nullish(),
+  "periode_jaar": zod.number(),
+  "periode_maand": zod.number(),
+  "type": zod.string(),
+  "omschrijving": zod.string().nullish(),
+  "ingangsdatum": zod.string().nullish(),
+  "bron": zod.string(),
+  "bijlage_object_path": zod.string().nullish(),
+  "bijlage_naam": zod.string().nullish(),
+  "bijlage_grootte": zod.number().nullish(),
+  "status": zod.string(),
+  "gecontroleerd": zod.boolean(),
+  "gecontroleerd_door_naam": zod.string().nullish(),
+  "gecontroleerd_op": zod.string().nullish(),
+  "akkoord": zod.boolean().nullish(),
+  "notities": zod.string().nullish(),
+  "aangemaakt_door_naam": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+
+
+/**
+ * @summary SCAB-mails lijst
+ */
+export const GetScabMailsQueryParams = zod.object({
+  "jaar": zod.coerce.number().optional(),
+  "maand": zod.coerce.number().optional(),
+  "werkmaatschappij": zod.coerce.string().optional(),
+  "status": zod.coerce.string().optional()
+})
+
+export const GetScabMailsResponseItem = zod.object({
+  "id": zod.number(),
+  "werkmaatschappij": zod.string(),
+  "werkgever_id": zod.number().nullish(),
+  "periode_jaar": zod.number(),
+  "periode_maand": zod.number(),
+  "onderwerp": zod.string(),
+  "inhoud": zod.string(),
+  "scab_email_adres": zod.string().nullish(),
+  "contactpersoon": zod.string().nullish(),
+  "status": zod.string(),
+  "verzond_op": zod.string().nullish(),
+  "verzond_door_naam": zod.string().nullish(),
+  "aantal_mutaties": zod.number(),
+  "aangemaakt_door_naam": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+export const GetScabMailsResponse = zod.array(GetScabMailsResponseItem)
+
+
+/**
+ * @summary SCAB-conceptmail AI-samenstellen
+ */
+export const PostScabMailsGenereerBody = zod.object({
+  "werkmaatschappij": zod.string(),
+  "werkgever_id": zod.number().nullish(),
+  "periode_jaar": zod.number(),
+  "periode_maand": zod.number()
+})
+
+export const PostScabMailsGenereerResponse = zod.void()
+
+
+/**
+ * @summary SCAB-mail detail
+ */
+export const GetScabMailsIdParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetScabMailsIdResponse = zod.object({
+  "id": zod.number(),
+  "werkmaatschappij": zod.string(),
+  "werkgever_id": zod.number().nullish(),
+  "periode_jaar": zod.number(),
+  "periode_maand": zod.number(),
+  "onderwerp": zod.string(),
+  "inhoud": zod.string(),
+  "scab_email_adres": zod.string().nullish(),
+  "contactpersoon": zod.string().nullish(),
+  "status": zod.string(),
+  "verzond_op": zod.string().nullish(),
+  "verzond_door_naam": zod.string().nullish(),
+  "aantal_mutaties": zod.number(),
+  "aangemaakt_door_naam": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+
+
+/**
+ * @summary SCAB-mail bijwerken
+ */
+export const PatchScabMailsIdParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const PatchScabMailsIdBody = zod.object({
+  "onderwerp": zod.string().optional(),
+  "inhoud": zod.string().optional(),
+  "scab_email_adres": zod.string().nullish(),
+  "contactpersoon": zod.string().nullish()
+})
+
+export const PatchScabMailsIdResponse = zod.object({
+  "id": zod.number(),
+  "werkmaatschappij": zod.string(),
+  "werkgever_id": zod.number().nullish(),
+  "periode_jaar": zod.number(),
+  "periode_maand": zod.number(),
+  "onderwerp": zod.string(),
+  "inhoud": zod.string(),
+  "scab_email_adres": zod.string().nullish(),
+  "contactpersoon": zod.string().nullish(),
+  "status": zod.string(),
+  "verzond_op": zod.string().nullish(),
+  "verzond_door_naam": zod.string().nullish(),
+  "aantal_mutaties": zod.number(),
+  "aangemaakt_door_naam": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+
+
+/**
+ * @summary SCAB-mail definitief verzenden
+ */
+export const PostScabMailsIdVerzendParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const PostScabMailsIdVerzendResponse = zod.object({
+  "id": zod.number(),
+  "werkmaatschappij": zod.string(),
+  "werkgever_id": zod.number().nullish(),
+  "periode_jaar": zod.number(),
+  "periode_maand": zod.number(),
+  "onderwerp": zod.string(),
+  "inhoud": zod.string(),
+  "scab_email_adres": zod.string().nullish(),
+  "contactpersoon": zod.string().nullish(),
+  "status": zod.string(),
+  "verzond_op": zod.string().nullish(),
+  "verzond_door_naam": zod.string().nullish(),
+  "aantal_mutaties": zod.number(),
+  "aangemaakt_door_naam": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+
+
+/**
+ * @summary Bijlagen van SCAB-mail
+ */
+export const GetScabMailsIdBijlagenParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetScabMailsIdBijlagenResponseItem = zod.object({
+  "id": zod.number(),
+  "scab_mail_id": zod.number(),
+  "type": zod.string(),
+  "omschrijving": zod.string().nullish(),
+  "object_path": zod.string(),
+  "bestandsnaam": zod.string(),
+  "bestandsgrootte": zod.number().nullish(),
+  "is_gevoelig": zod.boolean(),
+  "medewerker_id": zod.number().nullish(),
+  "medewerker_naam": zod.string().nullish(),
+  "aangemaakt_op": zod.string()
+})
+export const GetScabMailsIdBijlagenResponse = zod.array(GetScabMailsIdBijlagenResponseItem)
+
+
+/**
+ * @summary Bijlage toevoegen aan SCAB-mail
+ */
+export const PostScabMailsIdBijlagenParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const PostScabMailsIdBijlagenBody = zod.object({
+  "type": zod.string().optional(),
+  "omschrijving": zod.string().optional(),
+  "is_gevoelig": zod.boolean().optional(),
+  "medewerker_id": zod.number().optional()
+})
+
+export const PostScabMailsIdBijlagenResponse = zod.void()
+
+
+/**
+ * @summary Bijlage verwijderen van SCAB-mail
+ */
+export const DeleteScabMailsIdBijlagenBijlageIdParams = zod.object({
+  "id": zod.coerce.number(),
+  "bijlage_id": zod.coerce.number()
+})
+
+export const DeleteScabMailsIdBijlagenBijlageIdResponse = zod.void()
+
+
+/**
+ * @summary Loon-outputbestanden lijst
+ */
+export const GetLoonOutputQueryParams = zod.object({
+  "jaar": zod.coerce.number().optional(),
+  "maand": zod.coerce.number().optional(),
+  "werkmaatschappij": zod.coerce.string().optional(),
+  "type": zod.coerce.string().optional(),
+  "medewerker_id": zod.coerce.number().optional(),
+  "status": zod.coerce.string().optional()
+})
+
+export const GetLoonOutputResponseItem = zod.object({
+  "id": zod.number(),
+  "type": zod.string(),
+  "werkmaatschappij": zod.string().nullish(),
+  "werkgever_id": zod.number().nullish(),
+  "periode_jaar": zod.number().nullish(),
+  "periode_maand": zod.number().nullish(),
+  "medewerker_id": zod.number().nullish(),
+  "medewerker_naam": zod.string().nullish(),
+  "bron": zod.string(),
+  "bestandsnaam": zod.string(),
+  "object_path": zod.string(),
+  "bestandsgrootte": zod.number().nullish(),
+  "mime_type": zod.string().nullish(),
+  "status": zod.string(),
+  "zichtbaar_medewerker": zod.boolean(),
+  "gepubliceerd_op": zod.string().nullish(),
+  "upload_batch_ref": zod.string().nullish(),
+  "notities": zod.string().nullish(),
+  "uploader_naam": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+export const GetLoonOutputResponse = zod.array(GetLoonOutputResponseItem)
+
+
+/**
+ * @summary Loon-outputbestand uploaden
+ */
+export const PostLoonOutputBody = zod.object({
+  "type": zod.string(),
+  "werkmaatschappij": zod.string().optional(),
+  "werkgever_id": zod.number().optional(),
+  "periode_jaar": zod.number().optional(),
+  "periode_maand": zod.number().optional(),
+  "medewerker_id": zod.number().optional(),
+  "bron": zod.string().optional(),
+  "notities": zod.string().optional(),
+  "upload_batch_ref": zod.string().optional()
+})
+
+export const PostLoonOutputResponse = zod.void()
+
+
+/**
+ * @summary Loon-outputbestand bijwerken
+ */
+export const PatchLoonOutputIdParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const PatchLoonOutputIdBody = zod.object({
+  "status": zod.string().optional(),
+  "notities": zod.string().nullish(),
+  "medewerker_id": zod.number().nullish(),
+  "werkmaatschappij": zod.string().nullish()
+})
+
+export const PatchLoonOutputIdResponse = zod.object({
+  "id": zod.number(),
+  "type": zod.string(),
+  "werkmaatschappij": zod.string().nullish(),
+  "werkgever_id": zod.number().nullish(),
+  "periode_jaar": zod.number().nullish(),
+  "periode_maand": zod.number().nullish(),
+  "medewerker_id": zod.number().nullish(),
+  "medewerker_naam": zod.string().nullish(),
+  "bron": zod.string(),
+  "bestandsnaam": zod.string(),
+  "object_path": zod.string(),
+  "bestandsgrootte": zod.number().nullish(),
+  "mime_type": zod.string().nullish(),
+  "status": zod.string(),
+  "zichtbaar_medewerker": zod.boolean(),
+  "gepubliceerd_op": zod.string().nullish(),
+  "upload_batch_ref": zod.string().nullish(),
+  "notities": zod.string().nullish(),
+  "uploader_naam": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+
+
+/**
+ * @summary Loon-outputbestand publiceren naar medewerker
+ */
+export const PostLoonOutputIdPubliceerParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const PostLoonOutputIdPubliceerResponse = zod.object({
+  "id": zod.number(),
+  "type": zod.string(),
+  "werkmaatschappij": zod.string().nullish(),
+  "werkgever_id": zod.number().nullish(),
+  "periode_jaar": zod.number().nullish(),
+  "periode_maand": zod.number().nullish(),
+  "medewerker_id": zod.number().nullish(),
+  "medewerker_naam": zod.string().nullish(),
+  "bron": zod.string(),
+  "bestandsnaam": zod.string(),
+  "object_path": zod.string(),
+  "bestandsgrootte": zod.number().nullish(),
+  "mime_type": zod.string().nullish(),
+  "status": zod.string(),
+  "zichtbaar_medewerker": zod.boolean(),
+  "gepubliceerd_op": zod.string().nullish(),
+  "upload_batch_ref": zod.string().nullish(),
+  "notities": zod.string().nullish(),
+  "uploader_naam": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+
+
+/**
+ * @summary Boekhouderportaal dashboard
+ */
+export const GetBoekhouderDashboardQueryParams = zod.object({
+  "werkgever_id": zod.coerce.number().optional()
+})
+
+export const GetBoekhouderDashboardResponse = zod.object({
+  "werkgever_id": zod.number(),
+  "werkgever_naam": zod.string(),
+  "openstaande_mutaties": zod.number(),
+  "wachtend_loon_output": zod.number(),
+  "eigen_uploads": zod.number(),
+  "sepa_bestanden": zod.number(),
+  "scab_mails_concept": zod.number().nullish()
+})
+
+
+/**
+ * @summary Boekhouder-uploads lijst
+ */
+export const GetBoekhouderUploadsQueryParams = zod.object({
+  "werkgever_id": zod.coerce.number().optional(),
+  "map": zod.coerce.string().optional(),
+  "jaar": zod.coerce.number().optional()
+})
+
+export const GetBoekhouderUploadsResponseItem = zod.object({
+  "id": zod.number(),
+  "map": zod.string(),
+  "werkmaatschappij": zod.string().nullish(),
+  "werkgever_id": zod.number().nullish(),
+  "periode_jaar": zod.number().nullish(),
+  "periode_maand": zod.number().nullish(),
+  "omschrijving": zod.string().nullish(),
+  "bestandsnaam": zod.string(),
+  "object_path": zod.string(),
+  "bestandsgrootte": zod.number().nullish(),
+  "mime_type": zod.string().nullish(),
+  "gelezen": zod.boolean(),
+  "uploader_naam": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+export const GetBoekhouderUploadsResponse = zod.array(GetBoekhouderUploadsResponseItem)
+
+
+/**
+ * @summary Document uploaden als boekhouder
+ */
+export const PostBoekhouderUploadsBody = zod.object({
+  "map": zod.string(),
+  "werkgever_id": zod.number().optional(),
+  "periode_jaar": zod.number().optional(),
+  "periode_maand": zod.number().optional(),
+  "omschrijving": zod.string().optional()
+})
+
+export const PostBoekhouderUploadsResponse = zod.void()
+
+
+/**
+ * @summary Salarisverwerker-instellingen werkgever bijwerken
+ */
+export const PatchWerkgeversIdSalarisConfigParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const PatchWerkgeversIdSalarisConfigBody = zod.object({
+  "salarisverwerker": zod.string().nullish(),
+  "boekhouder_naam": zod.string().nullish(),
+  "boekhouder_email": zod.string().nullish(),
+  "loonperiode": zod.string().nullish(),
+  "intern_contact_naam": zod.string().nullish(),
+  "intern_contact_email": zod.string().nullish(),
+  "scab_email_adres": zod.string().nullish()
+})
+
+export const PatchWerkgeversIdSalarisConfigResponse = zod.object({
+  "salarisverwerker": zod.string().nullish(),
+  "boekhouder_naam": zod.string().nullish(),
+  "boekhouder_email": zod.string().nullish(),
+  "loonperiode": zod.string().nullish(),
+  "intern_contact_naam": zod.string().nullish(),
+  "intern_contact_email": zod.string().nullish(),
+  "scab_email_adres": zod.string().nullish()
+})
+
+

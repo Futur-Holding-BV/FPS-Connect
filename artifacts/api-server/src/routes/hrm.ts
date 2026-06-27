@@ -2971,4 +2971,44 @@ router.post("/mijn/ziekmeldingen", async (req, res) => {
   }
 });
 
+router.patch("/werkgevers/:id/salaris-config", schrijven, async (req, res) => {
+  try {
+    const id = parseId(req.params.id);
+    const {
+      salarisverwerker, boekhouder_naam, boekhouder_email,
+      loonperiode, intern_contact_naam, intern_contact_email, scab_email_adres,
+    } = req.body;
+
+    const update: Record<string, unknown> = { bijgewerktOp: new Date() };
+    if (salarisverwerker !== undefined) update.salarisverwerker = salarisverwerker;
+    if (boekhouder_naam !== undefined) update.boekhouderNaam = boekhouder_naam;
+    if (boekhouder_email !== undefined) update.boekhouderEmail = boekhouder_email;
+    if (loonperiode !== undefined) update.loonperiode = loonperiode;
+    if (intern_contact_naam !== undefined) update.internContactNaam = intern_contact_naam;
+    if (intern_contact_email !== undefined) update.internContactEmail = intern_contact_email;
+    if (scab_email_adres !== undefined) update.scabEmailAdres = scab_email_adres;
+
+    const [bijgewerkt] = await db
+      .update(werkgeversTable)
+      .set(update)
+      .where(eq(werkgeversTable.id, id))
+      .returning();
+
+    if (!bijgewerkt) return res.status(404).json({ error: "Niet gevonden" });
+
+    return res.json({
+      salarisverwerker: bijgewerkt.salarisverwerker ?? null,
+      boekhouder_naam: bijgewerkt.boekhouderNaam ?? null,
+      boekhouder_email: bijgewerkt.boekhouderEmail ?? null,
+      loonperiode: bijgewerkt.loonperiode ?? null,
+      intern_contact_naam: bijgewerkt.internContactNaam ?? null,
+      intern_contact_email: bijgewerkt.internContactEmail ?? null,
+      scab_email_adres: bijgewerkt.scabEmailAdres ?? null,
+    });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
 export default router;

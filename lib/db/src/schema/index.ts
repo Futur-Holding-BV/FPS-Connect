@@ -33,3 +33,4 @@ export * from "./opdrachten";
 export * from "./snagstream";
 export * from "./facturen";
 export * from "./golive";
+export * from "./salarismutaties";

@@ -55,6 +55,10 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
   const toonSnagstream    = heeftNiveau("bibliotheek", 1);
   const toonFinancieel    = heeftNiveau("financieel", 1);
   const toonSalarisarchief = heeftNiveau("salarisarchief", 1);
+  const toonSalarisMutaties = heeftNiveau("salaris_mutaties", 1);
+  const toonScabMail = heeftNiveau("scab_mail", 1);
+  const toonBoekhouderPortaal = heeftNiveau("boekhouder_portaal", 1);
+  const toonLoonOutput = heeftNiveau("salarisarchief", 2);
 
   const heeftOne = isHoofdbeheerder;
   const aantalOmgevingen = 1 + (heeftOne ? 1 : 0);
@@ -680,6 +684,58 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
                             <Link href="/salarisarchief">
                               <HardDriveUpload />
                               <span>Salarisarchief</span>
+                            </Link>
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                      )}
+                      {toonSalarisMutaties && (
+                        <SidebarMenuItem>
+                          <SidebarMenuButton
+                            asChild
+                            isActive={location === "/salaris-mutaties" || location.startsWith("/salaris-mutaties/")}
+                          >
+                            <Link href="/salaris-mutaties">
+                              <ClipboardList />
+                              <span>Salarismutaties</span>
+                            </Link>
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                      )}
+                      {toonScabMail && (
+                        <SidebarMenuItem>
+                          <SidebarMenuButton
+                            asChild
+                            isActive={location === "/scab-mail" || location.startsWith("/scab-mail/")}
+                          >
+                            <Link href="/scab-mail">
+                              <Mail />
+                              <span>SCAB Salarismails</span>
+                            </Link>
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                      )}
+                      {toonLoonOutput && (
+                        <SidebarMenuItem>
+                          <SidebarMenuButton
+                            asChild
+                            isActive={location === "/loon-output" || location.startsWith("/loon-output/")}
+                          >
+                            <Link href="/loon-output">
+                              <FileText />
+                              <span>Loon-output</span>
+                            </Link>
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                      )}
+                      {toonBoekhouderPortaal && (
+                        <SidebarMenuItem>
+                          <SidebarMenuButton
+                            asChild
+                            isActive={location === "/boekhouder" || location.startsWith("/boekhouder/")}
+                          >
+                            <Link href="/boekhouder">
+                              <LayoutDashboard />
+                              <span>Boekhouderportaal</span>
                             </Link>
                           </SidebarMenuButton>
                         </SidebarMenuItem>

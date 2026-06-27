@@ -12395,6 +12395,435 @@ paths:
                 $ref: '#/components/schemas/GoLiveLes'
 
 
+  /salaris-mutaties:
+    get:
+      summary: Salarismutaties lijst
+      tags: [SalarisMutaties]
+      security: [{ cookieAuth: [] }]
+      parameters:
+        - name: jaar
+          in: query
+          schema: { type: integer }
+        - name: maand
+          in: query
+          schema: { type: integer }
+        - name: werkmaatschappij
+          in: query
+          schema: { type: string }
+        - name: status
+          in: query
+          schema: { type: string }
+        - name: medewerker_id
+          in: query
+          schema: { type: integer }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SalarisMutatie'
+    post:
+      summary: Salarismutatie aanmaken
+      tags: [SalarisMutaties]
+      security: [{ cookieAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SalarisMutatieInput'
+      responses:
+        '201':
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SalarisMutatie'
+
+  /salaris-mutaties/{id}:
+    get:
+      summary: Salarismutatie detail
+      tags: [SalarisMutaties]
+      security: [{ cookieAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SalarisMutatie'
+    patch:
+      summary: Salarismutatie bijwerken
+      tags: [SalarisMutaties]
+      security: [{ cookieAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SalarisMutatiePatch'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SalarisMutatie'
+
+  /scab-mails:
+    get:
+      summary: SCAB-mails lijst
+      tags: [ScabMails]
+      security: [{ cookieAuth: [] }]
+      parameters:
+        - name: jaar
+          in: query
+          schema: { type: integer }
+        - name: maand
+          in: query
+          schema: { type: integer }
+        - name: werkmaatschappij
+          in: query
+          schema: { type: string }
+        - name: status
+          in: query
+          schema: { type: string }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ScabMail'
+
+  /scab-mails/genereer:
+    post:
+      summary: SCAB-conceptmail AI-samenstellen
+      tags: [ScabMails]
+      security: [{ cookieAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ScabMailGenereerInput'
+      responses:
+        '201':
+          description: Concept aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScabMail'
+
+  /scab-mails/{id}:
+    get:
+      summary: SCAB-mail detail
+      tags: [ScabMails]
+      security: [{ cookieAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScabMail'
+    patch:
+      summary: SCAB-mail bijwerken
+      tags: [ScabMails]
+      security: [{ cookieAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ScabMailPatch'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScabMail'
+
+  /scab-mails/{id}/verzend:
+    post:
+      summary: SCAB-mail definitief verzenden
+      tags: [ScabMails]
+      security: [{ cookieAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Verzonden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScabMail'
+
+  /scab-mails/{id}/bijlagen:
+    get:
+      summary: Bijlagen van SCAB-mail
+      tags: [ScabMails]
+      security: [{ cookieAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ScabMailBijlage'
+    post:
+      summary: Bijlage toevoegen aan SCAB-mail
+      tags: [ScabMails]
+      security: [{ cookieAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ScabMailBijlageInput'
+      responses:
+        '201':
+          description: Bijlage toegevoegd
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScabMailBijlage'
+
+  /scab-mails/{id}/bijlagen/{bijlage_id}:
+    delete:
+      summary: Bijlage verwijderen van SCAB-mail
+      tags: [ScabMails]
+      security: [{ cookieAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+        - name: bijlage_id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '204':
+          description: Verwijderd
+
+  /loon-output:
+    get:
+      summary: Loon-outputbestanden lijst
+      tags: [LoonOutput]
+      security: [{ cookieAuth: [] }]
+      parameters:
+        - name: jaar
+          in: query
+          schema: { type: integer }
+        - name: maand
+          in: query
+          schema: { type: integer }
+        - name: werkmaatschappij
+          in: query
+          schema: { type: string }
+        - name: type
+          in: query
+          schema: { type: string }
+        - name: medewerker_id
+          in: query
+          schema: { type: integer }
+        - name: status
+          in: query
+          schema: { type: string }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LoonOutputBestand'
+    post:
+      summary: Loon-outputbestand uploaden
+      tags: [LoonOutput]
+      security: [{ cookieAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/LoonOutputUploadInput'
+      responses:
+        '201':
+          description: Geupload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoonOutputBestand'
+
+  /loon-output/{id}:
+    patch:
+      summary: Loon-outputbestand bijwerken
+      tags: [LoonOutput]
+      security: [{ cookieAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoonOutputBestandPatch'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoonOutputBestand'
+
+  /loon-output/{id}/publiceer:
+    post:
+      summary: Loon-outputbestand publiceren naar medewerker
+      tags: [LoonOutput]
+      security: [{ cookieAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Gepubliceerd
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoonOutputBestand'
+
+  /boekhouder/dashboard:
+    get:
+      summary: Boekhouderportaal dashboard
+      tags: [Boekhouder]
+      security: [{ cookieAuth: [] }]
+      parameters:
+        - name: werkgever_id
+          in: query
+          schema: { type: integer }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BoekhouderDashboard'
+
+  /boekhouder/uploads:
+    get:
+      summary: Boekhouder-uploads lijst
+      tags: [Boekhouder]
+      security: [{ cookieAuth: [] }]
+      parameters:
+        - name: werkgever_id
+          in: query
+          schema: { type: integer }
+        - name: map
+          in: query
+          schema: { type: string }
+        - name: jaar
+          in: query
+          schema: { type: integer }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/BoekhouderUpload'
+    post:
+      summary: Document uploaden als boekhouder
+      tags: [Boekhouder]
+      security: [{ cookieAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/BoekhouderUploadInput'
+      responses:
+        '201':
+          description: Geupload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BoekhouderUpload'
+
+  /werkgevers/{id}/salaris-config:
+    patch:
+      summary: Salarisverwerker-instellingen werkgever bijwerken
+      tags: [Werkgevers]
+      security: [{ cookieAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WerkgeverSalarisConfig'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WerkgeverSalarisConfig'
+
 components:
   schemas:
     MailStatus:
@@ -22729,5 +23158,433 @@ components:
         omschrijving:
           type: string
         tijd_koste_uur:
+          type: integer
+
+    SalarisMutatie:
+      type: object
+      required: [id, werkmaatschappij, periode_jaar, periode_maand, type, bron, status, gecontroleerd, aangemaakt_op, bijgewerkt_op]
+      properties:
+        id:
+          type: integer
+        medewerker_id:
+          type: integer
+          nullable: true
+        medewerker_naam:
+          type: string
+          nullable: true
+        werkmaatschappij:
+          type: string
+        werkgever_id:
+          type: integer
+          nullable: true
+        periode_jaar:
+          type: integer
+        periode_maand:
+          type: integer
+        type:
+          type: string
+        omschrijving:
+          type: string
+          nullable: true
+        ingangsdatum:
+          type: string
+          nullable: true
+        bron:
+          type: string
+        bijlage_object_path:
+          type: string
+          nullable: true
+        bijlage_naam:
+          type: string
+          nullable: true
+        bijlage_grootte:
+          type: integer
+          nullable: true
+        status:
+          type: string
+        gecontroleerd:
+          type: boolean
+        gecontroleerd_door_naam:
+          type: string
+          nullable: true
+        gecontroleerd_op:
+          type: string
+          nullable: true
+        akkoord:
+          type: boolean
+          nullable: true
+        notities:
+          type: string
+          nullable: true
+        aangemaakt_door_naam:
+          type: string
+          nullable: true
+        aangemaakt_op:
+          type: string
+        bijgewerkt_op:
+          type: string
+
+    SalarisMutatieInput:
+      type: object
+      required: [werkmaatschappij, periode_jaar, periode_maand, type]
+      properties:
+        medewerker_id:
+          type: integer
+          nullable: true
+        werkmaatschappij:
+          type: string
+        werkgever_id:
+          type: integer
+          nullable: true
+        periode_jaar:
+          type: integer
+        periode_maand:
+          type: integer
+        type:
+          type: string
+        omschrijving:
+          type: string
+          nullable: true
+        ingangsdatum:
+          type: string
+          nullable: true
+        bron:
+          type: string
+        notities:
+          type: string
+          nullable: true
+
+    SalarisMutatiePatch:
+      type: object
+      properties:
+        type:
+          type: string
+        omschrijving:
+          type: string
+          nullable: true
+        ingangsdatum:
+          type: string
+          nullable: true
+        status:
+          type: string
+        akkoord:
+          type: boolean
+          nullable: true
+        notities:
+          type: string
+          nullable: true
+
+    ScabMail:
+      type: object
+      required: [id, werkmaatschappij, periode_jaar, periode_maand, onderwerp, inhoud, status, aantal_mutaties, aangemaakt_op, bijgewerkt_op]
+      properties:
+        id:
+          type: integer
+        werkmaatschappij:
+          type: string
+        werkgever_id:
+          type: integer
+          nullable: true
+        periode_jaar:
+          type: integer
+        periode_maand:
+          type: integer
+        onderwerp:
+          type: string
+        inhoud:
+          type: string
+        scab_email_adres:
+          type: string
+          nullable: true
+        contactpersoon:
+          type: string
+          nullable: true
+        status:
+          type: string
+        verzond_op:
+          type: string
+          nullable: true
+        verzond_door_naam:
+          type: string
+          nullable: true
+        aantal_mutaties:
+          type: integer
+        aangemaakt_door_naam:
+          type: string
+          nullable: true
+        aangemaakt_op:
+          type: string
+        bijgewerkt_op:
+          type: string
+
+    ScabMailGenereerInput:
+      type: object
+      required: [werkmaatschappij, periode_jaar, periode_maand]
+      properties:
+        werkmaatschappij:
+          type: string
+        werkgever_id:
+          type: integer
+          nullable: true
+        periode_jaar:
+          type: integer
+        periode_maand:
+          type: integer
+
+    ScabMailPatch:
+      type: object
+      properties:
+        onderwerp:
+          type: string
+        inhoud:
+          type: string
+        scab_email_adres:
+          type: string
+          nullable: true
+        contactpersoon:
+          type: string
+          nullable: true
+
+    ScabMailBijlage:
+      type: object
+      required: [id, scab_mail_id, type, object_path, bestandsnaam, is_gevoelig, aangemaakt_op]
+      properties:
+        id:
+          type: integer
+        scab_mail_id:
+          type: integer
+        type:
+          type: string
+        omschrijving:
+          type: string
+          nullable: true
+        object_path:
+          type: string
+        bestandsnaam:
+          type: string
+        bestandsgrootte:
+          type: integer
+          nullable: true
+        is_gevoelig:
+          type: boolean
+        medewerker_id:
+          type: integer
+          nullable: true
+        medewerker_naam:
+          type: string
+          nullable: true
+        aangemaakt_op:
+          type: string
+
+    LoonOutputBestand:
+      type: object
+      required: [id, type, bron, bestandsnaam, object_path, status, zichtbaar_medewerker, aangemaakt_op, bijgewerkt_op]
+      properties:
+        id:
+          type: integer
+        type:
+          type: string
+        werkmaatschappij:
+          type: string
+          nullable: true
+        werkgever_id:
+          type: integer
+          nullable: true
+        periode_jaar:
+          type: integer
+          nullable: true
+        periode_maand:
+          type: integer
+          nullable: true
+        medewerker_id:
+          type: integer
+          nullable: true
+        medewerker_naam:
+          type: string
+          nullable: true
+        bron:
+          type: string
+        bestandsnaam:
+          type: string
+        object_path:
+          type: string
+        bestandsgrootte:
+          type: integer
+          nullable: true
+        mime_type:
+          type: string
+          nullable: true
+        status:
+          type: string
+        zichtbaar_medewerker:
+          type: boolean
+        gepubliceerd_op:
+          type: string
+          nullable: true
+        upload_batch_ref:
+          type: string
+          nullable: true
+        notities:
+          type: string
+          nullable: true
+        uploader_naam:
+          type: string
+          nullable: true
+        aangemaakt_op:
+          type: string
+        bijgewerkt_op:
+          type: string
+
+    LoonOutputBestandPatch:
+      type: object
+      properties:
+        status:
+          type: string
+        notities:
+          type: string
+          nullable: true
+        medewerker_id:
+          type: integer
+          nullable: true
+        werkmaatschappij:
+          type: string
+          nullable: true
+
+    BoekhouderDashboard:
+      type: object
+      required: [werkgever_id, werkgever_naam, openstaande_mutaties, wachtend_loon_output, eigen_uploads, sepa_bestanden]
+      properties:
+        werkgever_id:
+          type: integer
+        werkgever_naam:
+          type: string
+        openstaande_mutaties:
+          type: integer
+        wachtend_loon_output:
+          type: integer
+        eigen_uploads:
+          type: integer
+        sepa_bestanden:
+          type: integer
+        scab_mails_concept:
+          type: integer
+          nullable: true
+
+    BoekhouderUpload:
+      type: object
+      required: [id, map, bestandsnaam, object_path, gelezen, aangemaakt_op, bijgewerkt_op]
+      properties:
+        id:
+          type: integer
+        map:
+          type: string
+        werkmaatschappij:
+          type: string
+          nullable: true
+        werkgever_id:
+          type: integer
+          nullable: true
+        periode_jaar:
+          type: integer
+          nullable: true
+        periode_maand:
+          type: integer
+          nullable: true
+        omschrijving:
+          type: string
+          nullable: true
+        bestandsnaam:
+          type: string
+        object_path:
+          type: string
+        bestandsgrootte:
+          type: integer
+          nullable: true
+        mime_type:
+          type: string
+          nullable: true
+        gelezen:
+          type: boolean
+        uploader_naam:
+          type: string
+          nullable: true
+        aangemaakt_op:
+          type: string
+        bijgewerkt_op:
+          type: string
+
+    WerkgeverSalarisConfig:
+      type: object
+      properties:
+        salarisverwerker:
+          type: string
+          nullable: true
+        boekhouder_naam:
+          type: string
+          nullable: true
+        boekhouder_email:
+          type: string
+          nullable: true
+        loonperiode:
+          type: string
+          nullable: true
+        intern_contact_naam:
+          type: string
+          nullable: true
+        intern_contact_email:
+          type: string
+          nullable: true
+        scab_email_adres:
+          type: string
+          nullable: true
+
+    LoonOutputUploadInput:
+      type: object
+      required: [type]
+      properties:
+        type:
+          type: string
+        werkmaatschappij:
+          type: string
+        werkgever_id:
+          type: integer
+        periode_jaar:
+          type: integer
+        periode_maand:
+          type: integer
+        medewerker_id:
+          type: integer
+        bron:
+          type: string
+        notities:
+          type: string
+        upload_batch_ref:
+          type: string
+
+    BoekhouderUploadInput:
+      type: object
+      required: [map]
+      properties:
+        map:
+          type: string
+        werkgever_id:
+          type: integer
+        periode_jaar:
+          type: integer
+        periode_maand:
+          type: integer
+        omschrijving:
+          type: string
+
+    ScabMailBijlageInput:
+      type: object
+      properties:
+        type:
+          type: string
+        omschrijving:
+          type: string
+        is_gevoelig:
+          type: boolean
+        medewerker_id:
           type: integer
 

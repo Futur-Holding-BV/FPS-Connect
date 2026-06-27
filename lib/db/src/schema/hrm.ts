@@ -34,6 +34,13 @@ export const werkgeversTable = pgTable("werkgevers", {
   voettekst: text("voettekst"),
   handtekeningUrl: text("handtekening_url"),
   actief: boolean("actief").notNull().default(true),
+  salarisverwerker: text("salarisverwerker"),
+  boekhouderNaam: text("boekhouder_naam"),
+  boekhouderEmail: text("boekhouder_email"),
+  loonperiode: text("loonperiode").default("maandelijks"),
+  internContactNaam: text("intern_contact_naam"),
+  internContactEmail: text("intern_contact_email"),
+  scabEmailAdres: text("scab_email_adres"),
   aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
   bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
 });

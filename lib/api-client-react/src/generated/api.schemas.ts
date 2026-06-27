@@ -6281,6 +6281,197 @@ export interface GoLiveLesInput {
   tijd_koste_uur?: number;
 }
 
+export interface SalarisMutatie {
+  id: number;
+  medewerker_id?: number | null;
+  medewerker_naam?: string | null;
+  werkmaatschappij: string;
+  werkgever_id?: number | null;
+  periode_jaar: number;
+  periode_maand: number;
+  type: string;
+  omschrijving?: string | null;
+  ingangsdatum?: string | null;
+  bron: string;
+  bijlage_object_path?: string | null;
+  bijlage_naam?: string | null;
+  bijlage_grootte?: number | null;
+  status: string;
+  gecontroleerd: boolean;
+  gecontroleerd_door_naam?: string | null;
+  gecontroleerd_op?: string | null;
+  akkoord?: boolean | null;
+  notities?: string | null;
+  aangemaakt_door_naam?: string | null;
+  aangemaakt_op: string;
+  bijgewerkt_op: string;
+}
+
+export interface SalarisMutatieInput {
+  medewerker_id?: number | null;
+  werkmaatschappij: string;
+  werkgever_id?: number | null;
+  periode_jaar: number;
+  periode_maand: number;
+  type: string;
+  omschrijving?: string | null;
+  ingangsdatum?: string | null;
+  bron?: string;
+  notities?: string | null;
+}
+
+export interface SalarisMutatiePatch {
+  type?: string;
+  omschrijving?: string | null;
+  ingangsdatum?: string | null;
+  status?: string;
+  akkoord?: boolean | null;
+  notities?: string | null;
+}
+
+export interface ScabMail {
+  id: number;
+  werkmaatschappij: string;
+  werkgever_id?: number | null;
+  periode_jaar: number;
+  periode_maand: number;
+  onderwerp: string;
+  inhoud: string;
+  scab_email_adres?: string | null;
+  contactpersoon?: string | null;
+  status: string;
+  verzond_op?: string | null;
+  verzond_door_naam?: string | null;
+  aantal_mutaties: number;
+  aangemaakt_door_naam?: string | null;
+  aangemaakt_op: string;
+  bijgewerkt_op: string;
+}
+
+export interface ScabMailGenereerInput {
+  werkmaatschappij: string;
+  werkgever_id?: number | null;
+  periode_jaar: number;
+  periode_maand: number;
+}
+
+export interface ScabMailPatch {
+  onderwerp?: string;
+  inhoud?: string;
+  scab_email_adres?: string | null;
+  contactpersoon?: string | null;
+}
+
+export interface ScabMailBijlage {
+  id: number;
+  scab_mail_id: number;
+  type: string;
+  omschrijving?: string | null;
+  object_path: string;
+  bestandsnaam: string;
+  bestandsgrootte?: number | null;
+  is_gevoelig: boolean;
+  medewerker_id?: number | null;
+  medewerker_naam?: string | null;
+  aangemaakt_op: string;
+}
+
+export interface LoonOutputBestand {
+  id: number;
+  type: string;
+  werkmaatschappij?: string | null;
+  werkgever_id?: number | null;
+  periode_jaar?: number | null;
+  periode_maand?: number | null;
+  medewerker_id?: number | null;
+  medewerker_naam?: string | null;
+  bron: string;
+  bestandsnaam: string;
+  object_path: string;
+  bestandsgrootte?: number | null;
+  mime_type?: string | null;
+  status: string;
+  zichtbaar_medewerker: boolean;
+  gepubliceerd_op?: string | null;
+  upload_batch_ref?: string | null;
+  notities?: string | null;
+  uploader_naam?: string | null;
+  aangemaakt_op: string;
+  bijgewerkt_op: string;
+}
+
+export interface LoonOutputBestandPatch {
+  status?: string;
+  notities?: string | null;
+  medewerker_id?: number | null;
+  werkmaatschappij?: string | null;
+}
+
+export interface BoekhouderDashboard {
+  werkgever_id: number;
+  werkgever_naam: string;
+  openstaande_mutaties: number;
+  wachtend_loon_output: number;
+  eigen_uploads: number;
+  sepa_bestanden: number;
+  scab_mails_concept?: number | null;
+}
+
+export interface BoekhouderUpload {
+  id: number;
+  map: string;
+  werkmaatschappij?: string | null;
+  werkgever_id?: number | null;
+  periode_jaar?: number | null;
+  periode_maand?: number | null;
+  omschrijving?: string | null;
+  bestandsnaam: string;
+  object_path: string;
+  bestandsgrootte?: number | null;
+  mime_type?: string | null;
+  gelezen: boolean;
+  uploader_naam?: string | null;
+  aangemaakt_op: string;
+  bijgewerkt_op: string;
+}
+
+export interface WerkgeverSalarisConfig {
+  salarisverwerker?: string | null;
+  boekhouder_naam?: string | null;
+  boekhouder_email?: string | null;
+  loonperiode?: string | null;
+  intern_contact_naam?: string | null;
+  intern_contact_email?: string | null;
+  scab_email_adres?: string | null;
+}
+
+export interface LoonOutputUploadInput {
+  type: string;
+  werkmaatschappij?: string;
+  werkgever_id?: number;
+  periode_jaar?: number;
+  periode_maand?: number;
+  medewerker_id?: number;
+  bron?: string;
+  notities?: string;
+  upload_batch_ref?: string;
+}
+
+export interface BoekhouderUploadInput {
+  map: string;
+  werkgever_id?: number;
+  periode_jaar?: number;
+  periode_maand?: number;
+  omschrijving?: string;
+}
+
+export interface ScabMailBijlageInput {
+  type?: string;
+  omschrijving?: string;
+  is_gevoelig?: boolean;
+  medewerker_id?: number;
+}
+
 export type GetRecenteActiviteitParams = {
 limit?: number;
 };
@@ -6683,5 +6874,39 @@ export type GetSalarisarchiefAuditlogParams = {
 document_id?: number;
 medewerker_id?: number;
 limit?: number;
+};
+
+export type GetSalarisMutatiesParams = {
+jaar?: number;
+maand?: number;
+werkmaatschappij?: string;
+status?: string;
+medewerker_id?: number;
+};
+
+export type GetScabMailsParams = {
+jaar?: number;
+maand?: number;
+werkmaatschappij?: string;
+status?: string;
+};
+
+export type GetLoonOutputParams = {
+jaar?: number;
+maand?: number;
+werkmaatschappij?: string;
+type?: string;
+medewerker_id?: number;
+status?: string;
+};
+
+export type GetBoekhouderDashboardParams = {
+werkgever_id?: number;
+};
+
+export type GetBoekhouderUploadsParams = {
+werkgever_id?: number;
+map?: string;
+jaar?: number;
 };
 

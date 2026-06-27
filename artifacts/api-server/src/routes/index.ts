@@ -50,6 +50,10 @@ import instellingenAccountviewRouter from "./instellingen-accountview";
 import accountviewMappingRouter from "./accountview-mapping";
 import salarisarchiefRouter from "./salarisarchief";
 import goLiveRouter from "./golive";
+import salarisMutatiesRouter from "./salaris-mutaties";
+import scabMailRouter from "./scab-mail";
+import boekhouderRouter from "./boekhouder";
+import loonOutputRouter from "./loon-output";
 import { requireAuth } from "../middlewares/auth";
 
 const router: IRouter = Router();
@@ -109,5 +113,9 @@ router.use(instellingenAccountviewRouter);
 router.use(accountviewMappingRouter);
 router.use(salarisarchiefRouter);
 router.use(goLiveRouter);
+router.use(salarisMutatiesRouter);
+router.use(scabMailRouter);
+router.use(boekhouderRouter);
+router.use(loonOutputRouter);
 
 export default router;
