@@ -10686,6 +10686,323 @@ paths:
               schema:
                 $ref: '#/components/schemas/ToolboxKoppelingSuggestieResultaat'
 
+  /veiligheid/lmras:
+    get:
+      operationId: getVeiligheidLmras
+      summary: LMRA-registraties ophalen
+      tags: [Veiligheid]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/VeiligheidLmra'
+    post:
+      operationId: postVeiligheidLmras
+      summary: Nieuwe LMRA aanmaken
+      tags: [Veiligheid]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VeiligheidLmraInput'
+      responses:
+        '201':
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VeiligheidLmra'
+
+  /veiligheid/lmras/upload-url:
+    get:
+      operationId: getVeiligheidLmrasUploadUrl
+      summary: Upload-URL voor LMRA-foto ophalen
+      tags: [Veiligheid]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [upload_url, object_path]
+                properties:
+                  upload_url:
+                    type: string
+                  object_path:
+                    type: string
+
+  /veiligheid/lmras/{id}:
+    get:
+      operationId: getVeiligheidLmrasId
+      summary: LMRA detail ophalen
+      tags: [Veiligheid]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VeiligheidLmra'
+    patch:
+      operationId: patchVeiligheidLmrasId
+      summary: LMRA bijwerken
+      tags: [Veiligheid]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VeiligheidLmraInput'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VeiligheidLmra'
+    delete:
+      operationId: deleteVeiligheidLmrasId
+      summary: LMRA verwijderen
+      tags: [Veiligheid]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Verwijderd
+
+  /veiligheid/meldingen:
+    get:
+      operationId: getVeiligheidMeldingen
+      summary: Veiligheidsmeldingen ophalen
+      tags: [Veiligheid]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/VeiligheidMelding'
+    post:
+      operationId: postVeiligheidMeldingen
+      summary: Nieuwe veiligheidsmelding aanmaken
+      tags: [Veiligheid]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VeiligheidMeldingInput'
+      responses:
+        '201':
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VeiligheidMelding'
+
+  /veiligheid/meldingen/upload-url:
+    get:
+      operationId: getVeiligheidMeldingenUploadUrl
+      summary: Upload-URL voor melding-foto ophalen
+      tags: [Veiligheid]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [upload_url, object_path]
+                properties:
+                  upload_url:
+                    type: string
+                  object_path:
+                    type: string
+
+  /veiligheid/meldingen/{id}:
+    get:
+      operationId: getVeiligheidMeldingenId
+      summary: Veiligheidsmelding detail ophalen
+      tags: [Veiligheid]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VeiligheidMelding'
+    patch:
+      operationId: patchVeiligheidMeldingenId
+      summary: Veiligheidsmelding bijwerken
+      tags: [Veiligheid]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VeiligheidMeldingInput'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VeiligheidMelding'
+    delete:
+      operationId: deleteVeiligheidMeldingenId
+      summary: Veiligheidsmelding verwijderen
+      tags: [Veiligheid]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Verwijderd
+
+  /veiligheid/meldingen/{id}/acties:
+    get:
+      operationId: getVeiligheidMeldingenIdActies
+      summary: Acties van een melding ophalen
+      tags: [Veiligheid]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/VeiligheidMeldingActie'
+    post:
+      operationId: postVeiligheidMeldingenIdActies
+      summary: Actie toevoegen aan melding
+      tags: [Veiligheid]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VeiligheidMeldingActieInput'
+      responses:
+        '201':
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VeiligheidMeldingActie'
+
+  /veiligheid/meldingen/{id}/acties/{actieId}:
+    patch:
+      operationId: patchVeiligheidMeldingenIdActiesActieId
+      summary: Actie bijwerken
+      tags: [Veiligheid]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: actieId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VeiligheidMeldingActieInput'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VeiligheidMeldingActie'
+    delete:
+      operationId: deleteVeiligheidMeldingenIdActiesActieId
+      summary: Actie verwijderen
+      tags: [Veiligheid]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: actieId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Verwijderd
+
+  /veiligheid/dashboard:
+    get:
+      operationId: getVeiligheidDashboard
+      summary: Veiligheids-KPI dashboard ophalen
+      tags: [Veiligheid]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VeiligheidDashboard'
+
 
 components:
   schemas:
@@ -19329,4 +19646,239 @@ components:
                 type: string
               reden:
                 type: string
+
+    VeiligheidLmra:
+      type: object
+      required: [id, locatie_omschrijving, werkzaamheden, veilig_voor_aanvang, risicos, maatregelen, foto_paden, aangemaakt_op]
+      properties:
+        id:
+          type: integer
+        gebouw_id:
+          type: integer
+          nullable: true
+        project_naam:
+          type: string
+          nullable: true
+        locatie_omschrijving:
+          type: string
+        werkzaamheden:
+          type: string
+        risicos:
+          type: array
+          items:
+            type: string
+        maatregelen:
+          type: array
+          items:
+            type: string
+        veilig_voor_aanvang:
+          type: boolean
+        handtekening:
+          type: string
+          nullable: true
+        foto_paden:
+          type: array
+          items:
+            type: string
+        gps_lat:
+          type: string
+          nullable: true
+        gps_lng:
+          type: string
+          nullable: true
+        medewerker_naam:
+          type: string
+          nullable: true
+        aangemaakt_door_id:
+          type: integer
+          nullable: true
+        aangemaakt_op:
+          type: string
+        bijgewerkt_op:
+          type: string
+          nullable: true
+
+    VeiligheidLmraInput:
+      type: object
+      required: [locatie_omschrijving, werkzaamheden]
+      properties:
+        gebouw_id:
+          type: integer
+          nullable: true
+        project_naam:
+          type: string
+          nullable: true
+        locatie_omschrijving:
+          type: string
+        werkzaamheden:
+          type: string
+        risicos:
+          type: array
+          items:
+            type: string
+        maatregelen:
+          type: array
+          items:
+            type: string
+        veilig_voor_aanvang:
+          type: boolean
+        handtekening:
+          type: string
+          nullable: true
+        foto_paden:
+          type: array
+          items:
+            type: string
+        gps_lat:
+          type: string
+          nullable: true
+        gps_lng:
+          type: string
+          nullable: true
+
+    VeiligheidMelding:
+      type: object
+      required: [id, type, omschrijving, prioriteit, status, foto_paden, aangemaakt_op]
+      properties:
+        id:
+          type: integer
+        type:
+          type: string
+        omschrijving:
+          type: string
+        locatie:
+          type: string
+          nullable: true
+        gebouw_id:
+          type: integer
+          nullable: true
+        project_naam:
+          type: string
+          nullable: true
+        foto_paden:
+          type: array
+          items:
+            type: string
+        prioriteit:
+          type: string
+        status:
+          type: string
+        melder_naam:
+          type: string
+          nullable: true
+        gemeld_door_id:
+          type: integer
+          nullable: true
+        toegewezen_aan_id:
+          type: integer
+          nullable: true
+        toegewezen_aan_naam:
+          type: string
+          nullable: true
+        aangemaakt_op:
+          type: string
+        bijgewerkt_op:
+          type: string
+          nullable: true
+
+    VeiligheidMeldingInput:
+      type: object
+      required: [type, omschrijving]
+      properties:
+        type:
+          type: string
+        omschrijving:
+          type: string
+        locatie:
+          type: string
+          nullable: true
+        gebouw_id:
+          type: integer
+          nullable: true
+        project_naam:
+          type: string
+          nullable: true
+        foto_paden:
+          type: array
+          items:
+            type: string
+        prioriteit:
+          type: string
+        status:
+          type: string
+        toegewezen_aan_id:
+          type: integer
+          nullable: true
+
+    VeiligheidMeldingActie:
+      type: object
+      required: [id, melding_id, omschrijving, status, aangemaakt_op]
+      properties:
+        id:
+          type: integer
+        melding_id:
+          type: integer
+        omschrijving:
+          type: string
+        eigenaar_id:
+          type: integer
+          nullable: true
+        eigenaar_naam:
+          type: string
+          nullable: true
+        deadline:
+          type: string
+          nullable: true
+        status:
+          type: string
+        aangemaakt_op:
+          type: string
+        bijgewerkt_op:
+          type: string
+          nullable: true
+
+    VeiligheidMeldingActieInput:
+      type: object
+      required: [omschrijving]
+      properties:
+        omschrijving:
+          type: string
+        eigenaar_id:
+          type: integer
+          nullable: true
+        eigenaar_naam:
+          type: string
+          nullable: true
+        deadline:
+          type: string
+          nullable: true
+        status:
+          type: string
+
+    VeiligheidDashboard:
+      type: object
+      required: [lmras_totaal, meldingen_open, meldingen_in_behandeling, meldingen_afgehandeld, toolboxen_totaal, acties_open]
+      properties:
+        lmras_totaal:
+          type: integer
+        lmras_vandaag:
+          type: integer
+        lmras_week:
+          type: integer
+        meldingen_open:
+          type: integer
+        meldingen_in_behandeling:
+          type: integer
+        meldingen_afgehandeld:
+          type: integer
+        meldingen_kritiek:
+          type: integer
+        toolboxen_totaal:
+          type: integer
+        toolboxen_afrondingen:
+          type: integer
+        acties_open:
+          type: integer
+        acties_verlopen:
+          type: integer
 

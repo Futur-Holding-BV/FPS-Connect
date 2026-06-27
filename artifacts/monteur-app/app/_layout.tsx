@@ -74,6 +74,8 @@ function RootLayoutNav() {
       <Stack.Screen name="opname/item/[itemId]" />
       <Stack.Screen name="werkdag/index" />
       <Stack.Screen name="werkdag/[id]" />
+      <Stack.Screen name="lmra" />
+      <Stack.Screen name="veiligheid-melding" />
     </Stack>
   );
 }

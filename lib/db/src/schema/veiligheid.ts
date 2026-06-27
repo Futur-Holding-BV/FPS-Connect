@@ -1,5 +1,6 @@
 import { pgTable, serial, text, integer, boolean, jsonb, timestamp } from "drizzle-orm/pg-core";
 import { gebruikersTable } from "./gebruikers";
+import { gebouwenTable } from "./gebouwen";
 
 export const veiligheidToolboxenTable = pgTable("veiligheid_toolboxen", {
   id: serial("id").primaryKey(),
@@ -53,3 +54,59 @@ export const veiligheidToolboxAfrondingTable = pgTable("veiligheid_toolbox_afron
 export type VeiligheidToolbox = typeof veiligheidToolboxenTable.$inferSelect;
 export type VeiligheidToolboxVraag = typeof veiligheidToolboxVragenTable.$inferSelect;
 export type VeiligheidToolboxAfronding = typeof veiligheidToolboxAfrondingTable.$inferSelect;
+
+// ── LMRA ─────────────────────────────────────────────────────────────────────
+
+export const veiligheidLmrasTable = pgTable("veiligheid_lmras", {
+  id: serial("id").primaryKey(),
+  gebouwId: integer("gebouw_id").references(() => gebouwenTable.id, { onDelete: "set null" }),
+  projectNaam: text("project_naam"),
+  locatieOmschrijving: text("locatie_omschrijving").notNull(),
+  werkzaamheden: text("werkzaamheden").notNull(),
+  risicos: jsonb("risicos").notNull().default([]),
+  maatregelen: jsonb("maatregelen").notNull().default([]),
+  veiligVoorAanvang: boolean("veilig_voor_aanvang").notNull().default(true),
+  handtekening: text("handtekening"),
+  fotoPaden: jsonb("foto_paden").notNull().default([]),
+  gpsLat: text("gps_lat"),
+  gpsLng: text("gps_lng"),
+  medewerkerNaam: text("medewerker_naam"),
+  aangemaaktDoorId: integer("aangemaakt_door_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
+  aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
+  bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
+});
+
+// ── Veiligheidsmeldingen ──────────────────────────────────────────────────────
+
+export const veiligheidMeldingenTable = pgTable("veiligheid_meldingen", {
+  id: serial("id").primaryKey(),
+  type: text("type").notNull().default("onveilige_situatie"),
+  omschrijving: text("omschrijving").notNull(),
+  locatie: text("locatie"),
+  gebouwId: integer("gebouw_id").references(() => gebouwenTable.id, { onDelete: "set null" }),
+  projectNaam: text("project_naam"),
+  fotoPaden: jsonb("foto_paden").notNull().default([]),
+  prioriteit: text("prioriteit").notNull().default("middel"),
+  status: text("status").notNull().default("open"),
+  melderNaam: text("melder_naam"),
+  gemeldDoorId: integer("gemeld_door_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
+  toegewezenAanId: integer("toegewezen_aan_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
+  aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
+  bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
+});
+
+export const veiligheidMeldingenActiesTable = pgTable("veiligheid_meldingen_acties", {
+  id: serial("id").primaryKey(),
+  meldingId: integer("melding_id").notNull().references(() => veiligheidMeldingenTable.id, { onDelete: "cascade" }),
+  omschrijving: text("omschrijving").notNull(),
+  eigenaarId: integer("eigenaar_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
+  eigenaarNaam: text("eigenaar_naam"),
+  deadline: text("deadline"),
+  status: text("status").notNull().default("open"),
+  aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
+  bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
+});
+
+export type VeiligheidLmra = typeof veiligheidLmrasTable.$inferSelect;
+export type VeiligheidMelding = typeof veiligheidMeldingenTable.$inferSelect;
+export type VeiligheidMeldingActie = typeof veiligheidMeldingenActiesTable.$inferSelect;

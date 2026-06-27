@@ -143,6 +143,8 @@ import type {
   GetMijnWeekUrenParams,
   GetPlanningNacalculatieParams,
   GetRecenteActiviteitParams,
+  GetVeiligheidLmrasUploadUrl200,
+  GetVeiligheidMeldingenUploadUrl200,
   GetVeiligheidToolboxenParams,
   GetVerlofOverzichtParams,
   GetVervaldagenParams,
@@ -363,6 +365,13 @@ import type {
   UrenRegistratieInput,
   VeiligheidAfronding,
   VeiligheidAfrondingInput,
+  VeiligheidDashboard,
+  VeiligheidLmra,
+  VeiligheidLmraInput,
+  VeiligheidMelding,
+  VeiligheidMeldingActie,
+  VeiligheidMeldingActieInput,
+  VeiligheidMeldingInput,
   VeiligheidToolbox,
   VeiligheidToolboxDetail,
   VeiligheidToolboxInput,
@@ -38013,4 +38022,1258 @@ export const usePostVeiligheidToolboxenKoppelingSuggestie = <TError = ErrorType<
       > => {
       return useMutation(getPostVeiligheidToolboxenKoppelingSuggestieMutationOptions(options));
     }
+
+export const getGetVeiligheidLmrasUrl = () => {
+
+
+
+
+  return `/api/veiligheid/lmras`
+}
+
+/**
+ * @summary LMRA-registraties ophalen
+ */
+export const getVeiligheidLmras = async ( options?: RequestInit): Promise<VeiligheidLmra[]> => {
+
+  return customFetch<VeiligheidLmra[]>(getGetVeiligheidLmrasUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetVeiligheidLmrasQueryKey = () => {
+    return [
+    `/api/veiligheid/lmras`
+    ] as const;
+    }
+
+
+export const getGetVeiligheidLmrasQueryOptions = <TData = Awaited<ReturnType<typeof getVeiligheidLmras>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getVeiligheidLmras>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetVeiligheidLmrasQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getVeiligheidLmras>>> = ({ signal }) => getVeiligheidLmras({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getVeiligheidLmras>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetVeiligheidLmrasQueryResult = NonNullable<Awaited<ReturnType<typeof getVeiligheidLmras>>>
+export type GetVeiligheidLmrasQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary LMRA-registraties ophalen
+ */
+
+export function useGetVeiligheidLmras<TData = Awaited<ReturnType<typeof getVeiligheidLmras>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getVeiligheidLmras>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetVeiligheidLmrasQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getPostVeiligheidLmrasUrl = () => {
+
+
+
+
+  return `/api/veiligheid/lmras`
+}
+
+/**
+ * @summary Nieuwe LMRA aanmaken
+ */
+export const postVeiligheidLmras = async (veiligheidLmraInput: VeiligheidLmraInput, options?: RequestInit): Promise<VeiligheidLmra> => {
+
+  return customFetch<VeiligheidLmra>(getPostVeiligheidLmrasUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(veiligheidLmraInput)
+  }
+);}
+
+
+
+
+export const getPostVeiligheidLmrasMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postVeiligheidLmras>>, TError,{data: BodyType<VeiligheidLmraInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof postVeiligheidLmras>>, TError,{data: BodyType<VeiligheidLmraInput>}, TContext> => {
+
+const mutationKey = ['postVeiligheidLmras'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postVeiligheidLmras>>, {data: BodyType<VeiligheidLmraInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  postVeiligheidLmras(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PostVeiligheidLmrasMutationResult = NonNullable<Awaited<ReturnType<typeof postVeiligheidLmras>>>
+    export type PostVeiligheidLmrasMutationBody = BodyType<VeiligheidLmraInput>
+    export type PostVeiligheidLmrasMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Nieuwe LMRA aanmaken
+ */
+export const usePostVeiligheidLmras = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postVeiligheidLmras>>, TError,{data: BodyType<VeiligheidLmraInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof postVeiligheidLmras>>,
+        TError,
+        {data: BodyType<VeiligheidLmraInput>},
+        TContext
+      > => {
+      return useMutation(getPostVeiligheidLmrasMutationOptions(options));
+    }
+
+export const getGetVeiligheidLmrasUploadUrlUrl = () => {
+
+
+
+
+  return `/api/veiligheid/lmras/upload-url`
+}
+
+/**
+ * @summary Upload-URL voor LMRA-foto ophalen
+ */
+export const getVeiligheidLmrasUploadUrl = async ( options?: RequestInit): Promise<GetVeiligheidLmrasUploadUrl200> => {
+
+  return customFetch<GetVeiligheidLmrasUploadUrl200>(getGetVeiligheidLmrasUploadUrlUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetVeiligheidLmrasUploadUrlQueryKey = () => {
+    return [
+    `/api/veiligheid/lmras/upload-url`
+    ] as const;
+    }
+
+
+export const getGetVeiligheidLmrasUploadUrlQueryOptions = <TData = Awaited<ReturnType<typeof getVeiligheidLmrasUploadUrl>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getVeiligheidLmrasUploadUrl>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetVeiligheidLmrasUploadUrlQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getVeiligheidLmrasUploadUrl>>> = ({ signal }) => getVeiligheidLmrasUploadUrl({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getVeiligheidLmrasUploadUrl>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetVeiligheidLmrasUploadUrlQueryResult = NonNullable<Awaited<ReturnType<typeof getVeiligheidLmrasUploadUrl>>>
+export type GetVeiligheidLmrasUploadUrlQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Upload-URL voor LMRA-foto ophalen
+ */
+
+export function useGetVeiligheidLmrasUploadUrl<TData = Awaited<ReturnType<typeof getVeiligheidLmrasUploadUrl>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getVeiligheidLmrasUploadUrl>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetVeiligheidLmrasUploadUrlQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetVeiligheidLmrasIdUrl = (id: number,) => {
+
+
+
+
+  return `/api/veiligheid/lmras/${id}`
+}
+
+/**
+ * @summary LMRA detail ophalen
+ */
+export const getVeiligheidLmrasId = async (id: number, options?: RequestInit): Promise<VeiligheidLmra> => {
+
+  return customFetch<VeiligheidLmra>(getGetVeiligheidLmrasIdUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetVeiligheidLmrasIdQueryKey = (id: number,) => {
+    return [
+    `/api/veiligheid/lmras/${id}`
+    ] as const;
+    }
+
+
+export const getGetVeiligheidLmrasIdQueryOptions = <TData = Awaited<ReturnType<typeof getVeiligheidLmrasId>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getVeiligheidLmrasId>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetVeiligheidLmrasIdQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getVeiligheidLmrasId>>> = ({ signal }) => getVeiligheidLmrasId(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getVeiligheidLmrasId>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetVeiligheidLmrasIdQueryResult = NonNullable<Awaited<ReturnType<typeof getVeiligheidLmrasId>>>
+export type GetVeiligheidLmrasIdQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary LMRA detail ophalen
+ */
+
+export function useGetVeiligheidLmrasId<TData = Awaited<ReturnType<typeof getVeiligheidLmrasId>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getVeiligheidLmrasId>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetVeiligheidLmrasIdQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getPatchVeiligheidLmrasIdUrl = (id: number,) => {
+
+
+
+
+  return `/api/veiligheid/lmras/${id}`
+}
+
+/**
+ * @summary LMRA bijwerken
+ */
+export const patchVeiligheidLmrasId = async (id: number,
+    veiligheidLmraInput: VeiligheidLmraInput, options?: RequestInit): Promise<VeiligheidLmra> => {
+
+  return customFetch<VeiligheidLmra>(getPatchVeiligheidLmrasIdUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(veiligheidLmraInput)
+  }
+);}
+
+
+
+
+export const getPatchVeiligheidLmrasIdMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof patchVeiligheidLmrasId>>, TError,{id: number;data: BodyType<VeiligheidLmraInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof patchVeiligheidLmrasId>>, TError,{id: number;data: BodyType<VeiligheidLmraInput>}, TContext> => {
+
+const mutationKey = ['patchVeiligheidLmrasId'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof patchVeiligheidLmrasId>>, {id: number;data: BodyType<VeiligheidLmraInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  patchVeiligheidLmrasId(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PatchVeiligheidLmrasIdMutationResult = NonNullable<Awaited<ReturnType<typeof patchVeiligheidLmrasId>>>
+    export type PatchVeiligheidLmrasIdMutationBody = BodyType<VeiligheidLmraInput>
+    export type PatchVeiligheidLmrasIdMutationError = ErrorType<unknown>
+
+    /**
+ * @summary LMRA bijwerken
+ */
+export const usePatchVeiligheidLmrasId = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof patchVeiligheidLmrasId>>, TError,{id: number;data: BodyType<VeiligheidLmraInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof patchVeiligheidLmrasId>>,
+        TError,
+        {id: number;data: BodyType<VeiligheidLmraInput>},
+        TContext
+      > => {
+      return useMutation(getPatchVeiligheidLmrasIdMutationOptions(options));
+    }
+
+export const getDeleteVeiligheidLmrasIdUrl = (id: number,) => {
+
+
+
+
+  return `/api/veiligheid/lmras/${id}`
+}
+
+/**
+ * @summary LMRA verwijderen
+ */
+export const deleteVeiligheidLmrasId = async (id: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteVeiligheidLmrasIdUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteVeiligheidLmrasIdMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteVeiligheidLmrasId>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteVeiligheidLmrasId>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deleteVeiligheidLmrasId'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteVeiligheidLmrasId>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteVeiligheidLmrasId(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteVeiligheidLmrasIdMutationResult = NonNullable<Awaited<ReturnType<typeof deleteVeiligheidLmrasId>>>
+
+    export type DeleteVeiligheidLmrasIdMutationError = ErrorType<unknown>
+
+    /**
+ * @summary LMRA verwijderen
+ */
+export const useDeleteVeiligheidLmrasId = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteVeiligheidLmrasId>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteVeiligheidLmrasId>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeleteVeiligheidLmrasIdMutationOptions(options));
+    }
+
+export const getGetVeiligheidMeldingenUrl = () => {
+
+
+
+
+  return `/api/veiligheid/meldingen`
+}
+
+/**
+ * @summary Veiligheidsmeldingen ophalen
+ */
+export const getVeiligheidMeldingen = async ( options?: RequestInit): Promise<VeiligheidMelding[]> => {
+
+  return customFetch<VeiligheidMelding[]>(getGetVeiligheidMeldingenUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetVeiligheidMeldingenQueryKey = () => {
+    return [
+    `/api/veiligheid/meldingen`
+    ] as const;
+    }
+
+
+export const getGetVeiligheidMeldingenQueryOptions = <TData = Awaited<ReturnType<typeof getVeiligheidMeldingen>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getVeiligheidMeldingen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetVeiligheidMeldingenQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getVeiligheidMeldingen>>> = ({ signal }) => getVeiligheidMeldingen({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getVeiligheidMeldingen>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetVeiligheidMeldingenQueryResult = NonNullable<Awaited<ReturnType<typeof getVeiligheidMeldingen>>>
+export type GetVeiligheidMeldingenQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Veiligheidsmeldingen ophalen
+ */
+
+export function useGetVeiligheidMeldingen<TData = Awaited<ReturnType<typeof getVeiligheidMeldingen>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getVeiligheidMeldingen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetVeiligheidMeldingenQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getPostVeiligheidMeldingenUrl = () => {
+
+
+
+
+  return `/api/veiligheid/meldingen`
+}
+
+/**
+ * @summary Nieuwe veiligheidsmelding aanmaken
+ */
+export const postVeiligheidMeldingen = async (veiligheidMeldingInput: VeiligheidMeldingInput, options?: RequestInit): Promise<VeiligheidMelding> => {
+
+  return customFetch<VeiligheidMelding>(getPostVeiligheidMeldingenUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(veiligheidMeldingInput)
+  }
+);}
+
+
+
+
+export const getPostVeiligheidMeldingenMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postVeiligheidMeldingen>>, TError,{data: BodyType<VeiligheidMeldingInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof postVeiligheidMeldingen>>, TError,{data: BodyType<VeiligheidMeldingInput>}, TContext> => {
+
+const mutationKey = ['postVeiligheidMeldingen'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postVeiligheidMeldingen>>, {data: BodyType<VeiligheidMeldingInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  postVeiligheidMeldingen(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PostVeiligheidMeldingenMutationResult = NonNullable<Awaited<ReturnType<typeof postVeiligheidMeldingen>>>
+    export type PostVeiligheidMeldingenMutationBody = BodyType<VeiligheidMeldingInput>
+    export type PostVeiligheidMeldingenMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Nieuwe veiligheidsmelding aanmaken
+ */
+export const usePostVeiligheidMeldingen = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postVeiligheidMeldingen>>, TError,{data: BodyType<VeiligheidMeldingInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof postVeiligheidMeldingen>>,
+        TError,
+        {data: BodyType<VeiligheidMeldingInput>},
+        TContext
+      > => {
+      return useMutation(getPostVeiligheidMeldingenMutationOptions(options));
+    }
+
+export const getGetVeiligheidMeldingenUploadUrlUrl = () => {
+
+
+
+
+  return `/api/veiligheid/meldingen/upload-url`
+}
+
+/**
+ * @summary Upload-URL voor melding-foto ophalen
+ */
+export const getVeiligheidMeldingenUploadUrl = async ( options?: RequestInit): Promise<GetVeiligheidMeldingenUploadUrl200> => {
+
+  return customFetch<GetVeiligheidMeldingenUploadUrl200>(getGetVeiligheidMeldingenUploadUrlUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetVeiligheidMeldingenUploadUrlQueryKey = () => {
+    return [
+    `/api/veiligheid/meldingen/upload-url`
+    ] as const;
+    }
+
+
+export const getGetVeiligheidMeldingenUploadUrlQueryOptions = <TData = Awaited<ReturnType<typeof getVeiligheidMeldingenUploadUrl>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getVeiligheidMeldingenUploadUrl>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetVeiligheidMeldingenUploadUrlQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getVeiligheidMeldingenUploadUrl>>> = ({ signal }) => getVeiligheidMeldingenUploadUrl({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getVeiligheidMeldingenUploadUrl>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetVeiligheidMeldingenUploadUrlQueryResult = NonNullable<Awaited<ReturnType<typeof getVeiligheidMeldingenUploadUrl>>>
+export type GetVeiligheidMeldingenUploadUrlQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Upload-URL voor melding-foto ophalen
+ */
+
+export function useGetVeiligheidMeldingenUploadUrl<TData = Awaited<ReturnType<typeof getVeiligheidMeldingenUploadUrl>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getVeiligheidMeldingenUploadUrl>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetVeiligheidMeldingenUploadUrlQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetVeiligheidMeldingenIdUrl = (id: number,) => {
+
+
+
+
+  return `/api/veiligheid/meldingen/${id}`
+}
+
+/**
+ * @summary Veiligheidsmelding detail ophalen
+ */
+export const getVeiligheidMeldingenId = async (id: number, options?: RequestInit): Promise<VeiligheidMelding> => {
+
+  return customFetch<VeiligheidMelding>(getGetVeiligheidMeldingenIdUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetVeiligheidMeldingenIdQueryKey = (id: number,) => {
+    return [
+    `/api/veiligheid/meldingen/${id}`
+    ] as const;
+    }
+
+
+export const getGetVeiligheidMeldingenIdQueryOptions = <TData = Awaited<ReturnType<typeof getVeiligheidMeldingenId>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getVeiligheidMeldingenId>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetVeiligheidMeldingenIdQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getVeiligheidMeldingenId>>> = ({ signal }) => getVeiligheidMeldingenId(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getVeiligheidMeldingenId>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetVeiligheidMeldingenIdQueryResult = NonNullable<Awaited<ReturnType<typeof getVeiligheidMeldingenId>>>
+export type GetVeiligheidMeldingenIdQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Veiligheidsmelding detail ophalen
+ */
+
+export function useGetVeiligheidMeldingenId<TData = Awaited<ReturnType<typeof getVeiligheidMeldingenId>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getVeiligheidMeldingenId>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetVeiligheidMeldingenIdQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getPatchVeiligheidMeldingenIdUrl = (id: number,) => {
+
+
+
+
+  return `/api/veiligheid/meldingen/${id}`
+}
+
+/**
+ * @summary Veiligheidsmelding bijwerken
+ */
+export const patchVeiligheidMeldingenId = async (id: number,
+    veiligheidMeldingInput: VeiligheidMeldingInput, options?: RequestInit): Promise<VeiligheidMelding> => {
+
+  return customFetch<VeiligheidMelding>(getPatchVeiligheidMeldingenIdUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(veiligheidMeldingInput)
+  }
+);}
+
+
+
+
+export const getPatchVeiligheidMeldingenIdMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof patchVeiligheidMeldingenId>>, TError,{id: number;data: BodyType<VeiligheidMeldingInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof patchVeiligheidMeldingenId>>, TError,{id: number;data: BodyType<VeiligheidMeldingInput>}, TContext> => {
+
+const mutationKey = ['patchVeiligheidMeldingenId'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof patchVeiligheidMeldingenId>>, {id: number;data: BodyType<VeiligheidMeldingInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  patchVeiligheidMeldingenId(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PatchVeiligheidMeldingenIdMutationResult = NonNullable<Awaited<ReturnType<typeof patchVeiligheidMeldingenId>>>
+    export type PatchVeiligheidMeldingenIdMutationBody = BodyType<VeiligheidMeldingInput>
+    export type PatchVeiligheidMeldingenIdMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Veiligheidsmelding bijwerken
+ */
+export const usePatchVeiligheidMeldingenId = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof patchVeiligheidMeldingenId>>, TError,{id: number;data: BodyType<VeiligheidMeldingInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof patchVeiligheidMeldingenId>>,
+        TError,
+        {id: number;data: BodyType<VeiligheidMeldingInput>},
+        TContext
+      > => {
+      return useMutation(getPatchVeiligheidMeldingenIdMutationOptions(options));
+    }
+
+export const getDeleteVeiligheidMeldingenIdUrl = (id: number,) => {
+
+
+
+
+  return `/api/veiligheid/meldingen/${id}`
+}
+
+/**
+ * @summary Veiligheidsmelding verwijderen
+ */
+export const deleteVeiligheidMeldingenId = async (id: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteVeiligheidMeldingenIdUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteVeiligheidMeldingenIdMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteVeiligheidMeldingenId>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteVeiligheidMeldingenId>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deleteVeiligheidMeldingenId'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteVeiligheidMeldingenId>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteVeiligheidMeldingenId(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteVeiligheidMeldingenIdMutationResult = NonNullable<Awaited<ReturnType<typeof deleteVeiligheidMeldingenId>>>
+
+    export type DeleteVeiligheidMeldingenIdMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Veiligheidsmelding verwijderen
+ */
+export const useDeleteVeiligheidMeldingenId = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteVeiligheidMeldingenId>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteVeiligheidMeldingenId>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeleteVeiligheidMeldingenIdMutationOptions(options));
+    }
+
+export const getGetVeiligheidMeldingenIdActiesUrl = (id: number,) => {
+
+
+
+
+  return `/api/veiligheid/meldingen/${id}/acties`
+}
+
+/**
+ * @summary Acties van een melding ophalen
+ */
+export const getVeiligheidMeldingenIdActies = async (id: number, options?: RequestInit): Promise<VeiligheidMeldingActie[]> => {
+
+  return customFetch<VeiligheidMeldingActie[]>(getGetVeiligheidMeldingenIdActiesUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetVeiligheidMeldingenIdActiesQueryKey = (id: number,) => {
+    return [
+    `/api/veiligheid/meldingen/${id}/acties`
+    ] as const;
+    }
+
+
+export const getGetVeiligheidMeldingenIdActiesQueryOptions = <TData = Awaited<ReturnType<typeof getVeiligheidMeldingenIdActies>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getVeiligheidMeldingenIdActies>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetVeiligheidMeldingenIdActiesQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getVeiligheidMeldingenIdActies>>> = ({ signal }) => getVeiligheidMeldingenIdActies(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getVeiligheidMeldingenIdActies>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetVeiligheidMeldingenIdActiesQueryResult = NonNullable<Awaited<ReturnType<typeof getVeiligheidMeldingenIdActies>>>
+export type GetVeiligheidMeldingenIdActiesQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Acties van een melding ophalen
+ */
+
+export function useGetVeiligheidMeldingenIdActies<TData = Awaited<ReturnType<typeof getVeiligheidMeldingenIdActies>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getVeiligheidMeldingenIdActies>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetVeiligheidMeldingenIdActiesQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getPostVeiligheidMeldingenIdActiesUrl = (id: number,) => {
+
+
+
+
+  return `/api/veiligheid/meldingen/${id}/acties`
+}
+
+/**
+ * @summary Actie toevoegen aan melding
+ */
+export const postVeiligheidMeldingenIdActies = async (id: number,
+    veiligheidMeldingActieInput: VeiligheidMeldingActieInput, options?: RequestInit): Promise<VeiligheidMeldingActie> => {
+
+  return customFetch<VeiligheidMeldingActie>(getPostVeiligheidMeldingenIdActiesUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(veiligheidMeldingActieInput)
+  }
+);}
+
+
+
+
+export const getPostVeiligheidMeldingenIdActiesMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postVeiligheidMeldingenIdActies>>, TError,{id: number;data: BodyType<VeiligheidMeldingActieInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof postVeiligheidMeldingenIdActies>>, TError,{id: number;data: BodyType<VeiligheidMeldingActieInput>}, TContext> => {
+
+const mutationKey = ['postVeiligheidMeldingenIdActies'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postVeiligheidMeldingenIdActies>>, {id: number;data: BodyType<VeiligheidMeldingActieInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  postVeiligheidMeldingenIdActies(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PostVeiligheidMeldingenIdActiesMutationResult = NonNullable<Awaited<ReturnType<typeof postVeiligheidMeldingenIdActies>>>
+    export type PostVeiligheidMeldingenIdActiesMutationBody = BodyType<VeiligheidMeldingActieInput>
+    export type PostVeiligheidMeldingenIdActiesMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Actie toevoegen aan melding
+ */
+export const usePostVeiligheidMeldingenIdActies = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postVeiligheidMeldingenIdActies>>, TError,{id: number;data: BodyType<VeiligheidMeldingActieInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof postVeiligheidMeldingenIdActies>>,
+        TError,
+        {id: number;data: BodyType<VeiligheidMeldingActieInput>},
+        TContext
+      > => {
+      return useMutation(getPostVeiligheidMeldingenIdActiesMutationOptions(options));
+    }
+
+export const getPatchVeiligheidMeldingenIdActiesActieIdUrl = (id: number,
+    actieId: number,) => {
+
+
+
+
+  return `/api/veiligheid/meldingen/${id}/acties/${actieId}`
+}
+
+/**
+ * @summary Actie bijwerken
+ */
+export const patchVeiligheidMeldingenIdActiesActieId = async (id: number,
+    actieId: number,
+    veiligheidMeldingActieInput: VeiligheidMeldingActieInput, options?: RequestInit): Promise<VeiligheidMeldingActie> => {
+
+  return customFetch<VeiligheidMeldingActie>(getPatchVeiligheidMeldingenIdActiesActieIdUrl(id,actieId),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(veiligheidMeldingActieInput)
+  }
+);}
+
+
+
+
+export const getPatchVeiligheidMeldingenIdActiesActieIdMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof patchVeiligheidMeldingenIdActiesActieId>>, TError,{id: number;actieId: number;data: BodyType<VeiligheidMeldingActieInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof patchVeiligheidMeldingenIdActiesActieId>>, TError,{id: number;actieId: number;data: BodyType<VeiligheidMeldingActieInput>}, TContext> => {
+
+const mutationKey = ['patchVeiligheidMeldingenIdActiesActieId'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof patchVeiligheidMeldingenIdActiesActieId>>, {id: number;actieId: number;data: BodyType<VeiligheidMeldingActieInput>}> = (props) => {
+          const {id,actieId,data} = props ?? {};
+
+          return  patchVeiligheidMeldingenIdActiesActieId(id,actieId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PatchVeiligheidMeldingenIdActiesActieIdMutationResult = NonNullable<Awaited<ReturnType<typeof patchVeiligheidMeldingenIdActiesActieId>>>
+    export type PatchVeiligheidMeldingenIdActiesActieIdMutationBody = BodyType<VeiligheidMeldingActieInput>
+    export type PatchVeiligheidMeldingenIdActiesActieIdMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Actie bijwerken
+ */
+export const usePatchVeiligheidMeldingenIdActiesActieId = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof patchVeiligheidMeldingenIdActiesActieId>>, TError,{id: number;actieId: number;data: BodyType<VeiligheidMeldingActieInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof patchVeiligheidMeldingenIdActiesActieId>>,
+        TError,
+        {id: number;actieId: number;data: BodyType<VeiligheidMeldingActieInput>},
+        TContext
+      > => {
+      return useMutation(getPatchVeiligheidMeldingenIdActiesActieIdMutationOptions(options));
+    }
+
+export const getDeleteVeiligheidMeldingenIdActiesActieIdUrl = (id: number,
+    actieId: number,) => {
+
+
+
+
+  return `/api/veiligheid/meldingen/${id}/acties/${actieId}`
+}
+
+/**
+ * @summary Actie verwijderen
+ */
+export const deleteVeiligheidMeldingenIdActiesActieId = async (id: number,
+    actieId: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteVeiligheidMeldingenIdActiesActieIdUrl(id,actieId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteVeiligheidMeldingenIdActiesActieIdMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteVeiligheidMeldingenIdActiesActieId>>, TError,{id: number;actieId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteVeiligheidMeldingenIdActiesActieId>>, TError,{id: number;actieId: number}, TContext> => {
+
+const mutationKey = ['deleteVeiligheidMeldingenIdActiesActieId'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteVeiligheidMeldingenIdActiesActieId>>, {id: number;actieId: number}> = (props) => {
+          const {id,actieId} = props ?? {};
+
+          return  deleteVeiligheidMeldingenIdActiesActieId(id,actieId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteVeiligheidMeldingenIdActiesActieIdMutationResult = NonNullable<Awaited<ReturnType<typeof deleteVeiligheidMeldingenIdActiesActieId>>>
+
+    export type DeleteVeiligheidMeldingenIdActiesActieIdMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Actie verwijderen
+ */
+export const useDeleteVeiligheidMeldingenIdActiesActieId = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteVeiligheidMeldingenIdActiesActieId>>, TError,{id: number;actieId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteVeiligheidMeldingenIdActiesActieId>>,
+        TError,
+        {id: number;actieId: number},
+        TContext
+      > => {
+      return useMutation(getDeleteVeiligheidMeldingenIdActiesActieIdMutationOptions(options));
+    }
+
+export const getGetVeiligheidDashboardUrl = () => {
+
+
+
+
+  return `/api/veiligheid/dashboard`
+}
+
+/**
+ * @summary Veiligheids-KPI dashboard ophalen
+ */
+export const getVeiligheidDashboard = async ( options?: RequestInit): Promise<VeiligheidDashboard> => {
+
+  return customFetch<VeiligheidDashboard>(getGetVeiligheidDashboardUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetVeiligheidDashboardQueryKey = () => {
+    return [
+    `/api/veiligheid/dashboard`
+    ] as const;
+    }
+
+
+export const getGetVeiligheidDashboardQueryOptions = <TData = Awaited<ReturnType<typeof getVeiligheidDashboard>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getVeiligheidDashboard>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetVeiligheidDashboardQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getVeiligheidDashboard>>> = ({ signal }) => getVeiligheidDashboard({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getVeiligheidDashboard>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetVeiligheidDashboardQueryResult = NonNullable<Awaited<ReturnType<typeof getVeiligheidDashboard>>>
+export type GetVeiligheidDashboardQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Veiligheids-KPI dashboard ophalen
+ */
+
+export function useGetVeiligheidDashboard<TData = Awaited<ReturnType<typeof getVeiligheidDashboard>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getVeiligheidDashboard>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetVeiligheidDashboardQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
 

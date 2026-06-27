@@ -4,9 +4,12 @@ import {
   veiligheidToolboxenTable,
   veiligheidToolboxVragenTable,
   veiligheidToolboxAfrondingTable,
+  veiligheidLmrasTable,
+  veiligheidMeldingenTable,
+  veiligheidMeldingenActiesTable,
   gebruikersTable,
 } from "@workspace/db";
-import { eq, and, desc, sql, count } from "drizzle-orm";
+import { eq, and, desc, sql, count, gte, lt } from "drizzle-orm";
 import { requireAuth, requireBevoegdheid } from "../middlewares/auth.js";
 import { maakOpenAiClient, heeftOpenAi } from "../lib/openai.js";
 import { createRequire } from "module";
@@ -699,6 +702,555 @@ veiligheidRouter.get("/veiligheid/toolboxen/upload-url", schrijvenVeiligheid, as
     res.json({ upload_url: uploadURL, object_path: objectPath });
   } catch (err) {
     req.log.error(err, "GET /veiligheid/toolboxen/upload-url");
+    res.status(500).json({ error: "Interne fout" });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// LMRA
+// ═══════════════════════════════════════════════════════════════════════════════
+
+veiligheidRouter.get("/veiligheid/lmras", lezenVeiligheid, async (req, res) => {
+  try {
+    const rijen = await db
+      .select({
+        id: veiligheidLmrasTable.id,
+        gebouwId: veiligheidLmrasTable.gebouwId,
+        projectNaam: veiligheidLmrasTable.projectNaam,
+        locatieOmschrijving: veiligheidLmrasTable.locatieOmschrijving,
+        werkzaamheden: veiligheidLmrasTable.werkzaamheden,
+        risicos: veiligheidLmrasTable.risicos,
+        maatregelen: veiligheidLmrasTable.maatregelen,
+        veiligVoorAanvang: veiligheidLmrasTable.veiligVoorAanvang,
+        handtekening: veiligheidLmrasTable.handtekening,
+        fotoPaden: veiligheidLmrasTable.fotoPaden,
+        gpsLat: veiligheidLmrasTable.gpsLat,
+        gpsLng: veiligheidLmrasTable.gpsLng,
+        medewerkerNaam: veiligheidLmrasTable.medewerkerNaam,
+        aangemaaktDoorId: veiligheidLmrasTable.aangemaaktDoorId,
+        aangemaaktOp: veiligheidLmrasTable.aangemaaktOp,
+        bijgewerktOp: veiligheidLmrasTable.bijgewerktOp,
+      })
+      .from(veiligheidLmrasTable)
+      .orderBy(desc(veiligheidLmrasTable.aangemaaktOp));
+    res.json(
+      rijen.map((r) => ({
+        id: r.id,
+        gebouw_id: r.gebouwId ?? null,
+        project_naam: r.projectNaam ?? null,
+        locatie_omschrijving: r.locatieOmschrijving,
+        werkzaamheden: r.werkzaamheden,
+        risicos: (r.risicos as string[]) ?? [],
+        maatregelen: (r.maatregelen as string[]) ?? [],
+        veilig_voor_aanvang: r.veiligVoorAanvang,
+        handtekening: r.handtekening ?? null,
+        foto_paden: (r.fotoPaden as string[]) ?? [],
+        gps_lat: r.gpsLat ?? null,
+        gps_lng: r.gpsLng ?? null,
+        medewerker_naam: r.medewerkerNaam ?? null,
+        aangemaakt_door_id: r.aangemaaktDoorId ?? null,
+        aangemaakt_op: r.aangemaaktOp.toISOString(),
+        bijgewerkt_op: r.bijgewerktOp?.toISOString() ?? null,
+      })),
+    );
+  } catch (err) {
+    req.log.error(err, "GET /veiligheid/lmras");
+    res.status(500).json({ error: "Interne fout" });
+  }
+});
+
+veiligheidRouter.post("/veiligheid/lmras", lezenVeiligheid, async (req, res) => {
+  try {
+    const gebruiker = (req as any).session?.gebruiker;
+    const {
+      gebouw_id, project_naam, locatie_omschrijving, werkzaamheden,
+      risicos, maatregelen, veilig_voor_aanvang, handtekening,
+      foto_paden, gps_lat, gps_lng,
+    } = req.body;
+
+    if (!locatie_omschrijving || !werkzaamheden) {
+      return res.status(400).json({ error: "locatie_omschrijving en werkzaamheden zijn verplicht" });
+    }
+
+    const medewerkerNaam = gebruiker
+      ? `${gebruiker.naam ?? ""} ${gebruiker.achternaam ?? ""}`.trim() || gebruiker.email
+      : null;
+
+    const [rij] = await db
+      .insert(veiligheidLmrasTable)
+      .values({
+        gebouwId: gebouw_id ?? null,
+        projectNaam: project_naam ?? null,
+        locatieOmschrijving: locatie_omschrijving,
+        werkzaamheden,
+        risicos: risicos ?? [],
+        maatregelen: maatregelen ?? [],
+        veiligVoorAanvang: veilig_voor_aanvang ?? true,
+        handtekening: handtekening ?? null,
+        fotoPaden: foto_paden ?? [],
+        gpsLat: gps_lat ?? null,
+        gpsLng: gps_lng ?? null,
+        medewerkerNaam,
+        aangemaaktDoorId: gebruiker?.id ?? null,
+        bijgewerktOp: new Date(),
+      })
+      .returning();
+    res.status(201).json({
+      id: rij.id,
+      gebouw_id: rij.gebouwId ?? null,
+      project_naam: rij.projectNaam ?? null,
+      locatie_omschrijving: rij.locatieOmschrijving,
+      werkzaamheden: rij.werkzaamheden,
+      risicos: (rij.risicos as string[]) ?? [],
+      maatregelen: (rij.maatregelen as string[]) ?? [],
+      veilig_voor_aanvang: rij.veiligVoorAanvang,
+      handtekening: rij.handtekening ?? null,
+      foto_paden: (rij.fotoPaden as string[]) ?? [],
+      gps_lat: rij.gpsLat ?? null,
+      gps_lng: rij.gpsLng ?? null,
+      medewerker_naam: rij.medewerkerNaam ?? null,
+      aangemaakt_door_id: rij.aangemaaktDoorId ?? null,
+      aangemaakt_op: rij.aangemaaktOp.toISOString(),
+      bijgewerkt_op: rij.bijgewerktOp?.toISOString() ?? null,
+    });
+  } catch (err) {
+    req.log.error(err, "POST /veiligheid/lmras");
+    res.status(500).json({ error: "Interne fout" });
+  }
+});
+
+veiligheidRouter.get("/veiligheid/lmras/upload-url", schrijvenVeiligheid, async (req, res) => {
+  try {
+    const { uploadURL, objectPath } = await objectStorage.getObjectEntityUploadURL();
+    res.json({ upload_url: uploadURL, object_path: objectPath });
+  } catch (err) {
+    req.log.error(err, "GET /veiligheid/lmras/upload-url");
+    res.status(500).json({ error: "Interne fout" });
+  }
+});
+
+veiligheidRouter.get("/veiligheid/lmras/:id", lezenVeiligheid, async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const [rij] = await db
+      .select()
+      .from(veiligheidLmrasTable)
+      .where(eq(veiligheidLmrasTable.id, id));
+    if (!rij) return res.status(404).json({ error: "Niet gevonden" });
+    res.json({
+      id: rij.id,
+      gebouw_id: rij.gebouwId ?? null,
+      project_naam: rij.projectNaam ?? null,
+      locatie_omschrijving: rij.locatieOmschrijving,
+      werkzaamheden: rij.werkzaamheden,
+      risicos: (rij.risicos as string[]) ?? [],
+      maatregelen: (rij.maatregelen as string[]) ?? [],
+      veilig_voor_aanvang: rij.veiligVoorAanvang,
+      handtekening: rij.handtekening ?? null,
+      foto_paden: (rij.fotoPaden as string[]) ?? [],
+      gps_lat: rij.gpsLat ?? null,
+      gps_lng: rij.gpsLng ?? null,
+      medewerker_naam: rij.medewerkerNaam ?? null,
+      aangemaakt_door_id: rij.aangemaaktDoorId ?? null,
+      aangemaakt_op: rij.aangemaaktOp.toISOString(),
+      bijgewerkt_op: rij.bijgewerktOp?.toISOString() ?? null,
+    });
+  } catch (err) {
+    req.log.error(err, "GET /veiligheid/lmras/:id");
+    res.status(500).json({ error: "Interne fout" });
+  }
+});
+
+veiligheidRouter.patch("/veiligheid/lmras/:id", schrijvenVeiligheid, async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const {
+      locatie_omschrijving, werkzaamheden, risicos, maatregelen,
+      veilig_voor_aanvang, handtekening, foto_paden, gps_lat, gps_lng,
+      project_naam, gebouw_id,
+    } = req.body;
+    const [rij] = await db
+      .update(veiligheidLmrasTable)
+      .set({
+        ...(locatie_omschrijving !== undefined && { locatieOmschrijving: locatie_omschrijving }),
+        ...(werkzaamheden !== undefined && { werkzaamheden }),
+        ...(risicos !== undefined && { risicos }),
+        ...(maatregelen !== undefined && { maatregelen }),
+        ...(veilig_voor_aanvang !== undefined && { veiligVoorAanvang: veilig_voor_aanvang }),
+        ...(handtekening !== undefined && { handtekening }),
+        ...(foto_paden !== undefined && { fotoPaden: foto_paden }),
+        ...(gps_lat !== undefined && { gpsLat: gps_lat }),
+        ...(gps_lng !== undefined && { gpsLng: gps_lng }),
+        ...(project_naam !== undefined && { projectNaam: project_naam }),
+        ...(gebouw_id !== undefined && { gebouwId: gebouw_id }),
+        bijgewerktOp: new Date(),
+      })
+      .where(eq(veiligheidLmrasTable.id, id))
+      .returning();
+    if (!rij) return res.status(404).json({ error: "Niet gevonden" });
+    res.json({
+      id: rij.id,
+      gebouw_id: rij.gebouwId ?? null,
+      project_naam: rij.projectNaam ?? null,
+      locatie_omschrijving: rij.locatieOmschrijving,
+      werkzaamheden: rij.werkzaamheden,
+      risicos: (rij.risicos as string[]) ?? [],
+      maatregelen: (rij.maatregelen as string[]) ?? [],
+      veilig_voor_aanvang: rij.veiligVoorAanvang,
+      handtekening: rij.handtekening ?? null,
+      foto_paden: (rij.fotoPaden as string[]) ?? [],
+      gps_lat: rij.gpsLat ?? null,
+      gps_lng: rij.gpsLng ?? null,
+      medewerker_naam: rij.medewerkerNaam ?? null,
+      aangemaakt_door_id: rij.aangemaaktDoorId ?? null,
+      aangemaakt_op: rij.aangemaaktOp.toISOString(),
+      bijgewerkt_op: rij.bijgewerktOp?.toISOString() ?? null,
+    });
+  } catch (err) {
+    req.log.error(err, "PATCH /veiligheid/lmras/:id");
+    res.status(500).json({ error: "Interne fout" });
+  }
+});
+
+veiligheidRouter.delete("/veiligheid/lmras/:id", verwijderenVeiligheid, async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    await db.delete(veiligheidLmrasTable).where(eq(veiligheidLmrasTable.id, id));
+    res.status(204).end();
+  } catch (err) {
+    req.log.error(err, "DELETE /veiligheid/lmras/:id");
+    res.status(500).json({ error: "Interne fout" });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// VEILIGHEIDSMELDINGEN
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function mapMelding(r: typeof veiligheidMeldingenTable.$inferSelect & { toegewezen_aan_naam?: string | null }) {
+  return {
+    id: r.id,
+    type: r.type,
+    omschrijving: r.omschrijving,
+    locatie: r.locatie ?? null,
+    gebouw_id: r.gebouwId ?? null,
+    project_naam: r.projectNaam ?? null,
+    foto_paden: (r.fotoPaden as string[]) ?? [],
+    prioriteit: r.prioriteit,
+    status: r.status,
+    melder_naam: r.melderNaam ?? null,
+    gemeld_door_id: r.gemeldDoorId ?? null,
+    toegewezen_aan_id: r.toegewezenAanId ?? null,
+    toegewezen_aan_naam: r.toegewezen_aan_naam ?? null,
+    aangemaakt_op: r.aangemaaktOp.toISOString(),
+    bijgewerkt_op: r.bijgewerktOp?.toISOString() ?? null,
+  };
+}
+
+veiligheidRouter.get("/veiligheid/meldingen", lezenVeiligheid, async (req, res) => {
+  try {
+    const toegewezenAlias = db
+      .$with("toegewezen")
+      .as(db.select({ id: gebruikersTable.id, naam: sql<string>`coalesce(${gebruikersTable.naam} || ' ' || ${gebruikersTable.achternaam}, ${gebruikersTable.email})` }).from(gebruikersTable));
+    const rijen = await db
+      .select({
+        id: veiligheidMeldingenTable.id,
+        type: veiligheidMeldingenTable.type,
+        omschrijving: veiligheidMeldingenTable.omschrijving,
+        locatie: veiligheidMeldingenTable.locatie,
+        gebouwId: veiligheidMeldingenTable.gebouwId,
+        projectNaam: veiligheidMeldingenTable.projectNaam,
+        fotoPaden: veiligheidMeldingenTable.fotoPaden,
+        prioriteit: veiligheidMeldingenTable.prioriteit,
+        status: veiligheidMeldingenTable.status,
+        melderNaam: veiligheidMeldingenTable.melderNaam,
+        gemeldDoorId: veiligheidMeldingenTable.gemeldDoorId,
+        toegewezenAanId: veiligheidMeldingenTable.toegewezenAanId,
+        toegewezen_aan_naam: sql<string | null>`coalesce(u.naam || ' ' || u.achternaam, u.email)`,
+        aangemaaktOp: veiligheidMeldingenTable.aangemaaktOp,
+        bijgewerktOp: veiligheidMeldingenTable.bijgewerktOp,
+      })
+      .from(veiligheidMeldingenTable)
+      .leftJoin(gebruikersTable, eq(gebruikersTable.id, veiligheidMeldingenTable.toegewezenAanId))
+      .orderBy(desc(veiligheidMeldingenTable.aangemaaktOp));
+    res.json(rijen.map((r) => mapMelding(r as any)));
+  } catch (err) {
+    req.log.error(err, "GET /veiligheid/meldingen");
+    res.status(500).json({ error: "Interne fout" });
+  }
+});
+
+veiligheidRouter.post("/veiligheid/meldingen", lezenVeiligheid, async (req, res) => {
+  try {
+    const gebruiker = (req as any).session?.gebruiker;
+    const {
+      type, omschrijving, locatie, gebouw_id, project_naam,
+      foto_paden, prioriteit, toegewezen_aan_id,
+    } = req.body;
+    if (!type || !omschrijving) {
+      return res.status(400).json({ error: "type en omschrijving zijn verplicht" });
+    }
+    const melderNaam = gebruiker
+      ? `${gebruiker.naam ?? ""} ${gebruiker.achternaam ?? ""}`.trim() || gebruiker.email
+      : null;
+    const [rij] = await db
+      .insert(veiligheidMeldingenTable)
+      .values({
+        type,
+        omschrijving,
+        locatie: locatie ?? null,
+        gebouwId: gebouw_id ?? null,
+        projectNaam: project_naam ?? null,
+        fotoPaden: foto_paden ?? [],
+        prioriteit: prioriteit ?? "middel",
+        status: "open",
+        melderNaam,
+        gemeldDoorId: gebruiker?.id ?? null,
+        toegewezenAanId: toegewezen_aan_id ?? null,
+        bijgewerktOp: new Date(),
+      })
+      .returning();
+    res.status(201).json(mapMelding(rij as any));
+  } catch (err) {
+    req.log.error(err, "POST /veiligheid/meldingen");
+    res.status(500).json({ error: "Interne fout" });
+  }
+});
+
+veiligheidRouter.get("/veiligheid/meldingen/upload-url", schrijvenVeiligheid, async (req, res) => {
+  try {
+    const { uploadURL, objectPath } = await objectStorage.getObjectEntityUploadURL();
+    res.json({ upload_url: uploadURL, object_path: objectPath });
+  } catch (err) {
+    req.log.error(err, "GET /veiligheid/meldingen/upload-url");
+    res.status(500).json({ error: "Interne fout" });
+  }
+});
+
+veiligheidRouter.get("/veiligheid/meldingen/:id", lezenVeiligheid, async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const [rij] = await db
+      .select({
+        id: veiligheidMeldingenTable.id,
+        type: veiligheidMeldingenTable.type,
+        omschrijving: veiligheidMeldingenTable.omschrijving,
+        locatie: veiligheidMeldingenTable.locatie,
+        gebouwId: veiligheidMeldingenTable.gebouwId,
+        projectNaam: veiligheidMeldingenTable.projectNaam,
+        fotoPaden: veiligheidMeldingenTable.fotoPaden,
+        prioriteit: veiligheidMeldingenTable.prioriteit,
+        status: veiligheidMeldingenTable.status,
+        melderNaam: veiligheidMeldingenTable.melderNaam,
+        gemeldDoorId: veiligheidMeldingenTable.gemeldDoorId,
+        toegewezenAanId: veiligheidMeldingenTable.toegewezenAanId,
+        toegewezen_aan_naam: sql<string | null>`coalesce(u.naam || ' ' || u.achternaam, u.email)`,
+        aangemaaktOp: veiligheidMeldingenTable.aangemaaktOp,
+        bijgewerktOp: veiligheidMeldingenTable.bijgewerktOp,
+      })
+      .from(veiligheidMeldingenTable)
+      .leftJoin(gebruikersTable, eq(gebruikersTable.id, veiligheidMeldingenTable.toegewezenAanId))
+      .where(eq(veiligheidMeldingenTable.id, id));
+    if (!rij) return res.status(404).json({ error: "Niet gevonden" });
+    res.json(mapMelding(rij as any));
+  } catch (err) {
+    req.log.error(err, "GET /veiligheid/meldingen/:id");
+    res.status(500).json({ error: "Interne fout" });
+  }
+});
+
+veiligheidRouter.patch("/veiligheid/meldingen/:id", schrijvenVeiligheid, async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const {
+      type, omschrijving, locatie, gebouw_id, project_naam,
+      foto_paden, prioriteit, status, toegewezen_aan_id,
+    } = req.body;
+    const [rij] = await db
+      .update(veiligheidMeldingenTable)
+      .set({
+        ...(type !== undefined && { type }),
+        ...(omschrijving !== undefined && { omschrijving }),
+        ...(locatie !== undefined && { locatie }),
+        ...(gebouw_id !== undefined && { gebouwId: gebouw_id }),
+        ...(project_naam !== undefined && { projectNaam: project_naam }),
+        ...(foto_paden !== undefined && { fotoPaden: foto_paden }),
+        ...(prioriteit !== undefined && { prioriteit }),
+        ...(status !== undefined && { status }),
+        ...(toegewezen_aan_id !== undefined && { toegewezenAanId: toegewezen_aan_id }),
+        bijgewerktOp: new Date(),
+      })
+      .where(eq(veiligheidMeldingenTable.id, id))
+      .returning();
+    if (!rij) return res.status(404).json({ error: "Niet gevonden" });
+    res.json(mapMelding(rij as any));
+  } catch (err) {
+    req.log.error(err, "PATCH /veiligheid/meldingen/:id");
+    res.status(500).json({ error: "Interne fout" });
+  }
+});
+
+veiligheidRouter.delete("/veiligheid/meldingen/:id", verwijderenVeiligheid, async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    await db.delete(veiligheidMeldingenTable).where(eq(veiligheidMeldingenTable.id, id));
+    res.status(204).end();
+  } catch (err) {
+    req.log.error(err, "DELETE /veiligheid/meldingen/:id");
+    res.status(500).json({ error: "Interne fout" });
+  }
+});
+
+// ── Acties ────────────────────────────────────────────────────────────────────
+
+veiligheidRouter.get("/veiligheid/meldingen/:id/acties", lezenVeiligheid, async (req, res) => {
+  try {
+    const meldingId = parseInt(req.params.id);
+    const rijen = await db
+      .select()
+      .from(veiligheidMeldingenActiesTable)
+      .where(eq(veiligheidMeldingenActiesTable.meldingId, meldingId))
+      .orderBy(desc(veiligheidMeldingenActiesTable.aangemaaktOp));
+    res.json(
+      rijen.map((r) => ({
+        id: r.id,
+        melding_id: r.meldingId,
+        omschrijving: r.omschrijving,
+        eigenaar_id: r.eigenaarId ?? null,
+        eigenaar_naam: r.eigenaarNaam ?? null,
+        deadline: r.deadline ?? null,
+        status: r.status,
+        aangemaakt_op: r.aangemaaktOp.toISOString(),
+        bijgewerkt_op: r.bijgewerktOp?.toISOString() ?? null,
+      })),
+    );
+  } catch (err) {
+    req.log.error(err, "GET /veiligheid/meldingen/:id/acties");
+    res.status(500).json({ error: "Interne fout" });
+  }
+});
+
+veiligheidRouter.post("/veiligheid/meldingen/:id/acties", schrijvenVeiligheid, async (req, res) => {
+  try {
+    const meldingId = parseInt(req.params.id);
+    const { omschrijving, eigenaar_id, eigenaar_naam, deadline } = req.body;
+    if (!omschrijving) return res.status(400).json({ error: "omschrijving is verplicht" });
+    const [rij] = await db
+      .insert(veiligheidMeldingenActiesTable)
+      .values({
+        meldingId,
+        omschrijving,
+        eigenaarId: eigenaar_id ?? null,
+        eigenaarNaam: eigenaar_naam ?? null,
+        deadline: deadline ?? null,
+        status: "open",
+        bijgewerktOp: new Date(),
+      })
+      .returning();
+    res.status(201).json({
+      id: rij.id,
+      melding_id: rij.meldingId,
+      omschrijving: rij.omschrijving,
+      eigenaar_id: rij.eigenaarId ?? null,
+      eigenaar_naam: rij.eigenaarNaam ?? null,
+      deadline: rij.deadline ?? null,
+      status: rij.status,
+      aangemaakt_op: rij.aangemaaktOp.toISOString(),
+      bijgewerkt_op: rij.bijgewerktOp?.toISOString() ?? null,
+    });
+  } catch (err) {
+    req.log.error(err, "POST /veiligheid/meldingen/:id/acties");
+    res.status(500).json({ error: "Interne fout" });
+  }
+});
+
+veiligheidRouter.patch("/veiligheid/meldingen/:id/acties/:actieId", schrijvenVeiligheid, async (req, res) => {
+  try {
+    const actieId = parseInt(req.params.actieId);
+    const { omschrijving, eigenaar_id, eigenaar_naam, deadline, status } = req.body;
+    const [rij] = await db
+      .update(veiligheidMeldingenActiesTable)
+      .set({
+        ...(omschrijving !== undefined && { omschrijving }),
+        ...(eigenaar_id !== undefined && { eigenaarId: eigenaar_id }),
+        ...(eigenaar_naam !== undefined && { eigenaarNaam: eigenaar_naam }),
+        ...(deadline !== undefined && { deadline }),
+        ...(status !== undefined && { status }),
+        bijgewerktOp: new Date(),
+      })
+      .where(eq(veiligheidMeldingenActiesTable.id, actieId))
+      .returning();
+    if (!rij) return res.status(404).json({ error: "Niet gevonden" });
+    res.json({
+      id: rij.id,
+      melding_id: rij.meldingId,
+      omschrijving: rij.omschrijving,
+      eigenaar_id: rij.eigenaarId ?? null,
+      eigenaar_naam: rij.eigenaarNaam ?? null,
+      deadline: rij.deadline ?? null,
+      status: rij.status,
+      aangemaakt_op: rij.aangemaaktOp.toISOString(),
+      bijgewerkt_op: rij.bijgewerktOp?.toISOString() ?? null,
+    });
+  } catch (err) {
+    req.log.error(err, "PATCH /veiligheid/meldingen/:id/acties/:actieId");
+    res.status(500).json({ error: "Interne fout" });
+  }
+});
+
+veiligheidRouter.delete("/veiligheid/meldingen/:id/acties/:actieId", verwijderenVeiligheid, async (req, res) => {
+  try {
+    const actieId = parseInt(req.params.actieId);
+    await db.delete(veiligheidMeldingenActiesTable).where(eq(veiligheidMeldingenActiesTable.id, actieId));
+    res.status(204).end();
+  } catch (err) {
+    req.log.error(err, "DELETE /veiligheid/meldingen/:id/acties/:actieId");
+    res.status(500).json({ error: "Interne fout" });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// VEILIGHEID DASHBOARD
+// ═══════════════════════════════════════════════════════════════════════════════
+
+veiligheidRouter.get("/veiligheid/dashboard", lezenVeiligheid, async (req, res) => {
+  try {
+    const nu = new Date();
+    const vandaagStart = new Date(nu.getFullYear(), nu.getMonth(), nu.getDate());
+    const weekStart = new Date(nu.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+    const [[lmrasTotaal], [lmrasVandaag], [lmrasWeek],
+      [meldingenOpen], [meldingenInBehandeling], [meldingenAfgehandeld], [meldingenKritiek],
+      [toolboxenTotaal], [toolboxenAfrondingen],
+      [actiesOpen],
+    ] = await Promise.all([
+      db.select({ c: count() }).from(veiligheidLmrasTable),
+      db.select({ c: count() }).from(veiligheidLmrasTable).where(gte(veiligheidLmrasTable.aangemaaktOp, vandaagStart)),
+      db.select({ c: count() }).from(veiligheidLmrasTable).where(gte(veiligheidLmrasTable.aangemaaktOp, weekStart)),
+      db.select({ c: count() }).from(veiligheidMeldingenTable).where(eq(veiligheidMeldingenTable.status, "open")),
+      db.select({ c: count() }).from(veiligheidMeldingenTable).where(eq(veiligheidMeldingenTable.status, "in_behandeling")),
+      db.select({ c: count() }).from(veiligheidMeldingenTable).where(eq(veiligheidMeldingenTable.status, "afgehandeld")),
+      db.select({ c: count() }).from(veiligheidMeldingenTable).where(and(eq(veiligheidMeldingenTable.prioriteit, "kritiek"), eq(veiligheidMeldingenTable.status, "open"))),
+      db.select({ c: count() }).from(veiligheidToolboxenTable).where(eq(veiligheidToolboxenTable.gepubliceerd, true)),
+      db.select({ c: count() }).from(veiligheidToolboxAfrondingTable),
+      db.select({ c: count() }).from(veiligheidMeldingenActiesTable).where(eq(veiligheidMeldingenActiesTable.status, "open")),
+    ]);
+
+    res.json({
+      lmras_totaal: Number(lmrasTotaal.c),
+      lmras_vandaag: Number(lmrasVandaag.c),
+      lmras_week: Number(lmrasWeek.c),
+      meldingen_open: Number(meldingenOpen.c),
+      meldingen_in_behandeling: Number(meldingenInBehandeling.c),
+      meldingen_afgehandeld: Number(meldingenAfgehandeld.c),
+      meldingen_kritiek: Number(meldingenKritiek.c),
+      toolboxen_totaal: Number(toolboxenTotaal.c),
+      toolboxen_afrondingen: Number(toolboxenAfrondingen.c),
+      acties_open: Number(actiesOpen.c),
+      acties_verlopen: 0,
+    });
+  } catch (err) {
+    req.log.error(err, "GET /veiligheid/dashboard");
     res.status(500).json({ error: "Interne fout" });
   }
 });

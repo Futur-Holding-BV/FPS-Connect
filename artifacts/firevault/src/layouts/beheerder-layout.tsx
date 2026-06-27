@@ -15,6 +15,7 @@ import {
   Trophy, HardDrive, ClipboardList, Smartphone, Plus, Hammer, PackageCheck,
   BookOpen, HardDriveUpload, CalendarCheck2, Settings2, ArchiveRestore,
   Inbox, Building2, Target, Handshake, Newspaper, CalendarRange, KeyRound,
+  ClipboardCheck, AlertTriangle,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { GebruikerMenu } from "@/components/gebruiker-menu";
@@ -468,6 +469,28 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
                           <Link href="/veiligheid/toolboxen">
                             <ShieldCheck />
                             <span>Toolbox Center</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                      <SidebarMenuItem>
+                        <SidebarMenuButton
+                          asChild
+                          isActive={location === "/veiligheid/lmra" || location.startsWith("/veiligheid/lmra/")}
+                        >
+                          <Link href="/veiligheid/lmra">
+                            <ClipboardCheck />
+                            <span>LMRA</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                      <SidebarMenuItem>
+                        <SidebarMenuButton
+                          asChild
+                          isActive={location === "/veiligheid/meldingen" || location.startsWith("/veiligheid/meldingen/")}
+                        >
+                          <Link href="/veiligheid/meldingen">
+                            <AlertTriangle />
+                            <span>Meldingen</span>
                           </Link>
                         </SidebarMenuButton>
                       </SidebarMenuItem>

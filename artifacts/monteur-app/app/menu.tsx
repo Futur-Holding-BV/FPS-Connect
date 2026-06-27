@@ -62,6 +62,18 @@ export default function MenuScherm() {
       onPress: () => router.push("/toolboxen"),
     },
     {
+      sleutel: "lmra",
+      label: "LMRA",
+      icoon: "clipboard-outline",
+      onPress: () => router.push("/lmra"),
+    },
+    {
+      sleutel: "veiligheid_melding",
+      label: "Veiligheidsmelding",
+      icoon: "warning-outline",
+      onPress: () => router.push("/veiligheid-melding"),
+    },
+    {
       sleutel: "berichten",
       label: "Berichten",
       icoon: "chatbubbles",
@@ -82,6 +94,8 @@ export default function MenuScherm() {
     personeel: "/hrm",
     uren: "/uren",
     toolboxen: "/toolboxen",
+    lmra: "/lmra",
+    veiligheid_melding: "/veiligheid-melding",
     berichten: "/berichten",
     opname: "/opname",
   };

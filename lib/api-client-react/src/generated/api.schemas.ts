@@ -5491,6 +5491,103 @@ export interface ToolboxKoppelingSuggestieResultaat {
   suggesties: ToolboxKoppelingSuggestieResultaatSuggestiesItem[];
 }
 
+export interface VeiligheidLmra {
+  id: number;
+  gebouw_id?: number | null;
+  project_naam?: string | null;
+  locatie_omschrijving: string;
+  werkzaamheden: string;
+  risicos: string[];
+  maatregelen: string[];
+  veilig_voor_aanvang: boolean;
+  handtekening?: string | null;
+  foto_paden: string[];
+  gps_lat?: string | null;
+  gps_lng?: string | null;
+  medewerker_naam?: string | null;
+  aangemaakt_door_id?: number | null;
+  aangemaakt_op: string;
+  bijgewerkt_op?: string | null;
+}
+
+export interface VeiligheidLmraInput {
+  gebouw_id?: number | null;
+  project_naam?: string | null;
+  locatie_omschrijving: string;
+  werkzaamheden: string;
+  risicos?: string[];
+  maatregelen?: string[];
+  veilig_voor_aanvang?: boolean;
+  handtekening?: string | null;
+  foto_paden?: string[];
+  gps_lat?: string | null;
+  gps_lng?: string | null;
+}
+
+export interface VeiligheidMelding {
+  id: number;
+  type: string;
+  omschrijving: string;
+  locatie?: string | null;
+  gebouw_id?: number | null;
+  project_naam?: string | null;
+  foto_paden: string[];
+  prioriteit: string;
+  status: string;
+  melder_naam?: string | null;
+  gemeld_door_id?: number | null;
+  toegewezen_aan_id?: number | null;
+  toegewezen_aan_naam?: string | null;
+  aangemaakt_op: string;
+  bijgewerkt_op?: string | null;
+}
+
+export interface VeiligheidMeldingInput {
+  type: string;
+  omschrijving: string;
+  locatie?: string | null;
+  gebouw_id?: number | null;
+  project_naam?: string | null;
+  foto_paden?: string[];
+  prioriteit?: string;
+  status?: string;
+  toegewezen_aan_id?: number | null;
+}
+
+export interface VeiligheidMeldingActie {
+  id: number;
+  melding_id: number;
+  omschrijving: string;
+  eigenaar_id?: number | null;
+  eigenaar_naam?: string | null;
+  deadline?: string | null;
+  status: string;
+  aangemaakt_op: string;
+  bijgewerkt_op?: string | null;
+}
+
+export interface VeiligheidMeldingActieInput {
+  omschrijving: string;
+  eigenaar_id?: number | null;
+  eigenaar_naam?: string | null;
+  deadline?: string | null;
+  status?: string;
+}
+
+export interface VeiligheidDashboard {
+  lmras_totaal: number;
+  lmras_vandaag?: number;
+  lmras_week?: number;
+  meldingen_open: number;
+  meldingen_in_behandeling: number;
+  meldingen_afgehandeld: number;
+  meldingen_kritiek?: number;
+  toolboxen_totaal: number;
+  toolboxen_afrondingen?: number;
+  acties_open: number;
+  acties_verlopen?: number;
+}
+
 export type GetRecenteActiviteitParams = {
 limit?: number;
 };
@@ -5837,5 +5934,15 @@ verdieping_id: number;
 export type GetVeiligheidToolboxenParams = {
 categorie?: string;
 gepubliceerd?: boolean;
+};
+
+export type GetVeiligheidLmrasUploadUrl200 = {
+  upload_url: string;
+  object_path: string;
+};
+
+export type GetVeiligheidMeldingenUploadUrl200 = {
+  upload_url: string;
+  object_path: string;
 };
 

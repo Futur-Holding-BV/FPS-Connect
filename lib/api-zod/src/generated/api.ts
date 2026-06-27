@@ -13207,3 +13207,355 @@ export const PostVeiligheidToolboxenKoppelingSuggestieResponse = zod.object({
 })
 
 
+/**
+ * @summary LMRA-registraties ophalen
+ */
+export const GetVeiligheidLmrasResponseItem = zod.object({
+  "id": zod.number(),
+  "gebouw_id": zod.number().nullish(),
+  "project_naam": zod.string().nullish(),
+  "locatie_omschrijving": zod.string(),
+  "werkzaamheden": zod.string(),
+  "risicos": zod.array(zod.string()),
+  "maatregelen": zod.array(zod.string()),
+  "veilig_voor_aanvang": zod.boolean(),
+  "handtekening": zod.string().nullish(),
+  "foto_paden": zod.array(zod.string()),
+  "gps_lat": zod.string().nullish(),
+  "gps_lng": zod.string().nullish(),
+  "medewerker_naam": zod.string().nullish(),
+  "aangemaakt_door_id": zod.number().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string().nullish()
+})
+export const GetVeiligheidLmrasResponse = zod.array(GetVeiligheidLmrasResponseItem)
+
+
+/**
+ * @summary Nieuwe LMRA aanmaken
+ */
+export const PostVeiligheidLmrasBody = zod.object({
+  "gebouw_id": zod.number().nullish(),
+  "project_naam": zod.string().nullish(),
+  "locatie_omschrijving": zod.string(),
+  "werkzaamheden": zod.string(),
+  "risicos": zod.array(zod.string()).optional(),
+  "maatregelen": zod.array(zod.string()).optional(),
+  "veilig_voor_aanvang": zod.boolean().optional(),
+  "handtekening": zod.string().nullish(),
+  "foto_paden": zod.array(zod.string()).optional(),
+  "gps_lat": zod.string().nullish(),
+  "gps_lng": zod.string().nullish()
+})
+
+export const PostVeiligheidLmrasResponse = zod.void()
+
+
+/**
+ * @summary Upload-URL voor LMRA-foto ophalen
+ */
+export const GetVeiligheidLmrasUploadUrlResponse = zod.object({
+  "upload_url": zod.string(),
+  "object_path": zod.string()
+})
+
+
+/**
+ * @summary LMRA detail ophalen
+ */
+export const GetVeiligheidLmrasIdParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetVeiligheidLmrasIdResponse = zod.object({
+  "id": zod.number(),
+  "gebouw_id": zod.number().nullish(),
+  "project_naam": zod.string().nullish(),
+  "locatie_omschrijving": zod.string(),
+  "werkzaamheden": zod.string(),
+  "risicos": zod.array(zod.string()),
+  "maatregelen": zod.array(zod.string()),
+  "veilig_voor_aanvang": zod.boolean(),
+  "handtekening": zod.string().nullish(),
+  "foto_paden": zod.array(zod.string()),
+  "gps_lat": zod.string().nullish(),
+  "gps_lng": zod.string().nullish(),
+  "medewerker_naam": zod.string().nullish(),
+  "aangemaakt_door_id": zod.number().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string().nullish()
+})
+
+
+/**
+ * @summary LMRA bijwerken
+ */
+export const PatchVeiligheidLmrasIdParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const PatchVeiligheidLmrasIdBody = zod.object({
+  "gebouw_id": zod.number().nullish(),
+  "project_naam": zod.string().nullish(),
+  "locatie_omschrijving": zod.string(),
+  "werkzaamheden": zod.string(),
+  "risicos": zod.array(zod.string()).optional(),
+  "maatregelen": zod.array(zod.string()).optional(),
+  "veilig_voor_aanvang": zod.boolean().optional(),
+  "handtekening": zod.string().nullish(),
+  "foto_paden": zod.array(zod.string()).optional(),
+  "gps_lat": zod.string().nullish(),
+  "gps_lng": zod.string().nullish()
+})
+
+export const PatchVeiligheidLmrasIdResponse = zod.object({
+  "id": zod.number(),
+  "gebouw_id": zod.number().nullish(),
+  "project_naam": zod.string().nullish(),
+  "locatie_omschrijving": zod.string(),
+  "werkzaamheden": zod.string(),
+  "risicos": zod.array(zod.string()),
+  "maatregelen": zod.array(zod.string()),
+  "veilig_voor_aanvang": zod.boolean(),
+  "handtekening": zod.string().nullish(),
+  "foto_paden": zod.array(zod.string()),
+  "gps_lat": zod.string().nullish(),
+  "gps_lng": zod.string().nullish(),
+  "medewerker_naam": zod.string().nullish(),
+  "aangemaakt_door_id": zod.number().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string().nullish()
+})
+
+
+/**
+ * @summary LMRA verwijderen
+ */
+export const DeleteVeiligheidLmrasIdParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteVeiligheidLmrasIdResponse = zod.void()
+
+
+/**
+ * @summary Veiligheidsmeldingen ophalen
+ */
+export const GetVeiligheidMeldingenResponseItem = zod.object({
+  "id": zod.number(),
+  "type": zod.string(),
+  "omschrijving": zod.string(),
+  "locatie": zod.string().nullish(),
+  "gebouw_id": zod.number().nullish(),
+  "project_naam": zod.string().nullish(),
+  "foto_paden": zod.array(zod.string()),
+  "prioriteit": zod.string(),
+  "status": zod.string(),
+  "melder_naam": zod.string().nullish(),
+  "gemeld_door_id": zod.number().nullish(),
+  "toegewezen_aan_id": zod.number().nullish(),
+  "toegewezen_aan_naam": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string().nullish()
+})
+export const GetVeiligheidMeldingenResponse = zod.array(GetVeiligheidMeldingenResponseItem)
+
+
+/**
+ * @summary Nieuwe veiligheidsmelding aanmaken
+ */
+export const PostVeiligheidMeldingenBody = zod.object({
+  "type": zod.string(),
+  "omschrijving": zod.string(),
+  "locatie": zod.string().nullish(),
+  "gebouw_id": zod.number().nullish(),
+  "project_naam": zod.string().nullish(),
+  "foto_paden": zod.array(zod.string()).optional(),
+  "prioriteit": zod.string().optional(),
+  "status": zod.string().optional(),
+  "toegewezen_aan_id": zod.number().nullish()
+})
+
+export const PostVeiligheidMeldingenResponse = zod.void()
+
+
+/**
+ * @summary Upload-URL voor melding-foto ophalen
+ */
+export const GetVeiligheidMeldingenUploadUrlResponse = zod.object({
+  "upload_url": zod.string(),
+  "object_path": zod.string()
+})
+
+
+/**
+ * @summary Veiligheidsmelding detail ophalen
+ */
+export const GetVeiligheidMeldingenIdParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetVeiligheidMeldingenIdResponse = zod.object({
+  "id": zod.number(),
+  "type": zod.string(),
+  "omschrijving": zod.string(),
+  "locatie": zod.string().nullish(),
+  "gebouw_id": zod.number().nullish(),
+  "project_naam": zod.string().nullish(),
+  "foto_paden": zod.array(zod.string()),
+  "prioriteit": zod.string(),
+  "status": zod.string(),
+  "melder_naam": zod.string().nullish(),
+  "gemeld_door_id": zod.number().nullish(),
+  "toegewezen_aan_id": zod.number().nullish(),
+  "toegewezen_aan_naam": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string().nullish()
+})
+
+
+/**
+ * @summary Veiligheidsmelding bijwerken
+ */
+export const PatchVeiligheidMeldingenIdParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const PatchVeiligheidMeldingenIdBody = zod.object({
+  "type": zod.string(),
+  "omschrijving": zod.string(),
+  "locatie": zod.string().nullish(),
+  "gebouw_id": zod.number().nullish(),
+  "project_naam": zod.string().nullish(),
+  "foto_paden": zod.array(zod.string()).optional(),
+  "prioriteit": zod.string().optional(),
+  "status": zod.string().optional(),
+  "toegewezen_aan_id": zod.number().nullish()
+})
+
+export const PatchVeiligheidMeldingenIdResponse = zod.object({
+  "id": zod.number(),
+  "type": zod.string(),
+  "omschrijving": zod.string(),
+  "locatie": zod.string().nullish(),
+  "gebouw_id": zod.number().nullish(),
+  "project_naam": zod.string().nullish(),
+  "foto_paden": zod.array(zod.string()),
+  "prioriteit": zod.string(),
+  "status": zod.string(),
+  "melder_naam": zod.string().nullish(),
+  "gemeld_door_id": zod.number().nullish(),
+  "toegewezen_aan_id": zod.number().nullish(),
+  "toegewezen_aan_naam": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string().nullish()
+})
+
+
+/**
+ * @summary Veiligheidsmelding verwijderen
+ */
+export const DeleteVeiligheidMeldingenIdParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteVeiligheidMeldingenIdResponse = zod.void()
+
+
+/**
+ * @summary Acties van een melding ophalen
+ */
+export const GetVeiligheidMeldingenIdActiesParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetVeiligheidMeldingenIdActiesResponseItem = zod.object({
+  "id": zod.number(),
+  "melding_id": zod.number(),
+  "omschrijving": zod.string(),
+  "eigenaar_id": zod.number().nullish(),
+  "eigenaar_naam": zod.string().nullish(),
+  "deadline": zod.string().nullish(),
+  "status": zod.string(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string().nullish()
+})
+export const GetVeiligheidMeldingenIdActiesResponse = zod.array(GetVeiligheidMeldingenIdActiesResponseItem)
+
+
+/**
+ * @summary Actie toevoegen aan melding
+ */
+export const PostVeiligheidMeldingenIdActiesParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const PostVeiligheidMeldingenIdActiesBody = zod.object({
+  "omschrijving": zod.string(),
+  "eigenaar_id": zod.number().nullish(),
+  "eigenaar_naam": zod.string().nullish(),
+  "deadline": zod.string().nullish(),
+  "status": zod.string().optional()
+})
+
+export const PostVeiligheidMeldingenIdActiesResponse = zod.void()
+
+
+/**
+ * @summary Actie bijwerken
+ */
+export const PatchVeiligheidMeldingenIdActiesActieIdParams = zod.object({
+  "id": zod.coerce.number(),
+  "actieId": zod.coerce.number()
+})
+
+export const PatchVeiligheidMeldingenIdActiesActieIdBody = zod.object({
+  "omschrijving": zod.string(),
+  "eigenaar_id": zod.number().nullish(),
+  "eigenaar_naam": zod.string().nullish(),
+  "deadline": zod.string().nullish(),
+  "status": zod.string().optional()
+})
+
+export const PatchVeiligheidMeldingenIdActiesActieIdResponse = zod.object({
+  "id": zod.number(),
+  "melding_id": zod.number(),
+  "omschrijving": zod.string(),
+  "eigenaar_id": zod.number().nullish(),
+  "eigenaar_naam": zod.string().nullish(),
+  "deadline": zod.string().nullish(),
+  "status": zod.string(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string().nullish()
+})
+
+
+/**
+ * @summary Actie verwijderen
+ */
+export const DeleteVeiligheidMeldingenIdActiesActieIdParams = zod.object({
+  "id": zod.coerce.number(),
+  "actieId": zod.coerce.number()
+})
+
+export const DeleteVeiligheidMeldingenIdActiesActieIdResponse = zod.void()
+
+
+/**
+ * @summary Veiligheids-KPI dashboard ophalen
+ */
+export const GetVeiligheidDashboardResponse = zod.object({
+  "lmras_totaal": zod.number(),
+  "lmras_vandaag": zod.number().optional(),
+  "lmras_week": zod.number().optional(),
+  "meldingen_open": zod.number(),
+  "meldingen_in_behandeling": zod.number(),
+  "meldingen_afgehandeld": zod.number(),
+  "meldingen_kritiek": zod.number().optional(),
+  "toolboxen_totaal": zod.number(),
+  "toolboxen_afrondingen": zod.number().optional(),
+  "acties_open": zod.number(),
+  "acties_verlopen": zod.number().optional()
+})
+
+

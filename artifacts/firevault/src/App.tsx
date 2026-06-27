@@ -87,6 +87,8 @@ import UrenPagina from "@/pages/uren/index";
 import WeekstatenPaginaComponent from "@/pages/uren/weekstaten";
 import ToolboxPagina from "@/pages/toolbox/index";
 import VeiligheidToolboxenPagina from "@/pages/veiligheid/toolboxen";
+import VeiligheidLmraPagina from "@/pages/veiligheid/lmra";
+import VeiligheidMeldingenPagina from "@/pages/veiligheid/meldingen";
 import BerichtenPagina from "@/pages/berichten/index";
 import ModulesCalculatie from "@/pages/modules/calculatie/index";
 import ModulesCalculatieNieuw from "@/pages/modules/calculatie/nieuw";
@@ -227,6 +229,8 @@ function ConnectPortal() {
 
         {/* ── Veiligheid ── */}
         <Route path="/veiligheid/toolboxen" component={VeiligheidToolboxenPagina} />
+        <Route path="/veiligheid/lmra" component={VeiligheidLmraPagina} />
+        <Route path="/veiligheid/meldingen" component={VeiligheidMeldingenPagina} />
 
         {/* ── Communicatie ── */}
         <Route path="/berichten" component={BerichtenPagina} />
