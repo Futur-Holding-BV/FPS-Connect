@@ -23,6 +23,10 @@ tags:
     description: Abonnementsbeheer
   - name: dashboard
     description: Dashboard statistieken
+  - name: Facturen
+    description: Factuurverwerking en AccountView-koppeling
+  - name: AccountView
+    description: AccountView relatie- en projectmapping
   - name: crm
     description: CRM - klanten, contactpersonen, opdrachten en commercieel
   - name: emails
@@ -11649,6 +11653,268 @@ paths:
                 items:
                   $ref: "#/components/schemas/AccountviewExportLog"
 
+  /facturen/{id}/afkeuren:
+    post:
+      operationId: afkeurenFactuur
+      summary: Factuur afkeuren
+      tags: [Facturen]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FactuurAfkeurenInput"
+      responses:
+        "200":
+          description: Afgekeurde factuur
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Factuur"
+
+  /facturen/{id}/forceer-herexport:
+    post:
+      operationId: forceerHerexportFactuur
+      summary: Forceer herexport van al-geexporteerde factuur
+      tags: [Facturen]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FactuurHerexportInput"
+      responses:
+        "200":
+          description: Exportresultaat
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccountviewExportResultaat"
+
+  /facturen/batch-export:
+    post:
+      operationId: batchExportFacturen
+      summary: Meerdere facturen tegelijk exporteren naar AccountView
+      tags: [Facturen]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FactuurBatchExportInput"
+      responses:
+        "200":
+          description: Batch-exportresultaat
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BatchExportResultaat"
+
+  /facturen/exportlog:
+    get:
+      operationId: listExportlog
+      summary: Alle exportlog-regels ophalen (systeem-breed)
+      tags: [Facturen]
+      parameters:
+        - name: factuur_id
+          in: query
+          schema:
+            type: integer
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: actie
+          in: query
+          schema:
+            type: string
+        - name: van
+          in: query
+          schema:
+            type: string
+        - name: tot
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Exportlogregels
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ExportlogRegel"
+
+  /facturen/financieel-dashboard:
+    get:
+      operationId: getFinancieelDashboard
+      summary: Financieel dashboard statistieken
+      tags: [Facturen]
+      responses:
+        "200":
+          description: Dashboard
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FinancieelDashboard"
+
+  /accountview/relatie-mapping:
+    get:
+      operationId: listRelatieMapping
+      summary: AccountView relatie-mapping ophalen
+      tags: [AccountView]
+      responses:
+        "200":
+          description: Relatie-mappings
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AccountviewRelatieMapping"
+    post:
+      operationId: createRelatieMapping
+      summary: Nieuwe relatie-mapping aanmaken
+      tags: [AccountView]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AccountviewRelatieMappingInput"
+      responses:
+        "201":
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccountviewRelatieMapping"
+
+  /accountview/relatie-mapping/{id}:
+    patch:
+      operationId: updateRelatieMapping
+      summary: Relatie-mapping bijwerken
+      tags: [AccountView]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AccountviewRelatieMappingInput"
+      responses:
+        "200":
+          description: Bijgewerkt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccountviewRelatieMapping"
+    delete:
+      operationId: deleteRelatieMapping
+      summary: Relatie-mapping verwijderen
+      tags: [AccountView]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Verwijderd
+
+  /accountview/project-mapping:
+    get:
+      operationId: listProjectMapping
+      summary: AccountView project/kostenplaats-mapping ophalen
+      tags: [AccountView]
+      responses:
+        "200":
+          description: Project-mappings
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AccountviewProjectMapping"
+    post:
+      operationId: createProjectMapping
+      summary: Nieuwe project-mapping aanmaken
+      tags: [AccountView]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AccountviewProjectMappingInput"
+      responses:
+        "201":
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccountviewProjectMapping"
+
+  /accountview/project-mapping/{id}:
+    patch:
+      operationId: updateProjectMapping
+      summary: Project-mapping bijwerken
+      tags: [AccountView]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AccountviewProjectMappingInput"
+      responses:
+        "200":
+          description: Bijgewerkt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccountviewProjectMapping"
+    delete:
+      operationId: deleteProjectMapping
+      summary: Project-mapping verwijderen
+      tags: [AccountView]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Verwijderd
+
 
 components:
   schemas:
@@ -21103,6 +21369,38 @@ components:
         accountview_fout:
           type: string
           nullable: true
+        payload_hash:
+          type: string
+          nullable: true
+        betaalstatus:
+          type: string
+          nullable: true
+        betaaldatum:
+          type: string
+          nullable: true
+        boekingsnummer:
+          type: string
+          nullable: true
+        terugkoppeling_op:
+          type: string
+          nullable: true
+        afgekeurd:
+          type: boolean
+        afkeuring_reden:
+          type: string
+          nullable: true
+        afgekeurd_op:
+          type: string
+          nullable: true
+        afgekeurd_door_naam:
+          type: string
+          nullable: true
+        herexport_op:
+          type: string
+          nullable: true
+        herexport_reden:
+          type: string
+          nullable: true
         aangemaakt_op:
           type: string
         bijgewerkt_op:
@@ -21254,7 +21552,7 @@ components:
 
     AccountviewExportLog:
       type: object
-      required: [id, factuur_id, export_op, status, testmodus]
+      required: [id, factuur_id, export_op, status, testmodus, actie]
       properties:
         id:
           type: integer
@@ -21267,6 +21565,8 @@ components:
           type: string
         testmodus:
           type: boolean
+        actie:
+          type: string
         verzonden_payload:
           type: object
           additionalProperties: true
@@ -21278,6 +21578,9 @@ components:
         http_status:
           type: integer
           nullable: true
+        payload_hash:
+          type: string
+          nullable: true
         status:
           type: string
         accountview_boeking_id:
@@ -21286,4 +21589,191 @@ components:
         foutmelding:
           type: string
           nullable: true
+
+    ExportlogRegel:
+      type: object
+      required: [id, factuur_id, export_op, status, testmodus, actie]
+      properties:
+        id:
+          type: integer
+        factuur_id:
+          type: integer
+        factuurnummer:
+          type: string
+          nullable: true
+        relatienaam:
+          type: string
+          nullable: true
+        gebruiker_naam:
+          type: string
+          nullable: true
+        export_op:
+          type: string
+        testmodus:
+          type: boolean
+        actie:
+          type: string
+        status:
+          type: string
+        accountview_boeking_id:
+          type: string
+          nullable: true
+        foutmelding:
+          type: string
+          nullable: true
+        http_status:
+          type: integer
+          nullable: true
+
+    FactuurAfkeurenInput:
+      type: object
+      required: [reden]
+      properties:
+        reden:
+          type: string
+
+    FactuurHerexportInput:
+      type: object
+      properties:
+        reden:
+          type: string
+          nullable: true
+
+    FactuurBatchExportInput:
+      type: object
+      required: [factuur_ids]
+      properties:
+        factuur_ids:
+          type: array
+          items:
+            type: integer
+
+    BatchExportResultaat:
+      type: object
+      required: [totaal, geslaagd, mislukt, resultaten]
+      properties:
+        totaal:
+          type: integer
+        geslaagd:
+          type: integer
+        mislukt:
+          type: integer
+        resultaten:
+          type: array
+          items:
+            $ref: "#/components/schemas/AccountviewExportResultaat"
+
+    FinancieelDashboard:
+      type: object
+      required: [facturen_totaal, inkoop_totaal, verkoop_totaal, klaar_voor_export, afgekeurd, betaald, open_bedrag, exports_vandaag, exports_deze_maand, export_fouten_open]
+      properties:
+        facturen_totaal:
+          type: integer
+        inkoop_totaal:
+          type: integer
+        verkoop_totaal:
+          type: integer
+        klaar_voor_export:
+          type: integer
+        afgekeurd:
+          type: integer
+        betaald:
+          type: integer
+        open_bedrag:
+          type: string
+        exports_vandaag:
+          type: integer
+        exports_deze_maand:
+          type: integer
+        laatste_export_op:
+          type: string
+          nullable: true
+        export_fouten_open:
+          type: integer
+
+    AccountviewRelatieMapping:
+      type: object
+      required: [id, connect_relatienaam, accountview_code, type, bestaat_in_accountview, aangemaakt_op, bijgewerkt_op]
+      properties:
+        id:
+          type: integer
+        connect_relatienaam:
+          type: string
+        accountview_code:
+          type: string
+        type:
+          type: string
+        opmerking:
+          type: string
+          nullable: true
+        bestaat_in_accountview:
+          type: boolean
+        aangemaakt_op:
+          type: string
+        bijgewerkt_op:
+          type: string
+
+    AccountviewRelatieMappingInput:
+      type: object
+      required: [connect_relatienaam, accountview_code, type]
+      properties:
+        connect_relatienaam:
+          type: string
+        accountview_code:
+          type: string
+        type:
+          type: string
+        opmerking:
+          type: string
+          nullable: true
+        bestaat_in_accountview:
+          type: boolean
+
+    AccountviewProjectMapping:
+      type: object
+      required: [id, connect_project_code, export_zonder_mapping, aangemaakt_op, bijgewerkt_op]
+      properties:
+        id:
+          type: integer
+        connect_project_code:
+          type: string
+        connect_gebouw_naam:
+          type: string
+          nullable: true
+        accountview_projectcode:
+          type: string
+          nullable: true
+        accountview_kostenplaats:
+          type: string
+          nullable: true
+        opmerking:
+          type: string
+          nullable: true
+        export_zonder_mapping:
+          type: boolean
+        aangemaakt_op:
+          type: string
+        bijgewerkt_op:
+          type: string
+
+    AccountviewProjectMappingInput:
+      type: object
+      required: [connect_project_code]
+      properties:
+        connect_project_code:
+          type: string
+        connect_gebouw_naam:
+          type: string
+          nullable: true
+        accountview_projectcode:
+          type: string
+          nullable: true
+        accountview_kostenplaats:
+          type: string
+          nullable: true
+        opmerking:
+          type: string
+          nullable: true
+        export_zonder_mapping:
+          type: boolean
 

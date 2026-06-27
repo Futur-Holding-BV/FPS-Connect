@@ -268,6 +268,7 @@ export const PRESETS: Preset[] = [
       gebouwen: 2, voorzieningen: 2, inspecties: 2, onderhoud: 2,
       rapportages: 4, bibliotheek: 2, crm: 4, abonnementen: 4,
       personeel: 2, dossiers: 2, offertes: 2, calculaties: 1, planning: 2,
+      financieel: 2,
     }),
   },
   {
@@ -275,6 +276,7 @@ export const PRESETS: Preset[] = [
     bevoegdheden: matrix({
       gebouwen: 2, inspecties: 1, onderhoud: 2, rapportages: 3,
       crm: 2, personeel: 2, dossiers: 3, offertes: 1, planning: 1,
+      financieel: 4,
     }),
   },
   {

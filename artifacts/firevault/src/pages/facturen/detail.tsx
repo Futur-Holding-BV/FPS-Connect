@@ -8,6 +8,8 @@ import {
   useBlokkerenFactuur,
   useExportAccountviewFactuur,
   useListFactuurExportLogs,
+  useAfkeurenFactuur,
+  useForceerHerexportFactuur,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -33,6 +35,7 @@ const STATUS_LABEL: Record<string, string> = {
   verzonden_naar_accountview: "Verzonden naar AccountView",
   fout_bij_verzending: "Fout bij verzending",
   verwerkt: "Verwerkt",
+  afgekeurd: "Afgekeurd",
 };
 const STATUS_KLEUR: Record<string, string> = {
   ontvangen: "bg-slate-100 text-slate-700",
@@ -43,6 +46,7 @@ const STATUS_KLEUR: Record<string, string> = {
   verzonden_naar_accountview: "bg-green-100 text-green-700",
   fout_bij_verzending: "bg-red-100 text-red-700",
   verwerkt: "bg-green-100 text-green-700",
+  afgekeurd: "bg-red-100 text-red-700",
 };
 
 function euro(v?: string | null) {
@@ -67,6 +71,11 @@ export default function FactuurDetailPagina() {
   const [bewerkOpen, setBewerkOpen] = useState(false);
   const [blokkerenOpen, setBlokkerenOpen] = useState(false);
   const [blokkeringReden, setBlokkeringReden] = useState("");
+  const [afkeurenOpen, setAfkeurenOpen] = useState(false);
+  const [afkeurReden, setAfkeurReden] = useState("");
+  const [herexportOpen, setHerexportOpen] = useState(false);
+  const [herexportReden, setHerexportReden] = useState("");
+  const [herexportBezig, setHerexportBezig] = useState(false);
   const [exportResultaat, setExportResultaat] = useState<{ geslaagd: boolean; boekingId?: string | null; fout?: string | null; testmodus?: boolean } | null>(null);
   const [aiBezig, setAiBezig] = useState(false);
   const [exportBezig, setExportBezig] = useState(false);
@@ -89,6 +98,22 @@ export default function FactuurDetailPagina() {
   const aiMut = useAiUitlezenFactuur({ mutation: { onSuccess: invalideer } });
   const accorderenMut = useAccorderenFactuur({ mutation: { onSuccess: invalideer } });
   const blokkerenMut = useBlokkerenFactuur({ mutation: { onSuccess: () => { invalideer(); setBlokkerenOpen(false); } } });
+  const afkeurenMut = useAfkeurenFactuur({
+    mutation: {
+      onSuccess: () => { invalideer(); queryClient.invalidateQueries({ queryKey: ["factuur-logs", id] }); setAfkeurenOpen(false); setAfkeurReden(""); },
+    },
+  });
+  const herexportMut = useForceerHerexportFactuur({
+    mutation: {
+      onSuccess: (data) => {
+        invalideer();
+        queryClient.invalidateQueries({ queryKey: ["factuur-logs", id] });
+        const r = data as { status: string; boeking_id?: string | null; foutmelding?: string | null; testmodus: boolean };
+        setExportResultaat({ geslaagd: r.status === "geslaagd", boekingId: r.boeking_id, fout: r.foutmelding, testmodus: r.testmodus });
+        setHerexportOpen(false);
+      },
+    },
+  });
   const exportMut = useExportAccountviewFactuur({
     mutation: {
       onSuccess: (data) => {
@@ -144,8 +169,11 @@ export default function FactuurDetailPagina() {
   const kanAi = (f.status === "ontvangen" || f.status === "controle_nodig") && !!f.pdf_url;
   const kanAccorderen = (f.status === "klaar_voor_boeking" || f.status === "ai_gelezen" || f.status === "controle_nodig") && !f.geblokkeerd && !f.geaccordeerd;
   const kanExporteren = f.status === "klaar_voor_accountview" && !f.geblokkeerd;
+  const kanAfkeuren = f.status !== "verwerkt" && f.status !== "afgekeurd";
+  const kanHerexport = f.status === "verwerkt" || f.status === "fout_bij_verzending";
   const isVerwerkt = f.status === "verwerkt";
   const heeftFout = f.status === "fout_bij_verzending";
+  const isAfgekeurd = f.status === "afgekeurd";
 
   return (
     <div className="p-6 space-y-5 max-w-4xl">
@@ -220,6 +248,16 @@ export default function FactuurDetailPagina() {
                   <RotateCcw className="h-3.5 w-3.5 mr-1.5" />Opnieuw proberen
                 </Button>
               )}
+              {kanHerexport && (
+                <Button size="sm" variant="outline" onClick={() => { setHerexportReden(""); setHerexportOpen(true); }}>
+                  <RotateCcw className="h-3.5 w-3.5 mr-1.5" />Herexport
+                </Button>
+              )}
+              {kanAfkeuren && (
+                <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive" onClick={() => { setAfkeurReden(""); setAfkeurenOpen(true); }}>
+                  <XCircle className="h-3.5 w-3.5 mr-1.5" />Afkeuren
+                </Button>
+              )}
               <Button
                 size="sm"
                 variant={f.geblokkeerd ? "outline" : "ghost"}
@@ -240,6 +278,39 @@ export default function FactuurDetailPagina() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Afgekeurd banner */}
+      {isAfgekeurd && (
+        <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-800 flex items-start gap-2">
+          <XCircle className="h-4 w-4 mt-0.5 shrink-0" />
+          <div>
+            <p className="font-medium">Factuur afgekeurd</p>
+            {!!(f as unknown as Record<string, unknown>)["afkeuring_reden"] && (
+              <p className="mt-0.5">{String((f as unknown as Record<string, unknown>)["afkeuring_reden"])}</p>
+            )}
+            {!!(f as unknown as Record<string, unknown>)["afgekeurd_op"] && (
+              <p className="text-xs mt-1 text-red-600">
+                Afgekeurd op {new Date(String((f as unknown as Record<string, unknown>)["afgekeurd_op"])).toLocaleString("nl-NL")}
+                {(f as unknown as Record<string, unknown>)["afgekeurd_door_naam"] ? ` door ${String((f as unknown as Record<string, unknown>)["afgekeurd_door_naam"])}` : ""}
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Betaalstatus banner */}
+      {(f as unknown as Record<string, unknown>)["betaalstatus"] === "betaald" && (
+        <div className="rounded-lg bg-green-50 border border-green-200 px-4 py-3 text-sm text-green-800 flex items-center gap-2">
+          <CheckCircle2 className="h-4 w-4 shrink-0" />
+          <p>Betaald{(f as unknown as Record<string, unknown>)["betaaldatum"] ? ` op ${String((f as unknown as Record<string, unknown>)["betaaldatum"])}` : ""}</p>
+        </div>
+      )}
+      {(f as unknown as Record<string, unknown>)["betaalstatus"] === "deels_betaald" && (
+        <div className="rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800 flex items-center gap-2">
+          <AlertTriangle className="h-4 w-4 shrink-0" />
+          <p>Gedeeltelijk betaald</p>
+        </div>
+      )}
 
       {/* Fout banner */}
       {heeftFout && f.accountview_fout && (
@@ -500,6 +571,71 @@ export default function FactuurDetailPagina() {
             <Button variant="outline" onClick={() => setBlokkerenOpen(false)}>Annuleren</Button>
             <Button variant="destructive" disabled={blokkerenMut.isPending} onClick={() => blokkerenMut.mutate({ id, data: { geblokkeerd: true, reden: blokkeringReden || null } })}>
               Blokkeren
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Afkeuren dialog */}
+      <Dialog open={afkeurenOpen} onOpenChange={setAfkeurenOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader><DialogTitle>Factuur afkeuren</DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              De factuur wordt teruggezet naar afgekeurd en kan niet meer worden geexporteerd totdat de status wordt gecorrigeerd.
+            </p>
+            <div>
+              <Label>Reden (verplicht)</Label>
+              <Input
+                className="mt-1"
+                placeholder="Bijv. onjuist BTW-tarief"
+                value={afkeurReden}
+                onChange={(e) => setAfkeurReden(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAfkeurenOpen(false)}>Annuleren</Button>
+            <Button
+              variant="destructive"
+              disabled={afkeurenMut.isPending || !afkeurReden.trim()}
+              onClick={() => afkeurenMut.mutate({ id, data: { reden: afkeurReden.trim() } })}
+            >
+              {afkeurenMut.isPending ? <><Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />Afkeuren...</> : "Afkeuren"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Herexport dialog */}
+      <Dialog open={herexportOpen} onOpenChange={setHerexportOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader><DialogTitle>Herexport naar AccountView</DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              De factuur wordt opnieuw verzonden naar AccountView, ook als deze al eerder is verwerkt.
+            </p>
+            <div>
+              <Label>Reden (optioneel)</Label>
+              <Input
+                className="mt-1"
+                placeholder="Bijv. gecorrigeerd na terugmelding"
+                value={herexportReden}
+                onChange={(e) => setHerexportReden(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setHerexportOpen(false)}>Annuleren</Button>
+            <Button
+              disabled={herexportMut.isPending || herexportBezig}
+              onClick={async () => {
+                setHerexportBezig(true);
+                await herexportMut.mutateAsync({ id, data: { reden: herexportReden || undefined } });
+                setHerexportBezig(false);
+              }}
+            >
+              {herexportMut.isPending ? <><Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />Verzenden...</> : <><RotateCcw className="h-3.5 w-3.5 mr-1.5" />Herexport starten</>}
             </Button>
           </DialogFooter>
         </DialogContent>

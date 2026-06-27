@@ -4,6 +4,7 @@ import {
   useListFacturenKlaarVoorExport,
   useExportAccountviewFactuur,
   useBlokkerenFactuur,
+  useBatchExportFacturen,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -11,11 +12,12 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   ArrowLeft, ArrowUpRight, CheckCircle2, XCircle, AlertTriangle,
-  Ban, Loader2, Eye, Receipt, Info, Building2, Sparkles,
+  Ban, Loader2, Eye, Info, Layers,
 } from "lucide-react";
-import type { Factuur, AccountviewExportResultaat } from "@workspace/api-client-react";
+import type { Factuur, AccountviewExportResultaat, BatchExportResultaat } from "@workspace/api-client-react";
 
 function euro(v?: string | null) {
   if (!v) return "—";
@@ -25,14 +27,18 @@ function euro(v?: string | null) {
 export default function KlaarVoorExportPagina() {
   const queryClient = useQueryClient();
   const [exportBezig, setExportBezig] = useState<number | null>(null);
+  const [batchBezig, setBatchBezig] = useState(false);
   const [blokkerenOpen, setBlokkerenOpen] = useState(false);
   const [blokkerenFactuurId, setBlokkerenFactuurId] = useState<number | null>(null);
   const [blokkeringReden, setBlokkeringReden] = useState("");
+  const [geselecteerd, setGeselecteerd] = useState<Set<number>>(new Set());
   const [exportResultaat, setExportResultaat] = useState<{ id: number; result: AccountviewExportResultaat } | null>(null);
+  const [batchResultaat, setBatchResultaat] = useState<BatchExportResultaat | null>(null);
 
   const { data: facturen = [], isLoading } = useListFacturenKlaarVoorExport({
     query: { queryKey: ["facturen-klaar-voor-export"] },
   });
+
   const exportMut = useExportAccountviewFactuur({
     mutation: {
       onSuccess: () => {
@@ -41,8 +47,23 @@ export default function KlaarVoorExportPagina() {
       },
     },
   });
+
+  const batchMut = useBatchExportFacturen({
+    mutation: {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ["facturen-klaar-voor-export"] });
+        queryClient.invalidateQueries({ queryKey: ["facturen"] });
+      },
+    },
+  });
+
   const blokkerenMut = useBlokkerenFactuur({
-    mutation: { onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["facturen-klaar-voor-export"] }); setBlokkerenOpen(false); } },
+    mutation: {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ["facturen-klaar-voor-export"] });
+        setBlokkerenOpen(false);
+      },
+    },
   });
 
   async function handleExport(id: number) {
@@ -55,7 +76,44 @@ export default function KlaarVoorExportPagina() {
     }
   }
 
+  async function handleBatchExport() {
+    if (geselecteerd.size === 0) return;
+    setBatchBezig(true);
+    try {
+      const result = await batchMut.mutateAsync({ data: { factuur_ids: Array.from(geselecteerd) } });
+      setBatchResultaat(result as BatchExportResultaat);
+      setGeselecteerd(new Set());
+    } finally {
+      setBatchBezig(false);
+    }
+  }
+
   const lijst = facturen as Factuur[];
+
+  const exporteerbare = lijst.filter((f) => !!f.btw_code && !!f.grootboekrekening && !!f.factuurnummer);
+
+  function toggleAlles() {
+    if (geselecteerd.size === exporteerbare.length && exporteerbare.length > 0) {
+      setGeselecteerd(new Set());
+    } else {
+      setGeselecteerd(new Set(exporteerbare.map((f) => f.id)));
+    }
+  }
+
+  function toggleFactuur(id: number) {
+    setGeselecteerd((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  }
+
+  const alleGeselecteerd = exporteerbare.length > 0 && geselecteerd.size === exporteerbare.length;
+  const gedeeltelijkGeselecteerd = geselecteerd.size > 0 && geselecteerd.size < exporteerbare.length;
 
   return (
     <div className="p-6 space-y-5 max-w-5xl">
@@ -72,15 +130,28 @@ export default function KlaarVoorExportPagina() {
       </div>
 
       {/* Koptekst */}
-      <div>
-        <h1 className="text-2xl font-semibold text-slate-900 flex items-center gap-2">
-          <ArrowUpRight className="h-6 w-6 text-primary" />
-          Klaar voor AccountView
-        </h1>
-        <p className="text-sm text-muted-foreground mt-0.5">
-          Geaccordeerde facturen die nog niet naar AccountView zijn verzonden.
-          Controleer, blokkeer indien nodig, en verzend.
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold text-slate-900 flex items-center gap-2">
+            <ArrowUpRight className="h-6 w-6 text-primary" />
+            Klaar voor AccountView
+          </h1>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            Geaccordeerde facturen die nog niet naar AccountView zijn verzonden.
+            Selecteer meerdere facturen voor batchexport, of verzend per stuk.
+          </p>
+        </div>
+        {geselecteerd.size > 0 && (
+          <Button
+            onClick={handleBatchExport}
+            disabled={batchBezig}
+            className="shrink-0"
+          >
+            {batchBezig
+              ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Exporteren...</>
+              : <><Layers className="h-4 w-4 mr-2" />{geselecteerd.size} exporteren</>}
+          </Button>
+        )}
       </div>
 
       {/* Info */}
@@ -88,7 +159,7 @@ export default function KlaarVoorExportPagina() {
         <Info className="h-4 w-4 mt-0.5 shrink-0" />
         <div>
           Elke factuur wordt slechts <strong>één keer</strong> verzonden. Dubbele export is geblokkeerd.
-          Als AccountView een boeking weigert, blijft de factuur hier staan met een foutmelding.
+          Facturen met ontbrekende BTW-code of grootboekrekening kunnen niet worden geselecteerd.
         </div>
       </div>
 
@@ -110,6 +181,14 @@ export default function KlaarVoorExportPagina() {
           <table className="w-full text-sm">
             <thead className="bg-slate-50 border-b">
               <tr>
+                <th className="px-4 py-2.5 w-10">
+                  <Checkbox
+                    checked={alleGeselecteerd}
+                    data-state={gedeeltelijkGeselecteerd ? "indeterminate" : alleGeselecteerd ? "checked" : "unchecked"}
+                    onCheckedChange={toggleAlles}
+                    aria-label="Alles selecteren"
+                  />
+                </th>
                 <th className="px-4 py-2.5 text-left font-medium text-slate-600">Factuur</th>
                 <th className="px-4 py-2.5 text-left font-medium text-slate-600">Relatie</th>
                 <th className="px-4 py-2.5 text-left font-medium text-slate-600">Datum</th>
@@ -125,8 +204,18 @@ export default function KlaarVoorExportPagina() {
                 if (!f.btw_code) fouten.push("BTW-code ontbreekt");
                 if (!f.grootboekrekening) fouten.push("Grootboekrekening ontbreekt");
                 if (!f.factuurnummer) fouten.push("Factuurnummer ontbreekt");
+                const exporteerbaar = fouten.length === 0;
+                const isGeselecteerd = geselecteerd.has(f.id);
                 return (
-                  <tr key={f.id} className="hover:bg-slate-50/50">
+                  <tr key={f.id} className={`hover:bg-slate-50/50 ${isGeselecteerd ? "bg-primary/5" : ""}`}>
+                    <td className="px-4 py-3">
+                      <Checkbox
+                        checked={isGeselecteerd}
+                        disabled={!exporteerbaar}
+                        onCheckedChange={() => exporteerbaar && toggleFactuur(f.id)}
+                        aria-label={`Factuur ${f.factuurnummer ?? f.id} selecteren`}
+                      />
+                    </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
                         <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${f.type === "inkoop" ? "bg-slate-100 text-slate-600" : "bg-blue-50 text-blue-600"}`}>
@@ -197,7 +286,7 @@ export default function KlaarVoorExportPagina() {
         </div>
       )}
 
-      {/* Exportresultaat dialog */}
+      {/* Exportresultaat dialog (enkelvoudig) */}
       {exportResultaat && (
         <Dialog open onOpenChange={() => setExportResultaat(null)}>
           <DialogContent className="max-w-md">
@@ -233,6 +322,47 @@ export default function KlaarVoorExportPagina() {
             </div>
             <DialogFooter>
               <Button onClick={() => setExportResultaat(null)}>Sluiten</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Batchexport resultaat dialog */}
+      {batchResultaat && (
+        <Dialog open onOpenChange={() => setBatchResultaat(null)}>
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Batchexport resultaat</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-3">
+              <div className="grid grid-cols-3 gap-3 text-center">
+                <div className="rounded-lg bg-slate-50 border p-3">
+                  <p className="text-2xl font-semibold text-slate-800">{batchResultaat.totaal}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">Totaal</p>
+                </div>
+                <div className="rounded-lg bg-green-50 border border-green-200 p-3">
+                  <p className="text-2xl font-semibold text-green-700">{batchResultaat.geslaagd}</p>
+                  <p className="text-xs text-green-600 mt-0.5">Geslaagd</p>
+                </div>
+                <div className="rounded-lg bg-red-50 border border-red-200 p-3">
+                  <p className="text-2xl font-semibold text-red-700">{batchResultaat.mislukt}</p>
+                  <p className="text-xs text-red-600 mt-0.5">Mislukt</p>
+                </div>
+              </div>
+              {batchResultaat.resultaten && batchResultaat.resultaten.filter((r) => r.status === "mislukt").length > 0 && (
+                <div className="space-y-1.5">
+                  <p className="text-sm font-medium text-slate-700">Mislukte facturen</p>
+                  {batchResultaat.resultaten.filter((r) => r.status === "mislukt").map((r) => (
+                    <div key={r.factuur_id} className="rounded border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+                      <span className="font-mono font-medium">#{r.factuur_id}</span>
+                      {r.foutmelding && <span className="ml-2">{r.foutmelding}</span>}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            <DialogFooter>
+              <Button onClick={() => setBatchResultaat(null)}>Sluiten</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>

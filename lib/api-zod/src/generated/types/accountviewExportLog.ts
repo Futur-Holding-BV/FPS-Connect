@@ -14,9 +14,11 @@ export interface AccountviewExportLog {
   gebruiker_id?: number | null;
   export_op: string;
   testmodus: boolean;
+  actie: string;
   verzonden_payload?: AccountviewExportLogVerzondenPayload;
   accountview_response?: AccountviewExportLogAccountviewResponse;
   http_status?: number | null;
+  payload_hash?: string | null;
   status: string;
   accountview_boeking_id?: string | null;
   foutmelding?: string | null;

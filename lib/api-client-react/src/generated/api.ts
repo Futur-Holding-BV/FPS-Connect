@@ -27,6 +27,10 @@ import type {
   AccountviewExportResultaat,
   AccountviewInstellingen,
   AccountviewInstellingenInput,
+  AccountviewProjectMapping,
+  AccountviewProjectMappingInput,
+  AccountviewRelatieMapping,
+  AccountviewRelatieMappingInput,
   AchievementControleerResponse,
   Activiteit,
   AiAnalyseToolboxBerichten200,
@@ -38,6 +42,7 @@ import type {
   ArchiefUpdate,
   AssignClusterMonteur200,
   AuthGebruiker,
+  BatchExportResultaat,
   Bekwaamheid,
   BekwaamheidInput,
   BruikleenInput,
@@ -107,11 +112,15 @@ import type {
   DossierDocumentInput,
   DossierInput,
   ErrorEnvelope,
+  ExportlogRegel,
   Fabrikant,
   FabrikantInput,
   FabrikantUpdate,
   Factuur,
+  FactuurAfkeurenInput,
+  FactuurBatchExportInput,
   FactuurBlokkerenInput,
+  FactuurHerexportInput,
   FactuurInput,
   FactuurUpdateInput,
   FactuurUploadUrlInput,
@@ -119,6 +128,7 @@ import type {
   FeedbackInput,
   Feestdag,
   FeestdagInput,
+  FinancieelDashboard,
   Foto,
   FotoInput,
   Functie,
@@ -195,6 +205,7 @@ import type {
   ListCrmProjectkansenParams,
   ListDocumentLogboekParams,
   ListDocumentenParams,
+  ListExportlogParams,
   ListFabrikantenParams,
   ListFacturenParams,
   ListFeestdagenParams,
@@ -41661,4 +41672,953 @@ export function useListFactuurExportLogs<TData = Awaited<ReturnType<typeof listF
 
 
 
+
+export const getAfkeurenFactuurUrl = (id: number,) => {
+
+
+
+
+  return `/api/facturen/${id}/afkeuren`
+}
+
+/**
+ * @summary Factuur afkeuren
+ */
+export const afkeurenFactuur = async (id: number,
+    factuurAfkeurenInput: FactuurAfkeurenInput, options?: RequestInit): Promise<Factuur> => {
+
+  return customFetch<Factuur>(getAfkeurenFactuurUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(factuurAfkeurenInput)
+  }
+);}
+
+
+
+
+export const getAfkeurenFactuurMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof afkeurenFactuur>>, TError,{id: number;data: BodyType<FactuurAfkeurenInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof afkeurenFactuur>>, TError,{id: number;data: BodyType<FactuurAfkeurenInput>}, TContext> => {
+
+const mutationKey = ['afkeurenFactuur'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof afkeurenFactuur>>, {id: number;data: BodyType<FactuurAfkeurenInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  afkeurenFactuur(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AfkeurenFactuurMutationResult = NonNullable<Awaited<ReturnType<typeof afkeurenFactuur>>>
+    export type AfkeurenFactuurMutationBody = BodyType<FactuurAfkeurenInput>
+    export type AfkeurenFactuurMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Factuur afkeuren
+ */
+export const useAfkeurenFactuur = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof afkeurenFactuur>>, TError,{id: number;data: BodyType<FactuurAfkeurenInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof afkeurenFactuur>>,
+        TError,
+        {id: number;data: BodyType<FactuurAfkeurenInput>},
+        TContext
+      > => {
+      return useMutation(getAfkeurenFactuurMutationOptions(options));
+    }
+
+export const getForceerHerexportFactuurUrl = (id: number,) => {
+
+
+
+
+  return `/api/facturen/${id}/forceer-herexport`
+}
+
+/**
+ * @summary Forceer herexport van al-geexporteerde factuur
+ */
+export const forceerHerexportFactuur = async (id: number,
+    factuurHerexportInput: FactuurHerexportInput, options?: RequestInit): Promise<AccountviewExportResultaat> => {
+
+  return customFetch<AccountviewExportResultaat>(getForceerHerexportFactuurUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(factuurHerexportInput)
+  }
+);}
+
+
+
+
+export const getForceerHerexportFactuurMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof forceerHerexportFactuur>>, TError,{id: number;data: BodyType<FactuurHerexportInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof forceerHerexportFactuur>>, TError,{id: number;data: BodyType<FactuurHerexportInput>}, TContext> => {
+
+const mutationKey = ['forceerHerexportFactuur'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof forceerHerexportFactuur>>, {id: number;data: BodyType<FactuurHerexportInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  forceerHerexportFactuur(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ForceerHerexportFactuurMutationResult = NonNullable<Awaited<ReturnType<typeof forceerHerexportFactuur>>>
+    export type ForceerHerexportFactuurMutationBody = BodyType<FactuurHerexportInput>
+    export type ForceerHerexportFactuurMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Forceer herexport van al-geexporteerde factuur
+ */
+export const useForceerHerexportFactuur = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof forceerHerexportFactuur>>, TError,{id: number;data: BodyType<FactuurHerexportInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof forceerHerexportFactuur>>,
+        TError,
+        {id: number;data: BodyType<FactuurHerexportInput>},
+        TContext
+      > => {
+      return useMutation(getForceerHerexportFactuurMutationOptions(options));
+    }
+
+export const getBatchExportFacturenUrl = () => {
+
+
+
+
+  return `/api/facturen/batch-export`
+}
+
+/**
+ * @summary Meerdere facturen tegelijk exporteren naar AccountView
+ */
+export const batchExportFacturen = async (factuurBatchExportInput: FactuurBatchExportInput, options?: RequestInit): Promise<BatchExportResultaat> => {
+
+  return customFetch<BatchExportResultaat>(getBatchExportFacturenUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(factuurBatchExportInput)
+  }
+);}
+
+
+
+
+export const getBatchExportFacturenMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof batchExportFacturen>>, TError,{data: BodyType<FactuurBatchExportInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof batchExportFacturen>>, TError,{data: BodyType<FactuurBatchExportInput>}, TContext> => {
+
+const mutationKey = ['batchExportFacturen'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof batchExportFacturen>>, {data: BodyType<FactuurBatchExportInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  batchExportFacturen(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type BatchExportFacturenMutationResult = NonNullable<Awaited<ReturnType<typeof batchExportFacturen>>>
+    export type BatchExportFacturenMutationBody = BodyType<FactuurBatchExportInput>
+    export type BatchExportFacturenMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Meerdere facturen tegelijk exporteren naar AccountView
+ */
+export const useBatchExportFacturen = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof batchExportFacturen>>, TError,{data: BodyType<FactuurBatchExportInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof batchExportFacturen>>,
+        TError,
+        {data: BodyType<FactuurBatchExportInput>},
+        TContext
+      > => {
+      return useMutation(getBatchExportFacturenMutationOptions(options));
+    }
+
+export const getListExportlogUrl = (params?: ListExportlogParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/facturen/exportlog?${stringifiedParams}` : `/api/facturen/exportlog`
+}
+
+/**
+ * @summary Alle exportlog-regels ophalen (systeem-breed)
+ */
+export const listExportlog = async (params?: ListExportlogParams, options?: RequestInit): Promise<ExportlogRegel[]> => {
+
+  return customFetch<ExportlogRegel[]>(getListExportlogUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListExportlogQueryKey = (params?: ListExportlogParams,) => {
+    return [
+    `/api/facturen/exportlog`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListExportlogQueryOptions = <TData = Awaited<ReturnType<typeof listExportlog>>, TError = ErrorType<unknown>>(params?: ListExportlogParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listExportlog>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListExportlogQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listExportlog>>> = ({ signal }) => listExportlog(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listExportlog>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListExportlogQueryResult = NonNullable<Awaited<ReturnType<typeof listExportlog>>>
+export type ListExportlogQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Alle exportlog-regels ophalen (systeem-breed)
+ */
+
+export function useListExportlog<TData = Awaited<ReturnType<typeof listExportlog>>, TError = ErrorType<unknown>>(
+ params?: ListExportlogParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listExportlog>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListExportlogQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetFinancieelDashboardUrl = () => {
+
+
+
+
+  return `/api/facturen/financieel-dashboard`
+}
+
+/**
+ * @summary Financieel dashboard statistieken
+ */
+export const getFinancieelDashboard = async ( options?: RequestInit): Promise<FinancieelDashboard> => {
+
+  return customFetch<FinancieelDashboard>(getGetFinancieelDashboardUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetFinancieelDashboardQueryKey = () => {
+    return [
+    `/api/facturen/financieel-dashboard`
+    ] as const;
+    }
+
+
+export const getGetFinancieelDashboardQueryOptions = <TData = Awaited<ReturnType<typeof getFinancieelDashboard>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getFinancieelDashboard>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetFinancieelDashboardQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getFinancieelDashboard>>> = ({ signal }) => getFinancieelDashboard({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getFinancieelDashboard>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetFinancieelDashboardQueryResult = NonNullable<Awaited<ReturnType<typeof getFinancieelDashboard>>>
+export type GetFinancieelDashboardQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Financieel dashboard statistieken
+ */
+
+export function useGetFinancieelDashboard<TData = Awaited<ReturnType<typeof getFinancieelDashboard>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getFinancieelDashboard>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetFinancieelDashboardQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getListRelatieMappingUrl = () => {
+
+
+
+
+  return `/api/accountview/relatie-mapping`
+}
+
+/**
+ * @summary AccountView relatie-mapping ophalen
+ */
+export const listRelatieMapping = async ( options?: RequestInit): Promise<AccountviewRelatieMapping[]> => {
+
+  return customFetch<AccountviewRelatieMapping[]>(getListRelatieMappingUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListRelatieMappingQueryKey = () => {
+    return [
+    `/api/accountview/relatie-mapping`
+    ] as const;
+    }
+
+
+export const getListRelatieMappingQueryOptions = <TData = Awaited<ReturnType<typeof listRelatieMapping>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listRelatieMapping>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListRelatieMappingQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listRelatieMapping>>> = ({ signal }) => listRelatieMapping({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listRelatieMapping>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListRelatieMappingQueryResult = NonNullable<Awaited<ReturnType<typeof listRelatieMapping>>>
+export type ListRelatieMappingQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary AccountView relatie-mapping ophalen
+ */
+
+export function useListRelatieMapping<TData = Awaited<ReturnType<typeof listRelatieMapping>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listRelatieMapping>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListRelatieMappingQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateRelatieMappingUrl = () => {
+
+
+
+
+  return `/api/accountview/relatie-mapping`
+}
+
+/**
+ * @summary Nieuwe relatie-mapping aanmaken
+ */
+export const createRelatieMapping = async (accountviewRelatieMappingInput: AccountviewRelatieMappingInput, options?: RequestInit): Promise<AccountviewRelatieMapping> => {
+
+  return customFetch<AccountviewRelatieMapping>(getCreateRelatieMappingUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(accountviewRelatieMappingInput)
+  }
+);}
+
+
+
+
+export const getCreateRelatieMappingMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createRelatieMapping>>, TError,{data: BodyType<AccountviewRelatieMappingInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createRelatieMapping>>, TError,{data: BodyType<AccountviewRelatieMappingInput>}, TContext> => {
+
+const mutationKey = ['createRelatieMapping'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createRelatieMapping>>, {data: BodyType<AccountviewRelatieMappingInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createRelatieMapping(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateRelatieMappingMutationResult = NonNullable<Awaited<ReturnType<typeof createRelatieMapping>>>
+    export type CreateRelatieMappingMutationBody = BodyType<AccountviewRelatieMappingInput>
+    export type CreateRelatieMappingMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Nieuwe relatie-mapping aanmaken
+ */
+export const useCreateRelatieMapping = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createRelatieMapping>>, TError,{data: BodyType<AccountviewRelatieMappingInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createRelatieMapping>>,
+        TError,
+        {data: BodyType<AccountviewRelatieMappingInput>},
+        TContext
+      > => {
+      return useMutation(getCreateRelatieMappingMutationOptions(options));
+    }
+
+export const getUpdateRelatieMappingUrl = (id: number,) => {
+
+
+
+
+  return `/api/accountview/relatie-mapping/${id}`
+}
+
+/**
+ * @summary Relatie-mapping bijwerken
+ */
+export const updateRelatieMapping = async (id: number,
+    accountviewRelatieMappingInput: AccountviewRelatieMappingInput, options?: RequestInit): Promise<AccountviewRelatieMapping> => {
+
+  return customFetch<AccountviewRelatieMapping>(getUpdateRelatieMappingUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(accountviewRelatieMappingInput)
+  }
+);}
+
+
+
+
+export const getUpdateRelatieMappingMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateRelatieMapping>>, TError,{id: number;data: BodyType<AccountviewRelatieMappingInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateRelatieMapping>>, TError,{id: number;data: BodyType<AccountviewRelatieMappingInput>}, TContext> => {
+
+const mutationKey = ['updateRelatieMapping'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateRelatieMapping>>, {id: number;data: BodyType<AccountviewRelatieMappingInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateRelatieMapping(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateRelatieMappingMutationResult = NonNullable<Awaited<ReturnType<typeof updateRelatieMapping>>>
+    export type UpdateRelatieMappingMutationBody = BodyType<AccountviewRelatieMappingInput>
+    export type UpdateRelatieMappingMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Relatie-mapping bijwerken
+ */
+export const useUpdateRelatieMapping = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateRelatieMapping>>, TError,{id: number;data: BodyType<AccountviewRelatieMappingInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateRelatieMapping>>,
+        TError,
+        {id: number;data: BodyType<AccountviewRelatieMappingInput>},
+        TContext
+      > => {
+      return useMutation(getUpdateRelatieMappingMutationOptions(options));
+    }
+
+export const getDeleteRelatieMappingUrl = (id: number,) => {
+
+
+
+
+  return `/api/accountview/relatie-mapping/${id}`
+}
+
+/**
+ * @summary Relatie-mapping verwijderen
+ */
+export const deleteRelatieMapping = async (id: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteRelatieMappingUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteRelatieMappingMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteRelatieMapping>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteRelatieMapping>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deleteRelatieMapping'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteRelatieMapping>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteRelatieMapping(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteRelatieMappingMutationResult = NonNullable<Awaited<ReturnType<typeof deleteRelatieMapping>>>
+
+    export type DeleteRelatieMappingMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Relatie-mapping verwijderen
+ */
+export const useDeleteRelatieMapping = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteRelatieMapping>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteRelatieMapping>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeleteRelatieMappingMutationOptions(options));
+    }
+
+export const getListProjectMappingUrl = () => {
+
+
+
+
+  return `/api/accountview/project-mapping`
+}
+
+/**
+ * @summary AccountView project/kostenplaats-mapping ophalen
+ */
+export const listProjectMapping = async ( options?: RequestInit): Promise<AccountviewProjectMapping[]> => {
+
+  return customFetch<AccountviewProjectMapping[]>(getListProjectMappingUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListProjectMappingQueryKey = () => {
+    return [
+    `/api/accountview/project-mapping`
+    ] as const;
+    }
+
+
+export const getListProjectMappingQueryOptions = <TData = Awaited<ReturnType<typeof listProjectMapping>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listProjectMapping>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListProjectMappingQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listProjectMapping>>> = ({ signal }) => listProjectMapping({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listProjectMapping>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListProjectMappingQueryResult = NonNullable<Awaited<ReturnType<typeof listProjectMapping>>>
+export type ListProjectMappingQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary AccountView project/kostenplaats-mapping ophalen
+ */
+
+export function useListProjectMapping<TData = Awaited<ReturnType<typeof listProjectMapping>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listProjectMapping>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListProjectMappingQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateProjectMappingUrl = () => {
+
+
+
+
+  return `/api/accountview/project-mapping`
+}
+
+/**
+ * @summary Nieuwe project-mapping aanmaken
+ */
+export const createProjectMapping = async (accountviewProjectMappingInput: AccountviewProjectMappingInput, options?: RequestInit): Promise<AccountviewProjectMapping> => {
+
+  return customFetch<AccountviewProjectMapping>(getCreateProjectMappingUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(accountviewProjectMappingInput)
+  }
+);}
+
+
+
+
+export const getCreateProjectMappingMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createProjectMapping>>, TError,{data: BodyType<AccountviewProjectMappingInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createProjectMapping>>, TError,{data: BodyType<AccountviewProjectMappingInput>}, TContext> => {
+
+const mutationKey = ['createProjectMapping'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createProjectMapping>>, {data: BodyType<AccountviewProjectMappingInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createProjectMapping(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateProjectMappingMutationResult = NonNullable<Awaited<ReturnType<typeof createProjectMapping>>>
+    export type CreateProjectMappingMutationBody = BodyType<AccountviewProjectMappingInput>
+    export type CreateProjectMappingMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Nieuwe project-mapping aanmaken
+ */
+export const useCreateProjectMapping = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createProjectMapping>>, TError,{data: BodyType<AccountviewProjectMappingInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createProjectMapping>>,
+        TError,
+        {data: BodyType<AccountviewProjectMappingInput>},
+        TContext
+      > => {
+      return useMutation(getCreateProjectMappingMutationOptions(options));
+    }
+
+export const getUpdateProjectMappingUrl = (id: number,) => {
+
+
+
+
+  return `/api/accountview/project-mapping/${id}`
+}
+
+/**
+ * @summary Project-mapping bijwerken
+ */
+export const updateProjectMapping = async (id: number,
+    accountviewProjectMappingInput: AccountviewProjectMappingInput, options?: RequestInit): Promise<AccountviewProjectMapping> => {
+
+  return customFetch<AccountviewProjectMapping>(getUpdateProjectMappingUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(accountviewProjectMappingInput)
+  }
+);}
+
+
+
+
+export const getUpdateProjectMappingMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateProjectMapping>>, TError,{id: number;data: BodyType<AccountviewProjectMappingInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateProjectMapping>>, TError,{id: number;data: BodyType<AccountviewProjectMappingInput>}, TContext> => {
+
+const mutationKey = ['updateProjectMapping'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateProjectMapping>>, {id: number;data: BodyType<AccountviewProjectMappingInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateProjectMapping(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateProjectMappingMutationResult = NonNullable<Awaited<ReturnType<typeof updateProjectMapping>>>
+    export type UpdateProjectMappingMutationBody = BodyType<AccountviewProjectMappingInput>
+    export type UpdateProjectMappingMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Project-mapping bijwerken
+ */
+export const useUpdateProjectMapping = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateProjectMapping>>, TError,{id: number;data: BodyType<AccountviewProjectMappingInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateProjectMapping>>,
+        TError,
+        {id: number;data: BodyType<AccountviewProjectMappingInput>},
+        TContext
+      > => {
+      return useMutation(getUpdateProjectMappingMutationOptions(options));
+    }
+
+export const getDeleteProjectMappingUrl = (id: number,) => {
+
+
+
+
+  return `/api/accountview/project-mapping/${id}`
+}
+
+/**
+ * @summary Project-mapping verwijderen
+ */
+export const deleteProjectMapping = async (id: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteProjectMappingUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteProjectMappingMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteProjectMapping>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteProjectMapping>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deleteProjectMapping'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteProjectMapping>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteProjectMapping(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteProjectMappingMutationResult = NonNullable<Awaited<ReturnType<typeof deleteProjectMapping>>>
+
+    export type DeleteProjectMappingMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Project-mapping verwijderen
+ */
+export const useDeleteProjectMapping = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteProjectMapping>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteProjectMapping>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeleteProjectMappingMutationOptions(options));
+    }
 

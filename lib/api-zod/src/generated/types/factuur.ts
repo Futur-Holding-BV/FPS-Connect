@@ -40,6 +40,17 @@ export interface Factuur {
   accountview_export_op?: string | null;
   accountview_status?: string | null;
   accountview_fout?: string | null;
+  payload_hash?: string | null;
+  betaalstatus?: string | null;
+  betaaldatum?: string | null;
+  boekingsnummer?: string | null;
+  terugkoppeling_op?: string | null;
+  afgekeurd?: boolean;
+  afkeuring_reden?: string | null;
+  afgekeurd_op?: string | null;
+  afgekeurd_door_naam?: string | null;
+  herexport_op?: string | null;
+  herexport_reden?: string | null;
   aangemaakt_op: string;
   bijgewerkt_op?: string;
 }

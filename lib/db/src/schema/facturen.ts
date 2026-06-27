@@ -27,7 +27,7 @@ export type AccountviewInstellingen = typeof accountviewInstellingenTable.$infer
 
 // ── Facturen ──────────────────────────────────────────────────────────────────
 // Status-lifecycle:
-//   ontvangen → ai_gelezen → controle_nodig | klaar_voor_boeking
+//   ontvangen → ai_gelezen → controle_nodig | klaar_voor_boeking | afgekeurd
 //   → klaar_voor_accountview → verzonden_naar_accountview | fout_bij_verzending → verwerkt
 //   Geblokkeerd kan op elk moment worden gezet.
 export const facturenTable = pgTable("facturen", {
@@ -65,24 +65,41 @@ export const facturenTable = pgTable("facturen", {
 
   // Koppelingen
   gebouwId: integer("gebouw_id").references(() => gebouwenTable.id, { onDelete: "set null" }),
-  leverancierId: integer("leverancier_id"),   // toekomstige leveranciers-tabel
-  projectId: integer("project_id"),           // toekomstige projecten-koppeling
+  leverancierId: integer("leverancier_id"),
+  projectId: integer("project_id"),
 
   // AI-uitgelezen metadata
   aiMetadata: jsonb("ai_metadata"),
 
   // Status
   status: text("status").notNull().default("ontvangen"),
-  // ontvangen | ai_gelezen | controle_nodig | klaar_voor_boeking
-  // klaar_voor_accountview | verzonden_naar_accountview | fout_bij_verzending | verwerkt | geblokkeerd
+  // ontvangen | ai_gelezen | controle_nodig | klaar_voor_boeking | afgekeurd
+  // klaar_voor_accountview | verzonden_naar_accountview | fout_bij_verzending | verwerkt
   geblokkeerd: boolean("geblokkeerd").notNull().default(false),
   blokkeringReden: text("blokkering_reden"),
+
+  // Afkeuring
+  afgekeurdReden: text("afkeuring_reden"),
+  afgekeurdOp: timestamp("afgekeurd_op"),
+  afgekeurdDoor: integer("afgekeurd_door").references(() => gebruikersTable.id, { onDelete: "set null" }),
 
   // AccountView export
   accountviewBoekingId: text("accountview_boeking_id"),
   accountviewExportOp: timestamp("accountview_export_op"),
-  accountviewStatus: text("accountview_status"),  // success | error
+  accountviewStatus: text("accountview_status"),
   accountviewFout: text("accountview_fout"),
+  payloadHash: text("payload_hash"),
+
+  // Terugkoppeling betaalstatus
+  betaalstatus: text("betaalstatus"),     // openstaand | betaald | deels_betaald
+  betaaldatum: text("betaaldatum"),
+  boekingsnummer: text("boekingsnummer"), // AccountView boekingsnummer
+  terugkoppelingOp: timestamp("terugkoppeling_op"),
+
+  // Herexport
+  herexportOp: timestamp("herexport_op"),
+  herexportDoor: integer("herexport_door").references(() => gebruikersTable.id, { onDelete: "set null" }),
+  herexportReden: text("herexport_reden"),
 
   // Beheer
   uploaderId: integer("uploader_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
@@ -109,11 +126,13 @@ export const accountviewExportLogsTable = pgTable("accountview_export_logs", {
   gebruikerId: integer("gebruiker_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
   exportOp: timestamp("export_op").notNull().defaultNow(),
   testmodus: boolean("testmodus").notNull().default(true),
+  actie: text("actie").notNull().default("export"), // export | herexport | sync | afkeuren | accorderen
 
   // Payload & response
   verzondenPayload: jsonb("verzonden_payload"),
   accountviewResponse: jsonb("accountview_response"),
   httpStatus: integer("http_status"),
+  payloadHash: text("payload_hash"),
 
   // Uitkomst
   status: text("status").notNull().default("bezig"),  // bezig | geslaagd | mislukt
@@ -123,3 +142,32 @@ export const accountviewExportLogsTable = pgTable("accountview_export_logs", {
 });
 
 export type AccountviewExportLog = typeof accountviewExportLogsTable.$inferSelect;
+
+// ── AccountView relatie-mapping ───────────────────────────────────────────────
+export const accountviewRelatieMappingTable = pgTable("accountview_relatie_mapping", {
+  id: serial("id").primaryKey(),
+  connectRelatienaam: text("connect_relatienaam").notNull(),
+  accountviewCode: text("accountview_code").notNull(),
+  type: text("type").notNull().default("crediteur"), // crediteur | debiteur
+  opmerking: text("opmerking"),
+  bestaatInAccountview: boolean("bestaat_in_accountview").notNull().default(false),
+  aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
+  bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
+});
+
+export type AccountviewRelatieMapping = typeof accountviewRelatieMappingTable.$inferSelect;
+
+// ── AccountView project/kostenplaats-mapping ──────────────────────────────────
+export const accountviewProjectMappingTable = pgTable("accountview_project_mapping", {
+  id: serial("id").primaryKey(),
+  connectProjectCode: text("connect_project_code").notNull(),
+  connectGebouwNaam: text("connect_gebouw_naam"),
+  accountviewProjectcode: text("accountview_projectcode"),
+  accountviewKostenplaats: text("accountview_kostenplaats"),
+  opmerking: text("opmerking"),
+  exportZonderMapping: boolean("export_zonder_mapping").notNull().default(false),
+  aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
+  bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
+});
+
+export type AccountviewProjectMapping = typeof accountviewProjectMappingTable.$inferSelect;

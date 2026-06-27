@@ -8,12 +8,13 @@ import {
   gebouwenTable,
   gebruikersTable,
 } from "@workspace/db";
-import { eq, and, desc, sql, or } from "drizzle-orm";
+import { eq, and, desc, sql, or, gte, count, isNull, isNotNull, ne, lt, sum } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
 import { ObjectStorageService } from "../lib/objectStorage";
 import { maakAccountViewClient } from "../services/accountview-client";
 import type { AccountviewBoeking } from "../services/accountview-client";
 import OpenAI from "openai";
+import crypto from "crypto";
 
 const router = Router();
 const objectStorage = new ObjectStorageService();
@@ -40,6 +41,9 @@ async function mapFactuur(r: typeof facturenTable.$inferSelect) {
     : [null];
   const [accordeerder] = r.geaccordeerdDoor
     ? await db.select({ naam: gebruikersTable.naam }).from(gebruikersTable).where(eq(gebruikersTable.id, r.geaccordeerdDoor)).limit(1)
+    : [null];
+  const [afgekeurder] = r.afgekeurdDoor
+    ? await db.select({ naam: gebruikersTable.naam }).from(gebruikersTable).where(eq(gebruikersTable.id, r.afgekeurdDoor)).limit(1)
     : [null];
 
   return {
@@ -75,6 +79,17 @@ async function mapFactuur(r: typeof facturenTable.$inferSelect) {
     accountview_export_op: r.accountviewExportOp?.toISOString() ?? null,
     accountview_status: r.accountviewStatus,
     accountview_fout: r.accountviewFout,
+    payload_hash: r.payloadHash,
+    betaalstatus: r.betaalstatus,
+    betaaldatum: r.betaaldatum,
+    boekingsnummer: r.boekingsnummer,
+    terugkoppeling_op: r.terugkoppelingOp?.toISOString() ?? null,
+    afgekeurd: !!(r.afgekeurdReden || r.afgekeurdOp),
+    afkeuring_reden: r.afgekeurdReden,
+    afgekeurd_op: r.afgekeurdOp?.toISOString() ?? null,
+    afgekeurd_door_naam: afgekeurder?.naam ?? null,
+    herexport_op: r.herexportOp?.toISOString() ?? null,
+    herexport_reden: r.herexportReden,
     aangemaakt_op: r.aangemaaktOp.toISOString(),
     bijgewerkt_op: r.bijgewerktOp.toISOString(),
   };
@@ -455,13 +470,343 @@ router.get("/facturen/:id/export-logs", requireBevoegdheid("financieel", 1), asy
     gebruiker_id: l.gebruikerId,
     export_op: l.exportOp.toISOString(),
     testmodus: l.testmodus,
+    actie: l.actie,
     verzonden_payload: l.verzondenPayload,
     accountview_response: l.accountviewResponse,
     http_status: l.httpStatus,
+    payload_hash: l.payloadHash,
     status: l.status,
     accountview_boeking_id: l.accountviewBoekingId,
     foutmelding: l.foutmelding,
   })));
+});
+
+// ── POST /facturen/:id/afkeuren ────────────────────────────────────────────────
+router.post("/facturen/:id/afkeuren", requireBevoegdheid("financieel", 2), async (req: Request, res: Response) => {
+  const id = paramInt(req.params["id"]);
+  const { reden } = req.body as { reden?: string };
+  if (!reden?.trim()) { res.status(400).json({ error: "Afkeuringsreden is verplicht" }); return; }
+
+  const [factuur] = await db.select().from(facturenTable).where(eq(facturenTable.id, id)).limit(1);
+  if (!factuur) { res.status(404).json({ error: "Niet gevonden" }); return; }
+  if (factuur.status === "verwerkt") { res.status(409).json({ error: "Verwerkte facturen kunnen niet worden afgekeurd" }); return; }
+
+  const userId = sessionUserId(req);
+  const [updated] = await db.update(facturenTable).set({
+    status: "afgekeurd",
+    afgekeurdReden: reden.trim(),
+    afgekeurdOp: new Date(),
+    afgekeurdDoor: userId,
+    bijgewerktOp: new Date(),
+  }).where(eq(facturenTable.id, id)).returning();
+
+  await db.insert(accountviewExportLogsTable).values({
+    factuurId: id,
+    gebruikerId: userId,
+    testmodus: false,
+    actie: "afkeuren",
+    status: "geslaagd",
+    foutmelding: `Afgekeurd: ${reden.trim()}`,
+  });
+
+  res.json(await mapFactuur(updated));
+});
+
+// ── POST /facturen/:id/forceer-herexport ───────────────────────────────────────
+router.post("/facturen/:id/forceer-herexport", requireBevoegdheid("financieel", 2), async (req: Request, res: Response) => {
+  const id = paramInt(req.params["id"]);
+  const { reden } = req.body as { reden?: string };
+
+  const [factuur] = await db.select().from(facturenTable).where(eq(facturenTable.id, id)).limit(1);
+  if (!factuur) { res.status(404).json({ error: "Niet gevonden" }); return; }
+
+  const [inst] = await db.select().from(accountviewInstellingenTable).limit(1);
+  if (!inst?.apiGebruiker) { res.status(503).json({ error: "AccountView niet geconfigureerd" }); return; }
+
+  const client = maakAccountViewClient(inst);
+
+  const boekType = factuur.type === "verkoop" ? "verkoop" : "inkoop";
+  const boeking: AccountviewBoeking = {
+    dagboek: boekType === "verkoop" ? (inst.dagboekVerkoop ?? "VRK") : (inst.dagboekInkoop ?? "INK"),
+    administratiecode: inst.administratiecode ?? "",
+    factuurnummer: factuur.factuurnummer!,
+    factuurdatum: factuur.factuurdatum!,
+    vervaldatum: factuur.vervaldatum ?? factuur.factuurdatum!,
+    relatienaam: factuur.relatienaam!,
+    relatieCode: factuur.relatieCode ?? undefined,
+    omschrijving: factuur.omschrijving ?? `Factuur ${factuur.factuurnummer}`,
+    bedragExclBtw: parseFloat(factuur.bedragExclBtw ?? "0"),
+    btwBedrag: parseFloat(factuur.btwBedrag ?? "0"),
+    bedragInclBtw: parseFloat(factuur.bedragInclBtw ?? "0"),
+    btwCode: factuur.btwCode ?? undefined,
+    grootboekrekening: factuur.grootboekrekening ?? inst.grootboekStandaard ?? undefined,
+    kostenplaats: factuur.kostenplaats ?? undefined,
+    projectCode: factuur.projectCode ?? undefined,
+    type: boekType,
+  };
+
+  const payloadStr = JSON.stringify(boeking);
+  const payloadHash = crypto.createHash("sha256").update(payloadStr).digest("hex");
+
+  const userId = sessionUserId(req);
+  const [logEntry] = await db.insert(accountviewExportLogsTable).values({
+    factuurId: id,
+    gebruikerId: userId,
+    testmodus: inst.testmodus,
+    actie: "herexport",
+    verzondenPayload: boeking as unknown as Record<string, unknown>,
+    payloadHash,
+    status: "bezig",
+  }).returning();
+
+  const resultaat = await client.verzendBoeking(boeking);
+
+  await db.update(accountviewExportLogsTable).set({
+    accountviewResponse: resultaat.rawResponse as Record<string, unknown> | null,
+    httpStatus: resultaat.httpStatus ?? null,
+    status: resultaat.geslaagd ? "geslaagd" : "mislukt",
+    accountviewBoekingId: resultaat.boekingId ?? null,
+    foutmelding: resultaat.foutmelding ?? null,
+  }).where(eq(accountviewExportLogsTable.id, logEntry.id));
+
+  if (resultaat.geslaagd) {
+    await db.update(facturenTable).set({
+      accountviewBoekingId: resultaat.boekingId ?? null,
+      accountviewExportOp: new Date(),
+      accountviewStatus: "success",
+      accountviewFout: null,
+      payloadHash,
+      herexportOp: new Date(),
+      herexportDoor: userId,
+      herexportReden: reden ?? null,
+      status: "verwerkt",
+      bijgewerktOp: new Date(),
+    }).where(eq(facturenTable.id, id));
+  } else {
+    await db.update(facturenTable).set({
+      accountviewStatus: "error",
+      accountviewFout: resultaat.foutmelding ?? "Onbekende fout",
+      status: "fout_bij_verzending",
+      bijgewerktOp: new Date(),
+    }).where(eq(facturenTable.id, id));
+  }
+
+  const [updated] = await db.select().from(facturenTable).where(eq(facturenTable.id, id)).limit(1);
+  res.json({
+    status: resultaat.geslaagd ? "geslaagd" : "mislukt",
+    factuur_id: id,
+    boeking_id: resultaat.boekingId ?? null,
+    foutmelding: resultaat.foutmelding ?? null,
+    testmodus: inst.testmodus,
+  });
+  void updated;
+});
+
+// ── POST /facturen/batch-export ────────────────────────────────────────────────
+router.post("/facturen/batch-export", requireBevoegdheid("financieel", 2), async (req: Request, res: Response) => {
+  const { factuur_ids } = req.body as { factuur_ids?: number[] };
+  if (!Array.isArray(factuur_ids) || factuur_ids.length === 0) {
+    res.status(400).json({ error: "factuur_ids is verplicht en mag niet leeg zijn" }); return;
+  }
+
+  const [inst] = await db.select().from(accountviewInstellingenTable).limit(1);
+  if (!inst?.apiGebruiker) { res.status(503).json({ error: "AccountView niet geconfigureerd" }); return; }
+
+  const client = maakAccountViewClient(inst);
+  const userId = sessionUserId(req);
+  const resultaten: Array<{ status: string; factuur_id: number; boeking_id: string | null; foutmelding: string | null; testmodus: boolean }> = [];
+
+  for (const fid of factuur_ids) {
+    const [factuur] = await db.select().from(facturenTable).where(eq(facturenTable.id, fid)).limit(1);
+    if (!factuur) {
+      resultaten.push({ status: "mislukt", factuur_id: fid, boeking_id: null, foutmelding: "Niet gevonden", testmodus: inst.testmodus });
+      continue;
+    }
+    if (factuur.geblokkeerd || !factuur.geaccordeerd) {
+      resultaten.push({ status: "mislukt", factuur_id: fid, boeking_id: null, foutmelding: "Niet akkoord of geblokkeerd", testmodus: inst.testmodus });
+      continue;
+    }
+
+    const batchBoekType = factuur.type === "verkoop" ? "verkoop" : "inkoop";
+    const boeking: AccountviewBoeking = {
+      dagboek: batchBoekType === "verkoop" ? (inst.dagboekVerkoop ?? "VRK") : (inst.dagboekInkoop ?? "INK"),
+      administratiecode: inst.administratiecode ?? "",
+      factuurnummer: factuur.factuurnummer!,
+      factuurdatum: factuur.factuurdatum!,
+      vervaldatum: factuur.vervaldatum ?? factuur.factuurdatum!,
+      relatienaam: factuur.relatienaam!,
+      relatieCode: factuur.relatieCode ?? undefined,
+      omschrijving: factuur.omschrijving ?? `Factuur ${factuur.factuurnummer}`,
+      bedragExclBtw: parseFloat(factuur.bedragExclBtw ?? "0"),
+      btwBedrag: parseFloat(factuur.btwBedrag ?? "0"),
+      bedragInclBtw: parseFloat(factuur.bedragInclBtw ?? "0"),
+      btwCode: factuur.btwCode ?? undefined,
+      grootboekrekening: factuur.grootboekrekening ?? inst.grootboekStandaard ?? undefined,
+      kostenplaats: factuur.kostenplaats ?? undefined,
+      projectCode: factuur.projectCode ?? undefined,
+      type: factuur.type === "verkoop" ? "verkoop" : "inkoop",
+    };
+
+    const payloadStr = JSON.stringify(boeking);
+    const payloadHash = crypto.createHash("sha256").update(payloadStr).digest("hex");
+
+    const [logEntry] = await db.insert(accountviewExportLogsTable).values({
+      factuurId: fid,
+      gebruikerId: userId,
+      testmodus: inst.testmodus,
+      actie: "export",
+      verzondenPayload: boeking as unknown as Record<string, unknown>,
+      payloadHash,
+      status: "bezig",
+    }).returning();
+
+    const resultaat = await client.verzendBoeking(boeking);
+
+    await db.update(accountviewExportLogsTable).set({
+      accountviewResponse: resultaat.rawResponse as Record<string, unknown> | null,
+      httpStatus: resultaat.httpStatus ?? null,
+      status: resultaat.geslaagd ? "geslaagd" : "mislukt",
+      accountviewBoekingId: resultaat.boekingId ?? null,
+      foutmelding: resultaat.foutmelding ?? null,
+    }).where(eq(accountviewExportLogsTable.id, logEntry.id));
+
+    if (resultaat.geslaagd) {
+      await db.update(facturenTable).set({
+        accountviewBoekingId: resultaat.boekingId ?? null,
+        accountviewExportOp: new Date(),
+        accountviewStatus: "success",
+        accountviewFout: null,
+        payloadHash,
+        status: "verwerkt",
+        bijgewerktOp: new Date(),
+      }).where(eq(facturenTable.id, fid));
+    } else {
+      await db.update(facturenTable).set({
+        accountviewStatus: "error",
+        accountviewFout: resultaat.foutmelding ?? "Onbekende fout",
+        status: "fout_bij_verzending",
+        bijgewerktOp: new Date(),
+      }).where(eq(facturenTable.id, fid));
+    }
+
+    resultaten.push({
+      status: resultaat.geslaagd ? "geslaagd" : "mislukt",
+      factuur_id: fid,
+      boeking_id: resultaat.boekingId ?? null,
+      foutmelding: resultaat.foutmelding ?? null,
+      testmodus: inst.testmodus,
+    });
+  }
+
+  const geslaagd = resultaten.filter((r) => r.status === "geslaagd").length;
+  res.json({
+    totaal: resultaten.length,
+    geslaagd,
+    mislukt: resultaten.length - geslaagd,
+    resultaten,
+  });
+});
+
+// ── GET /facturen/exportlog ────────────────────────────────────────────────────
+router.get("/facturen/exportlog", requireBevoegdheid("financieel", 1), async (req: Request, res: Response) => {
+  const factuurIdFilter = req.query["factuur_id"] ? paramInt(req.query["factuur_id"]) : null;
+  const statusFilter = req.query["status"] ? String(req.query["status"]) : null;
+  const actieFilter = req.query["actie"] ? String(req.query["actie"]) : null;
+  const vanFilter = req.query["van"] ? String(req.query["van"]) : null;
+  const totFilter = req.query["tot"] ? String(req.query["tot"]) : null;
+  const limitFilter = req.query["limit"] ? paramInt(req.query["limit"]) : 200;
+
+  const conditions = [];
+  if (factuurIdFilter) conditions.push(eq(accountviewExportLogsTable.factuurId, factuurIdFilter));
+  if (statusFilter) conditions.push(eq(accountviewExportLogsTable.status, statusFilter));
+  if (actieFilter) conditions.push(eq(accountviewExportLogsTable.actie, actieFilter));
+  if (vanFilter) conditions.push(gte(accountviewExportLogsTable.exportOp, new Date(vanFilter)));
+  if (totFilter) conditions.push(lt(accountviewExportLogsTable.exportOp, new Date(totFilter)));
+
+  const logs = await db.select({
+    id: accountviewExportLogsTable.id,
+    factuurId: accountviewExportLogsTable.factuurId,
+    factuurnummer: facturenTable.factuurnummer,
+    relatienaam: facturenTable.relatienaam,
+    gebruikerId: accountviewExportLogsTable.gebruikerId,
+    gebruikerNaam: gebruikersTable.naam,
+    exportOp: accountviewExportLogsTable.exportOp,
+    testmodus: accountviewExportLogsTable.testmodus,
+    actie: accountviewExportLogsTable.actie,
+    httpStatus: accountviewExportLogsTable.httpStatus,
+    status: accountviewExportLogsTable.status,
+    accountviewBoekingId: accountviewExportLogsTable.accountviewBoekingId,
+    foutmelding: accountviewExportLogsTable.foutmelding,
+  })
+    .from(accountviewExportLogsTable)
+    .leftJoin(facturenTable, eq(accountviewExportLogsTable.factuurId, facturenTable.id))
+    .leftJoin(gebruikersTable, eq(accountviewExportLogsTable.gebruikerId, gebruikersTable.id))
+    .where(conditions.length ? and(...conditions) : undefined)
+    .orderBy(desc(accountviewExportLogsTable.exportOp))
+    .limit(limitFilter);
+
+  res.json(logs.map((l) => ({
+    id: l.id,
+    factuur_id: l.factuurId,
+    factuurnummer: l.factuurnummer ?? null,
+    relatienaam: l.relatienaam ?? null,
+    gebruiker_naam: l.gebruikerNaam ?? null,
+    export_op: l.exportOp.toISOString(),
+    testmodus: l.testmodus,
+    actie: l.actie,
+    status: l.status,
+    accountview_boeking_id: l.accountviewBoekingId ?? null,
+    foutmelding: l.foutmelding ?? null,
+    http_status: l.httpStatus ?? null,
+  })));
+});
+
+// ── GET /facturen/financieel-dashboard ────────────────────────────────────────
+router.get("/facturen/financieel-dashboard", requireBevoegdheid("financieel", 1), async (req: Request, res: Response) => {
+  const [totalen] = await db.select({
+    totaal: count(),
+  }).from(facturenTable);
+
+  const [inkoop] = await db.select({ n: count() }).from(facturenTable).where(eq(facturenTable.type, "inkoop"));
+  const [verkoop] = await db.select({ n: count() }).from(facturenTable).where(eq(facturenTable.type, "verkoop"));
+  const [klaarExport] = await db.select({ n: count() }).from(facturenTable)
+    .where(and(eq(facturenTable.status, "klaar_voor_accountview"), eq(facturenTable.geblokkeerd, false)));
+  const [afgekeurde] = await db.select({ n: count() }).from(facturenTable).where(eq(facturenTable.status, "afgekeurd"));
+  const [betaalde] = await db.select({ n: count() }).from(facturenTable).where(eq(facturenTable.betaalstatus, "betaald"));
+
+  const [openBedragRow] = await db.select({
+    totaal: sum(facturenTable.bedragInclBtw),
+  }).from(facturenTable).where(
+    and(ne(facturenTable.betaalstatus, "betaald"), ne(facturenTable.status, "afgekeurd"))
+  );
+
+  const vandaagStart = new Date(); vandaagStart.setHours(0, 0, 0, 0);
+  const maandStart = new Date(); maandStart.setDate(1); maandStart.setHours(0, 0, 0, 0);
+
+  const [exportsVandaag] = await db.select({ n: count() }).from(accountviewExportLogsTable)
+    .where(gte(accountviewExportLogsTable.exportOp, vandaagStart));
+  const [exportsMaand] = await db.select({ n: count() }).from(accountviewExportLogsTable)
+    .where(gte(accountviewExportLogsTable.exportOp, maandStart));
+
+  const [laastExport] = await db.select({ op: accountviewExportLogsTable.exportOp })
+    .from(accountviewExportLogsTable).orderBy(desc(accountviewExportLogsTable.exportOp)).limit(1);
+
+  const [exportFouten] = await db.select({ n: count() }).from(facturenTable)
+    .where(eq(facturenTable.accountviewStatus, "error"));
+
+  res.json({
+    facturen_totaal: totalen?.totaal ?? 0,
+    inkoop_totaal: inkoop?.n ?? 0,
+    verkoop_totaal: verkoop?.n ?? 0,
+    klaar_voor_export: klaarExport?.n ?? 0,
+    afgekeurd: afgekeurde?.n ?? 0,
+    betaald: betaalde?.n ?? 0,
+    open_bedrag: openBedragRow?.totaal ?? "0",
+    exports_vandaag: exportsVandaag?.n ?? 0,
+    exports_deze_maand: exportsMaand?.n ?? 0,
+    laatste_export_op: laastExport?.op?.toISOString() ?? null,
+    export_fouten_open: exportFouten?.n ?? 0,
+  });
 });
 
 export default router;

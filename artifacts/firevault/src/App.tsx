@@ -95,6 +95,8 @@ import SnagstreamDetailPagina from "@/pages/snagstream/detail";
 import FacturenPagina from "@/pages/facturen/index";
 import FactuurDetailPagina from "@/pages/facturen/detail";
 import KlaarVoorExportPagina from "@/pages/facturen/klaar-voor-export";
+import FinancieelDashboardPagina from "@/pages/facturen/dashboard";
+import ExportlogPagina from "@/pages/facturen/exportlog";
 import BoekhoudingBeheer from "@/pages/beheer/boekhouding";
 import BerichtenPagina from "@/pages/berichten/index";
 import ModulesCalculatie from "@/pages/modules/calculatie/index";
@@ -243,6 +245,8 @@ function ConnectPortal() {
         {/* ── Snagstream ── */}
         <Route path="/snagstream" component={SnagstreamArchiefPagina} />
         <Route path="/snagstream/:id" component={SnagstreamDetailPagina} />
+        <Route path="/facturen/dashboard" component={FinancieelDashboardPagina} />
+        <Route path="/facturen/exportlog" component={ExportlogPagina} />
         <Route path="/facturen/klaar-voor-export" component={KlaarVoorExportPagina} />
         <Route path="/facturen/:id" component={FactuurDetailPagina} />
         <Route path="/facturen" component={FacturenPagina} />

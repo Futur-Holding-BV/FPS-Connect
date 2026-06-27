@@ -47,6 +47,7 @@ import opdrachtenRouter from "./opdrachten";
 import snagstreamRouter from "./snagstream";
 import facturenRouter from "./facturen";
 import instellingenAccountviewRouter from "./instellingen-accountview";
+import accountviewMappingRouter from "./accountview-mapping";
 import { requireAuth } from "../middlewares/auth";
 
 const router: IRouter = Router();
@@ -103,5 +104,6 @@ router.use(opdrachtenRouter);
 router.use(snagstreamRouter);
 router.use(facturenRouter);
 router.use(instellingenAccountviewRouter);
+router.use(accountviewMappingRouter);
 
 export default router;

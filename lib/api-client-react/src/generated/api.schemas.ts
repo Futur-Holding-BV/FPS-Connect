@@ -5883,6 +5883,17 @@ export interface Factuur {
   accountview_export_op?: string | null;
   accountview_status?: string | null;
   accountview_fout?: string | null;
+  payload_hash?: string | null;
+  betaalstatus?: string | null;
+  betaaldatum?: string | null;
+  boekingsnummer?: string | null;
+  terugkoppeling_op?: string | null;
+  afgekeurd?: boolean;
+  afkeuring_reden?: string | null;
+  afgekeurd_op?: string | null;
+  afgekeurd_door_naam?: string | null;
+  herexport_op?: string | null;
+  herexport_reden?: string | null;
   aangemaakt_op: string;
   bijgewerkt_op?: string;
 }
@@ -5954,12 +5965,102 @@ export interface AccountviewExportLog {
   gebruiker_id?: number | null;
   export_op: string;
   testmodus: boolean;
+  actie: string;
   verzonden_payload?: AccountviewExportLogVerzondenPayload;
   accountview_response?: AccountviewExportLogAccountviewResponse;
   http_status?: number | null;
+  payload_hash?: string | null;
   status: string;
   accountview_boeking_id?: string | null;
   foutmelding?: string | null;
+}
+
+export interface ExportlogRegel {
+  id: number;
+  factuur_id: number;
+  factuurnummer?: string | null;
+  relatienaam?: string | null;
+  gebruiker_naam?: string | null;
+  export_op: string;
+  testmodus: boolean;
+  actie: string;
+  status: string;
+  accountview_boeking_id?: string | null;
+  foutmelding?: string | null;
+  http_status?: number | null;
+}
+
+export interface FactuurAfkeurenInput {
+  reden: string;
+}
+
+export interface FactuurHerexportInput {
+  reden?: string | null;
+}
+
+export interface FactuurBatchExportInput {
+  factuur_ids: number[];
+}
+
+export interface BatchExportResultaat {
+  totaal: number;
+  geslaagd: number;
+  mislukt: number;
+  resultaten: AccountviewExportResultaat[];
+}
+
+export interface FinancieelDashboard {
+  facturen_totaal: number;
+  inkoop_totaal: number;
+  verkoop_totaal: number;
+  klaar_voor_export: number;
+  afgekeurd: number;
+  betaald: number;
+  open_bedrag: string;
+  exports_vandaag: number;
+  exports_deze_maand: number;
+  laatste_export_op?: string | null;
+  export_fouten_open: number;
+}
+
+export interface AccountviewRelatieMapping {
+  id: number;
+  connect_relatienaam: string;
+  accountview_code: string;
+  type: string;
+  opmerking?: string | null;
+  bestaat_in_accountview: boolean;
+  aangemaakt_op: string;
+  bijgewerkt_op: string;
+}
+
+export interface AccountviewRelatieMappingInput {
+  connect_relatienaam: string;
+  accountview_code: string;
+  type: string;
+  opmerking?: string | null;
+  bestaat_in_accountview?: boolean;
+}
+
+export interface AccountviewProjectMapping {
+  id: number;
+  connect_project_code: string;
+  connect_gebouw_naam?: string | null;
+  accountview_projectcode?: string | null;
+  accountview_kostenplaats?: string | null;
+  opmerking?: string | null;
+  export_zonder_mapping: boolean;
+  aangemaakt_op: string;
+  bijgewerkt_op: string;
+}
+
+export interface AccountviewProjectMappingInput {
+  connect_project_code: string;
+  connect_gebouw_naam?: string | null;
+  accountview_projectcode?: string | null;
+  accountview_kostenplaats?: string | null;
+  opmerking?: string | null;
+  export_zonder_mapping?: boolean;
 }
 
 export type GetRecenteActiviteitParams = {
@@ -6342,5 +6443,14 @@ klaar_voor_export?: boolean;
 export type GetFactuurUploadUrl200 = {
   upload_url: string;
   object_path: string;
+};
+
+export type ListExportlogParams = {
+factuur_id?: number;
+status?: string;
+actie?: string;
+van?: string;
+tot?: string;
+limit?: number;
 };
 

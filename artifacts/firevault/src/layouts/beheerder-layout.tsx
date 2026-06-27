@@ -16,7 +16,7 @@ import {
   Trophy, HardDrive, ClipboardList, Smartphone, Plus, Hammer, PackageCheck,
   BookOpen, HardDriveUpload, CalendarCheck2, Settings2, ArchiveRestore,
   Inbox, Building2, Target, Handshake, Newspaper, CalendarRange, KeyRound,
-  ClipboardCheck, AlertTriangle, FileArchive, Receipt, ArrowUpRight,
+  ClipboardCheck, AlertTriangle, FileArchive, Receipt, ArrowUpRight, ScrollText,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { GebruikerMenu } from "@/components/gebruiker-menu";
@@ -511,11 +511,28 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
                       <SidebarMenuItem>
                         <SidebarMenuButton
                           asChild
-                          isActive={location === "/facturen" || (location.startsWith("/facturen/") && location !== "/facturen/klaar-voor-export")}
+                          isActive={location === "/facturen/dashboard"}
+                        >
+                          <Link href="/facturen/dashboard">
+                            <LayoutDashboard />
+                            <span>Overzicht</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                      <SidebarMenuItem>
+                        <SidebarMenuButton
+                          asChild
+                          isActive={
+                            location === "/facturen" ||
+                            (location.startsWith("/facturen/") &&
+                              location !== "/facturen/klaar-voor-export" &&
+                              location !== "/facturen/dashboard" &&
+                              location !== "/facturen/exportlog")
+                          }
                         >
                           <Link href="/facturen">
                             <Receipt />
-                            <span>Factuurverwerking</span>
+                            <span>Facturen</span>
                           </Link>
                         </SidebarMenuButton>
                       </SidebarMenuItem>
@@ -527,6 +544,17 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
                           <Link href="/facturen/klaar-voor-export">
                             <ArrowUpRight />
                             <span>Klaar voor export</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                      <SidebarMenuItem>
+                        <SidebarMenuButton
+                          asChild
+                          isActive={location === "/facturen/exportlog"}
+                        >
+                          <Link href="/facturen/exportlog">
+                            <ScrollText />
+                            <span>Exportlog</span>
                           </Link>
                         </SidebarMenuButton>
                       </SidebarMenuItem>
