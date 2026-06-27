@@ -32,6 +32,7 @@ import {
   getListAlleVerlofAanvragenQueryKey,
   getGetHrmStatsQueryKey,
   useGetMedewerkerAchievements,
+  useGetSalarisarchiefDocumenten,
 } from "@workspace/api-client-react";
 import type {
   MedewerkerInput,
@@ -269,6 +270,60 @@ function PrestatieSectie({ medewerkerId }: { medewerkerId: number }) {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+const MAANDEN = ["jan","feb","mrt","apr","mei","jun","jul","aug","sep","okt","nov","dec"];
+
+function SalarisdocumentenTab({ medewerkerId, magBewerken }: { medewerkerId: number; magBewerken: boolean }) {
+  const { data: docs = [], isLoading } = useGetSalarisarchiefDocumenten({ medewerker_id: medewerkerId });
+
+  const statusLabel: Record<string, string> = {
+    geupload: "Geüpload", controle_nodig: "Controle nodig", gekoppeld: "Gekoppeld",
+    gepubliceerd: "Gepubliceerd", gearchiveerd: "Gearchiveerd",
+  };
+  const statusVariant: Record<string, "default"|"secondary"|"destructive"|"outline"> = {
+    gepubliceerd: "default", controle_nodig: "destructive", gekoppeld: "secondary",
+    geupload: "outline", gearchiveerd: "outline",
+  };
+
+  if (isLoading) return <p className="text-sm text-muted-foreground py-4">Laden…</p>;
+  if (!docs.length) return (
+    <Card className="mt-2">
+      <CardContent className="py-8 text-center text-sm text-muted-foreground">
+        Geen salarisdocumenten gekoppeld aan deze medewerker.
+      </CardContent>
+    </Card>
+  );
+
+  return (
+    <div className="space-y-2 mt-2">
+      {docs.map((doc) => (
+        <Card key={doc.id}>
+          <CardContent className="flex items-center justify-between gap-3 py-3">
+            <div className="min-w-0">
+              <p className="text-sm font-medium truncate">{doc.bestandsnaam}</p>
+              <p className="text-xs text-muted-foreground">
+                {doc.type === "loonstrook" ? "Loonstrook" : doc.type === "jaaropgave" ? "Jaaropgave" : "Overig"}
+                {doc.periode_jaar && doc.periode_maand
+                  ? ` · ${MAANDEN[(doc.periode_maand ?? 1) - 1]} ${doc.periode_jaar}`
+                  : doc.periode_jaar
+                  ? ` · ${doc.periode_jaar}`
+                  : ""}
+              </p>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <Badge variant={statusVariant[doc.status] ?? "outline"}>{statusLabel[doc.status] ?? doc.status}</Badge>
+              {magBewerken && (
+                <a href={`/api/salarisarchief/documenten/${doc.id}/download`} target="_blank" rel="noreferrer">
+                  <Button variant="outline" size="sm">Download</Button>
+                </a>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      ))}
     </div>
   );
 }
@@ -698,6 +753,9 @@ export default function MedewerkerDetailPagina() {
           <TabsTrigger value="verlof">Verlof</TabsTrigger>
           <TabsTrigger value="achtergrond"><FileText className="h-3.5 w-3.5 mr-1.5" />Achtergrond / CV</TabsTrigger>
           <TabsTrigger value="prestaties"><Trophy className="h-3.5 w-3.5 mr-1.5" />Prestaties</TabsTrigger>
+          {(bevoegdheden.salarisarchief ?? 0) >= 1 && (
+            <TabsTrigger value="salarisdocumenten">Salarisdocumenten</TabsTrigger>
+          )}
         </TabsList>
 
         {/* Opleidingen */}
@@ -935,6 +993,13 @@ export default function MedewerkerDetailPagina() {
         <TabsContent value="prestaties">
           <PrestatieSectie medewerkerId={Number(id)} />
         </TabsContent>
+
+        {/* Salarisdocumenten */}
+        {(bevoegdheden.salarisarchief ?? 0) >= 1 && (
+          <TabsContent value="salarisdocumenten">
+            <SalarisdocumentenTab medewerkerId={Number(id)} magBewerken={(bevoegdheden.salarisarchief ?? 0) >= 2} />
+          </TabsContent>
+        )}
       </Tabs>
 
       {/* Profiel bewerken */}

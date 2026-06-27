@@ -97,6 +97,11 @@ export const MODULES = [
     label: "Financieel & Facturatie",
     omschrijving: "Factuurverwerking, accordering en AccountView-export",
   },
+  {
+    id: "salarisarchief",
+    label: "Salarisarchief & SEPA",
+    omschrijving: "Loonstroken, jaaropgaven, SEPA-betaalbestanden en salarisdocumentbeheer",
+  },
 ] as const;
 
 export type ModuleId = (typeof MODULES)[number]["id"];
@@ -252,7 +257,7 @@ export const PRESETS: Preset[] = [
   {
     naam: "HRM-adviseur",
     bevoegdheden: matrix({
-      personeel: 4, dossiers: 1, rapportages: 1,
+      personeel: 4, dossiers: 1, rapportages: 1, salarisarchief: 3,
     }),
   },
   {
@@ -268,7 +273,7 @@ export const PRESETS: Preset[] = [
       gebouwen: 2, voorzieningen: 2, inspecties: 2, onderhoud: 2,
       rapportages: 4, bibliotheek: 2, crm: 4, abonnementen: 4,
       personeel: 2, dossiers: 2, offertes: 2, calculaties: 1, planning: 2,
-      financieel: 2,
+      financieel: 2, salarisarchief: 1,
     }),
   },
   {
@@ -276,7 +281,7 @@ export const PRESETS: Preset[] = [
     bevoegdheden: matrix({
       gebouwen: 2, inspecties: 1, onderhoud: 2, rapportages: 3,
       crm: 2, personeel: 2, dossiers: 3, offertes: 1, planning: 1,
-      financieel: 4,
+      financieel: 4, salarisarchief: 2,
     }),
   },
   {

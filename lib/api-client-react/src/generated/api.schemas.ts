@@ -6063,6 +6063,125 @@ export interface AccountviewProjectMappingInput {
   export_zonder_mapping?: boolean;
 }
 
+export interface SalarisUploadInput {
+  omschrijving?: string;
+  periode_jaar?: number;
+  periode_maand?: number;
+  type?: string;
+}
+
+export interface SalarisBatch {
+  id: number;
+  omschrijving?: string | null;
+  periode_jaar?: number | null;
+  periode_maand?: number | null;
+  status: string;
+  uploader_naam?: string | null;
+  totaal_bestanden: number;
+  gekoppeld: number;
+  ongekoppeld: number;
+  controle_nodig: number;
+  aangemaakt_op: string;
+  bijgewerkt_op: string;
+}
+
+export interface SalarisbestandRegel {
+  id: number;
+  batch_id?: number | null;
+  type: string;
+  periode_jaar?: number | null;
+  periode_maand?: number | null;
+  medewerker_id?: number | null;
+  medewerker_naam?: string | null;
+  medewerker_naam_ai?: string | null;
+  status: string;
+  zichtbaar_medewerker: boolean;
+  bestandsnaam: string;
+  bestandsgrootte?: number | null;
+  mime_type?: string | null;
+  uploader_naam?: string | null;
+  ai_zekerheid?: number | null;
+  ai_toelichting?: string | null;
+  bronbestand_naam?: string | null;
+  aangemaakt_op: string;
+  bijgewerkt_op: string;
+}
+
+export type SalarisBatchDetail = SalarisBatch & {
+  documenten: SalarisbestandRegel[];
+};
+
+export interface SalarisbestandPatch {
+  medewerker_id?: number | null;
+  status?: string;
+  zichtbaar_medewerker?: boolean;
+  periode_jaar?: number | null;
+  periode_maand?: number | null;
+  type?: string;
+}
+
+export interface SalarisBatchPublicerenInput {
+  document_ids: number[];
+}
+
+export interface SalarisBatchPublicerenResultaat {
+  gepubliceerd: number;
+  overgeslagen: number;
+  totaal: number;
+  foutmeldingen?: string[];
+}
+
+export type SalarisdocumentAuditRegelExtra = { [key: string]: unknown } | null;
+
+export interface SalarisdocumentAuditRegel {
+  id: number;
+  document_id?: number | null;
+  sepa_id?: number | null;
+  actie: string;
+  gebruiker_naam?: string | null;
+  medewerker_id?: number | null;
+  document_type?: string | null;
+  batch_id?: number | null;
+  tijdstip: string;
+  extra?: SalarisdocumentAuditRegelExtra;
+}
+
+export interface SepaUploadInput {
+  omschrijving?: string;
+  periode_jaar?: number;
+  periode_maand?: number;
+}
+
+export interface SepaBestand {
+  id: number;
+  omschrijving?: string | null;
+  periode_jaar?: number | null;
+  periode_maand?: number | null;
+  betaaldatum?: string | null;
+  totaalbedrag?: string | null;
+  aantal_betalingen?: number | null;
+  iban_opdrachtgever?: string | null;
+  bestandsformaat?: string | null;
+  status: string;
+  bestandsnaam: string;
+  bestandsgrootte?: number | null;
+  uploader_naam?: string | null;
+  gedownload_op?: string | null;
+  fouten?: string[] | null;
+  batch_referentie?: string | null;
+  aangemaakt_op: string;
+  bijgewerkt_op: string;
+}
+
+export interface SepaBestandPatch {
+  status?: string;
+  omschrijving?: string;
+}
+
+export interface DownloadUrlResultaat {
+  url: string;
+}
+
 export type GetRecenteActiviteitParams = {
 limit?: number;
 };
@@ -6451,6 +6570,19 @@ status?: string;
 actie?: string;
 van?: string;
 tot?: string;
+limit?: number;
+};
+
+export type GetSalarisarchiefDocumentenParams = {
+batch_id?: number;
+medewerker_id?: number;
+type?: string;
+status?: string;
+};
+
+export type GetSalarisarchiefAuditlogParams = {
+document_id?: number;
+medewerker_id?: number;
 limit?: number;
 };
 

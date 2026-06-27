@@ -11916,6 +11916,323 @@ paths:
           description: Verwijderd
 
 
+  /salarisarchief/upload:
+    post:
+      summary: Salarisdocumenten uploaden (batch)
+      tags: [Salarisarchief]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SalarisUploadInput'
+      responses:
+        "201":
+          description: Batch aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SalarisBatch'
+
+  /salarisarchief/batches:
+    get:
+      summary: Lijst uploadbatches
+      tags: [Salarisarchief]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SalarisBatch'
+
+  /salarisarchief/batches/{id}:
+    get:
+      summary: Batch detail met documenten
+      tags: [Salarisarchief]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SalarisBatchDetail'
+        "404":
+          description: Niet gevonden
+
+  /salarisarchief/documenten:
+    get:
+      summary: Lijst salarisdocumenten
+      tags: [Salarisarchief]
+      parameters:
+        - name: batch_id
+          in: query
+          schema:
+            type: integer
+        - name: medewerker_id
+          in: query
+          schema:
+            type: integer
+        - name: type
+          in: query
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SalarisbestandRegel'
+
+  /salarisarchief/documenten/{id}:
+    get:
+      summary: Document detail
+      tags: [Salarisarchief]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SalarisbestandRegel'
+        "404":
+          description: Niet gevonden
+    patch:
+      summary: Document bijwerken
+      tags: [Salarisarchief]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SalarisbestandPatch'
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SalarisbestandRegel'
+
+  /salarisarchief/documenten/{id}/publiceer:
+    post:
+      summary: Document publiceren naar medewerker
+      tags: [Salarisarchief]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SalarisbestandRegel'
+
+  /salarisarchief/documenten/{id}/download-url:
+    get:
+      summary: Download-URL ophalen
+      tags: [Salarisarchief]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DownloadUrlResultaat'
+        "404":
+          description: Niet gevonden
+
+  /salarisarchief/batch-publiceer:
+    post:
+      summary: Meerdere documenten in batch publiceren
+      tags: [Salarisarchief]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SalarisBatchPublicerenInput'
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SalarisBatchPublicerenResultaat'
+
+  /salarisarchief/auditlog:
+    get:
+      summary: Auditlog salarisdocumenten
+      tags: [Salarisarchief]
+      parameters:
+        - name: document_id
+          in: query
+          schema:
+            type: integer
+        - name: medewerker_id
+          in: query
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SalarisdocumentAuditRegel'
+
+  /mijn/salarisdocumenten:
+    get:
+      summary: Eigen salarisdocumenten (medewerker)
+      tags: [Salarisarchief]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SalarisbestandRegel'
+
+  /sepa-bestanden:
+    get:
+      summary: Lijst SEPA-betaalbestanden
+      tags: [SEPA]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SepaBestand'
+
+  /sepa-bestanden/upload:
+    post:
+      summary: SEPA-bestand uploaden
+      tags: [SEPA]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SepaUploadInput'
+      responses:
+        "201":
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SepaBestand'
+
+  /sepa-bestanden/{id}:
+    get:
+      summary: SEPA-bestand detail
+      tags: [SEPA]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SepaBestand'
+        "404":
+          description: Niet gevonden
+    patch:
+      summary: SEPA-bestand status bijwerken
+      tags: [SEPA]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SepaBestandPatch'
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SepaBestand'
+
+  /sepa-bestanden/{id}/download-url:
+    get:
+      summary: Download-URL ophalen voor SEPA-bestand
+      tags: [SEPA]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DownloadUrlResultaat'
+        "404":
+          description: Niet gevonden
+
+
 components:
   schemas:
     MailStatus:
@@ -21776,4 +22093,272 @@ components:
           nullable: true
         export_zonder_mapping:
           type: boolean
+
+    SalarisUploadInput:
+      type: object
+      properties:
+        omschrijving:
+          type: string
+        periode_jaar:
+          type: integer
+        periode_maand:
+          type: integer
+        type:
+          type: string
+
+    SalarisBatch:
+      type: object
+      required: [id, status, totaal_bestanden, gekoppeld, ongekoppeld, controle_nodig, aangemaakt_op, bijgewerkt_op]
+      properties:
+        id:
+          type: integer
+        omschrijving:
+          type: string
+          nullable: true
+        periode_jaar:
+          type: integer
+          nullable: true
+        periode_maand:
+          type: integer
+          nullable: true
+        status:
+          type: string
+        uploader_naam:
+          type: string
+          nullable: true
+        totaal_bestanden:
+          type: integer
+        gekoppeld:
+          type: integer
+        ongekoppeld:
+          type: integer
+        controle_nodig:
+          type: integer
+        aangemaakt_op:
+          type: string
+        bijgewerkt_op:
+          type: string
+
+    SalarisBatchDetail:
+      allOf:
+        - $ref: '#/components/schemas/SalarisBatch'
+        - type: object
+          required: [documenten]
+          properties:
+            documenten:
+              type: array
+              items:
+                $ref: '#/components/schemas/SalarisbestandRegel'
+
+    SalarisbestandRegel:
+      type: object
+      required: [id, type, status, zichtbaar_medewerker, bestandsnaam, aangemaakt_op, bijgewerkt_op]
+      properties:
+        id:
+          type: integer
+        batch_id:
+          type: integer
+          nullable: true
+        type:
+          type: string
+        periode_jaar:
+          type: integer
+          nullable: true
+        periode_maand:
+          type: integer
+          nullable: true
+        medewerker_id:
+          type: integer
+          nullable: true
+        medewerker_naam:
+          type: string
+          nullable: true
+        medewerker_naam_ai:
+          type: string
+          nullable: true
+        status:
+          type: string
+        zichtbaar_medewerker:
+          type: boolean
+        bestandsnaam:
+          type: string
+        bestandsgrootte:
+          type: integer
+          nullable: true
+        mime_type:
+          type: string
+          nullable: true
+        uploader_naam:
+          type: string
+          nullable: true
+        ai_zekerheid:
+          type: number
+          nullable: true
+        ai_toelichting:
+          type: string
+          nullable: true
+        bronbestand_naam:
+          type: string
+          nullable: true
+        aangemaakt_op:
+          type: string
+        bijgewerkt_op:
+          type: string
+
+    SalarisbestandPatch:
+      type: object
+      properties:
+        medewerker_id:
+          type: integer
+          nullable: true
+        status:
+          type: string
+        zichtbaar_medewerker:
+          type: boolean
+        periode_jaar:
+          type: integer
+          nullable: true
+        periode_maand:
+          type: integer
+          nullable: true
+        type:
+          type: string
+
+    SalarisBatchPublicerenInput:
+      type: object
+      required: [document_ids]
+      properties:
+        document_ids:
+          type: array
+          items:
+            type: integer
+
+    SalarisBatchPublicerenResultaat:
+      type: object
+      required: [gepubliceerd, overgeslagen, totaal]
+      properties:
+        gepubliceerd:
+          type: integer
+        overgeslagen:
+          type: integer
+        totaal:
+          type: integer
+        foutmeldingen:
+          type: array
+          items:
+            type: string
+
+    SalarisdocumentAuditRegel:
+      type: object
+      required: [id, actie, tijdstip]
+      properties:
+        id:
+          type: integer
+        document_id:
+          type: integer
+          nullable: true
+        sepa_id:
+          type: integer
+          nullable: true
+        actie:
+          type: string
+        gebruiker_naam:
+          type: string
+          nullable: true
+        medewerker_id:
+          type: integer
+          nullable: true
+        document_type:
+          type: string
+          nullable: true
+        batch_id:
+          type: integer
+          nullable: true
+        tijdstip:
+          type: string
+        extra:
+          type: object
+          nullable: true
+          additionalProperties: true
+
+    SepaUploadInput:
+      type: object
+      properties:
+        omschrijving:
+          type: string
+        periode_jaar:
+          type: integer
+        periode_maand:
+          type: integer
+
+    SepaBestand:
+      type: object
+      required: [id, status, bestandsnaam, aangemaakt_op, bijgewerkt_op]
+      properties:
+        id:
+          type: integer
+        omschrijving:
+          type: string
+          nullable: true
+        periode_jaar:
+          type: integer
+          nullable: true
+        periode_maand:
+          type: integer
+          nullable: true
+        betaaldatum:
+          type: string
+          nullable: true
+        totaalbedrag:
+          type: string
+          nullable: true
+        aantal_betalingen:
+          type: integer
+          nullable: true
+        iban_opdrachtgever:
+          type: string
+          nullable: true
+        bestandsformaat:
+          type: string
+          nullable: true
+        status:
+          type: string
+        bestandsnaam:
+          type: string
+        bestandsgrootte:
+          type: integer
+          nullable: true
+        uploader_naam:
+          type: string
+          nullable: true
+        gedownload_op:
+          type: string
+          nullable: true
+        fouten:
+          type: array
+          nullable: true
+          items:
+            type: string
+        batch_referentie:
+          type: string
+          nullable: true
+        aangemaakt_op:
+          type: string
+        bijgewerkt_op:
+          type: string
+
+    SepaBestandPatch:
+      type: object
+      properties:
+        status:
+          type: string
+        omschrijving:
+          type: string
+
+    DownloadUrlResultaat:
+      type: object
+      required: [url]
+      properties:
+        url:
+          type: string
 

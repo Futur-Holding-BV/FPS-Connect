@@ -97,6 +97,10 @@ import FactuurDetailPagina from "@/pages/facturen/detail";
 import KlaarVoorExportPagina from "@/pages/facturen/klaar-voor-export";
 import FinancieelDashboardPagina from "@/pages/facturen/dashboard";
 import ExportlogPagina from "@/pages/facturen/exportlog";
+import SalarisarchiefPagina from "@/pages/salarisarchief/index";
+import SalarisarchiefBatchDetailPagina from "@/pages/salarisarchief/batch-detail";
+import SepaBestandenPagina from "@/pages/sepa-bestanden/index";
+import MijnSalarisdocumentenPagina from "@/pages/mijn/salarisdocumenten";
 import BoekhoudingBeheer from "@/pages/beheer/boekhouding";
 import BerichtenPagina from "@/pages/berichten/index";
 import ModulesCalculatie from "@/pages/modules/calculatie/index";
@@ -250,6 +254,9 @@ function ConnectPortal() {
         <Route path="/facturen/klaar-voor-export" component={KlaarVoorExportPagina} />
         <Route path="/facturen/:id" component={FactuurDetailPagina} />
         <Route path="/facturen" component={FacturenPagina} />
+        <Route path="/salarisarchief/batch/:id" component={SalarisarchiefBatchDetailPagina} />
+        <Route path="/salarisarchief" component={SalarisarchiefPagina} />
+        <Route path="/sepa-bestanden" component={SepaBestandenPagina} />
 
         {/* ── Communicatie ── */}
         <Route path="/berichten" component={BerichtenPagina} />
@@ -309,6 +316,7 @@ function ConnectPortal() {
         <Route path="/beheer/pwa-test" component={PwaTest} />
         <Route path="/beheer/privacy" component={BeheerPrivacy} />
         <Route path="/mijn/privacy" component={PrivacyCentrum} />
+        <Route path="/mijn/salarisdocumenten" component={MijnSalarisdocumentenPagina} />
 
         {/* ── FPS ONE (klantportaal, via omgevingsswitch) ── */}
         <Route path="/one/dashboard" component={OneDashboard} />

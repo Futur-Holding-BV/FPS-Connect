@@ -14907,3 +14907,405 @@ export const DeleteProjectMappingParams = zod.object({
 export const DeleteProjectMappingResponse = zod.void()
 
 
+/**
+ * @summary Salarisdocumenten uploaden (batch)
+ */
+export const PostSalarisarchiefUploadBody = zod.object({
+  "omschrijving": zod.string().optional(),
+  "periode_jaar": zod.number().optional(),
+  "periode_maand": zod.number().optional(),
+  "type": zod.string().optional()
+})
+
+export const PostSalarisarchiefUploadResponse = zod.void()
+
+
+/**
+ * @summary Lijst uploadbatches
+ */
+export const GetSalarisarchiefBatchesResponseItem = zod.object({
+  "id": zod.number(),
+  "omschrijving": zod.string().nullish(),
+  "periode_jaar": zod.number().nullish(),
+  "periode_maand": zod.number().nullish(),
+  "status": zod.string(),
+  "uploader_naam": zod.string().nullish(),
+  "totaal_bestanden": zod.number(),
+  "gekoppeld": zod.number(),
+  "ongekoppeld": zod.number(),
+  "controle_nodig": zod.number(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+export const GetSalarisarchiefBatchesResponse = zod.array(GetSalarisarchiefBatchesResponseItem)
+
+
+/**
+ * @summary Batch detail met documenten
+ */
+export const GetSalarisarchiefBatchesIdParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetSalarisarchiefBatchesIdResponse = zod.object({
+  "id": zod.number(),
+  "omschrijving": zod.string().nullish(),
+  "periode_jaar": zod.number().nullish(),
+  "periode_maand": zod.number().nullish(),
+  "status": zod.string(),
+  "uploader_naam": zod.string().nullish(),
+  "totaal_bestanden": zod.number(),
+  "gekoppeld": zod.number(),
+  "ongekoppeld": zod.number(),
+  "controle_nodig": zod.number(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+}).and(zod.object({
+  "documenten": zod.array(zod.object({
+  "id": zod.number(),
+  "batch_id": zod.number().nullish(),
+  "type": zod.string(),
+  "periode_jaar": zod.number().nullish(),
+  "periode_maand": zod.number().nullish(),
+  "medewerker_id": zod.number().nullish(),
+  "medewerker_naam": zod.string().nullish(),
+  "medewerker_naam_ai": zod.string().nullish(),
+  "status": zod.string(),
+  "zichtbaar_medewerker": zod.boolean(),
+  "bestandsnaam": zod.string(),
+  "bestandsgrootte": zod.number().nullish(),
+  "mime_type": zod.string().nullish(),
+  "uploader_naam": zod.string().nullish(),
+  "ai_zekerheid": zod.number().nullish(),
+  "ai_toelichting": zod.string().nullish(),
+  "bronbestand_naam": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+}))
+}))
+
+
+/**
+ * @summary Lijst salarisdocumenten
+ */
+export const GetSalarisarchiefDocumentenQueryParams = zod.object({
+  "batch_id": zod.coerce.number().optional(),
+  "medewerker_id": zod.coerce.number().optional(),
+  "type": zod.coerce.string().optional(),
+  "status": zod.coerce.string().optional()
+})
+
+export const GetSalarisarchiefDocumentenResponseItem = zod.object({
+  "id": zod.number(),
+  "batch_id": zod.number().nullish(),
+  "type": zod.string(),
+  "periode_jaar": zod.number().nullish(),
+  "periode_maand": zod.number().nullish(),
+  "medewerker_id": zod.number().nullish(),
+  "medewerker_naam": zod.string().nullish(),
+  "medewerker_naam_ai": zod.string().nullish(),
+  "status": zod.string(),
+  "zichtbaar_medewerker": zod.boolean(),
+  "bestandsnaam": zod.string(),
+  "bestandsgrootte": zod.number().nullish(),
+  "mime_type": zod.string().nullish(),
+  "uploader_naam": zod.string().nullish(),
+  "ai_zekerheid": zod.number().nullish(),
+  "ai_toelichting": zod.string().nullish(),
+  "bronbestand_naam": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+export const GetSalarisarchiefDocumentenResponse = zod.array(GetSalarisarchiefDocumentenResponseItem)
+
+
+/**
+ * @summary Document detail
+ */
+export const GetSalarisarchiefDocumentenIdParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetSalarisarchiefDocumentenIdResponse = zod.object({
+  "id": zod.number(),
+  "batch_id": zod.number().nullish(),
+  "type": zod.string(),
+  "periode_jaar": zod.number().nullish(),
+  "periode_maand": zod.number().nullish(),
+  "medewerker_id": zod.number().nullish(),
+  "medewerker_naam": zod.string().nullish(),
+  "medewerker_naam_ai": zod.string().nullish(),
+  "status": zod.string(),
+  "zichtbaar_medewerker": zod.boolean(),
+  "bestandsnaam": zod.string(),
+  "bestandsgrootte": zod.number().nullish(),
+  "mime_type": zod.string().nullish(),
+  "uploader_naam": zod.string().nullish(),
+  "ai_zekerheid": zod.number().nullish(),
+  "ai_toelichting": zod.string().nullish(),
+  "bronbestand_naam": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+
+
+/**
+ * @summary Document bijwerken
+ */
+export const PatchSalarisarchiefDocumentenIdParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const PatchSalarisarchiefDocumentenIdBody = zod.object({
+  "medewerker_id": zod.number().nullish(),
+  "status": zod.string().optional(),
+  "zichtbaar_medewerker": zod.boolean().optional(),
+  "periode_jaar": zod.number().nullish(),
+  "periode_maand": zod.number().nullish(),
+  "type": zod.string().optional()
+})
+
+export const PatchSalarisarchiefDocumentenIdResponse = zod.object({
+  "id": zod.number(),
+  "batch_id": zod.number().nullish(),
+  "type": zod.string(),
+  "periode_jaar": zod.number().nullish(),
+  "periode_maand": zod.number().nullish(),
+  "medewerker_id": zod.number().nullish(),
+  "medewerker_naam": zod.string().nullish(),
+  "medewerker_naam_ai": zod.string().nullish(),
+  "status": zod.string(),
+  "zichtbaar_medewerker": zod.boolean(),
+  "bestandsnaam": zod.string(),
+  "bestandsgrootte": zod.number().nullish(),
+  "mime_type": zod.string().nullish(),
+  "uploader_naam": zod.string().nullish(),
+  "ai_zekerheid": zod.number().nullish(),
+  "ai_toelichting": zod.string().nullish(),
+  "bronbestand_naam": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+
+
+/**
+ * @summary Document publiceren naar medewerker
+ */
+export const PostSalarisarchiefDocumentenIdPubliceerParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const PostSalarisarchiefDocumentenIdPubliceerResponse = zod.object({
+  "id": zod.number(),
+  "batch_id": zod.number().nullish(),
+  "type": zod.string(),
+  "periode_jaar": zod.number().nullish(),
+  "periode_maand": zod.number().nullish(),
+  "medewerker_id": zod.number().nullish(),
+  "medewerker_naam": zod.string().nullish(),
+  "medewerker_naam_ai": zod.string().nullish(),
+  "status": zod.string(),
+  "zichtbaar_medewerker": zod.boolean(),
+  "bestandsnaam": zod.string(),
+  "bestandsgrootte": zod.number().nullish(),
+  "mime_type": zod.string().nullish(),
+  "uploader_naam": zod.string().nullish(),
+  "ai_zekerheid": zod.number().nullish(),
+  "ai_toelichting": zod.string().nullish(),
+  "bronbestand_naam": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+
+
+/**
+ * @summary Download-URL ophalen
+ */
+export const GetSalarisarchiefDocumentenIdDownloadUrlParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetSalarisarchiefDocumentenIdDownloadUrlResponse = zod.object({
+  "url": zod.string()
+})
+
+
+/**
+ * @summary Meerdere documenten in batch publiceren
+ */
+export const PostSalarisarchiefBatchPubliceerBody = zod.object({
+  "document_ids": zod.array(zod.number())
+})
+
+export const PostSalarisarchiefBatchPubliceerResponse = zod.object({
+  "gepubliceerd": zod.number(),
+  "overgeslagen": zod.number(),
+  "totaal": zod.number(),
+  "foutmeldingen": zod.array(zod.string()).optional()
+})
+
+
+/**
+ * @summary Auditlog salarisdocumenten
+ */
+export const GetSalarisarchiefAuditlogQueryParams = zod.object({
+  "document_id": zod.coerce.number().optional(),
+  "medewerker_id": zod.coerce.number().optional(),
+  "limit": zod.coerce.number().optional()
+})
+
+export const GetSalarisarchiefAuditlogResponseItem = zod.object({
+  "id": zod.number(),
+  "document_id": zod.number().nullish(),
+  "sepa_id": zod.number().nullish(),
+  "actie": zod.string(),
+  "gebruiker_naam": zod.string().nullish(),
+  "medewerker_id": zod.number().nullish(),
+  "document_type": zod.string().nullish(),
+  "batch_id": zod.number().nullish(),
+  "tijdstip": zod.string(),
+  "extra": zod.record(zod.string(), zod.unknown()).nullish()
+})
+export const GetSalarisarchiefAuditlogResponse = zod.array(GetSalarisarchiefAuditlogResponseItem)
+
+
+/**
+ * @summary Eigen salarisdocumenten (medewerker)
+ */
+export const GetMijnSalarisdocumentenResponseItem = zod.object({
+  "id": zod.number(),
+  "batch_id": zod.number().nullish(),
+  "type": zod.string(),
+  "periode_jaar": zod.number().nullish(),
+  "periode_maand": zod.number().nullish(),
+  "medewerker_id": zod.number().nullish(),
+  "medewerker_naam": zod.string().nullish(),
+  "medewerker_naam_ai": zod.string().nullish(),
+  "status": zod.string(),
+  "zichtbaar_medewerker": zod.boolean(),
+  "bestandsnaam": zod.string(),
+  "bestandsgrootte": zod.number().nullish(),
+  "mime_type": zod.string().nullish(),
+  "uploader_naam": zod.string().nullish(),
+  "ai_zekerheid": zod.number().nullish(),
+  "ai_toelichting": zod.string().nullish(),
+  "bronbestand_naam": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+export const GetMijnSalarisdocumentenResponse = zod.array(GetMijnSalarisdocumentenResponseItem)
+
+
+/**
+ * @summary Lijst SEPA-betaalbestanden
+ */
+export const GetSepaBestandenResponseItem = zod.object({
+  "id": zod.number(),
+  "omschrijving": zod.string().nullish(),
+  "periode_jaar": zod.number().nullish(),
+  "periode_maand": zod.number().nullish(),
+  "betaaldatum": zod.string().nullish(),
+  "totaalbedrag": zod.string().nullish(),
+  "aantal_betalingen": zod.number().nullish(),
+  "iban_opdrachtgever": zod.string().nullish(),
+  "bestandsformaat": zod.string().nullish(),
+  "status": zod.string(),
+  "bestandsnaam": zod.string(),
+  "bestandsgrootte": zod.number().nullish(),
+  "uploader_naam": zod.string().nullish(),
+  "gedownload_op": zod.string().nullish(),
+  "fouten": zod.array(zod.string()).nullish(),
+  "batch_referentie": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+export const GetSepaBestandenResponse = zod.array(GetSepaBestandenResponseItem)
+
+
+/**
+ * @summary SEPA-bestand uploaden
+ */
+export const PostSepaBestandenUploadBody = zod.object({
+  "omschrijving": zod.string().optional(),
+  "periode_jaar": zod.number().optional(),
+  "periode_maand": zod.number().optional()
+})
+
+export const PostSepaBestandenUploadResponse = zod.void()
+
+
+/**
+ * @summary SEPA-bestand detail
+ */
+export const GetSepaBestandenIdParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetSepaBestandenIdResponse = zod.object({
+  "id": zod.number(),
+  "omschrijving": zod.string().nullish(),
+  "periode_jaar": zod.number().nullish(),
+  "periode_maand": zod.number().nullish(),
+  "betaaldatum": zod.string().nullish(),
+  "totaalbedrag": zod.string().nullish(),
+  "aantal_betalingen": zod.number().nullish(),
+  "iban_opdrachtgever": zod.string().nullish(),
+  "bestandsformaat": zod.string().nullish(),
+  "status": zod.string(),
+  "bestandsnaam": zod.string(),
+  "bestandsgrootte": zod.number().nullish(),
+  "uploader_naam": zod.string().nullish(),
+  "gedownload_op": zod.string().nullish(),
+  "fouten": zod.array(zod.string()).nullish(),
+  "batch_referentie": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+
+
+/**
+ * @summary SEPA-bestand status bijwerken
+ */
+export const PatchSepaBestandenIdParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const PatchSepaBestandenIdBody = zod.object({
+  "status": zod.string().optional(),
+  "omschrijving": zod.string().optional()
+})
+
+export const PatchSepaBestandenIdResponse = zod.object({
+  "id": zod.number(),
+  "omschrijving": zod.string().nullish(),
+  "periode_jaar": zod.number().nullish(),
+  "periode_maand": zod.number().nullish(),
+  "betaaldatum": zod.string().nullish(),
+  "totaalbedrag": zod.string().nullish(),
+  "aantal_betalingen": zod.number().nullish(),
+  "iban_opdrachtgever": zod.string().nullish(),
+  "bestandsformaat": zod.string().nullish(),
+  "status": zod.string(),
+  "bestandsnaam": zod.string(),
+  "bestandsgrootte": zod.number().nullish(),
+  "uploader_naam": zod.string().nullish(),
+  "gedownload_op": zod.string().nullish(),
+  "fouten": zod.array(zod.string()).nullish(),
+  "batch_referentie": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+
+
+/**
+ * @summary Download-URL ophalen voor SEPA-bestand
+ */
+export const GetSepaBestandenIdDownloadUrlParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetSepaBestandenIdDownloadUrlResponse = zod.object({
+  "url": zod.string()
+})
+
+

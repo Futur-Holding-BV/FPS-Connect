@@ -54,6 +54,7 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
   const toonToolboxen     = heeftNiveau("toolbox", 1);
   const toonSnagstream    = heeftNiveau("bibliotheek", 1);
   const toonFinancieel    = heeftNiveau("financieel", 1);
+  const toonSalarisarchief = heeftNiveau("salarisarchief", 1);
 
   const heeftOne = isHoofdbeheerder;
   const aantalOmgevingen = 1 + (heeftOne ? 1 : 0);
@@ -558,6 +559,19 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
                           </Link>
                         </SidebarMenuButton>
                       </SidebarMenuItem>
+                      {toonSalarisarchief && (
+                        <SidebarMenuItem>
+                          <SidebarMenuButton
+                            asChild
+                            isActive={location === "/sepa-bestanden"}
+                          >
+                            <Link href="/sepa-bestanden">
+                              <CreditCard />
+                              <span>SEPA-bestanden</span>
+                            </Link>
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                      )}
                     </SidebarMenu>
                   </SidebarGroupContent>
                 </SidebarGroup>
@@ -653,6 +667,19 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
                             <Link href="/personeel/jaarafsluiting">
                               <ArchiveRestore />
                               <span>Jaarafsluiting verlof</span>
+                            </Link>
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                      )}
+                      {toonSalarisarchief && (
+                        <SidebarMenuItem>
+                          <SidebarMenuButton
+                            asChild
+                            isActive={location === "/salarisarchief" || location.startsWith("/salarisarchief/")}
+                          >
+                            <Link href="/salarisarchief">
+                              <HardDriveUpload />
+                              <span>Salarisarchief</span>
                             </Link>
                           </SidebarMenuButton>
                         </SidebarMenuItem>

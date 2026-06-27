@@ -1,4 +1,5 @@
 export * from "./gebruikers";
+export * from "./salaris";
 export * from "./gebouwen";
 export * from "./voorzieningen";
 export * from "./documenten";

@@ -48,6 +48,7 @@ import snagstreamRouter from "./snagstream";
 import facturenRouter from "./facturen";
 import instellingenAccountviewRouter from "./instellingen-accountview";
 import accountviewMappingRouter from "./accountview-mapping";
+import salarisarchiefRouter from "./salarisarchief";
 import { requireAuth } from "../middlewares/auth";
 
 const router: IRouter = Router();
@@ -105,5 +106,6 @@ router.use(snagstreamRouter);
 router.use(facturenRouter);
 router.use(instellingenAccountviewRouter);
 router.use(accountviewMappingRouter);
+router.use(salarisarchiefRouter);
 
 export default router;

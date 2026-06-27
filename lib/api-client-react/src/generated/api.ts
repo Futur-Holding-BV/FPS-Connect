@@ -111,6 +111,7 @@ import type {
   DossierDocument,
   DossierDocumentInput,
   DossierInput,
+  DownloadUrlResultaat,
   ErrorEnvelope,
   ExportlogRegel,
   Fabrikant,
@@ -163,6 +164,8 @@ import type {
   GetMijnWeekUrenParams,
   GetPlanningNacalculatieParams,
   GetRecenteActiviteitParams,
+  GetSalarisarchiefAuditlogParams,
+  GetSalarisarchiefDocumentenParams,
   GetVeiligheidLmrasUploadUrl200,
   GetVeiligheidMeldingenUploadUrl200,
   GetVeiligheidToolboxenParams,
@@ -351,10 +354,21 @@ import type {
   RapportDefinitief,
   RapportInput,
   RapportPatch,
+  SalarisBatch,
+  SalarisBatchDetail,
+  SalarisBatchPublicerenInput,
+  SalarisBatchPublicerenResultaat,
+  SalarisUploadInput,
+  SalarisbestandPatch,
+  SalarisbestandRegel,
+  SalarisdocumentAuditRegel,
   ScanCrmMarktintelligentieAi503,
   Scheiding,
   ScheidingInput,
   ScheidingUpdate,
+  SepaBestand,
+  SepaBestandPatch,
+  SepaUploadInput,
   SnagstreamOvernemenInput,
   SnagstreamRapport,
   SnagstreamRapportInput,
@@ -42621,4 +42635,1233 @@ export const useDeleteProjectMapping = <TError = ErrorType<unknown>,
       > => {
       return useMutation(getDeleteProjectMappingMutationOptions(options));
     }
+
+export const getPostSalarisarchiefUploadUrl = () => {
+
+
+
+
+  return `/api/salarisarchief/upload`
+}
+
+/**
+ * @summary Salarisdocumenten uploaden (batch)
+ */
+export const postSalarisarchiefUpload = async (salarisUploadInput: SalarisUploadInput, options?: RequestInit): Promise<SalarisBatch> => {
+    const formData = new FormData();
+if(salarisUploadInput.omschrijving !== undefined) {
+ formData.append(`omschrijving`, salarisUploadInput.omschrijving);
+ }
+if(salarisUploadInput.periode_jaar !== undefined) {
+ formData.append(`periode_jaar`, salarisUploadInput.periode_jaar.toString())
+ }
+if(salarisUploadInput.periode_maand !== undefined) {
+ formData.append(`periode_maand`, salarisUploadInput.periode_maand.toString())
+ }
+if(salarisUploadInput.type !== undefined) {
+ formData.append(`type`, salarisUploadInput.type);
+ }
+
+  return customFetch<SalarisBatch>(getPostSalarisarchiefUploadUrl(),
+  {
+    ...options,
+    method: 'POST'
+    ,
+    body: formData
+  }
+);}
+
+
+
+
+export const getPostSalarisarchiefUploadMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postSalarisarchiefUpload>>, TError,{data: BodyType<SalarisUploadInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof postSalarisarchiefUpload>>, TError,{data: BodyType<SalarisUploadInput>}, TContext> => {
+
+const mutationKey = ['postSalarisarchiefUpload'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postSalarisarchiefUpload>>, {data: BodyType<SalarisUploadInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  postSalarisarchiefUpload(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PostSalarisarchiefUploadMutationResult = NonNullable<Awaited<ReturnType<typeof postSalarisarchiefUpload>>>
+    export type PostSalarisarchiefUploadMutationBody = BodyType<SalarisUploadInput>
+    export type PostSalarisarchiefUploadMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Salarisdocumenten uploaden (batch)
+ */
+export const usePostSalarisarchiefUpload = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postSalarisarchiefUpload>>, TError,{data: BodyType<SalarisUploadInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof postSalarisarchiefUpload>>,
+        TError,
+        {data: BodyType<SalarisUploadInput>},
+        TContext
+      > => {
+      return useMutation(getPostSalarisarchiefUploadMutationOptions(options));
+    }
+
+export const getGetSalarisarchiefBatchesUrl = () => {
+
+
+
+
+  return `/api/salarisarchief/batches`
+}
+
+/**
+ * @summary Lijst uploadbatches
+ */
+export const getSalarisarchiefBatches = async ( options?: RequestInit): Promise<SalarisBatch[]> => {
+
+  return customFetch<SalarisBatch[]>(getGetSalarisarchiefBatchesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetSalarisarchiefBatchesQueryKey = () => {
+    return [
+    `/api/salarisarchief/batches`
+    ] as const;
+    }
+
+
+export const getGetSalarisarchiefBatchesQueryOptions = <TData = Awaited<ReturnType<typeof getSalarisarchiefBatches>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSalarisarchiefBatches>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetSalarisarchiefBatchesQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getSalarisarchiefBatches>>> = ({ signal }) => getSalarisarchiefBatches({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getSalarisarchiefBatches>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetSalarisarchiefBatchesQueryResult = NonNullable<Awaited<ReturnType<typeof getSalarisarchiefBatches>>>
+export type GetSalarisarchiefBatchesQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Lijst uploadbatches
+ */
+
+export function useGetSalarisarchiefBatches<TData = Awaited<ReturnType<typeof getSalarisarchiefBatches>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSalarisarchiefBatches>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetSalarisarchiefBatchesQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetSalarisarchiefBatchesIdUrl = (id: number,) => {
+
+
+
+
+  return `/api/salarisarchief/batches/${id}`
+}
+
+/**
+ * @summary Batch detail met documenten
+ */
+export const getSalarisarchiefBatchesId = async (id: number, options?: RequestInit): Promise<SalarisBatchDetail> => {
+
+  return customFetch<SalarisBatchDetail>(getGetSalarisarchiefBatchesIdUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetSalarisarchiefBatchesIdQueryKey = (id: number,) => {
+    return [
+    `/api/salarisarchief/batches/${id}`
+    ] as const;
+    }
+
+
+export const getGetSalarisarchiefBatchesIdQueryOptions = <TData = Awaited<ReturnType<typeof getSalarisarchiefBatchesId>>, TError = ErrorType<void>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSalarisarchiefBatchesId>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetSalarisarchiefBatchesIdQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getSalarisarchiefBatchesId>>> = ({ signal }) => getSalarisarchiefBatchesId(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getSalarisarchiefBatchesId>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetSalarisarchiefBatchesIdQueryResult = NonNullable<Awaited<ReturnType<typeof getSalarisarchiefBatchesId>>>
+export type GetSalarisarchiefBatchesIdQueryError = ErrorType<void>
+
+
+/**
+ * @summary Batch detail met documenten
+ */
+
+export function useGetSalarisarchiefBatchesId<TData = Awaited<ReturnType<typeof getSalarisarchiefBatchesId>>, TError = ErrorType<void>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSalarisarchiefBatchesId>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetSalarisarchiefBatchesIdQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetSalarisarchiefDocumentenUrl = (params?: GetSalarisarchiefDocumentenParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/salarisarchief/documenten?${stringifiedParams}` : `/api/salarisarchief/documenten`
+}
+
+/**
+ * @summary Lijst salarisdocumenten
+ */
+export const getSalarisarchiefDocumenten = async (params?: GetSalarisarchiefDocumentenParams, options?: RequestInit): Promise<SalarisbestandRegel[]> => {
+
+  return customFetch<SalarisbestandRegel[]>(getGetSalarisarchiefDocumentenUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetSalarisarchiefDocumentenQueryKey = (params?: GetSalarisarchiefDocumentenParams,) => {
+    return [
+    `/api/salarisarchief/documenten`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetSalarisarchiefDocumentenQueryOptions = <TData = Awaited<ReturnType<typeof getSalarisarchiefDocumenten>>, TError = ErrorType<unknown>>(params?: GetSalarisarchiefDocumentenParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSalarisarchiefDocumenten>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetSalarisarchiefDocumentenQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getSalarisarchiefDocumenten>>> = ({ signal }) => getSalarisarchiefDocumenten(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getSalarisarchiefDocumenten>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetSalarisarchiefDocumentenQueryResult = NonNullable<Awaited<ReturnType<typeof getSalarisarchiefDocumenten>>>
+export type GetSalarisarchiefDocumentenQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Lijst salarisdocumenten
+ */
+
+export function useGetSalarisarchiefDocumenten<TData = Awaited<ReturnType<typeof getSalarisarchiefDocumenten>>, TError = ErrorType<unknown>>(
+ params?: GetSalarisarchiefDocumentenParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSalarisarchiefDocumenten>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetSalarisarchiefDocumentenQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetSalarisarchiefDocumentenIdUrl = (id: number,) => {
+
+
+
+
+  return `/api/salarisarchief/documenten/${id}`
+}
+
+/**
+ * @summary Document detail
+ */
+export const getSalarisarchiefDocumentenId = async (id: number, options?: RequestInit): Promise<SalarisbestandRegel> => {
+
+  return customFetch<SalarisbestandRegel>(getGetSalarisarchiefDocumentenIdUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetSalarisarchiefDocumentenIdQueryKey = (id: number,) => {
+    return [
+    `/api/salarisarchief/documenten/${id}`
+    ] as const;
+    }
+
+
+export const getGetSalarisarchiefDocumentenIdQueryOptions = <TData = Awaited<ReturnType<typeof getSalarisarchiefDocumentenId>>, TError = ErrorType<void>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSalarisarchiefDocumentenId>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetSalarisarchiefDocumentenIdQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getSalarisarchiefDocumentenId>>> = ({ signal }) => getSalarisarchiefDocumentenId(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getSalarisarchiefDocumentenId>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetSalarisarchiefDocumentenIdQueryResult = NonNullable<Awaited<ReturnType<typeof getSalarisarchiefDocumentenId>>>
+export type GetSalarisarchiefDocumentenIdQueryError = ErrorType<void>
+
+
+/**
+ * @summary Document detail
+ */
+
+export function useGetSalarisarchiefDocumentenId<TData = Awaited<ReturnType<typeof getSalarisarchiefDocumentenId>>, TError = ErrorType<void>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSalarisarchiefDocumentenId>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetSalarisarchiefDocumentenIdQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getPatchSalarisarchiefDocumentenIdUrl = (id: number,) => {
+
+
+
+
+  return `/api/salarisarchief/documenten/${id}`
+}
+
+/**
+ * @summary Document bijwerken
+ */
+export const patchSalarisarchiefDocumentenId = async (id: number,
+    salarisbestandPatch: SalarisbestandPatch, options?: RequestInit): Promise<SalarisbestandRegel> => {
+
+  return customFetch<SalarisbestandRegel>(getPatchSalarisarchiefDocumentenIdUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(salarisbestandPatch)
+  }
+);}
+
+
+
+
+export const getPatchSalarisarchiefDocumentenIdMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof patchSalarisarchiefDocumentenId>>, TError,{id: number;data: BodyType<SalarisbestandPatch>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof patchSalarisarchiefDocumentenId>>, TError,{id: number;data: BodyType<SalarisbestandPatch>}, TContext> => {
+
+const mutationKey = ['patchSalarisarchiefDocumentenId'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof patchSalarisarchiefDocumentenId>>, {id: number;data: BodyType<SalarisbestandPatch>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  patchSalarisarchiefDocumentenId(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PatchSalarisarchiefDocumentenIdMutationResult = NonNullable<Awaited<ReturnType<typeof patchSalarisarchiefDocumentenId>>>
+    export type PatchSalarisarchiefDocumentenIdMutationBody = BodyType<SalarisbestandPatch>
+    export type PatchSalarisarchiefDocumentenIdMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Document bijwerken
+ */
+export const usePatchSalarisarchiefDocumentenId = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof patchSalarisarchiefDocumentenId>>, TError,{id: number;data: BodyType<SalarisbestandPatch>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof patchSalarisarchiefDocumentenId>>,
+        TError,
+        {id: number;data: BodyType<SalarisbestandPatch>},
+        TContext
+      > => {
+      return useMutation(getPatchSalarisarchiefDocumentenIdMutationOptions(options));
+    }
+
+export const getPostSalarisarchiefDocumentenIdPubliceerUrl = (id: number,) => {
+
+
+
+
+  return `/api/salarisarchief/documenten/${id}/publiceer`
+}
+
+/**
+ * @summary Document publiceren naar medewerker
+ */
+export const postSalarisarchiefDocumentenIdPubliceer = async (id: number, options?: RequestInit): Promise<SalarisbestandRegel> => {
+
+  return customFetch<SalarisbestandRegel>(getPostSalarisarchiefDocumentenIdPubliceerUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getPostSalarisarchiefDocumentenIdPubliceerMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postSalarisarchiefDocumentenIdPubliceer>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof postSalarisarchiefDocumentenIdPubliceer>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['postSalarisarchiefDocumentenIdPubliceer'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postSalarisarchiefDocumentenIdPubliceer>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  postSalarisarchiefDocumentenIdPubliceer(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PostSalarisarchiefDocumentenIdPubliceerMutationResult = NonNullable<Awaited<ReturnType<typeof postSalarisarchiefDocumentenIdPubliceer>>>
+
+    export type PostSalarisarchiefDocumentenIdPubliceerMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Document publiceren naar medewerker
+ */
+export const usePostSalarisarchiefDocumentenIdPubliceer = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postSalarisarchiefDocumentenIdPubliceer>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof postSalarisarchiefDocumentenIdPubliceer>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getPostSalarisarchiefDocumentenIdPubliceerMutationOptions(options));
+    }
+
+export const getGetSalarisarchiefDocumentenIdDownloadUrlUrl = (id: number,) => {
+
+
+
+
+  return `/api/salarisarchief/documenten/${id}/download-url`
+}
+
+/**
+ * @summary Download-URL ophalen
+ */
+export const getSalarisarchiefDocumentenIdDownloadUrl = async (id: number, options?: RequestInit): Promise<DownloadUrlResultaat> => {
+
+  return customFetch<DownloadUrlResultaat>(getGetSalarisarchiefDocumentenIdDownloadUrlUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetSalarisarchiefDocumentenIdDownloadUrlQueryKey = (id: number,) => {
+    return [
+    `/api/salarisarchief/documenten/${id}/download-url`
+    ] as const;
+    }
+
+
+export const getGetSalarisarchiefDocumentenIdDownloadUrlQueryOptions = <TData = Awaited<ReturnType<typeof getSalarisarchiefDocumentenIdDownloadUrl>>, TError = ErrorType<void>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSalarisarchiefDocumentenIdDownloadUrl>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetSalarisarchiefDocumentenIdDownloadUrlQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getSalarisarchiefDocumentenIdDownloadUrl>>> = ({ signal }) => getSalarisarchiefDocumentenIdDownloadUrl(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getSalarisarchiefDocumentenIdDownloadUrl>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetSalarisarchiefDocumentenIdDownloadUrlQueryResult = NonNullable<Awaited<ReturnType<typeof getSalarisarchiefDocumentenIdDownloadUrl>>>
+export type GetSalarisarchiefDocumentenIdDownloadUrlQueryError = ErrorType<void>
+
+
+/**
+ * @summary Download-URL ophalen
+ */
+
+export function useGetSalarisarchiefDocumentenIdDownloadUrl<TData = Awaited<ReturnType<typeof getSalarisarchiefDocumentenIdDownloadUrl>>, TError = ErrorType<void>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSalarisarchiefDocumentenIdDownloadUrl>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetSalarisarchiefDocumentenIdDownloadUrlQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getPostSalarisarchiefBatchPubliceerUrl = () => {
+
+
+
+
+  return `/api/salarisarchief/batch-publiceer`
+}
+
+/**
+ * @summary Meerdere documenten in batch publiceren
+ */
+export const postSalarisarchiefBatchPubliceer = async (salarisBatchPublicerenInput: SalarisBatchPublicerenInput, options?: RequestInit): Promise<SalarisBatchPublicerenResultaat> => {
+
+  return customFetch<SalarisBatchPublicerenResultaat>(getPostSalarisarchiefBatchPubliceerUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(salarisBatchPublicerenInput)
+  }
+);}
+
+
+
+
+export const getPostSalarisarchiefBatchPubliceerMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postSalarisarchiefBatchPubliceer>>, TError,{data: BodyType<SalarisBatchPublicerenInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof postSalarisarchiefBatchPubliceer>>, TError,{data: BodyType<SalarisBatchPublicerenInput>}, TContext> => {
+
+const mutationKey = ['postSalarisarchiefBatchPubliceer'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postSalarisarchiefBatchPubliceer>>, {data: BodyType<SalarisBatchPublicerenInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  postSalarisarchiefBatchPubliceer(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PostSalarisarchiefBatchPubliceerMutationResult = NonNullable<Awaited<ReturnType<typeof postSalarisarchiefBatchPubliceer>>>
+    export type PostSalarisarchiefBatchPubliceerMutationBody = BodyType<SalarisBatchPublicerenInput>
+    export type PostSalarisarchiefBatchPubliceerMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Meerdere documenten in batch publiceren
+ */
+export const usePostSalarisarchiefBatchPubliceer = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postSalarisarchiefBatchPubliceer>>, TError,{data: BodyType<SalarisBatchPublicerenInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof postSalarisarchiefBatchPubliceer>>,
+        TError,
+        {data: BodyType<SalarisBatchPublicerenInput>},
+        TContext
+      > => {
+      return useMutation(getPostSalarisarchiefBatchPubliceerMutationOptions(options));
+    }
+
+export const getGetSalarisarchiefAuditlogUrl = (params?: GetSalarisarchiefAuditlogParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/salarisarchief/auditlog?${stringifiedParams}` : `/api/salarisarchief/auditlog`
+}
+
+/**
+ * @summary Auditlog salarisdocumenten
+ */
+export const getSalarisarchiefAuditlog = async (params?: GetSalarisarchiefAuditlogParams, options?: RequestInit): Promise<SalarisdocumentAuditRegel[]> => {
+
+  return customFetch<SalarisdocumentAuditRegel[]>(getGetSalarisarchiefAuditlogUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetSalarisarchiefAuditlogQueryKey = (params?: GetSalarisarchiefAuditlogParams,) => {
+    return [
+    `/api/salarisarchief/auditlog`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetSalarisarchiefAuditlogQueryOptions = <TData = Awaited<ReturnType<typeof getSalarisarchiefAuditlog>>, TError = ErrorType<unknown>>(params?: GetSalarisarchiefAuditlogParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSalarisarchiefAuditlog>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetSalarisarchiefAuditlogQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getSalarisarchiefAuditlog>>> = ({ signal }) => getSalarisarchiefAuditlog(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getSalarisarchiefAuditlog>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetSalarisarchiefAuditlogQueryResult = NonNullable<Awaited<ReturnType<typeof getSalarisarchiefAuditlog>>>
+export type GetSalarisarchiefAuditlogQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Auditlog salarisdocumenten
+ */
+
+export function useGetSalarisarchiefAuditlog<TData = Awaited<ReturnType<typeof getSalarisarchiefAuditlog>>, TError = ErrorType<unknown>>(
+ params?: GetSalarisarchiefAuditlogParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSalarisarchiefAuditlog>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetSalarisarchiefAuditlogQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetMijnSalarisdocumentenUrl = () => {
+
+
+
+
+  return `/api/mijn/salarisdocumenten`
+}
+
+/**
+ * @summary Eigen salarisdocumenten (medewerker)
+ */
+export const getMijnSalarisdocumenten = async ( options?: RequestInit): Promise<SalarisbestandRegel[]> => {
+
+  return customFetch<SalarisbestandRegel[]>(getGetMijnSalarisdocumentenUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetMijnSalarisdocumentenQueryKey = () => {
+    return [
+    `/api/mijn/salarisdocumenten`
+    ] as const;
+    }
+
+
+export const getGetMijnSalarisdocumentenQueryOptions = <TData = Awaited<ReturnType<typeof getMijnSalarisdocumenten>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMijnSalarisdocumenten>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetMijnSalarisdocumentenQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getMijnSalarisdocumenten>>> = ({ signal }) => getMijnSalarisdocumenten({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getMijnSalarisdocumenten>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetMijnSalarisdocumentenQueryResult = NonNullable<Awaited<ReturnType<typeof getMijnSalarisdocumenten>>>
+export type GetMijnSalarisdocumentenQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Eigen salarisdocumenten (medewerker)
+ */
+
+export function useGetMijnSalarisdocumenten<TData = Awaited<ReturnType<typeof getMijnSalarisdocumenten>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMijnSalarisdocumenten>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetMijnSalarisdocumentenQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetSepaBestandenUrl = () => {
+
+
+
+
+  return `/api/sepa-bestanden`
+}
+
+/**
+ * @summary Lijst SEPA-betaalbestanden
+ */
+export const getSepaBestanden = async ( options?: RequestInit): Promise<SepaBestand[]> => {
+
+  return customFetch<SepaBestand[]>(getGetSepaBestandenUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetSepaBestandenQueryKey = () => {
+    return [
+    `/api/sepa-bestanden`
+    ] as const;
+    }
+
+
+export const getGetSepaBestandenQueryOptions = <TData = Awaited<ReturnType<typeof getSepaBestanden>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSepaBestanden>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetSepaBestandenQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getSepaBestanden>>> = ({ signal }) => getSepaBestanden({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getSepaBestanden>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetSepaBestandenQueryResult = NonNullable<Awaited<ReturnType<typeof getSepaBestanden>>>
+export type GetSepaBestandenQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Lijst SEPA-betaalbestanden
+ */
+
+export function useGetSepaBestanden<TData = Awaited<ReturnType<typeof getSepaBestanden>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSepaBestanden>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetSepaBestandenQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getPostSepaBestandenUploadUrl = () => {
+
+
+
+
+  return `/api/sepa-bestanden/upload`
+}
+
+/**
+ * @summary SEPA-bestand uploaden
+ */
+export const postSepaBestandenUpload = async (sepaUploadInput: SepaUploadInput, options?: RequestInit): Promise<SepaBestand> => {
+    const formData = new FormData();
+if(sepaUploadInput.omschrijving !== undefined) {
+ formData.append(`omschrijving`, sepaUploadInput.omschrijving);
+ }
+if(sepaUploadInput.periode_jaar !== undefined) {
+ formData.append(`periode_jaar`, sepaUploadInput.periode_jaar.toString())
+ }
+if(sepaUploadInput.periode_maand !== undefined) {
+ formData.append(`periode_maand`, sepaUploadInput.periode_maand.toString())
+ }
+
+  return customFetch<SepaBestand>(getPostSepaBestandenUploadUrl(),
+  {
+    ...options,
+    method: 'POST'
+    ,
+    body: formData
+  }
+);}
+
+
+
+
+export const getPostSepaBestandenUploadMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postSepaBestandenUpload>>, TError,{data: BodyType<SepaUploadInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof postSepaBestandenUpload>>, TError,{data: BodyType<SepaUploadInput>}, TContext> => {
+
+const mutationKey = ['postSepaBestandenUpload'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postSepaBestandenUpload>>, {data: BodyType<SepaUploadInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  postSepaBestandenUpload(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PostSepaBestandenUploadMutationResult = NonNullable<Awaited<ReturnType<typeof postSepaBestandenUpload>>>
+    export type PostSepaBestandenUploadMutationBody = BodyType<SepaUploadInput>
+    export type PostSepaBestandenUploadMutationError = ErrorType<unknown>
+
+    /**
+ * @summary SEPA-bestand uploaden
+ */
+export const usePostSepaBestandenUpload = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postSepaBestandenUpload>>, TError,{data: BodyType<SepaUploadInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof postSepaBestandenUpload>>,
+        TError,
+        {data: BodyType<SepaUploadInput>},
+        TContext
+      > => {
+      return useMutation(getPostSepaBestandenUploadMutationOptions(options));
+    }
+
+export const getGetSepaBestandenIdUrl = (id: number,) => {
+
+
+
+
+  return `/api/sepa-bestanden/${id}`
+}
+
+/**
+ * @summary SEPA-bestand detail
+ */
+export const getSepaBestandenId = async (id: number, options?: RequestInit): Promise<SepaBestand> => {
+
+  return customFetch<SepaBestand>(getGetSepaBestandenIdUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetSepaBestandenIdQueryKey = (id: number,) => {
+    return [
+    `/api/sepa-bestanden/${id}`
+    ] as const;
+    }
+
+
+export const getGetSepaBestandenIdQueryOptions = <TData = Awaited<ReturnType<typeof getSepaBestandenId>>, TError = ErrorType<void>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSepaBestandenId>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetSepaBestandenIdQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getSepaBestandenId>>> = ({ signal }) => getSepaBestandenId(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getSepaBestandenId>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetSepaBestandenIdQueryResult = NonNullable<Awaited<ReturnType<typeof getSepaBestandenId>>>
+export type GetSepaBestandenIdQueryError = ErrorType<void>
+
+
+/**
+ * @summary SEPA-bestand detail
+ */
+
+export function useGetSepaBestandenId<TData = Awaited<ReturnType<typeof getSepaBestandenId>>, TError = ErrorType<void>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSepaBestandenId>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetSepaBestandenIdQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getPatchSepaBestandenIdUrl = (id: number,) => {
+
+
+
+
+  return `/api/sepa-bestanden/${id}`
+}
+
+/**
+ * @summary SEPA-bestand status bijwerken
+ */
+export const patchSepaBestandenId = async (id: number,
+    sepaBestandPatch: SepaBestandPatch, options?: RequestInit): Promise<SepaBestand> => {
+
+  return customFetch<SepaBestand>(getPatchSepaBestandenIdUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(sepaBestandPatch)
+  }
+);}
+
+
+
+
+export const getPatchSepaBestandenIdMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof patchSepaBestandenId>>, TError,{id: number;data: BodyType<SepaBestandPatch>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof patchSepaBestandenId>>, TError,{id: number;data: BodyType<SepaBestandPatch>}, TContext> => {
+
+const mutationKey = ['patchSepaBestandenId'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof patchSepaBestandenId>>, {id: number;data: BodyType<SepaBestandPatch>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  patchSepaBestandenId(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PatchSepaBestandenIdMutationResult = NonNullable<Awaited<ReturnType<typeof patchSepaBestandenId>>>
+    export type PatchSepaBestandenIdMutationBody = BodyType<SepaBestandPatch>
+    export type PatchSepaBestandenIdMutationError = ErrorType<unknown>
+
+    /**
+ * @summary SEPA-bestand status bijwerken
+ */
+export const usePatchSepaBestandenId = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof patchSepaBestandenId>>, TError,{id: number;data: BodyType<SepaBestandPatch>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof patchSepaBestandenId>>,
+        TError,
+        {id: number;data: BodyType<SepaBestandPatch>},
+        TContext
+      > => {
+      return useMutation(getPatchSepaBestandenIdMutationOptions(options));
+    }
+
+export const getGetSepaBestandenIdDownloadUrlUrl = (id: number,) => {
+
+
+
+
+  return `/api/sepa-bestanden/${id}/download-url`
+}
+
+/**
+ * @summary Download-URL ophalen voor SEPA-bestand
+ */
+export const getSepaBestandenIdDownloadUrl = async (id: number, options?: RequestInit): Promise<DownloadUrlResultaat> => {
+
+  return customFetch<DownloadUrlResultaat>(getGetSepaBestandenIdDownloadUrlUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetSepaBestandenIdDownloadUrlQueryKey = (id: number,) => {
+    return [
+    `/api/sepa-bestanden/${id}/download-url`
+    ] as const;
+    }
+
+
+export const getGetSepaBestandenIdDownloadUrlQueryOptions = <TData = Awaited<ReturnType<typeof getSepaBestandenIdDownloadUrl>>, TError = ErrorType<void>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSepaBestandenIdDownloadUrl>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetSepaBestandenIdDownloadUrlQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getSepaBestandenIdDownloadUrl>>> = ({ signal }) => getSepaBestandenIdDownloadUrl(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getSepaBestandenIdDownloadUrl>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetSepaBestandenIdDownloadUrlQueryResult = NonNullable<Awaited<ReturnType<typeof getSepaBestandenIdDownloadUrl>>>
+export type GetSepaBestandenIdDownloadUrlQueryError = ErrorType<void>
+
+
+/**
+ * @summary Download-URL ophalen voor SEPA-bestand
+ */
+
+export function useGetSepaBestandenIdDownloadUrl<TData = Awaited<ReturnType<typeof getSepaBestandenIdDownloadUrl>>, TError = ErrorType<void>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSepaBestandenIdDownloadUrl>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetSepaBestandenIdDownloadUrlQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
 
