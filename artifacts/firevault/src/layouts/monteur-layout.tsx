@@ -1,5 +1,6 @@
 import { Link, useLocation } from "wouter";
 import { useTranslation } from "react-i18next";
+import { BerichtNotificatieToast } from "@/components/bericht-notificatie-toast";
 import {
   SidebarProvider, Sidebar, SidebarHeader, SidebarContent, SidebarFooter,
   SidebarGroup, SidebarGroupLabel, SidebarGroupContent,
@@ -85,6 +86,7 @@ export default function MonteurLayout({ children }: { children: React.ReactNode 
           {children}
         </div>
       </main>
+      <BerichtNotificatieToast />
     </SidebarProvider>
   );
 }

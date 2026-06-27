@@ -9,7 +9,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { setAuthTokenGetter, setBaseUrl } from "@workspace/api-client-react";
 import { Stack, usePathname, useRouter } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
-import React, { useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
@@ -17,6 +17,8 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { AuthProvider, getHuidigToken, useAuth } from "@/context/auth";
 import { SyncProvider } from "@/context/sync";
 import { AchievementProvider } from "@/context/achievement";
+import { useListChatGesprekken } from "@workspace/api-client-react";
+import { useMeldingGeluid } from "@/hooks/useMeldingGeluid";
 
 setBaseUrl(`https://${process.env.EXPO_PUBLIC_DOMAIN}`);
 setAuthTokenGetter(() => getHuidigToken());
@@ -24,6 +26,37 @@ setAuthTokenGetter(() => getHuidigToken());
 SplashScreen.preventAutoHideAsync();
 
 const queryClient = new QueryClient();
+
+function BerichtMeldingMonitor() {
+  const { token } = useAuth();
+  const { speel } = useMeldingGeluid();
+  const geinitialiseerd = useRef(false);
+  const vorigeOngelezen = useRef(new Map<number, number>());
+
+  const { data: gesprekken, refetch } = useListChatGesprekken();
+
+  useEffect(() => {
+    if (!token) return;
+    const timer = setInterval(() => void refetch(), 15000);
+    return () => clearInterval(timer);
+  }, [token, refetch]);
+
+  useEffect(() => {
+    if (!gesprekken || !token) return;
+    if (!geinitialiseerd.current) {
+      gesprekken.forEach((g) => vorigeOngelezen.current.set(g.id, g.ongelezen_aantal));
+      geinitialiseerd.current = true;
+      return;
+    }
+    const heeftNieuw = gesprekken.some(
+      (g) => g.ongelezen_aantal > (vorigeOngelezen.current.get(g.id) ?? 0),
+    );
+    if (heeftNieuw) void speel();
+    gesprekken.forEach((g) => vorigeOngelezen.current.set(g.id, g.ongelezen_aantal));
+  }, [gesprekken, token, speel]);
+
+  return null;
+}
 
 function RootLayoutNav() {
   const { bezigLaden, vergrendeld, token } = useAuth();
@@ -50,7 +83,9 @@ function RootLayoutNav() {
   }, [bezigLaden, vergrendeld, token, pathname, router]);
 
   return (
-    <Stack screenOptions={{ headerShown: false }}>
+    <>
+      <BerichtMeldingMonitor />
+      <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="index" />
       <Stack.Screen name="login" />
       <Stack.Screen name="vergrendeld" />
@@ -77,6 +112,7 @@ function RootLayoutNav() {
       <Stack.Screen name="lmra" />
       <Stack.Screen name="veiligheid-melding" />
     </Stack>
+    </>
   );
 }
 

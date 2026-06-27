@@ -2,6 +2,7 @@ import { Link, useLocation } from "wouter";
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { useListChatGesprekken } from "@workspace/api-client-react";
+import { BerichtNotificatieToast } from "@/components/bericht-notificatie-toast";
 import {
   SidebarProvider, Sidebar, SidebarHeader, SidebarContent, SidebarFooter,
   SidebarGroup, SidebarGroupLabel, SidebarGroupContent,
@@ -900,6 +901,7 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
           {children}
         </div>
       </main>
+      <BerichtNotificatieToast />
     </SidebarProvider>
   );
 }
