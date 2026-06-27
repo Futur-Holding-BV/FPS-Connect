@@ -17919,7 +17919,7 @@ components:
 
     ModCalcHeader:
       type: object
-      required: [id, naam, status, opslag_ak, opslag_abk, opslag_risico, opslag_winst, korting, aangemaakt_op]
+      required: [id, naam, status, opslag_materiaal, opslag_arbeid, opslag_ak, opslag_abk, opslag_risico, opslag_winst, korting, aangemaakt_op]
       properties:
         id:
           type: integer
@@ -17948,6 +17948,10 @@ components:
         opmerkingen:
           type: string
           nullable: true
+        opslag_materiaal:
+          type: number
+        opslag_arbeid:
+          type: number
         opslag_ak:
           type: number
         opslag_abk:
@@ -18015,9 +18019,11 @@ components:
         opmerkingen:
           type: string
           nullable: true
-        opslag_ak:
+        opslag_materiaal:
           type: number
-        opslag_abk:
+        opslag_arbeid:
+          type: number
+        opslag_ak:
           type: number
         opslag_risico:
           type: number
@@ -18068,6 +18074,8 @@ components:
           type: number
         is_staartkosten:
           type: boolean
+        is_bouwplaatskosten:
+          type: boolean
         hoofdstuk:
           type: string
           default: 'Overige werkzaamheden'
@@ -18113,6 +18121,8 @@ components:
         onderaanneming_bedrag:
           type: number
         is_staartkosten:
+          type: boolean
+        is_bouwplaatskosten:
           type: boolean
         hoofdstuk:
           type: string

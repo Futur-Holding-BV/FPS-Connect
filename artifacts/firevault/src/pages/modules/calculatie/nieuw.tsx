@@ -27,8 +27,9 @@ export default function ModulesCalculatieNieuw() {
     project_naam: "",
     status: "concept",
     omschrijving: "",
+    opslag_materiaal: 0,
+    opslag_arbeid: 0,
     opslag_ak: 15,
-    opslag_abk: 10,
     opslag_risico: 5,
     opslag_winst: 10,
     korting: 0,
@@ -82,8 +83,9 @@ export default function ModulesCalculatieNieuw() {
         project_naam: form.project_naam || undefined,
         status: form.status,
         omschrijving: form.omschrijving || undefined,
+        opslag_materiaal: form.opslag_materiaal,
+        opslag_arbeid: form.opslag_arbeid,
         opslag_ak: form.opslag_ak,
-        opslag_abk: form.opslag_abk,
         opslag_risico: form.opslag_risico,
         opslag_winst: form.opslag_winst,
         korting: form.korting,
@@ -215,13 +217,14 @@ export default function ModulesCalculatieNieuw() {
             <CardTitle className="text-base">Opslagen</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-5 gap-4">
+            <div className="grid grid-cols-3 gap-4">
               {[
-                { field: "opslag_ak",    label: "AK (%)" },
-                { field: "opslag_abk",   label: "ABK (%)" },
-                { field: "opslag_risico", label: "Risico (%)" },
-                { field: "opslag_winst", label: "Winst (%)" },
-                { field: "korting",      label: "Korting (%)" },
+                { field: "opslag_materiaal", label: "Opslag materiaal (%)" },
+                { field: "opslag_arbeid",    label: "Opslag arbeid (%)" },
+                { field: "opslag_ak",        label: "AK (%)" },
+                { field: "opslag_risico",    label: "Risico (%)" },
+                { field: "opslag_winst",     label: "Winst (%)" },
+                { field: "korting",          label: "Korting (%)" },
               ].map(({ field, label }) => (
                 <div key={field} className="space-y-1.5">
                   <Label htmlFor={field}>{label}</Label>

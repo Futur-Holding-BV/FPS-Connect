@@ -121,6 +121,7 @@ type RegelRow = {
   arbeids_tarief: number;
   onderaanneming_bedrag: number;
   is_staartkosten: boolean;
+  is_bouwplaatskosten: boolean;
   hoofdstuk: string;
   klanttekst?: string | null;
   materiaal_totaal: number;
@@ -139,6 +140,7 @@ type RegelForm = {
   arbeids_tarief: string;
   onderaanneming_bedrag: string;
   is_staartkosten: boolean;
+  is_bouwplaatskosten: boolean;
   opmerkingen: string;
   regelnummer: string;
   hoofdstuk: string;
@@ -156,6 +158,7 @@ const LEGE_REGEL: RegelForm = {
   arbeids_tarief: "0",
   onderaanneming_bedrag: "0",
   is_staartkosten: false,
+  is_bouwplaatskosten: false,
   opmerkingen: "",
   regelnummer: "",
   hoofdstuk: "Overige werkzaamheden",
@@ -251,6 +254,7 @@ export default function ModulesCalculatieDetail() {
           arbeids_tarief: String(r.arbeids_tarief ?? 0),
           onderaanneming_bedrag: String(r.onderaanneming_bedrag ?? 0),
           is_staartkosten: r.is_staartkosten ?? false,
+          is_bouwplaatskosten: false,
           opmerkingen: "",
           regelnummer: "",
           hoofdstuk: r.hoofdstuk ?? "Overige werkzaamheden",
@@ -265,11 +269,12 @@ export default function ModulesCalculatieDetail() {
   const [headerForm, setHeaderForm] = useState({
     naam: "", referentie: "", klant_naam: "", project_naam: "",
     status: "", omschrijving: "", opmerkingen: "",
-    opslag_ak: 15, opslag_abk: 10, opslag_risico: 5, opslag_winst: 10, korting: 0,
+    opslag_materiaal: 0, opslag_arbeid: 0,
+    opslag_ak: 15, opslag_risico: 5, opslag_winst: 10, korting: 0,
   });
 
-  function openNieuweRegel(staartkosten = false) {
-    setRegelForm({ ...LEGE_REGEL, is_staartkosten: staartkosten });
+  function openNieuweRegel(staartkosten = false, bouwplaatskosten = false) {
+    setRegelForm({ ...LEGE_REGEL, is_staartkosten: staartkosten, is_bouwplaatskosten: bouwplaatskosten });
     setRegelDialoog("nieuw");
   }
 
@@ -285,6 +290,7 @@ export default function ModulesCalculatieDetail() {
       arbeids_tarief: String(r.arbeids_tarief ?? 0),
       onderaanneming_bedrag: String(r.onderaanneming_bedrag ?? 0),
       is_staartkosten: r.is_staartkosten ?? false,
+      is_bouwplaatskosten: r.is_bouwplaatskosten ?? false,
       opmerkingen: r.opmerkingen ?? "",
       regelnummer: r.regelnummer ?? "",
       hoofdstuk: r.hoofdstuk ?? "Overige werkzaamheden",
@@ -303,8 +309,9 @@ export default function ModulesCalculatieDetail() {
       status: data.status,
       omschrijving: data.omschrijving ?? "",
       opmerkingen: data.opmerkingen ?? "",
+      opslag_materiaal: data.opslag_materiaal ?? 0,
+      opslag_arbeid: data.opslag_arbeid ?? 0,
       opslag_ak: data.opslag_ak,
-      opslag_abk: data.opslag_abk ?? 10,
       opslag_risico: data.opslag_risico,
       opslag_winst: data.opslag_winst,
       korting: data.korting,
@@ -329,6 +336,7 @@ export default function ModulesCalculatieDetail() {
       arbeids_tarief: at,
       onderaanneming_bedrag: ob,
       is_staartkosten: regelForm.is_staartkosten,
+      is_bouwplaatskosten: regelForm.is_bouwplaatskosten,
       opmerkingen: regelForm.opmerkingen || null,
       regelnummer: regelForm.regelnummer || null,
       hoofdstuk: regelForm.hoofdstuk || "Overige werkzaamheden",
@@ -366,23 +374,40 @@ export default function ModulesCalculatieDetail() {
   }
 
   const regels: RegelRow[] = (data.regels ?? []) as RegelRow[];
-  const directeRegels = regels.filter((r) => !r.is_staartkosten).sort((a, b) => a.volgorde - b.volgorde);
-  const staartRegels  = regels.filter((r) => r.is_staartkosten).sort((a, b) => a.volgorde - b.volgorde);
+  const directeRegels    = regels.filter((r) => !r.is_staartkosten && !r.is_bouwplaatskosten).sort((a, b) => a.volgorde - b.volgorde);
+  const bouwplaatsRegels = regels.filter((r) => r.is_bouwplaatskosten).sort((a, b) => a.volgorde - b.volgorde);
+  const staartRegels     = regels.filter((r) => r.is_staartkosten).sort((a, b) => a.volgorde - b.volgorde);
 
-  const subtotaalDirect = directeRegels.reduce((s, r) => s + r.totaal, 0);
-  const subtotaalStaart = staartRegels.reduce((s, r) => s + r.totaal, 0);
-  const subtotaal = subtotaalDirect + subtotaalStaart;
+  const rnd = (n: number) => Math.round(n * 100) / 100;
 
-  const opslagAbk = data.opslag_abk ?? 10;
-  const akBedrag     = subtotaal * (data.opslag_ak / 100);
-  const abkBedrag    = subtotaal * (opslagAbk / 100);
-  const risicoBedrag = subtotaal * (data.opslag_risico / 100);
-  const winstBedrag  = subtotaal * (data.opslag_winst / 100);
-  const voorKorting  = subtotaal + akBedrag + abkBedrag + risicoBedrag + winstBedrag;
-  const kortingBedrag = voorKorting * (data.korting / 100);
-  const totaal       = voorKorting - kortingBedrag;
-  const totaalBtw    = totaal * 1.21;
-  const marge        = totaal > 0 ? Math.round(((totaal - subtotaal) / totaal) * 100 * 10) / 10 : 0;
+  const matSubtotaal        = rnd(directeRegels.reduce((s, r) => s + r.materiaal_totaal, 0));
+  const arbSubtotaal        = rnd(directeRegels.reduce((s, r) => s + r.arbeidsloon, 0));
+  const oaSubtotaal         = rnd(directeRegels.reduce((s, r) => s + r.onderaanneming_bedrag, 0));
+  const bouwplaatsSubtotaal = rnd(bouwplaatsRegels.reduce((s, r) => s + r.totaal, 0));
+  const staartSubtotaal     = rnd(staartRegels.reduce((s, r) => s + r.totaal, 0));
+
+  const opslagMateriaal = data.opslag_materiaal ?? 0;
+  const opslagArbeid    = data.opslag_arbeid ?? 0;
+
+  const matOpslagBedrag = rnd(matSubtotaal * opslagMateriaal / 100);
+  const arbOpslagBedrag = rnd(arbSubtotaal * opslagArbeid / 100);
+
+  const subtotaal = rnd(
+    matSubtotaal + matOpslagBedrag +
+    arbSubtotaal + arbOpslagBedrag +
+    oaSubtotaal + bouwplaatsSubtotaal + staartSubtotaal,
+  );
+
+  const akBedrag     = rnd(subtotaal * data.opslag_ak / 100);
+  const risicoBedrag = rnd(subtotaal * data.opslag_risico / 100);
+  const basisWinst   = rnd(subtotaal + akBedrag + risicoBedrag);
+  const winstBedrag  = rnd(basisWinst * data.opslag_winst / 100);
+  const aanneemsom   = rnd(basisWinst + winstBedrag);
+  const kortingBedrag = rnd(aanneemsom * data.korting / 100);
+  const totaal        = rnd(aanneemsom - kortingBedrag);
+  const totaalBtw     = rnd(totaal * 1.21);
+  const rawKosten     = matSubtotaal + arbSubtotaal + oaSubtotaal + bouwplaatsSubtotaal + staartSubtotaal;
+  const marge         = totaal > 0 ? Math.round(((totaal - rawKosten) / totaal) * 100 * 10) / 10 : 0;
 
   const regelsByCategorie = Object.entries(CATEGORIE_LABEL).map(([cat, label]) => ({
     categorie: cat,
@@ -553,26 +578,36 @@ export default function ModulesCalculatieDetail() {
               ) : weergave === "intern" ? (
                 <InternView
                   regelsByHoofdstuk={regelsByHoofdstuk}
+                  bouwplaatsRegels={bouwplaatsRegels}
                   staartRegels={staartRegels}
                   onBewerken={openBewerkenRegel}
                   onVerwijderen={(r) => deleteRegelMut.mutate({ id, regelId: r.id })}
+                  onNieuweBouwplaats={() => openNieuweRegel(false, true)}
                   onNieuweStaart={() => openNieuweRegel(true)}
                 />
               ) : weergave === "directie" ? (
                 <DirectieView
                   regelsByCategorie={regelsByCategorie}
+                  bouwplaatsRegels={bouwplaatsRegels}
                   staartRegels={staartRegels}
+                  matSubtotaal={matSubtotaal}
+                  matOpslagBedrag={matOpslagBedrag}
+                  opslagMateriaal={opslagMateriaal}
+                  arbSubtotaal={arbSubtotaal}
+                  arbOpslagBedrag={arbOpslagBedrag}
+                  opslagArbeid={opslagArbeid}
+                  oaSubtotaal={oaSubtotaal}
+                  bouwplaatsSubtotaal={bouwplaatsSubtotaal}
+                  staartSubtotaal={staartSubtotaal}
                   subtotaal={subtotaal}
-                  subtotaalStaart={subtotaalStaart}
                   akBedrag={akBedrag}
-                  abkBedrag={abkBedrag}
                   risicoBedrag={risicoBedrag}
+                  basisWinst={basisWinst}
                   winstBedrag={winstBedrag}
                   kortingBedrag={kortingBedrag}
                   totaal={totaal}
                   marge={marge}
                   opslagAk={data.opslag_ak}
-                  opslagAbk={opslagAbk}
                   opslagRisico={data.opslag_risico}
                   opslagWinst={data.opslag_winst}
                   korting={data.korting}
@@ -665,22 +700,72 @@ export default function ModulesCalculatieDetail() {
 
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-base">Opslagen</CardTitle>
+              <CardTitle className="text-base">Kostopbouw</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-2.5 text-sm">
-              {[
-                { label: "AK", pct: data.opslag_ak, bedrag: akBedrag },
-                { label: "ABK", pct: opslagAbk, bedrag: abkBedrag },
-                { label: "Risico", pct: data.opslag_risico, bedrag: risicoBedrag },
-                { label: "Winst", pct: data.opslag_winst, bedrag: winstBedrag },
-              ].map(({ label, pct, bedrag }) => (
-                <div key={label} className="flex justify-between items-center">
-                  <span className="text-muted-foreground">{label} ({pct}%)</span>
-                  <span className="tabular-nums">{formatBedrag(bedrag)}</span>
+            <CardContent className="space-y-1.5 text-sm">
+              <div className="flex justify-between text-muted-foreground">
+                <span>Materiaal</span>
+                <span className="tabular-nums">{formatBedrag(matSubtotaal)}</span>
+              </div>
+              {opslagMateriaal > 0 && (
+                <div className="flex justify-between text-muted-foreground pl-3 text-xs">
+                  <span>+ Opslag ({opslagMateriaal}%)</span>
+                  <span className="tabular-nums">{formatBedrag(matOpslagBedrag)}</span>
                 </div>
-              ))}
+              )}
+              <div className="flex justify-between text-muted-foreground">
+                <span>Arbeid</span>
+                <span className="tabular-nums">{formatBedrag(arbSubtotaal)}</span>
+              </div>
+              {opslagArbeid > 0 && (
+                <div className="flex justify-between text-muted-foreground pl-3 text-xs">
+                  <span>+ Opslag ({opslagArbeid}%)</span>
+                  <span className="tabular-nums">{formatBedrag(arbOpslagBedrag)}</span>
+                </div>
+              )}
+              {oaSubtotaal > 0 && (
+                <div className="flex justify-between text-muted-foreground">
+                  <span>Onderaanneming</span>
+                  <span className="tabular-nums">{formatBedrag(oaSubtotaal)}</span>
+                </div>
+              )}
+              {bouwplaatsSubtotaal > 0 && (
+                <div className="flex justify-between text-muted-foreground">
+                  <span>Bouwplaatskosten</span>
+                  <span className="tabular-nums">{formatBedrag(bouwplaatsSubtotaal)}</span>
+                </div>
+              )}
+              {staartSubtotaal > 0 && (
+                <div className="flex justify-between text-muted-foreground">
+                  <span>Staartkosten</span>
+                  <span className="tabular-nums">{formatBedrag(staartSubtotaal)}</span>
+                </div>
+              )}
+              <Separator />
+              <div className="flex justify-between font-medium">
+                <span>Subtotaal</span>
+                <span className="tabular-nums">{formatBedrag(subtotaal)}</span>
+              </div>
+              <div className="flex justify-between text-muted-foreground">
+                <span>AK ({data.opslag_ak}%)</span>
+                <span className="tabular-nums">{formatBedrag(akBedrag)}</span>
+              </div>
+              {data.opslag_risico > 0 && (
+                <div className="flex justify-between text-muted-foreground">
+                  <span>Risico ({data.opslag_risico}%)</span>
+                  <span className="tabular-nums">{formatBedrag(risicoBedrag)}</span>
+                </div>
+              )}
+              <div className="flex justify-between text-xs text-muted-foreground border-t pt-1">
+                <span>Basis voor winst</span>
+                <span className="tabular-nums">{formatBedrag(basisWinst)}</span>
+              </div>
+              <div className="flex justify-between text-muted-foreground">
+                <span>Winst ({data.opslag_winst}%)</span>
+                <span className="tabular-nums">{formatBedrag(winstBedrag)}</span>
+              </div>
               {data.korting > 0 && (
-                <div className="flex justify-between items-center text-green-700">
+                <div className="flex justify-between text-green-700">
                   <span>Korting ({data.korting}%)</span>
                   <span className="tabular-nums">- {formatBedrag(kortingBedrag)}</span>
                 </div>
@@ -690,21 +775,6 @@ export default function ModulesCalculatieDetail() {
 
           <Card className="border-slate-300">
             <CardContent className="pt-5 space-y-2 text-sm">
-              <div className="flex justify-between text-muted-foreground">
-                <span>Directe kosten</span>
-                <span className="tabular-nums">{formatBedrag(subtotaalDirect)}</span>
-              </div>
-              {subtotaalStaart > 0 && (
-                <div className="flex justify-between text-muted-foreground">
-                  <span>Staartkosten</span>
-                  <span className="tabular-nums">{formatBedrag(subtotaalStaart)}</span>
-                </div>
-              )}
-              <div className="flex justify-between text-muted-foreground">
-                <span>Opslagen</span>
-                <span className="tabular-nums">{formatBedrag(akBedrag + abkBedrag + risicoBedrag + winstBedrag - kortingBedrag)}</span>
-              </div>
-              <Separator />
               <div className="flex justify-between font-semibold text-base">
                 <span>Totaal excl. BTW</span>
                 <span className="tabular-nums">{formatBedrag(totaal)}</span>
@@ -713,6 +783,7 @@ export default function ModulesCalculatieDetail() {
                 <span>BTW (21%)</span>
                 <span className="tabular-nums">{formatBedrag(totaalBtw - totaal)}</span>
               </div>
+              <Separator />
               <div className="flex justify-between font-semibold text-primary">
                 <span>Totaal incl. BTW</span>
                 <span className="tabular-nums">{formatBedragKort(totaalBtw)}</span>
@@ -1017,13 +1088,14 @@ export default function ModulesCalculatieDetail() {
               <Textarea rows={2} value={headerForm.opmerkingen} onChange={(e) => setHeaderForm((f) => ({ ...f, opmerkingen: e.target.value }))} />
             </div>
             <p className="text-xs font-medium text-muted-foreground pt-1">Opslagen (%)</p>
-            <div className="grid grid-cols-5 gap-2">
+            <div className="grid grid-cols-3 gap-2">
               {[
-                { field: "opslag_ak",     label: "AK" },
-                { field: "opslag_abk",    label: "ABK" },
-                { field: "opslag_risico", label: "Risico" },
-                { field: "opslag_winst",  label: "Winst" },
-                { field: "korting",       label: "Korting" },
+                { field: "opslag_materiaal", label: "Opsl. mat." },
+                { field: "opslag_arbeid",    label: "Opsl. arb." },
+                { field: "opslag_ak",        label: "AK" },
+                { field: "opslag_risico",    label: "Risico" },
+                { field: "opslag_winst",     label: "Winst" },
+                { field: "korting",          label: "Korting" },
               ].map(({ field, label }) => (
                 <div key={field} className="space-y-1.5">
                   <Label className="text-xs">{label} (%)</Label>
@@ -1206,15 +1278,19 @@ function MonteurView({ regels, staartRegels }: { regels: RegelRow[]; staartRegel
 
 function InternView({
   regelsByHoofdstuk,
+  bouwplaatsRegels,
   staartRegels,
   onBewerken,
   onVerwijderen,
+  onNieuweBouwplaats,
   onNieuweStaart,
 }: {
   regelsByHoofdstuk: Array<{ hoofdstuk: string; regels: RegelRow[] }>;
+  bouwplaatsRegels: RegelRow[];
   staartRegels: RegelRow[];
   onBewerken: (r: RegelRow) => void;
   onVerwijderen: (r: RegelRow) => void;
+  onNieuweBouwplaats: () => void;
   onNieuweStaart: () => void;
 }) {
   return (
@@ -1276,6 +1352,55 @@ function InternView({
         </div>
       ))}
 
+      {/* Bouwplaatskosten */}
+      <div className="border-t mt-1">
+        <div className="flex items-center justify-between px-4 py-1.5 bg-amber-50">
+          <span className="text-xs font-semibold uppercase tracking-wide text-amber-800">Bouwplaatskosten</span>
+          <Button variant="ghost" size="sm" className="h-6 text-xs" onClick={onNieuweBouwplaats}>
+            <Plus className="h-3 w-3 mr-1" />
+            Toevoegen
+          </Button>
+        </div>
+        {bouwplaatsRegels.length === 0 ? (
+          <p className="text-xs text-muted-foreground px-4 py-3">
+            Geen bouwplaatskosten — steiger, schaftwagen, afval, container, transport, enz.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs min-w-[900px]">
+              <tbody className="divide-y">
+                {bouwplaatsRegels.map((r) => (
+                  <tr key={r.id} className="hover:bg-amber-50/50 group">
+                    <td className="px-4 py-2 w-[22%]">
+                      <p className="font-medium text-slate-800">{r.omschrijving}</p>
+                      {r.regelnummer && <p className="text-muted-foreground">{r.regelnummer}</p>}
+                    </td>
+                    <td className="px-2 py-2 text-center text-muted-foreground w-[5%]">{r.eenheid}</td>
+                    <td className="px-2 py-2 text-right tabular-nums w-[6%]">{r.hoeveelheid}</td>
+                    <td className="px-2 py-2 text-right tabular-nums w-[8%]">{r.tarief > 0 ? formatBedrag(r.tarief) : "—"}</td>
+                    <td className="px-2 py-2 text-right tabular-nums w-[8%]">{r.materiaal_totaal > 0 ? formatBedrag(r.materiaal_totaal) : "—"}</td>
+                    <td className="px-2 py-2 text-right tabular-nums w-[7%]">{r.mu_per_eenheid > 0 ? fmt2(r.mu_per_eenheid) : "—"}</td>
+                    <td className="px-2 py-2 text-right tabular-nums w-[7%]">{r.mu_totaal > 0 ? fmt2(r.mu_totaal) : "—"}</td>
+                    <td className="px-2 py-2 text-right tabular-nums w-[8%]">{r.arbeidsloon > 0 ? formatBedrag(r.arbeidsloon) : "—"}</td>
+                    <td className="px-2 py-2 text-right tabular-nums w-[8%]">{r.onderaanneming_bedrag > 0 ? formatBedrag(r.onderaanneming_bedrag) : "—"}</td>
+                    <td className="px-2 py-2 text-right tabular-nums font-medium w-[8%]">{formatBedrag(r.totaal)}</td>
+                    <td className="px-2 py-2 text-right w-[8%]">
+                      <div className="flex gap-1 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => onBewerken(r)}>
+                          <Pencil className="h-3 w-3" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => onVerwijderen(r)}>
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
       {/* Staartkosten */}
       <div className="border-t mt-1">
         <div className="flex items-center justify-between px-4 py-1.5 bg-slate-100">
@@ -1287,7 +1412,7 @@ function InternView({
         </div>
         {staartRegels.length === 0 ? (
           <p className="text-xs text-muted-foreground px-4 py-3">
-            Geen staartkosten — projectleiding, transport, steiger, schaftwagen, enz.
+            Geen staartkosten — projectleiding, enz.
           </p>
         ) : (
           <div className="overflow-x-auto">
@@ -1333,19 +1458,26 @@ function InternView({
 
 function DirectieView({
   regelsByCategorie,
+  bouwplaatsRegels,
   staartRegels,
+  matSubtotaal, matOpslagBedrag, opslagMateriaal,
+  arbSubtotaal, arbOpslagBedrag, opslagArbeid,
+  oaSubtotaal, bouwplaatsSubtotaal, staartSubtotaal,
   subtotaal,
-  subtotaalStaart,
-  akBedrag, abkBedrag, risicoBedrag, winstBedrag, kortingBedrag,
+  akBedrag, risicoBedrag, basisWinst, winstBedrag, kortingBedrag,
   totaal, marge,
-  opslagAk, opslagAbk, opslagRisico, opslagWinst, korting,
+  opslagAk, opslagRisico, opslagWinst, korting,
 }: {
   regelsByCategorie: Array<{ categorie: string; label: string; regels: RegelRow[] }>;
+  bouwplaatsRegels: RegelRow[];
   staartRegels: RegelRow[];
-  subtotaal: number; subtotaalStaart: number;
-  akBedrag: number; abkBedrag: number; risicoBedrag: number; winstBedrag: number; kortingBedrag: number;
+  matSubtotaal: number; matOpslagBedrag: number; opslagMateriaal: number;
+  arbSubtotaal: number; arbOpslagBedrag: number; opslagArbeid: number;
+  oaSubtotaal: number; bouwplaatsSubtotaal: number; staartSubtotaal: number;
+  subtotaal: number;
+  akBedrag: number; risicoBedrag: number; basisWinst: number; winstBedrag: number; kortingBedrag: number;
   totaal: number; marge: number;
-  opslagAk: number; opslagAbk: number; opslagRisico: number; opslagWinst: number; korting: number;
+  opslagAk: number; opslagRisico: number; opslagWinst: number; korting: number;
 }) {
   return (
     <div className="p-5 space-y-4">
@@ -1354,6 +1486,7 @@ function DirectieView({
       </div>
       <table className="w-full text-sm">
         <tbody className="divide-y">
+          {/* Directe regels per categorie */}
           {regelsByCategorie.map(({ categorie, label, regels }) => {
             const cat_totaal = regels.reduce((s, r) => s + r.totaal, 0);
             const mat = regels.reduce((s, r) => s + (r.materiaal_totaal ?? 0), 0);
@@ -1379,30 +1512,68 @@ function DirectieView({
               </tr>
             );
           })}
-          {subtotaalStaart > 0 && (
-            <tr className="hover:bg-slate-50">
-              <td className="py-2 text-slate-700 font-medium">Staartkosten</td>
+          {/* Opslagen per kostsoort */}
+          {opslagMateriaal > 0 && matSubtotaal > 0 && (
+            <tr className="text-muted-foreground bg-slate-50/50">
+              <td className="py-1 pl-4 text-xs">+ Opslag materiaal ({opslagMateriaal}%)</td>
               <td colSpan={4} />
-              <td className="py-2 pl-4 text-right tabular-nums font-medium">{formatBedrag(subtotaalStaart)}</td>
+              <td className="py-1 pl-4 text-right tabular-nums text-xs">{formatBedrag(matOpslagBedrag)}</td>
             </tr>
           )}
-          <tr className="font-semibold">
-            <td className="py-2 text-slate-900">Subtotaal directe kosten</td>
+          {opslagArbeid > 0 && arbSubtotaal > 0 && (
+            <tr className="text-muted-foreground bg-slate-50/50">
+              <td className="py-1 pl-4 text-xs">+ Opslag arbeid ({opslagArbeid}%)</td>
+              <td colSpan={4} />
+              <td className="py-1 pl-4 text-right tabular-nums text-xs">{formatBedrag(arbOpslagBedrag)}</td>
+            </tr>
+          )}
+          {/* Bouwplaatskosten */}
+          {bouwplaatsSubtotaal > 0 && (
+            <tr className="hover:bg-amber-50/50">
+              <td className="py-2 text-slate-700 font-medium">Bouwplaatskosten</td>
+              <td colSpan={4} className="py-2 text-right text-xs text-muted-foreground">
+                {bouwplaatsRegels.length} post{bouwplaatsRegels.length !== 1 ? "en" : ""}
+              </td>
+              <td className="py-2 pl-4 text-right tabular-nums font-medium">{formatBedrag(bouwplaatsSubtotaal)}</td>
+            </tr>
+          )}
+          {/* Staartkosten */}
+          {staartSubtotaal > 0 && (
+            <tr className="hover:bg-slate-50">
+              <td className="py-2 text-slate-700 font-medium">Staartkosten</td>
+              <td colSpan={4} className="py-2 text-right text-xs text-muted-foreground">
+                {staartRegels.length} post{staartRegels.length !== 1 ? "en" : ""}
+              </td>
+              <td className="py-2 pl-4 text-right tabular-nums font-medium">{formatBedrag(staartSubtotaal)}</td>
+            </tr>
+          )}
+          <tr className="font-semibold border-t-2">
+            <td className="py-2 text-slate-900">Subtotaal</td>
             <td colSpan={4} />
             <td className="py-2 pl-4 text-right tabular-nums">{formatBedrag(subtotaal)}</td>
           </tr>
-          {[
-            { label: `AK (${opslagAk}%)`, bedrag: akBedrag },
-            { label: `ABK (${opslagAbk}%)`, bedrag: abkBedrag },
-            { label: `Risico (${opslagRisico}%)`, bedrag: risicoBedrag },
-            { label: `Winst (${opslagWinst}%)`, bedrag: winstBedrag },
-          ].map(({ label, bedrag }) => (
-            <tr key={label} className="text-muted-foreground">
-              <td className="py-1.5 pl-3">+ {label}</td>
+          <tr className="text-muted-foreground">
+            <td className="py-1.5 pl-3">+ AK ({opslagAk}%)</td>
+            <td colSpan={4} />
+            <td className="py-1.5 pl-4 text-right tabular-nums">{formatBedrag(akBedrag)}</td>
+          </tr>
+          {opslagRisico > 0 && (
+            <tr className="text-muted-foreground">
+              <td className="py-1.5 pl-3">+ Risico ({opslagRisico}%)</td>
               <td colSpan={4} />
-              <td className="py-1.5 pl-4 text-right tabular-nums">{formatBedrag(bedrag)}</td>
+              <td className="py-1.5 pl-4 text-right tabular-nums">{formatBedrag(risicoBedrag)}</td>
             </tr>
-          ))}
+          )}
+          <tr className="text-muted-foreground text-xs border-t">
+            <td className="py-1.5 pl-3">Basis voor winst</td>
+            <td colSpan={4} />
+            <td className="py-1.5 pl-4 text-right tabular-nums">{formatBedrag(basisWinst)}</td>
+          </tr>
+          <tr className="text-muted-foreground">
+            <td className="py-1.5 pl-3">+ Winst ({opslagWinst}%)</td>
+            <td colSpan={4} />
+            <td className="py-1.5 pl-4 text-right tabular-nums">{formatBedrag(winstBedrag)}</td>
+          </tr>
           {korting > 0 && (
             <tr className="text-green-700">
               <td className="py-1.5 pl-3">- Korting ({korting}%)</td>
@@ -1438,7 +1609,7 @@ function KlantView({
   totaal: number;
   totaalBtw: number;
 }) {
-  const zichtbaar = regels.filter((r) => !r.is_staartkosten);
+  const zichtbaar = regels.filter((r) => !r.is_staartkosten && !r.is_bouwplaatskosten);
   return (
     <div>
       <table className="w-full text-sm">

@@ -17,6 +17,8 @@ export interface ModCalcHeader {
   status: string;
   omschrijving?: string | null;
   opmerkingen?: string | null;
+  opslag_materiaal: number;
+  opslag_arbeid: number;
   opslag_ak: number;
   opslag_abk: number;
   opslag_risico: number;

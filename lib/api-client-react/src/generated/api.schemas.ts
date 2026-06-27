@@ -4700,6 +4700,8 @@ export interface ModCalcHeader {
   status: string;
   omschrijving?: string | null;
   opmerkingen?: string | null;
+  opslag_materiaal: number;
+  opslag_arbeid: number;
   opslag_ak: number;
   opslag_abk: number;
   opslag_risico: number;
@@ -4734,6 +4736,7 @@ export interface ModCalcRegel {
   arbeids_tarief?: number;
   onderaanneming_bedrag?: number;
   is_staartkosten?: boolean;
+  is_bouwplaatskosten?: boolean;
   hoofdstuk?: string;
   klanttekst?: string | null;
   materiaal_totaal?: number;
@@ -4754,8 +4757,9 @@ export interface ModCalcHeaderInput {
   status?: string;
   omschrijving?: string | null;
   opmerkingen?: string | null;
+  opslag_materiaal?: number;
+  opslag_arbeid?: number;
   opslag_ak?: number;
-  opslag_abk?: number;
   opslag_risico?: number;
   opslag_winst?: number;
   korting?: number;
@@ -4775,6 +4779,7 @@ export interface ModCalcRegelInput {
   arbeids_tarief?: number;
   onderaanneming_bedrag?: number;
   is_staartkosten?: boolean;
+  is_bouwplaatskosten?: boolean;
   hoofdstuk?: string;
   klanttekst?: string | null;
 }

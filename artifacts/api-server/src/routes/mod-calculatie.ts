@@ -32,26 +32,60 @@ function parseId(v: unknown): number {
   return parseInt(String(v), 10);
 }
 
+type RegelCalcInput = {
+  hoeveelheid: number;
+  tarief: number;
+  muPerEenheid: number;
+  arbeidsTarief: number;
+  onderaannemingBedrag: number;
+  isStaartkosten: boolean;
+  isBouwplaatskosten: boolean;
+  totaal: number;
+};
+
 function berekenTotalen(
-  regels: Array<{ totaal: number }>,
+  regels: RegelCalcInput[],
   header: {
+    opslagMateriaal: number;
+    opslagArbeid: number;
     opslagAk: number;
-    opslagAbk: number;
     opslagRisico: number;
     opslagWinst: number;
     korting: number;
   },
 ) {
-  const subtotaal = regels.reduce((s, r) => s + (r.totaal ?? 0), 0);
-  const akBedrag    = subtotaal * (header.opslagAk / 100);
-  const abkBedrag   = subtotaal * (header.opslagAbk / 100);
-  const risicoBedrag = subtotaal * (header.opslagRisico / 100);
-  const winstBedrag  = subtotaal * (header.opslagWinst / 100);
-  const totaalVoorKorting = subtotaal + akBedrag + abkBedrag + risicoBedrag + winstBedrag;
-  const kortingBedrag = totaalVoorKorting * (header.korting / 100);
+  const rnd = (n: number) => Math.round(n * 100) / 100;
+
+  const directe    = regels.filter(r => !r.isStaartkosten && !r.isBouwplaatskosten);
+  const bouwplaats = regels.filter(r => r.isBouwplaatskosten);
+  const staart     = regels.filter(r => r.isStaartkosten);
+
+  const matSubtotaal       = rnd(directe.reduce((s, r) => s + r.hoeveelheid * r.tarief, 0));
+  const arbSubtotaal       = rnd(directe.reduce((s, r) => s + r.hoeveelheid * r.muPerEenheid * r.arbeidsTarief, 0));
+  const oaSubtotaal        = rnd(directe.reduce((s, r) => s + r.onderaannemingBedrag, 0));
+  const bouwplaatsSubtotaal = rnd(bouwplaats.reduce((s, r) => s + r.totaal, 0));
+  const staartSubtotaal    = rnd(staart.reduce((s, r) => s + r.totaal, 0));
+
+  const matOpslagBedrag = rnd(matSubtotaal * header.opslagMateriaal / 100);
+  const arbOpslagBedrag = rnd(arbSubtotaal * header.opslagArbeid / 100);
+
+  const subtotaal = rnd(
+    matSubtotaal + matOpslagBedrag +
+    arbSubtotaal + arbOpslagBedrag +
+    oaSubtotaal + bouwplaatsSubtotaal + staartSubtotaal,
+  );
+
+  const akBedrag     = rnd(subtotaal * header.opslagAk / 100);
+  const risicoBedrag = rnd(subtotaal * header.opslagRisico / 100);
+  const basisWinst   = rnd(subtotaal + akBedrag + risicoBedrag);
+  const winstBedrag  = rnd(basisWinst * header.opslagWinst / 100);
+
+  const aanneemsom    = rnd(basisWinst + winstBedrag);
+  const kortingBedrag = rnd(aanneemsom * header.korting / 100);
+
   return {
-    subtotaal: Math.round(subtotaal * 100) / 100,
-    totaal_na_opslagen: Math.round((totaalVoorKorting - kortingBedrag) * 100) / 100,
+    subtotaal,
+    totaal_na_opslagen: rnd(aanneemsom - kortingBedrag),
   };
 }
 
@@ -75,6 +109,8 @@ function mapHeader(
     status: h.status,
     omschrijving: h.omschrijving,
     opmerkingen: h.opmerkingen,
+    opslag_materiaal: h.opslagMateriaal ?? 0,
+    opslag_arbeid: h.opslagArbeid ?? 0,
     opslag_ak: h.opslagAk,
     opslag_abk: (h as any).opslagAbk ?? 10,
     opslag_risico: h.opslagRisico,
@@ -114,8 +150,9 @@ function mapRegel(r: typeof modCalcRegelsTable.$inferSelect, normtijdCode?: stri
     mu_per_eenheid: mu,
     arbeids_tarief: at,
     onderaanneming_bedrag: ob,
-    is_staartkosten: (r as any).isStaartkosten ?? false,
-    hoofdstuk: (r as any).hoofdstuk ?? "Overige werkzaamheden",
+    is_staartkosten: r.isStaartkosten ?? false,
+    is_bouwplaatskosten: r.isBouwplaatskosten ?? false,
+    hoofdstuk: r.hoofdstuk ?? "Overige werkzaamheden",
     klanttekst: (r as any).klanttekst ?? null,
     materiaal_totaal: materiaalTotaal,
     mu_totaal: muTotaal,
@@ -250,11 +287,31 @@ router.get("/modules/calculaties", lezenCalc, async (req, res) => {
       .leftJoin(gebruikersTable, eq(modCalcHeadersTable.aangemaaktDoorId, gebruikersTable.id))
       .orderBy(desc(modCalcHeadersTable.aangemaaktOp));
 
-    const allRegels = await db.select({ cid: modCalcRegelsTable.calculatieId, totaal: modCalcRegelsTable.totaal })
-      .from(modCalcRegelsTable);
-    const regelsByCalc = new Map<number, number>();
+    const allRegels = await db.select({
+      cid: modCalcRegelsTable.calculatieId,
+      totaal: modCalcRegelsTable.totaal,
+      hoeveelheid: modCalcRegelsTable.hoeveelheid,
+      tarief: modCalcRegelsTable.tarief,
+      muPerEenheid: modCalcRegelsTable.muPerEenheid,
+      arbeidsTarief: modCalcRegelsTable.arbeidsTarief,
+      onderaannemingBedrag: modCalcRegelsTable.onderaannemingBedrag,
+      isStaartkosten: modCalcRegelsTable.isStaartkosten,
+      isBouwplaatskosten: modCalcRegelsTable.isBouwplaatskosten,
+    }).from(modCalcRegelsTable);
+
+    const regelsByCalc = new Map<number, RegelCalcInput[]>();
     for (const r of allRegels) {
-      regelsByCalc.set(r.cid, (regelsByCalc.get(r.cid) ?? 0) + r.totaal);
+      if (!regelsByCalc.has(r.cid)) regelsByCalc.set(r.cid, []);
+      regelsByCalc.get(r.cid)!.push({
+        hoeveelheid: r.hoeveelheid,
+        tarief: r.tarief,
+        muPerEenheid: r.muPerEenheid,
+        arbeidsTarief: r.arbeidsTarief,
+        onderaannemingBedrag: r.onderaannemingBedrag,
+        isStaartkosten: r.isStaartkosten,
+        isBouwplaatskosten: r.isBouwplaatskosten,
+        totaal: r.totaal,
+      });
     }
 
     let resultaten = rows;
@@ -269,10 +326,11 @@ router.get("/modules/calculaties", lezenCalc, async (req, res) => {
     }
 
     res.json(resultaten.map(({ header, gebouwNaam, makerNaam }) => {
-      const subtotaal = regelsByCalc.get(header.id) ?? 0;
-      const { totaal_na_opslagen } = berekenTotalen([{ totaal: subtotaal }], {
+      const calcRegels = regelsByCalc.get(header.id) ?? [];
+      const { subtotaal, totaal_na_opslagen } = berekenTotalen(calcRegels, {
+        opslagMateriaal: header.opslagMateriaal ?? 0,
+        opslagArbeid: header.opslagArbeid ?? 0,
         opslagAk: header.opslagAk,
-        opslagAbk: (header as any).opslagAbk ?? 10,
         opslagRisico: header.opslagRisico,
         opslagWinst: header.opslagWinst,
         korting: header.korting,
@@ -290,7 +348,8 @@ router.post("/modules/calculaties", aanmakenCalc, async (req, res) => {
     const {
       naam, referentie, klant_naam, gebouw_id, project_naam, status = "concept",
       omschrijving, opmerkingen,
-      opslag_ak = 15, opslag_abk = 10, opslag_risico = 5, opslag_winst = 10, korting = 0,
+      opslag_materiaal = 0, opslag_arbeid = 0,
+      opslag_ak = 15, opslag_risico = 5, opslag_winst = 10, korting = 0,
     } = req.body as Record<string, unknown>;
 
     if (!naam) return res.status(400).json({ error: "naam is verplicht" });
@@ -304,8 +363,9 @@ router.post("/modules/calculaties", aanmakenCalc, async (req, res) => {
       status: String(status),
       omschrijving: omschrijving ? String(omschrijving) : null,
       opmerkingen: opmerkingen ? String(opmerkingen) : null,
+      opslagMateriaal: Number(opslag_materiaal),
+      opslagArbeid: Number(opslag_arbeid),
       opslagAk: Number(opslag_ak),
-      opslagAbk: Number(opslag_abk),
       opslagRisico: Number(opslag_risico),
       opslagWinst: Number(opslag_winst),
       korting: Number(korting),
@@ -547,9 +607,20 @@ router.get("/modules/calculaties/:id", lezenCalc, async (req, res) => {
       .orderBy(asc(modCalcRegelsTable.volgorde), asc(modCalcRegelsTable.id));
 
     const regels = regelRows.map(({ regel, normCode }) => mapRegel(regel, normCode));
-    const { subtotaal, totaal_na_opslagen } = berekenTotalen(regels, {
+    const calcRegels: RegelCalcInput[] = regelRows.map(({ regel: r }) => ({
+      hoeveelheid: r.hoeveelheid,
+      tarief: r.tarief,
+      muPerEenheid: r.muPerEenheid,
+      arbeidsTarief: r.arbeidsTarief,
+      onderaannemingBedrag: r.onderaannemingBedrag,
+      isStaartkosten: r.isStaartkosten,
+      isBouwplaatskosten: r.isBouwplaatskosten,
+      totaal: r.totaal,
+    }));
+    const { subtotaal, totaal_na_opslagen } = berekenTotalen(calcRegels, {
+      opslagMateriaal: headerRow.header.opslagMateriaal ?? 0,
+      opslagArbeid: headerRow.header.opslagArbeid ?? 0,
       opslagAk: headerRow.header.opslagAk,
-      opslagAbk: (headerRow.header as any).opslagAbk ?? 10,
       opslagRisico: headerRow.header.opslagRisico,
       opslagWinst: headerRow.header.opslagWinst,
       korting: headerRow.header.korting,
@@ -583,8 +654,9 @@ router.patch("/modules/calculaties/:id", schrijvenCalc, async (req, res) => {
     if (body.status !== undefined) update.status = String(body.status);
     if (body.omschrijving !== undefined) update.omschrijving = body.omschrijving ? String(body.omschrijving) : null;
     if (body.opmerkingen !== undefined) update.opmerkingen = body.opmerkingen ? String(body.opmerkingen) : null;
+    if (body.opslag_materiaal !== undefined) update.opslagMateriaal = Number(body.opslag_materiaal);
+    if (body.opslag_arbeid !== undefined) update.opslagArbeid = Number(body.opslag_arbeid);
     if (body.opslag_ak !== undefined) update.opslagAk = Number(body.opslag_ak);
-    if (body.opslag_abk !== undefined) (update as any).opslagAbk = Number(body.opslag_abk);
     if (body.opslag_risico !== undefined) update.opslagRisico = Number(body.opslag_risico);
     if (body.opslag_winst !== undefined) update.opslagWinst = Number(body.opslag_winst);
     if (body.korting !== undefined) update.korting = Number(body.korting);
@@ -623,8 +695,9 @@ router.post("/modules/calculaties/:id/dupliceer", aanmakenCalc, async (req, res)
       status: "concept",
       omschrijving: original.omschrijving,
       opmerkingen: original.opmerkingen,
+      opslagMateriaal: original.opslagMateriaal ?? 0,
+      opslagArbeid: original.opslagArbeid ?? 0,
       opslagAk: original.opslagAk,
-      opslagAbk: (original as any).opslagAbk ?? 10,
       opslagRisico: original.opslagRisico,
       opslagWinst: original.opslagWinst,
       korting: original.korting,
@@ -652,7 +725,8 @@ router.post("/modules/calculaties/:id/dupliceer", aanmakenCalc, async (req, res)
           muPerEenheid: (r as any).muPerEenheid ?? 0,
           arbeidsTarief: (r as any).arbeidsTarief ?? 0,
           onderaannemingBedrag: (r as any).onderaannemingBedrag ?? 0,
-          isStaartkosten: (r as any).isStaartkosten ?? false,
+          isStaartkosten: r.isStaartkosten ?? false,
+          isBouwplaatskosten: r.isBouwplaatskosten ?? false,
         } as typeof modCalcRegelsTable.$inferInsert))
       );
     }
@@ -690,7 +764,8 @@ router.post("/modules/calculaties/:id/regels", schrijvenCalc, async (req, res) =
 
     const body = req.body as Record<string, unknown>;
     const { categorie = "arbeid", omschrijving, normtijd_id, eenheid = "st", volgorde = 0, opmerkingen,
-      regelnummer, is_staartkosten = false, hoofdstuk = "Overige werkzaamheden", klanttekst } = body;
+      regelnummer, is_staartkosten = false, is_bouwplaatskosten = false,
+      hoofdstuk = "Overige werkzaamheden", klanttekst } = body;
     if (!omschrijving) return res.status(400).json({ error: "omschrijving is verplicht" });
 
     const { hv, t, mu, at, ob, totaal } = berekenRegelTotaal(body);
@@ -711,6 +786,7 @@ router.post("/modules/calculaties/:id/regels", schrijvenCalc, async (req, res) =
       arbeidsTarief: at,
       onderaannemingBedrag: ob,
       isStaartkosten: Boolean(is_staartkosten),
+      isBouwplaatskosten: Boolean(is_bouwplaatskosten),
       hoofdstuk: String(hoofdstuk),
       klanttekst: klanttekst ? String(klanttekst) : null,
     } as typeof modCalcRegelsTable.$inferInsert).returning();
@@ -740,7 +816,8 @@ router.patch("/modules/calculaties/:id/regels/:regelId", schrijvenCalc, async (r
     if (body.volgorde !== undefined) update.volgorde = Number(body.volgorde);
     if (body.opmerkingen !== undefined) update.opmerkingen = body.opmerkingen ? String(body.opmerkingen) : null;
     if (body.regelnummer !== undefined) (update as any).regelnummer = body.regelnummer ? String(body.regelnummer) : null;
-    if (body.is_staartkosten !== undefined) (update as any).isStaartkosten = Boolean(body.is_staartkosten);
+    if (body.is_staartkosten !== undefined) update.isStaartkosten = Boolean(body.is_staartkosten);
+    if (body.is_bouwplaatskosten !== undefined) update.isBouwplaatskosten = Boolean(body.is_bouwplaatskosten);
     if (body.hoofdstuk !== undefined) (update as any).hoofdstuk = String(body.hoofdstuk);
     if (body.klanttekst !== undefined) (update as any).klanttekst = body.klanttekst ? String(body.klanttekst) : null;
     update.hoeveelheid = hv;
