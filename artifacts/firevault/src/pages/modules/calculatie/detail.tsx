@@ -582,6 +582,7 @@ export default function ModulesCalculatieDetail() {
                   staartRegels={staartRegels}
                   onBewerken={openBewerkenRegel}
                   onVerwijderen={(r) => deleteRegelMut.mutate({ id, regelId: r.id })}
+                  onNieuweRegel={() => openNieuweRegel(false)}
                   onNieuweBouwplaats={() => openNieuweRegel(false, true)}
                   onNieuweStaart={() => openNieuweRegel(true)}
                 />
@@ -1310,6 +1311,7 @@ function InternView({
   staartRegels,
   onBewerken,
   onVerwijderen,
+  onNieuweRegel,
   onNieuweBouwplaats,
   onNieuweStaart,
 }: {
@@ -1318,9 +1320,25 @@ function InternView({
   staartRegels: RegelRow[];
   onBewerken: (r: RegelRow) => void;
   onVerwijderen: (r: RegelRow) => void;
+  onNieuweRegel: () => void;
   onNieuweBouwplaats: () => void;
   onNieuweStaart: () => void;
 }) {
+  function rijHandler(onNieuwe: () => void, onBewerkRij: () => void) {
+    return (e: React.KeyboardEvent<HTMLTableRowElement>) => {
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        const volgende = e.currentTarget.nextElementSibling as HTMLElement | null;
+        if (volgende) { volgende.focus(); } else { onNieuwe(); }
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        const vorige = e.currentTarget.previousElementSibling as HTMLElement | null;
+        if (vorige) vorige.focus();
+      } else if (e.key === "Enter") {
+        onBewerkRij();
+      }
+    };
+  }
   return (
     <div>
       {regelsByHoofdstuk.map(({ hoofdstuk, regels: hRegels }) => (
@@ -1347,7 +1365,9 @@ function InternView({
               </thead>
               <tbody className="divide-y">
                 {hRegels.map((r) => (
-                  <tr key={r.id} className="hover:bg-slate-50 group">
+                  <tr key={r.id} tabIndex={0}
+                    className="hover:bg-slate-50 focus:bg-slate-50 focus:outline-none group"
+                    onKeyDown={rijHandler(onNieuweRegel, () => onBewerken(r))}>
                     <td className="px-4 py-2">
                       <p className="font-medium text-slate-800">{r.omschrijving}</p>
                       {r.regelnummer && <p className="text-muted-foreground">{r.regelnummer}</p>}
@@ -1397,7 +1417,9 @@ function InternView({
             <table className="w-full text-xs min-w-[900px]">
               <tbody className="divide-y">
                 {bouwplaatsRegels.map((r) => (
-                  <tr key={r.id} className="hover:bg-amber-50/50 group">
+                  <tr key={r.id} tabIndex={0}
+                    className="hover:bg-amber-50/50 focus:bg-amber-50/50 focus:outline-none group"
+                    onKeyDown={rijHandler(onNieuweBouwplaats, () => onBewerken(r))}>
                     <td className="px-4 py-2 w-[22%]">
                       <p className="font-medium text-slate-800">{r.omschrijving}</p>
                       {r.regelnummer && <p className="text-muted-foreground">{r.regelnummer}</p>}
@@ -1447,7 +1469,9 @@ function InternView({
             <table className="w-full text-xs min-w-[900px]">
               <tbody className="divide-y">
                 {staartRegels.map((r) => (
-                  <tr key={r.id} className="hover:bg-slate-50 group">
+                  <tr key={r.id} tabIndex={0}
+                    className="hover:bg-slate-50 focus:bg-slate-50 focus:outline-none group"
+                    onKeyDown={rijHandler(onNieuweStaart, () => onBewerken(r))}>
                     <td className="px-4 py-2 w-[22%]">
                       <p className="font-medium text-slate-800">{r.omschrijving}</p>
                       {r.regelnummer && <p className="text-muted-foreground">{r.regelnummer}</p>}
