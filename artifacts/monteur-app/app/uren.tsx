@@ -210,11 +210,12 @@ type UrenFormulierProps = {
     project_naam?: string | null;
   };
   planningItemsVanWeek?: PlanningItemBrief[];
+  weekTotaal?: number;
   onSluiten: () => void;
   onOpgeslagen: () => void;
 };
 
-function UrenFormulier({ datum, bestaand, planningItem, planningItemsVanWeek = [], onSluiten, onOpgeslagen }: UrenFormulierProps) {
+function UrenFormulier({ datum, bestaand, planningItem, planningItemsVanWeek = [], weekTotaal = 0, onSluiten, onOpgeslagen }: UrenFormulierProps) {
   const c = useColors();
 
   // Type detectie: intern als werkzaamheden in INTERN_OPTIES staat
@@ -295,6 +296,9 @@ function UrenFormulier({ datum, bestaand, planningItem, planningItemsVanWeek = [
 
   const isBusy = aanmaken.isPending || bijwerken.isPending;
   const nettoUren = berekendUren();
+  // Weektotaal inclusief deze invoer (bij bewerken: oude uren eraf, nieuwe erbij)
+  const oudeUren = bestaand?.netto_uren ?? 0;
+  const weekInclDit = weekTotaal - oudeUren + nettoUren;
 
   return (
     <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
@@ -401,21 +405,30 @@ function UrenFormulier({ datum, bestaand, planningItem, planningItemsVanWeek = [
           </View>
         </View>
 
-        {/* Netto berekening */}
+        {/* Netto berekening + weektotaal */}
         <View style={{
           backgroundColor: c.accent,
           borderRadius: 10,
           padding: 12,
-          flexDirection: "row",
-          alignItems: "center",
-          justifyContent: "space-between",
+          gap: 8,
         }}>
-          <Text style={{ color: c.mutedForeground, fontSize: 13, fontFamily: "Inter_400Regular" }}>
-            Netto gewerkte uren
-          </Text>
-          <Text style={{ color: c.primary, fontSize: 20, fontFamily: "Inter_700Bold" }}>
-            {formatUren(nettoUren)}
-          </Text>
+          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+            <Text style={{ color: c.mutedForeground, fontSize: 13, fontFamily: "Inter_400Regular" }}>
+              Netto gewerkte uren
+            </Text>
+            <Text style={{ color: c.primary, fontSize: 20, fontFamily: "Inter_700Bold" }}>
+              {formatUren(nettoUren)}
+            </Text>
+          </View>
+          <View style={{ height: 1, backgroundColor: c.border }} />
+          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+            <Text style={{ color: c.mutedForeground, fontSize: 13, fontFamily: "Inter_400Regular" }}>
+              Weektotaal incl. dit
+            </Text>
+            <Text style={{ color: c.foreground, fontSize: 16, fontFamily: "Inter_700Bold" }}>
+              {formatUren(weekInclDit)}
+            </Text>
+          </View>
         </View>
 
         {/* Gebouw / Project picker — alleen bij project-type */}
@@ -1140,6 +1153,7 @@ export default function UrenScherm() {
               bestaand={bewerkenUren ?? undefined}
               planningItem={planningBevestigen ?? undefined}
               planningItemsVanWeek={data?.planning_items ?? []}
+              weekTotaal={totaalUren}
               onSluiten={() => {
                 setModalDatum(null);
                 setBewerkenUren(null);
