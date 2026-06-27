@@ -56,10 +56,22 @@ export default function MenuScherm() {
       onPress: () => router.push("/uren"),
     },
     {
+      sleutel: "berichten",
+      label: "Berichten",
+      icoon: "chatbubbles",
+      onPress: () => router.push("/berichten"),
+    },
+    {
       sleutel: "toolboxen",
       label: "Toolboxen",
       icoon: "shield-checkmark",
       onPress: () => router.push("/toolboxen"),
+    },
+    {
+      sleutel: "opname",
+      label: "Opname",
+      icoon: "clipboard",
+      onPress: () => router.push("/opname"),
     },
     {
       sleutel: "lmra",
@@ -72,18 +84,6 @@ export default function MenuScherm() {
       label: "Veiligheidsmelding",
       icoon: "warning-outline",
       onPress: () => router.push("/veiligheid-melding"),
-    },
-    {
-      sleutel: "berichten",
-      label: "Berichten",
-      icoon: "chatbubbles",
-      onPress: () => router.push("/berichten"),
-    },
-    {
-      sleutel: "opname",
-      label: "Opname",
-      icoon: "clipboard",
-      onPress: () => router.push("/opname"),
     },
   ];
 
