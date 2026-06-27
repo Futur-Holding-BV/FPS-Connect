@@ -13,10 +13,14 @@ import {
   gebouwenTable,
   gebruikersTable,
   voorzieningenTable,
+  voorzieningLabelsTable,
+  labelsTable,
+  opnamesTable,
+  opnameItemsTable,
   offertesTable,
   offerteRegelsTable,
 } from "@workspace/db";
-import { eq, desc, asc, ilike, or, count, sql } from "drizzle-orm";
+import { eq, desc, asc, ilike, or, count, sql, and } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
 import { heeftOpenAi, maakOpenAiClient } from "../lib/openai";
 
@@ -861,18 +865,82 @@ router.post("/modules/calculaties/:id/ai-regels", lezenCalc, async (req, res) =>
 
     let gebouwInfo = "";
     let spotenInfo = "";
+    let opnameInfo = "";
+
     if (header.gebouwId) {
-      const [[g], spotRows] = await Promise.all([
-        db.select().from(gebouwenTable).where(eq(gebouwenTable.id, header.gebouwId)).limit(1),
+      const gId = header.gebouwId;
+      const [[g], spotCounts, spotLabels, opnameItems] = await Promise.all([
+        db.select().from(gebouwenTable).where(eq(gebouwenTable.id, gId)).limit(1),
+
+        // Aantal spots per type
         db.select({ type: voorzieningenTable.type, aantal: count() })
           .from(voorzieningenTable)
-          .where(eq(voorzieningenTable.gebouwId, header.gebouwId))
+          .where(and(eq(voorzieningenTable.gebouwId, gId), eq(voorzieningenTable.gearchiveerd, false)))
           .groupBy(voorzieningenTable.type),
+
+        // Producten (labels/toepassingen) per spot type
+        db.selectDistinct({
+          type: voorzieningenTable.type,
+          labelNaam: labelsTable.naam,
+          fabrikant: labelsTable.fabrikant,
+        })
+          .from(voorzieningenTable)
+          .innerJoin(voorzieningLabelsTable, eq(voorzieningLabelsTable.voorzieningId, voorzieningenTable.id))
+          .innerJoin(labelsTable, eq(labelsTable.id, voorzieningLabelsTable.labelId))
+          .where(and(eq(voorzieningenTable.gebouwId, gId), eq(voorzieningenTable.gearchiveerd, false))),
+
+        // Meest recente opname-items (bevindingen uit de veldopname)
+        db.select({
+          opnameNaam: opnamesTable.naam,
+          opnameDatum: opnamesTable.datum,
+          spotType: opnameItemsTable.spotType,
+          actie: opnameItemsTable.actie,
+          bereikbaarheid: opnameItemsTable.bereikbaarheid,
+          aantal: opnameItemsTable.aantal,
+          afmetingen: opnameItemsTable.afmetingen,
+          prioriteit: opnameItemsTable.prioriteit,
+          beschrijving: opnameItemsTable.beschrijving,
+        })
+          .from(opnamesTable)
+          .innerJoin(opnameItemsTable, eq(opnameItemsTable.opnameId, opnamesTable.id))
+          .where(eq(opnamesTable.gebouwId, gId))
+          .orderBy(desc(opnamesTable.datum), asc(opnameItemsTable.id))
+          .limit(120),
       ]);
-      if (g) gebouwInfo = `Gebouw: ${g.naam}, ${(g as any).adres ?? ""} ${(g as any).stad ?? ""}. Bouwjaar: ${(g as any).bouwjaar ?? "onbekend"}. Type: ${(g as any).gebouwType ?? "onbekend"}.`;
-      if (spotRows.length > 0) {
-        spotenInfo = "Aanwezige spots (werkelijke aantallen uit de database):\n" +
-          spotRows.map((s) => `- ${s.type}: ${s.aantal} stuks`).join("\n");
+
+      if (g) {
+        gebouwInfo = `Gebouw: ${g.naam}, ${(g as any).adres ?? ""} ${(g as any).stad ?? ""}. Bouwjaar: ${(g as any).bouwjaar ?? "onbekend"}. Type: ${(g as any).gebouwType ?? "onbekend"}.`;
+      }
+
+      // Spots samenvatten per type, verrijkt met producten
+      if (spotCounts.length > 0) {
+        const labelsByType = new Map<string, string[]>();
+        for (const l of spotLabels) {
+          if (!labelsByType.has(l.type)) labelsByType.set(l.type, []);
+          const tekst = l.fabrikant ? `${l.labelNaam} (${l.fabrikant})` : l.labelNaam;
+          if (!labelsByType.get(l.type)!.includes(tekst)) labelsByType.get(l.type)!.push(tekst);
+        }
+        spotenInfo = "Geregistreerde spots in dit gebouw (reeds aangebrachte voorzieningen):\n" +
+          spotCounts.map((s) => {
+            const producten = labelsByType.get(s.type) ?? [];
+            const productStr = producten.length > 0 ? ` — producten: ${producten.join(", ")}` : "";
+            return `- ${s.type}: ${s.aantal} stuks${productStr}`;
+          }).join("\n");
+      }
+
+      // Opname-bevindingen: aangewezen werkzaamheden met aantallen en context
+      if (opnameItems.length > 0) {
+        const eerste = opnameItems[0]!;
+        opnameInfo = `Opname: "${eerste.opnameNaam}" d.d. ${eerste.opnameDatum}\n` +
+          "Bevindingen uit de veldopname (dit zijn de concreet te calculeren werkzaamheden):\n" +
+          opnameItems.map((item) => {
+            const delen: string[] = [`${item.spotType}: ${item.actie} × ${item.aantal}`];
+            if (item.afmetingen) delen.push(`afm: ${item.afmetingen}`);
+            if (item.bereikbaarheid && item.bereikbaarheid !== "goed") delen.push(`bereikbaarheid: ${item.bereikbaarheid}`);
+            if (item.prioriteit === "hoog") delen.push("prioriteit: hoog");
+            if (item.beschrijving) delen.push(item.beschrijving);
+            return `- ${delen.join(" | ")}`;
+          }).join("\n");
       }
     }
 
@@ -890,10 +958,18 @@ router.post("/modules/calculaties/:id/ai-regels", lezenCalc, async (req, res) =>
     const HOOFDSTUKKEN = ["Brandwerende doorvoeringen", "Deuren en kozijnen", "Wanden en plafonds", "Schachten", "Onderhoud", "Overige werkzaamheden"];
     const CATEGORIEEN = ["arbeid", "materiaal", "onderaanneming", "materieel", "overig"];
 
+    // Instructie afhankelijk van beschikbare data
+    const databronInstructie = opnameInfo
+      ? "Gebruik de opname-bevindingen als primaire basis voor hoeveelheden en werkzaamheden. De spotaantallen geven aanvullende context over de bestaande situatie."
+      : spotenInfo
+        ? "Gebruik de geregistreerde spotaantallen als basis voor hoeveelheden."
+        : "Er zijn geen spots of opname-bevindingen beschikbaar — schat realistisch op basis van de projectomschrijving.";
+
     const prompt = `Je bent een calculatie-expert brandpreventie voor het Nederlandse bedrijf FPS Brandpreventie.
 ${gebouwInfo}
 Project: ${header.naam}${header.projectNaam ? ` (${header.projectNaam})` : ""}${header.omschrijving ? `\nOmschrijving: ${header.omschrijving}` : ""}
-${spotenInfo ? `\n${spotenInfo}` : ""}
+${spotenInfo ? `\n${spotenInfo}` : ""}${opnameInfo ? `\n\n${opnameInfo}` : ""}
+
 Beschikbare normtijden (gebruik de exacte code als normtijd_code, max 3 selecteren):
 ${normtijdLijst || "(geen normtijden beschikbaar)"}
 
@@ -903,9 +979,9 @@ ${tarievenLijst}
 Al aanwezige regels (voeg geen duplicaten toe):
 ${bestaandeLijst}
 
-Geef 6-12 concrete calculatieregels als JSON. Gebruik de aanwezige spotaantallen als basis voor hoeveelheden.
-Gebruik de beschikbare tarieven voor materiaal (tarief) en arbeid (arbeids_tarief). 
-Vul hoeveelheden realistisch in op basis van de spotdata.
+${databronInstructie}
+Gebruik de beschikbare tarieven voor materiaal (tarief) en arbeid (arbeids_tarief).
+Geef 6-14 concrete calculatieregels als JSON. Markeer steigers, bereikbaarheidsmaatregelen en bouwplaatslogistiek als is_bouwplaatskosten: true.
 Geef ook max 3 korte waarschuwingen bij ontbrekende posten, lage hoeveelheden of risico's.
 
 JSON formaat (ALLEEN dit object teruggeven, geen uitleg):
@@ -922,6 +998,7 @@ JSON formaat (ALLEEN dit object teruggeven, geen uitleg):
       "arbeids_tarief": ${standaardArbeidstarief},
       "onderaanneming_bedrag": 0,
       "is_staartkosten": false,
+      "is_bouwplaatskosten": false,
       "klanttekst": "Tekst voor in de offerte"
     }
   ],

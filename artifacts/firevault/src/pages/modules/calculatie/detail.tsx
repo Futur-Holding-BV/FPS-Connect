@@ -254,7 +254,7 @@ export default function ModulesCalculatieDetail() {
           arbeids_tarief: String(r.arbeids_tarief ?? 0),
           onderaanneming_bedrag: String(r.onderaanneming_bedrag ?? 0),
           is_staartkosten: r.is_staartkosten ?? false,
-          is_bouwplaatskosten: false,
+          is_bouwplaatskosten: (r as any).is_bouwplaatskosten ?? false,
           opmerkingen: "",
           regelnummer: "",
           hoofdstuk: r.hoofdstuk ?? "Overige werkzaamheden",
@@ -659,12 +659,39 @@ export default function ModulesCalculatieDetail() {
                       ))}
                     </div>
                   )}
-                  <p className="text-xs text-muted-foreground">{aiVoorstellen.length} regels voorgesteld — klik op een regel om toe te voegen.</p>
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs text-muted-foreground">{aiVoorstellen.length} regels voorgesteld</p>
+                    <Button variant="outline" size="sm" className="h-6 text-xs px-2"
+                      disabled={createRegelMut.isPending}
+                      onClick={() => {
+                        aiVoorstellen.forEach((r) => createRegelMut.mutate({ id, data: {
+                          categorie: r.categorie,
+                          omschrijving: r.omschrijving,
+                          eenheid: r.eenheid,
+                          hoeveelheid: parseFloat(r.hoeveelheid) || 1,
+                          tarief: parseFloat(r.tarief) || 0,
+                          mu_per_eenheid: parseFloat(r.mu_per_eenheid) || 0,
+                          arbeids_tarief: parseFloat(r.arbeids_tarief) || 0,
+                          onderaanneming_bedrag: parseFloat(r.onderaanneming_bedrag) || 0,
+                          is_staartkosten: r.is_staartkosten,
+                          is_bouwplaatskosten: (r as any).is_bouwplaatskosten ?? false,
+                          hoofdstuk: r.hoofdstuk,
+                          klanttekst: r.klanttekst || null,
+                        } }));
+                      }}>
+                      Voeg alles toe
+                    </Button>
+                  </div>
                   <div className="space-y-1.5 max-h-72 overflow-y-auto">
                     {aiVoorstellen.map((r, i) => (
                       <div key={i} className="flex items-start gap-2 p-2 rounded border text-xs hover:bg-slate-50 group">
                         <div className="flex-1 min-w-0">
-                          <p className="font-medium text-slate-800 leading-tight">{r.omschrijving}</p>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <p className="font-medium text-slate-800 leading-tight">{r.omschrijving}</p>
+                            {(r as any).is_bouwplaatskosten && (
+                              <span className="inline-block rounded bg-amber-100 text-amber-700 px-1 py-0 text-[10px] leading-4 font-medium shrink-0">bouwplaats</span>
+                            )}
+                          </div>
                           <p className="text-muted-foreground mt-0.5">{r.hoofdstuk}</p>
                           <p className="text-muted-foreground">{r.hoeveelheid} {r.eenheid} · {CATEGORIE_LABEL[r.categorie] ?? r.categorie}</p>
                         </div>
@@ -680,6 +707,7 @@ export default function ModulesCalculatieDetail() {
                             arbeids_tarief: parseFloat(r.arbeids_tarief) || 0,
                             onderaanneming_bedrag: parseFloat(r.onderaanneming_bedrag) || 0,
                             is_staartkosten: r.is_staartkosten,
+                            is_bouwplaatskosten: (r as any).is_bouwplaatskosten ?? false,
                             hoofdstuk: r.hoofdstuk,
                             klanttekst: r.klanttekst || null,
                           } })}>
