@@ -78,3 +78,4 @@
 - [Werkdag-module patroon](werkdag-module.md) — planning_items=work orders; uitvoering_status via SQL ALTER (geen drizzle push); medewerker opzoeken via gebruiker_id in sessie; useFocusEffect voor refresh bij terugkeer.
 - [SidebarTrigger tooltip-patroon](sidebar-trigger-tooltip.md) — TooltipTrigger asChild op SidebarTrigger breekt rendering (geen forwardRef); gebruik native title-attribuut op SidebarTrigger voor hover-hint.
 - [Canvas viewport vs. sidebar zichtbaarheid](canvas-sidebar-viewport.md) — firevault-iframe staat op Canvas positie (-974,-551) bij 1920x1080; sidebar (x=0..250) valt buiten het Canvas-viewport als dat bij (0,0) begint; gebruik Preview-pane voor volledige app-weergave.
+- [E2E getByText nav-kaart val](e2e-getbytext-navkaart.md) — getByText("Verlof").first() matcht ancestor-containers (View/ScrollView) als meer dan één DOM-element de substring bevat; gebruik testID op de Pressable en getByTestId voor betrouwbaar klikken.
