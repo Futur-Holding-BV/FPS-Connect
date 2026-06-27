@@ -11830,6 +11830,8 @@ components:
           type: ["string", "null"]
         laatste_spot_op:
           type: ["string", "null"]
+        mijn_laatste_spot_op:
+          type: ["string", "null"]
         gereed_op:
           type: ["string", "null"]
         gereed_door:

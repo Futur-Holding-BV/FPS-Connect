@@ -101,6 +101,7 @@ function gebouwRij(
   partijen: { type: string; naam: string }[] = [],
   laatsteSpotOp: Date | string | null = null,
   werkmaatschappijNaam: string | null = null,
+  mijnLaatsteSpotOp: Date | string | null = null,
 ) {
   return {
     id: g.id,
@@ -126,6 +127,7 @@ function gebouwRij(
     aangemaakt_op: g.aangemaaktOp.toISOString(),
     bijgewerkt_op: g.bijgewerktOp ? g.bijgewerktOp.toISOString() : null,
     laatste_spot_op: laatsteSpotOp ? new Date(laatsteSpotOp).toISOString() : null,
+    mijn_laatste_spot_op: mijnLaatsteSpotOp ? new Date(mijnLaatsteSpotOp).toISOString() : null,
     gereed_op: g.gereedOp ? g.gereedOp.toISOString() : null,
     gereed_door: g.gereedDoor ?? null,
     gearchiveerd: g.gearchiveerd,
@@ -208,6 +210,19 @@ router.get("/gebouwen", lezenGebouwenOfKlant, async (req, res) => {
       .from(werkgeversTable);
     const werkgeverNamen = new Map(alleWerkgevers.map((w) => [w.id, w.naam]));
 
+    // Één query: laatste spot per gebouw toegevoegd door deze monteur
+    const mijnSpotRijen = await db
+      .select({
+        gebouwId: voorzieningenTable.gebouwId,
+        mijnLaatsteSpotOp: sql<Date | null>`max(${voorzieningenTable.aangemaaktOp})`,
+      })
+      .from(voorzieningenTable)
+      .where(eq(voorzieningenTable.makerMonteurId, userId))
+      .groupBy(voorzieningenTable.gebouwId);
+    const mijnLaatsteSpotPerGebouw = new Map(
+      mijnSpotRijen.map((r) => [r.gebouwId, r.mijnLaatsteSpotOp]),
+    );
+
     const result = await Promise.all(
       gebouwen.map(async (g) => {
         const [stats] = await db
@@ -224,6 +239,7 @@ router.get("/gebouwen", lezenGebouwenOfKlant, async (req, res) => {
           partijenPerGebouw.get(g.id) ?? [],
           stats?.laatsteSpotOp ?? null,
           werkgeverNamen.get(g.werkgeverId ?? -1) ?? null,
+          mijnLaatsteSpotPerGebouw.get(g.id) ?? null,
         );
       }),
     );

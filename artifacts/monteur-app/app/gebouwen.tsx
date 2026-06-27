@@ -37,15 +37,22 @@ export default function Gebouwen() {
 
   if (!token) return <Redirect href="/login" />;
 
-  const gebouwen = (data ?? []).filter((g) => {
-    if (!zoek.trim()) return true;
-    const q = zoek.toLowerCase();
-    return (
-      g.naam.toLowerCase().includes(q) ||
-      g.adres.toLowerCase().includes(q) ||
-      (g.stad ?? "").toLowerCase().includes(q)
-    );
-  });
+  const gebouwen = (data ?? [])
+    .filter((g) => {
+      if (!zoek.trim()) return true;
+      const q = zoek.toLowerCase();
+      return (
+        g.naam.toLowerCase().includes(q) ||
+        g.adres.toLowerCase().includes(q) ||
+        (g.stad ?? "").toLowerCase().includes(q)
+      );
+    })
+    .sort((a, b) => {
+      const ta = a.mijn_laatste_spot_op ? new Date(a.mijn_laatste_spot_op).getTime() : 0;
+      const tb = b.mijn_laatste_spot_op ? new Date(b.mijn_laatste_spot_op).getTime() : 0;
+      if (tb !== ta) return tb - ta;
+      return a.naam.localeCompare(b.naam, "nl");
+    });
 
   async function herlaadMetSync() {
     await forceerSync();
@@ -203,7 +210,7 @@ export default function Gebouwen() {
           keyExtractor={(g) => String(g.id)}
           numColumns={kolommen}
           columnWrapperStyle={kolommen > 1 ? { gap: RASTER_GAP } : undefined}
-          contentContainerStyle={{ padding: 16, gap: 12, paddingBottom: insets.bottom + 24, width: "100%", maxWidth: inhoudMaxBreedte, alignSelf: "center" }}
+          contentContainerStyle={{ padding: 12, gap: 8, paddingBottom: insets.bottom + 24, width: "100%", maxWidth: inhoudMaxBreedte, alignSelf: "center" }}
           refreshControl={
             <RefreshControl
               refreshing={isRefetching || isSyncing}
@@ -224,30 +231,44 @@ export default function Gebouwen() {
                 borderRadius: c.radius,
                 borderWidth: 1,
                 borderColor: c.border,
-                padding: 18,
+                paddingHorizontal: 14,
+                paddingVertical: 11,
                 width: itemBreedte,
                 opacity: pressed ? 0.85 : 1,
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 10,
               })}
             >
-              <Text style={{ fontSize: 18, color: c.foreground, fontFamily: "Inter_700Bold" }}>
-                {item.projectnummer ? `${item.projectnummer} - ${item.naam}` : item.naam}
-              </Text>
-              <Text style={{ fontSize: 15, color: c.mutedForeground, marginTop: 4, fontFamily: "Inter_400Regular" }}>
-                {item.adres}
-                {item.stad ? `, ${item.stad}` : ""}
-              </Text>
+              <View style={{ flex: 1 }}>
+                <Text
+                  style={{ fontSize: 14, color: c.foreground, fontFamily: "Inter_700Bold" }}
+                  numberOfLines={1}
+                >
+                  {item.projectnummer ? `${item.projectnummer} · ${item.naam}` : item.naam}
+                </Text>
+                <Text
+                  style={{ fontSize: 12, color: c.mutedForeground, marginTop: 2, fontFamily: "Inter_400Regular" }}
+                  numberOfLines={1}
+                >
+                  {item.adres}{item.stad ? `, ${item.stad}` : ""}
+                </Text>
+              </View>
               <View
                 style={{
-                  marginTop: 12,
-                  alignSelf: "flex-start",
                   backgroundColor: c.accent,
-                  paddingHorizontal: 12,
-                  paddingVertical: 6,
-                  borderRadius: 8,
+                  paddingHorizontal: 8,
+                  paddingVertical: 4,
+                  borderRadius: 6,
+                  minWidth: 44,
+                  alignItems: "center",
                 }}
               >
-                <Text style={{ color: c.accentForeground, fontSize: 13, fontFamily: "Inter_600SemiBold" }}>
-                  {item.totaal_voorzieningen ?? 0} {(item.totaal_voorzieningen ?? 0) === 1 ? "spot" : "spots"}
+                <Text style={{ color: c.accentForeground, fontSize: 11, fontFamily: "Inter_700Bold" }}>
+                  {item.totaal_voorzieningen ?? 0}
+                </Text>
+                <Text style={{ color: c.accentForeground, fontSize: 9, fontFamily: "Inter_400Regular" }}>
+                  spots
                 </Text>
               </View>
             </Pressable>

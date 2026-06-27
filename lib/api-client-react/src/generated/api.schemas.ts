@@ -788,6 +788,8 @@ export interface Gebouw {
   /** @nullable */
   laatste_spot_op?: string | null;
   /** @nullable */
+  mijn_laatste_spot_op?: string | null;
+  /** @nullable */
   gereed_op?: string | null;
   /** @nullable */
   gereed_door?: string | null;
