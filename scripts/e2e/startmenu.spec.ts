@@ -38,8 +38,11 @@ async function controleerGebouwen(page: Page): Promise<void> {
   await expect(page.getByPlaceholder("Zoek gebouw, adres of stad…")).toBeVisible({
     timeout: INHOUD_TIMEOUT,
   });
-  // Lijst geladen: óf een gebouwkaart (spot-badge) óf de lege-staat.
-  const lijstitem = zichtbareTekst(page, /\d+\s+spots?\b/);
+  // Lijst geladen: óf een spots-badge (altijd aanwezig per kaart) óf de lege-staat.
+  // De badge rendert het getal en "spots" in aparte Text-elementen; we matchen op
+  // "spots" als zelfstandige node omdat de gecombineerde tekst niet als één DOM-element
+  // zichtbaar is.
+  const lijstitem = zichtbareTekst(page, "spots");
   const leeg = zichtbareTekst(page, "Geen gebouwen gevonden");
   await expect(lijstitem.first().or(leeg.first())).toBeVisible({ timeout: INHOUD_TIMEOUT });
 }
@@ -197,7 +200,9 @@ test("FPS startmenu: login, waaier en doorlinken", async ({ page }) => {
       timeout: INHOUD_TIMEOUT,
     });
 
-    const eersteSpotsBadge = page.getByText(/\d+\s+spots?\b/).filter({ visible: true }).first();
+    // De spots-badge rendert getal en "spots" in aparte Text-elementen. We
+    // matchen op de eerste zichtbare "spots"-node als proxy voor een geladen kaart.
+    const eersteSpotsBadge = zichtbareTekst(page, "spots").first();
     const leegStaatGebouwen = zichtbareTekst(page, "Geen gebouwen gevonden");
 
     // Wacht tot de lijst (of de lege staat) geladen is.
@@ -205,6 +210,7 @@ test("FPS startmenu: login, waaier en doorlinken", async ({ page }) => {
       timeout: INHOUD_TIMEOUT,
     });
 
+    // Klik op de eerste spots-badge (click bubbles naar de Pressable-kaart).
     const heeftKaarten = (await eersteSpotsBadge.count()) > 0;
     if (heeftKaarten) {
       await eersteSpotsBadge.click();
