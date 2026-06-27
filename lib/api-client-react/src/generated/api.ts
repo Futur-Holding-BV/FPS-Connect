@@ -172,6 +172,16 @@ import type {
   GetVerlofOverzichtParams,
   GetVervaldagenParams,
   GetZiekmeldingenStatistiekenParams,
+  GoLiveAdvies,
+  GoLiveAdviesActie,
+  GoLiveDashboard,
+  GoLiveFase,
+  GoLiveFasePatch,
+  GoLiveLes,
+  GoLiveLesInput,
+  GoLiveMijnActie,
+  GoLiveReadinessItem,
+  GoLiveTestdataOverzicht,
   HallOfFameEntry,
   HealthStatus,
   HelpdeskTicket,
@@ -43864,4 +43874,748 @@ export function useGetSepaBestandenIdDownloadUrl<TData = Awaited<ReturnType<type
 
 
 
+
+export const getGetBeheerGoLiveDashboardUrl = () => {
+
+
+
+
+  return `/api/beheer/go-live/dashboard`
+}
+
+/**
+ * @summary Go-Live dashboard statistieken ophalen
+ */
+export const getBeheerGoLiveDashboard = async ( options?: RequestInit): Promise<GoLiveDashboard> => {
+
+  return customFetch<GoLiveDashboard>(getGetBeheerGoLiveDashboardUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetBeheerGoLiveDashboardQueryKey = () => {
+    return [
+    `/api/beheer/go-live/dashboard`
+    ] as const;
+    }
+
+
+export const getGetBeheerGoLiveDashboardQueryOptions = <TData = Awaited<ReturnType<typeof getBeheerGoLiveDashboard>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getBeheerGoLiveDashboard>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetBeheerGoLiveDashboardQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getBeheerGoLiveDashboard>>> = ({ signal }) => getBeheerGoLiveDashboard({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getBeheerGoLiveDashboard>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetBeheerGoLiveDashboardQueryResult = NonNullable<Awaited<ReturnType<typeof getBeheerGoLiveDashboard>>>
+export type GetBeheerGoLiveDashboardQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Go-Live dashboard statistieken ophalen
+ */
+
+export function useGetBeheerGoLiveDashboard<TData = Awaited<ReturnType<typeof getBeheerGoLiveDashboard>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getBeheerGoLiveDashboard>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetBeheerGoLiveDashboardQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetBeheerGoLiveFasenUrl = () => {
+
+
+
+
+  return `/api/beheer/go-live/fasen`
+}
+
+/**
+ * @summary Implementatiefasen ophalen (geseed bij eerste aanvraag)
+ */
+export const getBeheerGoLiveFasen = async ( options?: RequestInit): Promise<GoLiveFase[]> => {
+
+  return customFetch<GoLiveFase[]>(getGetBeheerGoLiveFasenUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetBeheerGoLiveFasenQueryKey = () => {
+    return [
+    `/api/beheer/go-live/fasen`
+    ] as const;
+    }
+
+
+export const getGetBeheerGoLiveFasenQueryOptions = <TData = Awaited<ReturnType<typeof getBeheerGoLiveFasen>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getBeheerGoLiveFasen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetBeheerGoLiveFasenQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getBeheerGoLiveFasen>>> = ({ signal }) => getBeheerGoLiveFasen({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getBeheerGoLiveFasen>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetBeheerGoLiveFasenQueryResult = NonNullable<Awaited<ReturnType<typeof getBeheerGoLiveFasen>>>
+export type GetBeheerGoLiveFasenQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Implementatiefasen ophalen (geseed bij eerste aanvraag)
+ */
+
+export function useGetBeheerGoLiveFasen<TData = Awaited<ReturnType<typeof getBeheerGoLiveFasen>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getBeheerGoLiveFasen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetBeheerGoLiveFasenQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getPatchBeheerGoLiveFasenIdUrl = (id: number,) => {
+
+
+
+
+  return `/api/beheer/go-live/fasen/${id}`
+}
+
+/**
+ * @summary Fase status / voortgang / opmerkingen bijwerken
+ */
+export const patchBeheerGoLiveFasenId = async (id: number,
+    goLiveFasePatch: GoLiveFasePatch, options?: RequestInit): Promise<GoLiveFase> => {
+
+  return customFetch<GoLiveFase>(getPatchBeheerGoLiveFasenIdUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(goLiveFasePatch)
+  }
+);}
+
+
+
+
+export const getPatchBeheerGoLiveFasenIdMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof patchBeheerGoLiveFasenId>>, TError,{id: number;data: BodyType<GoLiveFasePatch>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof patchBeheerGoLiveFasenId>>, TError,{id: number;data: BodyType<GoLiveFasePatch>}, TContext> => {
+
+const mutationKey = ['patchBeheerGoLiveFasenId'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof patchBeheerGoLiveFasenId>>, {id: number;data: BodyType<GoLiveFasePatch>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  patchBeheerGoLiveFasenId(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PatchBeheerGoLiveFasenIdMutationResult = NonNullable<Awaited<ReturnType<typeof patchBeheerGoLiveFasenId>>>
+    export type PatchBeheerGoLiveFasenIdMutationBody = BodyType<GoLiveFasePatch>
+    export type PatchBeheerGoLiveFasenIdMutationError = ErrorType<void>
+
+    /**
+ * @summary Fase status / voortgang / opmerkingen bijwerken
+ */
+export const usePatchBeheerGoLiveFasenId = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof patchBeheerGoLiveFasenId>>, TError,{id: number;data: BodyType<GoLiveFasePatch>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof patchBeheerGoLiveFasenId>>,
+        TError,
+        {id: number;data: BodyType<GoLiveFasePatch>},
+        TContext
+      > => {
+      return useMutation(getPatchBeheerGoLiveFasenIdMutationOptions(options));
+    }
+
+export const getGetBeheerGoLiveReadinessUrl = () => {
+
+
+
+
+  return `/api/beheer/go-live/readiness`
+}
+
+/**
+ * @summary Live readiness-checks uitvoeren
+ */
+export const getBeheerGoLiveReadiness = async ( options?: RequestInit): Promise<GoLiveReadinessItem[]> => {
+
+  return customFetch<GoLiveReadinessItem[]>(getGetBeheerGoLiveReadinessUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetBeheerGoLiveReadinessQueryKey = () => {
+    return [
+    `/api/beheer/go-live/readiness`
+    ] as const;
+    }
+
+
+export const getGetBeheerGoLiveReadinessQueryOptions = <TData = Awaited<ReturnType<typeof getBeheerGoLiveReadiness>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getBeheerGoLiveReadiness>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetBeheerGoLiveReadinessQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getBeheerGoLiveReadiness>>> = ({ signal }) => getBeheerGoLiveReadiness({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getBeheerGoLiveReadiness>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetBeheerGoLiveReadinessQueryResult = NonNullable<Awaited<ReturnType<typeof getBeheerGoLiveReadiness>>>
+export type GetBeheerGoLiveReadinessQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Live readiness-checks uitvoeren
+ */
+
+export function useGetBeheerGoLiveReadiness<TData = Awaited<ReturnType<typeof getBeheerGoLiveReadiness>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getBeheerGoLiveReadiness>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetBeheerGoLiveReadinessQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetBeheerGoLiveAdviezenUrl = () => {
+
+
+
+
+  return `/api/beheer/go-live/adviezen`
+}
+
+/**
+ * @summary AI-adviezen ophalen
+ */
+export const getBeheerGoLiveAdviezen = async ( options?: RequestInit): Promise<GoLiveAdvies[]> => {
+
+  return customFetch<GoLiveAdvies[]>(getGetBeheerGoLiveAdviezenUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetBeheerGoLiveAdviezenQueryKey = () => {
+    return [
+    `/api/beheer/go-live/adviezen`
+    ] as const;
+    }
+
+
+export const getGetBeheerGoLiveAdviezenQueryOptions = <TData = Awaited<ReturnType<typeof getBeheerGoLiveAdviezen>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getBeheerGoLiveAdviezen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetBeheerGoLiveAdviezenQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getBeheerGoLiveAdviezen>>> = ({ signal }) => getBeheerGoLiveAdviezen({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getBeheerGoLiveAdviezen>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetBeheerGoLiveAdviezenQueryResult = NonNullable<Awaited<ReturnType<typeof getBeheerGoLiveAdviezen>>>
+export type GetBeheerGoLiveAdviezenQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary AI-adviezen ophalen
+ */
+
+export function useGetBeheerGoLiveAdviezen<TData = Awaited<ReturnType<typeof getBeheerGoLiveAdviezen>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getBeheerGoLiveAdviezen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetBeheerGoLiveAdviezenQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getPostBeheerGoLiveAdviezenGenereerUrl = () => {
+
+
+
+
+  return `/api/beheer/go-live/adviezen/genereer`
+}
+
+/**
+ * @summary Nieuw AI-advies genereren op basis van actuele readiness
+ */
+export const postBeheerGoLiveAdviezenGenereer = async ( options?: RequestInit): Promise<GoLiveAdvies> => {
+
+  return customFetch<GoLiveAdvies>(getPostBeheerGoLiveAdviezenGenereerUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getPostBeheerGoLiveAdviezenGenereerMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postBeheerGoLiveAdviezenGenereer>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof postBeheerGoLiveAdviezenGenereer>>, TError,void, TContext> => {
+
+const mutationKey = ['postBeheerGoLiveAdviezenGenereer'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postBeheerGoLiveAdviezenGenereer>>, void> = () => {
+
+
+          return  postBeheerGoLiveAdviezenGenereer(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PostBeheerGoLiveAdviezenGenereerMutationResult = NonNullable<Awaited<ReturnType<typeof postBeheerGoLiveAdviezenGenereer>>>
+
+    export type PostBeheerGoLiveAdviezenGenereerMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Nieuw AI-advies genereren op basis van actuele readiness
+ */
+export const usePostBeheerGoLiveAdviezenGenereer = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postBeheerGoLiveAdviezenGenereer>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof postBeheerGoLiveAdviezenGenereer>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getPostBeheerGoLiveAdviezenGenereerMutationOptions(options));
+    }
+
+export const getPatchBeheerGoLiveAdviezenIdUrl = (id: number,) => {
+
+
+
+
+  return `/api/beheer/go-live/adviezen/${id}`
+}
+
+/**
+ * @summary AI-advies accepteren / uitstellen / negeren
+ */
+export const patchBeheerGoLiveAdviezenId = async (id: number,
+    goLiveAdviesActie: GoLiveAdviesActie, options?: RequestInit): Promise<GoLiveAdvies> => {
+
+  return customFetch<GoLiveAdvies>(getPatchBeheerGoLiveAdviezenIdUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(goLiveAdviesActie)
+  }
+);}
+
+
+
+
+export const getPatchBeheerGoLiveAdviezenIdMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof patchBeheerGoLiveAdviezenId>>, TError,{id: number;data: BodyType<GoLiveAdviesActie>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof patchBeheerGoLiveAdviezenId>>, TError,{id: number;data: BodyType<GoLiveAdviesActie>}, TContext> => {
+
+const mutationKey = ['patchBeheerGoLiveAdviezenId'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof patchBeheerGoLiveAdviezenId>>, {id: number;data: BodyType<GoLiveAdviesActie>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  patchBeheerGoLiveAdviezenId(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PatchBeheerGoLiveAdviezenIdMutationResult = NonNullable<Awaited<ReturnType<typeof patchBeheerGoLiveAdviezenId>>>
+    export type PatchBeheerGoLiveAdviezenIdMutationBody = BodyType<GoLiveAdviesActie>
+    export type PatchBeheerGoLiveAdviezenIdMutationError = ErrorType<void>
+
+    /**
+ * @summary AI-advies accepteren / uitstellen / negeren
+ */
+export const usePatchBeheerGoLiveAdviezenId = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof patchBeheerGoLiveAdviezenId>>, TError,{id: number;data: BodyType<GoLiveAdviesActie>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof patchBeheerGoLiveAdviezenId>>,
+        TError,
+        {id: number;data: BodyType<GoLiveAdviesActie>},
+        TContext
+      > => {
+      return useMutation(getPatchBeheerGoLiveAdviezenIdMutationOptions(options));
+    }
+
+export const getGetBeheerGoLiveMijnActiesUrl = () => {
+
+
+
+
+  return `/api/beheer/go-live/mijn-acties`
+}
+
+/**
+ * @summary Persoonlijke implementatiechecklist ophalen
+ */
+export const getBeheerGoLiveMijnActies = async ( options?: RequestInit): Promise<GoLiveMijnActie[]> => {
+
+  return customFetch<GoLiveMijnActie[]>(getGetBeheerGoLiveMijnActiesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetBeheerGoLiveMijnActiesQueryKey = () => {
+    return [
+    `/api/beheer/go-live/mijn-acties`
+    ] as const;
+    }
+
+
+export const getGetBeheerGoLiveMijnActiesQueryOptions = <TData = Awaited<ReturnType<typeof getBeheerGoLiveMijnActies>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getBeheerGoLiveMijnActies>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetBeheerGoLiveMijnActiesQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getBeheerGoLiveMijnActies>>> = ({ signal }) => getBeheerGoLiveMijnActies({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getBeheerGoLiveMijnActies>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetBeheerGoLiveMijnActiesQueryResult = NonNullable<Awaited<ReturnType<typeof getBeheerGoLiveMijnActies>>>
+export type GetBeheerGoLiveMijnActiesQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Persoonlijke implementatiechecklist ophalen
+ */
+
+export function useGetBeheerGoLiveMijnActies<TData = Awaited<ReturnType<typeof getBeheerGoLiveMijnActies>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getBeheerGoLiveMijnActies>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetBeheerGoLiveMijnActiesQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetBeheerGoLiveTestdataUrl = () => {
+
+
+
+
+  return `/api/beheer/go-live/testdata`
+}
+
+/**
+ * @summary Testdata-overzicht ophalen
+ */
+export const getBeheerGoLiveTestdata = async ( options?: RequestInit): Promise<GoLiveTestdataOverzicht> => {
+
+  return customFetch<GoLiveTestdataOverzicht>(getGetBeheerGoLiveTestdataUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetBeheerGoLiveTestdataQueryKey = () => {
+    return [
+    `/api/beheer/go-live/testdata`
+    ] as const;
+    }
+
+
+export const getGetBeheerGoLiveTestdataQueryOptions = <TData = Awaited<ReturnType<typeof getBeheerGoLiveTestdata>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getBeheerGoLiveTestdata>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetBeheerGoLiveTestdataQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getBeheerGoLiveTestdata>>> = ({ signal }) => getBeheerGoLiveTestdata({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getBeheerGoLiveTestdata>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetBeheerGoLiveTestdataQueryResult = NonNullable<Awaited<ReturnType<typeof getBeheerGoLiveTestdata>>>
+export type GetBeheerGoLiveTestdataQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Testdata-overzicht ophalen
+ */
+
+export function useGetBeheerGoLiveTestdata<TData = Awaited<ReturnType<typeof getBeheerGoLiveTestdata>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getBeheerGoLiveTestdata>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetBeheerGoLiveTestdataQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getPostBeheerGoLiveLessenUrl = () => {
+
+
+
+
+  return `/api/beheer/go-live/lessen`
+}
+
+/**
+ * @summary Les geleerd opslaan
+ */
+export const postBeheerGoLiveLessen = async (goLiveLesInput: GoLiveLesInput, options?: RequestInit): Promise<GoLiveLes> => {
+
+  return customFetch<GoLiveLes>(getPostBeheerGoLiveLessenUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(goLiveLesInput)
+  }
+);}
+
+
+
+
+export const getPostBeheerGoLiveLessenMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postBeheerGoLiveLessen>>, TError,{data: BodyType<GoLiveLesInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof postBeheerGoLiveLessen>>, TError,{data: BodyType<GoLiveLesInput>}, TContext> => {
+
+const mutationKey = ['postBeheerGoLiveLessen'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postBeheerGoLiveLessen>>, {data: BodyType<GoLiveLesInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  postBeheerGoLiveLessen(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PostBeheerGoLiveLessenMutationResult = NonNullable<Awaited<ReturnType<typeof postBeheerGoLiveLessen>>>
+    export type PostBeheerGoLiveLessenMutationBody = BodyType<GoLiveLesInput>
+    export type PostBeheerGoLiveLessenMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Les geleerd opslaan
+ */
+export const usePostBeheerGoLiveLessen = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postBeheerGoLiveLessen>>, TError,{data: BodyType<GoLiveLesInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof postBeheerGoLiveLessen>>,
+        TError,
+        {data: BodyType<GoLiveLesInput>},
+        TContext
+      > => {
+      return useMutation(getPostBeheerGoLiveLessenMutationOptions(options));
+    }
 

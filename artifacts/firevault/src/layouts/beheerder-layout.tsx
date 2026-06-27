@@ -747,6 +747,19 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
                   <SidebarGroupLabel>Beheer</SidebarGroupLabel>
                   <SidebarGroupContent>
                     <SidebarMenu>
+                      {isHoofdbeheerder && (
+                        <SidebarMenuItem>
+                          <SidebarMenuButton
+                            asChild
+                            isActive={location === "/beheer/go-live"}
+                          >
+                            <Link href="/beheer/go-live">
+                              <Target />
+                              <span>Go-Live Manager</span>
+                            </Link>
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                      )}
                       {toonGebruikers && (
                         <SidebarMenuItem>
                           <SidebarMenuButton

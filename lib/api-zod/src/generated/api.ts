@@ -15309,3 +15309,193 @@ export const GetSepaBestandenIdDownloadUrlResponse = zod.object({
 })
 
 
+/**
+ * @summary Go-Live dashboard statistieken ophalen
+ */
+export const GetBeheerGoLiveDashboardResponse = zod.object({
+  "voortgang_pct": zod.number(),
+  "open_acties": zod.number(),
+  "afgeronde_acties": zod.number(),
+  "kritieke_blokkades": zod.number(),
+  "fasen_gereed": zod.number(),
+  "fasen_totaal": zod.number(),
+  "gebruikers_zonder_start": zod.number(),
+  "heeft_open_advies": zod.boolean(),
+  "laatste_advies_titel": zod.string().nullish()
+})
+
+
+/**
+ * @summary Implementatiefasen ophalen (geseed bij eerste aanvraag)
+ */
+export const GetBeheerGoLiveFasenResponseItem = zod.object({
+  "id": zod.number(),
+  "sleutel": zod.string(),
+  "naam": zod.string(),
+  "beschrijving": zod.string().nullish(),
+  "doel": zod.string().nullish(),
+  "afhankelijkheden": zod.array(zod.string()),
+  "verantwoordelijke": zod.string().nullish(),
+  "geschatte_uren": zod.number().nullish(),
+  "status": zod.string(),
+  "voortgang_pct": zod.number(),
+  "opmerkingen": zod.string().nullish(),
+  "risico": zod.string().nullish(),
+  "volgorde": zod.number(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+export const GetBeheerGoLiveFasenResponse = zod.array(GetBeheerGoLiveFasenResponseItem)
+
+
+/**
+ * @summary Fase status / voortgang / opmerkingen bijwerken
+ */
+export const PatchBeheerGoLiveFasenIdParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const PatchBeheerGoLiveFasenIdBody = zod.object({
+  "status": zod.string().optional(),
+  "voortgang_pct": zod.number().optional(),
+  "opmerkingen": zod.string().optional(),
+  "risico": zod.string().optional(),
+  "verantwoordelijke": zod.string().optional()
+})
+
+export const PatchBeheerGoLiveFasenIdResponse = zod.object({
+  "id": zod.number(),
+  "sleutel": zod.string(),
+  "naam": zod.string(),
+  "beschrijving": zod.string().nullish(),
+  "doel": zod.string().nullish(),
+  "afhankelijkheden": zod.array(zod.string()),
+  "verantwoordelijke": zod.string().nullish(),
+  "geschatte_uren": zod.number().nullish(),
+  "status": zod.string(),
+  "voortgang_pct": zod.number(),
+  "opmerkingen": zod.string().nullish(),
+  "risico": zod.string().nullish(),
+  "volgorde": zod.number(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+
+
+/**
+ * @summary Live readiness-checks uitvoeren
+ */
+export const GetBeheerGoLiveReadinessResponseItem = zod.object({
+  "sleutel": zod.string(),
+  "label": zod.string(),
+  "status": zod.string(),
+  "categorie": zod.string(),
+  "detail": zod.string().nullish(),
+  "waarde": zod.string().nullish()
+})
+export const GetBeheerGoLiveReadinessResponse = zod.array(GetBeheerGoLiveReadinessResponseItem)
+
+
+/**
+ * @summary AI-adviezen ophalen
+ */
+export const GetBeheerGoLiveAdviezenResponseItem = zod.object({
+  "id": zod.number(),
+  "titel": zod.string(),
+  "inhoud": zod.string(),
+  "reden": zod.string().nullish(),
+  "impact": zod.string().nullish(),
+  "risico": zod.string().nullish(),
+  "tijdwinst_uur": zod.number().nullish(),
+  "afhankelijkheden": zod.array(zod.string()),
+  "status": zod.string(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+export const GetBeheerGoLiveAdviezenResponse = zod.array(GetBeheerGoLiveAdviezenResponseItem)
+
+
+/**
+ * @summary Nieuw AI-advies genereren op basis van actuele readiness
+ */
+export const PostBeheerGoLiveAdviezenGenereerResponse = zod.object({
+  "id": zod.number(),
+  "titel": zod.string(),
+  "inhoud": zod.string(),
+  "reden": zod.string().nullish(),
+  "impact": zod.string().nullish(),
+  "risico": zod.string().nullish(),
+  "tijdwinst_uur": zod.number().nullish(),
+  "afhankelijkheden": zod.array(zod.string()),
+  "status": zod.string(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+
+
+/**
+ * @summary AI-advies accepteren / uitstellen / negeren
+ */
+export const PatchBeheerGoLiveAdviezenIdParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const PatchBeheerGoLiveAdviezenIdBody = zod.object({
+  "status": zod.string()
+})
+
+export const PatchBeheerGoLiveAdviezenIdResponse = zod.object({
+  "id": zod.number(),
+  "titel": zod.string(),
+  "inhoud": zod.string(),
+  "reden": zod.string().nullish(),
+  "impact": zod.string().nullish(),
+  "risico": zod.string().nullish(),
+  "tijdwinst_uur": zod.number().nullish(),
+  "afhankelijkheden": zod.array(zod.string()),
+  "status": zod.string(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+
+
+/**
+ * @summary Persoonlijke implementatiechecklist ophalen
+ */
+export const GetBeheerGoLiveMijnActiesResponseItem = zod.object({
+  "id": zod.string(),
+  "titel": zod.string(),
+  "categorie": zod.string(),
+  "beschrijving": zod.string().nullish(),
+  "voltooid": zod.boolean(),
+  "link": zod.string().nullish()
+})
+export const GetBeheerGoLiveMijnActiesResponse = zod.array(GetBeheerGoLiveMijnActiesResponseItem)
+
+
+/**
+ * @summary Testdata-overzicht ophalen
+ */
+export const GetBeheerGoLiveTestdataResponse = zod.object({
+  "gebruikers": zod.number(),
+  "gebouwen": zod.number(),
+  "projecten": zod.number(),
+  "spots": zod.number(),
+  "documenten": zod.number(),
+  "facturen": zod.number(),
+  "medewerkers": zod.number()
+})
+
+
+/**
+ * @summary Les geleerd opslaan
+ */
+export const PostBeheerGoLiveLessenBody = zod.object({
+  "fase_sleutel": zod.string(),
+  "omschrijving": zod.string(),
+  "tijd_koste_uur": zod.number().optional()
+})
+
+export const PostBeheerGoLiveLessenResponse = zod.void()
+
+

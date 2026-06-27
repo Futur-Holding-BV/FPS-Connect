@@ -12232,6 +12232,168 @@ paths:
         "404":
           description: Niet gevonden
 
+  /beheer/go-live/dashboard:
+    get:
+      summary: Go-Live dashboard statistieken ophalen
+      tags: [GoLive]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GoLiveDashboard'
+
+  /beheer/go-live/fasen:
+    get:
+      summary: Implementatiefasen ophalen (geseed bij eerste aanvraag)
+      tags: [GoLive]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/GoLiveFase'
+
+  /beheer/go-live/fasen/{id}:
+    patch:
+      summary: Fase status / voortgang / opmerkingen bijwerken
+      tags: [GoLive]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GoLiveFasePatch'
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GoLiveFase'
+        "404":
+          description: Niet gevonden
+
+  /beheer/go-live/readiness:
+    get:
+      summary: Live readiness-checks uitvoeren
+      tags: [GoLive]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/GoLiveReadinessItem'
+
+  /beheer/go-live/adviezen:
+    get:
+      summary: AI-adviezen ophalen
+      tags: [GoLive]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/GoLiveAdvies'
+
+  /beheer/go-live/adviezen/genereer:
+    post:
+      summary: Nieuw AI-advies genereren op basis van actuele readiness
+      tags: [GoLive]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GoLiveAdvies'
+
+  /beheer/go-live/adviezen/{id}:
+    patch:
+      summary: AI-advies accepteren / uitstellen / negeren
+      tags: [GoLive]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GoLiveAdviesActie'
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GoLiveAdvies'
+        "404":
+          description: Niet gevonden
+
+  /beheer/go-live/mijn-acties:
+    get:
+      summary: Persoonlijke implementatiechecklist ophalen
+      tags: [GoLive]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/GoLiveMijnActie'
+
+  /beheer/go-live/testdata:
+    get:
+      summary: Testdata-overzicht ophalen
+      tags: [GoLive]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GoLiveTestdataOverzicht'
+
+  /beheer/go-live/lessen:
+    post:
+      summary: Les geleerd opslaan
+      tags: [GoLive]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GoLiveLesInput'
+      responses:
+        "201":
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GoLiveLes'
+
 
 components:
   schemas:
@@ -22361,4 +22523,211 @@ components:
       properties:
         url:
           type: string
+
+    GoLiveFase:
+      type: object
+      required: [id, sleutel, naam, status, voortgang_pct, afhankelijkheden, volgorde, aangemaakt_op, bijgewerkt_op]
+      properties:
+        id:
+          type: integer
+        sleutel:
+          type: string
+        naam:
+          type: string
+        beschrijving:
+          type: string
+          nullable: true
+        doel:
+          type: string
+          nullable: true
+        afhankelijkheden:
+          type: array
+          items:
+            type: string
+        verantwoordelijke:
+          type: string
+          nullable: true
+        geschatte_uren:
+          type: integer
+          nullable: true
+        status:
+          type: string
+        voortgang_pct:
+          type: integer
+        opmerkingen:
+          type: string
+          nullable: true
+        risico:
+          type: string
+          nullable: true
+        volgorde:
+          type: integer
+        aangemaakt_op:
+          type: string
+        bijgewerkt_op:
+          type: string
+
+    GoLiveFasePatch:
+      type: object
+      properties:
+        status:
+          type: string
+        voortgang_pct:
+          type: integer
+        opmerkingen:
+          type: string
+        risico:
+          type: string
+        verantwoordelijke:
+          type: string
+
+    GoLiveAdvies:
+      type: object
+      required: [id, titel, inhoud, status, afhankelijkheden, aangemaakt_op, bijgewerkt_op]
+      properties:
+        id:
+          type: integer
+        titel:
+          type: string
+        inhoud:
+          type: string
+        reden:
+          type: string
+          nullable: true
+        impact:
+          type: string
+          nullable: true
+        risico:
+          type: string
+          nullable: true
+        tijdwinst_uur:
+          type: integer
+          nullable: true
+        afhankelijkheden:
+          type: array
+          items:
+            type: string
+        status:
+          type: string
+        aangemaakt_op:
+          type: string
+        bijgewerkt_op:
+          type: string
+
+    GoLiveAdviesActie:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+
+    GoLiveDashboard:
+      type: object
+      required: [voortgang_pct, open_acties, afgeronde_acties, kritieke_blokkades, fasen_gereed, fasen_totaal, gebruikers_zonder_start, heeft_open_advies]
+      properties:
+        voortgang_pct:
+          type: integer
+        open_acties:
+          type: integer
+        afgeronde_acties:
+          type: integer
+        kritieke_blokkades:
+          type: integer
+        fasen_gereed:
+          type: integer
+        fasen_totaal:
+          type: integer
+        gebruikers_zonder_start:
+          type: integer
+        heeft_open_advies:
+          type: boolean
+        laatste_advies_titel:
+          type: string
+          nullable: true
+
+    GoLiveReadinessItem:
+      type: object
+      required: [sleutel, label, status, categorie]
+      properties:
+        sleutel:
+          type: string
+        label:
+          type: string
+        status:
+          type: string
+        categorie:
+          type: string
+        detail:
+          type: string
+          nullable: true
+        waarde:
+          type: string
+          nullable: true
+
+    GoLiveMijnActie:
+      type: object
+      required: [id, titel, categorie, voltooid]
+      properties:
+        id:
+          type: string
+        titel:
+          type: string
+        categorie:
+          type: string
+        beschrijving:
+          type: string
+          nullable: true
+        voltooid:
+          type: boolean
+        link:
+          type: string
+          nullable: true
+
+    GoLiveTestdataOverzicht:
+      type: object
+      required: [gebruikers, gebouwen, projecten, spots, documenten, facturen, medewerkers]
+      properties:
+        gebruikers:
+          type: integer
+        gebouwen:
+          type: integer
+        projecten:
+          type: integer
+        spots:
+          type: integer
+        documenten:
+          type: integer
+        facturen:
+          type: integer
+        medewerkers:
+          type: integer
+
+    GoLiveLes:
+      type: object
+      required: [id, fase_sleutel, omschrijving, aantal_keer, bijgewerkt_op]
+      properties:
+        id:
+          type: integer
+        fase_sleutel:
+          type: string
+        omschrijving:
+          type: string
+        tijd_koste_uur:
+          type: integer
+          nullable: true
+        aantal_keer:
+          type: integer
+        bijgewerkt_op:
+          type: string
+
+    GoLiveLesInput:
+      type: object
+      required: [fase_sleutel, omschrijving]
+      properties:
+        fase_sleutel:
+          type: string
+        omschrijving:
+          type: string
+        tijd_koste_uur:
+          type: integer
 

@@ -6182,6 +6182,105 @@ export interface DownloadUrlResultaat {
   url: string;
 }
 
+export interface GoLiveFase {
+  id: number;
+  sleutel: string;
+  naam: string;
+  beschrijving?: string | null;
+  doel?: string | null;
+  afhankelijkheden: string[];
+  verantwoordelijke?: string | null;
+  geschatte_uren?: number | null;
+  status: string;
+  voortgang_pct: number;
+  opmerkingen?: string | null;
+  risico?: string | null;
+  volgorde: number;
+  aangemaakt_op: string;
+  bijgewerkt_op: string;
+}
+
+export interface GoLiveFasePatch {
+  status?: string;
+  voortgang_pct?: number;
+  opmerkingen?: string;
+  risico?: string;
+  verantwoordelijke?: string;
+}
+
+export interface GoLiveAdvies {
+  id: number;
+  titel: string;
+  inhoud: string;
+  reden?: string | null;
+  impact?: string | null;
+  risico?: string | null;
+  tijdwinst_uur?: number | null;
+  afhankelijkheden: string[];
+  status: string;
+  aangemaakt_op: string;
+  bijgewerkt_op: string;
+}
+
+export interface GoLiveAdviesActie {
+  status: string;
+}
+
+export interface GoLiveDashboard {
+  voortgang_pct: number;
+  open_acties: number;
+  afgeronde_acties: number;
+  kritieke_blokkades: number;
+  fasen_gereed: number;
+  fasen_totaal: number;
+  gebruikers_zonder_start: number;
+  heeft_open_advies: boolean;
+  laatste_advies_titel?: string | null;
+}
+
+export interface GoLiveReadinessItem {
+  sleutel: string;
+  label: string;
+  status: string;
+  categorie: string;
+  detail?: string | null;
+  waarde?: string | null;
+}
+
+export interface GoLiveMijnActie {
+  id: string;
+  titel: string;
+  categorie: string;
+  beschrijving?: string | null;
+  voltooid: boolean;
+  link?: string | null;
+}
+
+export interface GoLiveTestdataOverzicht {
+  gebruikers: number;
+  gebouwen: number;
+  projecten: number;
+  spots: number;
+  documenten: number;
+  facturen: number;
+  medewerkers: number;
+}
+
+export interface GoLiveLes {
+  id: number;
+  fase_sleutel: string;
+  omschrijving: string;
+  tijd_koste_uur?: number | null;
+  aantal_keer: number;
+  bijgewerkt_op: string;
+}
+
+export interface GoLiveLesInput {
+  fase_sleutel: string;
+  omschrijving: string;
+  tijd_koste_uur?: number;
+}
+
 export type GetRecenteActiviteitParams = {
 limit?: number;
 };

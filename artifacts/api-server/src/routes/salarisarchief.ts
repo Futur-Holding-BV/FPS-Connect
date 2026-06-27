@@ -2,10 +2,10 @@ import { Router, type Request, type Response } from "express";
 import multer from "multer";
 import { eq, and, desc, asc, inArray } from "drizzle-orm";
 import {
+  db,
   salarisbatchesTable, salarisbestandenTable, sepaBestandenTable,
   salarisdocumentAuditTable, medewerkersTable,
 } from "@workspace/db";
-import { db } from "../db";
 import { requireBevoegdheid } from "../middlewares/auth";
 import { ObjectStorageService } from "../lib/objectStorage";
 import { logger } from "../lib/logger";

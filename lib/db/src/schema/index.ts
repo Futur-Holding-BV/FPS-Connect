@@ -32,3 +32,4 @@ export * from "./veiligheid";
 export * from "./opdrachten";
 export * from "./snagstream";
 export * from "./facturen";
+export * from "./golive";
