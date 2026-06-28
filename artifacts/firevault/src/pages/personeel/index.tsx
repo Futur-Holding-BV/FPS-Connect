@@ -49,6 +49,7 @@ import type {
   Werkgever,
   WerkgeverInput,
   ZiekmeldingenInput,
+  CvAnalyseResultaat,
 } from "@workspace/api-client-react";
 import { useRol } from "@/context/rol-context";
 import { Card, CardContent } from "@/components/ui/card";
@@ -71,8 +72,10 @@ import { useToast } from "@/hooks/use-toast";
 import {
   Users, Plus, UserPlus, Briefcase, GraduationCap, CalendarClock, AlertTriangle,
   Award, Check, X, ChevronRight, Building2, Pencil, Trash2, HeartPulse,
+  LogOut, Upload, Loader2, Sparkles, CheckCircle2, Shield,
 } from "lucide-react";
 import { WERKMAATSCHAPPIJEN, caoVoorWerkmaatschappij } from "@/lib/werkmaatschappijen";
+import { OffboardDialog } from "./offboard-dialog";
 
 const WERKMAATSCHAPPIJ_STD = WERKMAATSCHAPPIJEN[0];
 const DIENSTVERBANDEN = ["vast", "tijdelijk", "oproep", "stage", "inhuur", "zzp", "uitzend"] as const;
@@ -259,6 +262,11 @@ export default function PersoneelPagina() {
     start_datum: new Date().toISOString().slice(0, 10),
   });
   const [verwijderZiekId, setVerwijderZiekId] = useState<number | null>(null);
+
+  const [offboardOpen, setOffboardOpen] = useState(false);
+  const [offboardMedId, setOffboardMedId] = useState<number | null>(null);
+  const [cvAnalyseLaden, setCvAnalyseLaden] = useState(false);
+  const [cvVoorstel, setCvVoorstel] = useState<CvAnalyseResultaat | null>(null);
   const [werkgeverForm, setWerkgeverForm] = useState<WerkgeverInput>({
     naam: "",
     cao: "",
@@ -344,6 +352,51 @@ export default function PersoneelPagina() {
       const bericht = err instanceof Error ? err.message : "Onboarding mislukt";
       toast({ title: "Onboarding mislukt", description: bericht, variant: "destructive" });
     }
+  }
+
+  async function uploadCv(file: File) {
+    setCvAnalyseLaden(true);
+    setCvVoorstel(null);
+    try {
+      const fd = new FormData();
+      fd.append("cv", file);
+      const res = await fetch("/api/medewerkers/ai-cv-analyse", {
+        method: "POST",
+        body: fd,
+        credentials: "include",
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: "Onbekende fout" }));
+        toast({
+          title: "CV analyse mislukt",
+          description: (err as { error?: string }).error ?? "Probeer opnieuw.",
+          variant: "destructive",
+        });
+        return;
+      }
+      const data = (await res.json()) as CvAnalyseResultaat;
+      setCvVoorstel(data);
+    } catch {
+      toast({
+        title: "CV analyse mislukt",
+        description: "Controleer de internetverbinding.",
+        variant: "destructive",
+      });
+    } finally {
+      setCvAnalyseLaden(false);
+    }
+  }
+
+  function accepteerCvVoorstel() {
+    if (!cvVoorstel) return;
+    setOnboardForm((prev) => ({
+      ...prev,
+      ...(cvVoorstel.naam ? { naam: cvVoorstel.naam } : {}),
+      ...(cvVoorstel.email ? { email: cvVoorstel.email } : {}),
+      ...(cvVoorstel.telefoon ? { telefoon: cvVoorstel.telefoon } : {}),
+      ...(cvVoorstel.mobiel ? { mobiel: cvVoorstel.mobiel } : {}),
+    }));
+    setCvVoorstel(null);
   }
 
   async function opslaanFunctie() {
@@ -724,7 +777,24 @@ export default function PersoneelPagina() {
                         ) : (
                           <Badge variant="outline" className="text-[11px] border-amber-200 text-amber-700">Geen account</Badge>
                         )}
-                        <ChevronRight className="h-4 w-4 text-muted-foreground ml-auto" />
+                        {m.actief && magSchrijven ? (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-6 text-xs text-destructive/60 hover:text-destructive hover:bg-destructive/10 px-2 ml-auto"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              setOffboardMedId(m.id);
+                              setOffboardOpen(true);
+                            }}
+                          >
+                            <LogOut className="h-3 w-3 mr-1" />
+                            Offboarden
+                          </Button>
+                        ) : (
+                          <ChevronRight className="h-4 w-4 text-muted-foreground ml-auto" />
+                        )}
                       </div>
                     </CardContent>
                   </Card>
@@ -1359,6 +1429,87 @@ export default function PersoneelPagina() {
               wordt server-side pro rata opgebouwd.
             </DialogDescription>
           </DialogHeader>
+
+          {/* CV upload — AI vult velden in */}
+          <div className="rounded-lg border border-dashed p-3 space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="text-sm font-medium flex items-center gap-1.5">
+                <Upload className="h-4 w-4 text-muted-foreground" />
+                CV uploaden (AI vult velden in)
+              </div>
+              {cvVoorstel && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 text-xs"
+                  onClick={() => setCvVoorstel(null)}
+                >
+                  <X className="h-3 w-3" /> Sluiten
+                </Button>
+              )}
+            </div>
+            {cvVoorstel ? (
+              <div className="rounded-md bg-amber-50 border border-amber-200 p-2 space-y-2">
+                <div className="text-xs font-semibold text-amber-800 flex items-center gap-1">
+                  <Sparkles className="h-3.5 w-3.5" />
+                  AI heeft de volgende velden herkend:
+                </div>
+                <div className="grid grid-cols-2 gap-1 text-xs">
+                  {cvVoorstel.naam && (
+                    <div><span className="text-muted-foreground">Naam:</span> {cvVoorstel.naam}</div>
+                  )}
+                  {cvVoorstel.email && (
+                    <div><span className="text-muted-foreground">E-mail:</span> {cvVoorstel.email}</div>
+                  )}
+                  {cvVoorstel.telefoon && (
+                    <div><span className="text-muted-foreground">Telefoon:</span> {cvVoorstel.telefoon}</div>
+                  )}
+                  {cvVoorstel.mobiel && (
+                    <div><span className="text-muted-foreground">Mobiel:</span> {cvVoorstel.mobiel}</div>
+                  )}
+                  {cvVoorstel.vca_vervaldatum && (
+                    <div><span className="text-muted-foreground">VCA vervalt:</span> {cvVoorstel.vca_vervaldatum}</div>
+                  )}
+                  {cvVoorstel.rijbewijs && (
+                    <div><span className="text-muted-foreground">Rijbewijs:</span> {cvVoorstel.rijbewijs}</div>
+                  )}
+                </div>
+                {cvVoorstel.ai_toelichting && (
+                  <p className="text-xs text-amber-700 italic">{cvVoorstel.ai_toelichting}</p>
+                )}
+                <Button
+                  size="sm"
+                  className="w-full h-7 text-xs"
+                  onClick={accepteerCvVoorstel}
+                >
+                  <CheckCircle2 className="h-3 w-3" />
+                  Voorstel toepassen op formulier
+                </Button>
+              </div>
+            ) : cvAnalyseLaden ? (
+              <div className="flex items-center gap-2 text-xs text-muted-foreground py-1">
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                CV wordt geanalyseerd door AI...
+              </div>
+            ) : (
+              <label className="cursor-pointer block">
+                <input
+                  type="file"
+                  accept=".pdf,.txt"
+                  className="sr-only"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) void uploadCv(f);
+                    e.target.value = "";
+                  }}
+                />
+                <span className="text-xs text-muted-foreground hover:text-foreground transition-colors">
+                  PDF-bestand selecteren — AI herkent naam, e-mail, telefoon, VCA-vervaldatum, rijbewijs en meer
+                </span>
+              </label>
+            )}
+          </div>
+
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="sm:col-span-2 space-y-1.5">
               <Label>Gebruiker *</Label>
@@ -1975,6 +2126,20 @@ export default function PersoneelPagina() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Offboarding */}
+      <OffboardDialog
+        medewerkerId={offboardMedId}
+        open={offboardOpen}
+        onOpenChange={(o) => {
+          setOffboardOpen(o);
+          if (!o) setOffboardMedId(null);
+        }}
+        onSuccess={() => {
+          void queryClient.invalidateQueries({ queryKey: getListMedewerkersQueryKey() });
+          void queryClient.invalidateQueries({ queryKey: getGetHrmStatsQueryKey() });
+        }}
+      />
     </div>
   );
 }

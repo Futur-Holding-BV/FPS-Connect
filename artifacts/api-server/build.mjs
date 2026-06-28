@@ -19,6 +19,7 @@ async function buildAll() {
     platform: "node",
     bundle: true,
     format: "esm",
+    conditions: ["require", "node", "default"],
     outdir: distDir,
     outExtension: { ".js": ".mjs" },
     logLevel: "info",

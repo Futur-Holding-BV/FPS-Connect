@@ -6308,6 +6308,75 @@ paths:
               schema:
                 $ref: "#/components/schemas/VerlofAanvraag"
 
+  /medewerkers/{id}/offboard-samenvatting:
+    get:
+      operationId: getOffboardSamenvatting
+      tags: [personeel]
+      summary: Offboard-samenvatting — alle relevante data voor het offboarden van een medewerker
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OffboardSamenvatting"
+
+  /medewerkers/{id}/arbeidsgetuigenis-ai:
+    post:
+      operationId: genereerArbeidsgetuigenisAi
+      tags: [personeel]
+      summary: AI genereert tekst voor arbeidsgetuigenis / aanbevelingsbrief
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ArbeidsgetuigenisAiInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ArbeidsgetuigenisAiResultaat"
+
+  /medewerkers/{id}/offboard:
+    post:
+      operationId: offboardMedewerker
+      tags: [personeel]
+      summary: Offboard uitvoeren — zet uit-dienst-datum, deactiveer account en log AVG-acties
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OffboardInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Medewerker"
+
   /verlofaanvragen:
     get:
       operationId: listAlleVerlofAanvragen
@@ -17313,6 +17382,124 @@ components:
         bedrijf_uitzendbureau:
           type: string
           description: Naam uitzendbureau, ZZP-bedrijf of onderaannemingsbedrijf.
+
+    CvAnalyseResultaat:
+      type: object
+      required: [naam]
+      properties:
+        naam:
+          type: ["string", "null"]
+        email:
+          type: ["string", "null"]
+        telefoon:
+          type: ["string", "null"]
+        mobiel:
+          type: ["string", "null"]
+        geboortedatum:
+          type: ["string", "null"]
+        adres:
+          type: ["string", "null"]
+        postcode:
+          type: ["string", "null"]
+        woonplaats:
+          type: ["string", "null"]
+        rijbewijs:
+          type: ["string", "null"]
+        vca_vervaldatum:
+          type: ["string", "null"]
+        bhv_vervaldatum:
+          type: ["string", "null"]
+        ehbo_vervaldatum:
+          type: ["string", "null"]
+        werkervaring_samenvatting:
+          type: ["string", "null"]
+        ai_toelichting:
+          type: ["string", "null"]
+
+    OffboardSamenvatting:
+      type: object
+      required: [medewerker_id, medewerker_naam, verlof_totaal_uren, openstaande_aanvragen, avg_bewaar_tot]
+      properties:
+        medewerker_id:
+          type: integer
+        medewerker_naam:
+          type: string
+        functie_naam:
+          type: ["string", "null"]
+        werkmaatschappij:
+          type: string
+        in_dienst_sinds:
+          type: ["string", "null"]
+        dienstverband:
+          type: string
+        gebruiker_actief:
+          type: boolean
+        verlof_totaal_uren:
+          type: number
+          description: Totaal openstaand verlof in uren (huidig jaar, alle soorten)
+        openstaande_aanvragen:
+          type: integer
+          description: Aantal verlofaanvragen met status ingediend of wachtend
+        certificaten_bijna_verlopen:
+          type: array
+          items:
+            type: object
+            required: [naam, verloopt_op]
+            properties:
+              naam:
+                type: string
+              verloopt_op:
+                type: string
+        actieve_toewijzingen:
+          type: integer
+          description: Aantal actieve gebouwtoewijzingen
+        avg_bewaar_tot:
+          type: string
+          description: ISO datum tot wanneer persoonsgegevens minimaal bewaard moeten blijven (arbeidsrechtelijk 7 jaar)
+        avg_aandachtspunten:
+          type: array
+          items:
+            type: string
+
+    ArbeidsgetuigenisAiInput:
+      type: object
+      properties:
+        reden_uitdienst:
+          type: string
+          description: Bijv. eigen verzoek, reorganisatie, afloop contract
+        positief_getuigschrift:
+          type: boolean
+          description: Geeft aan of een positieve aanbeveling gewenst is
+        extra_toelichting:
+          type: string
+
+    ArbeidsgetuigenisAiResultaat:
+      type: object
+      required: [brief_tekst, samenvatting]
+      properties:
+        brief_tekst:
+          type: string
+          description: Volledige brieftekst (Nederlandstalig, formeel)
+        samenvatting:
+          type: string
+          description: Eén-regelig AI-oordeel voor intern gebruik
+        ai_gebruikt:
+          type: boolean
+
+    OffboardInput:
+      type: object
+      required: [uit_dienst_per]
+      properties:
+        uit_dienst_per:
+          type: string
+          description: ISO datum (YYYY-MM-DD)
+        deactiveer_account:
+          type: boolean
+          description: Zet ook het systeemaccount inactief
+        reden:
+          type: string
+        overdrachtsnota:
+          type: string
 
     OnboardingFout:
       type: object

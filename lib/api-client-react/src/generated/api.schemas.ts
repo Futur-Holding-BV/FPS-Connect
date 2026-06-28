@@ -3232,6 +3232,89 @@ export interface MedewerkerOnboardingInput {
   bedrijf_uitzendbureau?: string;
 }
 
+export interface CvAnalyseResultaat {
+  /** @nullable */
+  naam: string | null;
+  /** @nullable */
+  email?: string | null;
+  /** @nullable */
+  telefoon?: string | null;
+  /** @nullable */
+  mobiel?: string | null;
+  /** @nullable */
+  geboortedatum?: string | null;
+  /** @nullable */
+  adres?: string | null;
+  /** @nullable */
+  postcode?: string | null;
+  /** @nullable */
+  woonplaats?: string | null;
+  /** @nullable */
+  rijbewijs?: string | null;
+  /** @nullable */
+  vca_vervaldatum?: string | null;
+  /** @nullable */
+  bhv_vervaldatum?: string | null;
+  /** @nullable */
+  ehbo_vervaldatum?: string | null;
+  /** @nullable */
+  werkervaring_samenvatting?: string | null;
+  /** @nullable */
+  ai_toelichting?: string | null;
+}
+
+export type OffboardSamenvattingCertificatenBijnaVerlopenItem = {
+  naam: string;
+  verloopt_op: string;
+};
+
+export interface OffboardSamenvatting {
+  medewerker_id: number;
+  medewerker_naam: string;
+  /** @nullable */
+  functie_naam?: string | null;
+  werkmaatschappij?: string;
+  /** @nullable */
+  in_dienst_sinds?: string | null;
+  dienstverband?: string;
+  gebruiker_actief?: boolean;
+  /** Totaal openstaand verlof in uren (huidig jaar, alle soorten) */
+  verlof_totaal_uren: number;
+  /** Aantal verlofaanvragen met status ingediend of wachtend */
+  openstaande_aanvragen: number;
+  certificaten_bijna_verlopen?: OffboardSamenvattingCertificatenBijnaVerlopenItem[];
+  /** Aantal actieve gebouwtoewijzingen */
+  actieve_toewijzingen?: number;
+  /** ISO datum tot wanneer persoonsgegevens minimaal bewaard moeten blijven (arbeidsrechtelijk 7 jaar) */
+  avg_bewaar_tot: string;
+  avg_aandachtspunten?: string[];
+}
+
+export interface ArbeidsgetuigenisAiInput {
+  /** Bijv. eigen verzoek, reorganisatie, afloop contract */
+  reden_uitdienst?: string;
+  /** Geeft aan of een positieve aanbeveling gewenst is */
+  positief_getuigschrift?: boolean;
+  extra_toelichting?: string;
+}
+
+export interface ArbeidsgetuigenisAiResultaat {
+  /** Volledige brieftekst (Nederlandstalig, formeel) */
+  brief_tekst: string;
+  /** Eén-regelig AI-oordeel voor intern gebruik */
+  samenvatting: string;
+  ai_gebruikt?: boolean;
+}
+
+export interface OffboardInput {
+  /** ISO datum (YYYY-MM-DD) */
+  uit_dienst_per: string;
+  /** Zet ook het systeemaccount inactief */
+  deactiveer_account?: boolean;
+  reden?: string;
+  overdrachtsnota?: string;
+}
+
 export interface OnboardingFout {
   error: string;
   /** Namen van de velden die de controle niet doorstaan. */

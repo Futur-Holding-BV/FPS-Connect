@@ -39,6 +39,8 @@ import type {
   AppInstellingen,
   AppInstellingenInput,
   ApplicatieLabelsInput,
+  ArbeidsgetuigenisAiInput,
+  ArbeidsgetuigenisAiResultaat,
   ArchiefUpdate,
   AssignClusterMonteur200,
   AuthGebruiker,
@@ -295,6 +297,8 @@ import type {
   MuisGebeurtenis,
   MuisGebeurtenisBatch,
   NacalculatieRegel,
+  OffboardInput,
+  OffboardSamenvatting,
   Offerte,
   OfferteAiSchrijvenInput,
   OfferteAiSchrijvenResultaat,
@@ -22201,6 +22205,225 @@ export const useCreateVerlofAanvraag = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getCreateVerlofAanvraagMutationOptions(options));
+    }
+
+export const getGetOffboardSamenvattingUrl = (id: number,) => {
+
+
+
+
+  return `/api/medewerkers/${id}/offboard-samenvatting`
+}
+
+/**
+ * @summary Offboard-samenvatting — alle relevante data voor het offboarden van een medewerker
+ */
+export const getOffboardSamenvatting = async (id: number, options?: RequestInit): Promise<OffboardSamenvatting> => {
+
+  return customFetch<OffboardSamenvatting>(getGetOffboardSamenvattingUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetOffboardSamenvattingQueryKey = (id: number,) => {
+    return [
+    `/api/medewerkers/${id}/offboard-samenvatting`
+    ] as const;
+    }
+
+
+export const getGetOffboardSamenvattingQueryOptions = <TData = Awaited<ReturnType<typeof getOffboardSamenvatting>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getOffboardSamenvatting>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetOffboardSamenvattingQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getOffboardSamenvatting>>> = ({ signal }) => getOffboardSamenvatting(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getOffboardSamenvatting>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetOffboardSamenvattingQueryResult = NonNullable<Awaited<ReturnType<typeof getOffboardSamenvatting>>>
+export type GetOffboardSamenvattingQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Offboard-samenvatting — alle relevante data voor het offboarden van een medewerker
+ */
+
+export function useGetOffboardSamenvatting<TData = Awaited<ReturnType<typeof getOffboardSamenvatting>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getOffboardSamenvatting>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetOffboardSamenvattingQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGenereerArbeidsgetuigenisAiUrl = (id: number,) => {
+
+
+
+
+  return `/api/medewerkers/${id}/arbeidsgetuigenis-ai`
+}
+
+/**
+ * @summary AI genereert tekst voor arbeidsgetuigenis / aanbevelingsbrief
+ */
+export const genereerArbeidsgetuigenisAi = async (id: number,
+    arbeidsgetuigenisAiInput: ArbeidsgetuigenisAiInput, options?: RequestInit): Promise<ArbeidsgetuigenisAiResultaat> => {
+
+  return customFetch<ArbeidsgetuigenisAiResultaat>(getGenereerArbeidsgetuigenisAiUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(arbeidsgetuigenisAiInput)
+  }
+);}
+
+
+
+
+export const getGenereerArbeidsgetuigenisAiMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof genereerArbeidsgetuigenisAi>>, TError,{id: number;data: BodyType<ArbeidsgetuigenisAiInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof genereerArbeidsgetuigenisAi>>, TError,{id: number;data: BodyType<ArbeidsgetuigenisAiInput>}, TContext> => {
+
+const mutationKey = ['genereerArbeidsgetuigenisAi'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof genereerArbeidsgetuigenisAi>>, {id: number;data: BodyType<ArbeidsgetuigenisAiInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  genereerArbeidsgetuigenisAi(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type GenereerArbeidsgetuigenisAiMutationResult = NonNullable<Awaited<ReturnType<typeof genereerArbeidsgetuigenisAi>>>
+    export type GenereerArbeidsgetuigenisAiMutationBody = BodyType<ArbeidsgetuigenisAiInput>
+    export type GenereerArbeidsgetuigenisAiMutationError = ErrorType<unknown>
+
+    /**
+ * @summary AI genereert tekst voor arbeidsgetuigenis / aanbevelingsbrief
+ */
+export const useGenereerArbeidsgetuigenisAi = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof genereerArbeidsgetuigenisAi>>, TError,{id: number;data: BodyType<ArbeidsgetuigenisAiInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof genereerArbeidsgetuigenisAi>>,
+        TError,
+        {id: number;data: BodyType<ArbeidsgetuigenisAiInput>},
+        TContext
+      > => {
+      return useMutation(getGenereerArbeidsgetuigenisAiMutationOptions(options));
+    }
+
+export const getOffboardMedewerkerUrl = (id: number,) => {
+
+
+
+
+  return `/api/medewerkers/${id}/offboard`
+}
+
+/**
+ * @summary Offboard uitvoeren — zet uit-dienst-datum, deactiveer account en log AVG-acties
+ */
+export const offboardMedewerker = async (id: number,
+    offboardInput: OffboardInput, options?: RequestInit): Promise<Medewerker> => {
+
+  return customFetch<Medewerker>(getOffboardMedewerkerUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(offboardInput)
+  }
+);}
+
+
+
+
+export const getOffboardMedewerkerMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof offboardMedewerker>>, TError,{id: number;data: BodyType<OffboardInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof offboardMedewerker>>, TError,{id: number;data: BodyType<OffboardInput>}, TContext> => {
+
+const mutationKey = ['offboardMedewerker'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof offboardMedewerker>>, {id: number;data: BodyType<OffboardInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  offboardMedewerker(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type OffboardMedewerkerMutationResult = NonNullable<Awaited<ReturnType<typeof offboardMedewerker>>>
+    export type OffboardMedewerkerMutationBody = BodyType<OffboardInput>
+    export type OffboardMedewerkerMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Offboard uitvoeren — zet uit-dienst-datum, deactiveer account en log AVG-acties
+ */
+export const useOffboardMedewerker = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof offboardMedewerker>>, TError,{id: number;data: BodyType<OffboardInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof offboardMedewerker>>,
+        TError,
+        {id: number;data: BodyType<OffboardInput>},
+        TContext
+      > => {
+      return useMutation(getOffboardMedewerkerMutationOptions(options));
     }
 
 export const getListAlleVerlofAanvragenUrl = (params?: ListAlleVerlofAanvragenParams,) => {

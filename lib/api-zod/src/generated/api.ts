@@ -7928,6 +7928,105 @@ export const CreateVerlofAanvraagResponse = zod.void()
 
 
 /**
+ * @summary Offboard-samenvatting — alle relevante data voor het offboarden van een medewerker
+ */
+export const GetOffboardSamenvattingParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetOffboardSamenvattingResponse = zod.object({
+  "medewerker_id": zod.number(),
+  "medewerker_naam": zod.string(),
+  "functie_naam": zod.string().nullish(),
+  "werkmaatschappij": zod.string().optional(),
+  "in_dienst_sinds": zod.string().nullish(),
+  "dienstverband": zod.string().optional(),
+  "gebruiker_actief": zod.boolean().optional(),
+  "verlof_totaal_uren": zod.number().describe('Totaal openstaand verlof in uren (huidig jaar, alle soorten)'),
+  "openstaande_aanvragen": zod.number().describe('Aantal verlofaanvragen met status ingediend of wachtend'),
+  "certificaten_bijna_verlopen": zod.array(zod.object({
+  "naam": zod.string(),
+  "verloopt_op": zod.string()
+})).optional(),
+  "actieve_toewijzingen": zod.number().optional().describe('Aantal actieve gebouwtoewijzingen'),
+  "avg_bewaar_tot": zod.string().describe('ISO datum tot wanneer persoonsgegevens minimaal bewaard moeten blijven (arbeidsrechtelijk 7 jaar)'),
+  "avg_aandachtspunten": zod.array(zod.string()).optional()
+})
+
+
+/**
+ * @summary AI genereert tekst voor arbeidsgetuigenis / aanbevelingsbrief
+ */
+export const GenereerArbeidsgetuigenisAiParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GenereerArbeidsgetuigenisAiBody = zod.object({
+  "reden_uitdienst": zod.string().optional().describe('Bijv. eigen verzoek, reorganisatie, afloop contract'),
+  "positief_getuigschrift": zod.boolean().optional().describe('Geeft aan of een positieve aanbeveling gewenst is'),
+  "extra_toelichting": zod.string().optional()
+})
+
+export const GenereerArbeidsgetuigenisAiResponse = zod.object({
+  "brief_tekst": zod.string().describe('Volledige brieftekst (Nederlandstalig, formeel)'),
+  "samenvatting": zod.string().describe('Eén-regelig AI-oordeel voor intern gebruik'),
+  "ai_gebruikt": zod.boolean().optional()
+})
+
+
+/**
+ * @summary Offboard uitvoeren — zet uit-dienst-datum, deactiveer account en log AVG-acties
+ */
+export const OffboardMedewerkerParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const OffboardMedewerkerBody = zod.object({
+  "uit_dienst_per": zod.string().describe('ISO datum (YYYY-MM-DD)'),
+  "deactiveer_account": zod.boolean().optional().describe('Zet ook het systeemaccount inactief'),
+  "reden": zod.string().optional(),
+  "overdrachtsnota": zod.string().optional()
+})
+
+export const OffboardMedewerkerResponse = zod.object({
+  "id": zod.number(),
+  "gebruiker_id": zod.number().nullish(),
+  "gebruiker_rol": zod.string().nullish(),
+  "naam": zod.string(),
+  "email": zod.string().nullish(),
+  "telefoon": zod.string().nullish(),
+  "mobiel": zod.string().nullish(),
+  "werkmaatschappij": zod.string(),
+  "functie_id": zod.number().nullish(),
+  "functie_naam": zod.string().nullish(),
+  "cao": zod.string().nullish(),
+  "dienstverband": zod.string(),
+  "contracturen_per_week": zod.number().nullish(),
+  "deeltijd_percentage": zod.number().nullish().describe('Deeltijdfactor als percentage van de CAO-norm (bijv. 80 = 80%)'),
+  "in_dienst_sinds": zod.string().nullish(),
+  "uit_dienst_per": zod.string().nullish(),
+  "noodcontact_naam": zod.string().nullish(),
+  "noodcontact_telefoon": zod.string().nullish(),
+  "geboortedatum": zod.string().nullish(),
+  "geboorteplaats": zod.string().nullish(),
+  "adres": zod.string().nullish(),
+  "postcode": zod.string().nullish(),
+  "woonplaats": zod.string().nullish(),
+  "rijbewijs": zod.string().nullish(),
+  "rijbewijs_vervaldatum": zod.string().nullish(),
+  "vca_vervaldatum": zod.string().nullish().describe('Vervaldatum VCA-certificaat (YYYY-MM-DD)'),
+  "ehbo_vervaldatum": zod.string().nullish().describe('Vervaldatum EHBO-certificaat (YYYY-MM-DD)'),
+  "bhv_vervaldatum": zod.string().nullish().describe('Vervaldatum BHV-certificaat (YYYY-MM-DD)'),
+  "cv_tekst": zod.string().nullish(),
+  "actief": zod.boolean(),
+  "opmerkingen": zod.string().nullish(),
+  "bedrijf_uitzendbureau": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+
+
+/**
  * @summary Alle verlofaanvragen (centrale beoordelingslijst)
  */
 export const ListAlleVerlofAanvragenQueryParams = zod.object({

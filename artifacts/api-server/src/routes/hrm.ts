@@ -8,6 +8,15 @@
 // stelt opleidingen/cursussen voor per functie. Conform het projectprincipe stelt
 // de AI alleen voor; een mens bevestigt en bewaart (geen automatische opslag).
 import { Router } from "express";
+import { createRequire } from "module";
+import multer from "multer";
+// pdf-parse is a CJS module; gebruik createRequire zodat Node.js de CJS-versie laadt
+// en niet de ESM-stub die geen default-export heeft.
+const _req = createRequire(import.meta.url);
+type PdfParseResult = { text: string; numpages: number };
+type PdfParseFn = (buffer: Buffer, options?: object) => Promise<PdfParseResult>;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const pdfParse: PdfParseFn = (_req("pdf-parse") as any).default ?? (_req("pdf-parse") as any);
 import {
   db,
   werkgeversTable,
@@ -30,8 +39,10 @@ import {
 import { eq, desc, and, ne, inArray, or, isNull, gte, lte, sql } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
 import { stelOpleidingenVoor } from "../services/opleiding-ai";
-import { maakOpenAiClient } from "../lib/openai";
+import { maakOpenAiClient, heeftOpenAi } from "../lib/openai";
 import { logger } from "../lib/logger";
+
+const uploadGeheugem = multer({ storage: multer.memoryStorage(), limits: { fileSize: 20 * 1024 * 1024 } });
 
 const router = Router();
 
@@ -3004,6 +3015,425 @@ router.patch("/werkgevers/:id/salaris-config", schrijven, async (req, res) => {
       intern_contact_naam: bijgewerkt.internContactNaam ?? null,
       intern_contact_email: bijgewerkt.internContactEmail ?? null,
       scab_email_adres: bijgewerkt.scabEmailAdres ?? null,
+    });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// ─── CV ANALYSE (multipart upload, AI-extractie) ─────────────────────────────
+router.post(
+  "/medewerkers/ai-cv-analyse",
+  schrijven,
+  uploadGeheugem.single("cv"),
+  async (req, res) => {
+    try {
+      const bestand = req.file;
+      if (!bestand) {
+        return res.status(422).json({ error: "Geen bestand ontvangen. Stuur een PDF." });
+      }
+
+      let tekst = "";
+      const isPdf =
+        bestand.mimetype === "application/pdf" ||
+        bestand.originalname.toLowerCase().endsWith(".pdf");
+      if (isPdf) {
+        try {
+          const parsed = await pdfParse(bestand.buffer);
+          tekst = parsed.text ?? "";
+        } catch {
+          return res
+            .status(422)
+            .json({ error: "PDF kon niet worden gelezen. Gebruik een niet-gescand PDF-bestand." });
+        }
+      } else {
+        tekst = bestand.buffer.toString("utf-8");
+      }
+
+      if (!tekst.trim() || tekst.trim().length < 50) {
+        return res.status(422).json({ error: "Te weinig tekst gevonden in het bestand." });
+      }
+
+      if (!heeftOpenAi()) {
+        return res.status(503).json({ error: "AI is niet beschikbaar. Vul de velden handmatig in." });
+      }
+
+      const client = maakOpenAiClient();
+      const extractiePrompt = `Analyseer het volgende CV en extraheer de gevraagde velden. Antwoord UITSLUITEND met een geldig JSON-object (geen markdown, geen tekst buiten het object).
+
+CV-TEKST:
+${tekst.slice(0, 6000)}
+
+Extraheer exact deze velden (gebruik null als iets ontbreekt of onduidelijk is):
+{
+  "naam": "volledige naam",
+  "email": "e-mailadres of null",
+  "telefoon": "vast telefoonnummer incl. netnummer of null",
+  "mobiel": "mobiel nummer of null",
+  "geboortedatum": "YYYY-MM-DD of null",
+  "adres": "straatnaam + huisnummer of null",
+  "postcode": "Nederlandse postcode (1234 AB formaat) of null",
+  "woonplaats": "woonplaats of null",
+  "rijbewijs": "rijbewijscategorieën (bijv. B, BE, C) of null",
+  "vca_vervaldatum": "VCA vervaldatum YYYY-MM-DD of null",
+  "bhv_vervaldatum": "BHV vervaldatum YYYY-MM-DD of null",
+  "ehbo_vervaldatum": "EHBO vervaldatum YYYY-MM-DD of null",
+  "werkervaring_samenvatting": "max 2 zinnen over werkervaring of null",
+  "ai_toelichting": "opmerking over leesbaarheid of null (max 1 zin)"
+}`;
+
+      const response = await client.chat.completions.create({
+        model: "gpt-4o",
+        messages: [{ role: "user", content: extractiePrompt }],
+        max_tokens: 500,
+        temperature: 0,
+        response_format: { type: "json_object" },
+      });
+
+      let resultaat: Record<string, unknown> = {};
+      try {
+        resultaat = JSON.parse(response.choices[0]?.message?.content ?? "{}");
+      } catch {
+        return res.status(500).json({ error: "AI gaf een ongeldig antwoord. Probeer opnieuw." });
+      }
+
+      return res.json({
+        naam: resultaat.naam ?? null,
+        email: resultaat.email ?? null,
+        telefoon: resultaat.telefoon ?? null,
+        mobiel: resultaat.mobiel ?? null,
+        geboortedatum: resultaat.geboortedatum ?? null,
+        adres: resultaat.adres ?? null,
+        postcode: resultaat.postcode ?? null,
+        woonplaats: resultaat.woonplaats ?? null,
+        rijbewijs: resultaat.rijbewijs ?? null,
+        vca_vervaldatum: resultaat.vca_vervaldatum ?? null,
+        bhv_vervaldatum: resultaat.bhv_vervaldatum ?? null,
+        ehbo_vervaldatum: resultaat.ehbo_vervaldatum ?? null,
+        werkervaring_samenvatting: resultaat.werkervaring_samenvatting ?? null,
+        ai_toelichting: resultaat.ai_toelichting ?? null,
+      });
+    } catch (err) {
+      req.log.error(err);
+      res.status(500).json({ error: "Interne serverfout" });
+    }
+  }
+);
+
+// ─── OFFBOARD SAMENVATTING ────────────────────────────────────────────────────
+router.get("/medewerkers/:id/offboard-samenvatting", lezen, async (req, res) => {
+  try {
+    const id = parseId(req.params.id);
+
+    const [rij] = await db
+      .select({ m: medewerkersTable, functie_naam: functiesTable.naam })
+      .from(medewerkersTable)
+      .leftJoin(functiesTable, eq(medewerkersTable.functieId, functiesTable.id))
+      .where(eq(medewerkersTable.id, id));
+
+    if (!rij) return res.status(404).json({ error: "Niet gevonden" });
+    const { m, functie_naam } = rij;
+
+    // Gebruikersaccount actief?
+    let gebruiker_actief = false;
+    if (m.gebruikerId) {
+      const [g] = await db
+        .select({ actief: gebruikersTable.actief })
+        .from(gebruikersTable)
+        .where(eq(gebruikersTable.id, m.gebruikerId));
+      gebruiker_actief = g?.actief ?? false;
+    }
+
+    // Verlof saldi huidig jaar
+    const huidigJaar = new Date().getFullYear();
+    const saldi = await db
+      .select({ saldo_uren: verlofSaldiTable.saldoUren })
+      .from(verlofSaldiTable)
+      .where(and(eq(verlofSaldiTable.medewerkerId, id), eq(verlofSaldiTable.jaar, huidigJaar)));
+    const verlof_totaal_uren = saldi.reduce((s, r) => s + (r.saldo_uren ?? 0), 0);
+
+    // Openstaande verlofaanvragen
+    const openstaand = await db
+      .select({ id: verlofAanvragenTable.id })
+      .from(verlofAanvragenTable)
+      .where(
+        and(
+          eq(verlofAanvragenTable.medewerkerId, id),
+          inArray(verlofAanvragenTable.status, ["ingediend", "wachtend"])
+        )
+      );
+
+    // Certificaten die komend jaar verlopen
+    const nu = new Date();
+    const overJaar = new Date(nu);
+    overJaar.setFullYear(overJaar.getFullYear() + 1);
+    const certificaten = await db
+      .select({ naam: opleidingenTable.naam, verloopt_op: medewerkerOpleidingenTable.verlooptOp })
+      .from(medewerkerOpleidingenTable)
+      .leftJoin(opleidingenTable, eq(medewerkerOpleidingenTable.opleidingId, opleidingenTable.id))
+      .where(
+        and(
+          eq(medewerkerOpleidingenTable.medewerkerId, id),
+          gte(medewerkerOpleidingenTable.verlooptOp, nu.toISOString().split("T")[0]),
+          lte(medewerkerOpleidingenTable.verlooptOp, overJaar.toISOString().split("T")[0])
+        )
+      );
+
+    // AVG bewaarperiode: (uit_dienst_per of vandaag) + 7 jaar
+    const refDatum = m.uitDienstPer ? new Date(m.uitDienstPer) : new Date();
+    const avgTot = new Date(refDatum);
+    avgTot.setFullYear(avgTot.getFullYear() + 7);
+    const avg_bewaar_tot = avgTot.toISOString().split("T")[0];
+
+    const avg_aandachtspunten: string[] = [
+      `Loongegevens bewaren tot ${avg_bewaar_tot} (Wet op de loonbelasting art. 28 lid 9)`,
+      "Arbeidscontract en salarisspecificaties: minimaal 7 jaar na uitdiensttreding",
+      "Persoonsgegevens zonder wettelijke grondslag verwijderen bij of kort na offboarding",
+    ];
+    if (m.bsn) avg_aandachtspunten.push("BSN aanwezig — niet langer bewaren dan fiscale verplichting vereist");
+    if (m.gebruikerId) avg_aandachtspunten.push("Systeemtoegang (FPS Connect) intrekken — gebruikersaccount deactiveren");
+
+    return res.json({
+      medewerker_id: m.id,
+      medewerker_naam: m.naam,
+      functie_naam: functie_naam ?? null,
+      werkmaatschappij: m.werkmaatschappij,
+      in_dienst_sinds: m.inDienstSinds ?? null,
+      dienstverband: m.dienstverband ?? "onbekend",
+      gebruiker_actief,
+      verlof_totaal_uren: Math.round(verlof_totaal_uren * 10) / 10,
+      openstaande_aanvragen: openstaand.length,
+      certificaten_bijna_verlopen: certificaten
+        .filter((c) => c.verloopt_op)
+        .map((c) => ({ naam: c.naam ?? "Onbekende opleiding", verloopt_op: c.verloopt_op! })),
+      actieve_toewijzingen: 0,
+      avg_bewaar_tot,
+      avg_aandachtspunten,
+    });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// ─── ARBEIDSGETUIGENIS — AI GENEREERT BRIEFTEKST ─────────────────────────────
+function _briefZonderAi(opts: {
+  naam: string;
+  functieName: string;
+  werkgeverNaam: string;
+  inDienstSinds: string;
+  uitDienstPer: string;
+  vandaagNL: string;
+  diensttermijn: string;
+  positief: boolean;
+}): string {
+  return `${opts.vandaagNL}
+
+Betreft: Arbeidsgetuigenis ${opts.naam}
+
+Ondergetekende, ${opts.werkgeverNaam}, verklaart hierbij dat:
+
+${opts.naam} in dienst is geweest van ${opts.inDienstSinds} tot ${opts.uitDienstPer} — een periode van ${opts.diensttermijn} — in de functie van ${opts.functieName}.
+
+Gedurende dit dienstverband heeft ${opts.naam.split(" ")[0]} de werkzaamheden behorend bij de functie van ${opts.functieName} naar behoren uitgevoerd. ${opts.positief ? `Wij beschouwen ${opts.naam.split(" ")[0]} als een betrouwbare en gemotiveerde medewerker en bevelen hem/haar van harte aan voor een vergelijkbare functie.` : ""}
+
+Wij wensen ${opts.naam.split(" ")[0]} veel succes in de verdere loopbaan.
+
+Met vriendelijke groet,
+
+${opts.werkgeverNaam}
+
+
+_________________________
+Handtekening
+
+_________________________
+Naam en functie`;
+}
+
+router.post("/medewerkers/:id/arbeidsgetuigenis-ai", schrijven, async (req, res) => {
+  try {
+    const id = parseId(req.params.id);
+    const {
+      reden_uitdienst,
+      positief_getuigschrift = true,
+      extra_toelichting,
+    } = req.body as { reden_uitdienst?: string; positief_getuigschrift?: boolean; extra_toelichting?: string };
+
+    const [rij] = await db
+      .select({ m: medewerkersTable, functie_naam: functiesTable.naam })
+      .from(medewerkersTable)
+      .leftJoin(functiesTable, eq(medewerkersTable.functieId, functiesTable.id))
+      .where(eq(medewerkersTable.id, id));
+
+    if (!rij) return res.status(404).json({ error: "Niet gevonden" });
+    const { m, functie_naam } = rij;
+
+    // Werkgever
+    let werkgeverNaam = m.werkmaatschappij;
+    let werkgeverAdres = "";
+    if (m.werkgeverId) {
+      const [wg] = await db
+        .select({ naam: werkgeversTable.naam, adres: werkgeversTable.adres, postcode: werkgeversTable.postcode })
+        .from(werkgeversTable)
+        .where(eq(werkgeversTable.id, m.werkgeverId));
+      if (wg) {
+        werkgeverNaam = wg.naam ?? m.werkmaatschappij;
+        werkgeverAdres = [wg.adres, wg.postcode].filter(Boolean).join(", ");
+      }
+    }
+
+    // Behaalde opleidingen
+    const opleidingen = await db
+      .select({ naam: opleidingenTable.naam, behaald_op: medewerkerOpleidingenTable.behaaldOp, status: medewerkerOpleidingenTable.status })
+      .from(medewerkerOpleidingenTable)
+      .leftJoin(opleidingenTable, eq(medewerkerOpleidingenTable.opleidingId, opleidingenTable.id))
+      .where(eq(medewerkerOpleidingenTable.medewerkerId, id));
+
+    // Diensttermijn
+    const inDat = m.inDienstSinds ? new Date(m.inDienstSinds) : null;
+    const uitDat = m.uitDienstPer ? new Date(m.uitDienstPer) : new Date();
+    let diensttermijn = "onbekende periode";
+    if (inDat) {
+      const maanden = Math.round((uitDat.getTime() - inDat.getTime()) / (1000 * 60 * 60 * 24 * 30.5));
+      const jaren = Math.floor(maanden / 12);
+      const restM = maanden % 12;
+      diensttermijn =
+        [jaren > 0 ? `${jaren} jaar` : "", restM > 0 ? `${restM} maanden` : ""].filter(Boolean).join(" en ") ||
+        "minder dan een maand";
+    }
+
+    const vandaagNL = new Date().toLocaleDateString("nl-NL", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    });
+
+    const functieName = functie_naam ?? "medewerker";
+    const samenvatting = `Arbeidsgetuigenis voor ${m.naam} — ${diensttermijn} in dienst als ${functieName}${positief_getuigschrift !== false ? ", positief getuigschrift" : ""}.`;
+
+    if (!heeftOpenAi()) {
+      return res.json({
+        brief_tekst: _briefZonderAi({
+          naam: m.naam,
+          functieName,
+          werkgeverNaam,
+          inDienstSinds: m.inDienstSinds ?? "—",
+          uitDienstPer: m.uitDienstPer ?? new Date().toISOString().split("T")[0],
+          vandaagNL,
+          diensttermijn,
+          positief: positief_getuigschrift !== false,
+        }),
+        samenvatting,
+        ai_gebruikt: false,
+      });
+    }
+
+    const client = maakOpenAiClient();
+    const behaaldeCertificaten = opleidingen
+      .filter((o) => o.status === "behaald")
+      .map((o) => `${o.naam}${o.behaald_op ? " (behaald " + o.behaald_op + ")" : ""}`)
+      .join(", ");
+
+    const prompt = `Schrijf een professionele Nederlandse arbeidsgetuigenis. De brief moet op een formele, zakelijke manier geschreven zijn conform de Nederlandse praktijk.
+
+WERKGEVER: ${werkgeverNaam}${werkgeverAdres ? "\nADRES: " + werkgeverAdres : ""}
+
+MEDEWERKER: ${m.naam}
+FUNCTIE: ${functieName}
+IN DIENST SINCE: ${m.inDienstSinds ?? "onbekend"}
+UIT DIENST PER: ${m.uitDienstPer ?? vandaagNL}
+DIENSTTERMIJN: ${diensttermijn}
+CONTRACTVORM: ${m.dienstverband ?? "arbeidsovereenkomst"}
+WERKMAATSCHAPPIJ: ${m.werkmaatschappij}${behaaldeCertificaten ? "\nCERTIFICATEN: " + behaaldeCertificaten : ""}${reden_uitdienst ? "\nREDEN UITDIENST: " + reden_uitdienst : ""}${extra_toelichting ? "\nEXTRA TOELICHTING: " + extra_toelichting : ""}
+
+Schrijf een ${positief_getuigschrift !== false ? "positieve" : "neutrale"} arbeidsgetuigenis met:
+1. Datum bovenaan (gebruik: ${vandaagNL})
+2. Betreft-regel
+3. Verklaring van het dienstverband (periode, functie, werkgever)
+4. Inhoudelijke alinea over taken en eigenschappen passend bij de brandpreventie/bouwsector in Nederland
+5. ${positief_getuigschrift !== false ? "Positieve aanbevelingsregel" : "Neutrale slotformulering"}
+6. Formele afsluiting met ruimte voor handtekening
+
+Schrijf ALLEEN de brieftekst. Begin direct met de datum. Gebruik formeel Nederlands. Laat lege regels voor de handtekening onderaan.`;
+
+    const response = await client.chat.completions.create({
+      model: "gpt-4o",
+      messages: [{ role: "user", content: prompt }],
+      max_tokens: 1200,
+      temperature: 0.3,
+    });
+
+    return res.json({
+      brief_tekst: response.choices[0]?.message?.content ?? "",
+      samenvatting,
+      ai_gebruikt: true,
+    });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// ─── OFFBOARD UITVOEREN ───────────────────────────────────────────────────────
+router.post("/medewerkers/:id/offboard", schrijven, async (req, res) => {
+  try {
+    const id = parseId(req.params.id);
+    const { uit_dienst_per, deactiveer_account = true, reden, overdrachtsnota } = req.body as {
+      uit_dienst_per?: string;
+      deactiveer_account?: boolean;
+      reden?: string;
+      overdrachtsnota?: string;
+    };
+
+    if (!uit_dienst_per) {
+      return res.status(422).json({ error: "Veld 'uit_dienst_per' is verplicht." });
+    }
+
+    const [m] = await db
+      .select()
+      .from(medewerkersTable)
+      .where(eq(medewerkersTable.id, id));
+
+    if (!m) return res.status(404).json({ error: "Niet gevonden" });
+    if (m.uitDienstPer) {
+      return res.status(409).json({ error: `Medewerker is al uit dienst per ${m.uitDienstPer}.` });
+    }
+
+    const [bijgewerkt] = await db
+      .update(medewerkersTable)
+      .set({ uitDienstPer: uit_dienst_per, actief: false, bijgewerktOp: new Date() })
+      .where(eq(medewerkersTable.id, id))
+      .returning();
+
+    if (deactiveer_account && m.gebruikerId) {
+      await db
+        .update(gebruikersTable)
+        .set({ actief: false })
+        .where(eq(gebruikersTable.id, m.gebruikerId));
+    }
+
+    req.log.info({ medewerker_id: id, uit_dienst_per, reden }, "Offboard uitgevoerd");
+
+    const [functie] = bijgewerkt.functieId
+      ? await db.select().from(functiesTable).where(eq(functiesTable.id, bijgewerkt.functieId))
+      : [];
+
+    return res.json({
+      id: bijgewerkt.id,
+      naam: bijgewerkt.naam,
+      werkmaatschappij: bijgewerkt.werkmaatschappij,
+      functie_id: bijgewerkt.functieId ?? null,
+      functie_naam: functie?.naam ?? null,
+      actief: bijgewerkt.actief ?? false,
+      in_dienst_sinds: bijgewerkt.inDienstSinds ?? null,
+      uit_dienst_per: bijgewerkt.uitDienstPer ?? null,
+      email: bijgewerkt.email ?? null,
+      telefoon: bijgewerkt.telefoon ?? null,
+      dienstverband: bijgewerkt.dienstverband ?? null,
+      cao: bijgewerkt.cao ?? null,
+      bijgewerkt_op: bijgewerkt.bijgewerktOp?.toISOString() ?? null,
     });
   } catch (err) {
     req.log.error(err);
