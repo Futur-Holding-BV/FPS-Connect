@@ -2,22 +2,24 @@ import { useGetMijnWerk, useGetWerkdagVandaag } from "@workspace/api-client-reac
 import type { MijnWerkGebouw, WerkdagItem } from "@workspace/api-client-react";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, Redirect, useRouter } from "expo-router";
-import React, { useCallback } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
   Linking,
   Pressable,
   RefreshControl,
-  SectionList,
   Text,
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { OfflineBanner } from "@/components/OfflineBanner";
 import { bovenInset } from "@/components/ui";
 import { useAuth } from "@/context/auth";
+import { useOffline } from "@/context/offline";
 import { useColors } from "@/hooks/useColors";
+import { leesWerkorders, leesPlanning } from "@/lib/offlineCache";
 
 const UITVOERING_KLEUR: Record<string, string> = {
   gepland: "#6b7280",
@@ -82,9 +84,7 @@ function WerkorderRij({
     >
       <View style={{ width: 48, alignItems: "flex-end", paddingTop: 2, flexShrink: 0 }}>
         {item.tijd_start ? (
-          <Text
-            style={{ color: c.mutedForeground, fontSize: 12, fontFamily: "Inter_400Regular" }}
-          >
+          <Text style={{ color: c.mutedForeground, fontSize: 12, fontFamily: "Inter_400Regular" }}>
             {item.tijd_start}
           </Text>
         ) : (
@@ -241,6 +241,10 @@ export default function WerkdagScherm() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { token } = useAuth();
+  const { isOnline } = useOffline();
+
+  const [gecachedWerkorders, setGecachedWerkorders] = useState<WerkdagItem[]>([]);
+  const [gecachedLocaties, setGecachedLocaties] = useState<MijnWerkGebouw[]>([]);
 
   if (!token) return <Redirect href="/login" />;
 
@@ -259,6 +263,22 @@ export default function WerkdagScherm() {
     isRefetching: herladenWerk,
   } = useGetMijnWerk();
 
+  // Laad gecachede gegevens als fallback
+  useEffect(() => {
+    if (!isOnline || foutWerkorders) {
+      leesWerkorders().then((cached) => {
+        if (cached && cached.length > 0) {
+          setGecachedWerkorders(cached as WerkdagItem[]);
+        }
+      });
+      leesPlanning().then((cached) => {
+        if (cached && cached.length > 0) {
+          setGecachedLocaties(cached as MijnWerkGebouw[]);
+        }
+      });
+    }
+  }, [isOnline, foutWerkorders]);
+
   useFocusEffect(
     useCallback(() => {
       void herlaadWerkorders();
@@ -266,9 +286,22 @@ export default function WerkdagScherm() {
     }, [herlaadWerkorders, herlaadWerk]),
   );
 
-  const locaties = mijnWerk ?? [];
+  // Kies API-data of gecachede fallback
+  const toonWerkorders = isOnline && werkorders.length > 0
+    ? werkorders
+    : gecachedWerkorders.length > 0
+      ? gecachedWerkorders
+      : werkorders;
+
+  const locaties = isOnline && (mijnWerk ?? []).length > 0
+    ? (mijnWerk ?? [])
+    : gecachedLocaties.length > 0
+      ? gecachedLocaties
+      : (mijnWerk ?? []);
+
+  const isOfflineCache = !isOnline && (gecachedWerkorders.length > 0 || gecachedLocaties.length > 0);
   const isHerladen = herladenWerkorders || herladenWerk;
-  const isLaden = ladenWerkorders || ladenWerk;
+  const isLaden = (ladenWerkorders || ladenWerk) && toonWerkorders.length === 0;
 
   return (
     <View style={{ flex: 1, backgroundColor: c.background }}>
@@ -293,12 +326,29 @@ export default function WerkdagScherm() {
         >
           {vandaagNederlands()}
         </Text>
-        <Text
-          style={{ color: "#fff", fontSize: 20, fontFamily: "Inter_700Bold" }}
-        >
+        <Text style={{ color: "#fff", fontSize: 20, fontFamily: "Inter_700Bold" }}>
           Mijn werkdag
         </Text>
       </View>
+
+      <OfflineBanner stijl="compact" />
+      {isOfflineCache ? (
+        <View
+          style={{
+            backgroundColor: "rgba(234,179,8,0.08)",
+            paddingHorizontal: 16,
+            paddingVertical: 5,
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 6,
+          }}
+        >
+          <Ionicons name="time-outline" size={12} color="#facc15" />
+          <Text style={{ color: "#facc15", fontSize: 11, fontFamily: "Inter_400Regular" }}>
+            Gegevens uit lokale cache
+          </Text>
+        </View>
+      ) : null}
 
       {isLaden ? (
         <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
@@ -306,14 +356,16 @@ export default function WerkdagScherm() {
         </View>
       ) : (
         <FlatList
-          data={werkorders}
+          data={toonWerkorders}
           keyExtractor={(item) => `wo-${item.id}`}
           refreshControl={
-            <RefreshControl
-              refreshing={isHerladen}
-              onRefresh={() => { void herlaadWerkorders(); void herlaadWerk(); }}
-              tintColor={c.primary}
-            />
+            isOnline ? (
+              <RefreshControl
+                refreshing={isHerladen}
+                onRefresh={() => { void herlaadWerkorders(); void herlaadWerk(); }}
+                tintColor={c.primary}
+              />
+            ) : undefined
           }
           ListHeaderComponent={
             <View>
@@ -359,8 +411,9 @@ export default function WerkdagScherm() {
                         }}
                       >
                         {locaties.length} locatie{locaties.length !== 1 ? "s" : ""} vandaag
+                        {isOfflineCache ? " (cache)" : ""}
                       </Text>
-                    ) : ladenWerk ? (
+                    ) : ladenWerk && isOnline ? (
                       <Text
                         style={{
                           color: c.mutedForeground,
@@ -378,7 +431,7 @@ export default function WerkdagScherm() {
                           fontFamily: "Inter_400Regular",
                         }}
                       >
-                        Geen locaties ingepland
+                        {isOnline ? "Geen locaties ingepland" : "Geen cache beschikbaar"}
                       </Text>
                     )}
                   </View>
@@ -419,15 +472,15 @@ export default function WerkdagScherm() {
                     letterSpacing: 0.5,
                   }}
                 >
-                  {werkorders.length > 0
-                    ? `${werkorders.length} werkorder${werkorders.length !== 1 ? "s" : ""} vandaag`
+                  {toonWerkorders.length > 0
+                    ? `${toonWerkorders.length} werkorder${toonWerkorders.length !== 1 ? "s" : ""} vandaag`
                     : "Werkorders vandaag"}
                 </Text>
               </View>
             </View>
           }
           ListEmptyComponent={
-            foutWerkorders ? (
+            foutWerkorders && !isOfflineCache ? (
               <View style={{ padding: 24, alignItems: "center", gap: 12 }}>
                 <Ionicons name="alert-circle-outline" size={36} color={c.mutedForeground} />
                 <Text
@@ -438,21 +491,25 @@ export default function WerkdagScherm() {
                     fontFamily: "Inter_400Regular",
                   }}
                 >
-                  Werkorders konden niet worden geladen.
+                  {isOnline
+                    ? "Werkorders konden niet worden geladen."
+                    : "Geen verbinding en geen cache beschikbaar.\nDownload de planning op kantoor voordat je vertrekt."}
                 </Text>
-                <Pressable
-                  onPress={() => void herlaadWerkorders()}
-                  style={{
-                    backgroundColor: c.primary,
-                    borderRadius: 8,
-                    paddingHorizontal: 16,
-                    paddingVertical: 9,
-                  }}
-                >
-                  <Text style={{ color: "#fff", fontFamily: "Inter_600SemiBold", fontSize: 13 }}>
-                    Opnieuw proberen
-                  </Text>
-                </Pressable>
+                {isOnline ? (
+                  <Pressable
+                    onPress={() => void herlaadWerkorders()}
+                    style={{
+                      backgroundColor: c.primary,
+                      borderRadius: 8,
+                      paddingHorizontal: 16,
+                      paddingVertical: 9,
+                    }}
+                  >
+                    <Text style={{ color: "#fff", fontFamily: "Inter_600SemiBold", fontSize: 13 }}>
+                      Opnieuw proberen
+                    </Text>
+                  </Pressable>
+                ) : null}
               </View>
             ) : (
               <View style={{ padding: 24, alignItems: "center", gap: 8 }}>
@@ -471,13 +528,7 @@ export default function WerkdagScherm() {
             )
           }
           ItemSeparatorComponent={() => (
-            <View
-              style={{
-                height: 1,
-                backgroundColor: c.border,
-                marginLeft: 76,
-              }}
-            />
+            <View style={{ height: 1, backgroundColor: c.border, marginLeft: 76 }} />
           )}
           renderItem={({ item }) => (
             <WerkorderRij

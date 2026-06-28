@@ -5,9 +5,10 @@ import {
   useCreateOpnameFotoUploadUrl,
   useDeleteOpnameFoto,
 } from "@workspace/api-client-react";
+import * as FileSystem from "expo-file-system/legacy";
 import * as ImagePicker from "expo-image-picker";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -20,8 +21,17 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { OfflineBanner } from "@/components/OfflineBanner";
 import { bovenInset } from "@/components/ui";
+import { useOffline } from "@/context/offline";
+import { useSync } from "@/context/sync";
 import { useColors } from "@/hooks/useColors";
+import {
+  leesOpnameItem,
+  patchOpnameItemLokaal,
+  slaOpnameItemOp,
+} from "@/lib/offlineCache";
+import { voegToeAanWachtrij } from "@/lib/syncQueue";
 
 const SPOT_TYPEN = [
   { waarde: "branddeur", label: "Branddeur", kleur: "#ef4444" },
@@ -61,6 +71,9 @@ export default function OpnameItemDetail() {
   const insets = useSafeAreaInsets();
   const { itemId } = useLocalSearchParams<{ itemId: string }>();
   const id = Number(itemId);
+  const { isOnline } = useOffline();
+  const { herlaadAantal } = useSync();
+  const fotoMapGemaakt = useRef(false);
 
   const { data: item, isLoading, refetch } = useGetOpnameItem(id);
   const bijwerken = useUpdateOpnameItem();
@@ -79,6 +92,10 @@ export default function OpnameItemDetail() {
   const [afgerond, setAfgerond] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [heeftWijzigingen, setHeeftWijzigingen] = useState(false);
+  const [lokaleFotos, setLokaleFotos] = useState<string[]>([]);
+  const [gecachedItem, setGecachedItem] = useState<Record<string, unknown> | null>(null);
+
+  const fotoDir = `${FileSystem.documentDirectory ?? ""}opname-fotos/${id}/`;
 
   useEffect(() => {
     if (!item) return;
@@ -93,76 +110,154 @@ export default function OpnameItemDetail() {
     setNotities(item.notities ?? "");
     setAfgerond(item.afgerond ?? false);
     setHeeftWijzigingen(false);
-  }, [item]);
+    // Cache item voor offline gebruik
+    void slaOpnameItemOp(id, item);
+  }, [item, id]);
+
+  // Laad gecachede versie als offline
+  useEffect(() => {
+    if (!isOnline && !item) {
+      leesOpnameItem(id).then((cached) => {
+        if (cached) {
+          const c2 = cached as Record<string, unknown>;
+          setGecachedItem(c2);
+          setSpotType((c2.spot_type as string) ?? "");
+          setRuimte((c2.ruimte as string) ?? "");
+          setBeschrijving((c2.beschrijving as string) ?? "");
+          setActie((c2.actie as string) ?? "controleren");
+          setBereikbaarheid((c2.bereikbaarheid as string) ?? "goed");
+          setAantal(String((c2.aantal as number) ?? 1));
+          setAfmetingen((c2.afmetingen as string) ?? "");
+          setPrioriteit((c2.prioriteit as string) ?? "normaal");
+          setNotities((c2.notities as string) ?? "");
+          setAfgerond((c2.afgerond as boolean) ?? false);
+        }
+      });
+    }
+  }, [isOnline, item, id]);
+
+  // Laad lokale foto's
+  useEffect(() => {
+    FileSystem.getInfoAsync(fotoDir).then((info) => {
+      if (info.exists && info.isDirectory) {
+        FileSystem.readDirectoryAsync(fotoDir).then((bestanden) => {
+          setLokaleFotos(bestanden.sort().map((b) => `${fotoDir}${b}`));
+        });
+      }
+    });
+  }, [fotoDir]);
 
   function markeerGewijzigd() { setHeeftWijzigingen(true); }
 
   async function opslaan() {
-    await bijwerken.mutateAsync({
-      itemId: id,
-      data: {
-        spot_type: spotType,
-        ruimte: ruimte || undefined,
-        beschrijving: beschrijving || undefined,
-        actie,
-        bereikbaarheid,
-        aantal: Number(aantal) || 1,
-        afmetingen: afmetingen || undefined,
-        prioriteit,
-        notities: notities || undefined,
-        afgerond,
-      },
-    });
+    const velden = {
+      spot_type: spotType,
+      ruimte: ruimte || undefined,
+      beschrijving: beschrijving || undefined,
+      actie,
+      bereikbaarheid,
+      aantal: Number(aantal) || 1,
+      afmetingen: afmetingen || undefined,
+      prioriteit,
+      notities: notities || undefined,
+      afgerond,
+    };
+
+    if (!isOnline) {
+      // Offline: sla lokaal op en zet in wachtrij
+      await patchOpnameItemLokaal(id, velden as Record<string, unknown>);
+      await voegToeAanWachtrij({
+        type: "patch_opname_item",
+        itemId: id,
+        velden: velden as Record<string, unknown>,
+      });
+      await herlaadAantal();
+      setHeeftWijzigingen(false);
+      return;
+    }
+
+    // Online pad
+    await bijwerken.mutateAsync({ itemId: id, data: velden });
     setHeeftWijzigingen(false);
     await refetch();
   }
 
-  async function voegFotoToe() {
-    const perm = await ImagePicker.requestCameraPermissionsAsync();
-    if (perm.status !== "granted") {
-      const gallery = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (gallery.status !== "granted") {
-        Alert.alert("Geen toegang", "Geef toegang tot de camera of fotobibliotheek in de instellingen.");
-        return;
-      }
+  async function maakFotoMap() {
+    if (!fotoMapGemaakt.current) {
+      await FileSystem.makeDirectoryAsync(fotoDir, { intermediates: true });
+      fotoMapGemaakt.current = true;
     }
+  }
+
+  async function voegFotoToe() {
+    const permCam = await ImagePicker.requestCameraPermissionsAsync();
+    const permGal = await ImagePicker.requestMediaLibraryPermissionsAsync();
 
     Alert.alert(
       "Foto toevoegen",
       "Kies een bron",
       [
-        {
-          text: "Camera",
-          onPress: async () => {
-            const result = await ImagePicker.launchCameraAsync({
-              mediaTypes: ImagePicker.MediaTypeOptions.Images,
-              quality: 0.8,
-              base64: false,
-            });
-            if (!result.canceled && result.assets[0]) {
-              await uploadFoto(result.assets[0].uri);
-            }
-          },
-        },
-        {
-          text: "Fotobibliotheek",
-          onPress: async () => {
-            const result = await ImagePicker.launchImageLibraryAsync({
-              mediaTypes: ImagePicker.MediaTypeOptions.Images,
-              quality: 0.8,
-              base64: false,
-            });
-            if (!result.canceled && result.assets[0]) {
-              await uploadFoto(result.assets[0].uri);
-            }
-          },
-        },
+        ...(permCam.status === "granted"
+          ? [{
+              text: "Camera",
+              onPress: async () => {
+                const result = await ImagePicker.launchCameraAsync({
+                  mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                  quality: 0.8,
+                  base64: false,
+                });
+                if (!result.canceled && result.assets[0]) {
+                  await uploadFoto(result.assets[0].uri);
+                }
+              },
+            }]
+          : []),
+        ...(permGal.status === "granted"
+          ? [{
+              text: "Fotobibliotheek",
+              onPress: async () => {
+                const result = await ImagePicker.launchImageLibraryAsync({
+                  mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                  quality: 0.8,
+                  base64: false,
+                });
+                if (!result.canceled && result.assets[0]) {
+                  await uploadFoto(result.assets[0].uri);
+                }
+              },
+            }]
+          : []),
         { text: "Annuleren", style: "cancel" },
       ],
     );
   }
 
   async function uploadFoto(uri: string) {
+    if (!isOnline) {
+      // Offline: sla foto lokaal op en zet in wachtrij
+      setIsUploading(true);
+      try {
+        await maakFotoMap();
+        const bestandsnaam = `foto_${Date.now()}.jpg`;
+        const lokaalPad = `${fotoDir}${bestandsnaam}`;
+        await FileSystem.copyAsync({ from: uri, to: lokaalPad });
+        setLokaleFotos((prev) => [...prev, lokaalPad]);
+        await voegToeAanWachtrij({
+          type: "upload_foto_lokaal",
+          lokaalPad,
+          itemId: id,
+          fase: "uitvoering",
+        });
+        await herlaadAantal();
+      } catch {
+        Alert.alert("Fout", "Foto kon niet lokaal worden opgeslagen.");
+      } finally {
+        setIsUploading(false);
+      }
+      return;
+    }
+
+    // Online pad
     setIsUploading(true);
     try {
       const bestandsnaam = uri.split("/").pop() ?? "foto.jpg";
@@ -182,7 +277,7 @@ export default function OpnameItemDetail() {
       });
 
       await refetch();
-    } catch (e) {
+    } catch {
       Alert.alert("Fout", "Foto kon niet worden geupload. Probeer het opnieuw.");
     } finally {
       setIsUploading(false);
@@ -207,6 +302,7 @@ export default function OpnameItemDetail() {
     );
   }
 
+  const huidigItem = item ?? (gecachedItem ? { ...gecachedItem, fotos: [] } as unknown as typeof item : null);
   const typeInfo = SPOT_TYPEN.find((t) => t.waarde === spotType);
   const fotos = item?.fotos ?? [];
 
@@ -231,9 +327,9 @@ export default function OpnameItemDetail() {
             <Text style={{ color: c.darkForeground, fontSize: 20, fontFamily: "Inter_700Bold" }}>
               {typeInfo?.label ?? spotType}
             </Text>
-            {item?.ruimte ? (
+            {(huidigItem as typeof item)?.ruimte ? (
               <Text style={{ color: c.darkMuted, fontSize: 13, fontFamily: "Inter_400Regular", marginTop: 2 }}>
-                {item.ruimte}
+                {(huidigItem as typeof item)?.ruimte}
               </Text>
             ) : null}
           </View>
@@ -262,11 +358,33 @@ export default function OpnameItemDetail() {
         </View>
       </View>
 
+      <OfflineBanner stijl="compact" />
+
       <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 100 }} keyboardShouldPersistTaps="handled">
-        {isLoading ? (
+        {isLoading && !gecachedItem ? (
           <ActivityIndicator color={c.primary} style={{ marginTop: 40 }} />
         ) : (
           <>
+            {/* Offline-cache melding */}
+            {!isOnline && gecachedItem && !item ? (
+              <View
+                style={{
+                  backgroundColor: "rgba(234,179,8,0.1)",
+                  borderRadius: 8,
+                  padding: 10,
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: 6,
+                  marginBottom: 14,
+                }}
+              >
+                <Ionicons name="time-outline" size={14} color="#facc15" />
+                <Text style={{ color: "#facc15", fontSize: 12, fontFamily: "Inter_400Regular", flex: 1 }}>
+                  Gegevens uit lokale cache — wijzigingen worden gesynchroniseerd bij verbinding
+                </Text>
+              </View>
+            ) : null}
+
             {/* Type */}
             <Text style={{ fontSize: 13, fontFamily: "Inter_600SemiBold", color: c.foreground, marginBottom: 8 }}>
               Type voorziening
@@ -425,7 +543,7 @@ export default function OpnameItemDetail() {
             {/* Opslaan knop */}
             {heeftWijzigingen && (
               <Pressable
-                onPress={opslaan}
+                onPress={() => void opslaan()}
                 disabled={bijwerken.isPending}
                 style={{ backgroundColor: c.primary, padding: 14, borderRadius: 12, alignItems: "center", marginBottom: 24 }}
               >
@@ -433,7 +551,7 @@ export default function OpnameItemDetail() {
                   <ActivityIndicator color="#fff" />
                 ) : (
                   <Text style={{ color: "#fff", fontFamily: "Inter_700Bold", fontSize: 15 }}>
-                    Wijzigingen opslaan
+                    {!isOnline ? "Lokaal opslaan (sync later)" : "Wijzigingen opslaan"}
                   </Text>
                 )}
               </Pressable>
@@ -442,10 +560,10 @@ export default function OpnameItemDetail() {
             {/* Foto's sectie */}
             <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
               <Text style={{ fontSize: 15, fontFamily: "Inter_700Bold", color: c.foreground }}>
-                Foto's {fotos.length > 0 ? `(${fotos.length})` : ""}
+                Foto's {(fotos.length + lokaleFotos.length) > 0 ? `(${fotos.length + lokaleFotos.length})` : ""}
               </Text>
               <Pressable
-                onPress={voegFotoToe}
+                onPress={() => void voegFotoToe()}
                 disabled={isUploading}
                 style={{
                   flexDirection: "row",
@@ -463,12 +581,12 @@ export default function OpnameItemDetail() {
                   <Ionicons name="camera-outline" size={16} color={c.primary} />
                 )}
                 <Text style={{ fontSize: 13, fontFamily: "Inter_600SemiBold", color: c.primary }}>
-                  {isUploading ? "Uploaden..." : "Foto toevoegen"}
+                  {isUploading ? (isOnline ? "Uploaden..." : "Opslaan...") : "Foto toevoegen"}
                 </Text>
               </Pressable>
             </View>
 
-            {fotos.length === 0 ? (
+            {(fotos.length === 0 && lokaleFotos.length === 0) ? (
               <View
                 style={{
                   borderWidth: 1,
@@ -486,10 +604,11 @@ export default function OpnameItemDetail() {
               </View>
             ) : (
               <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
-                {fotos.map((foto: any) => (
+                {/* Server-foto's */}
+                {fotos.map((foto) => (
                   <View key={foto.id} style={{ position: "relative" }}>
                     <Image
-                      source={{ uri: `https://${process.env.EXPO_PUBLIC_DOMAIN}${foto.url}` }}
+                      source={{ uri: `https://${process.env.EXPO_PUBLIC_DOMAIN}${foto.url ?? ""}` }}
                       style={{ width: 100, height: 100, borderRadius: 10, backgroundColor: c.muted }}
                       resizeMode="cover"
                     />
@@ -511,6 +630,29 @@ export default function OpnameItemDetail() {
                         {foto.bijschrift}
                       </Text>
                     ) : null}
+                  </View>
+                ))}
+                {/* Lokale foto's (wachten op sync) */}
+                {lokaleFotos.map((pad) => (
+                  <View key={pad} style={{ position: "relative" }}>
+                    <Image
+                      source={{ uri: pad }}
+                      style={{ width: 100, height: 100, borderRadius: 10, backgroundColor: c.muted, opacity: 0.85 }}
+                      resizeMode="cover"
+                    />
+                    <View
+                      style={{
+                        position: "absolute",
+                        bottom: 4,
+                        left: 4,
+                        backgroundColor: "rgba(234,179,8,0.85)",
+                        borderRadius: 6,
+                        paddingHorizontal: 5,
+                        paddingVertical: 2,
+                      }}
+                    >
+                      <Text style={{ color: "#000", fontSize: 9, fontFamily: "Inter_600SemiBold" }}>Lokaal</Text>
+                    </View>
                   </View>
                 ))}
               </View>
@@ -535,7 +677,7 @@ export default function OpnameItemDetail() {
           }}
         >
           <Pressable
-            onPress={opslaan}
+            onPress={() => void opslaan()}
             disabled={bijwerken.isPending}
             style={{ backgroundColor: c.primary, padding: 14, borderRadius: 12, alignItems: "center" }}
           >
@@ -543,7 +685,7 @@ export default function OpnameItemDetail() {
               <ActivityIndicator color="#fff" />
             ) : (
               <Text style={{ color: "#fff", fontFamily: "Inter_700Bold", fontSize: 15 }}>
-                Wijzigingen opslaan
+                {!isOnline ? "Lokaal opslaan" : "Wijzigingen opslaan"}
               </Text>
             )}
           </Pressable>

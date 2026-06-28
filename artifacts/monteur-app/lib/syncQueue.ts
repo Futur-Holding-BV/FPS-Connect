@@ -1,13 +1,13 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-const QUEUE_KEY = "fps_sync_queue_v1";
+const QUEUE_KEY = "fps_sync_queue_v2";
 
 // Na dit aantal mislukte pogingen beschouwen we een item als definitief mislukt.
-// Zulke items blijven niet eindeloos de wachtrij-teller opblazen en kunnen
-// handmatig gewist worden.
 export const MAX_POGINGEN = 5;
 
+// ─── Alle actie-typen ────────────────────────────────────────────────────────
 export type SyncActie =
+  // Bestaand (backward compatible)
   | {
       type: "create_voorziening";
       payload: Record<string, unknown>;
@@ -20,6 +20,57 @@ export type SyncActie =
       payload: { fase: string; url: string };
       gebouwId: number;
       gebouwNaam: string;
+    }
+  // Werkdag-status offline wijzigen
+  | {
+      type: "patch_werkdag_status";
+      werkdagId: number;
+      nieuweStatus: string;
+    }
+  // Voorziening velden offline patchen (status, notities, materialen)
+  | {
+      type: "patch_voorziening";
+      voorzieningId: number;
+      gebouwId: number;
+      velden: Record<string, unknown>;
+    }
+  // Opname-item offline patchen (notities, afgerond, bereikbaarheid, etc.)
+  | {
+      type: "patch_opname_item";
+      itemId: number;
+      velden: Record<string, unknown>;
+    }
+  // Foto offline bewaren en later uploaden
+  | {
+      type: "upload_foto_lokaal";
+      lokaalPad: string;
+      itemId: number;
+      fase: string;
+    }
+  // Uren aanmaken terwijl offline — payload is de volledige API-body
+  | {
+      type: "create_uren";
+      lokaalId: string;
+      datum: string;
+      payload: Record<string, unknown>;
+    }
+  // Uren bijwerken terwijl offline
+  | {
+      type: "update_uren";
+      urenId: number;
+      velden: Record<string, unknown>;
+    }
+  // Uren verwijderen terwijl offline
+  | {
+      type: "delete_uren";
+      urenId: number;
+    }
+  // Handtekening (SVG) opslaan en later uploaden
+  | {
+      type: "create_handtekening";
+      lokaalPad: string;
+      werkdagId: number;
+      positie: "medewerker" | "klant";
     };
 
 export type WachtrijItem = SyncActie & {
@@ -29,6 +80,7 @@ export type WachtrijItem = SyncActie & {
   fout?: string;
 };
 
+// ─── Interne helpers ──────────────────────────────────────────────────────────
 function uuid(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 }
@@ -47,6 +99,7 @@ async function slaWachtrijOp(items: WachtrijItem[]): Promise<void> {
   await AsyncStorage.setItem(QUEUE_KEY, JSON.stringify(items));
 }
 
+// ─── Publieke API ─────────────────────────────────────────────────────────────
 export async function voegToeAanWachtrij(actie: SyncActie): Promise<string> {
   const items = await laadWachtrij();
   const item: WachtrijItem = {
@@ -73,21 +126,14 @@ export async function markeerFout(id: string, fout: string): Promise<void> {
   );
 }
 
-export async function aantalWachtrij(): Promise<number> {
-  return (await laadWachtrij()).length;
-}
-
-// Items die nog opnieuw geprobeerd kunnen worden (echt "wachtend").
 export async function aantalActief(): Promise<number> {
   return (await laadWachtrij()).filter((i) => i.pogingen < MAX_POGINGEN).length;
 }
 
-// Items die definitief mislukt zijn (maximaal aantal pogingen bereikt).
 export async function aantalMislukt(): Promise<number> {
   return (await laadWachtrij()).filter((i) => i.pogingen >= MAX_POGINGEN).length;
 }
 
-// Verwijder definitief mislukte items uit de wachtrij.
 export async function wisMislukteItems(): Promise<number> {
   const items = await laadWachtrij();
   const overgebleven = items.filter((i) => i.pogingen < MAX_POGINGEN);
@@ -95,9 +141,7 @@ export async function wisMislukteItems(): Promise<number> {
   return items.length - overgebleven.length;
 }
 
-// Synchroniseer de wachtrij: verwerk elk item via de opgegeven handler.
-// Als het gebouw niet meer in toegestaneGebouwIds staat, wordt het item
-// toch verwerkt (upload before removal), zodat data niet verloren gaat.
+// Verwerk de wachtrij via de opgegeven handler (de SyncContext levert deze).
 export async function verwerkWachtrij(
   handler: (item: WachtrijItem) => Promise<void>,
   opties?: { maxPogingen?: number },

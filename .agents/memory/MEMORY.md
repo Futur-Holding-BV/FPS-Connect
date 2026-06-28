@@ -1,3 +1,4 @@
+- [Offline-first monteur app patroon](offline-first-monteur.md) — AsyncStorage cache + SyncQueue; expo-file-system/legacy; WachtrijItem id-conflict (gebruik urenId/etc nooit id:number); create_uren payload-based.
 - [FPS Brandpreventie quirks](firevault-quirks.md) — query hooks need queryKey; pre-existing TS7030 in api-server; React 19 (no Uppy overrides); pdfjs v6 getDocument; storage paths; PDF spot coords stored at pdf.js scale:2 (web+mobile must match); mobile auth = HMAC bearer token, not cookies.
 - [Wagenparkmodule architectuur](wagenpark-module.md) — router.use("/wagenpark", wagenparkRouter) prefix; hook=useBevoegdheid (enkelvoud); mutation sig={id,data} niet {params:{id},data}; WagenparkOnderhoudInput vereist type+omschrijving ook bij PATCH.
 - [Opdracht/Werkbegroting flow](opdracht-werkbegroting.md) — offerte→opdracht→werkbegroting (zonder opslagen); vaststellen→planning→uurstaten→nacalculatie; bevoegdheid=offertes niet aparte module.

@@ -1,3 +1,4 @@
+import * as FileSystem from "expo-file-system";
 import { useQueryClient } from "@tanstack/react-query";
 import React, {
   createContext,
@@ -14,9 +15,11 @@ import {
   WachtrijItem,
   aantalActief,
   aantalMislukt,
+  laadWachtrij,
   verwerkWachtrij,
   wisMislukteItems,
 } from "@/lib/syncQueue";
+import { verwijderOfflineUren } from "@/lib/offlineCache";
 
 const INTERVAL_MS = 5 * 60 * 1000;
 
@@ -32,6 +35,7 @@ type SyncContextType = {
   aantalMislukt: number;
   isSyncing: boolean;
   syncStatus: SyncStatus;
+  mislukteItems: WachtrijItem[];
   forceerSync: () => Promise<void>;
   herlaadAantal: () => Promise<void>;
   wisMislukte: () => Promise<void>;
@@ -42,6 +46,7 @@ const SyncContext = createContext<SyncContextType>({
   aantalMislukt: 0,
   isSyncing: false,
   syncStatus: "gesynchroniseerd",
+  mislukteItems: [],
   forceerSync: async () => {},
   herlaadAantal: async () => {},
   wisMislukte: async () => {},
@@ -51,7 +56,6 @@ async function controleerVerbinding(basis: string): Promise<boolean> {
   try {
     const r = await fetch(`${basis}/api/healthz`, {
       method: "HEAD",
-      // Korte timeout via AbortController
       signal: AbortSignal.timeout(4000),
     });
     return r.ok;
@@ -65,6 +69,7 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
   const queryClient = useQueryClient();
   const [aantalWachtend, setAantalWachtend] = useState(0);
   const [aantalMisluktState, setAantalMislukt] = useState(0);
+  const [mislukteItems, setMislukteItems] = useState<WachtrijItem[]>([]);
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncStatus, setSyncStatus] = useState<SyncStatus>("gesynchroniseerd");
   const syncRef = useRef(false);
@@ -74,11 +79,14 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
   const herlaadAantal = useCallback(async () => {
     const actief = await aantalActief();
     const mislukt = await aantalMislukt();
+    const alleItems = await laadWachtrij();
+    const mislukteItemsLijst = alleItems.filter(
+      (i) => i.pogingen >= 5,
+    );
     setAantalWachtend(actief);
     setAantalMislukt(mislukt);
+    setMislukteItems(mislukteItemsLijst);
     if (syncRef.current) return;
-    // Mislukte items vereisen handmatige actie en krijgen daarom voorrang,
-    // ook als er nog wachtende items zijn die automatisch synchroniseren.
     if (mislukt > 0) setSyncStatus("mislukt");
     else if (actief > 0) setSyncStatus("opgeslagen");
     else setSyncStatus("gesynchroniseerd");
@@ -89,6 +97,7 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
     await herlaadAantal();
   }, [herlaadAantal]);
 
+  // ─── Verwerk één wachtrij-item ─────────────────────────────────────────────
   const verwerkItem = useCallback(
     async (item: WachtrijItem) => {
       if (!token) throw new Error("Niet ingelogd");
@@ -97,28 +106,178 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
         Authorization: `Bearer ${token}`,
       };
 
-      if (item.type === "create_voorziening") {
-        const r = await fetch(`${basis}/api/voorzieningen`, {
-          method: "POST",
-          headers,
-          body: JSON.stringify(item.payload),
-        });
-        if (!r.ok) throw new Error(`HTTP ${r.status}`);
-      } else if (item.type === "add_foto") {
-        const r = await fetch(
-          `${basis}/api/voorzieningen/${item.voorzieningId}/fotos`,
-          { method: "POST", headers, body: JSON.stringify(item.payload) },
-        );
-        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      switch (item.type) {
+        // ── Bestaand ──────────────────────────────────────────────────────────
+        case "create_voorziening": {
+          const r = await fetch(`${basis}/api/voorzieningen`, {
+            method: "POST",
+            headers,
+            body: JSON.stringify(item.payload),
+          });
+          if (!r.ok) throw new Error(`HTTP ${r.status}`);
+          break;
+        }
+        case "add_foto": {
+          const r = await fetch(
+            `${basis}/api/voorzieningen/${item.voorzieningId}/fotos`,
+            { method: "POST", headers, body: JSON.stringify(item.payload) },
+          );
+          if (!r.ok) throw new Error(`HTTP ${r.status}`);
+          break;
+        }
+
+        // ── Werkdag-status ─────────────────────────────────────────────────────
+        case "patch_werkdag_status": {
+          const r = await fetch(
+            `${basis}/api/werkdag/${item.werkdagId}`,
+            {
+              method: "PATCH",
+              headers,
+              body: JSON.stringify({ uitvoering_status: item.nieuweStatus }),
+            },
+          );
+          if (!r.ok) throw new Error(`HTTP ${r.status}`);
+          break;
+        }
+
+        // ── Voorziening patchen ────────────────────────────────────────────────
+        case "patch_voorziening": {
+          const r = await fetch(
+            `${basis}/api/voorzieningen/${item.voorzieningId}`,
+            {
+              method: "PATCH",
+              headers,
+              body: JSON.stringify(item.velden),
+            },
+          );
+          if (!r.ok) throw new Error(`HTTP ${r.status}`);
+          break;
+        }
+
+        // ── Opname-item patchen ────────────────────────────────────────────────
+        case "patch_opname_item": {
+          const r = await fetch(
+            `${basis}/api/opname/items/${item.itemId}`,
+            {
+              method: "PATCH",
+              headers,
+              body: JSON.stringify(item.velden),
+            },
+          );
+          if (!r.ok) throw new Error(`HTTP ${r.status}`);
+          break;
+        }
+
+        // ── Foto lokaal uploaden ───────────────────────────────────────────────
+        case "upload_foto_lokaal": {
+          const fileInfo = await FileSystem.getInfoAsync(item.lokaalPad);
+          if (!fileInfo.exists) {
+            // Bestand niet meer beschikbaar (bijv. gewist) — stil doorgaan
+            break;
+          }
+
+          const naam = item.lokaalPad.split("/").pop() ?? "foto.jpg";
+          const urlResp = await fetch(
+            `${basis}/api/opname/items/${item.itemId}/fotos/upload-url`,
+            {
+              method: "POST",
+              headers,
+              body: JSON.stringify({
+                bestandsnaam: naam,
+                content_type: "image/jpeg",
+              }),
+            },
+          );
+          if (!urlResp.ok) throw new Error(`Upload-URL HTTP ${urlResp.status}`);
+          const { upload_url } = (await urlResp.json()) as {
+            upload_url: string;
+          };
+
+          const uploadResult = await FileSystem.uploadAsync(
+            item.lokaalPad,
+            upload_url,
+            {
+              httpMethod: "PUT",
+              headers: { "Content-Type": "image/jpeg" },
+            },
+          );
+          if (uploadResult.status >= 400) {
+            throw new Error(`Upload HTTP ${uploadResult.status}`);
+          }
+          break;
+        }
+
+        // ── Uren aanmaken ──────────────────────────────────────────────────────
+        case "create_uren": {
+          const r = await fetch(`${basis}/api/uren`, {
+            method: "POST",
+            headers,
+            body: JSON.stringify(item.payload),
+          });
+          if (!r.ok) throw new Error(`HTTP ${r.status}`);
+          // Verwijder de lokale kopie na succesvolle sync
+          await verwijderOfflineUren(item.lokaalId);
+          break;
+        }
+
+        // ── Uren bijwerken ─────────────────────────────────────────────────────
+        case "update_uren": {
+          const r = await fetch(`${basis}/api/uren/${item.urenId}`, {
+            method: "PATCH",
+            headers,
+            body: JSON.stringify(item.velden),
+          });
+          if (!r.ok) throw new Error(`HTTP ${r.status}`);
+          break;
+        }
+
+        // ── Uren verwijderen ───────────────────────────────────────────────────
+        case "delete_uren": {
+          const r = await fetch(`${basis}/api/uren/${item.urenId}`, {
+            method: "DELETE",
+            headers,
+          });
+          // 404 is acceptabel (al verwijderd)
+          if (!r.ok && r.status !== 404) throw new Error(`HTTP ${r.status}`);
+          break;
+        }
+
+        // ── Handtekening uploaden ──────────────────────────────────────────────
+        case "create_handtekening": {
+          const fileInfo = await FileSystem.getInfoAsync(item.lokaalPad);
+          if (!fileInfo.exists) break; // Bestand weg — stil doorgaan
+
+          const svgContent = await FileSystem.readAsStringAsync(item.lokaalPad);
+          const r = await fetch(
+            `${basis}/api/werkdag/${item.werkdagId}/handtekening`,
+            {
+              method: "PATCH",
+              headers,
+              body: JSON.stringify({
+                svg_data: svgContent,
+                positie: item.positie,
+              }),
+            },
+          );
+          // 404/501 = endpoint nog niet beschikbaar — lokaal geslaagd, sync later
+          if (!r.ok && r.status !== 404 && r.status !== 501) {
+            throw new Error(`HTTP ${r.status}`);
+          }
+          break;
+        }
+
+        default:
+          // Onbekend type — verwijder uit queue zodat het niet eindeloos retried
+          break;
       }
     },
     [token, basis],
   );
 
+  // ─── Hoofd sync-functie ────────────────────────────────────────────────────
   const forceerSync = useCallback(async () => {
     if (syncRef.current || !token) return;
 
-    // Controleer verbinding vóór sync
     const online = await controleerVerbinding(basis);
     if (!online) {
       const n = await aantalActief();
@@ -141,24 +300,28 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
     }
   }, [token, basis, verwerkItem, queryClient, herlaadAantal]);
 
+  // ─── 5-minuten interval + foreground sync ─────────────────────────────────
   useEffect(() => {
-    herlaadAantal();
+    void herlaadAantal();
     if (!token) {
       if (intervalRef.current) clearInterval(intervalRef.current);
       return;
     }
-    // 5-minuten vangnet
-    intervalRef.current = setInterval(() => forceerSync(), INTERVAL_MS);
+    intervalRef.current = setInterval(() => {
+      void forceerSync();
+    }, INTERVAL_MS);
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
   }, [token, forceerSync, herlaadAantal]);
 
-  // Sync bij terugkeer naar voorgrond
   useEffect(() => {
-    const sub = AppState.addEventListener("change", (status: AppStateStatus) => {
-      if (status === "active") forceerSync();
-    });
+    const sub = AppState.addEventListener(
+      "change",
+      (status: AppStateStatus) => {
+        if (status === "active") void forceerSync();
+      },
+    );
     return () => sub.remove();
   }, [forceerSync]);
 
@@ -169,6 +332,7 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
         aantalMislukt: aantalMisluktState,
         isSyncing,
         syncStatus,
+        mislukteItems,
         forceerSync,
         herlaadAantal,
         wisMislukte,

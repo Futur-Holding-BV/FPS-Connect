@@ -1,7 +1,10 @@
-import React from "react";
+import { Ionicons } from "@expo/vector-icons";
+import React, { useState } from "react";
 import { ActivityIndicator, Pressable, Text, View } from "react-native";
 
+import { ConflictModal } from "@/components/ConflictModal";
 import { SyncStatus } from "@/context/sync";
+import { WachtrijItem } from "@/lib/syncQueue";
 
 const CONFIG: Record<
   SyncStatus,
@@ -29,7 +32,7 @@ const CONFIG: Record<
     tekst: "#9ca3af",
   },
   mislukt: {
-    label: "Synchronisatie mislukt",
+    label: "Sync mislukt",
     achtergrond: "rgba(239,68,68,0.18)",
     tekst: "#f87171",
   },
@@ -39,12 +42,31 @@ type Props = {
   status: SyncStatus;
   aantalWachtend?: number;
   aantalMislukt?: number;
+  mislukteItems?: WachtrijItem[];
   onWisMislukte?: () => void;
+  onForceerSync?: () => void;
 };
 
-export function SyncStatusBadge({ status, aantalWachtend, aantalMislukt, onWisMislukte }: Props) {
+export function SyncStatusBadge({
+  status,
+  aantalWachtend,
+  aantalMislukt,
+  mislukteItems = [],
+  onWisMislukte,
+  onForceerSync,
+}: Props) {
+  const [conflictZichtbaar, setConflictZichtbaar] = useState(false);
   const cfg = CONFIG[status];
-  const toonWissen = status === "mislukt" && (aantalMislukt ?? 0) > 0 && !!onWisMislukte;
+  const heeftMislukte = (aantalMislukt ?? 0) > 0;
+
+  const label =
+    status === "mislukt" && heeftMislukte
+      ? `Sync mislukt (${aantalMislukt}) — bekijk`
+      : aantalWachtend != null &&
+          aantalWachtend > 0 &&
+          status !== "synchroniseert"
+        ? `${cfg.label} (${aantalWachtend})`
+        : cfg.label;
 
   const inhoud = (
     <View
@@ -59,21 +81,47 @@ export function SyncStatusBadge({ status, aantalWachtend, aantalMislukt, onWisMi
       }}
     >
       {cfg.laden && <ActivityIndicator size={10} color={cfg.tekst} />}
+      {status === "mislukt" && heeftMislukte ? (
+        <Ionicons name="warning-outline" size={11} color={cfg.tekst} />
+      ) : null}
       <Text
         style={{ color: cfg.tekst, fontSize: 12, fontFamily: "Inter_500Medium" }}
       >
-        {cfg.label}
-        {status === "mislukt" && (aantalMislukt ?? 0) > 0
-          ? ` (${aantalMislukt})${toonWissen ? " — wissen" : ""}`
-          : aantalWachtend != null && aantalWachtend > 0 && status !== "synchroniseert"
-            ? ` (${aantalWachtend})`
-            : ""}
+        {label}
       </Text>
     </View>
   );
 
-  if (toonWissen) {
-    return <Pressable onPress={onWisMislukte}>{inhoud}</Pressable>;
+  if (status === "mislukt" && heeftMislukte) {
+    return (
+      <>
+        <Pressable onPress={() => setConflictZichtbaar(true)}>
+          {inhoud}
+        </Pressable>
+        <ConflictModal
+          zichtbaar={conflictZichtbaar}
+          mislukteItems={mislukteItems}
+          onSluit={() => setConflictZichtbaar(false)}
+          onWisMislukte={() => {
+            onWisMislukte?.();
+            setConflictZichtbaar(false);
+          }}
+          onHerprobeer={() => {
+            setConflictZichtbaar(false);
+            onForceerSync?.();
+          }}
+        />
+      </>
+    );
   }
+
+  if (status === "wacht_op_verbinding" && onForceerSync) {
+    return (
+      <Pressable onPress={onForceerSync}>
+        {inhoud}
+      </Pressable>
+    );
+  }
+
   return inhoud;
 }

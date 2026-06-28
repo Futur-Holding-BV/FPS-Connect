@@ -3,11 +3,14 @@ import {
   useUpdateWerkdagItemStatus,
 } from "@workspace/api-client-react";
 import { Ionicons } from "@expo/vector-icons";
+import * as FileSystem from "expo-file-system/legacy";
+import * as ImagePicker from "expo-image-picker";
 import { Redirect, useLocalSearchParams, useRouter } from "expo-router";
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Image,
   Pressable,
   ScrollView,
   Text,
@@ -15,9 +18,18 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { HandtekeningPad } from "@/components/HandtekeningPad";
+import { OfflineBanner } from "@/components/OfflineBanner";
 import { bovenInset } from "@/components/ui";
 import { useAuth } from "@/context/auth";
+import { useOffline } from "@/context/offline";
+import { useSync } from "@/context/sync";
 import { useColors } from "@/hooks/useColors";
+import {
+  leesWerkorder,
+  patchWerkorderStatusLokaal,
+} from "@/lib/offlineCache";
+import { voegToeAanWachtrij } from "@/lib/syncQueue";
 
 const UITVOERING_LABEL: Record<string, string> = {
   gepland: "Gepland",
@@ -47,14 +59,7 @@ function InfoRegel({
   const c = useColors();
   if (!waarde) return null;
   return (
-    <View
-      style={{
-        flexDirection: "row",
-        alignItems: "flex-start",
-        paddingVertical: 8,
-        gap: 12,
-      }}
-    >
+    <View style={{ flexDirection: "row", alignItems: "flex-start", paddingVertical: 8, gap: 12 }}>
       <Ionicons name={icoon} size={16} color={c.mutedForeground} style={{ marginTop: 2 }} />
       <View style={{ flex: 1 }}>
         <Text
@@ -69,13 +74,7 @@ function InfoRegel({
         >
           {label}
         </Text>
-        <Text
-          style={{
-            color: kleur ?? c.text,
-            fontSize: 14,
-            fontFamily: "Inter_400Regular",
-          }}
-        >
+        <Text style={{ color: kleur ?? c.text, fontSize: 14, fontFamily: "Inter_400Regular" }}>
           {waarde}
         </Text>
       </View>
@@ -111,72 +110,54 @@ function Kaart({ titel, children }: { titel: string; children: React.ReactNode }
   );
 }
 
-function PlaceholderKaart({ icoon, titel, beschrijving }: {
-  icoon: keyof typeof Ionicons.glyphMap;
-  titel: string;
-  beschrijving: string;
-}) {
-  const c = useColors();
-  return (
-    <View
-      style={{
-        backgroundColor: c.card,
-        borderRadius: 12,
-        padding: 16,
-        marginBottom: 12,
-        marginHorizontal: 16,
-        borderWidth: 1,
-        borderColor: c.border,
-        borderStyle: "dashed",
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 12,
-      }}
-    >
-      <View
-        style={{
-          width: 36,
-          height: 36,
-          borderRadius: 8,
-          backgroundColor: c.muted + "22",
-          justifyContent: "center",
-          alignItems: "center",
-        }}
-      >
-        <Ionicons name={icoon} size={18} color={c.mutedForeground} />
-      </View>
-      <View style={{ flex: 1 }}>
-        <Text style={{ color: c.mutedForeground, fontSize: 13, fontFamily: "Inter_600SemiBold" }}>
-          {titel}
-        </Text>
-        <Text style={{ color: c.mutedForeground, fontSize: 12, fontFamily: "Inter_400Regular", marginTop: 2 }}>
-          {beschrijving}
-        </Text>
-      </View>
-    </View>
-  );
-}
-
 export default function WerkdagDetailScherm() {
   const c = useColors();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { id: idParam } = useLocalSearchParams<{ id: string }>();
   const { token } = useAuth();
+  const { isOnline } = useOffline();
+  const { herlaadAantal } = useSync();
 
   const [statusBezig, setStatusBezig] = useState(false);
+  const [lokaleStatus, setLokaleStatus] = useState<string | null>(null);
+  const [lokaleFotos, setLokaleFotos] = useState<string[]>([]);
+  const [handtekeningOpgeslagen, setHandtekeningOpgeslagen] = useState(false);
+  const [handtekeningBezig, setHandtekeningBezig] = useState(false);
+  const fotoMapGemaakt = useRef(false);
 
   if (!token) return <Redirect href="/login" />;
 
   const id = parseInt(idParam ?? "0", 10);
+  const fotoDir = `${FileSystem.documentDirectory ?? ""}werkdag-fotos/${id}/`;
 
   const { data: werkorder, isLoading, isError, refetch } = useGetWerkdagItem(id);
+  const [gecachedWerkorder, setGecachedWerkorder] = useState<Record<string, unknown> | null>(null);
+
+  useEffect(() => {
+    if (!isOnline || (!werkorder && isError)) {
+      leesWerkorder(id).then((cached) => {
+        if (cached) setGecachedWerkorder(cached as Record<string, unknown>);
+      });
+    }
+  }, [isOnline, id, werkorder, isError]);
+
+  // Laad lokale foto's uit FileSystem bij start
+  useEffect(() => {
+    FileSystem.getInfoAsync(fotoDir).then((info) => {
+      if (info.exists && info.isDirectory) {
+        FileSystem.readDirectoryAsync(fotoDir).then((bestanden) => {
+          setLokaleFotos(bestanden.map((b) => `${fotoDir}${b}`));
+        });
+      }
+    });
+  }, [fotoDir]);
 
   const statusMutatie = useUpdateWerkdagItemStatus({
     mutation: {
       onSuccess: () => {
         setStatusBezig(false);
-        refetch();
+        void refetch();
       },
       onError: () => {
         setStatusBezig(false);
@@ -185,12 +166,109 @@ export default function WerkdagDetailScherm() {
     },
   });
 
-  function zetStatus(nieuweStatus: string) {
+  async function zetStatus(nieuweStatus: string) {
+    if (!isOnline) {
+      // Offline: sla op in cache en wachtrij
+      await patchWerkorderStatusLokaal(id, nieuweStatus);
+      await voegToeAanWachtrij({
+        type: "patch_werkdag_status",
+        werkdagId: id,
+        nieuweStatus,
+      });
+      setLokaleStatus(nieuweStatus);
+      await herlaadAantal();
+      return;
+    }
     setStatusBezig(true);
     statusMutatie.mutate({ id, data: { uitvoering_status: nieuweStatus } });
   }
 
-  const uitvoeringStatus = werkorder?.uitvoering_status ?? "gepland";
+  // Gebruik lokale status als die er is, anders server-data of cache
+  const huidigWerkorder = werkorder ?? (gecachedWerkorder as unknown as typeof werkorder) ?? null;
+  const uitvoeringStatus = lokaleStatus ?? huidigWerkorder?.uitvoering_status ?? "gepland";
+  const isOfflineCache = !werkorder && !!gecachedWerkorder;
+
+  async function maakFotoMap() {
+    if (!fotoMapGemaakt.current) {
+      await FileSystem.makeDirectoryAsync(fotoDir, { intermediates: true });
+      fotoMapGemaakt.current = true;
+    }
+  }
+
+  async function voegFotoToe() {
+    const permCam = await ImagePicker.requestCameraPermissionsAsync();
+    const permGal = await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+    const bronnen: { label: string; actie: () => Promise<ImagePicker.ImagePickerResult> }[] = [];
+
+    if (permCam.status === "granted") {
+      bronnen.push({
+        label: "Camera",
+        actie: () =>
+          ImagePicker.launchCameraAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.8 }),
+      });
+    }
+    if (permGal.status === "granted") {
+      bronnen.push({
+        label: "Fotobibliotheek",
+        actie: () =>
+          ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.8 }),
+      });
+    }
+
+    if (bronnen.length === 0) {
+      Alert.alert("Geen toegang", "Geef toegang tot camera of fotobibliotheek.");
+      return;
+    }
+
+    const kies = bronnen.length === 1
+      ? bronnen[0]!.actie
+      : await new Promise<(() => Promise<ImagePicker.ImagePickerResult>) | null>((resolve) => {
+          Alert.alert(
+            "Foto toevoegen",
+            "Kies een bron",
+            [
+              ...bronnen.map((b) => ({
+                text: b.label,
+                onPress: () => resolve(b.actie),
+              })),
+              { text: "Annuleren", style: "cancel", onPress: () => resolve(null) },
+            ],
+          );
+        });
+
+    if (!kies) return;
+    const result = await kies();
+    if (result.canceled || !result.assets[0]) return;
+
+    await maakFotoMap();
+    const bestandsnaam = `foto_${Date.now()}.jpg`;
+    const doel = `${fotoDir}${bestandsnaam}`;
+    await FileSystem.copyAsync({ from: result.assets[0].uri, to: doel });
+    setLokaleFotos((prev) => [...prev, doel]);
+  }
+
+  async function slaHandtekeningOp(svgData: string) {
+    setHandtekeningBezig(true);
+    try {
+      const pad = `${FileSystem.documentDirectory ?? ""}werkdag-handtekeningen/werkdag_${id}.svg`;
+      await FileSystem.makeDirectoryAsync(
+        `${FileSystem.documentDirectory ?? ""}werkdag-handtekeningen`,
+        { intermediates: true },
+      );
+      await FileSystem.writeAsStringAsync(pad, svgData);
+      await voegToeAanWachtrij({
+        type: "create_handtekening",
+        lokaalPad: pad,
+        werkdagId: id,
+        positie: "medewerker",
+      });
+      await herlaadAantal();
+      setHandtekeningOpgeslagen(true);
+    } finally {
+      setHandtekeningBezig(false);
+    }
+  }
 
   return (
     <View style={{ flex: 1, backgroundColor: c.background }}>
@@ -210,16 +288,21 @@ export default function WerkdagDetailScherm() {
           <Ionicons name="arrow-back" size={22} color="#fff" />
         </Pressable>
         <View style={{ flex: 1 }}>
-          <Text style={{ color: "#fff", fontSize: 17, fontFamily: "Inter_700Bold" }} numberOfLines={1}>
-            {isLoading ? "Laden…" : (werkorder?.project_naam ?? werkorder?.titel ?? "Werkorder")}
+          <Text
+            style={{ color: "#fff", fontSize: 17, fontFamily: "Inter_700Bold" }}
+            numberOfLines={1}
+          >
+            {isLoading && !huidigWerkorder
+              ? "Laden…"
+              : (huidigWerkorder?.project_naam ?? huidigWerkorder?.titel ?? "Werkorder")}
           </Text>
-          {werkorder?.werknummer ? (
+          {huidigWerkorder?.werknummer ? (
             <Text style={{ color: c.mutedForeground, fontSize: 12, fontFamily: "Inter_400Regular" }}>
-              #{werkorder.werknummer}
+              #{huidigWerkorder.werknummer}
             </Text>
           ) : null}
         </View>
-        {werkorder ? (
+        {huidigWerkorder ? (
           <View
             style={{
               backgroundColor: (UITVOERING_KLEUR[uitvoeringStatus] ?? "#6b7280") + "33",
@@ -241,39 +324,59 @@ export default function WerkdagDetailScherm() {
         ) : null}
       </View>
 
+      <OfflineBanner stijl="compact" />
+      {isOfflineCache ? (
+        <View
+          style={{
+            backgroundColor: "rgba(234,179,8,0.1)",
+            paddingHorizontal: 16,
+            paddingVertical: 6,
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 6,
+          }}
+        >
+          <Ionicons name="time-outline" size={13} color="#facc15" />
+          <Text style={{ color: "#facc15", fontSize: 11, fontFamily: "Inter_400Regular" }}>
+            Gegevens uit lokale cache
+          </Text>
+        </View>
+      ) : null}
+
       {/* Inhoud */}
-      {isLoading ? (
+      {isLoading && !huidigWerkorder ? (
         <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
           <ActivityIndicator color={c.tint} size="large" />
         </View>
-      ) : isError || !werkorder ? (
+      ) : (isError && !huidigWerkorder) ? (
         <View style={{ flex: 1, justifyContent: "center", alignItems: "center", padding: 32 }}>
           <Ionicons name="alert-circle-outline" size={40} color={c.mutedForeground} />
-          <Text style={{ color: c.mutedForeground, fontSize: 15, textAlign: "center", marginTop: 12, fontFamily: "Inter_400Regular" }}>
-            Werkorder niet gevonden of geen toegang.
-          </Text>
-          <Pressable
-            onPress={() => router.back()}
-            style={{ marginTop: 16 }}
+          <Text
+            style={{
+              color: c.mutedForeground,
+              fontSize: 15,
+              textAlign: "center",
+              marginTop: 12,
+              fontFamily: "Inter_400Regular",
+            }}
           >
+            {isOnline
+              ? "Werkorder niet gevonden of geen toegang."
+              : "Geen verbinding en geen lokale cache beschikbaar."}
+          </Text>
+          <Pressable onPress={() => router.back()} style={{ marginTop: 16 }}>
             <Text style={{ color: c.tint, fontFamily: "Inter_600SemiBold" }}>Terug</Text>
           </Pressable>
         </View>
-      ) : (
+      ) : huidigWerkorder ? (
         <ScrollView contentContainerStyle={{ paddingTop: 16, paddingBottom: 48 }}>
 
-          {/* Statusknopen */}
+          {/* ── Statusknopen ─────────────────────────────────────────────── */}
           {uitvoeringStatus !== "gereed" ? (
-            <View
-              style={{
-                marginHorizontal: 16,
-                marginBottom: 16,
-                gap: 10,
-              }}
-            >
+            <View style={{ marginHorizontal: 16, marginBottom: 16, gap: 10 }}>
               {uitvoeringStatus === "gepland" ? (
                 <Pressable
-                  onPress={() => zetStatus("bezig")}
+                  onPress={() => void zetStatus("bezig")}
                   disabled={statusBezig}
                   style={({ pressed }) => ({
                     backgroundColor: pressed || statusBezig ? "#d63510" : c.tint,
@@ -292,7 +395,7 @@ export default function WerkdagDetailScherm() {
                     <Ionicons name="play-circle" size={20} color="#fff" />
                   )}
                   <Text style={{ color: "#fff", fontSize: 16, fontFamily: "Inter_700Bold" }}>
-                    Start werk
+                    Start werk{!isOnline ? " (offline)" : ""}
                   </Text>
                 </Pressable>
               ) : null}
@@ -300,7 +403,7 @@ export default function WerkdagDetailScherm() {
               {uitvoeringStatus === "bezig" ? (
                 <View style={{ flexDirection: "row", gap: 10 }}>
                   <Pressable
-                    onPress={() => zetStatus("pauze")}
+                    onPress={() => void zetStatus("pauze")}
                     disabled={statusBezig}
                     style={({ pressed }) => ({
                       flex: 1,
@@ -320,7 +423,7 @@ export default function WerkdagDetailScherm() {
                     </Text>
                   </Pressable>
                   <Pressable
-                    onPress={() => zetStatus("gereed")}
+                    onPress={() => void zetStatus("gereed")}
                     disabled={statusBezig}
                     style={({ pressed }) => ({
                       flex: 1,
@@ -345,7 +448,7 @@ export default function WerkdagDetailScherm() {
               {uitvoeringStatus === "pauze" ? (
                 <View style={{ flexDirection: "row", gap: 10 }}>
                   <Pressable
-                    onPress={() => zetStatus("bezig")}
+                    onPress={() => void zetStatus("bezig")}
                     disabled={statusBezig}
                     style={({ pressed }) => ({
                       flex: 1,
@@ -369,7 +472,7 @@ export default function WerkdagDetailScherm() {
                     </Text>
                   </Pressable>
                   <Pressable
-                    onPress={() => zetStatus("gereed")}
+                    onPress={() => void zetStatus("gereed")}
                     disabled={statusBezig}
                     style={({ pressed }) => ({
                       flex: 1,
@@ -414,111 +517,53 @@ export default function WerkdagDetailScherm() {
             </View>
           )}
 
-          {/* Project */}
+          {/* ── Project info ──────────────────────────────────────────────── */}
           <Kaart titel="Project">
-            <InfoRegel
-              icoon="business-outline"
-              label="Gebouw"
-              waarde={werkorder.gebouw_naam}
-            />
-            <InfoRegel
-              icoon="folder-outline"
-              label="Project"
-              waarde={werkorder.project_naam}
-            />
-            <InfoRegel
-              icoon="barcode-outline"
-              label="Werknummer"
-              waarde={werkorder.werknummer}
-            />
+            <InfoRegel icoon="business-outline" label="Gebouw" waarde={huidigWerkorder.gebouw_naam as string | null} />
+            <InfoRegel icoon="folder-outline" label="Project" waarde={huidigWerkorder.project_naam as string | null} />
+            <InfoRegel icoon="barcode-outline" label="Werknummer" waarde={huidigWerkorder.werknummer as string | null} />
             <InfoRegel
               icoon="information-circle-outline"
               label="Type"
-              waarde={werkorder.opdracht_type === "meerwerk" ? "Meerwerk" : "Hoofdopdracht"}
+              waarde={(huidigWerkorder.opdracht_type as string | null) === "meerwerk" ? "Meerwerk" : "Hoofdopdracht"}
             />
           </Kaart>
 
-          {/* Locatie & planning */}
+          {/* ── Locatie & planning ─────────────────────────────────────────── */}
           <Kaart titel="Locatie & planning">
-            <InfoRegel
-              icoon="location-outline"
-              label="Locatie / woning / bouwnummer"
-              waarde={werkorder.locaties}
-            />
+            <InfoRegel icoon="location-outline" label="Locatie / woning / bouwnummer" waarde={huidigWerkorder.locaties as string | null} />
             <InfoRegel
               icoon="calendar-outline"
               label="Datum"
               waarde={
-                werkorder.datum_start === werkorder.datum_eind
-                  ? werkorder.datum_start
-                  : `${werkorder.datum_start} – ${werkorder.datum_eind}`
+                huidigWerkorder.datum_start === huidigWerkorder.datum_eind
+                  ? (huidigWerkorder.datum_start as string | null)
+                  : `${huidigWerkorder.datum_start as string} – ${huidigWerkorder.datum_eind as string}`
               }
             />
             <InfoRegel
               icoon="time-outline"
               label="Tijd"
               waarde={
-                werkorder.tijd_start
-                  ? `${werkorder.tijd_start}${werkorder.tijd_eind ? ` – ${werkorder.tijd_eind}` : ""}`
+                (huidigWerkorder.tijd_start as string | null)
+                  ? `${huidigWerkorder.tijd_start as string}${(huidigWerkorder.tijd_eind as string | null) ? ` – ${huidigWerkorder.tijd_eind as string}` : ""}`
                   : null
               }
             />
-            <InfoRegel
-              icoon="hourglass-outline"
-              label="Geplande uren"
-              waarde={werkorder.uren ? `${werkorder.uren} uur` : null}
-            />
+            <InfoRegel icoon="hourglass-outline" label="Geplande uren" waarde={(huidigWerkorder.uren as number | null) ? `${huidigWerkorder.uren as number} uur` : null} />
           </Kaart>
 
-          {/* Werkzaamheden */}
-          {werkorder.omschrijving || werkorder.dag_notities || werkorder.notities ? (
+          {/* ── Werkzaamheden ──────────────────────────────────────────────── */}
+          {(huidigWerkorder.omschrijving ?? huidigWerkorder.dag_notities ?? huidigWerkorder.notities) ? (
             <Kaart titel="Werkzaamheden">
-              <InfoRegel
-                icoon="construct-outline"
-                label="Werkzaamheden"
-                waarde={werkorder.omschrijving}
-              />
-              <InfoRegel
-                icoon="document-text-outline"
-                label="Dagopdracht"
-                waarde={werkorder.dag_notities}
-              />
-              <InfoRegel
-                icoon="chatbox-outline"
-                label="Opmerkingen"
-                waarde={werkorder.notities}
-              />
+              <InfoRegel icoon="construct-outline" label="Werkzaamheden" waarde={huidigWerkorder.omschrijving as string | null} />
+              <InfoRegel icoon="document-text-outline" label="Dagopdracht" waarde={huidigWerkorder.dag_notities as string | null} />
+              <InfoRegel icoon="chatbox-outline" label="Opmerkingen" waarde={huidigWerkorder.notities as string | null} />
             </Kaart>
           ) : null}
 
-          {/* Meerwerk (als aanwezig) */}
-          {(werkorder as any).meerwerk?.length > 0 ? (
-            <Kaart titel="Meerwerk">
-              {(werkorder as any).meerwerk.map((m: { id: number; meerwerkNummer: string | null; omschrijving: string | null; status: string }) => (
-                <View
-                  key={m.id}
-                  style={{
-                    paddingVertical: 8,
-                    borderBottomWidth: 1,
-                    borderBottomColor: c.border,
-                  }}
-                >
-                  <Text style={{ color: c.text, fontSize: 13, fontFamily: "Inter_600SemiBold" }}>
-                    {m.meerwerkNummer ? `MW-${m.meerwerkNummer}` : "Meerwerk"}
-                  </Text>
-                  {m.omschrijving ? (
-                    <Text style={{ color: c.mutedForeground, fontSize: 13, fontFamily: "Inter_400Regular", marginTop: 2 }}>
-                      {m.omschrijving}
-                    </Text>
-                  ) : null}
-                  <Text style={{ color: c.mutedForeground, fontSize: 12, marginTop: 4 }}>{m.status}</Text>
-                </View>
-              ))}
-            </Kaart>
-          ) : null}
-
-          {/* Medewerker */}
-          {werkorder.medewerker_naam ? (
+          {/* ── Uitvoerend personeel ───────────────────────────────────────── */}
+          {(huidigWerkorder.medewerker_naam as string | null) ? (
             <Kaart titel="Uitvoerend personeel">
               <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
                 <View
@@ -534,47 +579,152 @@ export default function WerkdagDetailScherm() {
                   <Ionicons name="person" size={16} color={c.tint} />
                 </View>
                 <Text style={{ color: c.text, fontSize: 14, fontFamily: "Inter_500Medium" }}>
-                  {werkorder.medewerker_naam}
+                  {huidigWerkorder.medewerker_naam as string}
                 </Text>
               </View>
             </Kaart>
           ) : null}
 
-          {/* Placeholders voor toekomstige modules */}
-          <Text
-            style={{
-              color: c.mutedForeground,
-              fontSize: 11,
-              fontFamily: "Inter_600SemiBold",
-              letterSpacing: 0.8,
-              textTransform: "uppercase",
+          {/* ── Foto's (offline-first) ─────────────────────────────────────── */}
+          <Kaart titel={`Foto's${lokaleFotos.length > 0 ? ` (${lokaleFotos.length})` : ""}`}>
+            {lokaleFotos.length > 0 ? (
+              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 10 }}>
+                {lokaleFotos.map((pad) => (
+                  <View key={pad} style={{ position: "relative" }}>
+                    <Image
+                      source={{ uri: pad }}
+                      style={{ width: 90, height: 90, borderRadius: 8, backgroundColor: c.muted }}
+                      resizeMode="cover"
+                    />
+                    <View
+                      style={{
+                        position: "absolute",
+                        bottom: 4,
+                        right: 4,
+                        backgroundColor: "rgba(0,0,0,0.55)",
+                        borderRadius: 6,
+                        paddingHorizontal: 5,
+                        paddingVertical: 2,
+                      }}
+                    >
+                      <Text style={{ color: "#fff", fontSize: 9, fontFamily: "Inter_500Medium" }}>Lokaal</Text>
+                    </View>
+                  </View>
+                ))}
+              </View>
+            ) : (
+              <View
+                style={{
+                  borderWidth: 1,
+                  borderColor: c.border,
+                  borderStyle: "dashed",
+                  borderRadius: 8,
+                  padding: 20,
+                  alignItems: "center",
+                  marginBottom: 10,
+                }}
+              >
+                <Ionicons name="camera-outline" size={26} color={c.mutedForeground} />
+                <Text style={{ color: c.mutedForeground, fontSize: 12, fontFamily: "Inter_400Regular", marginTop: 6 }}>
+                  Nog geen foto's toegevoegd
+                </Text>
+              </View>
+            )}
+            <Pressable
+              onPress={() => void voegFotoToe()}
+              style={({ pressed }) => ({
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 6,
+                backgroundColor: pressed ? c.muted : c.accent,
+                borderRadius: 10,
+                paddingVertical: 10,
+              })}
+            >
+              <Ionicons name="camera-outline" size={16} color={c.primary} />
+              <Text style={{ color: c.primary, fontSize: 13, fontFamily: "Inter_600SemiBold" }}>
+                Foto toevoegen
+              </Text>
+            </Pressable>
+            {!isOnline && (
+              <Text style={{ color: c.mutedForeground, fontSize: 11, fontFamily: "Inter_400Regular", marginTop: 6, textAlign: "center" }}>
+                Foto's worden lokaal opgeslagen en gesynchroniseerd bij verbinding
+              </Text>
+            )}
+          </Kaart>
+
+          {/* ── Tijdregistratie ────────────────────────────────────────────── */}
+          <Pressable
+            onPress={() => router.push("/uren")}
+            style={({ pressed }) => ({
+              backgroundColor: pressed ? c.muted : c.card,
+              borderRadius: 12,
+              padding: 16,
+              marginBottom: 12,
               marginHorizontal: 16,
-              marginBottom: 8,
-              marginTop: 4,
-            }}
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 12,
+            })}
           >
-            Nog te bouwen
-          </Text>
+            <View
+              style={{
+                width: 36,
+                height: 36,
+                borderRadius: 8,
+                backgroundColor: c.accent,
+                justifyContent: "center",
+                alignItems: "center",
+              }}
+            >
+              <Ionicons name="stopwatch-outline" size={18} color={c.primary} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: c.foreground, fontSize: 13, fontFamily: "Inter_600SemiBold" }}>
+                Tijdregistratie
+              </Text>
+              <Text style={{ color: c.mutedForeground, fontSize: 12, fontFamily: "Inter_400Regular", marginTop: 1 }}>
+                Uren bijhouden voor vandaag
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color={c.mutedForeground} />
+          </Pressable>
 
-          <PlaceholderKaart
-            icoon="camera-outline"
-            titel="Foto's"
-            beschrijving="Voeg uitvoerings- en opleveringsfoto's toe — beschikbaar in een volgende versie"
-          />
-
-          <PlaceholderKaart
-            icoon="stopwatch-outline"
-            titel="Tijdregistratie"
-            beschrijving="Begin- en eindtijd, pauze en netto uren registreren — beschikbaar in een volgende versie"
-          />
-
-          <PlaceholderKaart
-            icoon="clipboard-outline"
-            titel="Oplevering"
-            beschrijving="Opleverchecklist en handtekening — beschikbaar in een volgende versie"
-          />
+          {/* ── Oplevering / handtekening ──────────────────────────────────── */}
+          <Kaart titel="Oplevering">
+            <Text style={{ color: c.mutedForeground, fontSize: 12, fontFamily: "Inter_400Regular", marginBottom: 14 }}>
+              Laat de opdrachtgever of contactpersoon hieronder tekenen ter bevestiging van de uitgevoerde werkzaamheden.
+            </Text>
+            <HandtekeningPad
+              breedte={320}
+              hoogte={160}
+              opgeslagen={handtekeningOpgeslagen}
+              bezig={handtekeningBezig}
+              onOpgeslagen={(svg) => void slaHandtekeningOp(svg)}
+              onWissen={() => setHandtekeningOpgeslagen(false)}
+            />
+            {handtekeningOpgeslagen && !isOnline ? (
+              <View
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: 6,
+                  marginTop: 8,
+                  backgroundColor: "rgba(234,179,8,0.1)",
+                  borderRadius: 8,
+                  padding: 10,
+                }}
+              >
+                <Ionicons name="time-outline" size={14} color="#facc15" />
+                <Text style={{ color: "#facc15", fontSize: 12, fontFamily: "Inter_400Regular", flex: 1 }}>
+                  Handtekening lokaal opgeslagen — wordt gesynchroniseerd bij verbinding
+                </Text>
+              </View>
+            ) : null}
+          </Kaart>
         </ScrollView>
-      )}
+      ) : null}
     </View>
   );
 }

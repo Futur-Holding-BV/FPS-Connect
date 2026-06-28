@@ -2,7 +2,7 @@ import { useGetMijnWerk } from "@workspace/api-client-react";
 import type { MijnWerkGebouw } from "@workspace/api-client-react";
 import { Ionicons } from "@expo/vector-icons";
 import { Redirect, useRouter } from "expo-router";
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -13,8 +13,10 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { OfflineBanner } from "@/components/OfflineBanner";
 import { LijstFout, bovenInset } from "@/components/ui";
 import { useAuth } from "@/context/auth";
+import { useOffline } from "@/context/offline";
 import { useColors } from "@/hooks/useColors";
 import { useResponsive } from "@/hooks/useResponsive";
 
@@ -31,7 +33,7 @@ function openNavigatie(gebouw: MijnWerkGebouw) {
     `${gebouw.adres ?? ""} ${gebouw.stad ?? ""}`.trim(),
   );
   const url = `https://www.google.com/maps/search/?api=1&query=${query}`;
-  Linking.openURL(url);
+  void Linking.openURL(url);
 }
 
 export default function PlanningScherm() {
@@ -40,12 +42,24 @@ export default function PlanningScherm() {
   const insets = useSafeAreaInsets();
   const { token } = useAuth();
   const { inhoudMaxBreedte } = useResponsive();
+  const { isOnline, isDownloading, downloadVandaag, getCachedPlanning } = useOffline();
 
   const { data, isLoading, isError, refetch } = useGetMijnWerk();
+  const [cachedPlanning, setCachedPlanning] = useState<MijnWerkGebouw[] | null>(null);
+
+  useEffect(() => {
+    if (!isOnline || isError) {
+      getCachedPlanning().then((cached) => {
+        if (cached) setCachedPlanning(cached as MijnWerkGebouw[]);
+      });
+    }
+  }, [isOnline, isError, getCachedPlanning]);
 
   if (!token) return <Redirect href="/login" />;
 
-  const gesorteerd = sorteerOpRoute(data ?? []);
+  const bronData = (isOnline ? data : null) ?? cachedPlanning ?? data ?? [];
+  const gesorteerd = sorteerOpRoute(bronData);
+  const isOfflineCache = !isOnline && !!cachedPlanning;
 
   const vandaag = new Date().toLocaleDateString("nl-NL", {
     weekday: "long",
@@ -69,34 +83,92 @@ export default function PlanningScherm() {
               ‹ Terug
             </Text>
           </Pressable>
-          <Text style={{ color: c.darkForeground, fontSize: 22, fontFamily: "Inter_700Bold" }}>
-            Routeplanning
-          </Text>
-          <Text
-            style={{
-              color: c.darkMuted,
-              fontSize: 13,
-              marginTop: 4,
-              fontFamily: "Inter_400Regular",
-              textTransform: "capitalize",
-            }}
-          >
-            {vandaag}
-          </Text>
+          <View style={{ flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between" }}>
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: c.darkForeground, fontSize: 22, fontFamily: "Inter_700Bold" }}>
+                Routeplanning
+              </Text>
+              <Text
+                style={{
+                  color: c.darkMuted,
+                  fontSize: 13,
+                  marginTop: 4,
+                  fontFamily: "Inter_400Regular",
+                  textTransform: "capitalize",
+                }}
+              >
+                {vandaag}
+              </Text>
+            </View>
+            {/* Download-knop voor offline gebruik */}
+            {isOnline ? (
+              <Pressable
+                onPress={() => void downloadVandaag()}
+                disabled={isDownloading}
+                style={({ pressed }) => ({
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: 5,
+                  backgroundColor: pressed ? "rgba(242,59,13,0.3)" : "rgba(242,59,13,0.15)",
+                  paddingHorizontal: 12,
+                  paddingVertical: 8,
+                  borderRadius: 10,
+                  opacity: isDownloading ? 0.6 : 1,
+                  marginTop: 4,
+                })}
+              >
+                {isDownloading ? (
+                  <ActivityIndicator size={13} color={c.primary} />
+                ) : (
+                  <Ionicons name="download-outline" size={15} color={c.primary} />
+                )}
+                <Text style={{ color: c.primary, fontSize: 12, fontFamily: "Inter_600SemiBold" }}>
+                  {isDownloading ? "Laden..." : "Offline opslaan"}
+                </Text>
+              </Pressable>
+            ) : null}
+          </View>
         </View>
       </View>
 
-      {isLoading ? (
+      <OfflineBanner stijl="volledig" />
+      {isOfflineCache ? (
+        <View
+          style={{
+            backgroundColor: "rgba(234,179,8,0.08)",
+            paddingHorizontal: 16,
+            paddingVertical: 6,
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 6,
+          }}
+        >
+          <Ionicons name="time-outline" size={13} color="#facc15" />
+          <Text style={{ color: "#facc15", fontSize: 11, fontFamily: "Inter_400Regular" }}>
+            Routeplanning uit lokale cache
+          </Text>
+        </View>
+      ) : null}
+
+      {isLoading && !cachedPlanning ? (
         <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
           <ActivityIndicator size="large" color={c.primary} />
         </View>
-      ) : isError ? (
+      ) : isError && !cachedPlanning ? (
         <LijstFout
           beschrijving="De routeplanning kon niet worden geladen. Controleer uw verbinding en probeer opnieuw."
-          onOpnieuw={() => refetch()}
+          onOpnieuw={() => void refetch()}
         />
       ) : gesorteerd.length === 0 ? (
-        <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: 32, gap: 14 }}>
+        <View
+          style={{
+            flex: 1,
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 32,
+            gap: 14,
+          }}
+        >
           <View
             style={{
               width: 80,
@@ -128,8 +200,8 @@ export default function PlanningScherm() {
               lineHeight: 21,
             }}
           >
-            Er zijn geen spots aan u toegewezen. Uw routeplanning wordt automatisch samengesteld
-            op basis van toegewezen werk.
+            Er zijn geen spots aan u toegewezen. Uw routeplanning wordt automatisch
+            samengesteld op basis van toegewezen werk.
           </Text>
         </View>
       ) : (
@@ -147,7 +219,12 @@ export default function PlanningScherm() {
           >
             <Ionicons name="information-circle-outline" size={16} color={c.mutedForeground} />
             <Text
-              style={{ color: c.mutedForeground, fontSize: 12, fontFamily: "Inter_400Regular", flex: 1 }}
+              style={{
+                color: c.mutedForeground,
+                fontSize: 12,
+                fontFamily: "Inter_400Regular",
+                flex: 1,
+              }}
             >
               {gesorteerd.length} locatie{gesorteerd.length !== 1 ? "s" : ""} gesorteerd op adres.
               Tik op een adres om navigatie te openen.
@@ -157,7 +234,11 @@ export default function PlanningScherm() {
           <FlatList
             data={gesorteerd}
             keyExtractor={(g: MijnWerkGebouw) => String(g.gebouw_id)}
-            contentContainerStyle={{ padding: 14, paddingBottom: insets.bottom + 24, gap: 10 }}
+            contentContainerStyle={{
+              padding: 14,
+              paddingBottom: insets.bottom + 24,
+              gap: 10,
+            }}
             renderItem={({ item: g, index }) => (
               <RouteKaart
                 gebouw={g}
@@ -210,14 +291,7 @@ function RouteKaart({
         overflow: "hidden",
       }}
     >
-      <View
-        style={{
-          flexDirection: "row",
-          alignItems: "center",
-          gap: 12,
-          padding: 14,
-        }}
-      >
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 12, padding: 14 }}>
         <View
           style={{
             width: 36,
@@ -229,9 +303,7 @@ function RouteKaart({
             flexShrink: 0,
           }}
         >
-          <Text
-            style={{ color: "#fff", fontSize: 14, fontFamily: "Inter_700Bold" }}
-          >
+          <Text style={{ color: "#fff", fontSize: 14, fontFamily: "Inter_700Bold" }}>
             {volgorde}
           </Text>
         </View>
@@ -273,22 +345,14 @@ function RouteKaart({
             </Text>
           </View>
           {openKleur > 0 ? (
-            <Text
-              style={{ color: c.mutedForeground, fontSize: 11, fontFamily: "Inter_400Regular" }}
-            >
+            <Text style={{ color: c.mutedForeground, fontSize: 11, fontFamily: "Inter_400Regular" }}>
               {openKleur} open
             </Text>
           ) : null}
         </View>
       </View>
 
-      <View
-        style={{
-          flexDirection: "row",
-          borderTopWidth: 1,
-          borderTopColor: c.border,
-        }}
-      >
+      <View style={{ flexDirection: "row", borderTopWidth: 1, borderTopColor: c.border }}>
         <Pressable
           onPress={() => router.push(`/gebouw/${gebouw.gebouw_id}`)}
           style={{
@@ -329,13 +393,7 @@ function RouteKaart({
       </View>
 
       {volgorde < totaal ? (
-        <View
-          style={{
-            alignItems: "center",
-            paddingVertical: 6,
-            backgroundColor: c.muted,
-          }}
-        >
+        <View style={{ alignItems: "center", paddingVertical: 6, backgroundColor: c.muted }}>
           <Ionicons name="arrow-down" size={14} color={c.mutedForeground} />
         </View>
       ) : null}

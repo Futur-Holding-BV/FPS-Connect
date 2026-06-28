@@ -32,8 +32,12 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { bovenInset } from "@/components/ui";
 import { useAuth } from "@/context/auth";
+import { useOffline } from "@/context/offline";
+import { useSync } from "@/context/sync";
 import { useColors } from "@/hooks/useColors";
 import { useResponsive } from "@/hooks/useResponsive";
+import { voegOfflineUrenToe } from "@/lib/offlineCache";
+import { voegToeAanWachtrij } from "@/lib/syncQueue";
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -269,6 +273,8 @@ function UrenFormulier({ datum, bestaand, planningItem, planningItemsVanWeek = [
 
   const aanmaken = useCreateUrenRegistratie();
   const bijwerken = useUpdateUrenRegistratie();
+  const { isOnline } = useOffline();
+  const { herlaadAantal } = useSync();
 
   function berekendUren(): number {
     const [bH, bM] = begin.split(":").map(Number);
@@ -382,7 +388,7 @@ function UrenFormulier({ datum, bestaand, planningItem, planningItemsVanWeek = [
     }
   }
 
-  function opslaan() {
+  async function opslaan() {
     const payload = {
       datum,
       begin_tijd: begin,
@@ -396,8 +402,36 @@ function UrenFormulier({ datum, bestaand, planningItem, planningItemsVanWeek = [
     };
 
     if (bestaand) {
+      if (!isOnline) {
+        // Offline: bijwerken queuen voor later
+        await voegToeAanWachtrij({
+          type: "update_uren",
+          urenId: bestaand.id,
+          velden: payload,
+        });
+        await herlaadAantal();
+        onOpgeslagen();
+        return;
+      }
       bijwerken.mutate({ id: bestaand.id, data: payload }, { onSuccess: onOpgeslagen });
     } else {
+      if (!isOnline) {
+        // Offline: lokaal opslaan en queuen
+        const offlineEntry = await voegOfflineUrenToe(
+          datum,
+          payload,
+          werkzaamheden || project || "",
+        );
+        await voegToeAanWachtrij({
+          type: "create_uren",
+          lokaalId: offlineEntry.lokaalId,
+          datum,
+          payload,
+        });
+        await herlaadAantal();
+        onOpgeslagen();
+        return;
+      }
       aanmaken.mutate({ data: payload }, { onSuccess: onOpgeslagen });
     }
   }

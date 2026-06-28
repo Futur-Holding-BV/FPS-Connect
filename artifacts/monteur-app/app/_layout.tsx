@@ -16,6 +16,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { AuthProvider, getHuidigToken, useAuth } from "@/context/auth";
 import { SyncProvider } from "@/context/sync";
+import { OfflineProvider } from "@/context/offline";
 import { AchievementProvider } from "@/context/achievement";
 import { useListChatGesprekken } from "@workspace/api-client-react";
 import { useMeldingGeluid } from "@/hooks/useMeldingGeluid";
@@ -44,7 +45,9 @@ function BerichtMeldingMonitor() {
   useEffect(() => {
     if (!gesprekken || !token) return;
     if (!geinitialiseerd.current) {
-      gesprekken.forEach((g) => vorigeOngelezen.current.set(g.id, g.ongelezen_aantal));
+      gesprekken.forEach((g) =>
+        vorigeOngelezen.current.set(g.id, g.ongelezen_aantal),
+      );
       geinitialiseerd.current = true;
       return;
     }
@@ -52,7 +55,9 @@ function BerichtMeldingMonitor() {
       (g) => g.ongelezen_aantal > (vorigeOngelezen.current.get(g.id) ?? 0),
     );
     if (heeftNieuw) void speel();
-    gesprekken.forEach((g) => vorigeOngelezen.current.set(g.id, g.ongelezen_aantal));
+    gesprekken.forEach((g) =>
+      vorigeOngelezen.current.set(g.id, g.ongelezen_aantal),
+    );
   }, [gesprekken, token, speel]);
 
   return null;
@@ -63,9 +68,6 @@ function RootLayoutNav() {
   const pathname = usePathname();
   const router = useRouter();
 
-  // Centrale toegangspoort: voorkomt dat een vergrendelde sessie via een
-  // diepe link of herstelde route langs het slotscherm komt. De per-scherm
-  // redirects blijven als extra vangnet bestaan.
   useEffect(() => {
     if (bezigLaden) return;
     if (vergrendeld) {
@@ -86,32 +88,32 @@ function RootLayoutNav() {
     <>
       <BerichtMeldingMonitor />
       <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="index" />
-      <Stack.Screen name="login" />
-      <Stack.Screen name="vergrendeld" />
-      <Stack.Screen name="menu" />
-      <Stack.Screen name="binnenkort" />
-      <Stack.Screen name="fabrikanten" />
-      <Stack.Screen name="gebouwen" />
-      <Stack.Screen name="documenten" />
-      <Stack.Screen name="documenten/[id]" />
-      <Stack.Screen name="gebouw/[id]" />
-      <Stack.Screen name="plattegrond/[verdiepingId]" />
-      <Stack.Screen name="document/[tekeningId]" />
-      <Stack.Screen name="hrm/index" />
-      <Stack.Screen name="hrm/opleidingen" />
-      <Stack.Screen name="hrm/kennisbank" />
-      <Stack.Screen name="uren" />
-      <Stack.Screen name="toolboxen" />
-      <Stack.Screen name="info" />
-      <Stack.Screen name="opname/index" />
-      <Stack.Screen name="opname/[id]" />
-      <Stack.Screen name="opname/item/[itemId]" />
-      <Stack.Screen name="werkdag/index" />
-      <Stack.Screen name="werkdag/[id]" />
-      <Stack.Screen name="lmra" />
-      <Stack.Screen name="veiligheid-melding" />
-    </Stack>
+        <Stack.Screen name="index" />
+        <Stack.Screen name="login" />
+        <Stack.Screen name="vergrendeld" />
+        <Stack.Screen name="menu" />
+        <Stack.Screen name="binnenkort" />
+        <Stack.Screen name="fabrikanten" />
+        <Stack.Screen name="gebouwen" />
+        <Stack.Screen name="documenten" />
+        <Stack.Screen name="documenten/[id]" />
+        <Stack.Screen name="gebouw/[id]" />
+        <Stack.Screen name="plattegrond/[verdiepingId]" />
+        <Stack.Screen name="document/[tekeningId]" />
+        <Stack.Screen name="hrm/index" />
+        <Stack.Screen name="hrm/opleidingen" />
+        <Stack.Screen name="hrm/kennisbank" />
+        <Stack.Screen name="uren" />
+        <Stack.Screen name="toolboxen" />
+        <Stack.Screen name="info" />
+        <Stack.Screen name="opname/index" />
+        <Stack.Screen name="opname/[id]" />
+        <Stack.Screen name="opname/item/[itemId]" />
+        <Stack.Screen name="werkdag/index" />
+        <Stack.Screen name="werkdag/[id]" />
+        <Stack.Screen name="lmra" />
+        <Stack.Screen name="veiligheid-melding" />
+      </Stack>
     </>
   );
 }
@@ -138,11 +140,13 @@ export default function RootLayout() {
         <QueryClientProvider client={queryClient}>
           <AuthProvider>
             <SyncProvider>
-              <AchievementProvider>
-                <GestureHandlerRootView style={{ flex: 1 }}>
-                  <RootLayoutNav />
-                </GestureHandlerRootView>
-              </AchievementProvider>
+              <OfflineProvider>
+                <AchievementProvider>
+                  <GestureHandlerRootView style={{ flex: 1 }}>
+                    <RootLayoutNav />
+                  </GestureHandlerRootView>
+                </AchievementProvider>
+              </OfflineProvider>
             </SyncProvider>
           </AuthProvider>
         </QueryClientProvider>
