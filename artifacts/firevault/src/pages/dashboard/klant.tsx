@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Building, Map, FileText, Plus, CheckCircle, AlertTriangle, ChevronRight, ClipboardList } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@/context/auth-context";
 
 const INSPECTIE_STATUS: Record<string, { kleur: string; label: string }> = {
   gepland:     { kleur: "bg-blue-100 text-blue-800",   label: "Gepland" },
@@ -21,6 +22,8 @@ const INSPECTIE_STATUS: Record<string, { kleur: string; label: string }> = {
 
 export default function KlantDashboard() {
   const queryClient = useQueryClient();
+  const { gebruiker } = useAuth();
+  const functietitel = gebruiker?.functietitels?.[0] ?? null;
   const { data: gebouwen } = useListGebouwen();
   const { data: inspecties } = useListInspecties();
   const maakOnderhoud = useCreateOnderhoud();
@@ -68,7 +71,9 @@ export default function KlantDashboard() {
     <div className="space-y-6 max-w-5xl mx-auto">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Mijn portaal</h1>
+          <h1 className="text-2xl font-bold tracking-tight">
+            Mijn portaal{functietitel ? ` — ${functietitel}` : ""}
+          </h1>
           <p className="text-muted-foreground mt-1">Bekijk uw gebouwen, rapportages en dien meldingen in.</p>
         </div>
         <Button onClick={() => setTicketDialoog(true)}>

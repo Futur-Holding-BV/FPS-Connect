@@ -15,6 +15,7 @@ import {
   Users, HeartPulse, ChevronRight,
 } from "lucide-react";
 import { useRol } from "@/context/rol-context";
+import { useAuth } from "@/context/auth-context";
 import { Link } from "wouter";
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
@@ -49,6 +50,8 @@ const ZIEKTE_STATUS_KLEUR: Record<string, string> = {
 export default function BeheerderDashboard() {
   const { t } = useTranslation();
   const { echteRol, bevoegdheden } = useRol();
+  const { gebruiker } = useAuth();
+  const functietitel = gebruiker?.functietitels?.[0] ?? null;
 
   const { data: stats } = useGetDashboardStats();
   const { data: activiteit } = useGetRecenteActiviteit();
@@ -105,7 +108,9 @@ export default function BeheerderDashboard() {
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">{t("dashboard.titel")}</h1>
+        <h1 className="text-3xl font-bold tracking-tight">
+          {t("dashboard.titel")}{functietitel ? ` — ${functietitel}` : ""}
+        </h1>
         <p className="text-muted-foreground mt-1">{t("dashboard.ondertitel")}</p>
       </div>
 

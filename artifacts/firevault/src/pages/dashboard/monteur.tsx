@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Wrench, ClipboardCheck, AlertTriangle, CheckCircle, Clock, ChevronRight, Calendar } from "lucide-react";
 import { useRol } from "@/context/rol-context";
+import { useAuth } from "@/context/auth-context";
 
 const PRIORITEITKLEUR: Record<string, string> = {
   hoog:   "bg-red-100 text-red-800 border-red-200",
@@ -28,6 +29,8 @@ const STATUSLABEL: Record<string, string> = {
 
 export default function MonteurDashboard() {
   const { rol } = useRol();
+  const { gebruiker } = useAuth();
+  const functietitel = gebruiker?.functietitels?.[0] ?? null;
   const { data: onderhoud } = useListOnderhoud();
   const { data: inspecties } = useListInspecties();
 
@@ -44,7 +47,11 @@ export default function MonteurDashboard() {
     <div className="space-y-6 max-w-4xl mx-auto">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">
-          {isControleur ? "Onderhoudscontroleur overzicht" : "Monteur overzicht"}
+          {functietitel
+            ? `Dashboard — ${functietitel}`
+            : isControleur
+              ? "Onderhoudscontroleur overzicht"
+              : "Monteur overzicht"}
         </h1>
         <p className="text-muted-foreground mt-1">
           {isControleur
