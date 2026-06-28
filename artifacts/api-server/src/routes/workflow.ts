@@ -11,12 +11,23 @@ import { requireAuth } from "../middlewares/auth";
 const router = Router();
 
 // ── Seed helper ────────────────────────────────────────────────────────────────
-// Zaait de standaard workflows als de tabel leeg is.
+// Zaait de standaard workflows. Race-safe via promise-lock + per-naam check.
+
+let _seedBelofte: Promise<void> | null = null;
 
 async function zaaiWorkflowsAlsLeeg() {
-  const bestaand = await db.select({ id: workflowDefinitiesTable.id })
-    .from(workflowDefinitiesTable).limit(1);
-  if (bestaand.length > 0) return;
+  if (_seedBelofte) return _seedBelofte;
+  _seedBelofte = _voerSeedUit().catch(() => { _seedBelofte = null; });
+  return _seedBelofte;
+}
+
+async function _voerSeedUit() {
+  // Haal bestaande namen op zodat we per template kunnen besluiten
+  const bestaandeNamen = new Set(
+    (await db.select({ naam: workflowDefinitiesTable.naam })
+      .from(workflowDefinitiesTable))
+      .map((r) => r.naam)
+  );
 
   const workflows: Array<{
     naam: string; type: string; omschrijving: string; volgorde: number;
@@ -290,6 +301,7 @@ async function zaaiWorkflowsAlsLeeg() {
   ];
 
   for (const wf of workflows) {
+    if (bestaandeNamen.has(wf.naam)) continue;   // al aanwezig — overslaan
     const [wfRij] = await db.insert(workflowDefinitiesTable).values({
       naam: wf.naam,
       type: wf.type,
