@@ -42,13 +42,33 @@ const WERKDAGEN = ["Maandag", "Dinsdag", "Woensdag", "Donderdag", "Vrijdag"];
 const WERKDAGEN_KORT = ["Ma", "Di", "Wo", "Do", "Vr"];
 
 const DAGDELEN = [
-  { key: "ochtend", label: "Ochtend", sub: "08:00–12:00", tijd_start: "08:00", tijd_eind: "12:00", uren: 4 },
-  { key: "middag", label: "Middag", sub: "13:00–17:00", tijd_start: "13:00", tijd_eind: "17:00", uren: 4 },
-  { key: "volledig", label: "Volledig", sub: "08:00–17:00", tijd_start: "08:00", tijd_eind: "17:00", uren: 8 },
-  { key: "specifiek", label: "Specifiek", sub: "eigen tijden", tijd_start: "", tijd_eind: "", uren: 0 },
+  { key: "ochtend",    label: "Ochtend",    sub: "08:00–12:00",   tijd_start: "08:00", tijd_eind: "12:00", uren: 4 },
+  { key: "middag",     label: "Middag",     sub: "13:00–17:00",   tijd_start: "13:00", tijd_eind: "17:00", uren: 4 },
+  { key: "volledig",   label: "Volledig",   sub: "08:00–17:00",   tijd_start: "08:00", tijd_eind: "17:00", uren: 8 },
+  { key: "tijdsloten", label: "Tijdsloten", sub: "16 × 30 min",   tijd_start: "",      tijd_eind: "",      uren: 0 },
+  { key: "specifiek",  label: "Specifiek",  sub: "eigen tijden",  tijd_start: "",      tijd_eind: "",      uren: 0 },
 ] as const;
 
-type DagdeelKey = "ochtend" | "middag" | "volledig" | "specifiek";
+type DagdeelKey = "ochtend" | "middag" | "volledig" | "tijdsloten" | "specifiek";
+
+// 16 halve-uren: 07:00 t/m 14:30 (eindtijd laatste slot = 15:00)
+const HALVE_UREN: string[] = Array.from({ length: 16 }, (_, i) => {
+  const min = 7 * 60 + i * 30;
+  return `${String(Math.floor(min / 60)).padStart(2, "0")}:${String(min % 60).padStart(2, "0")}`;
+});
+
+function slotsTijden(slots: string[]): { tijd_start: string; tijd_eind: string; uren: number } {
+  if (slots.length === 0) return { tijd_start: "07:00", tijd_eind: "07:00", uren: 0 };
+  const sorted = [...slots].sort();
+  const last = sorted[sorted.length - 1]!;
+  const [lh, lm] = last.split(":").map(Number) as [number, number];
+  const endMin = lh * 60 + lm + 30;
+  return {
+    tijd_start: sorted[0]!,
+    tijd_eind: `${String(Math.floor(endMin / 60)).padStart(2, "0")}:${String(endMin % 60).padStart(2, "0")}`,
+    uren: slots.length * 0.5,
+  };
+}
 
 const STATUS_KLEUR: Record<string, string> = {
   concept: "bg-slate-100 border-slate-300 text-slate-600",
@@ -156,6 +176,7 @@ type DialooglItem = {
   gebouw_id: number | null;
   datum: string;
   dagdeel: DagdeelKey;
+  geselecteerdeTijdsloten: string[];
   tijd_start: string;
   tijd_eind: string;
   titel: string;
@@ -328,6 +349,7 @@ export default function ModulesPlanning() {
       gebouw_id: null,
       datum: datum ?? datumStrings[0]!,
       dagdeel: "volledig",
+      geselecteerdeTijdsloten: [],
       tijd_start: "08:00",
       tijd_eind: "17:00",
       titel: "",
@@ -348,6 +370,7 @@ export default function ModulesPlanning() {
       gebouw_id: item.gebouw_id ?? null,
       datum: item.datum_start,
       dagdeel: dd,
+      geselecteerdeTijdsloten: [],
       tijd_start: item.tijd_start ?? dagdeelDef?.tijd_start ?? "08:00",
       tijd_eind: item.tijd_eind ?? dagdeelDef?.tijd_eind ?? "17:00",
       titel: item.titel,
@@ -361,13 +384,30 @@ export default function ModulesPlanning() {
 
   function kiesDagdeel(key: DagdeelKey) {
     const def = DAGDELEN.find((d) => d.key === key)!;
-    setDialoog((d) => d ? {
-      ...d,
-      dagdeel: key,
-      tijd_start: def.tijd_start,
-      tijd_eind: def.tijd_eind,
-      uren: def.uren ? String(def.uren) : d.uren,
-    } : d);
+    setDialoog((d) => {
+      if (!d) return d;
+      if (key === "tijdsloten") {
+        return { ...d, dagdeel: key };
+      }
+      return {
+        ...d,
+        dagdeel: key,
+        tijd_start: def.tijd_start,
+        tijd_eind: def.tijd_eind,
+        uren: def.uren ? String(def.uren) : d.uren,
+      };
+    });
+  }
+
+  function toggleTijdslot(slot: string) {
+    setDialoog((d) => {
+      if (!d) return d;
+      const set = new Set(d.geselecteerdeTijdsloten);
+      if (set.has(slot)) set.delete(slot); else set.add(slot);
+      const slots = Array.from(set);
+      const { tijd_start, tijd_eind, uren } = slotsTijden(slots);
+      return { ...d, geselecteerdeTijdsloten: slots, tijd_start, tijd_eind, uren: String(uren) };
+    });
   }
 
   function kiesGebouw(id: string) {
@@ -395,13 +435,23 @@ export default function ModulesPlanning() {
     if (!dialoog || !dialoog.datum || !dialoog.titel) return;
     setOpslaan(true);
 
+    const tijdenPayload = (() => {
+      if (dialoog.dagdeel === "tijdsloten") {
+        const { tijd_start, tijd_eind, uren } = slotsTijden(dialoog.geselecteerdeTijdsloten);
+        return { tijd_start: tijd_start || null, tijd_eind: tijd_eind || null, uren: uren || 0 };
+      }
+      return {
+        tijd_start: dialoog.tijd_start || null,
+        tijd_eind: dialoog.tijd_eind || null,
+        uren: parseFloat(dialoog.uren) || 8,
+      };
+    })();
+
     const payload = {
       titel: dialoog.titel,
       datum_start: dialoog.datum,
       datum_eind: dialoog.datum,
-      tijd_start: dialoog.dagdeel !== "specifiek" ? dialoog.tijd_start || null : dialoog.tijd_start || null,
-      tijd_eind: dialoog.dagdeel !== "specifiek" ? dialoog.tijd_eind || null : dialoog.tijd_eind || null,
-      uren: parseFloat(dialoog.uren) || 8,
+      ...tijdenPayload,
       status: dialoog.status,
       type: dialoog.type,
       gebouw_id: dialoog.gebouw_id ?? undefined,
@@ -950,7 +1000,7 @@ export default function ModulesPlanning() {
                 {/* Dagdeel */}
                 <div className="space-y-1.5">
                   <Label>Dagdeel</Label>
-                  <div className="grid grid-cols-4 gap-2">
+                  <div className="grid grid-cols-5 gap-2">
                     {DAGDELEN.map((dd) => (
                       <button
                         key={dd.key}
@@ -963,6 +1013,47 @@ export default function ModulesPlanning() {
                       </button>
                     ))}
                   </div>
+
+                  {/* Tijdsloten-picker: 16 × 30 min blokken */}
+                  {dialoog.dagdeel === "tijdsloten" && (
+                    <div className="mt-2 rounded border border-slate-200 bg-slate-50 p-3 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <p className="text-xs font-medium text-slate-600">Klik blokken aan om in te plannen (07:00–15:00)</p>
+                        {dialoog.geselecteerdeTijdsloten.length > 0 && (
+                          <p className="text-xs text-primary font-medium">
+                            {dialoog.geselecteerdeTijdsloten.length} × 30 min = {dialoog.geselecteerdeTijdsloten.length * 0.5} uur
+                            {" · "}{dialoog.tijd_start}–{dialoog.tijd_eind}
+                          </p>
+                        )}
+                      </div>
+                      {/* Rij 1: 07:00–10:30, Rij 2: 11:00–14:30 */}
+                      {[HALVE_UREN.slice(0, 8), HALVE_UREN.slice(8, 16)].map((rij, ri) => (
+                        <div key={ri} className="grid grid-cols-8 gap-1">
+                          {rij.map((slot) => {
+                            const actief = dialoog.geselecteerdeTijdsloten.includes(slot);
+                            return (
+                              <button
+                                key={slot}
+                                type="button"
+                                onClick={() => toggleTijdslot(slot)}
+                                className={`rounded text-[10px] font-mono py-1.5 border transition-all select-none ${
+                                  actief
+                                    ? "bg-primary text-white border-primary font-semibold"
+                                    : "bg-white text-slate-500 border-slate-200 hover:border-primary/40 hover:bg-primary/5"
+                                }`}
+                              >
+                                {slot}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      ))}
+                      {dialoog.geselecteerdeTijdsloten.length === 0 && (
+                        <p className="text-[10px] text-muted-foreground text-center pt-0.5">Geen blokken geselecteerd</p>
+                      )}
+                    </div>
+                  )}
+
                   {dialoog.dagdeel === "specifiek" && (
                     <div className="grid grid-cols-3 gap-3 mt-2">
                       <div className="space-y-1">

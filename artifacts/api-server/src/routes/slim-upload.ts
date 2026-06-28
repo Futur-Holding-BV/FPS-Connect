@@ -155,7 +155,7 @@ async function aiClassificeer(
 
 async function haalPdfTekst(buffer: Buffer): Promise<string | null> {
   try {
-    const pdfParse = ((await import("pdf-parse")) as { default: (b: Buffer) => Promise<{ text: string }> }).default;
+    const pdfParse = ((await import("pdf-parse")) as unknown as { default: (b: Buffer) => Promise<{ text: string }> }).default;
     const result = await pdfParse(buffer);
     return result.text?.trim() || null;
   } catch {
