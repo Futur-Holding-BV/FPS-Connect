@@ -309,6 +309,62 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                         <InUitvoering />
                       </SidebarMenuButton>
                     </SidebarMenuItem>
+                    {/* ── scheiding: uitvoering ↑ / oplevering ↓ ── */}
+                    <div className="mx-3 my-2 flex items-center gap-2 group-data-[collapsible=icon]:hidden">
+                      <div className="flex-1 h-px bg-slate-200" />
+                      <span className="text-[10px] text-muted-foreground/60 font-medium shrink-0 uppercase tracking-wider">Oplevering</span>
+                      <div className="flex-1 h-px bg-slate-200" />
+                    </div>
+                    <SidebarMenuItem className="pl-5">
+                      <SidebarMenuButton
+                        asChild
+                        isActive={location === "/rapporten" || location.startsWith("/rapporten/")}
+                      >
+                        <Link href="/rapporten">
+                          <PackageCheck />
+                          <span>Opleverrapportage</span>
+                          <InUitvoering />
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                    {toonOnderhoud && (
+                      <SidebarMenuItem className="pl-5">
+                        <SidebarMenuButton
+                          asChild
+                          isActive={location === "/onderhoud" || location.startsWith("/onderhoud/")}
+                        >
+                          <Link href="/onderhoud">
+                            <Wrench />
+                            <span>Onderhoud</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    )}
+                    {toonDossiers && (
+                      <SidebarMenuItem className="pl-5">
+                        <SidebarMenuButton
+                          asChild
+                          isActive={location === "/dossiers" || location.startsWith("/dossiers/")}
+                        >
+                          <Link href="/dossiers">
+                            <FolderOpen />
+                            <span>{t("nav.dossiers")}</span>
+                            <InUitvoering />
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    )}
+                    <SidebarMenuItem className="pl-5">
+                      <SidebarMenuButton
+                        asChild
+                        isActive={location === "/documenten" || location.startsWith("/documenten/")}
+                      >
+                        <Link href="/documenten">
+                          <Files />
+                          <span>Documenten</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
                   </SidebarMenu>
                 </SidebarGroupContent>
               </SidebarGroup>
@@ -389,65 +445,6 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                   </SidebarGroupContent>
                 </SidebarGroup>
               )}
-
-              {/* Oplevering */}
-              <SidebarGroup>
-                <SidebarGroupLabel>Oplevering</SidebarGroupLabel>
-                <SidebarGroupContent>
-                  <SidebarMenu>
-                    <SidebarMenuItem>
-                      <SidebarMenuButton
-                        asChild
-                        isActive={location === "/rapporten" || location.startsWith("/rapporten/")}
-                      >
-                        <Link href="/rapporten">
-                          <PackageCheck />
-                          <span>Opleverrapportage</span>
-                          <InUitvoering />
-                        </Link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                    {toonOnderhoud && (
-                      <SidebarMenuItem>
-                        <SidebarMenuButton
-                          asChild
-                          isActive={location === "/onderhoud" || location.startsWith("/onderhoud/")}
-                        >
-                          <Link href="/onderhoud">
-                            <Wrench />
-                            <span>Onderhoud</span>
-                          </Link>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                    )}
-                    {toonDossiers && (
-                      <SidebarMenuItem>
-                        <SidebarMenuButton
-                          asChild
-                          isActive={location === "/dossiers" || location.startsWith("/dossiers/")}
-                        >
-                          <Link href="/dossiers">
-                            <FolderOpen />
-                            <span>{t("nav.dossiers")}</span>
-                            <InUitvoering />
-                          </Link>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                    )}
-                    <SidebarMenuItem>
-                      <SidebarMenuButton
-                        asChild
-                        isActive={location === "/documenten" || location.startsWith("/documenten/")}
-                      >
-                        <Link href="/documenten">
-                          <Files />
-                          <span>Documenten</span>
-                        </Link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  </SidebarMenu>
-                </SidebarGroupContent>
-              </SidebarGroup>
 
               {/* Communicatie */}
               <SidebarGroup>
