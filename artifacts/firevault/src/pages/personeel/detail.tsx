@@ -56,7 +56,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
 } from "@/components/ui/dialog";
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+  Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { caoVoorWerkmaatschappij, werkmaatschappijOpties } from "@/lib/werkmaatschappijen";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -1060,7 +1060,22 @@ export default function MedewerkerDetailPagina() {
                   <SelectTrigger><SelectValue placeholder="Kies functie" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="geen">Geen functie</SelectItem>
-                    {(functies ?? []).map((f) => <SelectItem key={f.id} value={String(f.id)}>{f.naam}</SelectItem>)}
+                    {(functies ?? []).some((f) => f.uitvoerend) && (
+                      <SelectGroup>
+                        <SelectLabel className="text-xs font-semibold text-primary">Buitendienst — zichtbaar in planning</SelectLabel>
+                        {(functies ?? []).filter((f) => f.uitvoerend).map((f) => (
+                          <SelectItem key={f.id} value={String(f.id)}>{f.naam}</SelectItem>
+                        ))}
+                      </SelectGroup>
+                    )}
+                    {(functies ?? []).some((f) => !f.uitvoerend) && (
+                      <SelectGroup>
+                        <SelectLabel className="text-xs font-semibold text-muted-foreground">Kantoor / staf — niet in planning</SelectLabel>
+                        {(functies ?? []).filter((f) => !f.uitvoerend).map((f) => (
+                          <SelectItem key={f.id} value={String(f.id)}>{f.naam}</SelectItem>
+                        ))}
+                      </SelectGroup>
+                    )}
                   </SelectContent>
                 </Select>
                 {(functies ?? []).length === 0 && (

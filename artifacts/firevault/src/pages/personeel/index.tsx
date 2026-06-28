@@ -63,7 +63,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
 } from "@/components/ui/dialog";
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+  Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -1286,7 +1286,22 @@ export default function PersoneelPagina() {
               >
                 <SelectTrigger><SelectValue placeholder="Kies functie" /></SelectTrigger>
                 <SelectContent>
-                  {(functies ?? []).map((f) => <SelectItem key={f.id} value={String(f.id)}>{f.naam}</SelectItem>)}
+                  {(functies ?? []).some((f) => f.uitvoerend) && (
+                    <SelectGroup>
+                      <SelectLabel className="text-xs font-semibold text-primary">Buitendienst — zichtbaar in planning</SelectLabel>
+                      {(functies ?? []).filter((f) => f.uitvoerend).map((f) => (
+                        <SelectItem key={f.id} value={String(f.id)}>{f.naam}</SelectItem>
+                      ))}
+                    </SelectGroup>
+                  )}
+                  {(functies ?? []).some((f) => !f.uitvoerend) && (
+                    <SelectGroup>
+                      <SelectLabel className="text-xs font-semibold text-muted-foreground">Kantoor / staf — niet in planning</SelectLabel>
+                      {(functies ?? []).filter((f) => !f.uitvoerend).map((f) => (
+                        <SelectItem key={f.id} value={String(f.id)}>{f.naam}</SelectItem>
+                      ))}
+                    </SelectGroup>
+                  )}
                 </SelectContent>
               </Select>
             </div>
@@ -1377,15 +1392,49 @@ export default function PersoneelPagina() {
                   Nog geen functies in het functiehuis. Maak er eerst een aan met "Nieuwe functie".
                 </p>
               ) : (
-                <Select
-                  value={onboardForm.functie_id ? String(onboardForm.functie_id) : undefined}
-                  onValueChange={(v) => setOnboardForm({ ...onboardForm, functie_id: Number(v) })}
-                >
-                  <SelectTrigger><SelectValue placeholder="Kies functie" /></SelectTrigger>
-                  <SelectContent>
-                    {(functies ?? []).map((f) => <SelectItem key={f.id} value={String(f.id)}>{f.naam}</SelectItem>)}
-                  </SelectContent>
-                </Select>
+                <>
+                  <Select
+                    value={onboardForm.functie_id ? String(onboardForm.functie_id) : undefined}
+                    onValueChange={(v) => setOnboardForm({ ...onboardForm, functie_id: Number(v) })}
+                  >
+                    <SelectTrigger><SelectValue placeholder="Kies functie" /></SelectTrigger>
+                    <SelectContent>
+                      {(functies ?? []).some((f) => f.uitvoerend) && (
+                        <SelectGroup>
+                          <SelectLabel className="text-xs font-semibold text-primary">
+                            Buitendienst — zichtbaar in planning
+                          </SelectLabel>
+                          {(functies ?? []).filter((f) => f.uitvoerend).map((f) => (
+                            <SelectItem key={f.id} value={String(f.id)}>{f.naam}</SelectItem>
+                          ))}
+                        </SelectGroup>
+                      )}
+                      {(functies ?? []).some((f) => !f.uitvoerend) && (
+                        <SelectGroup>
+                          <SelectLabel className="text-xs font-semibold text-muted-foreground">
+                            Kantoor / staf — niet in planning
+                          </SelectLabel>
+                          {(functies ?? []).filter((f) => !f.uitvoerend).map((f) => (
+                            <SelectItem key={f.id} value={String(f.id)}>{f.naam}</SelectItem>
+                          ))}
+                        </SelectGroup>
+                      )}
+                    </SelectContent>
+                  </Select>
+                  {onboardForm.functie_id ? (
+                    (functies ?? []).find((f) => f.id === onboardForm.functie_id)?.uitvoerend ? (
+                      <p className="flex items-center gap-1.5 text-xs text-primary font-medium mt-1">
+                        <span className="inline-block h-2 w-2 rounded-full bg-primary" />
+                        Zichtbaar in de planning (buitendienst)
+                      </p>
+                    ) : (
+                      <p className="flex items-center gap-1.5 text-xs text-muted-foreground mt-1">
+                        <span className="inline-block h-2 w-2 rounded-full bg-slate-300" />
+                        Niet zichtbaar in de planning (kantoor/staf)
+                      </p>
+                    )
+                  ) : null}
+                </>
               )}
             </div>
             <div className="space-y-1.5">

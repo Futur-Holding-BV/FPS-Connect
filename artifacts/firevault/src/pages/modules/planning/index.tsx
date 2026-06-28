@@ -234,7 +234,7 @@ export default function ModulesPlanning() {
   const [opslaan, setOpslaan] = useState(false);
   const [toolboxAdvies, setToolboxAdvies] = useState<Array<{ id: number; titel: string; categorie: string; reden: string }> | null>(null);
   const [filterWerkmaatschappij, setFilterWerkmaatschappij] = useState<string>("alle");
-  const [filterAlleenUitvoerend, setFilterAlleenUitvoerend] = useState(false);
+  const [filterAlleenUitvoerend, setFilterAlleenUitvoerend] = useState(true);
 
   const queryClient = useQueryClient();
 
