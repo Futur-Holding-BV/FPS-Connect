@@ -340,6 +340,7 @@ function CardEditSheet({
   });
   const [laneId, setLaneId] = useState<number | null>(null);
   const [opslaan, setOpslaan] = useState(false);
+  const [attempted, setAttempted] = useState(false);
 
   useEffect(() => {
     if (card) {
@@ -357,12 +358,19 @@ function CardEditSheet({
         actief: card.actief,
       });
       setLaneId(card.lane_id);
+      setAttempted(false);
     }
   }, [card]);
 
   if (!card) return null;
 
+  const isValid = form.titel.trim().length > 0;
+
   const handleSave = async () => {
+    if (!isValid) {
+      setAttempted(true);
+      return;
+    }
     setOpslaan(true);
     await onSave(card.id, { ...form, lane_id: laneId ?? card.lane_id });
     setOpslaan(false);
@@ -382,12 +390,22 @@ function CardEditSheet({
         <div className="mt-6 space-y-4">
           {/* Titel */}
           <div className="space-y-1.5">
-            <Label>Titel</Label>
+            <Label className="flex items-center gap-1">
+              Titel
+              <span className="text-red-500">*</span>
+            </Label>
             <Input
               value={form.titel}
-              onChange={(e) => setForm((f) => ({ ...f, titel: e.target.value }))}
+              onChange={(e) => {
+                setForm((f) => ({ ...f, titel: e.target.value }));
+                if (attempted && e.target.value.trim()) setAttempted(false);
+              }}
               placeholder="Naam van de processtap"
+              className={attempted && !form.titel.trim() ? "border-red-400 ring-2 ring-red-200 focus-visible:ring-red-300" : ""}
             />
+            {attempted && !form.titel.trim() && (
+              <p className="text-xs text-red-500">Titel is verplicht</p>
+            )}
           </div>
 
           {/* Type */}
@@ -529,7 +547,19 @@ function CardEditSheet({
           </div>
         </div>
 
-        <SheetFooter className="mt-6 flex items-center justify-between">
+        {attempted && !isValid && (
+          <div className="mt-5 flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2.5">
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-red-500" />
+            <div>
+              <p className="text-sm font-medium text-red-700">Verplicht veld niet ingevuld</p>
+              <p className="text-xs text-red-600 mt-0.5">
+                Vul minimaal de <span className="font-semibold">Titel</span> in om de kaart op te slaan.
+              </p>
+            </div>
+          </div>
+        )}
+
+        <SheetFooter className="mt-4 flex items-center justify-between">
           <Button
             variant="destructive"
             size="sm"
@@ -543,7 +573,13 @@ function CardEditSheet({
             <Button variant="outline" onClick={onClose}>
               Annuleren
             </Button>
-            <Button onClick={handleSave} disabled={opslaan || !form.titel}>
+            <Button
+              onClick={handleSave}
+              disabled={opslaan}
+              className={!isValid
+                ? "bg-red-100 text-red-400 border border-red-200 hover:bg-red-100 hover:text-red-400 shadow-none"
+                : ""}
+            >
               <Check className="mr-1.5 h-3.5 w-3.5" />
               {opslaan ? "Opslaan..." : "Opslaan"}
             </Button>
@@ -572,14 +608,20 @@ function NieuweKaartSheet({
   const [titel, setTitel] = useState("");
   const [type, setType] = useState("stap");
   const [opslaan, setOpslaan] = useState(false);
+  const [attempted, setAttempted] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
-    if (open) { setTitel(""); setType("stap"); }
+    if (open) { setTitel(""); setType("stap"); setAttempted(false); }
   }, [open]);
 
+  const isValid = titel.trim().length > 0;
+
   const handleSubmit = async () => {
-    if (!titel || !laneId) return;
+    if (!isValid || !laneId) {
+      setAttempted(true);
+      return;
+    }
     setOpslaan(true);
     try {
       const res = await fetch("/api/workflow-cards", {
@@ -611,14 +653,24 @@ function NieuweKaartSheet({
         </SheetHeader>
         <div className="mt-6 space-y-4">
           <div className="space-y-1.5">
-            <Label>Titel</Label>
+            <Label className="flex items-center gap-1">
+              Titel
+              <span className="text-red-500">*</span>
+            </Label>
             <Input
               autoFocus
               value={titel}
-              onChange={(e) => setTitel(e.target.value)}
+              onChange={(e) => {
+                setTitel(e.target.value);
+                if (attempted && e.target.value.trim()) setAttempted(false);
+              }}
               onKeyDown={(e) => { if (e.key === "Enter") handleSubmit(); }}
               placeholder="Naam van de stap"
+              className={attempted && !titel.trim() ? "border-red-400 ring-2 ring-red-200 focus-visible:ring-red-300" : ""}
             />
+            {attempted && !titel.trim() && (
+              <p className="text-xs text-red-500">Titel is verplicht</p>
+            )}
           </div>
           <div className="space-y-1.5">
             <Label>Type</Label>
@@ -631,9 +683,23 @@ function NieuweKaartSheet({
             </Select>
           </div>
         </div>
-        <SheetFooter className="mt-6">
+        {attempted && !isValid && (
+          <div className="mt-4 flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2.5">
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-red-500" />
+            <p className="text-sm text-red-700">
+              Vul de <span className="font-semibold">Titel</span> in om de kaart aan te maken.
+            </p>
+          </div>
+        )}
+        <SheetFooter className="mt-4">
           <Button variant="outline" onClick={onClose}>Annuleren</Button>
-          <Button onClick={handleSubmit} disabled={opslaan || !titel}>
+          <Button
+            onClick={handleSubmit}
+            disabled={opslaan}
+            className={!isValid
+              ? "bg-red-100 text-red-400 border border-red-200 hover:bg-red-100 hover:text-red-400 shadow-none"
+              : ""}
+          >
             {opslaan ? "Aanmaken..." : "Aanmaken"}
           </Button>
         </SheetFooter>
