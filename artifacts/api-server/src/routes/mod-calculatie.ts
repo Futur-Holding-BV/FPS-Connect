@@ -392,7 +392,20 @@ router.post("/modules/calculaties", aanmakenCalc, async (req, res) => {
       aangemaaktDoorId: req.session.userId ?? null,
     } as typeof modCalcHeadersTable.$inferInsert).returning();
 
-    res.status(201).json(mapHeader(row, { subtotaal: 0, totaalNaOpslagen: 0 }));
+    // Auto-genereer referentie als nog niet opgegeven
+    let finalRow = row;
+    if (!row.referentie) {
+      const jaar = new Date().getFullYear();
+      const refCode = `CALC-${jaar}-${String(row.id).padStart(4, "0")}`;
+      const [updated] = await db
+        .update(modCalcHeadersTable)
+        .set({ referentie: refCode })
+        .where(eq(modCalcHeadersTable.id, row.id))
+        .returning();
+      finalRow = updated;
+    }
+
+    res.status(201).json(mapHeader(finalRow, { subtotaal: 0, totaalNaOpslagen: 0 }));
   } catch (e) {
     req.log.error(e);
     res.status(500).json({ error: "Interne fout" });

@@ -1433,13 +1433,17 @@ export default function ModulesCalculatieDetail() {
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
+              {data.referentie && (
+                <span className="font-mono text-xs font-semibold tracking-wide text-slate-500 bg-slate-100 border border-slate-200 rounded px-2 py-0.5 select-all">
+                  {data.referentie}
+                </span>
+              )}
               <h1 className="text-xl font-semibold text-slate-900">{data.naam}</h1>
               <Badge className={`text-xs border ${STATUS_KLEUR[data.status] ?? STATUS_KLEUR.concept}`}>
                 {STATUS_LABEL[data.status] ?? data.status}
               </Badge>
             </div>
-            {data.referentie && <p className="text-xs text-muted-foreground">{data.referentie}</p>}
           </div>
         </div>
         <div className="flex items-center gap-1.5 flex-wrap justify-end">
@@ -1480,8 +1484,14 @@ export default function ModulesCalculatieDetail() {
       </div>
 
       {/* Projectgegevens strip */}
-      {(data.klant_naam || data.project_naam || data.gebouw_naam || data.aangemaakt_door_naam) && (
+      {(data.referentie || data.klant_naam || data.project_naam || data.gebouw_naam || data.aangemaakt_door_naam) && (
         <div className="flex items-center gap-6 px-6 py-2.5 border-b bg-slate-50/60 text-sm">
+          {data.referentie && (
+            <div className="flex gap-1.5 items-center">
+              <span className="text-muted-foreground text-xs">Ref:</span>
+              <span className="font-mono text-xs font-semibold text-slate-700 select-all">{data.referentie}</span>
+            </div>
+          )}
           {data.klant_naam && (
             <div className="flex gap-1.5 items-center">
               <span className="text-muted-foreground text-xs">Klant:</span>
