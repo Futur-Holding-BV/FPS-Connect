@@ -9,6 +9,7 @@ import { AuthProvider, useAuth } from "@/context/auth-context";
 import { TaalProvider } from "@/context/taal-context";
 import { useRol, RolProvider } from "@/context/rol-context";
 import { AchievementProvider } from "@/context/achievement-context";
+import { WeergaveProvider } from "@/context/weergave-context";
 import LoginPagina from "@/pages/auth/login";
 import ActivatiePagina from "@/pages/uitnodiging/index";
 import WachtwoordVergetenPagina from "@/pages/auth/wachtwoord-vergeten";
@@ -505,12 +506,14 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <TaalProvider>
-          <AuthProvider>
-            <RolProvider>
-              <Gate />
-            </RolProvider>
-            <Toaster />
-          </AuthProvider>
+          <WeergaveProvider>
+            <AuthProvider>
+              <RolProvider>
+                <Gate />
+              </RolProvider>
+              <Toaster />
+            </AuthProvider>
+          </WeergaveProvider>
         </TaalProvider>
       </TooltipProvider>
     </QueryClientProvider>
