@@ -19,8 +19,9 @@ import {
   BookOpen, HardDriveUpload, CalendarCheck2, Settings2, ArchiveRestore,
   Inbox, Building2, Target, Handshake, Newspaper, CalendarRange, KeyRound,
   ClipboardCheck, AlertTriangle, FileArchive, Receipt, ArrowUpRight, ScrollText,
-  UserPlus, UserMinus, Car, GitBranch, ArrowLeft,
+  UserPlus, UserMinus, Car, GitBranch, ArrowLeft, ChevronDown,
 } from "lucide-react";
+import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
 import { Badge } from "@/components/ui/badge";
 import { GebruikerMenu } from "@/components/gebruiker-menu";
 import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
@@ -388,169 +389,196 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
 
               {/* Commercie */}
               {toonCrm && (
-                <SidebarGroup>
-                  <SidebarGroupLabel>Commercie</SidebarGroupLabel>
-                  <SidebarGroupContent>
-                    <SidebarMenu>
-                      <SidebarMenuItem>
-                        <SidebarMenuButton
-                          asChild
-                          isActive={location === "/crm/projectkansen"}
-                        >
-                          <Link href="/crm/projectkansen">
-                            <Target />
-                            <span>Projectkansen</span>
-                          </Link>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                      <SidebarMenuItem>
-                        <SidebarMenuButton
-                          asChild
-                          isActive={location === "/crm" && !location.startsWith("/crm/")}
-                        >
-                          <Link href="/crm">
-                            <Contact />
-                            <span>Klanten</span>
-                          </Link>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                      <SidebarMenuItem>
-                        <SidebarMenuButton
-                          asChild
-                          isActive={location === "/crm/organisaties" || location.startsWith("/crm/organisaties")}
-                        >
-                          <Link href="/crm/organisaties">
-                            <Building2 />
-                            <span>Organisaties</span>
-                          </Link>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                      <SidebarMenuItem>
-                        <SidebarMenuButton
-                          asChild
-                          isActive={location === "/crm/concurrenten"}
-                        >
-                          <Link href="/crm/concurrenten">
-                            <Handshake />
-                            <span>Concurrenten</span>
-                          </Link>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                      <SidebarMenuItem>
-                        <SidebarMenuButton
-                          asChild
-                          isActive={location === "/crm/marktintelligentie"}
-                        >
-                          <Link href="/crm/marktintelligentie">
-                            <Newspaper />
-                            <span>Marktinzicht</span>
-                          </Link>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                      <SidebarMenuItem>
-                        <SidebarMenuButton
-                          asChild
-                          isActive={location === "/crm/kennisbibliotheek"}
-                        >
-                          <Link href="/crm/kennisbibliotheek">
-                            <BookOpen />
-                            <span>Kennisbibliotheek</span>
-                          </Link>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                    </SidebarMenu>
-                  </SidebarGroupContent>
-                </SidebarGroup>
+                <Collapsible defaultOpen className="group/collapsible">
+                  <SidebarGroup>
+                    <SidebarGroupLabel asChild>
+                      <CollapsibleTrigger className="flex w-full items-center">
+                        Commercie
+                        <ChevronDown className="ml-auto h-4 w-4 transition-transform group-data-[state=open]/collapsible:rotate-180 group-data-[collapsible=icon]:hidden" />
+                      </CollapsibleTrigger>
+                    </SidebarGroupLabel>
+                    <CollapsibleContent>
+                      <SidebarGroupContent>
+                        <SidebarMenu>
+                          <SidebarMenuItem>
+                            <SidebarMenuButton
+                              asChild
+                              isActive={location === "/crm/projectkansen"}
+                            >
+                              <Link href="/crm/projectkansen">
+                                <Target />
+                                <span>Projectkansen</span>
+                              </Link>
+                            </SidebarMenuButton>
+                          </SidebarMenuItem>
+                          <SidebarMenuItem>
+                            <SidebarMenuButton
+                              asChild
+                              isActive={location === "/crm" && !location.startsWith("/crm/")}
+                            >
+                              <Link href="/crm">
+                                <Contact />
+                                <span>Klanten</span>
+                              </Link>
+                            </SidebarMenuButton>
+                          </SidebarMenuItem>
+                          <SidebarMenuItem>
+                            <SidebarMenuButton
+                              asChild
+                              isActive={location === "/crm/organisaties" || location.startsWith("/crm/organisaties")}
+                            >
+                              <Link href="/crm/organisaties">
+                                <Building2 />
+                                <span>Organisaties</span>
+                              </Link>
+                            </SidebarMenuButton>
+                          </SidebarMenuItem>
+                          <SidebarMenuItem>
+                            <SidebarMenuButton
+                              asChild
+                              isActive={location === "/crm/concurrenten"}
+                            >
+                              <Link href="/crm/concurrenten">
+                                <Handshake />
+                                <span>Concurrenten</span>
+                              </Link>
+                            </SidebarMenuButton>
+                          </SidebarMenuItem>
+                          <SidebarMenuItem>
+                            <SidebarMenuButton
+                              asChild
+                              isActive={location === "/crm/marktintelligentie"}
+                            >
+                              <Link href="/crm/marktintelligentie">
+                                <Newspaper />
+                                <span>Marktinzicht</span>
+                              </Link>
+                            </SidebarMenuButton>
+                          </SidebarMenuItem>
+                          <SidebarMenuItem>
+                            <SidebarMenuButton
+                              asChild
+                              isActive={location === "/crm/kennisbibliotheek"}
+                            >
+                              <Link href="/crm/kennisbibliotheek">
+                                <BookOpen />
+                                <span>Kennisbibliotheek</span>
+                              </Link>
+                            </SidebarMenuButton>
+                          </SidebarMenuItem>
+                        </SidebarMenu>
+                      </SidebarGroupContent>
+                    </CollapsibleContent>
+                  </SidebarGroup>
+                </Collapsible>
               )}
 
               {/* Communicatie */}
-              <SidebarGroup>
-                <SidebarGroupLabel>Communicatie</SidebarGroupLabel>
-                <SidebarGroupContent>
-                  <SidebarMenu>
-                    <SidebarMenuItem>
-                      <SidebarMenuButton
-                        asChild
-                        isActive={location === "/berichten" || location.startsWith("/berichten/")}
-                      >
-                        <Link href="/berichten">
-                          <MessageSquare />
-                          <span>Berichten</span>
-                          <OngelezenBerichtenBadge />
-                        </Link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                    <SidebarMenuItem>
-                      <SidebarMenuButton
-                        asChild
-                        isActive={location === "/werk-inbox" || location.startsWith("/werk-inbox/")}
-                      >
-                        <Link href="/werk-inbox">
-                          <PackageCheck />
-                          <span>Werk-inbox</span>
-                        </Link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                    {toonCrm && (
-                      <SidebarMenuItem>
-                        <SidebarMenuButton
-                          asChild
-                          isActive={location === "/inbox" || location.startsWith("/inbox/")}
-                        >
-                          <Link href="/inbox">
-                            <Inbox />
-                            <span>Slim Uploadpunt</span>
-                          </Link>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                    )}
-                  </SidebarMenu>
-                </SidebarGroupContent>
-              </SidebarGroup>
+              <Collapsible defaultOpen className="group/collapsible">
+                <SidebarGroup>
+                  <SidebarGroupLabel asChild>
+                    <CollapsibleTrigger className="flex w-full items-center">
+                      Communicatie
+                      <ChevronDown className="ml-auto h-4 w-4 transition-transform group-data-[state=open]/collapsible:rotate-180 group-data-[collapsible=icon]:hidden" />
+                    </CollapsibleTrigger>
+                  </SidebarGroupLabel>
+                  <CollapsibleContent>
+                    <SidebarGroupContent>
+                      <SidebarMenu>
+                        <SidebarMenuItem>
+                          <SidebarMenuButton
+                            asChild
+                            isActive={location === "/berichten" || location.startsWith("/berichten/")}
+                          >
+                            <Link href="/berichten">
+                              <MessageSquare />
+                              <span>Berichten</span>
+                              <OngelezenBerichtenBadge />
+                            </Link>
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                        <SidebarMenuItem>
+                          <SidebarMenuButton
+                            asChild
+                            isActive={location === "/werk-inbox" || location.startsWith("/werk-inbox/")}
+                          >
+                            <Link href="/werk-inbox">
+                              <PackageCheck />
+                              <span>Werk-inbox</span>
+                            </Link>
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                        {toonCrm && (
+                          <SidebarMenuItem>
+                            <SidebarMenuButton
+                              asChild
+                              isActive={location === "/inbox" || location.startsWith("/inbox/")}
+                            >
+                              <Link href="/inbox">
+                                <Inbox />
+                                <span>Slim Uploadpunt</span>
+                              </Link>
+                            </SidebarMenuButton>
+                          </SidebarMenuItem>
+                        )}
+                      </SidebarMenu>
+                    </SidebarGroupContent>
+                  </CollapsibleContent>
+                </SidebarGroup>
+              </Collapsible>
 
               {/* Veiligheid */}
               {toonToolboxen && (
-                <SidebarGroup>
-                  <SidebarGroupLabel>Veiligheid</SidebarGroupLabel>
-                  <SidebarGroupContent>
-                    <SidebarMenu>
-                      <SidebarMenuItem>
-                        <SidebarMenuButton
-                          asChild
-                          isActive={location === "/veiligheid/toolboxen" || location.startsWith("/veiligheid/toolboxen/")}
-                        >
-                          <Link href="/veiligheid/toolboxen">
-                            <ShieldCheck />
-                            <span>Toolbox Center</span>
-                          </Link>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                      <SidebarMenuItem>
-                        <SidebarMenuButton
-                          asChild
-                          isActive={location === "/veiligheid/lmra" || location.startsWith("/veiligheid/lmra/")}
-                        >
-                          <Link href="/veiligheid/lmra">
-                            <ClipboardCheck />
-                            <span>LMRA</span>
-                          </Link>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                      <SidebarMenuItem>
-                        <SidebarMenuButton
-                          asChild
-                          isActive={location === "/veiligheid/meldingen" || location.startsWith("/veiligheid/meldingen/")}
-                        >
-                          <Link href="/veiligheid/meldingen">
-                            <AlertTriangle />
-                            <span>Meldingen</span>
-                            <OpenMeldingenBadge />
-                          </Link>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                    </SidebarMenu>
-                  </SidebarGroupContent>
-                </SidebarGroup>
+                <Collapsible defaultOpen className="group/collapsible">
+                  <SidebarGroup>
+                    <SidebarGroupLabel asChild>
+                      <CollapsibleTrigger className="flex w-full items-center">
+                        Veiligheid
+                        <ChevronDown className="ml-auto h-4 w-4 transition-transform group-data-[state=open]/collapsible:rotate-180 group-data-[collapsible=icon]:hidden" />
+                      </CollapsibleTrigger>
+                    </SidebarGroupLabel>
+                    <CollapsibleContent>
+                      <SidebarGroupContent>
+                        <SidebarMenu>
+                          <SidebarMenuItem>
+                            <SidebarMenuButton
+                              asChild
+                              isActive={location === "/veiligheid/toolboxen" || location.startsWith("/veiligheid/toolboxen/")}
+                            >
+                              <Link href="/veiligheid/toolboxen">
+                                <ShieldCheck />
+                                <span>Toolbox Center</span>
+                              </Link>
+                            </SidebarMenuButton>
+                          </SidebarMenuItem>
+                          <SidebarMenuItem>
+                            <SidebarMenuButton
+                              asChild
+                              isActive={location === "/veiligheid/lmra" || location.startsWith("/veiligheid/lmra/")}
+                            >
+                              <Link href="/veiligheid/lmra">
+                                <ClipboardCheck />
+                                <span>LMRA</span>
+                              </Link>
+                            </SidebarMenuButton>
+                          </SidebarMenuItem>
+                          <SidebarMenuItem>
+                            <SidebarMenuButton
+                              asChild
+                              isActive={location === "/veiligheid/meldingen" || location.startsWith("/veiligheid/meldingen/")}
+                            >
+                              <Link href="/veiligheid/meldingen">
+                                <AlertTriangle />
+                                <span>Meldingen</span>
+                                <OpenMeldingenBadge />
+                              </Link>
+                            </SidebarMenuButton>
+                          </SidebarMenuItem>
+                        </SidebarMenu>
+                      </SidebarGroupContent>
+                    </CollapsibleContent>
+                  </SidebarGroup>
+                </Collapsible>
               )}
 
               {/* Financieel */}
