@@ -8,6 +8,7 @@ import {
 } from "@/components/ui/sidebar";
 import { Home, FileText, Building, Info } from "lucide-react";
 import { GebruikerMenu } from "@/components/gebruiker-menu";
+import { PauzeKnop } from "@/components/pauze/pauze-modal";
 
 const ROUTES = [
   { href: "/", labelKey: "nav.mijnPortaal", icoon: Home },
@@ -62,6 +63,9 @@ export default function KlantLayout({ children }: { children: React.ReactNode })
         </SidebarContent>
 
         <SidebarFooter>
+          <SidebarMenu>
+            <PauzeKnop />
+          </SidebarMenu>
           <GebruikerMenu />
         </SidebarFooter>
       </Sidebar>

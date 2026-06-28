@@ -9,6 +9,7 @@ import {
 import { ShieldCheck, Home, Wrench, Search, Building, Map, Info } from "lucide-react";
 import { useRol } from "@/context/rol-context";
 import { GebruikerMenu } from "@/components/gebruiker-menu";
+import { PauzeKnop } from "@/components/pauze/pauze-modal";
 
 const ROUTES_MONTEUR = [
   { href: "/", labelKey: "nav.mijnOpdrachten", icoon: Home },
@@ -73,6 +74,9 @@ export default function MonteurLayout({ children }: { children: React.ReactNode 
         </SidebarContent>
 
         <SidebarFooter>
+          <SidebarMenu>
+            <PauzeKnop />
+          </SidebarMenu>
           <GebruikerMenu />
         </SidebarFooter>
       </Sidebar>

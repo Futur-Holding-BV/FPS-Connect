@@ -27,6 +27,7 @@ import { useRol } from "@/context/rol-context";
 import { featureFlags } from "@/lib/feature-flags";
 import { cn } from "@/lib/utils";
 import { NavigatieBewakingProvider, useNavigatieBewaking } from "@/context/navigatie-bewaking";
+import { PauzeKnop } from "@/components/pauze/pauze-modal";
 
 function TerugKnop() {
   const { requestTerug } = useNavigatieBewaking();
@@ -1220,6 +1221,9 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
         </SidebarContent>
 
         <SidebarFooter>
+          <SidebarMenu>
+            <PauzeKnop />
+          </SidebarMenu>
           <GebruikerMenu />
         </SidebarFooter>
       </Sidebar>
