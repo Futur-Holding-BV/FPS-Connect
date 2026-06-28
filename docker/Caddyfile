@@ -1,0 +1,66 @@
+# ─────────────────────────────────────────────────────────────
+#  FPS Connect — Caddy reverse proxy
+#
+#  Gebruik omgevingsvariabelen:
+#    DOMAIN      = connect.fps-brandpreventie.nl
+#    ACME_EMAIL  = beheerder@fps-brandpreventie.nl
+#
+#  Caddy vraagt automatisch TLS-certificaat aan via Let's Encrypt.
+#  Zorg dat poorten 80 en 443 open staan op de server.
+# ─────────────────────────────────────────────────────────────
+
+{
+    # Globale opties
+    admin off
+    email {$ACME_EMAIL}
+
+    # Logs
+    log {
+        output file /var/log/caddy/access.log {
+            roll_size 50mb
+            roll_keep 5
+        }
+        format json
+    }
+}
+
+# Productie-domein met automatisch TLS
+{$DOMAIN} {
+    # Beveiligingsheaders
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "SAMEORIGIN"
+        X-XSS-Protection "1; mode=block"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        Permissions-Policy "camera=(), microphone=(), geolocation=()"
+        -Server
+    }
+
+    # API backend — alle verzoeken naar /api/*
+    handle /api/* {
+        reverse_proxy api:8080 {
+            header_up X-Real-IP {remote_host}
+            header_up X-Forwarded-For {remote_host}
+            header_up X-Forwarded-Proto {scheme}
+        }
+    }
+
+    # Frontend — alle overige verzoeken
+    handle {
+        reverse_proxy web:80 {
+            header_up X-Real-IP {remote_host}
+        }
+    }
+
+    # Toegangslog
+    log {
+        output file /var/log/caddy/fps-connect.log {
+            roll_size 100mb
+            roll_keep 10
+        }
+    }
+}
+
+# HTTP → HTTPS redirect (automatisch door Caddy)
+# Geen aparte configuratie nodig

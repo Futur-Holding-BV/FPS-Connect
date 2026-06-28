@@ -1,19 +1,26 @@
 version: "3.9"
 
 # ─────────────────────────────────────────────────────────────
-#  FPS Connect — CI/CD productie Docker Compose
+#  FPS Connect — Selfhost Docker Compose
 #
-#  Gebruik: pre-built images vanuit container registry (GitHub ghcr.io)
+#  Bouwt alle containers lokaal vanuit de broncode.
+#  Gebruik voor: disaster recovery, eigen server, eigen datacenter.
+#
+#  Vereiste omgevingsvariabelen: zie .env.docker.example
 #
 #  Starten:
 #    cp .env.docker.example .env.docker
-#    nano .env.docker
-#    docker compose -f docker-compose.production.yml --env-file .env.docker up -d
+#    nano .env.docker                   # vul waarden in
+#    docker compose --env-file .env.docker up -d --build
 #
-#  Voor disaster recovery zonder registry (bouw lokaal):
-#    Gebruik docker-compose.yml in plaats van dit bestand.
+#  Schema initialiseren (eenmalig na eerste start):
+#    docker compose exec api node --input-type=module \
+#      --eval "import('./dist/index.mjs').then(()=>process.exit(0))"
+#    docker compose exec -it api sh -c "pnpm db push" 2>/dev/null || true
 #
-#  Vereiste variabelen: zie .env.docker.example
+#  Logs bekijken:
+#    docker compose logs -f api
+#    docker compose logs -f caddy
 # ─────────────────────────────────────────────────────────────
 
 services:
@@ -56,7 +63,7 @@ services:
     networks:
       - internal
     ports:
-      - "127.0.0.1:9001:9001"
+      - "127.0.0.1:9001:9001"  # MinIO beheerinterface (alleen localhost)
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
       interval: 30s
@@ -86,34 +93,40 @@ services:
       "
     restart: "no"
 
-  # ── API Server (pre-built image) ──────────────────────────────
+  # ── API Server ───────────────────────────────────────────────
   api:
-    image: ${REGISTRY:-ghcr.io/fps-brandpreventie}/fps-connect-api:${IMAGE_TAG:-latest}
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.api
     restart: unless-stopped
     environment:
       NODE_ENV: production
       PORT: "8080"
       DATABASE_URL: postgresql://fps:${DB_PASSWORD}@db:5432/fps_connect
       SESSION_SECRET: ${SESSION_SECRET}
+      # Object storage
       S3_ENDPOINT: http://minio:9000
       S3_REGION: eu-west-1
       S3_BUCKET: fps-connect-bestanden
       S3_ACCESS_KEY_ID: ${MINIO_ROOT_USER}
       S3_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD}
+      # Microsoft Graph / e-mail
       AZURE_TENANT_ID: ${AZURE_TENANT_ID}
       AZURE_CLIENT_ID_NEW: ${AZURE_CLIENT_ID_NEW}
       AZURE_CLIENT_SECRET: ${AZURE_CLIENT_SECRET}
       MAIL_MAILBOX: ${MAIL_MAILBOX}
       MAIL_FROM: ${MAIL_FROM}
+      # AI
       OPENAI_API_KEY: ${OPENAI_API_KEY}
+      # Google Maps
       GOOGLE_MAPS_API_KEY: ${GOOGLE_MAPS_API_KEY}
-    networks:
-      - internal
     depends_on:
       db:
         condition: service_healthy
       minio:
         condition: service_healthy
+    networks:
+      - internal
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:8080/healthz"]
       interval: 30s
@@ -126,9 +139,14 @@ services:
         max-size: "50m"
         max-file: "5"
 
-  # ── Frontend (pre-built image → Nginx) ───────────────────────
+  # ── Frontend (React + Vite → Nginx) ──────────────────────────
   web:
-    image: ${REGISTRY:-ghcr.io/fps-brandpreventie}/fps-connect-web:${IMAGE_TAG:-latest}
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.web
+      args:
+        VITE_FEATURE_PLANNING: ${VITE_FEATURE_PLANNING:-true}
+        VITE_FEATURE_CALCULATIE: ${VITE_FEATURE_CALCULATIE:-false}
     restart: unless-stopped
     networks:
       - internal

@@ -1,0 +1,52 @@
+# ─────────────────────────────────────────────────────────────
+#  FPS Connect — Frontend (React + Vite)
+#  Multi-stage build: Vite bouwt statische bestanden,
+#  Nginx serveert ze.
+# ─────────────────────────────────────────────────────────────
+
+# ── Stage 1: builder ──────────────────────────────────────────
+FROM node:24-alpine AS builder
+
+RUN npm install -g pnpm@9 --no-update-notifier
+
+WORKDIR /workspace
+
+# Workspace-configuratie
+COPY pnpm-workspace.yaml package.json pnpm-lock.yaml* ./
+
+# Gedeelde libs
+COPY lib/ lib/
+
+# Frontend artifact
+COPY artifacts/firevault/ artifacts/firevault/
+
+# Feature flags als build args (kunnen overschreven worden bij build)
+ARG VITE_FEATURE_PLANNING=true
+ARG VITE_FEATURE_CALCULATIE=false
+ENV VITE_FEATURE_PLANNING=${VITE_FEATURE_PLANNING}
+ENV VITE_FEATURE_CALCULATIE=${VITE_FEATURE_CALCULATIE}
+
+# Vite vereist PORT en BASE_PATH tijdens build
+ENV PORT=3000
+ENV BASE_PATH=/
+
+# Replit-specifieke plugins uitschakelen
+ENV REPL_ID=""
+
+RUN pnpm install --frozen-lockfile --ignore-scripts
+
+RUN pnpm --filter @workspace/firevault run build
+
+# ── Stage 2: runtime ──────────────────────────────────────────
+FROM nginx:1.27-alpine AS runtime
+
+# Statische bestanden uit de Vite-build
+COPY --from=builder /workspace/artifacts/firevault/dist /usr/share/nginx/html
+
+# Aangepaste Nginx-configuratie (SPA routing + caching-headers)
+COPY docker/nginx.conf /etc/nginx/conf.d/default.conf
+
+EXPOSE 80
+
+HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
+    CMD wget -qO- http://localhost:80/ || exit 1
