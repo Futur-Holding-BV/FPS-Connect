@@ -506,31 +506,41 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
                   <SidebarGroupLabel>Financieel</SidebarGroupLabel>
                   <SidebarGroupContent>
                     <SidebarMenu>
+                      {toonSysteem && (
+                        <SidebarMenuItem>
+                          <SidebarMenuButton asChild isActive={location === "/beheer/boekhouding"}>
+                            <Link href="/beheer/boekhouding">
+                              <Receipt />
+                              <span>AccountView-koppeling</span>
+                            </Link>
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                      )}
                       <SidebarMenuItem>
                         <SidebarMenuButton
                           asChild
-                          isActive={location === "/facturen/dashboard"}
+                          isActive={
+                            location === "/facturen" ||
+                            location === "/facturen/dashboard" ||
+                            (location.startsWith("/facturen/") &&
+                              location !== "/facturen/klaar-voor-export" &&
+                              location !== "/facturen/exportlog")
+                          }
                         >
                           <Link href="/facturen/dashboard">
                             <LayoutDashboard />
-                            <span>Overzicht</span>
+                            <span>Facturen</span>
                           </Link>
                         </SidebarMenuButton>
                       </SidebarMenuItem>
                       <SidebarMenuItem>
                         <SidebarMenuButton
                           asChild
-                          isActive={
-                            location === "/facturen" ||
-                            (location.startsWith("/facturen/") &&
-                              location !== "/facturen/klaar-voor-export" &&
-                              location !== "/facturen/dashboard" &&
-                              location !== "/facturen/exportlog")
-                          }
+                          isActive={location === "/financieel/bedrijfsresultaten"}
                         >
-                          <Link href="/facturen">
-                            <Receipt />
-                            <span>Facturen</span>
+                          <Link href="/financieel/bedrijfsresultaten">
+                            <BarChart3 />
+                            <span>Bedrijfsresultaten</span>
                           </Link>
                         </SidebarMenuButton>
                       </SidebarMenuItem>
@@ -1055,14 +1065,6 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
                               <Link href="/beheer/backup">
                                 <HardDrive />
                                 <span>Back-up &amp; Herstel</span>
-                              </Link>
-                            </SidebarMenuButton>
-                          </SidebarMenuItem>
-                          <SidebarMenuItem>
-                            <SidebarMenuButton asChild isActive={location === "/beheer/boekhouding"}>
-                              <Link href="/beheer/boekhouding">
-                                <Receipt />
-                                <span>AccountView-koppeling</span>
                               </Link>
                             </SidebarMenuButton>
                           </SidebarMenuItem>

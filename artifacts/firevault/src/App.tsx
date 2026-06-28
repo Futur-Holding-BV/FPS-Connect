@@ -83,6 +83,7 @@ import VerzekeringenPagina from "@/pages/organisatie/verzekeringen";
 import BedrijfsgegevensPagina from "@/pages/organisatie/bedrijfsgegevens";
 import JaarverslagenPagina from "@/pages/organisatie/jaarverslagen";
 import BedrijfsdocumentenPagina from "@/pages/organisatie/bedrijfsdocumenten";
+import BedrijfsresultatenPagina from "@/pages/financieel/bedrijfsresultaten";
 import DossiersPagina from "@/pages/dossiers/index";
 import OffertesPagina from "@/pages/offertes/index";
 import ProposalStudio from "@/pages/offertes/studio";
@@ -305,6 +306,9 @@ function ConnectPortal() {
         <Route path="/personeel" component={PersoneelPagina} />
         <Route path="/gereedschappen" component={GereedschappenPagina} />
         <Route path="/gereedschappen/:id" component={GereedschapDetailPagina} />
+
+        {/* ── Financieel extra ── */}
+        <Route path="/financieel/bedrijfsresultaten" component={BedrijfsresultatenPagina} />
 
         {/* ── Organisatie ── */}
         <Route path="/organisatie/autopark" component={AutoparkPagina} />
