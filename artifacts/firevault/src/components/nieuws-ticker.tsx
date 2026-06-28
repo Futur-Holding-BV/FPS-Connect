@@ -2,6 +2,8 @@ import { useRef, useState, useEffect } from "react";
 import { useListNieuws } from "@workspace/api-client-react";
 import { Newspaper, Pause, Play, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { RadioSpeler } from "@/components/radio-speler";
+import { PauzeKnopTaakbalk } from "@/components/pauze/pauze-modal";
 
 export function NieuwsTicker() {
   const { data: nieuws = [], isLoading, refetch } = useListNieuws();
@@ -74,10 +76,16 @@ export function NieuwsTicker() {
           </div>
         </div>
 
-        {/* Pauzeer-knop */}
+        {/* Radio compact */}
+        <RadioSpeler compact />
+
+        {/* Pauze / spelletjes */}
+        <PauzeKnopTaakbalk />
+
+        {/* Ticker pauzeer-knop */}
         <button
           type="button"
-          title={gepauzeerd ? "Verder scrollen" : "Pauzeren"}
+          title={gepauzeerd ? "Nieuws verder scrollen" : "Nieuws pauzeren"}
           onClick={() => setGepauzeerd((v) => !v)}
           className="flex-shrink-0 flex items-center justify-center w-8 border-l border-white/10 text-white/40 hover:text-white/80 transition-colors"
         >

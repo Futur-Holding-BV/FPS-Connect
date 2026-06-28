@@ -52,7 +52,7 @@ function schrijfVoorkeur(sleutel: string, waarde: unknown) {
 
 // ── RadioSpeler component ─────────────────────────────────────────────────────
 
-export function RadioSpeler() {
+export function RadioSpeler({ compact = false }: { compact?: boolean } = {}) {
   const audioRef = useRef<HTMLAudioElement>(null);
 
   const [actieveZender, setActieveZender] = useState<Zender>(
@@ -142,6 +142,137 @@ export function RadioSpeler() {
     acc[z.genre].push(z);
     return acc;
   }, {});
+
+  const audioEl = (
+    <audio
+      ref={audioRef}
+      onCanPlay={() => setLaden(false)}
+      onPlaying={() => { setSpeelt(true); setLaden(false); setFout(false); }}
+      onPause={() => setSpeelt(false)}
+      onError={() => { setFout(true); setSpeelt(false); setLaden(false); }}
+      onWaiting={() => setLaden(true)}
+      preload="none"
+    />
+  );
+
+  const zenderPopover = (
+    <PopoverContent side="top" align="end" className="w-72 p-0 shadow-xl" sideOffset={6}>
+      <div className="p-3 border-b">
+        <div className="flex items-center gap-2 mb-2">
+          <Settings className="h-3.5 w-3.5 text-muted-foreground" />
+          <span className="text-xs font-semibold text-foreground">Radio-instellingen</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <Volume2 className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+          <Slider
+            min={0} max={1} step={0.01}
+            value={[gedempt ? 0 : volume]}
+            onValueChange={wisselVolume}
+            className="flex-1"
+          />
+          <span className="text-[10px] text-muted-foreground w-7 text-right tabular-nums">
+            {Math.round((gedempt ? 0 : volume) * 100)}%
+          </span>
+        </div>
+      </div>
+      <div className="max-h-72 overflow-y-auto">
+        {Object.entries(genreGroepen).map(([genre, zenders]) => (
+          <div key={genre}>
+            <p className="px-3 pt-2.5 pb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">
+              {genre}
+            </p>
+            {zenders.map(zender => (
+              <button
+                key={zender.id}
+                type="button"
+                onClick={() => kiesZender(zender)}
+                className={cn(
+                  "w-full flex items-center gap-2.5 px-3 py-1.5 text-left hover:bg-muted/60 transition-colors",
+                  actieveZender.id === zender.id && "bg-primary/10",
+                )}
+              >
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); wisselFavoriet(zender.id); }}
+                  className="shrink-0 text-muted-foreground hover:text-amber-500 transition-colors"
+                  title={favorieten.includes(zender.id) ? "Verwijder uit favorieten" : "Voeg toe aan favorieten"}
+                >
+                  <span className={cn("text-sm", favorieten.includes(zender.id) ? "text-amber-500" : "text-muted-foreground/30")}>★</span>
+                </button>
+                <span className={cn("flex-1 text-sm", actieveZender.id === zender.id ? "font-semibold text-foreground" : "text-foreground/80")}>
+                  {zender.naam}
+                </span>
+                {actieveZender.id === zender.id && speelt && (
+                  <span className="shrink-0 flex gap-0.5 items-end h-3">
+                    <span className="w-0.5 bg-primary animate-[equalizer_0.8s_ease-in-out_infinite]" style={{ height: "40%" }} />
+                    <span className="w-0.5 bg-primary animate-[equalizer_0.8s_ease-in-out_0.2s_infinite]" style={{ height: "80%" }} />
+                    <span className="w-0.5 bg-primary animate-[equalizer_0.8s_ease-in-out_0.4s_infinite]" style={{ height: "60%" }} />
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
+        ))}
+      </div>
+      <div className="px-3 py-2 border-t">
+        <p className="text-[10px] text-muted-foreground/60">
+          Klik op ★ om een zender als favoriet te markeren
+        </p>
+      </div>
+    </PopoverContent>
+  );
+
+  if (compact) {
+    return (
+      <>
+        {audioEl}
+        <div className="flex items-center h-full border-r border-white/10 px-1">
+          <button
+            type="button"
+            onClick={wisselAfspelen}
+            className="flex items-center justify-center w-7 h-7 rounded text-white/60 hover:text-white/90 transition-colors"
+            title={speelt ? "Radio pauzeren" : "Radio afspelen"}
+          >
+            {laden ? (
+              <Radio className="h-3.5 w-3.5 text-[hsl(12,90%,50%)] animate-pulse" />
+            ) : speelt ? (
+              <Pause className="h-3.5 w-3.5 text-[hsl(12,90%,50%)]" />
+            ) : (
+              <Play className="h-3.5 w-3.5" />
+            )}
+          </button>
+          <button
+            type="button"
+            onClick={() => setInstellingenOpen(true)}
+            className="max-w-[88px] truncate text-[11px] text-white/60 hover:text-white transition-colors px-1"
+            title="Zender kiezen"
+          >
+            {actieveZender.naam}
+          </button>
+          <button
+            type="button"
+            onClick={() => setGedempt(g => !g)}
+            className="flex items-center justify-center w-6 h-6 rounded text-white/40 hover:text-white/80 transition-colors"
+            title={gedempt ? "Geluid aan" : "Dempen"}
+          >
+            {gedempt ? <VolumeX className="h-3 w-3" /> : <Volume2 className="h-3 w-3" />}
+          </button>
+          <Popover open={instellingenOpen} onOpenChange={setInstellingenOpen}>
+            <PopoverTrigger asChild>
+              <button
+                type="button"
+                className="flex items-center justify-center w-6 h-6 rounded text-white/40 hover:text-white/80 transition-colors"
+                title="Zender en volume"
+              >
+                <ChevronUp className={cn("h-3 w-3 transition-transform", instellingenOpen && "rotate-180")} />
+              </button>
+            </PopoverTrigger>
+            {zenderPopover}
+          </Popover>
+        </div>
+      </>
+    );
+  }
 
   return (
     <>

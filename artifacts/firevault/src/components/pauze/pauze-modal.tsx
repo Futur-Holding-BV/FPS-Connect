@@ -619,3 +619,20 @@ export function PauzeKnop() {
     </>
   );
 }
+
+export function PauzeKnopTaakbalk() {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        title="Pauze — even een spelletje"
+        className="flex-shrink-0 flex items-center justify-center w-8 border-l border-white/10 text-white/40 hover:text-white/80 transition-colors h-full"
+      >
+        <Coffee className="w-3.5 h-3.5" />
+      </button>
+      <PauzeModal open={open} onOpenChange={setOpen} />
+    </>
+  );
+}
