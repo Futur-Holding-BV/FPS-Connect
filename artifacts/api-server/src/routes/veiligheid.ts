@@ -1152,7 +1152,7 @@ veiligheidRouter.get("/veiligheid/meldingen", lezenVeiligheid, async (req, res) 
         melderNaam: veiligheidMeldingenTable.melderNaam,
         gemeldDoorId: veiligheidMeldingenTable.gemeldDoorId,
         toegewezenAanId: veiligheidMeldingenTable.toegewezenAanId,
-        toegewezen_aan_naam: sql<string | null>`coalesce(u.naam || ' ' || u.achternaam, u.email)`,
+        toegewezen_aan_naam: sql<string | null>`coalesce(nullif(trim(${gebruikersTable.naam}), ''), ${gebruikersTable.email})`,
         aangemaaktOp: veiligheidMeldingenTable.aangemaaktOp,
         bijgewerktOp: veiligheidMeldingenTable.bijgewerktOp,
       })
@@ -1230,7 +1230,7 @@ veiligheidRouter.get("/veiligheid/meldingen/:id", lezenVeiligheid, async (req, r
         melderNaam: veiligheidMeldingenTable.melderNaam,
         gemeldDoorId: veiligheidMeldingenTable.gemeldDoorId,
         toegewezenAanId: veiligheidMeldingenTable.toegewezenAanId,
-        toegewezen_aan_naam: sql<string | null>`coalesce(u.naam || ' ' || u.achternaam, u.email)`,
+        toegewezen_aan_naam: sql<string | null>`coalesce(nullif(trim(${gebruikersTable.naam}), ''), ${gebruikersTable.email})`,
         aangemaaktOp: veiligheidMeldingenTable.aangemaaktOp,
         bijgewerktOp: veiligheidMeldingenTable.bijgewerktOp,
       })
