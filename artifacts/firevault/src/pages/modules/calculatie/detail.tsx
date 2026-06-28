@@ -52,7 +52,7 @@ const STATUS_LABEL: Record<string, string> = {
 
 const STATUS_KLEUR: Record<string, string> = {
   concept: "bg-slate-100 text-slate-700 border-slate-200",
-  intern_akkoord: "bg-blue-100 text-blue-800 border-blue-200",
+  intern_akkoord: "bg-violet-100 text-violet-800 border-violet-200",
   aangeboden: "bg-amber-100 text-amber-800 border-amber-200",
   gewonnen: "bg-green-100 text-green-800 border-green-200",
   verloren: "bg-red-100 text-red-800 border-red-200",
@@ -88,12 +88,12 @@ const CATEGORIE_LABEL: Record<string, string> = {
 };
 
 const CATEGORIE_KLEUR: Record<string, string> = {
-  arbeid:         "bg-blue-50 text-blue-700",
+  arbeid:         "bg-slate-100 text-slate-700",
   materiaal:      "bg-green-50 text-green-700",
   onderaanneming: "bg-purple-50 text-purple-700",
   materieel:      "bg-orange-50 text-orange-700",
   opslag:         "bg-amber-50 text-amber-700",
-  stelpost:       "bg-cyan-50 text-cyan-700",
+  stelpost:       "bg-amber-100 text-amber-800",
   regiepost:      "bg-pink-50 text-pink-700",
   overig:         "bg-slate-50 text-slate-600",
 };
@@ -388,7 +388,7 @@ function SpreadsheetRegelRij({
       );
     }
     return (
-      <td style={{ width: breedte }} className={cn(celKlasse, "bg-blue-50/20")}>
+      <td style={{ width: breedte }} className={cn(celKlasse, "bg-slate-50/60")}>
         <input
           type="number"
           step="0.01"
