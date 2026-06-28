@@ -18,7 +18,7 @@ import {
   BookOpen, HardDriveUpload, CalendarCheck2, Settings2, ArchiveRestore,
   Inbox, Building2, Target, Handshake, Newspaper, CalendarRange, KeyRound,
   ClipboardCheck, AlertTriangle, FileArchive, Receipt, ArrowUpRight, ScrollText,
-  UserPlus, UserMinus, Car, GitBranch,
+  UserPlus, UserMinus, Car, GitBranch, ArrowLeft,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { GebruikerMenu } from "@/components/gebruiker-menu";
@@ -26,6 +26,22 @@ import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
 import { useRol } from "@/context/rol-context";
 import { featureFlags } from "@/lib/feature-flags";
 import { cn } from "@/lib/utils";
+import { NavigatieBewakingProvider, useNavigatieBewaking } from "@/context/navigatie-bewaking";
+
+function TerugKnop() {
+  const { requestTerug } = useNavigatieBewaking();
+  return (
+    <button
+      onClick={requestTerug}
+      className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors px-2 py-1 rounded-md hover:bg-muted"
+      title="Terug"
+      type="button"
+    >
+      <ArrowLeft className="h-4 w-4" />
+      <span className="hidden sm:inline">Terug</span>
+    </button>
+  );
+}
 
 type Omgeving = "connect" | "one";
 const OMGEVING_SLEUTEL = "fps.omgeving";
@@ -36,6 +52,14 @@ function omgevingVanLocatie(loc: string): Omgeving | null {
 }
 
 export default function BeheerderLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <NavigatieBewakingProvider>
+      <BeheerderLayoutInhoud>{children}</BeheerderLayoutInhoud>
+    </NavigatieBewakingProvider>
+  );
+}
+
+function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
   const { t } = useTranslation();
   const { heeftNiveau } = useBevoegdheid();
@@ -1190,10 +1214,11 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
       </Sidebar>
 
       <main className="flex-1 min-h-screen overflow-auto bg-background">
-        {/* Mobiele topbalk — alleen zichtbaar onder md, geeft toegang tot het menu */}
-        <div className="sticky top-0 z-10 flex items-center gap-3 px-3 py-2 bg-background border-b border-border md:hidden">
-          <SidebarTrigger title="Menu openen" />
-          <img src="/logo-fps-connect.png" alt="FPS Connect" className="h-6 w-auto" />
+        {/* Universele topbalk — terugknop altijd zichtbaar, menu toggle alleen mobiel */}
+        <div className="sticky top-0 z-20 flex items-center gap-2 px-2 py-1.5 bg-background border-b border-border">
+          <SidebarTrigger className="md:hidden" title="Menu openen" />
+          <img src="/logo-fps-connect.png" alt="FPS Connect" className="h-5 w-auto md:hidden" />
+          <TerugKnop />
         </div>
         <div className="p-3 md:p-4 xl:p-6 pb-10">
           {children}
