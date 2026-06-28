@@ -509,6 +509,13 @@ import type {
   Werkgever,
   WerkgeverInput,
   WerkgeverSalarisConfig,
+  WorkflowCard,
+  WorkflowCardInput,
+  WorkflowDefinitie,
+  WorkflowDefinitieInput,
+  WorkflowDetail,
+  WorkflowLane,
+  WorkflowLaneInput,
   Ziekmelding,
   ZiekmeldingenInput,
   ZiekmeldingenSelfInput,
@@ -47086,5 +47093,722 @@ export const usePatchWerkgeversIdSalarisConfig = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getPatchWerkgeversIdSalarisConfigMutationOptions(options));
+    }
+
+export const getListWorkflowDefinitiesUrl = () => {
+
+
+
+
+  return `/api/workflow-definities`
+}
+
+/**
+ * @summary Lijst van workflow-definities
+ */
+export const listWorkflowDefinities = async ( options?: RequestInit): Promise<WorkflowDefinitie[]> => {
+
+  return customFetch<WorkflowDefinitie[]>(getListWorkflowDefinitiesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListWorkflowDefinitiesQueryKey = () => {
+    return [
+    `/api/workflow-definities`
+    ] as const;
+    }
+
+
+export const getListWorkflowDefinitiesQueryOptions = <TData = Awaited<ReturnType<typeof listWorkflowDefinities>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listWorkflowDefinities>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListWorkflowDefinitiesQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listWorkflowDefinities>>> = ({ signal }) => listWorkflowDefinities({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listWorkflowDefinities>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListWorkflowDefinitiesQueryResult = NonNullable<Awaited<ReturnType<typeof listWorkflowDefinities>>>
+export type ListWorkflowDefinitiesQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Lijst van workflow-definities
+ */
+
+export function useListWorkflowDefinities<TData = Awaited<ReturnType<typeof listWorkflowDefinities>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listWorkflowDefinities>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListWorkflowDefinitiesQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getPostWorkflowDefinitieUrl = () => {
+
+
+
+
+  return `/api/workflow-definities`
+}
+
+/**
+ * @summary Nieuwe workflow aanmaken
+ */
+export const postWorkflowDefinitie = async (workflowDefinitieInput: WorkflowDefinitieInput, options?: RequestInit): Promise<WorkflowDefinitie> => {
+
+  return customFetch<WorkflowDefinitie>(getPostWorkflowDefinitieUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(workflowDefinitieInput)
+  }
+);}
+
+
+
+
+export const getPostWorkflowDefinitieMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postWorkflowDefinitie>>, TError,{data: BodyType<WorkflowDefinitieInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof postWorkflowDefinitie>>, TError,{data: BodyType<WorkflowDefinitieInput>}, TContext> => {
+
+const mutationKey = ['postWorkflowDefinitie'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postWorkflowDefinitie>>, {data: BodyType<WorkflowDefinitieInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  postWorkflowDefinitie(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PostWorkflowDefinitieMutationResult = NonNullable<Awaited<ReturnType<typeof postWorkflowDefinitie>>>
+    export type PostWorkflowDefinitieMutationBody = BodyType<WorkflowDefinitieInput>
+    export type PostWorkflowDefinitieMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Nieuwe workflow aanmaken
+ */
+export const usePostWorkflowDefinitie = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postWorkflowDefinitie>>, TError,{data: BodyType<WorkflowDefinitieInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof postWorkflowDefinitie>>,
+        TError,
+        {data: BodyType<WorkflowDefinitieInput>},
+        TContext
+      > => {
+      return useMutation(getPostWorkflowDefinitieMutationOptions(options));
+    }
+
+export const getGetWorkflowDefinitieUrl = (id: number,) => {
+
+
+
+
+  return `/api/workflow-definities/${id}`
+}
+
+/**
+ * @summary Workflow detail met lanes en kaarten
+ */
+export const getWorkflowDefinitie = async (id: number, options?: RequestInit): Promise<WorkflowDetail> => {
+
+  return customFetch<WorkflowDetail>(getGetWorkflowDefinitieUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetWorkflowDefinitieQueryKey = (id: number,) => {
+    return [
+    `/api/workflow-definities/${id}`
+    ] as const;
+    }
+
+
+export const getGetWorkflowDefinitieQueryOptions = <TData = Awaited<ReturnType<typeof getWorkflowDefinitie>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getWorkflowDefinitie>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetWorkflowDefinitieQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getWorkflowDefinitie>>> = ({ signal }) => getWorkflowDefinitie(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getWorkflowDefinitie>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetWorkflowDefinitieQueryResult = NonNullable<Awaited<ReturnType<typeof getWorkflowDefinitie>>>
+export type GetWorkflowDefinitieQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Workflow detail met lanes en kaarten
+ */
+
+export function useGetWorkflowDefinitie<TData = Awaited<ReturnType<typeof getWorkflowDefinitie>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getWorkflowDefinitie>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetWorkflowDefinitieQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getPatchWorkflowDefinitieUrl = (id: number,) => {
+
+
+
+
+  return `/api/workflow-definities/${id}`
+}
+
+/**
+ * @summary Workflow bijwerken
+ */
+export const patchWorkflowDefinitie = async (id: number,
+    workflowDefinitieInput: WorkflowDefinitieInput, options?: RequestInit): Promise<WorkflowDefinitie> => {
+
+  return customFetch<WorkflowDefinitie>(getPatchWorkflowDefinitieUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(workflowDefinitieInput)
+  }
+);}
+
+
+
+
+export const getPatchWorkflowDefinitieMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof patchWorkflowDefinitie>>, TError,{id: number;data: BodyType<WorkflowDefinitieInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof patchWorkflowDefinitie>>, TError,{id: number;data: BodyType<WorkflowDefinitieInput>}, TContext> => {
+
+const mutationKey = ['patchWorkflowDefinitie'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof patchWorkflowDefinitie>>, {id: number;data: BodyType<WorkflowDefinitieInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  patchWorkflowDefinitie(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PatchWorkflowDefinitieMutationResult = NonNullable<Awaited<ReturnType<typeof patchWorkflowDefinitie>>>
+    export type PatchWorkflowDefinitieMutationBody = BodyType<WorkflowDefinitieInput>
+    export type PatchWorkflowDefinitieMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Workflow bijwerken
+ */
+export const usePatchWorkflowDefinitie = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof patchWorkflowDefinitie>>, TError,{id: number;data: BodyType<WorkflowDefinitieInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof patchWorkflowDefinitie>>,
+        TError,
+        {id: number;data: BodyType<WorkflowDefinitieInput>},
+        TContext
+      > => {
+      return useMutation(getPatchWorkflowDefinitieMutationOptions(options));
+    }
+
+export const getPostWorkflowLaneUrl = () => {
+
+
+
+
+  return `/api/workflow-lanes`
+}
+
+/**
+ * @summary Lane toevoegen aan workflow
+ */
+export const postWorkflowLane = async (workflowLaneInput: WorkflowLaneInput, options?: RequestInit): Promise<WorkflowLane> => {
+
+  return customFetch<WorkflowLane>(getPostWorkflowLaneUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(workflowLaneInput)
+  }
+);}
+
+
+
+
+export const getPostWorkflowLaneMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postWorkflowLane>>, TError,{data: BodyType<WorkflowLaneInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof postWorkflowLane>>, TError,{data: BodyType<WorkflowLaneInput>}, TContext> => {
+
+const mutationKey = ['postWorkflowLane'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postWorkflowLane>>, {data: BodyType<WorkflowLaneInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  postWorkflowLane(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PostWorkflowLaneMutationResult = NonNullable<Awaited<ReturnType<typeof postWorkflowLane>>>
+    export type PostWorkflowLaneMutationBody = BodyType<WorkflowLaneInput>
+    export type PostWorkflowLaneMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Lane toevoegen aan workflow
+ */
+export const usePostWorkflowLane = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postWorkflowLane>>, TError,{data: BodyType<WorkflowLaneInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof postWorkflowLane>>,
+        TError,
+        {data: BodyType<WorkflowLaneInput>},
+        TContext
+      > => {
+      return useMutation(getPostWorkflowLaneMutationOptions(options));
+    }
+
+export const getPatchWorkflowLaneUrl = (id: number,) => {
+
+
+
+
+  return `/api/workflow-lanes/${id}`
+}
+
+/**
+ * @summary Lane bijwerken
+ */
+export const patchWorkflowLane = async (id: number,
+    workflowLaneInput: WorkflowLaneInput, options?: RequestInit): Promise<WorkflowLane> => {
+
+  return customFetch<WorkflowLane>(getPatchWorkflowLaneUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(workflowLaneInput)
+  }
+);}
+
+
+
+
+export const getPatchWorkflowLaneMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof patchWorkflowLane>>, TError,{id: number;data: BodyType<WorkflowLaneInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof patchWorkflowLane>>, TError,{id: number;data: BodyType<WorkflowLaneInput>}, TContext> => {
+
+const mutationKey = ['patchWorkflowLane'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof patchWorkflowLane>>, {id: number;data: BodyType<WorkflowLaneInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  patchWorkflowLane(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PatchWorkflowLaneMutationResult = NonNullable<Awaited<ReturnType<typeof patchWorkflowLane>>>
+    export type PatchWorkflowLaneMutationBody = BodyType<WorkflowLaneInput>
+    export type PatchWorkflowLaneMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Lane bijwerken
+ */
+export const usePatchWorkflowLane = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof patchWorkflowLane>>, TError,{id: number;data: BodyType<WorkflowLaneInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof patchWorkflowLane>>,
+        TError,
+        {id: number;data: BodyType<WorkflowLaneInput>},
+        TContext
+      > => {
+      return useMutation(getPatchWorkflowLaneMutationOptions(options));
+    }
+
+export const getDeleteWorkflowLaneUrl = (id: number,) => {
+
+
+
+
+  return `/api/workflow-lanes/${id}`
+}
+
+/**
+ * @summary Lane verwijderen
+ */
+export const deleteWorkflowLane = async (id: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteWorkflowLaneUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteWorkflowLaneMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteWorkflowLane>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteWorkflowLane>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deleteWorkflowLane'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteWorkflowLane>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteWorkflowLane(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteWorkflowLaneMutationResult = NonNullable<Awaited<ReturnType<typeof deleteWorkflowLane>>>
+
+    export type DeleteWorkflowLaneMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Lane verwijderen
+ */
+export const useDeleteWorkflowLane = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteWorkflowLane>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteWorkflowLane>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeleteWorkflowLaneMutationOptions(options));
+    }
+
+export const getPostWorkflowCardUrl = () => {
+
+
+
+
+  return `/api/workflow-cards`
+}
+
+/**
+ * @summary Kaart toevoegen aan lane
+ */
+export const postWorkflowCard = async (workflowCardInput: WorkflowCardInput, options?: RequestInit): Promise<WorkflowCard> => {
+
+  return customFetch<WorkflowCard>(getPostWorkflowCardUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(workflowCardInput)
+  }
+);}
+
+
+
+
+export const getPostWorkflowCardMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postWorkflowCard>>, TError,{data: BodyType<WorkflowCardInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof postWorkflowCard>>, TError,{data: BodyType<WorkflowCardInput>}, TContext> => {
+
+const mutationKey = ['postWorkflowCard'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postWorkflowCard>>, {data: BodyType<WorkflowCardInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  postWorkflowCard(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PostWorkflowCardMutationResult = NonNullable<Awaited<ReturnType<typeof postWorkflowCard>>>
+    export type PostWorkflowCardMutationBody = BodyType<WorkflowCardInput>
+    export type PostWorkflowCardMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Kaart toevoegen aan lane
+ */
+export const usePostWorkflowCard = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postWorkflowCard>>, TError,{data: BodyType<WorkflowCardInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof postWorkflowCard>>,
+        TError,
+        {data: BodyType<WorkflowCardInput>},
+        TContext
+      > => {
+      return useMutation(getPostWorkflowCardMutationOptions(options));
+    }
+
+export const getPatchWorkflowCardUrl = (id: number,) => {
+
+
+
+
+  return `/api/workflow-cards/${id}`
+}
+
+/**
+ * @summary Kaart bijwerken of verplaatsen
+ */
+export const patchWorkflowCard = async (id: number,
+    workflowCardInput: WorkflowCardInput, options?: RequestInit): Promise<WorkflowCard> => {
+
+  return customFetch<WorkflowCard>(getPatchWorkflowCardUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(workflowCardInput)
+  }
+);}
+
+
+
+
+export const getPatchWorkflowCardMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof patchWorkflowCard>>, TError,{id: number;data: BodyType<WorkflowCardInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof patchWorkflowCard>>, TError,{id: number;data: BodyType<WorkflowCardInput>}, TContext> => {
+
+const mutationKey = ['patchWorkflowCard'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof patchWorkflowCard>>, {id: number;data: BodyType<WorkflowCardInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  patchWorkflowCard(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PatchWorkflowCardMutationResult = NonNullable<Awaited<ReturnType<typeof patchWorkflowCard>>>
+    export type PatchWorkflowCardMutationBody = BodyType<WorkflowCardInput>
+    export type PatchWorkflowCardMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Kaart bijwerken of verplaatsen
+ */
+export const usePatchWorkflowCard = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof patchWorkflowCard>>, TError,{id: number;data: BodyType<WorkflowCardInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof patchWorkflowCard>>,
+        TError,
+        {id: number;data: BodyType<WorkflowCardInput>},
+        TContext
+      > => {
+      return useMutation(getPatchWorkflowCardMutationOptions(options));
+    }
+
+export const getDeleteWorkflowCardUrl = (id: number,) => {
+
+
+
+
+  return `/api/workflow-cards/${id}`
+}
+
+/**
+ * @summary Kaart verwijderen
+ */
+export const deleteWorkflowCard = async (id: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteWorkflowCardUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteWorkflowCardMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteWorkflowCard>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteWorkflowCard>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deleteWorkflowCard'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteWorkflowCard>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteWorkflowCard(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteWorkflowCardMutationResult = NonNullable<Awaited<ReturnType<typeof deleteWorkflowCard>>>
+
+    export type DeleteWorkflowCardMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Kaart verwijderen
+ */
+export const useDeleteWorkflowCard = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteWorkflowCard>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteWorkflowCard>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeleteWorkflowCardMutationOptions(options));
     }
 

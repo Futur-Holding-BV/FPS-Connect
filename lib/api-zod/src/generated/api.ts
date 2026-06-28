@@ -16320,3 +16320,247 @@ export const PatchWerkgeversIdSalarisConfigResponse = zod.object({
 })
 
 
+/**
+ * @summary Lijst van workflow-definities
+ */
+export const ListWorkflowDefinitiesResponseItem = zod.object({
+  "id": zod.number(),
+  "naam": zod.string(),
+  "type": zod.string(),
+  "omschrijving": zod.string().nullish(),
+  "actief": zod.boolean(),
+  "volgorde": zod.number(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+export const ListWorkflowDefinitiesResponse = zod.array(ListWorkflowDefinitiesResponseItem)
+
+
+/**
+ * @summary Nieuwe workflow aanmaken
+ */
+export const PostWorkflowDefinitieBody = zod.object({
+  "naam": zod.string().optional(),
+  "type": zod.string().optional(),
+  "omschrijving": zod.string().optional(),
+  "actief": zod.boolean().optional()
+})
+
+export const PostWorkflowDefinitieResponse = zod.void()
+
+
+/**
+ * @summary Workflow detail met lanes en kaarten
+ */
+export const GetWorkflowDefinitieParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetWorkflowDefinitieResponse = zod.object({
+  "id": zod.number(),
+  "naam": zod.string(),
+  "type": zod.string(),
+  "omschrijving": zod.string().nullish(),
+  "actief": zod.boolean(),
+  "volgorde": zod.number(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+}).and(zod.object({
+  "lanes": zod.array(zod.object({
+  "id": zod.number(),
+  "workflow_id": zod.number(),
+  "naam": zod.string(),
+  "kleur": zod.string(),
+  "volgorde": zod.number(),
+  "aangemaakt_op": zod.string(),
+  "cards": zod.array(zod.object({
+  "id": zod.number(),
+  "workflow_id": zod.number(),
+  "lane_id": zod.number(),
+  "type": zod.string(),
+  "titel": zod.string(),
+  "omschrijving": zod.string().nullish(),
+  "invoer": zod.string().nullish(),
+  "uitvoer": zod.string().nullish(),
+  "rol": zod.string().nullish(),
+  "ai_taak": zod.string().nullish(),
+  "akkoord_door": zod.string().nullish(),
+  "gekoppelde_module": zod.string().nullish(),
+  "uitzonderingsroute": zod.string().nullish(),
+  "actief": zod.boolean(),
+  "volgorde": zod.number(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})).optional()
+})).optional()
+}))
+
+
+/**
+ * @summary Workflow bijwerken
+ */
+export const PatchWorkflowDefinitieParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const PatchWorkflowDefinitieBody = zod.object({
+  "naam": zod.string().optional(),
+  "type": zod.string().optional(),
+  "omschrijving": zod.string().optional(),
+  "actief": zod.boolean().optional()
+})
+
+export const PatchWorkflowDefinitieResponse = zod.object({
+  "id": zod.number(),
+  "naam": zod.string(),
+  "type": zod.string(),
+  "omschrijving": zod.string().nullish(),
+  "actief": zod.boolean(),
+  "volgorde": zod.number(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+
+
+/**
+ * @summary Lane toevoegen aan workflow
+ */
+export const PostWorkflowLaneBody = zod.object({
+  "workflow_id": zod.number().optional(),
+  "naam": zod.string().optional(),
+  "kleur": zod.string().optional()
+})
+
+export const PostWorkflowLaneResponse = zod.void()
+
+
+/**
+ * @summary Lane bijwerken
+ */
+export const PatchWorkflowLaneParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const PatchWorkflowLaneBody = zod.object({
+  "workflow_id": zod.number().optional(),
+  "naam": zod.string().optional(),
+  "kleur": zod.string().optional()
+})
+
+export const PatchWorkflowLaneResponse = zod.object({
+  "id": zod.number(),
+  "workflow_id": zod.number(),
+  "naam": zod.string(),
+  "kleur": zod.string(),
+  "volgorde": zod.number(),
+  "aangemaakt_op": zod.string(),
+  "cards": zod.array(zod.object({
+  "id": zod.number(),
+  "workflow_id": zod.number(),
+  "lane_id": zod.number(),
+  "type": zod.string(),
+  "titel": zod.string(),
+  "omschrijving": zod.string().nullish(),
+  "invoer": zod.string().nullish(),
+  "uitvoer": zod.string().nullish(),
+  "rol": zod.string().nullish(),
+  "ai_taak": zod.string().nullish(),
+  "akkoord_door": zod.string().nullish(),
+  "gekoppelde_module": zod.string().nullish(),
+  "uitzonderingsroute": zod.string().nullish(),
+  "actief": zod.boolean(),
+  "volgorde": zod.number(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})).optional()
+})
+
+
+/**
+ * @summary Lane verwijderen
+ */
+export const DeleteWorkflowLaneParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteWorkflowLaneResponse = zod.void()
+
+
+/**
+ * @summary Kaart toevoegen aan lane
+ */
+export const PostWorkflowCardBody = zod.object({
+  "workflow_id": zod.number().optional(),
+  "lane_id": zod.number().optional(),
+  "type": zod.string().optional(),
+  "titel": zod.string().optional(),
+  "omschrijving": zod.string().optional(),
+  "invoer": zod.string().optional(),
+  "uitvoer": zod.string().optional(),
+  "rol": zod.string().optional(),
+  "ai_taak": zod.string().optional(),
+  "akkoord_door": zod.string().optional(),
+  "gekoppelde_module": zod.string().optional(),
+  "uitzonderingsroute": zod.string().optional(),
+  "actief": zod.boolean().optional(),
+  "volgorde": zod.number().optional()
+})
+
+export const PostWorkflowCardResponse = zod.void()
+
+
+/**
+ * @summary Kaart bijwerken of verplaatsen
+ */
+export const PatchWorkflowCardParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const PatchWorkflowCardBody = zod.object({
+  "workflow_id": zod.number().optional(),
+  "lane_id": zod.number().optional(),
+  "type": zod.string().optional(),
+  "titel": zod.string().optional(),
+  "omschrijving": zod.string().optional(),
+  "invoer": zod.string().optional(),
+  "uitvoer": zod.string().optional(),
+  "rol": zod.string().optional(),
+  "ai_taak": zod.string().optional(),
+  "akkoord_door": zod.string().optional(),
+  "gekoppelde_module": zod.string().optional(),
+  "uitzonderingsroute": zod.string().optional(),
+  "actief": zod.boolean().optional(),
+  "volgorde": zod.number().optional()
+})
+
+export const PatchWorkflowCardResponse = zod.object({
+  "id": zod.number(),
+  "workflow_id": zod.number(),
+  "lane_id": zod.number(),
+  "type": zod.string(),
+  "titel": zod.string(),
+  "omschrijving": zod.string().nullish(),
+  "invoer": zod.string().nullish(),
+  "uitvoer": zod.string().nullish(),
+  "rol": zod.string().nullish(),
+  "ai_taak": zod.string().nullish(),
+  "akkoord_door": zod.string().nullish(),
+  "gekoppelde_module": zod.string().nullish(),
+  "uitzonderingsroute": zod.string().nullish(),
+  "actief": zod.boolean(),
+  "volgorde": zod.number(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+
+
+/**
+ * @summary Kaart verwijderen
+ */
+export const DeleteWorkflowCardParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteWorkflowCardResponse = zod.void()
+
+

@@ -83,6 +83,7 @@ import VerzekeringenPagina from "@/pages/organisatie/verzekeringen";
 import BedrijfsgegevensPagina from "@/pages/organisatie/bedrijfsgegevens";
 import JaarverslagenPagina from "@/pages/organisatie/jaarverslagen";
 import BedrijfsdocumentenPagina from "@/pages/organisatie/bedrijfsdocumenten";
+import WorkflowDesignerPagina from "@/pages/workflow/index";
 import BedrijfsresultatenPagina from "@/pages/financieel/bedrijfsresultaten";
 import DossiersPagina from "@/pages/dossiers/index";
 import OffertesPagina from "@/pages/offertes/index";
@@ -316,6 +317,7 @@ function ConnectPortal() {
         <Route path="/organisatie/bedrijfsgegevens" component={BedrijfsgegevensPagina} />
         <Route path="/organisatie/jaarverslagen" component={JaarverslagenPagina} />
         <Route path="/organisatie/bedrijfsdocumenten" component={BedrijfsdocumentenPagina} />
+        <Route path="/workflow" component={WorkflowDesignerPagina} />
         <Route path="/uren" component={UrenPagina} />
         <Route path="/weekstaten" component={WeekstatenPagina} />
         <Route path="/hall-of-fame" component={HallOfFamePagina} />

@@ -18,7 +18,7 @@ import {
   BookOpen, HardDriveUpload, CalendarCheck2, Settings2, ArchiveRestore,
   Inbox, Building2, Target, Handshake, Newspaper, CalendarRange, KeyRound,
   ClipboardCheck, AlertTriangle, FileArchive, Receipt, ArrowUpRight, ScrollText,
-  UserPlus, UserMinus, Car,
+  UserPlus, UserMinus, Car, GitBranch,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { GebruikerMenu } from "@/components/gebruiker-menu";
@@ -676,6 +676,17 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
                         <Link href="/organisatie/bedrijfsdocumenten">
                           <Files />
                           <span>Bedrijfsdocumenten</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                    <SidebarMenuItem className="pl-5">
+                      <SidebarMenuButton
+                        asChild
+                        isActive={location === "/workflow" || location.startsWith("/workflow")}
+                      >
+                        <Link href="/workflow">
+                          <GitBranch />
+                          <span>Workflow</span>
                         </Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>

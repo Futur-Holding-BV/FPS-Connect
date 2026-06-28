@@ -55,6 +55,7 @@ import scabMailRouter from "./scab-mail";
 import boekhouderRouter from "./boekhouder";
 import loonOutputRouter from "./loon-output";
 import slimUploadRouter from "./slim-upload";
+import workflowRouter from "./workflow";
 import { requireAuth } from "../middlewares/auth";
 
 const router: IRouter = Router();
@@ -119,5 +120,6 @@ router.use(scabMailRouter);
 router.use(boekhouderRouter);
 router.use(loonOutputRouter);
 router.use(slimUploadRouter);
+router.use(workflowRouter);
 
 export default router;

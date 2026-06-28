@@ -34,3 +34,4 @@ export * from "./snagstream";
 export * from "./facturen";
 export * from "./golive";
 export * from "./salarismutaties";
+export * from "./workflow";

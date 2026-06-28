@@ -6630,6 +6630,81 @@ export interface ScabMailBijlageInput {
   medewerker_id?: number;
 }
 
+export interface WorkflowDefinitie {
+  id: number;
+  naam: string;
+  type: string;
+  omschrijving?: string | null;
+  actief: boolean;
+  volgorde: number;
+  aangemaakt_op: string;
+  bijgewerkt_op: string;
+}
+
+export interface WorkflowDefinitieInput {
+  naam?: string;
+  type?: string;
+  omschrijving?: string;
+  actief?: boolean;
+}
+
+export interface WorkflowCard {
+  id: number;
+  workflow_id: number;
+  lane_id: number;
+  type: string;
+  titel: string;
+  omschrijving?: string | null;
+  invoer?: string | null;
+  uitvoer?: string | null;
+  rol?: string | null;
+  ai_taak?: string | null;
+  akkoord_door?: string | null;
+  gekoppelde_module?: string | null;
+  uitzonderingsroute?: string | null;
+  actief: boolean;
+  volgorde: number;
+  aangemaakt_op: string;
+  bijgewerkt_op: string;
+}
+
+export interface WorkflowCardInput {
+  workflow_id?: number;
+  lane_id?: number;
+  type?: string;
+  titel?: string;
+  omschrijving?: string;
+  invoer?: string;
+  uitvoer?: string;
+  rol?: string;
+  ai_taak?: string;
+  akkoord_door?: string;
+  gekoppelde_module?: string;
+  uitzonderingsroute?: string;
+  actief?: boolean;
+  volgorde?: number;
+}
+
+export interface WorkflowLane {
+  id: number;
+  workflow_id: number;
+  naam: string;
+  kleur: string;
+  volgorde: number;
+  aangemaakt_op: string;
+  cards?: WorkflowCard[];
+}
+
+export interface WorkflowLaneInput {
+  workflow_id?: number;
+  naam?: string;
+  kleur?: string;
+}
+
+export type WorkflowDetail = WorkflowDefinitie & {
+  lanes?: WorkflowLane[];
+};
+
 export type GetRecenteActiviteitParams = {
 limit?: number;
 };

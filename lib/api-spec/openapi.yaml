@@ -13065,6 +13065,194 @@ paths:
               schema:
                 $ref: '#/components/schemas/WerkgeverSalarisConfig'
 
+  /workflow-definities:
+    get:
+      summary: Lijst van workflow-definities
+      operationId: listWorkflowDefinities
+      tags: [Workflow]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/WorkflowDefinitie'
+    post:
+      summary: Nieuwe workflow aanmaken
+      operationId: postWorkflowDefinitie
+      tags: [Workflow]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkflowDefinitieInput'
+      responses:
+        '201':
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkflowDefinitie'
+
+  /workflow-definities/{id}:
+    get:
+      summary: Workflow detail met lanes en kaarten
+      operationId: getWorkflowDefinitie
+      tags: [Workflow]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkflowDetail'
+    patch:
+      summary: Workflow bijwerken
+      operationId: patchWorkflowDefinitie
+      tags: [Workflow]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkflowDefinitieInput'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkflowDefinitie'
+
+  /workflow-lanes:
+    post:
+      summary: Lane toevoegen aan workflow
+      operationId: postWorkflowLane
+      tags: [Workflow]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkflowLaneInput'
+      responses:
+        '201':
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkflowLane'
+
+  /workflow-lanes/{id}:
+    patch:
+      summary: Lane bijwerken
+      operationId: patchWorkflowLane
+      tags: [Workflow]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkflowLaneInput'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkflowLane'
+    delete:
+      summary: Lane verwijderen
+      operationId: deleteWorkflowLane
+      tags: [Workflow]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Verwijderd
+
+  /workflow-cards:
+    post:
+      summary: Kaart toevoegen aan lane
+      operationId: postWorkflowCard
+      tags: [Workflow]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkflowCardInput'
+      responses:
+        '201':
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkflowCard'
+
+  /workflow-cards/{id}:
+    patch:
+      summary: Kaart bijwerken of verplaatsen
+      operationId: patchWorkflowCard
+      tags: [Workflow]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkflowCardInput'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkflowCard'
+    delete:
+      summary: Kaart verwijderen
+      operationId: deleteWorkflowCard
+      tags: [Workflow]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Verwijderd
+
 components:
   schemas:
     MailStatus:
@@ -24101,4 +24289,158 @@ components:
           type: boolean
         medewerker_id:
           type: integer
+
+    WorkflowDefinitie:
+      type: object
+      required: [id, naam, type, actief, volgorde, aangemaakt_op, bijgewerkt_op]
+      properties:
+        id:
+          type: integer
+        naam:
+          type: string
+        type:
+          type: string
+        omschrijving:
+          type: string
+          nullable: true
+        actief:
+          type: boolean
+        volgorde:
+          type: integer
+        aangemaakt_op:
+          type: string
+        bijgewerkt_op:
+          type: string
+
+    WorkflowDefinitieInput:
+      type: object
+      properties:
+        naam:
+          type: string
+        type:
+          type: string
+        omschrijving:
+          type: string
+        actief:
+          type: boolean
+
+    WorkflowCard:
+      type: object
+      required: [id, workflow_id, lane_id, type, titel, actief, volgorde, aangemaakt_op, bijgewerkt_op]
+      properties:
+        id:
+          type: integer
+        workflow_id:
+          type: integer
+        lane_id:
+          type: integer
+        type:
+          type: string
+        titel:
+          type: string
+        omschrijving:
+          type: string
+          nullable: true
+        invoer:
+          type: string
+          nullable: true
+        uitvoer:
+          type: string
+          nullable: true
+        rol:
+          type: string
+          nullable: true
+        ai_taak:
+          type: string
+          nullable: true
+        akkoord_door:
+          type: string
+          nullable: true
+        gekoppelde_module:
+          type: string
+          nullable: true
+        uitzonderingsroute:
+          type: string
+          nullable: true
+        actief:
+          type: boolean
+        volgorde:
+          type: integer
+        aangemaakt_op:
+          type: string
+        bijgewerkt_op:
+          type: string
+
+    WorkflowCardInput:
+      type: object
+      properties:
+        workflow_id:
+          type: integer
+        lane_id:
+          type: integer
+        type:
+          type: string
+        titel:
+          type: string
+        omschrijving:
+          type: string
+        invoer:
+          type: string
+        uitvoer:
+          type: string
+        rol:
+          type: string
+        ai_taak:
+          type: string
+        akkoord_door:
+          type: string
+        gekoppelde_module:
+          type: string
+        uitzonderingsroute:
+          type: string
+        actief:
+          type: boolean
+        volgorde:
+          type: integer
+
+    WorkflowLane:
+      type: object
+      required: [id, workflow_id, naam, kleur, volgorde, aangemaakt_op]
+      properties:
+        id:
+          type: integer
+        workflow_id:
+          type: integer
+        naam:
+          type: string
+        kleur:
+          type: string
+        volgorde:
+          type: integer
+        aangemaakt_op:
+          type: string
+        cards:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkflowCard'
+
+    WorkflowLaneInput:
+      type: object
+      properties:
+        workflow_id:
+          type: integer
+        naam:
+          type: string
+        kleur:
+          type: string
+
+    WorkflowDetail:
+      allOf:
+        - $ref: '#/components/schemas/WorkflowDefinitie'
+        - type: object
+          properties:
+            lanes:
+              type: array
+              items:
+                $ref: '#/components/schemas/WorkflowLane'
 
