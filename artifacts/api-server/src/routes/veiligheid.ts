@@ -10,6 +10,9 @@ import {
   veiligheidMeldingenTable,
   veiligheidMeldingenActiesTable,
   gebruikersTable,
+  medewerkersTable,
+  gebouwenTable,
+  opdrachtenTable,
 } from "@workspace/db";
 import { eq, and, desc, sql, count, gte, lt, isNotNull } from "drizzle-orm";
 import { requireAuth, requireBevoegdheid } from "../middlewares/auth.js";
@@ -731,6 +734,8 @@ veiligheidRouter.get("/veiligheid/lmras", lezenVeiligheid, async (req, res) => {
         gpsLat: veiligheidLmrasTable.gpsLat,
         gpsLng: veiligheidLmrasTable.gpsLng,
         medewerkerNaam: veiligheidLmrasTable.medewerkerNaam,
+        medewerkerId: veiligheidLmrasTable.medewerkerId,
+        aiVoorstel: veiligheidLmrasTable.aiVoorstel,
         aangemaaktDoorId: veiligheidLmrasTable.aangemaaktDoorId,
         aangemaaktOp: veiligheidLmrasTable.aangemaaktOp,
         bijgewerktOp: veiligheidLmrasTable.bijgewerktOp,
@@ -752,6 +757,8 @@ veiligheidRouter.get("/veiligheid/lmras", lezenVeiligheid, async (req, res) => {
         gps_lat: r.gpsLat ?? null,
         gps_lng: r.gpsLng ?? null,
         medewerker_naam: r.medewerkerNaam ?? null,
+        medewerker_id: r.medewerkerId ?? null,
+        ai_voorstel: r.aiVoorstel,
         aangemaakt_door_id: r.aangemaaktDoorId ?? null,
         aangemaakt_op: r.aangemaaktOp.toISOString(),
         bijgewerkt_op: r.bijgewerktOp?.toISOString() ?? null,
@@ -767,9 +774,10 @@ veiligheidRouter.post("/veiligheid/lmras", lezenVeiligheid, async (req, res) => 
   try {
     const gebruiker = (req as any).session?.gebruiker;
     const {
-      gebouw_id, project_naam, locatie_omschrijving, werkzaamheden,
+      gebouw_id, medewerker_id: body_medewerker_id, project_naam,
+      locatie_omschrijving, werkzaamheden,
       risicos, maatregelen, veilig_voor_aanvang, handtekening,
-      foto_paden, gps_lat, gps_lng,
+      foto_paden, gps_lat, gps_lng, ai_voorstel,
     } = req.body;
 
     if (!locatie_omschrijving || !werkzaamheden) {
@@ -779,6 +787,16 @@ veiligheidRouter.post("/veiligheid/lmras", lezenVeiligheid, async (req, res) => 
     const medewerkerNaam = gebruiker
       ? `${gebruiker.naam ?? ""} ${gebruiker.achternaam ?? ""}`.trim() || gebruiker.email
       : null;
+
+    // Zoek medewerker_id uit sessie als niet meegegeven in body
+    let resolvedMedewerkerId: number | null = body_medewerker_id ?? null;
+    if (!resolvedMedewerkerId && gebruiker?.id) {
+      const [med] = await db.select({ id: medewerkersTable.id })
+        .from(medewerkersTable)
+        .where(eq(medewerkersTable.gebruikerId, gebruiker.id))
+        .limit(1);
+      resolvedMedewerkerId = med?.id ?? null;
+    }
 
     const [rij] = await db
       .insert(veiligheidLmrasTable)
@@ -795,6 +813,8 @@ veiligheidRouter.post("/veiligheid/lmras", lezenVeiligheid, async (req, res) => 
         gpsLat: gps_lat ?? null,
         gpsLng: gps_lng ?? null,
         medewerkerNaam,
+        medewerkerId: resolvedMedewerkerId,
+        aiVoorstel: ai_voorstel === true,
         aangemaaktDoorId: gebruiker?.id ?? null,
         bijgewerktOp: new Date(),
       })
@@ -813,6 +833,8 @@ veiligheidRouter.post("/veiligheid/lmras", lezenVeiligheid, async (req, res) => 
       gps_lat: rij.gpsLat ?? null,
       gps_lng: rij.gpsLng ?? null,
       medewerker_naam: rij.medewerkerNaam ?? null,
+      medewerker_id: rij.medewerkerId ?? null,
+      ai_voorstel: rij.aiVoorstel,
       aangemaakt_door_id: rij.aangemaaktDoorId ?? null,
       aangemaakt_op: rij.aangemaaktOp.toISOString(),
       bijgewerkt_op: rij.bijgewerktOp?.toISOString() ?? null,
@@ -829,6 +851,151 @@ veiligheidRouter.get("/veiligheid/lmras/upload-url", schrijvenVeiligheid, async 
     res.json({ upload_url: uploadURL, object_path: objectPath });
   } catch (err) {
     req.log.error(err, "GET /veiligheid/lmras/upload-url");
+    res.status(500).json({ error: "Interne fout" });
+  }
+});
+
+veiligheidRouter.post("/veiligheid/lmras/ai-voorstel", lezenVeiligheid, async (req, res) => {
+  try {
+    if (!heeftOpenAi()) return res.status(503).json({ error: "AI niet beschikbaar" });
+
+    const { gebouw_id, werkzaamheden_omschrijving } = req.body;
+    if (!gebouw_id) return res.status(400).json({ error: "gebouw_id is verplicht" });
+
+    const [gebouw] = await db
+      .select({
+        naam: gebouwenTable.naam,
+        adres: gebouwenTable.adres,
+        stad: gebouwenTable.stad,
+        gebouwType: gebouwenTable.gebouwType,
+        omschrijving: gebouwenTable.omschrijving,
+      })
+      .from(gebouwenTable)
+      .where(eq(gebouwenTable.id, Number(gebouw_id)))
+      .limit(1);
+
+    if (!gebouw) return res.status(404).json({ error: "Gebouw niet gevonden" });
+
+    const context = [
+      `Gebouwnaam: ${gebouw.naam}`,
+      `Adres: ${gebouw.adres}${gebouw.stad ? `, ${gebouw.stad}` : ""}`,
+      gebouw.gebouwType ? `Type: ${gebouw.gebouwType}` : null,
+      gebouw.omschrijving ? `Omschrijving: ${gebouw.omschrijving}` : null,
+      werkzaamheden_omschrijving ? `Geplande werkzaamheden: ${werkzaamheden_omschrijving}` : null,
+    ].filter(Boolean).join("\n");
+
+    const openai = maakOpenAiClient();
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o",
+      max_tokens: 800,
+      messages: [
+        {
+          role: "system",
+          content: `Je bent een veiligheidsadviseur voor brandpreventiewerk. 
+Genereer een pre-ingevulde LMRA (Laatste Minuut Risico Analyse) op basis van de gebouwinformatie.
+Retourneer uitsluitend JSON (geen extra tekst) in het formaat:
+{
+  "locatie_omschrijving": "string",
+  "werkzaamheden": "string",
+  "risicos": ["string", ...],
+  "maatregelen": ["string", ...]
+}
+Zorg voor 3-5 relevante risico's en bijbehorende maatregelen voor brandpreventiewerk.`,
+        },
+        { role: "user", content: `Gebouwinformatie:\n${context}` },
+      ],
+    });
+
+    const raw = completion.choices[0].message.content ?? "{}";
+    const cleanJson = raw.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+    let voorstel: { locatie_omschrijving: string; werkzaamheden: string; risicos: string[]; maatregelen: string[] };
+    try {
+      voorstel = JSON.parse(cleanJson);
+    } catch {
+      return res.status(500).json({ error: "AI-antwoord kon niet worden verwerkt" });
+    }
+
+    res.json({
+      locatie_omschrijving: voorstel.locatie_omschrijving ?? "",
+      werkzaamheden: voorstel.werkzaamheden ?? "",
+      risicos: Array.isArray(voorstel.risicos) ? voorstel.risicos : [],
+      maatregelen: Array.isArray(voorstel.maatregelen) ? voorstel.maatregelen : [],
+    });
+  } catch (err) {
+    req.log.error(err, "POST /veiligheid/lmras/ai-voorstel");
+    res.status(500).json({ error: "Interne fout" });
+  }
+});
+
+veiligheidRouter.get("/mijn/lmra-status", requireAuth, async (req, res) => {
+  try {
+    const gebruiker = (req as any).session?.gebruiker;
+    if (!gebruiker?.id) return res.status(401).json({ error: "Niet ingelogd" });
+
+    const gebouwId = req.query.gebouw_id ? Number(req.query.gebouw_id) : null;
+    if (!gebouwId) return res.status(400).json({ error: "gebouw_id is verplicht" });
+
+    // Medewerker opzoeken op basis van gebruiker
+    const [med] = await db
+      .select({ id: medewerkersTable.id })
+      .from(medewerkersTable)
+      .where(eq(medewerkersTable.gebruikerId, gebruiker.id))
+      .limit(1);
+
+    const medewerkerId = med?.id ?? null;
+
+    // Controleer of LMRA verplicht is:
+    // Zoek actieve opdracht voor dit gebouw met budget_uren >= 8 of null
+    const opdrachten = await db
+      .select({ budgetUren: opdrachtenTable.budgetUren })
+      .from(opdrachtenTable)
+      .where(
+        and(
+          eq(opdrachtenTable.gebouwId, gebouwId),
+          eq(opdrachtenTable.status, "actief"),
+        ),
+      )
+      .limit(5);
+
+    // Vrijgesteld als ER een opdracht is met budget_uren < 8
+    const heeftKleineOpdracht = opdrachten.some(
+      (o) => o.budgetUren !== null && o.budgetUren < 8,
+    );
+
+    if (heeftKleineOpdracht) {
+      return res.json({
+        vereist: false,
+        voltooid: false,
+        lmra_id: null,
+        reden_vrijstelling: "Project heeft een geplande omvang van minder dan 8 uur",
+      });
+    }
+
+    // LMRA voltooid als medewerker al een LMRA heeft voor dit gebouw
+    let bestaandeLmra: { id: number } | null = null;
+    if (medewerkerId) {
+      const [lmra] = await db
+        .select({ id: veiligheidLmrasTable.id })
+        .from(veiligheidLmrasTable)
+        .where(
+          and(
+            eq(veiligheidLmrasTable.gebouwId, gebouwId),
+            eq(veiligheidLmrasTable.medewerkerId, medewerkerId),
+          ),
+        )
+        .orderBy(desc(veiligheidLmrasTable.aangemaaktOp))
+        .limit(1);
+      bestaandeLmra = lmra ?? null;
+    }
+
+    res.json({
+      vereist: true,
+      voltooid: !!bestaandeLmra,
+      lmra_id: bestaandeLmra?.id ?? null,
+      reden_vrijstelling: null,
+    });
+  } catch (err) {
+    req.log.error(err, "GET /mijn/lmra-status");
     res.status(500).json({ error: "Interne fout" });
   }
 });

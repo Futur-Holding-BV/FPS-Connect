@@ -2,7 +2,7 @@ import {
   pgTable, serial, text, integer, boolean, timestamp, numeric, real, jsonb,
 } from "drizzle-orm/pg-core";
 import { gebruikersTable } from "./gebruikers";
-import { medewerkersTable } from "./hrm";
+import { medewerkersTable, werkgeversTable } from "./hrm";
 
 export const salarisbatchesTable = pgTable("salarisbatches", {
   id: serial("id").primaryKey(),
@@ -10,6 +10,7 @@ export const salarisbatchesTable = pgTable("salarisbatches", {
   periodeJaar: integer("periode_jaar"),
   periodeMaand: integer("periode_maand"),
   werkmaatschappij: text("werkmaatschappij"),
+  werkgeverId: integer("werkgever_id").references(() => werkgeversTable.id, { onDelete: "set null" }),
   status: text("status").notNull().default("verwerken"),
   uploaderId: integer("uploader_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
   uploaderNaam: text("uploader_naam"),
@@ -48,6 +49,7 @@ export const sepaBestandenTable = pgTable("sepa_bestanden", {
   id: serial("id").primaryKey(),
   omschrijving: text("omschrijving"),
   werkmaatschappij: text("werkmaatschappij"),
+  werkgeverId: integer("werkgever_id").references(() => werkgeversTable.id, { onDelete: "set null" }),
   periodeJaar: integer("periode_jaar"),
   periodeMaand: integer("periode_maand"),
   betaaldatum: text("betaaldatum"),

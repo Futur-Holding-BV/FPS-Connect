@@ -1,4 +1,4 @@
-import { pgTable, serial, text, integer, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, integer, real, timestamp } from "drizzle-orm/pg-core";
 import { gebruikersTable } from "./gebruikers";
 import { gebouwenTable } from "./gebouwen";
 import { projectenTable } from "./projecten";
@@ -17,6 +17,10 @@ export const opdrachtenTable = pgTable("opdrachten", {
   werknummer: text("werknummer"),
   opdrachtgever: text("opdrachtgever"),
   omschrijving: text("omschrijving"),
+  // vast | regie | overig  (regie = regieproject, drempelwaarde voor LMRA-plicht)
+  type: text("type").notNull().default("vast"),
+  // Geplande uren — LMRA vereist indien >= 8; null = onbekend (behandeld als >= 8)
+  budgetUren: real("budget_uren"),
   // actief | afgerond | gepauzeerd | geannuleerd
   status: text("status").notNull().default("actief"),
   aangemaaktDoorId: integer("aangemaakt_door_id").references(() => gebruikersTable.id, { onDelete: "set null" }),

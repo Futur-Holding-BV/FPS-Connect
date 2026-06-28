@@ -1,6 +1,7 @@
 import { pgTable, serial, text, integer, boolean, jsonb, timestamp } from "drizzle-orm/pg-core";
 import { gebruikersTable } from "./gebruikers";
 import { gebouwenTable } from "./gebouwen";
+import { medewerkersTable } from "./hrm";
 
 export const veiligheidToolboxenTable = pgTable("veiligheid_toolboxen", {
   id: serial("id").primaryKey(),
@@ -97,6 +98,8 @@ export const veiligheidLmrasTable = pgTable("veiligheid_lmras", {
   gpsLat: text("gps_lat"),
   gpsLng: text("gps_lng"),
   medewerkerNaam: text("medewerker_naam"),
+  medewerkerId: integer("medewerker_id").references(() => medewerkersTable.id, { onDelete: "set null" }),
+  aiVoorstel: boolean("ai_voorstel").notNull().default(false),
   aangemaaktDoorId: integer("aangemaakt_door_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
   aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
   bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),

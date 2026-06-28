@@ -1931,6 +1931,25 @@ paths:
               schema:
                 $ref: '#/components/schemas/MijnToolboxMaandopdracht'
 
+  /mijn/lmra-status:
+    get:
+      operationId: getMijnLmraStatus
+      summary: LMRA-status voor gebouw ophalen (vereist / voltooid)
+      tags: [mijn]
+      parameters:
+        - in: query
+          name: gebouw_id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LmraStatus'
+
   /mijn/verlofsoorten:
     get:
       operationId: listMijnVerlofsoorten
@@ -11114,6 +11133,27 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/VeiligheidLmra'
+
+  /veiligheid/lmras/ai-voorstel:
+    post:
+      operationId: postVeiligheidLmrasAiVoorstel
+      summary: AI-voorstel genereren voor LMRA op basis van gebouwinformatie
+      tags: [Veiligheid]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LmraAiVoorstelInput'
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LmraAiVoorstel'
+        "503":
+          description: AI niet beschikbaar
 
   /veiligheid/lmras/upload-url:
     get:
@@ -22130,6 +22170,11 @@ components:
         medewerker_naam:
           type: string
           nullable: true
+        medewerker_id:
+          type: integer
+          nullable: true
+        ai_voorstel:
+          type: boolean
         aangemaakt_door_id:
           type: integer
           nullable: true
@@ -22144,6 +22189,9 @@ components:
       required: [locatie_omschrijving, werkzaamheden]
       properties:
         gebouw_id:
+          type: integer
+          nullable: true
+        medewerker_id:
           type: integer
           nullable: true
         project_naam:
@@ -22176,6 +22224,48 @@ components:
         gps_lng:
           type: string
           nullable: true
+
+    LmraStatus:
+      type: object
+      required: [vereist, voltooid]
+      properties:
+        vereist:
+          type: boolean
+        voltooid:
+          type: boolean
+        lmra_id:
+          type: integer
+          nullable: true
+        reden_vrijstelling:
+          type: string
+          nullable: true
+
+    LmraAiVoorstelInput:
+      type: object
+      required: [gebouw_id]
+      properties:
+        gebouw_id:
+          type: integer
+        werkzaamheden_omschrijving:
+          type: string
+          nullable: true
+
+    LmraAiVoorstel:
+      type: object
+      required: [locatie_omschrijving, werkzaamheden, risicos, maatregelen]
+      properties:
+        locatie_omschrijving:
+          type: string
+        werkzaamheden:
+          type: string
+        risicos:
+          type: array
+          items:
+            type: string
+        maatregelen:
+          type: array
+          items:
+            type: string
 
     VeiligheidMelding:
       type: object

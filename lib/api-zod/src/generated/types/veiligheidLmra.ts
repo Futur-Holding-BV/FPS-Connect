@@ -20,6 +20,8 @@ export interface VeiligheidLmra {
   gps_lat?: string | null;
   gps_lng?: string | null;
   medewerker_naam?: string | null;
+  medewerker_id?: number | null;
+  ai_voorstel?: boolean;
   aangemaakt_door_id?: number | null;
   aangemaakt_op: string;
   bijgewerkt_op?: string | null;

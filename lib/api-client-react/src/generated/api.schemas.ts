@@ -5769,6 +5769,8 @@ export interface VeiligheidLmra {
   gps_lat?: string | null;
   gps_lng?: string | null;
   medewerker_naam?: string | null;
+  medewerker_id?: number | null;
+  ai_voorstel?: boolean;
   aangemaakt_door_id?: number | null;
   aangemaakt_op: string;
   bijgewerkt_op?: string | null;
@@ -5776,6 +5778,7 @@ export interface VeiligheidLmra {
 
 export interface VeiligheidLmraInput {
   gebouw_id?: number | null;
+  medewerker_id?: number | null;
   project_naam?: string | null;
   locatie_omschrijving: string;
   werkzaamheden: string;
@@ -5786,6 +5789,25 @@ export interface VeiligheidLmraInput {
   foto_paden?: string[];
   gps_lat?: string | null;
   gps_lng?: string | null;
+}
+
+export interface LmraStatus {
+  vereist: boolean;
+  voltooid: boolean;
+  lmra_id?: number | null;
+  reden_vrijstelling?: string | null;
+}
+
+export interface LmraAiVoorstelInput {
+  gebouw_id: number;
+  werkzaamheden_omschrijving?: string | null;
+}
+
+export interface LmraAiVoorstel {
+  locatie_omschrijving: string;
+  werkzaamheden: string;
+  risicos: string[];
+  maatregelen: string[];
 }
 
 export interface VeiligheidMelding {
@@ -6678,6 +6700,10 @@ per_pagina?: number;
 
 export type ListVoorzieningTypesParams = {
 inclusief_inactief?: boolean;
+};
+
+export type GetMijnLmraStatusParams = {
+gebouw_id: number;
 };
 
 export type ListMijnActiviteitenParams = {

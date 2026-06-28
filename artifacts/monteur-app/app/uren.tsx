@@ -22,6 +22,7 @@ import {
   Platform,
   Pressable,
   ScrollView,
+  Switch,
   Text,
   TextInput,
   TouchableOpacity,
@@ -243,6 +244,25 @@ function UrenFormulier({ datum, bestaand, planningItem, planningItemsVanWeek = [
   const { data: gebouwen } = useListGebouwen();
   const [gebouwZoek, setGebouwZoek] = useState("");
 
+  // LMRA-gate state
+  const { token } = useAuth();
+  const [lmraGateOpen, setLmraGateOpen] = useState(false);
+  const [lmraPendingGebouwId, setLmraPendingGebouwId] = useState<number | null>(null);
+  const [lmraPendingGebouwNaam, setLmraPendingGebouwNaam] = useState("");
+  const [lmraAiLaden, setLmraAiLaden] = useState(false);
+  const [lmraAiGebruikt, setLmraAiGebruikt] = useState(false);
+  const [lmraOpslaan, setLmraOpslaanBezig] = useState(false);
+  const [lmraRisicoInput, setLmraRisicoInput] = useState("");
+  const [lmraMaatregelInput, setLmraMaatregelInput] = useState("");
+  const [lmraForm, setLmraForm] = useState({
+    locatieOmschrijving: "",
+    werkzaamheden: "",
+    risicos: [] as string[],
+    maatregelen: [] as string[],
+    veiligVoorAanvang: true,
+    bevestigd: false,
+  });
+
   const gefilterdGebouwen = (gebouwen ?? []).filter((g) =>
     !gebouwZoek || g.naam.toLowerCase().includes(gebouwZoek.toLowerCase())
   );
@@ -272,6 +292,94 @@ function UrenFormulier({ datum, bestaand, planningItem, planningItemsVanWeek = [
     setGebouwId(gId);
     setProject(gNaam);
     setVrijeInvoer(false);
+    // Skip LMRA check bij bewerkingen van bestaande registraties
+    if (bestaand) return;
+    const basis = `https://${process.env.EXPO_PUBLIC_DOMAIN}`;
+    fetch(`${basis}/api/mijn/lmra-status?gebouw_id=${gId}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((status) => {
+        if (status?.vereist && !status?.voltooid) {
+          setLmraPendingGebouwId(gId);
+          setLmraPendingGebouwNaam(gNaam);
+          setLmraAiGebruikt(false);
+          setLmraForm({
+            locatieOmschrijving: gNaam,
+            werkzaamheden: "",
+            risicos: [],
+            maatregelen: [],
+            veiligVoorAanvang: true,
+            bevestigd: false,
+          });
+          setLmraGateOpen(true);
+        }
+      })
+      .catch(() => {
+        // Stille fout: LMRA-check mislukt, doorgaan zonder blokkade
+      });
+  }
+
+  async function laadLmraAiVoorstel() {
+    if (!lmraPendingGebouwId) return;
+    setLmraAiLaden(true);
+    try {
+      const basis = `https://${process.env.EXPO_PUBLIC_DOMAIN}`;
+      const resp = await fetch(`${basis}/api/veiligheid/lmras/ai-voorstel`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ gebouw_id: lmraPendingGebouwId }),
+      });
+      if (!resp.ok) throw new Error();
+      const v = await resp.json();
+      setLmraAiGebruikt(true);
+      setLmraForm((f) => ({
+        ...f,
+        locatieOmschrijving: v.locatie_omschrijving || f.locatieOmschrijving,
+        werkzaamheden: v.werkzaamheden || f.werkzaamheden,
+        risicos: Array.isArray(v.risicos) && v.risicos.length ? v.risicos : f.risicos,
+        maatregelen: Array.isArray(v.maatregelen) && v.maatregelen.length ? v.maatregelen : f.maatregelen,
+      }));
+    } catch {
+      Alert.alert("AI niet beschikbaar", "Vul de LMRA handmatig in.");
+    } finally {
+      setLmraAiLaden(false);
+    }
+  }
+
+  async function slaLmraOp() {
+    if (!lmraForm.locatieOmschrijving.trim() || !lmraForm.werkzaamheden.trim()) {
+      Alert.alert("Verplicht", "Locatie en werkzaamheden zijn verplicht.");
+      return;
+    }
+    if (!lmraForm.bevestigd) {
+      Alert.alert("Bevestiging vereist", "Bevestig de LMRA voor je uren kunt invullen.");
+      return;
+    }
+    setLmraOpslaanBezig(true);
+    try {
+      const basis = `https://${process.env.EXPO_PUBLIC_DOMAIN}`;
+      const resp = await fetch(`${basis}/api/veiligheid/lmras`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          gebouw_id: lmraPendingGebouwId,
+          locatie_omschrijving: lmraForm.locatieOmschrijving,
+          werkzaamheden: lmraForm.werkzaamheden,
+          risicos: lmraForm.risicos,
+          maatregelen: lmraForm.maatregelen,
+          veilig_voor_aanvang: lmraForm.veiligVoorAanvang,
+          ai_voorstel: lmraAiGebruikt,
+        }),
+      });
+      if (!resp.ok) throw new Error();
+      setLmraGateOpen(false);
+      setLmraPendingGebouwId(null);
+    } catch {
+      Alert.alert("Fout", "Kon de LMRA niet opslaan. Probeer opnieuw.");
+    } finally {
+      setLmraOpslaanBezig(false);
+    }
   }
 
   function opslaan() {

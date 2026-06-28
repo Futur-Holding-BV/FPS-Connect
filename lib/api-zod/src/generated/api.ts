@@ -2299,6 +2299,21 @@ export const VoltooienToolboxMaandopdrachtResponse = zod.object({
 
 
 /**
+ * @summary LMRA-status voor gebouw ophalen (vereist / voltooid)
+ */
+export const GetMijnLmraStatusQueryParams = zod.object({
+  "gebouw_id": zod.coerce.number()
+})
+
+export const GetMijnLmraStatusResponse = zod.object({
+  "vereist": zod.boolean(),
+  "voltooid": zod.boolean(),
+  "lmra_id": zod.number().nullish(),
+  "reden_vrijstelling": zod.string().nullish()
+})
+
+
+/**
  * @summary Actieve verlofsoorten (beschikbaar bij verlofaanvraag)
  */
 export const ListMijnVerlofsoortenResponseItem = zod.object({
@@ -13767,6 +13782,8 @@ export const GetVeiligheidLmrasResponseItem = zod.object({
   "gps_lat": zod.string().nullish(),
   "gps_lng": zod.string().nullish(),
   "medewerker_naam": zod.string().nullish(),
+  "medewerker_id": zod.number().nullish(),
+  "ai_voorstel": zod.boolean().optional(),
   "aangemaakt_door_id": zod.number().nullish(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string().nullish()
@@ -13779,6 +13796,7 @@ export const GetVeiligheidLmrasResponse = zod.array(GetVeiligheidLmrasResponseIt
  */
 export const PostVeiligheidLmrasBody = zod.object({
   "gebouw_id": zod.number().nullish(),
+  "medewerker_id": zod.number().nullish(),
   "project_naam": zod.string().nullish(),
   "locatie_omschrijving": zod.string(),
   "werkzaamheden": zod.string(),
@@ -13792,6 +13810,22 @@ export const PostVeiligheidLmrasBody = zod.object({
 })
 
 export const PostVeiligheidLmrasResponse = zod.void()
+
+
+/**
+ * @summary AI-voorstel genereren voor LMRA op basis van gebouwinformatie
+ */
+export const PostVeiligheidLmrasAiVoorstelBody = zod.object({
+  "gebouw_id": zod.number(),
+  "werkzaamheden_omschrijving": zod.string().nullish()
+})
+
+export const PostVeiligheidLmrasAiVoorstelResponse = zod.object({
+  "locatie_omschrijving": zod.string(),
+  "werkzaamheden": zod.string(),
+  "risicos": zod.array(zod.string()),
+  "maatregelen": zod.array(zod.string())
+})
 
 
 /**
@@ -13824,6 +13858,8 @@ export const GetVeiligheidLmrasIdResponse = zod.object({
   "gps_lat": zod.string().nullish(),
   "gps_lng": zod.string().nullish(),
   "medewerker_naam": zod.string().nullish(),
+  "medewerker_id": zod.number().nullish(),
+  "ai_voorstel": zod.boolean().optional(),
   "aangemaakt_door_id": zod.number().nullish(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string().nullish()
@@ -13839,6 +13875,7 @@ export const PatchVeiligheidLmrasIdParams = zod.object({
 
 export const PatchVeiligheidLmrasIdBody = zod.object({
   "gebouw_id": zod.number().nullish(),
+  "medewerker_id": zod.number().nullish(),
   "project_naam": zod.string().nullish(),
   "locatie_omschrijving": zod.string(),
   "werkzaamheden": zod.string(),
@@ -13865,6 +13902,8 @@ export const PatchVeiligheidLmrasIdResponse = zod.object({
   "gps_lat": zod.string().nullish(),
   "gps_lng": zod.string().nullish(),
   "medewerker_naam": zod.string().nullish(),
+  "medewerker_id": zod.number().nullish(),
+  "ai_voorstel": zod.boolean().optional(),
   "aangemaakt_door_id": zod.number().nullish(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string().nullish()

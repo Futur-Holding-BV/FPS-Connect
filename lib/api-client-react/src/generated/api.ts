@@ -169,6 +169,7 @@ import type {
   GetFactuurUploadUrl200,
   GetGebouwGevelbeeld200,
   GetLoonOutputParams,
+  GetMijnLmraStatusParams,
   GetMijnWeekUrenParams,
   GetPlanningNacalculatieParams,
   GetRecenteActiviteitParams,
@@ -262,6 +263,9 @@ import type {
   ListVoorzieningenParams,
   ListWeekStatenParams,
   ListZiekmeldingenParams,
+  LmraAiVoorstel,
+  LmraAiVoorstelInput,
+  LmraStatus,
   LoginInput,
   LoginPoging,
   LoginResultaat,
@@ -6455,6 +6459,90 @@ export const useVoltooienToolboxMaandopdracht = <TError = ErrorType<unknown>,
       > => {
       return useMutation(getVoltooienToolboxMaandopdrachtMutationOptions(options));
     }
+
+export const getGetMijnLmraStatusUrl = (params: GetMijnLmraStatusParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/mijn/lmra-status?${stringifiedParams}` : `/api/mijn/lmra-status`
+}
+
+/**
+ * @summary LMRA-status voor gebouw ophalen (vereist / voltooid)
+ */
+export const getMijnLmraStatus = async (params: GetMijnLmraStatusParams, options?: RequestInit): Promise<LmraStatus> => {
+
+  return customFetch<LmraStatus>(getGetMijnLmraStatusUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetMijnLmraStatusQueryKey = (params?: GetMijnLmraStatusParams,) => {
+    return [
+    `/api/mijn/lmra-status`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetMijnLmraStatusQueryOptions = <TData = Awaited<ReturnType<typeof getMijnLmraStatus>>, TError = ErrorType<unknown>>(params: GetMijnLmraStatusParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMijnLmraStatus>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetMijnLmraStatusQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getMijnLmraStatus>>> = ({ signal }) => getMijnLmraStatus(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getMijnLmraStatus>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetMijnLmraStatusQueryResult = NonNullable<Awaited<ReturnType<typeof getMijnLmraStatus>>>
+export type GetMijnLmraStatusQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary LMRA-status voor gebouw ophalen (vereist / voltooid)
+ */
+
+export function useGetMijnLmraStatus<TData = Awaited<ReturnType<typeof getMijnLmraStatus>>, TError = ErrorType<unknown>>(
+ params: GetMijnLmraStatusParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMijnLmraStatus>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetMijnLmraStatusQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
 
 export const getListMijnVerlofsoortenUrl = () => {
 
@@ -39664,6 +39752,76 @@ export const usePostVeiligheidLmras = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getPostVeiligheidLmrasMutationOptions(options));
+    }
+
+export const getPostVeiligheidLmrasAiVoorstelUrl = () => {
+
+
+
+
+  return `/api/veiligheid/lmras/ai-voorstel`
+}
+
+/**
+ * @summary AI-voorstel genereren voor LMRA op basis van gebouwinformatie
+ */
+export const postVeiligheidLmrasAiVoorstel = async (lmraAiVoorstelInput: LmraAiVoorstelInput, options?: RequestInit): Promise<LmraAiVoorstel> => {
+
+  return customFetch<LmraAiVoorstel>(getPostVeiligheidLmrasAiVoorstelUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(lmraAiVoorstelInput)
+  }
+);}
+
+
+
+
+export const getPostVeiligheidLmrasAiVoorstelMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postVeiligheidLmrasAiVoorstel>>, TError,{data: BodyType<LmraAiVoorstelInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof postVeiligheidLmrasAiVoorstel>>, TError,{data: BodyType<LmraAiVoorstelInput>}, TContext> => {
+
+const mutationKey = ['postVeiligheidLmrasAiVoorstel'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postVeiligheidLmrasAiVoorstel>>, {data: BodyType<LmraAiVoorstelInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  postVeiligheidLmrasAiVoorstel(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PostVeiligheidLmrasAiVoorstelMutationResult = NonNullable<Awaited<ReturnType<typeof postVeiligheidLmrasAiVoorstel>>>
+    export type PostVeiligheidLmrasAiVoorstelMutationBody = BodyType<LmraAiVoorstelInput>
+    export type PostVeiligheidLmrasAiVoorstelMutationError = ErrorType<void>
+
+    /**
+ * @summary AI-voorstel genereren voor LMRA op basis van gebouwinformatie
+ */
+export const usePostVeiligheidLmrasAiVoorstel = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postVeiligheidLmrasAiVoorstel>>, TError,{data: BodyType<LmraAiVoorstelInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof postVeiligheidLmrasAiVoorstel>>,
+        TError,
+        {data: BodyType<LmraAiVoorstelInput>},
+        TContext
+      > => {
+      return useMutation(getPostVeiligheidLmrasAiVoorstelMutationOptions(options));
     }
 
 export const getGetVeiligheidLmrasUploadUrlUrl = () => {
