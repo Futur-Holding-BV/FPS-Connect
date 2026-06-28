@@ -2218,6 +2218,87 @@ export const GetMijnCertificatenResponse = zod.object({
 
 
 /**
+ * @summary Huidige maandelijkse toolbox-opdracht voor ingelogde gebruiker
+ */
+export const GetMijnToolboxMaandopdrachtResponse = zod.object({
+  "id": zod.number(),
+  "toolbox_id": zod.number(),
+  "toolbox_titel": zod.string(),
+  "toolbox_categorie": zod.string(),
+  "toolbox_intro": zod.string().nullish(),
+  "toolbox_heeft_pdf": zod.boolean().optional(),
+  "toolbox_heeft_video": zod.boolean().optional(),
+  "jaar": zod.number(),
+  "maand": zod.number(),
+  "eerste_aanbieding": zod.string(),
+  "aantal_uitgesteld": zod.number(),
+  "kan_uitstellen": zod.boolean(),
+  "is_verplicht": zod.boolean(),
+  "dagen_resterend": zod.number(),
+  "voltooid": zod.boolean(),
+  "voltooid_op": zod.string().nullish()
+}).nullable()
+
+
+/**
+ * @summary Opdracht tijdelijk uitstellen (max 3 dagen)
+ */
+export const UitstellenToolboxMaandopdrachtParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UitstellenToolboxMaandopdrachtResponse = zod.object({
+  "id": zod.number(),
+  "toolbox_id": zod.number(),
+  "toolbox_titel": zod.string(),
+  "toolbox_categorie": zod.string(),
+  "toolbox_intro": zod.string().nullish(),
+  "toolbox_heeft_pdf": zod.boolean().optional(),
+  "toolbox_heeft_video": zod.boolean().optional(),
+  "jaar": zod.number(),
+  "maand": zod.number(),
+  "eerste_aanbieding": zod.string(),
+  "aantal_uitgesteld": zod.number(),
+  "kan_uitstellen": zod.boolean(),
+  "is_verplicht": zod.boolean(),
+  "dagen_resterend": zod.number(),
+  "voltooid": zod.boolean(),
+  "voltooid_op": zod.string().nullish()
+})
+
+
+/**
+ * @summary Toolbox-opdracht voltooien met akkoord
+ */
+export const VoltooienToolboxMaandopdrachtParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const VoltooienToolboxMaandopdrachtBody = zod.object({
+  "vraag": zod.string().nullish()
+})
+
+export const VoltooienToolboxMaandopdrachtResponse = zod.object({
+  "id": zod.number(),
+  "toolbox_id": zod.number(),
+  "toolbox_titel": zod.string(),
+  "toolbox_categorie": zod.string(),
+  "toolbox_intro": zod.string().nullish(),
+  "toolbox_heeft_pdf": zod.boolean().optional(),
+  "toolbox_heeft_video": zod.boolean().optional(),
+  "jaar": zod.number(),
+  "maand": zod.number(),
+  "eerste_aanbieding": zod.string(),
+  "aantal_uitgesteld": zod.number(),
+  "kan_uitstellen": zod.boolean(),
+  "is_verplicht": zod.boolean(),
+  "dagen_resterend": zod.number(),
+  "voltooid": zod.boolean(),
+  "voltooid_op": zod.string().nullish()
+})
+
+
+/**
  * @summary Actieve verlofsoorten (beschikbaar bij verlofaanvraag)
  */
 export const ListMijnVerlofsoortenResponseItem = zod.object({
@@ -13199,6 +13280,64 @@ export const DeleteOpnameFotoParams = zod.object({
 })
 
 export const DeleteOpnameFotoResponse = zod.void()
+
+
+/**
+ * @summary Lijst maandelijkse toolbox-opdrachten
+ */
+export const ListToolboxMaandopdrachtenResponseItem = zod.object({
+  "id": zod.number(),
+  "toolbox_id": zod.number(),
+  "toolbox_titel": zod.string(),
+  "toolbox_categorie": zod.string().optional(),
+  "jaar": zod.number(),
+  "maand": zod.number(),
+  "totaal_voltooid": zod.number(),
+  "totaal_gebruikers": zod.number(),
+  "aangemaakt_op": zod.string()
+})
+export const ListToolboxMaandopdrachtenResponse = zod.array(ListToolboxMaandopdrachtenResponseItem)
+
+
+/**
+ * @summary Nieuwe maandopdracht aanmaken
+ */
+export const CreateToolboxMaandopdrachtBody = zod.object({
+  "toolbox_id": zod.number(),
+  "jaar": zod.number(),
+  "maand": zod.number()
+})
+
+export const CreateToolboxMaandopdrachtResponse = zod.void()
+
+
+/**
+ * @summary Verwijder maandopdracht
+ */
+export const DeleteToolboxMaandopdrachtParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteToolboxMaandopdrachtResponse = zod.void()
+
+
+/**
+ * @summary Voortgang per medewerker voor een opdracht
+ */
+export const GetToolboxMaandopdrachtVoortgangParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetToolboxMaandopdrachtVoortgangResponseItem = zod.object({
+  "gebruiker_id": zod.number(),
+  "naam": zod.string(),
+  "eerste_aanbieding": zod.string(),
+  "aantal_uitgesteld": zod.number(),
+  "voltooid": zod.boolean(),
+  "voltooid_op": zod.string().nullish(),
+  "vraag": zod.string().nullish()
+})
+export const GetToolboxMaandopdrachtVoortgangResponse = zod.array(GetToolboxMaandopdrachtVoortgangResponseItem)
 
 
 /**

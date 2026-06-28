@@ -4,12 +4,14 @@ import {
   veiligheidToolboxenTable,
   veiligheidToolboxVragenTable,
   veiligheidToolboxAfrondingTable,
+  toolboxMaandOpdrachtenTable,
+  toolboxMaandStatusTable,
   veiligheidLmrasTable,
   veiligheidMeldingenTable,
   veiligheidMeldingenActiesTable,
   gebruikersTable,
 } from "@workspace/db";
-import { eq, and, desc, sql, count, gte, lt } from "drizzle-orm";
+import { eq, and, desc, sql, count, gte, lt, isNotNull } from "drizzle-orm";
 import { requireAuth, requireBevoegdheid } from "../middlewares/auth.js";
 import { maakOpenAiClient, heeftOpenAi } from "../lib/openai.js";
 import { createRequire } from "module";
@@ -1253,6 +1255,257 @@ veiligheidRouter.get("/veiligheid/dashboard", lezenVeiligheid, async (req, res) 
     });
   } catch (err) {
     req.log.error(err, "GET /veiligheid/dashboard");
+    res.status(500).json({ error: "Interne fout" });
+  }
+});
+
+// ── Maandelijkse toolbox-opdrachten ──────────────────────────────────────────
+
+function mapMaandStatus(
+  s: typeof toolboxMaandStatusTable.$inferSelect,
+  o: typeof toolboxMaandOpdrachtenTable.$inferSelect,
+  tb: { titel: string; categorie: string; intro: string | null; pdfPad: string | null; videoUrl: string | null }
+) {
+  const nu = new Date();
+  const MS_DAG = 86_400_000;
+  const eersteAanbieding = s.eersteAanbieding as Date;
+  const voltooIdOp = s.voltooIdOp as Date | null;
+  const dagenVerstreken = Math.floor((nu.getTime() - eersteAanbieding.getTime()) / MS_DAG);
+  const dagenResterend = Math.max(0, 3 - dagenVerstreken);
+  const isVerplicht = dagenVerstreken >= 3;
+  const kanUitstellen = !isVerplicht && s.aantalUitgesteld < 3 && !voltooIdOp;
+  return {
+    id: s.id,
+    toolbox_id: o.toolboxId,
+    toolbox_titel: tb.titel,
+    toolbox_categorie: tb.categorie,
+    toolbox_intro: tb.intro ?? null,
+    toolbox_heeft_pdf: !!tb.pdfPad,
+    toolbox_heeft_video: !!tb.videoUrl,
+    jaar: o.jaar,
+    maand: o.maand,
+    eerste_aanbieding: eersteAanbieding.toISOString(),
+    aantal_uitgesteld: s.aantalUitgesteld,
+    kan_uitstellen: kanUitstellen,
+    is_verplicht: isVerplicht,
+    dagen_resterend: dagenResterend,
+    voltooid: !!voltooIdOp,
+    voltooid_op: voltooIdOp ? voltooIdOp.toISOString() : null,
+  };
+}
+
+veiligheidRouter.get("/veiligheid/toolbox-maandopdrachten", schrijvenVeiligheid, async (req, res) => {
+  try {
+    const opdrachten = await db
+      .select({
+        id: toolboxMaandOpdrachtenTable.id,
+        toolboxId: toolboxMaandOpdrachtenTable.toolboxId,
+        jaar: toolboxMaandOpdrachtenTable.jaar,
+        maand: toolboxMaandOpdrachtenTable.maand,
+        aangemaktOp: toolboxMaandOpdrachtenTable.aangemaaktOp,
+        titel: veiligheidToolboxenTable.titel,
+        categorie: veiligheidToolboxenTable.categorie,
+      })
+      .from(toolboxMaandOpdrachtenTable)
+      .leftJoin(veiligheidToolboxenTable, eq(toolboxMaandOpdrachtenTable.toolboxId, veiligheidToolboxenTable.id))
+      .orderBy(desc(toolboxMaandOpdrachtenTable.jaar), desc(toolboxMaandOpdrachtenTable.maand));
+
+    const result = await Promise.all(opdrachten.map(async (o) => {
+      const [voltooid] = await db.select({ c: count() }).from(toolboxMaandStatusTable)
+        .where(and(eq(toolboxMaandStatusTable.opdrachtId, o.id), isNotNull(toolboxMaandStatusTable.voltooIdOp)));
+      const [totaal] = await db.select({ c: count() }).from(toolboxMaandStatusTable)
+        .where(eq(toolboxMaandStatusTable.opdrachtId, o.id));
+      return {
+        id: o.id,
+        toolbox_id: o.toolboxId,
+        toolbox_titel: o.titel ?? "",
+        toolbox_categorie: o.categorie ?? "",
+        jaar: o.jaar,
+        maand: o.maand,
+        aangemaakt_op: (o.aangemaktOp as Date).toISOString(),
+        totaal_voltooid: Number(voltooid?.c ?? 0),
+        totaal_gebruikers: Number(totaal?.c ?? 0),
+      };
+    }));
+    res.json(result);
+  } catch (err) {
+    req.log.error(err, "GET /veiligheid/toolbox-maandopdrachten");
+    res.status(500).json({ error: "Interne fout" });
+  }
+});
+
+veiligheidRouter.post("/veiligheid/toolbox-maandopdrachten", schrijvenVeiligheid, async (req, res) => {
+  try {
+    const { toolbox_id, jaar, maand } = req.body as { toolbox_id: number; jaar: number; maand: number };
+    if (!toolbox_id || !jaar || !maand) return res.status(400).json({ error: "toolbox_id, jaar en maand zijn verplicht" });
+
+    const [bestaand] = await db.select({ id: toolboxMaandOpdrachtenTable.id })
+      .from(toolboxMaandOpdrachtenTable)
+      .where(and(eq(toolboxMaandOpdrachtenTable.jaar, jaar), eq(toolboxMaandOpdrachtenTable.maand, maand)))
+      .limit(1);
+    if (bestaand) return res.status(409).json({ error: "Er is al een toolbox-opdracht voor deze maand" });
+
+    const [nieuw] = await db.insert(toolboxMaandOpdrachtenTable)
+      .values({ toolboxId: toolbox_id, jaar, maand, aangemaaktDoorId: req.session.userId ?? null })
+      .returning();
+    const [tb] = await db.select({ titel: veiligheidToolboxenTable.titel, categorie: veiligheidToolboxenTable.categorie })
+      .from(veiligheidToolboxenTable).where(eq(veiligheidToolboxenTable.id, toolbox_id)).limit(1);
+
+    res.status(201).json({
+      id: nieuw.id, toolbox_id: nieuw.toolboxId,
+      toolbox_titel: tb?.titel ?? "", toolbox_categorie: tb?.categorie ?? "",
+      jaar: nieuw.jaar, maand: nieuw.maand,
+      aangemaakt_op: (nieuw.aangemaaktOp as Date).toISOString(),
+      totaal_voltooid: 0, totaal_gebruikers: 0,
+    });
+  } catch (err) {
+    req.log.error(err, "POST /veiligheid/toolbox-maandopdrachten");
+    res.status(500).json({ error: "Interne fout" });
+  }
+});
+
+veiligheidRouter.delete("/veiligheid/toolbox-maandopdrachten/:id", schrijvenVeiligheid, async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const [v] = await db.delete(toolboxMaandOpdrachtenTable)
+      .where(eq(toolboxMaandOpdrachtenTable.id, id)).returning({ id: toolboxMaandOpdrachtenTable.id });
+    if (!v) return res.status(404).json({ error: "Niet gevonden" });
+    res.status(204).end();
+  } catch (err) {
+    req.log.error(err, "DELETE /veiligheid/toolbox-maandopdrachten/:id");
+    res.status(500).json({ error: "Interne fout" });
+  }
+});
+
+veiligheidRouter.get("/veiligheid/toolbox-maandopdrachten/:id/voortgang", schrijvenVeiligheid, async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const rijen = await db
+      .select({
+        gebruiker_id: toolboxMaandStatusTable.gebruikerId,
+        naam: gebruikersTable.naam,
+        eerste_aanbieding: toolboxMaandStatusTable.eersteAanbieding,
+        aantal_uitgesteld: toolboxMaandStatusTable.aantalUitgesteld,
+        voltooid_op: toolboxMaandStatusTable.voltooIdOp,
+        vraag: toolboxMaandStatusTable.vraag,
+      })
+      .from(toolboxMaandStatusTable)
+      .leftJoin(gebruikersTable, eq(toolboxMaandStatusTable.gebruikerId, gebruikersTable.id))
+      .where(eq(toolboxMaandStatusTable.opdrachtId, id))
+      .orderBy(desc(toolboxMaandStatusTable.eersteAanbieding));
+
+    res.json(rijen.map(r => ({
+      gebruiker_id: r.gebruiker_id,
+      naam: r.naam ?? "Onbekend",
+      eerste_aanbieding: (r.eerste_aanbieding as Date).toISOString(),
+      aantal_uitgesteld: r.aantal_uitgesteld,
+      voltooid: !!r.voltooid_op,
+      voltooid_op: r.voltooid_op ? (r.voltooid_op as Date).toISOString() : null,
+      vraag: r.vraag ?? null,
+    })));
+  } catch (err) {
+    req.log.error(err, "GET /veiligheid/toolbox-maandopdrachten/:id/voortgang");
+    res.status(500).json({ error: "Interne fout" });
+  }
+});
+
+// ── Mijn toolbox-maandopdracht ────────────────────────────────────────────────
+
+async function haalToolboxOp(toolboxId: number) {
+  const [tb] = await db.select({
+    titel: veiligheidToolboxenTable.titel,
+    categorie: veiligheidToolboxenTable.categorie,
+    intro: veiligheidToolboxenTable.intro,
+    pdfPad: veiligheidToolboxenTable.pdfPad,
+    videoUrl: veiligheidToolboxenTable.videoUrl,
+  }).from(veiligheidToolboxenTable).where(eq(veiligheidToolboxenTable.id, toolboxId)).limit(1);
+  return tb ?? null;
+}
+
+veiligheidRouter.get("/mijn/toolbox-maandopdracht", requireAuth, async (req, res) => {
+  try {
+    const userId = req.session.userId;
+    if (!userId) return res.status(401).json({ error: "Niet ingelogd" });
+    const nu = new Date();
+    const [opdracht] = await db.select().from(toolboxMaandOpdrachtenTable)
+      .where(and(eq(toolboxMaandOpdrachtenTable.jaar, nu.getFullYear()), eq(toolboxMaandOpdrachtenTable.maand, nu.getMonth() + 1)))
+      .limit(1);
+    if (!opdracht) return res.json(null);
+
+    let [status] = await db.select().from(toolboxMaandStatusTable)
+      .where(and(eq(toolboxMaandStatusTable.opdrachtId, opdracht.id), eq(toolboxMaandStatusTable.gebruikerId, userId)))
+      .limit(1);
+    if (!status) {
+      [status] = await db.insert(toolboxMaandStatusTable)
+        .values({ opdrachtId: opdracht.id, gebruikerId: userId }).returning();
+    }
+
+    const tb = await haalToolboxOp(opdracht.toolboxId);
+    if (!tb) return res.json(null);
+    res.json(mapMaandStatus(status, opdracht, tb));
+  } catch (err) {
+    req.log.error(err, "GET /mijn/toolbox-maandopdracht");
+    res.status(500).json({ error: "Interne fout" });
+  }
+});
+
+veiligheidRouter.post("/mijn/toolbox-maandopdracht/:id/uitstellen", requireAuth, async (req, res) => {
+  try {
+    const userId = req.session.userId;
+    if (!userId) return res.status(401).json({ error: "Niet ingelogd" });
+    const statusId = Number(req.params.id);
+    const [status] = await db.select().from(toolboxMaandStatusTable)
+      .where(and(eq(toolboxMaandStatusTable.id, statusId), eq(toolboxMaandStatusTable.gebruikerId, userId))).limit(1);
+    if (!status) return res.status(404).json({ error: "Niet gevonden" });
+    if (status.voltooIdOp) return res.status(400).json({ error: "Al voltooid" });
+
+    const nu = new Date();
+    const dagenVerstreken = Math.floor((nu.getTime() - (status.eersteAanbieding as Date).getTime()) / 86_400_000);
+    if (dagenVerstreken >= 3 || status.aantalUitgesteld >= 3) {
+      return res.status(403).json({ error: "Kan niet meer uitstellen: deadline verstreken" });
+    }
+
+    const [bijgewerkt] = await db.update(toolboxMaandStatusTable)
+      .set({ aantalUitgesteld: status.aantalUitgesteld + 1, laatsteUitgesteld: nu, bijgewerktOp: nu })
+      .where(eq(toolboxMaandStatusTable.id, statusId)).returning();
+    const [opdracht] = await db.select().from(toolboxMaandOpdrachtenTable)
+      .where(eq(toolboxMaandOpdrachtenTable.id, status.opdrachtId)).limit(1);
+    const tb = await haalToolboxOp(opdracht.toolboxId);
+    res.json(mapMaandStatus(bijgewerkt, opdracht, tb!));
+  } catch (err) {
+    req.log.error(err, "POST /mijn/toolbox-maandopdracht/:id/uitstellen");
+    res.status(500).json({ error: "Interne fout" });
+  }
+});
+
+veiligheidRouter.post("/mijn/toolbox-maandopdracht/:id/voltooien", requireAuth, async (req, res) => {
+  try {
+    const userId = req.session.userId;
+    if (!userId) return res.status(401).json({ error: "Niet ingelogd" });
+    const statusId = Number(req.params.id);
+    const { vraag } = (req.body ?? {}) as { vraag?: string };
+
+    const [status] = await db.select().from(toolboxMaandStatusTable)
+      .where(and(eq(toolboxMaandStatusTable.id, statusId), eq(toolboxMaandStatusTable.gebruikerId, userId))).limit(1);
+    if (!status) return res.status(404).json({ error: "Niet gevonden" });
+
+    if (status.voltooIdOp) {
+      const [existOpdracht] = await db.select().from(toolboxMaandOpdrachtenTable)
+        .where(eq(toolboxMaandOpdrachtenTable.id, status.opdrachtId)).limit(1);
+      const existTb = await haalToolboxOp(existOpdracht.toolboxId);
+      return res.json(mapMaandStatus(status, existOpdracht, existTb!));
+    }
+
+    const nu = new Date();
+    const [bijgewerkt] = await db.update(toolboxMaandStatusTable)
+      .set({ voltooIdOp: nu, vraag: vraag ?? status.vraag, bijgewerktOp: nu })
+      .where(eq(toolboxMaandStatusTable.id, statusId)).returning();
+    const [opdracht] = await db.select().from(toolboxMaandOpdrachtenTable)
+      .where(eq(toolboxMaandOpdrachtenTable.id, status.opdrachtId)).limit(1);
+    const tb = await haalToolboxOp(opdracht.toolboxId);
+    res.json(mapMaandStatus(bijgewerkt, opdracht, tb!));
+  } catch (err) {
+    req.log.error(err, "POST /mijn/toolbox-maandopdracht/:id/voltooien");
     res.status(500).json({ error: "Interne fout" });
   }
 });

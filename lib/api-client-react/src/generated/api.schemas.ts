@@ -5645,6 +5645,57 @@ export interface VeiligheidToolboxVraag {
   uitleg?: string | null;
 }
 
+export interface ToolboxMaandopdrachtInput {
+  toolbox_id: number;
+  jaar: number;
+  maand: number;
+}
+
+export interface ToolboxMaandopdracht {
+  id: number;
+  toolbox_id: number;
+  toolbox_titel: string;
+  toolbox_categorie?: string;
+  jaar: number;
+  maand: number;
+  totaal_voltooid: number;
+  totaal_gebruikers: number;
+  aangemaakt_op: string;
+}
+
+export interface ToolboxMaandStatusRegel {
+  gebruiker_id: number;
+  naam: string;
+  eerste_aanbieding: string;
+  aantal_uitgesteld: number;
+  voltooid: boolean;
+  voltooid_op?: string | null;
+  vraag?: string | null;
+}
+
+export interface MijnToolboxMaandopdracht {
+  id: number;
+  toolbox_id: number;
+  toolbox_titel: string;
+  toolbox_categorie: string;
+  toolbox_intro?: string | null;
+  toolbox_heeft_pdf?: boolean;
+  toolbox_heeft_video?: boolean;
+  jaar: number;
+  maand: number;
+  eerste_aanbieding: string;
+  aantal_uitgesteld: number;
+  kan_uitstellen: boolean;
+  is_verplicht: boolean;
+  dagen_resterend: number;
+  voltooid: boolean;
+  voltooid_op?: string | null;
+}
+
+export interface ToolboxMaandVoltooienInput {
+  vraag?: string | null;
+}
+
 export type VeiligheidToolboxDetail = VeiligheidToolbox & ({
   intro?: string | null;
   ai_samenvatting?: string | null;

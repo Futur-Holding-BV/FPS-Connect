@@ -11,9 +11,15 @@ import {
   useGetVeiligheidToolboxenIdAfrondingen,
   getGetVeiligheidToolboxenQueryKey,
   getGetVeiligheidToolboxenIdQueryKey,
+  useListToolboxMaandopdrachten,
+  useCreateToolboxMaandopdracht,
+  useDeleteToolboxMaandopdracht,
+  useGetToolboxMaandopdrachtVoortgang,
+  getListToolboxMaandopdrachtenQueryKey,
   type VeiligheidToolbox,
   type VeiligheidToolboxInput,
   type VeiligheidToolboxDetail,
+  type ToolboxMaandopdracht,
 } from "@workspace/api-client-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -35,7 +41,8 @@ import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
 import {
   ShieldCheck, Plus, Trash2, Sparkles, Upload, FileText,
   CheckCircle, Clock, AlertTriangle, Loader2, ChevronRight,
-  BookOpen, Send, Users, X, Play, ExternalLink,
+  BookOpen, Send, Users, X, Play, ExternalLink, Calendar,
+  BarChart2, Shield,
 } from "lucide-react";
 
 const CATEGORIEEN: { value: string; label: string }[] = [
@@ -61,6 +68,8 @@ const STATUS_KLEUR: Record<string, string> = {
   concept: "bg-amber-100 text-amber-800 border-amber-200",
   verlopen: "bg-red-100 text-red-800 border-red-200",
 };
+
+const MAANDEN_LANG = ["januari", "februari", "maart", "april", "mei", "juni", "juli", "augustus", "september", "oktober", "november", "december"];
 
 const CATEGORIE_ACCENT: Record<string, string> = {
   brandveiligheid: "border-l-red-500",
@@ -357,6 +366,21 @@ export default function VeiligheidToolboxenPagina() {
     { query: { enabled: detailId !== null && kanSchrijven } } as any
   );
 
+  const { data: maandopdrachten = [], isLoading: maandLaden } = useListToolboxMaandopdrachten();
+  const maakMaandopdrachtMut = useCreateToolboxMaandopdracht();
+  const verwijderMaandopdrachtMut = useDeleteToolboxMaandopdracht();
+  const [maandDialog, setMaandDialog] = useState(false);
+  const [voortgangId, setVoortgangId] = useState<number | null>(null);
+  const [maandFormulier, setMaandFormulier] = useState<{ toolbox_id: string; jaar: number; maand: number }>({
+    toolbox_id: "",
+    jaar: new Date().getFullYear(),
+    maand: new Date().getMonth() + 1,
+  });
+  const { data: voortgang = [] } = useGetToolboxMaandopdrachtVoortgang(
+    voortgangId ?? 0,
+    { query: { enabled: voortgangId !== null } } as any
+  );
+
   function invaliderenLijst() {
     queryClient.invalidateQueries({ queryKey: getGetVeiligheidToolboxenQueryKey() });
   }
@@ -499,6 +523,84 @@ export default function VeiligheidToolboxenPagina() {
           </Button>
         )}
       </div>
+
+      {/* Maandopdrachten */}
+      {kanSchrijven && (
+        <div className="rounded-xl border bg-card shadow-sm">
+          <div className="flex items-center justify-between px-5 py-4 border-b">
+            <div className="flex items-center gap-2">
+              <Calendar className="h-4 w-4 text-primary" />
+              <span className="font-semibold text-sm">Maandopdrachten</span>
+              <Badge variant="outline" className="text-[10px]">{(maandopdrachten as ToolboxMaandopdracht[]).length}</Badge>
+            </div>
+            <Button size="sm" onClick={() => setMaandDialog(true)}>
+              <Plus className="h-3.5 w-3.5 mr-1" />
+              Nieuwe opdracht
+            </Button>
+          </div>
+          {maandLaden ? (
+            <div className="p-4 space-y-2">
+              {[1, 2].map(i => <Skeleton key={i} className="h-10 w-full" />)}
+            </div>
+          ) : (maandopdrachten as ToolboxMaandopdracht[]).length === 0 ? (
+            <div className="p-6 text-center text-sm text-muted-foreground">
+              Nog geen maandopdrachten aangemaakt
+            </div>
+          ) : (
+            <div className="divide-y">
+              {(maandopdrachten as ToolboxMaandopdracht[]).map((o) => {
+                const totaalVoltooid = (o as any).totaal_voltooid ?? 0;
+                const totaalGebruikers = (o as any).totaal_gebruikers ?? 0;
+                return (
+                  <div key={o.id} className="flex items-center gap-4 px-5 py-3">
+                    <div className="shrink-0 w-14 text-center">
+                      <div className="text-[10px] font-bold uppercase text-muted-foreground">
+                        {MAANDEN_LANG[o.maand - 1]?.slice(0, 3)}
+                      </div>
+                      <div className="text-lg font-bold leading-none">{o.jaar}</div>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium text-sm truncate">{o.toolbox_titel}</div>
+                      <div className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                        <Users className="h-3 w-3" />
+                        {totaalVoltooid} / {totaalGebruikers} voltooid
+                      </div>
+                      {totaalGebruikers > 0 && (
+                        <div className="w-full bg-muted rounded-full h-1 mt-1.5">
+                          <div
+                            className="bg-emerald-500 h-1 rounded-full transition-all"
+                            style={{ width: `${Math.round((totaalVoltooid / totaalGebruikers) * 100)}%` }}
+                          />
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <Button size="sm" variant="outline" onClick={() => setVoortgangId(o.id)} title="Voortgang bekijken">
+                        <BarChart2 className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="text-muted-foreground hover:text-destructive"
+                        onClick={() => {
+                          verwijderMaandopdrachtMut.mutate({ id: o.id } as any, {
+                            onSuccess: () => {
+                              queryClient.invalidateQueries({ queryKey: getListToolboxMaandopdrachtenQueryKey() });
+                              toast({ title: "Opdracht verwijderd" });
+                            },
+                          });
+                        }}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Filters */}
       <div className="flex gap-3 flex-wrap">
@@ -1012,6 +1114,126 @@ export default function VeiligheidToolboxenPagina() {
               Verwijderen
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Maandopdracht aanmaken */}
+      <Dialog open={maandDialog} onOpenChange={setMaandDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Nieuwe maandopdracht</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label>Toolbox</Label>
+              <Select
+                value={maandFormulier.toolbox_id}
+                onValueChange={v => setMaandFormulier(f => ({ ...f, toolbox_id: v }))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecteer een toolbox..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {(toolboxen ?? []).filter(t => t.gepubliceerd).map(t => (
+                    <SelectItem key={t.id} value={String(t.id)}>{t.titel}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label>Maand</Label>
+                <Select
+                  value={String(maandFormulier.maand)}
+                  onValueChange={v => setMaandFormulier(f => ({ ...f, maand: Number(v) }))}
+                >
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {MAANDEN_LANG.map((m, i) => (
+                      <SelectItem key={i + 1} value={String(i + 1)}>{m}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Jaar</Label>
+                <Input
+                  type="number"
+                  value={maandFormulier.jaar}
+                  onChange={e => setMaandFormulier(f => ({ ...f, jaar: Number(e.target.value) }))}
+                />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setMaandDialog(false)}>Annuleren</Button>
+            <Button
+              disabled={!maandFormulier.toolbox_id || maakMaandopdrachtMut.isPending}
+              onClick={async () => {
+                try {
+                  await maakMaandopdrachtMut.mutateAsync({
+                    data: {
+                      toolbox_id: Number(maandFormulier.toolbox_id),
+                      jaar: maandFormulier.jaar,
+                      maand: maandFormulier.maand,
+                    }
+                  });
+                  queryClient.invalidateQueries({ queryKey: getListToolboxMaandopdrachtenQueryKey() });
+                  setMaandDialog(false);
+                  setMaandFormulier({ toolbox_id: "", jaar: new Date().getFullYear(), maand: new Date().getMonth() + 1 });
+                  toast({ title: "Maandopdracht aangemaakt" });
+                } catch (e: any) {
+                  toast({ title: e?.message ?? "Er is een fout opgetreden", variant: "destructive" });
+                }
+              }}
+            >
+              {maakMaandopdrachtMut.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Aanmaken"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Voortgang maandopdracht */}
+      <Dialog open={voortgangId !== null} onOpenChange={v => !v && setVoortgangId(null)}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <BarChart2 className="h-4 w-4" />
+              Voortgang medewerkers
+            </DialogTitle>
+          </DialogHeader>
+          <div className="max-h-96 overflow-y-auto">
+            {(voortgang as any[]).length === 0 ? (
+              <p className="text-sm text-muted-foreground py-6 text-center">
+                Nog niemand heeft de opdracht gezien
+              </p>
+            ) : (
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b text-muted-foreground text-xs">
+                    <th className="text-left py-2 font-medium">Medewerker</th>
+                    <th className="text-center py-2 font-medium">Status</th>
+                    <th className="text-center py-2 font-medium">Uitgesteld</th>
+                    <th className="text-left py-2 font-medium">Vraag</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  {(voortgang as any[]).map((r, i) => (
+                    <tr key={i}>
+                      <td className="py-2.5">{r.naam}</td>
+                      <td className="py-2.5 text-center">
+                        {r.voltooid
+                          ? <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200 text-[10px]">Voltooid</Badge>
+                          : <Badge className="bg-amber-100 text-amber-800 border-amber-200 text-[10px]">Open</Badge>}
+                      </td>
+                      <td className="py-2.5 text-center text-muted-foreground">{r.aantal_uitgesteld}x</td>
+                      <td className="py-2.5 text-muted-foreground max-w-[200px] truncate">{r.vraag ?? "—"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
         </DialogContent>
       </Dialog>
     </div>

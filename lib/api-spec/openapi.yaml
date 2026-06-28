@@ -1871,6 +1871,66 @@ paths:
         "404":
           description: Geen medewerker gekoppeld
 
+  /mijn/toolbox-maandopdracht:
+    get:
+      operationId: getMijnToolboxMaandopdracht
+      summary: Huidige maandelijkse toolbox-opdracht voor ingelogde gebruiker
+      tags: [mijn]
+      responses:
+        "200":
+          description: Actieve opdracht of null indien geen
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MijnToolboxMaandopdracht'
+                nullable: true
+
+  /mijn/toolbox-maandopdracht/{id}/uitstellen:
+    post:
+      operationId: uitstellenToolboxMaandopdracht
+      summary: Opdracht tijdelijk uitstellen (max 3 dagen)
+      tags: [mijn]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Uitgesteld
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MijnToolboxMaandopdracht'
+        "403":
+          description: Kan niet meer uitstellen
+
+  /mijn/toolbox-maandopdracht/{id}/voltooien:
+    post:
+      operationId: voltooienToolboxMaandopdracht
+      summary: Toolbox-opdracht voltooien met akkoord
+      tags: [mijn]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ToolboxMaandVoltooienInput'
+      responses:
+        "200":
+          description: Voltooid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MijnToolboxMaandopdracht'
+
   /mijn/verlofsoorten:
     get:
       operationId: listMijnVerlofsoorten
@@ -10742,6 +10802,78 @@ paths:
         '204':
           description: Verwijderd
 
+
+  /veiligheid/toolbox-maandopdrachten:
+    get:
+      operationId: listToolboxMaandopdrachten
+      summary: Lijst maandelijkse toolbox-opdrachten
+      tags: [Veiligheid]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ToolboxMaandopdracht'
+    post:
+      operationId: createToolboxMaandopdracht
+      summary: Nieuwe maandopdracht aanmaken
+      tags: [Veiligheid]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ToolboxMaandopdrachtInput'
+      responses:
+        "201":
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ToolboxMaandopdracht'
+        "409":
+          description: Al een opdracht voor deze maand
+
+  /veiligheid/toolbox-maandopdrachten/{id}:
+    delete:
+      operationId: deleteToolboxMaandopdracht
+      summary: Verwijder maandopdracht
+      tags: [Veiligheid]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Verwijderd
+        "404":
+          description: Niet gevonden
+
+  /veiligheid/toolbox-maandopdrachten/{id}/voortgang:
+    get:
+      operationId: getToolboxMaandopdrachtVoortgang
+      summary: Voortgang per medewerker voor een opdracht
+      tags: [Veiligheid]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ToolboxMaandStatusRegel'
 
   /veiligheid/toolboxen:
     get:
@@ -21691,6 +21823,107 @@ components:
               correct:
                 type: boolean
         uitleg:
+          type: string
+          nullable: true
+
+    ToolboxMaandopdrachtInput:
+      type: object
+      required: [toolbox_id, jaar, maand]
+      properties:
+        toolbox_id:
+          type: integer
+        jaar:
+          type: integer
+        maand:
+          type: integer
+
+    ToolboxMaandopdracht:
+      type: object
+      required: [id, toolbox_id, toolbox_titel, jaar, maand, aangemaakt_op, totaal_voltooid, totaal_gebruikers]
+      properties:
+        id:
+          type: integer
+        toolbox_id:
+          type: integer
+        toolbox_titel:
+          type: string
+        toolbox_categorie:
+          type: string
+        jaar:
+          type: integer
+        maand:
+          type: integer
+        totaal_voltooid:
+          type: integer
+        totaal_gebruikers:
+          type: integer
+        aangemaakt_op:
+          type: string
+
+    ToolboxMaandStatusRegel:
+      type: object
+      required: [gebruiker_id, naam, eerste_aanbieding, aantal_uitgesteld, voltooid]
+      properties:
+        gebruiker_id:
+          type: integer
+        naam:
+          type: string
+        eerste_aanbieding:
+          type: string
+        aantal_uitgesteld:
+          type: integer
+        voltooid:
+          type: boolean
+        voltooid_op:
+          type: string
+          nullable: true
+        vraag:
+          type: string
+          nullable: true
+
+    MijnToolboxMaandopdracht:
+      type: object
+      required: [id, toolbox_id, toolbox_titel, toolbox_categorie, jaar, maand, eerste_aanbieding, aantal_uitgesteld, kan_uitstellen, is_verplicht, dagen_resterend, voltooid]
+      properties:
+        id:
+          type: integer
+        toolbox_id:
+          type: integer
+        toolbox_titel:
+          type: string
+        toolbox_categorie:
+          type: string
+        toolbox_intro:
+          type: string
+          nullable: true
+        toolbox_heeft_pdf:
+          type: boolean
+        toolbox_heeft_video:
+          type: boolean
+        jaar:
+          type: integer
+        maand:
+          type: integer
+        eerste_aanbieding:
+          type: string
+        aantal_uitgesteld:
+          type: integer
+        kan_uitstellen:
+          type: boolean
+        is_verplicht:
+          type: boolean
+        dagen_resterend:
+          type: integer
+        voltooid:
+          type: boolean
+        voltooid_op:
+          type: string
+          nullable: true
+
+    ToolboxMaandVoltooienInput:
+      type: object
+      properties:
+        vraag:
           type: string
           nullable: true
 

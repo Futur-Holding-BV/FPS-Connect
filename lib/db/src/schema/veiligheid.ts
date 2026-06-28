@@ -55,6 +55,32 @@ export type VeiligheidToolbox = typeof veiligheidToolboxenTable.$inferSelect;
 export type VeiligheidToolboxVraag = typeof veiligheidToolboxVragenTable.$inferSelect;
 export type VeiligheidToolboxAfronding = typeof veiligheidToolboxAfrondingTable.$inferSelect;
 
+// ── Maandelijkse toolbox-opdrachten ──────────────────────────────────────────
+
+export const toolboxMaandOpdrachtenTable = pgTable("toolbox_maand_opdrachten", {
+  id: serial("id").primaryKey(),
+  toolboxId: integer("toolbox_id").notNull().references(() => veiligheidToolboxenTable.id, { onDelete: "cascade" }),
+  jaar: integer("jaar").notNull(),
+  maand: integer("maand").notNull(),
+  aangemaaktDoorId: integer("aangemaakt_door_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
+  aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
+});
+
+export const toolboxMaandStatusTable = pgTable("toolbox_maand_status", {
+  id: serial("id").primaryKey(),
+  opdrachtId: integer("opdracht_id").notNull().references(() => toolboxMaandOpdrachtenTable.id, { onDelete: "cascade" }),
+  gebruikerId: integer("gebruiker_id").notNull().references(() => gebruikersTable.id, { onDelete: "cascade" }),
+  eersteAanbieding: timestamp("eerste_aanbieding").notNull().defaultNow(),
+  aantalUitgesteld: integer("aantal_uitgesteld").notNull().default(0),
+  laatsteUitgesteld: timestamp("laatste_uitgesteld"),
+  vraag: text("vraag"),
+  voltooIdOp: timestamp("voltooid_op"),
+  bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
+});
+
+export type ToolboxMaandOpdracht = typeof toolboxMaandOpdrachtenTable.$inferSelect;
+export type ToolboxMaandStatus = typeof toolboxMaandStatusTable.$inferSelect;
+
 // ── LMRA ─────────────────────────────────────────────────────────────────────
 
 export const veiligheidLmrasTable = pgTable("veiligheid_lmras", {

@@ -282,6 +282,7 @@ import type {
   MedewerkerOpleidingInput,
   MijnCertificaten,
   MijnPrivacyGegevens,
+  MijnToolboxMaandopdracht,
   MijnWerkGebouw,
   ModCalcHeader,
   ModCalcHeaderDetail,
@@ -439,6 +440,10 @@ import type {
   ToolboxBerichtInput,
   ToolboxKoppelingSuggestieInput,
   ToolboxKoppelingSuggestieResultaat,
+  ToolboxMaandStatusRegel,
+  ToolboxMaandVoltooienInput,
+  ToolboxMaandopdracht,
+  ToolboxMaandopdrachtInput,
   TweeFactorSetup,
   UitnodigingActiveren,
   UitnodigingActiveren200,
@@ -6232,6 +6237,224 @@ export function useGetMijnCertificaten<TData = Awaited<ReturnType<typeof getMijn
 
 
 
+
+export const getGetMijnToolboxMaandopdrachtUrl = () => {
+
+
+
+
+  return `/api/mijn/toolbox-maandopdracht`
+}
+
+/**
+ * @summary Huidige maandelijkse toolbox-opdracht voor ingelogde gebruiker
+ */
+export const getMijnToolboxMaandopdracht = async ( options?: RequestInit): Promise<MijnToolboxMaandopdracht | null> => {
+
+  return customFetch<MijnToolboxMaandopdracht | null>(getGetMijnToolboxMaandopdrachtUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetMijnToolboxMaandopdrachtQueryKey = () => {
+    return [
+    `/api/mijn/toolbox-maandopdracht`
+    ] as const;
+    }
+
+
+export const getGetMijnToolboxMaandopdrachtQueryOptions = <TData = Awaited<ReturnType<typeof getMijnToolboxMaandopdracht>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMijnToolboxMaandopdracht>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetMijnToolboxMaandopdrachtQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getMijnToolboxMaandopdracht>>> = ({ signal }) => getMijnToolboxMaandopdracht({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getMijnToolboxMaandopdracht>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetMijnToolboxMaandopdrachtQueryResult = NonNullable<Awaited<ReturnType<typeof getMijnToolboxMaandopdracht>>>
+export type GetMijnToolboxMaandopdrachtQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Huidige maandelijkse toolbox-opdracht voor ingelogde gebruiker
+ */
+
+export function useGetMijnToolboxMaandopdracht<TData = Awaited<ReturnType<typeof getMijnToolboxMaandopdracht>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMijnToolboxMaandopdracht>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetMijnToolboxMaandopdrachtQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getUitstellenToolboxMaandopdrachtUrl = (id: number,) => {
+
+
+
+
+  return `/api/mijn/toolbox-maandopdracht/${id}/uitstellen`
+}
+
+/**
+ * @summary Opdracht tijdelijk uitstellen (max 3 dagen)
+ */
+export const uitstellenToolboxMaandopdracht = async (id: number, options?: RequestInit): Promise<MijnToolboxMaandopdracht> => {
+
+  return customFetch<MijnToolboxMaandopdracht>(getUitstellenToolboxMaandopdrachtUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getUitstellenToolboxMaandopdrachtMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof uitstellenToolboxMaandopdracht>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof uitstellenToolboxMaandopdracht>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['uitstellenToolboxMaandopdracht'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof uitstellenToolboxMaandopdracht>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  uitstellenToolboxMaandopdracht(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UitstellenToolboxMaandopdrachtMutationResult = NonNullable<Awaited<ReturnType<typeof uitstellenToolboxMaandopdracht>>>
+
+    export type UitstellenToolboxMaandopdrachtMutationError = ErrorType<void>
+
+    /**
+ * @summary Opdracht tijdelijk uitstellen (max 3 dagen)
+ */
+export const useUitstellenToolboxMaandopdracht = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof uitstellenToolboxMaandopdracht>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof uitstellenToolboxMaandopdracht>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getUitstellenToolboxMaandopdrachtMutationOptions(options));
+    }
+
+export const getVoltooienToolboxMaandopdrachtUrl = (id: number,) => {
+
+
+
+
+  return `/api/mijn/toolbox-maandopdracht/${id}/voltooien`
+}
+
+/**
+ * @summary Toolbox-opdracht voltooien met akkoord
+ */
+export const voltooienToolboxMaandopdracht = async (id: number,
+    toolboxMaandVoltooienInput?: ToolboxMaandVoltooienInput, options?: RequestInit): Promise<MijnToolboxMaandopdracht> => {
+
+  return customFetch<MijnToolboxMaandopdracht>(getVoltooienToolboxMaandopdrachtUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(toolboxMaandVoltooienInput)
+  }
+);}
+
+
+
+
+export const getVoltooienToolboxMaandopdrachtMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof voltooienToolboxMaandopdracht>>, TError,{id: number;data?: BodyType<ToolboxMaandVoltooienInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof voltooienToolboxMaandopdracht>>, TError,{id: number;data?: BodyType<ToolboxMaandVoltooienInput>}, TContext> => {
+
+const mutationKey = ['voltooienToolboxMaandopdracht'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof voltooienToolboxMaandopdracht>>, {id: number;data?: BodyType<ToolboxMaandVoltooienInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  voltooienToolboxMaandopdracht(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type VoltooienToolboxMaandopdrachtMutationResult = NonNullable<Awaited<ReturnType<typeof voltooienToolboxMaandopdracht>>>
+    export type VoltooienToolboxMaandopdrachtMutationBody = BodyType<ToolboxMaandVoltooienInput> | undefined
+    export type VoltooienToolboxMaandopdrachtMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Toolbox-opdracht voltooien met akkoord
+ */
+export const useVoltooienToolboxMaandopdracht = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof voltooienToolboxMaandopdracht>>, TError,{id: number;data?: BodyType<ToolboxMaandVoltooienInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof voltooienToolboxMaandopdracht>>,
+        TError,
+        {id: number;data?: BodyType<ToolboxMaandVoltooienInput>},
+        TContext
+      > => {
+      return useMutation(getVoltooienToolboxMaandopdrachtMutationOptions(options));
+    }
 
 export const getListMijnVerlofsoortenUrl = () => {
 
@@ -38194,6 +38417,300 @@ export const useDeleteOpnameFoto = <TError = ErrorType<unknown>,
       > => {
       return useMutation(getDeleteOpnameFotoMutationOptions(options));
     }
+
+export const getListToolboxMaandopdrachtenUrl = () => {
+
+
+
+
+  return `/api/veiligheid/toolbox-maandopdrachten`
+}
+
+/**
+ * @summary Lijst maandelijkse toolbox-opdrachten
+ */
+export const listToolboxMaandopdrachten = async ( options?: RequestInit): Promise<ToolboxMaandopdracht[]> => {
+
+  return customFetch<ToolboxMaandopdracht[]>(getListToolboxMaandopdrachtenUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListToolboxMaandopdrachtenQueryKey = () => {
+    return [
+    `/api/veiligheid/toolbox-maandopdrachten`
+    ] as const;
+    }
+
+
+export const getListToolboxMaandopdrachtenQueryOptions = <TData = Awaited<ReturnType<typeof listToolboxMaandopdrachten>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listToolboxMaandopdrachten>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListToolboxMaandopdrachtenQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listToolboxMaandopdrachten>>> = ({ signal }) => listToolboxMaandopdrachten({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listToolboxMaandopdrachten>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListToolboxMaandopdrachtenQueryResult = NonNullable<Awaited<ReturnType<typeof listToolboxMaandopdrachten>>>
+export type ListToolboxMaandopdrachtenQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Lijst maandelijkse toolbox-opdrachten
+ */
+
+export function useListToolboxMaandopdrachten<TData = Awaited<ReturnType<typeof listToolboxMaandopdrachten>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listToolboxMaandopdrachten>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListToolboxMaandopdrachtenQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateToolboxMaandopdrachtUrl = () => {
+
+
+
+
+  return `/api/veiligheid/toolbox-maandopdrachten`
+}
+
+/**
+ * @summary Nieuwe maandopdracht aanmaken
+ */
+export const createToolboxMaandopdracht = async (toolboxMaandopdrachtInput: ToolboxMaandopdrachtInput, options?: RequestInit): Promise<ToolboxMaandopdracht> => {
+
+  return customFetch<ToolboxMaandopdracht>(getCreateToolboxMaandopdrachtUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(toolboxMaandopdrachtInput)
+  }
+);}
+
+
+
+
+export const getCreateToolboxMaandopdrachtMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createToolboxMaandopdracht>>, TError,{data: BodyType<ToolboxMaandopdrachtInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createToolboxMaandopdracht>>, TError,{data: BodyType<ToolboxMaandopdrachtInput>}, TContext> => {
+
+const mutationKey = ['createToolboxMaandopdracht'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createToolboxMaandopdracht>>, {data: BodyType<ToolboxMaandopdrachtInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createToolboxMaandopdracht(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateToolboxMaandopdrachtMutationResult = NonNullable<Awaited<ReturnType<typeof createToolboxMaandopdracht>>>
+    export type CreateToolboxMaandopdrachtMutationBody = BodyType<ToolboxMaandopdrachtInput>
+    export type CreateToolboxMaandopdrachtMutationError = ErrorType<void>
+
+    /**
+ * @summary Nieuwe maandopdracht aanmaken
+ */
+export const useCreateToolboxMaandopdracht = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createToolboxMaandopdracht>>, TError,{data: BodyType<ToolboxMaandopdrachtInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createToolboxMaandopdracht>>,
+        TError,
+        {data: BodyType<ToolboxMaandopdrachtInput>},
+        TContext
+      > => {
+      return useMutation(getCreateToolboxMaandopdrachtMutationOptions(options));
+    }
+
+export const getDeleteToolboxMaandopdrachtUrl = (id: number,) => {
+
+
+
+
+  return `/api/veiligheid/toolbox-maandopdrachten/${id}`
+}
+
+/**
+ * @summary Verwijder maandopdracht
+ */
+export const deleteToolboxMaandopdracht = async (id: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteToolboxMaandopdrachtUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteToolboxMaandopdrachtMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteToolboxMaandopdracht>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteToolboxMaandopdracht>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deleteToolboxMaandopdracht'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteToolboxMaandopdracht>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteToolboxMaandopdracht(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteToolboxMaandopdrachtMutationResult = NonNullable<Awaited<ReturnType<typeof deleteToolboxMaandopdracht>>>
+
+    export type DeleteToolboxMaandopdrachtMutationError = ErrorType<void>
+
+    /**
+ * @summary Verwijder maandopdracht
+ */
+export const useDeleteToolboxMaandopdracht = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteToolboxMaandopdracht>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteToolboxMaandopdracht>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeleteToolboxMaandopdrachtMutationOptions(options));
+    }
+
+export const getGetToolboxMaandopdrachtVoortgangUrl = (id: number,) => {
+
+
+
+
+  return `/api/veiligheid/toolbox-maandopdrachten/${id}/voortgang`
+}
+
+/**
+ * @summary Voortgang per medewerker voor een opdracht
+ */
+export const getToolboxMaandopdrachtVoortgang = async (id: number, options?: RequestInit): Promise<ToolboxMaandStatusRegel[]> => {
+
+  return customFetch<ToolboxMaandStatusRegel[]>(getGetToolboxMaandopdrachtVoortgangUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetToolboxMaandopdrachtVoortgangQueryKey = (id: number,) => {
+    return [
+    `/api/veiligheid/toolbox-maandopdrachten/${id}/voortgang`
+    ] as const;
+    }
+
+
+export const getGetToolboxMaandopdrachtVoortgangQueryOptions = <TData = Awaited<ReturnType<typeof getToolboxMaandopdrachtVoortgang>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getToolboxMaandopdrachtVoortgang>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetToolboxMaandopdrachtVoortgangQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getToolboxMaandopdrachtVoortgang>>> = ({ signal }) => getToolboxMaandopdrachtVoortgang(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getToolboxMaandopdrachtVoortgang>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetToolboxMaandopdrachtVoortgangQueryResult = NonNullable<Awaited<ReturnType<typeof getToolboxMaandopdrachtVoortgang>>>
+export type GetToolboxMaandopdrachtVoortgangQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Voortgang per medewerker voor een opdracht
+ */
+
+export function useGetToolboxMaandopdrachtVoortgang<TData = Awaited<ReturnType<typeof getToolboxMaandopdrachtVoortgang>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getToolboxMaandopdrachtVoortgang>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetToolboxMaandopdrachtVoortgangQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
 
 export const getGetVeiligheidToolboxenUrl = (params?: GetVeiligheidToolboxenParams,) => {
   const normalizedParams = new URLSearchParams();
