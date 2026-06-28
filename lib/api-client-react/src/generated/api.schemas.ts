@@ -4909,6 +4909,10 @@ export interface ModCalcHeader {
   opslag_risico: number;
   opslag_winst: number;
   korting: number;
+  ak_is_vast?: boolean;
+  abk_is_vast?: boolean;
+  risico_is_vast?: boolean;
+  winst_is_vast?: boolean;
   subtotaal?: number | null;
   totaal_na_opslagen?: number | null;
   aangemaakt_door_naam?: string | null;
@@ -4964,9 +4968,14 @@ export interface ModCalcHeaderInput {
   opslag_materiaal?: number;
   opslag_arbeid?: number;
   opslag_ak?: number;
+  opslag_abk?: number;
   opslag_risico?: number;
   opslag_winst?: number;
   korting?: number;
+  ak_is_vast?: boolean;
+  abk_is_vast?: boolean;
+  risico_is_vast?: boolean;
+  winst_is_vast?: boolean;
 }
 
 export interface ModCalcRegelInput {

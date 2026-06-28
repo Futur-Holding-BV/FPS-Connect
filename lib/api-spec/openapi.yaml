@@ -20509,6 +20509,14 @@ components:
           type: number
         korting:
           type: number
+        ak_is_vast:
+          type: boolean
+        abk_is_vast:
+          type: boolean
+        risico_is_vast:
+          type: boolean
+        winst_is_vast:
+          type: boolean
         subtotaal:
           type: number
           nullable: true
@@ -20572,12 +20580,22 @@ components:
           type: number
         opslag_ak:
           type: number
+        opslag_abk:
+          type: number
         opslag_risico:
           type: number
         opslag_winst:
           type: number
         korting:
           type: number
+        ak_is_vast:
+          type: boolean
+        abk_is_vast:
+          type: boolean
+        risico_is_vast:
+          type: boolean
+        winst_is_vast:
+          type: boolean
 
     ModCalcRegel:
       type: object

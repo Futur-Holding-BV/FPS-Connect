@@ -11188,6 +11188,10 @@ export const ListModCalculatiesResponseItem = zod.object({
   "opslag_risico": zod.number(),
   "opslag_winst": zod.number(),
   "korting": zod.number(),
+  "ak_is_vast": zod.boolean().optional(),
+  "abk_is_vast": zod.boolean().optional(),
+  "risico_is_vast": zod.boolean().optional(),
+  "winst_is_vast": zod.boolean().optional(),
   "subtotaal": zod.number().nullish(),
   "totaal_na_opslagen": zod.number().nullish(),
   "aangemaakt_door_naam": zod.string().nullish(),
@@ -11212,9 +11216,14 @@ export const CreateModCalculatieBody = zod.object({
   "opslag_materiaal": zod.number().optional(),
   "opslag_arbeid": zod.number().optional(),
   "opslag_ak": zod.number().optional(),
+  "opslag_abk": zod.number().optional(),
   "opslag_risico": zod.number().optional(),
   "opslag_winst": zod.number().optional(),
-  "korting": zod.number().optional()
+  "korting": zod.number().optional(),
+  "ak_is_vast": zod.boolean().optional(),
+  "abk_is_vast": zod.boolean().optional(),
+  "risico_is_vast": zod.boolean().optional(),
+  "winst_is_vast": zod.boolean().optional()
 })
 
 export const CreateModCalculatieResponse = zod.void()
@@ -11341,6 +11350,10 @@ export const GetModCalculatieResponse = zod.object({
   "opslag_risico": zod.number(),
   "opslag_winst": zod.number(),
   "korting": zod.number(),
+  "ak_is_vast": zod.boolean().optional(),
+  "abk_is_vast": zod.boolean().optional(),
+  "risico_is_vast": zod.boolean().optional(),
+  "winst_is_vast": zod.boolean().optional(),
   "subtotaal": zod.number().nullish(),
   "totaal_na_opslagen": zod.number().nullish(),
   "aangemaakt_door_naam": zod.string().nullish(),
@@ -11395,9 +11408,14 @@ export const UpdateModCalculatieBody = zod.object({
   "opslag_materiaal": zod.number().optional(),
   "opslag_arbeid": zod.number().optional(),
   "opslag_ak": zod.number().optional(),
+  "opslag_abk": zod.number().optional(),
   "opslag_risico": zod.number().optional(),
   "opslag_winst": zod.number().optional(),
-  "korting": zod.number().optional()
+  "korting": zod.number().optional(),
+  "ak_is_vast": zod.boolean().optional(),
+  "abk_is_vast": zod.boolean().optional(),
+  "risico_is_vast": zod.boolean().optional(),
+  "winst_is_vast": zod.boolean().optional()
 })
 
 export const UpdateModCalculatieResponse = zod.object({
@@ -11418,6 +11436,10 @@ export const UpdateModCalculatieResponse = zod.object({
   "opslag_risico": zod.number(),
   "opslag_winst": zod.number(),
   "korting": zod.number(),
+  "ak_is_vast": zod.boolean().optional(),
+  "abk_is_vast": zod.boolean().optional(),
+  "risico_is_vast": zod.boolean().optional(),
+  "winst_is_vast": zod.boolean().optional(),
   "subtotaal": zod.number().nullish(),
   "totaal_na_opslagen": zod.number().nullish(),
   "aangemaakt_door_naam": zod.string().nullish(),

@@ -318,11 +318,12 @@ export default function ModulesCalculatieDetail() {
     naam: "", referentie: "", klant_naam: "", project_naam: "",
     status: "", omschrijving: "", opmerkingen: "",
     opslag_materiaal: 0, opslag_arbeid: 0,
-    opslag_ak: 15, opslag_risico: 5, opslag_winst: 10, korting: 0,
+    opslag_ak: 15, opslag_abk: 10, opslag_risico: 5, opslag_winst: 10, korting: 0,
+    ak_is_vast: false, abk_is_vast: false, risico_is_vast: false, winst_is_vast: false,
   });
 
-  function openNieuweRegel(staartkosten = false, bouwplaatskosten = false) {
-    setRegelForm({ ...LEGE_REGEL, is_staartkosten: staartkosten, is_bouwplaatskosten: bouwplaatskosten });
+  function openNieuweRegel(staartkosten = false, bouwplaatskosten = false, hoofdstuk?: string) {
+    setRegelForm({ ...LEGE_REGEL, is_staartkosten: staartkosten, is_bouwplaatskosten: bouwplaatskosten, hoofdstuk: hoofdstuk ?? LEGE_REGEL.hoofdstuk });
     setRegelDialoog("nieuw");
   }
 
@@ -361,9 +362,14 @@ export default function ModulesCalculatieDetail() {
       opslag_materiaal: data.opslag_materiaal ?? 0,
       opslag_arbeid: data.opslag_arbeid ?? 0,
       opslag_ak: data.opslag_ak,
+      opslag_abk: (data as any).opslag_abk ?? 10,
       opslag_risico: data.opslag_risico,
       opslag_winst: data.opslag_winst,
       korting: data.korting,
+      ak_is_vast: (data as any).ak_is_vast ?? false,
+      abk_is_vast: (data as any).abk_is_vast ?? false,
+      risico_is_vast: (data as any).risico_is_vast ?? false,
+      winst_is_vast: (data as any).winst_is_vast ?? false,
     });
     setBewerkenDialoog(true);
   }
@@ -438,6 +444,16 @@ export default function ModulesCalculatieDetail() {
 
   const opslagMateriaal = data.opslag_materiaal ?? 0;
   const opslagArbeid    = data.opslag_arbeid ?? 0;
+  const opslagAk        = data.opslag_ak;
+  const opslagAbk       = (data as any).opslag_abk ?? 10;
+  const opslagRisico    = data.opslag_risico;
+  const opslagWinst     = data.opslag_winst;
+  const akIsVast        = (data as any).ak_is_vast ?? false;
+  const abkIsVast       = (data as any).abk_is_vast ?? false;
+  const risicoIsVast    = (data as any).risico_is_vast ?? false;
+  const winstIsVast     = (data as any).winst_is_vast ?? false;
+
+  const materieelSubtotaal = rnd(directeRegels.filter((r) => r.categorie === "materieel").reduce((s, r) => s + r.materiaal_totaal, 0));
 
   const matOpslagBedrag = rnd(matSubtotaal * opslagMateriaal / 100);
   const arbOpslagBedrag = rnd(arbSubtotaal * opslagArbeid / 100);
@@ -448,10 +464,11 @@ export default function ModulesCalculatieDetail() {
     oaSubtotaal + bouwplaatsSubtotaal + staartSubtotaal,
   );
 
-  const akBedrag     = rnd(subtotaal * data.opslag_ak / 100);
-  const risicoBedrag = rnd(subtotaal * data.opslag_risico / 100);
-  const basisWinst   = rnd(subtotaal + akBedrag + risicoBedrag);
-  const winstBedrag  = rnd(basisWinst * data.opslag_winst / 100);
+  const akBedrag     = akIsVast     ? rnd(opslagAk)     : rnd(subtotaal * opslagAk / 100);
+  const abkBedrag    = abkIsVast    ? rnd(opslagAbk)    : rnd(subtotaal * opslagAbk / 100);
+  const risicoBedrag = risicoIsVast ? rnd(opslagRisico) : rnd(subtotaal * opslagRisico / 100);
+  const basisWinst   = rnd(subtotaal + akBedrag + abkBedrag + risicoBedrag);
+  const winstBedrag  = winstIsVast  ? rnd(opslagWinst)  : rnd(basisWinst * opslagWinst / 100);
   const aanneemsom   = rnd(basisWinst + winstBedrag);
   const kortingBedrag = rnd(aanneemsom * data.korting / 100);
   const totaal        = rnd(aanneemsom - kortingBedrag);
@@ -633,6 +650,7 @@ export default function ModulesCalculatieDetail() {
                   onBewerken={openBewerkenRegel}
                   onVerwijderen={(r) => deleteRegelMut.mutate({ id, regelId: r.id })}
                   onNieuweRegel={() => openNieuweRegel(false)}
+                  onNieuweRegelInHoofdstuk={(h) => openNieuweRegel(false, false, h)}
                   onNieuweBouwplaats={() => openNieuweRegel(false, true)}
                   onNieuweStaart={() => openNieuweRegel(true)}
                 />
@@ -652,16 +670,22 @@ export default function ModulesCalculatieDetail() {
                   staartSubtotaal={staartSubtotaal}
                   subtotaal={subtotaal}
                   akBedrag={akBedrag}
+                  abkBedrag={abkBedrag}
                   risicoBedrag={risicoBedrag}
                   basisWinst={basisWinst}
                   winstBedrag={winstBedrag}
                   kortingBedrag={kortingBedrag}
                   totaal={totaal}
                   marge={marge}
-                  opslagAk={data.opslag_ak}
-                  opslagRisico={data.opslag_risico}
-                  opslagWinst={data.opslag_winst}
+                  opslagAk={opslagAk}
+                  opslagAbk={opslagAbk}
+                  opslagRisico={opslagRisico}
+                  opslagWinst={opslagWinst}
                   korting={data.korting}
+                  akIsVast={akIsVast}
+                  abkIsVast={abkIsVast}
+                  risicoIsVast={risicoIsVast}
+                  winstIsVast={winstIsVast}
                 />
               ) : weergave === "klant" ? (
                 <KlantView
@@ -1296,25 +1320,65 @@ export default function ModulesCalculatieDetail() {
               <Label>Opmerkingen (intern)</Label>
               <Textarea rows={2} value={headerForm.opmerkingen} onChange={(e) => setHeaderForm((f) => ({ ...f, opmerkingen: e.target.value }))} />
             </div>
-            <p className="text-xs font-medium text-muted-foreground pt-1">Opslagen (%)</p>
-            <div className="grid grid-cols-3 gap-2">
-              {[
-                { field: "opslag_materiaal", label: "Opsl. mat." },
-                { field: "opslag_arbeid",    label: "Opsl. arb." },
-                { field: "opslag_ak",        label: "AK" },
-                { field: "opslag_risico",    label: "Risico" },
-                { field: "opslag_winst",     label: "Winst" },
-                { field: "korting",          label: "Korting" },
-              ].map(({ field, label }) => (
-                <div key={field} className="space-y-1.5">
-                  <Label className="text-xs">{label} (%)</Label>
-                  <Input
-                    type="number" step="0.5" min="0" max="100"
-                    value={headerForm[field as keyof typeof headerForm]}
-                    onChange={(e) => setHeaderForm((f) => ({ ...f, [field]: parseFloat(e.target.value) || 0 }))}
-                  />
-                </div>
-              ))}
+            <p className="text-xs font-medium text-muted-foreground pt-1">Opslagen</p>
+            <div className="space-y-2">
+              {/* Materiaal + Arbeid: altijd percentage */}
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  { field: "opslag_materiaal", label: "Opsl. materiaal (%)" },
+                  { field: "opslag_arbeid",    label: "Opsl. arbeid (%)" },
+                ].map(({ field, label }) => (
+                  <div key={field} className="space-y-1">
+                    <Label className="text-xs">{label}</Label>
+                    <Input
+                      type="number" step="0.5" min="0"
+                      value={headerForm[field as keyof typeof headerForm] as number}
+                      onChange={(e) => setHeaderForm((f) => ({ ...f, [field]: parseFloat(e.target.value) || 0 }))}
+                    />
+                  </div>
+                ))}
+              </div>
+              {/* AK / ABK / Risico / Winst: schakelbaar % of vast bedrag */}
+              {([
+                { valueField: "opslag_ak",     vastField: "ak_is_vast",     label: "AK" },
+                { valueField: "opslag_abk",    vastField: "abk_is_vast",    label: "ABK" },
+                { valueField: "opslag_risico", vastField: "risico_is_vast", label: "Risico" },
+                { valueField: "opslag_winst",  vastField: "winst_is_vast",  label: "Winst" },
+              ] as Array<{ valueField: string; vastField: string; label: string }>).map(({ valueField, vastField, label }) => {
+                const isVast = headerForm[vastField as keyof typeof headerForm] as boolean;
+                return (
+                  <div key={valueField} className="flex items-end gap-2">
+                    <div className="flex-1 space-y-1">
+                      <Label className="text-xs">{label} {isVast ? "(€)" : "(%)"}</Label>
+                      <Input
+                        type="number" step={isVast ? "10" : "0.5"} min="0"
+                        value={headerForm[valueField as keyof typeof headerForm] as number}
+                        onChange={(e) => setHeaderForm((f) => ({ ...f, [valueField]: parseFloat(e.target.value) || 0 }))}
+                      />
+                    </div>
+                    <div className="flex rounded-md border overflow-hidden shrink-0">
+                      <button
+                        type="button"
+                        className={cn("px-2 py-1.5 text-xs transition-colors", !isVast ? "bg-primary text-primary-foreground" : "bg-background text-muted-foreground hover:bg-slate-50")}
+                        onClick={() => setHeaderForm((f) => ({ ...f, [vastField]: false }))}
+                      >%</button>
+                      <button
+                        type="button"
+                        className={cn("px-2 py-1.5 text-xs transition-colors border-l", isVast ? "bg-primary text-primary-foreground" : "bg-background text-muted-foreground hover:bg-slate-50")}
+                        onClick={() => setHeaderForm((f) => ({ ...f, [vastField]: true }))}
+                      >€</button>
+                    </div>
+                  </div>
+                );
+              })}
+              <div className="space-y-1">
+                <Label className="text-xs">Korting (%)</Label>
+                <Input
+                  type="number" step="0.5" min="0" max="100"
+                  value={headerForm.korting}
+                  onChange={(e) => setHeaderForm((f) => ({ ...f, korting: parseFloat(e.target.value) || 0 }))}
+                />
+              </div>
             </div>
           </div>
           <DialogFooter>
@@ -1492,6 +1556,7 @@ function InternView({
   onBewerken,
   onVerwijderen,
   onNieuweRegel,
+  onNieuweRegelInHoofdstuk,
   onNieuweBouwplaats,
   onNieuweStaart,
 }: {
@@ -1501,6 +1566,7 @@ function InternView({
   onBewerken: (r: RegelRow) => void;
   onVerwijderen: (r: RegelRow) => void;
   onNieuweRegel: () => void;
+  onNieuweRegelInHoofdstuk: (hoofdstuk: string) => void;
   onNieuweBouwplaats: () => void;
   onNieuweStaart: () => void;
 }) {
@@ -1696,9 +1762,10 @@ function DirectieView({
   arbSubtotaal, arbOpslagBedrag, opslagArbeid,
   oaSubtotaal, bouwplaatsSubtotaal, staartSubtotaal,
   subtotaal,
-  akBedrag, risicoBedrag, basisWinst, winstBedrag, kortingBedrag,
+  akBedrag, abkBedrag, risicoBedrag, basisWinst, winstBedrag, kortingBedrag,
   totaal, marge,
-  opslagAk, opslagRisico, opslagWinst, korting,
+  opslagAk, opslagAbk, opslagRisico, opslagWinst, korting,
+  akIsVast, abkIsVast, risicoIsVast, winstIsVast,
 }: {
   regelsByCategorie: Array<{ categorie: string; label: string; regels: RegelRow[] }>;
   bouwplaatsRegels: RegelRow[];
@@ -1707,9 +1774,10 @@ function DirectieView({
   arbSubtotaal: number; arbOpslagBedrag: number; opslagArbeid: number;
   oaSubtotaal: number; bouwplaatsSubtotaal: number; staartSubtotaal: number;
   subtotaal: number;
-  akBedrag: number; risicoBedrag: number; basisWinst: number; winstBedrag: number; kortingBedrag: number;
+  akBedrag: number; abkBedrag: number; risicoBedrag: number; basisWinst: number; winstBedrag: number; kortingBedrag: number;
   totaal: number; marge: number;
-  opslagAk: number; opslagRisico: number; opslagWinst: number; korting: number;
+  opslagAk: number; opslagAbk: number; opslagRisico: number; opslagWinst: number; korting: number;
+  akIsVast: boolean; abkIsVast: boolean; risicoIsVast: boolean; winstIsVast: boolean;
 }) {
   return (
     <div className="p-5 space-y-4">
@@ -1785,13 +1853,20 @@ function DirectieView({
             <td className="py-2 pl-4 text-right tabular-nums">{formatBedrag(subtotaal)}</td>
           </tr>
           <tr className="text-muted-foreground">
-            <td className="py-1.5 pl-3">+ AK ({opslagAk}%)</td>
+            <td className="py-1.5 pl-3">+ AK {akIsVast ? `(€ vast)` : `(${opslagAk}%)`}</td>
             <td colSpan={4} />
             <td className="py-1.5 pl-4 text-right tabular-nums">{formatBedrag(akBedrag)}</td>
           </tr>
+          {(opslagAbk > 0 || abkIsVast) && (
+            <tr className="text-muted-foreground">
+              <td className="py-1.5 pl-3">+ ABK {abkIsVast ? `(€ vast)` : `(${opslagAbk}%)`}</td>
+              <td colSpan={4} />
+              <td className="py-1.5 pl-4 text-right tabular-nums">{formatBedrag(abkBedrag)}</td>
+            </tr>
+          )}
           {opslagRisico > 0 && (
             <tr className="text-muted-foreground">
-              <td className="py-1.5 pl-3">+ Risico ({opslagRisico}%)</td>
+              <td className="py-1.5 pl-3">+ Risico {risicoIsVast ? `(€ vast)` : `(${opslagRisico}%)`}</td>
               <td colSpan={4} />
               <td className="py-1.5 pl-4 text-right tabular-nums">{formatBedrag(risicoBedrag)}</td>
             </tr>
@@ -1802,7 +1877,7 @@ function DirectieView({
             <td className="py-1.5 pl-4 text-right tabular-nums">{formatBedrag(basisWinst)}</td>
           </tr>
           <tr className="text-muted-foreground">
-            <td className="py-1.5 pl-3">+ Winst ({opslagWinst}%)</td>
+            <td className="py-1.5 pl-3">+ Winst {winstIsVast ? `(€ vast)` : `(${opslagWinst}%)`}</td>
             <td colSpan={4} />
             <td className="py-1.5 pl-4 text-right tabular-nums">{formatBedrag(winstBedrag)}</td>
           </tr>

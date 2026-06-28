@@ -24,6 +24,10 @@ export interface ModCalcHeader {
   opslag_risico: number;
   opslag_winst: number;
   korting: number;
+  ak_is_vast?: boolean;
+  abk_is_vast?: boolean;
+  risico_is_vast?: boolean;
+  winst_is_vast?: boolean;
   subtotaal?: number | null;
   totaal_na_opslagen?: number | null;
   aangemaakt_door_naam?: string | null;

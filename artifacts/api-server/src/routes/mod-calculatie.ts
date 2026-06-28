@@ -53,9 +53,14 @@ function berekenTotalen(
     opslagMateriaal: number;
     opslagArbeid: number;
     opslagAk: number;
+    opslagAbk: number;
     opslagRisico: number;
     opslagWinst: number;
     korting: number;
+    akIsVast?: boolean;
+    abkIsVast?: boolean;
+    risicoIsVast?: boolean;
+    winstIsVast?: boolean;
   },
 ) {
   const rnd = (n: number) => Math.round(n * 100) / 100;
@@ -64,11 +69,11 @@ function berekenTotalen(
   const bouwplaats = regels.filter(r => r.isBouwplaatskosten);
   const staart     = regels.filter(r => r.isStaartkosten);
 
-  const matSubtotaal       = rnd(directe.reduce((s, r) => s + r.hoeveelheid * r.tarief, 0));
-  const arbSubtotaal       = rnd(directe.reduce((s, r) => s + r.hoeveelheid * r.muPerEenheid * r.arbeidsTarief, 0));
-  const oaSubtotaal        = rnd(directe.reduce((s, r) => s + r.onderaannemingBedrag, 0));
+  const matSubtotaal        = rnd(directe.reduce((s, r) => s + r.hoeveelheid * r.tarief, 0));
+  const arbSubtotaal        = rnd(directe.reduce((s, r) => s + r.hoeveelheid * r.muPerEenheid * r.arbeidsTarief, 0));
+  const oaSubtotaal         = rnd(directe.reduce((s, r) => s + r.onderaannemingBedrag, 0));
   const bouwplaatsSubtotaal = rnd(bouwplaats.reduce((s, r) => s + r.totaal, 0));
-  const staartSubtotaal    = rnd(staart.reduce((s, r) => s + r.totaal, 0));
+  const staartSubtotaal     = rnd(staart.reduce((s, r) => s + r.totaal, 0));
 
   const matOpslagBedrag = rnd(matSubtotaal * header.opslagMateriaal / 100);
   const arbOpslagBedrag = rnd(arbSubtotaal * header.opslagArbeid / 100);
@@ -79,10 +84,11 @@ function berekenTotalen(
     oaSubtotaal + bouwplaatsSubtotaal + staartSubtotaal,
   );
 
-  const akBedrag     = rnd(subtotaal * header.opslagAk / 100);
-  const risicoBedrag = rnd(subtotaal * header.opslagRisico / 100);
-  const basisWinst   = rnd(subtotaal + akBedrag + risicoBedrag);
-  const winstBedrag  = rnd(basisWinst * header.opslagWinst / 100);
+  const akBedrag     = header.akIsVast     ? rnd(header.opslagAk)      : rnd(subtotaal * header.opslagAk / 100);
+  const abkBedrag    = header.abkIsVast    ? rnd(header.opslagAbk)     : rnd(subtotaal * header.opslagAbk / 100);
+  const risicoBedrag = header.risicoIsVast ? rnd(header.opslagRisico)  : rnd(subtotaal * header.opslagRisico / 100);
+  const basisWinst   = rnd(subtotaal + akBedrag + abkBedrag + risicoBedrag);
+  const winstBedrag  = header.winstIsVast  ? rnd(header.opslagWinst)   : rnd(basisWinst * header.opslagWinst / 100);
 
   const aanneemsom    = rnd(basisWinst + winstBedrag);
   const kortingBedrag = rnd(aanneemsom * header.korting / 100);
@@ -116,10 +122,14 @@ function mapHeader(
     opslag_materiaal: h.opslagMateriaal ?? 0,
     opslag_arbeid: h.opslagArbeid ?? 0,
     opslag_ak: h.opslagAk,
-    opslag_abk: (h as any).opslagAbk ?? 10,
+    opslag_abk: h.opslagAbk ?? 10,
     opslag_risico: h.opslagRisico,
     opslag_winst: h.opslagWinst,
     korting: h.korting,
+    ak_is_vast: h.akIsVast ?? false,
+    abk_is_vast: h.abkIsVast ?? false,
+    risico_is_vast: h.risicoIsVast ?? false,
+    winst_is_vast: h.winstIsVast ?? false,
     subtotaal: extra?.subtotaal ?? 0,
     totaal_na_opslagen: extra?.totaalNaOpslagen ?? 0,
     aangemaakt_door_naam: extra?.aangemaaktDoorNaam ?? null,
@@ -336,9 +346,14 @@ router.get("/modules/calculaties", lezenCalc, async (req, res) => {
         opslagMateriaal: header.opslagMateriaal ?? 0,
         opslagArbeid: header.opslagArbeid ?? 0,
         opslagAk: header.opslagAk,
+        opslagAbk: header.opslagAbk ?? 10,
         opslagRisico: header.opslagRisico,
         opslagWinst: header.opslagWinst,
         korting: header.korting,
+        akIsVast: header.akIsVast ?? false,
+        abkIsVast: header.abkIsVast ?? false,
+        risicoIsVast: header.risicoIsVast ?? false,
+        winstIsVast: header.winstIsVast ?? false,
       });
       return mapHeader(header, { gebouwNaam: gebouwNaam ?? null, aangemaaktDoorNaam: makerNaam ?? null, subtotaal, totaalNaOpslagen: totaal_na_opslagen });
     }));
@@ -626,9 +641,14 @@ router.get("/modules/calculaties/:id", lezenCalc, async (req, res) => {
       opslagMateriaal: headerRow.header.opslagMateriaal ?? 0,
       opslagArbeid: headerRow.header.opslagArbeid ?? 0,
       opslagAk: headerRow.header.opslagAk,
+      opslagAbk: headerRow.header.opslagAbk ?? 10,
       opslagRisico: headerRow.header.opslagRisico,
       opslagWinst: headerRow.header.opslagWinst,
       korting: headerRow.header.korting,
+      akIsVast: headerRow.header.akIsVast ?? false,
+      abkIsVast: headerRow.header.abkIsVast ?? false,
+      risicoIsVast: headerRow.header.risicoIsVast ?? false,
+      winstIsVast: headerRow.header.winstIsVast ?? false,
     });
 
     res.json({
@@ -662,9 +682,14 @@ router.patch("/modules/calculaties/:id", schrijvenCalc, async (req, res) => {
     if (body.opslag_materiaal !== undefined) update.opslagMateriaal = Number(body.opslag_materiaal);
     if (body.opslag_arbeid !== undefined) update.opslagArbeid = Number(body.opslag_arbeid);
     if (body.opslag_ak !== undefined) update.opslagAk = Number(body.opslag_ak);
+    if (body.opslag_abk !== undefined) update.opslagAbk = Number(body.opslag_abk);
     if (body.opslag_risico !== undefined) update.opslagRisico = Number(body.opslag_risico);
     if (body.opslag_winst !== undefined) update.opslagWinst = Number(body.opslag_winst);
     if (body.korting !== undefined) update.korting = Number(body.korting);
+    if (body.ak_is_vast !== undefined) update.akIsVast = Boolean(body.ak_is_vast);
+    if (body.abk_is_vast !== undefined) update.abkIsVast = Boolean(body.abk_is_vast);
+    if (body.risico_is_vast !== undefined) update.risicoIsVast = Boolean(body.risico_is_vast);
+    if (body.winst_is_vast !== undefined) update.winstIsVast = Boolean(body.winst_is_vast);
     const [row] = await db.update(modCalcHeadersTable).set(update).where(eq(modCalcHeadersTable.id, id)).returning();
     if (!row) return res.status(404).json({ error: "Niet gevonden" });
     res.json(mapHeader(row));
@@ -703,9 +728,14 @@ router.post("/modules/calculaties/:id/dupliceer", aanmakenCalc, async (req, res)
       opslagMateriaal: original.opslagMateriaal ?? 0,
       opslagArbeid: original.opslagArbeid ?? 0,
       opslagAk: original.opslagAk,
+      opslagAbk: original.opslagAbk ?? 10,
       opslagRisico: original.opslagRisico,
       opslagWinst: original.opslagWinst,
       korting: original.korting,
+      akIsVast: original.akIsVast ?? false,
+      abkIsVast: original.abkIsVast ?? false,
+      risicoIsVast: original.risicoIsVast ?? false,
+      winstIsVast: original.winstIsVast ?? false,
       aangemaaktDoorId: req.session.userId ?? null,
     } as typeof modCalcHeadersTable.$inferInsert).returning();
 
