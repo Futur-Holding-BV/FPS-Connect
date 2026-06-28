@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Loader2, ArrowLeft, KeyRound, CheckCircle } from "lucide-react";
+import { Loader2, ArrowLeft, KeyRound, CheckCircle, Eye, EyeOff } from "lucide-react";
 import { wachtwoordReset } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,6 +25,8 @@ export default function WachtwoordResetPagina({ token }: Props) {
   const [bezig, setBezig] = useState(false);
   const [fout, setFout] = useState<string | null>(null);
   const [gelukt, setGelukt] = useState(false);
+  const [toonNieuw, setToonNieuw] = useState(false);
+  const [toonBevestig, setToonBevestig] = useState(false);
 
   async function verstuur(e: React.FormEvent) {
     e.preventDefault();
@@ -75,25 +77,49 @@ export default function WachtwoordResetPagina({ token }: Props) {
                 <form onSubmit={verstuur} className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="nieuw">{t("auth.resetNieuwWachtwoord")}</Label>
-                    <Input
-                      id="nieuw"
-                      type="password"
-                      autoComplete="new-password"
-                      value={nieuwWachtwoord}
-                      onChange={(e) => setNieuwWachtwoord(e.target.value)}
-                      required
-                    />
+                    <div className="relative">
+                      <Input
+                        id="nieuw"
+                        type={toonNieuw ? "text" : "password"}
+                        autoComplete="new-password"
+                        value={nieuwWachtwoord}
+                        onChange={(e) => setNieuwWachtwoord(e.target.value)}
+                        className="pr-10"
+                        required
+                      />
+                      <button
+                        type="button"
+                        tabIndex={-1}
+                        onClick={() => setToonNieuw((v) => !v)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                        title={toonNieuw ? "Wachtwoord verbergen" : "Wachtwoord tonen"}
+                      >
+                        {toonNieuw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                    </div>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="bevestig">{t("auth.resetBevestig")}</Label>
-                    <Input
-                      id="bevestig"
-                      type="password"
-                      autoComplete="new-password"
-                      value={bevestig}
-                      onChange={(e) => setBevestig(e.target.value)}
-                      required
-                    />
+                    <div className="relative">
+                      <Input
+                        id="bevestig"
+                        type={toonBevestig ? "text" : "password"}
+                        autoComplete="new-password"
+                        value={bevestig}
+                        onChange={(e) => setBevestig(e.target.value)}
+                        className="pr-10"
+                        required
+                      />
+                      <button
+                        type="button"
+                        tabIndex={-1}
+                        onClick={() => setToonBevestig((v) => !v)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                        title={toonBevestig ? "Wachtwoord verbergen" : "Wachtwoord tonen"}
+                      >
+                        {toonBevestig ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                    </div>
                   </div>
                   {fout && <p className="text-sm text-destructive">{fout}</p>}
                   <Button type="submit" className="w-full" disabled={bezig}>

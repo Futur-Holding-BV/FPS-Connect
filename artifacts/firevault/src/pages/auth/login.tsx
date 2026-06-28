@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Loader2, KeyRound, ArrowLeft } from "lucide-react";
+import { Loader2, KeyRound, ArrowLeft, Eye, EyeOff } from "lucide-react";
 import {
   login,
   tweeFactorSetup,
@@ -44,6 +44,7 @@ export default function LoginPagina() {
   const [bezig, setBezig] = useState(false);
   const [fout, setFout] = useState<string | null>(null);
   const [taalGekozen, setTaalGekozen] = useState(false);
+  const [toonWachtwoord, setToonWachtwoord] = useState(false);
 
   async function verstuurInloggen(e: React.FormEvent) {
     e.preventDefault();
@@ -179,14 +180,30 @@ export default function LoginPagina() {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="wachtwoord">{t("auth.wachtwoord")}</Label>
-                    <Input
-                      id="wachtwoord"
-                      type="password"
-                      autoComplete="current-password"
-                      value={wachtwoord}
-                      onChange={(e) => setWachtwoord(e.target.value)}
-                      required
-                    />
+                    <div className="relative">
+                      <Input
+                        id="wachtwoord"
+                        type={toonWachtwoord ? "text" : "password"}
+                        autoComplete="current-password"
+                        value={wachtwoord}
+                        onChange={(e) => setWachtwoord(e.target.value)}
+                        className="pr-10"
+                        required
+                      />
+                      <button
+                        type="button"
+                        tabIndex={-1}
+                        onClick={() => setToonWachtwoord((v) => !v)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                        title={toonWachtwoord ? "Wachtwoord verbergen" : "Wachtwoord tonen"}
+                      >
+                        {toonWachtwoord ? (
+                          <EyeOff className="h-4 w-4" />
+                        ) : (
+                          <Eye className="h-4 w-4" />
+                        )}
+                      </button>
+                    </div>
                   </div>
                   {fout && <p className="text-sm text-destructive">{fout}</p>}
                   <Button type="submit" className="w-full" disabled={bezig}>
