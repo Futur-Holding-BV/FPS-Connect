@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useMemo } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -18,6 +18,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import {
   useGetVeiligheidLmras,
   usePostVeiligheidLmras,
+  useGetWerkdagVandaag,
   getGetVeiligheidLmrasQueryKey,
   type VeiligheidLmra,
 } from "@workspace/api-client-react";
@@ -42,7 +43,14 @@ const STANDAARD_MAATREGELEN = [
   "Vluchtweg vrijhouden",
 ];
 
+type GebouwOptie = {
+  id: number;
+  naam: string;
+};
+
 type FormState = {
+  gebouwId: number | null;
+  gebouwNaam: string;
   locatieOmschrijving: string;
   werkzaamheden: string;
   projectNaam: string;
@@ -53,6 +61,8 @@ type FormState = {
 };
 
 const leegForm = (): FormState => ({
+  gebouwId: null,
+  gebouwNaam: "",
   locatieOmschrijving: "",
   werkzaamheden: "",
   projectNaam: "",
@@ -83,7 +93,54 @@ export default function LmraPagina() {
 
   const { data: lmras, isLoading, refetch } = useGetVeiligheidLmras();
 
+  const { data: werkdagData } = useGetWerkdagVandaag();
+
   useFocusEffect(useCallback(() => { refetch(); }, [refetch]));
+
+  const gebouwenVandaag = useMemo<GebouwOptie[]>(() => {
+    if (!werkdagData) return [];
+    const items = Array.isArray(werkdagData) ? werkdagData : [];
+    const gezien = new Set<number>();
+    const opties: GebouwOptie[] = [];
+    for (const item of items) {
+      if (item.gebouw_id && item.gebouw_naam && !gezien.has(item.gebouw_id)) {
+        gezien.add(item.gebouw_id);
+        opties.push({ id: item.gebouw_id, naam: item.gebouw_naam });
+      }
+    }
+    return opties;
+  }, [werkdagData]);
+
+  const openDialoog = () => {
+    const leeg = leegForm();
+    if (gebouwenVandaag.length === 1) {
+      const g = gebouwenVandaag[0];
+      setFormulier({
+        ...leeg,
+        gebouwId: g.id,
+        gebouwNaam: g.naam,
+        locatieOmschrijving: g.naam,
+      });
+    } else {
+      setFormulier(leeg);
+    }
+    setRisicoInput("");
+    setMaatregelInput("");
+    setDialoogOpen(true);
+  };
+
+  const kiesGebouw = (g: GebouwOptie) => {
+    setFormulier((f) => ({
+      ...f,
+      gebouwId: g.id,
+      gebouwNaam: g.naam,
+      locatieOmschrijving: f.locatieOmschrijving || g.naam,
+    }));
+  };
+
+  const wisGebouw = () => {
+    setFormulier((f) => ({ ...f, gebouwId: null, gebouwNaam: "" }));
+  };
 
   const aanmakenMutatie = usePostVeiligheidLmras({
     mutation: {
@@ -127,6 +184,7 @@ export default function LmraPagina() {
     setIsBezigOpslaan(true);
     aanmakenMutatie.mutate({
       data: {
+        gebouw_id: formulier.gebouwId ?? undefined,
         locatie_omschrijving: formulier.locatieOmschrijving,
         werkzaamheden: formulier.werkzaamheden,
         project_naam: formulier.projectNaam || null,
@@ -168,10 +226,23 @@ export default function LmraPagina() {
         <Text style={{ color: c.foreground, fontWeight: "600", fontSize: 15 }}>
           {item.locatie_omschrijving}
         </Text>
-        <Text style={{ color: c.mutedForeground, fontSize: 13, marginTop: 2 }} numberOfLines={2}>
+        {item.gebouw_naam && (
+          <View style={{
+            flexDirection: "row", alignItems: "center", gap: 4,
+            backgroundColor: "#f0fdf4", borderRadius: 6,
+            paddingHorizontal: 7, paddingVertical: 3, marginTop: 4,
+            alignSelf: "flex-start",
+          }}>
+            <Ionicons name="business-outline" size={11} color="#059669" />
+            <Text style={{ color: "#059669", fontSize: 11, fontWeight: "500" }}>
+              {item.gebouw_naam}
+            </Text>
+          </View>
+        )}
+        <Text style={{ color: c.mutedForeground, fontSize: 13, marginTop: 4 }} numberOfLines={2}>
           {item.werkzaamheden}
         </Text>
-        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 6 }}>
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 6, alignItems: "center" }}>
           {item.medewerker_naam && (
             <Text style={{ color: c.mutedForeground, fontSize: 12 }}>{item.medewerker_naam}</Text>
           )}
@@ -208,7 +279,7 @@ export default function LmraPagina() {
           <Text style={{ color: c.mutedForeground, fontSize: 13 }}>Laatste Minuut Risico Analyse</Text>
         </View>
         <Pressable
-          onPress={() => { setFormulier(leegForm()); setDialoogOpen(true); }}
+          onPress={openDialoog}
           style={{
             backgroundColor: c.primary,
             borderRadius: 22, width: 44, height: 44,
@@ -230,7 +301,7 @@ export default function LmraPagina() {
             Nog geen LMRA's. Registreer de eerste voor aanvang van werkzaamheden.
           </Text>
           <Pressable
-            onPress={() => { setFormulier(leegForm()); setDialoogOpen(true); }}
+            onPress={openDialoog}
             style={{ backgroundColor: c.primary, borderRadius: 8, paddingHorizontal: 20, paddingVertical: 10, marginTop: 16 }}
           >
             <Text style={{ color: "white", fontWeight: "600" }}>Eerste LMRA registreren</Text>
@@ -265,7 +336,61 @@ export default function LmraPagina() {
               <Ionicons name="close" size={24} color={c.foreground} />
             </Pressable>
           </View>
+
           <ScrollView contentContainerStyle={{ padding: 16, gap: 16 }}>
+
+            {/* Smart gebouw koppeling */}
+            {gebouwenVandaag.length > 0 && (
+              <View style={{
+                backgroundColor: formulier.gebouwId ? "#f0fdf4" : c.card,
+                borderRadius: 12, padding: 12,
+                borderWidth: 1,
+                borderColor: formulier.gebouwId ? "#86efac" : c.border,
+              }}>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 8 }}>
+                  <Ionicons name="business-outline" size={14} color={formulier.gebouwId ? "#059669" : c.mutedForeground} />
+                  <Text style={{ color: formulier.gebouwId ? "#059669" : c.mutedForeground, fontSize: 13, fontWeight: "500" }}>
+                    {formulier.gebouwId
+                      ? "Gebouw automatisch gekoppeld"
+                      : gebouwenVandaag.length === 1
+                        ? "Vandaag ingepland bij"
+                        : "Kies het gebouw van vandaag"}
+                  </Text>
+                </View>
+
+                {formulier.gebouwId ? (
+                  <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+                    <Text style={{ color: "#166534", fontWeight: "600", fontSize: 15, flex: 1 }}>
+                      {formulier.gebouwNaam}
+                    </Text>
+                    <Pressable
+                      onPress={wisGebouw}
+                      style={{ paddingHorizontal: 8, paddingVertical: 4 }}
+                    >
+                      <Text style={{ color: "#059669", fontSize: 13 }}>Wijzigen</Text>
+                    </Pressable>
+                  </View>
+                ) : (
+                  <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+                    {gebouwenVandaag.map((g) => (
+                      <Pressable
+                        key={g.id}
+                        onPress={() => kiesGebouw(g)}
+                        style={{
+                          backgroundColor: c.dark, borderRadius: 8, borderWidth: 1,
+                          borderColor: c.border, paddingHorizontal: 12, paddingVertical: 8,
+                          flexDirection: "row", alignItems: "center", gap: 6,
+                        }}
+                      >
+                        <Ionicons name="location-outline" size={13} color={c.primary} />
+                        <Text style={{ color: c.foreground, fontSize: 14 }}>{g.naam}</Text>
+                      </Pressable>
+                    ))}
+                  </View>
+                )}
+              </View>
+            )}
+
             {/* Locatie */}
             <View>
               <Text style={{ color: c.mutedForeground, fontSize: 13, marginBottom: 4 }}>

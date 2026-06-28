@@ -9,6 +9,7 @@
 export interface VeiligheidLmra {
   id: number;
   gebouw_id?: number | null;
+  gebouw_naam?: string | null;
   project_naam?: string | null;
   locatie_omschrijving: string;
   werkzaamheden: string;

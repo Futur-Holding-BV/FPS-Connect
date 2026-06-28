@@ -13871,6 +13871,7 @@ export const PostVeiligheidToolboxenKoppelingSuggestieResponse = zod.object({
 export const GetVeiligheidLmrasResponseItem = zod.object({
   "id": zod.number(),
   "gebouw_id": zod.number().nullish(),
+  "gebouw_naam": zod.string().nullish(),
   "project_naam": zod.string().nullish(),
   "locatie_omschrijving": zod.string(),
   "werkzaamheden": zod.string(),
@@ -13947,6 +13948,7 @@ export const GetVeiligheidLmrasIdParams = zod.object({
 export const GetVeiligheidLmrasIdResponse = zod.object({
   "id": zod.number(),
   "gebouw_id": zod.number().nullish(),
+  "gebouw_naam": zod.string().nullish(),
   "project_naam": zod.string().nullish(),
   "locatie_omschrijving": zod.string(),
   "werkzaamheden": zod.string(),
@@ -13991,6 +13993,7 @@ export const PatchVeiligheidLmrasIdBody = zod.object({
 export const PatchVeiligheidLmrasIdResponse = zod.object({
   "id": zod.number(),
   "gebouw_id": zod.number().nullish(),
+  "gebouw_naam": zod.string().nullish(),
   "project_naam": zod.string().nullish(),
   "locatie_omschrijving": zod.string(),
   "werkzaamheden": zod.string(),

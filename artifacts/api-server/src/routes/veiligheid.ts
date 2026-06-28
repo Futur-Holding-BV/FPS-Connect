@@ -723,6 +723,7 @@ veiligheidRouter.get("/veiligheid/lmras", lezenVeiligheid, async (req, res) => {
       .select({
         id: veiligheidLmrasTable.id,
         gebouwId: veiligheidLmrasTable.gebouwId,
+        gebouwNaam: gebouwenTable.naam,
         projectNaam: veiligheidLmrasTable.projectNaam,
         locatieOmschrijving: veiligheidLmrasTable.locatieOmschrijving,
         werkzaamheden: veiligheidLmrasTable.werkzaamheden,
@@ -741,11 +742,13 @@ veiligheidRouter.get("/veiligheid/lmras", lezenVeiligheid, async (req, res) => {
         bijgewerktOp: veiligheidLmrasTable.bijgewerktOp,
       })
       .from(veiligheidLmrasTable)
+      .leftJoin(gebouwenTable, eq(veiligheidLmrasTable.gebouwId, gebouwenTable.id))
       .orderBy(desc(veiligheidLmrasTable.aangemaaktOp));
     res.json(
       rijen.map((r) => ({
         id: r.id,
         gebouw_id: r.gebouwId ?? null,
+        gebouw_naam: r.gebouwNaam ?? null,
         project_naam: r.projectNaam ?? null,
         locatie_omschrijving: r.locatieOmschrijving,
         werkzaamheden: r.werkzaamheden,
@@ -819,9 +822,15 @@ veiligheidRouter.post("/veiligheid/lmras", lezenVeiligheid, async (req, res) => 
         bijgewerktOp: new Date(),
       })
       .returning();
+    let gebouwNaam: string | null = null;
+    if (rij.gebouwId) {
+      const [geb] = await db.select({ naam: gebouwenTable.naam }).from(gebouwenTable).where(eq(gebouwenTable.id, rij.gebouwId)).limit(1);
+      gebouwNaam = geb?.naam ?? null;
+    }
     res.status(201).json({
       id: rij.id,
       gebouw_id: rij.gebouwId ?? null,
+      gebouw_naam: gebouwNaam,
       project_naam: rij.projectNaam ?? null,
       locatie_omschrijving: rij.locatieOmschrijving,
       werkzaamheden: rij.werkzaamheden,
@@ -1004,27 +1013,33 @@ veiligheidRouter.get("/veiligheid/lmras/:id", lezenVeiligheid, async (req, res) 
   try {
     const id = parseInt(String(req.params.id));
     const [rij] = await db
-      .select()
+      .select({
+        lmra: veiligheidLmrasTable,
+        gebouwNaam: gebouwenTable.naam,
+      })
       .from(veiligheidLmrasTable)
+      .leftJoin(gebouwenTable, eq(veiligheidLmrasTable.gebouwId, gebouwenTable.id))
       .where(eq(veiligheidLmrasTable.id, id));
     if (!rij) return res.status(404).json({ error: "Niet gevonden" });
+    const r = rij.lmra;
     res.json({
-      id: rij.id,
-      gebouw_id: rij.gebouwId ?? null,
-      project_naam: rij.projectNaam ?? null,
-      locatie_omschrijving: rij.locatieOmschrijving,
-      werkzaamheden: rij.werkzaamheden,
-      risicos: (rij.risicos as string[]) ?? [],
-      maatregelen: (rij.maatregelen as string[]) ?? [],
-      veilig_voor_aanvang: rij.veiligVoorAanvang,
-      handtekening: rij.handtekening ?? null,
-      foto_paden: (rij.fotoPaden as string[]) ?? [],
-      gps_lat: rij.gpsLat ?? null,
-      gps_lng: rij.gpsLng ?? null,
-      medewerker_naam: rij.medewerkerNaam ?? null,
-      aangemaakt_door_id: rij.aangemaaktDoorId ?? null,
-      aangemaakt_op: rij.aangemaaktOp.toISOString(),
-      bijgewerkt_op: rij.bijgewerktOp?.toISOString() ?? null,
+      id: r.id,
+      gebouw_id: r.gebouwId ?? null,
+      gebouw_naam: rij.gebouwNaam ?? null,
+      project_naam: r.projectNaam ?? null,
+      locatie_omschrijving: r.locatieOmschrijving,
+      werkzaamheden: r.werkzaamheden,
+      risicos: (r.risicos as string[]) ?? [],
+      maatregelen: (r.maatregelen as string[]) ?? [],
+      veilig_voor_aanvang: r.veiligVoorAanvang,
+      handtekening: r.handtekening ?? null,
+      foto_paden: (r.fotoPaden as string[]) ?? [],
+      gps_lat: r.gpsLat ?? null,
+      gps_lng: r.gpsLng ?? null,
+      medewerker_naam: r.medewerkerNaam ?? null,
+      aangemaakt_door_id: r.aangemaaktDoorId ?? null,
+      aangemaakt_op: r.aangemaaktOp.toISOString(),
+      bijgewerkt_op: r.bijgewerktOp?.toISOString() ?? null,
     });
   } catch (err) {
     req.log.error(err, "GET /veiligheid/lmras/:id");

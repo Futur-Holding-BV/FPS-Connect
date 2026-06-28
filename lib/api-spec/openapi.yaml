@@ -22947,6 +22947,9 @@ components:
         gebouw_id:
           type: integer
           nullable: true
+        gebouw_naam:
+          type: string
+          nullable: true
         project_naam:
           type: string
           nullable: true
