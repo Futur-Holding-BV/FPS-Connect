@@ -46,7 +46,10 @@ export default function ModulesCalculatiePrint() {
 
   const { data, isLoading, isError } = useQuery<PrintData>({
     queryKey: ["calc-print", id],
-    queryFn: () => fetch(`/api/modules/calculaties/${id}/print-data`).then((r) => r.json()),
+    queryFn: () => fetch(`/api/modules/calculaties/${id}/print-data`).then((r) => {
+      if (!r.ok) throw new Error(`${r.status}`);
+      return r.json();
+    }),
     enabled: id !== null,
   });
 

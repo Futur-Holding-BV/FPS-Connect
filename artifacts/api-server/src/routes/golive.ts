@@ -564,7 +564,13 @@ router.patch("/beheer/go-live/adviezen/:id", requireAuth, async (req, res) => {
 });
 
 router.get("/beheer/go-live/mijn-acties", requireAuth, async (req, res) => {
-  const gebruiker = req.session.gebruiker!;
+  const userId = req.session.userId;
+  if (!userId) { res.status(401).json({ error: "Niet ingelogd" }); return; }
+  const [gebruiker] = await db
+    .select({ rol: gebruikersTable.rol, bevoegdheden: gebruikersTable.bevoegdheden })
+    .from(gebruikersTable)
+    .where(eq(gebruikersTable.id, userId));
+  if (!gebruiker) { res.status(404).json({ error: "Gebruiker niet gevonden" }); return; }
   const bevoegdheden = (gebruiker.bevoegdheden ?? {}) as Record<string, number>;
   res.json(mijnActiesVoorRol(gebruiker.rol, bevoegdheden));
 });

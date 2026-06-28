@@ -1283,7 +1283,7 @@ router.patch(
   async (req, res) => {
     try {
       const id = parseInt(String(req.params.id));
-      const { type } = req.params;
+      const type = String(req.params.type);
       if (!(await magBijGebouw(req.session.userId!, await gebouwIdVanVoorziening(id)))) {
         return res.status(403).json({ error: "Geen toegang tot deze voorziening" });
       }

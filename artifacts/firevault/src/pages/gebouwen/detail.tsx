@@ -662,8 +662,8 @@ export default function GebouwDetail() {
           <TabsList className="grid w-full max-w-4xl min-w-0 grid-cols-5">
             <TabsTrigger value="project" className="gap-1.5">
               <Building2 className="h-4 w-4 shrink-0" />
-              <span className="hidden sm:inline">Project &amp; Gebouw</span>
-              <span className="sm:hidden">Project</span>
+              <span className="hidden sm:inline">Gebouw</span>
+              <span className="sm:hidden">Gebouw</span>
             </TabsTrigger>
             <TabsTrigger value="uitvoering" className="gap-1.5">
               <Wrench className="h-4 w-4 shrink-0" />
@@ -771,7 +771,7 @@ export default function GebouwDetail() {
       <TabsContent value="project" className="space-y-4 mt-6">
         <SegmentKop
           icoon={<Building2 className="h-5 w-5" />}
-          titel="Project & Gebouwgegevens"
+          titel="Gebouwgegevens"
           ondertitel="NAW-gegevens, contactpartijen, opdracht­omschrijving en open actiepunten"
           noodzakelijk
         />

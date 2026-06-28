@@ -17,11 +17,11 @@ const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 100
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function sessieGebruikerId(req: Request): number | null {
-  return (req.session as Record<string, unknown>)["gebruikerId"] as number | null ?? null;
+  return req.session.userId ?? null;
 }
 
 function sessieGebruikerNaam(req: Request): string {
-  return ((req.session as Record<string, unknown>)["gebruikerNaam"] as string | undefined) ?? "Onbekend";
+  return ((req.session as unknown as Record<string, unknown>)["gebruikerNaam"] as string | undefined) ?? "Onbekend";
 }
 
 async function logAudit(params: {
@@ -417,7 +417,7 @@ router.get("/salarisarchief/batches", requireBevoegdheid("salarisarchief", 1), a
 });
 
 router.get("/salarisarchief/batches/:id", requireBevoegdheid("salarisarchief", 1), async (req: Request, res: Response) => {
-  const id = parseInt(req.params["id"] ?? "0", 10);
+  const id = parseInt(String(req.params["id"] ?? "0"), 10);
   const [batch] = await db.select().from(salarisbatchesTable).where(eq(salarisbatchesTable.id, id));
   if (!batch) { res.status(404).json({ error: "Niet gevonden" }); return; }
 
@@ -459,7 +459,7 @@ router.get("/salarisarchief/documenten", requireBevoegdheid("salarisarchief", 1)
 });
 
 router.get("/salarisarchief/documenten/:id", requireBevoegdheid("salarisarchief", 1), async (req: Request, res: Response) => {
-  const id = parseInt(req.params["id"] ?? "0", 10);
+  const id = parseInt(String(req.params["id"] ?? "0"), 10);
   const rows = await db
     .select({ d: salarisbestandenTable, medewerkerNaam: medewerkersTable.naam })
     .from(salarisbestandenTable)
@@ -471,7 +471,7 @@ router.get("/salarisarchief/documenten/:id", requireBevoegdheid("salarisarchief"
 });
 
 router.patch("/salarisarchief/documenten/:id", requireBevoegdheid("salarisarchief", 2), async (req: Request, res: Response) => {
-  const id = parseInt(req.params["id"] ?? "0", 10);
+  const id = parseInt(String(req.params["id"] ?? "0"), 10);
   const { medewerker_id, status, zichtbaar_medewerker, periode_jaar, periode_maand, type } = req.body as {
     medewerker_id?: number | null;
     status?: string;
@@ -520,7 +520,7 @@ router.patch("/salarisarchief/documenten/:id", requireBevoegdheid("salarisarchie
 // ── PUBLICEREN ────────────────────────────────────────────────────────────────
 
 router.post("/salarisarchief/documenten/:id/publiceer", requireBevoegdheid("salarisarchief", 2), async (req: Request, res: Response) => {
-  const id = parseInt(req.params["id"] ?? "0", 10);
+  const id = parseInt(String(req.params["id"] ?? "0"), 10);
   const [doc] = await db.select().from(salarisbestandenTable).where(eq(salarisbestandenTable.id, id)).limit(1);
   if (!doc) { res.status(404).json({ error: "Niet gevonden" }); return; }
   if (!doc.medewerkerId) { res.status(409).json({ error: "Document is niet aan een medewerker gekoppeld" }); return; }
@@ -578,7 +578,7 @@ router.post("/salarisarchief/batch-publiceer", requireBevoegdheid("salarisarchie
 // ── DOWNLOAD ──────────────────────────────────────────────────────────────────
 
 router.get("/salarisarchief/documenten/:id/download-url", requireBevoegdheid("salarisarchief", 1), async (req: Request, res: Response) => {
-  const id = parseInt(req.params["id"] ?? "0", 10);
+  const id = parseInt(String(req.params["id"] ?? "0"), 10);
   const [doc] = await db.select().from(salarisbestandenTable).where(eq(salarisbestandenTable.id, id)).limit(1);
   if (!doc) { res.status(404).json({ error: "Niet gevonden" }); return; }
 
@@ -590,7 +590,7 @@ router.get("/salarisarchief/documenten/:id/download-url", requireBevoegdheid("sa
 });
 
 router.get("/salarisarchief/documenten/:id/download", requireBevoegdheid("salarisarchief", 1), async (req: Request, res: Response) => {
-  const id = parseInt(req.params["id"] ?? "0", 10);
+  const id = parseInt(String(req.params["id"] ?? "0"), 10);
   const [doc] = await db.select().from(salarisbestandenTable).where(eq(salarisbestandenTable.id, id)).limit(1);
   if (!doc) { res.status(404).json({ error: "Niet gevonden" }); return; }
 
@@ -669,7 +669,7 @@ router.get("/mijn/salarisdocumenten", async (req: Request, res: Response) => {
 router.get("/mijn/salarisdocumenten/:id/download-url", async (req: Request, res: Response) => {
   const userId = sessieGebruikerId(req);
   if (!userId) { res.status(401).json({ error: "Niet ingelogd" }); return; }
-  const docId = parseInt(req.params["id"] ?? "0", 10);
+  const docId = parseInt(String(req.params["id"] ?? "0"), 10);
 
   const [mw] = await db.select({ id: medewerkersTable.id, naam: medewerkersTable.naam })
     .from(medewerkersTable).where(eq(medewerkersTable.gebruikerId, userId)).limit(1);
@@ -692,14 +692,14 @@ router.get("/sepa-bestanden", requireBevoegdheid("salarisarchief", 1), async (re
 });
 
 router.get("/sepa-bestanden/:id", requireBevoegdheid("salarisarchief", 1), async (req: Request, res: Response) => {
-  const id = parseInt(req.params["id"] ?? "0", 10);
+  const id = parseInt(String(req.params["id"] ?? "0"), 10);
   const [sepa] = await db.select().from(sepaBestandenTable).where(eq(sepaBestandenTable.id, id)).limit(1);
   if (!sepa) { res.status(404).json({ error: "Niet gevonden" }); return; }
   res.json(mapSepa(sepa));
 });
 
 router.patch("/sepa-bestanden/:id", requireBevoegdheid("salarisarchief", 2), async (req: Request, res: Response) => {
-  const id = parseInt(req.params["id"] ?? "0", 10);
+  const id = parseInt(String(req.params["id"] ?? "0"), 10);
   const { status, omschrijving } = req.body as { status?: string; omschrijving?: string };
 
   const patch: Partial<typeof sepaBestandenTable.$inferInsert> = { bijgewerktOp: new Date() };
@@ -730,7 +730,7 @@ router.patch("/sepa-bestanden/:id", requireBevoegdheid("salarisarchief", 2), asy
 });
 
 router.get("/sepa-bestanden/:id/download-url", requireBevoegdheid("salarisarchief", 1), async (req: Request, res: Response) => {
-  const id = parseInt(req.params["id"] ?? "0", 10);
+  const id = parseInt(String(req.params["id"] ?? "0"), 10);
   const [sepa] = await db.select().from(sepaBestandenTable).where(eq(sepaBestandenTable.id, id)).limit(1);
   if (!sepa) { res.status(404).json({ error: "Niet gevonden" }); return; }
 
@@ -742,7 +742,7 @@ router.get("/sepa-bestanden/:id/download-url", requireBevoegdheid("salarisarchie
 });
 
 router.get("/sepa-bestanden/:id/download", requireBevoegdheid("salarisarchief", 1), async (req: Request, res: Response) => {
-  const id = parseInt(req.params["id"] ?? "0", 10);
+  const id = parseInt(String(req.params["id"] ?? "0"), 10);
   const [sepa] = await db.select().from(sepaBestandenTable).where(eq(sepaBestandenTable.id, id)).limit(1);
   if (!sepa) { res.status(404).json({ error: "Niet gevonden" }); return; }
 

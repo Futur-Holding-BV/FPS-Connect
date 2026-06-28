@@ -1092,37 +1092,37 @@ router.post("/modules/calculaties/:id/maak-offerte", schrijvenCalc, async (req, 
       await db.insert(offerteRegelsTable).values(
         regels.map((r, i) => ({
           offerteId: offerte.id,
-          categorie: (r as any).isStaartkosten ? "staartkosten" : "maatregel",
-          omschrijving: r.omschrijving,
-          eenheid: r.eenheid,
-          hoeveelheid: r.hoeveelheid,
-          eenheidsprijs: r.hoeveelheid > 0 ? Math.round((r.totaal / r.hoeveelheid) * 100) / 100 : r.totaal,
-          totaalprijs: r.totaal,
+          categorie: r.isStaartkosten ? "staartkosten" : "maatregel",
+          maatregel: r.omschrijving,
+          eenheid: r.eenheid || "st",
+          aantal: r.hoeveelheid,
+          prijsPerEenheid: r.hoeveelheid > 0 ? Math.round((r.totaal / r.hoeveelheid) * 100) / 100 : r.totaal,
+          kosten: r.totaal,
           volgorde: i + 1,
-        } as typeof offerteRegelsTable.$inferInsert))
+        }))
       );
     }
 
     const opslagen = [
-      { omschrijving: `Algemene kosten (${header.opslagAk}%)`, bedrag: akBedrag },
-      { omschrijving: `Algemene bedrijfskosten (${opslagAbk}%)`, bedrag: abkBedrag },
-      { omschrijving: `Risico (${header.opslagRisico}%)`, bedrag: risicoBedrag },
-      { omschrijving: `Winst (${header.opslagWinst}%)`, bedrag: winstBedrag },
+      { label: `Algemene kosten (${header.opslagAk}%)`, bedrag: akBedrag },
+      { label: `Algemene bedrijfskosten (${opslagAbk}%)`, bedrag: abkBedrag },
+      { label: `Risico (${header.opslagRisico}%)`, bedrag: risicoBedrag },
+      { label: `Winst (${header.opslagWinst}%)`, bedrag: winstBedrag },
     ];
     if (header.korting > 0) {
-      opslagen.push({ omschrijving: `Korting (${header.korting}%)`, bedrag: -kortingBedrag });
+      opslagen.push({ label: `Korting (${header.korting}%)`, bedrag: -kortingBedrag });
     }
     await db.insert(offerteRegelsTable).values(
       opslagen.map((o, i) => ({
         offerteId: offerte.id,
         categorie: "algemene_kosten",
-        omschrijving: o.omschrijving,
-        eenheid: "lump_sum",
-        hoeveelheid: 1,
-        eenheidsprijs: o.bedrag,
-        totaalprijs: o.bedrag,
-        volgorde: (regels.length + i + 1),
-      } as typeof offerteRegelsTable.$inferInsert))
+        maatregel: o.label,
+        eenheid: "st",
+        aantal: 1,
+        prijsPerEenheid: o.bedrag,
+        kosten: o.bedrag,
+        volgorde: regels.length + i + 1,
+      }))
     );
 
     res.status(201).json({ offerte_id: offerte.id });

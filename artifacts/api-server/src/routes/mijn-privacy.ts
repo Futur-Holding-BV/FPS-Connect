@@ -73,7 +73,7 @@ mijnPrivacyRouter.get("/mijn/privacy-gegevens", requireAuth, async (req, res) =>
     const opleidingRijen = await db
       .select({
         naam: opleidingenTable.naam,
-        type: opleidingenTable.type,
+        type: opleidingenTable.soort,
         niveau: opleidingenTable.niveau,
         behaald_op: medewerkerOpleidingenTable.behaaldOp,
         verloopt_op: medewerkerOpleidingenTable.verlooptOp,

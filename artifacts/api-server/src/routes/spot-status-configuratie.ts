@@ -35,7 +35,7 @@ router.patch(
   requireBevoegdheid("systeem", 2),
   async (req, res) => {
     try {
-      const { statusCode } = req.params;
+      const statusCode = String(req.params["statusCode"] ?? "");
       const { weergave_naam, actief, volgorde } = req.body as {
         weergave_naam?: string;
         actief?: boolean;

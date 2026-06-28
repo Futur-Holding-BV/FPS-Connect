@@ -4,6 +4,7 @@ import {
   useListGebouwPartijOpties,
   useGetGebouwSpotsInzicht,
   useListGebouwToewijzingen,
+  type Gebouw,
 } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -34,15 +35,23 @@ const BEHEERDER_ROLLEN = ["beheerder", "hoofdbeheerder"];
 
 const PROJECT_STATUS_LABELS: Record<string, string> = {
   offerte_aanvraag: "Offerte-aanvraag",
-  offerte_ingediend: "Offerte-ingediend",
-  opdracht_in_uitvoering: "Opdracht in uitvoering",
+  offerte_ingediend: "Calculatie-fase",
+  opdracht_in_uitvoering: "Opdracht",
 };
 
 const PROJECT_STATUS_KLASSEN: Record<string, string> = {
   offerte_aanvraag: "bg-amber-100 text-amber-800 border-amber-300",
   offerte_ingediend: "bg-blue-100 text-blue-800 border-blue-300",
-  opdracht_in_uitvoering: "bg-primary/10 text-primary border-primary/30",
+  opdracht_in_uitvoering: "bg-emerald-100 text-emerald-800 border-emerald-300",
 };
+
+const COMMERCIEEL_GROEPEN: { key: string; label: string; icoonKlasse: string }[] = [
+  { key: "offerte_aanvraag", label: "Offerte-aanvraag", icoonKlasse: "text-amber-600" },
+  { key: "offerte_ingediend", label: "Calculatie-fase", icoonKlasse: "text-blue-600" },
+  { key: "opdracht_in_uitvoering", label: "Opdracht", icoonKlasse: "text-emerald-600" },
+];
+
+const COMMERCIEEL_STATUSSEN = new Set(["offerte_aanvraag", "offerte_ingediend", "opdracht_in_uitvoering"]);
 
 const PARTIJ_TYPE_LABELS: Record<string, string> = {
   eigenaar: "Eigenaar",
@@ -242,6 +251,88 @@ function tijd(waarde: string | null | undefined): number {
   return isFinite(ms) ? ms : 0;
 }
 
+type GebouwItem = Gebouw;
+
+function GebouwKaart({ gebouw }: { gebouw: GebouwItem }) {
+  const isOpdracht = gebouw.project_status === "opdracht_in_uitvoering";
+  const heeftSpots = (gebouw.totaal_voorzieningen ?? 0) > 0;
+  const kaartKlasse = gebouw.gearchiveerd
+    ? "opacity-60 border-muted"
+    : isOpdracht
+      ? "border-emerald-400 bg-emerald-50/50 hover:border-emerald-500"
+      : heeftSpots
+        ? "border-primary/40 bg-primary/5"
+        : "";
+
+  return (
+    <Link href={`/gebouwen/${gebouw.id}`}>
+      <Card className={`hover:border-primary transition-colors cursor-pointer h-full flex flex-col ${kaartKlasse}`}>
+        <CardHeader>
+          <div className="flex justify-between items-start">
+            <div className={`p-2 rounded-md ${isOpdracht ? "bg-emerald-100" : "bg-primary/10"}`}>
+              <Building className={`h-6 w-6 ${isOpdracht ? "text-emerald-600" : "text-primary"}`} />
+            </div>
+            <div className="flex items-center gap-1 flex-wrap">
+              {gebouw.gearchiveerd && (
+                <Badge variant="outline" className="bg-background text-muted-foreground border-muted-foreground/40 shrink-0 text-xs">
+                  <Archive className="h-3 w-3 mr-1" /> Gearchiveerd
+                </Badge>
+              )}
+              {!gebouw.gearchiveerd && gebouw.project_status && (
+                <Badge variant="outline" className={`shrink-0 text-xs font-medium ${PROJECT_STATUS_KLASSEN[gebouw.project_status] ?? ""}`}>
+                  {PROJECT_STATUS_LABELS[gebouw.project_status] ?? gebouw.project_status}
+                </Badge>
+              )}
+              {!gebouw.gearchiveerd && heeftSpots && (
+                <SpotsInzichtKnop
+                  gebouwId={gebouw.id}
+                  gebouwNaam={
+                    gebouw.projectnummer
+                      ? `${gebouw.projectnummer} - ${gebouw.naam}`
+                      : gebouw.naam
+                  }
+                />
+              )}
+              <PrintKnop gebouwId={gebouw.id} />
+              <Badge variant="outline" className="bg-background">
+                {gebouw.totaal_voorzieningen} {gebouw.totaal_voorzieningen === 1 ? "spot" : "spots"}
+              </Badge>
+            </div>
+          </div>
+          <CardTitle className="mt-4">
+            {gebouw.projectnummer
+              ? `${gebouw.projectnummer} - ${gebouw.naam}`
+              : gebouw.naam}
+          </CardTitle>
+          <CardDescription>{gebouw.adres}, {gebouw.stad}</CardDescription>
+          <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
+            <Calendar className="h-3 w-3 shrink-0" />
+            <span>
+              {new Date(gebouw.aangemaakt_op).toLocaleDateString("nl-NL", {
+                day: "numeric",
+                month: "short",
+                year: "numeric",
+              })}
+            </span>
+          </div>
+          {gebouw.partijen && gebouw.partijen.length > 0 && (
+            <div className="mt-3 space-y-1">
+              {gebouw.partijen.map((partij: { type: string; naam: string }, i: number) => (
+                <div key={i} className="flex items-baseline gap-1.5 text-sm">
+                  <span className="text-muted-foreground shrink-0">
+                    {PARTIJ_TYPE_LABELS[partij.type] ?? partij.type}:
+                  </span>
+                  <span className="font-medium truncate">{partij.naam}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardHeader>
+      </Card>
+    </Link>
+  );
+}
+
 export default function Gebouwen() {
   const { t } = useTranslation();
   const { gebruiker } = useAuth();
@@ -416,82 +507,67 @@ export default function Gebouwen() {
             <Card key={i} className="animate-pulse h-48 bg-muted" />
           ))}
         </div>
-      ) : (
+      ) : filterStatus !== ALLE ? (
+        /* Gefilterd: platte lijst */
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {gesorteerdeGebouwen.map((gebouw) => (
-            <Link key={gebouw.id} href={`/gebouwen/${gebouw.id}`}>
-              <Card className={`hover:border-primary transition-colors cursor-pointer h-full flex flex-col ${gebouw.gearchiveerd ? "opacity-60 border-muted" : (gebouw.totaal_voorzieningen ?? 0) > 0 ? "border-primary/40 bg-primary/5" : ""}`}>
-                <CardHeader>
-                  <div className="flex justify-between items-start">
-                    <div className="bg-primary/10 p-2 rounded-md">
-                      <Building className="h-6 w-6 text-primary" />
-                    </div>
-                    <div className="flex items-center gap-1 flex-wrap">
-                      {gebouw.gearchiveerd && (
-                        <Badge variant="outline" className="bg-background text-muted-foreground border-muted-foreground/40 shrink-0 text-xs">
-                          <Archive className="h-3 w-3 mr-1" /> Gearchiveerd
-                        </Badge>
-                      )}
-                      {!gebouw.gearchiveerd && gebouw.project_status && (
-                        <Badge variant="outline" className={`shrink-0 text-xs font-medium ${PROJECT_STATUS_KLASSEN[gebouw.project_status] ?? ""}`}>
-                          {PROJECT_STATUS_LABELS[gebouw.project_status] ?? gebouw.project_status}
-                        </Badge>
-                      )}
-                      {!gebouw.gearchiveerd && (gebouw.totaal_voorzieningen ?? 0) > 0 && (
-                        <SpotsInzichtKnop
-                          gebouwId={gebouw.id}
-                          gebouwNaam={
-                            gebouw.projectnummer
-                              ? `${gebouw.projectnummer} - ${gebouw.naam}`
-                              : gebouw.naam
-                          }
-                        />
-                      )}
-                      <PrintKnop gebouwId={gebouw.id} />
-                      <Badge variant="outline" className="bg-background">
-                        {gebouw.totaal_voorzieningen} {gebouw.totaal_voorzieningen === 1 ? "spot" : "spots"}
-                      </Badge>
-                    </div>
-                  </div>
-                  <CardTitle className="mt-4">
-                    {gebouw.projectnummer
-                      ? `${gebouw.projectnummer} - ${gebouw.naam}`
-                      : gebouw.naam}
-                  </CardTitle>
-                  <CardDescription>{gebouw.adres}, {gebouw.stad}</CardDescription>
-                  <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
-                    <Calendar className="h-3 w-3 shrink-0" />
-                    <span>
-                      {new Date(gebouw.aangemaakt_op).toLocaleDateString("nl-NL", {
-                        day: "numeric",
-                        month: "short",
-                        year: "numeric",
-                      })}
-                    </span>
-                  </div>
-                  {gebouw.partijen && gebouw.partijen.length > 0 && (
-                    <div className="mt-3 space-y-1">
-                      {gebouw.partijen.map((partij, i) => (
-                        <div
-                          key={i}
-                          className="flex items-baseline gap-1.5 text-sm"
-                        >
-                          <span className="text-muted-foreground shrink-0">
-                            {PARTIJ_TYPE_LABELS[partij.type] ?? partij.type}:
-                          </span>
-                          <span className="font-medium truncate">
-                            {partij.naam}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </CardHeader>
-              </Card>
-            </Link>
+            <GebouwKaart key={gebouw.id} gebouw={gebouw} />
           ))}
-          {gebouwen?.length === 0 && (
+          {gesorteerdeGebouwen.length === 0 && (
             <div className="col-span-full py-12 text-center text-muted-foreground">
+              Geen gebouwen gevonden.
+            </div>
+          )}
+        </div>
+      ) : (
+        /* Groepweergave per commerciële fase */
+        <div className="space-y-8">
+          {COMMERCIEEL_GROEPEN.map((groep) => {
+            const groepGebouwen = gesorteerdeGebouwen.filter(
+              (g) => g.project_status === groep.key && !g.gearchiveerd,
+            );
+            if (groepGebouwen.length === 0) return null;
+            return (
+              <div key={groep.key}>
+                <div className="flex items-center gap-2 mb-3">
+                  <h2 className={`text-sm font-semibold uppercase tracking-wide ${groep.icoonKlasse}`}>
+                    {groep.label}
+                  </h2>
+                  <Badge variant="outline" className="text-xs font-normal">
+                    {groepGebouwen.length}
+                  </Badge>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {groepGebouwen.map((gebouw) => (
+                    <GebouwKaart key={gebouw.id} gebouw={gebouw} />
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+          {(() => {
+            const overig = gesorteerdeGebouwen.filter(
+              (g) => !g.project_status || !COMMERCIEEL_STATUSSEN.has(g.project_status),
+            );
+            if (overig.length === 0) return null;
+            return (
+              <div>
+                <div className="flex items-center gap-2 mb-3">
+                  <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                    Overige projecten
+                  </h2>
+                  <Badge variant="outline" className="text-xs font-normal">{overig.length}</Badge>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {overig.map((gebouw) => (
+                    <GebouwKaart key={gebouw.id} gebouw={gebouw} />
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
+          {gesorteerdeGebouwen.length === 0 && (
+            <div className="py-12 text-center text-muted-foreground">
               Geen gebouwen gevonden.
             </div>
           )}

@@ -117,7 +117,7 @@ function mapAfronding(a: Record<string, unknown>) {
 
 veiligheidRouter.get("/veiligheid/toolboxen", lezenVeiligheid, async (req, res) => {
   try {
-    const userId = req.session.gebruikerId!;
+    const userId = req.session.userId!;
     const { categorie, gepubliceerd } = req.query;
 
     const rows = await db
@@ -184,7 +184,7 @@ veiligheidRouter.get("/veiligheid/toolboxen", lezenVeiligheid, async (req, res) 
 
 veiligheidRouter.post("/veiligheid/toolboxen", schrijvenVeiligheid, async (req, res) => {
   try {
-    const userId = req.session.gebruikerId!;
+    const userId = req.session.userId!;
     const { vragen: vragenInput, ...rest } = req.body;
 
     if (!rest.titel?.trim()) {
@@ -234,8 +234,8 @@ veiligheidRouter.post("/veiligheid/toolboxen", schrijvenVeiligheid, async (req, 
 
 veiligheidRouter.get("/veiligheid/toolboxen/:id", lezenVeiligheid, async (req, res) => {
   try {
-    const id = parseInt(req.params.id);
-    const userId = req.session.gebruikerId!;
+    const id = parseInt(String(req.params.id));
+    const userId = req.session.userId!;
 
     const [row] = await db
       .select({
@@ -289,7 +289,7 @@ veiligheidRouter.get("/veiligheid/toolboxen/:id", lezenVeiligheid, async (req, r
 
 veiligheidRouter.patch("/veiligheid/toolboxen/:id", schrijvenVeiligheid, async (req, res) => {
   try {
-    const id = parseInt(req.params.id);
+    const id = parseInt(String(req.params.id));
     const { vragen: vragenInput, ...rest } = req.body;
 
     const update: Record<string, unknown> = { bijgewerktOp: new Date() };
@@ -351,7 +351,7 @@ veiligheidRouter.patch("/veiligheid/toolboxen/:id", schrijvenVeiligheid, async (
 
 veiligheidRouter.delete("/veiligheid/toolboxen/:id", verwijderenVeiligheid, async (req, res) => {
   try {
-    const id = parseInt(req.params.id);
+    const id = parseInt(String(req.params.id));
     await db.delete(veiligheidToolboxenTable).where(eq(veiligheidToolboxenTable.id, id));
     res.status(204).end();
   } catch (err) {
@@ -364,7 +364,7 @@ veiligheidRouter.delete("/veiligheid/toolboxen/:id", verwijderenVeiligheid, asyn
 
 veiligheidRouter.post("/veiligheid/toolboxen/:id/publiceren", schrijvenVeiligheid, async (req, res) => {
   try {
-    const id = parseInt(req.params.id);
+    const id = parseInt(String(req.params.id));
     const [updated] = await db
       .update(veiligheidToolboxenTable)
       .set({ gepubliceerd: true, bijgewerktOp: new Date() })
@@ -386,7 +386,7 @@ veiligheidRouter.post("/veiligheid/toolboxen/:id/ai-analyse", schrijvenVeilighei
     if (!heeftOpenAi()) {
       return res.status(503).json({ error: "AI niet beschikbaar" });
     }
-    const id = parseInt(req.params.id);
+    const id = parseInt(String(req.params.id));
     const [toolbox] = await db
       .select()
       .from(veiligheidToolboxenTable)
@@ -487,8 +487,8 @@ veiligheidRouter.post("/veiligheid/toolboxen/:id/ai-analyse", schrijvenVeilighei
 
 veiligheidRouter.post("/veiligheid/toolboxen/:id/afronden", lezenVeiligheid, async (req, res) => {
   try {
-    const toolboxId = parseInt(req.params.id);
-    const userId = req.session.gebruikerId!;
+    const toolboxId = parseInt(String(req.params.id));
+    const userId = req.session.userId!;
     const { antwoorden, handtekening } = req.body;
 
     if (!handtekening?.trim()) {
@@ -553,7 +553,7 @@ veiligheidRouter.post("/veiligheid/toolboxen/:id/afronden", lezenVeiligheid, asy
 
 veiligheidRouter.get("/veiligheid/toolboxen/:id/afrondingen", schrijvenVeiligheid, async (req, res) => {
   try {
-    const toolboxId = parseInt(req.params.id);
+    const toolboxId = parseInt(String(req.params.id));
 
     const rows = await db
       .select({
@@ -591,8 +591,8 @@ veiligheidRouter.get("/veiligheid/toolboxen/:id/afrondingen", schrijvenVeilighei
 
 veiligheidRouter.get("/veiligheid/toolboxen/:id/mijn-afronding", lezenVeiligheid, async (req, res) => {
   try {
-    const toolboxId = parseInt(req.params.id);
-    const userId = req.session.gebruikerId!;
+    const toolboxId = parseInt(String(req.params.id));
+    const userId = req.session.userId!;
 
     const [afronding] = await db
       .select()
@@ -831,7 +831,7 @@ veiligheidRouter.get("/veiligheid/lmras/upload-url", schrijvenVeiligheid, async 
 
 veiligheidRouter.get("/veiligheid/lmras/:id", lezenVeiligheid, async (req, res) => {
   try {
-    const id = parseInt(req.params.id);
+    const id = parseInt(String(req.params.id));
     const [rij] = await db
       .select()
       .from(veiligheidLmrasTable)
@@ -863,7 +863,7 @@ veiligheidRouter.get("/veiligheid/lmras/:id", lezenVeiligheid, async (req, res) 
 
 veiligheidRouter.patch("/veiligheid/lmras/:id", schrijvenVeiligheid, async (req, res) => {
   try {
-    const id = parseInt(req.params.id);
+    const id = parseInt(String(req.params.id));
     const {
       locatie_omschrijving, werkzaamheden, risicos, maatregelen,
       veilig_voor_aanvang, handtekening, foto_paden, gps_lat, gps_lng,
@@ -914,7 +914,7 @@ veiligheidRouter.patch("/veiligheid/lmras/:id", schrijvenVeiligheid, async (req,
 
 veiligheidRouter.delete("/veiligheid/lmras/:id", verwijderenVeiligheid, async (req, res) => {
   try {
-    const id = parseInt(req.params.id);
+    const id = parseInt(String(req.params.id));
     await db.delete(veiligheidLmrasTable).where(eq(veiligheidLmrasTable.id, id));
     res.status(204).end();
   } catch (err) {
@@ -951,7 +951,7 @@ veiligheidRouter.get("/veiligheid/meldingen", lezenVeiligheid, async (req, res) 
   try {
     const toegewezenAlias = db
       .$with("toegewezen")
-      .as(db.select({ id: gebruikersTable.id, naam: sql<string>`coalesce(${gebruikersTable.naam} || ' ' || ${gebruikersTable.achternaam}, ${gebruikersTable.email})` }).from(gebruikersTable));
+      .as(db.select({ id: gebruikersTable.id, naam: sql<string>`coalesce(nullif(${gebruikersTable.naam}, ''), ${gebruikersTable.email})` }).from(gebruikersTable));
     const rijen = await db
       .select({
         id: veiligheidMeldingenTable.id,
@@ -1029,7 +1029,7 @@ veiligheidRouter.get("/veiligheid/meldingen/upload-url", schrijvenVeiligheid, as
 
 veiligheidRouter.get("/veiligheid/meldingen/:id", lezenVeiligheid, async (req, res) => {
   try {
-    const id = parseInt(req.params.id);
+    const id = parseInt(String(req.params.id));
     const [rij] = await db
       .select({
         id: veiligheidMeldingenTable.id,
@@ -1061,7 +1061,7 @@ veiligheidRouter.get("/veiligheid/meldingen/:id", lezenVeiligheid, async (req, r
 
 veiligheidRouter.patch("/veiligheid/meldingen/:id", schrijvenVeiligheid, async (req, res) => {
   try {
-    const id = parseInt(req.params.id);
+    const id = parseInt(String(req.params.id));
     const {
       type, omschrijving, locatie, gebouw_id, project_naam,
       foto_paden, prioriteit, status, toegewezen_aan_id,
@@ -1092,7 +1092,7 @@ veiligheidRouter.patch("/veiligheid/meldingen/:id", schrijvenVeiligheid, async (
 
 veiligheidRouter.delete("/veiligheid/meldingen/:id", verwijderenVeiligheid, async (req, res) => {
   try {
-    const id = parseInt(req.params.id);
+    const id = parseInt(String(req.params.id));
     await db.delete(veiligheidMeldingenTable).where(eq(veiligheidMeldingenTable.id, id));
     res.status(204).end();
   } catch (err) {
@@ -1105,7 +1105,7 @@ veiligheidRouter.delete("/veiligheid/meldingen/:id", verwijderenVeiligheid, asyn
 
 veiligheidRouter.get("/veiligheid/meldingen/:id/acties", lezenVeiligheid, async (req, res) => {
   try {
-    const meldingId = parseInt(req.params.id);
+    const meldingId = parseInt(String(req.params.id));
     const rijen = await db
       .select()
       .from(veiligheidMeldingenActiesTable)
@@ -1132,7 +1132,7 @@ veiligheidRouter.get("/veiligheid/meldingen/:id/acties", lezenVeiligheid, async 
 
 veiligheidRouter.post("/veiligheid/meldingen/:id/acties", schrijvenVeiligheid, async (req, res) => {
   try {
-    const meldingId = parseInt(req.params.id);
+    const meldingId = parseInt(String(req.params.id));
     const { omschrijving, eigenaar_id, eigenaar_naam, deadline } = req.body;
     if (!omschrijving) return res.status(400).json({ error: "omschrijving is verplicht" });
     const [rij] = await db
@@ -1166,7 +1166,7 @@ veiligheidRouter.post("/veiligheid/meldingen/:id/acties", schrijvenVeiligheid, a
 
 veiligheidRouter.patch("/veiligheid/meldingen/:id/acties/:actieId", schrijvenVeiligheid, async (req, res) => {
   try {
-    const actieId = parseInt(req.params.actieId);
+    const actieId = parseInt(String(req.params.actieId));
     const { omschrijving, eigenaar_id, eigenaar_naam, deadline, status } = req.body;
     const [rij] = await db
       .update(veiligheidMeldingenActiesTable)
@@ -1200,7 +1200,7 @@ veiligheidRouter.patch("/veiligheid/meldingen/:id/acties/:actieId", schrijvenVei
 
 veiligheidRouter.delete("/veiligheid/meldingen/:id/acties/:actieId", verwijderenVeiligheid, async (req, res) => {
   try {
-    const actieId = parseInt(req.params.actieId);
+    const actieId = parseInt(String(req.params.actieId));
     await db.delete(veiligheidMeldingenActiesTable).where(eq(veiligheidMeldingenActiesTable.id, actieId));
     res.status(204).end();
   } catch (err) {
