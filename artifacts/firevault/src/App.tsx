@@ -73,6 +73,8 @@ import VerlofOverzichtPagina from "@/pages/personeel/verlof-overzicht";
 import VerlofInstellingenPagina from "@/pages/personeel/verlof-instellingen";
 import JaarAfsluitingPagina from "@/pages/personeel/jaarafsluiting";
 import CapaciteitsplanningPagina from "@/pages/personeel/capaciteitsplanning";
+import UitboardenPagina from "@/pages/personeel/uitboarden";
+import JaarplanningPagina from "@/pages/personeel/jaarplanning";
 import GereedschappenPagina from "@/pages/gereedschappen/index";
 import GereedschapDetailPagina from "@/pages/gereedschappen/detail";
 import HallOfFamePagina from "@/pages/hall-of-fame";
@@ -287,11 +289,13 @@ function ConnectPortal() {
         {/* ── Werk-inbox ── */}
         <Route path="/werk-inbox" component={WerkInboxPagina} />
 
-        {/* ── HRM ── statische /personeel/* paden vóór dynamisch /:id */}
+        {/* ── Personeel ── statische /personeel/* paden vóór dynamisch /:id */}
         <Route path="/personeel/verlof" component={VerlofOverzichtPagina} />
         <Route path="/personeel/verlof-instellingen" component={VerlofInstellingenPagina} />
         <Route path="/personeel/jaarafsluiting" component={JaarAfsluitingPagina} />
         <Route path="/personeel/capaciteitsplanning" component={CapaciteitsplanningPagina} />
+        <Route path="/personeel/uitboarden" component={UitboardenPagina} />
+        <Route path="/personeel/jaarplanning" component={JaarplanningPagina} />
         <Route path="/personeel/:id" component={MedewerkerDetailPagina} />
         <Route path="/personeel" component={PersoneelPagina} />
         <Route path="/gereedschappen" component={GereedschappenPagina} />

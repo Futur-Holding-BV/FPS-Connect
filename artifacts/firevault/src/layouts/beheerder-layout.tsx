@@ -18,6 +18,7 @@ import {
   BookOpen, HardDriveUpload, CalendarCheck2, Settings2, ArchiveRestore,
   Inbox, Building2, Target, Handshake, Newspaper, CalendarRange, KeyRound,
   ClipboardCheck, AlertTriangle, FileArchive, Receipt, ArrowUpRight, ScrollText,
+  UserPlus, UserMinus,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { GebruikerMenu } from "@/components/gebruiker-menu";
@@ -595,39 +596,12 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
                 </SidebarGroup>
               )}
 
-              {/* HRM */}
-              {(toonPersoneel || toonGereedschappen || isHoofdbeheerder) && (
+              {/* Organisatie */}
+              {(toonGereedschappen || toonPersoneel) && (
                 <SidebarGroup>
-                  <SidebarGroupLabel>HRM</SidebarGroupLabel>
+                  <SidebarGroupLabel>Organisatie</SidebarGroupLabel>
                   <SidebarGroupContent>
                     <SidebarMenu>
-                      {toonPersoneel && (
-                        <SidebarMenuItem>
-                          <SidebarMenuButton
-                            asChild
-                            isActive={location === "/personeel" || (location.startsWith("/personeel/") && !location.startsWith("/personeel/verlof") && !location.startsWith("/personeel/capaciteitsplanning") && !location.startsWith("/personeel/jaarafsluiting"))}
-                          >
-                            <Link href="/personeel">
-                              <Users />
-                              <span>{t("nav.personeel")}</span>
-                              <InUitvoering />
-                            </Link>
-                          </SidebarMenuButton>
-                        </SidebarMenuItem>
-                      )}
-                      {toonPersoneel && (
-                        <SidebarMenuItem>
-                          <SidebarMenuButton
-                            asChild
-                            isActive={location.startsWith("/personeel/verlof")}
-                          >
-                            <Link href="/personeel/verlof">
-                              <CalendarCheck2 />
-                              <span>Verlofoverzicht</span>
-                            </Link>
-                          </SidebarMenuButton>
-                        </SidebarMenuItem>
-                      )}
                       {toonPersoneel && (
                         <SidebarMenuItem>
                           <SidebarMenuButton
@@ -637,97 +611,6 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
                             <Link href="/personeel/capaciteitsplanning">
                               <BarChart3 />
                               <span>Capaciteitsplanning</span>
-                            </Link>
-                          </SidebarMenuButton>
-                        </SidebarMenuItem>
-                      )}
-                      {isHoofdbeheerder && (
-                        <SidebarMenuItem>
-                          <SidebarMenuButton
-                            asChild
-                            isActive={location === "/personeel/verlof-instellingen"}
-                          >
-                            <Link href="/personeel/verlof-instellingen">
-                              <Settings2 />
-                              <span>Verlof-instellingen</span>
-                            </Link>
-                          </SidebarMenuButton>
-                        </SidebarMenuItem>
-                      )}
-                      {isHoofdbeheerder && (
-                        <SidebarMenuItem>
-                          <SidebarMenuButton
-                            asChild
-                            isActive={location === "/personeel/jaarafsluiting"}
-                          >
-                            <Link href="/personeel/jaarafsluiting">
-                              <ArchiveRestore />
-                              <span>Jaarafsluiting verlof</span>
-                            </Link>
-                          </SidebarMenuButton>
-                        </SidebarMenuItem>
-                      )}
-                      {toonSalarisarchief && (
-                        <SidebarMenuItem>
-                          <SidebarMenuButton
-                            asChild
-                            isActive={location === "/salarisarchief" || location.startsWith("/salarisarchief/")}
-                          >
-                            <Link href="/salarisarchief">
-                              <HardDriveUpload />
-                              <span>Salarisarchief</span>
-                            </Link>
-                          </SidebarMenuButton>
-                        </SidebarMenuItem>
-                      )}
-                      {toonSalarisMutaties && (
-                        <SidebarMenuItem>
-                          <SidebarMenuButton
-                            asChild
-                            isActive={location === "/salaris-mutaties" || location.startsWith("/salaris-mutaties/")}
-                          >
-                            <Link href="/salaris-mutaties">
-                              <ClipboardList />
-                              <span>Salarismutaties</span>
-                            </Link>
-                          </SidebarMenuButton>
-                        </SidebarMenuItem>
-                      )}
-                      {toonScabMail && (
-                        <SidebarMenuItem>
-                          <SidebarMenuButton
-                            asChild
-                            isActive={location === "/scab-mail" || location.startsWith("/scab-mail/")}
-                          >
-                            <Link href="/scab-mail">
-                              <Mail />
-                              <span>SCAB Salarismails</span>
-                            </Link>
-                          </SidebarMenuButton>
-                        </SidebarMenuItem>
-                      )}
-                      {toonLoonOutput && (
-                        <SidebarMenuItem>
-                          <SidebarMenuButton
-                            asChild
-                            isActive={location === "/loon-output" || location.startsWith("/loon-output/")}
-                          >
-                            <Link href="/loon-output">
-                              <FileText />
-                              <span>Loon-output</span>
-                            </Link>
-                          </SidebarMenuButton>
-                        </SidebarMenuItem>
-                      )}
-                      {toonBoekhouderPortaal && (
-                        <SidebarMenuItem>
-                          <SidebarMenuButton
-                            asChild
-                            isActive={location === "/boekhouder" || location.startsWith("/boekhouder/")}
-                          >
-                            <Link href="/boekhouder">
-                              <LayoutDashboard />
-                              <span>Boekhouderportaal</span>
                             </Link>
                           </SidebarMenuButton>
                         </SidebarMenuItem>
@@ -745,8 +628,79 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
                           </SidebarMenuButton>
                         </SidebarMenuItem>
                       )}
+                    </SidebarMenu>
+                  </SidebarGroupContent>
+                </SidebarGroup>
+              )}
+
+              {/* Personeel */}
+              {(toonPersoneel || isHoofdbeheerder) && (
+                <SidebarGroup>
+                  <SidebarGroupLabel>Personeel</SidebarGroupLabel>
+                  <SidebarGroupContent>
+                    <SidebarMenu>
+                      {toonPersoneel && (
+                        <SidebarMenuItem className="pl-5">
+                          <SidebarMenuButton
+                            asChild
+                            isActive={
+                              location === "/personeel" ||
+                              (location.startsWith("/personeel/") &&
+                                !location.startsWith("/personeel/verlof") &&
+                                !location.startsWith("/personeel/capaciteitsplanning") &&
+                                !location.startsWith("/personeel/jaarafsluiting") &&
+                                !location.startsWith("/personeel/uitboarden") &&
+                                !location.startsWith("/personeel/jaarplanning"))
+                            }
+                          >
+                            <Link href="/personeel">
+                              <UserPlus />
+                              <span>Onboarden</span>
+                            </Link>
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                      )}
+                      {toonPersoneel && (
+                        <SidebarMenuItem className="pl-5">
+                          <SidebarMenuButton
+                            asChild
+                            isActive={location === "/personeel/uitboarden"}
+                          >
+                            <Link href="/personeel/uitboarden">
+                              <UserMinus />
+                              <span>Uitboarden</span>
+                            </Link>
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                      )}
+                      {toonPersoneel && (
+                        <SidebarMenuItem className="pl-5">
+                          <SidebarMenuButton
+                            asChild
+                            isActive={location.startsWith("/personeel/verlof") && location !== "/personeel/verlof-instellingen"}
+                          >
+                            <Link href="/personeel/verlof">
+                              <CalendarCheck2 />
+                              <span>Verlofoverzicht</span>
+                            </Link>
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                      )}
+                      {isHoofdbeheerder && (
+                        <SidebarMenuItem className="pl-5">
+                          <SidebarMenuButton
+                            asChild
+                            isActive={location === "/personeel/jaarplanning"}
+                          >
+                            <Link href="/personeel/jaarplanning">
+                              <CalendarDays />
+                              <span>Jaarplanning</span>
+                            </Link>
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                      )}
                       {(toonPersoneel || isHoofdbeheerder) && (
-                        <SidebarMenuItem>
+                        <SidebarMenuItem className="pl-5">
                           <SidebarMenuButton
                             asChild
                             isActive={location === "/uren" || location.startsWith("/uren/")}
@@ -759,7 +713,7 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
                         </SidebarMenuItem>
                       )}
                       {(toonPersoneel || isHoofdbeheerder) && (
-                        <SidebarMenuItem>
+                        <SidebarMenuItem className="pl-5">
                           <SidebarMenuButton
                             asChild
                             isActive={location === "/weekstaten" || location.startsWith("/weekstaten/")}
@@ -772,7 +726,7 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
                         </SidebarMenuItem>
                       )}
                       {(toonPersoneel || isHoofdbeheerder) && (
-                        <SidebarMenuItem>
+                        <SidebarMenuItem className="pl-5">
                           <SidebarMenuButton
                             asChild
                             isActive={location === "/hall-of-fame"}
@@ -789,12 +743,122 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
                 </SidebarGroup>
               )}
 
-              {/* Beheer */}
+              {/* Loon — scheiding vóór salarismodules */}
+              {(toonSalarisMutaties || toonScabMail || toonLoonOutput || toonBoekhouderPortaal || toonSalarisarchief) && (
+                <>
+                  <div className="mx-4 my-1 h-px bg-border group-data-[collapsible=icon]:hidden" />
+                  <SidebarGroup>
+                    <SidebarGroupLabel>Loon</SidebarGroupLabel>
+                    <SidebarGroupContent>
+                      <SidebarMenu>
+                        {toonSalarisMutaties && (
+                          <SidebarMenuItem>
+                            <SidebarMenuButton
+                              asChild
+                              isActive={location === "/salaris-mutaties" || location.startsWith("/salaris-mutaties/")}
+                            >
+                              <Link href="/salaris-mutaties">
+                                <ClipboardList />
+                                <span>Salarismutaties</span>
+                              </Link>
+                            </SidebarMenuButton>
+                          </SidebarMenuItem>
+                        )}
+                        {toonScabMail && (
+                          <SidebarMenuItem>
+                            <SidebarMenuButton
+                              asChild
+                              isActive={location === "/scab-mail" || location.startsWith("/scab-mail/")}
+                            >
+                              <Link href="/scab-mail">
+                                <Mail />
+                                <span>SCAB Salarismails</span>
+                              </Link>
+                            </SidebarMenuButton>
+                          </SidebarMenuItem>
+                        )}
+                        {toonLoonOutput && (
+                          <SidebarMenuItem>
+                            <SidebarMenuButton
+                              asChild
+                              isActive={location === "/loon-output" || location.startsWith("/loon-output/")}
+                            >
+                              <Link href="/loon-output">
+                                <FileText />
+                                <span>Loon-output</span>
+                              </Link>
+                            </SidebarMenuButton>
+                          </SidebarMenuItem>
+                        )}
+                        {toonBoekhouderPortaal && (
+                          <SidebarMenuItem>
+                            <SidebarMenuButton
+                              asChild
+                              isActive={location === "/boekhouder" || location.startsWith("/boekhouder/")}
+                            >
+                              <Link href="/boekhouder">
+                                <LayoutDashboard />
+                                <span>Boekhouderportaal</span>
+                              </Link>
+                            </SidebarMenuButton>
+                          </SidebarMenuItem>
+                        )}
+                        {isHoofdbeheerder && (
+                          <SidebarMenuItem>
+                            <SidebarMenuButton
+                              asChild
+                              isActive={location === "/personeel/jaarafsluiting"}
+                            >
+                              <Link href="/personeel/jaarafsluiting">
+                                <ArchiveRestore />
+                                <span>Jaarafsluiting verlof</span>
+                              </Link>
+                            </SidebarMenuButton>
+                          </SidebarMenuItem>
+                        )}
+                        {toonSalarisarchief && (
+                          <SidebarMenuItem>
+                            <SidebarMenuButton
+                              asChild
+                              isActive={location === "/salarisarchief" || location.startsWith("/salarisarchief/")}
+                            >
+                              <Link href="/salarisarchief">
+                                <HardDriveUpload />
+                                <span>Salarisarchief</span>
+                              </Link>
+                            </SidebarMenuButton>
+                          </SidebarMenuItem>
+                        )}
+                      </SidebarMenu>
+                    </SidebarGroupContent>
+                  </SidebarGroup>
+                </>
+              )}
+
+              {/* Instellingen — scheiding vóór beheersectie */}
+              {(toonGebruikers || toonSysteem || toonBibliotheek) && (
+                <>
+                  <div className="mx-4 my-1 h-px bg-border group-data-[collapsible=icon]:hidden" />
+                </>
+              )}
               {(toonGebruikers || toonSysteem || toonBibliotheek) && (
                 <SidebarGroup>
-                  <SidebarGroupLabel>Beheer</SidebarGroupLabel>
+                  <SidebarGroupLabel>Instellingen</SidebarGroupLabel>
                   <SidebarGroupContent>
                     <SidebarMenu>
+                      {isHoofdbeheerder && (
+                        <SidebarMenuItem>
+                          <SidebarMenuButton
+                            asChild
+                            isActive={location === "/personeel/verlof-instellingen"}
+                          >
+                            <Link href="/personeel/verlof-instellingen">
+                              <Settings2 />
+                              <span>Verlof-instellingen</span>
+                            </Link>
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                      )}
                       {isHoofdbeheerder && (
                         <SidebarMenuItem>
                           <SidebarMenuButton
