@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { RadioSpeler } from "@/components/radio-speler";
 import { PauzeKnopTaakbalk } from "@/components/pauze/pauze-modal";
 import { WeergaveKnopTaakbalk } from "@/components/weergave/weergave-modal";
+import { OnlineGebruikersTaakbalk } from "@/components/online-gebruikers/online-gebruikers";
 
 export function NieuwsTicker() {
   const { data: nieuws = [], isLoading, refetch } = useListNieuws();
@@ -126,6 +127,9 @@ export function NieuwsTicker() {
             <div className="flex-1" />
           </>
         )}
+
+        {/* Wie is online — altijd zichtbaar, verborgen als niemand online */}
+        <OnlineGebruikersTaakbalk />
 
         {/* Weergave-instellingen — altijd zichtbaar */}
         <WeergaveKnopTaakbalk />

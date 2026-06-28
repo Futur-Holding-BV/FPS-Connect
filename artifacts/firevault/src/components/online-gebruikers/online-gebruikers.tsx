@@ -114,3 +114,59 @@ export function OnlineGebruikers() {
   if (rol === "klant") return null;
   return <OnlineGebruikersInner />;
 }
+
+// ═══════════════════════════════════════════════════════════
+// Compacte taakbalk-variant (onderin de schermrand)
+// ═══════════════════════════════════════════════════════════
+
+function OnlineGebruikersTaakbalkInner() {
+  const { data, refetch } = useListOnlineGebruikers();
+
+  useEffect(() => {
+    const id = setInterval(() => { refetch().catch(() => {}); }, 45_000);
+    return () => clearInterval(id);
+  }, [refetch]);
+
+  if (!data || data.length === 0) return null;
+
+  const MAX = 4;
+  const zichtbaar = data.slice(0, MAX);
+  const rest      = data.length - MAX;
+
+  return (
+    <div className="flex-shrink-0 flex items-center gap-1.5 px-3 border-l border-white/10">
+      <div className="h-1.5 w-1.5 rounded-full bg-emerald-400 shrink-0" />
+      <div className="flex items-center gap-0.5">
+        {zichtbaar.map((g, i) => (
+          <Tooltip key={i}>
+            <TooltipTrigger asChild>
+              <div
+                className="h-5 w-5 rounded-full flex items-center justify-center text-[9px] font-bold text-white ring-1 ring-black/30 shrink-0 cursor-default select-none"
+                style={{ backgroundColor: naamKleur(g.naam) }}
+              >
+                {g.initialen}
+              </div>
+            </TooltipTrigger>
+            <TooltipContent side="top" className="flex flex-col gap-0.5">
+              <span className="font-medium">{g.naam}</span>
+              <span className="text-xs text-muted-foreground">
+                {ROL_LABELS[g.rol] ?? g.rol}
+              </span>
+            </TooltipContent>
+          </Tooltip>
+        ))}
+        {rest > 0 && (
+          <div className="h-5 w-5 rounded-full flex items-center justify-center text-[9px] font-semibold bg-white/10 text-white/70 ring-1 ring-black/30 shrink-0 select-none">
+            +{rest}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export function OnlineGebruikersTaakbalk() {
+  const { rol } = useRol();
+  if (rol === "klant") return null;
+  return <OnlineGebruikersTaakbalkInner />;
+}
