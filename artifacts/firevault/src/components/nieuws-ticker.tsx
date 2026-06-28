@@ -4,6 +4,7 @@ import { Newspaper, Pause, Play, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { RadioSpeler } from "@/components/radio-speler";
 import { PauzeKnopTaakbalk } from "@/components/pauze/pauze-modal";
+import { WeergaveKnopTaakbalk } from "@/components/weergave/weergave-modal";
 
 export function NieuwsTicker() {
   const { data: nieuws = [], isLoading, refetch } = useListNieuws();
@@ -125,6 +126,9 @@ export function NieuwsTicker() {
             <div className="flex-1" />
           </>
         )}
+
+        {/* Weergave-instellingen — altijd zichtbaar */}
+        <WeergaveKnopTaakbalk />
 
         {/* Radio — altijd zichtbaar */}
         <RadioSpeler compact />

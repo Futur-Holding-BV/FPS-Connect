@@ -28,7 +28,6 @@ import { useRol } from "@/context/rol-context";
 import { featureFlags } from "@/lib/feature-flags";
 import { cn } from "@/lib/utils";
 import { NavigatieBewakingProvider, useNavigatieBewaking } from "@/context/navigatie-bewaking";
-import { WeergaveKnop } from "@/components/weergave/weergave-modal";
 import { OnlineGebruikers } from "@/components/online-gebruikers/online-gebruikers";
 
 function TerugKnop() {
@@ -1227,9 +1226,6 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
 
         <SidebarFooter>
           <OnlineGebruikers />
-          <SidebarMenu>
-            <WeergaveKnop />
-          </SidebarMenu>
           <GebruikerMenu />
         </SidebarFooter>
       </Sidebar>
