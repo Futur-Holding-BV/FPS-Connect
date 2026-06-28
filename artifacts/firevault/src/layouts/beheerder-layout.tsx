@@ -400,7 +400,7 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                     <CollapsibleContent>
                       <SidebarGroupContent>
                         <SidebarMenu>
-                          <SidebarMenuItem>
+                          <SidebarMenuItem className="pl-5">
                             <SidebarMenuButton
                               asChild
                               isActive={location === "/crm/projectkansen"}
@@ -411,7 +411,7 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                               </Link>
                             </SidebarMenuButton>
                           </SidebarMenuItem>
-                          <SidebarMenuItem>
+                          <SidebarMenuItem className="pl-5">
                             <SidebarMenuButton
                               asChild
                               isActive={location === "/crm" && !location.startsWith("/crm/")}
@@ -422,7 +422,7 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                               </Link>
                             </SidebarMenuButton>
                           </SidebarMenuItem>
-                          <SidebarMenuItem>
+                          <SidebarMenuItem className="pl-5">
                             <SidebarMenuButton
                               asChild
                               isActive={location === "/crm/organisaties" || location.startsWith("/crm/organisaties")}
@@ -433,7 +433,7 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                               </Link>
                             </SidebarMenuButton>
                           </SidebarMenuItem>
-                          <SidebarMenuItem>
+                          <SidebarMenuItem className="pl-5">
                             <SidebarMenuButton
                               asChild
                               isActive={location === "/crm/concurrenten"}
@@ -444,7 +444,7 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                               </Link>
                             </SidebarMenuButton>
                           </SidebarMenuItem>
-                          <SidebarMenuItem>
+                          <SidebarMenuItem className="pl-5">
                             <SidebarMenuButton
                               asChild
                               isActive={location === "/crm/marktintelligentie"}
@@ -455,7 +455,7 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                               </Link>
                             </SidebarMenuButton>
                           </SidebarMenuItem>
-                          <SidebarMenuItem>
+                          <SidebarMenuItem className="pl-5">
                             <SidebarMenuButton
                               asChild
                               isActive={location === "/crm/kennisbibliotheek"}
@@ -485,7 +485,7 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                   <CollapsibleContent>
                     <SidebarGroupContent>
                       <SidebarMenu>
-                        <SidebarMenuItem>
+                        <SidebarMenuItem className="pl-5">
                           <SidebarMenuButton
                             asChild
                             isActive={location === "/berichten" || location.startsWith("/berichten/")}
@@ -497,7 +497,7 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                             </Link>
                           </SidebarMenuButton>
                         </SidebarMenuItem>
-                        <SidebarMenuItem>
+                        <SidebarMenuItem className="pl-5">
                           <SidebarMenuButton
                             asChild
                             isActive={location === "/werk-inbox" || location.startsWith("/werk-inbox/")}
@@ -509,7 +509,7 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                           </SidebarMenuButton>
                         </SidebarMenuItem>
                         {toonCrm && (
-                          <SidebarMenuItem>
+                          <SidebarMenuItem className="pl-5">
                             <SidebarMenuButton
                               asChild
                               isActive={location === "/inbox" || location.startsWith("/inbox/")}
@@ -540,7 +540,7 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                     <CollapsibleContent>
                       <SidebarGroupContent>
                         <SidebarMenu>
-                          <SidebarMenuItem>
+                          <SidebarMenuItem className="pl-5">
                             <SidebarMenuButton
                               asChild
                               isActive={location === "/veiligheid/toolboxen" || location.startsWith("/veiligheid/toolboxen/")}
@@ -551,7 +551,7 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                               </Link>
                             </SidebarMenuButton>
                           </SidebarMenuItem>
-                          <SidebarMenuItem>
+                          <SidebarMenuItem className="pl-5">
                             <SidebarMenuButton
                               asChild
                               isActive={location === "/veiligheid/lmra" || location.startsWith("/veiligheid/lmra/")}
@@ -562,7 +562,7 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                               </Link>
                             </SidebarMenuButton>
                           </SidebarMenuItem>
-                          <SidebarMenuItem>
+                          <SidebarMenuItem className="pl-5">
                             <SidebarMenuButton
                               asChild
                               isActive={location === "/veiligheid/meldingen" || location.startsWith("/veiligheid/meldingen/")}
@@ -588,7 +588,7 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                   <SidebarGroupContent>
                     <SidebarMenu>
                       {toonSysteem && (
-                        <SidebarMenuItem>
+                        <SidebarMenuItem className="pl-5">
                           <SidebarMenuButton asChild isActive={location === "/beheer/boekhouding"}>
                             <Link href="/beheer/boekhouding">
                               <Receipt />
@@ -597,7 +597,7 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                           </SidebarMenuButton>
                         </SidebarMenuItem>
                       )}
-                      <SidebarMenuItem>
+                      <SidebarMenuItem className="pl-5">
                         <SidebarMenuButton
                           asChild
                           isActive={
@@ -614,7 +614,7 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                           </Link>
                         </SidebarMenuButton>
                       </SidebarMenuItem>
-                      <SidebarMenuItem>
+                      <SidebarMenuItem className="pl-5">
                         <SidebarMenuButton
                           asChild
                           isActive={location === "/financieel/bedrijfsresultaten"}
@@ -625,7 +625,7 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                           </Link>
                         </SidebarMenuButton>
                       </SidebarMenuItem>
-                      <SidebarMenuItem>
+                      <SidebarMenuItem className="pl-5">
                         <SidebarMenuButton
                           asChild
                           isActive={location === "/facturen/klaar-voor-export"}
@@ -636,7 +636,7 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                           </Link>
                         </SidebarMenuButton>
                       </SidebarMenuItem>
-                      <SidebarMenuItem>
+                      <SidebarMenuItem className="pl-5">
                         <SidebarMenuButton
                           asChild
                           isActive={location === "/facturen/exportlog"}
@@ -648,7 +648,7 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                         </SidebarMenuButton>
                       </SidebarMenuItem>
                       {toonSalarisarchief && (
-                        <SidebarMenuItem>
+                        <SidebarMenuItem className="pl-5">
                           <SidebarMenuButton
                             asChild
                             isActive={location === "/sepa-bestanden"}
@@ -969,7 +969,7 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                   <SidebarGroupContent>
                     <SidebarMenu>
                       {isHoofdbeheerder && (
-                        <SidebarMenuItem>
+                        <SidebarMenuItem className="pl-5">
                           <SidebarMenuButton
                             asChild
                             isActive={location === "/personeel/verlof-instellingen"}
@@ -982,7 +982,7 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                         </SidebarMenuItem>
                       )}
                       {isHoofdbeheerder && (
-                        <SidebarMenuItem>
+                        <SidebarMenuItem className="pl-5">
                           <SidebarMenuButton
                             asChild
                             isActive={location === "/beheer/go-live"}
@@ -995,7 +995,7 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                         </SidebarMenuItem>
                       )}
                       {toonGebruikers && (
-                        <SidebarMenuItem>
+                        <SidebarMenuItem className="pl-5">
                           <SidebarMenuButton
                             asChild
                             isActive={location === "/gebruikers" || location.startsWith("/gebruikers/")}
@@ -1008,7 +1008,7 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                         </SidebarMenuItem>
                       )}
                       {toonBibliotheek && (
-                        <SidebarMenuItem>
+                        <SidebarMenuItem className="pl-5">
                           <SidebarMenuButton
                             asChild
                             isActive={
@@ -1026,7 +1026,7 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                         </SidebarMenuItem>
                       )}
                       {isHoofdbeheerder && (
-                        <SidebarMenuItem>
+                        <SidebarMenuItem className="pl-5">
                           <SidebarMenuButton asChild isActive={location === "/beheer/profielen"}>
                             <Link href="/beheer/profielen">
                               <ShieldCheck />
@@ -1036,7 +1036,7 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                         </SidebarMenuItem>
                       )}
                       {isHoofdbeheerder && (
-                        <SidebarMenuItem>
+                        <SidebarMenuItem className="pl-5">
                           <SidebarMenuButton
                             asChild
                             isActive={location === "/beheer/rollen-rechten"}
@@ -1049,7 +1049,7 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                         </SidebarMenuItem>
                       )}
                       {isHoofdbeheerder && (
-                        <SidebarMenuItem>
+                        <SidebarMenuItem className="pl-5">
                           <SidebarMenuButton
                             asChild
                             isActive={location === "/beheer/documentopmaak"}
@@ -1062,7 +1062,7 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                         </SidebarMenuItem>
                       )}
                       {isHoofdbeheerder && (
-                        <SidebarMenuItem>
+                        <SidebarMenuItem className="pl-5">
                           <SidebarMenuButton
                             asChild
                             isActive={location === "/beheer/spotconfiguratie"}
@@ -1075,7 +1075,7 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                         </SidebarMenuItem>
                       )}
                       {isHoofdbeheerder && (
-                        <SidebarMenuItem>
+                        <SidebarMenuItem className="pl-5">
                           <SidebarMenuButton
                             asChild
                             isActive={location === "/beheer/gebouwen-archief"}
@@ -1089,7 +1089,7 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                       )}
                       {toonSysteem && (
                         <>
-                          <SidebarMenuItem>
+                          <SidebarMenuItem className="pl-5">
                             <SidebarMenuButton asChild isActive={location === "/beheer/login-pogingen"}>
                               <Link href="/beheer/login-pogingen">
                                 <ShieldAlert />
@@ -1097,7 +1097,7 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                               </Link>
                             </SidebarMenuButton>
                           </SidebarMenuItem>
-                          <SidebarMenuItem>
+                          <SidebarMenuItem className="pl-5">
                             <SidebarMenuButton asChild isActive={location === "/beheer/mail"}>
                               <Link href="/beheer/mail">
                                 <Mail />
@@ -1105,7 +1105,7 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                               </Link>
                             </SidebarMenuButton>
                           </SidebarMenuItem>
-                          <SidebarMenuItem>
+                          <SidebarMenuItem className="pl-5">
                             <SidebarMenuButton asChild isActive={location === "/beheer/helpdesk"}>
                               <Link href="/beheer/helpdesk">
                                 <LifeBuoy />
@@ -1113,7 +1113,7 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                               </Link>
                             </SidebarMenuButton>
                           </SidebarMenuItem>
-                          <SidebarMenuItem>
+                          <SidebarMenuItem className="pl-5">
                             <SidebarMenuButton asChild isActive={location === "/beheer/feedback"}>
                               <Link href="/beheer/feedback">
                                 <MessageSquarePlus />
@@ -1121,7 +1121,7 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                               </Link>
                             </SidebarMenuButton>
                           </SidebarMenuItem>
-                          <SidebarMenuItem>
+                          <SidebarMenuItem className="pl-5">
                             <SidebarMenuButton asChild isActive={location === "/beheer/heatmaps"}>
                               <Link href="/beheer/heatmaps">
                                 <Activity />
@@ -1129,7 +1129,7 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                               </Link>
                             </SidebarMenuButton>
                           </SidebarMenuItem>
-                          <SidebarMenuItem>
+                          <SidebarMenuItem className="pl-5">
                             <SidebarMenuButton asChild isActive={location === "/beheer/ontwikkelstatus"}>
                               <Link href="/beheer/ontwikkelstatus">
                                 <ListChecks />
@@ -1137,7 +1137,7 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                               </Link>
                             </SidebarMenuButton>
                           </SidebarMenuItem>
-                          <SidebarMenuItem>
+                          <SidebarMenuItem className="pl-5">
                             <SidebarMenuButton asChild isActive={location === "/beheer/projectstatus"}>
                               <Link href="/beheer/projectstatus">
                                 <BarChart3 />
@@ -1145,7 +1145,7 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                               </Link>
                             </SidebarMenuButton>
                           </SidebarMenuItem>
-                          <SidebarMenuItem>
+                          <SidebarMenuItem className="pl-5">
                             <SidebarMenuButton asChild isActive={location === "/beheer/backup"}>
                               <Link href="/beheer/backup">
                                 <HardDrive />
@@ -1153,7 +1153,7 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                               </Link>
                             </SidebarMenuButton>
                           </SidebarMenuItem>
-                          <SidebarMenuItem>
+                          <SidebarMenuItem className="pl-5">
                             <SidebarMenuButton asChild isActive={location === "/toolbox" || location.startsWith("/toolbox/")}>
                               <Link href="/toolbox">
                                 <HardDriveUpload />
@@ -1161,7 +1161,7 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                               </Link>
                             </SidebarMenuButton>
                           </SidebarMenuItem>
-                          <SidebarMenuItem>
+                          <SidebarMenuItem className="pl-5">
                             <SidebarMenuButton asChild isActive={location === "/beheer/privacy"}>
                               <Link href="/beheer/privacy">
                                 <ShieldCheck />
@@ -1171,7 +1171,7 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                           </SidebarMenuItem>
                         </>
                       )}
-                      <SidebarMenuItem>
+                      <SidebarMenuItem className="pl-5">
                         <SidebarMenuButton asChild isActive={location === "/beheer/pwa-test"}>
                           <Link href="/beheer/pwa-test">
                             <Smartphone />
@@ -1179,7 +1179,7 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                           </Link>
                         </SidebarMenuButton>
                       </SidebarMenuItem>
-                      <SidebarMenuItem>
+                      <SidebarMenuItem className="pl-5">
                         <SidebarMenuButton asChild isActive={location === "/info"}>
                           <Link href="/info">
                             <Info />
@@ -1199,7 +1199,7 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
             <SidebarGroup>
               <SidebarGroupContent>
                 <SidebarMenu>
-                  <SidebarMenuItem>
+                  <SidebarMenuItem className="pl-5">
                     <SidebarMenuButton asChild isActive={location === "/one/dashboard"}>
                       <Link href="/one/dashboard">
                         <LayoutDashboard />
@@ -1207,7 +1207,7 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
-                  <SidebarMenuItem>
+                  <SidebarMenuItem className="pl-5">
                     <SidebarMenuButton
                       asChild
                       isActive={location === "/one/gebouwen" || location.startsWith("/one/gebouwen/")}
@@ -1218,7 +1218,7 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
-                  <SidebarMenuItem>
+                  <SidebarMenuItem className="pl-5">
                     <SidebarMenuButton
                       asChild
                       isActive={location === "/one/documenten" || location.startsWith("/one/documenten/")}
@@ -1229,7 +1229,7 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
-                  <SidebarMenuItem>
+                  <SidebarMenuItem className="pl-5">
                     <SidebarMenuButton
                       asChild
                       isActive={location === "/one/rapporten" || location.startsWith("/one/rapporten/")}
@@ -1240,7 +1240,7 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
-                  <SidebarMenuItem>
+                  <SidebarMenuItem className="pl-5">
                     <SidebarMenuButton
                       asChild
                       isActive={location === "/one/abonnementen" || location.startsWith("/one/abonnementen/")}
