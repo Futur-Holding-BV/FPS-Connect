@@ -1269,10 +1269,6 @@ export default function ModulesCalculatieDetail() {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label>Referentie</Label>
-                <Input value={headerForm.referentie} onChange={(e) => setHeaderForm((f) => ({ ...f, referentie: e.target.value }))} />
-              </div>
-              <div className="space-y-1.5">
                 <Label>Status</Label>
                 <Select value={headerForm.status} onValueChange={(v) => setHeaderForm((f) => ({ ...f, status: v }))}>
                   <SelectTrigger><SelectValue /></SelectTrigger>

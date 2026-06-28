@@ -24,7 +24,6 @@ export default function ModulesCalculatieNieuw() {
 
   const [form, setForm] = useState({
     naam: "",
-    referentie: "",
     klant_naam: "",
     gebouw_id: vooringevuldGebouwId,
     project_naam: "",
@@ -81,7 +80,6 @@ export default function ModulesCalculatieNieuw() {
     createMut.mutate({
       data: {
         naam: form.naam,
-        referentie: form.referentie || undefined,
         klant_naam: form.klant_naam || undefined,
         gebouw_id: form.gebouw_id && form.gebouw_id !== "__geen__" ? Number(form.gebouw_id) : undefined,
         project_naam: form.project_naam || undefined,
@@ -128,15 +126,6 @@ export default function ModulesCalculatieNieuw() {
                   onChange={(e) => setField("naam", e.target.value)}
                   placeholder="Bijv. Brandwerende afdichting Project X"
                   required
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="referentie">Referentienummer</Label>
-                <Input
-                  id="referentie"
-                  value={form.referentie}
-                  onChange={(e) => setField("referentie", e.target.value)}
-                  placeholder="Bijv. CAL-2026-001"
                 />
               </div>
               <div className="space-y-1.5">
