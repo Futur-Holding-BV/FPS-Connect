@@ -207,6 +207,81 @@ export const wagenparkSyncLogTable = pgTable("wagenpark_sync_log", {
 });
 
 // ═══════════════════════════════════════════════════════════
+// MKB Brandstof import — batches
+// ═══════════════════════════════════════════════════════════
+
+export const brandstofImportenTable = pgTable("brandstof_importen", {
+  id:           serial("id").primaryKey(),
+
+  bestandsnaam: text("bestandsnaam").notNull(),
+  brontype:     text("brontype").notNull(),
+  // "pdf" | "ubl_xml" | "email_bijlage" | "handmatig"
+  leverancier:  text("leverancier").notNull().default("mkb_brandstof"),
+  status:       text("status").notNull().default("verwerkt"),
+  // "verwerkt" | "wacht_op_controle" | "geaccordeerd" | "gearchiveerd"
+
+  aantalRegels:      integer("aantal_regels").notNull().default(0),
+  aantalGekoppeld:   integer("aantal_gekoppeld").notNull().default(0),
+  aantalOnzeker:     integer("aantal_onzeker").notNull().default(0),
+  aantalOntkoppeld:  integer("aantal_ontkoppeld").notNull().default(0),
+
+  periodeVan:   timestamp("periode_van"),
+  periodeTot:   timestamp("periode_tot"),
+
+  factuurNummer: text("factuur_nummer"),
+  totaalBedrag:  real("totaal_bedrag"),
+  totaalBtw:     real("totaal_btw"),
+
+  aiSignalen:   jsonb("ai_signalen"),   // array van { type, omschrijving, kenteken? }
+
+  geladen:        boolean("geladen").notNull().default(false),  // kosten aangemaakt?
+  geladenOp:      timestamp("geladen_op"),
+  geladenDoorId:  integer("geladen_door_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
+
+  aangemaaktDoorId: integer("aangemaakt_door_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
+  werkgeverId:      integer("werkgever_id").references(() => werkgeversTable.id, { onDelete: "set null" }),
+  aangemaaktOp:     timestamp("aangemaakt_op").notNull().defaultNow(),
+  bijgewerktOp:     timestamp("bijgewerkt_op").notNull().defaultNow(),
+});
+
+export type BrandstofImport = typeof brandstofImportenTable.$inferSelect;
+
+// ═══════════════════════════════════════════════════════════
+// MKB Brandstof import — individuele transactieregels
+// ═══════════════════════════════════════════════════════════
+
+export const brandstofRegelsTable = pgTable("brandstof_regels", {
+  id:         serial("id").primaryKey(),
+  importId:   integer("import_id").notNull().references(() => brandstofImportenTable.id, { onDelete: "cascade" }),
+
+  // Geëxtraheerd uit factuur
+  datum:      timestamp("datum"),
+  kenteken:   text("kenteken"),                  // ruw kenteken uit factuur
+  pasnummer:  text("pasnummer"),                 // brandstofpas-/laadpasnummer
+  locatie:    text("locatie"),                   // tank-/laadlocatie omschrijving
+  product:    text("product"),                   // bijv. "Euro 95", "Diesel B7", "Elektrisch"
+  hoeveelheid: real("hoeveelheid"),              // liters of kWh
+  eenheid:    text("eenheid"),                   // "ltr" | "kwh"
+  bedragExBtw: real("bedrag_ex_btw"),
+  btw:        real("btw"),
+  bedragInclBtw: real("bedrag_incl_btw"),
+  kmStand:    integer("km_stand"),               // indien aanwezig op factuur
+
+  // Koppeling aan voertuig
+  voertuigId:       integer("voertuig_id").references(() => voertuigenTable.id, { onDelete: "set null" }),
+  koppelingStatus:  text("koppeling_status").notNull().default("onzeker"),
+  // "automatisch" | "onzeker" | "handmatig" | "niet_gevonden"
+  koppelingScore:   real("koppeling_score"),     // 0.0 – 1.0 zekerheid
+
+  // Na verwerken: verwijzing naar aangemaakte kosten-rij
+  kostenId:   integer("kosten_id"),              // losse FK (geen cirkel)
+
+  opmerkingen: text("opmerkingen"),
+});
+
+export type BrandstofRegel = typeof brandstofRegelsTable.$inferSelect;
+
+// ═══════════════════════════════════════════════════════════
 // AVG-logboek — exporteerbaar privacyaudit-trail
 // ═══════════════════════════════════════════════════════════
 

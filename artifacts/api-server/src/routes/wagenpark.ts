@@ -18,6 +18,7 @@ import {
 } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth.js";
 import { getFleetProvider } from "../lib/fleet-provider/index.js";
+import brandstofImportRouter from "./brandstof-import.js";
 
 const router = Router();
 
@@ -730,5 +731,8 @@ router.get("/avg-logboek", beheer, async (req, res) => {
 router.get("/privacy-info", lezen, (_req, res) => {
   res.json({ tekst: PRIVACY_TEKST });
 });
+
+// ── MKB Brandstof import-adapter ─────────────────────────────────────────────
+router.use("/brandstof-import", brandstofImportRouter);
 
 export default router;

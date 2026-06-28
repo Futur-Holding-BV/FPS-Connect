@@ -17045,3 +17045,164 @@ export const ListWagenparkAvgLogboekResponseItem = zod.object({
 export const ListWagenparkAvgLogboekResponse = zod.array(ListWagenparkAvgLogboekResponseItem)
 
 
+/**
+ * @summary Lijst van MKB Brandstof importbatches
+ */
+export const ListBrandstofImportenQueryParams = zod.object({
+  "status": zod.coerce.string().optional()
+})
+
+export const ListBrandstofImportenResponseItem = zod.object({
+  "id": zod.number(),
+  "bestandsnaam": zod.string(),
+  "brontype": zod.string(),
+  "leverancier": zod.string(),
+  "status": zod.string(),
+  "aantal_regels": zod.number(),
+  "aantal_gekoppeld": zod.number(),
+  "aantal_onzeker": zod.number(),
+  "aantal_ontkoppeld": zod.number(),
+  "periode_van": zod.coerce.date().nullish(),
+  "periode_tot": zod.coerce.date().nullish(),
+  "factuur_nummer": zod.string().nullish(),
+  "totaal_bedrag": zod.number().nullish(),
+  "totaal_btw": zod.number().nullish(),
+  "ai_signalen": zod.array(zod.object({
+  "type": zod.string(),
+  "omschrijving": zod.string(),
+  "kenteken": zod.string().nullish()
+})).nullish(),
+  "geladen": zod.boolean(),
+  "geladen_op": zod.coerce.date().nullish(),
+  "aangemaakt_op": zod.coerce.date(),
+  "bijgewerkt_op": zod.coerce.date().optional()
+})
+export const ListBrandstofImportenResponse = zod.array(ListBrandstofImportenResponseItem)
+
+
+/**
+ * @summary Upload een MKB Brandstof factuur (PDF, UBL/XML of EML)
+ */
+export const UploadBrandstofFactuurBody = zod.object({
+  "bestand": zod.instanceof(File)
+})
+
+export const UploadBrandstofFactuurResponse = zod.void()
+
+
+/**
+ * @summary Importbatch met alle transactieregels
+ */
+export const GetBrandstofImportParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetBrandstofImportResponse = zod.object({
+  "id": zod.number(),
+  "bestandsnaam": zod.string(),
+  "brontype": zod.string(),
+  "leverancier": zod.string(),
+  "status": zod.string(),
+  "aantal_regels": zod.number(),
+  "aantal_gekoppeld": zod.number(),
+  "aantal_onzeker": zod.number(),
+  "aantal_ontkoppeld": zod.number(),
+  "periode_van": zod.coerce.date().nullish(),
+  "periode_tot": zod.coerce.date().nullish(),
+  "factuur_nummer": zod.string().nullish(),
+  "totaal_bedrag": zod.number().nullish(),
+  "totaal_btw": zod.number().nullish(),
+  "ai_signalen": zod.array(zod.object({
+  "type": zod.string(),
+  "omschrijving": zod.string(),
+  "kenteken": zod.string().nullish()
+})).nullish(),
+  "geladen": zod.boolean(),
+  "geladen_op": zod.coerce.date().nullish(),
+  "aangemaakt_op": zod.coerce.date(),
+  "bijgewerkt_op": zod.coerce.date().optional()
+}).and(zod.object({
+  "regels": zod.array(zod.object({
+  "id": zod.number(),
+  "import_id": zod.number(),
+  "datum": zod.coerce.date().nullish(),
+  "kenteken": zod.string().nullish(),
+  "pasnummer": zod.string().nullish(),
+  "locatie": zod.string().nullish(),
+  "product": zod.string().nullish(),
+  "hoeveelheid": zod.number().nullish(),
+  "eenheid": zod.string().nullish(),
+  "bedrag_ex_btw": zod.number().nullish(),
+  "btw": zod.number().nullish(),
+  "bedrag_incl_btw": zod.number().nullish(),
+  "km_stand": zod.number().nullish(),
+  "voertuig_id": zod.number().nullish(),
+  "kenteken_voertuig": zod.string().nullish(),
+  "koppeling_status": zod.string(),
+  "koppeling_score": zod.number().nullish(),
+  "kosten_id": zod.number().nullish(),
+  "opmerkingen": zod.string().nullish()
+}))
+}))
+
+
+/**
+ * @summary Verwijder een importbatch (inclusief regels, niet de aangemaakte kosten)
+ */
+export const DeleteBrandstofImportParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteBrandstofImportResponse = zod.void()
+
+
+/**
+ * @summary Koppel een transactieregel handmatig aan een voertuig
+ */
+export const PatchBrandstofRegelParams = zod.object({
+  "id": zod.coerce.number(),
+  "regelId": zod.coerce.number()
+})
+
+export const PatchBrandstofRegelBody = zod.object({
+  "voertuig_id": zod.number().nullish(),
+  "koppeling_status": zod.string().optional(),
+  "opmerkingen": zod.string().nullish()
+})
+
+export const PatchBrandstofRegelResponse = zod.object({
+  "id": zod.number(),
+  "import_id": zod.number(),
+  "datum": zod.coerce.date().nullish(),
+  "kenteken": zod.string().nullish(),
+  "pasnummer": zod.string().nullish(),
+  "locatie": zod.string().nullish(),
+  "product": zod.string().nullish(),
+  "hoeveelheid": zod.number().nullish(),
+  "eenheid": zod.string().nullish(),
+  "bedrag_ex_btw": zod.number().nullish(),
+  "btw": zod.number().nullish(),
+  "bedrag_incl_btw": zod.number().nullish(),
+  "km_stand": zod.number().nullish(),
+  "voertuig_id": zod.number().nullish(),
+  "kenteken_voertuig": zod.string().nullish(),
+  "koppeling_status": zod.string(),
+  "koppeling_score": zod.number().nullish(),
+  "kosten_id": zod.number().nullish(),
+  "opmerkingen": zod.string().nullish()
+})
+
+
+/**
+ * @summary Verwerk de import — maak kostenregels aan per voertuig
+ */
+export const LaadBrandstofImportParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const LaadBrandstofImportResponse = zod.object({
+  "aantalGeladen": zod.number(),
+  "aantalOvergeslagen": zod.number()
+})
+
+

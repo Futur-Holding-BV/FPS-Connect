@@ -81,6 +81,7 @@ import GereedschappenPagina from "@/pages/gereedschappen/index";
 import GereedschapDetailPagina from "@/pages/gereedschappen/detail";
 import WagenparkPagina from "@/pages/wagenpark/index";
 import WagenparkDetailPagina from "@/pages/wagenpark/detail";
+import WagenparkBrandstofImportPagina from "@/pages/wagenpark/brandstof-import";
 import HallOfFamePagina from "@/pages/hall-of-fame";
 import AutoparkPagina from "@/pages/organisatie/autopark";
 import VerzekeringenPagina from "@/pages/organisatie/verzekeringen";
@@ -313,6 +314,7 @@ function ConnectPortal() {
         <Route path="/gereedschappen" component={GereedschappenPagina} />
         <Route path="/gereedschappen/:id" component={GereedschapDetailPagina} />
         <Route path="/wagenpark" component={WagenparkPagina} />
+        <Route path="/wagenpark/brandstof-import" component={WagenparkBrandstofImportPagina} />
         <Route path="/wagenpark/:id" component={WagenparkDetailPagina} />
 
         {/* ── Financieel extra ── */}

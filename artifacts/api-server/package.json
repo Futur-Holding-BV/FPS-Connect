@@ -27,6 +27,7 @@
     "drizzle-orm": "catalog:",
     "express": "^5.2.1",
     "express-session": "^1.19.0",
+    "fast-xml-parser": "^5.9.3",
     "google-auth-library": "^10.7.0",
     "mailparser": "^3.9.9",
     "multer": "^2.2.0",

@@ -13631,6 +13631,140 @@ paths:
         '401': { description: Niet ingelogd }
         '403': { description: Geen toegang }
 
+  /wagenpark/brandstof-import:
+    get:
+      operationId: listBrandstofImporten
+      tags: [wagenpark]
+      summary: Lijst van MKB Brandstof importbatches
+      parameters:
+        - in: query
+          name: status
+          schema: { type: string }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/BrandstofImport'
+        '401': { description: Niet ingelogd }
+        '403': { description: Geen toegang }
+    post:
+      operationId: uploadBrandstofFactuur
+      tags: [wagenpark]
+      summary: Upload een MKB Brandstof factuur (PDF, UBL/XML of EML)
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/BrandstofFactuurUploadInput'
+      responses:
+        '201':
+          description: Import aangemaakt en geparsed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BrandstofImport'
+        '400': { description: Ongeldig bestand of niet-herkenbare factuur }
+        '401': { description: Niet ingelogd }
+        '403': { description: Geen toegang }
+
+  /wagenpark/brandstof-import/{id}:
+    get:
+      operationId: getBrandstofImport
+      tags: [wagenpark]
+      summary: Importbatch met alle transactieregels
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BrandstofImportDetail'
+        '401': { description: Niet ingelogd }
+        '403': { description: Geen toegang }
+        '404': { description: Niet gevonden }
+    delete:
+      operationId: deleteBrandstofImport
+      tags: [wagenpark]
+      summary: Verwijder een importbatch (inclusief regels, niet de aangemaakte kosten)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        '204': { description: Verwijderd }
+        '400': { description: Al geladen — verwijder eerst de kostenboeking }
+        '401': { description: Niet ingelogd }
+        '403': { description: Geen toegang }
+
+  /wagenpark/brandstof-import/{id}/regels/{regelId}:
+    patch:
+      operationId: patchBrandstofRegel
+      tags: [wagenpark]
+      summary: Koppel een transactieregel handmatig aan een voertuig
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+        - in: path
+          name: regelId
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BrandstofRegelPatch'
+      responses:
+        '200':
+          description: Bijgewerkt
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BrandstofRegel'
+        '401': { description: Niet ingelogd }
+        '403': { description: Geen toegang }
+        '404': { description: Niet gevonden }
+
+  /wagenpark/brandstof-import/{id}/laden:
+    post:
+      operationId: laadBrandstofImport
+      tags: [wagenpark]
+      summary: Verwerk de import — maak kostenregels aan per voertuig
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Kostenregels aangemaakt
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [aantalGeladen, aantalOvergeslagen]
+                properties:
+                  aantalGeladen:
+                    type: integer
+                  aantalOvergeslagen:
+                    type: integer
+        '400': { description: Al geladen of nog onzekere regels }
+        '401': { description: Niet ingelogd }
+        '403': { description: Geen toegang }
+
 components:
   schemas:
     OnlineGebruiker:
@@ -25093,4 +25227,87 @@ components:
         datatype:       { type: string, nullable: true }
         bewaartermijn:  { type: string, nullable: true }
         bijzonderheden: { type: string, nullable: true }
+
+    BrandstofImport:
+      type: object
+      required: [id, bestandsnaam, brontype, leverancier, status, aantal_regels, aantal_gekoppeld, aantal_onzeker, aantal_ontkoppeld, geladen, aangemaakt_op]
+      properties:
+        id:                 { type: integer }
+        bestandsnaam:       { type: string }
+        brontype:           { type: string }
+        leverancier:        { type: string }
+        status:             { type: string }
+        aantal_regels:      { type: integer }
+        aantal_gekoppeld:   { type: integer }
+        aantal_onzeker:     { type: integer }
+        aantal_ontkoppeld:  { type: integer }
+        periode_van:        { type: string, format: date-time, nullable: true }
+        periode_tot:        { type: string, format: date-time, nullable: true }
+        factuur_nummer:     { type: string, nullable: true }
+        totaal_bedrag:      { type: number, nullable: true }
+        totaal_btw:         { type: number, nullable: true }
+        ai_signalen:
+          type: array
+          nullable: true
+          items:
+            type: object
+            required: [type, omschrijving]
+            properties:
+              type:         { type: string }
+              omschrijving: { type: string }
+              kenteken:     { type: string, nullable: true }
+        geladen:            { type: boolean }
+        geladen_op:         { type: string, format: date-time, nullable: true }
+        aangemaakt_op:      { type: string, format: date-time }
+        bijgewerkt_op:      { type: string, format: date-time }
+
+    BrandstofRegel:
+      type: object
+      required: [id, import_id, koppeling_status]
+      properties:
+        id:               { type: integer }
+        import_id:        { type: integer }
+        datum:            { type: string, format: date-time, nullable: true }
+        kenteken:         { type: string, nullable: true }
+        pasnummer:        { type: string, nullable: true }
+        locatie:          { type: string, nullable: true }
+        product:          { type: string, nullable: true }
+        hoeveelheid:      { type: number, nullable: true }
+        eenheid:          { type: string, nullable: true }
+        bedrag_ex_btw:    { type: number, nullable: true }
+        btw:              { type: number, nullable: true }
+        bedrag_incl_btw:  { type: number, nullable: true }
+        km_stand:         { type: integer, nullable: true }
+        voertuig_id:      { type: integer, nullable: true }
+        kenteken_voertuig: { type: string, nullable: true }
+        koppeling_status: { type: string }
+        koppeling_score:  { type: number, nullable: true }
+        kosten_id:        { type: integer, nullable: true }
+        opmerkingen:      { type: string, nullable: true }
+
+    BrandstofImportDetail:
+      allOf:
+        - $ref: '#/components/schemas/BrandstofImport'
+        - type: object
+          required: [regels]
+          properties:
+            regels:
+              type: array
+              items:
+                $ref: '#/components/schemas/BrandstofRegel'
+
+    BrandstofFactuurUploadInput:
+      type: object
+      required: [bestand]
+      properties:
+        bestand:
+          type: string
+          format: binary
+
+    BrandstofRegelPatch:
+      type: object
+      properties:
+        voertuig_id:      { type: integer, nullable: true }
+        koppeling_status: { type: string }
+        opmerkingen:      { type: string, nullable: true }
 

@@ -6993,6 +6993,70 @@ export interface WagenparkAvgLogboekRegel {
   bijzonderheden?: string | null;
 }
 
+export type BrandstofImportAiSignalenItem = {
+  type: string;
+  omschrijving: string;
+  kenteken?: string | null;
+};
+
+export interface BrandstofImport {
+  id: number;
+  bestandsnaam: string;
+  brontype: string;
+  leverancier: string;
+  status: string;
+  aantal_regels: number;
+  aantal_gekoppeld: number;
+  aantal_onzeker: number;
+  aantal_ontkoppeld: number;
+  periode_van?: string | null;
+  periode_tot?: string | null;
+  factuur_nummer?: string | null;
+  totaal_bedrag?: number | null;
+  totaal_btw?: number | null;
+  ai_signalen?: BrandstofImportAiSignalenItem[] | null;
+  geladen: boolean;
+  geladen_op?: string | null;
+  aangemaakt_op: string;
+  bijgewerkt_op?: string;
+}
+
+export interface BrandstofRegel {
+  id: number;
+  import_id: number;
+  datum?: string | null;
+  kenteken?: string | null;
+  pasnummer?: string | null;
+  locatie?: string | null;
+  product?: string | null;
+  hoeveelheid?: number | null;
+  eenheid?: string | null;
+  bedrag_ex_btw?: number | null;
+  btw?: number | null;
+  bedrag_incl_btw?: number | null;
+  km_stand?: number | null;
+  voertuig_id?: number | null;
+  kenteken_voertuig?: string | null;
+  koppeling_status: string;
+  koppeling_score?: number | null;
+  kosten_id?: number | null;
+  opmerkingen?: string | null;
+}
+
+export type BrandstofImportDetail = BrandstofImport & {
+  regels: BrandstofRegel[];
+};
+
+export interface BrandstofFactuurUploadInput {
+  bestand: Blob;
+}
+
+export interface BrandstofRegelPatch {
+  voertuig_id?: number | null;
+  koppeling_status?: string;
+  opmerkingen?: string | null;
+}
+
 export type GetRecenteActiviteitParams = {
 limit?: number;
 };
@@ -7451,5 +7515,14 @@ limit?: number;
 export type ListWagenparkAvgLogboekParams = {
 van?: string;
 tot?: string;
+};
+
+export type ListBrandstofImportenParams = {
+status?: string;
+};
+
+export type LaadBrandstofImport200 = {
+  aantalGeladen: number;
+  aantalOvergeslagen: number;
 };
 

@@ -50,6 +50,11 @@ import type {
   BoekhouderDashboard,
   BoekhouderUpload,
   BoekhouderUploadInput,
+  BrandstofFactuurUploadInput,
+  BrandstofImport,
+  BrandstofImportDetail,
+  BrandstofRegel,
+  BrandstofRegelPatch,
   BruikleenInput,
   BruikleenOndertekeningInput,
   BruikleenOvereenkomst,
@@ -222,12 +227,14 @@ import type {
   JaarAfsluitingRegelInput,
   JaarAfsluitingResultaat,
   KaartEmbed,
+  LaadBrandstofImport200,
   Label,
   LabelDocumentenInput,
   LabelInput,
   LabelUpdate,
   LeesBevestiging,
   ListAlleVerlofAanvragenParams,
+  ListBrandstofImportenParams,
   ListCrmContactpersonenAllParams,
   ListCrmProjectkansenParams,
   ListDocumentLogboekParams,
@@ -49109,4 +49116,450 @@ export function useListWagenparkAvgLogboek<TData = Awaited<ReturnType<typeof lis
 
 
 
+
+export const getListBrandstofImportenUrl = (params?: ListBrandstofImportenParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/wagenpark/brandstof-import?${stringifiedParams}` : `/api/wagenpark/brandstof-import`
+}
+
+/**
+ * @summary Lijst van MKB Brandstof importbatches
+ */
+export const listBrandstofImporten = async (params?: ListBrandstofImportenParams, options?: RequestInit): Promise<BrandstofImport[]> => {
+
+  return customFetch<BrandstofImport[]>(getListBrandstofImportenUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListBrandstofImportenQueryKey = (params?: ListBrandstofImportenParams,) => {
+    return [
+    `/api/wagenpark/brandstof-import`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListBrandstofImportenQueryOptions = <TData = Awaited<ReturnType<typeof listBrandstofImporten>>, TError = ErrorType<void>>(params?: ListBrandstofImportenParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listBrandstofImporten>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListBrandstofImportenQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listBrandstofImporten>>> = ({ signal }) => listBrandstofImporten(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listBrandstofImporten>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListBrandstofImportenQueryResult = NonNullable<Awaited<ReturnType<typeof listBrandstofImporten>>>
+export type ListBrandstofImportenQueryError = ErrorType<void>
+
+
+/**
+ * @summary Lijst van MKB Brandstof importbatches
+ */
+
+export function useListBrandstofImporten<TData = Awaited<ReturnType<typeof listBrandstofImporten>>, TError = ErrorType<void>>(
+ params?: ListBrandstofImportenParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listBrandstofImporten>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListBrandstofImportenQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getUploadBrandstofFactuurUrl = () => {
+
+
+
+
+  return `/api/wagenpark/brandstof-import`
+}
+
+/**
+ * @summary Upload een MKB Brandstof factuur (PDF, UBL/XML of EML)
+ */
+export const uploadBrandstofFactuur = async (brandstofFactuurUploadInput: BrandstofFactuurUploadInput, options?: RequestInit): Promise<BrandstofImport> => {
+    const formData = new FormData();
+formData.append(`bestand`, brandstofFactuurUploadInput.bestand);
+
+  return customFetch<BrandstofImport>(getUploadBrandstofFactuurUrl(),
+  {
+    ...options,
+    method: 'POST'
+    ,
+    body: formData
+  }
+);}
+
+
+
+
+export const getUploadBrandstofFactuurMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof uploadBrandstofFactuur>>, TError,{data: BodyType<BrandstofFactuurUploadInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof uploadBrandstofFactuur>>, TError,{data: BodyType<BrandstofFactuurUploadInput>}, TContext> => {
+
+const mutationKey = ['uploadBrandstofFactuur'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof uploadBrandstofFactuur>>, {data: BodyType<BrandstofFactuurUploadInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  uploadBrandstofFactuur(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UploadBrandstofFactuurMutationResult = NonNullable<Awaited<ReturnType<typeof uploadBrandstofFactuur>>>
+    export type UploadBrandstofFactuurMutationBody = BodyType<BrandstofFactuurUploadInput>
+    export type UploadBrandstofFactuurMutationError = ErrorType<void>
+
+    /**
+ * @summary Upload een MKB Brandstof factuur (PDF, UBL/XML of EML)
+ */
+export const useUploadBrandstofFactuur = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof uploadBrandstofFactuur>>, TError,{data: BodyType<BrandstofFactuurUploadInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof uploadBrandstofFactuur>>,
+        TError,
+        {data: BodyType<BrandstofFactuurUploadInput>},
+        TContext
+      > => {
+      return useMutation(getUploadBrandstofFactuurMutationOptions(options));
+    }
+
+export const getGetBrandstofImportUrl = (id: number,) => {
+
+
+
+
+  return `/api/wagenpark/brandstof-import/${id}`
+}
+
+/**
+ * @summary Importbatch met alle transactieregels
+ */
+export const getBrandstofImport = async (id: number, options?: RequestInit): Promise<BrandstofImportDetail> => {
+
+  return customFetch<BrandstofImportDetail>(getGetBrandstofImportUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetBrandstofImportQueryKey = (id: number,) => {
+    return [
+    `/api/wagenpark/brandstof-import/${id}`
+    ] as const;
+    }
+
+
+export const getGetBrandstofImportQueryOptions = <TData = Awaited<ReturnType<typeof getBrandstofImport>>, TError = ErrorType<void>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getBrandstofImport>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetBrandstofImportQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getBrandstofImport>>> = ({ signal }) => getBrandstofImport(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getBrandstofImport>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetBrandstofImportQueryResult = NonNullable<Awaited<ReturnType<typeof getBrandstofImport>>>
+export type GetBrandstofImportQueryError = ErrorType<void>
+
+
+/**
+ * @summary Importbatch met alle transactieregels
+ */
+
+export function useGetBrandstofImport<TData = Awaited<ReturnType<typeof getBrandstofImport>>, TError = ErrorType<void>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getBrandstofImport>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetBrandstofImportQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getDeleteBrandstofImportUrl = (id: number,) => {
+
+
+
+
+  return `/api/wagenpark/brandstof-import/${id}`
+}
+
+/**
+ * @summary Verwijder een importbatch (inclusief regels, niet de aangemaakte kosten)
+ */
+export const deleteBrandstofImport = async (id: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteBrandstofImportUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteBrandstofImportMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteBrandstofImport>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteBrandstofImport>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deleteBrandstofImport'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteBrandstofImport>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteBrandstofImport(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteBrandstofImportMutationResult = NonNullable<Awaited<ReturnType<typeof deleteBrandstofImport>>>
+
+    export type DeleteBrandstofImportMutationError = ErrorType<void>
+
+    /**
+ * @summary Verwijder een importbatch (inclusief regels, niet de aangemaakte kosten)
+ */
+export const useDeleteBrandstofImport = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteBrandstofImport>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteBrandstofImport>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeleteBrandstofImportMutationOptions(options));
+    }
+
+export const getPatchBrandstofRegelUrl = (id: number,
+    regelId: number,) => {
+
+
+
+
+  return `/api/wagenpark/brandstof-import/${id}/regels/${regelId}`
+}
+
+/**
+ * @summary Koppel een transactieregel handmatig aan een voertuig
+ */
+export const patchBrandstofRegel = async (id: number,
+    regelId: number,
+    brandstofRegelPatch: BrandstofRegelPatch, options?: RequestInit): Promise<BrandstofRegel> => {
+
+  return customFetch<BrandstofRegel>(getPatchBrandstofRegelUrl(id,regelId),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(brandstofRegelPatch)
+  }
+);}
+
+
+
+
+export const getPatchBrandstofRegelMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof patchBrandstofRegel>>, TError,{id: number;regelId: number;data: BodyType<BrandstofRegelPatch>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof patchBrandstofRegel>>, TError,{id: number;regelId: number;data: BodyType<BrandstofRegelPatch>}, TContext> => {
+
+const mutationKey = ['patchBrandstofRegel'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof patchBrandstofRegel>>, {id: number;regelId: number;data: BodyType<BrandstofRegelPatch>}> = (props) => {
+          const {id,regelId,data} = props ?? {};
+
+          return  patchBrandstofRegel(id,regelId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PatchBrandstofRegelMutationResult = NonNullable<Awaited<ReturnType<typeof patchBrandstofRegel>>>
+    export type PatchBrandstofRegelMutationBody = BodyType<BrandstofRegelPatch>
+    export type PatchBrandstofRegelMutationError = ErrorType<void>
+
+    /**
+ * @summary Koppel een transactieregel handmatig aan een voertuig
+ */
+export const usePatchBrandstofRegel = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof patchBrandstofRegel>>, TError,{id: number;regelId: number;data: BodyType<BrandstofRegelPatch>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof patchBrandstofRegel>>,
+        TError,
+        {id: number;regelId: number;data: BodyType<BrandstofRegelPatch>},
+        TContext
+      > => {
+      return useMutation(getPatchBrandstofRegelMutationOptions(options));
+    }
+
+export const getLaadBrandstofImportUrl = (id: number,) => {
+
+
+
+
+  return `/api/wagenpark/brandstof-import/${id}/laden`
+}
+
+/**
+ * @summary Verwerk de import — maak kostenregels aan per voertuig
+ */
+export const laadBrandstofImport = async (id: number, options?: RequestInit): Promise<LaadBrandstofImport200> => {
+
+  return customFetch<LaadBrandstofImport200>(getLaadBrandstofImportUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getLaadBrandstofImportMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof laadBrandstofImport>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof laadBrandstofImport>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['laadBrandstofImport'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof laadBrandstofImport>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  laadBrandstofImport(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type LaadBrandstofImportMutationResult = NonNullable<Awaited<ReturnType<typeof laadBrandstofImport>>>
+
+    export type LaadBrandstofImportMutationError = ErrorType<void>
+
+    /**
+ * @summary Verwerk de import — maak kostenregels aan per voertuig
+ */
+export const useLaadBrandstofImport = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof laadBrandstofImport>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof laadBrandstofImport>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getLaadBrandstofImportMutationOptions(options));
+    }
 

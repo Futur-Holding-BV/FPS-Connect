@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/table";
 import {
   Truck, AlertTriangle, Wrench, CheckCircle, RefreshCw,
-  ShieldAlert, Sparkles, Search, Plus, Eye,
+  ShieldAlert, Sparkles, Search, Plus, Eye, FileInput,
 } from "lucide-react";
 
 // ── Helpers ────────────────────────────────────────────────
@@ -132,6 +132,12 @@ export default function WagenparkPagina() {
               Synchroniseren
             </Button>
           )}
+          <Button asChild variant="outline" size="sm">
+            <Link href="/wagenpark/brandstof-import">
+              <FileInput className="h-4 w-4 mr-2" />
+              Brandstof importeren
+            </Link>
+          </Button>
           {magAanmaken && (
             <Button asChild size="sm">
               <Link href="/wagenpark/nieuw">
