@@ -36,7 +36,7 @@ export function NieuwsTicker() {
         }
       `}</style>
 
-      <div className="fixed bottom-0 left-0 right-0 z-40 h-8 flex items-stretch bg-[#1a1f2b] border-t border-white/10 text-white select-none">
+      <div className="fixed bottom-0 left-0 z-40 h-8 flex items-stretch bg-[#1a1f2b] border-t border-white/10 text-white select-none max-w-[calc(40ch+220px)]">
 
         {/* Nieuws-sectie — alleen wanneer niet verborgen */}
         {!nieuwsVerborgen ? (
@@ -51,7 +51,7 @@ export function NieuwsTicker() {
 
             {/* Scrollende items of laadindicator */}
             <div
-              className="flex-1 overflow-hidden relative"
+              className="w-[40ch] min-w-0 overflow-hidden relative"
               onMouseEnter={() => setGepauzeerd(true)}
               onMouseLeave={() => setGepauzeerd(false)}
             >
