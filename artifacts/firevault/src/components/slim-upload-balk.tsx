@@ -5,7 +5,6 @@ import {
   Sparkles,
   X,
   ChevronRight,
-  Settings,
   Trash2,
   CheckCircle2,
   AlertCircle,
@@ -18,6 +17,7 @@ import {
   FolderOpen,
   Zap,
   ZapOff,
+  Settings,
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -50,12 +50,12 @@ interface AutomatiseringsRegel {
 // ── Categorie-metadata ────────────────────────────────────────────────────────
 
 const CATEGORIE_INFO: Record<Categorie, { label: string; icoon: React.ReactNode; pad: string; kleur: string }> = {
-  bibliotheek: { label: "Documentenbibliotheek", icoon: <BookOpen className="h-4 w-4" />, pad: "/documenten", kleur: "bg-blue-50 text-blue-700 border-blue-200" },
-  offerte:     { label: "Offertes",              icoon: <FileText className="h-4 w-4" />, pad: "/offertes",  kleur: "bg-amber-50 text-amber-700 border-amber-200" },
-  factuur:     { label: "Facturen",              icoon: <Receipt className="h-4 w-4" />, pad: "/facturen",  kleur: "bg-emerald-50 text-emerald-700 border-emerald-200" },
-  hrm:         { label: "Personeel / HRM",       icoon: <Users className="h-4 w-4" />,   pad: "/personeel", kleur: "bg-purple-50 text-purple-700 border-purple-200" },
-  tekening:    { label: "Tekeningen",            icoon: <PenLine className="h-4 w-4" />, pad: "/documenten",kleur: "bg-sky-50 text-sky-700 border-sky-200" },
-  rapport:     { label: "Rapporten",             icoon: <BarChart3 className="h-4 w-4" />,pad: "/rapporten", kleur: "bg-orange-50 text-orange-700 border-orange-200" },
+  bibliotheek: { label: "Documentenbibliotheek", icoon: <BookOpen className="h-4 w-4" />, pad: "/documenten",  kleur: "bg-blue-50 text-blue-700 border-blue-200" },
+  offerte:     { label: "Offertes",              icoon: <FileText className="h-4 w-4" />, pad: "/offertes",   kleur: "bg-amber-50 text-amber-700 border-amber-200" },
+  factuur:     { label: "Facturen",              icoon: <Receipt className="h-4 w-4" />, pad: "/facturen",   kleur: "bg-emerald-50 text-emerald-700 border-emerald-200" },
+  hrm:         { label: "Personeel / HRM",       icoon: <Users className="h-4 w-4" />,   pad: "/personeel",  kleur: "bg-purple-50 text-purple-700 border-purple-200" },
+  tekening:    { label: "Tekeningen",            icoon: <PenLine className="h-4 w-4" />, pad: "/documenten", kleur: "bg-sky-50 text-sky-700 border-sky-200" },
+  rapport:     { label: "Rapporten",             icoon: <BarChart3 className="h-4 w-4" />,pad: "/rapporten",  kleur: "bg-orange-50 text-orange-700 border-orange-200" },
   algemeen:    { label: "Documenten (algemeen)", icoon: <FolderOpen className="h-4 w-4" />,pad: "/documenten",kleur: "bg-gray-50 text-gray-700 border-gray-200" },
 };
 
@@ -77,11 +77,8 @@ const LS_KEY = "fps_slim_upload_regels";
 const DREMPEL_AUTOMATISEREN = 3;
 
 function laadRegels(): AutomatiseringsRegel[] {
-  try {
-    return JSON.parse(localStorage.getItem(LS_KEY) ?? "[]") as AutomatiseringsRegel[];
-  } catch {
-    return [];
-  }
+  try { return JSON.parse(localStorage.getItem(LS_KEY) ?? "[]") as AutomatiseringsRegel[]; }
+  catch { return []; }
 }
 
 function slaRegelsOp(regels: AutomatiseringsRegel[]) {
@@ -93,32 +90,23 @@ function haalExtensie(bestandsnaam: string): string {
   return dot >= 0 ? bestandsnaam.slice(dot).toLowerCase() : "";
 }
 
-function zoekRegel(regels: AutomatiseringsRegel[], extensie: string, categorie: Categorie): AutomatiseringsRegel | undefined {
+function zoekRegel(regels: AutomatiseringsRegel[], extensie: string, categorie: Categorie) {
   return regels.find((r) => r.extensie === extensie && r.categorie === categorie);
 }
 
 function registreerBevestiging(extensie: string, categorie: Categorie): {
-  regel: AutomatiseringsRegel;
-  vraagAutomatiseren: boolean;
+  regel: AutomatiseringsRegel; vraagAutomatiseren: boolean;
 } {
   const regels = laadRegels();
   const bestaand = zoekRegel(regels, extensie, categorie);
-
   if (bestaand) {
     bestaand.bevestigingen += 1;
     slaRegelsOp(regels);
-    const vraagAutomatiseren =
-      bestaand.bevestigingen === DREMPEL_AUTOMATISEREN && !bestaand.geautomatiseerd;
-    return { regel: bestaand, vraagAutomatiseren };
+    return { regel: bestaand, vraagAutomatiseren: bestaand.bevestigingen === DREMPEL_AUTOMATISEREN && !bestaand.geautomatiseerd };
   }
-
   const nieuw: AutomatiseringsRegel = {
-    id: crypto.randomUUID(),
-    extensie,
-    categorie,
-    bevestigingen: 1,
-    geautomatiseerd: false,
-    aangemaakt: new Date().toISOString().slice(0, 10),
+    id: crypto.randomUUID(), extensie, categorie, bevestigingen: 1,
+    geautomatiseerd: false, aangemaakt: new Date().toISOString().slice(0, 10),
   };
   slaRegelsOp([...regels, nieuw]);
   return { regel: nieuw, vraagAutomatiseren: false };
@@ -132,6 +120,35 @@ function activeerAutomatisering(id: string) {
 
 function verwijderRegel(id: string) {
   slaRegelsOp(laadRegels().filter((r) => r.id !== id));
+}
+
+// ── Slim-upload knop (snelkoppeling in de taakbalk) ───────────────────────────
+
+function SlimUploadKnop({ onClick, actieveAutomatiseringen }: {
+  onClick: () => void;
+  actieveAutomatiseringen: number;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={cn(
+        "group flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-medium",
+        "bg-white/10 hover:bg-white/20 text-white/90 hover:text-white",
+        "border border-white/15 hover:border-white/30",
+        "transition-all duration-150 cursor-pointer select-none",
+      )}
+      title="Slim uploaden — sleep of klik om een bestand te analyseren"
+    >
+      <Upload className="h-3.5 w-3.5 shrink-0" />
+      <span>Slim uploaden</span>
+      {actieveAutomatiseringen > 0 && (
+        <span className="ml-0.5 flex items-center gap-0.5 bg-amber-400/20 text-amber-300 border border-amber-400/30 rounded px-1 text-[10px]">
+          <Zap className="h-2.5 w-2.5" />
+          {actieveAutomatiseringen}
+        </span>
+      )}
+    </button>
+  );
 }
 
 // ── Hoofd-component ───────────────────────────────────────────────────────────
@@ -148,8 +165,8 @@ export function SlimUploadBalk() {
   const [toonInstellingen, setToonInstellingen] = useState(false);
   const [regels, setRegels] = useState<AutomatiseringsRegel[]>([]);
 
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const sleepTeller = useRef(0);
-  const dropZoneRef = useRef<HTMLDivElement>(null);
 
   const herlaadRegels = useCallback(() => setRegels(laadRegels()), []);
   useEffect(() => { herlaadRegels(); }, [herlaadRegels]);
@@ -162,20 +179,14 @@ export function SlimUploadBalk() {
       sleepTeller.current += 1;
       setSleepActief(true);
     }
-
     function opDragLeave() {
       sleepTeller.current -= 1;
-      if (sleepTeller.current <= 0) {
-        sleepTeller.current = 0;
-        setSleepActief(false);
-      }
+      if (sleepTeller.current <= 0) { sleepTeller.current = 0; setSleepActief(false); }
     }
-
     function opDragOver(e: DragEvent) {
       e.preventDefault();
       if (e.dataTransfer) e.dataTransfer.dropEffect = "copy";
     }
-
     function opDrop(e: DragEvent) {
       e.preventDefault();
       sleepTeller.current = 0;
@@ -188,7 +199,6 @@ export function SlimUploadBalk() {
     document.addEventListener("dragleave", opDragLeave);
     document.addEventListener("dragover", opDragOver);
     document.addEventListener("drop", opDrop);
-
     return () => {
       document.removeEventListener("dragenter", opDragEnter);
       document.removeEventListener("dragleave", opDragLeave);
@@ -207,12 +217,9 @@ export function SlimUploadBalk() {
 
     const extensie = haalExtensie(bestand.name);
     const regelsHuidig = laadRegels();
-
-    // Controleer of er een actieve automatiseringsregel is
     const actieveRegel = regelsHuidig.find((r) => r.extensie === extensie && r.geautomatiseerd);
     if (actieveRegel) {
-      const info = CATEGORIE_INFO[actieveRegel.categorie];
-      navigate(info.pad);
+      navigate(CATEGORIE_INFO[actieveRegel.categorie].pad);
       return;
     }
 
@@ -222,17 +229,11 @@ export function SlimUploadBalk() {
     try {
       const formData = new FormData();
       formData.append("bestand", bestand);
-
       const res = await fetch("/api/slim-upload/analyseer", {
-        method: "POST",
-        body: formData,
-        credentials: "include",
+        method: "POST", body: formData, credentials: "include",
       });
-
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-
-      const data = (await res.json()) as Suggestie;
-      setSuggestie(data);
+      setSuggestie((await res.json()) as Suggestie);
     } catch {
       setFout("De analyse kon niet worden uitgevoerd. Kies hieronder handmatig waar het bestand thuishoort.");
     } finally {
@@ -242,17 +243,12 @@ export function SlimUploadBalk() {
 
   function opBevestigen() {
     if (!suggestie || !gedroptBestand) return;
-
     const extensie = haalExtensie(gedroptBestand.name);
     const { regel, vraagAutomatiseren } = registreerBevestiging(extensie, suggestie.categorie);
-
     setToonDialoog(false);
     setSuggestie(null);
     setGedroptBestand(null);
-
-    const info = CATEGORIE_INFO[suggestie.categorie];
-    navigate(info.pad);
-
+    navigate(CATEGORIE_INFO[suggestie.categorie].pad);
     if (vraagAutomatiseren) {
       setTimeout(() => { setToonAutomatiseren(regel); herlaadRegels(); }, 400);
     }
@@ -266,16 +262,8 @@ export function SlimUploadBalk() {
   }
 
   function opAutomatiseerBevestigen() {
-    if (toonAutomatiseren) {
-      activeerAutomatisering(toonAutomatiseren.id);
-      herlaadRegels();
-    }
+    if (toonAutomatiseren) { activeerAutomatisering(toonAutomatiseren.id); herlaadRegels(); }
     setToonAutomatiseren(null);
-  }
-
-  function opRegelVerwijderen(id: string) {
-    verwijderRegel(id);
-    herlaadRegels();
   }
 
   const actieveAutomatiseringen = regels.filter((r) => r.geautomatiseerd);
@@ -284,132 +272,142 @@ export function SlimUploadBalk() {
 
   return (
     <>
-      {/* Balk */}
+      {/* ── Taakbalk ────────────────────────────────────────────────────────── */}
       <div
-        ref={dropZoneRef}
-        className={cn(
-          "fixed bottom-0 left-0 right-0 z-40 transition-all duration-300 ease-in-out",
-          "border-t bg-background/95 backdrop-blur-sm",
-          sleepActief
-            ? "border-primary shadow-2xl"
-            : "border-border/60",
-        )}
+        className="fixed bottom-0 right-0 z-40 flex items-center"
         style={{ left: "var(--sidebar-width, 0px)" }}
       >
-        {/* Sleep-overlay */}
+        {/* Gekleurde balk */}
         <div
           className={cn(
-            "transition-all duration-300 ease-in-out overflow-hidden",
-            sleepActief ? "max-h-40 opacity-100" : "max-h-0 opacity-0",
+            "flex items-center gap-2 px-4 w-full transition-all duration-300",
+            "border-t",
+            sleepActief
+              ? "bg-primary border-primary/80 py-6"
+              : "bg-[#1e2535] border-[#2d3548] py-2",
           )}
         >
-          <div className="flex flex-col items-center justify-center gap-2 py-8 px-4">
-            <div
-              className={cn(
-                "rounded-full p-4 transition-all duration-300",
-                sleepActief ? "bg-primary/10 scale-110" : "bg-muted scale-100",
-              )}
-            >
-              <Upload className={cn("h-8 w-8 transition-colors duration-300", sleepActief ? "text-primary" : "text-muted-foreground")} />
+          {sleepActief ? (
+            /* Sleep-staat: grote drop-zone hint */
+            <div className="flex items-center gap-3 w-full justify-center">
+              <div className="rounded-full p-2 bg-white/15">
+                <Upload className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-white">Laat los om te analyseren</p>
+                <p className="text-xs text-white/70">AI bepaalt automatisch waar het bestand thuishoort</p>
+              </div>
             </div>
-            <p className="text-sm font-medium text-foreground">Laat los om te analyseren</p>
-            <p className="text-xs text-muted-foreground">AI bepaalt waar het bestand thuishoort</p>
-          </div>
-        </div>
+          ) : (
+            /* Rusttoestand: taakbalk met snelkoppelingen */
+            <>
+              {/* Label */}
+              <span className="text-[11px] text-white/40 font-medium uppercase tracking-wider shrink-0 select-none">
+                Snelkoppelingen
+              </span>
 
-        {/* Rusttoestand */}
-        <div
-          className={cn(
-            "flex items-center gap-2 px-4 py-2 transition-all duration-300",
-            sleepActief ? "opacity-0 h-0 py-0 overflow-hidden" : "opacity-100 h-auto",
-          )}
-        >
-          <Upload className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-          <span className="text-xs text-muted-foreground">
-            Slim uploadpunt — sleep een bestand hierheen
-          </span>
-          {actieveAutomatiseringen.length > 0 && (
-            <Badge variant="secondary" className="text-[10px] px-1.5 py-0 ml-1">
-              <Zap className="h-2.5 w-2.5 mr-0.5" />
-              {actieveAutomatiseringen.length} automatisch
-            </Badge>
-          )}
-          <div className="ml-auto">
-            <Popover open={toonInstellingen} onOpenChange={setToonInstellingen}>
-              <PopoverTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-6 w-6">
-                  <Settings className="h-3 w-3 text-muted-foreground" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent align="end" className="w-80 p-0">
-                <div className="p-3 border-b">
-                  <p className="text-sm font-semibold">Automatiseringsregels</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    Regels worden aangemaakt zodra u meerdere keren hetzelfde type bestand op dezelfde plek plaatst.
-                  </p>
-                </div>
-                {regels.length === 0 ? (
-                  <div className="p-4 text-center">
-                    <p className="text-xs text-muted-foreground">Nog geen regels aangemaakt.</p>
+              <div className="w-px h-4 bg-white/15 shrink-0" />
+
+              {/* Slim uploaden knop */}
+              <SlimUploadKnop
+                onClick={() => fileInputRef.current?.click()}
+                actieveAutomatiseringen={actieveAutomatiseringen.length}
+              />
+
+              {/* Ruimte voor toekomstige snelkoppelingen */}
+              {/* <NogEenKnop /> */}
+
+              {/* Spacer */}
+              <div className="flex-1" />
+
+              {/* Instellingen tandwiel */}
+              <Popover open={toonInstellingen} onOpenChange={setToonInstellingen}>
+                <PopoverTrigger asChild>
+                  <button
+                    className="flex items-center justify-center h-6 w-6 rounded text-white/40 hover:text-white/80 hover:bg-white/10 transition-colors"
+                    title="Automatiseringsregels"
+                  >
+                    <Settings className="h-3.5 w-3.5" />
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent align="end" side="top" className="w-80 p-0 mb-2">
+                  <div className="p-3 border-b">
+                    <p className="text-sm font-semibold">Automatiseringsregels</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Regels worden aangemaakt zodra u meerdere keren hetzelfde type bestand op dezelfde plek plaatst.
+                    </p>
                   </div>
-                ) : (
-                  <ul className="divide-y max-h-64 overflow-y-auto">
-                    {regels.map((r) => {
-                      const info = CATEGORIE_INFO[r.categorie];
-                      return (
-                        <li key={r.id} className="flex items-center gap-2 px-3 py-2.5">
-                          <div className="flex-1 min-w-0">
-                            <p className="text-xs font-medium truncate">
-                              {r.extensie || "(geen extensie)"} → {info.label}
-                            </p>
-                            <p className="text-[10px] text-muted-foreground">
-                              {r.bevestigingen}x bevestigd &bull; {r.aangemaakt}
-                            </p>
-                          </div>
-                          {r.geautomatiseerd ? (
-                            <Badge variant="secondary" className="text-[10px] px-1.5 py-0 shrink-0">
-                              <Zap className="h-2.5 w-2.5 mr-0.5" /> Auto
-                            </Badge>
-                          ) : (
-                            <Badge variant="outline" className="text-[10px] px-1.5 py-0 shrink-0 text-muted-foreground">
-                              Handmatig
-                            </Badge>
-                          )}
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-6 w-6 shrink-0 text-muted-foreground hover:text-destructive"
-                            onClick={() => opRegelVerwijderen(r.id)}
-                            title="Regel verwijderen"
-                          >
-                            <Trash2 className="h-3 w-3" />
-                          </Button>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                )}
-              </PopoverContent>
-            </Popover>
-          </div>
+                  {regels.length === 0 ? (
+                    <div className="p-4 text-center">
+                      <p className="text-xs text-muted-foreground">Nog geen regels aangemaakt.</p>
+                    </div>
+                  ) : (
+                    <ul className="divide-y max-h-64 overflow-y-auto">
+                      {regels.map((r) => {
+                        const info = CATEGORIE_INFO[r.categorie];
+                        return (
+                          <li key={r.id} className="flex items-center gap-2 px-3 py-2.5">
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs font-medium truncate">
+                                {r.extensie || "(geen extensie)"} → {info.label}
+                              </p>
+                              <p className="text-[10px] text-muted-foreground">
+                                {r.bevestigingen}x bevestigd &bull; {r.aangemaakt}
+                              </p>
+                            </div>
+                            {r.geautomatiseerd ? (
+                              <Badge variant="secondary" className="text-[10px] px-1.5 py-0 shrink-0">
+                                <Zap className="h-2.5 w-2.5 mr-0.5" /> Auto
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline" className="text-[10px] px-1.5 py-0 shrink-0 text-muted-foreground">
+                                Handmatig
+                              </Badge>
+                            )}
+                            <button
+                              className="h-6 w-6 flex items-center justify-center rounded text-muted-foreground hover:text-destructive hover:bg-muted transition-colors shrink-0"
+                              onClick={() => { verwijderRegel(r.id); herlaadRegels(); }}
+                              title="Regel verwijderen"
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </button>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
+                </PopoverContent>
+              </Popover>
+            </>
+          )}
         </div>
       </div>
 
-      {/* AI-analyse dialoog */}
+      {/* Verborgen file-input voor klik-upload */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        className="hidden"
+        onChange={(e) => {
+          const bestand = e.target.files?.[0];
+          if (bestand) verwerkBestand(bestand);
+          e.target.value = "";
+        }}
+      />
+
+      {/* ── AI-analyse dialoog ───────────────────────────────────────────────── */}
       <Dialog open={toonDialoog} onOpenChange={(open) => { if (!open) opAnnuleren(); }}>
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Sparkles className="h-4 w-4 text-primary" />
-              Slim uploadpunt
+              Slim uploaden
             </DialogTitle>
           </DialogHeader>
 
           {analyseert && (
             <div className="flex flex-col items-center gap-3 py-8">
-              <div className="relative">
-                <Sparkles className="h-8 w-8 text-primary animate-pulse" />
-              </div>
+              <Sparkles className="h-8 w-8 text-primary animate-pulse" />
               <p className="text-sm text-muted-foreground">
                 AI analyseert{" "}
                 <span className="font-medium text-foreground">{gedroptBestand?.name}</span>…
@@ -426,15 +424,9 @@ export function SlimUploadBalk() {
               <p className="text-xs text-muted-foreground">Kies zelf waar u het bestand wilt opslaan:</p>
               <div className="grid grid-cols-2 gap-2">
                 {(Object.entries(CATEGORIE_INFO) as [Categorie, typeof CATEGORIE_INFO[Categorie]][]).map(([cat, info]) => (
-                  <Button
-                    key={cat}
-                    variant="outline"
-                    size="sm"
-                    className="justify-start gap-2 text-xs h-8"
-                    onClick={() => { setSuggestie({ categorie: cat, voorstel_naam: gedroptBestand?.name.replace(/\.[^.]+$/, "") ?? "", redenering: "Handmatig gekozen.", vertrouwen: "laag", ai_beschikbaar: false }); setFout(null); }}
-                  >
-                    {info.icoon}
-                    {info.label}
+                  <Button key={cat} variant="outline" size="sm" className="justify-start gap-2 text-xs h-8"
+                    onClick={() => setSuggestie({ categorie: cat, voorstel_naam: gedroptBestand?.name.replace(/\.[^.]+$/, "") ?? "", redenering: "Handmatig gekozen.", vertrouwen: "laag", ai_beschikbaar: false })}>
+                    {info.icoon}{info.label}
                   </Button>
                 ))}
               </div>
@@ -462,26 +454,17 @@ export function SlimUploadBalk() {
                   </div>
                 )}
                 {!suggestie.ai_beschikbaar && (
-                  <p className="text-[10px] opacity-60 italic">Geclassificeerd op basis van bestandsnaam (AI niet actief)</p>
+                  <p className="text-[10px] opacity-60 italic">Geclassificeerd op bestandsnaam (AI niet actief)</p>
                 )}
               </div>
-
-              <p className="text-xs text-muted-foreground">
-                Niet wat u verwacht? Kies een andere bestemming:
-              </p>
+              <p className="text-xs text-muted-foreground">Niet wat u verwacht? Kies een andere bestemming:</p>
               <div className="grid grid-cols-2 gap-1.5">
                 {(Object.entries(CATEGORIE_INFO) as [Categorie, typeof CATEGORIE_INFO[Categorie]][])
                   .filter(([cat]) => cat !== suggestie.categorie)
                   .map(([cat, info]) => (
-                    <Button
-                      key={cat}
-                      variant="ghost"
-                      size="sm"
-                      className="justify-start gap-1.5 text-xs h-7 text-muted-foreground hover:text-foreground"
-                      onClick={() => setSuggestie({ ...suggestie, categorie: cat, vertrouwen: "laag", redenering: "Handmatig gewijzigd." })}
-                    >
-                      {info.icoon}
-                      {info.label}
+                    <Button key={cat} variant="ghost" size="sm" className="justify-start gap-1.5 text-xs h-7 text-muted-foreground hover:text-foreground"
+                      onClick={() => setSuggestie({ ...suggestie, categorie: cat, vertrouwen: "laag", redenering: "Handmatig gewijzigd." })}>
+                      {info.icoon}{info.label}
                     </Button>
                   ))}
               </div>
@@ -489,9 +472,7 @@ export function SlimUploadBalk() {
           )}
 
           <DialogFooter>
-            <Button variant="outline" size="sm" onClick={opAnnuleren}>
-              Annuleren
-            </Button>
+            <Button variant="outline" size="sm" onClick={opAnnuleren}>Annuleren</Button>
             {suggestie && (
               <Button size="sm" onClick={opBevestigen} className="gap-1.5">
                 <ChevronRight className="h-4 w-4" />
@@ -502,7 +483,7 @@ export function SlimUploadBalk() {
         </DialogContent>
       </Dialog>
 
-      {/* Automatiseer-dialoog */}
+      {/* ── Automatiseer-dialoog ─────────────────────────────────────────────── */}
       <Dialog open={!!toonAutomatiseren} onOpenChange={(open) => { if (!open) setToonAutomatiseren(null); }}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
@@ -532,7 +513,7 @@ export function SlimUploadBalk() {
               <div className="rounded-md bg-muted/50 p-3 flex items-start gap-2">
                 <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />
                 <p className="text-xs text-muted-foreground">
-                  U kunt dit altijd terugdraaien via het tandwiel-icoon in de uploadbalk.
+                  U kunt dit altijd terugdraaien via het tandwiel-icoon in de taakbalk.
                 </p>
               </div>
             </div>
