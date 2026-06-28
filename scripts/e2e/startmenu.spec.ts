@@ -415,13 +415,13 @@ test("FPS startmenu: login, waaier en doorlinken", async ({ page }) => {
         page.getByTestId("verlof-formulier-fout").getByText("Kies een geldige startdatum."),
       ).toBeVisible({ timeout: INHOUD_TIMEOUT });
     } else {
-      // Geen verlofsoorten beschikbaar in de catalog; sluit de picker via het ×-knopje.
-      await page.getByText("×").filter({ visible: true }).first().click();
+      // Geen verlofsoorten beschikbaar in de catalog; sluit de picker via testID.
+      await page.getByTestId("verlofsoort-picker-sluiten").click();
       await expect(zichtbareTekst(page, "Verlofsoort kiezen").first()).toHaveCount(0);
     }
 
-    // Sluit de hoofd-modal via het ×-knopje.
-    await page.getByText("×").filter({ visible: true }).first().click();
+    // Sluit de hoofd-modal via testID.
+    await page.getByTestId("verlofaanvraag-sluiten").click();
     await expect(zichtbareTekst(page, "Verlofaanvraag indienen").first()).toHaveCount(0);
 
     await page.goBack(); // terug naar /hrm

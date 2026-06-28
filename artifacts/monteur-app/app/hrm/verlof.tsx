@@ -446,7 +446,7 @@ export default function VerlofScherm() {
               <Text style={{ color: c.foreground, fontSize: 18, fontFamily: "Inter_700Bold" }}>
                 Verlofaanvraag indienen
               </Text>
-              <Pressable onPress={sluitModal} hitSlop={12}>
+              <Pressable testID="verlofaanvraag-sluiten" onPress={sluitModal} hitSlop={12}>
                 <Text style={{ color: c.mutedForeground, fontSize: 22, lineHeight: 26 }}>×</Text>
               </Pressable>
             </View>
@@ -673,7 +673,7 @@ export default function VerlofScherm() {
             <Text style={{ color: c.foreground, fontSize: 17, fontFamily: "Inter_700Bold" }}>
               Verlofsoort kiezen
             </Text>
-            <Pressable onPress={() => setSoortPickerOpen(false)} hitSlop={12}>
+            <Pressable testID="verlofsoort-picker-sluiten" onPress={() => setSoortPickerOpen(false)} hitSlop={12}>
               <Text style={{ color: c.mutedForeground, fontSize: 22, lineHeight: 26 }}>×</Text>
             </Pressable>
           </View>
