@@ -4544,6 +4544,7 @@ export const ListGebruikersResponseItem = zod.object({
   "telefoon": zod.string().nullish(),
   "bedrijf": zod.string().nullish(),
   "actief": zod.boolean(),
+  "gearchiveerd": zod.boolean(),
   "aangemaakt_op": zod.string(),
   "laatste_online": zod.string().nullish(),
   "avatar_url": zod.string().nullish(),
@@ -4606,6 +4607,7 @@ export const GetGebruikerResponse = zod.object({
   "telefoon": zod.string().nullish(),
   "bedrijf": zod.string().nullish(),
   "actief": zod.boolean(),
+  "gearchiveerd": zod.boolean(),
   "aangemaakt_op": zod.string(),
   "laatste_online": zod.string().nullish(),
   "avatar_url": zod.string().nullish(),
@@ -4662,6 +4664,7 @@ export const UpdateGebruikerResponse = zod.object({
   "telefoon": zod.string().nullish(),
   "bedrijf": zod.string().nullish(),
   "actief": zod.boolean(),
+  "gearchiveerd": zod.boolean(),
   "aangemaakt_op": zod.string(),
   "laatste_online": zod.string().nullish(),
   "avatar_url": zod.string().nullish(),
@@ -4693,6 +4696,43 @@ export const DeleteGebruikerResponse = zod.void()
 
 
 /**
+ * @summary Gearchiveerde gebruiker herstellen
+ */
+export const HerstellenGebruikerParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const HerstellenGebruikerResponse = zod.object({
+  "id": zod.number(),
+  "naam": zod.string(),
+  "email": zod.string(),
+  "rol": zod.enum(['hoofdbeheerder', 'gebruiker', 'klant']),
+  "functietitels": zod.array(zod.string()).optional(),
+  "telefoon": zod.string().nullish(),
+  "bedrijf": zod.string().nullish(),
+  "actief": zod.boolean(),
+  "gearchiveerd": zod.boolean(),
+  "aangemaakt_op": zod.string(),
+  "laatste_online": zod.string().nullish(),
+  "avatar_url": zod.string().nullish(),
+  "bedrijfslogo_url": zod.string().nullish(),
+  "bedrijfskleuren": zod.string().nullish(),
+  "uitnodiging_status": zod.enum(['niet_uitgenodigd', 'uitgenodigd', 'geaccepteerd']),
+  "uitnodiging_verstuurd_op": zod.string().nullish(),
+  "uitnodiging_verloopt_op": zod.string().nullish(),
+  "uitnodiging_geopend_op": zod.string().nullish(),
+  "uitnodiging_opnieuw_verstuurd_op": zod.string().nullish(),
+  "uitnodiging_geaccepteerd_op": zod.string().nullish(),
+  "taal": zod.enum(['nl', 'en', 'de', 'fr', 'ar', 'tr']).optional(),
+  "bevoegdheden": zod.record(zod.string(), zod.number()),
+  "herkomst_profiel_id": zod.number().nullish(),
+  "herkomst_automatisch": zod.boolean().optional(),
+  "dienstverband": zod.string().nullish(),
+  "bedrijf_uitzendbureau": zod.string().nullish()
+})
+
+
+/**
  * @summary Uitnodiging sturen naar gebruiker
  */
 export const UitnodigingVersturenParams = zod.object({
@@ -4708,6 +4748,7 @@ export const UitnodigingVersturenResponse = zod.object({
   "telefoon": zod.string().nullish(),
   "bedrijf": zod.string().nullish(),
   "actief": zod.boolean(),
+  "gearchiveerd": zod.boolean(),
   "aangemaakt_op": zod.string(),
   "laatste_online": zod.string().nullish(),
   "avatar_url": zod.string().nullish(),
@@ -4744,6 +4785,7 @@ export const UitnodigingOpnieuwVersturenResponse = zod.object({
   "telefoon": zod.string().nullish(),
   "bedrijf": zod.string().nullish(),
   "actief": zod.boolean(),
+  "gearchiveerd": zod.boolean(),
   "aangemaakt_op": zod.string(),
   "laatste_online": zod.string().nullish(),
   "avatar_url": zod.string().nullish(),
@@ -4780,6 +4822,7 @@ export const GebruikerHerkomstToepassenResponse = zod.object({
   "telefoon": zod.string().nullish(),
   "bedrijf": zod.string().nullish(),
   "actief": zod.boolean(),
+  "gearchiveerd": zod.boolean(),
   "aangemaakt_op": zod.string(),
   "laatste_online": zod.string().nullish(),
   "avatar_url": zod.string().nullish(),
@@ -4816,6 +4859,7 @@ export const GebruikerHerkomstBevestigenResponse = zod.object({
   "telefoon": zod.string().nullish(),
   "bedrijf": zod.string().nullish(),
   "actief": zod.boolean(),
+  "gearchiveerd": zod.boolean(),
   "aangemaakt_op": zod.string(),
   "laatste_online": zod.string().nullish(),
   "avatar_url": zod.string().nullish(),
@@ -4873,6 +4917,7 @@ export const GebruikerHerkomstVerwijderenResponse = zod.object({
   "telefoon": zod.string().nullish(),
   "bedrijf": zod.string().nullish(),
   "actief": zod.boolean(),
+  "gearchiveerd": zod.boolean(),
   "aangemaakt_op": zod.string(),
   "laatste_online": zod.string().nullish(),
   "avatar_url": zod.string().nullish(),

@@ -1955,6 +1955,7 @@ export interface Gebruiker {
   /** @nullable */
   bedrijf?: string | null;
   actief: boolean;
+  gearchiveerd: boolean;
   aangemaakt_op: string;
   /** @nullable */
   laatste_online?: string | null;

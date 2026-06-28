@@ -13260,6 +13260,76 @@ export const useDeleteGebruiker = <TError = ErrorType<unknown>,
       return useMutation(getDeleteGebruikerMutationOptions(options));
     }
 
+export const getHerstellenGebruikerUrl = (id: number,) => {
+
+
+
+
+  return `/api/gebruikers/${id}/herstellen`
+}
+
+/**
+ * @summary Gearchiveerde gebruiker herstellen
+ */
+export const herstellenGebruiker = async (id: number, options?: RequestInit): Promise<Gebruiker> => {
+
+  return customFetch<Gebruiker>(getHerstellenGebruikerUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getHerstellenGebruikerMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof herstellenGebruiker>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof herstellenGebruiker>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['herstellenGebruiker'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof herstellenGebruiker>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  herstellenGebruiker(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type HerstellenGebruikerMutationResult = NonNullable<Awaited<ReturnType<typeof herstellenGebruiker>>>
+
+    export type HerstellenGebruikerMutationError = ErrorType<void>
+
+    /**
+ * @summary Gearchiveerde gebruiker herstellen
+ */
+export const useHerstellenGebruiker = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof herstellenGebruiker>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof herstellenGebruiker>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getHerstellenGebruikerMutationOptions(options));
+    }
+
 export const getUitnodigingVersturenUrl = (id: number,) => {
 
 

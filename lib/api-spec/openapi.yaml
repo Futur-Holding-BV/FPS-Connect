@@ -3872,6 +3872,27 @@ paths:
         "204":
           description: Verwijderd
 
+  /gebruikers/{id}/herstellen:
+    post:
+      operationId: herstellenGebruiker
+      tags: [gebruikers]
+      summary: Gearchiveerde gebruiker herstellen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Hersteld
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Gebruiker"
+        "404":
+          description: Gebruiker niet gevonden
+
   /gebruikers/{id}/uitnodigen:
     post:
       operationId: uitnodigingVersturen
@@ -16473,7 +16494,7 @@ components:
     # ── GEBRUIKER ────────────────────────────────────────────────────────
     Gebruiker:
       type: object
-      required: [id, naam, email, rol, actief, aangemaakt_op, uitnodiging_status, bevoegdheden]
+      required: [id, naam, email, rol, actief, gearchiveerd, aangemaakt_op, uitnodiging_status, bevoegdheden]
       properties:
         id:
           type: integer
@@ -16493,6 +16514,8 @@ components:
         bedrijf:
           type: ["string", "null"]
         actief:
+          type: boolean
+        gearchiveerd:
           type: boolean
         aangemaakt_op:
           type: string

@@ -90,6 +90,7 @@ const mapGebruiker = (g: typeof gebruikersTable.$inferSelect) => ({
   herkomst_automatisch: g.herkomstProfielId != null ? (g.herkomstAutomatisch ?? false) : false,
   dienstverband: g.dienstverband ?? "intern",
   bedrijf_uitzendbureau: g.bedrijfUitzendbureau ?? null,
+  gearchiveerd: g.gearchiveerd,
 });
 
 // Veilige projectie zonder PII voor niet-beheerders: namen/rol blijven zichtbaar
@@ -115,6 +116,7 @@ const mapGebruikerPubliek = (g: typeof gebruikersTable.$inferSelect) => ({
   uitnodiging_geopend_op: null,
   uitnodiging_opnieuw_verstuurd_op: null,
   uitnodiging_geaccepteerd_op: null,
+  gearchiveerd: g.gearchiveerd,
   taal: g.taal ?? "nl",
   bevoegdheden: {},
 });
@@ -719,12 +721,37 @@ router.post(
   },
 );
 
-// DELETE /gebruikers/:id
+// DELETE /gebruikers/:id — soft archivering (geen harde verwijdering)
 router.delete("/gebruikers/:id", alleenBeheerder, async (req, res) => {
   try {
     const id = parseInt(String(req.params.id), 10);
-    await db.delete(gebruikersTable).where(eq(gebruikersTable.id, id));
+    if (req.session.userId === id) {
+      return res.status(400).json({ error: "U kunt uw eigen account niet archiveren" });
+    }
+    const [bijgewerkt] = await db
+      .update(gebruikersTable)
+      .set({ gearchiveerd: true, actief: false })
+      .where(eq(gebruikersTable.id, id))
+      .returning();
+    if (!bijgewerkt) return res.status(404).json({ error: "Gebruiker niet gevonden" });
     res.status(204).send();
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// POST /gebruikers/:id/herstellen
+router.post("/gebruikers/:id/herstellen", alleenBeheerder, async (req, res) => {
+  try {
+    const id = parseInt(String(req.params.id), 10);
+    const [bijgewerkt] = await db
+      .update(gebruikersTable)
+      .set({ gearchiveerd: false, actief: true })
+      .where(eq(gebruikersTable.id, id))
+      .returning();
+    if (!bijgewerkt) return res.status(404).json({ error: "Gebruiker niet gevonden" });
+    res.json(mapGebruiker(bijgewerkt));
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Interne serverfout" });

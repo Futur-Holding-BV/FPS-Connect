@@ -5,6 +5,7 @@ import {
   useCreateGebruiker,
   useUpdateGebruiker,
   useDeleteGebruiker,
+  useHerstellenGebruiker,
   useUitnodigingVersturen,
   useUitnodigingOpnieuwVersturen,
   useGebruikerHerkomstToepassen,
@@ -34,7 +35,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  Mail, Phone, Building, Clock, Plus, UserPlus, Pencil, Trash2,
+  Mail, Phone, Building, Clock, Plus, UserPlus, Pencil, Trash2, Archive,
   RefreshCw, ShieldCheck, Eye, User, Crown, Upload, Palette, SendHorizonal, X,
   Layers, Search, RotateCcw, Check, CheckCheck, Briefcase, Hammer, Wrench, TrendingUp,
   ListChecks, Loader2,
@@ -239,6 +240,7 @@ type Gebruiker = {
   telefoon: string | null;
   bedrijf: string | null;
   actief: boolean | null;
+  gearchiveerd: boolean;
   laatste_online?: string | null;
   avatar_url?: string | null;
   bedrijfslogo_url?: string | null;
@@ -279,6 +281,7 @@ export default function Gebruikers() {
   const maakGebruiker       = useCreateGebruiker();
   const werkBijGebruiker    = useUpdateGebruiker();
   const verwijderGebruiker  = useDeleteGebruiker();
+  const herstellenMutatie   = useHerstellenGebruiker();
   const uitnodigingVersturen = useUitnodigingVersturen();
   const uitnodigingOpnieuwVersturen = useUitnodigingOpnieuwVersturen();
   const herkomstToepassen   = useGebruikerHerkomstToepassen();
@@ -305,7 +308,8 @@ export default function Gebruikers() {
   const [zoek, setZoek]               = useVoorkeur<string>("gebruikers_zoek", "");
   const [filterGroep, setFilterGroep] = useVoorkeur<string | null>("gebruikers_filter_groep", null);
   const [actieveTab, setActieveTab]   = useState<"gebruikers" | "klanten" | "profielen">("gebruikers");
-  const [alleenAuto, setAlleenAuto]   = useState<boolean>(false);
+  const [alleenAuto, setAlleenAuto]         = useState<boolean>(false);
+  const [toonGearchiveerd, setToonGearchiveerd] = useState<boolean>(false);
   const [bulkBevestigOpen, setBulkBevestigOpen] = useState<boolean>(false);
   const [bulkResultaat, setBulkResultaat] = useState<string | null>(null);
 
@@ -470,6 +474,13 @@ export default function Gebruikers() {
     setVerwijderTarget(null);
   }
 
+  async function herstellenGebruiker(g: Gebruiker) {
+    try {
+      await herstellenMutatie.mutateAsync({ id: g.id });
+      await invalideer();
+    } catch { }
+  }
+
   async function stuurUitnodiging(g: Gebruiker) {
     const status = g.uitnodiging_status ?? "niet_uitgenodigd";
     setUitnodigingBezig(g.id);
@@ -488,11 +499,19 @@ export default function Gebruikers() {
   // klantomgeving (FPS One) en worden bewust apart getoond, niet tussen het
   // interne gebruikersoverzicht.
   const internBron = useMemo(
-    () => ((gebruikers ?? []) as Gebruiker[]).filter((g) => g.rol !== "klant"),
-    [gebruikers],
+    () => ((gebruikers ?? []) as Gebruiker[]).filter(
+      (g) => g.rol !== "klant" && (toonGearchiveerd || !g.gearchiveerd),
+    ),
+    [gebruikers, toonGearchiveerd],
   );
   const klantBron = useMemo(
-    () => ((gebruikers ?? []) as Gebruiker[]).filter((g) => g.rol === "klant"),
+    () => ((gebruikers ?? []) as Gebruiker[]).filter(
+      (g) => g.rol === "klant" && (toonGearchiveerd || !g.gearchiveerd),
+    ),
+    [gebruikers, toonGearchiveerd],
+  );
+  const aantalGearchiveerd = useMemo(
+    () => ((gebruikers ?? []) as Gebruiker[]).filter((g) => g.gearchiveerd).length,
     [gebruikers],
   );
 
@@ -589,7 +608,7 @@ export default function Gebruikers() {
       <Card
         key={g.id}
         className={`hover:shadow-md transition-shadow ${statusCfg.balk}`}
-        style={statusCfg.kaartStyle}
+        style={statusCfg.kaartStyle as any}
       >
         <CardContent className="p-3">
           <div className="flex items-start gap-2.5">
@@ -611,9 +630,15 @@ export default function Gebruikers() {
                     <Pencil className="h-3 w-3" />
                   </Button>
                   {magVerwijderen && (
-                    <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-destructive" onClick={() => setVerwijderTarget(g)} title="Verwijderen">
-                      <Trash2 className="h-3 w-3" />
-                    </Button>
+                    g.gearchiveerd ? (
+                      <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-green-600" onClick={() => herstellenGebruiker(g)} title="Herstellen" disabled={herstellenMutatie.isPending}>
+                        <RotateCcw className="h-3 w-3" />
+                      </Button>
+                    ) : (
+                      <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-destructive" onClick={() => setVerwijderTarget(g)} title="Archiveren">
+                        <Archive className="h-3 w-3" />
+                      </Button>
+                    )
                   )}
                 </div>
               </div>
@@ -660,7 +685,9 @@ export default function Gebruikers() {
               )}
 
               <div className="flex flex-wrap items-center gap-1 mt-1.5">
-                {!g.actief && (
+                {g.gearchiveerd ? (
+                  <Badge variant="outline" className="text-xs bg-orange-50 text-orange-700 border-orange-200 h-5 px-1.5">Gearchiveerd</Badge>
+                ) : !g.actief && (
                   <Badge variant="outline" className="text-xs bg-gray-100 text-gray-500 border-gray-200 h-5 px-1.5">Inactief</Badge>
                 )}
                 {status !== "geaccepteerd" && statusCfg.label && (
@@ -772,6 +799,19 @@ export default function Gebruikers() {
             {(!!zoek.trim() || !!filterGroep) && (
               <Button variant="ghost" size="sm" className="h-9 text-muted-foreground" onClick={() => { setZoek(""); setFilterGroep(null); }}>
                 Alles wissen
+              </Button>
+            )}
+            {isHoofd && aantalGearchiveerd > 0 && (
+              <Button
+                variant={toonGearchiveerd ? "secondary" : "outline"}
+                size="sm"
+                className="h-9 gap-1.5 ml-auto"
+                onClick={() => setToonGearchiveerd((v) => !v)}
+              >
+                <Archive className="h-3.5 w-3.5" />
+                {toonGearchiveerd
+                  ? "Verberg gearchiveerden"
+                  : `Gearchiveerd (${aantalGearchiveerd})`}
               </Button>
             )}
             {(!!zoek.trim() || !!filterGroep) && (
@@ -1091,14 +1131,14 @@ export default function Gebruikers() {
         </DialogContent>
       </Dialog>
 
-      {/* AlertDialog: verwijderen */}
+      {/* AlertDialog: archiveren */}
       <AlertDialog open={!!verwijderTarget} onOpenChange={(o) => { if (!o) setVerwijderTarget(null); }}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Gebruiker verwijderen?</AlertDialogTitle>
+            <AlertDialogTitle>Gebruiker archiveren?</AlertDialogTitle>
             <AlertDialogDescription>
-              Weet u zeker dat u <strong>{verwijderTarget?.naam}</strong> ({verwijderTarget?.email}) wilt verwijderen?
-              Dit kan niet ongedaan worden gemaakt.
+              Weet u zeker dat u <strong>{verwijderTarget?.naam}</strong> ({verwijderTarget?.email}) wilt archiveren?
+              De gebruiker kan dan niet meer inloggen. U kunt dit later ongedaan maken via de knop Herstellen.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -1107,7 +1147,7 @@ export default function Gebruikers() {
               onClick={bevestigVerwijderen}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              {verwijderGebruiker.isPending ? "Verwijderen..." : "Definitief verwijderen"}
+              {verwijderGebruiker.isPending ? "Archiveren..." : "Archiveren"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
