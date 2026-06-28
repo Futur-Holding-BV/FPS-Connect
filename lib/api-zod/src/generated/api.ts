@@ -13226,6 +13226,8 @@ export const GetVeiligheidToolboxenResponseItem = zod.object({
   "bijgewerkt_op": zod.string().optional(),
   "aangemaakt_door_naam": zod.string().nullish(),
   "afronding_count": zod.number().optional(),
+  "heeft_pdf": zod.boolean().optional(),
+  "heeft_video": zod.boolean().optional(),
   "mijn_afronding": zod.object({
   "id": zod.number(),
   "toolbox_id": zod.number(),
@@ -13295,6 +13297,8 @@ export const GetVeiligheidToolboxenIdResponse = zod.object({
   "bijgewerkt_op": zod.string().optional(),
   "aangemaakt_door_naam": zod.string().nullish(),
   "afronding_count": zod.number().optional(),
+  "heeft_pdf": zod.boolean().optional(),
+  "heeft_video": zod.boolean().optional(),
   "mijn_afronding": zod.object({
   "id": zod.number(),
   "toolbox_id": zod.number(),
@@ -13379,6 +13383,8 @@ export const PatchVeiligheidToolboxenIdResponse = zod.object({
   "bijgewerkt_op": zod.string().optional(),
   "aangemaakt_door_naam": zod.string().nullish(),
   "afronding_count": zod.number().optional(),
+  "heeft_pdf": zod.boolean().optional(),
+  "heeft_video": zod.boolean().optional(),
   "mijn_afronding": zod.object({
   "id": zod.number(),
   "toolbox_id": zod.number(),
@@ -13450,6 +13456,8 @@ export const PostVeiligheidToolboxenIdPublicerenResponse = zod.object({
   "bijgewerkt_op": zod.string().optional(),
   "aangemaakt_door_naam": zod.string().nullish(),
   "afronding_count": zod.number().optional(),
+  "heeft_pdf": zod.boolean().optional(),
+  "heeft_video": zod.boolean().optional(),
   "mijn_afronding": zod.object({
   "id": zod.number(),
   "toolbox_id": zod.number(),
@@ -13489,6 +13497,8 @@ export const PostVeiligheidToolboxenIdAiAnalyseResponse = zod.object({
   "bijgewerkt_op": zod.string().optional(),
   "aangemaakt_door_naam": zod.string().nullish(),
   "afronding_count": zod.number().optional(),
+  "heeft_pdf": zod.boolean().optional(),
+  "heeft_video": zod.boolean().optional(),
   "mijn_afronding": zod.object({
   "id": zod.number(),
   "toolbox_id": zod.number(),

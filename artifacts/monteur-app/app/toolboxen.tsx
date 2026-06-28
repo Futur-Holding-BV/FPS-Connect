@@ -383,7 +383,7 @@ function DetailModal({
                 {/* PDF knop */}
                 {heeftPdf && (
                   <Pressable
-                    onPress={() => Linking.openURL(`/api/storage${(detail as any).pdf_pad}`)}
+                    onPress={() => Linking.openURL(`https://${process.env.EXPO_PUBLIC_DOMAIN}/api/storage${(detail as any).pdf_pad}`)}
                     style={{
                       flexDirection: "row",
                       alignItems: "center",

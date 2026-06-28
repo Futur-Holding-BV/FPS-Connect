@@ -24,5 +24,7 @@ export interface VeiligheidToolbox {
   bijgewerkt_op?: string;
   aangemaakt_door_naam?: string | null;
   afronding_count?: number;
+  heeft_pdf?: boolean;
+  heeft_video?: boolean;
   mijn_afronding?: VeiligheidAfronding | null;
 }

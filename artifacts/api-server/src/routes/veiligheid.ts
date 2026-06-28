@@ -64,6 +64,8 @@ function mapToolbox(
     bijgewerkt_op: (t.bijgewerktOp as Date).toISOString(),
     aangemaakt_door_naam: extra?.aangemaaktDoorNaam ?? null,
     afronding_count: extra?.afrondingCount ?? 0,
+    heeft_pdf: !!t.pdfPad,
+    heeft_video: !!t.videoUrl,
     mijn_afronding: extra?.mijnAfronding ? mapAfronding(extra.mijnAfronding) : null,
   };
 

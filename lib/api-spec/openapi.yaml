@@ -21661,6 +21661,10 @@ components:
           nullable: true
         afronding_count:
           type: integer
+        heeft_pdf:
+          type: boolean
+        heeft_video:
+          type: boolean
         mijn_afronding:
           $ref: '#/components/schemas/VeiligheidAfronding'
           nullable: true

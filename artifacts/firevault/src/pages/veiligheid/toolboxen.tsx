@@ -33,9 +33,9 @@ import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
 import {
-  ShieldCheck, Plus, Eye, Trash2, Sparkles, Upload, FileText,
+  ShieldCheck, Plus, Trash2, Sparkles, Upload, FileText,
   CheckCircle, Clock, AlertTriangle, Loader2, ChevronRight,
-  BookOpen, Send, Users, X, Play,
+  BookOpen, Send, Users, X, Play, ExternalLink,
 } from "lucide-react";
 
 const CATEGORIEEN: { value: string; label: string }[] = [
@@ -61,6 +61,32 @@ const STATUS_KLEUR: Record<string, string> = {
   concept: "bg-amber-100 text-amber-800 border-amber-200",
   verlopen: "bg-red-100 text-red-800 border-red-200",
 };
+
+const CATEGORIE_ACCENT: Record<string, string> = {
+  brandveiligheid: "border-l-red-500",
+  werken_op_hoogte: "border-l-yellow-500",
+  pbm: "border-l-green-500",
+  elektrisch: "border-l-yellow-400",
+  bouwplaats: "border-l-orange-500",
+  gezondheid: "border-l-emerald-500",
+  milieu: "border-l-teal-500",
+  machines: "border-l-slate-400",
+  overig: "border-l-gray-300",
+};
+
+const MOEILIJKHEID_DOT: Record<string, string> = {
+  eenvoudig: "bg-emerald-500",
+  gemiddeld: "bg-amber-500",
+  gevorderd: "bg-red-500",
+};
+
+function embedVideoUrl(url: string): string | null {
+  const yt = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([A-Za-z0-9_-]+)/);
+  if (yt) return `https://www.youtube.com/embed/${yt[1]}?rel=0`;
+  const vimeo = url.match(/vimeo\.com\/(\d+)/);
+  if (vimeo) return `https://player.vimeo.com/video/${vimeo[1]}`;
+  return null;
+}
 
 function categorieLabel(cat: string) {
   return CATEGORIEEN.find((c) => c.value === cat)?.label ?? cat;
@@ -91,20 +117,32 @@ function ToolboxKaart({
   onDetail: () => void;
   onVerwijder: () => void;
 }) {
-  const mijnAfronding = (t as any).mijn_afronding;
+  const mijnAfronding = t.mijn_afronding;
   const geslaagd = mijnAfronding?.geslaagd === true;
   const afgerond = mijnAfronding != null;
+  const accentKleur = CATEGORIE_ACCENT[t.categorie] ?? "border-l-gray-300";
+  const dotKleur = MOEILIJKHEID_DOT[t.moeilijkheid] ?? "bg-gray-400";
+  const moeilijkheidLabel = MOEILIJKHEID.find((m) => m.value === t.moeilijkheid)?.label ?? t.moeilijkheid;
 
   return (
     <Card
-      className="hover:shadow-md transition-shadow cursor-pointer"
+      className={`group cursor-pointer border-l-4 ${accentKleur} transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md`}
       onClick={onDetail}
     >
       <CardContent className="p-4">
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 flex-wrap mb-1">
-              <span className="font-semibold truncate">{t.titel}</span>
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex-1 min-w-0 space-y-1.5">
+
+            {/* Rij 1: categorie + moeilijkheid */}
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-muted-foreground font-medium">{categorieLabel(t.categorie)}</span>
+              <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${dotKleur}`} />
+              <span className="text-xs text-muted-foreground">{moeilijkheidLabel}</span>
+            </div>
+
+            {/* Rij 2: titel + status-badges */}
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="font-semibold leading-snug">{t.titel}</span>
               <Badge variant="outline" className={t.gepubliceerd ? STATUS_KLEUR["gepubliceerd"] : STATUS_KLEUR["concept"]}>
                 {t.gepubliceerd
                   ? <><CheckCircle className="h-3 w-3 mr-1" />Gepubliceerd</>
@@ -117,38 +155,62 @@ function ToolboxKaart({
                 </Badge>
               )}
               {afgerond && (
-                <Badge variant="outline" className={geslaagd ? "bg-emerald-50 text-emerald-700 border-emerald-200 text-[10px]" : "bg-orange-50 text-orange-700 border-orange-200 text-[10px]"}>
+                <Badge variant="outline" className={geslaagd
+                  ? "bg-emerald-50 text-emerald-700 border-emerald-200 text-[10px]"
+                  : "bg-orange-50 text-orange-700 border-orange-200 text-[10px]"}>
                   {geslaagd ? <><CheckCircle className="h-2.5 w-2.5 mr-1" />Afgerond</> : "Niet geslaagd"}
                 </Badge>
               )}
             </div>
-            <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1">
-              <span>{categorieLabel(t.categorie)}</span>
-              {t.geschatte_leestijd && <span>{t.geschatte_leestijd} min</span>}
+
+            {/* Rij 3: media + meta */}
+            <div className="flex items-center gap-3 flex-wrap text-xs text-muted-foreground">
+              {t.heeft_pdf && (
+                <span className="flex items-center gap-1 font-medium text-amber-700">
+                  <FileText className="h-3 w-3" />
+                  PDF
+                </span>
+              )}
+              {t.heeft_video && (
+                <span className="flex items-center gap-1 font-medium text-blue-700">
+                  <Play className="h-3 w-3" />
+                  Video
+                </span>
+              )}
+              {t.geschatte_leestijd && (
+                <span className="flex items-center gap-1">
+                  <BookOpen className="h-3 w-3" />
+                  {t.geschatte_leestijd} min
+                </span>
+              )}
               {(t.afronding_count ?? 0) > 0 && (
                 <span className="flex items-center gap-1">
                   <Users className="h-3 w-3" />
                   {t.afronding_count} afgerond
                 </span>
               )}
-              {(t.ai_verwerkt_op) && (
-                <span className="flex items-center gap-1">
+              {t.ai_verwerkt_op && (
+                <span className="flex items-center gap-1 text-amber-600">
                   <Sparkles className="h-3 w-3" />
                   AI
                 </span>
               )}
             </div>
+
+            {/* Rij 4: tags */}
             {(t.tags ?? []).length > 0 && (
-              <div className="flex flex-wrap gap-1 mt-2">
-                {(t.tags as string[]).slice(0, 4).map((tag) => (
-                  <span key={tag} className="text-[10px] bg-muted px-1.5 py-0.5 rounded">{tag}</span>
+              <div className="flex flex-wrap gap-1 pt-0.5">
+                {(t.tags as string[]).slice(0, 5).map((tag) => (
+                  <span key={tag} className="text-[10px] bg-muted px-1.5 py-0.5 rounded-full">{tag}</span>
                 ))}
               </div>
             )}
           </div>
-          <div className="flex items-center gap-1 shrink-0">
-            <Button size="sm" variant="ghost" onClick={(e) => { e.stopPropagation(); onDetail(); }}>
-              <Eye className="h-4 w-4" />
+
+          {/* Knoppen */}
+          <div className="flex items-center gap-1 shrink-0 opacity-60 group-hover:opacity-100 transition-opacity duration-200">
+            <Button size="sm" variant="ghost" onClick={(e) => { e.stopPropagation(); onDetail(); }} title="Bekijken">
+              <ChevronRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5" />
             </Button>
             {kanSchrijven && (
               <Button
@@ -156,6 +218,7 @@ function ToolboxKaart({
                 variant="ghost"
                 className="text-muted-foreground hover:text-destructive"
                 onClick={(e) => { e.stopPropagation(); onVerwijder(); }}
+                title="Verwijderen"
               >
                 <Trash2 className="h-4 w-4" />
               </Button>
@@ -506,8 +569,20 @@ export default function VeiligheidToolboxenPagina() {
             </div>
           ) : detail ? (
             <Tabs defaultValue="inhoud">
-              <TabsList>
+              <TabsList className="flex-wrap h-auto gap-1">
                 <TabsTrigger value="inhoud">Inhoud</TabsTrigger>
+                {(detail as any).pdf_pad && (
+                  <TabsTrigger value="pdf" className="gap-1.5">
+                    <FileText className="h-3.5 w-3.5" />
+                    PDF
+                  </TabsTrigger>
+                )}
+                {(detail as any).video_url && (
+                  <TabsTrigger value="video" className="gap-1.5">
+                    <Play className="h-3.5 w-3.5" />
+                    Video
+                  </TabsTrigger>
+                )}
                 <TabsTrigger value="quiz">Vragen ({((detail as any).vragen ?? []).length})</TabsTrigger>
                 {kanSchrijven && <TabsTrigger value="afrondingen">Afrondingen ({(afrondingen ?? []).length})</TabsTrigger>}
                 {kanSchrijven && <TabsTrigger value="beheer">Beheer</TabsTrigger>}
@@ -578,33 +653,109 @@ export default function VeiligheidToolboxenPagina() {
                 )}
 
                 {(detail as any).pdf_pad && (
-                  <div className="flex items-center gap-2">
-                    <FileText className="h-4 w-4 text-muted-foreground" />
+                  <div className="flex items-center gap-3 rounded-lg border bg-amber-50/50 border-amber-200 px-3 py-2.5">
+                    <FileText className="h-5 w-5 text-amber-600 shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-amber-900">PDF bijgevoegd</p>
+                      <p className="text-xs text-amber-700">Bekijk via de PDF-tab of download het document</p>
+                    </div>
                     <a
                       href={`/api/storage${(detail as any).pdf_pad}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-sm text-primary hover:underline"
+                      className="text-xs text-amber-700 hover:underline shrink-0"
+                      onClick={(e) => e.stopPropagation()}
                     >
-                      PDF bekijken / downloaden
+                      Downloaden
                     </a>
                   </div>
                 )}
 
                 {(detail as any).video_url && (
-                  <div className="flex items-center gap-2">
-                    <Play className="h-4 w-4 text-muted-foreground" />
+                  <div className="flex items-center gap-3 rounded-lg border bg-blue-50/50 border-blue-200 px-3 py-2.5">
+                    <Play className="h-5 w-5 text-blue-600 shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-blue-900">Video bijgevoegd</p>
+                      <p className="text-xs text-blue-700">Bekijk de instructievideo via de Video-tab</p>
+                    </div>
+                  </div>
+                )}
+              </TabsContent>
+
+              {/* ── PDF inline viewer ── */}
+              {(detail as any).pdf_pad && (
+                <TabsContent value="pdf" className="mt-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <FileText className="h-4 w-4 text-amber-600" />
+                      <span className="text-sm font-medium">PDF Document</span>
+                    </div>
+                    <a
+                      href={`/api/storage${(detail as any).pdf_pad}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs text-primary hover:underline flex items-center gap-1"
+                    >
+                      <ExternalLink className="h-3 w-3" />
+                      Openen in nieuw tabblad
+                    </a>
+                  </div>
+                  <div className="rounded-lg overflow-hidden border bg-muted/30">
+                    <iframe
+                      src={`/api/storage${(detail as any).pdf_pad}`}
+                      className="w-full"
+                      style={{ height: "520px" }}
+                      title={`PDF: ${detail.titel}`}
+                    />
+                  </div>
+                </TabsContent>
+              )}
+
+              {/* ── Video embed ── */}
+              {(detail as any).video_url && (
+                <TabsContent value="video" className="mt-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <Play className="h-4 w-4 text-blue-600" />
+                      <span className="text-sm font-medium">Instructievideo</span>
+                    </div>
                     <a
                       href={(detail as any).video_url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-sm text-primary hover:underline"
+                      className="text-xs text-primary hover:underline flex items-center gap-1"
                     >
-                      Video bekijken
+                      <ExternalLink className="h-3 w-3" />
+                      Openen in nieuw tabblad
                     </a>
                   </div>
-                )}
-              </TabsContent>
+                  {(() => {
+                    const embed = embedVideoUrl((detail as any).video_url);
+                    return embed ? (
+                      <div className="rounded-lg overflow-hidden border aspect-video">
+                        <iframe
+                          src={embed}
+                          className="w-full h-full"
+                          title={`Video: ${detail.titel}`}
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                          allowFullScreen
+                        />
+                      </div>
+                    ) : (
+                      <div className="rounded-lg overflow-hidden border bg-black">
+                        <video
+                          src={(detail as any).video_url}
+                          controls
+                          className="w-full"
+                          style={{ maxHeight: "480px" }}
+                        >
+                          Uw browser ondersteunt geen HTML5 video.
+                        </video>
+                      </div>
+                    );
+                  })()}
+                </TabsContent>
+              )}
 
               <TabsContent value="quiz" className="space-y-3 mt-4">
                 {((detail as any).vragen ?? []).length === 0 ? (
