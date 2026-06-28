@@ -4,6 +4,7 @@ import { SlimUploadBalk } from "@/components/slim-upload-balk";
 import { useTranslation } from "react-i18next";
 import { useListChatGesprekken } from "@workspace/api-client-react";
 import { BerichtNotificatieToast } from "@/components/bericht-notificatie-toast";
+import { NieuwsTicker } from "@/components/nieuws-ticker";
 import {
   SidebarProvider, Sidebar, SidebarHeader, SidebarContent, SidebarFooter,
   SidebarGroup, SidebarGroupLabel, SidebarGroupContent,
@@ -1250,6 +1251,7 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
       </main>
       <BerichtNotificatieToast />
       <SlimUploadBalk />
+      <NieuwsTicker />
     </SidebarProvider>
   );
 }

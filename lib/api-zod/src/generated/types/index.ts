@@ -370,6 +370,7 @@ export * from './muisGebeurtenis';
 export * from './muisGebeurtenisBatch';
 export * from './nacalculatieRegel';
 export * from './nationaalMaandpunt';
+export * from './nieuwsItem';
 export * from './offboardInput';
 export * from './offboardSamenvatting';
 export * from './offboardSamenvattingCertificatenBijnaVerlopenItem';

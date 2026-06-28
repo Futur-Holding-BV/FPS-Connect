@@ -17206,3 +17206,16 @@ export const LaadBrandstofImportResponse = zod.object({
 })
 
 
+/**
+ * @summary Externe nieuwsflitsen ophalen (gecached 30 min)
+ */
+export const ListNieuwsResponseItem = zod.object({
+  "titel": zod.string(),
+  "url": zod.string(),
+  "bron": zod.string(),
+  "gepubliceerd": zod.string(),
+  "beschrijving": zod.string().nullish()
+})
+export const ListNieuwsResponse = zod.array(ListNieuwsResponseItem)
+
+

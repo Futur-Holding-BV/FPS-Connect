@@ -13765,8 +13765,37 @@ paths:
         '401': { description: Niet ingelogd }
         '403': { description: Geen toegang }
 
+  /nieuws:
+    get:
+      tags: [Nieuws]
+      summary: Externe nieuwsflitsen ophalen (gecached 30 min)
+      operationId: listNieuws
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Lijst nieuwsitems uit Nederlandse RSS-bronnen
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/NieuwsItem'
+        '401': { description: Niet ingelogd }
+
 components:
   schemas:
+    NieuwsItem:
+      type: object
+      required: [titel, url, bron, gepubliceerd]
+      properties:
+        titel:        { type: string }
+        url:          { type: string }
+        bron:         { type: string }
+        gepubliceerd: { type: string }
+        beschrijving: { type: string, nullable: true }
+
     OnlineGebruiker:
       type: object
       required: [naam, initialen, rol]

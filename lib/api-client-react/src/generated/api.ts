@@ -315,6 +315,7 @@ import type {
   MuisGebeurtenis,
   MuisGebeurtenisBatch,
   NacalculatieRegel,
+  NieuwsItem,
   OffboardInput,
   OffboardSamenvatting,
   Offerte,
@@ -49562,4 +49563,81 @@ export const useLaadBrandstofImport = <TError = ErrorType<void>,
       > => {
       return useMutation(getLaadBrandstofImportMutationOptions(options));
     }
+
+export const getListNieuwsUrl = () => {
+
+
+
+
+  return `/api/nieuws`
+}
+
+/**
+ * @summary Externe nieuwsflitsen ophalen (gecached 30 min)
+ */
+export const listNieuws = async ( options?: RequestInit): Promise<NieuwsItem[]> => {
+
+  return customFetch<NieuwsItem[]>(getListNieuwsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListNieuwsQueryKey = () => {
+    return [
+    `/api/nieuws`
+    ] as const;
+    }
+
+
+export const getListNieuwsQueryOptions = <TData = Awaited<ReturnType<typeof listNieuws>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listNieuws>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListNieuwsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listNieuws>>> = ({ signal }) => listNieuws({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listNieuws>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListNieuwsQueryResult = NonNullable<Awaited<ReturnType<typeof listNieuws>>>
+export type ListNieuwsQueryError = ErrorType<void>
+
+
+/**
+ * @summary Externe nieuwsflitsen ophalen (gecached 30 min)
+ */
+
+export function useListNieuws<TData = Awaited<ReturnType<typeof listNieuws>>, TError = ErrorType<void>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listNieuws>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListNieuwsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
 

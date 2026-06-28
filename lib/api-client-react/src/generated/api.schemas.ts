@@ -5,6 +5,14 @@
  * FPS Brandpreventie - Platform voor brandpreventieve gebouwvoorzieningen
  * OpenAPI spec version: 0.1.0
  */
+export interface NieuwsItem {
+  titel: string;
+  url: string;
+  bron: string;
+  gepubliceerd: string;
+  beschrijving?: string | null;
+}
+
 export interface OnlineGebruiker {
   naam: string;
   /** @maxLength 3 */
