@@ -49,14 +49,15 @@ export default function ModulesCalculatieNieuw() {
       setForm((f) => ({ ...f, klant_naam: "" }));
       return;
     }
-    const gebouw = gebouwen.find((g) => String(g.id) === form.gebouw_id);
+    const lijst = Array.isArray(gebouwenData) ? gebouwenData : [];
+    const gebouw = lijst.find((g) => String(g.id) === form.gebouw_id);
     if (!gebouw) return;
     const partijen = (gebouw as any).partijen as { type: string; naam: string }[] | undefined;
     const opdrachtgever = partijen?.find((p) => p.type === "opdrachtgever");
     if (opdrachtgever) {
       setForm((f) => ({ ...f, klant_naam: opdrachtgever.naam }));
     }
-  }, [form.gebouw_id, gebouwen, klantNaamHandmatig]);
+  }, [form.gebouw_id, gebouwenData, klantNaamHandmatig]);
 
   const createMut = useCreateModCalculatie({
     mutation: {
