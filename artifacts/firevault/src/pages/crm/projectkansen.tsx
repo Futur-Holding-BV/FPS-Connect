@@ -20,7 +20,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
-import { Target, Plus, ArrowLeft, TrendingUp, Calendar, User } from "lucide-react";
+import { Target, Plus, ArrowLeft, TrendingUp, Calendar, User, Sparkles } from "lucide-react";
+import { CrmCoachPanel } from "@/components/crm-coach-panel";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 
 const FASEN = [
   { value: "signaal", label: "Signaal", kleur: "bg-slate-100 text-slate-700 border-slate-200" },
@@ -112,6 +114,21 @@ export default function ProjectkansenPagina() {
         <Button onClick={() => setNieuwOpen(true)} size="sm" className="gap-1">
           <Plus className="w-4 h-4" /> Projectkans toevoegen
         </Button>
+        <Sheet>
+          <SheetTrigger asChild>
+            <Button variant="outline" size="sm" className="gap-1.5">
+              <Sparkles className="w-4 h-4" /> Coach
+            </Button>
+          </SheetTrigger>
+          <SheetContent className="w-80 overflow-y-auto">
+            <SheetHeader>
+              <SheetTitle>AI Business Coach</SheetTitle>
+            </SheetHeader>
+            <div className="mt-6">
+              <CrmCoachPanel scherm="projectkansen" context={{ kansen_totaal: gefilterd.length, gewogen_pijplijn: totaalGewogen }} />
+            </div>
+          </SheetContent>
+        </Sheet>
       </div>
 
       {/* Fase filters */}

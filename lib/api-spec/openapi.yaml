@@ -5216,6 +5216,34 @@ paths:
                   error:
                     type: string
 
+  /crm/ai-coach:
+    post:
+      operationId: getCrmAiCoach
+      tags: [crm]
+      summary: AI Business Coach voor CRM-schermen
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CrmCoachInput"
+      responses:
+        "200":
+          description: Coaching van de AI
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CrmCoachAntwoord"
+        "503":
+          description: AI niet beschikbaar
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+
   /crm/marktintelligentie/{id}:
     patch:
       operationId: updateCrmMarktintelligentie
@@ -13888,6 +13916,35 @@ components:
           type: string
         datum:
           type: string
+
+    CrmCoachInput:
+      type: object
+      required: [scherm]
+      properties:
+        scherm:
+          type: string
+        klant_id:
+          type: ["integer", "null"]
+        context:
+          type: object
+          additionalProperties: {}
+
+    CrmCoachAntwoord:
+      type: object
+      required: [waarom, advies, ontbreekt]
+      properties:
+        waarom:
+          type: string
+        ontbreekt:
+          type: array
+          items:
+            type: string
+        advies:
+          type: string
+        effect:
+          type: ["string", "null"]
+        kennisblok:
+          type: ["string", "null"]
 
     # ── INBOX ──────────────────────────────────────────────────────────────
     InboxStats:

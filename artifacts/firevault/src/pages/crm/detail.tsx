@@ -48,8 +48,10 @@ import { useToast } from "@/hooks/use-toast";
 import { useRol } from "@/context/rol-context";
 import {
   ArrowLeft, Building2, Plus, Trash2, Phone, Mail, Smartphone, Star,
-  Lock, Briefcase, MessageSquare, TrendingUp, Euro, Users,
+  Lock, Briefcase, MessageSquare, TrendingUp, Euro, Users, Sparkles, Circle,
 } from "lucide-react";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { CrmCoachPanel } from "@/components/crm-coach-panel";
 
 const GEEN_GEBOUW = "geen";
 
@@ -62,6 +64,72 @@ function datum(s: string | null | undefined): string {
   if (!s) return "—";
   const d = new Date(s);
   return Number.isNaN(d.getTime()) ? s : d.toLocaleDateString("nl-NL");
+}
+
+const BESLISROL_LABELS: Record<string, string> = {
+  beslisser: "Beslisser",
+  beinvloeder: "Beinvloeder",
+  inkoper: "Inkoper",
+  technisch_adviseur: "Technisch adviseur",
+  gebruiker: "Gebruiker",
+};
+
+const BESLISROL_KLEUR: Record<string, string> = {
+  beslisser: "border-red-200 bg-red-50",
+  beinvloeder: "border-orange-200 bg-orange-50",
+  inkoper: "border-yellow-200 bg-yellow-50",
+  technisch_adviseur: "border-blue-200 bg-blue-50",
+  gebruiker: "border-slate-200 bg-slate-50",
+};
+
+function RelatieKaart({ klantId }: { klantId: number }) {
+  const { data: contacten = [], isLoading } = useListCrmContactpersonen(klantId);
+  if (isLoading || contacten.length === 0) return null;
+
+  const gegroepeerd: Record<string, typeof contacten> = {};
+  for (const c of contacten) {
+    const rol = (c.beslisrol as string | null) ?? "gebruiker";
+    if (!gegroepeerd[rol]) gegroepeerd[rol] = [];
+    gegroepeerd[rol].push(c);
+  }
+
+  const volgorde = ["beslisser", "inkoper", "technisch_adviseur", "beinvloeder", "gebruiker"];
+  const aanwezigeRollen = volgorde.filter(r => gegroepeerd[r]?.length);
+
+  return (
+    <div className="space-y-2">
+      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Contactnetwerk</p>
+      <div className="flex flex-wrap gap-2">
+        {aanwezigeRollen.flatMap(rol =>
+          gegroepeerd[rol].map(c => {
+            const sterkte = (c.relatiesterkte as number | null) ?? 1;
+            const kleur = BESLISROL_KLEUR[rol] ?? "border-slate-200 bg-slate-50";
+            return (
+              <div
+                key={c.id}
+                className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-sm ${kleur}`}
+              >
+                <div className="flex gap-0.5">
+                  {[1, 2, 3].map(i => (
+                    <Circle
+                      key={i}
+                      className={`h-2 w-2 ${i <= sterkte ? "fill-current opacity-70" : "opacity-20"}`}
+                    />
+                  ))}
+                </div>
+                <div className="min-w-0">
+                  <span className="font-medium truncate block max-w-32">{c.naam}</span>
+                  <span className="text-[10px] text-muted-foreground">
+                    {BESLISROL_LABELS[rol] ?? rol}{c.functie ? ` · ${c.functie}` : ""}
+                  </span>
+                </div>
+              </div>
+            );
+          })
+        )}
+      </div>
+    </div>
+  );
 }
 
 export default function CrmKlantDetail() {
@@ -118,9 +186,28 @@ export default function CrmKlantDetail() {
             {klant.telefoon && <span className="flex items-center gap-1"><Phone className="h-3 w-3" />{klant.telefoon}</span>}
             {klant.email && <span className="flex items-center gap-1"><Mail className="h-3 w-3" />{klant.email}</span>}
           </div>
-          <Badge variant="outline">{klant.status}</Badge>
+          <div className="flex flex-wrap gap-2 mt-1">
+            <Badge variant="outline">{klant.status}</Badge>
+            <Sheet>
+              <SheetTrigger asChild>
+                <button className="inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-xs font-medium hover:bg-accent transition-colors">
+                  <Sparkles className="h-3 w-3" /> Coach
+                </button>
+              </SheetTrigger>
+              <SheetContent className="w-80 overflow-y-auto">
+                <SheetHeader>
+                  <SheetTitle>AI Business Coach</SheetTitle>
+                </SheetHeader>
+                <div className="mt-6">
+                  <CrmCoachPanel scherm="organisatie_detail" klantId={klantId} />
+                </div>
+              </SheetContent>
+            </Sheet>
+          </div>
         </div>
       </div>
+
+      <RelatieKaart klantId={klantId} />
 
       <Tabs defaultValue="contactpersonen">
         <TabsList className="flex-wrap h-auto">

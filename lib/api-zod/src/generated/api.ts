@@ -6320,6 +6320,24 @@ export const ScanCrmMarktintelligentieAiResponse = zod.array(ScanCrmMarktintelli
 
 
 /**
+ * @summary AI Business Coach voor CRM-schermen
+ */
+export const GetCrmAiCoachBody = zod.object({
+  "scherm": zod.string(),
+  "klant_id": zod.number().nullish(),
+  "context": zod.record(zod.string(), zod.unknown()).optional()
+})
+
+export const GetCrmAiCoachResponse = zod.object({
+  "waarom": zod.string(),
+  "ontbreekt": zod.array(zod.string()),
+  "advies": zod.string(),
+  "effect": zod.string().nullish(),
+  "kennisblok": zod.string().nullish()
+})
+
+
+/**
  * @summary Marktinformatie bijwerken
  */
 export const UpdateCrmMarktintelligentieParams = zod.object({

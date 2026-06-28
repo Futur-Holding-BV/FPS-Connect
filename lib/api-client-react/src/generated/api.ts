@@ -76,6 +76,8 @@ import type {
   CodeInput,
   ConstructieTemplate,
   ConstructieTemplateInput,
+  CrmCoachAntwoord,
+  CrmCoachInput,
   CrmCommercieel,
   CrmCommercieelInput,
   CrmCommunicatie,
@@ -166,6 +168,7 @@ import type {
   GetBoekhouderDashboardParams,
   GetBoekhouderUploadsParams,
   GetCapaciteitBezettingParams,
+  GetCrmAiCoach503,
   GetFactuurUploadUrl200,
   GetGebouwGevelbeeld200,
   GetLoonOutputParams,
@@ -18224,6 +18227,76 @@ export const useScanCrmMarktintelligentieAi = <TError = ErrorType<ScanCrmMarktin
         TContext
       > => {
       return useMutation(getScanCrmMarktintelligentieAiMutationOptions(options));
+    }
+
+export const getGetCrmAiCoachUrl = () => {
+
+
+
+
+  return `/api/crm/ai-coach`
+}
+
+/**
+ * @summary AI Business Coach voor CRM-schermen
+ */
+export const getCrmAiCoach = async (crmCoachInput: CrmCoachInput, options?: RequestInit): Promise<CrmCoachAntwoord> => {
+
+  return customFetch<CrmCoachAntwoord>(getGetCrmAiCoachUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(crmCoachInput)
+  }
+);}
+
+
+
+
+export const getGetCrmAiCoachMutationOptions = <TError = ErrorType<GetCrmAiCoach503>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof getCrmAiCoach>>, TError,{data: BodyType<CrmCoachInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof getCrmAiCoach>>, TError,{data: BodyType<CrmCoachInput>}, TContext> => {
+
+const mutationKey = ['getCrmAiCoach'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof getCrmAiCoach>>, {data: BodyType<CrmCoachInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  getCrmAiCoach(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type GetCrmAiCoachMutationResult = NonNullable<Awaited<ReturnType<typeof getCrmAiCoach>>>
+    export type GetCrmAiCoachMutationBody = BodyType<CrmCoachInput>
+    export type GetCrmAiCoachMutationError = ErrorType<GetCrmAiCoach503>
+
+    /**
+ * @summary AI Business Coach voor CRM-schermen
+ */
+export const useGetCrmAiCoach = <TError = ErrorType<GetCrmAiCoach503>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof getCrmAiCoach>>, TError,{data: BodyType<CrmCoachInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof getCrmAiCoach>>,
+        TError,
+        {data: BodyType<CrmCoachInput>},
+        TContext
+      > => {
+      return useMutation(getGetCrmAiCoachMutationOptions(options));
     }
 
 export const getUpdateCrmMarktintelligentieUrl = (id: number,) => {

@@ -610,4 +610,132 @@ router.post("/crm/klanten/:id/communicatie", schrijven, async (req, res) => {
   }
 });
 
+// ── AI COACH ──────────────────────────────────────────────────────────────────
+router.post("/crm/ai-coach", lezen, async (req, res) => {
+  const { scherm, klant_id, context: extraContext } = req.body as {
+    scherm?: string;
+    klant_id?: number | null;
+    context?: Record<string, unknown>;
+  };
+
+  if (!scherm) return res.status(400).json({ error: "scherm is verplicht" });
+
+  let orgContext = "";
+
+  if (klant_id) {
+    try {
+      const [klant] = await db.select().from(crmKlantenTable).where(eq(crmKlantenTable.id, parseId(klant_id))).limit(1);
+      if (klant) {
+        const contacten = await db.select().from(crmContactpersonenTable).where(eq(crmContactpersonenTable.klantId, parseId(klant_id)));
+        const kansen = await db.select().from(crmCommercieelTable).where(eq(crmCommercieelTable.klantId, parseId(klant_id)));
+        const communicatie = await db.select().from(crmCommunicatieTable)
+          .where(eq(crmCommunicatieTable.klantId, parseId(klant_id)))
+          .orderBy(desc(crmCommunicatieTable.aangemaaktOp))
+          .limit(3);
+
+        const beslissers = contacten.filter(c => c.beslisrol === "beslisser").map(c => c.naam);
+        const inkopers = contacten.filter(c => c.beslisrol === "inkoper").map(c => c.naam);
+        const technici = contacten.filter(c => c.beslisrol === "technisch_adviseur").map(c => c.naam);
+        const openKansen = kansen.filter(k => !["gewonnen", "verloren"].includes(k.fase ?? ""));
+        const recentContact = communicatie[0];
+
+        orgContext = `
+Organisatie: ${klant.naam}
+Type: ${klant.type ?? "onbekend"}
+Status: ${klant.status} | Relatie: ${klant.relatieStatus ?? "onbekend"}
+Stad: ${klant.stad ?? "onbekend"} | Regio: ${klant.regio ?? "onbekend"}
+Contactpersonen (${contacten.length}):
+  - Beslissers: ${beslissers.join(", ") || "geen geregistreerd"}
+  - Inkopers: ${inkopers.join(", ") || "geen geregistreerd"}
+  - Technisch adviseurs: ${technici.join(", ") || "geen geregistreerd"}
+Open kansen: ${openKansen.length} (fases: ${openKansen.map(k => k.fase).join(", ") || "geen"})
+Meest recente communicatie: ${recentContact ? `${recentContact.type} op ${recentContact.datum}` : "geen geregistreerd"}
+Opmerkingen: ${klant.opmerkingen ?? "geen"}
+`.trim();
+      }
+    } catch (e) {
+      req.log.warn({ err: e }, "Kon organisatiecontext niet laden voor AI Coach");
+    }
+  }
+
+  const schermUitleg: Record<string, string> = {
+    dashboard: "overzicht van alle relaties, kansen en actiepunten",
+    organisatie_overzicht: "lijst van alle organisaties (klanten, prospects en partners)",
+    organisatie_detail: "detailpagina van een specifieke organisatie",
+    projectkansen: "commerciële pipeline met alle lopende trajecten",
+    contactpersonen: "overzicht van alle contactpersonen",
+    concurrenten: "concurrentieanalyse met sterktes en zwaktes",
+    marktintelligentie: "marktinformatie, nieuws en signalen",
+    kennisbibliotheek: "commerciële kennisbibliotheek van FPS",
+  };
+
+  const fallback = {
+    waarom: `Je bekijkt het ${schermUitleg[scherm] ?? scherm} binnen FPS Connect CRM.`,
+    ontbreekt: [] as string[],
+    advies: "Houd klantgegevens actueel en noteer elke interactie. Elk contactmoment is een kans om de relatie te versterken.",
+    effect: null as string | null,
+    kennisblok: "Vraag bij woningcorporaties altijd naar het MJOP (meerjaren onderhoudsplan). Daarin staan alle geplande renovaties en onderhoudsprojecten voor de komende jaren.",
+  };
+
+  if (!heeftOpenAi()) {
+    return res.json(fallback);
+  }
+
+  const client = maakOpenAiClient();
+
+  const systeemPrompt = `Je bent een ervaren commercieel coach voor FPS Brandpreventie, een bedrijf dat brandpreventieve voorzieningen (branddeur, doorvoering, manchet, coating, brandklep) installeert en onderhoudt.
+
+Klanten van FPS: woningcorporaties, VvE-beheerders, aannemers, zorginstellingen, gemeenten, vastgoedbeheerders.
+FPS-diensten: brandpreventie, opname, RGA, droge blusleiding, bouwkundig herstel, onderhoudscontract.
+
+Cruciale FPS-commerciële kennis:
+- Bij woningcorporaties: altijd vragen naar het MJOP (meerjaren onderhoudsplan) — dat onthult toekomstige projecten
+- Eerst vertrouwen opbouwen, daarna pas verkopen — zeker bij corporaties en zorginstellingen
+- Beslissingshiërarchie: opzichter (technisch) → inkoper (commercieel) → directie/RvB (strategisch)
+- Na een offerte altijd bellen na één week — niet e-mailen
+- Key accounts minimaal één keer per kwartaal persoonlijk bezoeken
+- Een ontbrekende beslisser in de contactenlijst is een risico voor de deal
+- Bij gemeenten: aanbestedingen zijn leidend — tijdig signaleren is essentieel
+
+Geef coaching als JSON met precies deze velden:
+- waarom: 2-3 zinnen over waarom de gebruiker dit scherm bekijkt en wat het doel is
+- ontbreekt: array van max 3 concrete dingen die ontbreken of verbeterd kunnen worden (lege array als er niets ontbreekt)
+- advies: 1-3 zinnen concrete actie die nu uitgevoerd moet worden (specifiek voor de situatie)
+- effect: 1-2 zinnen over het verwachte resultaat van het advies (of null)
+- kennisblok: één praktische FPS-kennistip (of null)
+
+Wees specifiek en concreet. Geen generieke CRM-teksten. Altijd in het Nederlands.`;
+
+  const gebruikerPrompt = `Huidig scherm: ${scherm} (${schermUitleg[scherm] ?? scherm})
+${orgContext ? `\nOrganisatiecontext:\n${orgContext}` : ""}
+${extraContext ? `\nExtra informatie: ${JSON.stringify(extraContext)}` : ""}
+
+Geef coaching voor deze gebruiker.`;
+
+  try {
+    const completion = await client.chat.completions.create({
+      model: "gpt-4o",
+      response_format: { type: "json_object" },
+      messages: [
+        { role: "system", content: systeemPrompt },
+        { role: "user", content: gebruikerPrompt },
+      ],
+      max_tokens: 900,
+    });
+    const tekst = completion.choices[0]?.message?.content ?? "{}";
+    let parsed: Record<string, unknown> = {};
+    try { parsed = JSON.parse(tekst); } catch { /* gebruik fallback */ }
+    res.json({
+      waarom: (parsed.waarom as string) || fallback.waarom,
+      ontbreekt: (parsed.ontbreekt as string[]) || [],
+      advies: (parsed.advies as string) || fallback.advies,
+      effect: (parsed.effect as string | null) ?? null,
+      kennisblok: (parsed.kennisblok as string | null) ?? null,
+    });
+  } catch (err) {
+    req.log.error({ err }, "CRM AI Coach fout");
+    res.status(503).json({ error: "AI niet beschikbaar" });
+  }
+});
+
 export default router;

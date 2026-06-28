@@ -411,6 +411,25 @@ export interface CrmMarktintelligentieInput {
   datum?: string;
 }
 
+export type CrmCoachInputContext = {[key: string]: unknown};
+
+export interface CrmCoachInput {
+  scherm: string;
+  /** @nullable */
+  klant_id?: number | null;
+  context?: CrmCoachInputContext;
+}
+
+export interface CrmCoachAntwoord {
+  waarom: string;
+  ontbreekt: string[];
+  advies: string;
+  /** @nullable */
+  effect?: string | null;
+  /** @nullable */
+  kennisblok?: string | null;
+}
+
 export interface InboxStats {
   totaal: number;
   nieuw: number;
@@ -6904,6 +6923,10 @@ klant_id?: number;
 };
 
 export type ScanCrmMarktintelligentieAi503 = {
+  error?: string;
+};
+
+export type GetCrmAiCoach503 = {
   error?: string;
 };
 
