@@ -464,6 +464,29 @@ export default function PersoneelPagina() {
     setFunctieOpen(true);
   }
 
+  async function markeerAlsBuitendienst() {
+    const functie = (functies ?? []).find((f) => f.id === onboardForm.functie_id);
+    if (!functie) return;
+    try {
+      await wijzigFunctie.mutateAsync({
+        id: functie.id,
+        data: {
+          naam: functie.naam,
+          werkmaatschappij: functie.werkmaatschappij,
+          omschrijving: functie.omschrijving ?? undefined,
+          uitvoerend: true,
+        },
+      });
+      await queryClient.invalidateQueries({ queryKey: getListFunctiesQueryKey() });
+      toast({
+        title: "Functie bijgewerkt",
+        description: `${functie.naam} is gemarkeerd als buitendienst en verschijnt nu in de planning.`,
+      });
+    } catch {
+      toast({ title: "Bijwerken mislukt", variant: "destructive" });
+    }
+  }
+
   function startOpleidingNieuw() {
     setOpleidingBewerkenId(null);
     setOpleidingForm({ naam: "", categorie: "vakopleiding", soort: "cursus" });
@@ -1578,6 +1601,24 @@ export default function PersoneelPagina() {
                         <span className="inline-block h-2 w-2 rounded-full bg-primary" />
                         Zichtbaar in de planning (buitendienst)
                       </p>
+                    ) : ["zzp", "uitzend", "inhuur"].includes(onboardForm.dienstverband ?? "") ? (
+                      <div className="mt-1.5 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+                        <p className="flex items-center gap-1.5 font-medium">
+                          <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+                          Functie staat niet als buitendienst geregistreerd
+                        </p>
+                        <p className="mt-0.5 text-amber-800">
+                          ZZP / uitzend / inhuur medewerkers voeren doorgaans veldwerk uit. Klik hieronder om de functie als uitvoerend te markeren zodat deze medewerker in de planning verschijnt.
+                        </p>
+                        <button
+                          type="button"
+                          className="mt-1.5 font-medium underline underline-offset-2 hover:text-amber-950 disabled:opacity-50"
+                          disabled={wijzigFunctie.isPending}
+                          onClick={markeerAlsBuitendienst}
+                        >
+                          {wijzigFunctie.isPending ? "Bezig…" : "Markeer als buitendienst"}
+                        </button>
+                      </div>
                     ) : (
                       <p className="flex items-center gap-1.5 text-xs text-muted-foreground mt-1">
                         <span className="inline-block h-2 w-2 rounded-full bg-slate-300" />

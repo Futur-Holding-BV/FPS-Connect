@@ -13,7 +13,7 @@ import {
   planningMeerwerkTable,
   urenRegistratiesTable,
 } from "@workspace/db";
-import { eq, and, gte, lte, desc, asc, inArray, sql, isNull, type SQL } from "drizzle-orm";
+import { eq, and, gte, lte, desc, asc, inArray, sql, isNull, or, type SQL } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
 
 const router = Router();
@@ -64,7 +64,16 @@ router.get("/modules/planning/medewerkers", lezenPlanning, async (req, res) => {
     const alleenUitvoerend = req.query.alleen_uitvoerend === "true";
 
     const conditions: SQL[] = [eq(medewerkersTable.actief, true)];
-    if (alleenUitvoerend) conditions.push(eq(functiesTable.uitvoerend, true));
+    if (alleenUitvoerend) {
+      // Uitvoerende medewerkers = functie.uitvoerend = true,
+      // PLUS altijd: zzp / uitzend / inhuur / onderaannemer (zijn in deze branche veldwerkers)
+      conditions.push(
+        or(
+          eq(functiesTable.uitvoerend, true),
+          inArray(medewerkersTable.dienstverband, ["zzp", "uitzend", "inhuur", "onderaannemer"]),
+        )!,
+      );
+    }
     if (wmFilter) conditions.push(eq(medewerkersTable.werkmaatschappij, wmFilter));
     if (dvFilter) conditions.push(eq(medewerkersTable.dienstverband, dvFilter));
 
