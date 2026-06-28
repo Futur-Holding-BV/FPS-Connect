@@ -54,6 +54,7 @@ import salarisMutatiesRouter from "./salaris-mutaties";
 import scabMailRouter from "./scab-mail";
 import boekhouderRouter from "./boekhouder";
 import loonOutputRouter from "./loon-output";
+import slimUploadRouter from "./slim-upload";
 import { requireAuth } from "../middlewares/auth";
 
 const router: IRouter = Router();
@@ -117,5 +118,6 @@ router.use(salarisMutatiesRouter);
 router.use(scabMailRouter);
 router.use(boekhouderRouter);
 router.use(loonOutputRouter);
+router.use(slimUploadRouter);
 
 export default router;

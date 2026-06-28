@@ -1,5 +1,6 @@
 import { Link, useLocation } from "wouter";
 import { useState, useEffect } from "react";
+import { SlimUploadBalk } from "@/components/slim-upload-balk";
 import { useTranslation } from "react-i18next";
 import { useListChatGesprekken } from "@workspace/api-client-react";
 import { BerichtNotificatieToast } from "@/components/bericht-notificatie-toast";
@@ -1071,11 +1072,12 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
           <SidebarTrigger title="Menu openen" />
           <img src="/logo-fps-connect.png" alt="FPS Connect" className="h-6 w-auto" />
         </div>
-        <div className="p-3 md:p-4 xl:p-6">
+        <div className="p-3 md:p-4 xl:p-6 pb-10">
           {children}
         </div>
       </main>
       <BerichtNotificatieToast />
+      <SlimUploadBalk />
     </SidebarProvider>
   );
 }
