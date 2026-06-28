@@ -290,7 +290,7 @@ export default function WelkomWizard() {
 
           {/* ── Stap 2: Eerste gebouw ── */}
           {huidigeStap.id === "gebouw" && (
-            <div className="bg-white rounded-2xl shadow-2xl p-8 space-y-6">
+            <div className="bg-white rounded-2xl shadow-2xl p-8 space-y-6 text-slate-900 [color-scheme:light]">
               <div>
                 <div className="inline-flex items-center gap-2 text-primary text-sm font-semibold mb-1">
                   <Building2 className="w-4 h-4" />
@@ -374,7 +374,7 @@ export default function WelkomWizard() {
 
           {/* ── Stap 3: Verdieping ── */}
           {huidigeStap.id === "verdieping" && (
-            <div className="bg-white rounded-2xl shadow-2xl p-8 space-y-6">
+            <div className="bg-white rounded-2xl shadow-2xl p-8 space-y-6 text-slate-900 [color-scheme:light]">
               <div>
                 <div className="inline-flex items-center gap-2 text-primary text-sm font-semibold mb-1">
                   <Layers className="w-4 h-4" />
@@ -450,7 +450,7 @@ export default function WelkomWizard() {
 
           {/* ── Stap 4: Teamlid uitnodigen (optioneel) ── */}
           {huidigeStap.id === "teamlid" && (
-            <div className="bg-white rounded-2xl shadow-2xl p-8 space-y-6">
+            <div className="bg-white rounded-2xl shadow-2xl p-8 space-y-6 text-slate-900 [color-scheme:light]">
               <div>
                 <div className="inline-flex items-center gap-2 text-primary text-sm font-semibold mb-1">
                   <Users className="w-4 h-4" />
