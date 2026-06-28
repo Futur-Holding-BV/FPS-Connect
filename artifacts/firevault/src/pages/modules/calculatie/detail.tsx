@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { useRoute, useLocation } from "wouter";
 import {
   useGetModCalculatie,
@@ -34,11 +34,13 @@ import { Separator } from "@/components/ui/separator";
 import {
   ArrowLeft, Plus, Pencil, Trash2, Copy, ChevronRight, FileText,
   LayoutList, Users, Eye, Sparkles, Wrench, CheckCircle2, X,
-  Printer, History, Save,
+  Printer, History, Save, MoreHorizontal,
 } from "lucide-react";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+
+// ─── Constanten ─────────────────────────────────────────────────────────────
 
 const STATUS_LABEL: Record<string, string> = {
   concept: "Concept",
@@ -65,13 +67,13 @@ const STATUS_WORKFLOW: Record<string, string[]> = {
 };
 
 const KOSTENSOORT_OPTIES = [
-  { value: "arbeid",        label: "Arbeid" },
-  { value: "materiaal",     label: "Materiaal" },
-  { value: "materieel",     label: "Materieel" },
-  { value: "onderaanneming",label: "Onderaanneming" },
-  { value: "opslag",        label: "Opslag / toeslag" },
-  { value: "stelpost",      label: "Stelpost" },
-  { value: "regiepost",     label: "Regiepost" },
+  { value: "arbeid",         label: "Arbeid" },
+  { value: "materiaal",      label: "Materiaal" },
+  { value: "materieel",      label: "Materieel" },
+  { value: "onderaanneming", label: "Onderaanneming" },
+  { value: "opslag",         label: "Opslag / toeslag" },
+  { value: "stelpost",       label: "Stelpost" },
+  { value: "regiepost",      label: "Regiepost" },
 ];
 
 const CATEGORIE_LABEL: Record<string, string> = {
@@ -86,31 +88,24 @@ const CATEGORIE_LABEL: Record<string, string> = {
 };
 
 const CATEGORIE_KLEUR: Record<string, string> = {
-  arbeid: "bg-blue-50 text-blue-700",
-  materiaal: "bg-green-50 text-green-700",
+  arbeid:         "bg-blue-50 text-blue-700",
+  materiaal:      "bg-green-50 text-green-700",
   onderaanneming: "bg-purple-50 text-purple-700",
-  materieel: "bg-orange-50 text-orange-700",
-  opslag: "bg-amber-50 text-amber-700",
-  stelpost: "bg-cyan-50 text-cyan-700",
-  regiepost: "bg-pink-50 text-pink-700",
-  overig: "bg-slate-50 text-slate-600",
+  materieel:      "bg-orange-50 text-orange-700",
+  opslag:         "bg-amber-50 text-amber-700",
+  stelpost:       "bg-cyan-50 text-cyan-700",
+  regiepost:      "bg-pink-50 text-pink-700",
+  overig:         "bg-slate-50 text-slate-600",
 };
 
 const EENHEDEN = ["st", "pst", "m1", "m2", "m3", "uur", "dag", "week", "lump_sum"];
 
-function formatBedrag(n: number | null | undefined) {
-  if (n == null) return "—";
-  return new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR" }).format(n);
-}
-
-function formatBedragKort(n: number) {
-  return new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR", minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(n);
-}
-
-function fmt2(n: number) {
-  if (n === 0) return "—";
-  return new Intl.NumberFormat("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n);
-}
+const BTW_OPTIES = [
+  { value: "21",      label: "21%" },
+  { value: "9",       label: "9%" },
+  { value: "verlegd", label: "Verlegd" },
+  { value: "0",       label: "0%" },
+];
 
 const HOOFDSTUK_OPTIES = [
   "Brandwerende doorvoeringen",
@@ -127,13 +122,30 @@ const HOOFDSTUK_OPTIES = [
   "Overige werkzaamheden",
 ];
 
+// AI hint tabel (keyword → normtijd suggestie)
+const AI_HINTS: Array<{ keyword: string; mu: string; categorie: string; eenheid: string }> = [
+  { keyword: "doorvoering",  mu: "0.25", categorie: "arbeid",    eenheid: "st" },
+  { keyword: "branddeur",    mu: "1.50", categorie: "arbeid",    eenheid: "st" },
+  { keyword: "brandklep",    mu: "0.50", categorie: "arbeid",    eenheid: "st" },
+  { keyword: "manchet",      mu: "0.15", categorie: "arbeid",    eenheid: "st" },
+  { keyword: "coating",      mu: "0.08", categorie: "materiaal", eenheid: "m2" },
+  { keyword: "kit",          mu: "0.06", categorie: "materiaal", eenheid: "m1" },
+  { keyword: "beglazing",    mu: "2.00", categorie: "arbeid",    eenheid: "st" },
+  { keyword: "inspectie",    mu: "0.50", categorie: "regiepost", eenheid: "st" },
+  { keyword: "afdichting",   mu: "0.20", categorie: "arbeid",    eenheid: "st" },
+  { keyword: "schuim",       mu: "0.10", categorie: "materiaal", eenheid: "st" },
+];
+
+// ─── Types ──────────────────────────────────────────────────────────────────
+
+type Weergave = "intern" | "directie" | "klant" | "monteur";
+
 type RegelRow = {
   id: number;
   calculatie_id: number;
   categorie: string;
   omschrijving: string;
   normtijd_id?: number | null;
-  normtijd_code?: string | null;
   eenheid: string;
   hoeveelheid: number;
   tarief: number;
@@ -151,12 +163,12 @@ type RegelRow = {
   materiaal_totaal: number;
   mu_totaal: number;
   arbeidsloon: number;
+  btw_tarief?: string | null;
 };
 
-type RegelForm = {
+type LocalDraft = {
   categorie: string;
   omschrijving: string;
-  normtijd_id: string;
   eenheid: string;
   hoeveelheid: string;
   tarief: string;
@@ -165,24 +177,16 @@ type RegelForm = {
   onderaanneming_bedrag: string;
   is_staartkosten: boolean;
   is_bouwplaatskosten: boolean;
-  opmerkingen: string;
-  regelnummer: string;
   hoofdstuk: string;
   klanttekst: string;
+  opmerkingen: string;
+  regelnummer: string;
   btw_tarief: string;
 };
 
-const BTW_OPTIES = [
-  { value: "21",      label: "21%",      toelichting: "Standaard tarief" },
-  { value: "9",       label: "9%",       toelichting: "Verlaagd — arbeidsintensief onderhoud/renovatie bestaande woning (> 2 jaar oud)" },
-  { value: "verlegd", label: "Verlegd",  toelichting: "BTW-verlegd — bij B2B onderaanneming in de bouw" },
-  { value: "0",       label: "0%",       toelichting: "Vrijgesteld van BTW" },
-];
-
-const LEGE_REGEL: RegelForm = {
+const LEEG_DRAFT: LocalDraft = {
   categorie: "arbeid",
   omschrijving: "",
-  normtijd_id: "",
   eenheid: "st",
   hoeveelheid: "1",
   tarief: "0",
@@ -191,1659 +195,844 @@ const LEGE_REGEL: RegelForm = {
   onderaanneming_bedrag: "0",
   is_staartkosten: false,
   is_bouwplaatskosten: false,
-  opmerkingen: "",
-  regelnummer: "",
   hoofdstuk: "Overige werkzaamheden",
   klanttekst: "",
+  opmerkingen: "",
+  regelnummer: "",
   btw_tarief: "21",
 };
 
-type Weergave = "intern" | "directie" | "klant" | "monteur";
+// ─── Helpers ────────────────────────────────────────────────────────────────
 
-export default function ModulesCalculatieDetail() {
-  const [, params] = useRoute("/modules/calculatie/:id");
-  const [, navigate] = useLocation();
-  const id = params?.id ? parseInt(params.id, 10) : 0;
+function regelToDraft(r: RegelRow): LocalDraft {
+  return {
+    categorie: r.categorie,
+    omschrijving: r.omschrijving,
+    eenheid: r.eenheid,
+    hoeveelheid: String(r.hoeveelheid),
+    tarief: String(r.tarief),
+    mu_per_eenheid: String(r.mu_per_eenheid ?? 0),
+    arbeids_tarief: String(r.arbeids_tarief ?? 0),
+    onderaanneming_bedrag: String(r.onderaanneming_bedrag ?? 0),
+    is_staartkosten: r.is_staartkosten ?? false,
+    is_bouwplaatskosten: r.is_bouwplaatskosten ?? false,
+    hoofdstuk: r.hoofdstuk ?? "Overige werkzaamheden",
+    klanttekst: r.klanttekst ?? "",
+    opmerkingen: r.opmerkingen ?? "",
+    regelnummer: r.regelnummer ?? "",
+    btw_tarief: (r as any).btw_tarief ?? "21",
+  };
+}
 
-  const queryClient = useQueryClient();
-  const { toast } = useToast();
-  const invalidate = useCallback(() => {
-    queryClient.invalidateQueries({ queryKey: ["mod-calculatie", id] });
-  }, [queryClient, id]);
+function draftToPayload(d: LocalDraft) {
+  return {
+    categorie: d.categorie,
+    omschrijving: d.omschrijving,
+    eenheid: d.eenheid,
+    hoeveelheid: parseFloat(d.hoeveelheid) || 0,
+    tarief: parseFloat(d.tarief) || 0,
+    mu_per_eenheid: parseFloat(d.mu_per_eenheid) || 0,
+    arbeids_tarief: parseFloat(d.arbeids_tarief) || 0,
+    onderaanneming_bedrag: parseFloat(d.onderaanneming_bedrag) || 0,
+    is_staartkosten: d.is_staartkosten,
+    is_bouwplaatskosten: d.is_bouwplaatskosten,
+    hoofdstuk: d.hoofdstuk || "Overige werkzaamheden",
+    klanttekst: d.klanttekst || null,
+    opmerkingen: d.opmerkingen || null,
+    regelnummer: d.regelnummer || null,
+    btw_tarief: d.btw_tarief || "21",
+  };
+}
 
-  const { data, isLoading } = useGetModCalculatie(id, {
-    query: { queryKey: ["mod-calculatie", id], enabled: id > 0 },
-  });
-  const { data: normtijden = [] } = useListModCalcNormtijden({ query: { queryKey: ["mod-calc-normtijden"] } });
-  const { data: tarieven = [] } = useListModCalcTarieven({ query: { queryKey: ["mod-calc-tarieven"] } });
+function formatBedrag(n: number | null | undefined) {
+  if (n == null) return "—";
+  return new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR" }).format(n);
+}
 
-  const updateMut = useUpdateModCalculatie({
-    mutation: {
-      onSuccess: invalidate,
-      onError: () => toast({ title: "Opslaan mislukt", description: "De wijziging kon niet worden opgeslagen.", variant: "destructive" }),
-    },
-  });
-  const deleteMut = useDeleteModCalculatie({
-    mutation: {
-      onSuccess: () => navigate("/modules/calculatie"),
-      onError: () => toast({ title: "Verwijderen mislukt", description: "De calculatie kon niet worden verwijderd.", variant: "destructive" }),
-    },
-  });
-  const dupliceerMut = useDupliceerModCalculatie({
-    mutation: {
-      onSuccess: (d) => {
-        queryClient.invalidateQueries({ queryKey: ["mod-calculaties"] });
-        navigate(`/modules/calculatie/${d.id}`);
-      },
-      onError: () => toast({ title: "Dupliceren mislukt", description: "De calculatie kon niet worden gedupliceerd.", variant: "destructive" }),
-    },
-  });
-  const maakOfferteMut = useMaakOfferteVanCalculatie({
-    mutation: {
-      onSuccess: (d) => {
-        toast({ title: "Offerte aangemaakt", description: "De offerte is aangemaakt op basis van de calculatie." });
-        navigate(`/offertes/${d.offerte_id}`);
-      },
-      onError: () => toast({ title: "Offerte aanmaken mislukt", description: "De offerte kon niet worden aangemaakt. Controleer of de API-server draait.", variant: "destructive" }),
-    },
-  });
+function formatBedragKort(n: number) {
+  return new Intl.NumberFormat("nl-NL", {
+    style: "currency", currency: "EUR",
+    minimumFractionDigits: 0, maximumFractionDigits: 0,
+  }).format(n);
+}
 
-  const createRegelMut = useCreateModCalcRegel({ mutation: { onSuccess: invalidate } });
-  const updateRegelMut = useUpdateModCalcRegel({ mutation: { onSuccess: invalidate } });
-  const deleteRegelMut = useDeleteModCalcRegel({ mutation: { onSuccess: invalidate } });
+function fmt2(n: number) {
+  if (n === 0) return "—";
+  return new Intl.NumberFormat("nl-NL", {
+    minimumFractionDigits: 2, maximumFractionDigits: 2,
+  }).format(n);
+}
 
-  const [weergave, setWeergave] = useState<Weergave>("intern");
-  const [teVerwijderen, setTeVerwijderen] = useState(false);
-  const [regelDialoog, setRegelDialoog] = useState<"nieuw" | number | null>(null);
-  const [regelForm, setRegelForm] = useState<RegelForm>(LEGE_REGEL);
-  const [bewerkenDialoog, setBewerkenDialoog] = useState(false);
-  const [aiPaneel, setAiPaneel] = useState(false);
-  const [aiVoorstellen, setAiVoorstellen] = useState<RegelForm[]>([]);
-  const [aiWaarschuwingen, setAiWaarschuwingen] = useState<string[]>([]);
-  const [versieDialoog, setVersieDialoog] = useState(false);
-  const [versieOpslaanDialoog, setVersieOpslaanDialoog] = useState(false);
-  const [versieLabel, setVersieLabel] = useState("");
-  const [versieOpslaanBezig, setVersieOpslaanBezig] = useState(false);
+function rnd(n: number) { return Math.round(n * 100) / 100; }
 
-  const { data: versieData, refetch: versiesHerladen } = useQuery<{ id: number; versienummer: number; label: string | null; aangemaakt_op: string }[]>({
-    queryKey: ["calc-versies", id],
-    queryFn: () => fetch(`/api/modules/calculaties/${id}/versies`).then((r) => r.json()),
-    enabled: versieDialoog,
-  });
+function aiHintVoorOmschrijving(omschrijving: string) {
+  const lower = omschrijving.toLowerCase();
+  return AI_HINTS.find((h) => lower.includes(h.keyword)) ?? null;
+}
 
-  async function handleVersieOpslaan() {
-    setVersieOpslaanBezig(true);
-    try {
-      await fetch(`/api/modules/calculaties/${id}/versie-opslaan`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ label: versieLabel.trim() || undefined }),
-      });
-      setVersieOpslaanDialoog(false);
-      setVersieLabel("");
-      versiesHerladen();
-    } finally {
-      setVersieOpslaanBezig(false);
+// ─── SpreadsheetRegelRij ─────────────────────────────────────────────────────
+
+function SpreadsheetRegelRij({
+  rij,
+  weergave,
+  onSave,
+  onDelete,
+  onDuplicate,
+  onEnterNaRegel,
+  bezig,
+}: {
+  rij: RegelRow;
+  weergave: Weergave;
+  onSave: (id: number, payload: ReturnType<typeof draftToPayload>) => void;
+  onDelete: (id: number) => void;
+  onDuplicate: (rij: RegelRow) => void;
+  onEnterNaRegel: (hoofdstuk: string, isStaart: boolean, isBouwplaats: boolean) => void;
+  bezig: boolean;
+}) {
+  const rowRef = useRef<HTMLTableRowElement>(null);
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState<LocalDraft>(() => regelToDraft(rij));
+  const [showAiHint, setShowAiHint] = useState(false);
+  const savingRef = useRef(false);
+
+  // Sync draft wanneer serverdata verandert (na bewaar)
+  useEffect(() => {
+    if (!editing) {
+      setDraft(regelToDraft(rij));
     }
-  }
+  }, [rij, editing]);
 
-  const aiMut = useAiModCalcRegels({
-    mutation: {
-      onSuccess: (d) => {
-        const regels = (d.regels ?? []).map((r) => ({
-          categorie: r.categorie ?? "materiaal",
-          omschrijving: r.omschrijving ?? "",
-          normtijd_id: "",
-          eenheid: r.eenheid ?? "st",
-          hoeveelheid: String(r.hoeveelheid ?? 1),
-          tarief: String(r.tarief ?? 0),
-          mu_per_eenheid: String(r.mu_per_eenheid ?? 0),
-          arbeids_tarief: String(r.arbeids_tarief ?? 0),
-          onderaanneming_bedrag: String(r.onderaanneming_bedrag ?? 0),
-          is_staartkosten: r.is_staartkosten ?? false,
-          is_bouwplaatskosten: (r as any).is_bouwplaatskosten ?? false,
-          opmerkingen: "",
-          regelnummer: "",
-          hoofdstuk: r.hoofdstuk ?? "Overige werkzaamheden",
-          klanttekst: r.klanttekst ?? "",
-          btw_tarief: (r as any).btw_tarief ?? "21",
-        }));
-        setAiVoorstellen(regels);
-        setAiWaarschuwingen((d.waarschuwingen ?? []) as string[]);
-        setAiPaneel(true);
-      },
-    },
-  });
-  const [headerForm, setHeaderForm] = useState({
-    naam: "", referentie: "", klant_naam: "", project_naam: "",
-    status: "", omschrijving: "", opmerkingen: "",
-    opslag_materiaal: 0, opslag_arbeid: 0,
-    opslag_ak: 15, opslag_abk: 10, opslag_risico: 5, opslag_winst: 10, korting: 0,
-    ak_is_vast: false, abk_is_vast: false, risico_is_vast: false, winst_is_vast: false,
-  });
-
-  function openNieuweRegel(staartkosten = false, bouwplaatskosten = false, hoofdstuk?: string) {
-    setRegelForm({ ...LEGE_REGEL, is_staartkosten: staartkosten, is_bouwplaatskosten: bouwplaatskosten, hoofdstuk: hoofdstuk ?? LEGE_REGEL.hoofdstuk });
-    setRegelDialoog("nieuw");
-  }
-
-  function openBewerkenRegel(r: RegelRow) {
-    setRegelForm({
-      categorie: r.categorie,
-      omschrijving: r.omschrijving,
-      normtijd_id: r.normtijd_id ? String(r.normtijd_id) : "",
-      eenheid: r.eenheid,
-      hoeveelheid: String(r.hoeveelheid),
-      tarief: String(r.tarief),
-      mu_per_eenheid: String(r.mu_per_eenheid ?? 0),
-      arbeids_tarief: String(r.arbeids_tarief ?? 0),
-      onderaanneming_bedrag: String(r.onderaanneming_bedrag ?? 0),
-      is_staartkosten: r.is_staartkosten ?? false,
-      is_bouwplaatskosten: r.is_bouwplaatskosten ?? false,
-      opmerkingen: r.opmerkingen ?? "",
-      regelnummer: r.regelnummer ?? "",
-      hoofdstuk: r.hoofdstuk ?? "Overige werkzaamheden",
-      klanttekst: r.klanttekst ?? "",
-      btw_tarief: (r as any).btw_tarief ?? "21",
-    });
-    setRegelDialoog(r.id);
-  }
-
-  function openBewerkenHeader() {
-    if (!data) return;
-    setHeaderForm({
-      naam: data.naam,
-      referentie: data.referentie ?? "",
-      klant_naam: data.klant_naam ?? "",
-      project_naam: data.project_naam ?? "",
-      status: data.status,
-      omschrijving: data.omschrijving ?? "",
-      opmerkingen: data.opmerkingen ?? "",
-      opslag_materiaal: data.opslag_materiaal ?? 0,
-      opslag_arbeid: data.opslag_arbeid ?? 0,
-      opslag_ak: data.opslag_ak,
-      opslag_abk: (data as any).opslag_abk ?? 10,
-      opslag_risico: data.opslag_risico,
-      opslag_winst: data.opslag_winst,
-      korting: data.korting,
-      ak_is_vast: (data as any).ak_is_vast ?? false,
-      abk_is_vast: (data as any).abk_is_vast ?? false,
-      risico_is_vast: (data as any).risico_is_vast ?? false,
-      winst_is_vast: (data as any).winst_is_vast ?? false,
-    });
-    setBewerkenDialoog(true);
-  }
-
-  function handleRegelOpslaan() {
-    const hv = parseFloat(regelForm.hoeveelheid) || 0;
-    const t  = parseFloat(regelForm.tarief) || 0;
-    const mu = parseFloat(regelForm.mu_per_eenheid) || 0;
-    const at = parseFloat(regelForm.arbeids_tarief) || 0;
-    const ob = parseFloat(regelForm.onderaanneming_bedrag) || 0;
-    const payload = {
-      categorie: regelForm.categorie,
-      omschrijving: regelForm.omschrijving,
-      normtijd_id: regelForm.normtijd_id ? parseInt(regelForm.normtijd_id, 10) : null,
-      eenheid: regelForm.eenheid,
-      hoeveelheid: hv,
-      tarief: t,
-      mu_per_eenheid: mu,
-      arbeids_tarief: at,
-      onderaanneming_bedrag: ob,
-      is_staartkosten: regelForm.is_staartkosten,
-      is_bouwplaatskosten: regelForm.is_bouwplaatskosten,
-      opmerkingen: regelForm.opmerkingen || null,
-      regelnummer: regelForm.regelnummer || null,
-      hoofdstuk: regelForm.hoofdstuk || "Overige werkzaamheden",
-      klanttekst: regelForm.klanttekst || null,
-      btw_tarief: regelForm.btw_tarief || "21",
-    };
-    if (regelDialoog === "nieuw") {
-      createRegelMut.mutate({ id, data: payload });
-    } else if (typeof regelDialoog === "number") {
-      updateRegelMut.mutate({ id, regelId: regelDialoog, data: payload });
+  const upd = useCallback((updates: Partial<LocalDraft>) => {
+    setDraft((d) => ({ ...d, ...updates }));
+    if ("omschrijving" in updates) {
+      setShowAiHint(true);
     }
-    setRegelDialoog(null);
-  }
+  }, []);
 
-  function handleStatusWijzigen(nieuweStatus: string) {
-    if (!data) return;
-    updateMut.mutate({ id, data: { naam: data.naam, status: nieuweStatus } });
-  }
+  const doSave = useCallback(() => {
+    if (savingRef.current) return;
+    savingRef.current = true;
+    setEditing(false);
+    setShowAiHint(false);
+    const payload = draftToPayload(draft);
+    if (payload.omschrijving.trim()) {
+      onSave(rij.id, payload);
+    } else {
+      setDraft(regelToDraft(rij));
+    }
+    setTimeout(() => { savingRef.current = false; }, 500);
+  }, [draft, rij, onSave]);
 
-  if (isLoading) {
+  const handleRowBlur = useCallback(() => {
+    setTimeout(() => {
+      if (!rowRef.current) return;
+      if (rowRef.current.contains(document.activeElement)) return;
+      if (editing) doSave();
+    }, 0);
+  }, [editing, doSave]);
+
+  // Live berekening van regeltotalen op basis van draft
+  const hv = parseFloat(draft.hoeveelheid) || 0;
+  const t  = parseFloat(draft.tarief) || 0;
+  const mu = parseFloat(draft.mu_per_eenheid) || 0;
+  const at = parseFloat(draft.arbeids_tarief) || 0;
+  const ob = parseFloat(draft.onderaanneming_bedrag) || 0;
+  const liveArb  = rnd(hv * mu * at);
+  const liveMat  = rnd(hv * t);
+  const liveTot  = rnd(liveArb + liveMat + ob);
+
+  const arbDisplay = editing ? liveArb  : rij.arbeidsloon;
+  const matDisplay = editing ? liveMat  : rij.materiaal_totaal;
+  const totDisplay = editing ? liveTot  : rij.totaal;
+
+  const aiHint  = showAiHint ? aiHintVoorOmschrijving(draft.omschrijving) : null;
+  const isArb   = draft.categorie === "arbeid" || draft.categorie === "regiepost";
+  const isMat   = draft.categorie === "materiaal" || draft.categorie === "materieel"
+    || draft.categorie === "opslag" || draft.categorie === "stelpost";
+  const isOa    = draft.categorie === "onderaanneming";
+
+  const celKlasse = "px-1 py-0 text-sm";
+  const invoerKlasse =
+    "w-full h-full px-2 py-[5px] border-0 border-b border-primary/40 bg-transparent focus:border-primary focus:outline-none text-sm tabular-nums";
+
+  // Invoercel helper
+  function NumCel({
+    waarde,
+    field,
+    actief,
+    align = "right",
+    placeholder = "0",
+    breedte,
+  }: {
+    waarde: number | string;
+    field: keyof LocalDraft;
+    actief: boolean;
+    align?: "left" | "right" | "center";
+    placeholder?: string;
+    breedte: number;
+  }) {
+    if (!editing || !actief) {
+      const val = typeof waarde === "number"
+        ? (waarde !== 0 ? (field === "hoeveelheid" ? fmt2(waarde) : formatBedrag(waarde)) : "—")
+        : (waarde || "—");
+      return (
+        <td
+          style={{ width: breedte }}
+          className={cn(celKlasse, editing ? "bg-slate-50/40" : "cursor-pointer hover:bg-slate-50")}
+          onClick={() => { if (!editing) setEditing(true); }}
+        >
+          <div className={cn("px-2 py-[5px] tabular-nums text-muted-foreground", `text-${align}`)}>
+            {val}
+          </div>
+        </td>
+      );
+    }
     return (
-      <div className="p-6 space-y-4 max-w-7xl mx-auto">
-        <Skeleton className="h-8 w-64" />
-        <Skeleton className="h-48 w-full" />
-        <Skeleton className="h-96 w-full" />
-      </div>
+      <td style={{ width: breedte }} className={cn(celKlasse, "bg-blue-50/20")}>
+        <input
+          type="number"
+          step="0.01"
+          min="0"
+          value={draft[field] as string}
+          onChange={(e) => upd({ [field]: e.target.value } as Partial<LocalDraft>)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") { e.preventDefault(); doSave(); onEnterNaRegel(draft.hoofdstuk, draft.is_staartkosten, draft.is_bouwplaatskosten); }
+            if (e.key === "Escape") { setEditing(false); setDraft(regelToDraft(rij)); }
+          }}
+          className={cn(invoerKlasse, `text-${align}`)}
+          placeholder={placeholder}
+        />
+      </td>
     );
   }
-
-  if (!data) {
-    return (
-      <div className="p-6 text-center text-muted-foreground">
-        Calculatie niet gevonden.
-      </div>
-    );
-  }
-
-  const regels: RegelRow[] = (data.regels ?? []) as RegelRow[];
-  const directeRegels    = regels.filter((r) => !r.is_staartkosten && !r.is_bouwplaatskosten).sort((a, b) => a.volgorde - b.volgorde);
-  const bouwplaatsRegels = regels.filter((r) => r.is_bouwplaatskosten).sort((a, b) => a.volgorde - b.volgorde);
-  const staartRegels     = regels.filter((r) => r.is_staartkosten).sort((a, b) => a.volgorde - b.volgorde);
-
-  const rnd = (n: number) => Math.round(n * 100) / 100;
-
-  const matSubtotaal        = rnd(directeRegels.reduce((s, r) => s + r.materiaal_totaal, 0));
-  const arbSubtotaal        = rnd(directeRegels.reduce((s, r) => s + r.arbeidsloon, 0));
-  const oaSubtotaal         = rnd(directeRegels.reduce((s, r) => s + r.onderaanneming_bedrag, 0));
-  const bouwplaatsSubtotaal = rnd(bouwplaatsRegels.reduce((s, r) => s + r.totaal, 0));
-  const staartSubtotaal     = rnd(staartRegels.reduce((s, r) => s + r.totaal, 0));
-
-  const opslagMateriaal = data.opslag_materiaal ?? 0;
-  const opslagArbeid    = data.opslag_arbeid ?? 0;
-  const opslagAk        = data.opslag_ak;
-  const opslagAbk       = (data as any).opslag_abk ?? 10;
-  const opslagRisico    = data.opslag_risico;
-  const opslagWinst     = data.opslag_winst;
-  const akIsVast        = (data as any).ak_is_vast ?? false;
-  const abkIsVast       = (data as any).abk_is_vast ?? false;
-  const risicoIsVast    = (data as any).risico_is_vast ?? false;
-  const winstIsVast     = (data as any).winst_is_vast ?? false;
-
-  const materieelSubtotaal = rnd(directeRegels.filter((r) => r.categorie === "materieel").reduce((s, r) => s + r.materiaal_totaal, 0));
-
-  const matOpslagBedrag = rnd(matSubtotaal * opslagMateriaal / 100);
-  const arbOpslagBedrag = rnd(arbSubtotaal * opslagArbeid / 100);
-
-  const subtotaal = rnd(
-    matSubtotaal + matOpslagBedrag +
-    arbSubtotaal + arbOpslagBedrag +
-    oaSubtotaal + bouwplaatsSubtotaal + staartSubtotaal,
-  );
-
-  const akBedrag     = akIsVast     ? rnd(opslagAk)     : rnd(subtotaal * opslagAk / 100);
-  const abkBedrag    = abkIsVast    ? rnd(opslagAbk)    : rnd(subtotaal * opslagAbk / 100);
-  const risicoBedrag = risicoIsVast ? rnd(opslagRisico) : rnd(subtotaal * opslagRisico / 100);
-  const basisWinst   = rnd(subtotaal + akBedrag + abkBedrag + risicoBedrag);
-  const winstBedrag  = winstIsVast  ? rnd(opslagWinst)  : rnd(basisWinst * opslagWinst / 100);
-  const aanneemsom   = rnd(basisWinst + winstBedrag);
-  const kortingBedrag = rnd(aanneemsom * data.korting / 100);
-  const totaal        = rnd(aanneemsom - kortingBedrag);
-  const totaalBtw     = rnd(totaal * 1.21);
-  const rawKosten     = matSubtotaal + arbSubtotaal + oaSubtotaal + bouwplaatsSubtotaal + staartSubtotaal;
-  const marge         = totaal > 0 ? Math.round(((totaal - rawKosten) / totaal) * 100 * 10) / 10 : 0;
-
-  const regelsByCategorie = Object.entries(CATEGORIE_LABEL).map(([cat, label]) => ({
-    categorie: cat,
-    label,
-    regels: directeRegels.filter((r) => r.categorie === cat),
-  })).filter((g) => g.regels.length > 0);
-
-  const regelsByHoofdstuk = HOOFDSTUK_OPTIES.map((h) => ({
-    hoofdstuk: h,
-    regels: directeRegels.filter((r) => (r.hoofdstuk ?? "Overige werkzaamheden") === h),
-  })).filter((g) => g.regels.length > 0);
-
-  const volgendStatussen = STATUS_WORKFLOW[data.status] ?? [];
 
   return (
-    <div className="p-6 space-y-5 max-w-[1400px] mx-auto">
-      {/* Koptekst */}
-      <div className="flex items-start justify-between">
-        <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" onClick={() => navigate("/modules/calculatie")}>
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-semibold text-slate-900">{data.naam}</h1>
-              <Badge className={`text-xs border ${STATUS_KLEUR[data.status] ?? STATUS_KLEUR.concept}`}>
-                {STATUS_LABEL[data.status] ?? data.status}
-              </Badge>
-            </div>
-            {data.referentie && (
-              <p className="text-sm text-muted-foreground">{data.referentie}</p>
+    <tr
+      ref={rowRef}
+      onFocus={() => setEditing(true)}
+      onBlur={handleRowBlur}
+      className={cn(
+        "border-b border-slate-100 group transition-colors relative",
+        editing ? "bg-amber-50/20 outline outline-1 outline-primary/30" : "hover:bg-slate-50/60",
+        bezig ? "opacity-50 pointer-events-none" : ""
+      )}
+    >
+      {/* # */}
+      <td
+        className="px-2 py-[5px] text-xs text-muted-foreground/60 text-right w-10 cursor-pointer select-none"
+        onClick={() => setEditing(true)}
+      >
+        {rij.regelnummer || rij.volgorde}
+      </td>
+
+      {/* Omschrijving */}
+      <td className="px-1 py-0 min-w-[200px] max-w-[300px] relative">
+        {editing ? (
+          <div className="relative">
+            <input
+              type="text"
+              value={draft.omschrijving}
+              onChange={(e) => upd({ omschrijving: e.target.value })}
+              onFocus={() => setShowAiHint(true)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") { e.preventDefault(); doSave(); onEnterNaRegel(draft.hoofdstuk, draft.is_staartkosten, draft.is_bouwplaatskosten); }
+                if (e.key === "Escape") { setEditing(false); setDraft(regelToDraft(rij)); }
+              }}
+              className="w-full px-2 py-[5px] border-0 border-b border-primary/40 bg-transparent focus:border-primary focus:outline-none text-sm font-medium"
+              placeholder="Omschrijving werkzaamheid..."
+              autoFocus
+            />
+            {aiHint && draft.omschrijving.length > 2 && (
+              <div className="absolute top-full left-0 z-20 mt-0.5 flex items-center gap-1.5 rounded border border-amber-200 bg-amber-50 px-2 py-1 text-xs shadow-md whitespace-nowrap">
+                <Sparkles className="h-3 w-3 text-amber-500 shrink-0" />
+                <span className="text-amber-800">
+                  AI: {aiHint.mu} MU &bull; {CATEGORIE_LABEL[aiHint.categorie]} &bull; {aiHint.eenheid}
+                </span>
+                <button
+                  type="button"
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    upd({ mu_per_eenheid: aiHint.mu, categorie: aiHint.categorie, eenheid: aiHint.eenheid });
+                    setShowAiHint(false);
+                  }}
+                  className="ml-1 font-semibold text-amber-700 hover:text-amber-900 underline"
+                >
+                  Overnemen
+                </button>
+                <button
+                  type="button"
+                  onMouseDown={(e) => { e.preventDefault(); setShowAiHint(false); }}
+                  className="text-amber-400 hover:text-amber-600"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </div>
             )}
           </div>
-        </div>
-        <div className="flex items-center gap-2">
-          {volgendStatussen.map((s) => (
-            <Button
-              key={s}
-              variant={s === "verloren" ? "outline" : "default"}
-              size="sm"
-              onClick={() => handleStatusWijzigen(s)}
+        ) : (
+          <div
+            onClick={() => setEditing(true)}
+            className="px-2 py-[5px] text-sm font-medium cursor-pointer truncate"
+          >
+            {rij.omschrijving || (
+              <span className="text-muted-foreground/40 italic font-normal">klik om te bewerken</span>
+            )}
+          </div>
+        )}
+      </td>
+
+      {/* Kostensoort — intern + directie */}
+      {(weergave === "intern" || weergave === "directie") && (
+        <td className="px-1 py-0 w-[124px]">
+          {editing ? (
+            <select
+              value={draft.categorie}
+              onChange={(e) => {
+                const cat = e.target.value;
+                const btw = cat === "onderaanneming" ? "verlegd"
+                  : draft.btw_tarief === "verlegd" ? "21" : draft.btw_tarief;
+                upd({ categorie: cat, btw_tarief: btw });
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") { e.preventDefault(); doSave(); }
+                if (e.key === "Escape") { setEditing(false); setDraft(regelToDraft(rij)); }
+              }}
+              className="w-full px-1 py-[5px] text-xs border-0 border-b border-primary/40 bg-transparent focus:border-primary focus:outline-none"
             >
-              {STATUS_LABEL[s]}
-              {s !== "verloren" && <ChevronRight className="h-3.5 w-3.5 ml-1" />}
+              {KOSTENSOORT_OPTIES.map((o) => (
+                <option key={o.value} value={o.value}>{o.label}</option>
+              ))}
+            </select>
+          ) : (
+            <div onClick={() => setEditing(true)} className="px-2 py-[5px] cursor-pointer">
+              <span className={cn(
+                "text-xs rounded-sm px-1.5 py-0.5 font-medium",
+                CATEGORIE_KLEUR[rij.categorie] ?? "bg-slate-50 text-slate-600"
+              )}>
+                {CATEGORIE_LABEL[rij.categorie] ?? rij.categorie}
+              </span>
+            </div>
+          )}
+        </td>
+      )}
+
+      {/* Eenheid */}
+      <td className="px-1 py-0 w-[68px] text-center">
+        {editing ? (
+          <select
+            value={draft.eenheid}
+            onChange={(e) => upd({ eenheid: e.target.value })}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") { e.preventDefault(); doSave(); }
+              if (e.key === "Escape") { setEditing(false); setDraft(regelToDraft(rij)); }
+            }}
+            className="w-full px-1 py-[5px] text-xs border-0 border-b border-primary/40 bg-transparent focus:border-primary focus:outline-none text-center"
+          >
+            {EENHEDEN.map((e) => <option key={e} value={e}>{e}</option>)}
+          </select>
+        ) : (
+          <div onClick={() => setEditing(true)} className="px-1 py-[5px] text-xs text-muted-foreground text-center cursor-pointer">
+            {rij.eenheid}
+          </div>
+        )}
+      </td>
+
+      {/* Hoeveelheid */}
+      <NumCel waarde={rij.hoeveelheid} field="hoeveelheid" actief={true} breedte={76} placeholder="1" />
+
+      {/* MU/eenh — intern + directie */}
+      {(weergave === "intern" || weergave === "directie") && (
+        <NumCel waarde={rij.mu_per_eenheid} field="mu_per_eenheid" actief={isArb} breedte={76} placeholder="0.00" />
+      )}
+
+      {/* Arbeidstarief — intern + directie */}
+      {(weergave === "intern" || weergave === "directie") && (
+        <NumCel waarde={rij.arbeids_tarief} field="arbeids_tarief" actief={isArb} breedte={88} placeholder="0.00" />
+      )}
+
+      {/* Arbeidskosten (berekend) — intern + directie */}
+      {(weergave === "intern" || weergave === "directie") && (
+        <td className="px-2 py-[5px] w-[96px] text-right text-sm tabular-nums text-slate-500 cursor-pointer" onClick={() => setEditing(true)}>
+          {arbDisplay > 0 ? formatBedrag(arbDisplay) : "—"}
+        </td>
+      )}
+
+      {/* Prijs/eenh — intern + directie */}
+      {(weergave === "intern" || weergave === "directie") && (
+        <NumCel waarde={rij.tarief} field="tarief" actief={isMat} breedte={88} placeholder="0.00" />
+      )}
+
+      {/* Materiaal totaal (berekend) — intern + directie */}
+      {(weergave === "intern" || weergave === "directie") && (
+        <td className="px-2 py-[5px] w-[96px] text-right text-sm tabular-nums text-slate-500 cursor-pointer" onClick={() => setEditing(true)}>
+          {matDisplay > 0 ? formatBedrag(matDisplay) : "—"}
+        </td>
+      )}
+
+      {/* Onderaanneming — intern + directie */}
+      {(weergave === "intern" || weergave === "directie") && (
+        <NumCel waarde={rij.onderaanneming_bedrag} field="onderaanneming_bedrag" actief={isOa} breedte={96} placeholder="0.00" />
+      )}
+
+      {/* BTW — intern only */}
+      {weergave === "intern" && (
+        <td className="px-1 py-0 w-[72px] text-center">
+          {editing ? (
+            <select
+              value={draft.btw_tarief}
+              onChange={(e) => upd({ btw_tarief: e.target.value })}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") { e.preventDefault(); doSave(); }
+                if (e.key === "Escape") { setEditing(false); setDraft(regelToDraft(rij)); }
+              }}
+              className="w-full px-1 py-[5px] text-xs border-0 border-b border-primary/40 bg-transparent focus:border-primary focus:outline-none"
+            >
+              {BTW_OPTIES.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
+          ) : (
+            <div onClick={() => setEditing(true)} className="px-1 py-[5px] text-xs text-muted-foreground text-center cursor-pointer">
+              {(rij as any).btw_tarief === "verlegd" ? "Verlegd" : `${(rij as any).btw_tarief ?? 21}%`}
+            </div>
+          )}
+        </td>
+      )}
+
+      {/* Interne notitie — intern + monteur */}
+      {(weergave === "intern" || weergave === "monteur") && (
+        <td className="px-1 py-0 w-[140px]">
+          {editing ? (
+            <input
+              type="text"
+              value={draft.opmerkingen}
+              onChange={(e) => upd({ opmerkingen: e.target.value })}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") { e.preventDefault(); doSave(); }
+                if (e.key === "Escape") { setEditing(false); setDraft(regelToDraft(rij)); }
+              }}
+              className="w-full px-2 py-[5px] text-xs border-0 border-b border-primary/40 bg-transparent focus:border-primary focus:outline-none"
+              placeholder="Intern..."
+            />
+          ) : (
+            <div onClick={() => setEditing(true)} className="px-2 py-[5px] text-xs text-muted-foreground cursor-pointer truncate">
+              {rij.opmerkingen || "—"}
+            </div>
+          )}
+        </td>
+      )}
+
+      {/* Klanttekst offerte — intern + klant */}
+      {(weergave === "intern" || weergave === "klant") && (
+        <td className="px-1 py-0 w-[140px]">
+          {editing ? (
+            <input
+              type="text"
+              value={draft.klanttekst}
+              onChange={(e) => upd({ klanttekst: e.target.value })}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") { e.preventDefault(); doSave(); }
+                if (e.key === "Escape") { setEditing(false); setDraft(regelToDraft(rij)); }
+              }}
+              className="w-full px-2 py-[5px] text-xs border-0 border-b border-primary/40 bg-transparent focus:border-primary focus:outline-none"
+              placeholder="Op offerte..."
+            />
+          ) : (
+            <div onClick={() => setEditing(true)} className="px-2 py-[5px] text-xs text-muted-foreground cursor-pointer truncate">
+              {rij.klanttekst || "—"}
+            </div>
+          )}
+        </td>
+      )}
+
+      {/* Totaal (berekend) */}
+      <td className="px-2 py-[5px] w-[100px] text-right text-sm tabular-nums font-semibold cursor-pointer" onClick={() => setEditing(true)}>
+        {formatBedrag(totDisplay)}
+      </td>
+
+      {/* Acties — intern only */}
+      {weergave === "intern" && (
+        <td className="px-1 py-0 w-14 text-center">
+          <div className="flex items-center gap-0 justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+            <Button
+              variant="ghost" size="icon" className="h-6 w-6 text-slate-400 hover:text-slate-700"
+              title="Dupliceren"
+              tabIndex={-1}
+              onClick={(e) => { e.stopPropagation(); onDuplicate(rij); }}
+            >
+              <Copy className="h-3 w-3" />
             </Button>
-          ))}
-          <Button
-            size="sm"
-            onClick={() => maakOfferteMut.mutate({ id })}
-            disabled={maakOfferteMut.isPending}
+            <Button
+              variant="ghost" size="icon" className="h-6 w-6 text-slate-400 hover:text-destructive"
+              title="Verwijderen"
+              tabIndex={-1}
+              onClick={(e) => { e.stopPropagation(); onDelete(rij.id); }}
+            >
+              <Trash2 className="h-3 w-3" />
+            </Button>
+          </div>
+        </td>
+      )}
+    </tr>
+  );
+}
+
+// ─── NieuweRegelRij ──────────────────────────────────────────────────────────
+
+function NieuweRegelRij({
+  initialDraft,
+  weergave,
+  onSave,
+  onCancel,
+  bezig,
+}: {
+  initialDraft: LocalDraft;
+  weergave: Weergave;
+  onSave: (payload: ReturnType<typeof draftToPayload>) => void;
+  onCancel: () => void;
+  bezig: boolean;
+}) {
+  const rowRef = useRef<HTMLTableRowElement>(null);
+  const [draft, setDraft] = useState<LocalDraft>(initialDraft);
+  const [showAiHint, setShowAiHint] = useState(false);
+  const upd = (updates: Partial<LocalDraft>) => setDraft((d) => ({ ...d, ...updates }));
+
+  const doSave = useCallback(() => {
+    const p = draftToPayload(draft);
+    if (p.omschrijving.trim()) onSave(p);
+    else onCancel();
+  }, [draft, onSave, onCancel]);
+
+  const handleRowBlur = useCallback(() => {
+    setTimeout(() => {
+      if (!rowRef.current) return;
+      if (rowRef.current.contains(document.activeElement)) return;
+      doSave();
+    }, 0);
+  }, [doSave]);
+
+  const hv = parseFloat(draft.hoeveelheid) || 0;
+  const t  = parseFloat(draft.tarief) || 0;
+  const mu = parseFloat(draft.mu_per_eenheid) || 0;
+  const at = parseFloat(draft.arbeids_tarief) || 0;
+  const ob = parseFloat(draft.onderaanneming_bedrag) || 0;
+  const liveArb = rnd(hv * mu * at);
+  const liveMat = rnd(hv * t);
+  const liveTot = rnd(liveArb + liveMat + ob);
+  const aiHint  = showAiHint ? aiHintVoorOmschrijving(draft.omschrijving) : null;
+  const isArb   = draft.categorie === "arbeid" || draft.categorie === "regiepost";
+  const isMat   = draft.categorie === "materiaal" || draft.categorie === "materieel"
+    || draft.categorie === "opslag" || draft.categorie === "stelpost";
+  const isOa    = draft.categorie === "onderaanneming";
+
+  const invoerKlasse =
+    "w-full h-full px-2 py-[5px] border-0 border-b border-primary/60 bg-transparent focus:border-primary focus:outline-none text-sm tabular-nums";
+
+  const onKD = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") { e.preventDefault(); doSave(); }
+    if (e.key === "Escape") { e.preventDefault(); onCancel(); }
+  };
+
+  const numInvoer = (field: keyof LocalDraft, breedte: number, actief: boolean) =>
+    actief ? (
+      <td style={{ width: breedte }} className="px-1 py-0 bg-primary/5">
+        <input type="number" step="0.01" min="0"
+          value={draft[field] as string}
+          onChange={(e) => upd({ [field]: e.target.value } as Partial<LocalDraft>)}
+          onKeyDown={onKD}
+          className={cn(invoerKlasse, "text-right")}
+          placeholder="0"
+        />
+      </td>
+    ) : (
+      <td style={{ width: breedte }} className="px-2 py-[5px] text-muted-foreground/40 text-right text-sm">—</td>
+    );
+
+  return (
+    <tr
+      ref={rowRef}
+      onBlur={handleRowBlur}
+      className={cn(
+        "border-b border-primary/30 bg-primary/5 outline outline-1 outline-primary/30",
+        bezig ? "opacity-60" : ""
+      )}
+    >
+      <td className="px-2 py-[5px] text-xs text-muted-foreground/40 text-right w-10">+</td>
+
+      {/* Omschrijving */}
+      <td className="px-1 py-0 min-w-[200px] max-w-[300px] relative">
+        <input
+          type="text"
+          value={draft.omschrijving}
+          onChange={(e) => { upd({ omschrijving: e.target.value }); setShowAiHint(true); }}
+          onKeyDown={onKD}
+          className="w-full px-2 py-[5px] border-0 border-b border-primary bg-transparent focus:outline-none text-sm font-medium"
+          placeholder="Omschrijving werkzaamheid..."
+          autoFocus
+        />
+        {aiHint && draft.omschrijving.length > 2 && (
+          <div className="absolute top-full left-0 z-20 mt-0.5 flex items-center gap-1.5 rounded border border-amber-200 bg-amber-50 px-2 py-1 text-xs shadow-md whitespace-nowrap">
+            <Sparkles className="h-3 w-3 text-amber-500 shrink-0" />
+            <span className="text-amber-800">
+              AI: {aiHint.mu} MU &bull; {CATEGORIE_LABEL[aiHint.categorie]} &bull; {aiHint.eenheid}
+            </span>
+            <button
+              type="button"
+              onMouseDown={(e) => {
+                e.preventDefault();
+                upd({ mu_per_eenheid: aiHint.mu, categorie: aiHint.categorie, eenheid: aiHint.eenheid });
+                setShowAiHint(false);
+              }}
+              className="ml-1 font-semibold text-amber-700 hover:text-amber-900 underline"
+            >
+              Overnemen
+            </button>
+          </div>
+        )}
+      </td>
+
+      {/* Kostensoort */}
+      {(weergave === "intern" || weergave === "directie") && (
+        <td className="px-1 py-0 w-[124px]">
+          <select
+            value={draft.categorie}
+            onChange={(e) => {
+              const cat = e.target.value;
+              const btw = cat === "onderaanneming" ? "verlegd"
+                : draft.btw_tarief === "verlegd" ? "21" : draft.btw_tarief;
+              upd({ categorie: cat, btw_tarief: btw });
+            }}
+            onKeyDown={onKD}
+            className="w-full px-1 py-[5px] text-xs border-0 border-b border-primary bg-transparent focus:outline-none"
           >
-            <FileText className="h-3.5 w-3.5 mr-1.5" />
-            {maakOfferteMut.isPending ? "Bezig..." : "Maak offerte"}
-          </Button>
-          <Button variant="outline" size="sm" onClick={openBewerkenHeader}>
-            <Pencil className="h-3.5 w-3.5 mr-1.5" />
-            Bewerken
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => dupliceerMut.mutate({ id })}>
-            <Copy className="h-3.5 w-3.5 mr-1.5" />
-            Dupliceren
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => setVersieOpslaanDialoog(true)}>
-            <Save className="h-3.5 w-3.5 mr-1.5" />
-            Versie opslaan
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => setVersieDialoog(true)}>
-            <History className="h-3.5 w-3.5 mr-1.5" />
-            Versies
-          </Button>
-          <Button
-            variant="outline" size="sm"
-            onClick={() => window.open(`/modules/calculatie/${id}/print`, "_blank")}
+            {KOSTENSOORT_OPTIES.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+          </select>
+        </td>
+      )}
+
+      {/* Eenheid */}
+      <td className="px-1 py-0 w-[68px]">
+        <select
+          value={draft.eenheid}
+          onChange={(e) => upd({ eenheid: e.target.value })}
+          onKeyDown={onKD}
+          className="w-full px-1 py-[5px] text-xs border-0 border-b border-primary bg-transparent focus:outline-none text-center"
+        >
+          {EENHEDEN.map((e) => <option key={e} value={e}>{e}</option>)}
+        </select>
+      </td>
+
+      {/* Hoeveelheid */}
+      {numInvoer("hoeveelheid", 76, true)}
+
+      {/* MU */}
+      {(weergave === "intern" || weergave === "directie") && numInvoer("mu_per_eenheid", 76, isArb)}
+      {/* Arb tarief */}
+      {(weergave === "intern" || weergave === "directie") && numInvoer("arbeids_tarief", 88, isArb)}
+      {/* Arbeid totaal */}
+      {(weergave === "intern" || weergave === "directie") && (
+        <td className="px-2 py-[5px] w-[96px] text-right text-sm tabular-nums text-slate-400">
+          {liveArb > 0 ? formatBedrag(liveArb) : "—"}
+        </td>
+      )}
+      {/* Prijs/eenh */}
+      {(weergave === "intern" || weergave === "directie") && numInvoer("tarief", 88, isMat)}
+      {/* Materiaal totaal */}
+      {(weergave === "intern" || weergave === "directie") && (
+        <td className="px-2 py-[5px] w-[96px] text-right text-sm tabular-nums text-slate-400">
+          {liveMat > 0 ? formatBedrag(liveMat) : "—"}
+        </td>
+      )}
+      {/* Onderaanneming */}
+      {(weergave === "intern" || weergave === "directie") && numInvoer("onderaanneming_bedrag", 96, isOa)}
+      {/* BTW */}
+      {weergave === "intern" && (
+        <td className="px-1 py-0 w-[72px]">
+          <select
+            value={draft.btw_tarief}
+            onChange={(e) => upd({ btw_tarief: e.target.value })}
+            onKeyDown={onKD}
+            className="w-full px-1 py-[5px] text-xs border-0 border-b border-primary bg-transparent focus:outline-none"
           >
-            <Printer className="h-3.5 w-3.5 mr-1.5" />
-            Afdrukken
-          </Button>
-          <Button
-            variant="outline" size="sm"
-            className="text-destructive hover:text-destructive"
-            onClick={() => setTeVerwijderen(true)}
-          >
-            <Trash2 className="h-3.5 w-3.5" />
-          </Button>
-        </div>
-      </div>
+            {BTW_OPTIES.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+          </select>
+        </td>
+      )}
+      {/* Notitie */}
+      {(weergave === "intern" || weergave === "monteur") && (
+        <td className="px-1 py-0 w-[140px]">
+          <input
+            type="text"
+            value={draft.opmerkingen}
+            onChange={(e) => upd({ opmerkingen: e.target.value })}
+            onKeyDown={onKD}
+            className="w-full px-2 py-[5px] text-xs border-0 border-b border-primary bg-transparent focus:outline-none"
+            placeholder="Intern..."
+          />
+        </td>
+      )}
+      {/* Klanttekst */}
+      {(weergave === "intern" || weergave === "klant") && (
+        <td className="px-1 py-0 w-[140px]">
+          <input
+            type="text"
+            value={draft.klanttekst}
+            onChange={(e) => upd({ klanttekst: e.target.value })}
+            onKeyDown={onKD}
+            className="w-full px-2 py-[5px] text-xs border-0 border-b border-primary bg-transparent focus:outline-none"
+            placeholder="Op offerte..."
+          />
+        </td>
+      )}
+      {/* Totaal */}
+      <td className="px-2 py-[5px] w-[100px] text-right text-sm tabular-nums font-semibold">
+        {liveTot > 0 ? formatBedrag(liveTot) : "—"}
+      </td>
+      {/* Acties */}
+      {weergave === "intern" && (
+        <td className="px-1 py-0 w-14 text-center">
+          <div className="flex gap-0.5 justify-center">
+            <Button variant="ghost" size="icon" className="h-6 w-6 text-slate-400" tabIndex={-1} onClick={onCancel}>
+              <X className="h-3 w-3" />
+            </Button>
+          </div>
+        </td>
+      )}
+    </tr>
+  );
+}
 
-      <div className="grid grid-cols-4 gap-5">
-        {/* Hoofdinhoud */}
-        <div className="col-span-3 space-y-5">
-          {/* Projectgegevens */}
-          <Card>
-            <CardContent className="pt-5">
-              <div className="grid grid-cols-4 gap-4 text-sm">
-                {data.klant_naam && (
-                  <div>
-                    <p className="text-xs text-muted-foreground mb-0.5">Klant</p>
-                    <p className="font-medium">{data.klant_naam}</p>
-                  </div>
-                )}
-                {data.project_naam && (
-                  <div>
-                    <p className="text-xs text-muted-foreground mb-0.5">Project</p>
-                    <p className="font-medium">{data.project_naam}</p>
-                  </div>
-                )}
-                {data.gebouw_naam && (
-                  <div>
-                    <p className="text-xs text-muted-foreground mb-0.5">Gebouw</p>
-                    <p className="font-medium">{data.gebouw_naam}</p>
-                  </div>
-                )}
-                {data.aangemaakt_door_naam && (
-                  <div>
-                    <p className="text-xs text-muted-foreground mb-0.5">Calculator</p>
-                    <p className="font-medium">{data.aangemaakt_door_naam}</p>
-                  </div>
-                )}
-              </div>
-              {data.omschrijving && (
-                <p className="text-sm text-muted-foreground mt-3 pt-3 border-t">{data.omschrijving}</p>
-              )}
-            </CardContent>
-          </Card>
+// ─── HoofdstukBalk ───────────────────────────────────────────────────────────
 
-          {/* Calculatieregels */}
-          <Card>
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-base">Calculatieregels</CardTitle>
-                <div className="flex items-center gap-3">
-                  {/* Weergave toggle */}
-                  <div className="flex rounded-md border overflow-hidden text-xs">
-                    {(["intern", "directie", "klant", "monteur"] as Weergave[]).map((v) => (
-                      <button
-                        key={v}
-                        onClick={() => setWeergave(v)}
-                        className={`px-3 py-1.5 flex items-center gap-1.5 transition-colors ${
-                          weergave === v
-                            ? "bg-slate-900 text-white"
-                            : "bg-white text-slate-600 hover:bg-slate-50"
-                        }`}
-                      >
-                        {v === "intern" && <LayoutList className="h-3 w-3" />}
-                        {v === "directie" && <Eye className="h-3 w-3" />}
-                        {v === "klant" && <Users className="h-3 w-3" />}
-                        {v === "monteur" && <Wrench className="h-3 w-3" />}
-                        {v === "intern" ? "Intern" : v === "directie" ? "Directie" : v === "klant" ? "Klant" : "Monteur"}
-                      </button>
-                    ))}
-                  </div>
-                  <Button size="sm" onClick={() => openNieuweRegel(false)}>
-                    <Plus className="h-3.5 w-3.5 mr-1.5" />
-                    Regel toevoegen
-                  </Button>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="p-0">
-              {regels.length === 0 ? (
-                <div className="py-12 text-center text-muted-foreground">
-                  <p className="text-sm">Nog geen regels toegevoegd.</p>
-                  <Button size="sm" variant="outline" className="mt-3" onClick={() => openNieuweRegel(false)}>
-                    <Plus className="h-3.5 w-3.5 mr-1.5" />
-                    Eerste regel toevoegen
-                  </Button>
-                </div>
-              ) : weergave === "intern" ? (
-                <InternView
-                  regelsByHoofdstuk={regelsByHoofdstuk}
-                  bouwplaatsRegels={bouwplaatsRegels}
-                  staartRegels={staartRegels}
-                  onBewerken={openBewerkenRegel}
-                  onVerwijderen={(r) => deleteRegelMut.mutate({ id, regelId: r.id })}
-                  onNieuweRegel={() => openNieuweRegel(false)}
-                  onNieuweRegelInHoofdstuk={(h) => openNieuweRegel(false, false, h)}
-                  onNieuweBouwplaats={() => openNieuweRegel(false, true)}
-                  onNieuweStaart={() => openNieuweRegel(true)}
-                />
-              ) : weergave === "directie" ? (
-                <DirectieView
-                  regelsByCategorie={regelsByCategorie}
-                  bouwplaatsRegels={bouwplaatsRegels}
-                  staartRegels={staartRegels}
-                  matSubtotaal={matSubtotaal}
-                  matOpslagBedrag={matOpslagBedrag}
-                  opslagMateriaal={opslagMateriaal}
-                  arbSubtotaal={arbSubtotaal}
-                  arbOpslagBedrag={arbOpslagBedrag}
-                  opslagArbeid={opslagArbeid}
-                  oaSubtotaal={oaSubtotaal}
-                  bouwplaatsSubtotaal={bouwplaatsSubtotaal}
-                  staartSubtotaal={staartSubtotaal}
-                  subtotaal={subtotaal}
-                  akBedrag={akBedrag}
-                  abkBedrag={abkBedrag}
-                  risicoBedrag={risicoBedrag}
-                  basisWinst={basisWinst}
-                  winstBedrag={winstBedrag}
-                  kortingBedrag={kortingBedrag}
-                  totaal={totaal}
-                  marge={marge}
-                  opslagAk={opslagAk}
-                  opslagAbk={opslagAbk}
-                  opslagRisico={opslagRisico}
-                  opslagWinst={opslagWinst}
-                  korting={data.korting}
-                  akIsVast={akIsVast}
-                  abkIsVast={abkIsVast}
-                  risicoIsVast={risicoIsVast}
-                  winstIsVast={winstIsVast}
-                />
-              ) : weergave === "klant" ? (
-                <KlantView
-                  regels={regels}
-                  totaal={totaal}
-                  totaalBtw={totaalBtw}
-                />
-              ) : (
-                <MonteurView regels={directeRegels} staartRegels={staartRegels} />
-              )}
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Rechterpaneel */}
-        <div className="space-y-4">
-
-          {/* AI-voorstel paneel */}
-          <Card>
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <Sparkles className="h-4 w-4 text-amber-500" />
-                  AI-voorstel
-                </CardTitle>
-                {aiPaneel && (
-                  <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setAiPaneel(false)}>
-                    <X className="h-4 w-4" />
-                  </Button>
-                )}
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {!aiPaneel ? (
-                <Button variant="outline" className="w-full" size="sm"
-                  onClick={() => aiMut.mutate({ id })} disabled={aiMut.isPending}>
-                  <Sparkles className="h-3.5 w-3.5 mr-1.5" />
-                  {aiMut.isPending ? "Analyseren..." : "Genereer AI-voorstel"}
-                </Button>
-              ) : (
-                <div className="space-y-3">
-                  {aiWaarschuwingen.length > 0 && (
-                    <div className="rounded-md bg-amber-50 border border-amber-200 p-3 text-xs space-y-1">
-                      {aiWaarschuwingen.map((w, i) => (
-                        <p key={i} className="text-amber-700">{w}</p>
-                      ))}
-                    </div>
-                  )}
-                  <div className="flex items-center justify-between">
-                    <p className="text-xs text-muted-foreground">{aiVoorstellen.length} regels voorgesteld</p>
-                    <Button variant="outline" size="sm" className="h-6 text-xs px-2"
-                      disabled={createRegelMut.isPending}
-                      onClick={() => {
-                        aiVoorstellen.forEach((r) => createRegelMut.mutate({ id, data: {
-                          categorie: r.categorie,
-                          omschrijving: r.omschrijving,
-                          eenheid: r.eenheid,
-                          hoeveelheid: parseFloat(r.hoeveelheid) || 1,
-                          tarief: parseFloat(r.tarief) || 0,
-                          mu_per_eenheid: parseFloat(r.mu_per_eenheid) || 0,
-                          arbeids_tarief: parseFloat(r.arbeids_tarief) || 0,
-                          onderaanneming_bedrag: parseFloat(r.onderaanneming_bedrag) || 0,
-                          is_staartkosten: r.is_staartkosten,
-                          is_bouwplaatskosten: (r as any).is_bouwplaatskosten ?? false,
-                          hoofdstuk: r.hoofdstuk,
-                          klanttekst: r.klanttekst || null,
-                        } }));
-                      }}>
-                      Voeg alles toe
-                    </Button>
-                  </div>
-                  <div className="space-y-1.5 max-h-72 overflow-y-auto">
-                    {aiVoorstellen.map((r, i) => (
-                      <div key={i} className="flex items-start gap-2 p-2 rounded border text-xs hover:bg-slate-50 group">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            <p className="font-medium text-slate-800 leading-tight">{r.omschrijving}</p>
-                            {(r as any).is_bouwplaatskosten && (
-                              <span className="inline-block rounded bg-amber-100 text-amber-700 px-1 py-0 text-[10px] leading-4 font-medium shrink-0">bouwplaats</span>
-                            )}
-                          </div>
-                          <p className="text-muted-foreground mt-0.5">{r.hoofdstuk}</p>
-                          <p className="text-muted-foreground">{r.hoeveelheid} {r.eenheid} · {CATEGORIE_LABEL[r.categorie] ?? r.categorie}</p>
-                        </div>
-                        <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0 text-green-600 opacity-0 group-hover:opacity-100 transition-opacity"
-                          title="Toevoegen aan calculatie"
-                          onClick={() => createRegelMut.mutate({ id, data: {
-                            categorie: r.categorie,
-                            omschrijving: r.omschrijving,
-                            eenheid: r.eenheid,
-                            hoeveelheid: parseFloat(r.hoeveelheid) || 1,
-                            tarief: parseFloat(r.tarief) || 0,
-                            mu_per_eenheid: parseFloat(r.mu_per_eenheid) || 0,
-                            arbeids_tarief: parseFloat(r.arbeids_tarief) || 0,
-                            onderaanneming_bedrag: parseFloat(r.onderaanneming_bedrag) || 0,
-                            is_staartkosten: r.is_staartkosten,
-                            is_bouwplaatskosten: (r as any).is_bouwplaatskosten ?? false,
-                            hoofdstuk: r.hoofdstuk,
-                            klanttekst: r.klanttekst || null,
-                          } })}>
-                          <CheckCircle2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                  <Button variant="outline" size="sm" className="w-full text-xs"
-                    onClick={() => aiMut.mutate({ id })} disabled={aiMut.isPending}>
-                    <Sparkles className="h-3 w-3 mr-1" />
-                    Opnieuw genereren
-                  </Button>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base">Kostopbouw</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-1.5 text-sm">
-              <div className="flex justify-between text-muted-foreground">
-                <span>Materiaal</span>
-                <span className="tabular-nums">{formatBedrag(matSubtotaal)}</span>
-              </div>
-              {opslagMateriaal > 0 && (
-                <div className="flex justify-between text-muted-foreground pl-3 text-xs">
-                  <span>+ Opslag ({opslagMateriaal}%)</span>
-                  <span className="tabular-nums">{formatBedrag(matOpslagBedrag)}</span>
-                </div>
-              )}
-              <div className="flex justify-between text-muted-foreground">
-                <span>Arbeid</span>
-                <span className="tabular-nums">{formatBedrag(arbSubtotaal)}</span>
-              </div>
-              {opslagArbeid > 0 && (
-                <div className="flex justify-between text-muted-foreground pl-3 text-xs">
-                  <span>+ Opslag ({opslagArbeid}%)</span>
-                  <span className="tabular-nums">{formatBedrag(arbOpslagBedrag)}</span>
-                </div>
-              )}
-              {oaSubtotaal > 0 && (
-                <div className="flex justify-between text-muted-foreground">
-                  <span>Onderaanneming</span>
-                  <span className="tabular-nums">{formatBedrag(oaSubtotaal)}</span>
-                </div>
-              )}
-              {bouwplaatsSubtotaal > 0 && (
-                <div className="flex justify-between text-muted-foreground">
-                  <span>Bouwplaatskosten</span>
-                  <span className="tabular-nums">{formatBedrag(bouwplaatsSubtotaal)}</span>
-                </div>
-              )}
-              {staartSubtotaal > 0 && (
-                <div className="flex justify-between text-muted-foreground">
-                  <span>Staartkosten</span>
-                  <span className="tabular-nums">{formatBedrag(staartSubtotaal)}</span>
-                </div>
-              )}
-              <Separator />
-              <div className="flex justify-between font-medium">
-                <span>Subtotaal</span>
-                <span className="tabular-nums">{formatBedrag(subtotaal)}</span>
-              </div>
-              <div className="flex justify-between text-muted-foreground">
-                <span>AK ({data.opslag_ak}%)</span>
-                <span className="tabular-nums">{formatBedrag(akBedrag)}</span>
-              </div>
-              {data.opslag_risico > 0 && (
-                <div className="flex justify-between text-muted-foreground">
-                  <span>Risico ({data.opslag_risico}%)</span>
-                  <span className="tabular-nums">{formatBedrag(risicoBedrag)}</span>
-                </div>
-              )}
-              <div className="flex justify-between text-xs text-muted-foreground border-t pt-1">
-                <span>Basis voor winst</span>
-                <span className="tabular-nums">{formatBedrag(basisWinst)}</span>
-              </div>
-              <div className="flex justify-between text-muted-foreground">
-                <span>Winst ({data.opslag_winst}%)</span>
-                <span className="tabular-nums">{formatBedrag(winstBedrag)}</span>
-              </div>
-              {data.korting > 0 && (
-                <div className="flex justify-between text-green-700">
-                  <span>Korting ({data.korting}%)</span>
-                  <span className="tabular-nums">- {formatBedrag(kortingBedrag)}</span>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card className="border-slate-300">
-            <CardContent className="pt-5 space-y-2 text-sm">
-              <div className="flex justify-between font-semibold text-base">
-                <span>Totaal excl. BTW</span>
-                <span className="tabular-nums">{formatBedrag(totaal)}</span>
-              </div>
-              <div className="flex justify-between text-muted-foreground">
-                <span>BTW (21%)</span>
-                <span className="tabular-nums">{formatBedrag(totaalBtw - totaal)}</span>
-              </div>
-              <Separator />
-              <div className="flex justify-between font-semibold text-primary">
-                <span>Totaal incl. BTW</span>
-                <span className="tabular-nums">{formatBedragKort(totaalBtw)}</span>
-              </div>
-              <div className="flex justify-between text-xs text-muted-foreground pt-1 border-t">
-                <span>Marge</span>
-                <span>{marge}%</span>
-              </div>
-            </CardContent>
-          </Card>
-
-          {data.opmerkingen && (
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm">Opmerkingen</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground">{data.opmerkingen}</p>
-              </CardContent>
-            </Card>
+function HoofdstukBalk({
+  naam,
+  aantalKolommen,
+  onToevoegen,
+  weergave,
+}: {
+  naam: string;
+  aantalKolommen: number;
+  onToevoegen: () => void;
+  weergave: Weergave;
+}) {
+  return (
+    <tr className="border-b border-slate-200 bg-slate-100/80 group/hs">
+      <td
+        colSpan={aantalKolommen}
+        className="px-3 py-1.5"
+      >
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-semibold uppercase tracking-wide text-slate-600">{naam}</span>
+          {weergave === "intern" && (
+            <Button
+              variant="ghost" size="sm"
+              className="h-5 px-1.5 text-xs text-slate-500 hover:text-slate-900 opacity-0 group-hover/hs:opacity-100 transition-opacity"
+              onClick={onToevoegen}
+            >
+              <Plus className="h-3 w-3 mr-0.5" />
+              Regel
+            </Button>
           )}
         </div>
-      </div>
-
-      {/* Regelsdialoog */}
-      <Dialog open={regelDialoog !== null} onOpenChange={() => setRegelDialoog(null)}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>
-              {regelDialoog === "nieuw"
-                ? regelForm.is_staartkosten ? "Staartkostenregel toevoegen"
-                : regelForm.is_bouwplaatskosten ? "Bouwplaatskostenregel toevoegen"
-                : "Calculatieregel toevoegen"
-                : "Regel bewerken"}
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-2">
-
-            {/* 1. Hoofdstuk — alleen bij reguliere werkregels */}
-            {!regelForm.is_staartkosten && !regelForm.is_bouwplaatskosten && (
-              <div className="space-y-1.5">
-                <Label>Hoofdstuk</Label>
-                <Select
-                  value={regelForm.hoofdstuk || "Overige werkzaamheden"}
-                  onValueChange={(v) => setRegelForm((f) => ({ ...f, hoofdstuk: v }))}
-                >
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {HOOFDSTUK_OPTIES.map((h) => (
-                      <SelectItem key={h} value={h}>{h}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-
-            {/* 2. Kostensoort */}
-            <div className="space-y-1.5">
-              <Label>Kostensoort</Label>
-              <div className="flex flex-wrap gap-1.5">
-                {KOSTENSOORT_OPTIES.map((ks) => (
-                  <button
-                    key={ks.value}
-                    type="button"
-                    onClick={() => setRegelForm((f) => {
-                      const btw = ks.value === "onderaanneming"
-                        ? "verlegd"
-                        : f.btw_tarief === "verlegd" ? "21" : f.btw_tarief;
-                      return { ...f, categorie: ks.value, btw_tarief: btw };
-                    })}
-                    className={cn(
-                      "rounded-md border px-3 py-1 text-xs font-medium transition-colors",
-                      regelForm.categorie === ks.value
-                        ? "bg-primary text-primary-foreground border-primary"
-                        : "border-input text-muted-foreground hover:border-primary/50 hover:text-foreground"
-                    )}
-                  >
-                    {ks.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* 3. Normregel — optioneel, alleen bij arbeid/regiepost */}
-            {(regelForm.categorie === "arbeid" || regelForm.categorie === "regiepost") && normtijden.length > 0 && (
-              <div className="space-y-1.5">
-                <Label>
-                  Normregel{" "}
-                  <span className="font-normal text-muted-foreground text-xs">(optioneel)</span>
-                </Label>
-                <Select
-                  value={regelForm.normtijd_id || "__geen__"}
-                  onValueChange={(v) => {
-                    if (!v || v === "__geen__") { setRegelForm((f) => ({ ...f, normtijd_id: "" })); return; }
-                    const nt = normtijden.find((n) => String(n.id) === v);
-                    if (nt) setRegelForm((f) => ({
-                      ...f, normtijd_id: v,
-                      omschrijving: f.omschrijving || nt.omschrijving,
-                      eenheid: nt.eenheid,
-                      mu_per_eenheid: String(nt.uren_per_eenheid),
-                    }));
-                  }}
-                >
-                  <SelectTrigger><SelectValue placeholder="Kies normregel..." /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="__geen__">Geen normregel (vrije invoer)</SelectItem>
-                    {normtijden.map((n) => (
-                      <SelectItem key={n.id} value={String(n.id)}>
-                        {n.code} — {n.omschrijving}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-
-            {/* 4. Omschrijving */}
-            <div className="space-y-1.5">
-              <Label>
-                Omschrijving <span className="text-destructive">*</span>
-              </Label>
-              <Input
-                value={regelForm.omschrijving}
-                onChange={(e) => setRegelForm((f) => ({ ...f, omschrijving: e.target.value }))}
-                placeholder={
-                  regelForm.categorie === "arbeid" ? "Bijv. Brandwerende doorvoering afdichten" :
-                  regelForm.categorie === "materiaal" ? "Bijv. Brandwerende kit 310ml" :
-                  regelForm.categorie === "onderaanneming" ? "Bijv. Schilderwerk herstelwerkzaamheden" :
-                  regelForm.categorie === "stelpost" ? "Bijv. Stelpost onvoorzien" :
-                  regelForm.categorie === "opslag" ? "Bijv. Materiaalopslag 10%" :
-                  "Omschrijving van de werkzaamheid of het materiaal"
-                }
-              />
-            </div>
-
-            {/* 5+6. Eenheid · Hoeveelheid · Regelnummer */}
-            <div className="grid grid-cols-3 gap-3">
-              <div className="space-y-1.5">
-                <Label>Eenheid</Label>
-                <Select
-                  value={regelForm.eenheid}
-                  onValueChange={(v) => setRegelForm((f) => ({ ...f, eenheid: v }))}
-                >
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {EENHEDEN.map((e) => (
-                      <SelectItem key={e} value={e}>{e}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1.5">
-                <Label>Hoeveelheid</Label>
-                <Input
-                  type="number" step="0.01" min="0"
-                  value={regelForm.hoeveelheid}
-                  onChange={(e) => setRegelForm((f) => ({ ...f, hoeveelheid: e.target.value }))}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Regelnummer</Label>
-                <Input
-                  value={regelForm.regelnummer}
-                  onChange={(e) => setRegelForm((f) => ({ ...f, regelnummer: e.target.value }))}
-                  placeholder="bijv. 1.17"
-                />
-              </div>
-            </div>
-
-            {/* Arbeid / Regiepost — arbeidsvelden */}
-            {(regelForm.categorie === "arbeid" || regelForm.categorie === "regiepost") && (
-              <div className="rounded-md bg-blue-50/60 border border-blue-100 p-3 space-y-3">
-                <div className="space-y-1.5">
-                  <Label>MU per eenheid (uur)</Label>
-                  <Input
-                    type="number" step="0.01" min="0"
-                    value={regelForm.mu_per_eenheid}
-                    onChange={(e) => setRegelForm((f) => ({ ...f, mu_per_eenheid: e.target.value }))}
-                    placeholder="0,00"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Arbeidstarief</Label>
-                  <div className="flex flex-wrap gap-1.5">
-                    {tarieven.filter((t) => t.categorie === "arbeid").map((t) => {
-                      const geselecteerd = parseFloat(regelForm.arbeids_tarief) === t.tarief;
-                      return (
-                        <button
-                          key={t.id}
-                          type="button"
-                          onClick={() => setRegelForm((f) => ({ ...f, arbeids_tarief: String(t.tarief) }))}
-                          className={cn(
-                            "rounded border px-3 py-1.5 text-xs font-medium transition-colors",
-                            geselecteerd
-                              ? "bg-blue-600 text-white border-blue-600"
-                              : "bg-white text-slate-700 border-slate-200 hover:border-blue-300"
-                          )}
-                        >
-                          {t.naam} — {formatBedrag(t.tarief)}/u
-                        </button>
-                      );
-                    })}
-                    {(() => {
-                      const isStandaard = tarieven
-                        .filter((t) => t.categorie === "arbeid")
-                        .some((t) => parseFloat(regelForm.arbeids_tarief) === t.tarief);
-                      return (
-                        <button
-                          type="button"
-                          onClick={() => setRegelForm((f) => ({ ...f, arbeids_tarief: "" }))}
-                          className={cn(
-                            "rounded border px-3 py-1.5 text-xs font-medium transition-colors",
-                            !isStandaard
-                              ? "bg-blue-600 text-white border-blue-600"
-                              : "bg-white text-slate-700 border-slate-200 hover:border-blue-300"
-                          )}
-                        >
-                          Aangepast
-                        </button>
-                      );
-                    })()}
-                  </div>
-                  {!tarieven
-                    .filter((t) => t.categorie === "arbeid")
-                    .some((t) => parseFloat(regelForm.arbeids_tarief) === t.tarief) && (
-                    <Input
-                      type="number" step="0.01" min="0"
-                      value={regelForm.arbeids_tarief}
-                      onChange={(e) => setRegelForm((f) => ({ ...f, arbeids_tarief: e.target.value }))}
-                      placeholder="Aangepast tarief (€/uur)"
-                    />
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Materiaal / Materieel / Opslag / Stelpost — tariefveld */}
-            {(regelForm.categorie === "materiaal" ||
-              regelForm.categorie === "materieel" ||
-              regelForm.categorie === "opslag" ||
-              regelForm.categorie === "stelpost") && (
-              <div className="rounded-md bg-green-50/60 border border-green-100 p-3 space-y-1.5">
-                <Label>
-                  {regelForm.categorie === "opslag" ? "Opslagbedrag (€ per eenheid)" :
-                   regelForm.categorie === "stelpost" ? "Stelpostbedrag (€ per eenheid)" :
-                   regelForm.categorie === "materieel" ? "Huurprijs (€ per eenheid)" :
-                   "Materiaalprijs (€ per eenheid)"}
-                </Label>
-                <Input
-                  type="number" step="0.01" min="0"
-                  value={regelForm.tarief}
-                  onChange={(e) => setRegelForm((f) => ({ ...f, tarief: e.target.value }))}
-                  placeholder="0,00"
-                />
-              </div>
-            )}
-
-            {/* Onderaanneming — bedragveld */}
-            {regelForm.categorie === "onderaanneming" && (
-              <div className="rounded-md bg-purple-50/60 border border-purple-100 p-3 space-y-1.5">
-                <Label>Onderaanneming bedrag (€ totaal)</Label>
-                <Input
-                  type="number" step="0.01" min="0"
-                  value={regelForm.onderaanneming_bedrag}
-                  onChange={(e) => setRegelForm((f) => ({ ...f, onderaanneming_bedrag: e.target.value }))}
-                  placeholder="0,00"
-                />
-              </div>
-            )}
-
-            {/* Live regelopbouw */}
-            {(() => {
-              const hv = parseFloat(regelForm.hoeveelheid) || 0;
-              const t  = parseFloat(regelForm.tarief) || 0;
-              const mu = parseFloat(regelForm.mu_per_eenheid) || 0;
-              const at = parseFloat(regelForm.arbeids_tarief) || 0;
-              const ob = parseFloat(regelForm.onderaanneming_bedrag) || 0;
-              const matTotaal = hv * t;
-              const muTot     = hv * mu;
-              const arbeid    = muTot * at;
-              const totaal    = matTotaal + arbeid + ob;
-              if (totaal === 0) return null;
-              return (
-                <div className="rounded-md bg-slate-50 border px-4 py-3 text-sm space-y-1.5">
-                  <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Regelopbouw</p>
-                  {(regelForm.categorie === "arbeid" || regelForm.categorie === "regiepost") && mu > 0 && at > 0 && (
-                    <p className="text-xs text-slate-600">
-                      {fmt2(hv)} {regelForm.eenheid} &times; {fmt2(mu)} MU &times; {formatBedrag(at)}/u
-                      {" = "}
-                      <span className="font-semibold text-slate-800">{formatBedrag(arbeid)}</span>
-                    </p>
-                  )}
-                  {(regelForm.categorie === "materiaal" ||
-                    regelForm.categorie === "materieel" ||
-                    regelForm.categorie === "stelpost" ||
-                    regelForm.categorie === "opslag") && t > 0 && (
-                    <p className="text-xs text-slate-600">
-                      {fmt2(hv)} {regelForm.eenheid} &times; {formatBedrag(t)}/eenheid
-                      {" = "}
-                      <span className="font-semibold text-slate-800">{formatBedrag(matTotaal)}</span>
-                    </p>
-                  )}
-                  {regelForm.categorie === "onderaanneming" && ob > 0 && (
-                    <p className="text-xs text-slate-600">
-                      Onderaanneming:{" "}
-                      <span className="font-semibold text-slate-800">{formatBedrag(ob)}</span>
-                    </p>
-                  )}
-                  <div className="flex items-center justify-between pt-1 border-t border-slate-200">
-                    <span className="text-xs text-muted-foreground">Regeltotaal</span>
-                    <span className="font-semibold">{formatBedrag(totaal)}</span>
-                  </div>
-                </div>
-              );
-            })()}
-
-            {/* BTW-tarief */}
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <Label>BTW</Label>
-                {regelForm.categorie === "onderaanneming" && regelForm.btw_tarief !== "verlegd" && (
-                  <span className="text-[11px] bg-amber-50 text-amber-700 border border-amber-200 rounded px-1.5 py-0.5">
-                    Tip: BTW-verlegd gebruikelijk bij onderaanneming
-                  </span>
-                )}
-                {regelForm.categorie === "arbeid" && regelForm.btw_tarief !== "9" && (
-                  <span className="text-[11px] bg-blue-50 text-blue-700 border border-blue-200 rounded px-1.5 py-0.5">
-                    Tip: 9% mogelijk bij onderhoud/renovatie bestaande woning
-                  </span>
-                )}
-              </div>
-              <div className="flex flex-wrap gap-1.5">
-                {BTW_OPTIES.map((opt) => (
-                  <button
-                    key={opt.value}
-                    type="button"
-                    onClick={() => setRegelForm((f) => ({ ...f, btw_tarief: opt.value }))}
-                    className={cn(
-                      "rounded-md border px-3 py-1 text-xs font-medium transition-colors",
-                      regelForm.btw_tarief === opt.value
-                        ? "bg-primary text-primary-foreground border-primary"
-                        : "border-input text-muted-foreground hover:border-primary/50 hover:text-foreground"
-                    )}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
-              </div>
-              {BTW_OPTIES.find((o) => o.value === regelForm.btw_tarief) && (
-                <p className="text-[11px] text-muted-foreground">
-                  {BTW_OPTIES.find((o) => o.value === regelForm.btw_tarief)!.toelichting}
-                </p>
-              )}
-            </div>
-
-            <Separator />
-
-            {/* Klanttekst offerte */}
-            <div className="space-y-1.5">
-              <Label>Klanttekst offerte</Label>
-              <p className="text-xs text-muted-foreground">Zichtbaar op de offerte voor de klant.</p>
-              <Textarea
-                value={regelForm.klanttekst ?? ""}
-                onChange={(e) => setRegelForm((f) => ({ ...f, klanttekst: e.target.value }))}
-                placeholder="Tekst die zichtbaar is voor de klant in de offerte"
-                rows={2}
-                className="resize-none text-sm"
-              />
-            </div>
-
-            {/* Interne notitie */}
-            <div className="space-y-1.5">
-              <Label>Interne notitie</Label>
-              <p className="text-xs text-muted-foreground">Alleen zichtbaar voor FPS, niet op de offerte.</p>
-              <Input
-                value={regelForm.opmerkingen}
-                onChange={(e) => setRegelForm((f) => ({ ...f, opmerkingen: e.target.value }))}
-                placeholder="Bijv. let op afwijkende situatie, speciale monteur nodig"
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setRegelDialoog(null)}>Annuleren</Button>
-            <Button
-              onClick={handleRegelOpslaan}
-              disabled={!regelForm.omschrijving.trim() || createRegelMut.isPending || updateRegelMut.isPending}
-            >
-              {regelDialoog === "nieuw" ? "Toevoegen" : "Opslaan"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Bewerken header dialoog */}
-      <Dialog open={bewerkenDialoog} onOpenChange={setBewerkenDialoog}>
-        <DialogContent className="max-w-xl">
-          <DialogHeader>
-            <DialogTitle>Calculatie bewerken</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-3 py-2">
-            <div className="space-y-1.5">
-              <Label>Naam *</Label>
-              <Input value={headerForm.naam} onChange={(e) => setHeaderForm((f) => ({ ...f, naam: e.target.value }))} />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label>Status</Label>
-                <Select value={headerForm.status} onValueChange={(v) => setHeaderForm((f) => ({ ...f, status: v }))}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {Object.entries(STATUS_LABEL).map(([k, v]) => (
-                      <SelectItem key={k} value={k}>{v}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1.5">
-                <Label>Klant</Label>
-                <Input value={headerForm.klant_naam} onChange={(e) => setHeaderForm((f) => ({ ...f, klant_naam: e.target.value }))} />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Project</Label>
-                <Input value={headerForm.project_naam} onChange={(e) => setHeaderForm((f) => ({ ...f, project_naam: e.target.value }))} />
-              </div>
-            </div>
-            <div className="space-y-1.5">
-              <Label>Omschrijving</Label>
-              <Textarea rows={2} value={headerForm.omschrijving} onChange={(e) => setHeaderForm((f) => ({ ...f, omschrijving: e.target.value }))} />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Opmerkingen (intern)</Label>
-              <Textarea rows={2} value={headerForm.opmerkingen} onChange={(e) => setHeaderForm((f) => ({ ...f, opmerkingen: e.target.value }))} />
-            </div>
-            <p className="text-xs font-medium text-muted-foreground pt-1">Opslagen</p>
-            <div className="space-y-2">
-              {/* Materiaal + Arbeid: altijd percentage */}
-              <div className="grid grid-cols-2 gap-2">
-                {[
-                  { field: "opslag_materiaal", label: "Opsl. materiaal (%)" },
-                  { field: "opslag_arbeid",    label: "Opsl. arbeid (%)" },
-                ].map(({ field, label }) => (
-                  <div key={field} className="space-y-1">
-                    <Label className="text-xs">{label}</Label>
-                    <Input
-                      type="number" step="0.5" min="0"
-                      value={headerForm[field as keyof typeof headerForm] as number}
-                      onChange={(e) => setHeaderForm((f) => ({ ...f, [field]: parseFloat(e.target.value) || 0 }))}
-                    />
-                  </div>
-                ))}
-              </div>
-              {/* AK / ABK / Risico / Winst: schakelbaar % of vast bedrag */}
-              {([
-                { valueField: "opslag_ak",     vastField: "ak_is_vast",     label: "AK" },
-                { valueField: "opslag_abk",    vastField: "abk_is_vast",    label: "ABK" },
-                { valueField: "opslag_risico", vastField: "risico_is_vast", label: "Risico" },
-                { valueField: "opslag_winst",  vastField: "winst_is_vast",  label: "Winst" },
-              ] as Array<{ valueField: string; vastField: string; label: string }>).map(({ valueField, vastField, label }) => {
-                const isVast = headerForm[vastField as keyof typeof headerForm] as boolean;
-                return (
-                  <div key={valueField} className="flex items-end gap-2">
-                    <div className="flex-1 space-y-1">
-                      <Label className="text-xs">{label} {isVast ? "(€)" : "(%)"}</Label>
-                      <Input
-                        type="number" step={isVast ? "10" : "0.5"} min="0"
-                        value={headerForm[valueField as keyof typeof headerForm] as number}
-                        onChange={(e) => setHeaderForm((f) => ({ ...f, [valueField]: parseFloat(e.target.value) || 0 }))}
-                      />
-                    </div>
-                    <div className="flex rounded-md border overflow-hidden shrink-0">
-                      <button
-                        type="button"
-                        className={cn("px-2 py-1.5 text-xs transition-colors", !isVast ? "bg-primary text-primary-foreground" : "bg-background text-muted-foreground hover:bg-slate-50")}
-                        onClick={() => setHeaderForm((f) => ({ ...f, [vastField]: false }))}
-                      >%</button>
-                      <button
-                        type="button"
-                        className={cn("px-2 py-1.5 text-xs transition-colors border-l", isVast ? "bg-primary text-primary-foreground" : "bg-background text-muted-foreground hover:bg-slate-50")}
-                        onClick={() => setHeaderForm((f) => ({ ...f, [vastField]: true }))}
-                      >€</button>
-                    </div>
-                  </div>
-                );
-              })}
-              <div className="space-y-1">
-                <Label className="text-xs">Korting (%)</Label>
-                <Input
-                  type="number" step="0.5" min="0" max="100"
-                  value={headerForm.korting}
-                  onChange={(e) => setHeaderForm((f) => ({ ...f, korting: parseFloat(e.target.value) || 0 }))}
-                />
-              </div>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setBewerkenDialoog(false)}>Annuleren</Button>
-            <Button
-              onClick={() => {
-                updateMut.mutate({ id, data: { ...headerForm } });
-                setBewerkenDialoog(false);
-              }}
-              disabled={!headerForm.naam.trim()}
-            >
-              Opslaan
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Verwijder bevestiging */}
-      <AlertDialog open={teVerwijderen} onOpenChange={setTeVerwijderen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Calculatie verwijderen</AlertDialogTitle>
-            <AlertDialogDescription>
-              Weet u zeker dat u deze calculatie en alle regels wilt verwijderen?
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Annuleren</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={() => deleteMut.mutate({ id })}
-            >
-              Verwijderen
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* ── Versie opslaan dialoog ── */}
-      <Dialog open={versieOpslaanDialoog} onOpenChange={(o) => !o && setVersieOpslaanDialoog(false)}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle>Versie opslaan</DialogTitle>
-          </DialogHeader>
-          <div className="py-2 space-y-3">
-            <p className="text-sm text-muted-foreground">
-              Sla de huidige staat van de calculatie op als versie. U kunt later versies vergelijken.
-            </p>
-            <div className="space-y-1.5">
-              <Label>Label (optioneel)</Label>
-              <Input
-                value={versieLabel}
-                onChange={(e) => setVersieLabel(e.target.value)}
-                placeholder="Bijv. Versie na klantoverleg"
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setVersieOpslaanDialoog(false)}>Annuleren</Button>
-            <Button onClick={handleVersieOpslaan} disabled={versieOpslaanBezig}>
-              <Save className="h-4 w-4 mr-1.5" />
-              {versieOpslaanBezig ? "Opslaan..." : "Opslaan als versie"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* ── Versiegeschiedenis dialoog ── */}
-      <Dialog open={versieDialoog} onOpenChange={setVersieDialoog}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Versiegeschiedenis</DialogTitle>
-          </DialogHeader>
-          <div className="py-2">
-            {!versieData || versieData.length === 0 ? (
-              <div className="text-center text-sm text-muted-foreground py-8">
-                Nog geen versies opgeslagen. Klik op "Versie opslaan" om de huidige staat vast te leggen.
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {versieData.map((v) => (
-                  <div key={v.id} className="flex items-center justify-between p-3 rounded-lg border bg-slate-50">
-                    <div>
-                      <p className="font-medium text-sm">{v.label ?? `Versie ${v.versienummer}`}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {new Date(v.aangemaakt_op).toLocaleString("nl-NL", {
-                          day: "2-digit", month: "2-digit", year: "numeric",
-                          hour: "2-digit", minute: "2-digit",
-                        })}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-xs text-muted-foreground bg-white border rounded px-2 py-0.5">
-                        v{v.versienummer}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-            <div className="mt-4 pt-3 border-t">
-              <Button size="sm" onClick={() => { setVersieDialoog(false); setVersieOpslaanDialoog(true); }}>
-                <Save className="h-3.5 w-3.5 mr-1.5" />
-                Nieuwe versie opslaan
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-    </div>
+      </td>
+    </tr>
   );
 }
 
-// ── Monteur view ─────────────────────────────────────────────────────────────
+// ─── Tabelkop helper ─────────────────────────────────────────────────────────
 
-function MonteurView({ regels, staartRegels }: { regels: RegelRow[]; staartRegels: RegelRow[] }) {
-  const alleRegels = [...regels, ...staartRegels];
-  const byHoofdstuk = HOOFDSTUK_OPTIES.map((h) => ({
-    hoofdstuk: h,
-    regels: alleRegels.filter((r) => (r.hoofdstuk ?? "Overige werkzaamheden") === h),
-  })).filter((g) => g.regels.length > 0);
-
+function Th({ children, align = "left", className }: { children?: React.ReactNode; align?: "left" | "right" | "center"; className?: string }) {
   return (
-    <div className="divide-y">
-      {byHoofdstuk.map(({ hoofdstuk, regels: hRegels }) => {
-        const totalMu = hRegels.reduce((s, r) => s + r.mu_totaal, 0);
-        return (
-          <div key={hoofdstuk}>
-            <div className="px-4 py-2 bg-slate-50 flex items-center justify-between">
-              <span className="text-xs font-semibold uppercase tracking-wide text-slate-700">{hoofdstuk}</span>
-              <span className="text-xs text-muted-foreground tabular-nums">{fmt2(totalMu)} MU</span>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-xs min-w-[500px]">
-                <thead>
-                  <tr className="border-b text-muted-foreground">
-                    <th className="px-4 py-1.5 text-left font-normal">Omschrijving</th>
-                    <th className="px-2 py-1.5 text-center font-normal w-[8%]">EH</th>
-                    <th className="px-2 py-1.5 text-right font-normal w-[8%]">Aantal</th>
-                    <th className="px-2 py-1.5 text-right font-normal w-[10%]">MU totaal</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y">
-                  {hRegels.map((r) => (
-                    <tr key={r.id} className="hover:bg-slate-50">
-                      <td className="px-4 py-2">
-                        <p className="font-medium text-slate-800">{r.omschrijving}</p>
-                        {r.klanttekst && <p className="text-muted-foreground mt-0.5">{r.klanttekst}</p>}
-                        {r.normtijd_code && <p className="text-muted-foreground">{r.normtijd_code}</p>}
-                      </td>
-                      <td className="px-2 py-2 text-center text-muted-foreground">{r.eenheid}</td>
-                      <td className="px-2 py-2 text-right tabular-nums">{r.hoeveelheid}</td>
-                      <td className="px-2 py-2 text-right tabular-nums font-medium">{r.mu_totaal > 0 ? fmt2(r.mu_totaal) : "—"}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        );
-      })}
-      {alleRegels.length === 0 && (
-        <p className="text-xs text-muted-foreground px-4 py-6 text-center">Geen regels gevonden.</p>
-      )}
-    </div>
+    <th className={cn(
+      "px-2 py-2 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground/70 whitespace-nowrap border-b border-slate-200 bg-slate-50",
+      align === "right" ? "text-right" : align === "center" ? "text-center" : "text-left",
+      className
+    )}>
+      {children}
+    </th>
   );
 }
 
-// ── Intern view ─────────────────────────────────────────────────────────────
-
-function InternView({
-  regelsByHoofdstuk,
-  bouwplaatsRegels,
-  staartRegels,
-  onBewerken,
-  onVerwijderen,
-  onNieuweRegel,
-  onNieuweRegelInHoofdstuk,
-  onNieuweBouwplaats,
-  onNieuweStaart,
-}: {
-  regelsByHoofdstuk: Array<{ hoofdstuk: string; regels: RegelRow[] }>;
-  bouwplaatsRegels: RegelRow[];
-  staartRegels: RegelRow[];
-  onBewerken: (r: RegelRow) => void;
-  onVerwijderen: (r: RegelRow) => void;
-  onNieuweRegel: () => void;
-  onNieuweRegelInHoofdstuk: (hoofdstuk: string) => void;
-  onNieuweBouwplaats: () => void;
-  onNieuweStaart: () => void;
-}) {
-  function rijHandler(onNieuwe: () => void, onBewerkRij: () => void) {
-    return (e: React.KeyboardEvent<HTMLTableRowElement>) => {
-      if (e.key === "ArrowDown") {
-        e.preventDefault();
-        const volgende = e.currentTarget.nextElementSibling as HTMLElement | null;
-        if (volgende) { volgende.focus(); } else { onNieuwe(); }
-      } else if (e.key === "ArrowUp") {
-        e.preventDefault();
-        const vorige = e.currentTarget.previousElementSibling as HTMLElement | null;
-        if (vorige) vorige.focus();
-      } else if (e.key === "Enter") {
-        onBewerkRij();
-      }
-    };
-  }
-  return (
-    <div>
-      {regelsByHoofdstuk.map(({ hoofdstuk, regels: hRegels }) => (
-        <div key={hoofdstuk}>
-          <div className="px-4 py-1.5 text-xs font-semibold uppercase tracking-wide bg-slate-100 text-slate-700">
-            {hoofdstuk}
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs min-w-[900px]">
-              <thead>
-                <tr className="border-b text-muted-foreground">
-                  <th className="px-4 py-1.5 text-left font-normal w-[22%]">Omschrijving</th>
-                  <th className="px-2 py-1.5 text-center font-normal w-[5%]">EH</th>
-                  <th className="px-2 py-1.5 text-right font-normal w-[6%]">Aantal</th>
-                  <th className="px-2 py-1.5 text-right font-normal w-[8%]">Mat.prijs</th>
-                  <th className="px-2 py-1.5 text-right font-normal w-[8%]">Materiaal</th>
-                  <th className="px-2 py-1.5 text-right font-normal w-[7%]">MU/EH</th>
-                  <th className="px-2 py-1.5 text-right font-normal w-[7%]">MU totaal</th>
-                  <th className="px-2 py-1.5 text-right font-normal w-[8%]">Arbeid</th>
-                  <th className="px-2 py-1.5 text-right font-normal w-[8%]">Ondernm.</th>
-                  <th className="px-2 py-1.5 text-right font-normal w-[8%]">Totaal</th>
-                  <th className="px-2 py-1.5 w-[8%]" />
-                </tr>
-              </thead>
-              <tbody className="divide-y">
-                {hRegels.map((r) => (
-                  <tr key={r.id} tabIndex={0}
-                    className="hover:bg-slate-50 focus:bg-slate-50 focus:outline-none group"
-                    onKeyDown={rijHandler(onNieuweRegel, () => onBewerken(r))}>
-                    <td className="px-4 py-2">
-                      <p className="font-medium text-slate-800">{r.omschrijving}</p>
-                      {r.regelnummer && <p className="text-muted-foreground">{r.regelnummer}</p>}
-                      {r.normtijd_code && <p className="text-muted-foreground">{r.normtijd_code}</p>}
-                    </td>
-                    <td className="px-2 py-2 text-center text-muted-foreground">{r.eenheid}</td>
-                    <td className="px-2 py-2 text-right tabular-nums">{r.hoeveelheid}</td>
-                    <td className="px-2 py-2 text-right tabular-nums">{r.tarief > 0 ? formatBedrag(r.tarief) : "—"}</td>
-                    <td className="px-2 py-2 text-right tabular-nums">{r.materiaal_totaal > 0 ? formatBedrag(r.materiaal_totaal) : "—"}</td>
-                    <td className="px-2 py-2 text-right tabular-nums">{r.mu_per_eenheid > 0 ? fmt2(r.mu_per_eenheid) : "—"}</td>
-                    <td className="px-2 py-2 text-right tabular-nums">{r.mu_totaal > 0 ? fmt2(r.mu_totaal) : "—"}</td>
-                    <td className="px-2 py-2 text-right tabular-nums">{r.arbeidsloon > 0 ? formatBedrag(r.arbeidsloon) : "—"}</td>
-                    <td className="px-2 py-2 text-right tabular-nums">{r.onderaanneming_bedrag > 0 ? formatBedrag(r.onderaanneming_bedrag) : "—"}</td>
-                    <td className="px-2 py-2 text-right tabular-nums font-medium">{formatBedrag(r.totaal)}</td>
-                    <td className="px-2 py-2 text-right">
-                      <div className="flex gap-1 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => onBewerken(r)}>
-                          <Pencil className="h-3 w-3" />
-                        </Button>
-                        <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => onVerwijderen(r)}>
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      ))}
-
-      {/* Bouwplaatskosten */}
-      <div className="border-t mt-1">
-        <div className="flex items-center justify-between px-4 py-1.5 bg-amber-50">
-          <span className="text-xs font-semibold uppercase tracking-wide text-amber-800">Bouwplaatskosten</span>
-          <Button variant="ghost" size="sm" className="h-6 text-xs" onClick={onNieuweBouwplaats}>
-            <Plus className="h-3 w-3 mr-1" />
-            Toevoegen
-          </Button>
-        </div>
-        {bouwplaatsRegels.length === 0 ? (
-          <p className="text-xs text-muted-foreground px-4 py-3">
-            Geen bouwplaatskosten — steiger, schaftwagen, afval, container, transport, enz.</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs min-w-[900px]">
-              <tbody className="divide-y">
-                {bouwplaatsRegels.map((r) => (
-                  <tr key={r.id} tabIndex={0}
-                    className="hover:bg-amber-50/50 focus:bg-amber-50/50 focus:outline-none group"
-                    onKeyDown={rijHandler(onNieuweBouwplaats, () => onBewerken(r))}>
-                    <td className="px-4 py-2 w-[22%]">
-                      <p className="font-medium text-slate-800">{r.omschrijving}</p>
-                      {r.regelnummer && <p className="text-muted-foreground">{r.regelnummer}</p>}
-                    </td>
-                    <td className="px-2 py-2 text-center text-muted-foreground w-[5%]">{r.eenheid}</td>
-                    <td className="px-2 py-2 text-right tabular-nums w-[6%]">{r.hoeveelheid}</td>
-                    <td className="px-2 py-2 text-right tabular-nums w-[8%]">{r.tarief > 0 ? formatBedrag(r.tarief) : "—"}</td>
-                    <td className="px-2 py-2 text-right tabular-nums w-[8%]">{r.materiaal_totaal > 0 ? formatBedrag(r.materiaal_totaal) : "—"}</td>
-                    <td className="px-2 py-2 text-right tabular-nums w-[7%]">{r.mu_per_eenheid > 0 ? fmt2(r.mu_per_eenheid) : "—"}</td>
-                    <td className="px-2 py-2 text-right tabular-nums w-[7%]">{r.mu_totaal > 0 ? fmt2(r.mu_totaal) : "—"}</td>
-                    <td className="px-2 py-2 text-right tabular-nums w-[8%]">{r.arbeidsloon > 0 ? formatBedrag(r.arbeidsloon) : "—"}</td>
-                    <td className="px-2 py-2 text-right tabular-nums w-[8%]">{r.onderaanneming_bedrag > 0 ? formatBedrag(r.onderaanneming_bedrag) : "—"}</td>
-                    <td className="px-2 py-2 text-right tabular-nums font-medium w-[8%]">{formatBedrag(r.totaal)}</td>
-                    <td className="px-2 py-2 text-right w-[8%]">
-                      <div className="flex gap-1 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => onBewerken(r)}>
-                          <Pencil className="h-3 w-3" />
-                        </Button>
-                        <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => onVerwijderen(r)}>
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
-
-      {/* Staartkosten */}
-      <div className="border-t mt-1">
-        <div className="flex items-center justify-between px-4 py-1.5 bg-slate-100">
-          <span className="text-xs font-semibold uppercase tracking-wide text-slate-600">Staartkosten</span>
-          <Button variant="ghost" size="sm" className="h-6 text-xs" onClick={onNieuweStaart}>
-            <Plus className="h-3 w-3 mr-1" />
-            Staartkost toevoegen
-          </Button>
-        </div>
-        {staartRegels.length === 0 ? (
-          <p className="text-xs text-muted-foreground px-4 py-3">
-            Geen staartkosten — projectleiding, enz.
-          </p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs min-w-[900px]">
-              <tbody className="divide-y">
-                {staartRegels.map((r) => (
-                  <tr key={r.id} tabIndex={0}
-                    className="hover:bg-slate-50 focus:bg-slate-50 focus:outline-none group"
-                    onKeyDown={rijHandler(onNieuweStaart, () => onBewerken(r))}>
-                    <td className="px-4 py-2 w-[22%]">
-                      <p className="font-medium text-slate-800">{r.omschrijving}</p>
-                      {r.regelnummer && <p className="text-muted-foreground">{r.regelnummer}</p>}
-                    </td>
-                    <td className="px-2 py-2 text-center text-muted-foreground w-[5%]">{r.eenheid}</td>
-                    <td className="px-2 py-2 text-right tabular-nums w-[6%]">{r.hoeveelheid}</td>
-                    <td className="px-2 py-2 text-right tabular-nums w-[8%]">{r.tarief > 0 ? formatBedrag(r.tarief) : "—"}</td>
-                    <td className="px-2 py-2 text-right tabular-nums w-[8%]">{r.materiaal_totaal > 0 ? formatBedrag(r.materiaal_totaal) : "—"}</td>
-                    <td className="px-2 py-2 text-right tabular-nums w-[7%]">{r.mu_per_eenheid > 0 ? fmt2(r.mu_per_eenheid) : "—"}</td>
-                    <td className="px-2 py-2 text-right tabular-nums w-[7%]">{r.mu_totaal > 0 ? fmt2(r.mu_totaal) : "—"}</td>
-                    <td className="px-2 py-2 text-right tabular-nums w-[8%]">{r.arbeidsloon > 0 ? formatBedrag(r.arbeidsloon) : "—"}</td>
-                    <td className="px-2 py-2 text-right tabular-nums w-[8%]">{r.onderaanneming_bedrag > 0 ? formatBedrag(r.onderaanneming_bedrag) : "—"}</td>
-                    <td className="px-2 py-2 text-right tabular-nums font-medium w-[8%]">{formatBedrag(r.totaal)}</td>
-                    <td className="px-2 py-2 text-right w-[8%]">
-                      <div className="flex gap-1 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => onBewerken(r)}>
-                          <Pencil className="h-3 w-3" />
-                        </Button>
-                        <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => onVerwijderen(r)}>
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-// ── Directie view ────────────────────────────────────────────────────────────
+// ─── Directie overzicht (read-only) ─────────────────────────────────────────
 
 function DirectieView({
-  regelsByCategorie,
-  bouwplaatsRegels,
-  staartRegels,
+  directeRegels, bouwplaatsRegels, staartRegels,
   matSubtotaal, matOpslagBedrag, opslagMateriaal,
   arbSubtotaal, arbOpslagBedrag, opslagArbeid,
   oaSubtotaal, bouwplaatsSubtotaal, staartSubtotaal,
-  subtotaal,
-  akBedrag, abkBedrag, risicoBedrag, basisWinst, winstBedrag, kortingBedrag,
-  totaal, marge,
+  subtotaal, akBedrag, abkBedrag, risicoBedrag, basisWinst, winstBedrag,
+  kortingBedrag, totaal, marge,
   opslagAk, opslagAbk, opslagRisico, opslagWinst, korting,
   akIsVast, abkIsVast, risicoIsVast, winstIsVast,
 }: {
-  regelsByCategorie: Array<{ categorie: string; label: string; regels: RegelRow[] }>;
-  bouwplaatsRegels: RegelRow[];
-  staartRegels: RegelRow[];
+  directeRegels: RegelRow[]; bouwplaatsRegels: RegelRow[]; staartRegels: RegelRow[];
   matSubtotaal: number; matOpslagBedrag: number; opslagMateriaal: number;
   arbSubtotaal: number; arbOpslagBedrag: number; opslagArbeid: number;
   oaSubtotaal: number; bouwplaatsSubtotaal: number; staartSubtotaal: number;
-  subtotaal: number;
-  akBedrag: number; abkBedrag: number; risicoBedrag: number; basisWinst: number; winstBedrag: number; kortingBedrag: number;
-  totaal: number; marge: number;
+  subtotaal: number; akBedrag: number; abkBedrag: number; risicoBedrag: number;
+  basisWinst: number; winstBedrag: number; kortingBedrag: number; totaal: number; marge: number;
   opslagAk: number; opslagAbk: number; opslagRisico: number; opslagWinst: number; korting: number;
   akIsVast: boolean; abkIsVast: boolean; risicoIsVast: boolean; winstIsVast: boolean;
 }) {
+  const groepenPerCat = Object.entries(CATEGORIE_LABEL)
+    .map(([cat, label]) => ({ cat, label, regels: directeRegels.filter((r) => r.categorie === cat) }))
+    .filter((g) => g.regels.length > 0);
+
   return (
     <div className="p-5 space-y-4">
-      <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
+      <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
         Kostprijsoverzicht — vertrouwelijk
-      </div>
+      </p>
       <table className="w-full text-sm">
         <tbody className="divide-y">
-          {/* Directe regels per categorie */}
-          {regelsByCategorie.map(({ categorie, label, regels }) => {
-            const cat_totaal = regels.reduce((s, r) => s + r.totaal, 0);
+          {groepenPerCat.map(({ cat, label, regels }) => {
+            const mu  = regels.reduce((s, r) => s + (r.mu_totaal ?? 0), 0);
             const mat = regels.reduce((s, r) => s + (r.materiaal_totaal ?? 0), 0);
             const arb = regels.reduce((s, r) => s + (r.arbeidsloon ?? 0), 0);
             const ond = regels.reduce((s, r) => s + (r.onderaanneming_bedrag ?? 0), 0);
-            const mu  = regels.reduce((s, r) => s + (r.mu_totaal ?? 0), 0);
+            const tot = regels.reduce((s, r) => s + r.totaal, 0);
             return (
-              <tr key={categorie} className="hover:bg-slate-50">
-                <td className="py-2 text-slate-700 font-medium w-1/3">{label}</td>
-                <td className="py-2 text-right tabular-nums text-muted-foreground text-xs">
-                  {mu > 0 && `${fmt2(mu)} MU`}
+              <tr key={cat} className="hover:bg-slate-50">
+                <td className="py-2 font-medium text-slate-700 w-1/3">{label}</td>
+                <td className="py-2 text-right text-xs text-muted-foreground tabular-nums">
+                  {mu > 0 ? `${fmt2(mu)} MU` : ""}
                 </td>
-                <td className="py-2 text-right tabular-nums text-muted-foreground text-xs">
-                  {mat > 0 && `mat ${formatBedrag(mat)}`}
+                <td className="py-2 text-right text-xs text-muted-foreground tabular-nums">
+                  {mat > 0 ? `mat ${formatBedrag(mat)}` : ""}
                 </td>
-                <td className="py-2 text-right tabular-nums text-muted-foreground text-xs">
-                  {arb > 0 && `arb ${formatBedrag(arb)}`}
+                <td className="py-2 text-right text-xs text-muted-foreground tabular-nums">
+                  {arb > 0 ? `arb ${formatBedrag(arb)}` : ""}
                 </td>
-                <td className="py-2 text-right tabular-nums text-muted-foreground text-xs">
-                  {ond > 0 && `ond ${formatBedrag(ond)}`}
+                <td className="py-2 text-right text-xs text-muted-foreground tabular-nums">
+                  {ond > 0 ? `ond ${formatBedrag(ond)}` : ""}
                 </td>
-                <td className="py-2 pl-4 text-right tabular-nums font-medium">{formatBedrag(cat_totaal)}</td>
+                <td className="py-2 pl-4 text-right tabular-nums font-medium">{formatBedrag(tot)}</td>
               </tr>
             );
           })}
-          {/* Opslagen per kostsoort */}
           {opslagMateriaal > 0 && matSubtotaal > 0 && (
             <tr className="text-muted-foreground bg-slate-50/50">
               <td className="py-1 pl-4 text-xs">+ Opslag materiaal ({opslagMateriaal}%)</td>
               <td colSpan={4} />
-              <td className="py-1 pl-4 text-right tabular-nums text-xs">{formatBedrag(matOpslagBedrag)}</td>
+              <td className="py-1 pl-4 text-right text-xs tabular-nums">{formatBedrag(matOpslagBedrag)}</td>
             </tr>
           )}
           {opslagArbeid > 0 && arbSubtotaal > 0 && (
             <tr className="text-muted-foreground bg-slate-50/50">
               <td className="py-1 pl-4 text-xs">+ Opslag arbeid ({opslagArbeid}%)</td>
               <td colSpan={4} />
-              <td className="py-1 pl-4 text-right tabular-nums text-xs">{formatBedrag(arbOpslagBedrag)}</td>
+              <td className="py-1 pl-4 text-right text-xs tabular-nums">{formatBedrag(arbOpslagBedrag)}</td>
             </tr>
           )}
-          {/* Bouwplaatskosten */}
           {bouwplaatsSubtotaal > 0 && (
             <tr className="hover:bg-amber-50/50">
-              <td className="py-2 text-slate-700 font-medium">Bouwplaatskosten</td>
-              <td colSpan={4} className="py-2 text-right text-xs text-muted-foreground">
-                {bouwplaatsRegels.length} post{bouwplaatsRegels.length !== 1 ? "en" : ""}
-              </td>
+              <td className="py-2 font-medium text-slate-700">Bouwplaatskosten</td>
+              <td colSpan={4} className="py-2 text-right text-xs text-muted-foreground">{bouwplaatsRegels.length} post{bouwplaatsRegels.length !== 1 ? "en" : ""}</td>
               <td className="py-2 pl-4 text-right tabular-nums font-medium">{formatBedrag(bouwplaatsSubtotaal)}</td>
             </tr>
           )}
-          {/* Staartkosten */}
           {staartSubtotaal > 0 && (
             <tr className="hover:bg-slate-50">
-              <td className="py-2 text-slate-700 font-medium">Staartkosten</td>
-              <td colSpan={4} className="py-2 text-right text-xs text-muted-foreground">
-                {staartRegels.length} post{staartRegels.length !== 1 ? "en" : ""}
-              </td>
+              <td className="py-2 font-medium text-slate-700">Staartkosten</td>
+              <td colSpan={4} className="py-2 text-right text-xs text-muted-foreground">{staartRegels.length} post{staartRegels.length !== 1 ? "en" : ""}</td>
               <td className="py-2 pl-4 text-right tabular-nums font-medium">{formatBedrag(staartSubtotaal)}</td>
             </tr>
           )}
@@ -1853,39 +1042,33 @@ function DirectieView({
             <td className="py-2 pl-4 text-right tabular-nums">{formatBedrag(subtotaal)}</td>
           </tr>
           <tr className="text-muted-foreground">
-            <td className="py-1.5 pl-3">+ AK {akIsVast ? `(€ vast)` : `(${opslagAk}%)`}</td>
-            <td colSpan={4} />
-            <td className="py-1.5 pl-4 text-right tabular-nums">{formatBedrag(akBedrag)}</td>
+            <td className="py-1.5 pl-3">+ AK {akIsVast ? "(€ vast)" : `(${opslagAk}%)`}</td>
+            <td colSpan={4} /><td className="py-1.5 pl-4 text-right tabular-nums">{formatBedrag(akBedrag)}</td>
           </tr>
           {(opslagAbk > 0 || abkIsVast) && (
             <tr className="text-muted-foreground">
-              <td className="py-1.5 pl-3">+ ABK {abkIsVast ? `(€ vast)` : `(${opslagAbk}%)`}</td>
-              <td colSpan={4} />
-              <td className="py-1.5 pl-4 text-right tabular-nums">{formatBedrag(abkBedrag)}</td>
+              <td className="py-1.5 pl-3">+ ABK {abkIsVast ? "(€ vast)" : `(${opslagAbk}%)`}</td>
+              <td colSpan={4} /><td className="py-1.5 pl-4 text-right tabular-nums">{formatBedrag(abkBedrag)}</td>
             </tr>
           )}
           {opslagRisico > 0 && (
             <tr className="text-muted-foreground">
-              <td className="py-1.5 pl-3">+ Risico {risicoIsVast ? `(€ vast)` : `(${opslagRisico}%)`}</td>
-              <td colSpan={4} />
-              <td className="py-1.5 pl-4 text-right tabular-nums">{formatBedrag(risicoBedrag)}</td>
+              <td className="py-1.5 pl-3">+ Risico {risicoIsVast ? "(€ vast)" : `(${opslagRisico}%)`}</td>
+              <td colSpan={4} /><td className="py-1.5 pl-4 text-right tabular-nums">{formatBedrag(risicoBedrag)}</td>
             </tr>
           )}
           <tr className="text-muted-foreground text-xs border-t">
             <td className="py-1.5 pl-3">Basis voor winst</td>
-            <td colSpan={4} />
-            <td className="py-1.5 pl-4 text-right tabular-nums">{formatBedrag(basisWinst)}</td>
+            <td colSpan={4} /><td className="py-1.5 pl-4 text-right tabular-nums">{formatBedrag(basisWinst)}</td>
           </tr>
           <tr className="text-muted-foreground">
-            <td className="py-1.5 pl-3">+ Winst {winstIsVast ? `(€ vast)` : `(${opslagWinst}%)`}</td>
-            <td colSpan={4} />
-            <td className="py-1.5 pl-4 text-right tabular-nums">{formatBedrag(winstBedrag)}</td>
+            <td className="py-1.5 pl-3">+ Winst {winstIsVast ? "(€ vast)" : `(${opslagWinst}%)`}</td>
+            <td colSpan={4} /><td className="py-1.5 pl-4 text-right tabular-nums">{formatBedrag(winstBedrag)}</td>
           </tr>
           {korting > 0 && (
             <tr className="text-green-700">
               <td className="py-1.5 pl-3">- Korting ({korting}%)</td>
-              <td colSpan={4} />
-              <td className="py-1.5 pl-4 text-right tabular-nums">- {formatBedrag(kortingBedrag)}</td>
+              <td colSpan={4} /><td className="py-1.5 pl-4 text-right tabular-nums">- {formatBedrag(kortingBedrag)}</td>
             </tr>
           )}
           <tr className="font-bold text-base border-t-2">
@@ -1905,17 +1088,9 @@ function DirectieView({
   );
 }
 
-// ── Klant view ────────────────────────────────────────────────────────────────
+// ─── Klant view ──────────────────────────────────────────────────────────────
 
-function KlantView({
-  regels,
-  totaal,
-  totaalBtw,
-}: {
-  regels: RegelRow[];
-  totaal: number;
-  totaalBtw: number;
-}) {
+function KlantView({ regels, totaal, totaalBtw }: { regels: RegelRow[]; totaal: number; totaalBtw: number }) {
   const zichtbaar = regels.filter((r) => !r.is_staartkosten && !r.is_bouwplaatskosten);
   return (
     <div>
@@ -1932,7 +1107,7 @@ function KlantView({
           {zichtbaar.map((r) => (
             <tr key={r.id} className="hover:bg-slate-50">
               <td className="px-6 py-2.5">
-                <p className="font-medium text-slate-800">{r.omschrijving}</p>
+                <p className="font-medium text-slate-800">{r.klanttekst || r.omschrijving}</p>
                 {r.regelnummer && <p className="text-xs text-muted-foreground">{r.regelnummer}</p>}
               </td>
               <td className="px-3 py-2.5 text-center text-muted-foreground">{r.eenheid}</td>
@@ -1965,6 +1140,959 @@ function KlantView({
           <span className="tabular-nums">{formatBedrag(totaalBtw)}</span>
         </div>
       </div>
+    </div>
+  );
+}
+
+// ─── Monteur view ────────────────────────────────────────────────────────────
+
+function MonteurView({ regels }: { regels: RegelRow[] }) {
+  const directe = regels.filter((r) => !r.is_staartkosten && !r.is_bouwplaatskosten);
+  return (
+    <div>
+      {HOOFDSTUK_OPTIES.map((h) => {
+        const rijen = directe.filter((r) => (r.hoofdstuk ?? "Overige werkzaamheden") === h);
+        if (!rijen.length) return null;
+        return (
+          <div key={h}>
+            <div className="px-4 py-1.5 bg-slate-100 border-b text-xs font-semibold uppercase tracking-wide text-slate-600">{h}</div>
+            <table className="w-full text-sm">
+              <tbody className="divide-y">
+                {rijen.map((r) => (
+                  <tr key={r.id} className="hover:bg-slate-50">
+                    <td className="px-4 py-2.5 font-medium">{r.omschrijving}</td>
+                    <td className="px-3 py-2.5 text-center text-muted-foreground w-16">{r.eenheid}</td>
+                    <td className="px-3 py-2.5 text-right tabular-nums w-20">{r.hoeveelheid}</td>
+                    <td className="px-3 py-2.5 text-sm text-muted-foreground w-56">{r.opmerkingen || ""}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ─── Hoofdcomponent ──────────────────────────────────────────────────────────
+
+export default function ModulesCalculatieDetail() {
+  const [, params] = useRoute("/modules/calculatie/:id");
+  const [, navigate] = useLocation();
+  const id = params?.id ? parseInt(params.id, 10) : 0;
+
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const invalidate = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ["mod-calculatie", id] });
+  }, [queryClient, id]);
+
+  const { data, isLoading } = useGetModCalculatie(id, {
+    query: { queryKey: ["mod-calculatie", id], enabled: id > 0 },
+  });
+  const { data: normtijden = [] } = useListModCalcNormtijden({ query: { queryKey: ["mod-calc-normtijden"] } });
+  const { data: tarieven = [] } = useListModCalcTarieven({ query: { queryKey: ["mod-calc-tarieven"] } });
+
+  const updateMut   = useUpdateModCalculatie({ mutation: { onSuccess: invalidate } });
+  const deleteMut   = useDeleteModCalculatie({ mutation: { onSuccess: () => navigate("/modules/calculatie") } });
+  const dupliceerMut = useDupliceerModCalculatie({
+    mutation: {
+      onSuccess: (d) => {
+        queryClient.invalidateQueries({ queryKey: ["mod-calculaties"] });
+        navigate(`/modules/calculatie/${d.id}`);
+      },
+    },
+  });
+  const maakOfferteMut = useMaakOfferteVanCalculatie({
+    mutation: {
+      onSuccess: (d) => { navigate(`/offertes/${d.offerte_id}`); },
+      onError: () => toast({ title: "Offerte aanmaken mislukt", variant: "destructive" }),
+    },
+  });
+  const createRegelMut = useCreateModCalcRegel({ mutation: { onSuccess: invalidate } });
+  const updateRegelMut = useUpdateModCalcRegel({ mutation: { onSuccess: invalidate } });
+  const deleteRegelMut = useDeleteModCalcRegel({ mutation: { onSuccess: invalidate } });
+  const aiMut = useAiModCalcRegels({
+    mutation: {
+      onSuccess: (d) => {
+        const regels = (d.regels ?? []).map((r) => ({
+          categorie: r.categorie ?? "materiaal",
+          omschrijving: r.omschrijving ?? "",
+          normtijd_id: "",
+          eenheid: r.eenheid ?? "st",
+          hoeveelheid: String(r.hoeveelheid ?? 1),
+          tarief: String(r.tarief ?? 0),
+          mu_per_eenheid: String((r as any).mu_per_eenheid ?? 0),
+          arbeids_tarief: String((r as any).arbeids_tarief ?? 0),
+          onderaanneming_bedrag: String((r as any).onderaanneming_bedrag ?? 0),
+          is_staartkosten: (r as any).is_staartkosten ?? false,
+          is_bouwplaatskosten: (r as any).is_bouwplaatskosten ?? false,
+          opmerkingen: "",
+          regelnummer: "",
+          hoofdstuk: (r as any).hoofdstuk ?? "Overige werkzaamheden",
+          klanttekst: r.klanttekst ?? "",
+          btw_tarief: "21",
+        }));
+        setAiVoorstellen(regels);
+        setAiWaarschuwingen((d.waarschuwingen ?? []) as string[]);
+        setAiPaneel(true);
+      },
+    },
+  });
+
+  const [weergave, setWeergave] = useState<Weergave>("intern");
+  const [teVerwijderen, setTeVerwijderen]       = useState(false);
+  const [bewerkenDialoog, setBewerkenDialoog]   = useState(false);
+  const [aiPaneel, setAiPaneel]                 = useState(false);
+  const [aiVoorstellen, setAiVoorstellen]       = useState<any[]>([]);
+  const [aiWaarschuwingen, setAiWaarschuwingen] = useState<string[]>([]);
+  const [versieDialoog, setVersieDialoog]       = useState(false);
+  const [versieOpslaanDialoog, setVersieOpslaanDialoog] = useState(false);
+  const [versieLabel, setVersieLabel]           = useState("");
+  const [versieOpslaanBezig, setVersieOpslaanBezig] = useState(false);
+
+  // Nieuw rij invoerrij (null = verborgen)
+  const [nieuwDraft, setNieuwDraft] = useState<LocalDraft | null>(null);
+
+  const [headerForm, setHeaderForm] = useState({
+    naam: "", referentie: "", klant_naam: "", project_naam: "",
+    status: "", omschrijving: "", opmerkingen: "",
+    opslag_materiaal: 0, opslag_arbeid: 0,
+    opslag_ak: 15, opslag_abk: 10, opslag_risico: 5, opslag_winst: 10, korting: 0,
+    ak_is_vast: false, abk_is_vast: false, risico_is_vast: false, winst_is_vast: false,
+  });
+
+  const { data: versieData, refetch: versiesHerladen } = useQuery<{ id: number; versienummer: number; label: string | null; aangemaakt_op: string }[]>({
+    queryKey: ["calc-versies", id],
+    queryFn: () => fetch(`/api/modules/calculaties/${id}/versies`).then((r) => r.json()),
+    enabled: versieDialoog,
+  });
+
+  async function handleVersieOpslaan() {
+    setVersieOpslaanBezig(true);
+    try {
+      await fetch(`/api/modules/calculaties/${id}/versie-opslaan`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ label: versieLabel.trim() || undefined }),
+      });
+      setVersieOpslaanDialoog(false);
+      setVersieLabel("");
+      versiesHerladen();
+    } finally {
+      setVersieOpslaanBezig(false);
+    }
+  }
+
+  function openBewerkenHeader() {
+    if (!data) return;
+    setHeaderForm({
+      naam: data.naam,
+      referentie: data.referentie ?? "",
+      klant_naam: data.klant_naam ?? "",
+      project_naam: data.project_naam ?? "",
+      status: data.status,
+      omschrijving: data.omschrijving ?? "",
+      opmerkingen: data.opmerkingen ?? "",
+      opslag_materiaal: data.opslag_materiaal ?? 0,
+      opslag_arbeid: data.opslag_arbeid ?? 0,
+      opslag_ak: data.opslag_ak,
+      opslag_abk: (data as any).opslag_abk ?? 10,
+      opslag_risico: data.opslag_risico,
+      opslag_winst: data.opslag_winst,
+      korting: data.korting,
+      ak_is_vast: (data as any).ak_is_vast ?? false,
+      abk_is_vast: (data as any).abk_is_vast ?? false,
+      risico_is_vast: (data as any).risico_is_vast ?? false,
+      winst_is_vast: (data as any).winst_is_vast ?? false,
+    });
+    setBewerkenDialoog(true);
+  }
+
+  function handleHeaderOpslaan() {
+    updateMut.mutate({ id, data: {
+      naam: headerForm.naam,
+      referentie: headerForm.referentie || null,
+      klant_naam: headerForm.klant_naam || null,
+      project_naam: headerForm.project_naam || null,
+      status: headerForm.status,
+      omschrijving: headerForm.omschrijving || null,
+      opmerkingen: headerForm.opmerkingen || null,
+      opslag_materiaal: headerForm.opslag_materiaal,
+      opslag_arbeid: headerForm.opslag_arbeid,
+      opslag_ak: headerForm.opslag_ak,
+      opslag_abk: headerForm.opslag_abk,
+      opslag_risico: headerForm.opslag_risico,
+      opslag_winst: headerForm.opslag_winst,
+      korting: headerForm.korting,
+      ak_is_vast: headerForm.ak_is_vast,
+      abk_is_vast: headerForm.abk_is_vast,
+      risico_is_vast: headerForm.risico_is_vast,
+      winst_is_vast: headerForm.winst_is_vast,
+    } as any });
+    setBewerkenDialoog(false);
+  }
+
+  function handleStatusWijzigen(nieuweStatus: string) {
+    if (!data) return;
+    updateMut.mutate({ id, data: { naam: data.naam, status: nieuweStatus } });
+  }
+
+  function nieuweRegel(opts: { hoofdstuk?: string; is_staartkosten?: boolean; is_bouwplaatskosten?: boolean }) {
+    setNieuwDraft({
+      ...LEEG_DRAFT,
+      hoofdstuk: opts.hoofdstuk ?? "Overige werkzaamheden",
+      is_staartkosten: opts.is_staartkosten ?? false,
+      is_bouwplaatskosten: opts.is_bouwplaatskosten ?? false,
+    });
+  }
+
+  function bewaarNieuweRegel(payload: ReturnType<typeof draftToPayload>) {
+    createRegelMut.mutate({ id, data: payload as any }, {
+      onSettled: () => setNieuwDraft(null),
+    });
+  }
+
+  function bewaarBestaandeRegel(regelId: number, payload: ReturnType<typeof draftToPayload>) {
+    updateRegelMut.mutate({ id, regelId, data: payload as any });
+  }
+
+  function dupliceerRegel(rij: RegelRow) {
+    createRegelMut.mutate({ id, data: draftToPayload(regelToDraft(rij)) as any });
+  }
+
+  if (isLoading) {
+    return (
+      <div className="p-6 space-y-4 max-w-[1500px] mx-auto">
+        <Skeleton className="h-8 w-64" />
+        <Skeleton className="h-12 w-full" />
+        <Skeleton className="h-96 w-full" />
+      </div>
+    );
+  }
+
+  if (!data) {
+    return <div className="p-6 text-center text-muted-foreground">Calculatie niet gevonden.</div>;
+  }
+
+  const regels: RegelRow[] = (data.regels ?? []) as RegelRow[];
+  const directeRegels    = regels.filter((r) => !r.is_staartkosten && !r.is_bouwplaatskosten).sort((a, b) => a.volgorde - b.volgorde);
+  const bouwplaatsRegels = regels.filter((r) => r.is_bouwplaatskosten).sort((a, b) => a.volgorde - b.volgorde);
+  const staartRegels     = regels.filter((r) => r.is_staartkosten).sort((a, b) => a.volgorde - b.volgorde);
+
+  const matSubtotaal        = rnd(directeRegels.reduce((s, r) => s + r.materiaal_totaal, 0));
+  const arbSubtotaal        = rnd(directeRegels.reduce((s, r) => s + r.arbeidsloon, 0));
+  const oaSubtotaal         = rnd(directeRegels.reduce((s, r) => s + r.onderaanneming_bedrag, 0));
+  const bouwplaatsSubtotaal = rnd(bouwplaatsRegels.reduce((s, r) => s + r.totaal, 0));
+  const staartSubtotaal     = rnd(staartRegels.reduce((s, r) => s + r.totaal, 0));
+  const opslagMateriaal     = data.opslag_materiaal ?? 0;
+  const opslagArbeid        = data.opslag_arbeid ?? 0;
+  const opslagAk            = data.opslag_ak;
+  const opslagAbk           = (data as any).opslag_abk ?? 10;
+  const opslagRisico        = data.opslag_risico;
+  const opslagWinst         = data.opslag_winst;
+  const akIsVast            = (data as any).ak_is_vast ?? false;
+  const abkIsVast           = (data as any).abk_is_vast ?? false;
+  const risicoIsVast        = (data as any).risico_is_vast ?? false;
+  const winstIsVast         = (data as any).winst_is_vast ?? false;
+  const matOpslagBedrag     = rnd(matSubtotaal * opslagMateriaal / 100);
+  const arbOpslagBedrag     = rnd(arbSubtotaal * opslagArbeid / 100);
+  const subtotaal           = rnd(matSubtotaal + matOpslagBedrag + arbSubtotaal + arbOpslagBedrag + oaSubtotaal + bouwplaatsSubtotaal + staartSubtotaal);
+  const akBedrag            = akIsVast     ? rnd(opslagAk)    : rnd(subtotaal * opslagAk / 100);
+  const abkBedrag           = abkIsVast    ? rnd(opslagAbk)   : rnd(subtotaal * opslagAbk / 100);
+  const risicoBedrag        = risicoIsVast ? rnd(opslagRisico): rnd(subtotaal * opslagRisico / 100);
+  const basisWinst          = rnd(subtotaal + akBedrag + abkBedrag + risicoBedrag);
+  const winstBedrag         = winstIsVast  ? rnd(opslagWinst) : rnd(basisWinst * opslagWinst / 100);
+  const aanneemsom          = rnd(basisWinst + winstBedrag);
+  const kortingBedrag       = rnd(aanneemsom * data.korting / 100);
+  const totaal              = rnd(aanneemsom - kortingBedrag);
+  const totaalBtw           = rnd(totaal * 1.21);
+  const rawKosten           = matSubtotaal + arbSubtotaal + oaSubtotaal + bouwplaatsSubtotaal + staartSubtotaal;
+  const marge               = totaal > 0 ? Math.round(((totaal - rawKosten) / totaal) * 100 * 10) / 10 : 0;
+
+  const volgendStatussen = STATUS_WORKFLOW[data.status] ?? [];
+
+  // Groepeer directe regels per hoofdstuk (in volgorde van HOOFDSTUK_OPTIES)
+  const regelsByHoofdstuk = HOOFDSTUK_OPTIES
+    .map((h) => ({ hoofdstuk: h, regels: directeRegels.filter((r) => (r.hoofdstuk ?? "Overige werkzaamheden") === h) }))
+    .filter((g) => g.regels.length > 0);
+
+  // Aantal kolommen voor HoofdstukBalk colSpan
+  const aantalKolommen = weergave === "intern" ? 16
+    : weergave === "directie" ? 12
+    : weergave === "klant" ? 6
+    : 5; // monteur
+
+  return (
+    <div className="flex flex-col min-h-0" style={{ padding: "0" }}>
+      {/* Koptekst */}
+      <div className="flex items-center justify-between px-6 py-4 border-b bg-white sticky top-0 z-10 shadow-sm">
+        <div className="flex items-center gap-3">
+          <Button variant="ghost" size="icon" onClick={() => navigate("/modules/calculatie")}>
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <div>
+            <div className="flex items-center gap-2">
+              <h1 className="text-xl font-semibold text-slate-900">{data.naam}</h1>
+              <Badge className={`text-xs border ${STATUS_KLEUR[data.status] ?? STATUS_KLEUR.concept}`}>
+                {STATUS_LABEL[data.status] ?? data.status}
+              </Badge>
+            </div>
+            {data.referentie && <p className="text-xs text-muted-foreground">{data.referentie}</p>}
+          </div>
+        </div>
+        <div className="flex items-center gap-1.5 flex-wrap justify-end">
+          {volgendStatussen.map((s) => (
+            <Button key={s} variant={s === "verloren" ? "outline" : "default"} size="sm" onClick={() => handleStatusWijzigen(s)}>
+              {STATUS_LABEL[s]}
+              {s !== "verloren" && <ChevronRight className="h-3.5 w-3.5 ml-1" />}
+            </Button>
+          ))}
+          <Button size="sm" onClick={() => maakOfferteMut.mutate({ id })} disabled={maakOfferteMut.isPending}>
+            <FileText className="h-3.5 w-3.5 mr-1.5" />
+            {maakOfferteMut.isPending ? "Bezig..." : "Maak offerte"}
+          </Button>
+          <Button variant="outline" size="sm" onClick={openBewerkenHeader}>
+            <Pencil className="h-3.5 w-3.5 mr-1.5" />
+            Bewerken
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => dupliceerMut.mutate({ id })}>
+            <Copy className="h-3.5 w-3.5 mr-1.5" />
+            Dupliceren
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => setVersieOpslaanDialoog(true)}>
+            <Save className="h-3.5 w-3.5 mr-1.5" />
+            Versie opslaan
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => setVersieDialoog(true)}>
+            <History className="h-3.5 w-3.5 mr-1.5" />
+            Versies
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => window.open(`/modules/calculatie/${id}/print`, "_blank")}>
+            <Printer className="h-3.5 w-3.5 mr-1.5" />
+            Afdrukken
+          </Button>
+          <Button variant="outline" size="sm" className="text-destructive hover:text-destructive" onClick={() => setTeVerwijderen(true)}>
+            <Trash2 className="h-3.5 w-3.5" />
+          </Button>
+        </div>
+      </div>
+
+      {/* Projectgegevens strip */}
+      {(data.klant_naam || data.project_naam || data.gebouw_naam || data.aangemaakt_door_naam) && (
+        <div className="flex items-center gap-6 px-6 py-2.5 border-b bg-slate-50/60 text-sm">
+          {data.klant_naam && (
+            <div className="flex gap-1.5 items-center">
+              <span className="text-muted-foreground text-xs">Klant:</span>
+              <span className="font-medium">{data.klant_naam}</span>
+            </div>
+          )}
+          {data.project_naam && (
+            <div className="flex gap-1.5 items-center">
+              <span className="text-muted-foreground text-xs">Project:</span>
+              <span className="font-medium">{data.project_naam}</span>
+            </div>
+          )}
+          {data.gebouw_naam && (
+            <div className="flex gap-1.5 items-center">
+              <span className="text-muted-foreground text-xs">Gebouw:</span>
+              <span className="font-medium">{data.gebouw_naam}</span>
+            </div>
+          )}
+          {data.aangemaakt_door_naam && (
+            <div className="flex gap-1.5 items-center ml-auto">
+              <span className="text-muted-foreground text-xs">Calculator:</span>
+              <span className="font-medium">{data.aangemaakt_door_naam}</span>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Hoofd lay-out: spreadsheet links, zijpaneel rechts */}
+      <div className="flex flex-1 min-h-0 gap-0">
+
+        {/* === Spreadsheet === */}
+        <div className="flex-1 min-w-0 flex flex-col">
+
+          {/* Spreadsheet toolbar */}
+          <div className="flex items-center justify-between px-4 py-2 border-b bg-white gap-3 sticky top-[69px] z-10">
+            {/* Weergave tabs */}
+            <div className="flex rounded-md border overflow-hidden text-xs">
+              {(["intern", "directie", "klant", "monteur"] as Weergave[]).map((v) => (
+                <button
+                  key={v}
+                  onClick={() => setWeergave(v)}
+                  className={cn(
+                    "px-3 py-1.5 flex items-center gap-1.5 transition-colors",
+                    weergave === v ? "bg-slate-900 text-white" : "bg-white text-slate-600 hover:bg-slate-50"
+                  )}
+                >
+                  {v === "intern" && <LayoutList className="h-3 w-3" />}
+                  {v === "directie" && <Eye className="h-3 w-3" />}
+                  {v === "klant" && <Users className="h-3 w-3" />}
+                  {v === "monteur" && <Wrench className="h-3 w-3" />}
+                  {v === "intern" ? "Intern" : v === "directie" ? "Directie" : v === "klant" ? "Klant" : "Monteur"}
+                </button>
+              ))}
+            </div>
+            {weergave === "intern" && (
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground hidden sm:block">Klik op een cel om te bewerken &bull; Enter bevestigt</span>
+                <Button size="sm" onClick={() => nieuweRegel({})}>
+                  <Plus className="h-3.5 w-3.5 mr-1.5" />
+                  Regel toevoegen
+                </Button>
+              </div>
+            )}
+          </div>
+
+          {/* Spreadsheet tabel of andere weergave */}
+          {(weergave === "intern" || weergave === "directie") ? (
+            <div className="overflow-x-auto flex-1">
+              <table className="w-full text-sm border-collapse" style={{ minWidth: weergave === "intern" ? 1300 : 900 }}>
+                <thead className="sticky top-[109px] z-10">
+                  <tr>
+                    <Th className="w-10 text-right">#</Th>
+                    <Th className="min-w-[200px]">Omschrijving</Th>
+                    {(weergave === "intern" || weergave === "directie") && <Th className="w-[124px]">Soort</Th>}
+                    <Th className="w-[68px] text-center">Eenh</Th>
+                    <Th className="w-[76px] text-right">Aantal</Th>
+                    {(weergave === "intern" || weergave === "directie") && <Th className="w-[76px] text-right">MU/eenh</Th>}
+                    {(weergave === "intern" || weergave === "directie") && <Th className="w-[88px] text-right">Arb.tarief</Th>}
+                    {(weergave === "intern" || weergave === "directie") && <Th className="w-[96px] text-right">Arbeidskosten</Th>}
+                    {(weergave === "intern" || weergave === "directie") && <Th className="w-[88px] text-right">Prijs/eenh</Th>}
+                    {(weergave === "intern" || weergave === "directie") && <Th className="w-[96px] text-right">Materiaal</Th>}
+                    {(weergave === "intern" || weergave === "directie") && <Th className="w-[96px] text-right">Onderaann.</Th>}
+                    {weergave === "intern" && <Th className="w-[72px] text-center">BTW</Th>}
+                    {weergave === "intern" && <Th className="w-[140px]">Notitie</Th>}
+                    {weergave === "intern" && <Th className="w-[140px]">Klanttekst</Th>}
+                    <Th className="w-[100px] text-right">Totaal</Th>
+                    {weergave === "intern" && <Th className="w-14"></Th>}
+                  </tr>
+                </thead>
+                <tbody>
+                  {regels.length === 0 && !nieuwDraft ? (
+                    <tr>
+                      <td colSpan={aantalKolommen} className="px-6 py-16 text-center text-muted-foreground">
+                        <p className="text-sm mb-3">Nog geen regels. Klik op Regel toevoegen om te beginnen.</p>
+                        {weergave === "intern" && (
+                          <Button size="sm" variant="outline" onClick={() => nieuweRegel({})}>
+                            <Plus className="h-3.5 w-3.5 mr-1.5" />
+                            Eerste regel toevoegen
+                          </Button>
+                        )}
+                      </td>
+                    </tr>
+                  ) : null}
+
+                  {/* Directe regels per hoofdstuk */}
+                  {regelsByHoofdstuk.map(({ hoofdstuk, regels: hRegels }) => (
+                    <>
+                      <HoofdstukBalk
+                        key={`hst-${hoofdstuk}`}
+                        naam={hoofdstuk}
+                        aantalKolommen={aantalKolommen}
+                        weergave={weergave}
+                        onToevoegen={() => nieuweRegel({ hoofdstuk })}
+                      />
+                      {hRegels.map((r) => (
+                        <SpreadsheetRegelRij
+                          key={r.id}
+                          rij={r}
+                          weergave={weergave}
+                          onSave={bewaarBestaandeRegel}
+                          onDelete={(rid) => deleteRegelMut.mutate({ id, regelId: rid })}
+                          onDuplicate={dupliceerRegel}
+                          onEnterNaRegel={(hs, isSt, isBp) => nieuweRegel({ hoofdstuk: hs, is_staartkosten: isSt, is_bouwplaatskosten: isBp })}
+                          bezig={updateRegelMut.isPending || deleteRegelMut.isPending}
+                        />
+                      ))}
+                    </>
+                  ))}
+
+                  {/* Overige directe regels zonder hoofdstuk in regelsByHoofdstuk */}
+                  {directeRegels.filter((r) => !HOOFDSTUK_OPTIES.includes(r.hoofdstuk ?? "")).length > 0 && (
+                    <>
+                      <HoofdstukBalk
+                        naam="Overige werkzaamheden"
+                        aantalKolommen={aantalKolommen}
+                        weergave={weergave}
+                        onToevoegen={() => nieuweRegel({ hoofdstuk: "Overige werkzaamheden" })}
+                      />
+                      {directeRegels
+                        .filter((r) => !HOOFDSTUK_OPTIES.includes(r.hoofdstuk ?? ""))
+                        .map((r) => (
+                          <SpreadsheetRegelRij
+                            key={r.id}
+                            rij={r}
+                            weergave={weergave}
+                            onSave={bewaarBestaandeRegel}
+                            onDelete={(rid) => deleteRegelMut.mutate({ id, regelId: rid })}
+                            onDuplicate={dupliceerRegel}
+                            onEnterNaRegel={(hs, isSt, isBp) => nieuweRegel({ hoofdstuk: hs, is_staartkosten: isSt, is_bouwplaatskosten: isBp })}
+                            bezig={updateRegelMut.isPending || deleteRegelMut.isPending}
+                          />
+                        ))
+                      }
+                    </>
+                  )}
+
+                  {/* Bouwplaatskosten */}
+                  {bouwplaatsRegels.length > 0 && (
+                    <>
+                      <HoofdstukBalk
+                        naam="Bouwplaatskosten"
+                        aantalKolommen={aantalKolommen}
+                        weergave={weergave}
+                        onToevoegen={() => nieuweRegel({ is_bouwplaatskosten: true })}
+                      />
+                      {bouwplaatsRegels.map((r) => (
+                        <SpreadsheetRegelRij
+                          key={r.id}
+                          rij={r}
+                          weergave={weergave}
+                          onSave={bewaarBestaandeRegel}
+                          onDelete={(rid) => deleteRegelMut.mutate({ id, regelId: rid })}
+                          onDuplicate={dupliceerRegel}
+                          onEnterNaRegel={(_hs, _isSt, _isBp) => nieuweRegel({ is_bouwplaatskosten: true })}
+                          bezig={updateRegelMut.isPending || deleteRegelMut.isPending}
+                        />
+                      ))}
+                    </>
+                  )}
+
+                  {/* Staartkosten */}
+                  {staartRegels.length > 0 && (
+                    <>
+                      <HoofdstukBalk
+                        naam="Staartkosten"
+                        aantalKolommen={aantalKolommen}
+                        weergave={weergave}
+                        onToevoegen={() => nieuweRegel({ is_staartkosten: true })}
+                      />
+                      {staartRegels.map((r) => (
+                        <SpreadsheetRegelRij
+                          key={r.id}
+                          rij={r}
+                          weergave={weergave}
+                          onSave={bewaarBestaandeRegel}
+                          onDelete={(rid) => deleteRegelMut.mutate({ id, regelId: rid })}
+                          onDuplicate={dupliceerRegel}
+                          onEnterNaRegel={(_hs, _isSt, _isBp) => nieuweRegel({ is_staartkosten: true })}
+                          bezig={updateRegelMut.isPending || deleteRegelMut.isPending}
+                        />
+                      ))}
+                    </>
+                  )}
+
+                  {/* Nieuw rij invoer */}
+                  {nieuwDraft && (
+                    <NieuweRegelRij
+                      initialDraft={nieuwDraft}
+                      weergave={weergave}
+                      onSave={bewaarNieuweRegel}
+                      onCancel={() => setNieuwDraft(null)}
+                      bezig={createRegelMut.isPending}
+                    />
+                  )}
+
+                  {/* Bouwplaats/staart toevoegen knoppen als er nog geen zijn */}
+                  {weergave === "intern" && (
+                    <tr>
+                      <td colSpan={aantalKolommen} className="px-3 py-2 border-t border-slate-100">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <Button variant="ghost" size="sm" className="h-7 text-xs text-slate-500" onClick={() => nieuweRegel({})}>
+                            <Plus className="h-3 w-3 mr-1" />
+                            Directe regel
+                          </Button>
+                          <Button variant="ghost" size="sm" className="h-7 text-xs text-slate-500" onClick={() => nieuweRegel({ is_bouwplaatskosten: true })}>
+                            <Plus className="h-3 w-3 mr-1" />
+                            Bouwplaatskost
+                          </Button>
+                          <Button variant="ghost" size="sm" className="h-7 text-xs text-slate-500" onClick={() => nieuweRegel({ is_staartkosten: true })}>
+                            <Plus className="h-3 w-3 mr-1" />
+                            Staartkost
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+
+              {/* Directie kostoverzicht tabel als extra */}
+              {weergave === "directie" && (
+                <div className="border-t">
+                  <DirectieView
+                    directeRegels={directeRegels}
+                    bouwplaatsRegels={bouwplaatsRegels}
+                    staartRegels={staartRegels}
+                    matSubtotaal={matSubtotaal}
+                    matOpslagBedrag={matOpslagBedrag}
+                    opslagMateriaal={opslagMateriaal}
+                    arbSubtotaal={arbSubtotaal}
+                    arbOpslagBedrag={arbOpslagBedrag}
+                    opslagArbeid={opslagArbeid}
+                    oaSubtotaal={oaSubtotaal}
+                    bouwplaatsSubtotaal={bouwplaatsSubtotaal}
+                    staartSubtotaal={staartSubtotaal}
+                    subtotaal={subtotaal}
+                    akBedrag={akBedrag}
+                    abkBedrag={abkBedrag}
+                    risicoBedrag={risicoBedrag}
+                    basisWinst={basisWinst}
+                    winstBedrag={winstBedrag}
+                    kortingBedrag={kortingBedrag}
+                    totaal={totaal}
+                    marge={marge}
+                    opslagAk={opslagAk}
+                    opslagAbk={opslagAbk}
+                    opslagRisico={opslagRisico}
+                    opslagWinst={opslagWinst}
+                    korting={data.korting}
+                    akIsVast={akIsVast}
+                    abkIsVast={abkIsVast}
+                    risicoIsVast={risicoIsVast}
+                    winstIsVast={winstIsVast}
+                  />
+                </div>
+              )}
+            </div>
+          ) : weergave === "klant" ? (
+            <KlantView regels={regels} totaal={totaal} totaalBtw={totaalBtw} />
+          ) : (
+            <MonteurView regels={regels} />
+          )}
+        </div>
+
+        {/* === Zijpaneel === */}
+        <div className="w-72 shrink-0 border-l bg-slate-50/40 flex flex-col gap-0 overflow-y-auto">
+
+          {/* AI-voorstel */}
+          <div className="p-4 border-b">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-semibold flex items-center gap-1.5">
+                <Sparkles className="h-4 w-4 text-amber-500" />
+                AI-voorstel
+              </h3>
+              {aiPaneel && (
+                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setAiPaneel(false)}>
+                  <X className="h-3.5 w-3.5" />
+                </Button>
+              )}
+            </div>
+            {!aiPaneel ? (
+              <Button variant="outline" className="w-full" size="sm"
+                onClick={() => aiMut.mutate({ id })} disabled={aiMut.isPending}>
+                <Sparkles className="h-3.5 w-3.5 mr-1.5" />
+                {aiMut.isPending ? "Analyseren..." : "Genereer AI-voorstel"}
+              </Button>
+            ) : (
+              <div className="space-y-2">
+                {aiWaarschuwingen.length > 0 && (
+                  <div className="rounded-md bg-amber-50 border border-amber-200 p-2 text-xs space-y-1">
+                    {aiWaarschuwingen.map((w, i) => (
+                      <p key={i} className="text-amber-700">{w}</p>
+                    ))}
+                  </div>
+                )}
+                <div className="flex items-center justify-between">
+                  <p className="text-xs text-muted-foreground">{aiVoorstellen.length} regels</p>
+                  <Button variant="outline" size="sm" className="h-6 text-xs px-2"
+                    disabled={createRegelMut.isPending}
+                    onClick={() => {
+                      aiVoorstellen.forEach((r) => createRegelMut.mutate({ id, data: {
+                        categorie: r.categorie, omschrijving: r.omschrijving, eenheid: r.eenheid,
+                        hoeveelheid: parseFloat(r.hoeveelheid) || 1, tarief: parseFloat(r.tarief) || 0,
+                        mu_per_eenheid: parseFloat(r.mu_per_eenheid) || 0,
+                        arbeids_tarief: parseFloat(r.arbeids_tarief) || 0,
+                        onderaanneming_bedrag: parseFloat(r.onderaanneming_bedrag) || 0,
+                        is_staartkosten: r.is_staartkosten, is_bouwplaatskosten: r.is_bouwplaatskosten,
+                        hoofdstuk: r.hoofdstuk, klanttekst: r.klanttekst || null,
+                      } as any }));
+                    }}>
+                    Voeg alles toe
+                  </Button>
+                </div>
+                <div className="space-y-1 max-h-52 overflow-y-auto">
+                  {aiVoorstellen.map((r, i) => (
+                    <div key={i} className="flex items-start gap-1.5 p-1.5 rounded border text-xs hover:bg-slate-50 group/ai">
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-slate-800 leading-tight truncate">{r.omschrijving}</p>
+                        <p className="text-muted-foreground text-[10px]">{r.hoeveelheid} {r.eenheid} &bull; {CATEGORIE_LABEL[r.categorie] ?? r.categorie}</p>
+                      </div>
+                      <Button variant="ghost" size="icon" className="h-5 w-5 shrink-0 text-green-600 opacity-0 group-hover/ai:opacity-100"
+                        onClick={() => createRegelMut.mutate({ id, data: {
+                          categorie: r.categorie, omschrijving: r.omschrijving, eenheid: r.eenheid,
+                          hoeveelheid: parseFloat(r.hoeveelheid) || 1, tarief: parseFloat(r.tarief) || 0,
+                          mu_per_eenheid: parseFloat(r.mu_per_eenheid) || 0,
+                          arbeids_tarief: parseFloat(r.arbeids_tarief) || 0,
+                          onderaanneming_bedrag: parseFloat(r.onderaanneming_bedrag) || 0,
+                          is_staartkosten: r.is_staartkosten, is_bouwplaatskosten: r.is_bouwplaatskosten,
+                          hoofdstuk: r.hoofdstuk, klanttekst: r.klanttekst || null,
+                        } as any })}>
+                        <CheckCircle2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+                <Button variant="outline" size="sm" className="w-full text-xs"
+                  onClick={() => aiMut.mutate({ id })} disabled={aiMut.isPending}>
+                  <Sparkles className="h-3 w-3 mr-1" />
+                  Opnieuw genereren
+                </Button>
+              </div>
+            )}
+          </div>
+
+          {/* Kostopbouw */}
+          <div className="p-4 border-b space-y-1.5 text-sm">
+            <h3 className="text-sm font-semibold mb-3">Kostopbouw</h3>
+            <div className="flex justify-between text-muted-foreground">
+              <span>Materiaal</span>
+              <span className="tabular-nums">{formatBedrag(matSubtotaal)}</span>
+            </div>
+            {opslagMateriaal > 0 && (
+              <div className="flex justify-between text-muted-foreground pl-3 text-xs">
+                <span>+ Opslag ({opslagMateriaal}%)</span>
+                <span className="tabular-nums">{formatBedrag(matOpslagBedrag)}</span>
+              </div>
+            )}
+            <div className="flex justify-between text-muted-foreground">
+              <span>Arbeid</span>
+              <span className="tabular-nums">{formatBedrag(arbSubtotaal)}</span>
+            </div>
+            {opslagArbeid > 0 && (
+              <div className="flex justify-between text-muted-foreground pl-3 text-xs">
+                <span>+ Opslag ({opslagArbeid}%)</span>
+                <span className="tabular-nums">{formatBedrag(arbOpslagBedrag)}</span>
+              </div>
+            )}
+            {oaSubtotaal > 0 && (
+              <div className="flex justify-between text-muted-foreground">
+                <span>Onderaanneming</span>
+                <span className="tabular-nums">{formatBedrag(oaSubtotaal)}</span>
+              </div>
+            )}
+            {bouwplaatsSubtotaal > 0 && (
+              <div className="flex justify-between text-muted-foreground">
+                <span>Bouwplaatskosten</span>
+                <span className="tabular-nums">{formatBedrag(bouwplaatsSubtotaal)}</span>
+              </div>
+            )}
+            {staartSubtotaal > 0 && (
+              <div className="flex justify-between text-muted-foreground">
+                <span>Staartkosten</span>
+                <span className="tabular-nums">{formatBedrag(staartSubtotaal)}</span>
+              </div>
+            )}
+            <Separator />
+            <div className="flex justify-between font-medium">
+              <span>Subtotaal</span>
+              <span className="tabular-nums">{formatBedrag(subtotaal)}</span>
+            </div>
+            <div className="flex justify-between text-muted-foreground">
+              <span>AK ({opslagAk}%)</span>
+              <span className="tabular-nums">{formatBedrag(akBedrag)}</span>
+            </div>
+            {(opslagAbk > 0 || abkIsVast) && (
+              <div className="flex justify-between text-muted-foreground">
+                <span>ABK ({opslagAbk}%)</span>
+                <span className="tabular-nums">{formatBedrag(abkBedrag)}</span>
+              </div>
+            )}
+            {opslagRisico > 0 && (
+              <div className="flex justify-between text-muted-foreground">
+                <span>Risico ({opslagRisico}%)</span>
+                <span className="tabular-nums">{formatBedrag(risicoBedrag)}</span>
+              </div>
+            )}
+            <div className="flex justify-between text-xs text-muted-foreground border-t pt-1">
+              <span>Basis voor winst</span>
+              <span className="tabular-nums">{formatBedrag(basisWinst)}</span>
+            </div>
+            <div className="flex justify-between text-muted-foreground">
+              <span>Winst ({opslagWinst}%)</span>
+              <span className="tabular-nums">{formatBedrag(winstBedrag)}</span>
+            </div>
+            {data.korting > 0 && (
+              <div className="flex justify-between text-green-700">
+                <span>Korting ({data.korting}%)</span>
+                <span className="tabular-nums">- {formatBedrag(kortingBedrag)}</span>
+              </div>
+            )}
+          </div>
+
+          {/* Totaalpaneel */}
+          <div className="p-4 space-y-1.5 text-sm">
+            <div className="flex justify-between font-semibold text-base">
+              <span>Totaal excl. BTW</span>
+              <span className="tabular-nums">{formatBedrag(totaal)}</span>
+            </div>
+            <div className="flex justify-between text-muted-foreground">
+              <span>BTW (21%)</span>
+              <span className="tabular-nums">{formatBedrag(totaalBtw - totaal)}</span>
+            </div>
+            <Separator />
+            <div className="flex justify-between font-semibold text-primary">
+              <span>Totaal incl. BTW</span>
+              <span className="tabular-nums">{formatBedragKort(totaalBtw)}</span>
+            </div>
+            <div className="flex justify-between text-xs text-muted-foreground pt-1 border-t">
+              <span>Marge</span>
+              <span>{marge}%</span>
+            </div>
+          </div>
+
+          {data.opmerkingen && (
+            <div className="p-4 border-t">
+              <p className="text-xs font-semibold text-muted-foreground mb-1">Opmerkingen</p>
+              <p className="text-xs text-muted-foreground">{data.opmerkingen}</p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ── Dialogen ─────────────────────────────────────────────────────────── */}
+
+      {/* Calculatie bewerken */}
+      <Dialog open={bewerkenDialoog} onOpenChange={setBewerkenDialoog}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Calculatie bewerken</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5 col-span-2">
+                <Label>Naam</Label>
+                <Input value={headerForm.naam} onChange={(e) => setHeaderForm((f) => ({ ...f, naam: e.target.value }))} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Referentie</Label>
+                <Input value={headerForm.referentie} onChange={(e) => setHeaderForm((f) => ({ ...f, referentie: e.target.value }))} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Klant</Label>
+                <Input value={headerForm.klant_naam} onChange={(e) => setHeaderForm((f) => ({ ...f, klant_naam: e.target.value }))} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Project</Label>
+                <Input value={headerForm.project_naam} onChange={(e) => setHeaderForm((f) => ({ ...f, project_naam: e.target.value }))} />
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Omschrijving</Label>
+              <Textarea value={headerForm.omschrijving} onChange={(e) => setHeaderForm((f) => ({ ...f, omschrijving: e.target.value }))} rows={2} />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Opmerkingen (intern)</Label>
+              <Textarea value={headerForm.opmerkingen} onChange={(e) => setHeaderForm((f) => ({ ...f, opmerkingen: e.target.value }))} rows={2} />
+            </div>
+            <Separator />
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Opslagen</p>
+            <div className="grid grid-cols-3 gap-3 text-sm">
+              {[
+                { label: "AK (%)",    field: "opslag_ak" as const,    vastField: "ak_is_vast" as const },
+                { label: "ABK (%)",   field: "opslag_abk" as const,   vastField: "abk_is_vast" as const },
+                { label: "Risico (%)",field: "opslag_risico" as const, vastField: "risico_is_vast" as const },
+                { label: "Winst (%)", field: "opslag_winst" as const,  vastField: "winst_is_vast" as const },
+                { label: "Mat opslag (%)", field: "opslag_materiaal" as const, vastField: null },
+                { label: "Arb opslag (%)", field: "opslag_arbeid" as const, vastField: null },
+                { label: "Korting (%)",    field: "korting" as const,         vastField: null },
+              ].map(({ label, field, vastField }) => (
+                <div key={field} className="space-y-1">
+                  <Label className="text-xs">{label}</Label>
+                  <Input
+                    type="number" step="0.1"
+                    value={headerForm[field]}
+                    onChange={(e) => setHeaderForm((f) => ({ ...f, [field]: parseFloat(e.target.value) || 0 }))}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBewerkenDialoog(false)}>Annuleren</Button>
+            <Button onClick={handleHeaderOpslaan}>Opslaan</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Versie opslaan */}
+      <Dialog open={versieOpslaanDialoog} onOpenChange={setVersieOpslaanDialoog}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader><DialogTitle>Versie opslaan</DialogTitle></DialogHeader>
+          <div className="space-y-3 py-2">
+            <Label>Versielabel (optioneel)</Label>
+            <Input
+              value={versieLabel}
+              onChange={(e) => setVersieLabel(e.target.value)}
+              placeholder="bijv. Na klantbespreking v2"
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setVersieOpslaanDialoog(false)}>Annuleren</Button>
+            <Button onClick={handleVersieOpslaan} disabled={versieOpslaanBezig}>
+              {versieOpslaanBezig ? "Opslaan..." : "Versie opslaan"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Versiegeschiedenis */}
+      <Dialog open={versieDialoog} onOpenChange={setVersieDialoog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader><DialogTitle>Versiegeschiedenis</DialogTitle></DialogHeader>
+          <div className="space-y-2 max-h-96 overflow-y-auto py-2">
+            {!versieData ? (
+              <p className="text-sm text-muted-foreground text-center py-4">Laden...</p>
+            ) : versieData.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-4">Nog geen versies opgeslagen.</p>
+            ) : (
+              versieData.map((v) => (
+                <div key={v.id} className="flex items-center gap-3 p-3 rounded-md border hover:bg-slate-50">
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-sm">Versie {v.versienummer}{v.label && ` — ${v.label}`}</p>
+                    <p className="text-xs text-muted-foreground">{new Date(v.aangemaakt_op).toLocaleString("nl-NL")}</p>
+                  </div>
+                  <Button
+                    variant="outline" size="sm"
+                    onClick={() => fetch(`/api/modules/calculaties/${id}/versie-terugzetten`, {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ versie_id: v.id }),
+                    }).then(() => { invalidate(); setVersieDialoog(false); })}
+                  >
+                    Terugzetten
+                  </Button>
+                </div>
+              ))
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Verwijderen */}
+      <AlertDialog open={teVerwijderen} onOpenChange={setTeVerwijderen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Calculatie verwijderen?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Alle regels en versies van deze calculatie worden permanent verwijderd.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuleren</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive hover:bg-destructive/90"
+              onClick={() => deleteMut.mutate({ id })}
+            >
+              Verwijderen
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
