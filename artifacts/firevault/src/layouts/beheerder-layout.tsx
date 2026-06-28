@@ -30,6 +30,7 @@ import { NavigatieBewakingProvider, useNavigatieBewaking } from "@/context/navig
 import { PauzeKnop } from "@/components/pauze/pauze-modal";
 import { WeergaveKnop } from "@/components/weergave/weergave-modal";
 import { OnlineGebruikers } from "@/components/online-gebruikers/online-gebruikers";
+import { RadioSpeler } from "@/components/radio-speler";
 
 function TerugKnop() {
   const { requestTerug } = useNavigatieBewaking();
@@ -1227,6 +1228,7 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
 
         <SidebarFooter>
           <OnlineGebruikers />
+          <RadioSpeler />
           <SidebarMenu>
             <WeergaveKnop />
             <PauzeKnop />
