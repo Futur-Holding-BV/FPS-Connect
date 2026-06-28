@@ -363,6 +363,16 @@ function mapCard(c: CardRow) {
     volgorde: c.volgorde,
     aangemaakt_op: c.aangemaaktOp.toISOString(),
     bijgewerkt_op: c.bijgewerktOp.toISOString(),
+    // V2.0
+    betrokken_functies: c.betrokkenFuncties ?? [],
+    primaire_functie: c.primaireFunctie ?? null,
+    modules: c.modules ?? [],
+    objecten_gebruikt: c.objectenGebruikt ?? [],
+    objecten_gewijzigd: c.objectenGewijzigd ?? [],
+    ai_acties: c.aiActies ?? [],
+    beslisregels: c.beslisregels ?? [],
+    vervolgacties: c.vervolgacties ?? [],
+    impact_workflows: c.impactWorkflows ?? [],
   };
 }
 
@@ -498,6 +508,9 @@ router.post("/workflow-cards", requireAuth, async (req: Request, res: Response) 
     workflow_id, lane_id, type, titel, omschrijving,
     invoer, uitvoer, rol, ai_taak, akkoord_door,
     gekoppelde_module, uitzonderingsroute,
+    betrokken_functies, primaire_functie, modules,
+    objecten_gebruikt, objecten_gewijzigd, ai_acties,
+    beslisregels, vervolgacties, impact_workflows,
   } = req.body;
   if (!workflow_id || !lane_id || !titel) {
     return res.status(400).json({ message: "workflow_id, lane_id en titel zijn verplicht" });
@@ -522,6 +535,15 @@ router.post("/workflow-cards", requireAuth, async (req: Request, res: Response) 
     gekoppeldeModule: gekoppelde_module ?? null,
     uitzonderingsroute: uitzonderingsroute ?? null,
     volgorde: nieuweVolgorde,
+    betrokkenFuncties: Array.isArray(betrokken_functies) ? betrokken_functies : [],
+    primaireFunctie: primaire_functie ?? null,
+    modules: Array.isArray(modules) ? modules : [],
+    objectenGebruikt: Array.isArray(objecten_gebruikt) ? objecten_gebruikt : [],
+    objectenGewijzigd: Array.isArray(objecten_gewijzigd) ? objecten_gewijzigd : [],
+    aiActies: Array.isArray(ai_acties) ? ai_acties : [],
+    beslisregels: Array.isArray(beslisregels) ? beslisregels : [],
+    vervolgacties: Array.isArray(vervolgacties) ? vervolgacties : [],
+    impactWorkflows: Array.isArray(impact_workflows) ? impact_workflows : [],
   }).returning();
   return res.status(201).json(mapCard(card));
 });
@@ -532,6 +554,9 @@ router.patch("/workflow-cards/:id", requireAuth, async (req: Request, res: Respo
     lane_id, type, titel, omschrijving, invoer, uitvoer,
     rol, ai_taak, akkoord_door, gekoppelde_module,
     uitzonderingsroute, actief, volgorde,
+    betrokken_functies, primaire_functie, modules,
+    objecten_gebruikt, objecten_gewijzigd, ai_acties,
+    beslisregels, vervolgacties, impact_workflows,
   } = req.body;
 
   const update: Partial<typeof workflowCardsTable.$inferInsert> = {
@@ -550,6 +575,15 @@ router.patch("/workflow-cards/:id", requireAuth, async (req: Request, res: Respo
   if (uitzonderingsroute !== undefined) update.uitzonderingsroute = uitzonderingsroute;
   if (actief !== undefined) update.actief = actief;
   if (volgorde !== undefined) update.volgorde = Number(volgorde);
+  if (Array.isArray(betrokken_functies)) update.betrokkenFuncties = betrokken_functies;
+  if (primaire_functie !== undefined) update.primaireFunctie = primaire_functie;
+  if (Array.isArray(modules)) update.modules = modules;
+  if (Array.isArray(objecten_gebruikt)) update.objectenGebruikt = objecten_gebruikt;
+  if (Array.isArray(objecten_gewijzigd)) update.objectenGewijzigd = objecten_gewijzigd;
+  if (Array.isArray(ai_acties)) update.aiActies = ai_acties;
+  if (Array.isArray(beslisregels)) update.beslisregels = beslisregels;
+  if (Array.isArray(vervolgacties)) update.vervolgacties = vervolgacties;
+  if (Array.isArray(impact_workflows)) update.impactWorkflows = impact_workflows;
 
   const [updated] = await db.update(workflowCardsTable).set(update)
     .where(eq(workflowCardsTable.id, id)).returning();

@@ -46,6 +46,16 @@ export const workflowCardsTable = pgTable("workflow_cards", {
   volgorde: integer("volgorde").notNull().default(0),
   aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
   bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
+  // V2.0 velden
+  betrokkenFuncties: text("betrokken_functies").array().notNull().default([]),
+  primaireFunctie: text("primaire_functie"),
+  modules: text("modules").array().notNull().default([]),
+  objectenGebruikt: text("objecten_gebruikt").array().notNull().default([]),
+  objectenGewijzigd: text("objecten_gewijzigd").array().notNull().default([]),
+  aiActies: text("ai_acties").array().notNull().default([]),
+  beslisregels: text("beslisregels").array().notNull().default([]),
+  vervolgacties: text("vervolgacties").array().notNull().default([]),
+  impactWorkflows: text("impact_workflows").array().notNull().default([]),
 });
 
 export type WorkflowDefinitie = typeof workflowDefinitiesTable.$inferSelect;

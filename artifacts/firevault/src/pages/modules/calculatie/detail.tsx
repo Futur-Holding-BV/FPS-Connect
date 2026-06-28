@@ -270,6 +270,29 @@ function aiHintVoorOmschrijving(omschrijving: string) {
   return AI_HINTS.find((h) => lower.includes(h.keyword)) ?? null;
 }
 
+// ─── Tab-navigatie helper ────────────────────────────────────────────────────
+
+function handleTabNavigatieInRij(
+  e: React.KeyboardEvent,
+  huidigeCelIndex: number,
+  rowRef: React.RefObject<HTMLTableRowElement | null>,
+  onLaatste: () => void
+) {
+  if (e.key !== "Tab") return;
+  e.preventDefault();
+  if (!rowRef.current) return;
+  const cellen = Array.from(
+    rowRef.current.querySelectorAll<HTMLElement>("[data-celindex]")
+  ).sort((a, b) => Number(a.dataset.celindex) - Number(b.dataset.celindex));
+  const huidig = cellen.findIndex((el) => Number(el.dataset.celindex) === huidigeCelIndex);
+  const volgende = e.shiftKey ? huidig - 1 : huidig + 1;
+  if (volgende >= 0 && volgende < cellen.length) {
+    cellen[volgende].focus();
+  } else if (!e.shiftKey && volgende >= cellen.length) {
+    onLaatste();
+  }
+}
+
 // ─── SpreadsheetRegelRij ─────────────────────────────────────────────────────
 
 function SpreadsheetRegelRij({
@@ -363,6 +386,7 @@ function SpreadsheetRegelRij({
     align = "right",
     placeholder = "0",
     breedte,
+    celIndex,
   }: {
     waarde: number | string;
     field: keyof LocalDraft;
@@ -370,6 +394,7 @@ function SpreadsheetRegelRij({
     align?: "left" | "right" | "center";
     placeholder?: string;
     breedte: number;
+    celIndex: number;
   }) {
     if (!editing || !actief) {
       const val = typeof waarde === "number"
@@ -393,9 +418,11 @@ function SpreadsheetRegelRij({
           type="number"
           step="0.01"
           min="0"
+          data-celindex={celIndex}
           value={draft[field] as string}
           onChange={(e) => upd({ [field]: e.target.value } as Partial<LocalDraft>)}
           onKeyDown={(e) => {
+            handleTabNavigatieInRij(e, celIndex, rowRef, () => { doSave(); onEnterNaRegel(draft.hoofdstuk, draft.is_staartkosten, draft.is_bouwplaatskosten); });
             if (e.key === "Enter") { e.preventDefault(); doSave(); onEnterNaRegel(draft.hoofdstuk, draft.is_staartkosten, draft.is_bouwplaatskosten); }
             if (e.key === "Escape") { setEditing(false); setDraft(regelToDraft(rij)); }
           }}
@@ -431,10 +458,12 @@ function SpreadsheetRegelRij({
           <div className="relative">
             <input
               type="text"
+              data-celindex={1}
               value={draft.omschrijving}
               onChange={(e) => upd({ omschrijving: e.target.value })}
               onFocus={() => setShowAiHint(true)}
               onKeyDown={(e) => {
+                handleTabNavigatieInRij(e, 1, rowRef, () => { doSave(); onEnterNaRegel(draft.hoofdstuk, draft.is_staartkosten, draft.is_bouwplaatskosten); });
                 if (e.key === "Enter") { e.preventDefault(); doSave(); onEnterNaRegel(draft.hoofdstuk, draft.is_staartkosten, draft.is_bouwplaatskosten); }
                 if (e.key === "Escape") { setEditing(false); setDraft(regelToDraft(rij)); }
               }}
@@ -486,6 +515,7 @@ function SpreadsheetRegelRij({
         <td className="px-1 py-0 w-[124px]">
           {editing ? (
             <select
+              data-celindex={2}
               value={draft.categorie}
               onChange={(e) => {
                 const cat = e.target.value;
@@ -494,6 +524,7 @@ function SpreadsheetRegelRij({
                 upd({ categorie: cat, btw_tarief: btw });
               }}
               onKeyDown={(e) => {
+                handleTabNavigatieInRij(e, 2, rowRef, () => { doSave(); onEnterNaRegel(draft.hoofdstuk, draft.is_staartkosten, draft.is_bouwplaatskosten); });
                 if (e.key === "Enter") { e.preventDefault(); doSave(); }
                 if (e.key === "Escape") { setEditing(false); setDraft(regelToDraft(rij)); }
               }}
@@ -520,9 +551,11 @@ function SpreadsheetRegelRij({
       <td className="px-1 py-0 w-[68px] text-center">
         {editing ? (
           <select
+            data-celindex={3}
             value={draft.eenheid}
             onChange={(e) => upd({ eenheid: e.target.value })}
             onKeyDown={(e) => {
+              handleTabNavigatieInRij(e, 3, rowRef, () => { doSave(); onEnterNaRegel(draft.hoofdstuk, draft.is_staartkosten, draft.is_bouwplaatskosten); });
               if (e.key === "Enter") { e.preventDefault(); doSave(); }
               if (e.key === "Escape") { setEditing(false); setDraft(regelToDraft(rij)); }
             }}
@@ -538,16 +571,16 @@ function SpreadsheetRegelRij({
       </td>
 
       {/* Hoeveelheid */}
-      <NumCel waarde={rij.hoeveelheid} field="hoeveelheid" actief={true} breedte={76} placeholder="1" />
+      <NumCel waarde={rij.hoeveelheid} field="hoeveelheid" actief={true} breedte={76} placeholder="1" celIndex={4} />
 
       {/* MU/eenh — intern + directie */}
       {(weergave === "intern" || weergave === "directie") && (
-        <NumCel waarde={rij.mu_per_eenheid} field="mu_per_eenheid" actief={isArb} breedte={76} placeholder="0.00" />
+        <NumCel waarde={rij.mu_per_eenheid} field="mu_per_eenheid" actief={isArb} breedte={76} placeholder="0.00" celIndex={5} />
       )}
 
       {/* Arbeidstarief — intern + directie */}
       {(weergave === "intern" || weergave === "directie") && (
-        <NumCel waarde={rij.arbeids_tarief} field="arbeids_tarief" actief={isArb} breedte={88} placeholder="0.00" />
+        <NumCel waarde={rij.arbeids_tarief} field="arbeids_tarief" actief={isArb} breedte={88} placeholder="0.00" celIndex={6} />
       )}
 
       {/* Arbeidskosten (berekend) — intern + directie */}
@@ -559,7 +592,7 @@ function SpreadsheetRegelRij({
 
       {/* Prijs/eenh — intern + directie */}
       {(weergave === "intern" || weergave === "directie") && (
-        <NumCel waarde={rij.tarief} field="tarief" actief={isMat} breedte={88} placeholder="0.00" />
+        <NumCel waarde={rij.tarief} field="tarief" actief={isMat} breedte={88} placeholder="0.00" celIndex={7} />
       )}
 
       {/* Materiaal totaal (berekend) — intern + directie */}
@@ -571,7 +604,7 @@ function SpreadsheetRegelRij({
 
       {/* Onderaanneming — intern + directie */}
       {(weergave === "intern" || weergave === "directie") && (
-        <NumCel waarde={rij.onderaanneming_bedrag} field="onderaanneming_bedrag" actief={isOa} breedte={96} placeholder="0.00" />
+        <NumCel waarde={rij.onderaanneming_bedrag} field="onderaanneming_bedrag" actief={isOa} breedte={96} placeholder="0.00" celIndex={8} />
       )}
 
       {/* BTW — intern only */}
@@ -579,9 +612,11 @@ function SpreadsheetRegelRij({
         <td className="px-1 py-0 w-[72px] text-center">
           {editing ? (
             <select
+              data-celindex={9}
               value={draft.btw_tarief}
               onChange={(e) => upd({ btw_tarief: e.target.value })}
               onKeyDown={(e) => {
+                handleTabNavigatieInRij(e, 9, rowRef, () => { doSave(); onEnterNaRegel(draft.hoofdstuk, draft.is_staartkosten, draft.is_bouwplaatskosten); });
                 if (e.key === "Enter") { e.preventDefault(); doSave(); }
                 if (e.key === "Escape") { setEditing(false); setDraft(regelToDraft(rij)); }
               }}
@@ -603,10 +638,12 @@ function SpreadsheetRegelRij({
           {editing ? (
             <input
               type="text"
+              data-celindex={10}
               value={draft.opmerkingen}
               onChange={(e) => upd({ opmerkingen: e.target.value })}
               onKeyDown={(e) => {
-                if (e.key === "Enter") { e.preventDefault(); doSave(); }
+                handleTabNavigatieInRij(e, 10, rowRef, () => { doSave(); onEnterNaRegel(draft.hoofdstuk, draft.is_staartkosten, draft.is_bouwplaatskosten); });
+                if (e.key === "Enter") { e.preventDefault(); doSave(); onEnterNaRegel(draft.hoofdstuk, draft.is_staartkosten, draft.is_bouwplaatskosten); }
                 if (e.key === "Escape") { setEditing(false); setDraft(regelToDraft(rij)); }
               }}
               className="w-full px-2 py-[5px] text-xs border-0 border-b border-primary/40 bg-transparent focus:border-primary focus:outline-none"
@@ -626,10 +663,12 @@ function SpreadsheetRegelRij({
           {editing ? (
             <input
               type="text"
+              data-celindex={11}
               value={draft.klanttekst}
               onChange={(e) => upd({ klanttekst: e.target.value })}
               onKeyDown={(e) => {
-                if (e.key === "Enter") { e.preventDefault(); doSave(); }
+                handleTabNavigatieInRij(e, 11, rowRef, () => { doSave(); onEnterNaRegel(draft.hoofdstuk, draft.is_staartkosten, draft.is_bouwplaatskosten); });
+                if (e.key === "Enter") { e.preventDefault(); doSave(); onEnterNaRegel(draft.hoofdstuk, draft.is_staartkosten, draft.is_bouwplaatskosten); }
                 if (e.key === "Escape") { setEditing(false); setDraft(regelToDraft(rij)); }
               }}
               className="w-full px-2 py-[5px] text-xs border-0 border-b border-primary/40 bg-transparent focus:border-primary focus:outline-none"
@@ -726,18 +765,20 @@ function NieuweRegelRij({
   const invoerKlasse =
     "w-full h-full px-2 py-[5px] border-0 border-b border-primary/60 bg-transparent focus:border-primary focus:outline-none text-sm tabular-nums";
 
-  const onKD = (e: React.KeyboardEvent) => {
+  const mkKD = (celIndex: number) => (e: React.KeyboardEvent) => {
+    handleTabNavigatieInRij(e, celIndex, rowRef, doSave);
     if (e.key === "Enter") { e.preventDefault(); doSave(); }
     if (e.key === "Escape") { e.preventDefault(); onCancel(); }
   };
 
-  const numInvoer = (field: keyof LocalDraft, breedte: number, actief: boolean) =>
+  const numInvoer = (field: keyof LocalDraft, breedte: number, actief: boolean, celIndex: number) =>
     actief ? (
       <td style={{ width: breedte }} className="px-1 py-0 bg-primary/5">
         <input type="number" step="0.01" min="0"
+          data-celindex={celIndex}
           value={draft[field] as string}
           onChange={(e) => upd({ [field]: e.target.value } as Partial<LocalDraft>)}
-          onKeyDown={onKD}
+          onKeyDown={mkKD(celIndex)}
           className={cn(invoerKlasse, "text-right")}
           placeholder="0"
         />
@@ -762,8 +803,9 @@ function NieuweRegelRij({
         <input
           type="text"
           value={draft.omschrijving}
+          data-celindex={1}
           onChange={(e) => { upd({ omschrijving: e.target.value }); setShowAiHint(true); }}
-          onKeyDown={onKD}
+          onKeyDown={mkKD(1)}
           className="w-full px-2 py-[5px] border-0 border-b border-primary bg-transparent focus:outline-none text-sm font-medium"
           placeholder="Omschrijving werkzaamheid..."
           autoFocus
@@ -800,7 +842,8 @@ function NieuweRegelRij({
                 : draft.btw_tarief === "verlegd" ? "21" : draft.btw_tarief;
               upd({ categorie: cat, btw_tarief: btw });
             }}
-            onKeyDown={onKD}
+            data-celindex={2}
+            onKeyDown={mkKD(2)}
             className="w-full px-1 py-[5px] text-xs border-0 border-b border-primary bg-transparent focus:outline-none"
           >
             {KOSTENSOORT_OPTIES.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
@@ -812,8 +855,9 @@ function NieuweRegelRij({
       <td className="px-1 py-0 w-[68px]">
         <select
           value={draft.eenheid}
+          data-celindex={3}
           onChange={(e) => upd({ eenheid: e.target.value })}
-          onKeyDown={onKD}
+          onKeyDown={mkKD(3)}
           className="w-full px-1 py-[5px] text-xs border-0 border-b border-primary bg-transparent focus:outline-none text-center"
         >
           {EENHEDEN.map((e) => <option key={e} value={e}>{e}</option>)}
@@ -821,12 +865,12 @@ function NieuweRegelRij({
       </td>
 
       {/* Hoeveelheid */}
-      {numInvoer("hoeveelheid", 76, true)}
+      {numInvoer("hoeveelheid", 76, true, 4)}
 
       {/* MU */}
-      {(weergave === "intern" || weergave === "directie") && numInvoer("mu_per_eenheid", 76, isArb)}
+      {(weergave === "intern" || weergave === "directie") && numInvoer("mu_per_eenheid", 76, isArb, 5)}
       {/* Arb tarief */}
-      {(weergave === "intern" || weergave === "directie") && numInvoer("arbeids_tarief", 88, isArb)}
+      {(weergave === "intern" || weergave === "directie") && numInvoer("arbeids_tarief", 88, isArb, 6)}
       {/* Arbeid totaal */}
       {(weergave === "intern" || weergave === "directie") && (
         <td className="px-2 py-[5px] w-[96px] text-right text-sm tabular-nums text-slate-400">
@@ -834,7 +878,7 @@ function NieuweRegelRij({
         </td>
       )}
       {/* Prijs/eenh */}
-      {(weergave === "intern" || weergave === "directie") && numInvoer("tarief", 88, isMat)}
+      {(weergave === "intern" || weergave === "directie") && numInvoer("tarief", 88, isMat, 7)}
       {/* Materiaal totaal */}
       {(weergave === "intern" || weergave === "directie") && (
         <td className="px-2 py-[5px] w-[96px] text-right text-sm tabular-nums text-slate-400">
@@ -842,14 +886,15 @@ function NieuweRegelRij({
         </td>
       )}
       {/* Onderaanneming */}
-      {(weergave === "intern" || weergave === "directie") && numInvoer("onderaanneming_bedrag", 96, isOa)}
+      {(weergave === "intern" || weergave === "directie") && numInvoer("onderaanneming_bedrag", 96, isOa, 8)}
       {/* BTW */}
       {weergave === "intern" && (
         <td className="px-1 py-0 w-[72px]">
           <select
+            data-celindex={9}
             value={draft.btw_tarief}
             onChange={(e) => upd({ btw_tarief: e.target.value })}
-            onKeyDown={onKD}
+            onKeyDown={mkKD(9)}
             className="w-full px-1 py-[5px] text-xs border-0 border-b border-primary bg-transparent focus:outline-none"
           >
             {BTW_OPTIES.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
@@ -861,9 +906,10 @@ function NieuweRegelRij({
         <td className="px-1 py-0 w-[140px]">
           <input
             type="text"
+            data-celindex={10}
             value={draft.opmerkingen}
             onChange={(e) => upd({ opmerkingen: e.target.value })}
-            onKeyDown={onKD}
+            onKeyDown={mkKD(10)}
             className="w-full px-2 py-[5px] text-xs border-0 border-b border-primary bg-transparent focus:outline-none"
             placeholder="Intern..."
           />
@@ -874,9 +920,10 @@ function NieuweRegelRij({
         <td className="px-1 py-0 w-[140px]">
           <input
             type="text"
+            data-celindex={11}
             value={draft.klanttekst}
             onChange={(e) => upd({ klanttekst: e.target.value })}
-            onKeyDown={onKD}
+            onKeyDown={mkKD(11)}
             className="w-full px-2 py-[5px] text-xs border-0 border-b border-primary bg-transparent focus:outline-none"
             placeholder="Op offerte..."
           />
