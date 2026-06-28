@@ -1,4 +1,4 @@
-import { Switch, Route, Router as WouterRouter, Redirect } from "wouter";
+import { Switch, Route, Router as WouterRouter, Redirect, useLocation } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Loader2, Lock } from "lucide-react";
 import { featureFlags } from "@/lib/feature-flags";
@@ -97,6 +97,7 @@ import OffertePrintPagina from "@/pages/offertes/print";
 import OpdrachtDetailPagina from "@/pages/opdrachten/detail";
 import DocumentenPagina from "@/pages/documenten/index";
 import { OndersteuningWidget } from "@/components/ondersteuning-widget";
+import WelkomWizard, { isWelkomAfgerond } from "@/pages/welkom/index";
 import RapportenPagina from "@/pages/rapporten/index";
 import UrenPagina from "@/pages/uren/index";
 import WeekstatenPaginaComponent from "@/pages/uren/weekstaten";
@@ -433,10 +434,16 @@ function GeenToegang() {
 }
 
 function Portalen() {
+  const [locatie] = useLocation();
   const { rol, bevoegdheden } = useRol();
   // Cast naar string zodat legacy-rollen (beheerder/monteur/controleur) die nog
   // in de database kunnen staan ook matchen — T016 converteert ze naar "gebruiker".
   const rolStr = rol as string;
+
+  // Eerste keer inloggen als hoofdbeheerder → wizard tonen
+  if (rolStr === "hoofdbeheerder" && !isWelkomAfgerond() && locatie === "/") {
+    return <Redirect to="/welkom" />;
+  }
 
   // Interne FPS Connect gebruikers
   if (rolStr === "hoofdbeheerder" || rolStr === "beheerder") return <ConnectPortal />;
@@ -493,6 +500,7 @@ function Gate() {
   return (
     <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
       <Switch>
+        <Route path="/welkom" component={WelkomWizard} />
         <Route path="/gebouwen/:id/print" component={GebouwPrint} />
         <Route path="/modules/calculatie/:id/print" component={ModulesCalculatiePrint} />
         <Route>
