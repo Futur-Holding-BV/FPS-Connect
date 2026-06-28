@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import {
   GitBranch, Plus, X, ChevronDown, Sparkles, User, AlertTriangle,
   Check, Trash2, GripVertical, Filter, BookOpen, Layers, Cpu,
-  ArrowRight, Network, Package, Users, Zap,
+  ArrowRight, Network, Package, Users, Zap, RotateCcw, Clock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -170,6 +170,21 @@ interface WorkflowLane {
   kleur: string;
   volgorde: number;
   cards: WorkflowCard[];
+}
+
+// ── MoveRecord ────────────────────────────────────────────────────────────────
+
+interface MoveRecord {
+  id: string;
+  cardId: number;
+  cardTitel: string;
+  vanLaneId: number;
+  vanLaneNaam: string;
+  naarLaneId: number;
+  naarLaneNaam: string;
+  vanVolgorde: number;
+  vanBeforeCardId: number | null;
+  tijdstip: Date;
 }
 
 // ── TagEditor ──────────────────────────────────────────────────────────────────
@@ -1144,6 +1159,10 @@ export default function WorkflowDesignerPagina() {
   const [filterFunctie, setFilterFunctie] = useState<string | null>(null);
   const [filterModule, setFilterModule] = useState<string | null>(null);
 
+  // Verplaatsingsgeschiedenis
+  const [moveHistory, setMoveHistory] = useState<MoveRecord[]>([]);
+  const [geschiedenisOpen, setGeschiedenisOpen] = useState(false);
+
   // DnD state
   const [draggingCardId, setDraggingCardId] = useState<number | null>(null);
   const [draggingSourceLaneId, setDraggingSourceLaneId] = useState<number | null>(null);
@@ -1188,9 +1207,30 @@ export default function WorkflowDesignerPagina() {
     }, 80);
   };
 
-  const voerVerplaatsUit = async (cardId: number, targetLaneId: number, beforeCardId: number | null) => {
+  const voerVerplaatsUit = async (cardId: number, targetLaneId: number, beforeCardId: number | null, isRevert = false) => {
     const targetLane = localLanes.find((l) => l.id === targetLaneId);
     if (!targetLane) return;
+
+    // Record de verplaatsing in de geschiedenis (alleen bij echte moves, niet bij revert)
+    if (!isRevert) {
+      const kaart = localLanes.flatMap((l) => l.cards).find((c) => c.id === cardId);
+      const bronLane = localLanes.find((l) => l.cards.some((c) => c.id === cardId));
+      if (kaart && bronLane && bronLane.id !== targetLaneId) {
+        const record: MoveRecord = {
+          id: `${Date.now()}-${cardId}`,
+          cardId,
+          cardTitel: kaart.titel,
+          vanLaneId: bronLane.id,
+          vanLaneNaam: bronLane.naam,
+          naarLaneId: targetLaneId,
+          naarLaneNaam: targetLane.naam,
+          vanVolgorde: kaart.volgorde,
+          vanBeforeCardId: null,
+          tijdstip: new Date(),
+        };
+        setMoveHistory((prev) => [record, ...prev]);
+      }
+    }
 
     let nieuweVolgorde: number;
     if (beforeCardId) {
@@ -1299,6 +1339,12 @@ export default function WorkflowDesignerPagina() {
     }
   };
 
+  const terugdraaienMove = async (record: MoveRecord) => {
+    await voerVerplaatsUit(record.cardId, record.vanLaneId, null, true);
+    setMoveHistory((prev) => prev.filter((r) => r.id !== record.id));
+    toast({ title: `"${record.cardTitel}" teruggezet naar ${record.vanLaneNaam}` });
+  };
+
   // ── Impact analyse ────────────────────────────────────────────────────────────
 
   const alleImpactWorkflows = Array.from(
@@ -1360,9 +1406,25 @@ export default function WorkflowDesignerPagina() {
           )}
         </div>
 
-        <p className="text-xs text-gray-400">
-          Sleep kaarten om de volgorde aan te passen — wijzigingen worden automatisch opgeslagen
-        </p>
+        <div className="flex items-center gap-2">
+          <p className="text-xs text-gray-400">
+            Sleep kaarten om de volgorde aan te passen — wijzigingen worden automatisch opgeslagen
+          </p>
+          {moveHistory.length > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 gap-1.5 text-xs"
+              onClick={() => setGeschiedenisOpen(true)}
+            >
+              <Clock className="h-3.5 w-3.5" />
+              Geschiedenis
+              <span className="rounded-full bg-orange-100 px-1.5 py-0.5 text-[10px] font-semibold text-orange-700">
+                {moveHistory.length}
+              </span>
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Omschrijving workflow */}
@@ -1552,6 +1614,76 @@ export default function WorkflowDesignerPagina() {
         onClose={() => setAddOpen(false)}
         onCreated={() => refetch()}
       />
+
+      {/* Verplaatsingsgeschiedenis sheet */}
+      <Sheet open={geschiedenisOpen} onOpenChange={setGeschiedenisOpen}>
+        <SheetContent side="right" className="w-[400px] max-w-full flex flex-col">
+          <SheetHeader className="shrink-0">
+            <SheetTitle className="flex items-center gap-2 text-base">
+              <Clock className="h-4 w-4 text-orange-500" />
+              Verplaatsingsgeschiedenis
+            </SheetTitle>
+          </SheetHeader>
+
+          {moveHistory.length === 0 ? (
+            <div className="flex flex-1 items-center justify-center">
+              <p className="text-sm text-gray-400">Nog geen verplaatsingen</p>
+            </div>
+          ) : (
+            <div className="mt-4 flex-1 overflow-y-auto space-y-2 pr-1">
+              {moveHistory.map((record) => (
+                <div
+                  key={record.id}
+                  className="rounded-lg border border-gray-100 bg-gray-50 p-3"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium text-gray-900 truncate">
+                        {record.cardTitel}
+                      </p>
+                      <div className="mt-1 flex items-center gap-1.5 text-xs text-gray-500">
+                        <span className="rounded px-1.5 py-0.5 bg-white border border-gray-200 truncate max-w-[120px]">
+                          {record.vanLaneNaam}
+                        </span>
+                        <ArrowRight className="h-3 w-3 shrink-0 text-gray-400" />
+                        <span className="rounded px-1.5 py-0.5 bg-orange-50 border border-orange-200 text-orange-700 truncate max-w-[120px]">
+                          {record.naarLaneNaam}
+                        </span>
+                      </div>
+                      <p className="mt-1 text-[11px] text-gray-400">
+                        {record.tijdstip.toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
+                      </p>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-7 px-2 text-xs shrink-0"
+                      onClick={() => terugdraaienMove(record)}
+                    >
+                      <RotateCcw className="mr-1 h-3 w-3" />
+                      Terugdraaien
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {moveHistory.length > 0 && (
+            <div className="mt-4 shrink-0 border-t pt-3">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-full text-xs text-gray-400 hover:text-gray-600"
+                onClick={() => setMoveHistory([])}
+              >
+                <X className="mr-1.5 h-3 w-3" />
+                Geschiedenis wissen
+              </Button>
+            </div>
+          )}
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }
