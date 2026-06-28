@@ -11,6 +11,7 @@ import { useRol } from "@/context/rol-context";
 import { GebruikerMenu } from "@/components/gebruiker-menu";
 import { PauzeKnop } from "@/components/pauze/pauze-modal";
 import { WeergaveKnop } from "@/components/weergave/weergave-modal";
+import { OnlineGebruikers } from "@/components/online-gebruikers/online-gebruikers";
 
 const ROUTES_MONTEUR = [
   { href: "/", labelKey: "nav.mijnOpdrachten", icoon: Home },
@@ -75,6 +76,7 @@ export default function MonteurLayout({ children }: { children: React.ReactNode 
         </SidebarContent>
 
         <SidebarFooter>
+          <OnlineGebruikers />
           <SidebarMenu>
             <WeergaveKnop />
             <PauzeKnop />

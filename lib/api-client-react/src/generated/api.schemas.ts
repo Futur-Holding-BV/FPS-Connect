@@ -5,6 +5,13 @@
  * FPS Brandpreventie - Platform voor brandpreventieve gebouwvoorzieningen
  * OpenAPI spec version: 0.1.0
  */
+export interface OnlineGebruiker {
+  naam: string;
+  /** @maxLength 3 */
+  initialen: string;
+  rol: string;
+}
+
 export interface MailStatus {
   geconfigureerd: boolean;
   afzender: string;

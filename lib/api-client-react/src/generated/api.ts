@@ -339,6 +339,7 @@ import type {
   OnderhoudVoltooien,
   Onderhoudstaak,
   OndertekenenPortaal201,
+  OnlineGebruiker,
   Opdracht,
   OpdrachtNacalculatie,
   OpdrachtPatch,
@@ -6854,6 +6855,83 @@ export const useCreateMijnVerlofaanvraag = <TError = ErrorType<void>,
       > => {
       return useMutation(getCreateMijnVerlofaanvraagMutationOptions(options));
     }
+
+export const getListOnlineGebruikersUrl = () => {
+
+
+
+
+  return `/api/mijn/online-gebruikers`
+}
+
+/**
+ * @summary Actieve collega's in de afgelopen 5 minuten (exclusief jezelf en klanten)
+ */
+export const listOnlineGebruikers = async ( options?: RequestInit): Promise<OnlineGebruiker[]> => {
+
+  return customFetch<OnlineGebruiker[]>(getListOnlineGebruikersUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListOnlineGebruikersQueryKey = () => {
+    return [
+    `/api/mijn/online-gebruikers`
+    ] as const;
+    }
+
+
+export const getListOnlineGebruikersQueryOptions = <TData = Awaited<ReturnType<typeof listOnlineGebruikers>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listOnlineGebruikers>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListOnlineGebruikersQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listOnlineGebruikers>>> = ({ signal }) => listOnlineGebruikers({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listOnlineGebruikers>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListOnlineGebruikersQueryResult = NonNullable<Awaited<ReturnType<typeof listOnlineGebruikers>>>
+export type ListOnlineGebruikersQueryError = ErrorType<void>
+
+
+/**
+ * @summary Actieve collega's in de afgelopen 5 minuten (exclusief jezelf en klanten)
+ */
+
+export function useListOnlineGebruikers<TData = Awaited<ReturnType<typeof listOnlineGebruikers>>, TError = ErrorType<void>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listOnlineGebruikers>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListOnlineGebruikersQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
 
 export const getGetMijnPrivacyGegevensUrl = () => {
 

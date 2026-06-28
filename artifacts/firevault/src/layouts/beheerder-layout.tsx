@@ -29,6 +29,7 @@ import { cn } from "@/lib/utils";
 import { NavigatieBewakingProvider, useNavigatieBewaking } from "@/context/navigatie-bewaking";
 import { PauzeKnop } from "@/components/pauze/pauze-modal";
 import { WeergaveKnop } from "@/components/weergave/weergave-modal";
+import { OnlineGebruikers } from "@/components/online-gebruikers/online-gebruikers";
 
 function TerugKnop() {
   const { requestTerug } = useNavigatieBewaking();
@@ -1222,6 +1223,7 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
         </SidebarContent>
 
         <SidebarFooter>
+          <OnlineGebruikers />
           <SidebarMenu>
             <WeergaveKnop />
             <PauzeKnop />

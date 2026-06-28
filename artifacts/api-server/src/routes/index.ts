@@ -56,7 +56,9 @@ import boekhouderRouter from "./boekhouder";
 import loonOutputRouter from "./loon-output";
 import slimUploadRouter from "./slim-upload";
 import workflowRouter from "./workflow";
+import onlineGebruikersRouter from "./online-gebruikers";
 import { requireAuth } from "../middlewares/auth";
+import { meldActief } from "../lib/online-tracker";
 
 const router: IRouter = Router();
 
@@ -67,6 +69,12 @@ router.use(uitnodigingRouter);
 router.use(portaalRouter);
 // Vanaf hier vereist alles een geldige sessie
 router.use(requireAuth);
+// Online-aanwezigheid bijhouden (debounced, fire-and-forget)
+router.use((req, _res, next) => {
+  const uid = req.session?.userId;
+  if (uid) meldActief(uid).catch(() => {});
+  next();
+});
 
 router.use(dashboardRouter);
 router.use(gebouwenRouter);
@@ -121,5 +129,6 @@ router.use(boekhouderRouter);
 router.use(loonOutputRouter);
 router.use(slimUploadRouter);
 router.use(workflowRouter);
+router.use(onlineGebruikersRouter);
 
 export default router;

@@ -400,6 +400,7 @@ export * from './onderhoudstaakStatus';
 export * from './onderhoudUpdate';
 export * from './onderhoudVoltooien';
 export * from './ondertekenenPortaal201';
+export * from './onlineGebruiker';
 export * from './opdracht';
 export * from './opdrachtNacalculatie';
 export * from './opdrachtNacalculatieRegel';

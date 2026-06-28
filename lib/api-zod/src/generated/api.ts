@@ -2396,6 +2396,21 @@ export const CreateMijnVerlofaanvraagResponse = zod.void()
 
 
 /**
+ * @summary Actieve collega's in de afgelopen 5 minuten (exclusief jezelf en klanten)
+ */
+export const listOnlineGebruikersResponseInitialenMax = 3;
+
+
+
+export const ListOnlineGebruikersResponseItem = zod.object({
+  "naam": zod.string(),
+  "initialen": zod.string().max(listOnlineGebruikersResponseInitialenMax),
+  "rol": zod.string()
+})
+export const ListOnlineGebruikersResponse = zod.array(ListOnlineGebruikersResponseItem)
+
+
+/**
  * @summary Privacy-overzicht van de ingelogde gebruiker (eigen profiel + gekoppeld medewerker, zonder BSN)
  */
 export const GetMijnPrivacyGegevensResponse = zod.object({

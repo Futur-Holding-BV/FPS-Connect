@@ -10,6 +10,7 @@ import { Home, FileText, Building, Info } from "lucide-react";
 import { GebruikerMenu } from "@/components/gebruiker-menu";
 import { PauzeKnop } from "@/components/pauze/pauze-modal";
 import { WeergaveKnop } from "@/components/weergave/weergave-modal";
+import { OnlineGebruikers } from "@/components/online-gebruikers/online-gebruikers";
 
 const ROUTES = [
   { href: "/", labelKey: "nav.mijnPortaal", icoon: Home },
@@ -64,6 +65,7 @@ export default function KlantLayout({ children }: { children: React.ReactNode })
         </SidebarContent>
 
         <SidebarFooter>
+          <OnlineGebruikers />
           <SidebarMenu>
             <WeergaveKnop />
             <PauzeKnop />

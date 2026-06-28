@@ -2016,6 +2016,23 @@ paths:
         "404":
           description: Geen medewerker gekoppeld aan dit account
 
+  /mijn/online-gebruikers:
+    get:
+      operationId: listOnlineGebruikers
+      tags: [mijn]
+      summary: Actieve collega's in de afgelopen 5 minuten (exclusief jezelf en klanten)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/OnlineGebruiker"
+        "401":
+          description: Niet ingelogd
+
   /mijn/privacy-gegevens:
     get:
       operationId: getMijnPrivacyGegevens
@@ -13283,6 +13300,17 @@ paths:
 
 components:
   schemas:
+    OnlineGebruiker:
+      type: object
+      required: [naam, initialen, rol]
+      properties:
+        naam:
+          type: string
+        initialen:
+          type: string
+          maxLength: 3
+        rol:
+          type: string
     MailStatus:
       type: object
       required: [geconfigureerd, afzender, postbus, ontbrekende_secrets]
