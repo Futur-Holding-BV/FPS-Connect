@@ -29,6 +29,7 @@ import { featureFlags } from "@/lib/feature-flags";
 import { cn } from "@/lib/utils";
 import { NavigatieBewakingProvider, useNavigatieBewaking } from "@/context/navigatie-bewaking";
 import { OnlineGebruikers } from "@/components/online-gebruikers/online-gebruikers";
+import { VeiligheidMeldingBanner, OpenMeldingenBadge } from "@/components/veiligheidsmelding-banner";
 
 function TerugKnop() {
   const { requestTerug } = useNavigatieBewaking();
@@ -527,6 +528,7 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                           <Link href="/veiligheid/meldingen">
                             <AlertTriangle />
                             <span>Meldingen</span>
+                            <OpenMeldingenBadge />
                           </Link>
                         </SidebarMenuButton>
                       </SidebarMenuItem>
@@ -1247,6 +1249,7 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
           <img src="/logo-fps-connect.png" alt="FPS Connect" className="h-5 w-auto md:hidden" />
           <TerugKnop />
         </div>
+        {toonToolboxen && <VeiligheidMeldingBanner />}
         <div className="p-3 md:p-4 xl:p-6 pb-10">
           {children}
         </div>
