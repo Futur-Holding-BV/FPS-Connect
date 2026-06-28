@@ -51,6 +51,26 @@ export function OffboardDialog({
   const [offboardDatum, setOffboardDatum] = useState("");
   const [deactiveerAccount, setDeactiveerAccount] = useState(true);
 
+  const ACTIES = [
+    { id: "toegangspas",       label: "Toegangspas, sleutels en badges inleveren" },
+    { id: "bedrijfsmiddelen",  label: "Bedrijfsmiddelen retourneren (laptop, telefoon, bedrijfsauto)" },
+    { id: "email",             label: "E-mail doorsturen / out-of-office instellen" },
+    { id: "handover",          label: "Handover en kennisoverdracht afgerond" },
+    { id: "declaraties",       label: "Openstaande declaraties en onkostennota's afgehandeld" },
+    { id: "contacten",         label: "Klanten en collega's geïnformeerd over vertrek" },
+    { id: "loon",              label: "Eindafrekening verlof/vakantietoeslag berekend en doorgegeven" },
+  ] as const;
+
+  type ActieId = typeof ACTIES[number]["id"];
+  const [acties, setActies] = useState<Record<ActieId, boolean>>({
+    toegangspas: false, bedrijfsmiddelen: false, email: false,
+    handover: false, declaraties: false, contacten: false, loon: false,
+  });
+
+  function toggleActie(id: ActieId) {
+    setActies((a) => ({ ...a, [id]: !a[id] }));
+  }
+
   useEffect(() => {
     if (open) {
       setStap(1);
@@ -61,6 +81,8 @@ export function OffboardDialog({
       setBriefBewerkt(false);
       setOffboardDatum("");
       setDeactiveerAccount(true);
+      setActies({ toegangspas: false, bedrijfsmiddelen: false, email: false,
+                  handover: false, declaraties: false, contacten: false, loon: false });
     }
   }, [open]);
 
@@ -460,6 +482,40 @@ export function OffboardDialog({
                 value={offboardDatum}
                 onChange={(v) => setOffboardDatum(v ?? "")}
               />
+            </div>
+
+            {/* Praktische actielijst */}
+            <div className="rounded-lg border p-3 space-y-2">
+              <div className="text-sm font-semibold flex items-center gap-1.5">
+                <CheckCircle2 className="h-4 w-4 text-muted-foreground" />
+                Praktische acties vóór de laatste werkdag
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Vink af wat geregeld is. Dit wordt niet opgeslagen — het dient als reminder.
+              </p>
+              <div className="space-y-2 pt-1">
+                {ACTIES.map(({ id, label }) => (
+                  <div key={id} className="flex items-center gap-2">
+                    <Checkbox
+                      id={`actie-${id}`}
+                      checked={acties[id]}
+                      onCheckedChange={() => toggleActie(id)}
+                    />
+                    <label
+                      htmlFor={`actie-${id}`}
+                      className={`text-sm cursor-pointer ${acties[id] ? "line-through text-muted-foreground" : ""}`}
+                    >
+                      {label}
+                    </label>
+                  </div>
+                ))}
+              </div>
+              {Object.values(acties).every(Boolean) && (
+                <div className="flex items-center gap-1.5 text-xs text-emerald-700 font-medium pt-1">
+                  <CheckCircle2 className="h-3.5 w-3.5" />
+                  Alle praktische acties afgevinkt
+                </div>
+              )}
             </div>
 
             <div className="flex items-center gap-2">
