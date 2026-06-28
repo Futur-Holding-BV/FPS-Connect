@@ -37,26 +37,53 @@ export default function ModulesCalculatieNieuw() {
     korting: 0,
   });
 
-  const [klantNaamHandmatig, setKlantNaamHandmatig] = useState(false);
+  const [klantNaamHandmatig, setKlantNaamHandmatig]       = useState(false);
+  const [projectNaamHandmatig, setProjectNaamHandmatig]   = useState(false);
+  const [omschrijvingHandmatig, setOmschrijvingHandmatig] = useState(false);
 
   const { data: gebouwenData } = useListGebouwen();
   const gebouwen = Array.isArray(gebouwenData) ? gebouwenData : [];
 
   useEffect(() => {
-    if (klantNaamHandmatig) return;
+    const lijst = Array.isArray(gebouwenData) ? gebouwenData : [];
+
     if (form.gebouw_id === "__geen__") {
-      setForm((f) => ({ ...f, klant_naam: "" }));
+      setForm((f) => ({
+        ...f,
+        klant_naam:  klantNaamHandmatig    ? f.klant_naam  : "",
+        project_naam: projectNaamHandmatig ? f.project_naam : "",
+        omschrijving: omschrijvingHandmatig ? f.omschrijving : "",
+      }));
       return;
     }
-    const lijst = Array.isArray(gebouwenData) ? gebouwenData : [];
+
     const gebouw = lijst.find((g) => String(g.id) === form.gebouw_id);
     if (!gebouw) return;
-    const partijen = (gebouw as any).partijen as { type: string; naam: string }[] | undefined;
-    const opdrachtgever = partijen?.find((p) => p.type === "opdrachtgever");
-    if (opdrachtgever) {
-      setForm((f) => ({ ...f, klant_naam: opdrachtgever.naam }));
+
+    // Opdrachtgever: direct veld eerst, daarna partijen-fallback
+    if (!klantNaamHandmatig) {
+      const directKlant = (gebouw as any).klant_naam as string | null | undefined;
+      const partijen = (gebouw as any).partijen as { type: string; naam: string }[] | undefined;
+      const viaPartij = partijen?.find((p) => p.type === "opdrachtgever")?.naam;
+      const gevonden = directKlant || viaPartij || "";
+      if (gevonden) {
+        setForm((f) => ({ ...f, klant_naam: gevonden }));
+      }
     }
-  }, [form.gebouw_id, gebouwenData, klantNaamHandmatig]);
+
+    // Projectnaam: gebruik gebouwnaam als standaard
+    if (!projectNaamHandmatig) {
+      setForm((f) => ({ ...f, project_naam: gebouw.naam }));
+    }
+
+    // Omschrijving: gebouw-omschrijving als die er is
+    if (!omschrijvingHandmatig) {
+      const oms = (gebouw as any).omschrijving as string | null | undefined;
+      if (oms) {
+        setForm((f) => ({ ...f, omschrijving: oms }));
+      }
+    }
+  }, [form.gebouw_id, gebouwenData, klantNaamHandmatig, projectNaamHandmatig, omschrijvingHandmatig]);
 
   const createMut = useCreateModCalculatie({
     mutation: {
@@ -149,6 +176,8 @@ export default function ModulesCalculatieNieuw() {
                   value={form.gebouw_id}
                   onValueChange={(v) => {
                     setKlantNaamHandmatig(false);
+                    setProjectNaamHandmatig(false);
+                    setOmschrijvingHandmatig(false);
                     setField("gebouw_id", v);
                   }}
                 >
@@ -183,20 +212,36 @@ export default function ModulesCalculatieNieuw() {
                 />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="project_naam">Projectnaam</Label>
+                <Label htmlFor="project_naam">
+                  Projectnaam
+                  {!projectNaamHandmatig && form.gebouw_id !== "__geen__" && form.project_naam && (
+                    <span className="ml-1.5 text-xs text-muted-foreground">(uit gebouw)</span>
+                  )}
+                </Label>
                 <Input
                   id="project_naam"
                   value={form.project_naam}
-                  onChange={(e) => setField("project_naam", e.target.value)}
+                  onChange={(e) => {
+                    setProjectNaamHandmatig(true);
+                    setField("project_naam", e.target.value);
+                  }}
                   placeholder="Bijv. Renovatie Kantoorpand Y"
                 />
               </div>
               <div className="col-span-2 space-y-1.5">
-                <Label htmlFor="omschrijving">Omschrijving</Label>
+                <Label htmlFor="omschrijving">
+                  Omschrijving
+                  {!omschrijvingHandmatig && form.gebouw_id !== "__geen__" && form.omschrijving && (
+                    <span className="ml-1.5 text-xs text-muted-foreground">(uit gebouw)</span>
+                  )}
+                </Label>
                 <Textarea
                   id="omschrijving"
                   value={form.omschrijving}
-                  onChange={(e) => setField("omschrijving", e.target.value)}
+                  onChange={(e) => {
+                    setOmschrijvingHandmatig(true);
+                    setField("omschrijving", e.target.value);
+                  }}
                   placeholder="Toelichting op de opdracht of scope..."
                   rows={3}
                 />
