@@ -1050,6 +1050,19 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                           </SidebarMenuButton>
                         </SidebarMenuItem>
                       )}
+                      {isHoofdbeheerder && (
+                        <SidebarMenuItem>
+                          <SidebarMenuButton
+                            asChild
+                            isActive={location === "/beheer/gebouwen-archief"}
+                          >
+                            <Link href="/beheer/gebouwen-archief">
+                              <FileArchive />
+                              <span>Gebouwenarchief</span>
+                            </Link>
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                      )}
                       {toonSysteem && (
                         <>
                           <SidebarMenuItem>

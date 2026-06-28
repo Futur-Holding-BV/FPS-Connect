@@ -368,6 +368,7 @@ export default function Gebouwen() {
   });
   const isBeheerder =
     !!gebruiker?.rol && BEHEERDER_ROLLEN.includes(gebruiker.rol as string);
+  const isHoofdBeheerder = gebruiker?.rol === "hoofdbeheerder";
 
   const filterActief = partijType !== ALLE || partijNaam !== ALLE || filterStatus !== ALLE;
 
@@ -471,7 +472,7 @@ export default function Gebouwen() {
             <X className="h-4 w-4 mr-1" /> Filter wissen
           </Button>
         )}
-        {isBeheerder && (
+        {isHoofdBeheerder && (
           <Button
             variant={inclusiefGearchiveerd ? "secondary" : "ghost"}
             size="sm"

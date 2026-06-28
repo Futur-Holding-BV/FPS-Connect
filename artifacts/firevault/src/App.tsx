@@ -118,6 +118,7 @@ import SepaBestandenPagina from "@/pages/sepa-bestanden/index";
 import MijnSalarisdocumentenPagina from "@/pages/mijn/salarisdocumenten";
 import BoekhoudingBeheer from "@/pages/beheer/boekhouding";
 import GoLivePagina from "@/pages/beheer/go-live";
+import GebouwenArchiefBeheer from "@/pages/beheer/gebouwen-archief";
 import SalarisMutatiesPagina from "@/pages/salaris-mutaties/index";
 import ScabMailPagina from "@/pages/scab-mail/index";
 import BoekhouderPortaalPagina from "@/pages/boekhouder/index";
@@ -357,6 +358,7 @@ function ConnectPortal() {
         <Route path="/beheer/projectstatus" component={ProjectstatusPagina} />
         <Route path="/beheer/pwa-test" component={PwaTest} />
         <Route path="/beheer/privacy" component={BeheerPrivacy} />
+        <Route path="/beheer/gebouwen-archief" component={GebouwenArchiefBeheer} />
         <Route path="/mijn/privacy" component={PrivacyCentrum} />
         <Route path="/mijn/salarisdocumenten" component={MijnSalarisdocumentenPagina} />
 

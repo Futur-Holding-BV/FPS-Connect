@@ -23,6 +23,16 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -360,6 +370,8 @@ export default function GebouwDetail() {
   const [gereedBezig, setGereedBezig] = useState(false);
   const [herstelBezig, setHerstelBezig] = useState(false);
   const [archiveerBezig, setArchiveerBezig] = useState(false);
+  const [archiveerDialogOpen, setArchiveerDialogOpen] = useState(false);
+  const [archiveerRichting, setArchiveerRichting] = useState<boolean>(true);
 
   if (isLoading) return <div className="p-6 text-muted-foreground">Laden...</div>;
   if (!gebouw) return <div className="p-6">Gebouw niet gevonden.</div>;
@@ -469,19 +481,20 @@ export default function GebouwDetail() {
     }
   }
 
-  async function archiveer(gearchiveerd: boolean) {
-    if (
-      !confirm(
-        gearchiveerd
-          ? "Weet u zeker dat u dit project wilt archiveren? Het verdwijnt dan uit het actieve overzicht."
-          : "Weet u zeker dat u dit project wilt terugplaatsen naar het actieve overzicht?",
-      )
-    )
-      return;
+  function archiveer(gearchiveerd: boolean) {
+    setArchiveerRichting(gearchiveerd);
+    setArchiveerDialogOpen(true);
+  }
+
+  async function bevestigArchiveer() {
     setArchiveerBezig(true);
     try {
-      await archiveerMutatie.mutateAsync({ id: gebouwId, data: { gearchiveerd } });
+      await archiveerMutatie.mutateAsync({
+        id: gebouwId,
+        data: { gearchiveerd: archiveerRichting },
+      });
       queryClient.invalidateQueries();
+      setArchiveerDialogOpen(false);
     } finally {
       setArchiveerBezig(false);
     }
@@ -641,6 +654,40 @@ export default function GebouwDetail() {
         />
       )}
 
+      <AlertDialog
+        open={archiveerDialogOpen}
+        onOpenChange={(o) => { if (!o && !archiveerBezig) setArchiveerDialogOpen(false); }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {archiveerRichting ? "Gebouw verwijderen" : "Gebouw terugplaatsen"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {archiveerRichting
+                ? `"${gebouw.naam}" wordt verwijderd en verdwijnt uit het actieve overzicht. Alleen de hoofdbeheerder kan het gebouw via het Gebouwenarchief terugplaatsen.`
+                : `"${gebouw.naam}" wordt teruggeplaatst naar het actieve overzicht en is weer zichtbaar voor alle gebruikers met toegang.`}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={archiveerBezig}>Annuleren</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={bevestigArchiveer}
+              disabled={archiveerBezig}
+              className={archiveerRichting ? "bg-destructive text-destructive-foreground hover:bg-destructive/90" : ""}
+            >
+              {archiveerBezig ? (
+                <><Loader2 className="h-4 w-4 animate-spin mr-1" />Bezig...</>
+              ) : archiveerRichting ? (
+                "Verwijderen"
+              ) : (
+                "Terugplaatsen"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {gebouw.gearchiveerd && (
         <div className="flex items-center gap-3 rounded-lg border border-muted-foreground/30 bg-muted/50 p-4 text-sm">
           <Archive className="h-5 w-5 shrink-0 text-muted-foreground" />
@@ -741,7 +788,7 @@ export default function GebouwDetail() {
                         <Archive className="h-4 w-4" />
                       )
                     }
-                    label="Archiveren"
+                    label="Verwijderen"
                     onClick={() => archiveer(true)}
                     disabled={archiveerBezig}
                   />
