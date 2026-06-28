@@ -33,6 +33,7 @@ import toolboxRouter from "./toolbox";
 import planningModuleRouter from "./planning-module";
 import modCalculatieRouter from "./mod-calculatie";
 import gereedschappenRouter from "./gereedschappen";
+import wagenparkRouter from "./wagenpark";
 import { achievementsRouter } from "./achievements";
 import urenRouter from "./uren";
 import chatRouter from "./chat";
@@ -130,5 +131,6 @@ router.use(loonOutputRouter);
 router.use(slimUploadRouter);
 router.use(workflowRouter);
 router.use(onlineGebruikersRouter);
+router.use("/wagenpark", wagenparkRouter);
 
 export default router;

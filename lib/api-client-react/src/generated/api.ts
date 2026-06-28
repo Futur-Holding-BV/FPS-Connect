@@ -262,8 +262,11 @@ import type {
   ListToolboxBerichtenParams,
   ListUrenParams,
   ListVerlofInstellingenParams,
+  ListVoertuigenParams,
   ListVoorzieningTypesParams,
   ListVoorzieningenParams,
+  ListWagenparkAvgLogboekParams,
+  ListWagenparkSyncLogsParams,
   ListWeekStatenParams,
   ListZiekmeldingenParams,
   LmraAiVoorstel,
@@ -487,6 +490,9 @@ import type {
   VerlofsoortInput,
   Vervaldag,
   VerzendOfferte200,
+  Voertuig,
+  VoertuigInput,
+  VoertuigSamenvatting,
   VolgendSpotnummer,
   VoorwaardenSet,
   VoorwaardenSetInput,
@@ -502,6 +508,14 @@ import type {
   WachtwoordResetInput,
   WachtwoordVergetenInput,
   WachtwoordWijzigen,
+  WagenparkAiAdvies,
+  WagenparkAvgLogboekRegel,
+  WagenparkKosten,
+  WagenparkKostenInput,
+  WagenparkOnderhoud,
+  WagenparkOnderhoudInput,
+  WagenparkRit,
+  WagenparkSyncLog,
   WeekSamenvatting,
   WeekStaat,
   WeekStaatAfwijzenInput,
@@ -47962,4 +47976,1137 @@ export const useDeleteWorkflowCard = <TError = ErrorType<unknown>,
       > => {
       return useMutation(getDeleteWorkflowCardMutationOptions(options));
     }
+
+export const getListVoertuigenUrl = (params?: ListVoertuigenParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/wagenpark/voertuigen?${stringifiedParams}` : `/api/wagenpark/voertuigen`
+}
+
+/**
+ * @summary Lijst van alle voertuigen
+ */
+export const listVoertuigen = async (params?: ListVoertuigenParams, options?: RequestInit): Promise<VoertuigSamenvatting[]> => {
+
+  return customFetch<VoertuigSamenvatting[]>(getListVoertuigenUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListVoertuigenQueryKey = (params?: ListVoertuigenParams,) => {
+    return [
+    `/api/wagenpark/voertuigen`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListVoertuigenQueryOptions = <TData = Awaited<ReturnType<typeof listVoertuigen>>, TError = ErrorType<void>>(params?: ListVoertuigenParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listVoertuigen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListVoertuigenQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listVoertuigen>>> = ({ signal }) => listVoertuigen(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listVoertuigen>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListVoertuigenQueryResult = NonNullable<Awaited<ReturnType<typeof listVoertuigen>>>
+export type ListVoertuigenQueryError = ErrorType<void>
+
+
+/**
+ * @summary Lijst van alle voertuigen
+ */
+
+export function useListVoertuigen<TData = Awaited<ReturnType<typeof listVoertuigen>>, TError = ErrorType<void>>(
+ params?: ListVoertuigenParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listVoertuigen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListVoertuigenQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateVoertuigUrl = () => {
+
+
+
+
+  return `/api/wagenpark/voertuigen`
+}
+
+/**
+ * @summary Nieuw voertuig aanmaken
+ */
+export const createVoertuig = async (voertuigInput: VoertuigInput, options?: RequestInit): Promise<Voertuig> => {
+
+  return customFetch<Voertuig>(getCreateVoertuigUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(voertuigInput)
+  }
+);}
+
+
+
+
+export const getCreateVoertuigMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createVoertuig>>, TError,{data: BodyType<VoertuigInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createVoertuig>>, TError,{data: BodyType<VoertuigInput>}, TContext> => {
+
+const mutationKey = ['createVoertuig'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createVoertuig>>, {data: BodyType<VoertuigInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createVoertuig(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateVoertuigMutationResult = NonNullable<Awaited<ReturnType<typeof createVoertuig>>>
+    export type CreateVoertuigMutationBody = BodyType<VoertuigInput>
+    export type CreateVoertuigMutationError = ErrorType<void>
+
+    /**
+ * @summary Nieuw voertuig aanmaken
+ */
+export const useCreateVoertuig = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createVoertuig>>, TError,{data: BodyType<VoertuigInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createVoertuig>>,
+        TError,
+        {data: BodyType<VoertuigInput>},
+        TContext
+      > => {
+      return useMutation(getCreateVoertuigMutationOptions(options));
+    }
+
+export const getGetVoertuigUrl = (id: number,) => {
+
+
+
+
+  return `/api/wagenpark/voertuigen/${id}`
+}
+
+/**
+ * @summary Voertuig detail
+ */
+export const getVoertuig = async (id: number, options?: RequestInit): Promise<Voertuig> => {
+
+  return customFetch<Voertuig>(getGetVoertuigUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetVoertuigQueryKey = (id: number,) => {
+    return [
+    `/api/wagenpark/voertuigen/${id}`
+    ] as const;
+    }
+
+
+export const getGetVoertuigQueryOptions = <TData = Awaited<ReturnType<typeof getVoertuig>>, TError = ErrorType<void>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getVoertuig>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetVoertuigQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getVoertuig>>> = ({ signal }) => getVoertuig(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getVoertuig>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetVoertuigQueryResult = NonNullable<Awaited<ReturnType<typeof getVoertuig>>>
+export type GetVoertuigQueryError = ErrorType<void>
+
+
+/**
+ * @summary Voertuig detail
+ */
+
+export function useGetVoertuig<TData = Awaited<ReturnType<typeof getVoertuig>>, TError = ErrorType<void>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getVoertuig>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetVoertuigQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getUpdateVoertuigUrl = (id: number,) => {
+
+
+
+
+  return `/api/wagenpark/voertuigen/${id}`
+}
+
+/**
+ * @summary Voertuig bijwerken
+ */
+export const updateVoertuig = async (id: number,
+    voertuigInput: VoertuigInput, options?: RequestInit): Promise<Voertuig> => {
+
+  return customFetch<Voertuig>(getUpdateVoertuigUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(voertuigInput)
+  }
+);}
+
+
+
+
+export const getUpdateVoertuigMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateVoertuig>>, TError,{id: number;data: BodyType<VoertuigInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateVoertuig>>, TError,{id: number;data: BodyType<VoertuigInput>}, TContext> => {
+
+const mutationKey = ['updateVoertuig'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateVoertuig>>, {id: number;data: BodyType<VoertuigInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateVoertuig(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateVoertuigMutationResult = NonNullable<Awaited<ReturnType<typeof updateVoertuig>>>
+    export type UpdateVoertuigMutationBody = BodyType<VoertuigInput>
+    export type UpdateVoertuigMutationError = ErrorType<void>
+
+    /**
+ * @summary Voertuig bijwerken
+ */
+export const useUpdateVoertuig = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateVoertuig>>, TError,{id: number;data: BodyType<VoertuigInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateVoertuig>>,
+        TError,
+        {id: number;data: BodyType<VoertuigInput>},
+        TContext
+      > => {
+      return useMutation(getUpdateVoertuigMutationOptions(options));
+    }
+
+export const getArchiveVoertuigUrl = (id: number,) => {
+
+
+
+
+  return `/api/wagenpark/voertuigen/${id}`
+}
+
+/**
+ * @summary Voertuig archiveren
+ */
+export const archiveVoertuig = async (id: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getArchiveVoertuigUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getArchiveVoertuigMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof archiveVoertuig>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof archiveVoertuig>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['archiveVoertuig'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof archiveVoertuig>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  archiveVoertuig(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ArchiveVoertuigMutationResult = NonNullable<Awaited<ReturnType<typeof archiveVoertuig>>>
+
+    export type ArchiveVoertuigMutationError = ErrorType<void>
+
+    /**
+ * @summary Voertuig archiveren
+ */
+export const useArchiveVoertuig = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof archiveVoertuig>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof archiveVoertuig>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getArchiveVoertuigMutationOptions(options));
+    }
+
+export const getListVoertuigOnderhoudUrl = (id: number,) => {
+
+
+
+
+  return `/api/wagenpark/voertuigen/${id}/onderhoud`
+}
+
+/**
+ * @summary Onderhoudsmeldingen voor een voertuig
+ */
+export const listVoertuigOnderhoud = async (id: number, options?: RequestInit): Promise<WagenparkOnderhoud[]> => {
+
+  return customFetch<WagenparkOnderhoud[]>(getListVoertuigOnderhoudUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListVoertuigOnderhoudQueryKey = (id: number,) => {
+    return [
+    `/api/wagenpark/voertuigen/${id}/onderhoud`
+    ] as const;
+    }
+
+
+export const getListVoertuigOnderhoudQueryOptions = <TData = Awaited<ReturnType<typeof listVoertuigOnderhoud>>, TError = ErrorType<void>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listVoertuigOnderhoud>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListVoertuigOnderhoudQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listVoertuigOnderhoud>>> = ({ signal }) => listVoertuigOnderhoud(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listVoertuigOnderhoud>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListVoertuigOnderhoudQueryResult = NonNullable<Awaited<ReturnType<typeof listVoertuigOnderhoud>>>
+export type ListVoertuigOnderhoudQueryError = ErrorType<void>
+
+
+/**
+ * @summary Onderhoudsmeldingen voor een voertuig
+ */
+
+export function useListVoertuigOnderhoud<TData = Awaited<ReturnType<typeof listVoertuigOnderhoud>>, TError = ErrorType<void>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listVoertuigOnderhoud>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListVoertuigOnderhoudQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateVoertuigOnderhoudUrl = (id: number,) => {
+
+
+
+
+  return `/api/wagenpark/voertuigen/${id}/onderhoud`
+}
+
+/**
+ * @summary Onderhoudsmelding toevoegen
+ */
+export const createVoertuigOnderhoud = async (id: number,
+    wagenparkOnderhoudInput: WagenparkOnderhoudInput, options?: RequestInit): Promise<WagenparkOnderhoud> => {
+
+  return customFetch<WagenparkOnderhoud>(getCreateVoertuigOnderhoudUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(wagenparkOnderhoudInput)
+  }
+);}
+
+
+
+
+export const getCreateVoertuigOnderhoudMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createVoertuigOnderhoud>>, TError,{id: number;data: BodyType<WagenparkOnderhoudInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createVoertuigOnderhoud>>, TError,{id: number;data: BodyType<WagenparkOnderhoudInput>}, TContext> => {
+
+const mutationKey = ['createVoertuigOnderhoud'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createVoertuigOnderhoud>>, {id: number;data: BodyType<WagenparkOnderhoudInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  createVoertuigOnderhoud(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateVoertuigOnderhoudMutationResult = NonNullable<Awaited<ReturnType<typeof createVoertuigOnderhoud>>>
+    export type CreateVoertuigOnderhoudMutationBody = BodyType<WagenparkOnderhoudInput>
+    export type CreateVoertuigOnderhoudMutationError = ErrorType<void>
+
+    /**
+ * @summary Onderhoudsmelding toevoegen
+ */
+export const useCreateVoertuigOnderhoud = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createVoertuigOnderhoud>>, TError,{id: number;data: BodyType<WagenparkOnderhoudInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createVoertuigOnderhoud>>,
+        TError,
+        {id: number;data: BodyType<WagenparkOnderhoudInput>},
+        TContext
+      > => {
+      return useMutation(getCreateVoertuigOnderhoudMutationOptions(options));
+    }
+
+export const getUpdateVoertuigOnderhoudUrl = (id: number,
+    onderhoudId: number,) => {
+
+
+
+
+  return `/api/wagenpark/voertuigen/${id}/onderhoud/${onderhoudId}`
+}
+
+/**
+ * @summary Onderhoudsmelding bijwerken of accorderen
+ */
+export const updateVoertuigOnderhoud = async (id: number,
+    onderhoudId: number,
+    wagenparkOnderhoudInput: WagenparkOnderhoudInput, options?: RequestInit): Promise<WagenparkOnderhoud> => {
+
+  return customFetch<WagenparkOnderhoud>(getUpdateVoertuigOnderhoudUrl(id,onderhoudId),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(wagenparkOnderhoudInput)
+  }
+);}
+
+
+
+
+export const getUpdateVoertuigOnderhoudMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateVoertuigOnderhoud>>, TError,{id: number;onderhoudId: number;data: BodyType<WagenparkOnderhoudInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateVoertuigOnderhoud>>, TError,{id: number;onderhoudId: number;data: BodyType<WagenparkOnderhoudInput>}, TContext> => {
+
+const mutationKey = ['updateVoertuigOnderhoud'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateVoertuigOnderhoud>>, {id: number;onderhoudId: number;data: BodyType<WagenparkOnderhoudInput>}> = (props) => {
+          const {id,onderhoudId,data} = props ?? {};
+
+          return  updateVoertuigOnderhoud(id,onderhoudId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateVoertuigOnderhoudMutationResult = NonNullable<Awaited<ReturnType<typeof updateVoertuigOnderhoud>>>
+    export type UpdateVoertuigOnderhoudMutationBody = BodyType<WagenparkOnderhoudInput>
+    export type UpdateVoertuigOnderhoudMutationError = ErrorType<void>
+
+    /**
+ * @summary Onderhoudsmelding bijwerken of accorderen
+ */
+export const useUpdateVoertuigOnderhoud = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateVoertuigOnderhoud>>, TError,{id: number;onderhoudId: number;data: BodyType<WagenparkOnderhoudInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateVoertuigOnderhoud>>,
+        TError,
+        {id: number;onderhoudId: number;data: BodyType<WagenparkOnderhoudInput>},
+        TContext
+      > => {
+      return useMutation(getUpdateVoertuigOnderhoudMutationOptions(options));
+    }
+
+export const getListVoertuigKostenUrl = (id: number,) => {
+
+
+
+
+  return `/api/wagenpark/voertuigen/${id}/kosten`
+}
+
+/**
+ * @summary Kostenhistorie voor een voertuig
+ */
+export const listVoertuigKosten = async (id: number, options?: RequestInit): Promise<WagenparkKosten[]> => {
+
+  return customFetch<WagenparkKosten[]>(getListVoertuigKostenUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListVoertuigKostenQueryKey = (id: number,) => {
+    return [
+    `/api/wagenpark/voertuigen/${id}/kosten`
+    ] as const;
+    }
+
+
+export const getListVoertuigKostenQueryOptions = <TData = Awaited<ReturnType<typeof listVoertuigKosten>>, TError = ErrorType<void>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listVoertuigKosten>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListVoertuigKostenQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listVoertuigKosten>>> = ({ signal }) => listVoertuigKosten(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listVoertuigKosten>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListVoertuigKostenQueryResult = NonNullable<Awaited<ReturnType<typeof listVoertuigKosten>>>
+export type ListVoertuigKostenQueryError = ErrorType<void>
+
+
+/**
+ * @summary Kostenhistorie voor een voertuig
+ */
+
+export function useListVoertuigKosten<TData = Awaited<ReturnType<typeof listVoertuigKosten>>, TError = ErrorType<void>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listVoertuigKosten>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListVoertuigKostenQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateVoertuigKostenUrl = (id: number,) => {
+
+
+
+
+  return `/api/wagenpark/voertuigen/${id}/kosten`
+}
+
+/**
+ * @summary Kostenregel toevoegen
+ */
+export const createVoertuigKosten = async (id: number,
+    wagenparkKostenInput: WagenparkKostenInput, options?: RequestInit): Promise<WagenparkKosten> => {
+
+  return customFetch<WagenparkKosten>(getCreateVoertuigKostenUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(wagenparkKostenInput)
+  }
+);}
+
+
+
+
+export const getCreateVoertuigKostenMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createVoertuigKosten>>, TError,{id: number;data: BodyType<WagenparkKostenInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createVoertuigKosten>>, TError,{id: number;data: BodyType<WagenparkKostenInput>}, TContext> => {
+
+const mutationKey = ['createVoertuigKosten'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createVoertuigKosten>>, {id: number;data: BodyType<WagenparkKostenInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  createVoertuigKosten(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateVoertuigKostenMutationResult = NonNullable<Awaited<ReturnType<typeof createVoertuigKosten>>>
+    export type CreateVoertuigKostenMutationBody = BodyType<WagenparkKostenInput>
+    export type CreateVoertuigKostenMutationError = ErrorType<void>
+
+    /**
+ * @summary Kostenregel toevoegen
+ */
+export const useCreateVoertuigKosten = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createVoertuigKosten>>, TError,{id: number;data: BodyType<WagenparkKostenInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createVoertuigKosten>>,
+        TError,
+        {id: number;data: BodyType<WagenparkKostenInput>},
+        TContext
+      > => {
+      return useMutation(getCreateVoertuigKostenMutationOptions(options));
+    }
+
+export const getListVoertuigRittenUrl = (id: number,) => {
+
+
+
+
+  return `/api/wagenpark/voertuigen/${id}/ritten`
+}
+
+/**
+ * @summary Rittenlog voor een voertuig (voertuiggericht)
+ */
+export const listVoertuigRitten = async (id: number, options?: RequestInit): Promise<WagenparkRit[]> => {
+
+  return customFetch<WagenparkRit[]>(getListVoertuigRittenUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListVoertuigRittenQueryKey = (id: number,) => {
+    return [
+    `/api/wagenpark/voertuigen/${id}/ritten`
+    ] as const;
+    }
+
+
+export const getListVoertuigRittenQueryOptions = <TData = Awaited<ReturnType<typeof listVoertuigRitten>>, TError = ErrorType<void>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listVoertuigRitten>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListVoertuigRittenQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listVoertuigRitten>>> = ({ signal }) => listVoertuigRitten(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listVoertuigRitten>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListVoertuigRittenQueryResult = NonNullable<Awaited<ReturnType<typeof listVoertuigRitten>>>
+export type ListVoertuigRittenQueryError = ErrorType<void>
+
+
+/**
+ * @summary Rittenlog voor een voertuig (voertuiggericht)
+ */
+
+export function useListVoertuigRitten<TData = Awaited<ReturnType<typeof listVoertuigRitten>>, TError = ErrorType<void>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listVoertuigRitten>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListVoertuigRittenQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getTriggerWagenparkSyncUrl = () => {
+
+
+
+
+  return `/api/wagenpark/sync`
+}
+
+/**
+ * @summary Synchronisatie met de fleet-provider starten
+ */
+export const triggerWagenparkSync = async ( options?: RequestInit): Promise<WagenparkSyncLog> => {
+
+  return customFetch<WagenparkSyncLog>(getTriggerWagenparkSyncUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getTriggerWagenparkSyncMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof triggerWagenparkSync>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof triggerWagenparkSync>>, TError,void, TContext> => {
+
+const mutationKey = ['triggerWagenparkSync'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof triggerWagenparkSync>>, void> = () => {
+
+
+          return  triggerWagenparkSync(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type TriggerWagenparkSyncMutationResult = NonNullable<Awaited<ReturnType<typeof triggerWagenparkSync>>>
+
+    export type TriggerWagenparkSyncMutationError = ErrorType<void>
+
+    /**
+ * @summary Synchronisatie met de fleet-provider starten
+ */
+export const useTriggerWagenparkSync = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof triggerWagenparkSync>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof triggerWagenparkSync>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getTriggerWagenparkSyncMutationOptions(options));
+    }
+
+export const getListWagenparkSyncLogsUrl = (params?: ListWagenparkSyncLogsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/wagenpark/sync/logs?${stringifiedParams}` : `/api/wagenpark/sync/logs`
+}
+
+/**
+ * @summary Synchronisatielogboek
+ */
+export const listWagenparkSyncLogs = async (params?: ListWagenparkSyncLogsParams, options?: RequestInit): Promise<WagenparkSyncLog[]> => {
+
+  return customFetch<WagenparkSyncLog[]>(getListWagenparkSyncLogsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListWagenparkSyncLogsQueryKey = (params?: ListWagenparkSyncLogsParams,) => {
+    return [
+    `/api/wagenpark/sync/logs`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListWagenparkSyncLogsQueryOptions = <TData = Awaited<ReturnType<typeof listWagenparkSyncLogs>>, TError = ErrorType<void>>(params?: ListWagenparkSyncLogsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listWagenparkSyncLogs>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListWagenparkSyncLogsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listWagenparkSyncLogs>>> = ({ signal }) => listWagenparkSyncLogs(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listWagenparkSyncLogs>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListWagenparkSyncLogsQueryResult = NonNullable<Awaited<ReturnType<typeof listWagenparkSyncLogs>>>
+export type ListWagenparkSyncLogsQueryError = ErrorType<void>
+
+
+/**
+ * @summary Synchronisatielogboek
+ */
+
+export function useListWagenparkSyncLogs<TData = Awaited<ReturnType<typeof listWagenparkSyncLogs>>, TError = ErrorType<void>>(
+ params?: ListWagenparkSyncLogsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listWagenparkSyncLogs>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListWagenparkSyncLogsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getListWagenparkAiAdviesUrl = () => {
+
+
+
+
+  return `/api/wagenpark/ai-advies`
+}
+
+/**
+ * @summary AI-conceptadviezen voor het wagenpark (mens accordeert altijd)
+ */
+export const listWagenparkAiAdvies = async ( options?: RequestInit): Promise<WagenparkAiAdvies[]> => {
+
+  return customFetch<WagenparkAiAdvies[]>(getListWagenparkAiAdviesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListWagenparkAiAdviesQueryKey = () => {
+    return [
+    `/api/wagenpark/ai-advies`
+    ] as const;
+    }
+
+
+export const getListWagenparkAiAdviesQueryOptions = <TData = Awaited<ReturnType<typeof listWagenparkAiAdvies>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listWagenparkAiAdvies>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListWagenparkAiAdviesQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listWagenparkAiAdvies>>> = ({ signal }) => listWagenparkAiAdvies({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listWagenparkAiAdvies>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListWagenparkAiAdviesQueryResult = NonNullable<Awaited<ReturnType<typeof listWagenparkAiAdvies>>>
+export type ListWagenparkAiAdviesQueryError = ErrorType<void>
+
+
+/**
+ * @summary AI-conceptadviezen voor het wagenpark (mens accordeert altijd)
+ */
+
+export function useListWagenparkAiAdvies<TData = Awaited<ReturnType<typeof listWagenparkAiAdvies>>, TError = ErrorType<void>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listWagenparkAiAdvies>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListWagenparkAiAdviesQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getListWagenparkAvgLogboekUrl = (params?: ListWagenparkAvgLogboekParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/wagenpark/avg-logboek?${stringifiedParams}` : `/api/wagenpark/avg-logboek`
+}
+
+/**
+ * @summary AVG-logboek (exporteerbaar privacyaudittrail)
+ */
+export const listWagenparkAvgLogboek = async (params?: ListWagenparkAvgLogboekParams, options?: RequestInit): Promise<WagenparkAvgLogboekRegel[]> => {
+
+  return customFetch<WagenparkAvgLogboekRegel[]>(getListWagenparkAvgLogboekUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListWagenparkAvgLogboekQueryKey = (params?: ListWagenparkAvgLogboekParams,) => {
+    return [
+    `/api/wagenpark/avg-logboek`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListWagenparkAvgLogboekQueryOptions = <TData = Awaited<ReturnType<typeof listWagenparkAvgLogboek>>, TError = ErrorType<void>>(params?: ListWagenparkAvgLogboekParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listWagenparkAvgLogboek>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListWagenparkAvgLogboekQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listWagenparkAvgLogboek>>> = ({ signal }) => listWagenparkAvgLogboek(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listWagenparkAvgLogboek>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListWagenparkAvgLogboekQueryResult = NonNullable<Awaited<ReturnType<typeof listWagenparkAvgLogboek>>>
+export type ListWagenparkAvgLogboekQueryError = ErrorType<void>
+
+
+/**
+ * @summary AVG-logboek (exporteerbaar privacyaudittrail)
+ */
+
+export function useListWagenparkAvgLogboek<TData = Awaited<ReturnType<typeof listWagenparkAvgLogboek>>, TError = ErrorType<void>>(
+ params?: ListWagenparkAvgLogboekParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listWagenparkAvgLogboek>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListWagenparkAvgLogboekQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
 

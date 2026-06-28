@@ -10,7 +10,7 @@ import {
   SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarTrigger,
 } from "@/components/ui/sidebar";
 import {
-  ShieldCheck, Building, Wrench, Users, Home,
+  ShieldCheck, Building, Wrench, Users, Home, Truck,
   ShieldAlert, LifeBuoy, MessageSquarePlus, Activity, Contact, Info, Clock,
   FolderOpen, FileText, ListChecks, Files, LayoutTemplate, Mail,
   Calculator, CalendarDays, LayoutDashboard, BarChart3, CreditCard, MessageSquare, HardHat,
@@ -87,6 +87,7 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
   const toonSalarisMutaties = heeftNiveau("salaris_mutaties", 1);
   const toonScabMail = heeftNiveau("scab_mail", 1);
   const toonBoekhouderPortaal = heeftNiveau("boekhouder_portaal", 1);
+  const toonWagenpark = heeftNiveau("wagenpark", 1);
   const toonLoonOutput = heeftNiveau("salarisarchief", 2);
 
   const heeftOne = isHoofdbeheerder;
@@ -662,17 +663,19 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                         </SidebarMenuButton>
                       </SidebarMenuItem>
                     )}
-                    <SidebarMenuItem className="pl-5">
-                      <SidebarMenuButton
-                        asChild
-                        isActive={location === "/organisatie/autopark"}
-                      >
-                        <Link href="/organisatie/autopark">
-                          <Car />
-                          <span>Autopark</span>
-                        </Link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
+                    {toonWagenpark && (
+                      <SidebarMenuItem className="pl-5">
+                        <SidebarMenuButton
+                          asChild
+                          isActive={location === "/wagenpark" || location.startsWith("/wagenpark/")}
+                        >
+                          <Link href="/wagenpark">
+                            <Truck />
+                            <span>Wagenpark</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    )}
                     <SidebarMenuItem className="pl-5">
                       <SidebarMenuButton
                         asChild

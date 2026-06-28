@@ -6740,6 +6740,259 @@ export type WorkflowDetail = WorkflowDefinitie & {
   lanes?: WorkflowLane[];
 };
 
+export interface VoertuigSamenvatting {
+  id: number;
+  kenteken: string;
+  merk: string;
+  type: string;
+  bouwjaar?: number | null;
+  kleur?: string | null;
+  status: string;
+  km_stand: number;
+  apk_datum?: string | null;
+  bandenwissels_status?: string;
+  eigendoms_type?: string;
+  fleet_provider?: string | null;
+  provider_voertuig_id?: string | null;
+  aandacht_nodig?: boolean;
+  bijgewerkt_op?: string;
+}
+
+export type Voertuig = VoertuigSamenvatting & ({
+  chassisnummer?: string | null;
+  km_stand_datum?: string | null;
+  onderhouds_interval_km?: number | null;
+  onderhouds_interval_dag?: number | null;
+  llaatst_onderhoud_km?: number | null;
+  llaatste_onderhoud_datum?: string | null;
+  verzekeraar_naam?: string | null;
+  verzekering_polisnr?: string | null;
+  verzekering_verval_dat?: string | null;
+  leasemaatschappij?: string | null;
+  lease_eind_datum?: string | null;
+  lease_km_jaarlijks?: number | null;
+  chauffeur_id?: number | null;
+  chauffeur_naam?: string | null;
+  werkgever_id?: number | null;
+  opmerkingen?: string | null;
+  gearchiveerd?: boolean;
+  aangemaakt_op?: string;
+});
+
+export type VoertuigInputBandenwisselsStatus = typeof VoertuigInputBandenwisselsStatus[keyof typeof VoertuigInputBandenwisselsStatus];
+
+
+export const VoertuigInputBandenwisselsStatus = {
+  geen_actie: 'geen_actie',
+  plannen: 'plannen',
+  gepland: 'gepland',
+  gewisseld: 'gewisseld',
+} as const;
+
+export type VoertuigInputEigendomsType = typeof VoertuigInputEigendomsType[keyof typeof VoertuigInputEigendomsType];
+
+
+export const VoertuigInputEigendomsType = {
+  eigendom: 'eigendom',
+  lease: 'lease',
+  huur: 'huur',
+} as const;
+
+export type VoertuigInputStatus = typeof VoertuigInputStatus[keyof typeof VoertuigInputStatus];
+
+
+export const VoertuigInputStatus = {
+  actief: 'actief',
+  in_onderhoud: 'in_onderhoud',
+  beschadigd: 'beschadigd',
+  afgestoten: 'afgestoten',
+  gereserveerd: 'gereserveerd',
+} as const;
+
+export interface VoertuigInput {
+  kenteken: string;
+  merk: string;
+  type: string;
+  bouwjaar?: number | null;
+  kleur?: string | null;
+  chassisnummer?: string | null;
+  km_stand?: number;
+  apk_datum?: string | null;
+  onderhouds_interval_km?: number | null;
+  onderhouds_interval_dag?: number | null;
+  bandenwissels_status?: VoertuigInputBandenwisselsStatus;
+  eigendoms_type?: VoertuigInputEigendomsType;
+  leasemaatschappij?: string | null;
+  lease_eind_datum?: string | null;
+  lease_km_jaarlijks?: number | null;
+  verzekeraar_naam?: string | null;
+  verzekering_polisnr?: string | null;
+  verzekering_verval_dat?: string | null;
+  chauffeur_id?: number | null;
+  provider_voertuig_id?: string | null;
+  fleet_provider?: string | null;
+  werkgever_id?: number | null;
+  status?: VoertuigInputStatus;
+  opmerkingen?: string | null;
+}
+
+export interface WagenparkOnderhoud {
+  id: number;
+  voertuig_id: number;
+  type: string;
+  omschrijving: string;
+  status: string;
+  prioriteit: string;
+  km_stand_bij_melding?: number | null;
+  gepland_datum?: string | null;
+  afgerond_datum?: string | null;
+  kosten?: number | null;
+  leverancier?: string | null;
+  is_ai_voorstel: boolean;
+  ai_reden?: string | null;
+  geaccordeerd: boolean;
+  gemeld_door_id?: number | null;
+  aangemaakt_op: string;
+  bijgewerkt_op?: string;
+}
+
+export type WagenparkOnderhoudInputType = typeof WagenparkOnderhoudInputType[keyof typeof WagenparkOnderhoudInputType];
+
+
+export const WagenparkOnderhoudInputType = {
+  periodiek: 'periodiek',
+  apk: 'apk',
+  bandenwissel: 'bandenwissel',
+  schade: 'schade',
+  reparatie: 'reparatie',
+  overig: 'overig',
+} as const;
+
+export type WagenparkOnderhoudInputStatus = typeof WagenparkOnderhoudInputStatus[keyof typeof WagenparkOnderhoudInputStatus];
+
+
+export const WagenparkOnderhoudInputStatus = {
+  open: 'open',
+  ingepland: 'ingepland',
+  in_uitvoering: 'in_uitvoering',
+  afgerond: 'afgerond',
+  afgebroken: 'afgebroken',
+} as const;
+
+export type WagenparkOnderhoudInputPrioriteit = typeof WagenparkOnderhoudInputPrioriteit[keyof typeof WagenparkOnderhoudInputPrioriteit];
+
+
+export const WagenparkOnderhoudInputPrioriteit = {
+  laag: 'laag',
+  normaal: 'normaal',
+  hoog: 'hoog',
+  urgent: 'urgent',
+} as const;
+
+export interface WagenparkOnderhoudInput {
+  type: WagenparkOnderhoudInputType;
+  omschrijving: string;
+  status?: WagenparkOnderhoudInputStatus;
+  prioriteit?: WagenparkOnderhoudInputPrioriteit;
+  km_stand_bij_melding?: number | null;
+  gepland_datum?: string | null;
+  afgerond_datum?: string | null;
+  kosten?: number | null;
+  leverancier?: string | null;
+  geaccordeerd?: boolean;
+}
+
+export interface WagenparkKosten {
+  id: number;
+  voertuig_id: number;
+  categorie: string;
+  bedrag: number;
+  datum: string;
+  omschrijving?: string | null;
+  leverancier?: string | null;
+  factuur_nummer?: string | null;
+  km_stand?: number | null;
+  project_id?: number | null;
+  aangemaakt_op: string;
+}
+
+export type WagenparkKostenInputCategorie = typeof WagenparkKostenInputCategorie[keyof typeof WagenparkKostenInputCategorie];
+
+
+export const WagenparkKostenInputCategorie = {
+  onderhoud: 'onderhoud',
+  brandstof: 'brandstof',
+  banden: 'banden',
+  verzekering: 'verzekering',
+  lease: 'lease',
+  schade: 'schade',
+  apk: 'apk',
+  overig: 'overig',
+} as const;
+
+export interface WagenparkKostenInput {
+  categorie: WagenparkKostenInputCategorie;
+  bedrag: number;
+  datum: string;
+  omschrijving?: string | null;
+  leverancier?: string | null;
+  factuur_nummer?: string | null;
+  km_stand?: number | null;
+  project_id?: number | null;
+}
+
+export interface WagenparkRit {
+  id: number;
+  voertuig_id: number;
+  start_datum: string;
+  eind_datum?: string | null;
+  km_start?: number | null;
+  km_eind?: number | null;
+  afstand_km?: number | null;
+  vertrek_adres?: string | null;
+  bestemming_adres?: string | null;
+  doel?: string | null;
+  project_id?: number | null;
+  provider_rit_id?: string | null;
+  bron: string;
+  aangemaakt_op: string;
+}
+
+export interface WagenparkSyncLog {
+  id: number;
+  provider: string;
+  status: string;
+  aantal_bijgewerkt: number;
+  aantal_fouten: number;
+  foutmelding?: string | null;
+  gestart_op: string;
+  voltooid_op?: string | null;
+}
+
+export interface WagenparkAiAdvies {
+  voertuig_id: number;
+  kenteken: string;
+  type: string;
+  advies: string;
+  prioriteit: string;
+  reden?: string | null;
+  onderhoud_id?: number | null;
+}
+
+export interface WagenparkAvgLogboekRegel {
+  id: number;
+  datum: string;
+  actie: string;
+  voertuig_id?: number | null;
+  kenteken?: string | null;
+  gebruiker_id?: number | null;
+  gebruiker_naam?: string | null;
+  reden?: string | null;
+  datatype?: string | null;
+  bewaartermijn?: string | null;
+  bijzonderheden?: string | null;
+}
+
 export type GetRecenteActiviteitParams = {
 limit?: number;
 };
@@ -7184,5 +7437,19 @@ export type GetBoekhouderUploadsParams = {
 werkgever_id?: number;
 map?: string;
 jaar?: number;
+};
+
+export type ListVoertuigenParams = {
+status?: string;
+gearchiveerd?: boolean;
+};
+
+export type ListWagenparkSyncLogsParams = {
+limit?: number;
+};
+
+export type ListWagenparkAvgLogboekParams = {
+van?: string;
+tot?: string;
 };
 

@@ -117,6 +117,11 @@ export const MODULES = [
     label: "Boekhouderportaal",
     omschrijving: "Externe boekhouder: upload/download documenten, mutatieoverzicht, SEPA, jaarrekening",
   },
+  {
+    id: "wagenpark",
+    label: "Wagenpark",
+    omschrijving: "Voertuigbeheer, onderhoud, APK, kosten, ritten en Traxgo-koppeling",
+  },
 ] as const;
 
 export type ModuleId = (typeof MODULES)[number]["id"];
@@ -321,6 +326,14 @@ export const PRESETS: Preset[] = [
       salarisarchief: 2,
       salaris_mutaties: 1,
       boekhouder_portaal: 4,
+    }),
+  },
+  {
+    naam: "Wagenparkbeheerder",
+    bevoegdheden: matrix({
+      wagenpark: 4,
+      gereedschappen: 1,
+      planning: 1,
     }),
   },
 ];

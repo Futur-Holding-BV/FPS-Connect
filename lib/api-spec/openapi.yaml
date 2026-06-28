@@ -13298,6 +13298,339 @@ paths:
         '204':
           description: Verwijderd
 
+  # ───────────────────────────────────────────────────────
+  # Wagenpark
+  # ───────────────────────────────────────────────────────
+  /wagenpark/voertuigen:
+    get:
+      operationId: listVoertuigen
+      tags: [wagenpark]
+      summary: Lijst van alle voertuigen
+      parameters:
+        - in: query
+          name: status
+          schema: { type: string }
+        - in: query
+          name: gearchiveerd
+          schema: { type: boolean }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/VoertuigSamenvatting'
+        '401': { description: Niet ingelogd }
+        '403': { description: Geen toegang }
+    post:
+      operationId: createVoertuig
+      tags: [wagenpark]
+      summary: Nieuw voertuig aanmaken
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VoertuigInput'
+      responses:
+        '201':
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Voertuig'
+        '400': { description: Validatiefout }
+        '401': { description: Niet ingelogd }
+        '403': { description: Geen toegang }
+
+  /wagenpark/voertuigen/{id}:
+    get:
+      operationId: getVoertuig
+      tags: [wagenpark]
+      summary: Voertuig detail
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Voertuig'
+        '401': { description: Niet ingelogd }
+        '403': { description: Geen toegang }
+        '404': { description: Niet gevonden }
+    patch:
+      operationId: updateVoertuig
+      tags: [wagenpark]
+      summary: Voertuig bijwerken
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VoertuigInput'
+      responses:
+        '200':
+          description: Bijgewerkt
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Voertuig'
+        '400': { description: Validatiefout }
+        '401': { description: Niet ingelogd }
+        '403': { description: Geen toegang }
+        '404': { description: Niet gevonden }
+    delete:
+      operationId: archiveVoertuig
+      tags: [wagenpark]
+      summary: Voertuig archiveren
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        '204': { description: Gearchiveerd }
+        '401': { description: Niet ingelogd }
+        '403': { description: Geen toegang }
+        '404': { description: Niet gevonden }
+
+  /wagenpark/voertuigen/{id}/onderhoud:
+    get:
+      operationId: listVoertuigOnderhoud
+      tags: [wagenpark]
+      summary: Onderhoudsmeldingen voor een voertuig
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/WagenparkOnderhoud'
+        '401': { description: Niet ingelogd }
+        '403': { description: Geen toegang }
+    post:
+      operationId: createVoertuigOnderhoud
+      tags: [wagenpark]
+      summary: Onderhoudsmelding toevoegen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WagenparkOnderhoudInput'
+      responses:
+        '201':
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WagenparkOnderhoud'
+        '400': { description: Validatiefout }
+        '401': { description: Niet ingelogd }
+        '403': { description: Geen toegang }
+
+  /wagenpark/voertuigen/{id}/onderhoud/{onderhoudId}:
+    patch:
+      operationId: updateVoertuigOnderhoud
+      tags: [wagenpark]
+      summary: Onderhoudsmelding bijwerken of accorderen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+        - in: path
+          name: onderhoudId
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WagenparkOnderhoudInput'
+      responses:
+        '200':
+          description: Bijgewerkt
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WagenparkOnderhoud'
+        '400': { description: Validatiefout }
+        '401': { description: Niet ingelogd }
+        '403': { description: Geen toegang }
+        '404': { description: Niet gevonden }
+
+  /wagenpark/voertuigen/{id}/kosten:
+    get:
+      operationId: listVoertuigKosten
+      tags: [wagenpark]
+      summary: Kostenhistorie voor een voertuig
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/WagenparkKosten'
+        '401': { description: Niet ingelogd }
+        '403': { description: Geen toegang }
+    post:
+      operationId: createVoertuigKosten
+      tags: [wagenpark]
+      summary: Kostenregel toevoegen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WagenparkKostenInput'
+      responses:
+        '201':
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WagenparkKosten'
+        '400': { description: Validatiefout }
+        '401': { description: Niet ingelogd }
+        '403': { description: Geen toegang }
+
+  /wagenpark/voertuigen/{id}/ritten:
+    get:
+      operationId: listVoertuigRitten
+      tags: [wagenpark]
+      summary: Rittenlog voor een voertuig (voertuiggericht)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/WagenparkRit'
+        '401': { description: Niet ingelogd }
+        '403': { description: Geen toegang }
+
+  /wagenpark/sync:
+    post:
+      operationId: triggerWagenparkSync
+      tags: [wagenpark]
+      summary: Synchronisatie met de fleet-provider starten
+      responses:
+        '200':
+          description: Synchronisatie gestart
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WagenparkSyncLog'
+        '401': { description: Niet ingelogd }
+        '403': { description: Geen toegang }
+
+  /wagenpark/sync/logs:
+    get:
+      operationId: listWagenparkSyncLogs
+      tags: [wagenpark]
+      summary: Synchronisatielogboek
+      parameters:
+        - in: query
+          name: limit
+          schema: { type: integer }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/WagenparkSyncLog'
+        '401': { description: Niet ingelogd }
+        '403': { description: Geen toegang }
+
+  /wagenpark/ai-advies:
+    get:
+      operationId: listWagenparkAiAdvies
+      tags: [wagenpark]
+      summary: AI-conceptadviezen voor het wagenpark (mens accordeert altijd)
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/WagenparkAiAdvies'
+        '401': { description: Niet ingelogd }
+        '403': { description: Geen toegang }
+
+  /wagenpark/avg-logboek:
+    get:
+      operationId: listWagenparkAvgLogboek
+      tags: [wagenpark]
+      summary: AVG-logboek (exporteerbaar privacyaudittrail)
+      parameters:
+        - in: query
+          name: van
+          schema: { type: string, format: date }
+        - in: query
+          name: tot
+          schema: { type: string, format: date }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/WagenparkAvgLogboekRegel'
+        '401': { description: Niet ingelogd }
+        '403': { description: Geen toegang }
+
 components:
   schemas:
     OnlineGebruiker:
@@ -24546,4 +24879,218 @@ components:
               type: array
               items:
                 $ref: '#/components/schemas/WorkflowLane'
+
+    # ── Wagenpark ─────────────────────────────────────────
+    VoertuigSamenvatting:
+      type: object
+      required: [id, kenteken, merk, type, status, km_stand]
+      properties:
+        id:           { type: integer }
+        kenteken:     { type: string }
+        merk:         { type: string }
+        type:         { type: string }
+        bouwjaar:     { type: integer, nullable: true }
+        kleur:        { type: string, nullable: true }
+        status:       { type: string }
+        km_stand:     { type: integer }
+        apk_datum:    { type: string, format: date-time, nullable: true }
+        bandenwissels_status: { type: string }
+        eigendoms_type: { type: string }
+        fleet_provider: { type: string, nullable: true }
+        provider_voertuig_id: { type: string, nullable: true }
+        aandacht_nodig: { type: boolean }
+        bijgewerkt_op: { type: string, format: date-time }
+
+    Voertuig:
+      allOf:
+        - $ref: '#/components/schemas/VoertuigSamenvatting'
+        - type: object
+          properties:
+            chassisnummer:      { type: string, nullable: true }
+            km_stand_datum:     { type: string, format: date-time, nullable: true }
+            onderhouds_interval_km:  { type: integer, nullable: true }
+            onderhouds_interval_dag: { type: integer, nullable: true }
+            llaatst_onderhoud_km:    { type: integer, nullable: true }
+            llaatste_onderhoud_datum: { type: string, format: date-time, nullable: true }
+            verzekeraar_naam:   { type: string, nullable: true }
+            verzekering_polisnr: { type: string, nullable: true }
+            verzekering_verval_dat: { type: string, format: date-time, nullable: true }
+            leasemaatschappij:  { type: string, nullable: true }
+            lease_eind_datum:   { type: string, format: date-time, nullable: true }
+            lease_km_jaarlijks: { type: integer, nullable: true }
+            chauffeur_id:       { type: integer, nullable: true }
+            chauffeur_naam:     { type: string, nullable: true }
+            werkgever_id:       { type: integer, nullable: true }
+            opmerkingen:        { type: string, nullable: true }
+            gearchiveerd:       { type: boolean }
+            aangemaakt_op:      { type: string, format: date-time }
+
+    VoertuigInput:
+      type: object
+      required: [kenteken, merk, type]
+      properties:
+        kenteken:           { type: string }
+        merk:               { type: string }
+        type:               { type: string }
+        bouwjaar:           { type: integer, nullable: true }
+        kleur:              { type: string, nullable: true }
+        chassisnummer:      { type: string, nullable: true }
+        km_stand:           { type: integer }
+        apk_datum:          { type: string, format: date-time, nullable: true }
+        onderhouds_interval_km:  { type: integer, nullable: true }
+        onderhouds_interval_dag: { type: integer, nullable: true }
+        bandenwissels_status:
+          type: string
+          enum: [geen_actie, plannen, gepland, gewisseld]
+        eigendoms_type:
+          type: string
+          enum: [eigendom, lease, huur]
+        leasemaatschappij:  { type: string, nullable: true }
+        lease_eind_datum:   { type: string, format: date-time, nullable: true }
+        lease_km_jaarlijks: { type: integer, nullable: true }
+        verzekeraar_naam:   { type: string, nullable: true }
+        verzekering_polisnr: { type: string, nullable: true }
+        verzekering_verval_dat: { type: string, format: date-time, nullable: true }
+        chauffeur_id:       { type: integer, nullable: true }
+        provider_voertuig_id: { type: string, nullable: true }
+        fleet_provider:     { type: string, nullable: true }
+        werkgever_id:       { type: integer, nullable: true }
+        status:
+          type: string
+          enum: [actief, in_onderhoud, beschadigd, afgestoten, gereserveerd]
+        opmerkingen:        { type: string, nullable: true }
+
+    WagenparkOnderhoud:
+      type: object
+      required: [id, voertuig_id, type, omschrijving, status, prioriteit, is_ai_voorstel, geaccordeerd, aangemaakt_op]
+      properties:
+        id:               { type: integer }
+        voertuig_id:      { type: integer }
+        type:             { type: string }
+        omschrijving:     { type: string }
+        status:           { type: string }
+        prioriteit:       { type: string }
+        km_stand_bij_melding: { type: integer, nullable: true }
+        gepland_datum:    { type: string, format: date-time, nullable: true }
+        afgerond_datum:   { type: string, format: date-time, nullable: true }
+        kosten:           { type: number, nullable: true }
+        leverancier:      { type: string, nullable: true }
+        is_ai_voorstel:   { type: boolean }
+        ai_reden:         { type: string, nullable: true }
+        geaccordeerd:     { type: boolean }
+        gemeld_door_id:   { type: integer, nullable: true }
+        aangemaakt_op:    { type: string, format: date-time }
+        bijgewerkt_op:    { type: string, format: date-time }
+
+    WagenparkOnderhoudInput:
+      type: object
+      required: [type, omschrijving]
+      properties:
+        type:
+          type: string
+          enum: [periodiek, apk, bandenwissel, schade, reparatie, overig]
+        omschrijving:     { type: string }
+        status:
+          type: string
+          enum: [open, ingepland, in_uitvoering, afgerond, afgebroken]
+        prioriteit:
+          type: string
+          enum: [laag, normaal, hoog, urgent]
+        km_stand_bij_melding: { type: integer, nullable: true }
+        gepland_datum:    { type: string, format: date-time, nullable: true }
+        afgerond_datum:   { type: string, format: date-time, nullable: true }
+        kosten:           { type: number, nullable: true }
+        leverancier:      { type: string, nullable: true }
+        geaccordeerd:     { type: boolean }
+
+    WagenparkKosten:
+      type: object
+      required: [id, voertuig_id, categorie, bedrag, datum, aangemaakt_op]
+      properties:
+        id:               { type: integer }
+        voertuig_id:      { type: integer }
+        categorie:        { type: string }
+        bedrag:           { type: number }
+        datum:            { type: string, format: date-time }
+        omschrijving:     { type: string, nullable: true }
+        leverancier:      { type: string, nullable: true }
+        factuur_nummer:   { type: string, nullable: true }
+        km_stand:         { type: integer, nullable: true }
+        project_id:       { type: integer, nullable: true }
+        aangemaakt_op:    { type: string, format: date-time }
+
+    WagenparkKostenInput:
+      type: object
+      required: [categorie, bedrag, datum]
+      properties:
+        categorie:
+          type: string
+          enum: [onderhoud, brandstof, banden, verzekering, lease, schade, apk, overig]
+        bedrag:           { type: number }
+        datum:            { type: string, format: date-time }
+        omschrijving:     { type: string, nullable: true }
+        leverancier:      { type: string, nullable: true }
+        factuur_nummer:   { type: string, nullable: true }
+        km_stand:         { type: integer, nullable: true }
+        project_id:       { type: integer, nullable: true }
+
+    WagenparkRit:
+      type: object
+      required: [id, voertuig_id, start_datum, bron, aangemaakt_op]
+      properties:
+        id:               { type: integer }
+        voertuig_id:      { type: integer }
+        start_datum:      { type: string, format: date-time }
+        eind_datum:       { type: string, format: date-time, nullable: true }
+        km_start:         { type: integer, nullable: true }
+        km_eind:          { type: integer, nullable: true }
+        afstand_km:       { type: number, nullable: true }
+        vertrek_adres:    { type: string, nullable: true }
+        bestemming_adres: { type: string, nullable: true }
+        doel:             { type: string, nullable: true }
+        project_id:       { type: integer, nullable: true }
+        provider_rit_id:  { type: string, nullable: true }
+        bron:             { type: string }
+        aangemaakt_op:    { type: string, format: date-time }
+
+    WagenparkSyncLog:
+      type: object
+      required: [id, provider, status, aantal_bijgewerkt, aantal_fouten, gestart_op]
+      properties:
+        id:               { type: integer }
+        provider:         { type: string }
+        status:           { type: string }
+        aantal_bijgewerkt: { type: integer }
+        aantal_fouten:    { type: integer }
+        foutmelding:      { type: string, nullable: true }
+        gestart_op:       { type: string, format: date-time }
+        voltooid_op:      { type: string, format: date-time, nullable: true }
+
+    WagenparkAiAdvies:
+      type: object
+      required: [voertuig_id, kenteken, type, advies, prioriteit]
+      properties:
+        voertuig_id:  { type: integer }
+        kenteken:     { type: string }
+        type:         { type: string }
+        advies:       { type: string }
+        prioriteit:   { type: string }
+        reden:        { type: string, nullable: true }
+        onderhoud_id: { type: integer, nullable: true }
+
+    WagenparkAvgLogboekRegel:
+      type: object
+      required: [id, datum, actie]
+      properties:
+        id:             { type: integer }
+        datum:          { type: string, format: date-time }
+        actie:          { type: string }
+        voertuig_id:    { type: integer, nullable: true }
+        kenteken:       { type: string, nullable: true }
+        gebruiker_id:   { type: integer, nullable: true }
+        gebruiker_naam: { type: string, nullable: true }
+        reden:          { type: string, nullable: true }
+        datatype:       { type: string, nullable: true }
+        bewaartermijn:  { type: string, nullable: true }
+        bijzonderheden: { type: string, nullable: true }
 

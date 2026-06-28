@@ -79,6 +79,8 @@ import UitboardenPagina from "@/pages/personeel/uitboarden";
 import JaarplanningPagina from "@/pages/personeel/jaarplanning";
 import GereedschappenPagina from "@/pages/gereedschappen/index";
 import GereedschapDetailPagina from "@/pages/gereedschappen/detail";
+import WagenparkPagina from "@/pages/wagenpark/index";
+import WagenparkDetailPagina from "@/pages/wagenpark/detail";
 import HallOfFamePagina from "@/pages/hall-of-fame";
 import AutoparkPagina from "@/pages/organisatie/autopark";
 import VerzekeringenPagina from "@/pages/organisatie/verzekeringen";
@@ -310,6 +312,8 @@ function ConnectPortal() {
         <Route path="/personeel" component={PersoneelPagina} />
         <Route path="/gereedschappen" component={GereedschappenPagina} />
         <Route path="/gereedschappen/:id" component={GereedschapDetailPagina} />
+        <Route path="/wagenpark" component={WagenparkPagina} />
+        <Route path="/wagenpark/:id" component={WagenparkDetailPagina} />
 
         {/* ── Financieel extra ── */}
         <Route path="/financieel/bedrijfsresultaten" component={BedrijfsresultatenPagina} />
