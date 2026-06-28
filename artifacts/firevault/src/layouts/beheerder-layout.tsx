@@ -366,6 +366,22 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                         </Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
+                    {toonSnagstream && (
+                      <>
+                        <div className="mx-3 my-2 h-px bg-slate-200 group-data-[collapsible=icon]:hidden" />
+                        <SidebarMenuItem className="pl-5">
+                          <SidebarMenuButton
+                            asChild
+                            isActive={location === "/snagstream" || location.startsWith("/snagstream/")}
+                          >
+                            <Link href="/snagstream">
+                              <FileArchive />
+                              <span>Snagstream archief</span>
+                            </Link>
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                      </>
+                    )}
                   </SidebarMenu>
                 </SidebarGroupContent>
               </SidebarGroup>
@@ -616,28 +632,6 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                           </SidebarMenuButton>
                         </SidebarMenuItem>
                       )}
-                    </SidebarMenu>
-                  </SidebarGroupContent>
-                </SidebarGroup>
-              )}
-
-              {/* Snagstream */}
-              {toonSnagstream && (
-                <SidebarGroup>
-                  <SidebarGroupLabel>Archief</SidebarGroupLabel>
-                  <SidebarGroupContent>
-                    <SidebarMenu>
-                      <SidebarMenuItem>
-                        <SidebarMenuButton
-                          asChild
-                          isActive={location === "/snagstream" || location.startsWith("/snagstream/")}
-                        >
-                          <Link href="/snagstream">
-                            <FileArchive />
-                            <span>Snagstream archief</span>
-                          </Link>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
                     </SidebarMenu>
                   </SidebarGroupContent>
                 </SidebarGroup>
