@@ -197,7 +197,7 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
                       </SidebarMenuItem>
                     )}
                     {toonOpname && (
-                      <SidebarMenuItem>
+                      <SidebarMenuItem className="pl-5">
                         <SidebarMenuButton
                           asChild
                           isActive={location === "/opname" || location.startsWith("/opname/")}
@@ -209,7 +209,7 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
                         </SidebarMenuButton>
                       </SidebarMenuItem>
                     )}
-                    <SidebarMenuItem>
+                    <SidebarMenuItem className="pl-5">
                       {featureFlags.calculatie ? (
                         <SidebarMenuButton
                           asChild
@@ -228,7 +228,7 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
                         </SidebarMenuButton>
                       )}
                     </SidebarMenuItem>
-                    <SidebarMenuItem>
+                    <SidebarMenuItem className="pl-5">
                       <SidebarMenuButton
                         asChild
                         isActive={location === "/offertes" || location.startsWith("/offertes/")}
@@ -239,7 +239,7 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
                         </Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
-                    <SidebarMenuItem>
+                    <SidebarMenuItem className="pl-5">
                       <SidebarMenuButton
                         asChild
                         isActive={location === "/werk-inbox" || location.startsWith("/werk-inbox/")}
@@ -250,7 +250,7 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
                         </Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
-                    <SidebarMenuItem>
+                    <SidebarMenuItem className="pl-5">
                       <SidebarMenuButton disabled>
                         <Hammer />
                         <span>Werkvoorbereiding</span>
