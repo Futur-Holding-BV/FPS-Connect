@@ -14,6 +14,7 @@
     "e2e-web": "playwright test --config=playwright.web.config.ts",
     "e2e-web-ci": "tsx ./src/e2e-web-run.ts",
     "kwaliteitscheck": "tsx ./src/kwaliteitscheck.ts",
+    "broncode-export": "tsx ./src/broncode-export.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {

@@ -52,3 +52,12 @@ Thumbs.db
 test-results/
 playwright-report/
 blob-report/
+
+# Secrets — mogen NOOIT in Git terechtkomen
+.env
+.env.local
+artifacts/firevault/.env
+artifacts/monteur-app/.env
+
+# Broncode-exportpakketten (lokaal gegenereerd)
+exports/
