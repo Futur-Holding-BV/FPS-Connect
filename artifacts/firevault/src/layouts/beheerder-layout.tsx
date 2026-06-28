@@ -240,17 +240,12 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
                         </Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
-                    <SidebarMenuItem className="pl-5">
-                      <SidebarMenuButton
-                        asChild
-                        isActive={location === "/werk-inbox" || location.startsWith("/werk-inbox/")}
-                      >
-                        <Link href="/werk-inbox">
-                          <PackageCheck />
-                          <span>Werk-inbox</span>
-                        </Link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
+                    {/* ── scheiding: commercieel ↑ / uitvoering ↓ ── */}
+                    <div className="mx-3 my-2 flex items-center gap-2 group-data-[collapsible=icon]:hidden">
+                      <div className="flex-1 h-px bg-slate-200" />
+                      <span className="text-[10px] text-muted-foreground/60 font-medium shrink-0 uppercase tracking-wider">Uitvoering</span>
+                      <div className="flex-1 h-px bg-slate-200" />
+                    </div>
                     <SidebarMenuItem className="pl-5">
                       <SidebarMenuButton disabled>
                         <Hammer />
@@ -429,6 +424,17 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
                           <MessageSquare />
                           <span>Berichten</span>
                           <OngelezenBerichtenBadge />
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={location === "/werk-inbox" || location.startsWith("/werk-inbox/")}
+                      >
+                        <Link href="/werk-inbox">
+                          <PackageCheck />
+                          <span>Werk-inbox</span>
                         </Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>

@@ -23,16 +23,14 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
-} from "@/components/ui/dialog";
-import {
   Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
-  ChevronLeft, ChevronRight, Plus, AlertTriangle, Users, CalendarCheck,
-  Briefcase, Clock, RefreshCw, Sparkles, ExternalLink,
+  ChevronLeft, ChevronRight, Plus, AlertTriangle, Users,
+  Briefcase, Clock, RefreshCw, Sparkles, ExternalLink, X,
+  CalendarDays, ChevronDown,
 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -41,24 +39,25 @@ import { useQueryClient } from "@tanstack/react-query";
 const WERKDAGEN = ["Maandag", "Dinsdag", "Woensdag", "Donderdag", "Vrijdag"];
 const WERKDAGEN_KORT = ["Ma", "Di", "Wo", "Do", "Vr"];
 
+// Werkdag: 07:30–16:00 met 30 min pauze (netto 8 uur)
 const DAGDELEN = [
-  { key: "ochtend",    label: "Ochtend",    sub: "08:00–12:00",   tijd_start: "08:00", tijd_eind: "12:00", uren: 4 },
-  { key: "middag",     label: "Middag",     sub: "13:00–17:00",   tijd_start: "13:00", tijd_eind: "17:00", uren: 4 },
-  { key: "volledig",   label: "Volledig",   sub: "08:00–17:00",   tijd_start: "08:00", tijd_eind: "17:00", uren: 8 },
-  { key: "tijdsloten", label: "Tijdsloten", sub: "16 × 30 min",   tijd_start: "",      tijd_eind: "",      uren: 0 },
-  { key: "specifiek",  label: "Specifiek",  sub: "eigen tijden",  tijd_start: "",      tijd_eind: "",      uren: 0 },
+  { key: "ochtend",    label: "Ochtend",    sub: "07:30–12:00",  tijd_start: "07:30", tijd_eind: "12:00", uren: 4.5 },
+  { key: "middag",     label: "Middag",     sub: "12:30–16:00",  tijd_start: "12:30", tijd_eind: "16:00", uren: 3.5 },
+  { key: "volledig",   label: "Volledig",   sub: "07:30–16:00",  tijd_start: "07:30", tijd_eind: "16:00", uren: 8 },
+  { key: "tijdsloten", label: "Tijdsloten", sub: "16 × 30 min",  tijd_start: "",      tijd_eind: "",      uren: 0 },
+  { key: "specifiek",  label: "Specifiek",  sub: "eigen tijden", tijd_start: "",      tijd_eind: "",      uren: 0 },
 ] as const;
 
 type DagdeelKey = "ochtend" | "middag" | "volledig" | "tijdsloten" | "specifiek";
 
-// 16 halve-uren: 07:00 t/m 14:30 (eindtijd laatste slot = 15:00)
-const HALVE_UREN: string[] = Array.from({ length: 16 }, (_, i) => {
-  const min = 7 * 60 + i * 30;
-  return `${String(Math.floor(min / 60)).padStart(2, "0")}:${String(min % 60).padStart(2, "0")}`;
-});
+// 16 productieve halve-uren: 07:30–12:00 + 12:30–15:30 (pauze 12:00–12:30 uitgesloten)
+const HALVE_UREN: string[] = [
+  "07:30", "08:00", "08:30", "09:00", "09:30", "10:00", "10:30", "11:00", "11:30",
+  "12:30", "13:00", "13:30", "14:00", "14:30", "15:00", "15:30",
+];
 
 function slotsTijden(slots: string[]): { tijd_start: string; tijd_eind: string; uren: number } {
-  if (slots.length === 0) return { tijd_start: "07:00", tijd_eind: "07:00", uren: 0 };
+  if (slots.length === 0) return { tijd_start: "07:30", tijd_eind: "07:30", uren: 0 };
   const sorted = [...slots].sort();
   const last = sorted[sorted.length - 1]!;
   const [lh, lm] = last.split(":").map(Number) as [number, number];
@@ -71,26 +70,37 @@ function slotsTijden(slots: string[]): { tijd_start: string; tijd_eind: string; 
 }
 
 const STATUS_KLEUR: Record<string, string> = {
-  concept: "bg-slate-100 border-slate-300 text-slate-600",
-  ingepland: "bg-blue-50 border-blue-300 text-blue-800",
-  bevestigd: "bg-green-50 border-green-300 text-green-800",
-  uitgevoerd: "bg-emerald-50 border-emerald-300 text-emerald-800",
+  concept:     "bg-slate-100 border-slate-300 text-slate-600",
+  ingepland:   "bg-blue-50 border-blue-300 text-blue-800",
+  bevestigd:   "bg-green-50 border-green-300 text-green-800",
+  uitgevoerd:  "bg-emerald-50 border-emerald-300 text-emerald-800",
   geannuleerd: "bg-red-50 border-red-200 text-red-600 opacity-60",
 };
 
 const DAGDEEL_KLEUR: Record<string, string> = {
-  ochtend: "bg-amber-50 text-amber-700 border-amber-200",
-  middag: "bg-sky-50 text-sky-700 border-sky-200",
+  ochtend:  "bg-amber-50 text-amber-700 border-amber-200",
+  middag:   "bg-sky-50 text-sky-700 border-sky-200",
   volledig: "bg-violet-50 text-violet-700 border-violet-200",
 };
 
 const DIENSTVERBAND_KLEUR: Record<string, string> = {
-  inhuur: "bg-orange-50 text-orange-700 border-orange-200",
+  inhuur:        "bg-orange-50 text-orange-700 border-orange-200",
   onderaannemer: "bg-purple-50 text-purple-700 border-purple-200",
-  uitzend: "bg-amber-50 text-amber-700 border-amber-200",
+  uitzend:       "bg-amber-50 text-amber-700 border-amber-200",
 };
 
-// ── Hulpfuncties ───────────────────────────────────────────────────────────
+// ── Weergave-modi ───────────────────────────────────────────────────────────
+
+type WeergaveModus = "week" | "2weken" | "4weken" | "maand";
+
+const WEERGAVE_MODI: { key: WeergaveModus; label: string }[] = [
+  { key: "week",   label: "Week" },
+  { key: "2weken", label: "2 Weken" },
+  { key: "4weken", label: "4 Weken" },
+  { key: "maand",  label: "Maand" },
+];
+
+// ── Hulpfuncties ────────────────────────────────────────────────────────────
 
 function maandagVanWeek(datum: Date): Date {
   const d = new Date(datum);
@@ -105,20 +115,35 @@ function datumNaarStr(d: Date): string {
   return d.toISOString().slice(0, 10);
 }
 
-function weekLabel(maandag: Date): string {
-  const vrijdag = new Date(maandag);
-  vrijdag.setDate(maandag.getDate() + 4);
-  const opts: Intl.DateTimeFormatOptions = { day: "numeric", month: "long" };
-  return `${maandag.toLocaleDateString("nl-NL", opts)} – ${vrijdag.toLocaleDateString("nl-NL", opts)}`;
-}
-
 function weekNummer(d: Date): number {
   const jan1 = new Date(d.getFullYear(), 0, 1);
   return Math.ceil((((d.getTime() - jan1.getTime()) / 86400000) + jan1.getDay() + 1) / 7);
 }
 
+function berekenWeken(referentie: Date, modus: WeergaveModus): Date[] {
+  const maandag = maandagVanWeek(referentie);
+  if (modus === "week") return [maandag];
+  if (modus === "2weken") return [maandag, new Date(maandag.getTime() + 7 * 86400000)];
+  if (modus === "4weken") return Array.from({ length: 4 }, (_, i) => new Date(maandag.getTime() + i * 7 * 86400000));
+  // maand: alle werkweken die de kalendermaand overlappen
+  const eersteVanMaand = new Date(referentie.getFullYear(), referentie.getMonth(), 1);
+  const maandagEerste = maandagVanWeek(eersteVanMaand);
+  const weken: Date[] = [];
+  let cursor = new Date(maandagEerste);
+  while (true) {
+    weken.push(new Date(cursor));
+    cursor = new Date(cursor.getTime() + 7 * 86400000);
+    if (cursor.getMonth() > referentie.getMonth() && cursor.getFullYear() >= referentie.getFullYear()) break;
+    if (weken.length > 8) break; // veiligheidsklep
+  }
+  return weken;
+}
+
 function dagdeelUitTijd(tijdStart?: string | null, tijdEind?: string | null): DagdeelKey {
   if (!tijdStart) return "volledig";
+  if (tijdStart === "07:30" && tijdEind === "12:00") return "ochtend";
+  if (tijdStart === "12:30" && tijdEind === "16:00") return "middag";
+  if (tijdStart === "07:30" && tijdEind === "16:00") return "volledig";
   if (tijdStart === "08:00" && tijdEind === "12:00") return "ochtend";
   if (tijdStart === "13:00" && tijdEind === "17:00") return "middag";
   if (tijdStart === "08:00" && tijdEind === "17:00") return "volledig";
@@ -127,13 +152,16 @@ function dagdeelUitTijd(tijdStart?: string | null, tijdEind?: string | null): Da
 
 function dagdeelLabel(tijdStart?: string | null, tijdEind?: string | null): string {
   if (!tijdStart) return "";
-  if (tijdStart === "08:00" && tijdEind === "12:00") return "08-12";
-  if (tijdStart === "13:00" && tijdEind === "17:00") return "13-17";
-  if (tijdStart === "08:00" && tijdEind === "17:00") return "08-17";
+  if (tijdStart === "07:30" && tijdEind === "12:00") return "07:30–12";
+  if (tijdStart === "12:30" && tijdEind === "16:00") return "12:30–16";
+  if (tijdStart === "07:30" && tijdEind === "16:00") return "07:30–16";
+  if (tijdStart === "08:00" && tijdEind === "12:00") return "08–12";
+  if (tijdStart === "13:00" && tijdEind === "17:00") return "13–17";
+  if (tijdStart === "08:00" && tijdEind === "17:00") return "08–17";
   return tijdStart.slice(0, 5) + "–" + (tijdEind?.slice(0, 5) ?? "");
 }
 
-// ── Types ──────────────────────────────────────────────────────────────────
+// ── Types ───────────────────────────────────────────────────────────────────
 
 type PlanItem = {
   id: number;
@@ -187,14 +215,12 @@ type DialooglItem = {
   notities: string;
 };
 
-// ── Lege staat met diagnose ─────────────────────────────────────────────────
-// Gemount als apart component zodat de hook onvoorwaardelijk draait (geen enabled-prop nodig).
+// ── Lege staat ──────────────────────────────────────────────────────────────
 
 function PlanningLegeStaat({ onVernieuwen }: { onVernieuwen: () => void }) {
   const { data: diagnose, isLoading } = useGetPlanningDiagnose({
     query: { queryKey: ["planning-diagnose"] },
   });
-
   return (
     <CardContent className="py-14 text-center text-muted-foreground">
       <Users className="h-10 w-10 mx-auto mb-3 opacity-20" />
@@ -202,7 +228,6 @@ function PlanningLegeStaat({ onVernieuwen }: { onVernieuwen: () => void }) {
       <p className="text-xs mt-1 text-muted-foreground">
         Controleer of medewerkers actief zijn in HRM / Personeel.
       </p>
-
       {isLoading ? (
         <div className="mt-5 space-y-2 max-w-xs mx-auto">
           <Skeleton className="h-7 w-full" />
@@ -212,13 +237,10 @@ function PlanningLegeStaat({ onVernieuwen }: { onVernieuwen: () => void }) {
         <p className="mt-4 text-xs text-muted-foreground">
           Er zijn nog geen medewerkers aangemaakt in HRM / Personeel.
         </p>
-      ) : diagnose && diagnose.oorzaken.length > 0 ? (
+      ) : diagnose && (diagnose.oorzaken ?? []).length > 0 ? (
         <div className="mt-5 space-y-2 max-w-xs mx-auto text-left">
-          {diagnose.oorzaken.map((o) => (
-            <div
-              key={o.reden}
-              className="flex items-start gap-2 text-xs bg-amber-50 border border-amber-200 rounded-md px-3 py-2"
-            >
+          {(diagnose.oorzaken ?? []).map((o) => (
+            <div key={o.reden} className="flex items-start gap-2 text-xs bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
               <AlertTriangle className="h-3.5 w-3.5 text-amber-500 mt-0.5 shrink-0" />
               <span className="text-amber-800">
                 <span className="font-semibold">{o.aantal}</span>{" "}
@@ -228,7 +250,6 @@ function PlanningLegeStaat({ onVernieuwen }: { onVernieuwen: () => void }) {
           ))}
         </div>
       ) : null}
-
       <div className="mt-6 flex flex-wrap justify-center gap-3">
         <Button variant="outline" size="sm" onClick={onVernieuwen}>
           <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
@@ -245,10 +266,233 @@ function PlanningLegeStaat({ onVernieuwen }: { onVernieuwen: () => void }) {
   );
 }
 
-// ── Hoofdcomponent ─────────────────────────────────────────────────────────
+// ── Maand-view (project × week matrix) ──────────────────────────────────────
+
+type MaandViewProps = {
+  items: PlanItem[];
+  weken: Date[];
+  vandaagStr: string;
+  onNieuw: (datum: string, gebouwId?: number) => void;
+};
+
+function MaandView({ items, weken, vandaagStr, onNieuw }: MaandViewProps) {
+  const projectenInMaand = useMemo(() => {
+    const map = new Map<string, { naam: string; gebouw_id: number | null; items: PlanItem[] }>();
+    for (const item of items) {
+      const sleutel = item.gebouw_id ? `g:${item.gebouw_id}` : `p:${item.project_naam ?? item.titel}`;
+      const naam = item.gebouw_naam ?? item.project_naam ?? item.titel;
+      if (!map.has(sleutel)) map.set(sleutel, { naam, gebouw_id: item.gebouw_id ?? null, items: [] });
+      map.get(sleutel)!.items.push(item);
+    }
+    return Array.from(map.values()).sort((a, b) => a.naam.localeCompare(b.naam));
+  }, [items]);
+
+  if (items.length === 0) {
+    return (
+      <Card>
+        <CardContent className="py-16 text-center text-muted-foreground">
+          <CalendarDays className="h-10 w-10 mx-auto mb-3 opacity-20" />
+          <p className="text-sm">Geen projecten gepland deze maand.</p>
+          <Button size="sm" className="mt-4" onClick={() => onNieuw(datumNaarStr(weken[0] ?? new Date()))}>
+            <Plus className="h-3.5 w-3.5 mr-1.5" />
+            Inplannen
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card className="overflow-hidden">
+      <div className="overflow-x-auto">
+        <table className="w-full border-collapse">
+          <colgroup>
+            <col style={{ width: 200 }} />
+            {weken.map((_, i) => <col key={i} />)}
+          </colgroup>
+          <thead>
+            <tr className="border-b bg-slate-50">
+              <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide border-r">
+                Project / Gebouw
+              </th>
+              {weken.map((maa) => {
+                const vrijdag = new Date(maa.getTime() + 4 * 86400000);
+                const weekDatums = WERKDAGEN.map((_, i) => {
+                  const d = new Date(maa); d.setDate(maa.getDate() + i); return datumNaarStr(d);
+                });
+                const isVandaagInWeek = weekDatums.includes(vandaagStr);
+                return (
+                  <th
+                    key={datumNaarStr(maa)}
+                    className={`px-2 py-3 text-center text-xs font-medium border-l ${isVandaagInWeek ? "bg-primary/5 text-primary" : "text-muted-foreground"}`}
+                  >
+                    <div className="font-semibold">W{weekNummer(maa)}</div>
+                    <div className="text-[10px] opacity-70">
+                      {maa.toLocaleDateString("nl-NL", { day: "numeric", month: "short" })}–{vrijdag.toLocaleDateString("nl-NL", { day: "numeric" })}
+                    </div>
+                  </th>
+                );
+              })}
+            </tr>
+          </thead>
+          <tbody className="divide-y">
+            {projectenInMaand.map((project) => (
+              <tr key={project.naam} className="hover:bg-slate-50/40">
+                <td className="px-4 py-2.5 border-r bg-white">
+                  <p className="text-sm font-medium text-slate-800 truncate max-w-[180px]">{project.naam}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {project.items.reduce((s, i) => s + i.uren, 0)}u gepland
+                  </p>
+                </td>
+                {weken.map((maa) => {
+                  const weekDatums = WERKDAGEN.map((_, i) => {
+                    const d = new Date(maa); d.setDate(maa.getDate() + i); return datumNaarStr(d);
+                  });
+                  const weekItems = project.items.filter((it) =>
+                    weekDatums.some((dag) => it.datum_start <= dag && it.datum_eind >= dag)
+                  );
+                  const totaalUren = weekItems.reduce((s, i) => s + i.uren, 0);
+                  const isVandaagInWeek = weekDatums.includes(vandaagStr);
+                  return (
+                    <td key={datumNaarStr(maa)} className={`px-2 py-2 text-center border-l ${isVandaagInWeek ? "bg-primary/5" : ""}`}>
+                      {weekItems.length > 0 ? (
+                        <button
+                          className="w-full rounded bg-primary/10 border border-primary/20 px-1.5 py-1.5 hover:bg-primary/20 transition-colors"
+                          onClick={() => onNieuw(weekDatums[0]!, project.gebouw_id ?? undefined)}
+                        >
+                          <p className="text-xs font-semibold text-primary">{totaalUren}u</p>
+                          <p className="text-[9px] text-primary/70">{weekItems.length} item{weekItems.length !== 1 ? "s" : ""}</p>
+                        </button>
+                      ) : (
+                        <button
+                          className="w-full h-9 rounded border border-dashed border-slate-200 text-[10px] text-transparent hover:text-muted-foreground hover:border-primary/30 hover:bg-primary/5 transition-colors"
+                          onClick={() => onNieuw(weekDatums[0]!, project.gebouw_id ?? undefined)}
+                        >
+                          <Plus className="h-3 w-3 inline" />
+                        </button>
+                      )}
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </Card>
+  );
+}
+
+// ── Opdrachten-paneel ────────────────────────────────────────────────────────
+
+type OpdrachtenPaneelProps = {
+  opdrachten: unknown[];
+  ingeplandUrenPerGebouw: Map<number, number>;
+  onInplannen: (gebouwId: number, gebouwNaam: string) => void;
+};
+
+function OpdrachtenPaneel({ opdrachten, ingeplandUrenPerGebouw, onInplannen }: OpdrachtenPaneelProps) {
+  const [uitgeklapt, setUitgeklapt] = useState(false);
+
+  if (opdrachten.length === 0) return null;
+
+  return (
+    <div className="rounded-lg border bg-white overflow-hidden">
+      <button
+        type="button"
+        className="w-full flex items-center justify-between px-5 py-3.5 hover:bg-slate-50 transition-colors"
+        onClick={() => setUitgeklapt((v) => !v)}
+      >
+        <div className="flex items-center gap-2.5">
+          <Briefcase className="h-4 w-4 text-muted-foreground" />
+          <span className="text-sm font-semibold text-slate-800">Opdrachten — in te plannen</span>
+          <Badge variant="secondary" className="text-xs">{opdrachten.length}</Badge>
+        </div>
+        <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${uitgeklapt ? "rotate-180" : ""}`} />
+      </button>
+
+      {uitgeklapt && (
+        <div className="border-t">
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse">
+              <thead>
+                <tr className="border-b bg-slate-50 text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                  <th className="px-4 py-2.5 text-left">Opdracht</th>
+                  <th className="px-3 py-2.5 text-right">Begroot (uren)</th>
+                  <th className="px-3 py-2.5 text-right">Ingepland</th>
+                  <th className="px-3 py-2.5 text-right">Resterend</th>
+                  <th className="px-3 py-2.5 text-center">Actie</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                {opdrachten.map((o) => {
+                  const r = o as Record<string, unknown>;
+                  const id = r.id as number;
+                  const titel = r.titel as string ?? "Onbekend";
+                  const gebouwId = r.gebouw_id as number | null;
+                  const begroot = (r.begroting_totaal_arbeid_uren as number) ?? 0;
+                  const ingepland = gebouwId ? (ingeplandUrenPerGebouw.get(gebouwId) ?? 0) : 0;
+                  const resterend = Math.max(0, begroot - ingepland);
+                  const pct = begroot > 0 ? Math.min(100, (ingepland / begroot) * 100) : 0;
+                  const overplanning = ingepland > begroot;
+
+                  return (
+                    <tr key={id} className="hover:bg-slate-50/50 transition-colors">
+                      <td className="px-4 py-3">
+                        <Link href={`/opdrachten/${id}`}>
+                          <p className="text-sm font-medium text-slate-800 hover:text-primary hover:underline truncate max-w-72">{titel}</p>
+                        </Link>
+                        {/* Voortgangsbalk */}
+                        <div className="mt-1.5 h-1 w-full max-w-48 bg-slate-100 rounded-full overflow-hidden">
+                          <div
+                            className={`h-1 rounded-full transition-all ${overplanning ? "bg-red-400" : pct >= 90 ? "bg-amber-400" : "bg-primary"}`}
+                            style={{ width: `${pct}%` }}
+                          />
+                        </div>
+                      </td>
+                      <td className="px-3 py-3 text-right">
+                        <span className="text-sm text-slate-700">{begroot}u</span>
+                      </td>
+                      <td className="px-3 py-3 text-right">
+                        <span className={`text-sm font-medium ${overplanning ? "text-red-600" : "text-slate-700"}`}>
+                          {ingepland}u
+                        </span>
+                      </td>
+                      <td className="px-3 py-3 text-right">
+                        <span className={`text-sm font-medium ${resterend === 0 && !overplanning ? "text-emerald-600" : overplanning ? "text-red-600" : resterend < begroot * 0.1 ? "text-amber-600" : "text-slate-700"}`}>
+                          {overplanning ? `+${ingepland - begroot}u` : `${resterend}u`}
+                        </span>
+                      </td>
+                      <td className="px-3 py-3 text-center">
+                        {gebouwId && resterend > 0 && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-7 text-xs"
+                            onClick={() => onInplannen(gebouwId, titel)}
+                          >
+                            <Plus className="h-3 w-3 mr-1" />
+                            Inplannen
+                          </Button>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Hoofdcomponent ──────────────────────────────────────────────────────────
 
 export default function ModulesPlanning() {
-  const [maandag, setMaandag] = useState(() => maandagVanWeek(new Date()));
+  const [referentieDatum, setReferentieDatum] = useState(() => maandagVanWeek(new Date()));
+  const [weergaveModus, setWeergaveModus] = useState<WeergaveModus>("week");
   const [activeTab, setActiveTab] = useState<"medewerkers" | "projecten">("medewerkers");
   const [dialoog, setDialoog] = useState<DialooglItem | null>(null);
   const [bewerkenId, setBewerkenId] = useState<number | null>(null);
@@ -259,15 +503,25 @@ export default function ModulesPlanning() {
 
   const queryClient = useQueryClient();
 
-  const datumStrings = WERKDAGEN.map((_, i) => {
-    const d = new Date(maandag);
-    d.setDate(maandag.getDate() + i);
-    return datumNaarStr(d);
-  });
+  // ── Datum bereik ─────────────────────────────────────────────────────────
 
-  const van = datumStrings[0]!;
-  const tot = datumStrings[4]!;
+  const weken = useMemo(() => berekenWeken(referentieDatum, weergaveModus), [referentieDatum, weergaveModus]);
+
+  const datumStringsPerWeek = useMemo(() =>
+    weken.map((maandag) =>
+      WERKDAGEN.map((_, i) => {
+        const d = new Date(maandag);
+        d.setDate(maandag.getDate() + i);
+        return datumNaarStr(d);
+      })
+    ), [weken]);
+
+  const alleDatumStrings = useMemo(() => datumStringsPerWeek.flat(), [datumStringsPerWeek]);
+  const van = alleDatumStrings[0]!;
+  const tot = alleDatumStrings[alleDatumStrings.length - 1]!;
   const vandaagStr = datumNaarStr(new Date());
+
+  // ── Data ─────────────────────────────────────────────────────────────────
 
   const { data: items = [], isLoading: itemsLoading } = useListPlanningItems(
     { van, tot },
@@ -289,20 +543,21 @@ export default function ModulesPlanning() {
     {},
     { query: { queryKey: ["gebouwen-planning"] } }
   );
-
   const { data: actieveOpdrachten = [] } = useListOpdrachten(
     { status: "actief" } as Parameters<typeof useListOpdrachten>[0],
     { query: { queryKey: ["opdrachten-actief"] } }
   );
-  const openstaandeOpdrachten = actieveOpdrachten.filter(
-    (o) => (o as unknown as Record<string, unknown>).begroting_status === "vastgesteld"
-      && !((o as unknown as Record<string, unknown>).begroting_totaal_arbeid_uren === 0 || (o as unknown as Record<string, unknown>).begroting_totaal_arbeid_uren === null)
-  );
+
+  const ingePlannenOpdrachten = useMemo(() =>
+    actieveOpdrachten.filter((o) => {
+      const r = (o as unknown) as Record<string, unknown>;
+      return r.begroting_status === "vastgesteld" && r.begroting_totaal_arbeid_uren && Number(r.begroting_totaal_arbeid_uren) > 0;
+    }), [actieveOpdrachten]);
+
+  // ── Mutations ────────────────────────────────────────────────────────────
 
   const createMut = useCreatePlanningItem({
-    mutation: {
-      onSuccess: () => queryClient.invalidateQueries({ queryKey: ["planning-items"] }),
-    },
+    mutation: { onSuccess: () => queryClient.invalidateQueries({ queryKey: ["planning-items"] }) },
   });
   const updateMut = useUpdatePlanningItem({
     mutation: {
@@ -313,25 +568,27 @@ export default function ModulesPlanning() {
     },
   });
   const deleteMut = useDeletePlanningItem({
-    mutation: {
-      onSuccess: () => queryClient.invalidateQueries({ queryKey: ["planning-items"] }),
-    },
+    mutation: { onSuccess: () => queryClient.invalidateQueries({ queryKey: ["planning-items"] }) },
   });
   const toolboxSuggestieMut = usePostVeiligheidToolboxenKoppelingSuggestie({
-    mutation: {
-      onSuccess: (data) => setToolboxAdvies(data.suggesties),
-    },
+    mutation: { onSuccess: (data) => setToolboxAdvies(data.suggesties) },
   });
 
-  // ── Navigatie ───────────────────────────────────────────────────────────
+  // ── Navigatie ─────────────────────────────────────────────────────────────
 
-  function vorigeWeek() {
-    setMaandag((m) => { const n = new Date(m); n.setDate(n.getDate() - 7); return n; });
+  function stap(richting: 1 | -1) {
+    setReferentieDatum((r) => {
+      const d = new Date(r);
+      if (weergaveModus === "week")   d.setDate(d.getDate() + richting * 7);
+      else if (weergaveModus === "2weken") d.setDate(d.getDate() + richting * 14);
+      else if (weergaveModus === "4weken") d.setDate(d.getDate() + richting * 28);
+      else { d.setMonth(d.getMonth() + richting); d.setDate(1); }
+      return maandagVanWeek(d);
+    });
   }
-  function volgendeWeek() {
-    setMaandag((m) => { const n = new Date(m); n.setDate(n.getDate() + 7); return n; });
-  }
-  function vandaag() { setMaandag(maandagVanWeek(new Date())); }
+  function vandaag() { setReferentieDatum(maandagVanWeek(new Date())); }
+
+  // ── Dialoog helpers ──────────────────────────────────────────────────────
 
   function sluitDialoog() {
     setDialoog(null);
@@ -340,23 +597,22 @@ export default function ModulesPlanning() {
     setToolboxAdvies(null);
   }
 
-  // ── Dialoog openen ─────────────────────────────────────────────────────
-
-  function openNieuw(medewerkerId?: number, datum?: string) {
+  function openNieuw(medewerkerId?: number, datum?: string, gebouwId?: number) {
     setBewerkenId(null);
+    const gebouw = gebouwId ? (gebouwen as Gebouw[]).find((g) => g.id === gebouwId) : null;
     setDialoog({
       geselecteerdeMedewerkers: medewerkerId ? [medewerkerId] : [],
-      gebouw_id: null,
-      datum: datum ?? datumStrings[0]!,
+      gebouw_id: gebouwId ?? null,
+      datum: datum ?? alleDatumStrings[0]!,
       dagdeel: "volledig",
       geselecteerdeTijdsloten: [],
-      tijd_start: "08:00",
-      tijd_eind: "17:00",
-      titel: "",
+      tijd_start: "07:30",
+      tijd_eind: "16:00",
+      titel: gebouw?.naam ?? "",
       uren: "8",
       status: "ingepland",
       type: "project",
-      project_naam: "",
+      project_naam: gebouw?.naam ?? "",
       notities: "",
     });
   }
@@ -371,8 +627,8 @@ export default function ModulesPlanning() {
       datum: item.datum_start,
       dagdeel: dd,
       geselecteerdeTijdsloten: [],
-      tijd_start: item.tijd_start ?? dagdeelDef?.tijd_start ?? "08:00",
-      tijd_eind: item.tijd_eind ?? dagdeelDef?.tijd_eind ?? "17:00",
+      tijd_start: item.tijd_start ?? dagdeelDef?.tijd_start ?? "07:30",
+      tijd_eind: item.tijd_eind ?? dagdeelDef?.tijd_eind ?? "16:00",
       titel: item.titel,
       uren: String(item.uren),
       status: item.status,
@@ -386,16 +642,8 @@ export default function ModulesPlanning() {
     const def = DAGDELEN.find((d) => d.key === key)!;
     setDialoog((d) => {
       if (!d) return d;
-      if (key === "tijdsloten") {
-        return { ...d, dagdeel: key };
-      }
-      return {
-        ...d,
-        dagdeel: key,
-        tijd_start: def.tijd_start,
-        tijd_eind: def.tijd_eind,
-        uren: def.uren ? String(def.uren) : d.uren,
-      };
+      if (key === "tijdsloten") return { ...d, dagdeel: key };
+      return { ...d, dagdeel: key, tijd_start: def.tijd_start, tijd_eind: def.tijd_eind, uren: def.uren ? String(def.uren) : d.uren };
     });
   }
 
@@ -425,8 +673,7 @@ export default function ModulesPlanning() {
     setDialoog((d) => {
       if (!d) return d;
       const set = new Set(d.geselecteerdeMedewerkers);
-      if (set.has(id)) set.delete(id);
-      else set.add(id);
+      if (set.has(id)) set.delete(id); else set.add(id);
       return { ...d, geselecteerdeMedewerkers: Array.from(set) };
     });
   }
@@ -434,19 +681,13 @@ export default function ModulesPlanning() {
   async function handleOpslaan() {
     if (!dialoog || !dialoog.datum || !dialoog.titel) return;
     setOpslaan(true);
-
     const tijdenPayload = (() => {
       if (dialoog.dagdeel === "tijdsloten") {
         const { tijd_start, tijd_eind, uren } = slotsTijden(dialoog.geselecteerdeTijdsloten);
         return { tijd_start: tijd_start || null, tijd_eind: tijd_eind || null, uren: uren || 0 };
       }
-      return {
-        tijd_start: dialoog.tijd_start || null,
-        tijd_eind: dialoog.tijd_eind || null,
-        uren: parseFloat(dialoog.uren) || 8,
-      };
+      return { tijd_start: dialoog.tijd_start || null, tijd_eind: dialoog.tijd_eind || null, uren: parseFloat(dialoog.uren) || 8 };
     })();
-
     const payload = {
       titel: dialoog.titel,
       datum_start: dialoog.datum,
@@ -458,16 +699,13 @@ export default function ModulesPlanning() {
       project_naam: dialoog.project_naam || undefined,
       notities: dialoog.notities || undefined,
     };
-
     try {
       if (bewerkenId) {
         const medewerker_id = dialoog.geselecteerdeMedewerkers[0] ?? undefined;
         await updateMut.mutateAsync({ id: bewerkenId, data: { ...payload, medewerker_id } });
       } else {
-        const medewerkers_ids = dialoog.geselecteerdeMedewerkers.length
-          ? dialoog.geselecteerdeMedewerkers
-          : [undefined];
-        for (const mid of medewerkers_ids) {
+        const ids = dialoog.geselecteerdeMedewerkers.length ? dialoog.geselecteerdeMedewerkers : [undefined];
+        for (const mid of ids) {
           await createMut.mutateAsync({ data: { ...payload, medewerker_id: mid ?? null } });
         }
         queryClient.invalidateQueries({ queryKey: ["planning-items"] });
@@ -478,9 +716,9 @@ export default function ModulesPlanning() {
     }
   }
 
-  // ── Berekeningen ────────────────────────────────────────────────────────
+  // ── Berekeningen ─────────────────────────────────────────────────────────
 
-  const weekUrenPerMedewerker = useMemo(() => {
+  const bereikUrenPerMedewerker = useMemo(() => {
     const kaart = new Map<number, number>();
     for (const item of items as PlanItem[]) {
       if (!item.medewerker_id) continue;
@@ -493,21 +731,15 @@ export default function ModulesPlanning() {
     const kaart = new Set<string>();
     for (const af of afwezigheid) {
       if (af.status === "afgewezen") continue;
-      for (const dag of datumStrings) {
+      for (const dag of alleDatumStrings) {
         if (dag >= af.datum_start && dag <= af.datum_eind) kaart.add(`${af.medewerker_id}_${dag}`);
       }
     }
     return kaart;
-  }, [afwezigheid, datumStrings]);
+  }, [afwezigheid, alleDatumStrings]);
 
-  // Projecten-view: groepeer items per gebouw/project
   const projectGroepen = useMemo(() => {
-    const map = new Map<string, {
-      sleutel: string;
-      naam: string;
-      gebouw_id?: number | null;
-      items: PlanItem[];
-    }>();
+    const map = new Map<string, { sleutel: string; naam: string; gebouw_id?: number | null; items: PlanItem[] }>();
     for (const item of items as PlanItem[]) {
       const sleutel = item.gebouw_id ? `g:${item.gebouw_id}` : `p:${item.project_naam ?? item.titel}`;
       const naam = item.gebouw_naam ?? item.project_naam ?? item.titel;
@@ -517,696 +749,743 @@ export default function ModulesPlanning() {
     return Array.from(map.values()).sort((a, b) => a.naam.localeCompare(b.naam));
   }, [items]);
 
+  const ingeplandUrenPerGebouw = useMemo(() => {
+    const kaart = new Map<number, number>();
+    for (const item of items as PlanItem[]) {
+      if (!item.gebouw_id) continue;
+      kaart.set(item.gebouw_id, (kaart.get(item.gebouw_id) ?? 0) + item.uren);
+    }
+    return kaart;
+  }, [items]);
+
   const isLoading = itemsLoading || medewerkersLoading;
 
-  // ── Render ──────────────────────────────────────────────────────────────
+  // ── Header label ─────────────────────────────────────────────────────────
+
+  const headerLabel = useMemo(() => {
+    if (weergaveModus === "week") {
+      const maa = weken[0]!;
+      const vrij = new Date(maa.getTime() + 4 * 86400000);
+      const opts: Intl.DateTimeFormatOptions = { day: "numeric", month: "long" };
+      return `Week ${weekNummer(maa)} — ${maa.toLocaleDateString("nl-NL", opts)} – ${vrij.toLocaleDateString("nl-NL", opts)}`;
+    }
+    if (weergaveModus === "maand") {
+      return referentieDatum.toLocaleDateString("nl-NL", { month: "long", year: "numeric" });
+    }
+    return `Week ${weekNummer(weken[0]!)} – ${weekNummer(weken[weken.length - 1]!)}`;
+  }, [weergaveModus, weken, referentieDatum]);
+
+  // ── Dag-cel inhoud ────────────────────────────────────────────────────────
+
+  function renderDagCelInhoud(med: Medewerker, dag: string) {
+    const dagItems = (items as PlanItem[])
+      .filter((it) => it.medewerker_id === med.id && it.datum_start <= dag && it.datum_eind >= dag)
+      .sort((a, b) => (a.tijd_start ?? "00:00").localeCompare(b.tijd_start ?? "00:00"));
+    const isAfwezig = afwezigheidDagen.has(`${med.id}_${dag}`);
+    return (
+      <div className="space-y-0.5">
+        {isAfwezig && dagItems.length === 0 && (
+          <div className="rounded border border-orange-200 bg-orange-50 px-1.5 py-1 text-[10px] text-orange-700">
+            Afwezig
+          </div>
+        )}
+        {dagItems.map((item) => {
+          const ddLabel = dagdeelLabel(item.tijd_start, item.tijd_eind);
+          const dd = dagdeelUitTijd(item.tijd_start, item.tijd_eind);
+          const projectLabel = item.gebouw_naam ?? item.project_naam ?? item.titel;
+          return (
+            <Tooltip key={item.id}>
+              <TooltipTrigger asChild>
+                <button
+                  className={`w-full rounded border px-1 py-0.5 text-left text-[10px] transition-all hover:opacity-80 ${STATUS_KLEUR[item.status] ?? STATUS_KLEUR["concept"]}`}
+                  onClick={() => openBewerken(item)}
+                >
+                  {ddLabel && (
+                    <span className={`inline-block rounded px-1 py-0 text-[9px] font-mono mr-0.5 border ${DAGDEEL_KLEUR[dd] ?? "bg-slate-50 text-slate-500 border-slate-200"}`}>
+                      {ddLabel}
+                    </span>
+                  )}
+                  <span className="font-medium truncate block leading-tight">{projectLabel}</span>
+                  <span className="text-[9px] text-muted-foreground">{item.uren}u</span>
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p className="font-medium">{item.titel}</p>
+                {item.gebouw_naam && <p className="text-xs">{item.gebouw_naam}</p>}
+                {item.project_naam && item.project_naam !== item.gebouw_naam && (
+                  <p className="text-xs opacity-70">{item.project_naam}</p>
+                )}
+                <p className="text-xs">{item.uren} uur · {item.status}</p>
+                {item.notities && <p className="text-xs opacity-70">{item.notities}</p>}
+              </TooltipContent>
+            </Tooltip>
+          );
+        })}
+        <button
+          className="w-full rounded p-0.5 text-[10px] text-muted-foreground opacity-0 hover:opacity-100 hover:bg-slate-200 hover:text-slate-700 transition-all"
+          onClick={() => openNieuw(med.id, dag)}
+        >
+          <Plus className="h-3 w-3 inline" />
+        </button>
+      </div>
+    );
+  }
+
+  // ── Render ───────────────────────────────────────────────────────────────
+
+  const aantalWeken = weken.length;
 
   return (
     <TooltipProvider>
-      <div className="p-6 space-y-5 max-w-full">
+      <div className="flex min-h-full">
 
-        {/* Koptekst */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-semibold text-slate-900">Planning</h1>
-            <p className="text-sm text-muted-foreground mt-0.5">
-              Week {weekNummer(maandag)} — {weekLabel(maandag)}
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <Link href="/modules/planning/afwezigheid">
-              <Button variant="outline" size="sm">
-                <Users className="h-3.5 w-3.5 mr-1.5" />
-                Afwezigheid
-              </Button>
-            </Link>
-            <Link href="/modules/planning/medewerkers">
-              <Button variant="outline" size="sm">
-                <Users className="h-3.5 w-3.5 mr-1.5" />
-                Medewerkers
-              </Button>
-            </Link>
-            <Button size="sm" onClick={() => openNieuw()}>
-              <Plus className="h-3.5 w-3.5 mr-1.5" />
-              Inplannen
-            </Button>
-            <Button variant="outline" size="sm" onClick={vandaag}>Vandaag</Button>
-            <Button variant="outline" size="icon" className="h-8 w-8" onClick={vorigeWeek}>
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <Button variant="outline" size="icon" className="h-8 w-8" onClick={volgendeWeek}>
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
+        {/* ═══ HOOFD-INHOUD ═══ */}
+        <div className="flex-1 min-w-0 p-6 space-y-5">
 
-        {/* Tabs */}
-        <div className="flex gap-1 border-b">
-          <button
-            className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px ${activeTab === "medewerkers" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-slate-700"}`}
-            onClick={() => setActiveTab("medewerkers")}
-          >
-            <Users className="h-3.5 w-3.5 inline mr-1.5" />
-            Medewerkers
-          </button>
-          <button
-            className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px ${activeTab === "projecten" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-slate-700"}`}
-            onClick={() => setActiveTab("projecten")}
-          >
-            <Briefcase className="h-3.5 w-3.5 inline mr-1.5" />
-            Projecten
-          </button>
-        </div>
-
-        {/* Openstaande opdrachten banner */}
-        {openstaandeOpdrachten.length > 0 && (
-          <div className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
-            <Briefcase className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-amber-800">
-                {openstaandeOpdrachten.length === 1 ? "1 opdracht" : `${openstaandeOpdrachten.length} opdrachten`} nog niet volledig ingepland
-              </p>
-              <div className="mt-1.5 flex flex-wrap gap-2">
-                {openstaandeOpdrachten.slice(0, 5).map((o) => (
-                  <Link key={o.id} href={`/opdrachten/${o.id}`}>
-                    <span className="inline-flex items-center gap-1 text-xs bg-white border border-amber-200 rounded px-2 py-0.5 text-amber-800 hover:bg-amber-100 cursor-pointer">
-                      {(o as unknown as Record<string, unknown>).titel as string}
-                    </span>
-                  </Link>
+          {/* Koptekst */}
+          <div className="flex items-start justify-between gap-3 flex-wrap">
+            <div>
+              <h1 className="text-2xl font-semibold text-slate-900">Planning</h1>
+              <p className="text-sm text-muted-foreground mt-0.5">{headerLabel}</p>
+            </div>
+            <div className="flex items-center gap-2 flex-wrap">
+              {/* Weergave-modus toggle */}
+              <div className="flex rounded-md border bg-slate-50 p-0.5 gap-0.5">
+                {WEERGAVE_MODI.map((m) => (
+                  <button
+                    key={m.key}
+                    type="button"
+                    onClick={() => setWeergaveModus(m.key)}
+                    className={`px-2.5 py-1 text-xs rounded transition-colors ${weergaveModus === m.key ? "bg-white shadow-sm font-medium text-slate-800" : "text-muted-foreground hover:text-slate-700"}`}
+                  >
+                    {m.label}
+                  </button>
                 ))}
-                {openstaandeOpdrachten.length > 5 && (
-                  <span className="text-xs text-amber-700">+{openstaandeOpdrachten.length - 5} meer</span>
-                )}
               </div>
+              <Link href="/modules/planning/afwezigheid">
+                <Button variant="outline" size="sm">
+                  <Users className="h-3.5 w-3.5 mr-1.5" />
+                  Afwezigheid
+                </Button>
+              </Link>
+              <Link href="/modules/planning/medewerkers">
+                <Button variant="outline" size="sm">
+                  <Users className="h-3.5 w-3.5 mr-1.5" />
+                  Medewerkers
+                </Button>
+              </Link>
+              <Button size="sm" onClick={() => openNieuw()}>
+                <Plus className="h-3.5 w-3.5 mr-1.5" />
+                Inplannen
+              </Button>
+              <Button variant="outline" size="sm" onClick={vandaag}>Vandaag</Button>
+              <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => stap(-1)}>
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => stap(1)}>
+                <ChevronRight className="h-4 w-4" />
+              </Button>
             </div>
           </div>
-        )}
 
-        {/* Filterbar (medewerkers-tab) */}
-        {activeTab === "medewerkers" && (
-          <div className="flex flex-wrap items-center gap-3 rounded-lg border bg-slate-50/60 px-4 py-3">
-            <span className="text-xs font-medium text-muted-foreground shrink-0">Filter:</span>
-            <Select value={filterWerkmaatschappij} onValueChange={setFilterWerkmaatschappij}>
-              <SelectTrigger className="h-8 text-xs w-48">
-                <SelectValue placeholder="Werkmaatschappij" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="alle">Alle werkmaatschappijen</SelectItem>
-                <SelectItem value="FPS Brandpreventie">FPS Brandpreventie</SelectItem>
-                <SelectItem value="FPS Bouw">FPS Bouw</SelectItem>
-              </SelectContent>
-            </Select>
-            <button
-              className={`flex items-center gap-1.5 rounded border px-2.5 py-1 text-xs transition-colors ${filterAlleenUitvoerend ? "border-primary bg-primary/10 text-primary font-medium" : "border-slate-200 bg-white text-muted-foreground hover:border-slate-300"}`}
-              onClick={() => setFilterAlleenUitvoerend((v) => !v)}
-              type="button"
-            >
-              Alleen uitvoerend
-            </button>
-            {(filterWerkmaatschappij !== "alle" || filterAlleenUitvoerend) && (
+          {/* Tabs (niet in maand-view) */}
+          {weergaveModus !== "maand" && (
+            <div className="flex gap-1 border-b">
               <button
-                className="text-xs text-muted-foreground underline hover:text-slate-700"
-                onClick={() => { setFilterWerkmaatschappij("alle"); setFilterAlleenUitvoerend(false); }}
+                className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px ${activeTab === "medewerkers" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-slate-700"}`}
+                onClick={() => setActiveTab("medewerkers")}
+              >
+                <Users className="h-3.5 w-3.5 inline mr-1.5" />
+                Medewerkers
+              </button>
+              <button
+                className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px ${activeTab === "projecten" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-slate-700"}`}
+                onClick={() => setActiveTab("projecten")}
+              >
+                <Briefcase className="h-3.5 w-3.5 inline mr-1.5" />
+                Projecten
+              </button>
+            </div>
+          )}
+
+          {/* ── MAAND-VIEW ─────────────────────────────────────────────── */}
+          {weergaveModus === "maand" && (
+            <MaandView
+              items={items as PlanItem[]}
+              weken={weken}
+              vandaagStr={vandaagStr}
+              onNieuw={(datum, gebouwId) => openNieuw(undefined, datum, gebouwId)}
+            />
+          )}
+
+          {/* ── FILTERBAR (medewerkers-tab) ──────────────────────────── */}
+          {weergaveModus !== "maand" && activeTab === "medewerkers" && (
+            <div className="flex flex-wrap items-center gap-3 rounded-lg border bg-slate-50/60 px-4 py-3">
+              <span className="text-xs font-medium text-muted-foreground shrink-0">Filter:</span>
+              <Select value={filterWerkmaatschappij} onValueChange={setFilterWerkmaatschappij}>
+                <SelectTrigger className="h-8 text-xs w-48">
+                  <SelectValue placeholder="Werkmaatschappij" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="alle">Alle werkmaatschappijen</SelectItem>
+                  <SelectItem value="FPS Brandpreventie">FPS Brandpreventie</SelectItem>
+                  <SelectItem value="FPS Bouw">FPS Bouw</SelectItem>
+                </SelectContent>
+              </Select>
+              <button
+                className={`flex items-center gap-1.5 rounded border px-2.5 py-1 text-xs transition-colors ${filterAlleenUitvoerend ? "border-primary bg-primary/10 text-primary font-medium" : "border-slate-200 bg-white text-muted-foreground hover:border-slate-300"}`}
+                onClick={() => setFilterAlleenUitvoerend((v) => !v)}
                 type="button"
               >
-                Wis filters
+                Alleen uitvoerend
               </button>
-            )}
-            <span className="ml-auto text-xs text-muted-foreground">
-              {(medewerkers as Medewerker[]).length} medewerker{(medewerkers as Medewerker[]).length !== 1 ? "s" : ""}
-            </span>
-          </div>
-        )}
+              {(filterWerkmaatschappij !== "alle" || filterAlleenUitvoerend) && (
+                <button
+                  className="text-xs text-muted-foreground underline hover:text-slate-700"
+                  onClick={() => { setFilterWerkmaatschappij("alle"); setFilterAlleenUitvoerend(false); }}
+                  type="button"
+                >
+                  Wis filters
+                </button>
+              )}
+              <span className="ml-auto text-xs text-muted-foreground">
+                {(medewerkers as Medewerker[]).length} medewerker{(medewerkers as Medewerker[]).length !== 1 ? "s" : ""}
+              </span>
+            </div>
+          )}
 
-        {/* ── TAB: MEDEWERKERS ─────────────────────────────────────────────── */}
-        {activeTab === "medewerkers" && (
-          <Card className="overflow-hidden">
-            {isLoading ? (
-              <div className="p-6 space-y-3">
-                {[1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-20 w-full" />)}
-              </div>
-            ) : (medewerkers as Medewerker[]).length === 0 ? (
-              <PlanningLegeStaat onVernieuwen={() => { void refetchMedewerkers(); }} />
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full table-fixed">
-                  <colgroup>
-                    <col className="w-48" />
-                    {WERKDAGEN.map((_, i) => <col key={i} />)}
-                  </colgroup>
-                  <thead>
-                    <tr className="border-b bg-slate-50">
-                      <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                        Medewerker
-                      </th>
-                      {datumStrings.map((dag, i) => (
-                        <th
-                          key={dag}
-                          className={`px-2 py-3 text-center text-xs font-medium uppercase tracking-wide ${dag === vandaagStr ? "bg-primary/5 text-primary" : "text-muted-foreground"}`}
-                        >
-                          <div>{WERKDAGEN_KORT[i]}</div>
-                          <div className={`text-base font-semibold mt-0.5 ${dag === vandaagStr ? "text-primary" : "text-slate-800"}`}>
-                            {new Date(dag + "T00:00:00").getDate()}
-                          </div>
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y">
-                    {(medewerkers as Medewerker[]).map((med) => {
-                      const weekUren = weekUrenPerMedewerker.get(med.id) ?? 0;
-                      const contractUren = med.contracturen_per_week ?? 40;
-                      const overGepland = weekUren > contractUren;
-                      return (
-                        <tr key={med.id} className="hover:bg-slate-50/40 transition-colors">
-                          <td className="px-4 py-2 border-r bg-white">
-                            <div className="flex items-center justify-between">
-                              <div>
-                                <p className="text-sm font-medium text-slate-800">{med.naam}</p>
-                                {med.functie && (
-                                  <p className="text-xs text-muted-foreground">{med.functie}</p>
-                                )}
-                                {med.dienstverband && med.dienstverband !== "vast" && (
-                                  <Badge variant="outline" className={`mt-0.5 text-[10px] px-1 py-0 h-4 ${DIENSTVERBAND_KLEUR[med.dienstverband] ?? ""}`}>
-                                    {med.dienstverband}
-                                    {med.bedrijf_uitzendbureau ? ` · ${med.bedrijf_uitzendbureau}` : ""}
-                                  </Badge>
-                                )}
-                              </div>
-                              {overGepland && (
-                                <Tooltip>
-                                  <TooltipTrigger>
-                                    <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    Overplanning: {weekUren}u gepland, {contractUren}u contract
-                                  </TooltipContent>
-                                </Tooltip>
-                              )}
-                            </div>
-                            <div className="mt-1.5 flex items-center gap-1 text-xs text-muted-foreground">
-                              <span className={overGepland ? "text-amber-600 font-medium" : ""}>{weekUren}u</span>
-                              <span>/</span>
-                              <span>{contractUren}u</span>
-                            </div>
-                            <div className="mt-1 h-1 w-full bg-slate-100 rounded-full overflow-hidden">
-                              <div
-                                className={`h-1 rounded-full transition-all ${overGepland ? "bg-amber-400" : "bg-primary"}`}
-                                style={{ width: `${Math.min(100, (weekUren / contractUren) * 100)}%` }}
-                              />
-                            </div>
-                          </td>
-                          {datumStrings.map((dag) => {
-                            const dagItems = (items as PlanItem[])
-                              .filter((it) => it.medewerker_id === med.id && it.datum_start <= dag && it.datum_eind >= dag)
-                              .sort((a, b) => (a.tijd_start ?? "00:00").localeCompare(b.tijd_start ?? "00:00"));
-                            const isAfwezig = afwezigheidDagen.has(`${med.id}_${dag}`);
-                            const isVandaag = dag === vandaagStr;
+          {/* ── TAB: MEDEWERKERS ─────────────────────────────────────── */}
+          {weergaveModus !== "maand" && activeTab === "medewerkers" && (
+            <Card className="overflow-hidden">
+              {isLoading ? (
+                <div className="p-6 space-y-3">
+                  {[1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-20 w-full" />)}
+                </div>
+              ) : (medewerkers as Medewerker[]).length === 0 ? (
+                <PlanningLegeStaat onVernieuwen={() => { void refetchMedewerkers(); }} />
+              ) : (
+                <div className="overflow-x-auto">
+                  <table
+                    className="w-full border-collapse"
+                    style={{ tableLayout: "fixed", minWidth: aantalWeken > 1 ? aantalWeken * 5 * 100 + 192 : "auto" }}
+                  >
+                    <colgroup>
+                      <col style={{ width: 192 }} />
+                      {datumStringsPerWeek.flatMap((weekDatums, wi) =>
+                        weekDatums.map((_, di) => <col key={`${wi}-${di}`} />)
+                      )}
+                    </colgroup>
+                    <thead>
+                      {/* Weekgroep-rij (alleen bij meerweken) */}
+                      {aantalWeken > 1 && (
+                        <tr className="border-b bg-slate-100">
+                          <th className="px-4 py-2 border-r" />
+                          {weken.map((maa) => {
+                            const vrij = new Date(maa.getTime() + 4 * 86400000);
                             return (
-                              <td
-                                key={dag}
-                                className={`px-1.5 py-1.5 align-top border-l ${isVandaag ? "bg-primary/5" : ""}`}
-                                style={{ minHeight: 80, verticalAlign: "top" }}
+                              <th
+                                key={datumNaarStr(maa)}
+                                colSpan={5}
+                                className="px-2 py-2 text-center text-[11px] font-semibold text-slate-600 border-l-2 border-l-slate-300"
                               >
-                                <div className="space-y-1">
-                                  {isAfwezig && dagItems.length === 0 && (
-                                    <div className="rounded border border-orange-200 bg-orange-50 px-1.5 py-1 text-xs text-orange-700">
-                                      Afwezig
-                                    </div>
-                                  )}
-                                  {dagItems.map((item) => {
-                                    const ddLabel = dagdeelLabel(item.tijd_start, item.tijd_eind);
-                                    const dd = dagdeelUitTijd(item.tijd_start, item.tijd_eind);
-                                    const projectLabel = item.gebouw_naam ?? item.project_naam ?? item.titel;
-                                    return (
-                                      <Tooltip key={item.id}>
-                                        <TooltipTrigger asChild>
-                                          <button
-                                            className={`w-full rounded border px-1.5 py-1 text-left text-xs transition-all hover:opacity-80 ${STATUS_KLEUR[item.status] ?? STATUS_KLEUR["concept"]}`}
-                                            onClick={() => openBewerken(item)}
-                                          >
-                                            {ddLabel && (
-                                              <span className={`inline-block rounded px-1 py-0 text-[10px] font-mono mr-1 border ${DAGDEEL_KLEUR[dd] ?? "bg-slate-50 text-slate-500 border-slate-200"}`}>
-                                                {ddLabel}
-                                              </span>
-                                            )}
-                                            <span className="font-medium truncate">{projectLabel}</span>
-                                            <span className="block text-[10px] text-muted-foreground">{item.uren}u</span>
-                                          </button>
-                                        </TooltipTrigger>
-                                        <TooltipContent>
-                                          <p className="font-medium">{item.titel}</p>
-                                          {item.gebouw_naam && <p className="text-xs">{item.gebouw_naam}</p>}
-                                          {item.project_naam && item.project_naam !== item.gebouw_naam && (
-                                            <p className="text-xs opacity-70">{item.project_naam}</p>
-                                          )}
-                                          <p className="text-xs">{item.uren} uur · {item.status}</p>
-                                          {item.notities && <p className="text-xs opacity-70">{item.notities}</p>}
-                                        </TooltipContent>
-                                      </Tooltip>
-                                    );
-                                  })}
-                                  <button
-                                    className="w-full rounded p-0.5 text-xs text-muted-foreground opacity-0 hover:opacity-100 hover:bg-slate-200 hover:text-slate-700 transition-all"
-                                    onClick={() => openNieuw(med.id, dag)}
-                                  >
-                                    <Plus className="h-3 w-3 inline" />
-                                  </button>
-                                </div>
-                              </td>
+                                Week {weekNummer(maa)} · {maa.toLocaleDateString("nl-NL", { day: "numeric", month: "short" })} – {vrij.toLocaleDateString("nl-NL", { day: "numeric", month: "short" })}
+                              </th>
                             );
                           })}
                         </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </Card>
-        )}
+                      )}
+                      {/* Dag-rij */}
+                      <tr className="border-b bg-slate-50">
+                        <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide border-r">
+                          Medewerker
+                        </th>
+                        {datumStringsPerWeek.flatMap((weekDatums, wi) =>
+                          weekDatums.map((dag, di) => (
+                            <th
+                              key={dag}
+                              className={`px-1 py-3 text-center text-xs font-medium uppercase tracking-wide ${dag === vandaagStr ? "bg-primary/5 text-primary" : "text-muted-foreground"} ${di === 0 && wi > 0 ? "border-l-2 border-l-slate-300" : "border-l border-l-slate-100"}`}
+                            >
+                              <div>{WERKDAGEN_KORT[di]}</div>
+                              <div className={`text-sm font-semibold mt-0.5 ${dag === vandaagStr ? "text-primary" : "text-slate-800"}`}>
+                                {new Date(dag + "T00:00:00").getDate()}
+                              </div>
+                            </th>
+                          ))
+                        )}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y">
+                      {(medewerkers as Medewerker[]).map((med) => {
+                        const bereikUren = bereikUrenPerMedewerker.get(med.id) ?? 0;
+                        const contractUren = (med.contracturen_per_week ?? 40) * aantalWeken;
+                        const overGepland = bereikUren > contractUren;
+                        return (
+                          <tr key={med.id} className="hover:bg-slate-50/40 transition-colors">
+                            {/* Medewerker-kolom */}
+                            <td className="px-4 py-2 border-r bg-white">
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <p className="text-sm font-medium text-slate-800">{med.naam}</p>
+                                  {med.functie && <p className="text-xs text-muted-foreground">{med.functie}</p>}
+                                  {med.dienstverband && med.dienstverband !== "vast" && (
+                                    <Badge variant="outline" className={`mt-0.5 text-[10px] px-1 py-0 h-4 ${DIENSTVERBAND_KLEUR[med.dienstverband] ?? ""}`}>
+                                      {med.dienstverband}
+                                      {med.bedrijf_uitzendbureau ? ` · ${med.bedrijf_uitzendbureau}` : ""}
+                                    </Badge>
+                                  )}
+                                </div>
+                                {overGepland && (
+                                  <Tooltip>
+                                    <TooltipTrigger>
+                                      <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      Overplanning: {bereikUren}u gepland, {contractUren}u contract
+                                    </TooltipContent>
+                                  </Tooltip>
+                                )}
+                              </div>
+                              <div className="mt-1.5 flex items-center gap-1 text-xs text-muted-foreground">
+                                <span className={overGepland ? "text-amber-600 font-medium" : ""}>{bereikUren}u</span>
+                                <span>/</span>
+                                <span>{contractUren}u</span>
+                              </div>
+                              <div className="mt-1 h-1 w-full bg-slate-100 rounded-full overflow-hidden">
+                                <div
+                                  className={`h-1 rounded-full transition-all ${overGepland ? "bg-amber-400" : "bg-primary"}`}
+                                  style={{ width: `${Math.min(100, (bereikUren / contractUren) * 100)}%` }}
+                                />
+                              </div>
+                            </td>
+                            {/* Dag-cellen */}
+                            {datumStringsPerWeek.flatMap((weekDatums, wi) =>
+                              weekDatums.map((dag, di) => (
+                                <td
+                                  key={dag}
+                                  className={`px-1 py-1 align-top ${dag === vandaagStr ? "bg-primary/5" : ""} ${di === 0 && wi > 0 ? "border-l-2 border-l-slate-300" : "border-l border-l-slate-100"}`}
+                                  style={{ minHeight: 64, verticalAlign: "top", minWidth: 90 }}
+                                >
+                                  {renderDagCelInhoud(med, dag)}
+                                </td>
+                              ))
+                            )}
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </Card>
+          )}
 
-        {/* ── TAB: PROJECTEN ───────────────────────────────────────────────── */}
-        {activeTab === "projecten" && (
-          <div className="space-y-3">
-            {itemsLoading ? (
-              <div className="space-y-3">
-                {[1, 2, 3].map((i) => <Skeleton key={i} className="h-28 w-full rounded-lg" />)}
-              </div>
-            ) : projectGroepen.length === 0 ? (
-              <Card>
-                <CardContent className="py-16 text-center text-muted-foreground">
-                  <Briefcase className="h-10 w-10 mx-auto mb-3 opacity-20" />
-                  <p className="text-sm">Geen projecten gepland deze week.</p>
-                  <p className="text-xs mt-1">Klik op Inplannen om een project in te roosteren.</p>
-                </CardContent>
-              </Card>
-            ) : (
-              projectGroepen.map((groep) => {
-                const projectItems = groep.items;
-                const uniekeMedewerkers = Array.from(
-                  new Map(projectItems.filter((it) => it.medewerker_id).map((it) => [it.medewerker_id, it.medewerker_naam])).entries()
-                );
-                const totalUren = projectItems.reduce((s, it) => s + it.uren, 0);
-                const geplandeD = [...new Set(projectItems.map((it) => it.datum_start))].sort();
-                const statusVerdeling = projectItems.reduce((acc: Record<string, number>, it) => {
-                  acc[it.status] = (acc[it.status] ?? 0) + 1;
-                  return acc;
-                }, {});
-                return (
-                  <Card key={groep.sleutel} className="overflow-hidden">
-                    <div className="px-5 py-4 border-b bg-slate-50/60 flex items-center justify-between gap-4">
-                      <div className="flex items-center gap-3 min-w-0">
-                        <Briefcase className="h-4 w-4 text-muted-foreground shrink-0" />
-                        <div className="min-w-0">
-                          <p className="font-semibold text-slate-900 truncate">{groep.naam}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {totalUren} uur gepland · {uniekeMedewerkers.length} medewerker{uniekeMedewerkers.length !== 1 ? "s" : ""}
-                          </p>
+          {/* ── TAB: PROJECTEN ───────────────────────────────────────── */}
+          {weergaveModus !== "maand" && activeTab === "projecten" && (
+            <div className="space-y-3">
+              {itemsLoading ? (
+                <div className="space-y-3">
+                  {[1, 2, 3].map((i) => <Skeleton key={i} className="h-28 w-full rounded-lg" />)}
+                </div>
+              ) : projectGroepen.length === 0 ? (
+                <Card>
+                  <CardContent className="py-16 text-center text-muted-foreground">
+                    <Briefcase className="h-10 w-10 mx-auto mb-3 opacity-20" />
+                    <p className="text-sm">Geen projecten gepland in dit bereik.</p>
+                    <p className="text-xs mt-1">Klik op Inplannen om een project in te roosteren.</p>
+                  </CardContent>
+                </Card>
+              ) : (
+                projectGroepen.map((groep) => {
+                  const projectItems = groep.items;
+                  const uniekeMedewerkers = Array.from(
+                    new Map(projectItems.filter((it) => it.medewerker_id).map((it) => [it.medewerker_id, it.medewerker_naam])).entries()
+                  );
+                  const totalUren = projectItems.reduce((s, it) => s + it.uren, 0);
+                  const statusVerdeling = projectItems.reduce((acc: Record<string, number>, it) => {
+                    acc[it.status] = (acc[it.status] ?? 0) + 1;
+                    return acc;
+                  }, {});
+                  return (
+                    <Card key={groep.sleutel} className="overflow-hidden">
+                      <div className="px-5 py-4 border-b bg-slate-50/60 flex items-center justify-between gap-4">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <Briefcase className="h-4 w-4 text-muted-foreground shrink-0" />
+                          <div className="min-w-0">
+                            <p className="font-semibold text-slate-900 truncate">{groep.naam}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {totalUren} uur gepland · {uniekeMedewerkers.length} medewerker{uniekeMedewerkers.length !== 1 ? "s" : ""}
+                            </p>
+                          </div>
                         </div>
-                      </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        {Object.entries(statusVerdeling).map(([s, n]) => (
-                          <Badge key={s} variant="outline" className={`text-[11px] ${STATUS_KLEUR[s] ?? ""}`}>
-                            {n} {s}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                    <div className="px-5 py-4 grid grid-cols-3 gap-6">
-                      {/* Medewerkers */}
-                      <div>
-                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Medewerkers</p>
-                        <div className="flex flex-wrap gap-1.5">
-                          {uniekeMedewerkers.length === 0 ? (
-                            <span className="text-xs text-muted-foreground">Niet toegewezen</span>
-                          ) : uniekeMedewerkers.map(([id, naam]) => (
-                            <Badge key={id} variant="secondary" className="text-xs">
-                              {naam ?? `#${id}`}
+                        <div className="flex items-center gap-2 shrink-0">
+                          {Object.entries(statusVerdeling).map(([s, n]) => (
+                            <Badge key={s} variant="outline" className={`text-[11px] ${STATUS_KLEUR[s] ?? ""}`}>
+                              {n} {s}
                             </Badge>
                           ))}
                         </div>
                       </div>
-
-                      {/* Geplande dagen */}
-                      <div>
-                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Dagen deze week</p>
-                        <div className="flex gap-1.5">
-                          {datumStrings.map((dag, i) => {
-                            const dagItemsProj = projectItems.filter((it) => it.datum_start <= dag && it.datum_eind >= dag);
-                            const heeftItems = dagItemsProj.length > 0;
-                            return (
-                              <Tooltip key={dag}>
-                                <TooltipTrigger asChild>
-                                  <div className={`w-8 h-8 rounded flex items-center justify-center text-xs font-medium border transition-colors ${heeftItems ? "bg-primary text-white border-primary" : "bg-slate-50 text-muted-foreground border-slate-200"}`}>
-                                    {WERKDAGEN_KORT[i]}
-                                  </div>
-                                </TooltipTrigger>
-                                {heeftItems && (
+                      <div className="px-5 py-4 grid grid-cols-3 gap-6">
+                        <div>
+                          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Medewerkers</p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {uniekeMedewerkers.length === 0 ? (
+                              <span className="text-xs text-muted-foreground">Niet toegewezen</span>
+                            ) : uniekeMedewerkers.map(([id, naam]) => (
+                              <Badge key={id} variant="secondary" className="text-xs">{naam ?? `#${id}`}</Badge>
+                            ))}
+                          </div>
+                        </div>
+                        <div>
+                          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Geplande dagen</p>
+                          <div className="flex flex-wrap gap-1">
+                            {alleDatumStrings.map((dag) => {
+                              const dagItemsProj = projectItems.filter((it) => it.datum_start <= dag && it.datum_eind >= dag);
+                              const heeftItems = dagItemsProj.length > 0;
+                              return heeftItems ? (
+                                <Tooltip key={dag}>
+                                  <TooltipTrigger asChild>
+                                    <div className="w-7 h-7 rounded flex items-center justify-center text-[10px] font-medium border bg-primary text-white border-primary">
+                                      {new Date(dag + "T00:00:00").getDate()}
+                                    </div>
+                                  </TooltipTrigger>
                                   <TooltipContent>
-                                    <p className="font-medium">{WERKDAGEN[i]}</p>
+                                    {new Date(dag + "T00:00:00").toLocaleDateString("nl-NL", { weekday: "long", day: "numeric", month: "short" })}
                                     {dagItemsProj.map((it) => (
                                       <p key={it.id} className="text-xs">{it.medewerker_naam ?? "Onbekend"} · {dagdeelLabel(it.tijd_start, it.tijd_eind) || `${it.uren}u`}</p>
                                     ))}
                                   </TooltipContent>
-                                )}
-                              </Tooltip>
-                            );
-                          })}
+                                </Tooltip>
+                              ) : null;
+                            })}
+                          </div>
+                        </div>
+                        <div>
+                          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Tijdslots</p>
+                          <div className="space-y-1">
+                            {projectItems.slice(0, 4).map((it) => (
+                              <div key={it.id} className="flex items-center gap-2 text-xs">
+                                <Clock className="h-3 w-3 text-muted-foreground shrink-0" />
+                                <span className="text-slate-500">
+                                  {new Date(it.datum_start + "T00:00:00").toLocaleDateString("nl-NL", { weekday: "short", day: "numeric" })}
+                                </span>
+                                {it.tijd_start && <span className="font-mono text-slate-600">{dagdeelLabel(it.tijd_start, it.tijd_eind)}</span>}
+                                <span className="text-muted-foreground truncate">{it.medewerker_naam}</span>
+                              </div>
+                            ))}
+                            {projectItems.length > 4 && <p className="text-xs text-muted-foreground">+{projectItems.length - 4} meer</p>}
+                          </div>
                         </div>
                       </div>
+                    </Card>
+                  );
+                })
+              )}
+            </div>
+          )}
 
-                      {/* Tijdslots */}
-                      <div>
-                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Tijdslots deze week</p>
-                        <div className="space-y-1">
-                          {projectItems.slice(0, 4).map((it) => (
-                            <div key={it.id} className="flex items-center gap-2 text-xs">
-                              <Clock className="h-3 w-3 text-muted-foreground shrink-0" />
-                              <span className="text-slate-500">{new Date(it.datum_start + "T00:00:00").toLocaleDateString("nl-NL", { weekday: "short", day: "numeric" })}</span>
-                              {it.tijd_start && (
-                                <span className="font-mono text-slate-600">{dagdeelLabel(it.tijd_start, it.tijd_eind)}</span>
-                              )}
-                              <span className="text-muted-foreground">{it.medewerker_naam}</span>
-                            </div>
-                          ))}
-                          {projectItems.length > 4 && (
-                            <p className="text-xs text-muted-foreground">+{projectItems.length - 4} meer</p>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </Card>
-                );
-              })
-            )}
-          </div>
-        )}
+          {/* ── LEGENDA ──────────────────────────────────────────────── */}
+          {weergaveModus !== "maand" && activeTab === "medewerkers" && (
+            <div className="flex items-center flex-wrap gap-4 text-xs text-muted-foreground">
+              <span className="font-medium text-slate-600">Dagdeel:</span>
+              {[
+                { key: "ochtend",  label: "Ochtend 07:30–12" },
+                { key: "middag",   label: "Middag 12:30–16" },
+                { key: "volledig", label: "Volledig 07:30–16" },
+              ].map(({ key, label }) => (
+                <span key={key} className="flex items-center gap-1">
+                  <span className={`inline-block rounded border px-1.5 py-0.5 text-[10px] font-mono ${DAGDEEL_KLEUR[key] ?? ""}`}>{label}</span>
+                </span>
+              ))}
+              <span className="ml-2 font-medium text-slate-600">Status:</span>
+              {Object.entries({ ingepland: "Ingepland", bevestigd: "Bevestigd", uitgevoerd: "Uitgevoerd", concept: "Concept" }).map(([k, v]) => (
+                <span key={k} className={`rounded px-1.5 py-0.5 border ${STATUS_KLEUR[k]}`}>{v}</span>
+              ))}
+            </div>
+          )}
 
-        {/* Legenda (medewerkers-tab) */}
-        {activeTab === "medewerkers" && (
-          <div className="flex items-center flex-wrap gap-4 text-xs text-muted-foreground">
-            <span className="font-medium text-slate-600">Dagdeel:</span>
-            {[
-              { key: "ochtend", label: "Ochtend 08-12" },
-              { key: "middag", label: "Middag 13-17" },
-              { key: "volledig", label: "Volledig 08-17" },
-            ].map(({ key, label }) => (
-              <span key={key} className="flex items-center gap-1">
-                <span className={`inline-block rounded border px-1.5 py-0.5 text-[10px] font-mono ${DAGDEEL_KLEUR[key] ?? ""}`}>{label}</span>
-              </span>
-            ))}
-            <span className="ml-2 font-medium text-slate-600">Status:</span>
-            {Object.entries({ ingepland: "Ingepland", bevestigd: "Bevestigd", uitgevoerd: "Uitgevoerd", concept: "Concept" }).map(([k, v]) => (
-              <span key={k} className={`rounded px-1.5 py-0.5 border ${STATUS_KLEUR[k]}`}>{v}</span>
-            ))}
-          </div>
-        )}
+          {/* ── OPDRACHTEN-PANEEL ────────────────────────────────────── */}
+          <OpdrachtenPaneel
+            opdrachten={ingePlannenOpdrachten}
+            ingeplandUrenPerGebouw={ingeplandUrenPerGebouw}
+            onInplannen={(gebouwId, gebouwNaam) => {
+              openNieuw(undefined, alleDatumStrings[0], gebouwId);
+              void gebouwNaam;
+            }}
+          />
 
-        {/* ── DIALOOG ───────────────────────────────────────────────────────── */}
-        <Dialog open={dialoog !== null} onOpenChange={sluitDialoog}>
-          <DialogContent className="max-w-xl">
-            <DialogHeader>
-              <DialogTitle>{bewerkenId ? "Planningitem bewerken" : "Inplannen"}</DialogTitle>
-            </DialogHeader>
-            {dialoog && (
-              <div className="space-y-4 py-1">
+        </div>
 
-                {/* Gebouw */}
+        {/* ═══ INLINE ZIJPANEEL ═══ */}
+        {dialoog && (
+          <aside className="w-[400px] shrink-0 border-l bg-white flex flex-col" style={{ position: "sticky", top: 0, height: "100vh", overflowY: "auto" }}>
+            {/* Paneel-kop */}
+            <div className="flex items-center justify-between px-5 py-4 border-b bg-slate-50/80">
+              <h2 className="text-sm font-semibold text-slate-800">
+                {bewerkenId ? "Planningitem bewerken" : "Inplannen"}
+              </h2>
+              <button
+                type="button"
+                onClick={sluitDialoog}
+                className="rounded-md p-1.5 text-muted-foreground hover:bg-slate-200 hover:text-slate-700 transition-colors"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {/* Formulier */}
+            <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
+
+              {/* Project / Gebouw */}
+              <div className="space-y-1.5">
+                <Label>Project / Gebouw</Label>
+                <Select
+                  value={dialoog.gebouw_id ? String(dialoog.gebouw_id) : "__geen__"}
+                  onValueChange={(v) => v === "__geen__" ? setDialoog((d) => d ? { ...d, gebouw_id: null } : d) : kiesGebouw(v)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Kies een gebouw/project..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__geen__">Geen gebouw (vrije invoer)</SelectItem>
+                    {(gebouwen as Gebouw[]).map((g) => (
+                      <SelectItem key={g.id} value={String(g.id)}>
+                        {g.naam}{g.stad ? ` — ${g.stad}` : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {!dialoog.gebouw_id && (
+                  <Input
+                    value={dialoog.project_naam}
+                    onChange={(e) => setDialoog((d) => d ? { ...d, project_naam: e.target.value, titel: d.titel || e.target.value } : d)}
+                    placeholder="Naam van het project of de werkzaamheid"
+                  />
+                )}
+              </div>
+
+              {/* Werkzaamheid */}
+              <div className="space-y-1.5">
+                <Label>Werkzaamheid *</Label>
+                <Input
+                  value={dialoog.titel}
+                  onChange={(e) => setDialoog((d) => d ? { ...d, titel: e.target.value } : d)}
+                  placeholder="Bijv. Branddeur plaatsing, Inspectie, Overleg"
+                />
+              </div>
+
+              {/* Datum + Status */}
+              <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <Label>Project / Gebouw</Label>
-                  <Select
-                    value={dialoog.gebouw_id ? String(dialoog.gebouw_id) : "__geen__"}
-                    onValueChange={(v) => v === "__geen__" ? setDialoog((d) => d ? { ...d, gebouw_id: null } : d) : kiesGebouw(v)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Kies een gebouw/project..." />
-                    </SelectTrigger>
+                  <Label>Datum</Label>
+                  <DatePicker
+                    value={dialoog.datum}
+                    onChange={(v) => setDialoog((d) => d ? { ...d, datum: v } : d)}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Status</Label>
+                  <Select value={dialoog.status} onValueChange={(v) => setDialoog((d) => d ? { ...d, status: v } : d)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="__geen__">Geen gebouw (vrije invoer)</SelectItem>
-                      {(gebouwen as Gebouw[]).map((g) => (
-                        <SelectItem key={g.id} value={String(g.id)}>
-                          {g.naam}{g.stad ? ` — ${g.stad}` : ""}
-                        </SelectItem>
-                      ))}
+                      <SelectItem value="concept">Concept</SelectItem>
+                      <SelectItem value="ingepland">Ingepland</SelectItem>
+                      <SelectItem value="bevestigd">Bevestigd</SelectItem>
+                      <SelectItem value="uitgevoerd">Uitgevoerd</SelectItem>
+                      <SelectItem value="geannuleerd">Geannuleerd</SelectItem>
                     </SelectContent>
                   </Select>
-                  {!dialoog.gebouw_id && (
-                    <Input
-                      value={dialoog.project_naam}
-                      onChange={(e) => setDialoog((d) => d ? { ...d, project_naam: e.target.value, titel: d.titel || e.target.value } : d)}
-                      placeholder="Naam van het project of de werkzaamheid"
-                    />
-                  )}
-                </div>
-
-                {/* Omschrijving werkzaamheid */}
-                <div className="space-y-1.5">
-                  <Label>Werkzaamheid *</Label>
-                  <Input
-                    value={dialoog.titel}
-                    onChange={(e) => setDialoog((d) => d ? { ...d, titel: e.target.value } : d)}
-                    placeholder="Bijv. Branddeur plaatsing, Inspectie, Overleg"
-                  />
-                </div>
-
-                {/* Datum + Dagdeel */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <Label>Datum</Label>
-                    <DatePicker
-                      value={dialoog.datum}
-                      onChange={(v) => setDialoog((d) => d ? { ...d, datum: v } : d)}
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label>Status</Label>
-                    <Select
-                      value={dialoog.status}
-                      onValueChange={(v) => setDialoog((d) => d ? { ...d, status: v } : d)}
-                    >
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="concept">Concept</SelectItem>
-                        <SelectItem value="ingepland">Ingepland</SelectItem>
-                        <SelectItem value="bevestigd">Bevestigd</SelectItem>
-                        <SelectItem value="uitgevoerd">Uitgevoerd</SelectItem>
-                        <SelectItem value="geannuleerd">Geannuleerd</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                {/* Dagdeel */}
-                <div className="space-y-1.5">
-                  <Label>Dagdeel</Label>
-                  <div className="grid grid-cols-5 gap-2">
-                    {DAGDELEN.map((dd) => (
-                      <button
-                        key={dd.key}
-                        type="button"
-                        onClick={() => kiesDagdeel(dd.key)}
-                        className={`rounded border px-2 py-2 text-xs text-center transition-all ${dialoog.dagdeel === dd.key ? "border-primary bg-primary/10 text-primary font-medium" : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50"}`}
-                      >
-                        <p className="font-medium">{dd.label}</p>
-                        <p className="text-[10px] opacity-70">{dd.sub}</p>
-                      </button>
-                    ))}
-                  </div>
-
-                  {/* Tijdsloten-picker: 16 × 30 min blokken */}
-                  {dialoog.dagdeel === "tijdsloten" && (
-                    <div className="mt-2 rounded border border-slate-200 bg-slate-50 p-3 space-y-2">
-                      <div className="flex items-center justify-between">
-                        <p className="text-xs font-medium text-slate-600">Klik blokken aan om in te plannen (07:00–15:00)</p>
-                        {dialoog.geselecteerdeTijdsloten.length > 0 && (
-                          <p className="text-xs text-primary font-medium">
-                            {dialoog.geselecteerdeTijdsloten.length} × 30 min = {dialoog.geselecteerdeTijdsloten.length * 0.5} uur
-                            {" · "}{dialoog.tijd_start}–{dialoog.tijd_eind}
-                          </p>
-                        )}
-                      </div>
-                      {/* Rij 1: 07:00–10:30, Rij 2: 11:00–14:30 */}
-                      {[HALVE_UREN.slice(0, 8), HALVE_UREN.slice(8, 16)].map((rij, ri) => (
-                        <div key={ri} className="grid grid-cols-8 gap-1">
-                          {rij.map((slot) => {
-                            const actief = dialoog.geselecteerdeTijdsloten.includes(slot);
-                            return (
-                              <button
-                                key={slot}
-                                type="button"
-                                onClick={() => toggleTijdslot(slot)}
-                                className={`rounded text-[10px] font-mono py-1.5 border transition-all select-none ${
-                                  actief
-                                    ? "bg-primary text-white border-primary font-semibold"
-                                    : "bg-white text-slate-500 border-slate-200 hover:border-primary/40 hover:bg-primary/5"
-                                }`}
-                              >
-                                {slot}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      ))}
-                      {dialoog.geselecteerdeTijdsloten.length === 0 && (
-                        <p className="text-[10px] text-muted-foreground text-center pt-0.5">Geen blokken geselecteerd</p>
-                      )}
-                    </div>
-                  )}
-
-                  {dialoog.dagdeel === "specifiek" && (
-                    <div className="grid grid-cols-3 gap-3 mt-2">
-                      <div className="space-y-1">
-                        <Label className="text-xs">Starttijd</Label>
-                        <Input
-                          type="time"
-                          value={dialoog.tijd_start}
-                          onChange={(e) => setDialoog((d) => d ? { ...d, tijd_start: e.target.value } : d)}
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-xs">Eindtijd</Label>
-                        <Input
-                          type="time"
-                          value={dialoog.tijd_eind}
-                          onChange={(e) => setDialoog((d) => d ? { ...d, tijd_eind: e.target.value } : d)}
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-xs">Uren</Label>
-                        <Input
-                          type="number"
-                          step="0.5"
-                          min="0.5"
-                          max="12"
-                          value={dialoog.uren}
-                          onChange={(e) => setDialoog((d) => d ? { ...d, uren: e.target.value } : d)}
-                        />
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Medewerkers */}
-                <div className="space-y-1.5">
-                  <Label>{bewerkenId ? "Medewerker" : "Medewerkers (meerdere mogelijk)"}</Label>
-                  <div className="max-h-44 overflow-y-auto rounded border divide-y">
-                    {(medewerkers as Medewerker[]).length === 0 ? (
-                      <p className="text-xs text-muted-foreground p-3">Geen medewerkers gevonden.</p>
-                    ) : (medewerkers as Medewerker[]).map((m) => {
-                      const geselecteerd = dialoog.geselecteerdeMedewerkers.includes(m.id);
-                      return (
-                        <label
-                          key={m.id}
-                          className={`flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-slate-50 transition-colors ${geselecteerd ? "bg-primary/5" : ""}`}
-                        >
-                          <Checkbox
-                            checked={geselecteerd}
-                            onCheckedChange={() => toggleMedewerker(m.id)}
-                            disabled={bewerkenId !== null && !geselecteerd}
-                          />
-                          <div className="min-w-0">
-                            <p className="text-sm font-medium text-slate-800">{m.naam}</p>
-                            {m.functie && <p className="text-xs text-muted-foreground">{m.functie}</p>}
-                          </div>
-                        </label>
-                      );
-                    })}
-                  </div>
-                  {!bewerkenId && dialoog.geselecteerdeMedewerkers.length > 1 && (
-                    <p className="text-xs text-muted-foreground">
-                      {dialoog.geselecteerdeMedewerkers.length} medewerkers geselecteerd — er worden {dialoog.geselecteerdeMedewerkers.length} afzonderlijke planningitems aangemaakt.
-                    </p>
-                  )}
-                </div>
-
-                {/* Notities */}
-                <div className="space-y-1.5">
-                  <Label>Notities</Label>
-                  <Textarea
-                    rows={2}
-                    value={dialoog.notities}
-                    onChange={(e) => setDialoog((d) => d ? { ...d, notities: e.target.value } : d)}
-                    placeholder="Aanvullende opmerkingen..."
-                  />
-                </div>
-
-                {/* Toolbox advies */}
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label className="flex items-center gap-1.5">
-                      <Sparkles className="h-3.5 w-3.5 text-amber-500" />
-                      Toolbox advies
-                    </Label>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      className="h-7 text-xs"
-                      disabled={!dialoog.titel || toolboxSuggestieMut.isPending}
-                      onClick={() => {
-                        setToolboxAdvies(null);
-                        toolboxSuggestieMut.mutate({ data: { werkzaamheid: dialoog.titel } });
-                      }}
-                    >
-                      {toolboxSuggestieMut.isPending ? "Analyseren..." : toolboxAdvies ? "Opnieuw" : "Analyseer"}
-                    </Button>
-                  </div>
-                  {toolboxAdvies === null && !toolboxSuggestieMut.isPending && (
-                    <p className="text-xs text-muted-foreground">
-                      Klik op Analyseer om relevante toolboxen te suggereren op basis van de werkzaamheid.
-                    </p>
-                  )}
-                  {toolboxSuggestieMut.isPending && (
-                    <div className="rounded-md border bg-amber-50 p-3 text-xs text-amber-700">
-                      AI analyseert de werkzaamheid...
-                    </div>
-                  )}
-                  {toolboxAdvies && toolboxAdvies.length === 0 && (
-                    <p className="text-xs text-muted-foreground">Geen relevante toolboxen gevonden.</p>
-                  )}
-                  {toolboxAdvies && toolboxAdvies.length > 0 && (
-                    <div className="rounded-md border divide-y bg-amber-50">
-                      {toolboxAdvies.map((t) => (
-                        <div key={t.id} className="flex items-start gap-2 px-3 py-2">
-                          <div className="min-w-0 flex-1">
-                            <p className="text-xs font-medium text-slate-800">{t.titel}</p>
-                            <p className="text-xs text-muted-foreground">{t.reden}</p>
-                          </div>
-                          <Link
-                            href={`/veiligheid/toolboxen/${t.id}`}
-                            className="shrink-0 text-primary hover:text-primary/80"
-                            target="_blank"
-                          >
-                            <ExternalLink className="h-3.5 w-3.5" />
-                          </Link>
-                        </div>
-                      ))}
-                    </div>
-                  )}
                 </div>
               </div>
-            )}
-            <DialogFooter>
+
+              {/* Dagdeel */}
+              <div className="space-y-1.5">
+                <Label>Dagdeel</Label>
+                <div className="grid grid-cols-5 gap-1.5">
+                  {DAGDELEN.map((dd) => (
+                    <button
+                      key={dd.key}
+                      type="button"
+                      onClick={() => kiesDagdeel(dd.key)}
+                      className={`rounded border px-1.5 py-2 text-xs text-center transition-all ${dialoog.dagdeel === dd.key ? "border-primary bg-primary/10 text-primary font-medium" : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50"}`}
+                    >
+                      <p className="font-medium">{dd.label}</p>
+                      <p className="text-[9px] opacity-70 leading-tight">{dd.sub}</p>
+                    </button>
+                  ))}
+                </div>
+
+                {/* Tijdsloten-picker */}
+                {dialoog.dagdeel === "tijdsloten" && (
+                  <div className="mt-2 rounded border border-slate-200 bg-slate-50 p-3 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs font-medium text-slate-600">Selecteer blokken (07:30–16:00, pauze 12:00–12:30)</p>
+                      {dialoog.geselecteerdeTijdsloten.length > 0 && (
+                        <p className="text-xs text-primary font-medium">
+                          {dialoog.geselecteerdeTijdsloten.length * 0.5}u · {dialoog.tijd_start}–{dialoog.tijd_eind}
+                        </p>
+                      )}
+                    </div>
+                    {[HALVE_UREN.slice(0, 9), HALVE_UREN.slice(9, 16)].map((rij, ri) => (
+                      <div key={ri} className={`grid gap-1 ${ri === 0 ? "grid-cols-9" : "grid-cols-7"}`}>
+                        {rij.map((slot) => {
+                          const actief = dialoog.geselecteerdeTijdsloten.includes(slot);
+                          return (
+                            <button
+                              key={slot}
+                              type="button"
+                              onClick={() => toggleTijdslot(slot)}
+                              className={`rounded text-[9px] font-mono py-1.5 border transition-all select-none ${actief ? "bg-primary text-white border-primary font-semibold" : "bg-white text-slate-500 border-slate-200 hover:border-primary/40 hover:bg-primary/5"}`}
+                            >
+                              {slot}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    ))}
+                    {dialoog.geselecteerdeTijdsloten.length === 0 && (
+                      <p className="text-[10px] text-muted-foreground text-center pt-0.5">Geen blokken geselecteerd</p>
+                    )}
+                  </div>
+                )}
+
+                {/* Specifiek */}
+                {dialoog.dagdeel === "specifiek" && (
+                  <div className="grid grid-cols-3 gap-3 mt-2">
+                    <div className="space-y-1">
+                      <Label className="text-xs">Starttijd</Label>
+                      <Input type="time" value={dialoog.tijd_start} onChange={(e) => setDialoog((d) => d ? { ...d, tijd_start: e.target.value } : d)} />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Eindtijd</Label>
+                      <Input type="time" value={dialoog.tijd_eind} onChange={(e) => setDialoog((d) => d ? { ...d, tijd_eind: e.target.value } : d)} />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Uren</Label>
+                      <Input type="number" step="0.5" min="0.5" max="12" value={dialoog.uren} onChange={(e) => setDialoog((d) => d ? { ...d, uren: e.target.value } : d)} />
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Medewerkers */}
+              <div className="space-y-1.5">
+                <Label>{bewerkenId ? "Medewerker" : "Medewerkers (meerdere mogelijk)"}</Label>
+                <div className="max-h-44 overflow-y-auto rounded border divide-y">
+                  {(medewerkers as Medewerker[]).length === 0 ? (
+                    <p className="text-xs text-muted-foreground p-3">Geen medewerkers gevonden.</p>
+                  ) : (medewerkers as Medewerker[]).map((m) => {
+                    const geselecteerd = dialoog.geselecteerdeMedewerkers.includes(m.id);
+                    return (
+                      <label
+                        key={m.id}
+                        className={`flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-slate-50 transition-colors ${geselecteerd ? "bg-primary/5" : ""}`}
+                      >
+                        <Checkbox
+                          checked={geselecteerd}
+                          onCheckedChange={() => toggleMedewerker(m.id)}
+                          disabled={bewerkenId !== null && !geselecteerd}
+                        />
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-slate-800">{m.naam}</p>
+                          {m.functie && <p className="text-xs text-muted-foreground">{m.functie}</p>}
+                        </div>
+                      </label>
+                    );
+                  })}
+                </div>
+                {!bewerkenId && dialoog.geselecteerdeMedewerkers.length > 1 && (
+                  <p className="text-xs text-muted-foreground">
+                    {dialoog.geselecteerdeMedewerkers.length} medewerkers geselecteerd — er worden {dialoog.geselecteerdeMedewerkers.length} afzonderlijke planningitems aangemaakt.
+                  </p>
+                )}
+              </div>
+
+              {/* Notities */}
+              <div className="space-y-1.5">
+                <Label>Notities</Label>
+                <Textarea
+                  rows={2}
+                  value={dialoog.notities}
+                  onChange={(e) => setDialoog((d) => d ? { ...d, notities: e.target.value } : d)}
+                  placeholder="Aanvullende opmerkingen..."
+                />
+              </div>
+
+              {/* Toolbox advies */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label className="flex items-center gap-1.5">
+                    <Sparkles className="h-3.5 w-3.5 text-amber-500" />
+                    Toolbox advies
+                  </Label>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="h-7 text-xs"
+                    disabled={!dialoog.titel || toolboxSuggestieMut.isPending}
+                    onClick={() => {
+                      setToolboxAdvies(null);
+                      toolboxSuggestieMut.mutate({ data: { werkzaamheid: dialoog.titel } });
+                    }}
+                  >
+                    {toolboxSuggestieMut.isPending ? "Analyseren..." : toolboxAdvies ? "Opnieuw" : "Analyseer"}
+                  </Button>
+                </div>
+                {toolboxAdvies === null && !toolboxSuggestieMut.isPending && (
+                  <p className="text-xs text-muted-foreground">
+                    Klik op Analyseer om relevante toolboxen te suggereren op basis van de werkzaamheid.
+                  </p>
+                )}
+                {toolboxSuggestieMut.isPending && (
+                  <div className="rounded-md border bg-amber-50 p-3 text-xs text-amber-700">AI analyseert de werkzaamheid...</div>
+                )}
+                {toolboxAdvies && toolboxAdvies.length === 0 && (
+                  <p className="text-xs text-muted-foreground">Geen relevante toolboxen gevonden.</p>
+                )}
+                {toolboxAdvies && toolboxAdvies.length > 0 && (
+                  <div className="rounded-md border divide-y bg-amber-50">
+                    {toolboxAdvies.map((t) => (
+                      <div key={t.id} className="flex items-start gap-2 px-3 py-2">
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs font-medium text-slate-800">{t.titel}</p>
+                          <p className="text-xs text-muted-foreground">{t.reden}</p>
+                        </div>
+                        <Link href={`/veiligheid/toolboxen/${t.id}`} className="shrink-0 text-primary hover:text-primary/80" target="_blank">
+                          <ExternalLink className="h-3.5 w-3.5" />
+                        </Link>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Paneel-footer */}
+            <div className="shrink-0 px-5 py-4 border-t bg-slate-50/80 flex items-center gap-2">
               {bewerkenId && (
                 <Button
                   variant="outline"
-                  className="mr-auto text-destructive hover:text-destructive"
+                  size="sm"
+                  className="text-destructive hover:text-destructive"
                   onClick={() => { deleteMut.mutate({ id: bewerkenId }); sluitDialoog(); }}
                 >
                   Verwijderen
                 </Button>
               )}
-              <Button variant="outline" onClick={sluitDialoog}>Annuleren</Button>
+              <div className="flex-1" />
+              <Button variant="outline" size="sm" onClick={sluitDialoog}>Annuleren</Button>
               <Button
+                size="sm"
                 onClick={handleOpslaan}
-                disabled={!dialoog?.titel || !dialoog?.datum || opslaan}
+                disabled={!dialoog.titel || !dialoog.datum || opslaan}
               >
-                {opslaan ? "Bezig..." : bewerkenId ? "Opslaan" : dialoog?.geselecteerdeMedewerkers && dialoog.geselecteerdeMedewerkers.length > 1 ? `${dialoog.geselecteerdeMedewerkers.length} items toevoegen` : "Toevoegen"}
+                {opslaan ? "Bezig..." : bewerkenId ? "Opslaan" : dialoog.geselecteerdeMedewerkers.length > 1 ? `${dialoog.geselecteerdeMedewerkers.length} items toevoegen` : "Toevoegen"}
               </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+            </div>
+          </aside>
+        )}
 
       </div>
     </TooltipProvider>
