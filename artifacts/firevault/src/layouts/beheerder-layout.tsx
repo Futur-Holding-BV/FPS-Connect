@@ -257,6 +257,34 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
                         <InUitvoering />
                       </SidebarMenuButton>
                     </SidebarMenuItem>
+                    {featureFlags.planning ? (
+                      <SidebarMenuItem className="pl-5">
+                        <SidebarMenuButton
+                          asChild
+                          isActive={location === "/modules/planning" || location.startsWith("/modules/planning/")}
+                        >
+                          <Link href="/modules/planning">
+                            <CalendarDays />
+                            <span>Planning</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    ) : (
+                      <SidebarMenuItem className="pl-5">
+                        <SidebarMenuButton disabled>
+                          <CalendarDays />
+                          <span>Planning</span>
+                          <InUitvoering />
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    )}
+                    <SidebarMenuItem className="pl-5">
+                      <SidebarMenuButton disabled>
+                        <HardHat />
+                        <span>Uitvoering</span>
+                        <InUitvoering />
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
                   </SidebarMenu>
                 </SidebarGroupContent>
               </SidebarGroup>
@@ -326,43 +354,6 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
                   </SidebarGroupContent>
                 </SidebarGroup>
               )}
-
-              {/* Uitvoering */}
-              <SidebarGroup>
-                <SidebarGroupLabel>Uitvoering</SidebarGroupLabel>
-                <SidebarGroupContent>
-                  <SidebarMenu>
-                    {featureFlags.planning ? (
-                      <SidebarMenuItem>
-                        <SidebarMenuButton
-                          asChild
-                          isActive={location === "/modules/planning" || location.startsWith("/modules/planning/")}
-                        >
-                          <Link href="/modules/planning">
-                            <CalendarDays />
-                            <span>Planning</span>
-                          </Link>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                    ) : (
-                      <SidebarMenuItem>
-                        <SidebarMenuButton disabled>
-                          <CalendarDays />
-                          <span>Planning</span>
-                          <InUitvoering />
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                    )}
-                    <SidebarMenuItem>
-                      <SidebarMenuButton disabled>
-                        <HardHat />
-                        <span>Uitvoering</span>
-                        <InUitvoering />
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  </SidebarMenu>
-                </SidebarGroupContent>
-              </SidebarGroup>
 
               {/* Oplevering */}
               <SidebarGroup>
