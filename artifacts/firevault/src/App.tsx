@@ -78,6 +78,11 @@ import JaarplanningPagina from "@/pages/personeel/jaarplanning";
 import GereedschappenPagina from "@/pages/gereedschappen/index";
 import GereedschapDetailPagina from "@/pages/gereedschappen/detail";
 import HallOfFamePagina from "@/pages/hall-of-fame";
+import AutoparkPagina from "@/pages/organisatie/autopark";
+import VerzekeringenPagina from "@/pages/organisatie/verzekeringen";
+import BedrijfsgegevensPagina from "@/pages/organisatie/bedrijfsgegevens";
+import JaarverslagenPagina from "@/pages/organisatie/jaarverslagen";
+import BedrijfsdocumentenPagina from "@/pages/organisatie/bedrijfsdocumenten";
 import DossiersPagina from "@/pages/dossiers/index";
 import OffertesPagina from "@/pages/offertes/index";
 import ProposalStudio from "@/pages/offertes/studio";
@@ -300,6 +305,13 @@ function ConnectPortal() {
         <Route path="/personeel" component={PersoneelPagina} />
         <Route path="/gereedschappen" component={GereedschappenPagina} />
         <Route path="/gereedschappen/:id" component={GereedschapDetailPagina} />
+
+        {/* ── Organisatie ── */}
+        <Route path="/organisatie/autopark" component={AutoparkPagina} />
+        <Route path="/organisatie/verzekeringen" component={VerzekeringenPagina} />
+        <Route path="/organisatie/bedrijfsgegevens" component={BedrijfsgegevensPagina} />
+        <Route path="/organisatie/jaarverslagen" component={JaarverslagenPagina} />
+        <Route path="/organisatie/bedrijfsdocumenten" component={BedrijfsdocumentenPagina} />
         <Route path="/uren" component={UrenPagina} />
         <Route path="/weekstaten" component={WeekstatenPagina} />
         <Route path="/hall-of-fame" component={HallOfFamePagina} />

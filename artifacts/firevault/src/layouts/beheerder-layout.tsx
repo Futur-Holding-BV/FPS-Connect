@@ -18,7 +18,7 @@ import {
   BookOpen, HardDriveUpload, CalendarCheck2, Settings2, ArchiveRestore,
   Inbox, Building2, Target, Handshake, Newspaper, CalendarRange, KeyRound,
   ClipboardCheck, AlertTriangle, FileArchive, Receipt, ArrowUpRight, ScrollText,
-  UserPlus, UserMinus,
+  UserPlus, UserMinus, Car,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { GebruikerMenu } from "@/components/gebruiker-menu";
@@ -597,41 +597,81 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
               )}
 
               {/* Organisatie */}
-              {(toonGereedschappen || toonPersoneel) && (
-                <SidebarGroup>
-                  <SidebarGroupLabel>Organisatie</SidebarGroupLabel>
-                  <SidebarGroupContent>
-                    <SidebarMenu>
-                      {toonPersoneel && (
-                        <SidebarMenuItem>
-                          <SidebarMenuButton
-                            asChild
-                            isActive={location === "/personeel/capaciteitsplanning"}
-                          >
-                            <Link href="/personeel/capaciteitsplanning">
-                              <BarChart3 />
-                              <span>Capaciteitsplanning</span>
-                            </Link>
-                          </SidebarMenuButton>
-                        </SidebarMenuItem>
-                      )}
-                      {toonGereedschappen && (
-                        <SidebarMenuItem>
-                          <SidebarMenuButton
-                            asChild
-                            isActive={location === "/gereedschappen" || location.startsWith("/gereedschappen/")}
-                          >
-                            <Link href="/gereedschappen">
-                              <Wrench />
-                              <span>{t("nav.gereedschappen")}</span>
-                            </Link>
-                          </SidebarMenuButton>
-                        </SidebarMenuItem>
-                      )}
-                    </SidebarMenu>
-                  </SidebarGroupContent>
-                </SidebarGroup>
-              )}
+              <SidebarGroup>
+                <SidebarGroupLabel>Organisatie</SidebarGroupLabel>
+                <SidebarGroupContent>
+                  <SidebarMenu>
+                    {toonGereedschappen && (
+                      <SidebarMenuItem className="pl-5">
+                        <SidebarMenuButton
+                          asChild
+                          isActive={location === "/gereedschappen" || location.startsWith("/gereedschappen/")}
+                        >
+                          <Link href="/gereedschappen">
+                            <Wrench />
+                            <span>{t("nav.gereedschappen")}</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    )}
+                    <SidebarMenuItem className="pl-5">
+                      <SidebarMenuButton
+                        asChild
+                        isActive={location === "/organisatie/autopark"}
+                      >
+                        <Link href="/organisatie/autopark">
+                          <Car />
+                          <span>Autopark</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                    <SidebarMenuItem className="pl-5">
+                      <SidebarMenuButton
+                        asChild
+                        isActive={location === "/organisatie/verzekeringen"}
+                      >
+                        <Link href="/organisatie/verzekeringen">
+                          <ShieldCheck />
+                          <span>Verzekeringen</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                    <SidebarMenuItem className="pl-5">
+                      <SidebarMenuButton
+                        asChild
+                        isActive={location === "/organisatie/bedrijfsgegevens"}
+                      >
+                        <Link href="/organisatie/bedrijfsgegevens">
+                          <Building2 />
+                          <span>Bedrijfsgegevens</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                    <SidebarMenuItem className="pl-5">
+                      <SidebarMenuButton
+                        asChild
+                        isActive={location === "/organisatie/jaarverslagen"}
+                      >
+                        <Link href="/organisatie/jaarverslagen">
+                          <BookOpen />
+                          <span>Jaarverslagen &amp; Rekeningen</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                    <SidebarMenuItem className="pl-5">
+                      <SidebarMenuButton
+                        asChild
+                        isActive={location === "/organisatie/bedrijfsdocumenten"}
+                      >
+                        <Link href="/organisatie/bedrijfsdocumenten">
+                          <Files />
+                          <span>Bedrijfsdocumenten</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              </SidebarGroup>
 
               {/* Personeel */}
               {(toonPersoneel || isHoofdbeheerder) && (
