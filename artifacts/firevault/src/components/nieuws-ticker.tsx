@@ -37,7 +37,7 @@ export function NieuwsTicker() {
         }
       `}</style>
 
-      <div className="fixed bottom-0 left-0 z-40 h-[10cm] flex items-stretch bg-[#1a1f2b] border-t border-white/10 text-white select-none w-full">
+      <div className="fixed bottom-0 left-0 z-40 h-14 flex items-stretch bg-[#1a1f2b] border-t border-white/10 text-white select-none w-full">
 
         {/* Nieuws-sectie — alleen wanneer niet verborgen */}
         {!nieuwsVerborgen ? (
