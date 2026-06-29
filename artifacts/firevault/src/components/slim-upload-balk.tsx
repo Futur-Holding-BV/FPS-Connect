@@ -13,7 +13,7 @@ import {
   Receipt,
   Users,
   PenLine,
-  BarChart3,
+  Archive,
   FolderOpen,
   Zap,
   ZapOff,
@@ -27,7 +27,7 @@ import { cn } from "@/lib/utils";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
-type Categorie = "bibliotheek" | "offerte" | "factuur" | "hrm" | "tekening" | "rapport" | "algemeen";
+type Categorie = "bibliotheek" | "offerte" | "factuur" | "hrm" | "tekening" | "snagstream" | "algemeen";
 type Vertrouwen = "laag" | "midden" | "hoog";
 
 interface Suggestie {
@@ -54,9 +54,9 @@ const CATEGORIE_INFO: Record<Categorie, { label: string; icoon: React.ReactNode;
   offerte:     { label: "Offertes",              icoon: <FileText className="h-4 w-4" />, pad: "/offertes",   kleur: "bg-amber-50 text-amber-700 border-amber-200" },
   factuur:     { label: "Facturen",              icoon: <Receipt className="h-4 w-4" />, pad: "/facturen",   kleur: "bg-emerald-50 text-emerald-700 border-emerald-200" },
   hrm:         { label: "Personeel / HRM",       icoon: <Users className="h-4 w-4" />,   pad: "/personeel",  kleur: "bg-purple-50 text-purple-700 border-purple-200" },
-  tekening:    { label: "Tekeningen",            icoon: <PenLine className="h-4 w-4" />, pad: "/documenten", kleur: "bg-sky-50 text-sky-700 border-sky-200" },
-  rapport:     { label: "Rapporten",             icoon: <BarChart3 className="h-4 w-4" />,pad: "/rapporten",  kleur: "bg-orange-50 text-orange-700 border-orange-200" },
-  algemeen:    { label: "Documenten (algemeen)", icoon: <FolderOpen className="h-4 w-4" />,pad: "/documenten",kleur: "bg-gray-50 text-gray-700 border-gray-200" },
+  tekening:    { label: "Tekeningen",            icoon: <PenLine className="h-4 w-4" />,  pad: "/documenten",  kleur: "bg-sky-50 text-sky-700 border-sky-200" },
+  snagstream:  { label: "Snagstream archief",    icoon: <Archive className="h-4 w-4" />,  pad: "/snagstream",  kleur: "bg-orange-50 text-orange-700 border-orange-200" },
+  algemeen:    { label: "Documenten (algemeen)", icoon: <FolderOpen className="h-4 w-4" />, pad: "/documenten", kleur: "bg-gray-50 text-gray-700 border-gray-200" },
 };
 
 const VERTROUWEN_KLEUR: Record<Vertrouwen, string> = {

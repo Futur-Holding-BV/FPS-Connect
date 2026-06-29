@@ -15,7 +15,7 @@ export const SLIM_UPLOAD_CATEGORIEEN = [
   "factuur",
   "hrm",
   "tekening",
-  "rapport",
+  "snagstream",
   "algemeen",
 ] as const;
 
@@ -51,8 +51,8 @@ function heuristischClassificeer(bestandsnaam: string, mime: string): SlimUpload
     categorie = "hrm";
   } else if (["tekening", "plattegrond", "dwg", "autocad", "plan"].some((k) => naam.includes(k)) || ext === "dwg") {
     categorie = "tekening";
-  } else if (["rapport", "verslag", "oplevering", "inspectie"].some((k) => naam.includes(k))) {
-    categorie = "rapport";
+  } else if (["rapport", "verslag", "oplevering", "inspectie", "report"].some((k) => naam.includes(k))) {
+    categorie = "snagstream";
   } else if (mime.startsWith("image/")) {
     categorie = "tekening";
   }
@@ -80,7 +80,7 @@ Mogelijke categorieën:
 - "factuur": Facturen, bonnen, creditnota's, rekeningen
 - "hrm": HR-documenten — arbeidscontracten, diploma's, certificaten, opleidingsbewijzen, loonstroken
 - "tekening": Tekeningen, plattegronden, CAD-bestanden, situatietekeningen
-- "rapport": Opleverrapporten, inspectierapporten, auditverslagen
+- "snagstream": Opleverrapporten, inspectierapporten, auditverslagen — deze worden opgeslagen in het Snagstream archief
 - "algemeen": Alles wat niet in bovenstaande past
 
 Geef uitsluitend geldige JSON terug met deze velden:
