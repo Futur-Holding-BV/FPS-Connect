@@ -315,6 +315,22 @@ export const ziekmeldingenTable = pgTable("ziekmeldingen", {
   bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
 });
 
+// Persooonsdocumenten per medewerker — ID-bewijs, paspoort, CV, rijbewijs-scan,
+// certificaten, arbeidscontract en overige personeelsdocumenten.
+export const medewerkerDocumentenTable = pgTable("medewerker_documenten", {
+  id: serial("id").primaryKey(),
+  medewerkerId: integer("medewerker_id").notNull().references(() => medewerkersTable.id, { onDelete: "cascade" }),
+  // type: id_bewijs | paspoort | cv | rijbewijs_scan | vca_certificaat | bhv_certificaat |
+  //        ehbo_certificaat | arbeidscontract | diploma | overig
+  type: text("type").notNull().default("overig"),
+  label: text("label"),
+  bestandsnaam: text("bestandsnaam").notNull(),
+  objectPath: text("object_path").notNull(),
+  contentType: text("content_type"),
+  aangemaaktDoorId: integer("aangemaakt_door_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
+  aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
+});
+
 export const insertWerkgeverSchema = createInsertSchema(werkgeversTable).omit({ id: true, aangemaaktOp: true, bijgewerktOp: true });
 export const insertFunctieSchema = createInsertSchema(functiesTable).omit({ id: true, aangemaaktOp: true, bijgewerktOp: true });
 export const insertMedewerkerSchema = createInsertSchema(medewerkersTable).omit({ id: true, aangemaaktOp: true, bijgewerktOp: true });
@@ -362,3 +378,4 @@ export type Feestdag = typeof feestdagenTable.$inferSelect;
 export type JaarAfsluitingRegel = typeof jaarAfsluitingRegelsTable.$inferSelect;
 export type InsertZiekmelding = z.infer<typeof insertZiekmeldingenSchema>;
 export type Ziekmelding = typeof ziekmeldingenTable.$inferSelect;
+export type MedewerkerDocument = typeof medewerkerDocumentenTable.$inferSelect;

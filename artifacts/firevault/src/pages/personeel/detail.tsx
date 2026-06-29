@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { Link, useParams } from "wouter";
 import { useQueryClient } from "@tanstack/react-query";
 import {
@@ -33,6 +33,8 @@ import {
   getGetHrmStatsQueryKey,
   useGetMedewerkerAchievements,
   useGetSalarisarchiefDocumenten,
+  useListMedewerkerDocumenten,
+  getListMedewerkerDocumentenQueryKey,
 } from "@workspace/api-client-react";
 import type {
   MedewerkerInput,
@@ -42,6 +44,7 @@ import type {
   MedewerkerOpleidingInput,
   VerlofAanvraag,
   VerlofAanvraagInput,
+  MedewerkerDocument,
 } from "@workspace/api-client-react";
 import { useRol } from "@/context/rol-context";
 import { Card, CardContent } from "@/components/ui/card";
@@ -65,7 +68,7 @@ import { useToast } from "@/hooks/use-toast";
 import {
   ArrowLeft, Pencil, Trash2, Plus, GraduationCap, Award, CalendarClock,
   Mail, Phone, Briefcase, ShieldCheck, AlertTriangle, Check, X,
-  MapPin, Car, FileText, Cake, Trophy,
+  MapPin, Car, FileText, Cake, Trophy, Upload, Download, FolderOpen,
 } from "lucide-react";
 
 const NIVEAUS = [
@@ -271,6 +274,224 @@ function PrestatieSectie({ medewerkerId }: { medewerkerId: number }) {
         </div>
       )}
     </div>
+  );
+}
+
+const DOCUMENT_TYPE_LABELS: Record<string, string> = {
+  identiteitsbewijs: "Identiteitsbewijs",
+  paspoort: "Paspoort",
+  verblijfsvergunning: "Verblijfsvergunning",
+  rijbewijs: "Rijbewijs",
+  vca_certificaat: "VCA certificaat",
+  bhv_certificaat: "BHV certificaat",
+  ehbo_certificaat: "EHBO certificaat",
+  contract: "Arbeidscontract",
+  loonstrook: "Loonstrook",
+  cv: "CV",
+  diploma: "Diploma",
+  overig: "Overig",
+};
+
+const DOCUMENT_TYPES = Object.keys(DOCUMENT_TYPE_LABELS);
+
+function DocumentenTab({ medewerkerId, magBewerken }: { medewerkerId: number; magBewerken: boolean }) {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploadBezig, setUploadBezig] = useState(false);
+  const [uploadType, setUploadType] = useState("overig");
+  const [uploadLabel, setUploadLabel] = useState("");
+  const [uploadDialoogOpen, setUploadDialoogOpen] = useState(false);
+  const [geselecteerdBestand, setGeselecteerdBestand] = useState<File | null>(null);
+
+  const { data: docs = [], isLoading } = useListMedewerkerDocumenten(medewerkerId, {
+    query: { queryKey: getListMedewerkerDocumentenQueryKey(medewerkerId) },
+  });
+
+  function bestandGekozen(e: React.ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    setGeselecteerdBestand(f);
+    setUploadDialoogOpen(true);
+    e.target.value = "";
+  }
+
+  async function uploaden() {
+    if (!geselecteerdBestand) return;
+    setUploadBezig(true);
+    try {
+      const form = new FormData();
+      form.append("bestand", geselecteerdBestand);
+      form.append("type", uploadType);
+      if (uploadLabel.trim()) form.append("label", uploadLabel.trim());
+      const resp = await fetch(`/api/medewerkers/${medewerkerId}/documenten`, { method: "POST", body: form });
+      if (!resp.ok) throw new Error(await resp.text());
+      await queryClient.invalidateQueries({ queryKey: getListMedewerkerDocumentenQueryKey(medewerkerId) });
+      toast({ title: "Document geüpload" });
+      setUploadDialoogOpen(false);
+      setGeselecteerdBestand(null);
+      setUploadLabel("");
+      setUploadType("overig");
+    } catch {
+      toast({ title: "Uploaden mislukt", variant: "destructive" });
+    } finally {
+      setUploadBezig(false);
+    }
+  }
+
+  async function verwijderen(doc: MedewerkerDocument) {
+    if (!confirm(`"${doc.bestandsnaam}" verwijderen?`)) return;
+    try {
+      const resp = await fetch(`/api/medewerkers/${medewerkerId}/documenten/${doc.id}`, { method: "DELETE" });
+      if (!resp.ok) throw new Error();
+      await queryClient.invalidateQueries({ queryKey: getListMedewerkerDocumentenQueryKey(medewerkerId) });
+      toast({ title: "Document verwijderd" });
+    } catch {
+      toast({ title: "Verwijderen mislukt", variant: "destructive" });
+    }
+  }
+
+  const groepenPerType = DOCUMENT_TYPES
+    .map((t) => ({ type: t, label: DOCUMENT_TYPE_LABELS[t], docs: docs.filter((d) => d.type === t) }))
+    .filter((g) => g.docs.length > 0);
+
+  const overige = docs.filter((d) => !DOCUMENT_TYPES.includes(d.type));
+
+  return (
+    <div className="space-y-4">
+      {magBewerken && (
+        <div className="flex justify-end">
+          <input
+            ref={fileInputRef}
+            type="file"
+            className="hidden"
+            accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.webp"
+            onChange={bestandGekozen}
+          />
+          <Button onClick={() => fileInputRef.current?.click()}>
+            <Upload className="h-4 w-4" />
+            Document uploaden
+          </Button>
+        </div>
+      )}
+
+      {isLoading ? (
+        <div className="space-y-2">
+          {[1,2,3].map((i) => <Skeleton key={i} className="h-14 w-full" />)}
+        </div>
+      ) : docs.length === 0 ? (
+        <Card>
+          <CardContent className="py-12 text-center text-muted-foreground">
+            <FolderOpen className="h-10 w-10 mx-auto mb-3 opacity-40" />
+            <p className="text-sm">Nog geen persoonsdocumenten geüpload.</p>
+            {magBewerken && (
+              <p className="text-xs mt-1">Klik op <span className="font-medium">Document uploaden</span> om te beginnen.</p>
+            )}
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="space-y-4">
+          {groepenPerType.map(({ type, label, docs: groepDocs }) => (
+            <div key={type}>
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">{label}</p>
+              <div className="space-y-2">
+                {groepDocs.map((doc) => (
+                  <DocumentRegel key={doc.id} doc={doc} magBewerken={magBewerken} onVerwijder={() => verwijderen(doc)} />
+                ))}
+              </div>
+            </div>
+          ))}
+          {overige.length > 0 && (
+            <div>
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Overig</p>
+              <div className="space-y-2">
+                {overige.map((doc) => (
+                  <DocumentRegel key={doc.id} doc={doc} magBewerken={magBewerken} onVerwijder={() => verwijderen(doc)} />
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      <Dialog open={uploadDialoogOpen} onOpenChange={(o) => { if (!uploadBezig) { setUploadDialoogOpen(o); if (!o) setGeselecteerdBestand(null); } }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Document uploaden</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <div className="space-y-1.5">
+              <Label>Bestandsnaam</Label>
+              <p className="text-sm text-muted-foreground truncate">{geselecteerdBestand?.name}</p>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Type document</Label>
+              <Select value={uploadType} onValueChange={setUploadType}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {DOCUMENT_TYPES.map((t) => (
+                    <SelectItem key={t} value={t}>{DOCUMENT_TYPE_LABELS[t]}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Label (optioneel)</Label>
+              <Input
+                value={uploadLabel}
+                onChange={(e) => setUploadLabel(e.target.value)}
+                placeholder="bijv. Geldig t/m 2026"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setUploadDialoogOpen(false); setGeselecteerdBestand(null); }} disabled={uploadBezig}>Annuleren</Button>
+            <Button onClick={uploaden} disabled={uploadBezig}>
+              {uploadBezig ? "Uploaden…" : "Uploaden"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+function DocumentRegel({ doc, magBewerken, onVerwijder }: { doc: MedewerkerDocument; magBewerken: boolean; onVerwijder: () => void }) {
+  const datum = new Date(doc.aangemaakt_op).toLocaleDateString("nl-NL", { day: "2-digit", month: "short", year: "numeric" });
+  return (
+    <Card>
+      <CardContent className="p-3 flex items-center justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <div className="text-sm font-medium truncate">{doc.label || doc.bestandsnaam}</div>
+          <div className="text-xs text-muted-foreground flex gap-2 mt-0.5">
+            {doc.label && <span className="truncate opacity-70">{doc.bestandsnaam}</span>}
+            <span>{datum}</span>
+          </div>
+        </div>
+        <div className="flex items-center gap-1 shrink-0">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7"
+            title="Downloaden"
+            onClick={() => window.open(doc.download_url ?? "#", "_blank")}
+          >
+            <Download className="h-3.5 w-3.5" />
+          </Button>
+          {magBewerken && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 text-muted-foreground hover:text-destructive"
+              title="Verwijderen"
+              onClick={onVerwijder}
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </Button>
+          )}
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -753,6 +974,7 @@ export default function MedewerkerDetailPagina() {
           <TabsTrigger value="verlof">Verlof</TabsTrigger>
           <TabsTrigger value="achtergrond"><FileText className="h-3.5 w-3.5 mr-1.5" />Achtergrond / CV</TabsTrigger>
           <TabsTrigger value="prestaties"><Trophy className="h-3.5 w-3.5 mr-1.5" />Prestaties</TabsTrigger>
+          <TabsTrigger value="documenten"><FileText className="h-3.5 w-3.5 mr-1.5" />Documenten</TabsTrigger>
           {(bevoegdheden.salarisarchief ?? 0) >= 1 && (
             <TabsTrigger value="salarisdocumenten">Salarisdocumenten</TabsTrigger>
           )}
@@ -992,6 +1214,11 @@ export default function MedewerkerDetailPagina() {
         {/* Prestaties */}
         <TabsContent value="prestaties">
           <PrestatieSectie medewerkerId={Number(id)} />
+        </TabsContent>
+
+        {/* Persoonsdocumenten */}
+        <TabsContent value="documenten" className="space-y-3">
+          <DocumentenTab medewerkerId={Number(id)} magBewerken={magSchrijven} />
         </TabsContent>
 
         {/* Salarisdocumenten */}

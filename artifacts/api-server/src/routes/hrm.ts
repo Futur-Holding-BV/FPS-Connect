@@ -35,14 +35,17 @@ import {
   jaarAfsluitingRegelsTable,
   ziekmeldingenTable,
   gebruikersTable,
+  medewerkerDocumentenTable,
 } from "@workspace/db";
+import { ObjectStorageService } from "../lib/objectStorage";
 import { eq, desc, and, ne, inArray, or, isNull, gte, lte, sql } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
 import { stelOpleidingenVoor } from "../services/opleiding-ai";
 import { maakOpenAiClient, heeftOpenAi } from "../lib/openai";
 import { logger } from "../lib/logger";
 
-const uploadGeheugem = multer({ storage: multer.memoryStorage(), limits: { fileSize: 20 * 1024 * 1024 } });
+const uploadGeheugem = multer({ storage: multer.memoryStorage(), limits: { fileSize: 50 * 1024 * 1024 } });
+const hrmStorage = new ObjectStorageService();
 
 const router = Router();
 
@@ -3435,6 +3438,137 @@ router.post("/medewerkers/:id/offboard", schrijven, async (req, res) => {
       cao: bijgewerkt.cao ?? null,
       bijgewerkt_op: bijgewerkt.bijgewerktOp?.toISOString() ?? null,
     });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// ── Medewerker persoonsdocumenten ────────────────────────────────────────────
+
+const DOCUMENT_TYPES_LABEL: Record<string, string> = {
+  id_bewijs: "ID-bewijs",
+  paspoort: "Paspoort",
+  cv: "CV",
+  rijbewijs_scan: "Rijbewijsscan",
+  vca_certificaat: "VCA-certificaat",
+  bhv_certificaat: "BHV-certificaat",
+  ehbo_certificaat: "EHBO-certificaat",
+  arbeidscontract: "Arbeidscontract",
+  diploma: "Diploma",
+  overig: "Overig",
+};
+
+// Zet object_path om naar een download-URL via de storage-proxy.
+// objectPath = "/objects/..." → download via /api/storage/objects/...
+function docDownloadUrl(objectPath: string): string {
+  const subPath = objectPath.startsWith("/objects/") ? objectPath.slice("/objects/".length) : objectPath;
+  return `/api/storage/objects/${subPath}`;
+}
+
+function mapMedewerkerDoc(d: typeof medewerkerDocumentenTable.$inferSelect) {
+  return {
+    id: d.id,
+    medewerker_id: d.medewerkerId,
+    type: d.type,
+    type_label: DOCUMENT_TYPES_LABEL[d.type] ?? d.type,
+    label: d.label ?? null,
+    bestandsnaam: d.bestandsnaam,
+    object_path: d.objectPath,
+    content_type: d.contentType ?? null,
+    download_url: docDownloadUrl(d.objectPath),
+    aangemaakt_op: d.aangemaaktOp.toISOString(),
+  };
+}
+
+router.get("/medewerkers/:id/documenten", lezen, async (req, res) => {
+  try {
+    const id = parseId(req.params.id);
+    const docs = await db
+      .select()
+      .from(medewerkerDocumentenTable)
+      .where(eq(medewerkerDocumentenTable.medewerkerId, id))
+      .orderBy(desc(medewerkerDocumentenTable.aangemaaktOp));
+    res.json(docs.map(mapMedewerkerDoc));
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+router.post(
+  "/medewerkers/:id/documenten",
+  schrijven,
+  uploadGeheugem.single("bestand"),
+  async (req, res) => {
+    try {
+      const medewerkerId = parseId(req.params.id);
+      const bestand = req.file;
+      if (!bestand) return res.status(400).json({ error: "Geen bestand meegestuurd" });
+
+      const type = (req.body.type as string | undefined)?.trim() || "overig";
+      const label = (req.body.label as string | undefined)?.trim() || null;
+      const ext = bestand.originalname.split(".").pop() ?? "bin";
+      const subPath = `medewerker-documenten/${medewerkerId}/${type}/${Date.now()}.${ext}`;
+
+      // uploadBestand retourneert "/objects/{subPath}"
+      const objectPath = await hrmStorage.uploadBestand(subPath, bestand.buffer, bestand.mimetype);
+
+      const [doc] = await db
+        .insert(medewerkerDocumentenTable)
+        .values({
+          medewerkerId,
+          type,
+          label,
+          bestandsnaam: bestand.originalname,
+          objectPath,
+          contentType: bestand.mimetype,
+          aangemaaktDoorId: req.session.userId ?? null,
+        })
+        .returning();
+
+      req.log.info({ medewerker_id: medewerkerId, type, bestandsnaam: bestand.originalname }, "Medewerker document geupload");
+      res.status(201).json(mapMedewerkerDoc(doc));
+    } catch (err) {
+      req.log.error(err);
+      res.status(500).json({ error: "Interne serverfout" });
+    }
+  },
+);
+
+router.get("/medewerkers/:id/documenten/:docId/download-url", lezen, async (req, res) => {
+  try {
+    const medewerkerId = parseId(req.params.id);
+    const docId = parseId(req.params.docId);
+
+    const [doc] = await db
+      .select()
+      .from(medewerkerDocumentenTable)
+      .where(and(eq(medewerkerDocumentenTable.id, docId), eq(medewerkerDocumentenTable.medewerkerId, medewerkerId)));
+
+    if (!doc) return res.status(404).json({ error: "Document niet gevonden" });
+    res.json({ download_url: docDownloadUrl(doc.objectPath) });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+router.delete("/medewerkers/:id/documenten/:docId", schrijven, async (req, res) => {
+  try {
+    const medewerkerId = parseId(req.params.id);
+    const docId = parseId(req.params.docId);
+
+    const [doc] = await db
+      .select()
+      .from(medewerkerDocumentenTable)
+      .where(and(eq(medewerkerDocumentenTable.id, docId), eq(medewerkerDocumentenTable.medewerkerId, medewerkerId)));
+
+    if (!doc) return res.status(404).json({ error: "Document niet gevonden" });
+
+    await db.delete(medewerkerDocumentenTable).where(eq(medewerkerDocumentenTable.id, docId));
+    req.log.info({ medewerker_id: medewerkerId, doc_id: docId }, "Medewerker document verwijderd");
+    res.status(204).end();
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Interne serverfout" });

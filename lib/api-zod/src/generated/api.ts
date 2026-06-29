@@ -8201,6 +8201,68 @@ export const OffboardMedewerkerResponse = zod.object({
 
 
 /**
+ * @summary Persoonsdocumenten van een medewerker (ID, CV, certificaten, etc.)
+ */
+export const ListMedewerkerDocumentenParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ListMedewerkerDocumentenResponseItem = zod.object({
+  "id": zod.number(),
+  "medewerker_id": zod.number(),
+  "type": zod.string(),
+  "type_label": zod.string().optional(),
+  "label": zod.string().nullish(),
+  "bestandsnaam": zod.string(),
+  "object_path": zod.string(),
+  "content_type": zod.string().nullish(),
+  "download_url": zod.string().nullish(),
+  "aangemaakt_op": zod.coerce.date()
+})
+export const ListMedewerkerDocumentenResponse = zod.array(ListMedewerkerDocumentenResponseItem)
+
+
+/**
+ * @summary Persoonsdocument uploaden voor medewerker
+ */
+export const UploadMedewerkerDocumentParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UploadMedewerkerDocumentBody = zod.object({
+  "bestand": zod.instanceof(File),
+  "type": zod.string().optional(),
+  "label": zod.string().optional()
+})
+
+export const UploadMedewerkerDocumentResponse = zod.void()
+
+
+/**
+ * @summary Download-URL ophalen voor medewerker persoonsdocument
+ */
+export const GetMedewerkerDocumentDownloadUrlParams = zod.object({
+  "id": zod.coerce.number(),
+  "docId": zod.coerce.number()
+})
+
+export const GetMedewerkerDocumentDownloadUrlResponse = zod.object({
+  "download_url": zod.string()
+})
+
+
+/**
+ * @summary Persoonsdocument van medewerker verwijderen
+ */
+export const DeleteMedewerkerDocumentParams = zod.object({
+  "id": zod.coerce.number(),
+  "docId": zod.coerce.number()
+})
+
+export const DeleteMedewerkerDocumentResponse = zod.void()
+
+
+/**
  * @summary Alle verlofaanvragen (centrale beoordelingslijst)
  */
 export const ListAlleVerlofAanvragenQueryParams = zod.object({

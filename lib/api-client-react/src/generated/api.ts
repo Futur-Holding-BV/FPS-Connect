@@ -177,6 +177,7 @@ import type {
   GetFactuurUploadUrl200,
   GetGebouwGevelbeeld200,
   GetLoonOutputParams,
+  GetMedewerkerDocumentDownloadUrl200,
   GetMijnLmraStatusParams,
   GetMijnWeekUrenParams,
   GetPlanningNacalculatieParams,
@@ -293,6 +294,8 @@ import type {
   MailTestmailInput,
   Medewerker,
   MedewerkerAchievementsResponse,
+  MedewerkerDocument,
+  MedewerkerDocumentUploadBody,
   MedewerkerInput,
   MedewerkerOnboardingInput,
   MedewerkerOpleiding,
@@ -22985,6 +22988,316 @@ export const useOffboardMedewerker = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getOffboardMedewerkerMutationOptions(options));
+    }
+
+export const getListMedewerkerDocumentenUrl = (id: number,) => {
+
+
+
+
+  return `/api/medewerkers/${id}/documenten`
+}
+
+/**
+ * @summary Persoonsdocumenten van een medewerker (ID, CV, certificaten, etc.)
+ */
+export const listMedewerkerDocumenten = async (id: number, options?: RequestInit): Promise<MedewerkerDocument[]> => {
+
+  return customFetch<MedewerkerDocument[]>(getListMedewerkerDocumentenUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListMedewerkerDocumentenQueryKey = (id: number,) => {
+    return [
+    `/api/medewerkers/${id}/documenten`
+    ] as const;
+    }
+
+
+export const getListMedewerkerDocumentenQueryOptions = <TData = Awaited<ReturnType<typeof listMedewerkerDocumenten>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listMedewerkerDocumenten>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListMedewerkerDocumentenQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listMedewerkerDocumenten>>> = ({ signal }) => listMedewerkerDocumenten(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listMedewerkerDocumenten>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListMedewerkerDocumentenQueryResult = NonNullable<Awaited<ReturnType<typeof listMedewerkerDocumenten>>>
+export type ListMedewerkerDocumentenQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Persoonsdocumenten van een medewerker (ID, CV, certificaten, etc.)
+ */
+
+export function useListMedewerkerDocumenten<TData = Awaited<ReturnType<typeof listMedewerkerDocumenten>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listMedewerkerDocumenten>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListMedewerkerDocumentenQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getUploadMedewerkerDocumentUrl = (id: number,) => {
+
+
+
+
+  return `/api/medewerkers/${id}/documenten`
+}
+
+/**
+ * @summary Persoonsdocument uploaden voor medewerker
+ */
+export const uploadMedewerkerDocument = async (id: number,
+    medewerkerDocumentUploadBody: MedewerkerDocumentUploadBody, options?: RequestInit): Promise<MedewerkerDocument> => {
+    const formData = new FormData();
+formData.append(`bestand`, medewerkerDocumentUploadBody.bestand);
+if(medewerkerDocumentUploadBody.type !== undefined) {
+ formData.append(`type`, medewerkerDocumentUploadBody.type);
+ }
+if(medewerkerDocumentUploadBody.label !== undefined) {
+ formData.append(`label`, medewerkerDocumentUploadBody.label);
+ }
+
+  return customFetch<MedewerkerDocument>(getUploadMedewerkerDocumentUrl(id),
+  {
+    ...options,
+    method: 'POST'
+    ,
+    body: formData
+  }
+);}
+
+
+
+
+export const getUploadMedewerkerDocumentMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof uploadMedewerkerDocument>>, TError,{id: number;data: BodyType<MedewerkerDocumentUploadBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof uploadMedewerkerDocument>>, TError,{id: number;data: BodyType<MedewerkerDocumentUploadBody>}, TContext> => {
+
+const mutationKey = ['uploadMedewerkerDocument'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof uploadMedewerkerDocument>>, {id: number;data: BodyType<MedewerkerDocumentUploadBody>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  uploadMedewerkerDocument(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UploadMedewerkerDocumentMutationResult = NonNullable<Awaited<ReturnType<typeof uploadMedewerkerDocument>>>
+    export type UploadMedewerkerDocumentMutationBody = BodyType<MedewerkerDocumentUploadBody>
+    export type UploadMedewerkerDocumentMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Persoonsdocument uploaden voor medewerker
+ */
+export const useUploadMedewerkerDocument = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof uploadMedewerkerDocument>>, TError,{id: number;data: BodyType<MedewerkerDocumentUploadBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof uploadMedewerkerDocument>>,
+        TError,
+        {id: number;data: BodyType<MedewerkerDocumentUploadBody>},
+        TContext
+      > => {
+      return useMutation(getUploadMedewerkerDocumentMutationOptions(options));
+    }
+
+export const getGetMedewerkerDocumentDownloadUrlUrl = (id: number,
+    docId: number,) => {
+
+
+
+
+  return `/api/medewerkers/${id}/documenten/${docId}/download-url`
+}
+
+/**
+ * @summary Download-URL ophalen voor medewerker persoonsdocument
+ */
+export const getMedewerkerDocumentDownloadUrl = async (id: number,
+    docId: number, options?: RequestInit): Promise<GetMedewerkerDocumentDownloadUrl200> => {
+
+  return customFetch<GetMedewerkerDocumentDownloadUrl200>(getGetMedewerkerDocumentDownloadUrlUrl(id,docId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetMedewerkerDocumentDownloadUrlQueryKey = (id: number,
+    docId: number,) => {
+    return [
+    `/api/medewerkers/${id}/documenten/${docId}/download-url`
+    ] as const;
+    }
+
+
+export const getGetMedewerkerDocumentDownloadUrlQueryOptions = <TData = Awaited<ReturnType<typeof getMedewerkerDocumentDownloadUrl>>, TError = ErrorType<unknown>>(id: number,
+    docId: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMedewerkerDocumentDownloadUrl>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetMedewerkerDocumentDownloadUrlQueryKey(id,docId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getMedewerkerDocumentDownloadUrl>>> = ({ signal }) => getMedewerkerDocumentDownloadUrl(id,docId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined && docId !== null && docId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getMedewerkerDocumentDownloadUrl>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetMedewerkerDocumentDownloadUrlQueryResult = NonNullable<Awaited<ReturnType<typeof getMedewerkerDocumentDownloadUrl>>>
+export type GetMedewerkerDocumentDownloadUrlQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Download-URL ophalen voor medewerker persoonsdocument
+ */
+
+export function useGetMedewerkerDocumentDownloadUrl<TData = Awaited<ReturnType<typeof getMedewerkerDocumentDownloadUrl>>, TError = ErrorType<unknown>>(
+ id: number,
+    docId: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMedewerkerDocumentDownloadUrl>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetMedewerkerDocumentDownloadUrlQueryOptions(id,docId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getDeleteMedewerkerDocumentUrl = (id: number,
+    docId: number,) => {
+
+
+
+
+  return `/api/medewerkers/${id}/documenten/${docId}`
+}
+
+/**
+ * @summary Persoonsdocument van medewerker verwijderen
+ */
+export const deleteMedewerkerDocument = async (id: number,
+    docId: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteMedewerkerDocumentUrl(id,docId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteMedewerkerDocumentMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteMedewerkerDocument>>, TError,{id: number;docId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteMedewerkerDocument>>, TError,{id: number;docId: number}, TContext> => {
+
+const mutationKey = ['deleteMedewerkerDocument'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteMedewerkerDocument>>, {id: number;docId: number}> = (props) => {
+          const {id,docId} = props ?? {};
+
+          return  deleteMedewerkerDocument(id,docId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteMedewerkerDocumentMutationResult = NonNullable<Awaited<ReturnType<typeof deleteMedewerkerDocument>>>
+
+    export type DeleteMedewerkerDocumentMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Persoonsdocument van medewerker verwijderen
+ */
+export const useDeleteMedewerkerDocument = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteMedewerkerDocument>>, TError,{id: number;docId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteMedewerkerDocument>>,
+        TError,
+        {id: number;docId: number},
+        TContext
+      > => {
+      return useMutation(getDeleteMedewerkerDocumentMutationOptions(options));
     }
 
 export const getListAlleVerlofAanvragenUrl = (params?: ListAlleVerlofAanvragenParams,) => {

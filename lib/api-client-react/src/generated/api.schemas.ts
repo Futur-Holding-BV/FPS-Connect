@@ -3375,6 +3375,28 @@ export interface MedewerkerOpleiding {
   bijgewerkt_op: string;
 }
 
+export interface MedewerkerDocumentUploadBody {
+  bestand: Blob;
+  type?: string;
+  label?: string;
+}
+
+export interface MedewerkerDocument {
+  id: number;
+  medewerker_id: number;
+  type: string;
+  type_label?: string;
+  /** @nullable */
+  label?: string | null;
+  bestandsnaam: string;
+  object_path: string;
+  /** @nullable */
+  content_type?: string | null;
+  /** @nullable */
+  download_url?: string | null;
+  aangemaakt_op: string;
+}
+
 export interface MedewerkerOpleidingInput {
   opleiding_id: number;
   status?: string;
@@ -7267,6 +7289,10 @@ export type GetCrmAiCoach503 = {
 export type ListInboxItemsParams = {
 status?: string;
 bestemming?: string;
+};
+
+export type GetMedewerkerDocumentDownloadUrl200 = {
+  download_url: string;
 };
 
 export type ListAlleVerlofAanvragenParams = {

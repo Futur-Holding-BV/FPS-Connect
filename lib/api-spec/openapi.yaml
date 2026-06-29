@@ -6522,6 +6522,98 @@ paths:
               schema:
                 $ref: "#/components/schemas/Medewerker"
 
+  /medewerkers/{id}/documenten:
+    get:
+      operationId: listMedewerkerDocumenten
+      tags: [personeel]
+      summary: Persoonsdocumenten van een medewerker (ID, CV, certificaten, etc.)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MedewerkerDocument"
+    post:
+      operationId: uploadMedewerkerDocument
+      tags: [personeel]
+      summary: Persoonsdocument uploaden voor medewerker
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: "#/components/schemas/MedewerkerDocumentUploadBody"
+      responses:
+        "201":
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MedewerkerDocument"
+
+  /medewerkers/{id}/documenten/{docId}/download-url:
+    get:
+      operationId: getMedewerkerDocumentDownloadUrl
+      tags: [personeel]
+      summary: Download-URL ophalen voor medewerker persoonsdocument
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+        - in: path
+          name: docId
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [download_url]
+                properties:
+                  download_url:
+                    type: string
+
+  /medewerkers/{id}/documenten/{docId}:
+    delete:
+      operationId: deleteMedewerkerDocument
+      tags: [personeel]
+      summary: Persoonsdocument van medewerker verwijderen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+        - in: path
+          name: docId
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Verwijderd
+
   /verlofaanvragen:
     get:
       operationId: listAlleVerlofAanvragen
@@ -18503,6 +18595,44 @@ components:
           type: string
         bijgewerkt_op:
           type: string
+
+    MedewerkerDocumentUploadBody:
+      type: object
+      required: [bestand]
+      properties:
+        bestand:
+          type: string
+          format: binary
+        type:
+          type: string
+        label:
+          type: string
+
+    MedewerkerDocument:
+      type: object
+      required: [id, medewerker_id, type, bestandsnaam, object_path, aangemaakt_op]
+      properties:
+        id:
+          type: integer
+        medewerker_id:
+          type: integer
+        type:
+          type: string
+        type_label:
+          type: string
+        label:
+          type: ["string", "null"]
+        bestandsnaam:
+          type: string
+        object_path:
+          type: string
+        content_type:
+          type: ["string", "null"]
+        download_url:
+          type: ["string", "null"]
+        aangemaakt_op:
+          type: string
+          format: date-time
 
     MedewerkerOpleidingInput:
       type: object
