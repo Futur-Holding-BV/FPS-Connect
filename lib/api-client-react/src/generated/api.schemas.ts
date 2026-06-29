@@ -5027,6 +5027,9 @@ export interface ModCalcRegel {
   materiaal_totaal?: number;
   mu_totaal?: number;
   arbeidsloon?: number;
+  /** Orientatie: "wand" of "plafond" */
+  wand_plafond?: string | null;
+  toepassing_tekst?: string | null;
 }
 
 export type ModCalcHeaderDetail = ModCalcHeader & {
@@ -5074,6 +5077,8 @@ export interface ModCalcRegelInput {
   klanttekst?: string | null;
   /** BTW-tarief: "21", "9", "verlegd" of "0" */
   btw_tarief?: string;
+  wand_plafond?: string | null;
+  toepassing_tekst?: string | null;
 }
 
 export interface UrenRegistratie {

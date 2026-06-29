@@ -172,6 +172,8 @@ function mapRegel(r: typeof modCalcRegelsTable.$inferSelect, normtijdCode?: stri
     materiaal_totaal: materiaalTotaal,
     mu_totaal: muTotaal,
     arbeidsloon,
+    wand_plafond: (r as any).wandPlafond ?? null,
+    toepassing_tekst: (r as any).toepassingTekst ?? null,
   };
 }
 
@@ -813,7 +815,8 @@ router.post("/modules/calculaties/:id/regels", schrijvenCalc, async (req, res) =
     const body = req.body as Record<string, unknown>;
     const { categorie = "arbeid", omschrijving, normtijd_id, eenheid = "st", volgorde = 0, opmerkingen,
       regelnummer, is_staartkosten = false, is_bouwplaatskosten = false,
-      hoofdstuk = "Overige werkzaamheden", klanttekst, btw_tarief = "21" } = body;
+      hoofdstuk = "Overige werkzaamheden", klanttekst, btw_tarief = "21",
+      wand_plafond, toepassing_tekst } = body;
     if (!omschrijving) return res.status(400).json({ error: "omschrijving is verplicht" });
 
     const { hv, t, mu, at, ob, totaal } = berekenRegelTotaal(body);
@@ -838,6 +841,8 @@ router.post("/modules/calculaties/:id/regels", schrijvenCalc, async (req, res) =
       hoofdstuk: String(hoofdstuk),
       klanttekst: klanttekst ? String(klanttekst) : null,
       btwTarief: String(btw_tarief),
+      wandPlafond: wand_plafond ? String(wand_plafond) : null,
+      toepassingTekst: toepassing_tekst ? String(toepassing_tekst) : null,
     } as typeof modCalcRegelsTable.$inferInsert).returning();
 
     res.status(201).json(mapRegel(row));
@@ -870,6 +875,8 @@ router.patch("/modules/calculaties/:id/regels/:regelId", schrijvenCalc, async (r
     if (body.hoofdstuk !== undefined) (update as any).hoofdstuk = String(body.hoofdstuk);
     if (body.klanttekst !== undefined) (update as any).klanttekst = body.klanttekst ? String(body.klanttekst) : null;
     if (body.btw_tarief !== undefined) (update as any).btwTarief = String(body.btw_tarief);
+    if (body.wand_plafond !== undefined) (update as any).wandPlafond = body.wand_plafond ? String(body.wand_plafond) : null;
+    if (body.toepassing_tekst !== undefined) (update as any).toepassingTekst = body.toepassing_tekst ? String(body.toepassing_tekst) : null;
     update.hoeveelheid = hv;
     update.tarief = t;
     (update as any).muPerEenheid = mu;

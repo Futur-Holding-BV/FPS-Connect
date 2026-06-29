@@ -98,6 +98,8 @@ export const modCalcRegelsTable = pgTable("mod_calc_regels", {
   hoofdstuk: text("hoofdstuk").notNull().default("Overige werkzaamheden"),
   klanttekst: text("klanttekst"),
   btwTarief: text("btw_tarief").notNull().default("21"),
+  wandPlafond: text("wand_plafond"),
+  toepassingTekst: text("toepassing_tekst"),
   aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
   bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
 });

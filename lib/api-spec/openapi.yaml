@@ -21403,6 +21403,13 @@ components:
           type: number
         arbeidsloon:
           type: number
+        wand_plafond:
+          type: string
+          nullable: true
+          description: 'Orientatie: "wand" of "plafond"'
+        toepassing_tekst:
+          type: string
+          nullable: true
 
     ModCalcRegelInput:
       type: object
@@ -21447,6 +21454,12 @@ components:
         btw_tarief:
           type: string
           description: 'BTW-tarief: "21", "9", "verlegd" of "0"'
+        wand_plafond:
+          type: string
+          nullable: true
+        toepassing_tekst:
+          type: string
+          nullable: true
 
     UrenRegistratie:
       type: object

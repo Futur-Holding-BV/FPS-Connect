@@ -25,4 +25,6 @@ export interface ModCalcRegelInput {
   klanttekst?: string | null;
   /** BTW-tarief: "21", "9", "verlegd" of "0" */
   btw_tarief?: string;
+  wand_plafond?: string | null;
+  toepassing_tekst?: string | null;
 }

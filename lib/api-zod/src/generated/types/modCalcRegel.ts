@@ -32,4 +32,7 @@ export interface ModCalcRegel {
   materiaal_totaal?: number;
   mu_totaal?: number;
   arbeidsloon?: number;
+  /** Orientatie: "wand" of "plafond" */
+  wand_plafond?: string | null;
+  toepassing_tekst?: string | null;
 }

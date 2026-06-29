@@ -122,18 +122,22 @@ const HOOFDSTUK_OPTIES = [
   "Overige werkzaamheden",
 ];
 
-// AI hint tabel (keyword → normtijd suggestie)
-const AI_HINTS: Array<{ keyword: string; mu: string; categorie: string; eenheid: string }> = [
-  { keyword: "doorvoering",  mu: "0.25", categorie: "arbeid",    eenheid: "st" },
-  { keyword: "branddeur",    mu: "1.50", categorie: "arbeid",    eenheid: "st" },
-  { keyword: "brandklep",    mu: "0.50", categorie: "arbeid",    eenheid: "st" },
-  { keyword: "manchet",      mu: "0.15", categorie: "arbeid",    eenheid: "st" },
-  { keyword: "coating",      mu: "0.08", categorie: "materiaal", eenheid: "m2" },
-  { keyword: "kit",          mu: "0.06", categorie: "materiaal", eenheid: "m1" },
-  { keyword: "beglazing",    mu: "2.00", categorie: "arbeid",    eenheid: "st" },
-  { keyword: "inspectie",    mu: "0.50", categorie: "regiepost", eenheid: "st" },
-  { keyword: "afdichting",   mu: "0.20", categorie: "arbeid",    eenheid: "st" },
-  { keyword: "schuim",       mu: "0.10", categorie: "materiaal", eenheid: "st" },
+// AI hint tabel (keyword → toepassing suggestie met normtijden)
+const TOEPASSING_HINTS: Array<{ keyword: string; toepassing: string; mu: string; categorie: string; eenheid: string }> = [
+  { keyword: "doorvoering",  toepassing: "Brandwerende doorvoering",  mu: "0.25", categorie: "arbeid",    eenheid: "st" },
+  { keyword: "branddeur",    toepassing: "Brandwerende deur",          mu: "1.50", categorie: "arbeid",    eenheid: "st" },
+  { keyword: "brandklep",    toepassing: "Brandklep",                  mu: "0.50", categorie: "arbeid",    eenheid: "st" },
+  { keyword: "manchet",      toepassing: "Brandmanchet",               mu: "0.15", categorie: "arbeid",    eenheid: "st" },
+  { keyword: "pvc",          toepassing: "PVC doorvoering",            mu: "0.25", categorie: "arbeid",    eenheid: "st" },
+  { keyword: "coating",      toepassing: "Brandwerende coating",       mu: "0.08", categorie: "materiaal", eenheid: "m2" },
+  { keyword: "kit",          toepassing: "Brandwerende kit",           mu: "0.06", categorie: "materiaal", eenheid: "m1" },
+  { keyword: "beglazing",    toepassing: "Brandwerende beglazing",     mu: "2.00", categorie: "arbeid",    eenheid: "st" },
+  { keyword: "inspectie",    toepassing: "Inspectie",                  mu: "0.50", categorie: "regiepost", eenheid: "st" },
+  { keyword: "afdichting",   toepassing: "Brandwerende afdichting",    mu: "0.20", categorie: "arbeid",    eenheid: "st" },
+  { keyword: "schuim",       toepassing: "Brandwerend schuim",         mu: "0.10", categorie: "materiaal", eenheid: "st" },
+  { keyword: "plaat",        toepassing: "Brandwerende plaat",         mu: "0.30", categorie: "materiaal", eenheid: "m2" },
+  { keyword: "stopverf",     toepassing: "Brandwerende stopverf",      mu: "0.12", categorie: "materiaal", eenheid: "st" },
+  { keyword: "houder",       toepassing: "Kabelhouder brandwerend",    mu: "0.10", categorie: "arbeid",    eenheid: "st" },
 ];
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -146,6 +150,7 @@ type RegelRow = {
   categorie: string;
   omschrijving: string;
   normtijd_id?: number | null;
+  normtijd_code?: string | null;
   eenheid: string;
   hoeveelheid: number;
   tarief: number;
@@ -164,6 +169,8 @@ type RegelRow = {
   mu_totaal: number;
   arbeidsloon: number;
   btw_tarief?: string | null;
+  wand_plafond?: string | null;
+  toepassing_tekst?: string | null;
 };
 
 type LocalDraft = {
@@ -182,6 +189,8 @@ type LocalDraft = {
   opmerkingen: string;
   regelnummer: string;
   btw_tarief: string;
+  wand_plafond: string;
+  toepassing_tekst: string;
 };
 
 const LEEG_DRAFT: LocalDraft = {
@@ -200,6 +209,8 @@ const LEEG_DRAFT: LocalDraft = {
   opmerkingen: "",
   regelnummer: "",
   btw_tarief: "21",
+  wand_plafond: "",
+  toepassing_tekst: "",
 };
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
@@ -220,7 +231,9 @@ function regelToDraft(r: RegelRow): LocalDraft {
     klanttekst: r.klanttekst ?? "",
     opmerkingen: r.opmerkingen ?? "",
     regelnummer: r.regelnummer ?? "",
-    btw_tarief: (r as any).btw_tarief ?? "21",
+    btw_tarief: r.btw_tarief ?? "21",
+    wand_plafond: r.wand_plafond ?? "",
+    toepassing_tekst: r.toepassing_tekst ?? "",
   };
 }
 
@@ -241,6 +254,8 @@ function draftToPayload(d: LocalDraft) {
     opmerkingen: d.opmerkingen || null,
     regelnummer: d.regelnummer || null,
     btw_tarief: d.btw_tarief || "21",
+    wand_plafond: d.wand_plafond || null,
+    toepassing_tekst: d.toepassing_tekst || null,
   };
 }
 
@@ -265,9 +280,16 @@ function fmt2(n: number) {
 
 function rnd(n: number) { return Math.round(n * 100) / 100; }
 
-function aiHintVoorOmschrijving(omschrijving: string) {
+function toepassingHintVoorOmschrijving(omschrijving: string) {
   const lower = omschrijving.toLowerCase();
-  return AI_HINTS.find((h) => lower.includes(h.keyword)) ?? null;
+  return TOEPASSING_HINTS.find((h) => lower.includes(h.keyword)) ?? null;
+}
+
+function detecteerWandPlafond(omschrijving: string): "wand" | "plafond" | "" {
+  const lower = omschrijving.toLowerCase();
+  if (lower.includes("wand") || lower.includes("muur")) return "wand";
+  if (lower.includes("plafond") || lower.includes("vloer")) return "plafond";
+  return "";
 }
 
 // ─── Tab-navigatie helper ────────────────────────────────────────────────────
@@ -303,6 +325,8 @@ function SpreadsheetRegelRij({
   onDuplicate,
   onEnterNaRegel,
   bezig,
+  toonOnderaanneming,
+  tarieven,
 }: {
   rij: RegelRow;
   weergave: Weergave;
@@ -311,38 +335,39 @@ function SpreadsheetRegelRij({
   onDuplicate: (rij: RegelRow) => void;
   onEnterNaRegel: (hoofdstuk: string, isStaart: boolean, isBouwplaats: boolean) => void;
   bezig: boolean;
+  toonOnderaanneming: boolean;
+  tarieven: Array<{ id: number; naam: string; tarief: number; categorie: string }>;
 }) {
   const rowRef = useRef<HTMLTableRowElement>(null);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<LocalDraft>(() => regelToDraft(rij));
-  const [showAiHint, setShowAiHint] = useState(false);
+  const [toepassingSuggestie, setToepassingSuggestie] = useState<typeof TOEPASSING_HINTS[0] | null>(null);
   const savingRef = useRef(false);
 
-  // Sync draft wanneer serverdata verandert (na bewaar)
   useEffect(() => {
-    if (!editing) {
-      setDraft(regelToDraft(rij));
-    }
+    if (!editing) setDraft(regelToDraft(rij));
   }, [rij, editing]);
 
   const upd = useCallback((updates: Partial<LocalDraft>) => {
-    setDraft((d) => ({ ...d, ...updates }));
-    if ("omschrijving" in updates) {
-      setShowAiHint(true);
-    }
+    setDraft((d) => {
+      const next = { ...d, ...updates };
+      if ("omschrijving" in updates) {
+        const wp = detecteerWandPlafond(next.omschrijving);
+        if (wp && !next.wand_plafond) next.wand_plafond = wp;
+        setToepassingSuggestie(toepassingHintVoorOmschrijving(next.omschrijving));
+      }
+      return next;
+    });
   }, []);
 
   const doSave = useCallback(() => {
     if (savingRef.current) return;
     savingRef.current = true;
     setEditing(false);
-    setShowAiHint(false);
+    setToepassingSuggestie(null);
     const payload = draftToPayload(draft);
-    if (payload.omschrijving.trim()) {
-      onSave(rij.id, payload);
-    } else {
-      setDraft(regelToDraft(rij));
-    }
+    if (payload.omschrijving.trim()) onSave(rij.id, payload);
+    else setDraft(regelToDraft(rij));
     setTimeout(() => { savingRef.current = false; }, 500);
   }, [draft, rij, onSave]);
 
@@ -354,84 +379,27 @@ function SpreadsheetRegelRij({
     }, 0);
   }, [editing, doSave]);
 
-  // Live berekening van regeltotalen op basis van draft
   const hv = parseFloat(draft.hoeveelheid) || 0;
   const t  = parseFloat(draft.tarief) || 0;
   const mu = parseFloat(draft.mu_per_eenheid) || 0;
   const at = parseFloat(draft.arbeids_tarief) || 0;
   const ob = parseFloat(draft.onderaanneming_bedrag) || 0;
-  const liveArb  = rnd(hv * mu * at);
-  const liveMat  = rnd(hv * t);
-  const liveTot  = rnd(liveArb + liveMat + ob);
+  const liveArb = rnd(hv * mu * at);
+  const liveMat = rnd(hv * t);
+  const liveTot = rnd(liveArb + liveMat + ob);
+  const arbDisplay = editing ? liveArb : rij.arbeidsloon;
+  const matDisplay = editing ? liveMat : rij.materiaal_totaal;
+  const totDisplay = editing ? liveTot : rij.totaal;
 
-  const arbDisplay = editing ? liveArb  : rij.arbeidsloon;
-  const matDisplay = editing ? liveMat  : rij.materiaal_totaal;
-  const totDisplay = editing ? liveTot  : rij.totaal;
+  const arbTariefOpties = tarieven.filter((t) => t.categorie === "arbeid" || t.categorie === "materieel");
 
-  const aiHint  = showAiHint ? aiHintVoorOmschrijving(draft.omschrijving) : null;
-  const isArb   = draft.categorie === "arbeid" || draft.categorie === "regiepost";
-  const isMat   = draft.categorie === "materiaal" || draft.categorie === "materieel"
-    || draft.categorie === "opslag" || draft.categorie === "stelpost";
-  const isOa    = draft.categorie === "onderaanneming";
+  const mkKD = (ci: number) => (e: React.KeyboardEvent) => {
+    handleTabNavigatieInRij(e, ci, rowRef, () => { doSave(); onEnterNaRegel(draft.hoofdstuk, draft.is_staartkosten, draft.is_bouwplaatskosten); });
+    if (e.key === "Enter") { e.preventDefault(); doSave(); onEnterNaRegel(draft.hoofdstuk, draft.is_staartkosten, draft.is_bouwplaatskosten); }
+    if (e.key === "Escape") { setEditing(false); setDraft(regelToDraft(rij)); }
+  };
 
-  const celKlasse = "px-1 py-0 text-sm";
-  const invoerKlasse =
-    "w-full h-full px-2 py-[5px] border-0 border-b border-primary/40 bg-transparent focus:border-primary focus:outline-none text-sm tabular-nums";
-
-  // Invoercel helper
-  function NumCel({
-    waarde,
-    field,
-    actief,
-    align = "right",
-    placeholder = "0",
-    breedte,
-    celIndex,
-  }: {
-    waarde: number | string;
-    field: keyof LocalDraft;
-    actief: boolean;
-    align?: "left" | "right" | "center";
-    placeholder?: string;
-    breedte: number;
-    celIndex: number;
-  }) {
-    if (!editing || !actief) {
-      const val = typeof waarde === "number"
-        ? (waarde !== 0 ? (field === "hoeveelheid" ? fmt2(waarde) : formatBedrag(waarde)) : "—")
-        : (waarde || "—");
-      return (
-        <td
-          style={{ width: breedte }}
-          className={cn(celKlasse, editing ? "bg-muted/30" : "cursor-pointer hover:bg-muted/40")}
-          onClick={() => { if (!editing) setEditing(true); }}
-        >
-          <div className={cn("px-2 py-[5px] tabular-nums text-muted-foreground", `text-${align}`)}>
-            {val}
-          </div>
-        </td>
-      );
-    }
-    return (
-      <td style={{ width: breedte }} className={cn(celKlasse, "bg-muted/40")}>
-        <input
-          type="number"
-          step="0.01"
-          min="0"
-          data-celindex={celIndex}
-          value={draft[field] as string}
-          onChange={(e) => upd({ [field]: e.target.value } as Partial<LocalDraft>)}
-          onKeyDown={(e) => {
-            handleTabNavigatieInRij(e, celIndex, rowRef, () => { doSave(); onEnterNaRegel(draft.hoofdstuk, draft.is_staartkosten, draft.is_bouwplaatskosten); });
-            if (e.key === "Enter") { e.preventDefault(); doSave(); onEnterNaRegel(draft.hoofdstuk, draft.is_staartkosten, draft.is_bouwplaatskosten); }
-            if (e.key === "Escape") { setEditing(false); setDraft(regelToDraft(rij)); }
-          }}
-          className={cn(invoerKlasse, `text-${align}`)}
-          placeholder={placeholder}
-        />
-      </td>
-    );
-  }
+  const invK = "w-full px-2 py-[5px] border-0 border-b border-primary/40 bg-transparent focus:border-primary focus:outline-none text-sm tabular-nums";
 
   return (
     <tr
@@ -439,128 +407,165 @@ function SpreadsheetRegelRij({
       onFocus={() => setEditing(true)}
       onBlur={handleRowBlur}
       className={cn(
-        "border-b border-border/40 group transition-colors relative",
+        "border-b border-border/40 group transition-colors",
         editing ? "bg-amber-50/20 outline outline-1 outline-primary/30" : "hover:bg-muted/30",
         bezig ? "opacity-50 pointer-events-none" : ""
       )}
     >
       {/* # */}
-      <td
-        className="px-2 py-[5px] text-xs text-muted-foreground/60 text-right w-10 cursor-pointer select-none"
-        onClick={() => setEditing(true)}
-      >
+      <td className="px-2 py-[5px] text-xs text-muted-foreground/50 text-right w-8 cursor-pointer select-none shrink-0" onClick={() => setEditing(true)}>
         {rij.regelnummer || rij.volgorde}
       </td>
 
-      {/* Omschrijving */}
-      <td className="px-1 py-0 min-w-[200px] max-w-[300px] relative">
+      {/* Omschrijving + categorie chip */}
+      <td className="px-1 py-0 min-w-[180px]">
         {editing ? (
-          <div className="relative">
+          <div>
             <input
               type="text"
               data-celindex={1}
               value={draft.omschrijving}
               onChange={(e) => upd({ omschrijving: e.target.value })}
-              onFocus={() => setShowAiHint(true)}
-              onKeyDown={(e) => {
-                handleTabNavigatieInRij(e, 1, rowRef, () => { doSave(); onEnterNaRegel(draft.hoofdstuk, draft.is_staartkosten, draft.is_bouwplaatskosten); });
-                if (e.key === "Enter") { e.preventDefault(); doSave(); onEnterNaRegel(draft.hoofdstuk, draft.is_staartkosten, draft.is_bouwplaatskosten); }
-                if (e.key === "Escape") { setEditing(false); setDraft(regelToDraft(rij)); }
-              }}
+              onKeyDown={mkKD(1)}
               className="w-full px-2 py-[5px] border-0 border-b border-primary/40 bg-transparent focus:border-primary focus:outline-none text-sm font-medium"
               placeholder="Omschrijving werkzaamheid..."
               autoFocus
             />
-            {aiHint && draft.omschrijving.length > 2 && (
-              <div className="absolute top-full left-0 z-20 mt-0.5 flex items-center gap-1.5 rounded border border-amber-200 bg-amber-50 px-2 py-1 text-xs shadow-md whitespace-nowrap">
-                <Sparkles className="h-3 w-3 text-amber-500 shrink-0" />
-                <span className="text-amber-800">
-                  AI: {aiHint.mu} MU &bull; {CATEGORIE_LABEL[aiHint.categorie]} &bull; {aiHint.eenheid}
-                </span>
-                <button
-                  type="button"
-                  onMouseDown={(e) => {
-                    e.preventDefault();
-                    upd({ mu_per_eenheid: aiHint.mu, categorie: aiHint.categorie, eenheid: aiHint.eenheid });
-                    setShowAiHint(false);
-                  }}
-                  className="ml-1 font-semibold text-amber-700 hover:text-amber-900 underline"
-                >
-                  Overnemen
-                </button>
-                <button
-                  type="button"
-                  onMouseDown={(e) => { e.preventDefault(); setShowAiHint(false); }}
-                  className="text-amber-400 hover:text-amber-600"
-                >
-                  <X className="h-3 w-3" />
-                </button>
-              </div>
-            )}
+            <div className="px-2 pb-0.5 pt-0">
+              <select
+                value={draft.categorie}
+                onChange={(e) => {
+                  const cat = e.target.value;
+                  const btw = cat === "onderaanneming" ? "verlegd" : draft.btw_tarief === "verlegd" ? "21" : draft.btw_tarief;
+                  upd({ categorie: cat, btw_tarief: btw });
+                }}
+                className="text-[10px] border-0 bg-transparent focus:outline-none text-muted-foreground cursor-pointer h-auto py-0 px-0"
+              >
+                {KOSTENSOORT_OPTIES.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+              </select>
+            </div>
           </div>
         ) : (
-          <div
-            onClick={() => setEditing(true)}
-            className="px-2 py-[5px] text-sm font-medium cursor-pointer truncate"
-          >
-            {rij.omschrijving || (
-              <span className="text-muted-foreground/40 italic font-normal">klik om te bewerken</span>
+          <div onClick={() => setEditing(true)} className="px-2 py-[5px] cursor-pointer flex items-center gap-1.5 min-w-0">
+            <span className="text-sm font-medium truncate">
+              {rij.omschrijving || <span className="text-muted-foreground/40 italic font-normal">klik om te bewerken</span>}
+            </span>
+            {rij.categorie !== "arbeid" && (
+              <span className={cn("text-[10px] px-1 py-px rounded-sm shrink-0 whitespace-nowrap", CATEGORIE_KLEUR[rij.categorie] ?? "bg-muted/50 text-muted-foreground")}>
+                {CATEGORIE_LABEL[rij.categorie] ?? rij.categorie}
+              </span>
             )}
           </div>
         )}
       </td>
 
-      {/* Kostensoort — intern + directie */}
+      {/* Wand / Plafond */}
       {(weergave === "intern" || weergave === "directie") && (
-        <td className="px-1 py-0 w-[124px]">
+        <td className="px-1 py-0 w-[68px] text-center">
           {editing ? (
-            <select
-              data-celindex={2}
-              value={draft.categorie}
-              onChange={(e) => {
-                const cat = e.target.value;
-                const btw = cat === "onderaanneming" ? "verlegd"
-                  : draft.btw_tarief === "verlegd" ? "21" : draft.btw_tarief;
-                upd({ categorie: cat, btw_tarief: btw });
-              }}
-              onKeyDown={(e) => {
-                handleTabNavigatieInRij(e, 2, rowRef, () => { doSave(); onEnterNaRegel(draft.hoofdstuk, draft.is_staartkosten, draft.is_bouwplaatskosten); });
-                if (e.key === "Enter") { e.preventDefault(); doSave(); }
-                if (e.key === "Escape") { setEditing(false); setDraft(regelToDraft(rij)); }
-              }}
-              className="w-full px-1 py-[5px] text-xs border-0 border-b border-primary/40 bg-transparent focus:border-primary focus:outline-none"
-            >
-              {KOSTENSOORT_OPTIES.map((o) => (
-                <option key={o.value} value={o.value}>{o.label}</option>
+            <div className="flex gap-0.5 justify-center py-[4px]">
+              {(["wand", "plafond", ""] as const).map((v) => (
+                <button
+                  key={v || "geen"}
+                  type="button"
+                  onMouseDown={(e) => { e.preventDefault(); upd({ wand_plafond: v }); }}
+                  className={cn(
+                    "text-[10px] px-1.5 py-0.5 rounded border transition-colors leading-tight",
+                    draft.wand_plafond === v
+                      ? "bg-primary text-primary-foreground border-primary"
+                      : "bg-background text-muted-foreground border-border hover:border-primary/60"
+                  )}
+                >
+                  {v === "wand" ? "W" : v === "plafond" ? "P" : "—"}
+                </button>
               ))}
-            </select>
+            </div>
           ) : (
-            <div onClick={() => setEditing(true)} className="px-2 py-[5px] cursor-pointer">
-              <span className={cn(
-                "text-xs rounded-sm px-1.5 py-0.5 font-medium",
-                CATEGORIE_KLEUR[rij.categorie] ?? "bg-muted/50 text-muted-foreground"
-              )}>
-                {CATEGORIE_LABEL[rij.categorie] ?? rij.categorie}
-              </span>
+            <div onClick={() => setEditing(true)} className="py-[5px] cursor-pointer text-center">
+              {rij.wand_plafond === "wand" ? (
+                <span className="text-xs px-1.5 py-px rounded bg-blue-50 text-blue-700 font-semibold">W</span>
+              ) : rij.wand_plafond === "plafond" ? (
+                <span className="text-xs px-1.5 py-px rounded bg-violet-50 text-violet-700 font-semibold">P</span>
+              ) : (
+                <span className="text-muted-foreground/30 text-xs">—</span>
+              )}
             </div>
           )}
         </td>
       )}
 
-      {/* Eenheid */}
-      <td className="px-1 py-0 w-[68px] text-center">
+      {/* Toepassing + AI suggestie */}
+      {(weergave === "intern" || weergave === "directie") && (
+        <td className="px-1 py-0 w-[148px] relative">
+          {editing ? (
+            <div className="relative">
+              <input
+                type="text"
+                data-celindex={2}
+                value={draft.toepassing_tekst}
+                onChange={(e) => upd({ toepassing_tekst: e.target.value })}
+                onKeyDown={mkKD(2)}
+                className="w-full px-2 py-[5px] border-0 border-b border-primary/40 bg-transparent focus:border-primary focus:outline-none text-xs"
+                placeholder="Toepassing..."
+              />
+              {toepassingSuggestie && !draft.toepassing_tekst && draft.omschrijving.length > 2 && (
+                <div className="absolute top-full left-0 z-30 mt-0.5 flex items-center gap-1 rounded border border-amber-200 bg-amber-50 px-2 py-1 text-[10px] shadow-lg whitespace-nowrap">
+                  <Sparkles className="h-2.5 w-2.5 text-amber-500 shrink-0" />
+                  <span className="text-amber-800 max-w-[100px] truncate">{toepassingSuggestie.toepassing}</span>
+                  <button
+                    type="button"
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      upd({
+                        toepassing_tekst: toepassingSuggestie.toepassing,
+                        mu_per_eenheid: toepassingSuggestie.mu,
+                        categorie: toepassingSuggestie.categorie,
+                        eenheid: toepassingSuggestie.eenheid,
+                      });
+                      setToepassingSuggestie(null);
+                    }}
+                    className="font-semibold text-amber-700 hover:text-amber-900 underline"
+                  >
+                    Ok
+                  </button>
+                  <button
+                    type="button"
+                    onMouseDown={(e) => { e.preventDefault(); setToepassingSuggestie(null); }}
+                    className="text-amber-400 hover:text-amber-600"
+                  >
+                    <X className="h-2.5 w-2.5" />
+                  </button>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div onClick={() => setEditing(true)} className="px-2 py-[5px] text-xs text-muted-foreground cursor-pointer truncate">
+              {rij.toepassing_tekst || rij.normtijd_code || <span className="text-muted-foreground/30">—</span>}
+            </div>
+          )}
+        </td>
+      )}
+
+      {/* Aantal */}
+      <td className="px-1 py-0 w-[72px]">
         {editing ? (
-          <select
-            data-celindex={3}
-            value={draft.eenheid}
-            onChange={(e) => upd({ eenheid: e.target.value })}
-            onKeyDown={(e) => {
-              handleTabNavigatieInRij(e, 3, rowRef, () => { doSave(); onEnterNaRegel(draft.hoofdstuk, draft.is_staartkosten, draft.is_bouwplaatskosten); });
-              if (e.key === "Enter") { e.preventDefault(); doSave(); }
-              if (e.key === "Escape") { setEditing(false); setDraft(regelToDraft(rij)); }
-            }}
-            className="w-full px-1 py-[5px] text-xs border-0 border-b border-primary/40 bg-transparent focus:border-primary focus:outline-none text-center"
-          >
+          <input type="number" step="0.01" min="0" data-celindex={3}
+            value={draft.hoeveelheid}
+            onChange={(e) => upd({ hoeveelheid: e.target.value })}
+            onKeyDown={mkKD(3)}
+            className={cn(invK, "text-right")} placeholder="1" />
+        ) : (
+          <div onClick={() => setEditing(true)} className="px-2 py-[5px] text-sm text-right tabular-nums cursor-pointer">
+            {fmt2(rij.hoeveelheid)}
+          </div>
+        )}
+      </td>
+
+      {/* Eenheid */}
+      <td className="px-1 py-0 w-[58px]">
+        {editing ? (
+          <select data-celindex={4} value={draft.eenheid} onChange={(e) => upd({ eenheid: e.target.value })} onKeyDown={mkKD(4)}
+            className="w-full px-1 py-[5px] text-xs border-0 border-b border-primary/40 bg-transparent focus:border-primary focus:outline-none text-center">
             {EENHEDEN.map((e) => <option key={e} value={e}>{e}</option>)}
           </select>
         ) : (
@@ -570,141 +575,114 @@ function SpreadsheetRegelRij({
         )}
       </td>
 
-      {/* Hoeveelheid */}
-      <NumCel waarde={rij.hoeveelheid} field="hoeveelheid" actief={true} breedte={76} placeholder="1" celIndex={4} />
-
-      {/* MU/eenh — intern + directie */}
+      {/* Materiaal inkoop/stk */}
       {(weergave === "intern" || weergave === "directie") && (
-        <NumCel waarde={rij.mu_per_eenheid} field="mu_per_eenheid" actief={isArb} breedte={76} placeholder="0.00" celIndex={5} />
-      )}
-
-      {/* Arbeidstarief — intern + directie */}
-      {(weergave === "intern" || weergave === "directie") && (
-        <NumCel waarde={rij.arbeids_tarief} field="arbeids_tarief" actief={isArb} breedte={88} placeholder="0.00" celIndex={6} />
-      )}
-
-      {/* Arbeidskosten (berekend) — intern + directie */}
-      {(weergave === "intern" || weergave === "directie") && (
-        <td className="px-2 py-[5px] w-[96px] text-right text-sm tabular-nums text-muted-foreground cursor-pointer" onClick={() => setEditing(true)}>
-          {arbDisplay > 0 ? formatBedrag(arbDisplay) : "—"}
+        <td className="px-1 py-0 w-[96px]">
+          {editing ? (
+            <input type="number" step="0.01" min="0" data-celindex={5}
+              value={draft.tarief} onChange={(e) => upd({ tarief: e.target.value })} onKeyDown={mkKD(5)}
+              className={cn(invK, "text-right")} placeholder="0,00" />
+          ) : (
+            <div onClick={() => setEditing(true)} className="px-2 py-[5px] text-sm text-right tabular-nums text-muted-foreground cursor-pointer">
+              {rij.tarief > 0 ? formatBedrag(rij.tarief) : <span className="text-muted-foreground/30">—</span>}
+            </div>
+          )}
         </td>
       )}
 
-      {/* Prijs/eenh — intern + directie */}
+      {/* Materiaal totaal (berekend) */}
       {(weergave === "intern" || weergave === "directie") && (
-        <NumCel waarde={rij.tarief} field="tarief" actief={isMat} breedte={88} placeholder="0.00" celIndex={7} />
-      )}
-
-      {/* Materiaal totaal (berekend) — intern + directie */}
-      {(weergave === "intern" || weergave === "directie") && (
-        <td className="px-2 py-[5px] w-[96px] text-right text-sm tabular-nums text-muted-foreground cursor-pointer" onClick={() => setEditing(true)}>
-          {matDisplay > 0 ? formatBedrag(matDisplay) : "—"}
+        <td className="px-2 py-[5px] w-[96px] text-right text-sm tabular-nums cursor-pointer" onClick={() => setEditing(true)}>
+          {matDisplay > 0
+            ? <span className="text-muted-foreground">{formatBedrag(matDisplay)}</span>
+            : <span className="text-muted-foreground/30">—</span>}
         </td>
       )}
 
-      {/* Onderaanneming — intern + directie */}
+      {/* Normtijd u/stk */}
       {(weergave === "intern" || weergave === "directie") && (
-        <NumCel waarde={rij.onderaanneming_bedrag} field="onderaanneming_bedrag" actief={isOa} breedte={96} placeholder="0.00" celIndex={8} />
+        <td className="px-1 py-0 w-[80px]">
+          {editing ? (
+            <input type="number" step="0.01" min="0" data-celindex={6}
+              value={draft.mu_per_eenheid} onChange={(e) => upd({ mu_per_eenheid: e.target.value })} onKeyDown={mkKD(6)}
+              className={cn(invK, "text-right")} placeholder="0,00" />
+          ) : (
+            <div onClick={() => setEditing(true)} className="px-2 py-[5px] text-sm text-right tabular-nums text-muted-foreground cursor-pointer">
+              {rij.mu_per_eenheid > 0 ? <span>{fmt2(rij.mu_per_eenheid)} <span className="text-[10px]">u</span></span> : <span className="text-muted-foreground/30">—</span>}
+            </div>
+          )}
+        </td>
       )}
 
-      {/* BTW — intern only */}
+      {/* Arbeidstarief €/u */}
       {weergave === "intern" && (
-        <td className="px-1 py-0 w-[72px] text-center">
+        <td className="px-1 py-0 w-[92px]">
           {editing ? (
-            <select
-              data-celindex={9}
-              value={draft.btw_tarief}
-              onChange={(e) => upd({ btw_tarief: e.target.value })}
-              onKeyDown={(e) => {
-                handleTabNavigatieInRij(e, 9, rowRef, () => { doSave(); onEnterNaRegel(draft.hoofdstuk, draft.is_staartkosten, draft.is_bouwplaatskosten); });
-                if (e.key === "Enter") { e.preventDefault(); doSave(); }
-                if (e.key === "Escape") { setEditing(false); setDraft(regelToDraft(rij)); }
-              }}
-              className="w-full px-1 py-[5px] text-xs border-0 border-b border-primary/40 bg-transparent focus:border-primary focus:outline-none"
-            >
-              {BTW_OPTIES.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-            </select>
+            arbTariefOpties.length > 0 ? (
+              <select data-celindex={7}
+                value={draft.arbeids_tarief}
+                onChange={(e) => upd({ arbeids_tarief: e.target.value })}
+                onKeyDown={mkKD(7)}
+                className="w-full px-1 py-[5px] text-xs border-0 border-b border-primary/40 bg-transparent focus:border-primary focus:outline-none">
+                <option value="0">— geen —</option>
+                {arbTariefOpties.map((tr) => (
+                  <option key={tr.id} value={String(tr.tarief)}>{tr.naam} — €{tr.tarief}</option>
+                ))}
+              </select>
+            ) : (
+              <input type="number" step="0.01" min="0" data-celindex={7}
+                value={draft.arbeids_tarief} onChange={(e) => upd({ arbeids_tarief: e.target.value })} onKeyDown={mkKD(7)}
+                className={cn(invK, "text-right")} placeholder="0,00" />
+            )
           ) : (
-            <div onClick={() => setEditing(true)} className="px-1 py-[5px] text-xs text-muted-foreground text-center cursor-pointer">
-              {(rij as any).btw_tarief === "verlegd" ? "Verlegd" : `${(rij as any).btw_tarief ?? 21}%`}
+            <div onClick={() => setEditing(true)} className="px-2 py-[5px] text-xs text-right tabular-nums text-muted-foreground cursor-pointer">
+              {rij.arbeids_tarief > 0 ? `€\u00a0${rij.arbeids_tarief}` : <span className="text-muted-foreground/30">—</span>}
             </div>
           )}
         </td>
       )}
 
-      {/* Interne notitie — intern + monteur */}
-      {(weergave === "intern" || weergave === "monteur") && (
-        <td className="px-1 py-0 w-[140px]">
+      {/* Arbeid totaal (berekend) */}
+      {(weergave === "intern" || weergave === "directie") && (
+        <td className="px-2 py-[5px] w-[96px] text-right text-sm tabular-nums cursor-pointer" onClick={() => setEditing(true)}>
+          {arbDisplay > 0
+            ? <span className="text-muted-foreground">{formatBedrag(arbDisplay)}</span>
+            : <span className="text-muted-foreground/30">—</span>}
+        </td>
+      )}
+
+      {/* Onderaanneming (conditioneel) */}
+      {toonOnderaanneming && (weergave === "intern" || weergave === "directie") && (
+        <td className="px-1 py-0 w-[96px]">
           {editing ? (
-            <input
-              type="text"
-              data-celindex={10}
-              value={draft.opmerkingen}
-              onChange={(e) => upd({ opmerkingen: e.target.value })}
-              onKeyDown={(e) => {
-                handleTabNavigatieInRij(e, 10, rowRef, () => { doSave(); onEnterNaRegel(draft.hoofdstuk, draft.is_staartkosten, draft.is_bouwplaatskosten); });
-                if (e.key === "Enter") { e.preventDefault(); doSave(); onEnterNaRegel(draft.hoofdstuk, draft.is_staartkosten, draft.is_bouwplaatskosten); }
-                if (e.key === "Escape") { setEditing(false); setDraft(regelToDraft(rij)); }
-              }}
-              className="w-full px-2 py-[5px] text-xs border-0 border-b border-primary/40 bg-transparent focus:border-primary focus:outline-none"
-              placeholder="Intern..."
-            />
+            <input type="number" step="0.01" min="0" data-celindex={8}
+              value={draft.onderaanneming_bedrag} onChange={(e) => upd({ onderaanneming_bedrag: e.target.value })} onKeyDown={mkKD(8)}
+              className={cn(invK, "text-right")} placeholder="0,00" />
           ) : (
-            <div onClick={() => setEditing(true)} className="px-2 py-[5px] text-xs text-muted-foreground cursor-pointer truncate">
-              {rij.opmerkingen || "—"}
+            <div onClick={() => setEditing(true)} className="px-2 py-[5px] text-sm text-right tabular-nums text-muted-foreground cursor-pointer">
+              {rij.onderaanneming_bedrag > 0 ? formatBedrag(rij.onderaanneming_bedrag) : <span className="text-muted-foreground/30">—</span>}
             </div>
           )}
         </td>
       )}
 
-      {/* Klanttekst offerte — intern + klant */}
-      {(weergave === "intern" || weergave === "klant") && (
-        <td className="px-1 py-0 w-[140px]">
-          {editing ? (
-            <input
-              type="text"
-              data-celindex={11}
-              value={draft.klanttekst}
-              onChange={(e) => upd({ klanttekst: e.target.value })}
-              onKeyDown={(e) => {
-                handleTabNavigatieInRij(e, 11, rowRef, () => { doSave(); onEnterNaRegel(draft.hoofdstuk, draft.is_staartkosten, draft.is_bouwplaatskosten); });
-                if (e.key === "Enter") { e.preventDefault(); doSave(); onEnterNaRegel(draft.hoofdstuk, draft.is_staartkosten, draft.is_bouwplaatskosten); }
-                if (e.key === "Escape") { setEditing(false); setDraft(regelToDraft(rij)); }
-              }}
-              className="w-full px-2 py-[5px] text-xs border-0 border-b border-primary/40 bg-transparent focus:border-primary focus:outline-none"
-              placeholder="Op offerte..."
-            />
-          ) : (
-            <div onClick={() => setEditing(true)} className="px-2 py-[5px] text-xs text-muted-foreground cursor-pointer truncate">
-              {rij.klanttekst || "—"}
-            </div>
-          )}
-        </td>
-      )}
-
-      {/* Totaal (berekend) */}
-      <td className="px-2 py-[5px] w-[100px] text-right text-sm tabular-nums font-semibold cursor-pointer" onClick={() => setEditing(true)}>
-        {formatBedrag(totDisplay)}
+      {/* Totaal */}
+      <td className="px-2 py-[5px] w-[104px] text-right text-sm tabular-nums font-semibold cursor-pointer" onClick={() => setEditing(true)}>
+        {totDisplay !== 0 ? formatBedrag(totDisplay) : <span className="text-muted-foreground/30">—</span>}
       </td>
 
-      {/* Acties — intern only */}
+      {/* Acties */}
       {weergave === "intern" && (
-        <td className="px-1 py-0 w-14 text-center">
+        <td className="px-1 py-0 w-12 text-center">
           <div className="flex items-center gap-0 justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-            <Button
-              variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-foreground"
-              title="Dupliceren"
-              tabIndex={-1}
-              onClick={(e) => { e.stopPropagation(); onDuplicate(rij); }}
-            >
+            <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-foreground"
+              title="Dupliceren" tabIndex={-1}
+              onClick={(e) => { e.stopPropagation(); onDuplicate(rij); }}>
               <Copy className="h-3 w-3" />
             </Button>
-            <Button
-              variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-destructive"
-              title="Verwijderen"
-              tabIndex={-1}
-              onClick={(e) => { e.stopPropagation(); onDelete(rij.id); }}
-            >
+            <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-destructive"
+              title="Verwijderen" tabIndex={-1}
+              onClick={(e) => { e.stopPropagation(); onDelete(rij.id); }}>
               <Trash2 className="h-3 w-3" />
             </Button>
           </div>
@@ -722,17 +700,32 @@ function NieuweRegelRij({
   onSave,
   onCancel,
   bezig,
+  toonOnderaanneming,
+  tarieven,
 }: {
   initialDraft: LocalDraft;
   weergave: Weergave;
   onSave: (payload: ReturnType<typeof draftToPayload>) => void;
   onCancel: () => void;
   bezig: boolean;
+  toonOnderaanneming: boolean;
+  tarieven: Array<{ id: number; naam: string; tarief: number; categorie: string }>;
 }) {
   const rowRef = useRef<HTMLTableRowElement>(null);
   const [draft, setDraft] = useState<LocalDraft>(initialDraft);
-  const [showAiHint, setShowAiHint] = useState(false);
-  const upd = (updates: Partial<LocalDraft>) => setDraft((d) => ({ ...d, ...updates }));
+  const [toepassingSuggestie, setToepassingSuggestie] = useState<typeof TOEPASSING_HINTS[0] | null>(null);
+
+  const upd = (updates: Partial<LocalDraft>) => {
+    setDraft((d) => {
+      const next = { ...d, ...updates };
+      if ("omschrijving" in updates) {
+        const wp = detecteerWandPlafond(next.omschrijving);
+        if (wp && !next.wand_plafond) next.wand_plafond = wp;
+        setToepassingSuggestie(toepassingHintVoorOmschrijving(next.omschrijving));
+      }
+      return next;
+    });
+  };
 
   const doSave = useCallback(() => {
     const p = draftToPayload(draft);
@@ -756,36 +749,16 @@ function NieuweRegelRij({
   const liveArb = rnd(hv * mu * at);
   const liveMat = rnd(hv * t);
   const liveTot = rnd(liveArb + liveMat + ob);
-  const aiHint  = showAiHint ? aiHintVoorOmschrijving(draft.omschrijving) : null;
-  const isArb   = draft.categorie === "arbeid" || draft.categorie === "regiepost";
-  const isMat   = draft.categorie === "materiaal" || draft.categorie === "materieel"
-    || draft.categorie === "opslag" || draft.categorie === "stelpost";
-  const isOa    = draft.categorie === "onderaanneming";
 
-  const invoerKlasse =
-    "w-full h-full px-2 py-[5px] border-0 border-b border-primary/60 bg-transparent focus:border-primary focus:outline-none text-sm tabular-nums";
+  const arbTariefOpties = tarieven.filter((tr) => tr.categorie === "arbeid" || tr.categorie === "materieel");
 
-  const mkKD = (celIndex: number) => (e: React.KeyboardEvent) => {
-    handleTabNavigatieInRij(e, celIndex, rowRef, doSave);
+  const invK = "w-full px-2 py-[5px] border-0 border-b border-primary/60 bg-transparent focus:border-primary focus:outline-none text-sm tabular-nums";
+
+  const mkKD = (ci: number) => (e: React.KeyboardEvent) => {
+    handleTabNavigatieInRij(e, ci, rowRef, doSave);
     if (e.key === "Enter") { e.preventDefault(); doSave(); }
     if (e.key === "Escape") { e.preventDefault(); onCancel(); }
   };
-
-  const numInvoer = (field: keyof LocalDraft, breedte: number, actief: boolean, celIndex: number) =>
-    actief ? (
-      <td style={{ width: breedte }} className="px-1 py-0 bg-primary/5">
-        <input type="number" step="0.01" min="0"
-          data-celindex={celIndex}
-          value={draft[field] as string}
-          onChange={(e) => upd({ [field]: e.target.value } as Partial<LocalDraft>)}
-          onKeyDown={mkKD(celIndex)}
-          className={cn(invoerKlasse, "text-right")}
-          placeholder="0"
-        />
-      </td>
-    ) : (
-      <td style={{ width: breedte }} className="px-2 py-[5px] text-muted-foreground/40 text-right text-sm">—</td>
-    );
 
   return (
     <tr
@@ -796,151 +769,190 @@ function NieuweRegelRij({
         bezig ? "opacity-60" : ""
       )}
     >
-      <td className="px-2 py-[5px] text-xs text-muted-foreground/40 text-right w-10">+</td>
+      {/* # */}
+      <td className="px-2 py-[5px] text-xs text-muted-foreground/40 text-right w-8 shrink-0">+</td>
 
-      {/* Omschrijving */}
-      <td className="px-1 py-0 min-w-[200px] max-w-[300px] relative">
+      {/* Omschrijving + categorie */}
+      <td className="px-1 py-0 min-w-[180px]">
         <input
           type="text"
           value={draft.omschrijving}
           data-celindex={1}
-          onChange={(e) => { upd({ omschrijving: e.target.value }); setShowAiHint(true); }}
+          onChange={(e) => upd({ omschrijving: e.target.value })}
           onKeyDown={mkKD(1)}
           className="w-full px-2 py-[5px] border-0 border-b border-primary bg-transparent focus:outline-none text-sm font-medium"
           placeholder="Omschrijving werkzaamheid..."
           autoFocus
         />
-        {aiHint && draft.omschrijving.length > 2 && (
-          <div className="absolute top-full left-0 z-20 mt-0.5 flex items-center gap-1.5 rounded border border-amber-200 bg-amber-50 px-2 py-1 text-xs shadow-md whitespace-nowrap">
-            <Sparkles className="h-3 w-3 text-amber-500 shrink-0" />
-            <span className="text-amber-800">
-              AI: {aiHint.mu} MU &bull; {CATEGORIE_LABEL[aiHint.categorie]} &bull; {aiHint.eenheid}
-            </span>
-            <button
-              type="button"
-              onMouseDown={(e) => {
-                e.preventDefault();
-                upd({ mu_per_eenheid: aiHint.mu, categorie: aiHint.categorie, eenheid: aiHint.eenheid });
-                setShowAiHint(false);
-              }}
-              className="ml-1 font-semibold text-amber-700 hover:text-amber-900 underline"
-            >
-              Overnemen
-            </button>
-          </div>
-        )}
-      </td>
-
-      {/* Kostensoort */}
-      {(weergave === "intern" || weergave === "directie") && (
-        <td className="px-1 py-0 w-[124px]">
+        <div className="px-2 pb-0.5 pt-0">
           <select
             value={draft.categorie}
             onChange={(e) => {
               const cat = e.target.value;
-              const btw = cat === "onderaanneming" ? "verlegd"
-                : draft.btw_tarief === "verlegd" ? "21" : draft.btw_tarief;
+              const btw = cat === "onderaanneming" ? "verlegd" : draft.btw_tarief === "verlegd" ? "21" : draft.btw_tarief;
               upd({ categorie: cat, btw_tarief: btw });
             }}
-            data-celindex={2}
-            onKeyDown={mkKD(2)}
-            className="w-full px-1 py-[5px] text-xs border-0 border-b border-primary bg-transparent focus:outline-none"
+            className="text-[10px] border-0 bg-transparent focus:outline-none text-muted-foreground cursor-pointer h-auto py-0 px-0"
           >
             {KOSTENSOORT_OPTIES.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
           </select>
+        </div>
+      </td>
+
+      {/* Wand / Plafond */}
+      {(weergave === "intern" || weergave === "directie") && (
+        <td className="px-1 py-0 w-[68px] text-center">
+          <div className="flex gap-0.5 justify-center py-[4px]">
+            {(["wand", "plafond", ""] as const).map((v) => (
+              <button
+                key={v || "geen"}
+                type="button"
+                onMouseDown={(e) => { e.preventDefault(); upd({ wand_plafond: v }); }}
+                className={cn(
+                  "text-[10px] px-1.5 py-0.5 rounded border transition-colors leading-tight",
+                  draft.wand_plafond === v
+                    ? "bg-primary text-primary-foreground border-primary"
+                    : "bg-background text-muted-foreground border-border hover:border-primary/60"
+                )}
+              >
+                {v === "wand" ? "W" : v === "plafond" ? "P" : "—"}
+              </button>
+            ))}
+          </div>
         </td>
       )}
 
+      {/* Toepassing + AI */}
+      {(weergave === "intern" || weergave === "directie") && (
+        <td className="px-1 py-0 w-[148px] relative">
+          <input
+            type="text"
+            data-celindex={2}
+            value={draft.toepassing_tekst}
+            onChange={(e) => upd({ toepassing_tekst: e.target.value })}
+            onKeyDown={mkKD(2)}
+            className="w-full px-2 py-[5px] border-0 border-b border-primary/60 bg-transparent focus:border-primary focus:outline-none text-xs"
+            placeholder="Toepassing..."
+          />
+          {toepassingSuggestie && !draft.toepassing_tekst && draft.omschrijving.length > 2 && (
+            <div className="absolute top-full left-0 z-30 mt-0.5 flex items-center gap-1 rounded border border-amber-200 bg-amber-50 px-2 py-1 text-[10px] shadow-lg whitespace-nowrap">
+              <Sparkles className="h-2.5 w-2.5 text-amber-500 shrink-0" />
+              <span className="text-amber-800 max-w-[100px] truncate">{toepassingSuggestie.toepassing}</span>
+              <button
+                type="button"
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  upd({
+                    toepassing_tekst: toepassingSuggestie.toepassing,
+                    mu_per_eenheid: toepassingSuggestie.mu,
+                    categorie: toepassingSuggestie.categorie,
+                    eenheid: toepassingSuggestie.eenheid,
+                  });
+                  setToepassingSuggestie(null);
+                }}
+                className="font-semibold text-amber-700 hover:text-amber-900 underline"
+              >
+                Ok
+              </button>
+              <button
+                type="button"
+                onMouseDown={(e) => { e.preventDefault(); setToepassingSuggestie(null); }}
+                className="text-amber-400 hover:text-amber-600"
+              >
+                <X className="h-2.5 w-2.5" />
+              </button>
+            </div>
+          )}
+        </td>
+      )}
+
+      {/* Aantal */}
+      <td className="px-1 py-0 w-[72px]">
+        <input type="number" step="0.01" min="0" data-celindex={3}
+          value={draft.hoeveelheid} onChange={(e) => upd({ hoeveelheid: e.target.value })} onKeyDown={mkKD(3)}
+          className={cn(invK, "text-right")} placeholder="1" />
+      </td>
+
       {/* Eenheid */}
-      <td className="px-1 py-0 w-[68px]">
-        <select
-          value={draft.eenheid}
-          data-celindex={3}
-          onChange={(e) => upd({ eenheid: e.target.value })}
-          onKeyDown={mkKD(3)}
-          className="w-full px-1 py-[5px] text-xs border-0 border-b border-primary bg-transparent focus:outline-none text-center"
-        >
+      <td className="px-1 py-0 w-[58px]">
+        <select data-celindex={4} value={draft.eenheid} onChange={(e) => upd({ eenheid: e.target.value })} onKeyDown={mkKD(4)}
+          className="w-full px-1 py-[5px] text-xs border-0 border-b border-primary/60 bg-transparent focus:border-primary focus:outline-none text-center">
           {EENHEDEN.map((e) => <option key={e} value={e}>{e}</option>)}
         </select>
       </td>
 
-      {/* Hoeveelheid */}
-      {numInvoer("hoeveelheid", 76, true, 4)}
+      {/* Mat. inkoop/stk */}
+      {(weergave === "intern" || weergave === "directie") && (
+        <td className="px-1 py-0 w-[96px]">
+          <input type="number" step="0.01" min="0" data-celindex={5}
+            value={draft.tarief} onChange={(e) => upd({ tarief: e.target.value })} onKeyDown={mkKD(5)}
+            className={cn(invK, "text-right")} placeholder="0,00" />
+        </td>
+      )}
 
-      {/* MU */}
-      {(weergave === "intern" || weergave === "directie") && numInvoer("mu_per_eenheid", 76, isArb, 5)}
-      {/* Arb tarief */}
-      {(weergave === "intern" || weergave === "directie") && numInvoer("arbeids_tarief", 88, isArb, 6)}
+      {/* Mat. totaal */}
+      {(weergave === "intern" || weergave === "directie") && (
+        <td className="px-2 py-[5px] w-[96px] text-right text-sm tabular-nums text-muted-foreground/60">
+          {liveMat > 0 ? formatBedrag(liveMat) : "—"}
+        </td>
+      )}
+
+      {/* Norm u/stk */}
+      {(weergave === "intern" || weergave === "directie") && (
+        <td className="px-1 py-0 w-[80px]">
+          <input type="number" step="0.01" min="0" data-celindex={6}
+            value={draft.mu_per_eenheid} onChange={(e) => upd({ mu_per_eenheid: e.target.value })} onKeyDown={mkKD(6)}
+            className={cn(invK, "text-right")} placeholder="0,00" />
+        </td>
+      )}
+
+      {/* Arbeidstarief */}
+      {weergave === "intern" && (
+        <td className="px-1 py-0 w-[92px]">
+          {arbTariefOpties.length > 0 ? (
+            <select data-celindex={7}
+              value={draft.arbeids_tarief} onChange={(e) => upd({ arbeids_tarief: e.target.value })} onKeyDown={mkKD(7)}
+              className="w-full px-1 py-[5px] text-xs border-0 border-b border-primary/60 bg-transparent focus:border-primary focus:outline-none">
+              <option value="0">— geen —</option>
+              {arbTariefOpties.map((tr) => (
+                <option key={tr.id} value={String(tr.tarief)}>{tr.naam} — €{tr.tarief}</option>
+              ))}
+            </select>
+          ) : (
+            <input type="number" step="0.01" min="0" data-celindex={7}
+              value={draft.arbeids_tarief} onChange={(e) => upd({ arbeids_tarief: e.target.value })} onKeyDown={mkKD(7)}
+              className={cn(invK, "text-right")} placeholder="0,00" />
+          )}
+        </td>
+      )}
+
       {/* Arbeid totaal */}
       {(weergave === "intern" || weergave === "directie") && (
         <td className="px-2 py-[5px] w-[96px] text-right text-sm tabular-nums text-muted-foreground/60">
           {liveArb > 0 ? formatBedrag(liveArb) : "—"}
         </td>
       )}
-      {/* Prijs/eenh */}
-      {(weergave === "intern" || weergave === "directie") && numInvoer("tarief", 88, isMat, 7)}
-      {/* Materiaal totaal */}
-      {(weergave === "intern" || weergave === "directie") && (
-        <td className="px-2 py-[5px] w-[96px] text-right text-sm tabular-nums text-muted-foreground/60">
-          {liveMat > 0 ? formatBedrag(liveMat) : "—"}
+
+      {/* Onderaanneming (conditioneel) */}
+      {toonOnderaanneming && (weergave === "intern" || weergave === "directie") && (
+        <td className="px-1 py-0 w-[96px]">
+          <input type="number" step="0.01" min="0" data-celindex={8}
+            value={draft.onderaanneming_bedrag} onChange={(e) => upd({ onderaanneming_bedrag: e.target.value })} onKeyDown={mkKD(8)}
+            className={cn(invK, "text-right")} placeholder="0,00" />
         </td>
       )}
-      {/* Onderaanneming */}
-      {(weergave === "intern" || weergave === "directie") && numInvoer("onderaanneming_bedrag", 96, isOa, 8)}
-      {/* BTW */}
-      {weergave === "intern" && (
-        <td className="px-1 py-0 w-[72px]">
-          <select
-            data-celindex={9}
-            value={draft.btw_tarief}
-            onChange={(e) => upd({ btw_tarief: e.target.value })}
-            onKeyDown={mkKD(9)}
-            className="w-full px-1 py-[5px] text-xs border-0 border-b border-primary bg-transparent focus:outline-none"
-          >
-            {BTW_OPTIES.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-          </select>
-        </td>
-      )}
-      {/* Notitie */}
-      {(weergave === "intern" || weergave === "monteur") && (
-        <td className="px-1 py-0 w-[140px]">
-          <input
-            type="text"
-            data-celindex={10}
-            value={draft.opmerkingen}
-            onChange={(e) => upd({ opmerkingen: e.target.value })}
-            onKeyDown={mkKD(10)}
-            className="w-full px-2 py-[5px] text-xs border-0 border-b border-primary bg-transparent focus:outline-none"
-            placeholder="Intern..."
-          />
-        </td>
-      )}
-      {/* Klanttekst */}
-      {(weergave === "intern" || weergave === "klant") && (
-        <td className="px-1 py-0 w-[140px]">
-          <input
-            type="text"
-            data-celindex={11}
-            value={draft.klanttekst}
-            onChange={(e) => upd({ klanttekst: e.target.value })}
-            onKeyDown={mkKD(11)}
-            className="w-full px-2 py-[5px] text-xs border-0 border-b border-primary bg-transparent focus:outline-none"
-            placeholder="Op offerte..."
-          />
-        </td>
-      )}
+
       {/* Totaal */}
-      <td className="px-2 py-[5px] w-[100px] text-right text-sm tabular-nums font-semibold">
+      <td className="px-2 py-[5px] w-[104px] text-right text-sm tabular-nums font-semibold">
         {liveTot > 0 ? formatBedrag(liveTot) : "—"}
       </td>
+
       {/* Acties */}
       {weergave === "intern" && (
-        <td className="px-1 py-0 w-14 text-center">
-          <div className="flex gap-0.5 justify-center">
-            <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground" tabIndex={-1} onClick={onCancel}>
-              <X className="h-3 w-3" />
-            </Button>
-          </div>
+        <td className="px-1 py-0 w-12 text-center">
+          <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground" tabIndex={-1} onClick={onCancel}>
+            <X className="h-3 w-3" />
+          </Button>
         </td>
       )}
     </tr>
@@ -1280,6 +1292,8 @@ export default function ModulesCalculatieDetail() {
           hoofdstuk: (r as any).hoofdstuk ?? "Overige werkzaamheden",
           klanttekst: r.klanttekst ?? "",
           btw_tarief: "21",
+          wand_plafond: "",
+          toepassing_tekst: "",
         }));
         setAiVoorstellen(regels);
         setAiWaarschuwingen((d.waarschuwingen ?? []) as string[]);
@@ -1301,6 +1315,7 @@ export default function ModulesCalculatieDetail() {
 
   // Nieuw rij invoerrij (null = verborgen)
   const [nieuwDraft, setNieuwDraft] = useState<LocalDraft | null>(null);
+  const [toonOnderaanneming, setToonOnderaanneming] = useState(false);
 
   const [headerForm, setHeaderForm] = useState({
     naam: "", referentie: "", klant_naam: "", project_naam: "",
@@ -1466,10 +1481,11 @@ export default function ModulesCalculatieDetail() {
     .filter((g) => g.regels.length > 0);
 
   // Aantal kolommen voor HoofdstukBalk colSpan
-  const aantalKolommen = weergave === "intern" ? 16
-    : weergave === "directie" ? 12
-    : weergave === "klant" ? 6
-    : 5; // monteur
+  // intern: # + omschrijving + W/P + toepassing + aantal + eenh + mat/stk + mat.tot + norm + arb.tarief + arb.tot + [OA?] + totaal + acties
+  const aantalKolommen = weergave === "intern" ? (toonOnderaanneming ? 14 : 13)
+    : weergave === "directie" ? (toonOnderaanneming ? 11 : 10)
+    : weergave === "klant" ? 4
+    : 3; // monteur
 
   return (
     <div className="flex flex-col min-h-0" style={{ padding: "0" }}>
@@ -1595,6 +1611,18 @@ export default function ModulesCalculatieDetail() {
             </div>
             {weergave === "intern" && (
               <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setToonOnderaanneming((v) => !v)}
+                  className={cn(
+                    "text-xs px-2.5 py-1 rounded border transition-colors",
+                    toonOnderaanneming
+                      ? "bg-primary/10 text-primary border-primary/30 font-medium"
+                      : "bg-background text-muted-foreground border-border hover:border-muted-foreground/40"
+                  )}
+                >
+                  Onderaanneming
+                </button>
                 <span className="text-xs text-muted-foreground hidden sm:block">Klik op een cel om te bewerken &bull; Enter bevestigt</span>
                 <Button size="sm" onClick={() => nieuweRegel({})}>
                   <Plus className="h-3.5 w-3.5 mr-1.5" />
@@ -1610,22 +1638,20 @@ export default function ModulesCalculatieDetail() {
               <table className="w-full text-sm border-collapse" style={{ minWidth: weergave === "intern" ? 1300 : 900 }}>
                 <thead className="sticky top-[109px] z-10">
                   <tr>
-                    <Th className="w-10 text-right">#</Th>
-                    <Th className="min-w-[200px]">Omschrijving</Th>
-                    {(weergave === "intern" || weergave === "directie") && <Th className="w-[124px]">Soort</Th>}
-                    <Th className="w-[68px] text-center">Eenh</Th>
-                    <Th className="w-[76px] text-right">Aantal</Th>
-                    {(weergave === "intern" || weergave === "directie") && <Th className="w-[76px] text-right">MU/eenh</Th>}
-                    {(weergave === "intern" || weergave === "directie") && <Th className="w-[88px] text-right">Arb.tarief</Th>}
-                    {(weergave === "intern" || weergave === "directie") && <Th className="w-[96px] text-right">Arbeidskosten</Th>}
-                    {(weergave === "intern" || weergave === "directie") && <Th className="w-[88px] text-right">Prijs/eenh</Th>}
-                    {(weergave === "intern" || weergave === "directie") && <Th className="w-[96px] text-right">Materiaal</Th>}
-                    {(weergave === "intern" || weergave === "directie") && <Th className="w-[96px] text-right">Onderaann.</Th>}
-                    {weergave === "intern" && <Th className="w-[72px] text-center">BTW</Th>}
-                    {weergave === "intern" && <Th className="w-[140px]">Notitie</Th>}
-                    {weergave === "intern" && <Th className="w-[140px]">Klanttekst</Th>}
-                    <Th className="w-[100px] text-right">Totaal</Th>
-                    {weergave === "intern" && <Th className="w-14"></Th>}
+                    <Th className="w-8 text-right">#</Th>
+                    <Th className="min-w-[180px]">Omschrijving</Th>
+                    {(weergave === "intern" || weergave === "directie") && <Th className="w-[68px] text-center">W/P</Th>}
+                    {(weergave === "intern" || weergave === "directie") && <Th className="w-[148px]">Toepassing</Th>}
+                    <Th className="w-[72px] text-right">Aantal</Th>
+                    <Th className="w-[58px] text-center">Eenh</Th>
+                    {(weergave === "intern" || weergave === "directie") && <Th className="w-[96px] text-right">Mat./stk</Th>}
+                    {(weergave === "intern" || weergave === "directie") && <Th className="w-[96px] text-right">Mat. totaal</Th>}
+                    {(weergave === "intern" || weergave === "directie") && <Th className="w-[80px] text-right">Norm u/stk</Th>}
+                    {weergave === "intern" && <Th className="w-[92px] text-right">Arb.tarief</Th>}
+                    {(weergave === "intern" || weergave === "directie") && <Th className="w-[96px] text-right">Arb. totaal</Th>}
+                    {toonOnderaanneming && (weergave === "intern" || weergave === "directie") && <Th className="w-[96px] text-right">Onderaann.</Th>}
+                    <Th className="w-[104px] text-right">Totaal</Th>
+                    {weergave === "intern" && <Th className="w-12"></Th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -1663,6 +1689,8 @@ export default function ModulesCalculatieDetail() {
                           onDuplicate={dupliceerRegel}
                           onEnterNaRegel={(hs, isSt, isBp) => nieuweRegel({ hoofdstuk: hs, is_staartkosten: isSt, is_bouwplaatskosten: isBp })}
                           bezig={updateRegelMut.isPending || deleteRegelMut.isPending}
+                          toonOnderaanneming={toonOnderaanneming}
+                          tarieven={[]}
                         />
                       ))}
                     </>
@@ -1689,6 +1717,8 @@ export default function ModulesCalculatieDetail() {
                             onDuplicate={dupliceerRegel}
                             onEnterNaRegel={(hs, isSt, isBp) => nieuweRegel({ hoofdstuk: hs, is_staartkosten: isSt, is_bouwplaatskosten: isBp })}
                             bezig={updateRegelMut.isPending || deleteRegelMut.isPending}
+                            toonOnderaanneming={toonOnderaanneming}
+                            tarieven={[]}
                           />
                         ))
                       }
@@ -1714,6 +1744,8 @@ export default function ModulesCalculatieDetail() {
                           onDuplicate={dupliceerRegel}
                           onEnterNaRegel={(_hs, _isSt, _isBp) => nieuweRegel({ is_bouwplaatskosten: true })}
                           bezig={updateRegelMut.isPending || deleteRegelMut.isPending}
+                          toonOnderaanneming={toonOnderaanneming}
+                          tarieven={[]}
                         />
                       ))}
                     </>
@@ -1738,6 +1770,8 @@ export default function ModulesCalculatieDetail() {
                           onDuplicate={dupliceerRegel}
                           onEnterNaRegel={(_hs, _isSt, _isBp) => nieuweRegel({ is_staartkosten: true })}
                           bezig={updateRegelMut.isPending || deleteRegelMut.isPending}
+                          toonOnderaanneming={toonOnderaanneming}
+                          tarieven={[]}
                         />
                       ))}
                     </>
@@ -1751,6 +1785,8 @@ export default function ModulesCalculatieDetail() {
                       onSave={bewaarNieuweRegel}
                       onCancel={() => setNieuwDraft(null)}
                       bezig={createRegelMut.isPending}
+                      toonOnderaanneming={toonOnderaanneming}
+                      tarieven={[]}
                     />
                   )}
 
