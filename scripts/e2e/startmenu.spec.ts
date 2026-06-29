@@ -16,7 +16,7 @@ import {
   wachtOpNieuwTotpVenster,
 } from "../src/e2e-monteur-testaccount";
 
-const SLEUTELS = ["gebouwen", "planning", "personeel", "uren", "berichten"] as const;
+const SLEUTELS = ["werkdag", "gebouwen", "verlof", "uren", "planning", "veiligheid"] as const;
 
 // Lichte inhoudscontrole per route: bovenop de URL-check verifiëren we dat het
 // doelscherm zijn eigen inhoud daadwerkelijk rendert (een kop of een lijstitem),
@@ -139,7 +139,7 @@ test("FPS startmenu: login, waaier en doorlinken", async ({ page }) => {
     await logIn(page);
   });
 
-  await test.step("header en vijf menu-items zichtbaar", async () => {
+  await test.step("header en zes menu-items zichtbaar", async () => {
     await expect(page.getByText("E2E Test Monteur").first()).toBeAttached({ timeout: 20_000 });
     for (const sleutel of SLEUTELS) {
       await expect(page.getByTestId(`radiaal-${sleutel}`)).toBeVisible();
