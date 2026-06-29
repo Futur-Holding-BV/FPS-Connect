@@ -160,13 +160,15 @@ export default function Login() {
   return (
     <KeyboardAvoidingView
       style={{ flex: 1, backgroundColor: c.dark }}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      behavior="padding"
+      keyboardVerticalOffset={Platform.OS === "android" ? 0 : 0}
     >
       <ScrollView
-        contentContainerStyle={{ flexGrow: 1, justifyContent: "center" }}
+        contentContainerStyle={{ flexGrow: 1 }}
         keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
       >
-        <View style={{ paddingTop: bovenInset(insets) + 40, paddingHorizontal: 24, paddingBottom: 40, width: "100%", maxWidth: maxBreedte, alignSelf: "center" }}>
+        <View style={{ paddingTop: bovenInset(insets) + 32, paddingHorizontal: 24, paddingBottom: 48, width: "100%", maxWidth: maxBreedte, alignSelf: "center" }}>
           <View style={{ alignItems: "center", marginBottom: 36 }}>
             <View
               style={{
