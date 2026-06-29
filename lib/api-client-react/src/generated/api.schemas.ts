@@ -4558,6 +4558,13 @@ export interface Inkoopbon {
   goedgekeurd_op?: string | null;
   /** @nullable */
   opmerkingen?: string | null;
+  /** @nullable */
+  verzonden_op?: string | null;
+  /** @nullable */
+  verzonden_naar?: string | null;
+  ai_suggestie?: boolean;
+  /** @nullable */
+  ai_motivatie?: string | null;
   aangemaakt_op?: string;
   bijgewerkt_op?: string;
   regels?: InkoopbonRegel[];
@@ -4584,6 +4591,36 @@ export interface InkoopbonPatch {
   gewenste_leverdatum?: string;
   status?: string;
   opmerkingen?: string;
+}
+
+export type InkoopbonAiSuggestieResultaatBonnenItemRegelsItem = {
+  /** @nullable */
+  inkoopplan_regel_id?: number | null;
+  omschrijving: string;
+  hoeveelheid: number;
+  eenheid: string;
+  /** @nullable */
+  prijs?: number | null;
+};
+
+export type InkoopbonAiSuggestieResultaatBonnenItem = {
+  leverancier: string;
+  /** @nullable */
+  leverancier_id?: number | null;
+  /** @nullable */
+  gewenste_leverdatum?: string | null;
+  /** @nullable */
+  ai_motivatie?: string | null;
+  regels: InkoopbonAiSuggestieResultaatBonnenItemRegelsItem[];
+};
+
+export interface InkoopbonAiSuggestieResultaat {
+  bonnen: InkoopbonAiSuggestieResultaatBonnenItem[];
+}
+
+export interface InkoopbonVerzendInput {
+  email: string;
+  bericht?: string;
 }
 
 export interface UitvoeringsplanTaak {

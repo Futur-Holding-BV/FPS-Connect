@@ -228,8 +228,10 @@ import type {
   InboxStats,
   InboxVerplaatsenBody,
   Inkoopbon,
+  InkoopbonAiSuggestieResultaat,
   InkoopbonInput,
   InkoopbonPatch,
+  InkoopbonVerzendInput,
   InkoopplanRegel,
   InkoopplanRegelPatch,
   Inkoopplanning,
@@ -30834,6 +30836,76 @@ export const useCreateInkoopbon = <TError = ErrorType<unknown>,
       return useMutation(getCreateInkoopbonMutationOptions(options));
     }
 
+export const getGenereerInkoopbonAiSuggestiesUrl = (id: number,) => {
+
+
+
+
+  return `/api/opdrachten/${id}/inkoopplanning/inkoopbonnen/ai-suggesties`
+}
+
+/**
+ * @summary AI stelt inkoopbonnen voor per leverancier (niet opgeslagen)
+ */
+export const genereerInkoopbonAiSuggesties = async (id: number, options?: RequestInit): Promise<InkoopbonAiSuggestieResultaat> => {
+
+  return customFetch<InkoopbonAiSuggestieResultaat>(getGenereerInkoopbonAiSuggestiesUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getGenereerInkoopbonAiSuggestiesMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof genereerInkoopbonAiSuggesties>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof genereerInkoopbonAiSuggesties>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['genereerInkoopbonAiSuggesties'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof genereerInkoopbonAiSuggesties>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  genereerInkoopbonAiSuggesties(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type GenereerInkoopbonAiSuggestiesMutationResult = NonNullable<Awaited<ReturnType<typeof genereerInkoopbonAiSuggesties>>>
+
+    export type GenereerInkoopbonAiSuggestiesMutationError = ErrorType<unknown>
+
+    /**
+ * @summary AI stelt inkoopbonnen voor per leverancier (niet opgeslagen)
+ */
+export const useGenereerInkoopbonAiSuggesties = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof genereerInkoopbonAiSuggesties>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof genereerInkoopbonAiSuggesties>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getGenereerInkoopbonAiSuggestiesMutationOptions(options));
+    }
+
 export const getPatchInkoopbonUrl = (id: number,
     bonId: number,) => {
 
@@ -30977,6 +31049,79 @@ export const useDeleteInkoopbon = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getDeleteInkoopbonMutationOptions(options));
+    }
+
+export const getVerzendInkoopbonUrl = (id: number,
+    bonId: number,) => {
+
+
+
+
+  return `/api/opdrachten/${id}/inkoopplanning/inkoopbonnen/${bonId}/verzenden`
+}
+
+/**
+ * @summary Inkoopbon per e-mail versturen naar leverancier
+ */
+export const verzendInkoopbon = async (id: number,
+    bonId: number,
+    inkoopbonVerzendInput: InkoopbonVerzendInput, options?: RequestInit): Promise<Inkoopbon> => {
+
+  return customFetch<Inkoopbon>(getVerzendInkoopbonUrl(id,bonId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(inkoopbonVerzendInput)
+  }
+);}
+
+
+
+
+export const getVerzendInkoopbonMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof verzendInkoopbon>>, TError,{id: number;bonId: number;data: BodyType<InkoopbonVerzendInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof verzendInkoopbon>>, TError,{id: number;bonId: number;data: BodyType<InkoopbonVerzendInput>}, TContext> => {
+
+const mutationKey = ['verzendInkoopbon'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof verzendInkoopbon>>, {id: number;bonId: number;data: BodyType<InkoopbonVerzendInput>}> = (props) => {
+          const {id,bonId,data} = props ?? {};
+
+          return  verzendInkoopbon(id,bonId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type VerzendInkoopbonMutationResult = NonNullable<Awaited<ReturnType<typeof verzendInkoopbon>>>
+    export type VerzendInkoopbonMutationBody = BodyType<InkoopbonVerzendInput>
+    export type VerzendInkoopbonMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Inkoopbon per e-mail versturen naar leverancier
+ */
+export const useVerzendInkoopbon = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof verzendInkoopbon>>, TError,{id: number;bonId: number;data: BodyType<InkoopbonVerzendInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof verzendInkoopbon>>,
+        TError,
+        {id: number;bonId: number;data: BodyType<InkoopbonVerzendInput>},
+        TContext
+      > => {
+      return useMutation(getVerzendInkoopbonMutationOptions(options));
     }
 
 export const getGetUitvoeringsplanningUrl = (id: number,) => {

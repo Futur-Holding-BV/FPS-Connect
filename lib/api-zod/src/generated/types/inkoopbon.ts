@@ -27,6 +27,13 @@ export interface Inkoopbon {
   goedgekeurd_op?: string | null;
   /** @nullable */
   opmerkingen?: string | null;
+  /** @nullable */
+  verzonden_op?: string | null;
+  /** @nullable */
+  verzonden_naar?: string | null;
+  ai_suggestie?: boolean;
+  /** @nullable */
+  ai_motivatie?: string | null;
   aangemaakt_op?: string;
   bijgewerkt_op?: string;
   regels?: InkoopbonRegel[];

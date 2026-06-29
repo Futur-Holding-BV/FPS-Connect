@@ -73,6 +73,10 @@ export const inkoopbonnenTable = pgTable("inkoopbonnen", {
   goedgekeurdDoorId: integer("goedgekeurd_door_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
   goedgekeurdOp: timestamp("goedgekeurd_op"),
   opmerkingen: text("opmerkingen"),
+  verzondenOp: timestamp("verzonden_op"),
+  verzondenNaar: text("verzonden_naar"),
+  aiSuggestie: boolean("ai_suggestie").notNull().default(false),
+  aiMotivatie: text("ai_motivatie"),
   aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
   bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
 });

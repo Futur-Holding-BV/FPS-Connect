@@ -13,10 +13,12 @@ import {
   uitvoeringsplannenTable,
   uitvoeringsplanTakenTable,
   gebruikersTable,
+  leveranciersTable,
 } from "@workspace/db";
 import { eq, and, asc } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
 import { logger } from "../lib/logger";
+import { verstuurMail, isGeconfigureerd } from "../services/email";
 
 const router = Router();
 const iso = (d: Date | null | undefined) => d?.toISOString() ?? null;
@@ -115,11 +117,16 @@ function mapInkoopbon(
     opdracht_id: bon.opdrachtId,
     bon_nummer: bon.bonNummer ?? null,
     leverancier: bon.leverancier,
+    leverancier_id: bon.leverancierId ?? null,
     gewenste_leverdatum: bon.gewensteLeverdatum ?? null,
     totaal_bedrag: bon.totaalBedrag ?? null,
     status: bon.status,
     goedgekeurd_op: iso(bon.goedgekeurdOp),
     opmerkingen: bon.opmerkingen ?? null,
+    verzonden_op: iso(bon.verzondenOp),
+    verzonden_naar: bon.verzondenNaar ?? null,
+    ai_suggestie: bon.aiSuggestie,
+    ai_motivatie: bon.aiMotivatie ?? null,
     aangemaakt_op: iso(bon.aangemaaktOp)!,
     bijgewerkt_op: iso(bon.bijgewerktOp)!,
     regels: regels.map(mapBonRegel),
@@ -606,6 +613,142 @@ router.post("/opdrachten/:id/inkoopplanning/inkoopbonnen", schrijven, async (req
   }
 });
 
+// ── POST /opdrachten/:id/inkoopplanning/inkoopbonnen/ai-suggesties ────────
+
+router.post("/opdrachten/:id/inkoopplanning/inkoopbonnen/ai-suggesties", schrijven, async (req, res) => {
+  const id = parseInt(String(req.params.id), 10);
+  if (isNaN(id)) { res.status(400).json({ error: "Ongeldig id" }); return; }
+
+  try {
+    const [opdracht] = await db.select().from(opdrachtenTable).where(eq(opdrachtenTable.id, id));
+    if (!opdracht) { res.status(404).json({ error: "Opdracht niet gevonden" }); return; }
+
+    const [plan] = await db.select().from(inkoopplannenTable)
+      .where(eq(inkoopplannenTable.opdrachtId, id));
+
+    const planRegels = plan
+      ? await db.select().from(inkoopplanRegelsTable)
+          .where(eq(inkoopplanRegelsTable.inkoopplanId, plan.id))
+          .orderBy(asc(inkoopplanRegelsTable.volgorde))
+      : [];
+
+    const openRegels = planRegels.filter(r => r.status === "open" || r.status === "uit_voorraad");
+    const leveranciers = await db.select().from(leveranciersTable)
+      .where(eq(leveranciersTable.actief, true));
+
+    const { apiKey, baseUrl } = await getAiClient();
+
+    interface AiBonRegel {
+      inkoopplan_regel_id: number | null;
+      omschrijving: string;
+      hoeveelheid: number;
+      eenheid: string;
+      prijs: number | null;
+    }
+    interface AiSuggestieBon {
+      leverancier: string;
+      leverancier_id: number | null;
+      gewenste_leverdatum: string | null;
+      ai_motivatie: string;
+      regels: AiBonRegel[];
+    }
+
+    let bonnen: AiSuggestieBon[] = [];
+
+    if (apiKey && openRegels.length > 0) {
+      const leveranciersInfo = leveranciers.length > 0
+        ? `\nBeschikbare leveranciers in het systeem:\n${leveranciers.map(l => `- ${l.naam} (id:${l.id})${l.email ? `, email: ${l.email}` : ""}${l.categorie ? `, categorie: ${l.categorie}` : ""}`).join("\n")}`
+        : "";
+
+      const prompt = `Je bent een inkoper bij een brandpreventie-installatiebedrijf in Nederland.
+Groepeer de onderstaande inkoopplanregels in logische inkoopbonnen per leverancier.
+Wijs elke regel toe aan de meest passende leverancier.${leveranciersInfo}
+
+INKOOPPLANREGELS:
+${openRegels.map((r, i) => `${i + 1}. [id:${r.id}] ${r.omschrijving}: ${r.hoeveelheid} ${r.eenheid}${r.inkoopprijsVerwacht != null ? ` @ €${r.inkoopprijsVerwacht}` : ""}${r.aanbevolenLeverancier ? ` (aanbevolen: ${r.aanbevolenLeverancier})` : ""}`).join("\n")}
+
+Opdracht: ${opdracht.titel}
+
+Geef je suggestie als JSON:
+{
+  "bonnen": [
+    {
+      "leverancier": "naam leverancier",
+      "leverancier_id": null_of_id_uit_lijst,
+      "gewenste_leverdatum": "YYYY-MM-DD of null",
+      "ai_motivatie": "korte uitleg waarom deze groepering",
+      "regels": [
+        {
+          "inkoopplan_regel_id": id,
+          "omschrijving": "tekst",
+          "hoeveelheid": getal,
+          "eenheid": "st",
+          "prijs": getal_of_null
+        }
+      ]
+    }
+  ]
+}`;
+
+      try {
+        const aiRes = await fetch(`${baseUrl}/chat/completions`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+          body: JSON.stringify({
+            model: "gpt-4o",
+            messages: [
+              { role: "system", content: "Je bent een ervaren inkoper brandpreventie. Geef altijd valide JSON terug." },
+              { role: "user", content: prompt },
+            ],
+            response_format: { type: "json_object" },
+            max_tokens: 3000,
+          }),
+          signal: AbortSignal.timeout(35000),
+        });
+
+        if (aiRes.ok) {
+          const aiJson = await aiRes.json() as { choices: Array<{ message: { content: string } }> };
+          const parsed = JSON.parse(aiJson.choices[0]?.message?.content ?? "{}") as { bonnen?: AiSuggestieBon[] };
+          bonnen = parsed.bonnen ?? [];
+        }
+      } catch (aiErr) {
+        logger.warn({ aiErr }, "AI inkoopbon-suggesties mislukt — lege suggestie teruggegeven");
+      }
+    }
+
+    // Fallback: als geen AI of lege regels, groepeer per aanbevolen leverancier
+    if (bonnen.length === 0 && openRegels.length > 0) {
+      const groepen = new Map<string, typeof openRegels>();
+      for (const r of openRegels) {
+        const key = r.aanbevolenLeverancier ?? "Onbekend";
+        if (!groepen.has(key)) groepen.set(key, []);
+        groepen.get(key)!.push(r);
+      }
+      for (const [lev, regels] of groepen.entries()) {
+        const gevonden = leveranciers.find(l => l.naam.toLowerCase() === lev.toLowerCase());
+        bonnen.push({
+          leverancier: lev,
+          leverancier_id: gevonden?.id ?? null,
+          gewenste_leverdatum: null,
+          ai_motivatie: `Groepering op basis van aanbevolen leverancier "${lev}".`,
+          regels: regels.map(r => ({
+            inkoopplan_regel_id: r.id,
+            omschrijving: r.omschrijving,
+            hoeveelheid: r.hoeveelheid,
+            eenheid: r.eenheid,
+            prijs: r.inkoopprijsVerwacht ?? null,
+          })),
+        });
+      }
+    }
+
+    res.json({ bonnen });
+  } catch (err) {
+    logger.error({ err }, "genereerInkoopbonAiSuggesties fout");
+    res.status(500).json({ error: "Serverfout" });
+  }
+});
+
 // ── PATCH /opdrachten/:id/inkoopplanning/inkoopbonnen/:bonId ─────────────
 
 router.patch("/opdrachten/:id/inkoopplanning/inkoopbonnen/:bonId", schrijven, async (req, res) => {
@@ -619,6 +762,7 @@ router.patch("/opdrachten/:id/inkoopplanning/inkoopbonnen/:bonId", schrijven, as
     const updates: Record<string, unknown> = { bijgewerktOp: new Date() };
     const bodyMap: Record<string, string> = {
       leverancier: "leverancier",
+      leverancier_id: "leverancierId",
       gewenste_leverdatum: "gewensteLeverdatum",
       status: "status",
       opmerkingen: "opmerkingen",
@@ -674,6 +818,153 @@ router.delete("/opdrachten/:id/inkoopplanning/inkoopbonnen/:bonId", schrijven, a
     res.status(204).end();
   } catch (err) {
     logger.error({ err }, "deleteInkoopbon fout");
+    res.status(500).json({ error: "Serverfout" });
+  }
+});
+
+// ── POST /opdrachten/:id/inkoopplanning/inkoopbonnen/:bonId/verzenden ─────
+
+router.post("/opdrachten/:id/inkoopplanning/inkoopbonnen/:bonId/verzenden", schrijven, async (req, res) => {
+  const id = parseInt(String(req.params.id), 10);
+  const bonId = parseInt(String(req.params.bonId), 10);
+  if (isNaN(id) || isNaN(bonId)) { res.status(400).json({ error: "Ongeldig id" }); return; }
+
+  const body = req.body as { email?: string; bericht?: string };
+  if (!body.email?.trim()) {
+    res.status(400).json({ error: "E-mailadres verplicht" }); return;
+  }
+
+  try {
+    const [bon] = await db.select().from(inkoopbonnenTable)
+      .where(and(eq(inkoopbonnenTable.id, bonId), eq(inkoopbonnenTable.opdrachtId, id)));
+    if (!bon) { res.status(404).json({ error: "Inkoopbon niet gevonden" }); return; }
+
+    const regels = await db.select().from(inkoopbonRegelsTable)
+      .where(eq(inkoopbonRegelsTable.inkoopbonId, bonId))
+      .orderBy(asc(inkoopbonRegelsTable.volgorde));
+
+    const [opdracht] = await db.select().from(opdrachtenTable).where(eq(opdrachtenTable.id, id));
+
+    // Leverancier e-mail ophalen als niet meegegeven
+    const email = body.email.trim();
+    const datum = new Date().toLocaleDateString("nl-NL", { day: "2-digit", month: "long", year: "numeric", timeZone: "Europe/Amsterdam" });
+    const leverdatum = bon.gewensteLeverdatum
+      ? new Date(bon.gewensteLeverdatum).toLocaleDateString("nl-NL", { day: "2-digit", month: "long", year: "numeric" })
+      : null;
+
+    const totaal = regels.reduce((s, r) => s + (r.totaal ?? (r.prijs ?? 0) * r.hoeveelheid), 0);
+
+    const regelrijen = regels.map(r => {
+      const esc = (t: string) => t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+      const pr = r.prijs != null ? `€\u202F${r.prijs.toFixed(2)}` : "—";
+      const tot = r.totaal != null ? `€\u202F${r.totaal.toFixed(2)}` : r.prijs != null ? `€\u202F${(r.prijs * r.hoeveelheid).toFixed(2)}` : "—";
+      return `<tr style="border-bottom:1px solid #e4e4e7;">
+              <td style="padding:8px 12px;font-size:14px;color:#3f3f46;">${esc(r.omschrijving)}</td>
+              <td style="padding:8px 12px;font-size:14px;color:#3f3f46;text-align:right;white-space:nowrap;">${r.hoeveelheid} ${esc(r.eenheid)}</td>
+              <td style="padding:8px 12px;font-size:14px;color:#3f3f46;text-align:right;white-space:nowrap;">${pr}</td>
+              <td style="padding:8px 12px;font-size:14px;color:#3f3f46;text-align:right;white-space:nowrap;font-weight:500;">${tot}</td>
+            </tr>`;
+    }).join("\n");
+
+    const berichtBlok = body.bericht?.trim()
+      ? `<div style="margin-top:20px;padding:12px 16px;background:#f4f4f5;border-left:4px solid #F23B0D;border-radius:4px;">
+               <p style="margin:0;font-size:14px;color:#3f3f46;font-style:italic;">${body.bericht.trim().replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\n/g, "<br>")}</p>
+             </div>`
+      : "";
+
+    const html = `<!DOCTYPE html>
+<html lang="nl">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Inkoopbon ${bon.bonNummer ?? ""}</title></head>
+<body style="margin:0;padding:0;background:#f4f4f5;font-family:system-ui,-apple-system,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f5;padding:40px 0;">
+    <tr><td align="center">
+      <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.12);">
+        <tr>
+          <td style="background:#212631;padding:28px 40px;text-align:center;">
+            <p style="margin:0;">
+              <span style="display:inline-block;width:24px;height:24px;background:#F23B0D;border-radius:5px;vertical-align:middle;margin-right:8px;"></span>
+              <span style="color:#fff;font-size:16px;font-weight:700;vertical-align:middle;">FPS Connect</span>
+            </p>
+            <p style="margin:8px 0 0;color:rgba(255,255,255,.55);font-size:12px;">Brandpreventieve voorzieningen</p>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:32px 40px 0;">
+            <h1 style="margin:0 0 4px;font-size:20px;font-weight:700;color:#18181b;">Inkoopbon${bon.bonNummer ? ` ${bon.bonNummer}` : ""}</h1>
+            <p style="margin:0 0 20px;font-size:13px;color:#71717a;">Datum: ${datum}${leverdatum ? ` &bull; Gewenste leverdatum: ${leverdatum}` : ""}</p>
+            ${opdracht ? `<p style="margin:0 0 8px;font-size:14px;color:#3f3f46;"><strong>Project:</strong> ${opdracht.titel}</p>` : ""}
+            <p style="margin:0 0 20px;font-size:14px;color:#3f3f46;"><strong>Leverancier:</strong> ${bon.leverancier}</p>
+            ${berichtBlok}
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:20px 40px;">
+            <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e4e4e7;border-radius:6px;overflow:hidden;">
+              <thead>
+                <tr style="background:#f4f4f5;">
+                  <th style="padding:10px 12px;font-size:12px;font-weight:600;color:#71717a;text-align:left;border-bottom:1px solid #e4e4e7;">Omschrijving</th>
+                  <th style="padding:10px 12px;font-size:12px;font-weight:600;color:#71717a;text-align:right;border-bottom:1px solid #e4e4e7;">Hoeveelheid</th>
+                  <th style="padding:10px 12px;font-size:12px;font-weight:600;color:#71717a;text-align:right;border-bottom:1px solid #e4e4e7;">Prijs</th>
+                  <th style="padding:10px 12px;font-size:12px;font-weight:600;color:#71717a;text-align:right;border-bottom:1px solid #e4e4e7;">Totaal</th>
+                </tr>
+              </thead>
+              <tbody>${regelrijen}</tbody>
+              ${totaal > 0 ? `<tfoot>
+                <tr style="background:#f4f4f5;">
+                  <td colspan="3" style="padding:10px 12px;font-size:14px;font-weight:600;color:#18181b;text-align:right;">Totaal</td>
+                  <td style="padding:10px 12px;font-size:14px;font-weight:700;color:#18181b;text-align:right;">€\u202F${totaal.toFixed(2)}</td>
+                </tr>
+              </tfoot>` : ""}
+            </table>
+            ${bon.opmerkingen ? `<p style="margin:16px 0 0;font-size:13px;color:#71717a;"><strong>Opmerkingen:</strong> ${bon.opmerkingen}</p>` : ""}
+          </td>
+        </tr>
+        <tr>
+          <td style="background:#f4f4f5;padding:20px 40px;border-top:1px solid #e4e4e7;">
+            <p style="margin:0;font-size:12px;color:#71717a;text-align:center;">Dit bericht is verstuurd door FPS Connect &bull; Reacties graag per e-mail</p>
+          </td>
+        </tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+
+    const userId = req.session?.userId as number | undefined;
+
+    if (!isGeconfigureerd()) {
+      // Dev-modus: markeer als verzonden zonder echte mail te sturen
+      logger.warn({ bonId, email }, "E-mailservice niet geconfigureerd — inkoopbon niet verzonden");
+    } else {
+      await verstuurMail({
+        naarEmail: email,
+        naarNaam: bon.leverancier,
+        onderwerp: `Inkoopbon${bon.bonNummer ? ` ${bon.bonNummer}` : ""} — ${opdracht?.titel ?? "FPS Connect"}`,
+        html,
+        soort: "inkoopbon",
+        verstuurdDoorId: userId ?? null,
+      });
+    }
+
+    const nieuweStatus = bon.status === "concept" || bon.status === "goedgekeurd" ? "besteld" : bon.status;
+
+    const [updated] = await db.update(inkoopbonnenTable)
+      .set({
+        verzondenOp: new Date(),
+        verzondenNaar: email,
+        status: nieuweStatus,
+        bijgewerktOp: new Date(),
+      })
+      .where(eq(inkoopbonnenTable.id, bonId))
+      .returning();
+
+    const updatedRegels = await db.select().from(inkoopbonRegelsTable)
+      .where(eq(inkoopbonRegelsTable.inkoopbonId, bonId))
+      .orderBy(asc(inkoopbonRegelsTable.volgorde));
+
+    res.json(mapInkoopbon(updated, updatedRegels));
+  } catch (err) {
+    logger.error({ err }, "verzendInkoopbon fout");
     res.status(500).json({ error: "Serverfout" });
   }
 });

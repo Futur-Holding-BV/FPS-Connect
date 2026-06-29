@@ -9,23 +9,29 @@ import {
   useCreateInkoopbon,
   usePatchInkoopbon,
   useDeleteInkoopbon,
+  useGenereerInkoopbonAiSuggesties,
+  useVerzendInkoopbon,
   getGetInkoopplanningQueryKey,
   getListInkoopbonnenQueryKey,
   useListLeveranciers,
 } from "@workspace/api-client-react";
-import type { InkoopplanRegel, Inkoopbon } from "@workspace/api-client-react";
+import type { InkoopplanRegel, Inkoopbon, InkoopbonAiSuggestieResultaat } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
-import { Sparkles, Check, Package, Truck, Clock, AlertTriangle, Plus, Trash2, ChevronDown, ChevronUp } from "lucide-react";
+import {
+  Sparkles, Check, Package, Truck, Clock, AlertTriangle,
+  Plus, Trash2, ChevronDown, ChevronUp, Mail, Send, Bot,
+} from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -215,7 +221,6 @@ function InkoopRegelRij({ regel, opdrachtId, planId }: InkoopRegelRijProps) {
             </Button>
           </div>
 
-          {/* Plan regel niet bij planId check — planId is already passed */}
           {planId > 0 && null}
         </div>
       )}
@@ -359,12 +364,232 @@ function NieuweInkoopbonDialoog({ opdrachtId, planId, regels, open, onClose }: N
   );
 }
 
+interface VerzendDialoogProps {
+  bon: Inkoopbon;
+  opdrachtId: number;
+  open: boolean;
+  onClose: () => void;
+  defaultEmail?: string;
+}
+
+function VerzendDialoog({ bon, opdrachtId, open, onClose, defaultEmail }: VerzendDialoogProps) {
+  const [email, setEmail] = useState(defaultEmail ?? "");
+  const [bericht, setBericht] = useState("");
+  const { toast } = useToast();
+  const qc = useQueryClient();
+
+  const verzendMutatie = useVerzendInkoopbon({
+    mutation: {
+      onSuccess: () => {
+        qc.invalidateQueries({ queryKey: getListInkoopbonnenQueryKey(opdrachtId) });
+        toast({ title: "Inkoopbon verzonden", description: `Verstuurd naar ${email}` });
+        onClose();
+      },
+      onError: () => toast({ title: "Verzenden mislukt", variant: "destructive" }),
+    },
+  });
+
+  function verstuur() {
+    if (!email.trim()) {
+      toast({ title: "E-mailadres verplicht", variant: "destructive" }); return;
+    }
+    verzendMutatie.mutate({
+      id: opdrachtId,
+      bonId: bon.id,
+      data: { email: email.trim(), bericht: bericht.trim() || undefined },
+    });
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>
+            <Mail className="h-4 w-4 inline mr-2 text-primary" />
+            Inkoopbon verzenden
+          </DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div className="bg-muted/30 rounded-md p-3 text-sm">
+            <p className="font-medium">{bon.leverancier}</p>
+            {bon.bon_nummer && <p className="text-xs text-muted-foreground">{bon.bon_nummer}</p>}
+            {bon.totaal_bedrag != null && (
+              <p className="text-xs text-muted-foreground">Totaal: {euro(bon.totaal_bedrag)}</p>
+            )}
+          </div>
+          <div>
+            <label className="text-sm font-medium">E-mailadres leverancier</label>
+            <Input
+              type="email"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              placeholder="inkoop@leverancier.nl"
+              className="mt-1"
+            />
+          </div>
+          <div>
+            <label className="text-sm font-medium">
+              Aanvullend bericht <span className="text-muted-foreground font-normal">(optioneel)</span>
+            </label>
+            <Textarea
+              value={bericht}
+              onChange={e => setBericht(e.target.value)}
+              placeholder="Bijzonderheden, afspraken of toelichting..."
+              className="mt-1 min-h-[80px]"
+            />
+          </div>
+          <p className="text-xs text-muted-foreground">
+            De inkoopbon wordt als e-mail met artikeloverzicht verstuurd. Na verzenden wordt de status naar
+            <strong> Besteld</strong> gezet.
+          </p>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>Annuleren</Button>
+          <Button onClick={verstuur} disabled={verzendMutatie.isPending}>
+            <Send className="h-4 w-4" />
+            {verzendMutatie.isPending ? "Verzenden..." : "Versturen"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+interface AiSuggestieDialoogProps {
+  opdrachtId: number;
+  suggesties: InkoopbonAiSuggestieResultaat;
+  open: boolean;
+  onClose: () => void;
+}
+
+function AiSuggestieDialoog({ opdrachtId, suggesties, open, onClose }: AiSuggestieDialoogProps) {
+  const [geaccepteerd, setGeaccepteerd] = useState<number[]>([]);
+  const { toast } = useToast();
+  const qc = useQueryClient();
+
+  const createMutatie = useCreateInkoopbon({
+    mutation: {
+      onSuccess: () => {
+        qc.invalidateQueries({ queryKey: getListInkoopbonnenQueryKey(opdrachtId) });
+      },
+      onError: () => toast({ title: "Aanmaken mislukt", variant: "destructive" }),
+    },
+  });
+
+  async function accepteer() {
+    const indices = suggesties.bonnen.map((_, i) => i).filter(i => !geaccepteerd.includes(i) || geaccepteerd.includes(i));
+    const teAccepteren = suggesties.bonnen.filter((_, i) => geaccepteerd.includes(i));
+    if (teAccepteren.length === 0) {
+      toast({ title: "Geen bonnen geselecteerd", variant: "destructive" }); return;
+    }
+    for (const bon of teAccepteren) {
+      createMutatie.mutate({
+        id: opdrachtId,
+        data: {
+          leverancier: bon.leverancier,
+          gewenste_leverdatum: bon.gewenste_leverdatum ?? undefined,
+          regels: bon.regels.map(r => ({
+            inkoopplan_regel_id: r.inkoopplan_regel_id ?? undefined,
+            omschrijving: r.omschrijving,
+            hoeveelheid: r.hoeveelheid,
+            eenheid: r.eenheid,
+            prijs: r.prijs ?? undefined,
+          })),
+        },
+      });
+    }
+    void indices;
+    toast({ title: `${teAccepteren.length} inkoopbo${teAccepteren.length === 1 ? "n" : "nnen"} aangemaakt` });
+    onClose();
+  }
+
+  function toggleBon(i: number) {
+    setGeaccepteerd(prev => prev.includes(i) ? prev.filter(x => x !== i) : [...prev, i]);
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>
+            <Bot className="h-4 w-4 inline mr-2 text-amber-600" />
+            AI-voorstel inkoopbonnen
+          </DialogTitle>
+        </DialogHeader>
+        <p className="text-sm text-muted-foreground">
+          AI heeft de inkoopplanregels gegroepeerd per leverancier. Selecteer de bonnen die u wilt aanmaken.
+        </p>
+        <div className="space-y-3">
+          {suggesties.bonnen.map((bon, i) => (
+            <div
+              key={i}
+              className={`border rounded-md p-3 cursor-pointer transition-colors ${
+                geaccepteerd.includes(i)
+                  ? "border-emerald-400 bg-emerald-50"
+                  : "border-muted hover:border-muted-foreground/40"
+              }`}
+              onClick={() => toggleBon(i)}
+            >
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={geaccepteerd.includes(i)}
+                  onChange={() => toggleBon(i)}
+                  onClick={e => e.stopPropagation()}
+                  className="rounded"
+                />
+                <span className="font-medium text-sm">{bon.leverancier}</span>
+                {bon.gewenste_leverdatum && (
+                  <span className="text-xs text-muted-foreground ml-auto">
+                    Leverdatum: {new Date(bon.gewenste_leverdatum).toLocaleDateString("nl-NL")}
+                  </span>
+                )}
+              </div>
+              {bon.ai_motivatie && (
+                <p className="text-xs text-amber-700 mt-1 ml-6">
+                  <Sparkles className="h-3 w-3 inline mr-1" />
+                  {bon.ai_motivatie}
+                </p>
+              )}
+              <div className="mt-2 ml-6 space-y-1">
+                {bon.regels.map((r, j) => (
+                  <div key={j} className="flex items-center justify-between text-xs text-muted-foreground">
+                    <span>{r.omschrijving}</span>
+                    <span className="tabular-nums">
+                      {r.hoeveelheid} {r.eenheid}
+                      {r.prijs != null && ` — ${euro(r.prijs)}/st`}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>Annuleren</Button>
+          <Button
+            onClick={accepteer}
+            disabled={geaccepteerd.length === 0 || createMutatie.isPending}
+          >
+            <Check className="h-4 w-4" />
+            {geaccepteerd.length > 0
+              ? `${geaccepteerd.length} bon${geaccepteerd.length === 1 ? "" : "nen"} aanmaken`
+              : "Selecteer bonnen"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 interface InkoopbonKaartProps {
   bon: Inkoopbon;
   opdrachtId: number;
+  leverancierEmail?: string | null;
 }
 
-function InkoopbonKaart({ bon, opdrachtId }: InkoopbonKaartProps) {
+function InkoopbonKaart({ bon, opdrachtId, leverancierEmail }: InkoopbonKaartProps) {
+  const [verzendOpen, setVerzendOpen] = useState(false);
   const { toast } = useToast();
   const qc = useQueryClient();
   const statusInfo = BON_STATUS_LABELS[bon.status] ?? BON_STATUS_LABELS.concept;
@@ -401,79 +626,131 @@ function InkoopbonKaart({ bon, opdrachtId }: InkoopbonKaartProps) {
     besteld: "Markeer geleverd",
   };
 
+  const isVerzonden = bon.verzonden_op != null;
+  const kanVerzenden = bon.status === "concept" || bon.status === "goedgekeurd" || bon.status === "besteld";
+
   return (
-    <Card>
-      <CardHeader className="pb-2 pt-3">
-        <div className="flex items-center justify-between gap-2">
-          <div>
-            <div className="flex items-center gap-2">
-              <CardTitle className="text-sm">{bon.leverancier}</CardTitle>
-              {bon.bon_nummer && <span className="text-xs text-muted-foreground">{bon.bon_nummer}</span>}
-            </div>
-            <div className="flex items-center gap-2 mt-0.5">
-              <Badge variant="outline" className={`text-xs ${statusInfo.kleur}`}>{statusInfo.label}</Badge>
-              {bon.gewenste_leverdatum && (
-                <span className="text-xs text-muted-foreground">
-                  Leverdatum: {new Date(bon.gewenste_leverdatum).toLocaleDateString("nl-NL")}
-                </span>
+    <>
+      <Card>
+        <CardHeader className="pb-2 pt-3">
+          <div className="flex items-center justify-between gap-2">
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <CardTitle className="text-sm">{bon.leverancier}</CardTitle>
+                {bon.bon_nummer && <span className="text-xs text-muted-foreground">{bon.bon_nummer}</span>}
+                {bon.ai_suggestie && (
+                  <Badge variant="outline" className="text-xs bg-amber-50 text-amber-800 border-amber-200">
+                    <Bot className="h-2.5 w-2.5 mr-1" />
+                    AI
+                  </Badge>
+                )}
+                {isVerzonden && (
+                  <Badge variant="outline" className="text-xs bg-blue-50 text-blue-800 border-blue-200">
+                    <Mail className="h-2.5 w-2.5 mr-1" />
+                    Verzonden
+                  </Badge>
+                )}
+              </div>
+              <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                <Badge variant="outline" className={`text-xs ${statusInfo.kleur}`}>{statusInfo.label}</Badge>
+                {bon.gewenste_leverdatum && (
+                  <span className="text-xs text-muted-foreground">
+                    Leverdatum: {new Date(bon.gewenste_leverdatum).toLocaleDateString("nl-NL")}
+                  </span>
+                )}
+                {bon.totaal_bedrag != null && (
+                  <span className="text-xs font-medium">{euro(bon.totaal_bedrag)}</span>
+                )}
+              </div>
+              {isVerzonden && bon.verzonden_naar && (
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Verstuurd naar {bon.verzonden_naar}
+                  {bon.verzonden_op && ` op ${new Date(bon.verzonden_op).toLocaleDateString("nl-NL")}`}
+                </p>
               )}
-              {bon.totaal_bedrag != null && (
-                <span className="text-xs font-medium">{euro(bon.totaal_bedrag)}</span>
+            </div>
+            <div className="flex items-center gap-1 flex-wrap justify-end">
+              {kanVerzenden && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-7 text-xs"
+                  onClick={() => setVerzendOpen(true)}
+                >
+                  <Mail className="h-3 w-3" />
+                  {isVerzonden ? "Opnieuw verzenden" : "Verzenden"}
+                </Button>
+              )}
+              {volgendeStatus[bon.status] && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-7 text-xs"
+                  disabled={patchMutatie.isPending}
+                  onClick={() => patchMutatie.mutate({ id: opdrachtId, bonId: bon.id, data: { status: volgendeStatus[bon.status] } })}
+                >
+                  <Check className="h-3 w-3" />
+                  {volgendeStatusLabel[bon.status]}
+                </Button>
+              )}
+              {bon.status === "concept" && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                  disabled={deleteMutatie.isPending}
+                  onClick={() => deleteMutatie.mutate({ id: opdrachtId, bonId: bon.id })}
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
               )}
             </div>
           </div>
-          <div className="flex items-center gap-1">
-            {volgendeStatus[bon.status] && (
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-7 text-xs"
-                disabled={patchMutatie.isPending}
-                onClick={() => patchMutatie.mutate({ id: opdrachtId, bonId: bon.id, data: { status: volgendeStatus[bon.status] } })}
-              >
-                <Check className="h-3 w-3" />
-                {volgendeStatusLabel[bon.status]}
-              </Button>
-            )}
-            {bon.status === "concept" && (
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                disabled={deleteMutatie.isPending}
-                onClick={() => deleteMutatie.mutate({ id: opdrachtId, bonId: bon.id })}
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-              </Button>
-            )}
-          </div>
-        </div>
-      </CardHeader>
-      {(bon.regels ?? []).length > 0 && (
-        <CardContent className="pb-3">
-          <table className="w-full text-xs">
-            <thead>
-              <tr className="text-muted-foreground border-b">
-                <th className="text-left pb-1 font-normal">Artikel</th>
-                <th className="text-right pb-1 font-normal">Hoev.</th>
-                <th className="text-right pb-1 font-normal">Prijs</th>
-                <th className="text-right pb-1 font-normal">Totaal</th>
-              </tr>
-            </thead>
-            <tbody>
-              {(bon.regels ?? []).map((r, i) => (
-                <tr key={i} className="border-b border-dashed last:border-0">
-                  <td className="py-1">{r.omschrijving}</td>
-                  <td className="text-right py-1 tabular-nums">{r.hoeveelheid} {r.eenheid}</td>
-                  <td className="text-right py-1 tabular-nums">{r.prijs != null ? euro(r.prijs) : "—"}</td>
-                  <td className="text-right py-1 tabular-nums">{r.totaal != null ? euro(r.totaal) : "—"}</td>
+        </CardHeader>
+        {bon.ai_motivatie && (
+          <CardContent className="pb-2 pt-0">
+            <div className="bg-amber-50 border border-amber-200 rounded-md p-2 text-xs text-amber-800">
+              <Sparkles className="h-3 w-3 inline mr-1" />
+              {bon.ai_motivatie}
+            </div>
+          </CardContent>
+        )}
+        {(bon.regels ?? []).length > 0 && (
+          <CardContent className="pb-3">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="text-muted-foreground border-b">
+                  <th className="text-left pb-1 font-normal">Artikel</th>
+                  <th className="text-right pb-1 font-normal">Hoev.</th>
+                  <th className="text-right pb-1 font-normal">Prijs</th>
+                  <th className="text-right pb-1 font-normal">Totaal</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </CardContent>
+              </thead>
+              <tbody>
+                {(bon.regels ?? []).map((r, i) => (
+                  <tr key={i} className="border-b border-dashed last:border-0">
+                    <td className="py-1">{r.omschrijving}</td>
+                    <td className="text-right py-1 tabular-nums">{r.hoeveelheid} {r.eenheid}</td>
+                    <td className="text-right py-1 tabular-nums">{r.prijs != null ? euro(r.prijs) : "—"}</td>
+                    <td className="text-right py-1 tabular-nums">{r.totaal != null ? euro(r.totaal) : "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </CardContent>
+        )}
+      </Card>
+
+      {verzendOpen && (
+        <VerzendDialoog
+          bon={bon}
+          opdrachtId={opdrachtId}
+          open={verzendOpen}
+          onClose={() => setVerzendOpen(false)}
+          defaultEmail={leverancierEmail ?? bon.verzonden_naar ?? ""}
+        />
       )}
-    </Card>
+    </>
   );
 }
 
@@ -483,11 +760,14 @@ interface InkoopplanningTabProps {
 
 export default function InkoopplanningTab({ opdrachtId }: InkoopplanningTabProps) {
   const [bonDialoog, setBonDialoog] = useState(false);
+  const [aiDialoogOpen, setAiDialoogOpen] = useState(false);
+  const [aiSuggesties, setAiSuggesties] = useState<InkoopbonAiSuggestieResultaat | null>(null);
   const { toast } = useToast();
   const qc = useQueryClient();
 
   const { data: plan, isLoading, error } = useGetInkoopplanning(opdrachtId);
   const { data: bonnen } = useListInkoopbonnen(opdrachtId);
+  const { data: leveranciersList = [] } = useListLeveranciers();
 
   const genereerMutatie = useGenereerInkoopplanning({
     mutation: {
@@ -509,12 +789,31 @@ export default function InkoopplanningTab({ opdrachtId }: InkoopplanningTabProps
     },
   });
 
+  const aiSuggestiesMutatie = useGenereerInkoopbonAiSuggesties({
+    mutation: {
+      onSuccess: (data) => {
+        if (!data.bonnen || data.bonnen.length === 0) {
+          toast({ title: "Geen suggesties beschikbaar", description: "Zorg dat de inkoopplanning regels bevat met een open status." });
+          return;
+        }
+        setAiSuggesties(data);
+        setAiDialoogOpen(true);
+      },
+      onError: () => toast({ title: "AI-suggesties mislukt", variant: "destructive" }),
+    },
+  });
+
   const isGereed = plan?.status === "gereed";
 
-  // Groepeer per type voor overzicht
   const regels = plan?.regels ?? [];
   const langeLevering = regels.filter(r => r.type === "maatwerk" || (r.levertijd_weken ?? 0) >= 4);
   const totaalBesparing = plan?.totale_besparing ?? regels.reduce((a, r) => a + (r.besparing ?? 0), 0);
+
+  function getLeverancierEmail(bon: Inkoopbon): string | null {
+    if (!bon.leverancier_id) return null;
+    const lev = leveranciersList.find(l => l.id === bon.leverancier_id);
+    return lev?.email ?? null;
+  }
 
   if (isLoading) {
     return (
@@ -549,7 +848,6 @@ export default function InkoopplanningTab({ opdrachtId }: InkoopplanningTabProps
 
   return (
     <div className="mt-4 space-y-4">
-      {/* Header + acties */}
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div className="flex items-center gap-2 flex-wrap">
           {plan.ai_gegenereerd && (
@@ -589,7 +887,6 @@ export default function InkoopplanningTab({ opdrachtId }: InkoopplanningTabProps
         </div>
       </div>
 
-      {/* AI samenvatting */}
       {plan.ai_samenvatting && (
         <div className="bg-amber-50 border border-amber-200 rounded-md p-3 text-sm text-amber-900">
           <Sparkles className="h-4 w-4 inline mr-1.5 text-amber-600" />
@@ -597,7 +894,6 @@ export default function InkoopplanningTab({ opdrachtId }: InkoopplanningTabProps
         </div>
       )}
 
-      {/* Aandacht: lange levertijden */}
       {langeLevering.length > 0 && (
         <div className="bg-rose-50 border border-rose-200 rounded-md p-3">
           <div className="flex items-center gap-2 text-sm font-medium text-rose-800 mb-1">
@@ -614,7 +910,6 @@ export default function InkoopplanningTab({ opdrachtId }: InkoopplanningTabProps
         </div>
       )}
 
-      {/* Artikelen */}
       <div>
         <div className="flex items-center justify-between mb-2">
           <h3 className="text-sm font-semibold">Inkoop-artikelen ({regels.length})</h3>
@@ -646,7 +941,6 @@ export default function InkoopplanningTab({ opdrachtId }: InkoopplanningTabProps
         </div>
       </div>
 
-      {/* Inkoopbonnen */}
       <div>
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
@@ -655,26 +949,46 @@ export default function InkoopplanningTab({ opdrachtId }: InkoopplanningTabProps
               <Badge variant="outline" className="text-xs">{(bonnen ?? []).length}</Badge>
             )}
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setBonDialoog(true)}
-          >
-            <Plus className="h-3.5 w-3.5" /> Nieuwe inkoopbon
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => aiSuggestiesMutatie.mutate({ id: opdrachtId })}
+              disabled={aiSuggestiesMutatie.isPending}
+            >
+              <Bot className="h-3.5 w-3.5" />
+              {aiSuggestiesMutatie.isPending ? "Analyseren..." : "AI-voorstel"}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setBonDialoog(true)}
+            >
+              <Plus className="h-3.5 w-3.5" /> Nieuwe bon
+            </Button>
+          </div>
         </div>
 
         {(bonnen ?? []).length === 0 ? (
           <Card>
-            <CardContent className="py-6 text-center text-sm text-muted-foreground">
+            <CardContent className="py-8 text-center space-y-2">
               <Truck className="h-6 w-6 mx-auto mb-2 opacity-30" />
-              Nog geen inkoopbonnen aangemaakt.
+              <p className="text-sm text-muted-foreground">Nog geen inkoopbonnen aangemaakt.</p>
+              <p className="text-xs text-muted-foreground">
+                Gebruik <strong>AI-voorstel</strong> om automatisch bonnen per leverancier te laten voorstellen,
+                of maak handmatig een nieuwe bon aan.
+              </p>
             </CardContent>
           </Card>
         ) : (
           <div className="space-y-2">
             {(bonnen ?? []).map(bon => (
-              <InkoopbonKaart key={bon.id} bon={bon} opdrachtId={opdrachtId} />
+              <InkoopbonKaart
+                key={bon.id}
+                bon={bon}
+                opdrachtId={opdrachtId}
+                leverancierEmail={getLeverancierEmail(bon)}
+              />
             ))}
           </div>
         )}
@@ -687,6 +1001,18 @@ export default function InkoopplanningTab({ opdrachtId }: InkoopplanningTabProps
         open={bonDialoog}
         onClose={() => setBonDialoog(false)}
       />
+
+      {aiSuggesties && (
+        <AiSuggestieDialoog
+          opdrachtId={opdrachtId}
+          suggesties={aiSuggesties}
+          open={aiDialoogOpen}
+          onClose={() => {
+            setAiDialoogOpen(false);
+            setAiSuggesties(null);
+          }}
+        />
+      )}
     </div>
   );
 }

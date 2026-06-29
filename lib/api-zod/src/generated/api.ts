@@ -10632,6 +10632,10 @@ export const ListInkoopbonnenResponseItem = zod.object({
   "status": zod.enum(['concept', 'goedgekeurd', 'besteld', 'geleverd']),
   "goedgekeurd_op": zod.string().nullish(),
   "opmerkingen": zod.string().nullish(),
+  "verzonden_op": zod.string().nullish(),
+  "verzonden_naar": zod.string().nullish(),
+  "ai_suggestie": zod.boolean().optional(),
+  "ai_motivatie": zod.string().nullish(),
   "aangemaakt_op": zod.string().optional(),
   "bijgewerkt_op": zod.string().optional(),
   "regels": zod.array(zod.object({
@@ -10673,6 +10677,30 @@ export const CreateInkoopbonResponse = zod.void()
 
 
 /**
+ * @summary AI stelt inkoopbonnen voor per leverancier (niet opgeslagen)
+ */
+export const GenereerInkoopbonAiSuggestiesParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GenereerInkoopbonAiSuggestiesResponse = zod.object({
+  "bonnen": zod.array(zod.object({
+  "leverancier": zod.string(),
+  "leverancier_id": zod.number().nullish(),
+  "gewenste_leverdatum": zod.string().nullish(),
+  "ai_motivatie": zod.string().nullish(),
+  "regels": zod.array(zod.object({
+  "inkoopplan_regel_id": zod.number().nullish(),
+  "omschrijving": zod.string(),
+  "hoeveelheid": zod.number(),
+  "eenheid": zod.string(),
+  "prijs": zod.number().nullish()
+}))
+}))
+})
+
+
+/**
  * @summary Inkoopbon bijwerken (status / leverancier / datum)
  */
 export const PatchInkoopbonParams = zod.object({
@@ -10700,6 +10728,10 @@ export const PatchInkoopbonResponse = zod.object({
   "status": zod.enum(['concept', 'goedgekeurd', 'besteld', 'geleverd']),
   "goedgekeurd_op": zod.string().nullish(),
   "opmerkingen": zod.string().nullish(),
+  "verzonden_op": zod.string().nullish(),
+  "verzonden_naar": zod.string().nullish(),
+  "ai_suggestie": zod.boolean().optional(),
+  "ai_motivatie": zod.string().nullish(),
   "aangemaakt_op": zod.string().optional(),
   "bijgewerkt_op": zod.string().optional(),
   "regels": zod.array(zod.object({
@@ -10725,6 +10757,51 @@ export const DeleteInkoopbonParams = zod.object({
 })
 
 export const DeleteInkoopbonResponse = zod.void()
+
+
+/**
+ * @summary Inkoopbon per e-mail versturen naar leverancier
+ */
+export const VerzendInkoopbonParams = zod.object({
+  "id": zod.coerce.number(),
+  "bonId": zod.coerce.number()
+})
+
+export const VerzendInkoopbonBody = zod.object({
+  "email": zod.string(),
+  "bericht": zod.string().optional()
+})
+
+export const VerzendInkoopbonResponse = zod.object({
+  "id": zod.number(),
+  "inkoopplan_id": zod.number().nullish(),
+  "opdracht_id": zod.number(),
+  "bon_nummer": zod.string().nullish(),
+  "leverancier": zod.string(),
+  "leverancier_id": zod.number().nullish(),
+  "gewenste_leverdatum": zod.string().nullish(),
+  "totaal_bedrag": zod.number().nullish(),
+  "status": zod.enum(['concept', 'goedgekeurd', 'besteld', 'geleverd']),
+  "goedgekeurd_op": zod.string().nullish(),
+  "opmerkingen": zod.string().nullish(),
+  "verzonden_op": zod.string().nullish(),
+  "verzonden_naar": zod.string().nullish(),
+  "ai_suggestie": zod.boolean().optional(),
+  "ai_motivatie": zod.string().nullish(),
+  "aangemaakt_op": zod.string().optional(),
+  "bijgewerkt_op": zod.string().optional(),
+  "regels": zod.array(zod.object({
+  "id": zod.number(),
+  "inkoopbon_id": zod.number(),
+  "inkoopplan_regel_id": zod.number().nullish(),
+  "omschrijving": zod.string(),
+  "hoeveelheid": zod.number(),
+  "eenheid": zod.string(),
+  "prijs": zod.number().nullish(),
+  "totaal": zod.number().nullish(),
+  "volgorde": zod.number()
+})).optional()
+})
 
 
 /**

@@ -8673,6 +8673,25 @@ paths:
               schema:
                 $ref: "#/components/schemas/Inkoopbon"
 
+  /opdrachten/{id}/inkoopplanning/inkoopbonnen/ai-suggesties:
+    post:
+      operationId: genereerInkoopbonAiSuggesties
+      tags: [opdrachten]
+      summary: AI stelt inkoopbonnen voor per leverancier (niet opgeslagen)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InkoopbonAiSuggestieResultaat"
+
   /opdrachten/{id}/inkoopplanning/inkoopbonnen/{bonId}:
     patch:
       operationId: patchInkoopbon
@@ -8720,6 +8739,36 @@ paths:
       responses:
         "204":
           description: Verwijderd
+
+  /opdrachten/{id}/inkoopplanning/inkoopbonnen/{bonId}/verzenden:
+    post:
+      operationId: verzendInkoopbon
+      tags: [opdrachten]
+      summary: Inkoopbon per e-mail versturen naar leverancier
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+        - in: path
+          name: bonId
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InkoopbonVerzendInput"
+      responses:
+        "200":
+          description: Verzonden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Inkoopbon"
 
   /opdrachten/{id}/uitvoeringsplanning:
     get:
@@ -21248,6 +21297,14 @@ components:
           type: ["string", "null"]
         opmerkingen:
           type: ["string", "null"]
+        verzonden_op:
+          type: ["string", "null"]
+        verzonden_naar:
+          type: ["string", "null"]
+        ai_suggestie:
+          type: boolean
+        ai_motivatie:
+          type: ["string", "null"]
         aangemaakt_op:
           type: string
         bijgewerkt_op:
@@ -21296,6 +21353,50 @@ components:
         status:
           type: string
         opmerkingen:
+          type: string
+
+    InkoopbonAiSuggestieResultaat:
+      type: object
+      required: [bonnen]
+      properties:
+        bonnen:
+          type: array
+          items:
+            type: object
+            required: [leverancier, regels]
+            properties:
+              leverancier:
+                type: string
+              leverancier_id:
+                type: ["integer", "null"]
+              gewenste_leverdatum:
+                type: ["string", "null"]
+              ai_motivatie:
+                type: ["string", "null"]
+              regels:
+                type: array
+                items:
+                  type: object
+                  required: [omschrijving, hoeveelheid, eenheid]
+                  properties:
+                    inkoopplan_regel_id:
+                      type: ["integer", "null"]
+                    omschrijving:
+                      type: string
+                    hoeveelheid:
+                      type: number
+                    eenheid:
+                      type: string
+                    prijs:
+                      type: ["number", "null"]
+
+    InkoopbonVerzendInput:
+      type: object
+      required: [email]
+      properties:
+        email:
+          type: string
+        bericht:
           type: string
 
     UitvoeringsplanTaak:
