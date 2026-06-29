@@ -64,27 +64,30 @@ export default function MenuScherm() {
   const acties: RadiaalActie[] = [
     { sleutel: "werkdag", label: "Mijn werkdag", icoon: "today", onPress: () => router.push("/werkdag") },
     { sleutel: "gebouwen", label: "Gebouwen", icoon: "business", onPress: () => router.push("/gebouwen") },
-    { sleutel: "planning", label: "Routeplanning", icoon: "navigate", onPress: () => router.push("/planning") },
-    { sleutel: "personeel", label: "Personeel & Organisatie", icoon: "people", onPress: () => router.push("/hrm") },
+    { sleutel: "verlof", label: "Verlof", icoon: "calendar-outline", onPress: () => router.push("/hrm/verlof") },
     { sleutel: "uren", label: "Uren", icoon: "stopwatch", onPress: () => router.push("/uren") },
-    { sleutel: "berichten", label: "Berichten", icoon: "chatbubbles", onPress: () => router.push("/berichten") },
-    { sleutel: "toolboxen", label: "Toolboxen", icoon: "shield-checkmark", onPress: () => router.push("/toolboxen") },
-    { sleutel: "opname", label: "Opname", icoon: "clipboard", onPress: () => router.push("/opname") },
-    { sleutel: "lmra", label: "LMRA", icoon: "clipboard-outline", onPress: () => router.push("/lmra") },
-    { sleutel: "veiligheid_melding", label: "Veiligheidsmelding", icoon: "warning-outline", onPress: () => router.push("/veiligheid-melding") },
+    { sleutel: "planning", label: "Routeplanner", icoon: "navigate", onPress: () => router.push("/planning") },
+    { sleutel: "veiligheid", label: "Veiligheid", icoon: "shield-checkmark-outline", onPress: () => router.push("/veiligheid") },
+  ];
+
+  const meerActies: RadiaalActie[] = [
+    { sleutel: "personeel", label: "Personeel", icoon: "people-outline", onPress: () => router.push("/hrm") },
+    { sleutel: "berichten", label: "Berichten", icoon: "chatbubbles-outline", onPress: () => router.push("/berichten") },
+    { sleutel: "opname", label: "Opname", icoon: "clipboard-outline", onPress: () => router.push("/opname") },
+    { sleutel: "documenten", label: "Documenten", icoon: "folder-outline", onPress: () => router.push("/documenten") },
   ];
 
   const routeMap: Record<string, string> = {
     werkdag: "/werkdag",
     gebouwen: "/gebouwen",
-    planning: "/planning",
-    personeel: "/hrm",
+    verlof: "/hrm/verlof",
     uren: "/uren",
-    toolboxen: "/toolboxen",
-    lmra: "/lmra",
-    veiligheid_melding: "/veiligheid-melding",
+    planning: "/planning",
+    veiligheid: "/veiligheid",
+    personeel: "/hrm",
     berichten: "/berichten",
     opname: "/opname",
+    documenten: "/documenten",
   };
 
   // eslint-disable-next-line react-hooks/rules-of-hooks
@@ -394,7 +397,7 @@ export default function MenuScherm() {
         </View>
       </View>
 
-      <RadiaalMenu acties={acties} />
+      <RadiaalMenu acties={acties} meerActies={meerActies} />
     </View>
   );
 }

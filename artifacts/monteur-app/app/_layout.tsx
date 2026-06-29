@@ -101,6 +101,7 @@ function RootLayoutNav() {
         <Stack.Screen name="plattegrond/[verdiepingId]" />
         <Stack.Screen name="document/[tekeningId]" />
         <Stack.Screen name="hrm/index" />
+        <Stack.Screen name="hrm/verlof" />
         <Stack.Screen name="hrm/opleidingen" />
         <Stack.Screen name="hrm/kennisbank" />
         <Stack.Screen name="uren" />
@@ -113,6 +114,7 @@ function RootLayoutNav() {
         <Stack.Screen name="werkdag/[id]" />
         <Stack.Screen name="lmra" />
         <Stack.Screen name="veiligheid-melding" />
+        <Stack.Screen name="veiligheid/index" />
       </Stack>
     </>
   );

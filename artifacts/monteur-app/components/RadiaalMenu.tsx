@@ -35,6 +35,11 @@ export type RadiaalActie = {
   binnenkort?: boolean;
 };
 
+export type RadiaalMenuProps = {
+  acties: RadiaalActie[];
+  meerActies?: RadiaalActie[];
+};
+
 const ITEM_GROOTTE = 74;
 const MIDDEN_GROOTTE = 124;
 
@@ -172,13 +177,14 @@ function RadiaalItem({
   );
 }
 
-export function RadiaalMenu({ acties }: { acties: RadiaalActie[] }) {
+export function RadiaalMenu({ acties, meerActies = [] }: RadiaalMenuProps) {
   const c = useColors();
   const insets = useSafeAreaInsets();
   const { width, height } = useWindowDimensions();
   const [open, setOpen] = useState(true);
   const [selectie, setSelectie] = useState(0);
   const [vlak, setVlak] = useState({ w: width, h: height });
+  const [meerOpen, setMeerOpen] = useState(false);
 
   const voortgang = useSharedValue(1);
   const rotatie = useSharedValue(0);
@@ -246,6 +252,7 @@ export function RadiaalMenu({ acties }: { acties: RadiaalActie[] }) {
   function sluiten() {
     tikStoot(Haptics.ImpactFeedbackStyle.Light);
     setOpen(false);
+    setMeerOpen(false);
   }
 
   function kies(actie: RadiaalActie) {
@@ -461,9 +468,93 @@ export function RadiaalMenu({ acties }: { acties: RadiaalActie[] }) {
             </Pressable>
           </>
         ) : (
-          <Text style={{ color: c.darkMuted, fontSize: 13, fontFamily: "Inter_400Regular" }}>
-            Tik op FPS om het menu te openen
-          </Text>
+          <View style={{ alignItems: "center", width: "100%", paddingHorizontal: 24, gap: 0 }}>
+            <Text style={{ color: c.darkMuted, fontSize: 13, fontFamily: "Inter_400Regular", marginBottom: 14 }}>
+              Tik op FPS om het menu te openen
+            </Text>
+            {meerActies.length > 0 && (
+              <>
+                <Pressable
+                  onPress={() => setMeerOpen((v) => !v)}
+                  style={({ pressed }) => ({
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 6,
+                    paddingHorizontal: 16,
+                    paddingVertical: 8,
+                    borderRadius: 999,
+                    backgroundColor: pressed
+                      ? "rgba(255,255,255,0.16)"
+                      : "rgba(255,255,255,0.09)",
+                    marginBottom: meerOpen ? 16 : 0,
+                  })}
+                >
+                  <Text style={{ color: c.darkForeground, fontSize: 13, fontFamily: "Inter_600SemiBold" }}>
+                    Meer
+                  </Text>
+                  <Ionicons
+                    name={meerOpen ? "chevron-up" : "chevron-down"}
+                    size={14}
+                    color={c.darkForeground}
+                  />
+                </Pressable>
+                {meerOpen && (
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      flexWrap: "wrap",
+                      gap: 16,
+                      justifyContent: "center",
+                    }}
+                  >
+                    {meerActies.map((actie) => (
+                      <Pressable
+                        key={actie.sleutel}
+                        testID={`meer-${actie.sleutel}`}
+                        onPress={() => {
+                          setMeerOpen(false);
+                          actie.onPress();
+                        }}
+                        style={({ pressed }) => ({
+                          alignItems: "center",
+                          gap: 7,
+                          width: 68,
+                          opacity: pressed ? 0.6 : 1,
+                        })}
+                      >
+                        <View
+                          style={{
+                            width: 52,
+                            height: 52,
+                            borderRadius: 26,
+                            backgroundColor: "rgba(255,255,255,0.10)",
+                            borderWidth: 1,
+                            borderColor: "rgba(255,255,255,0.18)",
+                            alignItems: "center",
+                            justifyContent: "center",
+                          }}
+                        >
+                          <Ionicons name={actie.icoon} size={22} color={c.darkForeground} />
+                        </View>
+                        <Text
+                          numberOfLines={2}
+                          style={{
+                            color: c.darkMuted,
+                            fontSize: 11,
+                            fontFamily: "Inter_500Medium",
+                            textAlign: "center",
+                            lineHeight: 15,
+                          }}
+                        >
+                          {actie.label}
+                        </Text>
+                      </Pressable>
+                    ))}
+                  </View>
+                )}
+              </>
+            )}
+          </View>
         )}
       </View>
     </View>
