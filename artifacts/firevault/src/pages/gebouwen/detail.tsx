@@ -15,6 +15,7 @@ import {
   useListGekoppeldeDocumenten,
   useListModCalculaties,
   useListOffertes,
+  useListOpnames,
   type Document,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -368,6 +369,10 @@ export default function GebouwDetail() {
   const gebouwCalcs = (Array.isArray(alleCalculaties) ? alleCalculaties : []).filter((c: any) => c.gebouw_id === gebouwId);
   const { data: alleOffertes = [] } = useListOffertes();
   const gebouwOffertes = (Array.isArray(alleOffertes) ? alleOffertes : []).filter((o: any) => o.gebouw_id === gebouwId);
+  const { data: gebouwOpnames = [] } = useListOpnames(
+    { gebouw_id: gebouwId },
+    { query: { queryKey: ["opnames", gebouwId] } },
+  );
   const afgeleidStatus = bepaalAfgeleidStatus(gebouwCalcs, gebouwOffertes);
 
   const [gekozenGebruikerId, setGekozenGebruikerId] = useState<string>("");
@@ -684,7 +689,7 @@ export default function GebouwDetail() {
           ════════════════════════════════════════════════════ */}
       <Tabs value={segment} onValueChange={setSegment} className="w-full">
         <div className="flex items-start justify-between gap-4">
-          <TabsList className="grid w-full max-w-4xl min-w-0 grid-cols-6">
+          <TabsList className="grid w-full max-w-4xl min-w-0 grid-cols-7">
             <TabsTrigger value="project" className="gap-1.5">
               <Building2 className="h-4 w-4 shrink-0" />
               <span className="hidden sm:inline">Gebouw</span>
@@ -709,6 +714,10 @@ export default function GebouwDetail() {
             <TabsTrigger value="offertes" className="gap-1.5">
               <Euro className="h-4 w-4 shrink-0" />
               <span className="hidden sm:inline">Offertes</span>
+            </TabsTrigger>
+            <TabsTrigger value="opnames" className="gap-1.5">
+              <ListChecks className="h-4 w-4 shrink-0" />
+              <span className="hidden sm:inline">Opnames</span>
             </TabsTrigger>
           </TabsList>
 
@@ -1317,6 +1326,59 @@ export default function GebouwDetail() {
                           <span className="text-xs text-muted-foreground ml-1">excl.</span>
                         </span>
                       )}
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </TabsContent>
+
+      {/* ════════════════════════════════════════════════════
+          SEGMENT 7 — Opnames
+          ════════════════════════════════════════════════════ */}
+      <TabsContent value="opnames" className="space-y-6 mt-6">
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base flex items-center gap-2">
+                <ListChecks className="h-4 w-4" />
+                Opnames
+              </CardTitle>
+              <Button size="sm" asChild>
+                <Link href={`/opname/nieuw?gebouw_id=${gebouwId}`}>
+                  <Plus className="h-3.5 w-3.5 mr-1.5" />
+                  Nieuwe opname
+                </Link>
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent className="p-0">
+            {gebouwOpnames.length === 0 ? (
+              <div className="py-10 text-center text-muted-foreground text-sm">
+                <ListChecks className="h-8 w-8 mx-auto mb-2 opacity-20" />
+                <p>Geen opnames gekoppeld aan dit gebouw</p>
+              </div>
+            ) : (
+              <div className="divide-y">
+                {gebouwOpnames.map((o) => (
+                  <Link key={o.id} href={`/opname/${o.id}`}>
+                    <div className="flex items-center gap-3 px-6 py-3 hover:bg-muted/50 cursor-pointer transition-colors">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{o.naam}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {new Date(o.datum).toLocaleDateString("nl-NL", { day: "numeric", month: "short", year: "numeric" })}
+                          {o.aangemaakt_door_naam && <> · {o.aangemaakt_door_naam}</>}
+                        </p>
+                      </div>
+                      <span className="text-xs text-muted-foreground shrink-0">{o.aantal_items} items</span>
+                      <Badge
+                        variant={o.status === "definitief" ? "default" : "secondary"}
+                        className="text-xs shrink-0"
+                      >
+                        {o.status === "definitief" ? "Definitief" : "Concept"}
+                      </Badge>
                     </div>
                   </Link>
                 ))}
