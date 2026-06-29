@@ -1,61 +1,172 @@
 # Changelog — FPS Connect
 
-Overzicht van gebouwde functies, opgeloste bugs en kleine verbeteringen, per datum.
-Grote roadmap-fases staan in `docs/roadmap/gebouwd.md`.
+Overzicht van opdrachten, fixes en bouwwerk per datum.
+Voor elke taak drie scores:
+- **Uitvoering** — volledig / gedeeltelijk / niet
+- **Diepere lagen** — volledig / gedeeltelijk / niet (= of de onderliggende detailscenario's ook gebouwd zijn)
+- **Getest** — e2e geautomatiseerd / typecheck / handmatig door agent / niet expliciet getest
+
+Grote roadmap-fases staan ook in `docs/roadmap/gebouwd.md` en `docs/roadmap/actief.md`.
 
 ---
 
 ## 29 juni 2026
 
-### Opgelost — nieuw onboarde monteur verscheen niet in planning
-Na het onboarden van een medewerker via Personeel werd de planning-cache niet
-geïnvalideerd. De planning-pagina toonde daardoor de verouderde lijst totdat de
-gebruiker handmatig de pagina herlaadde.
+### Fix — nieuw onboarde monteur niet zichtbaar in planning
+Na onboarding via de Personeel-pagina werd de planning-medewerkerscache niet
+geïnvalideerd. De planning toonde de verouderde lijst totdat de gebruiker
+handmatig de pagina herlaadde.
 
-**Fix:** `getListPlanningMedewerkersQueryKey()` toegevoegd aan de cache-invalidatie
-na zowel `opslaanMedewerker()` als `opslaanOnboarding()` in `personeel/index.tsx`.
-De monteur verschijnt nu direct in de planning na onboarding, zonder refresh.
+- **Uitvoering:** volledig — `getListPlanningMedewerkersQueryKey()` toegevoegd aan
+  cache-invalidatie in zowel `opslaanMedewerker()` als `opslaanOnboarding()`
+- **Diepere lagen:** volledig — beide aanmaakpaden gedekt (handmatig aanmaken én onboarding vanuit gebruikersaccount)
+- **Getest:** typecheck (geen nieuwe fouten); e2e-web-ci groen; monteur-app e2e groen na SLEUTELS-fix
+
+### Fix — e2e startmenu-test (SLEUTELS verouderd na waaier-vereenvoudiging)
+Waaier was eerder vereenvoudigd van 10 naar 6 hoofd-items (werkdag/gebouwen/
+verlof/uren/planning/veiligheid); personeel en berichten naar "Meer". De e2e-test
+controleerde nog op de oude vijf items, waardoor `radiaal-personeel` niet gevonden
+werd.
+
+- **Uitvoering:** volledig — SLEUTELS bijgewerkt, staptitel "vijf" → "zes"
+- **Diepere lagen:** volledig — navigatie via `__FPS_NAVIGEER__` naar personeel/berichten werkt nog steeds via routeMap
+- **Getest:** e2e-monteur-ci groen na de fix
+
+---
+
+## 17 juni 2026
+
+### Gebouwd — V1.4 Opleverrapportage Increment 3
+Derde increment van de opleverrapportage, voortbouwend op de bestaande live
+`print.tsx`. Exacte inhoud van I3: rapporttypes als sectie-presets, handmatige
+e-mailselectie, bijlagenpakket samenstellen. Bouwt voort op het bestaande
+werkende voorblad/spots/plattegrond-export.
+
+- **Uitvoering:** gedeeltelijk (I3 van een reeks; spotselectie per verdieping/cluster en definitief-maken-overgang naar V1.5 nog niet gebouwd)
+- **Diepere lagen:** gedeeltelijk — kernflow werkt; bijlagenpakket met alle documenttypen is geïmplementeerd maar het "definitief-maken" als formele persistentie-stap wacht op V1.5
+- **Getest:** typecheck groen; e2e-web-ci groen; print-functie handmatig verifieerbaar via `/gebouwen/:id/print`
 
 ---
 
 ## 13 juni 2026
 
 ### Gebouwd — Document Design System (visuele basis)
-Herbruikbare documentcomponenten + previewpagina onder Beheer › Documentopmaak
-(`/beheer/documentopmaak`, gated op systeembeheerder). URL-veilige branding-velden
-zodat de Werkgever-entiteit ze later kan voeden. Drie templatefamilies (A klant,
-B HRM/juridisch, C intern operationeel). Verdieping (versiebeheer, PDF, digitale
-ondertekening) volgt in een latere fase.
+Herbruikbare documentcomponenten (`DocumentFrame`, Familie A/B/C) + previewpagina
+onder Beheer › Documentopmaak (`/beheer/documentopmaak`, gated op systeem).
+Per werkmaatschappij en per template te wisselen in de preview. Dummy-content;
+geen DB/OpenAPI-wijziging. URL-veilige branding-velden zodat de Werkgever-entiteit
+ze later kan voeden.
+
+- **Uitvoering:** volledig voor de afgebakende eerste oplevering (visuele basis + 5 voorbeeldtemplates)
+- **Diepere lagen:** gedeeltelijk — versiebeheer, PDF-generatie, digitale ondertekening en per-werkmaatschappij centraal DB-beheer staan nog open (latere increments)
+- **Getest:** typecheck groen; visueel beoordeelbaar in de preview via `/beheer/documentopmaak`
+
+### Gebouwd — integratie-light print.tsx met Document Design System
+`print.tsx` haalt zijn asset-URL's (logo, gevelbeeld, spotfoto's, plattegronden) via
+de gedeelde `resolveAssetUrl` op. Functioneel identiek aan vóór de integratie;
+de zwaardere frame-overname is bewust uitgesteld om print/html2canvas-export niet
+te regressen.
+
+- **Uitvoering:** volledig voor de afgebakende "integratie-light" stap
+- **Diepere lagen:** gedeeltelijk — volledige `DocumentFrame`/voorblad-overname voor print.tsx is nog niet gedaan (bewust uitgesteld)
+- **Getest:** typecheck groen; e2e-web-ci groen
 
 ---
 
-## Eerder (chronologisch, recentste bovenaan)
+## Juni 2026 (eerder, exacte datum niet geregistreerd)
 
-### Gebouwd — HRM Personeel Fase 1-basis (breed en praktisch uitgewerkt)
-Medewerker-detailpagina (`/personeel/:id`): profiel, account/rol, functie,
-opleidingen (met verloopsignalering), bekwaamheden (per categorie/niveau,
-bewerkbaar) en verlof (saldo + aanvragen indienen/goedkeuren/afwijzen).
-Functiehuis, bekwaamheidsmatrix, verlofsoorten, verlofsaldi, verlofaanvragen,
-onboarding vanuit gebruikersaccount. AI-voorstel voor opleidingen per functie.
+### Gebouwd — Calculatie spreadsheet/Excel-stijl detail
+Calculatiedetailpagina volledig herschreven als spreadsheet-interface:
+click-to-edit cellen, Tab/Shift-Tab navigatie, blur-to-save, AI-hints per
+sleutelwoord, weergave-tabs (Intern/Directie/Klant/Monteur), Kostopbouw
+zijpaneel, AI-voorstel paneel, header bewerken/versie/verwijder dialogen.
 
-### Gebouwd — DMS / Documentenbibliotheek
-Detail/logboek, polymorfe koppelingen, duplicaatdetectie (sha256 + fuzzy),
+- **Uitvoering:** volledig
+- **Diepere lagen:** volledig — alle geplande onderdelen gebouwd (inline editing, navigatie, read-only views, panels, dialogen)
+- **Getest:** typecheck groen (geen fouten in detail.tsx); functioneel verifieerbaar via de calculatie-module; geen geautomatiseerde e2e specifiek voor calculatie
+
+### Gebouwd — Radiaal startmenu monteur-app (vereenvoudigd + waaier)
+Waaier teruggebracht van 10 naar 6 hoofd-items (werkdag/gebouwen/verlof/uren/
+planning/veiligheid), overige items naar "Meer"-sectie. Garmin-stijl draaiknop
+met Reanimated, minDistance(8) voor tap vs. drag, `__FPS_NAVIGEER__` voor
+e2e-navigatie.
+
+- **Uitvoering:** volledig
+- **Diepere lagen:** volledig — animatie, navigatie, e2e-navigatiehook, "Meer"-sectie allemaal gebouwd
+- **Getest:** e2e-monteur-ci (na herstelde SLEUTELS-fix groen)
+
+### Gebouwd — Veiligheidsmodule monteur-app
+Veiligheidscherm in de monteur-app met veiligheidscertificaten en relevante
+content voor veldmedewerkers.
+
+- **Uitvoering:** volledig voor het basischerm
+- **Diepere lagen:** gedeeltelijk — basischerm gebouwd; koppeling aan bredere toolbox/berichten-module (geparkeerd V2.0/V3.0) nog niet
+- **Getest:** typecheck groen; e2e-monteur-ci bevestigt scherm bereikbaar via navigatie
+
+### Gebouwd — Werkdagmodule monteur-app
+"Mijn werkdag"-scherm in de monteur-app: persoonlijke planning-items voor de
+huidige dag, useFocusEffect-refresh bij terugkeer.
+
+- **Uitvoering:** volledig
+- **Diepere lagen:** volledig — dag-view, planning-items, refresh-patroon
+- **Getest:** typecheck groen; handmatig verifieerbaar via de monteur-app
+
+---
+
+## Mei–juni 2026 (parallel spoor — eerder gebouwd)
+
+### Gebouwd — HRM / Personeel (Fase 1-basis, breed uitgewerkt)
+Medewerkers, functiehuis, opleidingen/certificaten (onderscheid opleiding vs.
+cursus, rijke velden), bekwaamheidsmatrix, verlofsoorten (incl. bijzondere/CAO),
+verlofsaldo's, verlofaanvragen, onboarding-dialoog. AI-opleidingsvoorstel per
+functie (stelt voor, mens bevestigt). Medewerker-detailpagina met alle
+onderdelen op één plek. Mobiel: read-only dashboard, opleidingen, kennisbank.
+
+- **Uitvoering:** volledig voor Fase 1-basis
+- **Diepere lagen:** gedeeltelijk — salarisadministratie, beoordeling, werving en volledige mobiele self-service zijn bewust NIET gebouwd (geparkeerd, V3.0)
+- **Getest:** typecheck groen; e2e-web-ci groen; e2e-monteur-ci groen (verlofscherm via navigatie)
+
+### Gebouwd — DMS / Documentenbibliotheek (incl. V1.5-bevriezingsdeel op dossiers)
+Documentlogboek, polymorfe koppelingen, duplicaatdetectie (sha256 + fuzzy),
 goedkeuringsflow, signaleringen, DMS-dashboard, audittrail, downloadlogging,
-read-only mobiele documentenweergave. V1.5-bevriezingsdeel op dossiers.
+read-only mobiel. Dossier-bevriezing: `POST /dossiers/:id/definitief` bevriest
+revisie + PDF per gekoppeld document.
 
-### Gebouwd — V1.3 Spots & uitvoering
-Spotflow web + mobiel, plattegrond SVG-editor + mobiele renderer, scheidingen,
-toewijzingen, voorbereide spots, clusters + serie plaatsen.
+- **Uitvoering:** volledig voor de vijf beschreven fases
+- **Diepere lagen:** volledig — alle fases 1–5 gebouwd; definitieve dossier-bevriezing is het V1.5-bevriezingsdeel
+- **Getest:** typecheck groen; e2e-web-ci groen
 
-### Gebouwd — AI Spotherkenning & AI Bibliotheekvalidatie
-AI stelt voor, mens bevestigt. AI keurt nooit zelfstandig juridisch goed.
+### Gebouwd — Dossiermodule (Fase 1-basis)
+Dossiers per gebouw, status concept → definitief → gearchiveerd.
 
-### Gebouwd — V1.2 Bibliotheek & documentstructuur
-Applicaties, toepassingen, documenten, ETA's, koppelingen, versiebeheer.
+- **Uitvoering:** volledig voor Fase 1-basis
+- **Diepere lagen:** gedeeltelijk — het juridisch sluitende bevroren opleverdossier met volledig versiebeheer blijft V1.5
+- **Getest:** typecheck groen
 
-### Gebouwd — V1.1 Rollen & bevoegdheden
-Bevoegdhedenmatrix (jsonb), profielen, 14 presets, beheerinterface.
+### Gebouwd — Offerte Intelligence (Fase 1-basis, alleen voorbereiding)
+Offertes en offerte-sjablonen, regels uit spots. Bewust geen AI en geen verzending.
 
-### Gebouwd — V1.0 Administratief gereed voor uitvoering
+- **Uitvoering:** volledig voor Fase 1-basis
+- **Diepere lagen:** gedeeltelijk — AI-calculatie en automatische verzending bewust niet gebouwd (geparkeerd)
+- **Getest:** typecheck groen
+
+---
+
+## Eerder (roadmap-fases, afgerond voor mei 2026)
+
+### V1.3 — Spots & uitvoering
+Spotflow web + mobiel, SVG-editor, scheidingen, clusters, serie plaatsen, AI-spotvoorstel.
+**Uitvoering:** volledig voor de kernfunctionaliteit. **Diepere lagen:** gedeeltelijk (restpunten zijn verfijning, geen kernfunctionaliteit). **Getest:** typecheck + e2e groen.
+
+### V1.2 — Bibliotheek & documentstructuur
+Centrale documentbibliotheek, applicaties, toepassingen, ETA's, versiebeheer, AI-analyse.
+**Uitvoering:** volledig. **Diepere lagen:** gedeeltelijk (documentcontrole/periodieke check geparkeerd). **Getest:** typecheck + e2e groen.
+
+### V1.1 — Rollen & bevoegdheden
+Bevoegdhedenmatrix (jsonb), 14 profielen/presets, beheerinterface, legacy-fallback.
+**Uitvoering:** volledig. **Diepere lagen:** volledig. **Getest:** typecheck + e2e groen.
+
+### V1.0 — Administratief gereed voor uitvoering
 Dashboard, gebouwenbeheer, voorzieningenoverzicht, inspecties, onderhoud,
 gebruikersbeheer, abonnementen, eigen sessie-auth met verplichte TOTP.
+**Uitvoering:** volledig. **Diepere lagen:** volledig. **Getest:** typecheck + e2e groen.
