@@ -13,7 +13,6 @@ import {
   useListOnderhoud,
   useArchiveerGebouw,
   useListGekoppeldeDocumenten,
-  useUpdateGebouw,
   useListModCalculaties,
   useListOffertes,
   type Document,
@@ -130,11 +129,21 @@ const PROJECT_STATUS_CONFIG: Record<string, { label: string; className: string }
   },
 };
 
-const PROJECT_STATUSSEN = [
-  { waarde: "offerte_aanvraag",      label: "Offerte-aanvraag" },
-  { waarde: "offerte_ingediend",     label: "Offerte-ingediend" },
-  { waarde: "opdracht_in_uitvoering", label: "Opdracht in uitvoering" },
-] as const;
+function bepaalAfgeleidStatus(calcs: any[], offertes: any[]): string | null {
+  if (offertes.some((o) => o.status === "geaccepteerd") || calcs.some((c) => c.status === "gewonnen")) {
+    return "opdracht_in_uitvoering";
+  }
+  if (
+    offertes.some((o) => o.status === "verzonden") ||
+    calcs.some((c) => c.status === "aangeboden" || c.status === "intern_akkoord")
+  ) {
+    return "offerte_ingediend";
+  }
+  const heeftActieveCalc = calcs.some((c) => c.status !== "verloren");
+  const heeftActieveOfferte = offertes.some((o) => !["afgewezen", "vervallen"].includes(o.status));
+  if (heeftActieveCalc || heeftActieveOfferte) return "offerte_aanvraag";
+  return null;
+}
 
 function ProjectStatusBadge({ status }: { status: string }) {
   const cfg = PROJECT_STATUS_CONFIG[status];
@@ -353,13 +362,13 @@ export default function GebouwDetail() {
   const gereedMelden = useMeldGebouwGereed();
   const herstelGereed = useHerstelGebouwActief();
   const archiveerMutatie = useArchiveerGebouw();
-  const updateGebouw = useUpdateGebouw();
   const { toast } = useToast();
 
   const { data: alleCalculaties = [] } = useListModCalculaties(undefined, { query: { queryKey: ["mod-calculaties"] } });
   const gebouwCalcs = (Array.isArray(alleCalculaties) ? alleCalculaties : []).filter((c: any) => c.gebouw_id === gebouwId);
   const { data: alleOffertes = [] } = useListOffertes();
   const gebouwOffertes = (Array.isArray(alleOffertes) ? alleOffertes : []).filter((o: any) => o.gebouw_id === gebouwId);
+  const afgeleidStatus = bepaalAfgeleidStatus(gebouwCalcs, gebouwOffertes);
 
   const [gekozenGebruikerId, setGekozenGebruikerId] = useState<string>("");
   const [gekozenProjectRol, setGekozenProjectRol] = useState<string>("");
@@ -500,19 +509,6 @@ export default function GebouwDetail() {
     }
   }
 
-  async function wijzigStatus(nieuweStatus: string) {
-    try {
-      await updateGebouw.mutateAsync({
-        id: gebouwId,
-        data: { project_status: nieuweStatus },
-      });
-      queryClient.invalidateQueries();
-      toast({ description: "Projectstatus bijgewerkt." });
-    } catch {
-      toast({ variant: "destructive", description: "Status bijwerken mislukt." });
-    }
-  }
-
   const projectAdmin = (toewijzingen ?? []).find(
     (t) => t.project_rol === "Project-admin",
   );
@@ -579,26 +575,8 @@ export default function GebouwDetail() {
                 ? `${gebouw.projectnummer} \u2014 ${gebouw.naam}`
                 : gebouw.naam}
             </h1>
-            {isBeheerder ? (
-              <Select
-                value={gebouw.project_status ?? ""}
-                onValueChange={wijzigStatus}
-              >
-                <SelectTrigger className="h-6 text-xs px-2 gap-1 w-auto min-w-[130px] shrink-0">
-                  <SelectValue placeholder="Status instellen" />
-                </SelectTrigger>
-                <SelectContent>
-                  {PROJECT_STATUSSEN.map((s) => (
-                    <SelectItem key={s.waarde} value={s.waarde}>
-                      {s.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            ) : (
-              gebouw.project_status && (
-                <ProjectStatusBadge status={gebouw.project_status} />
-              )
+            {afgeleidStatus && !gebouw.gereed_op && (
+              <ProjectStatusBadge status={afgeleidStatus} />
             )}
             {gebouw.gereed_op && (
               <Badge className="bg-green-600 text-white gap-1 shrink-0">
