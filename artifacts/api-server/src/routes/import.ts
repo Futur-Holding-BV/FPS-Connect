@@ -1,7 +1,7 @@
 import { Router } from "express";
 import multer from "multer";
 import * as XLSX from "xlsx";
-import { db, leveranciersTable, artikelenTable, importLogsTable } from "@workspace/db";
+import { db, leveranciersTable, artikelenTable, importLogsTable, crmKlantenTable } from "@workspace/db";
 import { logger } from "../lib/logger";
 import { randomUUID } from "crypto";
 
@@ -117,8 +117,24 @@ router.post("/import/uitvoeren", async (req, res) => {
           overgeslagen++;
         }
       }
+    } else if (type === "klanten") {
+      for (let i = 0; i < rijen.length; i++) {
+        const rij = rijen[i]!;
+        try {
+          const values = koppelKlant(rij, kolomkoppeling);
+          if (!values.naam && overslaan_lege_naam !== false) {
+            overgeslagen++;
+            continue;
+          }
+          await db.insert(crmKlantenTable).values(values);
+          verwerkt++;
+        } catch (err) {
+          fouten.push({ rij: i + 2, fout: err instanceof Error ? err.message : "Onbekende fout" });
+          overgeslagen++;
+        }
+      }
     } else {
-      // klanten en projecten: toekomstige implementatie — teller bijhouden zonder opslaan
+      // projecten: toekomstige implementatie
       overgeslagen = rijen.length;
       fouten.push({ rij: 0, fout: `Import van '${type}' is nog niet beschikbaar in deze versie` });
     }
@@ -237,6 +253,30 @@ function koppelLeverancier(rij: Record<string, string>, kop: Record<string, stri
     productcategorieen: haal(rij, kop, "productcategorieen") || null,
     notities: haal(rij, kop, "notities") || null,
     actief: true,
+  };
+}
+
+function koppelKlant(rij: Record<string, string>, kop: Record<string, string>) {
+  const naam = haal(rij, kop, "naam") || haal(rij, kop, "bedrijfsnaam") || haal(rij, kop, "company");
+  const relatie = haal(rij, kop, "relatie_status") || haal(rij, kop, "relatiestatus");
+  const geldigeRelatie = ["onbekend", "koud", "warm", "actief", "key_account", "verloren"] as const;
+  type RelatieStatus = typeof geldigeRelatie[number];
+  return {
+    naam: naam || "Onbekend",
+    type: haal(rij, kop, "type") || haal(rij, kop, "organisatietype") || "overig",
+    kvk: haal(rij, kop, "kvk") || haal(rij, kop, "kvk_nummer") || null,
+    adres: haal(rij, kop, "adres") || haal(rij, kop, "straat") || null,
+    postcode: haal(rij, kop, "postcode") || null,
+    stad: haal(rij, kop, "stad") || haal(rij, kop, "plaats") || null,
+    regio: haal(rij, kop, "regio") || null,
+    telefoon: haal(rij, kop, "telefoon") || null,
+    email: haal(rij, kop, "email") || null,
+    website: haal(rij, kop, "website") || null,
+    linkedinUrl: haal(rij, kop, "linkedin_url") || haal(rij, kop, "linkedin") || null,
+    branche: haal(rij, kop, "branche") || null,
+    status: "prospect" as const,
+    relatieStatus: (geldigeRelatie.includes(relatie as RelatieStatus) ? relatie : "onbekend") as RelatieStatus,
+    opmerkingen: haal(rij, kop, "opmerkingen") || haal(rij, kop, "notities") || null,
   };
 }
 
