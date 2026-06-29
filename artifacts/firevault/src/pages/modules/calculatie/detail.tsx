@@ -399,7 +399,7 @@ function SpreadsheetRegelRij({
     if (e.key === "Escape") { setEditing(false); setDraft(regelToDraft(rij)); }
   };
 
-  const invK = "w-full px-2 py-[5px] border-0 border-b border-primary/40 bg-transparent focus:border-primary focus:outline-none text-sm tabular-nums";
+  const invK = "w-full px-2 py-1.5 border-0 border-b border-primary/40 bg-transparent focus:border-primary focus:outline-none text-sm tabular-nums";
 
   return (
     <tr
@@ -413,48 +413,50 @@ function SpreadsheetRegelRij({
       )}
     >
       {/* # */}
-      <td className="px-2 py-[5px] text-xs text-muted-foreground/50 text-right w-8 cursor-pointer select-none shrink-0" onClick={() => setEditing(true)}>
+      <td className="px-2 py-1.5 text-xs text-muted-foreground/50 text-right w-8 cursor-pointer select-none shrink-0" onClick={() => setEditing(true)}>
         {rij.regelnummer || rij.volgorde}
       </td>
 
-      {/* Omschrijving + categorie chip */}
-      <td className="px-1 py-0 min-w-[180px]">
+      {/* Omschrijving + categorie inline */}
+      <td className="px-1 py-1 min-w-[220px]">
         {editing ? (
-          <div>
+          <div className="flex items-center gap-1.5 px-0.5">
+            <select
+              value={draft.categorie}
+              onChange={(e) => {
+                const cat = e.target.value;
+                const btw = cat === "onderaanneming" ? "verlegd" : draft.btw_tarief === "verlegd" ? "21" : draft.btw_tarief;
+                upd({ categorie: cat, btw_tarief: btw });
+              }}
+              className={cn(
+                "text-[10px] h-[26px] border border-border/70 rounded px-1 focus:outline-none cursor-pointer shrink-0 font-medium",
+                CATEGORIE_KLEUR[draft.categorie] ?? "bg-muted text-muted-foreground"
+              )}
+              style={{ maxWidth: 78 }}
+            >
+              {KOSTENSOORT_OPTIES.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
             <input
               type="text"
               data-celindex={1}
               value={draft.omschrijving}
               onChange={(e) => upd({ omschrijving: e.target.value })}
               onKeyDown={mkKD(1)}
-              className="w-full px-2 py-[5px] border-0 border-b border-primary/40 bg-transparent focus:border-primary focus:outline-none text-sm font-medium"
+              className="flex-1 min-w-0 px-1.5 py-1 border-0 border-b border-primary/40 bg-transparent focus:border-primary focus:outline-none text-sm font-medium"
               placeholder="Omschrijving werkzaamheid..."
               autoFocus
             />
-            <div className="px-2 pb-0.5 pt-0">
-              <select
-                value={draft.categorie}
-                onChange={(e) => {
-                  const cat = e.target.value;
-                  const btw = cat === "onderaanneming" ? "verlegd" : draft.btw_tarief === "verlegd" ? "21" : draft.btw_tarief;
-                  upd({ categorie: cat, btw_tarief: btw });
-                }}
-                className="text-[10px] border-0 bg-transparent focus:outline-none text-muted-foreground cursor-pointer h-auto py-0 px-0"
-              >
-                {KOSTENSOORT_OPTIES.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-              </select>
-            </div>
           </div>
         ) : (
-          <div onClick={() => setEditing(true)} className="px-2 py-[5px] cursor-pointer flex items-center gap-1.5 min-w-0">
-            <span className="text-sm font-medium truncate">
-              {rij.omschrijving || <span className="text-muted-foreground/40 italic font-normal">klik om te bewerken</span>}
-            </span>
+          <div onClick={() => setEditing(true)} className="px-1.5 py-1.5 cursor-pointer flex items-center gap-2 min-w-0">
             {rij.categorie !== "arbeid" && (
-              <span className={cn("text-[10px] px-1 py-px rounded-sm shrink-0 whitespace-nowrap", CATEGORIE_KLEUR[rij.categorie] ?? "bg-muted/50 text-muted-foreground")}>
+              <span className={cn("text-[10px] px-1.5 py-px rounded-sm shrink-0 whitespace-nowrap font-medium", CATEGORIE_KLEUR[rij.categorie] ?? "bg-muted/50 text-muted-foreground")}>
                 {CATEGORIE_LABEL[rij.categorie] ?? rij.categorie}
               </span>
             )}
+            <span className="text-sm font-medium truncate">
+              {rij.omschrijving || <span className="text-muted-foreground/40 italic font-normal">klik om te bewerken</span>}
+            </span>
           </div>
         )}
       </td>
@@ -481,7 +483,7 @@ function SpreadsheetRegelRij({
               ))}
             </div>
           ) : (
-            <div onClick={() => setEditing(true)} className="py-[5px] cursor-pointer text-center">
+            <div onClick={() => setEditing(true)} className="py-1.5 cursor-pointer text-center">
               {rij.wand_plafond === "wand" ? (
                 <span className="text-xs px-1.5 py-px rounded bg-blue-50 text-blue-700 font-semibold">W</span>
               ) : rij.wand_plafond === "plafond" ? (
@@ -505,7 +507,7 @@ function SpreadsheetRegelRij({
                 value={draft.toepassing_tekst}
                 onChange={(e) => upd({ toepassing_tekst: e.target.value })}
                 onKeyDown={mkKD(2)}
-                className="w-full px-2 py-[5px] border-0 border-b border-primary/40 bg-transparent focus:border-primary focus:outline-none text-xs"
+                className="w-full px-2 py-1.5 border-0 border-b border-primary/40 bg-transparent focus:border-primary focus:outline-none text-xs"
                 placeholder="Toepassing..."
               />
               {toepassingSuggestie && !draft.toepassing_tekst && draft.omschrijving.length > 2 && (
@@ -539,7 +541,7 @@ function SpreadsheetRegelRij({
               )}
             </div>
           ) : (
-            <div onClick={() => setEditing(true)} className="px-2 py-[5px] text-xs text-muted-foreground cursor-pointer truncate">
+            <div onClick={() => setEditing(true)} className="px-2 py-1.5 text-xs text-muted-foreground cursor-pointer truncate">
               {rij.toepassing_tekst || rij.normtijd_code || <span className="text-muted-foreground/30">—</span>}
             </div>
           )}
@@ -555,7 +557,7 @@ function SpreadsheetRegelRij({
             onKeyDown={mkKD(3)}
             className={cn(invK, "text-right")} placeholder="1" />
         ) : (
-          <div onClick={() => setEditing(true)} className="px-2 py-[5px] text-sm text-right tabular-nums cursor-pointer">
+          <div onClick={() => setEditing(true)} className="px-2 py-1.5 text-sm text-right tabular-nums cursor-pointer">
             {fmt2(rij.hoeveelheid)}
           </div>
         )}
@@ -565,11 +567,11 @@ function SpreadsheetRegelRij({
       <td className="px-1 py-0 w-[58px]">
         {editing ? (
           <select data-celindex={4} value={draft.eenheid} onChange={(e) => upd({ eenheid: e.target.value })} onKeyDown={mkKD(4)}
-            className="w-full px-1 py-[5px] text-xs border-0 border-b border-primary/40 bg-transparent focus:border-primary focus:outline-none text-center">
+            className="w-full px-1 py-1.5 text-xs border-0 border-b border-primary/40 bg-transparent focus:border-primary focus:outline-none text-center">
             {EENHEDEN.map((e) => <option key={e} value={e}>{e}</option>)}
           </select>
         ) : (
-          <div onClick={() => setEditing(true)} className="px-1 py-[5px] text-xs text-muted-foreground text-center cursor-pointer">
+          <div onClick={() => setEditing(true)} className="px-1 py-1.5 text-xs text-muted-foreground text-center cursor-pointer">
             {rij.eenheid}
           </div>
         )}
@@ -583,7 +585,7 @@ function SpreadsheetRegelRij({
               value={draft.tarief} onChange={(e) => upd({ tarief: e.target.value })} onKeyDown={mkKD(5)}
               className={cn(invK, "text-right")} placeholder="0,00" />
           ) : (
-            <div onClick={() => setEditing(true)} className="px-2 py-[5px] text-sm text-right tabular-nums text-muted-foreground cursor-pointer">
+            <div onClick={() => setEditing(true)} className="px-2 py-1.5 text-sm text-right tabular-nums text-muted-foreground cursor-pointer">
               {rij.tarief > 0 ? formatBedrag(rij.tarief) : <span className="text-muted-foreground/30">—</span>}
             </div>
           )}
@@ -592,7 +594,7 @@ function SpreadsheetRegelRij({
 
       {/* Materiaal totaal (berekend) */}
       {(weergave === "intern" || weergave === "directie") && (
-        <td className="px-2 py-[5px] w-[96px] text-right text-sm tabular-nums cursor-pointer" onClick={() => setEditing(true)}>
+        <td className="px-2 py-1.5 w-[96px] text-right text-sm tabular-nums cursor-pointer" onClick={() => setEditing(true)}>
           {matDisplay > 0
             ? <span className="text-muted-foreground">{formatBedrag(matDisplay)}</span>
             : <span className="text-muted-foreground/30">—</span>}
@@ -607,7 +609,7 @@ function SpreadsheetRegelRij({
               value={draft.mu_per_eenheid} onChange={(e) => upd({ mu_per_eenheid: e.target.value })} onKeyDown={mkKD(6)}
               className={cn(invK, "text-right")} placeholder="0,00" />
           ) : (
-            <div onClick={() => setEditing(true)} className="px-2 py-[5px] text-sm text-right tabular-nums text-muted-foreground cursor-pointer">
+            <div onClick={() => setEditing(true)} className="px-2 py-1.5 text-sm text-right tabular-nums text-muted-foreground cursor-pointer">
               {rij.mu_per_eenheid > 0 ? <span>{fmt2(rij.mu_per_eenheid)} <span className="text-[10px]">u</span></span> : <span className="text-muted-foreground/30">—</span>}
             </div>
           )}
@@ -623,7 +625,7 @@ function SpreadsheetRegelRij({
                 value={draft.arbeids_tarief}
                 onChange={(e) => upd({ arbeids_tarief: e.target.value })}
                 onKeyDown={mkKD(7)}
-                className="w-full px-1 py-[5px] text-xs border-0 border-b border-primary/40 bg-transparent focus:border-primary focus:outline-none">
+                className="w-full px-1 py-1.5 text-xs border-0 border-b border-primary/40 bg-transparent focus:border-primary focus:outline-none">
                 <option value="0">— geen —</option>
                 {arbTariefOpties.map((tr) => (
                   <option key={tr.id} value={String(tr.tarief)}>{tr.naam} — €{tr.tarief}</option>
@@ -635,7 +637,7 @@ function SpreadsheetRegelRij({
                 className={cn(invK, "text-right")} placeholder="0,00" />
             )
           ) : (
-            <div onClick={() => setEditing(true)} className="px-2 py-[5px] text-xs text-right tabular-nums text-muted-foreground cursor-pointer">
+            <div onClick={() => setEditing(true)} className="px-2 py-1.5 text-xs text-right tabular-nums text-muted-foreground cursor-pointer">
               {rij.arbeids_tarief > 0 ? `€\u00a0${rij.arbeids_tarief}` : <span className="text-muted-foreground/30">—</span>}
             </div>
           )}
@@ -644,7 +646,7 @@ function SpreadsheetRegelRij({
 
       {/* Arbeid totaal (berekend) */}
       {(weergave === "intern" || weergave === "directie") && (
-        <td className="px-2 py-[5px] w-[96px] text-right text-sm tabular-nums cursor-pointer" onClick={() => setEditing(true)}>
+        <td className="px-2 py-1.5 w-[96px] text-right text-sm tabular-nums cursor-pointer" onClick={() => setEditing(true)}>
           {arbDisplay > 0
             ? <span className="text-muted-foreground">{formatBedrag(arbDisplay)}</span>
             : <span className="text-muted-foreground/30">—</span>}
@@ -659,7 +661,7 @@ function SpreadsheetRegelRij({
               value={draft.onderaanneming_bedrag} onChange={(e) => upd({ onderaanneming_bedrag: e.target.value })} onKeyDown={mkKD(8)}
               className={cn(invK, "text-right")} placeholder="0,00" />
           ) : (
-            <div onClick={() => setEditing(true)} className="px-2 py-[5px] text-sm text-right tabular-nums text-muted-foreground cursor-pointer">
+            <div onClick={() => setEditing(true)} className="px-2 py-1.5 text-sm text-right tabular-nums text-muted-foreground cursor-pointer">
               {rij.onderaanneming_bedrag > 0 ? formatBedrag(rij.onderaanneming_bedrag) : <span className="text-muted-foreground/30">—</span>}
             </div>
           )}
@@ -667,7 +669,7 @@ function SpreadsheetRegelRij({
       )}
 
       {/* Totaal */}
-      <td className="px-2 py-[5px] w-[104px] text-right text-sm tabular-nums font-semibold cursor-pointer" onClick={() => setEditing(true)}>
+      <td className="px-2 py-1.5 w-[104px] text-right text-sm tabular-nums font-semibold cursor-pointer" onClick={() => setEditing(true)}>
         {totDisplay !== 0 ? formatBedrag(totDisplay) : <span className="text-muted-foreground/30">—</span>}
       </td>
 
@@ -752,7 +754,7 @@ function NieuweRegelRij({
 
   const arbTariefOpties = tarieven.filter((tr) => tr.categorie === "arbeid" || tr.categorie === "materieel");
 
-  const invK = "w-full px-2 py-[5px] border-0 border-b border-primary/60 bg-transparent focus:border-primary focus:outline-none text-sm tabular-nums";
+  const invK = "w-full px-2 py-1.5 border-0 border-b border-primary/60 bg-transparent focus:border-primary focus:outline-none text-sm tabular-nums";
 
   const mkKD = (ci: number) => (e: React.KeyboardEvent) => {
     handleTabNavigatieInRij(e, ci, rowRef, doSave);
@@ -770,21 +772,11 @@ function NieuweRegelRij({
       )}
     >
       {/* # */}
-      <td className="px-2 py-[5px] text-xs text-muted-foreground/40 text-right w-8 shrink-0">+</td>
+      <td className="px-2 py-1.5 text-xs text-muted-foreground/40 text-right w-8 shrink-0">+</td>
 
-      {/* Omschrijving + categorie */}
-      <td className="px-1 py-0 min-w-[180px]">
-        <input
-          type="text"
-          value={draft.omschrijving}
-          data-celindex={1}
-          onChange={(e) => upd({ omschrijving: e.target.value })}
-          onKeyDown={mkKD(1)}
-          className="w-full px-2 py-[5px] border-0 border-b border-primary bg-transparent focus:outline-none text-sm font-medium"
-          placeholder="Omschrijving werkzaamheid..."
-          autoFocus
-        />
-        <div className="px-2 pb-0.5 pt-0">
+      {/* Omschrijving + categorie inline */}
+      <td className="px-1 py-1 min-w-[220px]">
+        <div className="flex items-center gap-1.5 px-0.5">
           <select
             value={draft.categorie}
             onChange={(e) => {
@@ -792,10 +784,24 @@ function NieuweRegelRij({
               const btw = cat === "onderaanneming" ? "verlegd" : draft.btw_tarief === "verlegd" ? "21" : draft.btw_tarief;
               upd({ categorie: cat, btw_tarief: btw });
             }}
-            className="text-[10px] border-0 bg-transparent focus:outline-none text-muted-foreground cursor-pointer h-auto py-0 px-0"
+            className={cn(
+              "text-[10px] h-[26px] border border-border/70 rounded px-1 focus:outline-none cursor-pointer shrink-0 font-medium",
+              CATEGORIE_KLEUR[draft.categorie] ?? "bg-muted text-muted-foreground"
+            )}
+            style={{ maxWidth: 78 }}
           >
             {KOSTENSOORT_OPTIES.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
           </select>
+          <input
+            type="text"
+            value={draft.omschrijving}
+            data-celindex={1}
+            onChange={(e) => upd({ omschrijving: e.target.value })}
+            onKeyDown={mkKD(1)}
+            className="flex-1 min-w-0 px-1.5 py-1 border-0 border-b border-primary bg-transparent focus:outline-none text-sm font-medium"
+            placeholder="Omschrijving werkzaamheid..."
+            autoFocus
+          />
         </div>
       </td>
 
@@ -831,7 +837,7 @@ function NieuweRegelRij({
             value={draft.toepassing_tekst}
             onChange={(e) => upd({ toepassing_tekst: e.target.value })}
             onKeyDown={mkKD(2)}
-            className="w-full px-2 py-[5px] border-0 border-b border-primary/60 bg-transparent focus:border-primary focus:outline-none text-xs"
+            className="w-full px-2 py-1.5 border-0 border-b border-primary/60 bg-transparent focus:border-primary focus:outline-none text-xs"
             placeholder="Toepassing..."
           />
           {toepassingSuggestie && !draft.toepassing_tekst && draft.omschrijving.length > 2 && (
@@ -876,7 +882,7 @@ function NieuweRegelRij({
       {/* Eenheid */}
       <td className="px-1 py-0 w-[58px]">
         <select data-celindex={4} value={draft.eenheid} onChange={(e) => upd({ eenheid: e.target.value })} onKeyDown={mkKD(4)}
-          className="w-full px-1 py-[5px] text-xs border-0 border-b border-primary/60 bg-transparent focus:border-primary focus:outline-none text-center">
+          className="w-full px-1 py-1.5 text-xs border-0 border-b border-primary/60 bg-transparent focus:border-primary focus:outline-none text-center">
           {EENHEDEN.map((e) => <option key={e} value={e}>{e}</option>)}
         </select>
       </td>
@@ -892,7 +898,7 @@ function NieuweRegelRij({
 
       {/* Mat. totaal */}
       {(weergave === "intern" || weergave === "directie") && (
-        <td className="px-2 py-[5px] w-[96px] text-right text-sm tabular-nums text-muted-foreground/60">
+        <td className="px-2 py-1.5 w-[96px] text-right text-sm tabular-nums text-muted-foreground/60">
           {liveMat > 0 ? formatBedrag(liveMat) : "—"}
         </td>
       )}
@@ -912,7 +918,7 @@ function NieuweRegelRij({
           {arbTariefOpties.length > 0 ? (
             <select data-celindex={7}
               value={draft.arbeids_tarief} onChange={(e) => upd({ arbeids_tarief: e.target.value })} onKeyDown={mkKD(7)}
-              className="w-full px-1 py-[5px] text-xs border-0 border-b border-primary/60 bg-transparent focus:border-primary focus:outline-none">
+              className="w-full px-1 py-1.5 text-xs border-0 border-b border-primary/60 bg-transparent focus:border-primary focus:outline-none">
               <option value="0">— geen —</option>
               {arbTariefOpties.map((tr) => (
                 <option key={tr.id} value={String(tr.tarief)}>{tr.naam} — €{tr.tarief}</option>
@@ -928,7 +934,7 @@ function NieuweRegelRij({
 
       {/* Arbeid totaal */}
       {(weergave === "intern" || weergave === "directie") && (
-        <td className="px-2 py-[5px] w-[96px] text-right text-sm tabular-nums text-muted-foreground/60">
+        <td className="px-2 py-1.5 w-[96px] text-right text-sm tabular-nums text-muted-foreground/60">
           {liveArb > 0 ? formatBedrag(liveArb) : "—"}
         </td>
       )}
@@ -943,7 +949,7 @@ function NieuweRegelRij({
       )}
 
       {/* Totaal */}
-      <td className="px-2 py-[5px] w-[104px] text-right text-sm tabular-nums font-semibold">
+      <td className="px-2 py-1.5 w-[104px] text-right text-sm tabular-nums font-semibold">
         {liveTot > 0 ? formatBedrag(liveTot) : "—"}
       </td>
 
@@ -1586,10 +1592,10 @@ export default function ModulesCalculatieDetail() {
       <div className="flex flex-1 min-h-0 gap-0">
 
         {/* === Spreadsheet === */}
-        <div className="flex-1 min-w-0 flex flex-col">
+        <div className="flex-1 min-w-0 flex flex-col min-h-0">
 
           {/* Spreadsheet toolbar */}
-          <div className="flex items-center justify-between px-4 py-2 border-b bg-background gap-3 sticky top-[69px] z-10">
+          <div className="flex items-center justify-between px-4 py-2 border-b bg-background gap-3 shrink-0">
             {/* Weergave tabs */}
             <div className="flex rounded-md border overflow-hidden text-xs">
               {(["intern", "directie", "klant", "monteur"] as Weergave[]).map((v) => (
@@ -1634,20 +1640,20 @@ export default function ModulesCalculatieDetail() {
 
           {/* Spreadsheet tabel of andere weergave */}
           {(weergave === "intern" || weergave === "directie") ? (
-            <div className="overflow-x-auto flex-1">
+            <div className="overflow-auto flex-1 min-h-0">
               <table className="w-full text-sm border-collapse" style={{ minWidth: weergave === "intern" ? 1300 : 900 }}>
-                <thead className="sticky top-[109px] z-10">
+                <thead className="sticky top-0 z-10">
                   <tr>
                     <Th className="w-8 text-right">#</Th>
-                    <Th className="min-w-[180px]">Omschrijving</Th>
-                    {(weergave === "intern" || weergave === "directie") && <Th className="w-[68px] text-center">W/P</Th>}
+                    <Th className="min-w-[220px]">Omschrijving</Th>
+                    {(weergave === "intern" || weergave === "directie") && <Th className="w-[68px] text-center">W / P</Th>}
                     {(weergave === "intern" || weergave === "directie") && <Th className="w-[148px]">Toepassing</Th>}
                     <Th className="w-[72px] text-right">Aantal</Th>
                     <Th className="w-[58px] text-center">Eenh</Th>
-                    {(weergave === "intern" || weergave === "directie") && <Th className="w-[96px] text-right">Mat./stk</Th>}
+                    {(weergave === "intern" || weergave === "directie") && <Th className="w-[96px] text-right">Mat. / stk</Th>}
                     {(weergave === "intern" || weergave === "directie") && <Th className="w-[96px] text-right">Mat. totaal</Th>}
                     {(weergave === "intern" || weergave === "directie") && <Th className="w-[80px] text-right">Norm u/stk</Th>}
-                    {weergave === "intern" && <Th className="w-[92px] text-right">Arb.tarief</Th>}
+                    {weergave === "intern" && <Th className="w-[92px] text-right">Arb. tarief</Th>}
                     {(weergave === "intern" || weergave === "directie") && <Th className="w-[96px] text-right">Arb. totaal</Th>}
                     {toonOnderaanneming && (weergave === "intern" || weergave === "directie") && <Th className="w-[96px] text-right">Onderaann.</Th>}
                     <Th className="w-[104px] text-right">Totaal</Th>
@@ -1790,22 +1796,24 @@ export default function ModulesCalculatieDetail() {
                     />
                   )}
 
-                  {/* Bouwplaats/staart toevoegen knoppen als er nog geen zijn */}
+                  {/* Regel toevoegen rij */}
                   {weergave === "intern" && (
-                    <tr>
-                      <td colSpan={aantalKolommen} className="px-3 py-2 border-t border-border/40">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <Button variant="ghost" size="sm" className="h-7 text-xs text-muted-foreground" onClick={() => nieuweRegel({})}>
-                            <Plus className="h-3 w-3 mr-1" />
+                    <tr className="border-t border-border/60 bg-muted/30">
+                      <td colSpan={aantalKolommen} className="px-4 py-2.5">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground/50 mr-1">Toevoegen</span>
+                          <Button variant="ghost" size="sm" className="h-7 text-xs gap-1 text-primary/80 hover:text-primary hover:bg-primary/5 font-medium" onClick={() => nieuweRegel({})}>
+                            <Plus className="h-3 w-3" />
                             Directe regel
                           </Button>
-                          <Button variant="ghost" size="sm" className="h-7 text-xs text-muted-foreground" onClick={() => nieuweRegel({ is_bouwplaatskosten: true })}>
-                            <Plus className="h-3 w-3 mr-1" />
-                            Bouwplaatskost
+                          <span className="text-border/60 select-none">|</span>
+                          <Button variant="ghost" size="sm" className="h-7 text-xs gap-1 text-muted-foreground hover:text-foreground" onClick={() => nieuweRegel({ is_bouwplaatskosten: true })}>
+                            <Plus className="h-3 w-3" />
+                            Bouwplaatskosten
                           </Button>
-                          <Button variant="ghost" size="sm" className="h-7 text-xs text-muted-foreground" onClick={() => nieuweRegel({ is_staartkosten: true })}>
-                            <Plus className="h-3 w-3 mr-1" />
-                            Staartkost
+                          <Button variant="ghost" size="sm" className="h-7 text-xs gap-1 text-muted-foreground hover:text-foreground" onClick={() => nieuweRegel({ is_staartkosten: true })}>
+                            <Plus className="h-3 w-3" />
+                            Staartkosten
                           </Button>
                         </div>
                       </td>
