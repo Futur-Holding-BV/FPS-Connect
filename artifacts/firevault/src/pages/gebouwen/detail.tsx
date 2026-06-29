@@ -684,7 +684,7 @@ export default function GebouwDetail() {
           ════════════════════════════════════════════════════ */}
       <Tabs value={segment} onValueChange={setSegment} className="w-full">
         <div className="flex items-start justify-between gap-4">
-          <TabsList className="grid w-full max-w-4xl min-w-0 grid-cols-5">
+          <TabsList className="grid w-full max-w-4xl min-w-0 grid-cols-6">
             <TabsTrigger value="project" className="gap-1.5">
               <Building2 className="h-4 w-4 shrink-0" />
               <span className="hidden sm:inline">Gebouw</span>
@@ -705,6 +705,10 @@ export default function GebouwDetail() {
             <TabsTrigger value="calculaties" className="gap-1.5">
               <Calculator className="h-4 w-4 shrink-0" />
               <span className="hidden sm:inline">Calculaties</span>
+            </TabsTrigger>
+            <TabsTrigger value="offertes" className="gap-1.5">
+              <Euro className="h-4 w-4 shrink-0" />
+              <span className="hidden sm:inline">Offertes</span>
             </TabsTrigger>
           </TabsList>
 
@@ -1221,7 +1225,7 @@ export default function GebouwDetail() {
       </TabsContent>
 
       {/* ════════════════════════════════════════════════════
-          SEGMENT 5 — Calculaties & Offertes
+          SEGMENT 5 — Calculaties
           ════════════════════════════════════════════════════ */}
       <TabsContent value="calculaties" className="space-y-6 mt-6">
         <Card>
@@ -1269,7 +1273,12 @@ export default function GebouwDetail() {
             )}
           </CardContent>
         </Card>
+      </TabsContent>
 
+      {/* ════════════════════════════════════════════════════
+          SEGMENT 6 — Offertes
+          ════════════════════════════════════════════════════ */}
+      <TabsContent value="offertes" className="space-y-6 mt-6">
         <Card>
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
