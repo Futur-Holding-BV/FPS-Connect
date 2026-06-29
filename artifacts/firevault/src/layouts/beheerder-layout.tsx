@@ -306,10 +306,14 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                       <div className="flex-1 h-px bg-slate-200" />
                     </div>
                     <SidebarMenuItem className="pl-5">
-                      <SidebarMenuButton disabled>
-                        <Hammer />
-                        <span>Werkvoorbereiding</span>
-                        <InUitvoering />
+                      <SidebarMenuButton
+                        asChild
+                        isActive={location === "/werkvoorbereiding" || location.startsWith("/werkvoorbereiding/") || location.startsWith("/opdrachten/")}
+                      >
+                        <Link href="/werkvoorbereiding">
+                          <Hammer />
+                          <span>Werkvoorbereiding</span>
+                        </Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                     {featureFlags.planning ? (

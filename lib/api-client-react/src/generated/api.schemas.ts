@@ -4409,6 +4409,251 @@ export interface PlanningUrenRegel {
   status?: string;
 }
 
+export interface WerkbegrotingRegelPatch {
+  omschrijving?: string;
+  hoeveelheid?: number;
+  tarief?: number;
+  eenheid?: string;
+}
+
+export type InkoopplanRegelType = typeof InkoopplanRegelType[keyof typeof InkoopplanRegelType];
+
+
+export const InkoopplanRegelType = {
+  voorraad: 'voorraad',
+  project: 'project',
+  maatwerk: 'maatwerk',
+  standaard: 'standaard',
+} as const;
+
+export type InkoopplanRegelStatus = typeof InkoopplanRegelStatus[keyof typeof InkoopplanRegelStatus];
+
+
+export const InkoopplanRegelStatus = {
+  open: 'open',
+  uit_voorraad: 'uit_voorraad',
+  besteld: 'besteld',
+  geleverd: 'geleverd',
+} as const;
+
+export interface InkoopplanRegel {
+  id: number;
+  inkoopplan_id: number;
+  /** @nullable */
+  werkbegroting_regel_id?: number | null;
+  omschrijving: string;
+  hoeveelheid: number;
+  eenheid: string;
+  type: InkoopplanRegelType;
+  /** @nullable */
+  leverancier?: string | null;
+  /** @nullable */
+  aanbevolen_leverancier?: string | null;
+  /** @nullable */
+  calc_prijs?: number | null;
+  /** @nullable */
+  inkoopprijs_verwacht?: number | null;
+  /** @nullable */
+  inkoopprijs?: number | null;
+  /** @nullable */
+  besparing_per_eenheid?: number | null;
+  /** @nullable */
+  besparing?: number | null;
+  /** @nullable */
+  levertijd_weken?: number | null;
+  /** @nullable */
+  gewenste_leverdatum?: string | null;
+  /** @nullable */
+  besteldatum?: string | null;
+  status: InkoopplanRegelStatus;
+  /** @nullable */
+  ai_motivatie?: string | null;
+  /** @nullable */
+  opmerkingen?: string | null;
+  volgorde: number;
+  aangemaakt_op?: string;
+  bijgewerkt_op?: string;
+}
+
+export interface InkoopplanRegelPatch {
+  leverancier?: string;
+  inkoopprijs?: number;
+  gewenste_leverdatum?: string;
+  besteldatum?: string;
+  levertijd_weken?: number;
+  status?: string;
+  opmerkingen?: string;
+  type?: string;
+}
+
+export type InkoopplanningStatus = typeof InkoopplanningStatus[keyof typeof InkoopplanningStatus];
+
+
+export const InkoopplanningStatus = {
+  concept: 'concept',
+  gereed: 'gereed',
+} as const;
+
+export interface Inkoopplanning {
+  id: number;
+  opdracht_id: number;
+  status: InkoopplanningStatus;
+  ai_gegenereerd: boolean;
+  /** @nullable */
+  ai_gegenereerd_op?: string | null;
+  /** @nullable */
+  ai_samenvatting?: string | null;
+  /** @nullable */
+  totale_besparing?: number | null;
+  /** @nullable */
+  vastgesteld_op?: string | null;
+  /** @nullable */
+  opmerkingen?: string | null;
+  aangemaakt_op?: string;
+  bijgewerkt_op?: string;
+  regels: InkoopplanRegel[];
+}
+
+export interface InkoopbonRegel {
+  id: number;
+  inkoopbon_id: number;
+  /** @nullable */
+  inkoopplan_regel_id?: number | null;
+  omschrijving: string;
+  hoeveelheid: number;
+  eenheid: string;
+  /** @nullable */
+  prijs?: number | null;
+  /** @nullable */
+  totaal?: number | null;
+  volgorde: number;
+}
+
+export type InkoopbonStatus = typeof InkoopbonStatus[keyof typeof InkoopbonStatus];
+
+
+export const InkoopbonStatus = {
+  concept: 'concept',
+  goedgekeurd: 'goedgekeurd',
+  besteld: 'besteld',
+  geleverd: 'geleverd',
+} as const;
+
+export interface Inkoopbon {
+  id: number;
+  /** @nullable */
+  inkoopplan_id?: number | null;
+  opdracht_id: number;
+  /** @nullable */
+  bon_nummer?: string | null;
+  leverancier: string;
+  /** @nullable */
+  gewenste_leverdatum?: string | null;
+  /** @nullable */
+  totaal_bedrag?: number | null;
+  status: InkoopbonStatus;
+  /** @nullable */
+  goedgekeurd_op?: string | null;
+  /** @nullable */
+  opmerkingen?: string | null;
+  aangemaakt_op?: string;
+  bijgewerkt_op?: string;
+  regels?: InkoopbonRegel[];
+}
+
+export type InkoopbonInputRegelsItem = {
+  inkoopplan_regel_id?: number;
+  omschrijving: string;
+  hoeveelheid: number;
+  eenheid: string;
+  prijs?: number;
+};
+
+export interface InkoopbonInput {
+  leverancier: string;
+  gewenste_leverdatum?: string;
+  opmerkingen?: string;
+  regels?: InkoopbonInputRegelsItem[];
+}
+
+export interface InkoopbonPatch {
+  leverancier?: string;
+  gewenste_leverdatum?: string;
+  status?: string;
+  opmerkingen?: string;
+}
+
+export interface UitvoeringsplanTaak {
+  id: number;
+  uitvoeringsplan_id: number;
+  volgorde: number;
+  /** @nullable */
+  fase?: string | null;
+  omschrijving: string;
+  /** @nullable */
+  discipline?: string | null;
+  /** @nullable */
+  duur_dagen?: number | null;
+  /** @nullable */
+  benodigde_medewerkers?: number | null;
+  /** @nullable */
+  urenbegroting?: number | null;
+  /** @nullable */
+  afhankelijk_van_ids?: string | null;
+  /** @nullable */
+  materiaal_moment?: string | null;
+  /** @nullable */
+  ai_motivatie?: string | null;
+  /** @nullable */
+  opmerkingen?: string | null;
+  ai_gegenereerd?: boolean;
+  aangemaakt_op?: string;
+  bijgewerkt_op?: string;
+}
+
+export interface UitvoeringsplanTaakPatch {
+  fase?: string;
+  omschrijving?: string;
+  discipline?: string;
+  duur_dagen?: number;
+  benodigde_medewerkers?: number;
+  urenbegroting?: number;
+  materiaal_moment?: string;
+  opmerkingen?: string;
+}
+
+export type UitvoeringsplanningStatus = typeof UitvoeringsplanningStatus[keyof typeof UitvoeringsplanningStatus];
+
+
+export const UitvoeringsplanningStatus = {
+  concept: 'concept',
+  gereed_voor_planning: 'gereed_voor_planning',
+} as const;
+
+export interface Uitvoeringsplanning {
+  id: number;
+  opdracht_id: number;
+  status: UitvoeringsplanningStatus;
+  ai_gegenereerd: boolean;
+  /** @nullable */
+  ai_gegenereerd_op?: string | null;
+  /** @nullable */
+  ai_samenvatting?: string | null;
+  /** @nullable */
+  startdatum?: string | null;
+  /** @nullable */
+  einddatum?: string | null;
+  /** @nullable */
+  totaal_weken?: number | null;
+  /** @nullable */
+  vastgesteld_op?: string | null;
+  /** @nullable */
+  opmerkingen?: string | null;
+  aangemaakt_op?: string;
+  bijgewerkt_op?: string;
+  taken: UitvoeringsplanTaak[];
+}
+
 export interface OfferteTrackingEvent {
   id: number;
   event: string;

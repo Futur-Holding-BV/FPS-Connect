@@ -37,3 +37,4 @@ export * from "./salarismutaties";
 export * from "./workflow";
 export * from "./wagenpark";
 export * from "./organisatie";
+export * from "./werkvoorbereiding";

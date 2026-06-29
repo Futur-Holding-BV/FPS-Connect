@@ -10396,6 +10396,500 @@ export const ListOpdrachtPlanningUrenResponse = zod.array(ListOpdrachtPlanningUr
 
 
 /**
+ * @summary Werkbegroting-regel bijwerken (omschrijving / hoeveelheid / tarief)
+ */
+export const PatchWerkbegrotingRegelParams = zod.object({
+  "id": zod.coerce.number(),
+  "regelId": zod.coerce.number()
+})
+
+export const PatchWerkbegrotingRegelBody = zod.object({
+  "omschrijving": zod.string().optional(),
+  "hoeveelheid": zod.number().optional(),
+  "tarief": zod.number().optional(),
+  "eenheid": zod.string().optional()
+})
+
+export const PatchWerkbegrotingRegelResponse = zod.object({
+  "id": zod.number(),
+  "begroting_id": zod.number(),
+  "calc_regel_id": zod.number().nullish(),
+  "categorie": zod.string(),
+  "omschrijving": zod.string(),
+  "eenheid": zod.string(),
+  "hoeveelheid": zod.number(),
+  "tarief": zod.number(),
+  "totaal": zod.number(),
+  "hoofdstuk": zod.string(),
+  "ai_inkoop_voorstel": zod.string().nullish(),
+  "ai_arbeid_voorstel": zod.string().nullish()
+})
+
+
+/**
+ * @summary Inkoopplanning van opdracht ophalen (incl. regels)
+ */
+export const GetInkoopplanningParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetInkoopplanningResponse = zod.object({
+  "id": zod.number(),
+  "opdracht_id": zod.number(),
+  "status": zod.enum(['concept', 'gereed']),
+  "ai_gegenereerd": zod.boolean(),
+  "ai_gegenereerd_op": zod.string().nullish(),
+  "ai_samenvatting": zod.string().nullish(),
+  "totale_besparing": zod.number().nullish(),
+  "vastgesteld_op": zod.string().nullish(),
+  "opmerkingen": zod.string().nullish(),
+  "aangemaakt_op": zod.string().optional(),
+  "bijgewerkt_op": zod.string().optional(),
+  "regels": zod.array(zod.object({
+  "id": zod.number(),
+  "inkoopplan_id": zod.number(),
+  "werkbegroting_regel_id": zod.number().nullish(),
+  "omschrijving": zod.string(),
+  "hoeveelheid": zod.number(),
+  "eenheid": zod.string(),
+  "type": zod.enum(['voorraad', 'project', 'maatwerk', 'standaard']),
+  "leverancier": zod.string().nullish(),
+  "aanbevolen_leverancier": zod.string().nullish(),
+  "calc_prijs": zod.number().nullish(),
+  "inkoopprijs_verwacht": zod.number().nullish(),
+  "inkoopprijs": zod.number().nullish(),
+  "besparing_per_eenheid": zod.number().nullish(),
+  "besparing": zod.number().nullish(),
+  "levertijd_weken": zod.number().nullish(),
+  "gewenste_leverdatum": zod.string().nullish(),
+  "besteldatum": zod.string().nullish(),
+  "status": zod.enum(['open', 'uit_voorraad', 'besteld', 'geleverd']),
+  "ai_motivatie": zod.string().nullish(),
+  "opmerkingen": zod.string().nullish(),
+  "volgorde": zod.number(),
+  "aangemaakt_op": zod.string().optional(),
+  "bijgewerkt_op": zod.string().optional()
+}))
+})
+
+
+/**
+ * @summary AI genereert inkoopplanning vanuit werkbegroting materiaalregels
+ */
+export const GenereerInkoopplanningParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GenereerInkoopplanningResponse = zod.object({
+  "id": zod.number(),
+  "opdracht_id": zod.number(),
+  "status": zod.enum(['concept', 'gereed']),
+  "ai_gegenereerd": zod.boolean(),
+  "ai_gegenereerd_op": zod.string().nullish(),
+  "ai_samenvatting": zod.string().nullish(),
+  "totale_besparing": zod.number().nullish(),
+  "vastgesteld_op": zod.string().nullish(),
+  "opmerkingen": zod.string().nullish(),
+  "aangemaakt_op": zod.string().optional(),
+  "bijgewerkt_op": zod.string().optional(),
+  "regels": zod.array(zod.object({
+  "id": zod.number(),
+  "inkoopplan_id": zod.number(),
+  "werkbegroting_regel_id": zod.number().nullish(),
+  "omschrijving": zod.string(),
+  "hoeveelheid": zod.number(),
+  "eenheid": zod.string(),
+  "type": zod.enum(['voorraad', 'project', 'maatwerk', 'standaard']),
+  "leverancier": zod.string().nullish(),
+  "aanbevolen_leverancier": zod.string().nullish(),
+  "calc_prijs": zod.number().nullish(),
+  "inkoopprijs_verwacht": zod.number().nullish(),
+  "inkoopprijs": zod.number().nullish(),
+  "besparing_per_eenheid": zod.number().nullish(),
+  "besparing": zod.number().nullish(),
+  "levertijd_weken": zod.number().nullish(),
+  "gewenste_leverdatum": zod.string().nullish(),
+  "besteldatum": zod.string().nullish(),
+  "status": zod.enum(['open', 'uit_voorraad', 'besteld', 'geleverd']),
+  "ai_motivatie": zod.string().nullish(),
+  "opmerkingen": zod.string().nullish(),
+  "volgorde": zod.number(),
+  "aangemaakt_op": zod.string().optional(),
+  "bijgewerkt_op": zod.string().optional()
+}))
+})
+
+
+/**
+ * @summary Inkoopplanning gereedmelden (projectleider akkoord)
+ */
+export const VaststellenInkoopplanningParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const VaststellenInkoopplanningResponse = zod.object({
+  "id": zod.number(),
+  "opdracht_id": zod.number(),
+  "status": zod.enum(['concept', 'gereed']),
+  "ai_gegenereerd": zod.boolean(),
+  "ai_gegenereerd_op": zod.string().nullish(),
+  "ai_samenvatting": zod.string().nullish(),
+  "totale_besparing": zod.number().nullish(),
+  "vastgesteld_op": zod.string().nullish(),
+  "opmerkingen": zod.string().nullish(),
+  "aangemaakt_op": zod.string().optional(),
+  "bijgewerkt_op": zod.string().optional(),
+  "regels": zod.array(zod.object({
+  "id": zod.number(),
+  "inkoopplan_id": zod.number(),
+  "werkbegroting_regel_id": zod.number().nullish(),
+  "omschrijving": zod.string(),
+  "hoeveelheid": zod.number(),
+  "eenheid": zod.string(),
+  "type": zod.enum(['voorraad', 'project', 'maatwerk', 'standaard']),
+  "leverancier": zod.string().nullish(),
+  "aanbevolen_leverancier": zod.string().nullish(),
+  "calc_prijs": zod.number().nullish(),
+  "inkoopprijs_verwacht": zod.number().nullish(),
+  "inkoopprijs": zod.number().nullish(),
+  "besparing_per_eenheid": zod.number().nullish(),
+  "besparing": zod.number().nullish(),
+  "levertijd_weken": zod.number().nullish(),
+  "gewenste_leverdatum": zod.string().nullish(),
+  "besteldatum": zod.string().nullish(),
+  "status": zod.enum(['open', 'uit_voorraad', 'besteld', 'geleverd']),
+  "ai_motivatie": zod.string().nullish(),
+  "opmerkingen": zod.string().nullish(),
+  "volgorde": zod.number(),
+  "aangemaakt_op": zod.string().optional(),
+  "bijgewerkt_op": zod.string().optional()
+}))
+})
+
+
+/**
+ * @summary Inkoopplan-regel bijwerken (leverancier / prijs / datum / status)
+ */
+export const PatchInkoopplanRegelParams = zod.object({
+  "id": zod.coerce.number(),
+  "regelId": zod.coerce.number()
+})
+
+export const PatchInkoopplanRegelBody = zod.object({
+  "leverancier": zod.string().optional(),
+  "inkoopprijs": zod.number().optional(),
+  "gewenste_leverdatum": zod.string().optional(),
+  "besteldatum": zod.string().optional(),
+  "levertijd_weken": zod.number().optional(),
+  "status": zod.string().optional(),
+  "opmerkingen": zod.string().optional(),
+  "type": zod.string().optional()
+})
+
+export const PatchInkoopplanRegelResponse = zod.object({
+  "id": zod.number(),
+  "inkoopplan_id": zod.number(),
+  "werkbegroting_regel_id": zod.number().nullish(),
+  "omschrijving": zod.string(),
+  "hoeveelheid": zod.number(),
+  "eenheid": zod.string(),
+  "type": zod.enum(['voorraad', 'project', 'maatwerk', 'standaard']),
+  "leverancier": zod.string().nullish(),
+  "aanbevolen_leverancier": zod.string().nullish(),
+  "calc_prijs": zod.number().nullish(),
+  "inkoopprijs_verwacht": zod.number().nullish(),
+  "inkoopprijs": zod.number().nullish(),
+  "besparing_per_eenheid": zod.number().nullish(),
+  "besparing": zod.number().nullish(),
+  "levertijd_weken": zod.number().nullish(),
+  "gewenste_leverdatum": zod.string().nullish(),
+  "besteldatum": zod.string().nullish(),
+  "status": zod.enum(['open', 'uit_voorraad', 'besteld', 'geleverd']),
+  "ai_motivatie": zod.string().nullish(),
+  "opmerkingen": zod.string().nullish(),
+  "volgorde": zod.number(),
+  "aangemaakt_op": zod.string().optional(),
+  "bijgewerkt_op": zod.string().optional()
+})
+
+
+/**
+ * @summary Inkoopbonnen van opdracht ophalen
+ */
+export const ListInkoopbonnenParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ListInkoopbonnenResponseItem = zod.object({
+  "id": zod.number(),
+  "inkoopplan_id": zod.number().nullish(),
+  "opdracht_id": zod.number(),
+  "bon_nummer": zod.string().nullish(),
+  "leverancier": zod.string(),
+  "gewenste_leverdatum": zod.string().nullish(),
+  "totaal_bedrag": zod.number().nullish(),
+  "status": zod.enum(['concept', 'goedgekeurd', 'besteld', 'geleverd']),
+  "goedgekeurd_op": zod.string().nullish(),
+  "opmerkingen": zod.string().nullish(),
+  "aangemaakt_op": zod.string().optional(),
+  "bijgewerkt_op": zod.string().optional(),
+  "regels": zod.array(zod.object({
+  "id": zod.number(),
+  "inkoopbon_id": zod.number(),
+  "inkoopplan_regel_id": zod.number().nullish(),
+  "omschrijving": zod.string(),
+  "hoeveelheid": zod.number(),
+  "eenheid": zod.string(),
+  "prijs": zod.number().nullish(),
+  "totaal": zod.number().nullish(),
+  "volgorde": zod.number()
+})).optional()
+})
+export const ListInkoopbonnenResponse = zod.array(ListInkoopbonnenResponseItem)
+
+
+/**
+ * @summary Nieuwe inkoopbon aanmaken
+ */
+export const CreateInkoopbonParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const CreateInkoopbonBody = zod.object({
+  "leverancier": zod.string(),
+  "gewenste_leverdatum": zod.string().optional(),
+  "opmerkingen": zod.string().optional(),
+  "regels": zod.array(zod.object({
+  "inkoopplan_regel_id": zod.number().optional(),
+  "omschrijving": zod.string(),
+  "hoeveelheid": zod.number(),
+  "eenheid": zod.string(),
+  "prijs": zod.number().optional()
+})).optional()
+})
+
+export const CreateInkoopbonResponse = zod.void()
+
+
+/**
+ * @summary Inkoopbon bijwerken (status / leverancier / datum)
+ */
+export const PatchInkoopbonParams = zod.object({
+  "id": zod.coerce.number(),
+  "bonId": zod.coerce.number()
+})
+
+export const PatchInkoopbonBody = zod.object({
+  "leverancier": zod.string().optional(),
+  "gewenste_leverdatum": zod.string().optional(),
+  "status": zod.string().optional(),
+  "opmerkingen": zod.string().optional()
+})
+
+export const PatchInkoopbonResponse = zod.object({
+  "id": zod.number(),
+  "inkoopplan_id": zod.number().nullish(),
+  "opdracht_id": zod.number(),
+  "bon_nummer": zod.string().nullish(),
+  "leverancier": zod.string(),
+  "gewenste_leverdatum": zod.string().nullish(),
+  "totaal_bedrag": zod.number().nullish(),
+  "status": zod.enum(['concept', 'goedgekeurd', 'besteld', 'geleverd']),
+  "goedgekeurd_op": zod.string().nullish(),
+  "opmerkingen": zod.string().nullish(),
+  "aangemaakt_op": zod.string().optional(),
+  "bijgewerkt_op": zod.string().optional(),
+  "regels": zod.array(zod.object({
+  "id": zod.number(),
+  "inkoopbon_id": zod.number(),
+  "inkoopplan_regel_id": zod.number().nullish(),
+  "omschrijving": zod.string(),
+  "hoeveelheid": zod.number(),
+  "eenheid": zod.string(),
+  "prijs": zod.number().nullish(),
+  "totaal": zod.number().nullish(),
+  "volgorde": zod.number()
+})).optional()
+})
+
+
+/**
+ * @summary Inkoopbon verwijderen (alleen concept)
+ */
+export const DeleteInkoopbonParams = zod.object({
+  "id": zod.coerce.number(),
+  "bonId": zod.coerce.number()
+})
+
+export const DeleteInkoopbonResponse = zod.void()
+
+
+/**
+ * @summary Uitvoeringsplanning van opdracht ophalen (incl. taken)
+ */
+export const GetUitvoeringsplanningParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetUitvoeringsplanningResponse = zod.object({
+  "id": zod.number(),
+  "opdracht_id": zod.number(),
+  "status": zod.enum(['concept', 'gereed_voor_planning']),
+  "ai_gegenereerd": zod.boolean(),
+  "ai_gegenereerd_op": zod.string().nullish(),
+  "ai_samenvatting": zod.string().nullish(),
+  "startdatum": zod.string().nullish(),
+  "einddatum": zod.string().nullish(),
+  "totaal_weken": zod.number().nullish(),
+  "vastgesteld_op": zod.string().nullish(),
+  "opmerkingen": zod.string().nullish(),
+  "aangemaakt_op": zod.string().optional(),
+  "bijgewerkt_op": zod.string().optional(),
+  "taken": zod.array(zod.object({
+  "id": zod.number(),
+  "uitvoeringsplan_id": zod.number(),
+  "volgorde": zod.number(),
+  "fase": zod.string().nullish(),
+  "omschrijving": zod.string(),
+  "discipline": zod.string().nullish(),
+  "duur_dagen": zod.number().nullish(),
+  "benodigde_medewerkers": zod.number().nullish(),
+  "urenbegroting": zod.number().nullish(),
+  "afhankelijk_van_ids": zod.string().nullish(),
+  "materiaal_moment": zod.string().nullish(),
+  "ai_motivatie": zod.string().nullish(),
+  "opmerkingen": zod.string().nullish(),
+  "ai_gegenereerd": zod.boolean().optional(),
+  "aangemaakt_op": zod.string().optional(),
+  "bijgewerkt_op": zod.string().optional()
+}))
+})
+
+
+/**
+ * @summary AI genereert uitvoeringsplanning vanuit werkbegroting arbeid- en materiaalregels
+ */
+export const GenereerUitvoeringsplanningParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GenereerUitvoeringsplanningResponse = zod.object({
+  "id": zod.number(),
+  "opdracht_id": zod.number(),
+  "status": zod.enum(['concept', 'gereed_voor_planning']),
+  "ai_gegenereerd": zod.boolean(),
+  "ai_gegenereerd_op": zod.string().nullish(),
+  "ai_samenvatting": zod.string().nullish(),
+  "startdatum": zod.string().nullish(),
+  "einddatum": zod.string().nullish(),
+  "totaal_weken": zod.number().nullish(),
+  "vastgesteld_op": zod.string().nullish(),
+  "opmerkingen": zod.string().nullish(),
+  "aangemaakt_op": zod.string().optional(),
+  "bijgewerkt_op": zod.string().optional(),
+  "taken": zod.array(zod.object({
+  "id": zod.number(),
+  "uitvoeringsplan_id": zod.number(),
+  "volgorde": zod.number(),
+  "fase": zod.string().nullish(),
+  "omschrijving": zod.string(),
+  "discipline": zod.string().nullish(),
+  "duur_dagen": zod.number().nullish(),
+  "benodigde_medewerkers": zod.number().nullish(),
+  "urenbegroting": zod.number().nullish(),
+  "afhankelijk_van_ids": zod.string().nullish(),
+  "materiaal_moment": zod.string().nullish(),
+  "ai_motivatie": zod.string().nullish(),
+  "opmerkingen": zod.string().nullish(),
+  "ai_gegenereerd": zod.boolean().optional(),
+  "aangemaakt_op": zod.string().optional(),
+  "bijgewerkt_op": zod.string().optional()
+}))
+})
+
+
+/**
+ * @summary Uitvoeringsplanning gereedmelden voor centrale planning
+ */
+export const VaststellenUitvoeringsplanningParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const VaststellenUitvoeringsplanningResponse = zod.object({
+  "id": zod.number(),
+  "opdracht_id": zod.number(),
+  "status": zod.enum(['concept', 'gereed_voor_planning']),
+  "ai_gegenereerd": zod.boolean(),
+  "ai_gegenereerd_op": zod.string().nullish(),
+  "ai_samenvatting": zod.string().nullish(),
+  "startdatum": zod.string().nullish(),
+  "einddatum": zod.string().nullish(),
+  "totaal_weken": zod.number().nullish(),
+  "vastgesteld_op": zod.string().nullish(),
+  "opmerkingen": zod.string().nullish(),
+  "aangemaakt_op": zod.string().optional(),
+  "bijgewerkt_op": zod.string().optional(),
+  "taken": zod.array(zod.object({
+  "id": zod.number(),
+  "uitvoeringsplan_id": zod.number(),
+  "volgorde": zod.number(),
+  "fase": zod.string().nullish(),
+  "omschrijving": zod.string(),
+  "discipline": zod.string().nullish(),
+  "duur_dagen": zod.number().nullish(),
+  "benodigde_medewerkers": zod.number().nullish(),
+  "urenbegroting": zod.number().nullish(),
+  "afhankelijk_van_ids": zod.string().nullish(),
+  "materiaal_moment": zod.string().nullish(),
+  "ai_motivatie": zod.string().nullish(),
+  "opmerkingen": zod.string().nullish(),
+  "ai_gegenereerd": zod.boolean().optional(),
+  "aangemaakt_op": zod.string().optional(),
+  "bijgewerkt_op": zod.string().optional()
+}))
+})
+
+
+/**
+ * @summary Uitvoeringsplan-taak bijwerken
+ */
+export const PatchUitvoeringsplanTaakParams = zod.object({
+  "id": zod.coerce.number(),
+  "taakId": zod.coerce.number()
+})
+
+export const PatchUitvoeringsplanTaakBody = zod.object({
+  "fase": zod.string().optional(),
+  "omschrijving": zod.string().optional(),
+  "discipline": zod.string().optional(),
+  "duur_dagen": zod.number().optional(),
+  "benodigde_medewerkers": zod.number().optional(),
+  "urenbegroting": zod.number().optional(),
+  "materiaal_moment": zod.string().optional(),
+  "opmerkingen": zod.string().optional()
+})
+
+export const PatchUitvoeringsplanTaakResponse = zod.object({
+  "id": zod.number(),
+  "uitvoeringsplan_id": zod.number(),
+  "volgorde": zod.number(),
+  "fase": zod.string().nullish(),
+  "omschrijving": zod.string(),
+  "discipline": zod.string().nullish(),
+  "duur_dagen": zod.number().nullish(),
+  "benodigde_medewerkers": zod.number().nullish(),
+  "urenbegroting": zod.number().nullish(),
+  "afhankelijk_van_ids": zod.string().nullish(),
+  "materiaal_moment": zod.string().nullish(),
+  "ai_motivatie": zod.string().nullish(),
+  "opmerkingen": zod.string().nullish(),
+  "ai_gegenereerd": zod.boolean().optional(),
+  "aangemaakt_op": zod.string().optional(),
+  "bijgewerkt_op": zod.string().optional()
+})
+
+
+/**
  * @summary Offerte via portaaltoken ophalen (publiek)
  */
 export const GetPortaalParams = zod.object({

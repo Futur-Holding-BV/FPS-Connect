@@ -96,6 +96,7 @@ import OffertesPagina from "@/pages/offertes/index";
 import ProposalStudio from "@/pages/offertes/studio";
 import OffertePrintPagina from "@/pages/offertes/print";
 import OpdrachtDetailPagina from "@/pages/opdrachten/detail";
+import WerkvoorbereidingOverzicht from "@/pages/werkvoorbereiding/index";
 import DocumentenPagina from "@/pages/documenten/index";
 import { OndersteuningWidget } from "@/components/ondersteuning-widget";
 import WelkomWizard, { isWelkomAfgerond } from "@/pages/welkom/index";
@@ -258,6 +259,7 @@ function ConnectPortal() {
         <Route path="/offertes/:id/print" component={OffertePrintPagina} />
         <Route path="/offertes/:id" component={ProposalStudio} />
         <Route path="/opdrachten/:id" component={OpdrachtDetailPagina} />
+        <Route path="/werkvoorbereiding" component={WerkvoorbereidingOverzicht} />
 
         {/* ── Documenten & Dossiers ── */}
         <Route path="/documenten" component={DocumentenPagina} />

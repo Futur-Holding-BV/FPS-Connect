@@ -1,4 +1,4 @@
-// Opdracht detail — werkbegroting, nacalculatie en planning-uren
+// Opdracht detail — werkbegroting, nacalculatie, planning-uren, inkoopplanning, uitvoeringsplanning
 import { useState } from "react";
 import { useParams, Link } from "wouter";
 import {
@@ -8,26 +8,31 @@ import {
   useAiAnalyseWerkbegroting,
   useGetNacalculatie,
   useListOpdrachtPlanningUren,
+  usePatchWerkbegrotingRegel,
+  getGetWerkbegrotingQueryKey,
+  getGetOpdrachtQueryKey,
+  getGetNacalculatieQueryKey,
 } from "@workspace/api-client-react";
 import type { Werkbegroting } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Separator } from "@/components/ui/separator";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel,
   AlertDialogContent, AlertDialogDescription, AlertDialogFooter,
   AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
-  ArrowLeft, Sparkles, Check, Clock, AlertTriangle, Users,
-  BarChart3, CalendarCheck, TrendingUp, TrendingDown,
+  ArrowLeft, Sparkles, Check, Clock, AlertTriangle, CalendarCheck,
+  TrendingUp, TrendingDown, Edit2, Package, ShoppingCart,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
-import { getGetWerkbegrotingQueryKey, getGetOpdrachtQueryKey, getGetNacalculatieQueryKey } from "@workspace/api-client-react";
+import InkoopplanningTab from "./inkoopplanning-tab";
+import UitvoeringsplanningTab from "./uitvoeringsplanning-tab";
 
 function euro(n: number | null | undefined) {
   return new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR" }).format(n ?? 0);
@@ -60,6 +65,119 @@ function groepeerOpHoofdstuk(werkbegroting: Werkbegroting) {
   return groepen;
 }
 
+// ── Bewerkbare werkbegroting-regel ────────────────────────────────────────────
+interface WerkbegrotingRegelRijProps {
+  r: NonNullable<Werkbegroting["regels"]>[number];
+  opdrachtId: number;
+  isVastgesteld: boolean;
+}
+
+function WerkbegrotingRegelRij({ r, opdrachtId, isVastgesteld }: WerkbegrotingRegelRijProps) {
+  const [bewerkModus, setBewerkModus] = useState(false);
+  const [hoeveelheid, setHoeveelheid] = useState(r.hoeveelheid != null ? String(r.hoeveelheid) : "");
+  const [tarief, setTarief] = useState(r.tarief != null ? String(r.tarief) : "");
+  const [omschrijving, setOmschrijving] = useState(r.omschrijving ?? "");
+  const { toast } = useToast();
+  const qc = useQueryClient();
+
+  const patchMutatie = usePatchWerkbegrotingRegel({
+    mutation: {
+      onSuccess: () => {
+        qc.invalidateQueries({ queryKey: getGetWerkbegrotingQueryKey(opdrachtId) });
+        setBewerkModus(false);
+        toast({ title: "Regel bijgewerkt" });
+      },
+      onError: () => toast({ title: "Opslaan mislukt", variant: "destructive" }),
+    },
+  });
+
+  function bewaar() {
+    patchMutatie.mutate({
+      id: opdrachtId,
+      regelId: r.id,
+      data: {
+        omschrijving: omschrijving || undefined,
+        hoeveelheid: hoeveelheid ? parseFloat(hoeveelheid) : undefined,
+        tarief: tarief ? parseFloat(tarief) : undefined,
+      },
+    });
+  }
+
+  if (bewerkModus) {
+    return (
+      <tr className="border-b border-dashed bg-muted/20">
+        <td className="py-1.5 pr-2">
+          <Input
+            value={omschrijving}
+            onChange={e => setOmschrijving(e.target.value)}
+            className="h-7 text-sm"
+          />
+        </td>
+        <td className="text-right py-1.5">
+          <Input
+            type="number"
+            value={hoeveelheid}
+            onChange={e => setHoeveelheid(e.target.value)}
+            className="h-7 text-sm text-right w-20 ml-auto"
+            step="0.01"
+          />
+        </td>
+        <td className="text-right py-1.5 text-muted-foreground">{r.eenheid}</td>
+        <td className="text-right py-1.5">
+          <Input
+            type="number"
+            value={tarief}
+            onChange={e => setTarief(e.target.value)}
+            className="h-7 text-sm text-right w-24 ml-auto"
+            step="0.01"
+          />
+        </td>
+        <td className="text-right py-1.5 tabular-nums font-medium">
+          {euro((parseFloat(hoeveelheid) || 0) * (parseFloat(tarief) || 0))}
+        </td>
+        <td className="text-right py-1.5">
+          <div className="flex gap-1 justify-end">
+            <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" onClick={() => setBewerkModus(false)}>
+              Annuleren
+            </Button>
+            <Button size="sm" className="h-6 px-2 text-xs" onClick={bewaar} disabled={patchMutatie.isPending}>
+              {patchMutatie.isPending ? "..." : "Opslaan"}
+            </Button>
+          </div>
+        </td>
+      </tr>
+    );
+  }
+
+  return (
+    <tr className="border-b border-dashed last:border-0 group">
+      <td className="py-1.5 pr-2">
+        {r.omschrijving}
+        {r.categorie === "arbeid" && (
+          <Badge variant="outline" className="ml-2 text-xs py-0 bg-blue-50 text-blue-700 border-blue-200">arbeid</Badge>
+        )}
+      </td>
+      <td className="text-right py-1.5 tabular-nums">{r.hoeveelheid?.toFixed(2)}</td>
+      <td className="text-right py-1.5 text-muted-foreground">{r.eenheid}</td>
+      <td className="text-right py-1.5 tabular-nums">{euro(r.tarief)}</td>
+      <td className="text-right py-1.5 tabular-nums font-medium">{euro(r.totaal)}</td>
+      <td className="text-right py-1.5 w-8">
+        {!isVastgesteld && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+            onClick={() => setBewerkModus(true)}
+          >
+            <Edit2 className="h-3 w-3 text-muted-foreground" />
+          </Button>
+        )}
+      </td>
+    </tr>
+  );
+}
+
+// ── Hoofdpagina ────────────────────────────────────────────────────────────────
 export default function OpdrachtDetailPagina() {
   const { id } = useParams<{ id: string }>();
   const opdrachtId = parseInt(id ?? "0", 10);
@@ -173,8 +291,16 @@ export default function OpdrachtDetailPagina() {
 
       {/* Tabs */}
       <Tabs defaultValue="werkbegroting">
-        <TabsList>
+        <TabsList className="flex-wrap h-auto gap-1">
           <TabsTrigger value="werkbegroting">Werkbegroting</TabsTrigger>
+          <TabsTrigger value="inkoopplanning">
+            <ShoppingCart className="h-3.5 w-3.5 mr-1.5" />
+            Inkoopplanning
+          </TabsTrigger>
+          <TabsTrigger value="uitvoeringsplanning">
+            <CalendarCheck className="h-3.5 w-3.5 mr-1.5" />
+            Uitvoeringsplanning
+          </TabsTrigger>
           <TabsTrigger value="nacalculatie">Nacalculatie</TabsTrigger>
           <TabsTrigger value="planning">Planning-uren</TabsTrigger>
           {aiAnalyse && <TabsTrigger value="ai">AI-analyse</TabsTrigger>}
@@ -210,6 +336,12 @@ export default function OpdrachtDetailPagina() {
             </div>
           </div>
 
+          {!isVastgesteld && (
+            <p className="text-xs text-muted-foreground">
+              Regels zijn bewerkbaar tot het moment van vaststelling. Klik op het potlood-icoon om een regel te bewerken.
+            </p>
+          )}
+
           {wbLoading ? (
             <div className="space-y-2">
               {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}
@@ -240,22 +372,17 @@ export default function OpdrachtDetailPagina() {
                           <th className="text-right pb-1 font-normal">Eenheid</th>
                           <th className="text-right pb-1 font-normal">Tarief</th>
                           <th className="text-right pb-1 font-normal">Totaal</th>
+                          <th className="w-8"></th>
                         </tr>
                       </thead>
                       <tbody>
                         {regels.map((r) => (
-                          <tr key={r.id} className="border-b border-dashed last:border-0">
-                            <td className="py-1.5 pr-2">
-                              {r.omschrijving}
-                              {r.categorie === "arbeid" && (
-                                <Badge variant="outline" className="ml-2 text-xs py-0 bg-blue-50 text-blue-700 border-blue-200">arbeid</Badge>
-                              )}
-                            </td>
-                            <td className="text-right py-1.5 tabular-nums">{r.hoeveelheid?.toFixed(2)}</td>
-                            <td className="text-right py-1.5 text-muted-foreground">{r.eenheid}</td>
-                            <td className="text-right py-1.5 tabular-nums">{euro(r.tarief)}</td>
-                            <td className="text-right py-1.5 tabular-nums font-medium">{euro(r.totaal)}</td>
-                          </tr>
+                          <WerkbegrotingRegelRij
+                            key={r.id}
+                            r={r}
+                            opdrachtId={opdrachtId}
+                            isVastgesteld={isVastgesteld}
+                          />
                         ))}
                       </tbody>
                     </table>
@@ -266,13 +393,22 @@ export default function OpdrachtDetailPagina() {
           )}
         </TabsContent>
 
+        {/* ── Inkoopplanning ── */}
+        <TabsContent value="inkoopplanning">
+          <InkoopplanningTab opdrachtId={opdrachtId} />
+        </TabsContent>
+
+        {/* ── Uitvoeringsplanning ── */}
+        <TabsContent value="uitvoeringsplanning">
+          <UitvoeringsplanningTab opdrachtId={opdrachtId} />
+        </TabsContent>
+
         {/* ── Nacalculatie ── */}
         <TabsContent value="nacalculatie" className="mt-4">
           {!nacalculatie ? (
             <Card><CardContent className="py-8 text-center text-muted-foreground">Nog geen nacalculatiegegevens beschikbaar.</CardContent></Card>
           ) : (
             <div className="space-y-4">
-              {/* Samenvatting */}
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                 <Card>
                   <CardContent className="pt-4 pb-3">
@@ -297,7 +433,6 @@ export default function OpdrachtDetailPagina() {
                 </Card>
               </div>
 
-              {/* Per-categorie tabel */}
               {nacalculatie.regels && nacalculatie.regels.length > 0 && (
                 <Card>
                   <CardHeader className="pb-2 pt-4">

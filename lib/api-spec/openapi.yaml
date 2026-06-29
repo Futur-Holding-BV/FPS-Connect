@@ -8504,6 +8504,306 @@ paths:
                 items:
                   $ref: "#/components/schemas/PlanningUrenRegel"
 
+  /opdrachten/{id}/werkbegroting/regels/{regelId}:
+    patch:
+      operationId: patchWerkbegrotingRegel
+      tags: [opdrachten]
+      summary: Werkbegroting-regel bijwerken (omschrijving / hoeveelheid / tarief)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+        - in: path
+          name: regelId
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WerkbegrotingRegelPatch"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WerkbegrotingRegel"
+
+  /opdrachten/{id}/inkoopplanning:
+    get:
+      operationId: getInkoopplanning
+      tags: [opdrachten]
+      summary: Inkoopplanning van opdracht ophalen (incl. regels)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Inkoopplanning"
+        "404":
+          description: Nog geen inkoopplanning
+
+  /opdrachten/{id}/inkoopplanning/genereer:
+    post:
+      operationId: genereerInkoopplanning
+      tags: [opdrachten]
+      summary: AI genereert inkoopplanning vanuit werkbegroting materiaalregels
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Inkoopplanning"
+
+  /opdrachten/{id}/inkoopplanning/vaststellen:
+    post:
+      operationId: vaststellenInkoopplanning
+      tags: [opdrachten]
+      summary: Inkoopplanning gereedmelden (projectleider akkoord)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Inkoopplanning"
+
+  /opdrachten/{id}/inkoopplanning/regels/{regelId}:
+    patch:
+      operationId: patchInkoopplanRegel
+      tags: [opdrachten]
+      summary: Inkoopplan-regel bijwerken (leverancier / prijs / datum / status)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+        - in: path
+          name: regelId
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InkoopplanRegelPatch"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InkoopplanRegel"
+
+  /opdrachten/{id}/inkoopplanning/inkoopbonnen:
+    get:
+      operationId: listInkoopbonnen
+      tags: [opdrachten]
+      summary: Inkoopbonnen van opdracht ophalen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Inkoopbon"
+    post:
+      operationId: createInkoopbon
+      tags: [opdrachten]
+      summary: Nieuwe inkoopbon aanmaken
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InkoopbonInput"
+      responses:
+        "201":
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Inkoopbon"
+
+  /opdrachten/{id}/inkoopplanning/inkoopbonnen/{bonId}:
+    patch:
+      operationId: patchInkoopbon
+      tags: [opdrachten]
+      summary: Inkoopbon bijwerken (status / leverancier / datum)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+        - in: path
+          name: bonId
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InkoopbonPatch"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Inkoopbon"
+    delete:
+      operationId: deleteInkoopbon
+      tags: [opdrachten]
+      summary: Inkoopbon verwijderen (alleen concept)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+        - in: path
+          name: bonId
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Verwijderd
+
+  /opdrachten/{id}/uitvoeringsplanning:
+    get:
+      operationId: getUitvoeringsplanning
+      tags: [opdrachten]
+      summary: Uitvoeringsplanning van opdracht ophalen (incl. taken)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Uitvoeringsplanning"
+        "404":
+          description: Nog geen uitvoeringsplanning
+
+  /opdrachten/{id}/uitvoeringsplanning/genereer:
+    post:
+      operationId: genereerUitvoeringsplanning
+      tags: [opdrachten]
+      summary: AI genereert uitvoeringsplanning vanuit werkbegroting arbeid- en materiaalregels
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Uitvoeringsplanning"
+
+  /opdrachten/{id}/uitvoeringsplanning/vaststellen:
+    post:
+      operationId: vaststellenUitvoeringsplanning
+      tags: [opdrachten]
+      summary: Uitvoeringsplanning gereedmelden voor centrale planning
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Uitvoeringsplanning"
+
+  /opdrachten/{id}/uitvoeringsplanning/taken/{taakId}:
+    patch:
+      operationId: patchUitvoeringsplanTaak
+      tags: [opdrachten]
+      summary: Uitvoeringsplan-taak bijwerken
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+        - in: path
+          name: taakId
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UitvoeringsplanTaakPatch"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UitvoeringsplanTaak"
+
   # ── Klantportaal (publiek, geen authenticatie) ─────────────────────────────
   /portaal/{token}:
     get:
@@ -20484,6 +20784,314 @@ components:
           type: number
         status:
           type: string
+
+    # ── Werkvoorbereiding ─────────────────────────────────────────────────────
+
+    WerkbegrotingRegelPatch:
+      type: object
+      properties:
+        omschrijving:
+          type: string
+        hoeveelheid:
+          type: number
+        tarief:
+          type: number
+        eenheid:
+          type: string
+
+    InkoopplanRegel:
+      type: object
+      required: [id, inkoopplan_id, omschrijving, hoeveelheid, eenheid, type, status, volgorde]
+      properties:
+        id:
+          type: integer
+        inkoopplan_id:
+          type: integer
+        werkbegroting_regel_id:
+          type: ["integer", "null"]
+        omschrijving:
+          type: string
+        hoeveelheid:
+          type: number
+        eenheid:
+          type: string
+        type:
+          type: string
+          enum: [voorraad, project, maatwerk, standaard]
+        leverancier:
+          type: ["string", "null"]
+        aanbevolen_leverancier:
+          type: ["string", "null"]
+        calc_prijs:
+          type: ["number", "null"]
+        inkoopprijs_verwacht:
+          type: ["number", "null"]
+        inkoopprijs:
+          type: ["number", "null"]
+        besparing_per_eenheid:
+          type: ["number", "null"]
+        besparing:
+          type: ["number", "null"]
+        levertijd_weken:
+          type: ["integer", "null"]
+        gewenste_leverdatum:
+          type: ["string", "null"]
+        besteldatum:
+          type: ["string", "null"]
+        status:
+          type: string
+          enum: [open, uit_voorraad, besteld, geleverd]
+        ai_motivatie:
+          type: ["string", "null"]
+        opmerkingen:
+          type: ["string", "null"]
+        volgorde:
+          type: integer
+        aangemaakt_op:
+          type: string
+        bijgewerkt_op:
+          type: string
+
+    InkoopplanRegelPatch:
+      type: object
+      properties:
+        leverancier:
+          type: string
+        inkoopprijs:
+          type: number
+        gewenste_leverdatum:
+          type: string
+        besteldatum:
+          type: string
+        levertijd_weken:
+          type: integer
+        status:
+          type: string
+        opmerkingen:
+          type: string
+        type:
+          type: string
+
+    Inkoopplanning:
+      type: object
+      required: [id, opdracht_id, status, ai_gegenereerd, regels]
+      properties:
+        id:
+          type: integer
+        opdracht_id:
+          type: integer
+        status:
+          type: string
+          enum: [concept, gereed]
+        ai_gegenereerd:
+          type: boolean
+        ai_gegenereerd_op:
+          type: ["string", "null"]
+        ai_samenvatting:
+          type: ["string", "null"]
+        totale_besparing:
+          type: ["number", "null"]
+        vastgesteld_op:
+          type: ["string", "null"]
+        opmerkingen:
+          type: ["string", "null"]
+        aangemaakt_op:
+          type: string
+        bijgewerkt_op:
+          type: string
+        regels:
+          type: array
+          items:
+            $ref: "#/components/schemas/InkoopplanRegel"
+
+    InkoopbonRegel:
+      type: object
+      required: [id, inkoopbon_id, omschrijving, hoeveelheid, eenheid, volgorde]
+      properties:
+        id:
+          type: integer
+        inkoopbon_id:
+          type: integer
+        inkoopplan_regel_id:
+          type: ["integer", "null"]
+        omschrijving:
+          type: string
+        hoeveelheid:
+          type: number
+        eenheid:
+          type: string
+        prijs:
+          type: ["number", "null"]
+        totaal:
+          type: ["number", "null"]
+        volgorde:
+          type: integer
+
+    Inkoopbon:
+      type: object
+      required: [id, opdracht_id, leverancier, status]
+      properties:
+        id:
+          type: integer
+        inkoopplan_id:
+          type: ["integer", "null"]
+        opdracht_id:
+          type: integer
+        bon_nummer:
+          type: ["string", "null"]
+        leverancier:
+          type: string
+        gewenste_leverdatum:
+          type: ["string", "null"]
+        totaal_bedrag:
+          type: ["number", "null"]
+        status:
+          type: string
+          enum: [concept, goedgekeurd, besteld, geleverd]
+        goedgekeurd_op:
+          type: ["string", "null"]
+        opmerkingen:
+          type: ["string", "null"]
+        aangemaakt_op:
+          type: string
+        bijgewerkt_op:
+          type: string
+        regels:
+          type: array
+          items:
+            $ref: "#/components/schemas/InkoopbonRegel"
+
+    InkoopbonInput:
+      type: object
+      required: [leverancier]
+      properties:
+        leverancier:
+          type: string
+        gewenste_leverdatum:
+          type: string
+        opmerkingen:
+          type: string
+        regels:
+          type: array
+          items:
+            type: object
+            required: [omschrijving, hoeveelheid, eenheid]
+            properties:
+              inkoopplan_regel_id:
+                type: integer
+              omschrijving:
+                type: string
+              hoeveelheid:
+                type: number
+              eenheid:
+                type: string
+              prijs:
+                type: number
+
+    InkoopbonPatch:
+      type: object
+      properties:
+        leverancier:
+          type: string
+        gewenste_leverdatum:
+          type: string
+        status:
+          type: string
+        opmerkingen:
+          type: string
+
+    UitvoeringsplanTaak:
+      type: object
+      required: [id, uitvoeringsplan_id, omschrijving, volgorde]
+      properties:
+        id:
+          type: integer
+        uitvoeringsplan_id:
+          type: integer
+        volgorde:
+          type: integer
+        fase:
+          type: ["string", "null"]
+        omschrijving:
+          type: string
+        discipline:
+          type: ["string", "null"]
+        duur_dagen:
+          type: ["integer", "null"]
+        benodigde_medewerkers:
+          type: ["integer", "null"]
+        urenbegroting:
+          type: ["number", "null"]
+        afhankelijk_van_ids:
+          type: ["string", "null"]
+        materiaal_moment:
+          type: ["string", "null"]
+        ai_motivatie:
+          type: ["string", "null"]
+        opmerkingen:
+          type: ["string", "null"]
+        ai_gegenereerd:
+          type: boolean
+        aangemaakt_op:
+          type: string
+        bijgewerkt_op:
+          type: string
+
+    UitvoeringsplanTaakPatch:
+      type: object
+      properties:
+        fase:
+          type: string
+        omschrijving:
+          type: string
+        discipline:
+          type: string
+        duur_dagen:
+          type: integer
+        benodigde_medewerkers:
+          type: integer
+        urenbegroting:
+          type: number
+        materiaal_moment:
+          type: string
+        opmerkingen:
+          type: string
+
+    Uitvoeringsplanning:
+      type: object
+      required: [id, opdracht_id, status, ai_gegenereerd, taken]
+      properties:
+        id:
+          type: integer
+        opdracht_id:
+          type: integer
+        status:
+          type: string
+          enum: [concept, gereed_voor_planning]
+        ai_gegenereerd:
+          type: boolean
+        ai_gegenereerd_op:
+          type: ["string", "null"]
+        ai_samenvatting:
+          type: ["string", "null"]
+        startdatum:
+          type: ["string", "null"]
+        einddatum:
+          type: ["string", "null"]
+        totaal_weken:
+          type: ["integer", "null"]
+        vastgesteld_op:
+          type: ["string", "null"]
+        opmerkingen:
+          type: ["string", "null"]
+        aangemaakt_op:
+          type: string
+        bijgewerkt_op:
+          type: string
+        taken:
+          type: array
+          items:
+            $ref: "#/components/schemas/UitvoeringsplanTaak"
 
     OfferteTrackingEvent:
       type: object
