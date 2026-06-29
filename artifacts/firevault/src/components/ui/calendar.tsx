@@ -129,7 +129,7 @@ function Calendar({
           return (
             <div
               data-slot="calendar"
-              ref={rootRef}
+              ref={rootRef as React.Ref<HTMLDivElement>}
               className={cn(className)}
               {...props}
             />
@@ -158,7 +158,7 @@ function Calendar({
         DayButton: CalendarDayButton,
         WeekNumber: ({ children, ...props }) => {
           return (
-            <td {...props}>
+            <td {...(props as React.TdHTMLAttributes<HTMLTableDataCellElement>)}>
               <div className="flex size-[--cell-size] items-center justify-center text-center">
                 {children}
               </div>
@@ -187,7 +187,7 @@ function CalendarDayButton({
 
   return (
     <Button
-      ref={ref}
+      ref={ref as React.RefObject<HTMLButtonElement>}
       variant="ghost"
       size="icon"
       data-day={day.date.toLocaleDateString()}

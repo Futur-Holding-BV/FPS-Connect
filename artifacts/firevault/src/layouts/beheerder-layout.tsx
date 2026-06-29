@@ -19,7 +19,7 @@ import {
   BookOpen, HardDriveUpload, CalendarCheck2, Settings2, ArchiveRestore,
   Inbox, Building2, Target, Handshake, Newspaper, CalendarRange, KeyRound,
   ClipboardCheck, AlertTriangle, FileArchive, Receipt, ArrowUpRight, ScrollText,
-  UserPlus, UserMinus, Car, GitBranch, ArrowLeft, ChevronDown, Palette,
+  UserPlus, UserMinus, Car, GitBranch, ArrowLeft, ChevronDown, Palette, Monitor,
 } from "lucide-react";
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
 import { Badge } from "@/components/ui/badge";
@@ -31,6 +31,35 @@ import { cn } from "@/lib/utils";
 import { NavigatieBewakingProvider, useNavigatieBewaking } from "@/context/navigatie-bewaking";
 import { OnlineGebruikers } from "@/components/online-gebruikers/online-gebruikers";
 import { VeiligheidMeldingBanner, OpenMeldingenBadge } from "@/components/veiligheidsmelding-banner";
+
+function PwaInstalleerKnop() {
+  const [prompt, setPrompt] = useState<Event & { prompt: () => Promise<void> } | null>(null);
+
+  useEffect(() => {
+    const handler = (e: Event) => {
+      e.preventDefault();
+      setPrompt(e as Event & { prompt: () => Promise<void> });
+    };
+    window.addEventListener("beforeinstallprompt", handler);
+    return () => window.removeEventListener("beforeinstallprompt", handler);
+  }, []);
+
+  if (!prompt) return null;
+
+  return (
+    <button
+      type="button"
+      onClick={async () => {
+        await prompt.prompt();
+        setPrompt(null);
+      }}
+      className="group-data-[collapsible=icon]:hidden flex items-center gap-2 w-full rounded-md px-3 py-2 text-xs text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent transition-colors"
+    >
+      <Monitor className="h-3.5 w-3.5 shrink-0" />
+      <span>App op bureaublad installeren</span>
+    </button>
+  );
+}
 
 function TerugKnop() {
   const { requestTerug } = useNavigatieBewaking();
@@ -1265,6 +1294,7 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
         </SidebarContent>
 
         <SidebarFooter>
+          <PwaInstalleerKnop />
           <OnlineGebruikers />
           <GebruikerMenu />
         </SidebarFooter>

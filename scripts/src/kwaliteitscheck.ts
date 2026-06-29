@@ -282,7 +282,12 @@ async function main() {
   const verwachteModules = ["connect", "one", "modules", "dashboard", "gebouwen",
     "voorzieningen", "inspecties", "onderhoud", "gebruikers", "crm", "abonnementen",
     "beheer", "personeel", "dossiers", "offertes", "documenten", "rapporten",
-    "toolbox", "auth", "uitnodiging", "info", "klant"];
+    "toolbox", "auth", "uitnodiging", "info", "klant",
+    // Uitgebreide modules (parallel spoor / actieve ontwikkeling)
+    "berichten", "boekhouder", "facturen", "financieel", "gereedschappen",
+    "inbox", "loon-output", "mijn", "opdrachten", "opname", "organisatie",
+    "portaal", "salaris-mutaties", "salarisarchief", "scab-mail", "sepa-bestanden",
+    "snagstream", "uren", "veiligheid", "wagenpark", "welkom", "werk-inbox", "workflow"];
   const onbekend = allePages.filter((p) => !verwachteModules.includes(p) && !p.includes("."));
   if (onbekend.length > 0) {
     onbekend.forEach((p) => {
