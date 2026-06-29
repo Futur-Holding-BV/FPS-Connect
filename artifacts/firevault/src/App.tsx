@@ -61,6 +61,7 @@ import DocumentopmaakBeheer from "@/pages/beheer/documentopmaak";
 import SpotconfiguratieBeheer from "@/pages/beheer/spotconfiguratie";
 import MailBeheer from "@/pages/beheer/mail";
 import BackupBeheer from "@/pages/beheer/backup";
+import HerstelDashboard from "@/pages/beheer/herstel";
 import ProjectstatusPagina from "@/pages/beheer/projectstatus";
 import PwaTest from "@/pages/beheer/pwa-test";
 import PrivacyCentrum from "@/pages/mijn/privacy";
@@ -353,6 +354,7 @@ function ConnectPortal() {
         <Route path="/beheer/spotconfiguratie" component={SpotconfiguratieBeheer} />
         <Route path="/beheer/mail" component={MailBeheer} />
         <Route path="/beheer/backup" component={BackupBeheer} />
+        <Route path="/beheer/herstel" component={HerstelDashboard} />
         <Route path="/beheer/boekhouding" component={BoekhoudingBeheer} />
         <Route path="/beheer/go-live" component={GoLivePagina} />
         <Route path="/beheer/projectstatus" component={ProjectstatusPagina} />

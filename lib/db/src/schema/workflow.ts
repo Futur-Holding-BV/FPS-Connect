@@ -56,6 +56,11 @@ export const workflowCardsTable = pgTable("workflow_cards", {
   beslisregels: text("beslisregels").array().notNull().default([]),
   vervolgacties: text("vervolgacties").array().notNull().default([]),
   impactWorkflows: text("impact_workflows").array().notNull().default([]),
+  // V3.0 Enterprise velden
+  kleur: text("kleur"),
+  hoofdverantwoordelijke: text("hoofdverantwoordelijke"),
+  vervanger: text("vervanger"),
+  benodigdeRechten: text("benodigde_rechten").array().notNull().default([]),
 });
 
 export type WorkflowDefinitie = typeof workflowDefinitiesTable.$inferSelect;

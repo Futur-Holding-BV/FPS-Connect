@@ -161,6 +161,11 @@ interface WorkflowCard {
   beslisregels: string[];
   vervolgacties: string[];
   impact_workflows: string[];
+  // V3.0
+  kleur: string | null;
+  hoofdverantwoordelijke: string | null;
+  vervanger: string | null;
+  benodigde_rechten: string[];
 }
 
 interface WorkflowLane {
@@ -349,6 +354,14 @@ function ProcesKaart({
         ${dimmed ? "opacity-30 pointer-events-none" : ""}
       `}
     >
+      {/* Per-kaart kleur indicator */}
+      {card.kleur && (
+        <div
+          className="absolute inset-x-0 top-0 h-1 rounded-t-lg"
+          style={{ backgroundColor: card.kleur }}
+        />
+      )}
+
       {/* Grip */}
       <div className="absolute left-1.5 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-40 transition-opacity">
         <GripVertical className="h-3.5 w-3.5 text-gray-400" />
@@ -466,6 +479,7 @@ function Swimlane({
   dropBeforeCardId,
   filterFunctie,
   filterModule,
+  filterObject,
   onCardDragStart,
   onCardDragOver,
   onCardDragLeave,
@@ -482,6 +496,7 @@ function Swimlane({
   dropBeforeCardId: number | null;
   filterFunctie: string | null;
   filterModule: string | null;
+  filterObject: string | null;
   onCardDragStart: (cardId: number, laneId: number) => void;
   onCardDragOver: (e: React.DragEvent, cardId: number, laneId: number) => void;
   onCardDragLeave: (e: React.DragEvent) => void;
@@ -495,7 +510,7 @@ function Swimlane({
   const isLaneDropTarget = dropTargetLaneId === lane.id && dropBeforeCardId === null;
 
   function isCardDimmed(card: WorkflowCard): boolean {
-    if (!filterFunctie && !filterModule) return false;
+    if (!filterFunctie && !filterModule && !filterObject) return false;
     const functies = card.betrokken_functies.length > 0
       ? card.betrokken_functies
       : card.rol ? [card.rol] : [];
@@ -506,7 +521,10 @@ function Swimlane({
       functies.includes(filterFunctie) ||
       card.primaire_functie === filterFunctie;
     const moduleOk = !filterModule || modules.includes(filterModule);
-    return !functieOk || !moduleOk;
+    const objectOk = !filterObject ||
+      card.objecten_gebruikt.includes(filterObject) ||
+      card.objecten_gewijzigd.includes(filterObject);
+    return !functieOk || !moduleOk || !objectOk;
   }
 
   const actieveTelling = lane.cards.filter((c) => c.actief && !isCardDimmed(c)).length;
@@ -599,6 +617,11 @@ interface EditFormData {
   beslisregels: string[];
   vervolgacties: string[];
   impact_workflows: string[];
+  // V3.0
+  kleur: string;
+  hoofdverantwoordelijke: string;
+  vervanger: string;
+  benodigde_rechten: string[];
 }
 
 function CardEditSheet({
@@ -639,6 +662,10 @@ function CardEditSheet({
     beslisregels: [],
     vervolgacties: [],
     impact_workflows: [],
+    kleur: "",
+    hoofdverantwoordelijke: "",
+    vervanger: "",
+    benodigde_rechten: [],
   });
   const [laneId, setLaneId] = useState<number | null>(null);
   const [opslaan, setOpslaan] = useState(false);
@@ -667,6 +694,10 @@ function CardEditSheet({
         beslisregels: card.beslisregels ?? [],
         vervolgacties: card.vervolgacties ?? [],
         impact_workflows: card.impact_workflows ?? [],
+        kleur: card.kleur ?? "",
+        hoofdverantwoordelijke: card.hoofdverantwoordelijke ?? "",
+        vervanger: card.vervanger ?? "",
+        benodigde_rechten: card.benodigde_rechten ?? [],
       });
       setLaneId(card.lane_id);
       setAttempted(false);
@@ -704,7 +735,7 @@ function CardEditSheet({
 
         <div className="flex-1 overflow-y-auto mt-4">
           <Tabs defaultValue="basis">
-            <TabsList className="w-full grid grid-cols-5 h-auto">
+            <TabsList className="w-full grid grid-cols-6 h-auto">
               <TabsTrigger value="basis" className="text-xs py-1.5 gap-1">
                 <BookOpen className="h-3 w-3" />
                 Basis
@@ -724,6 +755,10 @@ function CardEditSheet({
               <TabsTrigger value="koppeling" className="text-xs py-1.5 gap-1">
                 <Network className="h-3 w-3" />
                 Koppeling
+              </TabsTrigger>
+              <TabsTrigger value="relaties" className="text-xs py-1.5 gap-1">
+                <GitBranch className="h-3 w-3" />
+                Relaties
               </TabsTrigger>
             </TabsList>
 
@@ -812,6 +847,30 @@ function CardEditSheet({
                 />
                 <Label>Stap actief</Label>
               </div>
+
+              <div className="space-y-1.5">
+                <Label>Kaartkleur (optioneel)</Label>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="color"
+                    value={form.kleur || "#e5e7eb"}
+                    onChange={(e) => set("kleur", e.target.value)}
+                    className="h-8 w-8 cursor-pointer rounded border border-gray-300"
+                  />
+                  <span className="text-xs text-gray-500">
+                    {form.kleur ? `Kleur: ${form.kleur}` : "Geen kleur (gebruikt lijnkleur)"}
+                  </span>
+                  {form.kleur && (
+                    <button
+                      type="button"
+                      onClick={() => set("kleur", "")}
+                      className="text-xs text-gray-400 underline hover:text-gray-600"
+                    >
+                      Wissen
+                    </button>
+                  )}
+                </div>
+              </div>
             </TabsContent>
 
             {/* ── Tab: Functies ── */}
@@ -844,6 +903,37 @@ function CardEditSheet({
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="font-medium">Hoofdverantwoordelijke (naam of functie)</Label>
+                <p className="text-xs text-gray-500">Persoon eindverantwoordelijk voor uitvoering van deze stap</p>
+                <Input
+                  value={form.hoofdverantwoordelijke}
+                  onChange={(e) => set("hoofdverantwoordelijke", e.target.value)}
+                  placeholder="Bijv. Projectleider, Jan de Vries"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="font-medium">Vervanger (bij afwezigheid)</Label>
+                <p className="text-xs text-gray-500">Wie neemt de taak over als de hoofdverantwoordelijke niet beschikbaar is</p>
+                <Input
+                  value={form.vervanger}
+                  onChange={(e) => set("vervanger", e.target.value)}
+                  placeholder="Bijv. Werkvoorbereider, Maria Jansen"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="font-medium">Benodigde rechten</Label>
+                <p className="text-xs text-gray-500">Bevoegdheden vereist voor uitvoering van deze stap</p>
+                <TagEditor
+                  tags={form.benodigde_rechten}
+                  onChange={(v) => set("benodigde_rechten", v)}
+                  opties={["lezen", "schrijven", "goedkeuren", "exporteren", "beheren", "verwijderen", "archiveren", "definitief maken"]}
+                  placeholder="Recht toevoegen..."
+                />
               </div>
 
               <div className="space-y-1.5">
@@ -985,6 +1075,75 @@ function CardEditSheet({
                     vrij
                     placeholder="Workflow naam toevoegen..."
                   />
+                )}
+              </div>
+            </TabsContent>
+
+            {/* ── Tab: Relaties ── */}
+            <TabsContent value="relaties" className="mt-4 space-y-4">
+              <div className="rounded-lg border bg-blue-50/50 p-4 space-y-2">
+                <p className="text-xs font-semibold text-blue-700 uppercase tracking-wide">Gebruikt data van</p>
+                <p className="text-xs text-gray-500">Modules en objecten die als invoer dienen voor deze stap</p>
+                {form.objecten_gebruikt.length > 0 ? (
+                  <div className="flex flex-wrap gap-1.5">
+                    {form.objecten_gebruikt.map((obj) => (
+                      <span key={obj} className="inline-flex items-center gap-1 rounded-full border border-blue-200 bg-white px-2.5 py-1 text-xs text-blue-700">
+                        <ArrowRight className="h-3 w-3 rotate-180" />
+                        {obj}
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-gray-400 italic">Geen invoerbronnen — vul in via het tabblad Modules</p>
+                )}
+              </div>
+
+              <div className="rounded-lg border bg-green-50/50 p-4 space-y-2">
+                <p className="text-xs font-semibold text-green-700 uppercase tracking-wide">Maakt aan / Wijzigt</p>
+                <p className="text-xs text-gray-500">Objecten die door deze stap worden aangemaakt of gewijzigd</p>
+                {form.objecten_gewijzigd.length > 0 ? (
+                  <div className="flex flex-wrap gap-1.5">
+                    {form.objecten_gewijzigd.map((obj) => (
+                      <span key={obj} className="inline-flex items-center gap-1 rounded-full border border-green-200 bg-white px-2.5 py-1 text-xs text-green-700">
+                        <ArrowRight className="h-3 w-3" />
+                        {obj}
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-gray-400 italic">Geen uitvoer — vul in via het tabblad Modules</p>
+                )}
+              </div>
+
+              <div className="rounded-lg border bg-orange-50/50 p-4 space-y-2">
+                <p className="text-xs font-semibold text-orange-700 uppercase tracking-wide">Start of beïnvloedt workflows</p>
+                {form.impact_workflows.length > 0 ? (
+                  <div className="flex flex-wrap gap-1.5">
+                    {form.impact_workflows.map((wf) => (
+                      <span key={wf} className="inline-flex items-center gap-1 rounded-full border border-orange-200 bg-white px-2.5 py-1 text-xs text-orange-700">
+                        <GitBranch className="h-3 w-3" />
+                        {wf}
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-gray-400 italic">Geen gekoppelde workflows — vul in via het tabblad Koppeling</p>
+                )}
+              </div>
+
+              <div className="rounded-lg border bg-gray-50 p-4 space-y-2">
+                <p className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Betrokken modules</p>
+                {form.modules.length > 0 ? (
+                  <div className="flex flex-wrap gap-1.5">
+                    {form.modules.map((m) => (
+                      <span key={m} className="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-white px-2.5 py-1 text-xs text-gray-600">
+                        <Layers className="h-3 w-3" />
+                        {m}
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-gray-400 italic">Geen modules — vul in via het tabblad Modules</p>
                 )}
               </div>
             </TabsContent>
@@ -1158,6 +1317,7 @@ export default function WorkflowDesignerPagina() {
   // Filter state
   const [filterFunctie, setFilterFunctie] = useState<string | null>(null);
   const [filterModule, setFilterModule] = useState<string | null>(null);
+  const [filterObject, setFilterObject] = useState<string | null>(null);
 
   // Verplaatsingsgeschiedenis
   const [moveHistory, setMoveHistory] = useState<MoveRecord[]>([]);
@@ -1350,10 +1510,13 @@ export default function WorkflowDesignerPagina() {
   const alleImpactWorkflows = Array.from(
     new Set(localLanes.flatMap((l) => l.cards.flatMap((c) => c.impact_workflows))),
   );
+  const alleObjecten = Array.from(
+    new Set(localLanes.flatMap((l) => l.cards.flatMap((c) => [...c.objecten_gebruikt, ...c.objecten_gewijzigd]))),
+  ).sort();
 
   // ── Matching stats voor filter ────────────────────────────────────────────────
 
-  const filterActief = filterFunctie !== null || filterModule !== null;
+  const filterActief = filterFunctie !== null || filterModule !== null || filterObject !== null;
   const alleKaarten = localLanes.flatMap((l) => l.cards);
   const matchendeKaarten = filterActief
     ? alleKaarten.filter((c) => {
@@ -1361,7 +1524,8 @@ export default function WorkflowDesignerPagina() {
         const modules = c.modules.length > 0 ? c.modules : c.gekoppelde_module ? [c.gekoppelde_module] : [];
         const fOk = !filterFunctie || functies.includes(filterFunctie) || c.primaire_functie === filterFunctie;
         const mOk = !filterModule || modules.includes(filterModule);
-        return fOk && mOk;
+        const oOk = !filterObject || c.objecten_gebruikt.includes(filterObject) || c.objecten_gewijzigd.includes(filterObject);
+        return fOk && mOk && oOk;
       })
     : alleKaarten;
 
@@ -1477,6 +1641,27 @@ export default function WorkflowDesignerPagina() {
             </Select>
           </div>
 
+          {/* Object filter */}
+          {alleObjecten.length > 0 && (
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-gray-500 shrink-0">Object:</span>
+              <Select
+                value={filterObject ?? "__alle__"}
+                onValueChange={(v) => setFilterObject(v === "__alle__" ? null : v)}
+              >
+                <SelectTrigger className="h-7 text-xs w-44 border-gray-200">
+                  <SelectValue placeholder="Alle objecten" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__alle__" className="text-xs">Alle objecten</SelectItem>
+                  {alleObjecten.map((o) => (
+                    <SelectItem key={o} value={o} className="text-xs">{o}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
           {/* Filter actief indicator */}
           {filterActief && (
             <>
@@ -1485,7 +1670,7 @@ export default function WorkflowDesignerPagina() {
               </span>
               <button
                 type="button"
-                onClick={() => { setFilterFunctie(null); setFilterModule(null); }}
+                onClick={() => { setFilterFunctie(null); setFilterModule(null); setFilterObject(null); }}
                 className="flex items-center gap-1 rounded-full bg-orange-100 px-2 py-0.5 text-[11px] font-medium text-orange-700 hover:bg-orange-200 transition-colors"
               >
                 <X className="h-2.5 w-2.5" />
@@ -1533,6 +1718,7 @@ export default function WorkflowDesignerPagina() {
                 dropBeforeCardId={dropBeforeCardId}
                 filterFunctie={filterFunctie}
                 filterModule={filterModule}
+                filterObject={filterObject}
                 onCardDragStart={handleCardDragStart}
                 onCardDragOver={handleCardDragOver}
                 onCardDragLeave={handleCardDragLeave}

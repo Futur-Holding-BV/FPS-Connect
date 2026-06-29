@@ -1154,6 +1154,14 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                             </SidebarMenuButton>
                           </SidebarMenuItem>
                           <SidebarMenuItem className="pl-5">
+                            <SidebarMenuButton asChild isActive={location === "/beheer/herstel"}>
+                              <Link href="/beheer/herstel">
+                                <Activity />
+                                <span>Systeemstatus</span>
+                              </Link>
+                            </SidebarMenuButton>
+                          </SidebarMenuItem>
+                          <SidebarMenuItem className="pl-5">
                             <SidebarMenuButton asChild isActive={location === "/toolbox" || location.startsWith("/toolbox/")}>
                               <Link href="/toolbox">
                                 <HardDriveUpload />

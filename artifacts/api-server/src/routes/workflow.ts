@@ -373,6 +373,11 @@ function mapCard(c: CardRow) {
     beslisregels: c.beslisregels ?? [],
     vervolgacties: c.vervolgacties ?? [],
     impact_workflows: c.impactWorkflows ?? [],
+    // V3.0
+    kleur: c.kleur ?? null,
+    hoofdverantwoordelijke: c.hoofdverantwoordelijke ?? null,
+    vervanger: c.vervanger ?? null,
+    benodigde_rechten: c.benodigdeRechten ?? [],
   };
 }
 
@@ -511,6 +516,7 @@ router.post("/workflow-cards", requireAuth, async (req: Request, res: Response) 
     betrokken_functies, primaire_functie, modules,
     objecten_gebruikt, objecten_gewijzigd, ai_acties,
     beslisregels, vervolgacties, impact_workflows,
+    kleur, hoofdverantwoordelijke, vervanger, benodigde_rechten,
   } = req.body;
   if (!workflow_id || !lane_id || !titel) {
     return res.status(400).json({ message: "workflow_id, lane_id en titel zijn verplicht" });
@@ -544,6 +550,10 @@ router.post("/workflow-cards", requireAuth, async (req: Request, res: Response) 
     beslisregels: Array.isArray(beslisregels) ? beslisregels : [],
     vervolgacties: Array.isArray(vervolgacties) ? vervolgacties : [],
     impactWorkflows: Array.isArray(impact_workflows) ? impact_workflows : [],
+    kleur: kleur ?? null,
+    hoofdverantwoordelijke: hoofdverantwoordelijke ?? null,
+    vervanger: vervanger ?? null,
+    benodigdeRechten: Array.isArray(benodigde_rechten) ? benodigde_rechten : [],
   }).returning();
   return res.status(201).json(mapCard(card));
 });
@@ -557,6 +567,7 @@ router.patch("/workflow-cards/:id", requireAuth, async (req: Request, res: Respo
     betrokken_functies, primaire_functie, modules,
     objecten_gebruikt, objecten_gewijzigd, ai_acties,
     beslisregels, vervolgacties, impact_workflows,
+    kleur, hoofdverantwoordelijke, vervanger, benodigde_rechten,
   } = req.body;
 
   const update: Partial<typeof workflowCardsTable.$inferInsert> = {
@@ -584,6 +595,10 @@ router.patch("/workflow-cards/:id", requireAuth, async (req: Request, res: Respo
   if (Array.isArray(beslisregels)) update.beslisregels = beslisregels;
   if (Array.isArray(vervolgacties)) update.vervolgacties = vervolgacties;
   if (Array.isArray(impact_workflows)) update.impactWorkflows = impact_workflows;
+  if (kleur !== undefined) update.kleur = kleur ?? null;
+  if (hoofdverantwoordelijke !== undefined) update.hoofdverantwoordelijke = hoofdverantwoordelijke ?? null;
+  if (vervanger !== undefined) update.vervanger = vervanger ?? null;
+  if (Array.isArray(benodigde_rechten)) update.benodigdeRechten = benodigde_rechten;
 
   const [updated] = await db.update(workflowCardsTable).set(update)
     .where(eq(workflowCardsTable.id, id)).returning();
