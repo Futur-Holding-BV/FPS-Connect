@@ -500,6 +500,8 @@ export * from './rapportPatchSpotSelectie';
 export * from './rapportSecties';
 export * from './rapportSpotSelectie';
 export * from './rapportStatus';
+export * from './reistijdSchatting';
+export * from './reistijdSchattingInput';
 export * from './salarisBatch';
 export * from './salarisBatchDetail';
 export * from './salarisBatchPublicerenInput';

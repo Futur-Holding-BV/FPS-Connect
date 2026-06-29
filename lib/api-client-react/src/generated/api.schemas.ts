@@ -4926,6 +4926,17 @@ export interface PlanningMeerwerk {
   aangemaakt_op?: string;
 }
 
+export interface ReistijdSchattingInput {
+  locatie_a: string;
+  locatie_b: string;
+}
+
+export interface ReistijdSchatting {
+  minuten: number;
+  beschrijving: string;
+  onzeker?: boolean | null;
+}
+
 export interface PlanningMeerwerkInput {
   planning_item_id: number;
   meerwerk_nummer?: string | null;

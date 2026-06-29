@@ -9,7 +9,7 @@ import {
   useDeletePlanningItem,
   useListGebouwen,
   useGetPlanningDiagnose,
-  usePostVeiligheidToolboxenKoppelingSuggestie,
+  usePostPlanningReistijdSchatting,
   useListOpdrachten,
 } from "@workspace/api-client-react";
 import { Card, CardContent } from "@/components/ui/card";
@@ -29,7 +29,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   ChevronLeft, ChevronRight, Plus, AlertTriangle, Users,
-  Briefcase, Clock, RefreshCw, Sparkles, ExternalLink, X,
+  Briefcase, Clock, RefreshCw, X,
   CalendarDays, ChevronDown,
 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -196,6 +196,7 @@ type Gebouw = {
   id: number;
   naam: string;
   projectnummer?: string | null;
+  adres?: string | null;
   stad?: string | null;
 };
 
@@ -533,7 +534,7 @@ export default function ModulesPlanning() {
   const [dialoog, setDialoog] = useState<DialooglItem | null>(null);
   const [bewerkenId, setBewerkenId] = useState<number | null>(null);
   const [opslaan, setOpslaan] = useState(false);
-  const [toolboxAdvies, setToolboxAdvies] = useState<Array<{ id: number; titel: string; categorie: string; reden: string }> | null>(null);
+  const [reistijdSchatting, setReistijdSchatting] = useState<{ minuten: number; beschrijving: string; onzeker?: boolean | null } | null>(null);
   const [filterWerkmaatschappij, setFilterWerkmaatschappij] = useState<string>("alle");
   const [filterAlleenUitvoerend, setFilterAlleenUitvoerend] = useState(true);
 
@@ -606,8 +607,8 @@ export default function ModulesPlanning() {
   const deleteMut = useDeletePlanningItem({
     mutation: { onSuccess: () => queryClient.invalidateQueries({ queryKey: ["planning-items"] }) },
   });
-  const toolboxSuggestieMut = usePostVeiligheidToolboxenKoppelingSuggestie({
-    mutation: { onSuccess: (data) => setToolboxAdvies(data.suggesties) },
+  const reistijdMut = usePostPlanningReistijdSchatting({
+    mutation: { onSuccess: (data) => setReistijdSchatting(data) },
   });
 
   // ── Navigatie ─────────────────────────────────────────────────────────────
@@ -630,7 +631,7 @@ export default function ModulesPlanning() {
     setDialoog(null);
     setBewerkenId(null);
     setOpslaan(false);
-    setToolboxAdvies(null);
+    setReistijdSchatting(null);
   }
 
   function openNieuw(medewerkerId?: number, datum?: string, gebouwId?: number) {
@@ -1258,7 +1259,7 @@ export default function ModulesPlanning() {
 
         {/* ═══ INLINE ZIJPANEEL ═══ */}
         {dialoog && (
-          <aside className="w-[400px] shrink-0 border-l bg-white flex flex-col" style={{ position: "sticky", top: 0, height: "100vh", overflowY: "auto" }}>
+          <aside className="w-[400px] shrink-0 border-l bg-white flex flex-col" style={{ position: "sticky", top: 0, height: "100vh", overflow: "hidden" }}>
             {/* Paneel-kop */}
             <div className="flex items-center justify-between px-5 py-4 border-b bg-slate-50/80">
               <h2 className="text-sm font-semibold text-slate-800">
@@ -1452,54 +1453,62 @@ export default function ModulesPlanning() {
                 />
               </div>
 
-              {/* Toolbox advies */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label className="flex items-center gap-1.5">
-                    <Sparkles className="h-3.5 w-3.5 text-amber-500" />
-                    Toolbox advies
-                  </Label>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    className="h-7 text-xs"
-                    disabled={!dialoog.titel || toolboxSuggestieMut.isPending}
-                    onClick={() => {
-                      setToolboxAdvies(null);
-                      toolboxSuggestieMut.mutate({ data: { werkzaamheid: dialoog.titel } });
-                    }}
-                  >
-                    {toolboxSuggestieMut.isPending ? "Analyseren..." : toolboxAdvies ? "Opnieuw" : "Analyseer"}
-                  </Button>
-                </div>
-                {toolboxAdvies === null && !toolboxSuggestieMut.isPending && (
-                  <p className="text-xs text-muted-foreground">
-                    Klik op Analyseer om relevante toolboxen te suggereren op basis van de werkzaamheid.
-                  </p>
-                )}
-                {toolboxSuggestieMut.isPending && (
-                  <div className="rounded-md border bg-amber-50 p-3 text-xs text-amber-700">AI analyseert de werkzaamheid...</div>
-                )}
-                {toolboxAdvies && toolboxAdvies.length === 0 && (
-                  <p className="text-xs text-muted-foreground">Geen relevante toolboxen gevonden.</p>
-                )}
-                {toolboxAdvies && toolboxAdvies.length > 0 && (
-                  <div className="rounded-md border divide-y bg-amber-50">
-                    {toolboxAdvies.map((t) => (
-                      <div key={t.id} className="flex items-start gap-2 px-3 py-2">
-                        <div className="min-w-0 flex-1">
-                          <p className="text-xs font-medium text-slate-800">{t.titel}</p>
-                          <p className="text-xs text-muted-foreground">{t.reden}</p>
-                        </div>
-                        <Link href={`/veiligheid/toolboxen/${t.id}`} className="shrink-0 text-primary hover:text-primary/80" target="_blank">
-                          <ExternalLink className="h-3.5 w-3.5" />
-                        </Link>
+              {/* AI Reistijd */}
+              {(() => {
+                if (!dialoog.gebouw_id || !dialoog.datum || dialoog.geselecteerdeMedewerkers.length !== 1) return null;
+                const medId = dialoog.geselecteerdeMedewerkers[0]!;
+                const andereItems = (items as PlanItem[]).filter(
+                  (it) => it.medewerker_id === medId &&
+                          it.datum_start === dialoog.datum &&
+                          it.gebouw_id && it.gebouw_id !== dialoog.gebouw_id &&
+                          (!bewerkenId || it.id !== bewerkenId),
+                );
+                if (andereItems.length === 0) return null;
+                const huidigGebouw = (gebouwen as Gebouw[]).find((g) => g.id === dialoog.gebouw_id);
+                const eersteAnder = andereItems[0]!;
+                const anderGebouw = (gebouwen as Gebouw[]).find((g) => g.id === eersteAnder.gebouw_id);
+                const locatieA = anderGebouw
+                  ? [anderGebouw.naam, anderGebouw.adres, anderGebouw.stad].filter(Boolean).join(", ")
+                  : (eersteAnder.gebouw_naam ?? eersteAnder.titel);
+                const locatieB = huidigGebouw
+                  ? [huidigGebouw.naam, huidigGebouw.adres, huidigGebouw.stad].filter(Boolean).join(", ")
+                  : dialoog.titel;
+                return (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label className="flex items-center gap-1.5">
+                        <Clock className="h-3.5 w-3.5 text-blue-500" />
+                        Reistijd (AI)
+                      </Label>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="h-7 text-xs"
+                        disabled={reistijdMut.isPending}
+                        onClick={() => reistijdMut.mutate({ data: { locatie_a: locatieA, locatie_b: locatieB } })}
+                      >
+                        {reistijdMut.isPending ? "Berekenen..." : reistijdSchatting ? "Opnieuw" : "Bereken"}
+                      </Button>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Monteur heeft ook {eersteAnder.gebouw_naam ?? eersteAnder.titel} op deze dag.
+                    </p>
+                    {reistijdMut.isPending && (
+                      <div className="rounded-md border bg-blue-50 p-3 text-xs text-blue-700">AI berekent reistijd...</div>
+                    )}
+                    {reistijdSchatting && !reistijdMut.isPending && (
+                      <div className="rounded-md border bg-blue-50 p-3 space-y-0.5">
+                        <p className="text-sm font-medium text-blue-900">
+                          ~{reistijdSchatting.minuten} minuten reistijd
+                          {reistijdSchatting.onzeker && <span className="text-xs text-blue-600 ml-1">(schatting)</span>}
+                        </p>
+                        <p className="text-xs text-blue-700">{reistijdSchatting.beschrijving}</p>
                       </div>
-                    ))}
+                    )}
                   </div>
-                )}
-              </div>
+                );
+              })()}
             </div>
 
             {/* Paneel-footer */}

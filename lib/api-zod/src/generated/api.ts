@@ -11333,6 +11333,21 @@ export const GetPlanningNacalculatieResponse = zod.array(GetPlanningNacalculatie
 
 
 /**
+ * @summary Schat reistijd tussen twee locaties (AI)
+ */
+export const PostPlanningReistijdSchattingBody = zod.object({
+  "locatie_a": zod.string(),
+  "locatie_b": zod.string()
+})
+
+export const PostPlanningReistijdSchattingResponse = zod.object({
+  "minuten": zod.number(),
+  "beschrijving": zod.string(),
+  "onzeker": zod.boolean().nullish()
+})
+
+
+/**
  * @summary Calculaties ophalen
  */
 export const ListModCalculatiesQueryParams = zod.object({

@@ -15,6 +15,7 @@ import {
 } from "@workspace/db";
 import { eq, and, gte, lte, desc, asc, inArray, sql, isNull, or, type SQL } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
+import { maakOpenAiClient, heeftOpenAi } from "../lib/openai.js";
 
 const router = Router();
 const iso = (d: Date) => d.toISOString();
@@ -705,6 +706,45 @@ router.get("/modules/planning/nacalculatie", lezenPlanning, async (req, res) => 
   } catch (e) {
     req.log.error(e);
     res.status(500).json({ error: "Interne fout" });
+  }
+});
+
+// ── AI Reistijd schatting ─────────────────────────────────────────────────
+
+router.post("/modules/planning/reistijd-schatting", lezenPlanning, async (req, res) => {
+  const { locatie_a, locatie_b } = req.body as { locatie_a?: string; locatie_b?: string };
+  if (!locatie_a || !locatie_b) {
+    return res.status(422).json({ error: "locatie_a en locatie_b zijn verplicht" });
+  }
+  if (!heeftOpenAi()) {
+    return res.json({ minuten: 30, beschrijving: "Standaard schatting (AI niet beschikbaar)", onzeker: true });
+  }
+  try {
+    const client = maakOpenAiClient();
+    const completion = await client.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        {
+          role: "system",
+          content: "Je bent een Nederlandse reistijdassistent. Schat de reistijd per auto tussen twee locaties in Nederland. Geef een realistisch getal in minuten en een korte beschrijving in het Nederlands. Antwoord altijd als JSON: { \"minuten\": number, \"beschrijving\": string, \"onzeker\": boolean }. Zet onzeker op true als de locaties vaag zijn.",
+        },
+        {
+          role: "user",
+          content: `Schat de reistijd per auto van "${locatie_a}" naar "${locatie_b}" in Nederland.`,
+        },
+      ],
+      response_format: { type: "json_object" },
+      max_tokens: 200,
+    });
+    const raw = JSON.parse(completion.choices[0]?.message?.content ?? "{}") as { minuten?: unknown; beschrijving?: unknown; onzeker?: unknown };
+    return res.json({
+      minuten: typeof raw.minuten === "number" ? Math.max(5, Math.round(raw.minuten)) : 30,
+      beschrijving: typeof raw.beschrijving === "string" ? raw.beschrijving : "Schatting op basis van locatie",
+      onzeker: raw.onzeker === true,
+    });
+  } catch (e) {
+    req.log.error(e);
+    return res.json({ minuten: 30, beschrijving: "Schatting niet beschikbaar", onzeker: true });
   }
 });
 

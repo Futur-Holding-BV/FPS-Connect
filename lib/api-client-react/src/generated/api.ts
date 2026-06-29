@@ -413,6 +413,8 @@ import type {
   RapportDefinitief,
   RapportInput,
   RapportPatch,
+  ReistijdSchatting,
+  ReistijdSchattingInput,
   SalarisBatch,
   SalarisBatchDetail,
   SalarisBatchPublicerenInput,
@@ -33479,6 +33481,76 @@ export function useGetPlanningNacalculatie<TData = Awaited<ReturnType<typeof get
 
 
 
+
+export const getPostPlanningReistijdSchattingUrl = () => {
+
+
+
+
+  return `/api/modules/planning/reistijd-schatting`
+}
+
+/**
+ * @summary Schat reistijd tussen twee locaties (AI)
+ */
+export const postPlanningReistijdSchatting = async (reistijdSchattingInput: ReistijdSchattingInput, options?: RequestInit): Promise<ReistijdSchatting> => {
+
+  return customFetch<ReistijdSchatting>(getPostPlanningReistijdSchattingUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(reistijdSchattingInput)
+  }
+);}
+
+
+
+
+export const getPostPlanningReistijdSchattingMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postPlanningReistijdSchatting>>, TError,{data: BodyType<ReistijdSchattingInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof postPlanningReistijdSchatting>>, TError,{data: BodyType<ReistijdSchattingInput>}, TContext> => {
+
+const mutationKey = ['postPlanningReistijdSchatting'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postPlanningReistijdSchatting>>, {data: BodyType<ReistijdSchattingInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  postPlanningReistijdSchatting(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PostPlanningReistijdSchattingMutationResult = NonNullable<Awaited<ReturnType<typeof postPlanningReistijdSchatting>>>
+    export type PostPlanningReistijdSchattingMutationBody = BodyType<ReistijdSchattingInput>
+    export type PostPlanningReistijdSchattingMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Schat reistijd tussen twee locaties (AI)
+ */
+export const usePostPlanningReistijdSchatting = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postPlanningReistijdSchatting>>, TError,{data: BodyType<ReistijdSchattingInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof postPlanningReistijdSchatting>>,
+        TError,
+        {data: BodyType<ReistijdSchattingInput>},
+        TContext
+      > => {
+      return useMutation(getPostPlanningReistijdSchattingMutationOptions(options));
+    }
 
 export const getListModCalculatiesUrl = (params?: ListModCalculatiesParams,) => {
   const normalizedParams = new URLSearchParams();

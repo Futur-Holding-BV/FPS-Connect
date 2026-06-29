@@ -9393,6 +9393,25 @@ paths:
                 items:
                   $ref: '#/components/schemas/NacalculatieRegel'
 
+  /modules/planning/reistijd-schatting:
+    post:
+      operationId: postPlanningReistijdSchatting
+      summary: Schat reistijd tussen twee locaties (AI)
+      tags: [PlanningModule]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReistijdSchattingInput'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReistijdSchatting'
+
   /modules/calculaties:
     get:
       operationId: listModCalculaties
@@ -21396,6 +21415,27 @@ components:
           type: string
         aangemaakt_op:
           type: string
+
+    ReistijdSchattingInput:
+      type: object
+      required: [locatie_a, locatie_b]
+      properties:
+        locatie_a:
+          type: string
+        locatie_b:
+          type: string
+
+    ReistijdSchatting:
+      type: object
+      required: [minuten, beschrijving]
+      properties:
+        minuten:
+          type: integer
+        beschrijving:
+          type: string
+        onzeker:
+          type: boolean
+          nullable: true
 
     PlanningMeerwerkInput:
       type: object
