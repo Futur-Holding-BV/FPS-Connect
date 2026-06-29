@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "wouter";
+import { useLocation } from "wouter";
 import { useListGereedschappen, useCreateGereedschap } from "@workspace/api-client-react";
 import type { GereedschapInput, Gereedschap } from "@workspace/api-client-react";
 import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
@@ -15,10 +16,8 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from "@/components/ui/table";
-import { Plus, Wrench, Search, AlertTriangle } from "lucide-react";
+import { ListCard } from "@/components/ui/list-card";
+import { Plus, Wrench, Search, AlertTriangle, User } from "lucide-react";
 
 const STATUSSEN = [
   "Beschikbaar", "In bruikleen", "Defect gemeld", "Beschadigd",
@@ -39,6 +38,21 @@ function statusKleur(status: string): string {
     case "Vermist":       return "bg-purple-100 text-purple-800";
     case "Afgeschreven":  return "bg-gray-100 text-gray-600";
     default:              return "bg-gray-100 text-gray-700";
+  }
+}
+
+function statusStreep(status: string): string {
+  switch (status) {
+    case "Beschikbaar":   return "bg-green-500";
+    case "In bruikleen":  return "bg-blue-500";
+    case "Defect gemeld": return "bg-orange-500";
+    case "Beschadigd":    return "bg-red-500";
+    case "Ter keuring":   return "bg-yellow-400";
+    case "Afgekeurd":     return "bg-red-700";
+    case "In reparatie":  return "bg-amber-500";
+    case "Vermist":       return "bg-purple-500";
+    case "Afgeschreven":  return "bg-gray-400";
+    default:              return "bg-gray-300";
   }
 }
 
@@ -70,6 +84,7 @@ const leegFormulier: GereedschapInput = {
 export default function GereedschappenPagina() {
   const { heeftNiveau } = useBevoegdheid();
   const magSchrijven = heeftNiveau("gereedschappen", 2);
+  const [, navigate] = useLocation();
 
   const [zoek, setZoek] = useState("");
   const [statusFilter, setStatusFilter] = useState("alle");
@@ -147,75 +162,65 @@ export default function GereedschappenPagina() {
         </Select>
       </div>
 
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-28">Volgnummer</TableHead>
-              <TableHead>Omschrijving</TableHead>
-              <TableHead>Merk / Type</TableHead>
-              <TableHead>Categorie</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Huidige medewerker</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {isLoading ? (
-              <TableRow>
-                <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">Laden...</TableCell>
-              </TableRow>
-            ) : !gereedschappen || gereedschappen.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={6} className="text-center py-10">
-                  <div className="flex flex-col items-center gap-2 text-muted-foreground">
-                    <Wrench className="h-8 w-8 opacity-30" />
-                    <p>Geen gereedschappen gevonden</p>
-                    {magSchrijven && (
-                      <Button variant="outline" size="sm" onClick={() => setNieuwOpen(true)}>
-                        <Plus className="h-4 w-4 mr-1" />
-                        Eerste registreren
-                      </Button>
-                    )}
+      {isLoading ? (
+        <div className="space-y-2">
+          {Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-16 w-full rounded-xl" />)}
+        </div>
+      ) : !gereedschappen || gereedschappen.length === 0 ? (
+        <div className="flex flex-col items-center gap-3 py-16 text-muted-foreground">
+          <Wrench className="h-10 w-10 opacity-30" />
+          <p className="text-sm">Geen gereedschappen gevonden</p>
+          {magSchrijven && (
+            <Button variant="outline" size="sm" onClick={() => setNieuwOpen(true)}>
+              <Plus className="h-4 w-4 mr-1" />
+              Eerste registreren
+            </Button>
+          )}
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {gereedschappen.map((item: Gereedschap) => (
+            <ListCard
+              key={item.id}
+              onNavigate={() => navigate(`/gereedschappen/${item.id}`)}
+              statusKleur={statusStreep(item.status)}
+            >
+              <div className="flex items-center gap-4 min-w-0">
+                <span className="font-mono text-sm font-semibold text-primary shrink-0 w-20">
+                  {item.volgnummer}
+                </span>
+                <div className="flex-1 min-w-0">
+                  <div className="font-medium truncate">{item.omschrijving}</div>
+                  {item.gegraveerd_nummer && (
+                    <div className="text-xs text-muted-foreground">Gegraveerd: {item.gegraveerd_nummer}</div>
+                  )}
+                </div>
+                <div className="hidden sm:block text-sm text-muted-foreground w-40 shrink-0 truncate">
+                  {[item.merk, item.type].filter(Boolean).join(" / ") || "—"}
+                </div>
+                <div className="hidden md:block text-sm text-muted-foreground w-28 shrink-0 capitalize">
+                  {item.categorie}
+                </div>
+                <div className="shrink-0">
+                  <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${statusKleur(item.status)}`}>
+                    {item.status}
+                  </span>
+                </div>
+                {item.huidige_medewerker_naam ? (
+                  <div className="hidden lg:flex items-center gap-1 text-sm text-muted-foreground w-36 shrink-0">
+                    <User className="h-3.5 w-3.5 shrink-0" />
+                    <span className="truncate">{item.huidige_medewerker_naam}</span>
                   </div>
-                </TableCell>
-              </TableRow>
-            ) : (
-              gereedschappen.map((item: Gereedschap) => (
-                <TableRow key={item.id} className="cursor-pointer hover:bg-muted/50">
-                  <TableCell>
-                    <Link href={`/gereedschappen/${item.id}`} className="font-mono text-sm font-medium text-[#F23B0D]">
-                      {item.volgnummer}
-                    </Link>
-                  </TableCell>
-                  <TableCell>
-                    <Link href={`/gereedschappen/${item.id}`} className="hover:underline font-medium">
-                      {item.omschrijving}
-                    </Link>
-                    {item.gegraveerd_nummer && (
-                      <p className="text-xs text-muted-foreground">Gegraveerd: {item.gegraveerd_nummer}</p>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
-                    {[item.merk, item.type].filter(Boolean).join(" / ") || "—"}
-                  </TableCell>
-                  <TableCell className="text-sm">{item.categorie}</TableCell>
-                  <TableCell>
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${statusKleur(item.status)}`}>
-                      {item.status}
-                    </span>
-                  </TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
-                    {item.huidige_medewerker_naam ?? "—"}
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
-
-      {gereedschappen && gereedschappen.length > 0 && (
-        <p className="text-sm text-muted-foreground">{gereedschappen.length} gereedschap{gereedschappen.length !== 1 ? "pen" : ""}</p>
+                ) : (
+                  <div className="hidden lg:block w-36 shrink-0" />
+                )}
+              </div>
+            </ListCard>
+          ))}
+          <p className="text-xs text-muted-foreground pt-1">
+            {gereedschappen.length} gereedschap{gereedschappen.length !== 1 ? "pen" : ""}
+          </p>
+        </div>
       )}
 
       <Dialog open={nieuwOpen} onOpenChange={setNieuwOpen}>

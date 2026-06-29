@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { Link } from "wouter";
+import { useLocation } from "wouter";
 import { useListOnderhoud } from "@workspace/api-client-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -31,6 +31,7 @@ const statusIcon = (status: string) => {
 
 export default function Onderhoud() {
   const { t } = useTranslation();
+  const [, navigate] = useLocation();
   const [statusFilter, setStatusFilter] = useVoorkeur("onderhoud_status", "all");
   const [prioriteitFilter, setPrioriteitFilter] = useVoorkeur("onderhoud_prioriteit", "all");
   const filterActief = statusFilter !== "all" || prioriteitFilter !== "all";
@@ -116,60 +117,59 @@ export default function Onderhoud() {
       )}
 
       {!isLoading && (
-        <div className="space-y-3">
+        <div className="space-y-2">
           {filtered?.map((taak) => (
-            <Card key={taak.id} className="hover:shadow-md transition-shadow">
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <div className="p-2 bg-muted rounded-md">
-                      {statusIcon(taak.status ?? "")}
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-semibold">{taak.titel}</span>
-                        <Badge variant="outline" className={statusKleur[taak.status ?? ""]}>
-                          {taak.status === "open" ? "Openstaand" : taak.status === "in_uitvoering" ? "In uitvoering" : taak.status === "voltooid" ? "Voltooid" : taak.status}
-                        </Badge>
-                        <Badge variant="outline" className={prioriteitKleur[taak.prioriteit ?? "normaal"]}>
-                          {taak.prioriteit ?? "normaal"}
-                        </Badge>
-                      </div>
-                      <div className="flex items-center gap-3 mt-1 text-sm text-muted-foreground">
-                        {taak.gebouw_naam && (
-                          <span className="flex items-center gap-1">
-                            <Building className="h-3 w-3" />
-                            {taak.gebouw_naam}
-                          </span>
-                        )}
-                        {taak.deadline && (
-                          <span className="flex items-center gap-1">
-                            <Calendar className="h-3 w-3" />
-                            Deadline: {new Date(taak.deadline).toLocaleDateString("nl-NL")}
-                          </span>
-                        )}
-                        {taak.toegewezen_aan_naam && (
-                          <span>Toegewezen: {taak.toegewezen_aan_naam}</span>
-                        )}
-                      </div>
-                      {taak.omschrijving && (
-                        <p className="text-sm text-muted-foreground mt-1 max-w-xl truncate">{taak.omschrijving}</p>
-                      )}
-                    </div>
-                  </div>
-                  <Button variant="ghost" size="sm" asChild>
-                    <Link href={`/onderhoud/${taak.id}`}>Details</Link>
-                  </Button>
+            <div
+              key={taak.id}
+              role="button"
+              tabIndex={0}
+              onClick={() => navigate(`/onderhoud/${taak.id}`)}
+              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); navigate(`/onderhoud/${taak.id}`); } }}
+              className="group relative flex items-center gap-4 rounded-xl border bg-card px-5 py-4 cursor-pointer shadow-sm hover:shadow-md hover:-translate-y-px hover:bg-muted/30 transition-all duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <div className="p-2 bg-muted rounded-md shrink-0">
+                {statusIcon(taak.status ?? "")}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="font-semibold">{taak.titel}</span>
+                  <Badge variant="outline" className={statusKleur[taak.status ?? ""]}>
+                    {taak.status === "open" ? "Openstaand" : taak.status === "in_uitvoering" ? "In uitvoering" : taak.status === "voltooid" ? "Voltooid" : taak.status}
+                  </Badge>
+                  <Badge variant="outline" className={prioriteitKleur[taak.prioriteit ?? "normaal"]}>
+                    {taak.prioriteit ?? "normaal"}
+                  </Badge>
                 </div>
-              </CardContent>
-            </Card>
+                <div className="flex items-center gap-3 mt-1 text-sm text-muted-foreground flex-wrap">
+                  {taak.gebouw_naam && (
+                    <span className="flex items-center gap-1">
+                      <Building className="h-3 w-3" />
+                      {taak.gebouw_naam}
+                    </span>
+                  )}
+                  {taak.deadline && (
+                    <span className="flex items-center gap-1">
+                      <Calendar className="h-3 w-3" />
+                      Deadline: {new Date(taak.deadline).toLocaleDateString("nl-NL")}
+                    </span>
+                  )}
+                  {taak.toegewezen_aan_naam && (
+                    <span>Toegewezen: {taak.toegewezen_aan_naam}</span>
+                  )}
+                </div>
+                {taak.omschrijving && (
+                  <p className="text-sm text-muted-foreground mt-1 max-w-xl truncate">{taak.omschrijving}</p>
+                )}
+              </div>
+              <div className="shrink-0 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">
+                <Calendar className="h-4 w-4" />
+              </div>
+            </div>
           ))}
           {!filtered?.length && (
-            <Card>
-              <CardContent className="py-12 text-center text-muted-foreground">
-                Geen onderhoudstaken gevonden.
-              </CardContent>
-            </Card>
+            <div className="py-16 text-center text-muted-foreground text-sm">
+              Geen onderhoudstaken gevonden.
+            </div>
           )}
         </div>
       )}

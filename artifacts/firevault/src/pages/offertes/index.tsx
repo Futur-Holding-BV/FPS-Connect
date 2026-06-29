@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import {
   useListOffertes,
   useCreateOfferte,
@@ -25,7 +26,7 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
-import { FileText, Plus, Search, Sparkles, PenLine, TrendingUp, CheckCircle, Send, Eye, Clock, FolderOpen, XCircle, AlertTriangle, Download, Euro } from "lucide-react";
+import { FileText, Plus, Search, Sparkles, PenLine, TrendingUp, CheckCircle, Send, Eye, Clock, FolderOpen, XCircle, AlertTriangle, Download, Euro, ArrowRight } from "lucide-react";
 import { Link } from "wouter";
 
 const STATUS_KLEUR: Record<string, string> = {
@@ -71,6 +72,7 @@ const PORTAAL_STATUS_LABEL: Record<string, string> = {
 export default function OffertesPagina() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [, navigate] = useLocation();
   const { data: offertes, isLoading } = useListOffertes();
   const { data: gebouwen } = useListGebouwen();
   const { data: klanten } = useListCrmKlanten();
@@ -287,14 +289,21 @@ export default function OffertesPagina() {
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {gefilterd.map((o) => (
-            <Card key={o.id} className="h-full">
-              <CardContent className="p-4 space-y-3">
+            <div
+              key={o.id}
+              role="button"
+              tabIndex={0}
+              onClick={() => navigate(`/offertes/${o.id}`)}
+              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); navigate(`/offertes/${o.id}`); } }}
+              className="group relative rounded-xl border bg-card cursor-pointer shadow-sm hover:shadow-md hover:-translate-y-px hover:bg-muted/30 transition-all duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <div className="p-4 space-y-3">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
                     <div className="font-semibold truncate">{o.titel}</div>
                     {o.offertenummer && <div className="text-xs text-muted-foreground">{o.offertenummer}</div>}
                   </div>
-                  <div className="flex flex-col gap-1 items-end">
+                  <div className="flex flex-col gap-1 items-end shrink-0">
                     <Badge variant="outline" className={STATUS_KLEUR[o.status] ?? ""}>{o.status}</Badge>
                     {(o as { portaal_status?: string }).portaal_status && (o as { portaal_status?: string }).portaal_status !== "concept" && (
                       <Badge variant="outline" className={PORTAAL_STATUS_KLEUR[(o as { portaal_status?: string }).portaal_status!] ?? ""}>
@@ -307,12 +316,14 @@ export default function OffertesPagina() {
                       </Badge>
                     )}
                     {o.portaal_status === "ondertekend" && o.gebouw_id && (
-                      <Link href={`/gebouwen/${o.gebouw_id}`}>
-                        <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-300 cursor-pointer hover:bg-emerald-100 gap-1">
-                          <FolderOpen className="h-3 w-3" />
-                          Project geopend
-                        </Badge>
-                      </Link>
+                      <div onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
+                        <Link href={`/gebouwen/${o.gebouw_id}`}>
+                          <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-300 cursor-pointer hover:bg-emerald-100 gap-1">
+                            <FolderOpen className="h-3 w-3" />
+                            Project geopend
+                          </Badge>
+                        </Link>
+                      </div>
                     )}
                   </div>
                 </div>
@@ -320,21 +331,19 @@ export default function OffertesPagina() {
                   {o.opdrachtgever && <div>{o.opdrachtgever}</div>}
                   {o.gebouw_naam && <div>Gebouw: {o.gebouw_naam}</div>}
                 </div>
-                <div className="text-sm font-medium">{euro(o.bedrag_excl_btw)} <span className="text-xs text-muted-foreground">excl. btw</span></div>
-                <div className="flex gap-2 flex-wrap">
-                  <Link href={`/offertes/${o.id}`}>
-                    <Button size="sm" variant="outline" className="text-primary border-primary/30 hover:bg-primary/5">
-                      <PenLine className="h-3.5 w-3.5" /> Studio openen
-                    </Button>
-                  </Link>
-                  {o.gebouw_id && o.status === "concept" && (
+                <div className="flex items-center justify-between gap-2">
+                  <div className="text-sm font-medium">{euro(o.bedrag_excl_btw)} <span className="text-xs text-muted-foreground">excl. btw</span></div>
+                  <ArrowRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                </div>
+                {o.gebouw_id && o.status === "concept" && (
+                  <div onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
                     <Button size="sm" variant="outline" onClick={() => bereidVoorUitSpots(o.id)} disabled={uitSpots.isPending}>
                       <Sparkles className="h-3.5 w-3.5" /> Uit spots
                     </Button>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
+                  </div>
+                )}
+              </div>
+            </div>
           ))}
         </div>
       )}
