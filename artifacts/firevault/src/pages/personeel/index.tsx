@@ -36,6 +36,7 @@ import {
   getListAlleVerlofAanvragenQueryKey,
   getListWerkgeversQueryKey,
   getListZiekmeldingenQueryKey,
+  getListPlanningMedewerkersQueryKey,
 } from "@workspace/api-client-react";
 import type {
   MedewerkerInput,
@@ -329,6 +330,7 @@ export default function PersoneelPagina() {
       await maakMedewerker.mutateAsync({ data: { ...medewerkerForm, naam: medewerkerForm.naam.trim() } });
       await queryClient.invalidateQueries({ queryKey: getListMedewerkersQueryKey() });
       await queryClient.invalidateQueries({ queryKey: getGetHrmStatsQueryKey() });
+      await queryClient.invalidateQueries({ queryKey: getListPlanningMedewerkersQueryKey() });
       toast({ title: "Medewerker toegevoegd" });
       setMedewerkerForm({ naam: "", werkmaatschappij: WERKMAATSCHAPPIJ_STD, dienstverband: "vast", bedrijf_uitzendbureau: undefined });
       setMedewerkerOpen(false);
@@ -346,6 +348,7 @@ export default function PersoneelPagina() {
       await onboard.mutateAsync({ data: onboardForm });
       await queryClient.invalidateQueries({ queryKey: getListMedewerkersQueryKey() });
       await queryClient.invalidateQueries({ queryKey: getGetHrmStatsQueryKey() });
+      await queryClient.invalidateQueries({ queryKey: getListPlanningMedewerkersQueryKey() });
       toast({ title: "Medewerker onboarded", description: "Verlofsaldo is automatisch opgebouwd." });
       setOnboardOpen(false);
     } catch (err) {
