@@ -649,7 +649,8 @@ export default function VerlofScherm() {
       ) : null}
 
       {/* Verlofsoort picker */}
-      <Modal visible={soortPickerOpen} animationType="slide" transparent onRequestClose={() => setSoortPickerOpen(false)}>
+      {soortPickerOpen && (
+      <Modal visible animationType="slide" transparent onRequestClose={() => setSoortPickerOpen(false)}>
         <View style={{ flex: 1 }}>
           <TouchableWithoutFeedback onPress={() => setSoortPickerOpen(false)}>
             <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.45)" }} />
@@ -722,6 +723,7 @@ export default function VerlofScherm() {
           </View>
         </View>
       </Modal>
+      )}
     </View>
   );
 }
