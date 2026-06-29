@@ -62,6 +62,10 @@ import SpotconfiguratieBeheer from "@/pages/beheer/spotconfiguratie";
 import MailBeheer from "@/pages/beheer/mail";
 import BackupBeheer from "@/pages/beheer/backup";
 import HerstelDashboard from "@/pages/beheer/herstel";
+import ImportPagina from "@/pages/beheer/import";
+import LeveranciersPagina from "@/pages/leveranciers/index";
+import LeverancierDetailPagina from "@/pages/leveranciers/detail";
+import ArtikelenPagina from "@/pages/artikelen/index";
 import ProjectstatusPagina from "@/pages/beheer/projectstatus";
 import PwaTest from "@/pages/beheer/pwa-test";
 import PrivacyCentrum from "@/pages/mijn/privacy";
@@ -340,6 +344,11 @@ function ConnectPortal() {
           <Redirect to="/personeel" />
         </Route>
 
+        {/* ── Inkoop ── */}
+        <Route path="/leveranciers" component={LeveranciersPagina} />
+        <Route path="/leveranciers/:id" component={LeverancierDetailPagina} />
+        <Route path="/artikelen" component={ArtikelenPagina} />
+
         {/* ── Beheer ── */}
         <Route path="/gebruikers" component={Gebruikers} />
         <Route path="/abonnementen" component={Abonnementen} />
@@ -357,6 +366,7 @@ function ConnectPortal() {
         <Route path="/beheer/mail" component={MailBeheer} />
         <Route path="/beheer/backup" component={BackupBeheer} />
         <Route path="/beheer/herstel" component={HerstelDashboard} />
+        <Route path="/beheer/import" component={ImportPagina} />
         <Route path="/beheer/boekhouding" component={BoekhoudingBeheer} />
         <Route path="/beheer/go-live" component={GoLivePagina} />
         <Route path="/beheer/projectstatus" component={ProjectstatusPagina} />

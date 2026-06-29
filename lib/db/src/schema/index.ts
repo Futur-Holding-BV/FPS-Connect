@@ -38,3 +38,6 @@ export * from "./workflow";
 export * from "./wagenpark";
 export * from "./organisatie";
 export * from "./werkvoorbereiding";
+export * from "./leveranciers";
+export * from "./artikelen";
+export * from "./import_logs";

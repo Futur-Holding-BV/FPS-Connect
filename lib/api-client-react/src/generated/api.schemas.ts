@@ -4548,6 +4548,8 @@ export interface Inkoopbon {
   bon_nummer?: string | null;
   leverancier: string;
   /** @nullable */
+  leverancier_id?: number | null;
+  /** @nullable */
   gewenste_leverdatum?: string | null;
   /** @nullable */
   totaal_bedrag?: number | null;
@@ -4578,6 +4580,7 @@ export interface InkoopbonInput {
 
 export interface InkoopbonPatch {
   leverancier?: string;
+  leverancier_id?: number;
   gewenste_leverdatum?: string;
   status?: string;
   opmerkingen?: string;
@@ -7525,6 +7528,208 @@ export interface OrgAiBedrijfsscanResultaat {
   besparing_indicatie?: string | null;
 }
 
+export interface Leverancier {
+  id: number;
+  /** @nullable */
+  code?: string | null;
+  naam: string;
+  /** @nullable */
+  adres?: string | null;
+  /** @nullable */
+  huisnummer?: string | null;
+  /** @nullable */
+  postcode?: string | null;
+  /** @nullable */
+  stad?: string | null;
+  /** @nullable */
+  provincie?: string | null;
+  land?: string;
+  /** @nullable */
+  contactpersoon?: string | null;
+  /** @nullable */
+  contact_functie?: string | null;
+  /** @nullable */
+  contact_email?: string | null;
+  /** @nullable */
+  contact_telefoon?: string | null;
+  /** @nullable */
+  contact_mobiel?: string | null;
+  /** @nullable */
+  email?: string | null;
+  /** @nullable */
+  telefoon?: string | null;
+  /** @nullable */
+  website?: string | null;
+  /** @nullable */
+  kvk_nummer?: string | null;
+  /** @nullable */
+  btw_nummer?: string | null;
+  /** @nullable */
+  iban?: string | null;
+  /** @nullable */
+  bic?: string | null;
+  /** @nullable */
+  bank_naam?: string | null;
+  /** @nullable */
+  t_nam_van?: string | null;
+  betalingstermijn_dagen?: number;
+  /** @nullable */
+  kortingspercentage?: number | null;
+  /** @nullable */
+  categorie?: string | null;
+  /** @nullable */
+  productcategorieen?: string | null;
+  /** @nullable */
+  notities?: string | null;
+  actief: boolean;
+  bron: string;
+  aangemaakt_op: string;
+  bijgewerkt_op: string;
+}
+
+export interface LeverancierInput {
+  code?: string;
+  naam: string;
+  adres?: string;
+  huisnummer?: string;
+  postcode?: string;
+  stad?: string;
+  provincie?: string;
+  land?: string;
+  contactpersoon?: string;
+  contact_functie?: string;
+  contact_email?: string;
+  contact_telefoon?: string;
+  contact_mobiel?: string;
+  email?: string;
+  telefoon?: string;
+  website?: string;
+  kvk_nummer?: string;
+  btw_nummer?: string;
+  iban?: string;
+  bic?: string;
+  bank_naam?: string;
+  t_nam_van?: string;
+  betalingstermijn_dagen?: number;
+  kortingspercentage?: number;
+  categorie?: string;
+  productcategorieen?: string;
+  notities?: string;
+  actief?: boolean;
+}
+
+export interface Artikel {
+  id: number;
+  /** @nullable */
+  code?: string | null;
+  naam: string;
+  /** @nullable */
+  omschrijving?: string | null;
+  eenheid: string;
+  /** @nullable */
+  categorie?: string | null;
+  /** @nullable */
+  inkoopprijs?: number | null;
+  /** @nullable */
+  verkoopprijs?: number | null;
+  btw_percentage: number;
+  /** @nullable */
+  leverancier_id?: number | null;
+  /** @nullable */
+  leverancier_naam?: string | null;
+  /** @nullable */
+  notities?: string | null;
+  actief: boolean;
+  bron: string;
+  aangemaakt_op: string;
+  bijgewerkt_op: string;
+}
+
+export interface ArtikelInput {
+  code?: string;
+  naam: string;
+  omschrijving?: string;
+  eenheid?: string;
+  categorie?: string;
+  inkoopprijs?: number;
+  verkoopprijs?: number;
+  btw_percentage?: number;
+  leverancier_id?: number;
+  notities?: string;
+  actief?: boolean;
+}
+
+export type ImportUploadBestandType = typeof ImportUploadBestandType[keyof typeof ImportUploadBestandType];
+
+
+export const ImportUploadBestandType = {
+  leveranciers: 'leveranciers',
+  klanten: 'klanten',
+  artikelen: 'artikelen',
+  projecten: 'projecten',
+} as const;
+
+export interface ImportUploadBestand {
+  bestand: Blob;
+  type: ImportUploadBestandType;
+}
+
+export type ImportPreviewRijenItem = {[key: string]: string | null};
+
+export interface ImportPreview {
+  kolommen: string[];
+  rijen: ImportPreviewRijenItem[];
+  totaal_rijen: number;
+  bestand_id?: string;
+}
+
+export type ImportUitvoerenInputType = typeof ImportUitvoerenInputType[keyof typeof ImportUitvoerenInputType];
+
+
+export const ImportUitvoerenInputType = {
+  leveranciers: 'leveranciers',
+  klanten: 'klanten',
+  artikelen: 'artikelen',
+  projecten: 'projecten',
+} as const;
+
+export type ImportUitvoerenInputKolomkoppeling = {[key: string]: string};
+
+export interface ImportUitvoerenInput {
+  bestand_id: string;
+  type: ImportUitvoerenInputType;
+  kolomkoppeling: ImportUitvoerenInputKolomkoppeling;
+  overslaan_lege_naam?: boolean;
+}
+
+export type ImportResultaatFoutenItem = {
+  rij: number;
+  fout: string;
+};
+
+export interface ImportResultaat {
+  type: string;
+  rijen_totaal: number;
+  rijen_verwerkt: number;
+  rijen_overgeslagen: number;
+  fouten: ImportResultaatFoutenItem[];
+  /** @nullable */
+  log_id?: number | null;
+}
+
+export type ImportLogFoutenItem = { [key: string]: unknown };
+
+export interface ImportLog {
+  id: number;
+  type: string;
+  bestandsnaam: string;
+  rijen_totaal: number;
+  rijen_verwerkt: number;
+  rijen_overgeslagen: number;
+  fouten?: ImportLogFoutenItem[];
+  aangemaakt_op: string;
+}
+
 export type GetRecenteActiviteitParams = {
 limit?: number;
 };
@@ -8006,5 +8211,18 @@ export type AiInvullenOrganisatie200Velden = {[key: string]: string | null};
 
 export type AiInvullenOrganisatie200 = {
   velden: AiInvullenOrganisatie200Velden;
+};
+
+export type ListLeveranciersParams = {
+zoek?: string;
+actief?: boolean;
+categorie?: string;
+};
+
+export type ListArtikelenParams = {
+zoek?: string;
+leverancier_id?: number;
+categorie?: string;
+actief?: boolean;
 };
 

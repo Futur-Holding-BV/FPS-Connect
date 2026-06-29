@@ -11,6 +11,7 @@ import {
   useDeleteInkoopbon,
   getGetInkoopplanningQueryKey,
   getListInkoopbonnenQueryKey,
+  useListLeveranciers,
 } from "@workspace/api-client-react";
 import type { InkoopplanRegel, Inkoopbon } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
@@ -232,11 +233,13 @@ interface NieuweInkoopbonDialoogProps {
 
 function NieuweInkoopbonDialoog({ opdrachtId, planId, regels, open, onClose }: NieuweInkoopbonDialoogProps) {
   const [leverancier, setLeverancier] = useState("");
+  const [leverancierId, setLeverancierId] = useState<number | null>(null);
   const [datum, setDatum] = useState("");
   const [geselecteerd, setGeselecteerd] = useState<number[]>([]);
   const { toast } = useToast();
   const qc = useQueryClient();
   void planId;
+  const { data: leveranciersList = [] } = useListLeveranciers();
 
   const createMutatie = useCreateInkoopbon({
     mutation: {
@@ -259,13 +262,16 @@ function NieuweInkoopbonDialoog({ opdrachtId, planId, regels, open, onClose }: N
   }
 
   function aanmaken() {
-    if (!leverancier.trim()) {
+    const leverancierNaam = leverancierId
+      ? (leveranciersList.find((l) => l.id === leverancierId)?.naam ?? leverancier)
+      : leverancier;
+    if (!leverancierNaam.trim()) {
       toast({ title: "Leverancier verplicht", variant: "destructive" }); return;
     }
     createMutatie.mutate({
       id: opdrachtId,
       data: {
-        leverancier,
+        leverancier: leverancierNaam,
         gewenste_leverdatum: datum || undefined,
         regels: geselecteerdeRegels.map(r => ({
           inkoopplan_regel_id: r.id,
@@ -287,7 +293,36 @@ function NieuweInkoopbonDialoog({ opdrachtId, planId, regels, open, onClose }: N
         <div className="space-y-3">
           <div>
             <label className="text-sm font-medium">Leverancier</label>
-            <Input value={leverancier} onChange={e => setLeverancier(e.target.value)} placeholder="Naam leverancier" className="mt-1" />
+            {leveranciersList.length > 0 ? (
+              <select
+                value={leverancierId ?? ""}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (val === "") {
+                    setLeverancierId(null);
+                    setLeverancier("");
+                  } else {
+                    const id = parseInt(val);
+                    setLeverancierId(id);
+                    setLeverancier(leveranciersList.find((l) => l.id === id)?.naam ?? "");
+                  }
+                }}
+                className="mt-1 flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
+              >
+                <option value="">— Kies een leverancier of typ handmatig —</option>
+                {leveranciersList.map((l) => (
+                  <option key={l.id} value={l.id}>{l.naam}</option>
+                ))}
+              </select>
+            ) : null}
+            {leverancierId === null && (
+              <Input
+                value={leverancier}
+                onChange={(e) => setLeverancier(e.target.value)}
+                placeholder="Naam leverancier"
+                className="mt-1"
+              />
+            )}
           </div>
           <div>
             <label className="text-sm font-medium">Gewenste leverdatum</label>

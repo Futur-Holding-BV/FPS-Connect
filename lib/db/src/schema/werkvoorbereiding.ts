@@ -2,6 +2,7 @@ import { pgTable, serial, text, integer, real, timestamp, boolean } from "drizzl
 import { gebruikersTable } from "./gebruikers";
 import { opdrachtenTable } from "./opdrachten";
 import { werkbegrotingRegelsTable } from "./planning";
+import { leveranciersTable } from "./leveranciers";
 
 // ── INKOOPPLANNEN ─────────────────────────────────────────────────────────────
 // AI-gegenereerde inkoopplanning per opdracht; één actief plan per opdracht.
@@ -64,6 +65,7 @@ export const inkoopbonnenTable = pgTable("inkoopbonnen", {
   opdrachtId: integer("opdracht_id").notNull().references(() => opdrachtenTable.id, { onDelete: "cascade" }),
   bonNummer: text("bon_nummer"),                   // bijv. IB-2025-001
   leverancier: text("leverancier").notNull(),
+  leverancierId: integer("leverancier_id").references(() => leveranciersTable.id, { onDelete: "set null" }),
   gewensteLeverdatum: text("gewenste_leverdatum"),
   totaalBedrag: real("totaal_bedrag"),
   // concept | goedgekeurd | besteld | geleverd

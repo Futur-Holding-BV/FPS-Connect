@@ -49,6 +49,12 @@ tags:
     description: Projecten — centrale uitvoeringsentiteit (Enterprise Blueprint v1.1)
   - name: snagstream
     description: Snagstream PDF-archief — import, AI-uitlezing, koppeling en overname als Connect-spot
+  - name: leveranciers
+    description: Leveranciersbeheer — volledige leverancierskaarten met contactgegevens en bankgegevens
+  - name: artikelen
+    description: Artikelencatalogus — inkoopartikelen gekoppeld aan leveranciers
+  - name: import
+    description: ENK-importmodule — Excel/CSV-import van leveranciers, klanten, artikelen en projecten
 
 paths:
   /healthz:
@@ -14493,6 +14499,294 @@ paths:
               schema:
                 $ref: "#/components/schemas/OrgAiBedrijfsscanResultaat"
 
+  # ── LEVERANCIERS ─────────────────────────────────────────────────────────────
+
+  /leveranciers:
+    get:
+      operationId: listLeveranciers
+      tags: [leveranciers]
+      summary: Alle leveranciers ophalen
+      parameters:
+        - in: query
+          name: zoek
+          schema:
+            type: string
+        - in: query
+          name: actief
+          schema:
+            type: boolean
+        - in: query
+          name: categorie
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Leverancier"
+    post:
+      operationId: createLeverancier
+      tags: [leveranciers]
+      summary: Nieuwe leverancier aanmaken
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LeverancierInput"
+      responses:
+        "201":
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Leverancier"
+
+  /leveranciers/{id}:
+    get:
+      operationId: getLeverancier
+      tags: [leveranciers]
+      summary: Leverancier ophalen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Leverancier"
+        "404":
+          description: Niet gevonden
+    patch:
+      operationId: patchLeverancier
+      tags: [leveranciers]
+      summary: Leverancier bijwerken
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LeverancierInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Leverancier"
+    delete:
+      operationId: deleteLeverancier
+      tags: [leveranciers]
+      summary: Leverancier verwijderen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Verwijderd
+
+  /leveranciers/{id}/artikelen:
+    get:
+      operationId: listLeverancierArtikelen
+      tags: [leveranciers]
+      summary: Artikelen van een leverancier ophalen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Artikel"
+
+  # ── ARTIKELEN ────────────────────────────────────────────────────────────────
+
+  /artikelen:
+    get:
+      operationId: listArtikelen
+      tags: [artikelen]
+      summary: Artikelencatalogus ophalen
+      parameters:
+        - in: query
+          name: zoek
+          schema:
+            type: string
+        - in: query
+          name: leverancier_id
+          schema:
+            type: integer
+        - in: query
+          name: categorie
+          schema:
+            type: string
+        - in: query
+          name: actief
+          schema:
+            type: boolean
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Artikel"
+    post:
+      operationId: createArtikel
+      tags: [artikelen]
+      summary: Nieuw artikel aanmaken
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ArtikelInput"
+      responses:
+        "201":
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Artikel"
+
+  /artikelen/{id}:
+    get:
+      operationId: getArtikel
+      tags: [artikelen]
+      summary: Artikel ophalen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Artikel"
+    patch:
+      operationId: patchArtikel
+      tags: [artikelen]
+      summary: Artikel bijwerken
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ArtikelInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Artikel"
+    delete:
+      operationId: deleteArtikel
+      tags: [artikelen]
+      summary: Artikel verwijderen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Verwijderd
+
+  # ── IMPORT ───────────────────────────────────────────────────────────────────
+
+  /import/preview:
+    post:
+      operationId: importPreview
+      tags: [import]
+      summary: Bestand uploaden en kolommen + voorbeeldrijen ophalen
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: "#/components/schemas/ImportUploadBestand"
+      responses:
+        "200":
+          description: Preview met kolomnamen en voorbeeldrijen
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ImportPreview"
+        "400":
+          description: Ongeldig bestandsformaat
+
+  /import/uitvoeren:
+    post:
+      operationId: importUitvoeren
+      tags: [import]
+      summary: Import uitvoeren met kolomkoppeling
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ImportUitvoerenInput"
+      responses:
+        "200":
+          description: Importresultaat
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ImportResultaat"
+
+  /import/logs:
+    get:
+      operationId: listImportLogs
+      tags: [import]
+      summary: Import-logboek ophalen
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ImportLog"
+
 components:
   schemas:
     NieuwsItem:
@@ -20941,6 +21235,8 @@ components:
           type: ["string", "null"]
         leverancier:
           type: string
+        leverancier_id:
+          type: ["integer", "null"]
         gewenste_leverdatum:
           type: ["string", "null"]
         totaal_bedrag:
@@ -20993,6 +21289,8 @@ components:
       properties:
         leverancier:
           type: string
+        leverancier_id:
+          type: integer
         gewenste_leverdatum:
           type: string
         status:
@@ -26602,3 +26900,196 @@ components:
             type: string
         besparing_indicatie: { type: ["string", "null"] }
 
+
+    # ── LEVERANCIERS ──────────────────────────────────────────────────────────
+
+    Leverancier:
+      type: object
+      required: [id, naam, actief, bron, aangemaakt_op, bijgewerkt_op]
+      properties:
+        id:                       { type: integer }
+        code:                     { type: ["string", "null"] }
+        naam:                     { type: string }
+        adres:                    { type: ["string", "null"] }
+        huisnummer:               { type: ["string", "null"] }
+        postcode:                 { type: ["string", "null"] }
+        stad:                     { type: ["string", "null"] }
+        provincie:                { type: ["string", "null"] }
+        land:                     { type: string }
+        contactpersoon:           { type: ["string", "null"] }
+        contact_functie:          { type: ["string", "null"] }
+        contact_email:            { type: ["string", "null"] }
+        contact_telefoon:         { type: ["string", "null"] }
+        contact_mobiel:           { type: ["string", "null"] }
+        email:                    { type: ["string", "null"] }
+        telefoon:                 { type: ["string", "null"] }
+        website:                  { type: ["string", "null"] }
+        kvk_nummer:               { type: ["string", "null"] }
+        btw_nummer:               { type: ["string", "null"] }
+        iban:                     { type: ["string", "null"] }
+        bic:                      { type: ["string", "null"] }
+        bank_naam:                { type: ["string", "null"] }
+        t_nam_van:                { type: ["string", "null"] }
+        betalingstermijn_dagen:   { type: integer }
+        kortingspercentage:       { type: ["integer", "null"] }
+        categorie:                { type: ["string", "null"] }
+        productcategorieen:       { type: ["string", "null"] }
+        notities:                 { type: ["string", "null"] }
+        actief:                   { type: boolean }
+        bron:                     { type: string }
+        aangemaakt_op:            { type: string }
+        bijgewerkt_op:            { type: string }
+
+    LeverancierInput:
+      type: object
+      required: [naam]
+      properties:
+        code:                     { type: string }
+        naam:                     { type: string }
+        adres:                    { type: string }
+        huisnummer:               { type: string }
+        postcode:                 { type: string }
+        stad:                     { type: string }
+        provincie:                { type: string }
+        land:                     { type: string }
+        contactpersoon:           { type: string }
+        contact_functie:          { type: string }
+        contact_email:            { type: string }
+        contact_telefoon:         { type: string }
+        contact_mobiel:           { type: string }
+        email:                    { type: string }
+        telefoon:                 { type: string }
+        website:                  { type: string }
+        kvk_nummer:               { type: string }
+        btw_nummer:               { type: string }
+        iban:                     { type: string }
+        bic:                      { type: string }
+        bank_naam:                { type: string }
+        t_nam_van:                { type: string }
+        betalingstermijn_dagen:   { type: integer }
+        kortingspercentage:       { type: integer }
+        categorie:                { type: string }
+        productcategorieen:       { type: string }
+        notities:                 { type: string }
+        actief:                   { type: boolean }
+
+    # ── ARTIKELEN ──────────────────────────────────────────────────────────────
+
+    Artikel:
+      type: object
+      required: [id, naam, eenheid, btw_percentage, actief, bron, aangemaakt_op, bijgewerkt_op]
+      properties:
+        id:                 { type: integer }
+        code:               { type: ["string", "null"] }
+        naam:               { type: string }
+        omschrijving:       { type: ["string", "null"] }
+        eenheid:            { type: string }
+        categorie:          { type: ["string", "null"] }
+        inkoopprijs:        { type: ["number", "null"] }
+        verkoopprijs:       { type: ["number", "null"] }
+        btw_percentage:     { type: integer }
+        leverancier_id:     { type: ["integer", "null"] }
+        leverancier_naam:   { type: ["string", "null"] }
+        notities:           { type: ["string", "null"] }
+        actief:             { type: boolean }
+        bron:               { type: string }
+        aangemaakt_op:      { type: string }
+        bijgewerkt_op:      { type: string }
+
+    ArtikelInput:
+      type: object
+      required: [naam]
+      properties:
+        code:               { type: string }
+        naam:               { type: string }
+        omschrijving:       { type: string }
+        eenheid:            { type: string }
+        categorie:          { type: string }
+        inkoopprijs:        { type: number }
+        verkoopprijs:       { type: number }
+        btw_percentage:     { type: integer }
+        leverancier_id:     { type: integer }
+        notities:           { type: string }
+        actief:             { type: boolean }
+
+    # ── IMPORT ──────────────────────────────────────────────────────────────────
+
+    ImportUploadBestand:
+      type: object
+      required: [bestand, type]
+      properties:
+        bestand:
+          type: string
+          format: binary
+        type:
+          type: string
+          enum: [leveranciers, klanten, artikelen, projecten]
+
+    ImportPreview:
+      type: object
+      required: [kolommen, rijen, totaal_rijen]
+      properties:
+        kolommen:
+          type: array
+          items:
+            type: string
+        rijen:
+          type: array
+          items:
+            type: object
+            additionalProperties:
+              type: ["string", "null"]
+        totaal_rijen:
+          type: integer
+        bestand_id:
+          type: string
+
+    ImportUitvoerenInput:
+      type: object
+      required: [bestand_id, type, kolomkoppeling]
+      properties:
+        bestand_id:
+          type: string
+        type:
+          type: string
+          enum: [leveranciers, klanten, artikelen, projecten]
+        kolomkoppeling:
+          type: object
+          additionalProperties:
+            type: string
+        overslaan_lege_naam:
+          type: boolean
+
+    ImportResultaat:
+      type: object
+      required: [type, rijen_totaal, rijen_verwerkt, rijen_overgeslagen, fouten]
+      properties:
+        type:               { type: string }
+        rijen_totaal:       { type: integer }
+        rijen_verwerkt:     { type: integer }
+        rijen_overgeslagen: { type: integer }
+        fouten:
+          type: array
+          items:
+            type: object
+            required: [rij, fout]
+            properties:
+              rij:  { type: integer }
+              fout: { type: string }
+        log_id:             { type: ["integer", "null"] }
+
+    ImportLog:
+      type: object
+      required: [id, type, bestandsnaam, rijen_totaal, rijen_verwerkt, rijen_overgeslagen, aangemaakt_op]
+      properties:
+        id:                 { type: integer }
+        type:               { type: string }
+        bestandsnaam:       { type: string }
+        rijen_totaal:       { type: integer }
+        rijen_verwerkt:     { type: integer }
+        rijen_overgeslagen: { type: integer }
+        fouten:
+          type: array
+          items:
+            type: object
+        aangemaakt_op:      { type: string }

@@ -5,11 +5,9 @@
  * FPS Brandpreventie - Platform voor brandpreventieve gebouwvoorzieningen
  * OpenAPI spec version: 0.1.0
  */
+import type { ImportUploadBestandType } from './importUploadBestandType';
 
-export interface InkoopbonPatch {
-  leverancier?: string;
-  leverancier_id?: number;
-  gewenste_leverdatum?: string;
-  status?: string;
-  opmerkingen?: string;
+export interface ImportUploadBestand {
+  bestand: Blob;
+  type: ImportUploadBestandType;
 }

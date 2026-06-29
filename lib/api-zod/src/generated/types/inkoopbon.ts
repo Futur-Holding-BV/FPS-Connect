@@ -17,6 +17,8 @@ export interface Inkoopbon {
   bon_nummer?: string | null;
   leverancier: string;
   /** @nullable */
+  leverancier_id?: number | null;
+  /** @nullable */
   gewenste_leverdatum?: string | null;
   /** @nullable */
   totaal_bedrag?: number | null;

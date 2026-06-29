@@ -62,6 +62,9 @@ import workflowRouter from "./workflow";
 import onlineGebruikersRouter from "./online-gebruikers";
 import nieuwsRouter from "./nieuws";
 import organisatieRouter from "./organisatie";
+import leveranciersRouter from "./leveranciers";
+import artikelenRouter from "./artikelen";
+import importRouter from "./import";
 import { requireAuth } from "../middlewares/auth";
 import { meldActief } from "../lib/online-tracker";
 
@@ -140,5 +143,8 @@ router.use(onlineGebruikersRouter);
 router.use("/wagenpark", wagenparkRouter);
 router.use(nieuwsRouter);
 router.use(organisatieRouter);
+router.use(leveranciersRouter);
+router.use(artikelenRouter);
+router.use(importRouter);
 
 export default router;

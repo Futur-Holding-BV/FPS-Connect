@@ -10626,6 +10626,7 @@ export const ListInkoopbonnenResponseItem = zod.object({
   "opdracht_id": zod.number(),
   "bon_nummer": zod.string().nullish(),
   "leverancier": zod.string(),
+  "leverancier_id": zod.number().nullish(),
   "gewenste_leverdatum": zod.string().nullish(),
   "totaal_bedrag": zod.number().nullish(),
   "status": zod.enum(['concept', 'goedgekeurd', 'besteld', 'geleverd']),
@@ -10681,6 +10682,7 @@ export const PatchInkoopbonParams = zod.object({
 
 export const PatchInkoopbonBody = zod.object({
   "leverancier": zod.string().optional(),
+  "leverancier_id": zod.number().optional(),
   "gewenste_leverdatum": zod.string().optional(),
   "status": zod.string().optional(),
   "opmerkingen": zod.string().optional()
@@ -10692,6 +10694,7 @@ export const PatchInkoopbonResponse = zod.object({
   "opdracht_id": zod.number(),
   "bon_nummer": zod.string().nullish(),
   "leverancier": zod.string(),
+  "leverancier_id": zod.number().nullish(),
   "gewenste_leverdatum": zod.string().nullish(),
   "totaal_bedrag": zod.number().nullish(),
   "status": zod.enum(['concept', 'goedgekeurd', 'besteld', 'geleverd']),
@@ -18181,5 +18184,429 @@ export const AiBedrijfsscanOrganisatieResponse = zod.object({
   "ontbrekend": zod.array(zod.string()).optional(),
   "besparing_indicatie": zod.string().nullish()
 })
+
+
+/**
+ * @summary Alle leveranciers ophalen
+ */
+export const ListLeveranciersQueryParams = zod.object({
+  "zoek": zod.coerce.string().optional(),
+  "actief": zod.coerce.boolean().optional(),
+  "categorie": zod.coerce.string().optional()
+})
+
+export const ListLeveranciersResponseItem = zod.object({
+  "id": zod.number(),
+  "code": zod.string().nullish(),
+  "naam": zod.string(),
+  "adres": zod.string().nullish(),
+  "huisnummer": zod.string().nullish(),
+  "postcode": zod.string().nullish(),
+  "stad": zod.string().nullish(),
+  "provincie": zod.string().nullish(),
+  "land": zod.string().optional(),
+  "contactpersoon": zod.string().nullish(),
+  "contact_functie": zod.string().nullish(),
+  "contact_email": zod.string().nullish(),
+  "contact_telefoon": zod.string().nullish(),
+  "contact_mobiel": zod.string().nullish(),
+  "email": zod.string().nullish(),
+  "telefoon": zod.string().nullish(),
+  "website": zod.string().nullish(),
+  "kvk_nummer": zod.string().nullish(),
+  "btw_nummer": zod.string().nullish(),
+  "iban": zod.string().nullish(),
+  "bic": zod.string().nullish(),
+  "bank_naam": zod.string().nullish(),
+  "t_nam_van": zod.string().nullish(),
+  "betalingstermijn_dagen": zod.number().optional(),
+  "kortingspercentage": zod.number().nullish(),
+  "categorie": zod.string().nullish(),
+  "productcategorieen": zod.string().nullish(),
+  "notities": zod.string().nullish(),
+  "actief": zod.boolean(),
+  "bron": zod.string(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+export const ListLeveranciersResponse = zod.array(ListLeveranciersResponseItem)
+
+
+/**
+ * @summary Nieuwe leverancier aanmaken
+ */
+export const CreateLeverancierBody = zod.object({
+  "code": zod.string().optional(),
+  "naam": zod.string(),
+  "adres": zod.string().optional(),
+  "huisnummer": zod.string().optional(),
+  "postcode": zod.string().optional(),
+  "stad": zod.string().optional(),
+  "provincie": zod.string().optional(),
+  "land": zod.string().optional(),
+  "contactpersoon": zod.string().optional(),
+  "contact_functie": zod.string().optional(),
+  "contact_email": zod.string().optional(),
+  "contact_telefoon": zod.string().optional(),
+  "contact_mobiel": zod.string().optional(),
+  "email": zod.string().optional(),
+  "telefoon": zod.string().optional(),
+  "website": zod.string().optional(),
+  "kvk_nummer": zod.string().optional(),
+  "btw_nummer": zod.string().optional(),
+  "iban": zod.string().optional(),
+  "bic": zod.string().optional(),
+  "bank_naam": zod.string().optional(),
+  "t_nam_van": zod.string().optional(),
+  "betalingstermijn_dagen": zod.number().optional(),
+  "kortingspercentage": zod.number().optional(),
+  "categorie": zod.string().optional(),
+  "productcategorieen": zod.string().optional(),
+  "notities": zod.string().optional(),
+  "actief": zod.boolean().optional()
+})
+
+export const CreateLeverancierResponse = zod.void()
+
+
+/**
+ * @summary Leverancier ophalen
+ */
+export const GetLeverancierParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetLeverancierResponse = zod.object({
+  "id": zod.number(),
+  "code": zod.string().nullish(),
+  "naam": zod.string(),
+  "adres": zod.string().nullish(),
+  "huisnummer": zod.string().nullish(),
+  "postcode": zod.string().nullish(),
+  "stad": zod.string().nullish(),
+  "provincie": zod.string().nullish(),
+  "land": zod.string().optional(),
+  "contactpersoon": zod.string().nullish(),
+  "contact_functie": zod.string().nullish(),
+  "contact_email": zod.string().nullish(),
+  "contact_telefoon": zod.string().nullish(),
+  "contact_mobiel": zod.string().nullish(),
+  "email": zod.string().nullish(),
+  "telefoon": zod.string().nullish(),
+  "website": zod.string().nullish(),
+  "kvk_nummer": zod.string().nullish(),
+  "btw_nummer": zod.string().nullish(),
+  "iban": zod.string().nullish(),
+  "bic": zod.string().nullish(),
+  "bank_naam": zod.string().nullish(),
+  "t_nam_van": zod.string().nullish(),
+  "betalingstermijn_dagen": zod.number().optional(),
+  "kortingspercentage": zod.number().nullish(),
+  "categorie": zod.string().nullish(),
+  "productcategorieen": zod.string().nullish(),
+  "notities": zod.string().nullish(),
+  "actief": zod.boolean(),
+  "bron": zod.string(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+
+
+/**
+ * @summary Leverancier bijwerken
+ */
+export const PatchLeverancierParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const PatchLeverancierBody = zod.object({
+  "code": zod.string().optional(),
+  "naam": zod.string(),
+  "adres": zod.string().optional(),
+  "huisnummer": zod.string().optional(),
+  "postcode": zod.string().optional(),
+  "stad": zod.string().optional(),
+  "provincie": zod.string().optional(),
+  "land": zod.string().optional(),
+  "contactpersoon": zod.string().optional(),
+  "contact_functie": zod.string().optional(),
+  "contact_email": zod.string().optional(),
+  "contact_telefoon": zod.string().optional(),
+  "contact_mobiel": zod.string().optional(),
+  "email": zod.string().optional(),
+  "telefoon": zod.string().optional(),
+  "website": zod.string().optional(),
+  "kvk_nummer": zod.string().optional(),
+  "btw_nummer": zod.string().optional(),
+  "iban": zod.string().optional(),
+  "bic": zod.string().optional(),
+  "bank_naam": zod.string().optional(),
+  "t_nam_van": zod.string().optional(),
+  "betalingstermijn_dagen": zod.number().optional(),
+  "kortingspercentage": zod.number().optional(),
+  "categorie": zod.string().optional(),
+  "productcategorieen": zod.string().optional(),
+  "notities": zod.string().optional(),
+  "actief": zod.boolean().optional()
+})
+
+export const PatchLeverancierResponse = zod.object({
+  "id": zod.number(),
+  "code": zod.string().nullish(),
+  "naam": zod.string(),
+  "adres": zod.string().nullish(),
+  "huisnummer": zod.string().nullish(),
+  "postcode": zod.string().nullish(),
+  "stad": zod.string().nullish(),
+  "provincie": zod.string().nullish(),
+  "land": zod.string().optional(),
+  "contactpersoon": zod.string().nullish(),
+  "contact_functie": zod.string().nullish(),
+  "contact_email": zod.string().nullish(),
+  "contact_telefoon": zod.string().nullish(),
+  "contact_mobiel": zod.string().nullish(),
+  "email": zod.string().nullish(),
+  "telefoon": zod.string().nullish(),
+  "website": zod.string().nullish(),
+  "kvk_nummer": zod.string().nullish(),
+  "btw_nummer": zod.string().nullish(),
+  "iban": zod.string().nullish(),
+  "bic": zod.string().nullish(),
+  "bank_naam": zod.string().nullish(),
+  "t_nam_van": zod.string().nullish(),
+  "betalingstermijn_dagen": zod.number().optional(),
+  "kortingspercentage": zod.number().nullish(),
+  "categorie": zod.string().nullish(),
+  "productcategorieen": zod.string().nullish(),
+  "notities": zod.string().nullish(),
+  "actief": zod.boolean(),
+  "bron": zod.string(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+
+
+/**
+ * @summary Leverancier verwijderen
+ */
+export const DeleteLeverancierParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteLeverancierResponse = zod.void()
+
+
+/**
+ * @summary Artikelen van een leverancier ophalen
+ */
+export const ListLeverancierArtikelenParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ListLeverancierArtikelenResponseItem = zod.object({
+  "id": zod.number(),
+  "code": zod.string().nullish(),
+  "naam": zod.string(),
+  "omschrijving": zod.string().nullish(),
+  "eenheid": zod.string(),
+  "categorie": zod.string().nullish(),
+  "inkoopprijs": zod.number().nullish(),
+  "verkoopprijs": zod.number().nullish(),
+  "btw_percentage": zod.number(),
+  "leverancier_id": zod.number().nullish(),
+  "leverancier_naam": zod.string().nullish(),
+  "notities": zod.string().nullish(),
+  "actief": zod.boolean(),
+  "bron": zod.string(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+export const ListLeverancierArtikelenResponse = zod.array(ListLeverancierArtikelenResponseItem)
+
+
+/**
+ * @summary Artikelencatalogus ophalen
+ */
+export const ListArtikelenQueryParams = zod.object({
+  "zoek": zod.coerce.string().optional(),
+  "leverancier_id": zod.coerce.number().optional(),
+  "categorie": zod.coerce.string().optional(),
+  "actief": zod.coerce.boolean().optional()
+})
+
+export const ListArtikelenResponseItem = zod.object({
+  "id": zod.number(),
+  "code": zod.string().nullish(),
+  "naam": zod.string(),
+  "omschrijving": zod.string().nullish(),
+  "eenheid": zod.string(),
+  "categorie": zod.string().nullish(),
+  "inkoopprijs": zod.number().nullish(),
+  "verkoopprijs": zod.number().nullish(),
+  "btw_percentage": zod.number(),
+  "leverancier_id": zod.number().nullish(),
+  "leverancier_naam": zod.string().nullish(),
+  "notities": zod.string().nullish(),
+  "actief": zod.boolean(),
+  "bron": zod.string(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+export const ListArtikelenResponse = zod.array(ListArtikelenResponseItem)
+
+
+/**
+ * @summary Nieuw artikel aanmaken
+ */
+export const CreateArtikelBody = zod.object({
+  "code": zod.string().optional(),
+  "naam": zod.string(),
+  "omschrijving": zod.string().optional(),
+  "eenheid": zod.string().optional(),
+  "categorie": zod.string().optional(),
+  "inkoopprijs": zod.number().optional(),
+  "verkoopprijs": zod.number().optional(),
+  "btw_percentage": zod.number().optional(),
+  "leverancier_id": zod.number().optional(),
+  "notities": zod.string().optional(),
+  "actief": zod.boolean().optional()
+})
+
+export const CreateArtikelResponse = zod.void()
+
+
+/**
+ * @summary Artikel ophalen
+ */
+export const GetArtikelParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetArtikelResponse = zod.object({
+  "id": zod.number(),
+  "code": zod.string().nullish(),
+  "naam": zod.string(),
+  "omschrijving": zod.string().nullish(),
+  "eenheid": zod.string(),
+  "categorie": zod.string().nullish(),
+  "inkoopprijs": zod.number().nullish(),
+  "verkoopprijs": zod.number().nullish(),
+  "btw_percentage": zod.number(),
+  "leverancier_id": zod.number().nullish(),
+  "leverancier_naam": zod.string().nullish(),
+  "notities": zod.string().nullish(),
+  "actief": zod.boolean(),
+  "bron": zod.string(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+
+
+/**
+ * @summary Artikel bijwerken
+ */
+export const PatchArtikelParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const PatchArtikelBody = zod.object({
+  "code": zod.string().optional(),
+  "naam": zod.string(),
+  "omschrijving": zod.string().optional(),
+  "eenheid": zod.string().optional(),
+  "categorie": zod.string().optional(),
+  "inkoopprijs": zod.number().optional(),
+  "verkoopprijs": zod.number().optional(),
+  "btw_percentage": zod.number().optional(),
+  "leverancier_id": zod.number().optional(),
+  "notities": zod.string().optional(),
+  "actief": zod.boolean().optional()
+})
+
+export const PatchArtikelResponse = zod.object({
+  "id": zod.number(),
+  "code": zod.string().nullish(),
+  "naam": zod.string(),
+  "omschrijving": zod.string().nullish(),
+  "eenheid": zod.string(),
+  "categorie": zod.string().nullish(),
+  "inkoopprijs": zod.number().nullish(),
+  "verkoopprijs": zod.number().nullish(),
+  "btw_percentage": zod.number(),
+  "leverancier_id": zod.number().nullish(),
+  "leverancier_naam": zod.string().nullish(),
+  "notities": zod.string().nullish(),
+  "actief": zod.boolean(),
+  "bron": zod.string(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+
+
+/**
+ * @summary Artikel verwijderen
+ */
+export const DeleteArtikelParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteArtikelResponse = zod.void()
+
+
+/**
+ * @summary Bestand uploaden en kolommen + voorbeeldrijen ophalen
+ */
+export const ImportPreviewBody = zod.object({
+  "bestand": zod.instanceof(File),
+  "type": zod.enum(['leveranciers', 'klanten', 'artikelen', 'projecten'])
+})
+
+export const ImportPreviewResponse = zod.object({
+  "kolommen": zod.array(zod.string()),
+  "rijen": zod.array(zod.record(zod.string(), zod.string().nullable())),
+  "totaal_rijen": zod.number(),
+  "bestand_id": zod.string().optional()
+})
+
+
+/**
+ * @summary Import uitvoeren met kolomkoppeling
+ */
+export const ImportUitvoerenBody = zod.object({
+  "bestand_id": zod.string(),
+  "type": zod.enum(['leveranciers', 'klanten', 'artikelen', 'projecten']),
+  "kolomkoppeling": zod.record(zod.string(), zod.string()),
+  "overslaan_lege_naam": zod.boolean().optional()
+})
+
+export const ImportUitvoerenResponse = zod.object({
+  "type": zod.string(),
+  "rijen_totaal": zod.number(),
+  "rijen_verwerkt": zod.number(),
+  "rijen_overgeslagen": zod.number(),
+  "fouten": zod.array(zod.object({
+  "rij": zod.number(),
+  "fout": zod.string()
+})),
+  "log_id": zod.number().nullish()
+})
+
+
+/**
+ * @summary Import-logboek ophalen
+ */
+export const ListImportLogsResponseItem = zod.object({
+  "id": zod.number(),
+  "type": zod.string(),
+  "bestandsnaam": zod.string(),
+  "rijen_totaal": zod.number(),
+  "rijen_verwerkt": zod.number(),
+  "rijen_overgeslagen": zod.number(),
+  "fouten": zod.array(zod.object({
+
+}).passthrough()).optional(),
+  "aangemaakt_op": zod.string()
+})
+export const ListImportLogsResponse = zod.array(ListImportLogsResponseItem)
 
 

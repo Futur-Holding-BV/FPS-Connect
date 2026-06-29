@@ -20,6 +20,7 @@ import {
   Inbox, Building2, Target, Handshake, Newspaper, CalendarRange, KeyRound,
   ClipboardCheck, AlertTriangle, FileArchive, Receipt, ArrowUpRight, ScrollText,
   UserPlus, UserMinus, Car, GitBranch, ArrowLeft, ChevronDown, Palette, Monitor,
+  Package, Upload,
 } from "lucide-react";
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
 import { Badge } from "@/components/ui/badge";
@@ -419,6 +420,48 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                   </SidebarMenu>
                 </SidebarGroupContent>
               </SidebarGroup>
+
+              {/* Inkoop */}
+              {toonOffertes && (
+                <Collapsible defaultOpen className="group/collapsible">
+                  <SidebarGroup>
+                    <SidebarGroupLabel asChild>
+                      <CollapsibleTrigger className="flex w-full items-center">
+                        Inkoop
+                        <ChevronDown className="ml-auto h-4 w-4 transition-transform group-data-[state=open]/collapsible:rotate-180 group-data-[collapsible=icon]:hidden" />
+                      </CollapsibleTrigger>
+                    </SidebarGroupLabel>
+                    <CollapsibleContent>
+                      <SidebarGroupContent>
+                        <SidebarMenu>
+                          <SidebarMenuItem className="pl-5">
+                            <SidebarMenuButton
+                              asChild
+                              isActive={location === "/leveranciers" || location.startsWith("/leveranciers/")}
+                            >
+                              <Link href="/leveranciers">
+                                <Truck />
+                                <span>Leveranciers</span>
+                              </Link>
+                            </SidebarMenuButton>
+                          </SidebarMenuItem>
+                          <SidebarMenuItem className="pl-5">
+                            <SidebarMenuButton
+                              asChild
+                              isActive={location === "/artikelen" || location.startsWith("/artikelen/")}
+                            >
+                              <Link href="/artikelen">
+                                <Package />
+                                <span>Artikelen</span>
+                              </Link>
+                            </SidebarMenuButton>
+                          </SidebarMenuItem>
+                        </SidebarMenu>
+                      </SidebarGroupContent>
+                    </CollapsibleContent>
+                  </SidebarGroup>
+                </Collapsible>
+              )}
 
               {/* Commercie */}
               {toonCrm && (
@@ -1173,6 +1216,14 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                               <Link href="/beheer/projectstatus">
                                 <BarChart3 />
                                 <span>Projectstatus</span>
+                              </Link>
+                            </SidebarMenuButton>
+                          </SidebarMenuItem>
+                          <SidebarMenuItem className="pl-5">
+                            <SidebarMenuButton asChild isActive={location === "/beheer/import"}>
+                              <Link href="/beheer/import">
+                                <Upload />
+                                <span>Importeren</span>
                               </Link>
                             </SidebarMenuButton>
                           </SidebarMenuItem>

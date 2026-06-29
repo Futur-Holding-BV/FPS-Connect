@@ -40,7 +40,8 @@
     "pino": "^9.14.0",
     "pino-http": "^10.5.0",
     "qrcode": "^1.5.4",
-    "sharp": "^0.35.1"
+    "sharp": "^0.35.1",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@types/connect-pg-simple": "^7.0.3",

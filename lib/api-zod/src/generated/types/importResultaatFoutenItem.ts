@@ -6,10 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface InkoopbonPatch {
-  leverancier?: string;
-  leverancier_id?: number;
-  gewenste_leverdatum?: string;
-  status?: string;
-  opmerkingen?: string;
-}
+export type ImportResultaatFoutenItem = {
+  rij: number;
+  fout: string;
+};
