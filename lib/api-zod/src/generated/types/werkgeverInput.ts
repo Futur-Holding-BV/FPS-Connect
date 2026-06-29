@@ -46,4 +46,8 @@ export interface WerkgeverInput {
      */
   primaire_kleur?: string | null;
   actief?: boolean;
+  boekhouder_naam?: string;
+  boekhouder_email?: string;
+  intern_contact_naam?: string;
+  intern_contact_email?: string;
 }

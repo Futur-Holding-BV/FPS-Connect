@@ -122,6 +122,11 @@ export const MODULES = [
     label: "Wagenpark",
     omschrijving: "Voertuigbeheer, onderhoud, APK, kosten, ritten en Traxgo-koppeling",
   },
+  {
+    id: "organisatie",
+    label: "Organisatie",
+    omschrijving: "Bedrijfsgegevens, verzekeringen, jaarverslagen en bedrijfsdocumenten",
+  },
 ] as const;
 
 export type ModuleId = (typeof MODULES)[number]["id"];

@@ -7092,6 +7092,10 @@ export const ListWerkgeversResponseItem = zod.object({
   "logo_url": zod.string().nullish().describe('Object-storage pad van het huisstijllogo (PNG\/SVG) voor documenten.'),
   "primaire_kleur": zod.string().nullish().describe('Primaire merkkleur als hex-waarde (bijv.'),
   "actief": zod.boolean(),
+  "boekhouder_naam": zod.string().nullish(),
+  "boekhouder_email": zod.string().nullish(),
+  "intern_contact_naam": zod.string().nullish(),
+  "intern_contact_email": zod.string().nullish(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
 })
@@ -7119,7 +7123,11 @@ export const CreateWerkgeverBody = zod.object({
   "handtekening_url": zod.string().nullish(),
   "logo_url": zod.string().nullish().describe('Object-storage pad van het huisstijllogo voor documenten.'),
   "primaire_kleur": zod.string().nullish().describe('Primaire merkkleur als hex-waarde (bijv.'),
-  "actief": zod.boolean().optional()
+  "actief": zod.boolean().optional(),
+  "boekhouder_naam": zod.string().optional(),
+  "boekhouder_email": zod.string().optional(),
+  "intern_contact_naam": zod.string().optional(),
+  "intern_contact_email": zod.string().optional()
 })
 
 export const CreateWerkgeverResponse = zod.void()
@@ -7152,6 +7160,10 @@ export const GetWerkgeverResponse = zod.object({
   "logo_url": zod.string().nullish().describe('Object-storage pad van het huisstijllogo (PNG\/SVG) voor documenten.'),
   "primaire_kleur": zod.string().nullish().describe('Primaire merkkleur als hex-waarde (bijv.'),
   "actief": zod.boolean(),
+  "boekhouder_naam": zod.string().nullish(),
+  "boekhouder_email": zod.string().nullish(),
+  "intern_contact_naam": zod.string().nullish(),
+  "intern_contact_email": zod.string().nullish(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
 })
@@ -7182,7 +7194,11 @@ export const UpdateWerkgeverBody = zod.object({
   "handtekening_url": zod.string().nullish(),
   "logo_url": zod.string().nullish().describe('Object-storage pad van het huisstijllogo voor documenten.'),
   "primaire_kleur": zod.string().nullish().describe('Primaire merkkleur als hex-waarde (bijv.'),
-  "actief": zod.boolean().optional()
+  "actief": zod.boolean().optional(),
+  "boekhouder_naam": zod.string().optional(),
+  "boekhouder_email": zod.string().optional(),
+  "intern_contact_naam": zod.string().optional(),
+  "intern_contact_email": zod.string().optional()
 })
 
 export const UpdateWerkgeverResponse = zod.object({
@@ -7205,6 +7221,10 @@ export const UpdateWerkgeverResponse = zod.object({
   "logo_url": zod.string().nullish().describe('Object-storage pad van het huisstijllogo (PNG\/SVG) voor documenten.'),
   "primaire_kleur": zod.string().nullish().describe('Primaire merkkleur als hex-waarde (bijv.'),
   "actief": zod.boolean(),
+  "boekhouder_naam": zod.string().nullish(),
+  "boekhouder_email": zod.string().nullish(),
+  "intern_contact_naam": zod.string().nullish(),
+  "intern_contact_email": zod.string().nullish(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
 })
@@ -17349,5 +17369,308 @@ export const ListNieuwsResponseItem = zod.object({
   "beschrijving": zod.string().nullish()
 })
 export const ListNieuwsResponse = zod.array(ListNieuwsResponseItem)
+
+
+/**
+ * @summary Bedrijfsverzekeringen ophalen
+ */
+export const ListOrgVerzekeringenResponseItem = zod.object({
+  "id": zod.number(),
+  "type": zod.string(),
+  "omschrijving": zod.string().nullish(),
+  "maatschappij": zod.string().nullish(),
+  "polisnummer": zod.string().nullish(),
+  "premie": zod.number().nullish(),
+  "premie_frequentie": zod.string().nullish(),
+  "ingangsdatum": zod.string().nullish(),
+  "vervaldatum": zod.string().nullish(),
+  "eigen_risico": zod.number().nullish(),
+  "status": zod.string(),
+  "opmerkingen": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+export const ListOrgVerzekeringenResponse = zod.array(ListOrgVerzekeringenResponseItem)
+
+
+/**
+ * @summary Polis toevoegen
+ */
+export const CreateOrgVerzekeringBody = zod.object({
+  "type": zod.string(),
+  "omschrijving": zod.string().optional(),
+  "maatschappij": zod.string().optional(),
+  "polisnummer": zod.string().optional(),
+  "premie": zod.number().optional(),
+  "premie_frequentie": zod.string().optional(),
+  "ingangsdatum": zod.string().optional(),
+  "vervaldatum": zod.string().optional(),
+  "eigen_risico": zod.number().optional(),
+  "status": zod.string().optional(),
+  "opmerkingen": zod.string().optional()
+})
+
+export const CreateOrgVerzekeringResponse = zod.void()
+
+
+/**
+ * @summary AI-suggesties voor standaard bedrijfsverzekeringen
+ */
+export const AiSuggestiesOrgVerzekeringenBody = zod.object({
+  "bedrijfsnaam": zod.string().optional(),
+  "sector": zod.string().optional()
+})
+
+export const AiSuggestiesOrgVerzekeringenResponse = zod.object({
+  "suggesties": zod.array(zod.object({
+  "type": zod.string(),
+  "omschrijving": zod.string(),
+  "toelichting": zod.string().nullish(),
+  "typische_premie_min": zod.number().nullish(),
+  "typische_premie_max": zod.number().nullish(),
+  "prioriteit": zod.string()
+}))
+})
+
+
+/**
+ * @summary Polis bijwerken
+ */
+export const UpdateOrgVerzekeringParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateOrgVerzekeringBody = zod.object({
+  "type": zod.string(),
+  "omschrijving": zod.string().optional(),
+  "maatschappij": zod.string().optional(),
+  "polisnummer": zod.string().optional(),
+  "premie": zod.number().optional(),
+  "premie_frequentie": zod.string().optional(),
+  "ingangsdatum": zod.string().optional(),
+  "vervaldatum": zod.string().optional(),
+  "eigen_risico": zod.number().optional(),
+  "status": zod.string().optional(),
+  "opmerkingen": zod.string().optional()
+})
+
+export const UpdateOrgVerzekeringResponse = zod.object({
+  "id": zod.number(),
+  "type": zod.string(),
+  "omschrijving": zod.string().nullish(),
+  "maatschappij": zod.string().nullish(),
+  "polisnummer": zod.string().nullish(),
+  "premie": zod.number().nullish(),
+  "premie_frequentie": zod.string().nullish(),
+  "ingangsdatum": zod.string().nullish(),
+  "vervaldatum": zod.string().nullish(),
+  "eigen_risico": zod.number().nullish(),
+  "status": zod.string(),
+  "opmerkingen": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+
+
+/**
+ * @summary Polis verwijderen
+ */
+export const DeleteOrgVerzekeringParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteOrgVerzekeringResponse = zod.void()
+
+
+/**
+ * @summary Jaarverslagen & jaarrekeningen ophalen
+ */
+export const ListOrgJaarverslagenResponseItem = zod.object({
+  "id": zod.number(),
+  "boekjaar": zod.number(),
+  "type": zod.string(),
+  "omschrijving": zod.string().nullish(),
+  "accountant": zod.string().nullish(),
+  "definitief": zod.boolean(),
+  "vastgesteld_op": zod.string().nullish(),
+  "document_id": zod.number().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+export const ListOrgJaarverslagenResponse = zod.array(ListOrgJaarverslagenResponseItem)
+
+
+/**
+ * @summary Jaarverslag registreren
+ */
+export const CreateOrgJaarverslagBody = zod.object({
+  "boekjaar": zod.number(),
+  "type": zod.string(),
+  "omschrijving": zod.string().optional(),
+  "accountant": zod.string().optional(),
+  "definitief": zod.boolean().optional(),
+  "vastgesteld_op": zod.string().optional(),
+  "document_id": zod.number().optional()
+})
+
+export const CreateOrgJaarverslagResponse = zod.void()
+
+
+/**
+ * @summary Jaarverslag bijwerken
+ */
+export const UpdateOrgJaarverslagParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateOrgJaarverslagBody = zod.object({
+  "boekjaar": zod.number(),
+  "type": zod.string(),
+  "omschrijving": zod.string().optional(),
+  "accountant": zod.string().optional(),
+  "definitief": zod.boolean().optional(),
+  "vastgesteld_op": zod.string().optional(),
+  "document_id": zod.number().optional()
+})
+
+export const UpdateOrgJaarverslagResponse = zod.object({
+  "id": zod.number(),
+  "boekjaar": zod.number(),
+  "type": zod.string(),
+  "omschrijving": zod.string().nullish(),
+  "accountant": zod.string().nullish(),
+  "definitief": zod.boolean(),
+  "vastgesteld_op": zod.string().nullish(),
+  "document_id": zod.number().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+
+
+/**
+ * @summary Jaarverslag verwijderen
+ */
+export const DeleteOrgJaarverslagParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteOrgJaarverslagResponse = zod.void()
+
+
+/**
+ * @summary Bedrijfsdocumenten ophalen
+ */
+export const ListOrgBedrijfsdocumentenResponseItem = zod.object({
+  "id": zod.number(),
+  "naam": zod.string(),
+  "categorie": zod.string(),
+  "omschrijving": zod.string().nullish(),
+  "uitgever": zod.string().nullish(),
+  "referentie": zod.string().nullish(),
+  "ingangsdatum": zod.string().nullish(),
+  "vervaldatum": zod.string().nullish(),
+  "status": zod.string(),
+  "document_id": zod.number().nullish(),
+  "opmerkingen": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+export const ListOrgBedrijfsdocumentenResponse = zod.array(ListOrgBedrijfsdocumentenResponseItem)
+
+
+/**
+ * @summary Bedrijfsdocument registreren
+ */
+export const CreateOrgBedrijfsdocumentBody = zod.object({
+  "naam": zod.string(),
+  "categorie": zod.string(),
+  "omschrijving": zod.string().optional(),
+  "uitgever": zod.string().optional(),
+  "referentie": zod.string().optional(),
+  "ingangsdatum": zod.string().optional(),
+  "vervaldatum": zod.string().optional(),
+  "status": zod.string().optional(),
+  "document_id": zod.number().optional(),
+  "opmerkingen": zod.string().optional()
+})
+
+export const CreateOrgBedrijfsdocumentResponse = zod.void()
+
+
+/**
+ * @summary Bedrijfsdocument bijwerken
+ */
+export const UpdateOrgBedrijfsdocumentParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateOrgBedrijfsdocumentBody = zod.object({
+  "naam": zod.string(),
+  "categorie": zod.string(),
+  "omschrijving": zod.string().optional(),
+  "uitgever": zod.string().optional(),
+  "referentie": zod.string().optional(),
+  "ingangsdatum": zod.string().optional(),
+  "vervaldatum": zod.string().optional(),
+  "status": zod.string().optional(),
+  "document_id": zod.number().optional(),
+  "opmerkingen": zod.string().optional()
+})
+
+export const UpdateOrgBedrijfsdocumentResponse = zod.object({
+  "id": zod.number(),
+  "naam": zod.string(),
+  "categorie": zod.string(),
+  "omschrijving": zod.string().nullish(),
+  "uitgever": zod.string().nullish(),
+  "referentie": zod.string().nullish(),
+  "ingangsdatum": zod.string().nullish(),
+  "vervaldatum": zod.string().nullish(),
+  "status": zod.string(),
+  "document_id": zod.number().nullish(),
+  "opmerkingen": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+
+
+/**
+ * @summary Bedrijfsdocument verwijderen
+ */
+export const DeleteOrgBedrijfsdocumentParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteOrgBedrijfsdocumentResponse = zod.void()
+
+
+/**
+ * @summary AI prefill bedrijfsgegevens op basis van bedrijfsnaam
+ */
+export const AiInvullenOrganisatieBody = zod.object({
+  "bedrijfsnaam": zod.string().optional(),
+  "sector": zod.string().optional()
+})
+
+export const AiInvullenOrganisatieResponse = zod.object({
+  "velden": zod.record(zod.string(), zod.string().nullable())
+})
+
+
+/**
+ * @summary AI-analyse van het verzekeringspakket en bedrijfsrisicos
+ */
+export const AiBedrijfsscanOrganisatieResponse = zod.object({
+  "samenvatting": zod.string().nullish(),
+  "score": zod.number().nullish(),
+  "adviezen": zod.array(zod.object({
+  "titel": zod.string(),
+  "beschrijving": zod.string(),
+  "prioriteit": zod.string(),
+  "type": zod.string()
+})).optional(),
+  "ontbrekend": zod.array(zod.string()).optional(),
+  "besparing_indicatie": zod.string().nullish()
+})
 
 

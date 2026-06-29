@@ -60,6 +60,7 @@ import slimUploadRouter from "./slim-upload";
 import workflowRouter from "./workflow";
 import onlineGebruikersRouter from "./online-gebruikers";
 import nieuwsRouter from "./nieuws";
+import organisatieRouter from "./organisatie";
 import { requireAuth } from "../middlewares/auth";
 import { meldActief } from "../lib/online-tracker";
 
@@ -136,5 +137,6 @@ router.use(workflowRouter);
 router.use(onlineGebruikersRouter);
 router.use("/wagenpark", wagenparkRouter);
 router.use(nieuwsRouter);
+router.use(organisatieRouter);
 
 export default router;

@@ -13897,6 +13897,283 @@ paths:
                   $ref: '#/components/schemas/NieuwsItem'
         '401': { description: Niet ingelogd }
 
+  # ── Organisatie — verzekeringen ─────────────────────────────────────────────
+  /organisatie/verzekeringen:
+    get:
+      operationId: listOrgVerzekeringen
+      tags: [organisatie]
+      summary: Bedrijfsverzekeringen ophalen
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/OrgVerzekering"
+    post:
+      operationId: createOrgVerzekering
+      tags: [organisatie]
+      summary: Polis toevoegen
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrgVerzekeringInput"
+      responses:
+        "201":
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrgVerzekering"
+
+  /organisatie/verzekeringen/ai-suggesties:
+    post:
+      operationId: aiSuggestiesOrgVerzekeringen
+      tags: [organisatie]
+      summary: AI-suggesties voor standaard bedrijfsverzekeringen
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrgAiVerzekeringInput"
+      responses:
+        "200":
+          description: Suggesties
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [suggesties]
+                properties:
+                  suggesties:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/OrgVerzekeringAiSuggestie"
+
+  /organisatie/verzekeringen/{id}:
+    patch:
+      operationId: updateOrgVerzekering
+      tags: [organisatie]
+      summary: Polis bijwerken
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrgVerzekeringInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrgVerzekering"
+    delete:
+      operationId: deleteOrgVerzekering
+      tags: [organisatie]
+      summary: Polis verwijderen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Verwijderd
+
+  # ── Organisatie — jaarverslagen ──────────────────────────────────────────────
+  /organisatie/jaarverslagen:
+    get:
+      operationId: listOrgJaarverslagen
+      tags: [organisatie]
+      summary: Jaarverslagen & jaarrekeningen ophalen
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/OrgJaarverslag"
+    post:
+      operationId: createOrgJaarverslag
+      tags: [organisatie]
+      summary: Jaarverslag registreren
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrgJaarverslagInput"
+      responses:
+        "201":
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrgJaarverslag"
+
+  /organisatie/jaarverslagen/{id}:
+    patch:
+      operationId: updateOrgJaarverslag
+      tags: [organisatie]
+      summary: Jaarverslag bijwerken
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrgJaarverslagInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrgJaarverslag"
+    delete:
+      operationId: deleteOrgJaarverslag
+      tags: [organisatie]
+      summary: Jaarverslag verwijderen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Verwijderd
+
+  # ── Organisatie — bedrijfsdocumenten ─────────────────────────────────────────
+  /organisatie/bedrijfsdocumenten:
+    get:
+      operationId: listOrgBedrijfsdocumenten
+      tags: [organisatie]
+      summary: Bedrijfsdocumenten ophalen
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/OrgBedrijfsdocument"
+    post:
+      operationId: createOrgBedrijfsdocument
+      tags: [organisatie]
+      summary: Bedrijfsdocument registreren
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrgBedrijfsdocumentInput"
+      responses:
+        "201":
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrgBedrijfsdocument"
+
+  /organisatie/bedrijfsdocumenten/{id}:
+    patch:
+      operationId: updateOrgBedrijfsdocument
+      tags: [organisatie]
+      summary: Bedrijfsdocument bijwerken
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrgBedrijfsdocumentInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrgBedrijfsdocument"
+    delete:
+      operationId: deleteOrgBedrijfsdocument
+      tags: [organisatie]
+      summary: Bedrijfsdocument verwijderen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Verwijderd
+
+  # ── Organisatie — AI ──────────────────────────────────────────────────────────
+  /organisatie/ai-invullen:
+    post:
+      operationId: aiInvullenOrganisatie
+      tags: [organisatie]
+      summary: AI prefill bedrijfsgegevens op basis van bedrijfsnaam
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrgAiInvullenInput"
+      responses:
+        "200":
+          description: Voorgestelde velden
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [velden]
+                properties:
+                  velden:
+                    type: object
+                    additionalProperties:
+                      type: ["string", "null"]
+
+  /organisatie/ai-bedrijfsscan:
+    post:
+      operationId: aiBedrijfsscanOrganisatie
+      tags: [organisatie]
+      summary: AI-analyse van het verzekeringspakket en bedrijfsrisicos
+      responses:
+        "200":
+          description: Scanresultaat
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrgAiBedrijfsscanResultaat"
+
 components:
   schemas:
     NieuwsItem:
@@ -18006,6 +18283,14 @@ components:
           description: Primaire merkkleur als hex-waarde (bijv. #F23B0D) voor de documentopmaak.
         actief:
           type: boolean
+        boekhouder_naam:
+          type: ["string", "null"]
+        boekhouder_email:
+          type: ["string", "null"]
+        intern_contact_naam:
+          type: ["string", "null"]
+        intern_contact_email:
+          type: ["string", "null"]
         aangemaakt_op:
           type: string
         bijgewerkt_op:
@@ -18053,6 +18338,14 @@ components:
           description: Primaire merkkleur als hex-waarde (bijv. #F23B0D).
         actief:
           type: boolean
+        boekhouder_naam:
+          type: string
+        boekhouder_email:
+          type: string
+        intern_contact_naam:
+          type: string
+        intern_contact_email:
+          type: string
 
     Functie:
       type: object
@@ -25520,4 +25813,144 @@ components:
         voertuig_id:      { type: integer, nullable: true }
         koppeling_status: { type: string }
         opmerkingen:      { type: string, nullable: true }
+
+    # ── Organisatie ────────────────────────────────────────────────────────────
+    OrgAiInvullenInput:
+      type: object
+      properties:
+        bedrijfsnaam: { type: string }
+        sector:       { type: string }
+
+    OrgAiVerzekeringInput:
+      type: object
+      properties:
+        bedrijfsnaam: { type: string }
+        sector:       { type: string }
+
+    OrgVerzekering:
+      type: object
+      required: [id, type, status, aangemaakt_op, bijgewerkt_op]
+      properties:
+        id:                { type: integer }
+        type:              { type: string }
+        omschrijving:      { type: ["string", "null"] }
+        maatschappij:      { type: ["string", "null"] }
+        polisnummer:       { type: ["string", "null"] }
+        premie:            { type: ["number", "null"] }
+        premie_frequentie: { type: ["string", "null"] }
+        ingangsdatum:      { type: ["string", "null"] }
+        vervaldatum:       { type: ["string", "null"] }
+        eigen_risico:      { type: ["number", "null"] }
+        status:            { type: string }
+        opmerkingen:       { type: ["string", "null"] }
+        aangemaakt_op:     { type: string }
+        bijgewerkt_op:     { type: string }
+
+    OrgVerzekeringInput:
+      type: object
+      required: [type]
+      properties:
+        type:              { type: string }
+        omschrijving:      { type: string }
+        maatschappij:      { type: string }
+        polisnummer:       { type: string }
+        premie:            { type: number }
+        premie_frequentie: { type: string }
+        ingangsdatum:      { type: string }
+        vervaldatum:       { type: string }
+        eigen_risico:      { type: number }
+        status:            { type: string }
+        opmerkingen:       { type: string }
+
+    OrgVerzekeringAiSuggestie:
+      type: object
+      required: [type, omschrijving, prioriteit]
+      properties:
+        type:                 { type: string }
+        omschrijving:         { type: string }
+        toelichting:          { type: ["string", "null"] }
+        typische_premie_min:  { type: ["number", "null"] }
+        typische_premie_max:  { type: ["number", "null"] }
+        prioriteit:           { type: string }
+
+    OrgJaarverslag:
+      type: object
+      required: [id, boekjaar, type, definitief, aangemaakt_op, bijgewerkt_op]
+      properties:
+        id:             { type: integer }
+        boekjaar:       { type: integer }
+        type:           { type: string }
+        omschrijving:   { type: ["string", "null"] }
+        accountant:     { type: ["string", "null"] }
+        definitief:     { type: boolean }
+        vastgesteld_op: { type: ["string", "null"] }
+        document_id:    { type: ["integer", "null"] }
+        aangemaakt_op:  { type: string }
+        bijgewerkt_op:  { type: string }
+
+    OrgJaarverslagInput:
+      type: object
+      required: [boekjaar, type]
+      properties:
+        boekjaar:       { type: integer }
+        type:           { type: string }
+        omschrijving:   { type: string }
+        accountant:     { type: string }
+        definitief:     { type: boolean }
+        vastgesteld_op: { type: string }
+        document_id:    { type: integer }
+
+    OrgBedrijfsdocument:
+      type: object
+      required: [id, naam, categorie, status, aangemaakt_op, bijgewerkt_op]
+      properties:
+        id:            { type: integer }
+        naam:          { type: string }
+        categorie:     { type: string }
+        omschrijving:  { type: ["string", "null"] }
+        uitgever:      { type: ["string", "null"] }
+        referentie:    { type: ["string", "null"] }
+        ingangsdatum:  { type: ["string", "null"] }
+        vervaldatum:   { type: ["string", "null"] }
+        status:        { type: string }
+        document_id:   { type: ["integer", "null"] }
+        opmerkingen:   { type: ["string", "null"] }
+        aangemaakt_op: { type: string }
+        bijgewerkt_op: { type: string }
+
+    OrgBedrijfsdocumentInput:
+      type: object
+      required: [naam, categorie]
+      properties:
+        naam:         { type: string }
+        categorie:    { type: string }
+        omschrijving: { type: string }
+        uitgever:     { type: string }
+        referentie:   { type: string }
+        ingangsdatum: { type: string }
+        vervaldatum:  { type: string }
+        status:       { type: string }
+        document_id:  { type: integer }
+        opmerkingen:  { type: string }
+
+    OrgAiBedrijfsscanResultaat:
+      type: object
+      properties:
+        samenvatting:       { type: ["string", "null"] }
+        score:              { type: ["number", "null"] }
+        adviezen:
+          type: array
+          items:
+            type: object
+            required: [titel, beschrijving, prioriteit, type]
+            properties:
+              titel:       { type: string }
+              beschrijving: { type: string }
+              prioriteit:  { type: string }
+              type:        { type: string }
+        ontbrekend:
+          type: array
+          items:
+            type: string
+        besparing_indicatie: { type: ["string", "null"] }
 

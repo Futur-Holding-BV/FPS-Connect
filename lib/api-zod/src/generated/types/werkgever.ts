@@ -51,6 +51,14 @@ export interface Werkgever {
      */
   primaire_kleur?: string | null;
   actief: boolean;
+  /** @nullable */
+  boekhouder_naam?: string | null;
+  /** @nullable */
+  boekhouder_email?: string | null;
+  /** @nullable */
+  intern_contact_naam?: string | null;
+  /** @nullable */
+  intern_contact_email?: string | null;
   aangemaakt_op: string;
   bijgewerkt_op: string;
 }

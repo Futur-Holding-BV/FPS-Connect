@@ -2921,6 +2921,14 @@ export interface Werkgever {
      */
   primaire_kleur?: string | null;
   actief: boolean;
+  /** @nullable */
+  boekhouder_naam?: string | null;
+  /** @nullable */
+  boekhouder_email?: string | null;
+  /** @nullable */
+  intern_contact_naam?: string | null;
+  /** @nullable */
+  intern_contact_email?: string | null;
   aangemaakt_op: string;
   bijgewerkt_op: string;
 }
@@ -2965,6 +2973,10 @@ export interface WerkgeverInput {
      */
   primaire_kleur?: string | null;
   actief?: boolean;
+  boekhouder_naam?: string;
+  boekhouder_email?: string;
+  intern_contact_naam?: string;
+  intern_contact_email?: string;
 }
 
 export interface Functie {
@@ -7114,6 +7126,149 @@ export interface BrandstofRegelPatch {
   opmerkingen?: string | null;
 }
 
+export interface OrgAiInvullenInput {
+  bedrijfsnaam?: string;
+  sector?: string;
+}
+
+export interface OrgAiVerzekeringInput {
+  bedrijfsnaam?: string;
+  sector?: string;
+}
+
+export interface OrgVerzekering {
+  id: number;
+  type: string;
+  /** @nullable */
+  omschrijving?: string | null;
+  /** @nullable */
+  maatschappij?: string | null;
+  /** @nullable */
+  polisnummer?: string | null;
+  /** @nullable */
+  premie?: number | null;
+  /** @nullable */
+  premie_frequentie?: string | null;
+  /** @nullable */
+  ingangsdatum?: string | null;
+  /** @nullable */
+  vervaldatum?: string | null;
+  /** @nullable */
+  eigen_risico?: number | null;
+  status: string;
+  /** @nullable */
+  opmerkingen?: string | null;
+  aangemaakt_op: string;
+  bijgewerkt_op: string;
+}
+
+export interface OrgVerzekeringInput {
+  type: string;
+  omschrijving?: string;
+  maatschappij?: string;
+  polisnummer?: string;
+  premie?: number;
+  premie_frequentie?: string;
+  ingangsdatum?: string;
+  vervaldatum?: string;
+  eigen_risico?: number;
+  status?: string;
+  opmerkingen?: string;
+}
+
+export interface OrgVerzekeringAiSuggestie {
+  type: string;
+  omschrijving: string;
+  /** @nullable */
+  toelichting?: string | null;
+  /** @nullable */
+  typische_premie_min?: number | null;
+  /** @nullable */
+  typische_premie_max?: number | null;
+  prioriteit: string;
+}
+
+export interface OrgJaarverslag {
+  id: number;
+  boekjaar: number;
+  type: string;
+  /** @nullable */
+  omschrijving?: string | null;
+  /** @nullable */
+  accountant?: string | null;
+  definitief: boolean;
+  /** @nullable */
+  vastgesteld_op?: string | null;
+  /** @nullable */
+  document_id?: number | null;
+  aangemaakt_op: string;
+  bijgewerkt_op: string;
+}
+
+export interface OrgJaarverslagInput {
+  boekjaar: number;
+  type: string;
+  omschrijving?: string;
+  accountant?: string;
+  definitief?: boolean;
+  vastgesteld_op?: string;
+  document_id?: number;
+}
+
+export interface OrgBedrijfsdocument {
+  id: number;
+  naam: string;
+  categorie: string;
+  /** @nullable */
+  omschrijving?: string | null;
+  /** @nullable */
+  uitgever?: string | null;
+  /** @nullable */
+  referentie?: string | null;
+  /** @nullable */
+  ingangsdatum?: string | null;
+  /** @nullable */
+  vervaldatum?: string | null;
+  status: string;
+  /** @nullable */
+  document_id?: number | null;
+  /** @nullable */
+  opmerkingen?: string | null;
+  aangemaakt_op: string;
+  bijgewerkt_op: string;
+}
+
+export interface OrgBedrijfsdocumentInput {
+  naam: string;
+  categorie: string;
+  omschrijving?: string;
+  uitgever?: string;
+  referentie?: string;
+  ingangsdatum?: string;
+  vervaldatum?: string;
+  status?: string;
+  document_id?: number;
+  opmerkingen?: string;
+}
+
+export type OrgAiBedrijfsscanResultaatAdviezenItem = {
+  titel: string;
+  beschrijving: string;
+  prioriteit: string;
+  type: string;
+};
+
+export interface OrgAiBedrijfsscanResultaat {
+  /** @nullable */
+  samenvatting?: string | null;
+  /** @nullable */
+  score?: number | null;
+  adviezen?: OrgAiBedrijfsscanResultaatAdviezenItem[];
+  ontbrekend?: string[];
+  /** @nullable */
+  besparing_indicatie?: string | null;
+}
+
 export type GetRecenteActiviteitParams = {
 limit?: number;
 };
@@ -7585,5 +7740,15 @@ status?: string;
 export type LaadBrandstofImport200 = {
   aantalGeladen: number;
   aantalOvergeslagen: number;
+};
+
+export type AiSuggestiesOrgVerzekeringen200 = {
+  suggesties: OrgVerzekeringAiSuggestie[];
+};
+
+export type AiInvullenOrganisatie200Velden = {[key: string]: string | null};
+
+export type AiInvullenOrganisatie200 = {
+  velden: AiInvullenOrganisatie200Velden;
 };
 

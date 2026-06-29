@@ -110,6 +110,10 @@ const mapWerkgever = (w: typeof werkgeversTable.$inferSelect) => ({
   logo_url: w.logoUrl,
   primaire_kleur: w.primaireKleur ?? "#F23B0D",
   actief: w.actief,
+  boekhouder_naam: w.boekhouderNaam ?? null,
+  boekhouder_email: w.boekhouderEmail ?? null,
+  intern_contact_naam: w.internContactNaam ?? null,
+  intern_contact_email: w.internContactEmail ?? null,
   aangemaakt_op: iso(w.aangemaaktOp),
   bijgewerkt_op: iso(w.bijgewerktOp),
 });

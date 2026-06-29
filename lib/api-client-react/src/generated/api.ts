@@ -35,7 +35,9 @@ import type {
   Activiteit,
   AiAnalyseToolboxBerichten200,
   AiCalculatieRegels200,
+  AiInvullenOrganisatie200,
   AiModCalcRegels200,
+  AiSuggestiesOrgVerzekeringen200,
   AppInstellingen,
   AppInstellingenInput,
   ApplicatieLabelsInput,
@@ -371,6 +373,15 @@ import type {
   OpnamePatchInput,
   OpnameSamenvatting,
   OpnameSpotsAanmakenResultaat,
+  OrgAiBedrijfsscanResultaat,
+  OrgAiInvullenInput,
+  OrgAiVerzekeringInput,
+  OrgBedrijfsdocument,
+  OrgBedrijfsdocumentInput,
+  OrgJaarverslag,
+  OrgJaarverslagInput,
+  OrgVerzekering,
+  OrgVerzekeringInput,
   OvernemenSnagstreamSnag201,
   PlanningAfwezigheid,
   PlanningAfwezigheidInput,
@@ -50023,4 +50034,1078 @@ export function useListNieuws<TData = Awaited<ReturnType<typeof listNieuws>>, TE
 
 
 
+
+export const getListOrgVerzekeringenUrl = () => {
+
+
+
+
+  return `/api/organisatie/verzekeringen`
+}
+
+/**
+ * @summary Bedrijfsverzekeringen ophalen
+ */
+export const listOrgVerzekeringen = async ( options?: RequestInit): Promise<OrgVerzekering[]> => {
+
+  return customFetch<OrgVerzekering[]>(getListOrgVerzekeringenUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListOrgVerzekeringenQueryKey = () => {
+    return [
+    `/api/organisatie/verzekeringen`
+    ] as const;
+    }
+
+
+export const getListOrgVerzekeringenQueryOptions = <TData = Awaited<ReturnType<typeof listOrgVerzekeringen>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listOrgVerzekeringen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListOrgVerzekeringenQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listOrgVerzekeringen>>> = ({ signal }) => listOrgVerzekeringen({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listOrgVerzekeringen>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListOrgVerzekeringenQueryResult = NonNullable<Awaited<ReturnType<typeof listOrgVerzekeringen>>>
+export type ListOrgVerzekeringenQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Bedrijfsverzekeringen ophalen
+ */
+
+export function useListOrgVerzekeringen<TData = Awaited<ReturnType<typeof listOrgVerzekeringen>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listOrgVerzekeringen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListOrgVerzekeringenQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateOrgVerzekeringUrl = () => {
+
+
+
+
+  return `/api/organisatie/verzekeringen`
+}
+
+/**
+ * @summary Polis toevoegen
+ */
+export const createOrgVerzekering = async (orgVerzekeringInput: OrgVerzekeringInput, options?: RequestInit): Promise<OrgVerzekering> => {
+
+  return customFetch<OrgVerzekering>(getCreateOrgVerzekeringUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(orgVerzekeringInput)
+  }
+);}
+
+
+
+
+export const getCreateOrgVerzekeringMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createOrgVerzekering>>, TError,{data: BodyType<OrgVerzekeringInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createOrgVerzekering>>, TError,{data: BodyType<OrgVerzekeringInput>}, TContext> => {
+
+const mutationKey = ['createOrgVerzekering'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createOrgVerzekering>>, {data: BodyType<OrgVerzekeringInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createOrgVerzekering(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateOrgVerzekeringMutationResult = NonNullable<Awaited<ReturnType<typeof createOrgVerzekering>>>
+    export type CreateOrgVerzekeringMutationBody = BodyType<OrgVerzekeringInput>
+    export type CreateOrgVerzekeringMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Polis toevoegen
+ */
+export const useCreateOrgVerzekering = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createOrgVerzekering>>, TError,{data: BodyType<OrgVerzekeringInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createOrgVerzekering>>,
+        TError,
+        {data: BodyType<OrgVerzekeringInput>},
+        TContext
+      > => {
+      return useMutation(getCreateOrgVerzekeringMutationOptions(options));
+    }
+
+export const getAiSuggestiesOrgVerzekeringenUrl = () => {
+
+
+
+
+  return `/api/organisatie/verzekeringen/ai-suggesties`
+}
+
+/**
+ * @summary AI-suggesties voor standaard bedrijfsverzekeringen
+ */
+export const aiSuggestiesOrgVerzekeringen = async (orgAiVerzekeringInput?: OrgAiVerzekeringInput, options?: RequestInit): Promise<AiSuggestiesOrgVerzekeringen200> => {
+
+  return customFetch<AiSuggestiesOrgVerzekeringen200>(getAiSuggestiesOrgVerzekeringenUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(orgAiVerzekeringInput)
+  }
+);}
+
+
+
+
+export const getAiSuggestiesOrgVerzekeringenMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof aiSuggestiesOrgVerzekeringen>>, TError,{data?: BodyType<OrgAiVerzekeringInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof aiSuggestiesOrgVerzekeringen>>, TError,{data?: BodyType<OrgAiVerzekeringInput>}, TContext> => {
+
+const mutationKey = ['aiSuggestiesOrgVerzekeringen'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof aiSuggestiesOrgVerzekeringen>>, {data?: BodyType<OrgAiVerzekeringInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  aiSuggestiesOrgVerzekeringen(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AiSuggestiesOrgVerzekeringenMutationResult = NonNullable<Awaited<ReturnType<typeof aiSuggestiesOrgVerzekeringen>>>
+    export type AiSuggestiesOrgVerzekeringenMutationBody = BodyType<OrgAiVerzekeringInput> | undefined
+    export type AiSuggestiesOrgVerzekeringenMutationError = ErrorType<unknown>
+
+    /**
+ * @summary AI-suggesties voor standaard bedrijfsverzekeringen
+ */
+export const useAiSuggestiesOrgVerzekeringen = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof aiSuggestiesOrgVerzekeringen>>, TError,{data?: BodyType<OrgAiVerzekeringInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof aiSuggestiesOrgVerzekeringen>>,
+        TError,
+        {data?: BodyType<OrgAiVerzekeringInput>},
+        TContext
+      > => {
+      return useMutation(getAiSuggestiesOrgVerzekeringenMutationOptions(options));
+    }
+
+export const getUpdateOrgVerzekeringUrl = (id: number,) => {
+
+
+
+
+  return `/api/organisatie/verzekeringen/${id}`
+}
+
+/**
+ * @summary Polis bijwerken
+ */
+export const updateOrgVerzekering = async (id: number,
+    orgVerzekeringInput: OrgVerzekeringInput, options?: RequestInit): Promise<OrgVerzekering> => {
+
+  return customFetch<OrgVerzekering>(getUpdateOrgVerzekeringUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(orgVerzekeringInput)
+  }
+);}
+
+
+
+
+export const getUpdateOrgVerzekeringMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateOrgVerzekering>>, TError,{id: number;data: BodyType<OrgVerzekeringInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateOrgVerzekering>>, TError,{id: number;data: BodyType<OrgVerzekeringInput>}, TContext> => {
+
+const mutationKey = ['updateOrgVerzekering'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateOrgVerzekering>>, {id: number;data: BodyType<OrgVerzekeringInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateOrgVerzekering(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateOrgVerzekeringMutationResult = NonNullable<Awaited<ReturnType<typeof updateOrgVerzekering>>>
+    export type UpdateOrgVerzekeringMutationBody = BodyType<OrgVerzekeringInput>
+    export type UpdateOrgVerzekeringMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Polis bijwerken
+ */
+export const useUpdateOrgVerzekering = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateOrgVerzekering>>, TError,{id: number;data: BodyType<OrgVerzekeringInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateOrgVerzekering>>,
+        TError,
+        {id: number;data: BodyType<OrgVerzekeringInput>},
+        TContext
+      > => {
+      return useMutation(getUpdateOrgVerzekeringMutationOptions(options));
+    }
+
+export const getDeleteOrgVerzekeringUrl = (id: number,) => {
+
+
+
+
+  return `/api/organisatie/verzekeringen/${id}`
+}
+
+/**
+ * @summary Polis verwijderen
+ */
+export const deleteOrgVerzekering = async (id: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteOrgVerzekeringUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteOrgVerzekeringMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteOrgVerzekering>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteOrgVerzekering>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deleteOrgVerzekering'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteOrgVerzekering>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteOrgVerzekering(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteOrgVerzekeringMutationResult = NonNullable<Awaited<ReturnType<typeof deleteOrgVerzekering>>>
+
+    export type DeleteOrgVerzekeringMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Polis verwijderen
+ */
+export const useDeleteOrgVerzekering = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteOrgVerzekering>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteOrgVerzekering>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeleteOrgVerzekeringMutationOptions(options));
+    }
+
+export const getListOrgJaarverslagenUrl = () => {
+
+
+
+
+  return `/api/organisatie/jaarverslagen`
+}
+
+/**
+ * @summary Jaarverslagen & jaarrekeningen ophalen
+ */
+export const listOrgJaarverslagen = async ( options?: RequestInit): Promise<OrgJaarverslag[]> => {
+
+  return customFetch<OrgJaarverslag[]>(getListOrgJaarverslagenUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListOrgJaarverslagenQueryKey = () => {
+    return [
+    `/api/organisatie/jaarverslagen`
+    ] as const;
+    }
+
+
+export const getListOrgJaarverslagenQueryOptions = <TData = Awaited<ReturnType<typeof listOrgJaarverslagen>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listOrgJaarverslagen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListOrgJaarverslagenQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listOrgJaarverslagen>>> = ({ signal }) => listOrgJaarverslagen({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listOrgJaarverslagen>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListOrgJaarverslagenQueryResult = NonNullable<Awaited<ReturnType<typeof listOrgJaarverslagen>>>
+export type ListOrgJaarverslagenQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Jaarverslagen & jaarrekeningen ophalen
+ */
+
+export function useListOrgJaarverslagen<TData = Awaited<ReturnType<typeof listOrgJaarverslagen>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listOrgJaarverslagen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListOrgJaarverslagenQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateOrgJaarverslagUrl = () => {
+
+
+
+
+  return `/api/organisatie/jaarverslagen`
+}
+
+/**
+ * @summary Jaarverslag registreren
+ */
+export const createOrgJaarverslag = async (orgJaarverslagInput: OrgJaarverslagInput, options?: RequestInit): Promise<OrgJaarverslag> => {
+
+  return customFetch<OrgJaarverslag>(getCreateOrgJaarverslagUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(orgJaarverslagInput)
+  }
+);}
+
+
+
+
+export const getCreateOrgJaarverslagMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createOrgJaarverslag>>, TError,{data: BodyType<OrgJaarverslagInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createOrgJaarverslag>>, TError,{data: BodyType<OrgJaarverslagInput>}, TContext> => {
+
+const mutationKey = ['createOrgJaarverslag'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createOrgJaarverslag>>, {data: BodyType<OrgJaarverslagInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createOrgJaarverslag(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateOrgJaarverslagMutationResult = NonNullable<Awaited<ReturnType<typeof createOrgJaarverslag>>>
+    export type CreateOrgJaarverslagMutationBody = BodyType<OrgJaarverslagInput>
+    export type CreateOrgJaarverslagMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Jaarverslag registreren
+ */
+export const useCreateOrgJaarverslag = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createOrgJaarverslag>>, TError,{data: BodyType<OrgJaarverslagInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createOrgJaarverslag>>,
+        TError,
+        {data: BodyType<OrgJaarverslagInput>},
+        TContext
+      > => {
+      return useMutation(getCreateOrgJaarverslagMutationOptions(options));
+    }
+
+export const getUpdateOrgJaarverslagUrl = (id: number,) => {
+
+
+
+
+  return `/api/organisatie/jaarverslagen/${id}`
+}
+
+/**
+ * @summary Jaarverslag bijwerken
+ */
+export const updateOrgJaarverslag = async (id: number,
+    orgJaarverslagInput: OrgJaarverslagInput, options?: RequestInit): Promise<OrgJaarverslag> => {
+
+  return customFetch<OrgJaarverslag>(getUpdateOrgJaarverslagUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(orgJaarverslagInput)
+  }
+);}
+
+
+
+
+export const getUpdateOrgJaarverslagMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateOrgJaarverslag>>, TError,{id: number;data: BodyType<OrgJaarverslagInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateOrgJaarverslag>>, TError,{id: number;data: BodyType<OrgJaarverslagInput>}, TContext> => {
+
+const mutationKey = ['updateOrgJaarverslag'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateOrgJaarverslag>>, {id: number;data: BodyType<OrgJaarverslagInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateOrgJaarverslag(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateOrgJaarverslagMutationResult = NonNullable<Awaited<ReturnType<typeof updateOrgJaarverslag>>>
+    export type UpdateOrgJaarverslagMutationBody = BodyType<OrgJaarverslagInput>
+    export type UpdateOrgJaarverslagMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Jaarverslag bijwerken
+ */
+export const useUpdateOrgJaarverslag = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateOrgJaarverslag>>, TError,{id: number;data: BodyType<OrgJaarverslagInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateOrgJaarverslag>>,
+        TError,
+        {id: number;data: BodyType<OrgJaarverslagInput>},
+        TContext
+      > => {
+      return useMutation(getUpdateOrgJaarverslagMutationOptions(options));
+    }
+
+export const getDeleteOrgJaarverslagUrl = (id: number,) => {
+
+
+
+
+  return `/api/organisatie/jaarverslagen/${id}`
+}
+
+/**
+ * @summary Jaarverslag verwijderen
+ */
+export const deleteOrgJaarverslag = async (id: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteOrgJaarverslagUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteOrgJaarverslagMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteOrgJaarverslag>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteOrgJaarverslag>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deleteOrgJaarverslag'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteOrgJaarverslag>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteOrgJaarverslag(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteOrgJaarverslagMutationResult = NonNullable<Awaited<ReturnType<typeof deleteOrgJaarverslag>>>
+
+    export type DeleteOrgJaarverslagMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Jaarverslag verwijderen
+ */
+export const useDeleteOrgJaarverslag = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteOrgJaarverslag>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteOrgJaarverslag>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeleteOrgJaarverslagMutationOptions(options));
+    }
+
+export const getListOrgBedrijfsdocumentenUrl = () => {
+
+
+
+
+  return `/api/organisatie/bedrijfsdocumenten`
+}
+
+/**
+ * @summary Bedrijfsdocumenten ophalen
+ */
+export const listOrgBedrijfsdocumenten = async ( options?: RequestInit): Promise<OrgBedrijfsdocument[]> => {
+
+  return customFetch<OrgBedrijfsdocument[]>(getListOrgBedrijfsdocumentenUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListOrgBedrijfsdocumentenQueryKey = () => {
+    return [
+    `/api/organisatie/bedrijfsdocumenten`
+    ] as const;
+    }
+
+
+export const getListOrgBedrijfsdocumentenQueryOptions = <TData = Awaited<ReturnType<typeof listOrgBedrijfsdocumenten>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listOrgBedrijfsdocumenten>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListOrgBedrijfsdocumentenQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listOrgBedrijfsdocumenten>>> = ({ signal }) => listOrgBedrijfsdocumenten({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listOrgBedrijfsdocumenten>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListOrgBedrijfsdocumentenQueryResult = NonNullable<Awaited<ReturnType<typeof listOrgBedrijfsdocumenten>>>
+export type ListOrgBedrijfsdocumentenQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Bedrijfsdocumenten ophalen
+ */
+
+export function useListOrgBedrijfsdocumenten<TData = Awaited<ReturnType<typeof listOrgBedrijfsdocumenten>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listOrgBedrijfsdocumenten>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListOrgBedrijfsdocumentenQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateOrgBedrijfsdocumentUrl = () => {
+
+
+
+
+  return `/api/organisatie/bedrijfsdocumenten`
+}
+
+/**
+ * @summary Bedrijfsdocument registreren
+ */
+export const createOrgBedrijfsdocument = async (orgBedrijfsdocumentInput: OrgBedrijfsdocumentInput, options?: RequestInit): Promise<OrgBedrijfsdocument> => {
+
+  return customFetch<OrgBedrijfsdocument>(getCreateOrgBedrijfsdocumentUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(orgBedrijfsdocumentInput)
+  }
+);}
+
+
+
+
+export const getCreateOrgBedrijfsdocumentMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createOrgBedrijfsdocument>>, TError,{data: BodyType<OrgBedrijfsdocumentInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createOrgBedrijfsdocument>>, TError,{data: BodyType<OrgBedrijfsdocumentInput>}, TContext> => {
+
+const mutationKey = ['createOrgBedrijfsdocument'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createOrgBedrijfsdocument>>, {data: BodyType<OrgBedrijfsdocumentInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createOrgBedrijfsdocument(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateOrgBedrijfsdocumentMutationResult = NonNullable<Awaited<ReturnType<typeof createOrgBedrijfsdocument>>>
+    export type CreateOrgBedrijfsdocumentMutationBody = BodyType<OrgBedrijfsdocumentInput>
+    export type CreateOrgBedrijfsdocumentMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Bedrijfsdocument registreren
+ */
+export const useCreateOrgBedrijfsdocument = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createOrgBedrijfsdocument>>, TError,{data: BodyType<OrgBedrijfsdocumentInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createOrgBedrijfsdocument>>,
+        TError,
+        {data: BodyType<OrgBedrijfsdocumentInput>},
+        TContext
+      > => {
+      return useMutation(getCreateOrgBedrijfsdocumentMutationOptions(options));
+    }
+
+export const getUpdateOrgBedrijfsdocumentUrl = (id: number,) => {
+
+
+
+
+  return `/api/organisatie/bedrijfsdocumenten/${id}`
+}
+
+/**
+ * @summary Bedrijfsdocument bijwerken
+ */
+export const updateOrgBedrijfsdocument = async (id: number,
+    orgBedrijfsdocumentInput: OrgBedrijfsdocumentInput, options?: RequestInit): Promise<OrgBedrijfsdocument> => {
+
+  return customFetch<OrgBedrijfsdocument>(getUpdateOrgBedrijfsdocumentUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(orgBedrijfsdocumentInput)
+  }
+);}
+
+
+
+
+export const getUpdateOrgBedrijfsdocumentMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateOrgBedrijfsdocument>>, TError,{id: number;data: BodyType<OrgBedrijfsdocumentInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateOrgBedrijfsdocument>>, TError,{id: number;data: BodyType<OrgBedrijfsdocumentInput>}, TContext> => {
+
+const mutationKey = ['updateOrgBedrijfsdocument'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateOrgBedrijfsdocument>>, {id: number;data: BodyType<OrgBedrijfsdocumentInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateOrgBedrijfsdocument(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateOrgBedrijfsdocumentMutationResult = NonNullable<Awaited<ReturnType<typeof updateOrgBedrijfsdocument>>>
+    export type UpdateOrgBedrijfsdocumentMutationBody = BodyType<OrgBedrijfsdocumentInput>
+    export type UpdateOrgBedrijfsdocumentMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Bedrijfsdocument bijwerken
+ */
+export const useUpdateOrgBedrijfsdocument = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateOrgBedrijfsdocument>>, TError,{id: number;data: BodyType<OrgBedrijfsdocumentInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateOrgBedrijfsdocument>>,
+        TError,
+        {id: number;data: BodyType<OrgBedrijfsdocumentInput>},
+        TContext
+      > => {
+      return useMutation(getUpdateOrgBedrijfsdocumentMutationOptions(options));
+    }
+
+export const getDeleteOrgBedrijfsdocumentUrl = (id: number,) => {
+
+
+
+
+  return `/api/organisatie/bedrijfsdocumenten/${id}`
+}
+
+/**
+ * @summary Bedrijfsdocument verwijderen
+ */
+export const deleteOrgBedrijfsdocument = async (id: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteOrgBedrijfsdocumentUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteOrgBedrijfsdocumentMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteOrgBedrijfsdocument>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteOrgBedrijfsdocument>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deleteOrgBedrijfsdocument'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteOrgBedrijfsdocument>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteOrgBedrijfsdocument(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteOrgBedrijfsdocumentMutationResult = NonNullable<Awaited<ReturnType<typeof deleteOrgBedrijfsdocument>>>
+
+    export type DeleteOrgBedrijfsdocumentMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Bedrijfsdocument verwijderen
+ */
+export const useDeleteOrgBedrijfsdocument = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteOrgBedrijfsdocument>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteOrgBedrijfsdocument>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeleteOrgBedrijfsdocumentMutationOptions(options));
+    }
+
+export const getAiInvullenOrganisatieUrl = () => {
+
+
+
+
+  return `/api/organisatie/ai-invullen`
+}
+
+/**
+ * @summary AI prefill bedrijfsgegevens op basis van bedrijfsnaam
+ */
+export const aiInvullenOrganisatie = async (orgAiInvullenInput?: OrgAiInvullenInput, options?: RequestInit): Promise<AiInvullenOrganisatie200> => {
+
+  return customFetch<AiInvullenOrganisatie200>(getAiInvullenOrganisatieUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(orgAiInvullenInput)
+  }
+);}
+
+
+
+
+export const getAiInvullenOrganisatieMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof aiInvullenOrganisatie>>, TError,{data?: BodyType<OrgAiInvullenInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof aiInvullenOrganisatie>>, TError,{data?: BodyType<OrgAiInvullenInput>}, TContext> => {
+
+const mutationKey = ['aiInvullenOrganisatie'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof aiInvullenOrganisatie>>, {data?: BodyType<OrgAiInvullenInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  aiInvullenOrganisatie(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AiInvullenOrganisatieMutationResult = NonNullable<Awaited<ReturnType<typeof aiInvullenOrganisatie>>>
+    export type AiInvullenOrganisatieMutationBody = BodyType<OrgAiInvullenInput> | undefined
+    export type AiInvullenOrganisatieMutationError = ErrorType<unknown>
+
+    /**
+ * @summary AI prefill bedrijfsgegevens op basis van bedrijfsnaam
+ */
+export const useAiInvullenOrganisatie = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof aiInvullenOrganisatie>>, TError,{data?: BodyType<OrgAiInvullenInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof aiInvullenOrganisatie>>,
+        TError,
+        {data?: BodyType<OrgAiInvullenInput>},
+        TContext
+      > => {
+      return useMutation(getAiInvullenOrganisatieMutationOptions(options));
+    }
+
+export const getAiBedrijfsscanOrganisatieUrl = () => {
+
+
+
+
+  return `/api/organisatie/ai-bedrijfsscan`
+}
+
+/**
+ * @summary AI-analyse van het verzekeringspakket en bedrijfsrisicos
+ */
+export const aiBedrijfsscanOrganisatie = async ( options?: RequestInit): Promise<OrgAiBedrijfsscanResultaat> => {
+
+  return customFetch<OrgAiBedrijfsscanResultaat>(getAiBedrijfsscanOrganisatieUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getAiBedrijfsscanOrganisatieMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof aiBedrijfsscanOrganisatie>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof aiBedrijfsscanOrganisatie>>, TError,void, TContext> => {
+
+const mutationKey = ['aiBedrijfsscanOrganisatie'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof aiBedrijfsscanOrganisatie>>, void> = () => {
+
+
+          return  aiBedrijfsscanOrganisatie(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AiBedrijfsscanOrganisatieMutationResult = NonNullable<Awaited<ReturnType<typeof aiBedrijfsscanOrganisatie>>>
+
+    export type AiBedrijfsscanOrganisatieMutationError = ErrorType<unknown>
+
+    /**
+ * @summary AI-analyse van het verzekeringspakket en bedrijfsrisicos
+ */
+export const useAiBedrijfsscanOrganisatie = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof aiBedrijfsscanOrganisatie>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof aiBedrijfsscanOrganisatie>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getAiBedrijfsscanOrganisatieMutationOptions(options));
+    }
 
