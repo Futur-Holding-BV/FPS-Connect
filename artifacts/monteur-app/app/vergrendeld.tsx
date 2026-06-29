@@ -1,3 +1,4 @@
+import { Ionicons } from "@expo/vector-icons";
 import { Redirect, useRouter } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
 import { Image, Pressable, Text, View } from "react-native";
@@ -57,6 +58,11 @@ export default function Vergrendeld() {
   // in _layout.tsx de juiste route bepalen.
   if (!bezigLaden && !vergrendeld) return <Redirect href="/menu" />;
 
+  const biometrieIconNaam =
+    biometrieType === "Face ID" || biometrieType === "gezichtsherkenning"
+      ? "scan-outline"
+      : "finger-print-outline";
+
   return (
     <View
       style={{
@@ -84,6 +90,19 @@ export default function Vergrendeld() {
             style={{ width: 160, height: 62, resizeMode: "contain" }}
             accessibilityLabel="FPS Brandpreventie"
           />
+        </View>
+        <View
+          style={{
+            backgroundColor: c.primary,
+            borderRadius: 22,
+            width: 72,
+            height: 72,
+            alignItems: "center",
+            justifyContent: "center",
+            marginBottom: 16,
+          }}
+        >
+          <Ionicons name={biometrieIconNaam} size={34} color="#fff" />
         </View>
         <Text style={{ color: c.darkForeground, fontSize: 22, fontFamily: "Inter_700Bold" }}>
           App vergrendeld

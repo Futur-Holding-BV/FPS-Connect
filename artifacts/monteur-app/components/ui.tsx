@@ -1,4 +1,5 @@
-import React from "react";
+import { Ionicons } from "@expo/vector-icons";
+import React, { useState } from "react";
 import {
   ActivityIndicator,
   Platform,
@@ -144,27 +145,53 @@ type TekstVeldProps = TextInputProps & {
 
 export function TekstVeld({ label, style, ...rest }: TekstVeldProps) {
   const c = useColors();
+  const heeftToggle = !!rest.secureTextEntry;
+  const [toonTekst, setToonTekst] = useState(false);
+
+  const inputStijl = {
+    backgroundColor: c.card,
+    borderColor: c.input,
+    borderWidth: 1.5,
+    borderRadius: c.radius,
+    paddingHorizontal: 16,
+    paddingRight: heeftToggle ? 50 : 16,
+    paddingVertical: 14,
+    fontSize: 17,
+    color: c.foreground,
+    fontFamily: "Inter_400Regular",
+  };
+
   return (
     <View style={{ gap: 6 }}>
       <Text style={[styles.label, { color: c.mutedForeground }]}>{label}</Text>
-      <TextInput
-        placeholderTextColor={c.mutedForeground}
-        style={[
-          {
-            backgroundColor: c.card,
-            borderColor: c.input,
-            borderWidth: 1.5,
-            borderRadius: c.radius,
-            paddingHorizontal: 16,
-            paddingVertical: 14,
-            fontSize: 17,
-            color: c.foreground,
-            fontFamily: "Inter_400Regular",
-          },
-          style,
-        ]}
-        {...rest}
-      />
+      <View>
+        <TextInput
+          placeholderTextColor={c.mutedForeground}
+          style={[inputStijl, style]}
+          {...rest}
+          secureTextEntry={heeftToggle ? !toonTekst : undefined}
+        />
+        {heeftToggle && (
+          <Pressable
+            onPress={() => setToonTekst((v) => !v)}
+            hitSlop={8}
+            style={{
+              position: "absolute",
+              right: 12,
+              top: 0,
+              bottom: 0,
+              justifyContent: "center",
+              paddingHorizontal: 4,
+            }}
+          >
+            <Ionicons
+              name={toonTekst ? "eye-off-outline" : "eye-outline"}
+              size={22}
+              color={c.mutedForeground}
+            />
+          </Pressable>
+        )}
+      </View>
     </View>
   );
 }

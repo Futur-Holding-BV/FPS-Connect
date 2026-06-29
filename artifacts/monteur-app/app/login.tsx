@@ -1,3 +1,4 @@
+import { Ionicons } from "@expo/vector-icons";
 import { Redirect, useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
@@ -71,6 +72,11 @@ export default function Login() {
 
   const maxBreedte = isTablet ? 460 : undefined;
 
+  const biometrieIconNaam =
+    biometrieType === "Face ID" || biometrieType === "gezichtsherkenning"
+      ? "scan-outline"
+      : "finger-print-outline";
+
   if (biedBiometriAan) {
     return (
       <View
@@ -89,16 +95,14 @@ export default function Login() {
             <View
               style={{
                 backgroundColor: c.primary,
-                borderRadius: 20,
-                width: 72,
-                height: 72,
+                borderRadius: 22,
+                width: 80,
+                height: 80,
                 alignItems: "center",
                 justifyContent: "center",
               }}
             >
-              <Text style={{ fontSize: 28, color: "#fff", fontFamily: "Inter_700Bold" }}>
-                {biometrieType.charAt(0).toUpperCase()}
-              </Text>
+              <Ionicons name={biometrieIconNaam} size={40} color="#fff" />
             </View>
             <Text
               style={{
