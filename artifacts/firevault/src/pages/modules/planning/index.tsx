@@ -217,45 +217,81 @@ type DialooglItem = {
 
 // ── Lege staat ──────────────────────────────────────────────────────────────
 
-function PlanningLegeStaat({ onVernieuwen }: { onVernieuwen: () => void }) {
+function PlanningLegeStaat({
+  onVernieuwen,
+  filterActief,
+  onWisFilter,
+}: {
+  onVernieuwen: () => void;
+  filterActief?: boolean;
+  onWisFilter?: () => void;
+}) {
   const { data: diagnose, isLoading } = useGetPlanningDiagnose({
     query: { queryKey: ["planning-diagnose"] },
   });
+
+  const heeftMedewerkersInHrm = diagnose && diagnose.totaal_in_hrm > 0;
+
   return (
     <CardContent className="py-14 text-center text-muted-foreground">
       <Users className="h-10 w-10 mx-auto mb-3 opacity-20" />
       <p className="text-sm font-medium text-slate-700">Geen medewerkers zichtbaar</p>
-      <p className="text-xs mt-1 text-muted-foreground">
-        Controleer of medewerkers actief zijn in HRM / Personeel.
-      </p>
-      {isLoading ? (
-        <div className="mt-5 space-y-2 max-w-xs mx-auto">
-          <Skeleton className="h-7 w-full" />
-          <Skeleton className="h-7 w-4/5 mx-auto" />
+
+      {/* Filter verbergt medewerkers */}
+      {filterActief && heeftMedewerkersInHrm ? (
+        <div className="mt-4 max-w-xs mx-auto">
+          <div className="flex items-start gap-2 text-xs bg-amber-50 border border-amber-200 rounded-md px-3 py-2 text-left">
+            <AlertTriangle className="h-3.5 w-3.5 text-amber-500 mt-0.5 shrink-0" />
+            <span className="text-amber-800">
+              Het filter <span className="font-semibold">Alleen uitvoerend</span> is actief.
+              Er {diagnose.totaal_in_hrm === 1 ? "staat" : "staan"}{" "}
+              <span className="font-semibold">{diagnose.totaal_in_hrm}</span>{" "}
+              medewerker{diagnose.totaal_in_hrm !== 1 ? "s" : ""} in HRM, maar geen enkele heeft een uitvoerende functie.
+              Zet in het functiehuis (Personeel) de functie op <span className="font-semibold">Uitvoerend</span>, of wis het filter.
+            </span>
+          </div>
         </div>
-      ) : diagnose && diagnose.totaal_in_hrm === 0 ? (
-        <p className="mt-4 text-xs text-muted-foreground">
-          Er zijn nog geen medewerkers aangemaakt in HRM / Personeel.
-        </p>
-      ) : diagnose && (diagnose.oorzaken ?? []).length > 0 ? (
-        <div className="mt-5 space-y-2 max-w-xs mx-auto text-left">
-          {(diagnose.oorzaken ?? []).map((o) => (
-            <div key={o.reden} className="flex items-start gap-2 text-xs bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
-              <AlertTriangle className="h-3.5 w-3.5 text-amber-500 mt-0.5 shrink-0" />
-              <span className="text-amber-800">
-                <span className="font-semibold">{o.aantal}</span>{" "}
-                {o.omschrijving.charAt(0).toLowerCase() + o.omschrijving.slice(1)}
-              </span>
+      ) : (
+        <>
+          <p className="text-xs mt-1 text-muted-foreground">
+            Controleer of medewerkers actief zijn in HRM / Personeel.
+          </p>
+          {isLoading ? (
+            <div className="mt-5 space-y-2 max-w-xs mx-auto">
+              <Skeleton className="h-7 w-full" />
+              <Skeleton className="h-7 w-4/5 mx-auto" />
             </div>
-          ))}
-        </div>
-      ) : null}
+          ) : diagnose && diagnose.totaal_in_hrm === 0 ? (
+            <p className="mt-4 text-xs text-muted-foreground">
+              Er zijn nog geen medewerkers aangemaakt in HRM / Personeel.
+            </p>
+          ) : diagnose && (diagnose.oorzaken ?? []).length > 0 ? (
+            <div className="mt-5 space-y-2 max-w-xs mx-auto text-left">
+              {(diagnose.oorzaken ?? []).map((o) => (
+                <div key={o.reden} className="flex items-start gap-2 text-xs bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
+                  <AlertTriangle className="h-3.5 w-3.5 text-amber-500 mt-0.5 shrink-0" />
+                  <span className="text-amber-800">
+                    <span className="font-semibold">{o.aantal}</span>{" "}
+                    {o.omschrijving.charAt(0).toLowerCase() + o.omschrijving.slice(1)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          ) : null}
+        </>
+      )}
+
       <div className="mt-6 flex flex-wrap justify-center gap-3">
+        {filterActief && heeftMedewerkersInHrm && onWisFilter && (
+          <Button size="sm" onClick={onWisFilter}>
+            Wis filter — toon alle medewerkers
+          </Button>
+        )}
         <Button variant="outline" size="sm" onClick={onVernieuwen}>
           <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
           Vernieuwen
         </Button>
-        <Button size="sm" asChild>
+        <Button variant={filterActief && heeftMedewerkersInHrm ? "outline" : "default"} size="sm" asChild>
           <Link href="/personeel">
             <Users className="h-3.5 w-3.5 mr-1.5" />
             Medewerker toevoegen in HRM
@@ -962,7 +998,11 @@ export default function ModulesPlanning() {
                   {[1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-20 w-full" />)}
                 </div>
               ) : (medewerkers as Medewerker[]).length === 0 ? (
-                <PlanningLegeStaat onVernieuwen={() => { void refetchMedewerkers(); }} />
+                <PlanningLegeStaat
+                  onVernieuwen={() => { void refetchMedewerkers(); }}
+                  filterActief={filterAlleenUitvoerend}
+                  onWisFilter={() => { setFilterAlleenUitvoerend(false); setFilterWerkmaatschappij("alle"); }}
+                />
               ) : (
                 <div className="overflow-x-auto">
                   <table
