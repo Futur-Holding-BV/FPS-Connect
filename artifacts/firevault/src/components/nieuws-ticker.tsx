@@ -37,22 +37,22 @@ export function NieuwsTicker() {
         }
       `}</style>
 
-      <div className="fixed bottom-0 left-0 z-40 h-8 flex items-stretch bg-[#1a1f2b] border-t border-white/10 text-white select-none max-w-[calc(40ch+220px)]">
+      <div className="fixed bottom-0 left-0 z-40 h-[10cm] flex items-stretch bg-[#1a1f2b] border-t border-white/10 text-white select-none w-full">
 
         {/* Nieuws-sectie — alleen wanneer niet verborgen */}
         {!nieuwsVerborgen ? (
           <>
             {/* Label */}
-            <div className="flex-shrink-0 flex items-center gap-1.5 px-3 border-r border-white/10 bg-[hsl(12,90%,50%)]/10">
-              <Newspaper className="w-3 h-3 text-[hsl(12,90%,50%)]" />
-              <span className="text-[10px] font-semibold uppercase tracking-wider text-[hsl(12,90%,50%)]">
+            <div className="flex-shrink-0 flex items-center gap-2.5 px-6 border-r border-white/10 bg-[hsl(12,90%,50%)]/10">
+              <Newspaper className="w-5 h-5 text-[hsl(12,90%,50%)]" />
+              <span className="text-sm font-semibold uppercase tracking-wider text-[hsl(12,90%,50%)]">
                 Nieuws
               </span>
             </div>
 
             {/* Scrollende items of laadindicator */}
             <div
-              className="w-[40ch] min-w-0 overflow-hidden relative"
+              className="flex-1 min-w-0 overflow-hidden relative"
               onMouseEnter={() => setGepauzeerd(true)}
               onMouseLeave={() => setGepauzeerd(false)}
             >
@@ -60,7 +60,7 @@ export function NieuwsTicker() {
                 <div
                   ref={trackRef}
                   className={cn(
-                    "flex items-center h-8 whitespace-nowrap",
+                    "flex items-center h-full whitespace-nowrap",
                     "fps-ticker-track",
                     gepauzeerd && "gepauzeerd",
                   )}
@@ -72,10 +72,10 @@ export function NieuwsTicker() {
                       onClick={() => {
                         if (item.url) window.open(item.url, "_blank", "noopener,noreferrer");
                       }}
-                      className="inline-flex items-center gap-2 px-5 h-full text-[12px] text-white/70 hover:text-white transition-colors cursor-pointer shrink-0 bg-transparent border-0"
+                      className="inline-flex items-center gap-3 px-8 h-full text-sm text-white/70 hover:text-white transition-colors cursor-pointer shrink-0 bg-transparent border-0"
                       title={item.titel}
                     >
-                      <span className="text-[10px] font-medium text-[hsl(12,90%,50%)]/70 uppercase tracking-wide shrink-0">
+                      <span className="text-xs font-medium text-[hsl(12,90%,50%)]/70 uppercase tracking-wide shrink-0">
                         {item.bron}
                       </span>
                       <span className="shrink-0">{item.titel}</span>
@@ -84,7 +84,7 @@ export function NieuwsTicker() {
                   ))}
                 </div>
               ) : (
-                <div className="flex items-center h-8 px-4 text-white/25 text-[11px] italic">
+                <div className="flex items-center h-full px-6 text-white/25 text-sm italic">
                   {isLoading ? "Nieuws laden\u2026" : "Geen nieuws beschikbaar"}
                 </div>
               )}
@@ -96,9 +96,9 @@ export function NieuwsTicker() {
                 type="button"
                 title={gepauzeerd ? "Nieuws verder scrollen" : "Nieuws pauzeren"}
                 onClick={() => setGepauzeerd((v) => !v)}
-                className="flex-shrink-0 flex items-center justify-center w-8 border-l border-white/10 text-white/40 hover:text-white/80 transition-colors"
+                className="flex-shrink-0 flex items-center justify-center w-14 border-l border-white/10 text-white/40 hover:text-white/80 transition-colors"
               >
-                {gepauzeerd ? <Play className="w-3 h-3" /> : <Pause className="w-3 h-3" />}
+                {gepauzeerd ? <Play className="w-5 h-5" /> : <Pause className="w-5 h-5" />}
               </button>
             )}
 
@@ -107,9 +107,9 @@ export function NieuwsTicker() {
               type="button"
               title="Nieuwsbalk verbergen"
               onClick={() => setNieuwsVerborgen(true)}
-              className="flex-shrink-0 flex items-center justify-center w-8 border-l border-white/10 text-white/40 hover:text-white/80 transition-colors"
+              className="flex-shrink-0 flex items-center justify-center w-14 border-l border-white/10 text-white/40 hover:text-white/80 transition-colors"
             >
-              <X className="w-3.5 h-3.5" />
+              <X className="w-5 h-5" />
             </button>
           </>
         ) : (
@@ -119,9 +119,9 @@ export function NieuwsTicker() {
               type="button"
               title="Nieuwsbalk tonen"
               onClick={() => setNieuwsVerborgen(false)}
-              className="flex-shrink-0 flex items-center justify-center gap-1.5 px-3 border-r border-white/10 text-white/30 hover:text-white/70 transition-colors"
+              className="flex-shrink-0 flex items-center justify-center gap-2 px-6 border-r border-white/10 text-white/30 hover:text-white/70 transition-colors"
             >
-              <Newspaper className="w-3 h-3" />
+              <Newspaper className="w-5 h-5" />
             </button>
             {/* Opvulling zodat radio/pauze rechts blijven */}
             <div className="flex-1" />

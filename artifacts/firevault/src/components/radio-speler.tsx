@@ -226,25 +226,25 @@ export function RadioSpeler({ compact = false }: { compact?: boolean } = {}) {
     return (
       <>
         {audioEl}
-        <div className="flex items-center h-full border-r border-white/10 px-1">
+        <div className="flex items-center h-full border-r border-white/10 px-4 gap-1">
           <button
             type="button"
             onClick={wisselAfspelen}
-            className="flex items-center justify-center w-7 h-7 rounded text-white/60 hover:text-white/90 transition-colors"
+            className="flex items-center justify-center w-9 h-9 rounded text-white/60 hover:text-white/90 transition-colors"
             title={speelt ? "Radio pauzeren" : "Radio afspelen"}
           >
             {laden ? (
-              <Radio className="h-3.5 w-3.5 text-[hsl(12,90%,50%)] animate-pulse" />
+              <Radio className="h-5 w-5 text-[hsl(12,90%,50%)] animate-pulse" />
             ) : speelt ? (
-              <Pause className="h-3.5 w-3.5 text-[hsl(12,90%,50%)]" />
+              <Pause className="h-5 w-5 text-[hsl(12,90%,50%)]" />
             ) : (
-              <Play className="h-3.5 w-3.5" />
+              <Play className="h-5 w-5" />
             )}
           </button>
           <button
             type="button"
             onClick={() => setInstellingenOpen(true)}
-            className="max-w-[88px] truncate text-[11px] text-white/60 hover:text-white transition-colors px-1"
+            className="max-w-[120px] truncate text-sm text-white/60 hover:text-white transition-colors px-2"
             title="Zender kiezen"
           >
             {actieveZender.naam}
@@ -252,19 +252,19 @@ export function RadioSpeler({ compact = false }: { compact?: boolean } = {}) {
           <button
             type="button"
             onClick={() => setGedempt(g => !g)}
-            className="flex items-center justify-center w-6 h-6 rounded text-white/40 hover:text-white/80 transition-colors"
+            className="flex items-center justify-center w-8 h-8 rounded text-white/40 hover:text-white/80 transition-colors"
             title={gedempt ? "Geluid aan" : "Dempen"}
           >
-            {gedempt ? <VolumeX className="h-3 w-3" /> : <Volume2 className="h-3 w-3" />}
+            {gedempt ? <VolumeX className="h-4.5 w-4.5" /> : <Volume2 className="h-4.5 w-4.5" />}
           </button>
           <Popover open={instellingenOpen} onOpenChange={setInstellingenOpen}>
             <PopoverTrigger asChild>
               <button
                 type="button"
-                className="flex items-center justify-center w-6 h-6 rounded text-white/40 hover:text-white/80 transition-colors"
+                className="flex items-center justify-center w-8 h-8 rounded text-white/40 hover:text-white/80 transition-colors"
                 title="Zender en volume"
               >
-                <ChevronUp className={cn("h-3 w-3 transition-transform", instellingenOpen && "rotate-180")} />
+                <ChevronUp className={cn("h-4 w-4 transition-transform", instellingenOpen && "rotate-180")} />
               </button>
             </PopoverTrigger>
             {zenderPopover}

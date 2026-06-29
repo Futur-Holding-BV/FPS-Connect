@@ -134,14 +134,14 @@ function OnlineGebruikersTaakbalkInner() {
   const rest      = data.length - MAX;
 
   return (
-    <div className="flex-shrink-0 flex items-center gap-1.5 px-3 border-l border-white/10">
-      <div className="h-1.5 w-1.5 rounded-full bg-emerald-400 shrink-0" />
-      <div className="flex items-center gap-0.5">
+    <div className="flex-shrink-0 flex items-center gap-2.5 px-5 border-l border-white/10">
+      <div className="h-2 w-2 rounded-full bg-emerald-400 shrink-0" />
+      <div className="flex items-center gap-1">
         {zichtbaar.map((g, i) => (
           <Tooltip key={i}>
             <TooltipTrigger asChild>
               <div
-                className="h-5 w-5 rounded-full flex items-center justify-center text-[9px] font-bold text-white ring-1 ring-black/30 shrink-0 cursor-default select-none"
+                className="h-7 w-7 rounded-full flex items-center justify-center text-xs font-bold text-white ring-1 ring-black/30 shrink-0 cursor-default select-none"
                 style={{ backgroundColor: naamKleur(g.naam) }}
               >
                 {g.initialen}
@@ -156,7 +156,7 @@ function OnlineGebruikersTaakbalkInner() {
           </Tooltip>
         ))}
         {rest > 0 && (
-          <div className="h-5 w-5 rounded-full flex items-center justify-center text-[9px] font-semibold bg-white/10 text-white/70 ring-1 ring-black/30 shrink-0 select-none">
+          <div className="h-7 w-7 rounded-full flex items-center justify-center text-xs font-semibold bg-white/10 text-white/70 ring-1 ring-black/30 shrink-0 select-none">
             +{rest}
           </div>
         )}

@@ -256,10 +256,10 @@ export function WeergaveKnopTaakbalk() {
         type="button"
         onClick={() => setOpen(true)}
         title="Instellingen weergave"
-        className="flex-shrink-0 flex items-center gap-1.5 px-3 border-l border-white/10 text-white/40 hover:text-white/80 transition-colors h-full"
+        className="flex-shrink-0 flex items-center gap-2.5 px-6 border-l border-white/10 text-white/40 hover:text-white/80 transition-colors h-full"
       >
-        <Settings2 className="w-3.5 h-3.5" />
-        <span className="text-[11px] font-medium hidden sm:inline">Weergave</span>
+        <Settings2 className="w-5 h-5" />
+        <span className="text-sm font-medium">Weergave</span>
       </button>
       <WeergaveModal open={open} onOpenChange={setOpen} />
     </>
