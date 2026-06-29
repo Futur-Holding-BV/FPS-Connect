@@ -32,7 +32,7 @@ const STATUS_LABEL: Record<string, string> = {
 };
 
 const STATUS_KLEUR: Record<string, string> = {
-  concept: "bg-slate-100 text-slate-700 border-slate-200",
+  concept: "bg-muted text-muted-foreground border-border",
   intern_akkoord: "bg-blue-100 text-blue-800 border-blue-200",
   aangeboden: "bg-amber-100 text-amber-800 border-amber-200",
   gewonnen: "bg-green-100 text-green-800 border-green-200",
@@ -89,7 +89,7 @@ export default function ModulesCalculatie() {
     <div className="p-6 space-y-6 max-w-7xl mx-auto">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-slate-900">Calculaties</h1>
+          <h1 className="text-2xl font-semibold text-foreground">Calculaties</h1>
           <p className="text-sm text-muted-foreground mt-0.5">
             Kostprijsbegrotingen voor brandpreventie- en bouwwerkzaamheden
           </p>
@@ -181,7 +181,7 @@ export default function ModulesCalculatie() {
           ) : (
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b bg-slate-50 text-slate-500 text-xs uppercase tracking-wide">
+                <tr className="border-b bg-muted/40 text-muted-foreground text-xs uppercase tracking-wide">
                   <th className="px-6 py-3 text-left font-medium">Naam</th>
                   <th className="px-4 py-3 text-left font-medium">Klant / Project</th>
                   <th className="px-4 py-3 text-left font-medium">Status</th>
@@ -193,10 +193,10 @@ export default function ModulesCalculatie() {
               </thead>
               <tbody className="divide-y">
                 {gefilterd.map((c) => (
-                  <tr key={c.id} className="hover:bg-slate-50 transition-colors">
+                  <tr key={c.id} className="hover:bg-muted/40 transition-colors">
                     <td className="px-6 py-3.5">
                       <Link href={`/modules/calculatie/${c.id}`}>
-                        <span className="font-medium text-slate-900 hover:text-primary cursor-pointer">
+                        <span className="font-medium text-foreground hover:text-primary cursor-pointer">
                           {c.naam}
                         </span>
                       </Link>
@@ -205,7 +205,7 @@ export default function ModulesCalculatie() {
                       )}
                     </td>
                     <td className="px-4 py-3.5">
-                      {c.klant_naam && <p className="text-slate-700">{c.klant_naam}</p>}
+                      {c.klant_naam && <p className="text-foreground/80">{c.klant_naam}</p>}
                       {c.project_naam && <p className="text-xs text-muted-foreground">{c.project_naam}</p>}
                       {!c.klant_naam && !c.project_naam && <span className="text-muted-foreground">—</span>}
                     </td>

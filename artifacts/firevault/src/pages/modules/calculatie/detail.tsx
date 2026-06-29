@@ -51,7 +51,7 @@ const STATUS_LABEL: Record<string, string> = {
 };
 
 const STATUS_KLEUR: Record<string, string> = {
-  concept: "bg-slate-100 text-slate-700 border-slate-200",
+  concept: "bg-muted text-muted-foreground border-border",
   intern_akkoord: "bg-violet-100 text-violet-800 border-violet-200",
   aangeboden: "bg-amber-100 text-amber-800 border-amber-200",
   gewonnen: "bg-green-100 text-green-800 border-green-200",
@@ -88,14 +88,14 @@ const CATEGORIE_LABEL: Record<string, string> = {
 };
 
 const CATEGORIE_KLEUR: Record<string, string> = {
-  arbeid:         "bg-slate-100 text-slate-700",
+  arbeid:         "bg-muted text-muted-foreground",
   materiaal:      "bg-green-50 text-green-700",
   onderaanneming: "bg-purple-50 text-purple-700",
   materieel:      "bg-orange-50 text-orange-700",
   opslag:         "bg-amber-50 text-amber-700",
   stelpost:       "bg-amber-100 text-amber-800",
   regiepost:      "bg-pink-50 text-pink-700",
-  overig:         "bg-slate-50 text-slate-600",
+  overig:         "bg-muted/50 text-muted-foreground",
 };
 
 const EENHEDEN = ["st", "pst", "m1", "m2", "m3", "uur", "dag", "week", "lump_sum"];
@@ -403,7 +403,7 @@ function SpreadsheetRegelRij({
       return (
         <td
           style={{ width: breedte }}
-          className={cn(celKlasse, editing ? "bg-slate-50/40" : "cursor-pointer hover:bg-slate-50")}
+          className={cn(celKlasse, editing ? "bg-muted/30" : "cursor-pointer hover:bg-muted/40")}
           onClick={() => { if (!editing) setEditing(true); }}
         >
           <div className={cn("px-2 py-[5px] tabular-nums text-muted-foreground", `text-${align}`)}>
@@ -413,7 +413,7 @@ function SpreadsheetRegelRij({
       );
     }
     return (
-      <td style={{ width: breedte }} className={cn(celKlasse, "bg-slate-50/60")}>
+      <td style={{ width: breedte }} className={cn(celKlasse, "bg-muted/40")}>
         <input
           type="number"
           step="0.01"
@@ -439,8 +439,8 @@ function SpreadsheetRegelRij({
       onFocus={() => setEditing(true)}
       onBlur={handleRowBlur}
       className={cn(
-        "border-b border-slate-100 group transition-colors relative",
-        editing ? "bg-amber-50/20 outline outline-1 outline-primary/30" : "hover:bg-slate-50/60",
+        "border-b border-border/40 group transition-colors relative",
+        editing ? "bg-amber-50/20 outline outline-1 outline-primary/30" : "hover:bg-muted/30",
         bezig ? "opacity-50 pointer-events-none" : ""
       )}
     >
@@ -538,7 +538,7 @@ function SpreadsheetRegelRij({
             <div onClick={() => setEditing(true)} className="px-2 py-[5px] cursor-pointer">
               <span className={cn(
                 "text-xs rounded-sm px-1.5 py-0.5 font-medium",
-                CATEGORIE_KLEUR[rij.categorie] ?? "bg-slate-50 text-slate-600"
+                CATEGORIE_KLEUR[rij.categorie] ?? "bg-muted/50 text-muted-foreground"
               )}>
                 {CATEGORIE_LABEL[rij.categorie] ?? rij.categorie}
               </span>
@@ -585,7 +585,7 @@ function SpreadsheetRegelRij({
 
       {/* Arbeidskosten (berekend) — intern + directie */}
       {(weergave === "intern" || weergave === "directie") && (
-        <td className="px-2 py-[5px] w-[96px] text-right text-sm tabular-nums text-slate-500 cursor-pointer" onClick={() => setEditing(true)}>
+        <td className="px-2 py-[5px] w-[96px] text-right text-sm tabular-nums text-muted-foreground cursor-pointer" onClick={() => setEditing(true)}>
           {arbDisplay > 0 ? formatBedrag(arbDisplay) : "—"}
         </td>
       )}
@@ -597,7 +597,7 @@ function SpreadsheetRegelRij({
 
       {/* Materiaal totaal (berekend) — intern + directie */}
       {(weergave === "intern" || weergave === "directie") && (
-        <td className="px-2 py-[5px] w-[96px] text-right text-sm tabular-nums text-slate-500 cursor-pointer" onClick={() => setEditing(true)}>
+        <td className="px-2 py-[5px] w-[96px] text-right text-sm tabular-nums text-muted-foreground cursor-pointer" onClick={() => setEditing(true)}>
           {matDisplay > 0 ? formatBedrag(matDisplay) : "—"}
         </td>
       )}
@@ -692,7 +692,7 @@ function SpreadsheetRegelRij({
         <td className="px-1 py-0 w-14 text-center">
           <div className="flex items-center gap-0 justify-center opacity-0 group-hover:opacity-100 transition-opacity">
             <Button
-              variant="ghost" size="icon" className="h-6 w-6 text-slate-400 hover:text-slate-700"
+              variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-foreground"
               title="Dupliceren"
               tabIndex={-1}
               onClick={(e) => { e.stopPropagation(); onDuplicate(rij); }}
@@ -700,7 +700,7 @@ function SpreadsheetRegelRij({
               <Copy className="h-3 w-3" />
             </Button>
             <Button
-              variant="ghost" size="icon" className="h-6 w-6 text-slate-400 hover:text-destructive"
+              variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-destructive"
               title="Verwijderen"
               tabIndex={-1}
               onClick={(e) => { e.stopPropagation(); onDelete(rij.id); }}
@@ -873,7 +873,7 @@ function NieuweRegelRij({
       {(weergave === "intern" || weergave === "directie") && numInvoer("arbeids_tarief", 88, isArb, 6)}
       {/* Arbeid totaal */}
       {(weergave === "intern" || weergave === "directie") && (
-        <td className="px-2 py-[5px] w-[96px] text-right text-sm tabular-nums text-slate-400">
+        <td className="px-2 py-[5px] w-[96px] text-right text-sm tabular-nums text-muted-foreground/60">
           {liveArb > 0 ? formatBedrag(liveArb) : "—"}
         </td>
       )}
@@ -881,7 +881,7 @@ function NieuweRegelRij({
       {(weergave === "intern" || weergave === "directie") && numInvoer("tarief", 88, isMat, 7)}
       {/* Materiaal totaal */}
       {(weergave === "intern" || weergave === "directie") && (
-        <td className="px-2 py-[5px] w-[96px] text-right text-sm tabular-nums text-slate-400">
+        <td className="px-2 py-[5px] w-[96px] text-right text-sm tabular-nums text-muted-foreground/60">
           {liveMat > 0 ? formatBedrag(liveMat) : "—"}
         </td>
       )}
@@ -937,7 +937,7 @@ function NieuweRegelRij({
       {weergave === "intern" && (
         <td className="px-1 py-0 w-14 text-center">
           <div className="flex gap-0.5 justify-center">
-            <Button variant="ghost" size="icon" className="h-6 w-6 text-slate-400" tabIndex={-1} onClick={onCancel}>
+            <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground" tabIndex={-1} onClick={onCancel}>
               <X className="h-3 w-3" />
             </Button>
           </div>
@@ -961,17 +961,17 @@ function HoofdstukBalk({
   weergave: Weergave;
 }) {
   return (
-    <tr className="border-b border-slate-200 bg-slate-100/80 group/hs">
+    <tr className="border-b border-border bg-muted/50 group/hs">
       <td
         colSpan={aantalKolommen}
         className="px-3 py-1.5"
       >
         <div className="flex items-center justify-between">
-          <span className="text-xs font-semibold uppercase tracking-wide text-slate-600">{naam}</span>
+          <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{naam}</span>
           {weergave === "intern" && (
             <Button
               variant="ghost" size="sm"
-              className="h-5 px-1.5 text-xs text-slate-500 hover:text-slate-900 opacity-0 group-hover/hs:opacity-100 transition-opacity"
+              className="h-5 px-1.5 text-xs text-muted-foreground hover:text-foreground opacity-0 group-hover/hs:opacity-100 transition-opacity"
               onClick={onToevoegen}
             >
               <Plus className="h-3 w-3 mr-0.5" />
@@ -989,7 +989,7 @@ function HoofdstukBalk({
 function Th({ children, align = "left", className }: { children?: React.ReactNode; align?: "left" | "right" | "center"; className?: string }) {
   return (
     <th className={cn(
-      "px-2 py-2 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground/70 whitespace-nowrap border-b border-slate-200 bg-slate-50",
+      "px-2 py-2 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground/70 whitespace-nowrap border-b border-border bg-muted/40",
       align === "right" ? "text-right" : align === "center" ? "text-center" : "text-left",
       className
     )}>
@@ -1037,8 +1037,8 @@ function DirectieView({
             const ond = regels.reduce((s, r) => s + (r.onderaanneming_bedrag ?? 0), 0);
             const tot = regels.reduce((s, r) => s + r.totaal, 0);
             return (
-              <tr key={cat} className="hover:bg-slate-50">
-                <td className="py-2 font-medium text-slate-700 w-1/3">{label}</td>
+              <tr key={cat} className="hover:bg-muted/40">
+                <td className="py-2 font-medium text-foreground w-1/3">{label}</td>
                 <td className="py-2 text-right text-xs text-muted-foreground tabular-nums">
                   {mu > 0 ? `${fmt2(mu)} MU` : ""}
                 </td>
@@ -1056,14 +1056,14 @@ function DirectieView({
             );
           })}
           {opslagMateriaal > 0 && matSubtotaal > 0 && (
-            <tr className="text-muted-foreground bg-slate-50/50">
+            <tr className="text-muted-foreground bg-muted/30">
               <td className="py-1 pl-4 text-xs">+ Opslag materiaal ({opslagMateriaal}%)</td>
               <td colSpan={4} />
               <td className="py-1 pl-4 text-right text-xs tabular-nums">{formatBedrag(matOpslagBedrag)}</td>
             </tr>
           )}
           {opslagArbeid > 0 && arbSubtotaal > 0 && (
-            <tr className="text-muted-foreground bg-slate-50/50">
+            <tr className="text-muted-foreground bg-muted/30">
               <td className="py-1 pl-4 text-xs">+ Opslag arbeid ({opslagArbeid}%)</td>
               <td colSpan={4} />
               <td className="py-1 pl-4 text-right text-xs tabular-nums">{formatBedrag(arbOpslagBedrag)}</td>
@@ -1071,20 +1071,20 @@ function DirectieView({
           )}
           {bouwplaatsSubtotaal > 0 && (
             <tr className="hover:bg-amber-50/50">
-              <td className="py-2 font-medium text-slate-700">Bouwplaatskosten</td>
+              <td className="py-2 font-medium text-foreground">Bouwplaatskosten</td>
               <td colSpan={4} className="py-2 text-right text-xs text-muted-foreground">{bouwplaatsRegels.length} post{bouwplaatsRegels.length !== 1 ? "en" : ""}</td>
               <td className="py-2 pl-4 text-right tabular-nums font-medium">{formatBedrag(bouwplaatsSubtotaal)}</td>
             </tr>
           )}
           {staartSubtotaal > 0 && (
-            <tr className="hover:bg-slate-50">
-              <td className="py-2 font-medium text-slate-700">Staartkosten</td>
+            <tr className="hover:bg-muted/40">
+              <td className="py-2 font-medium text-foreground">Staartkosten</td>
               <td colSpan={4} className="py-2 text-right text-xs text-muted-foreground">{staartRegels.length} post{staartRegels.length !== 1 ? "en" : ""}</td>
               <td className="py-2 pl-4 text-right tabular-nums font-medium">{formatBedrag(staartSubtotaal)}</td>
             </tr>
           )}
           <tr className="font-semibold border-t-2">
-            <td className="py-2 text-slate-900">Subtotaal</td>
+            <td className="py-2 text-foreground">Subtotaal</td>
             <td colSpan={4} />
             <td className="py-2 pl-4 text-right tabular-nums">{formatBedrag(subtotaal)}</td>
           </tr>
@@ -1126,7 +1126,7 @@ function DirectieView({
         </tbody>
       </table>
       <div className="flex justify-end">
-        <div className="rounded-md bg-slate-50 border px-5 py-3 text-sm">
+        <div className="rounded-md bg-muted/40 border px-5 py-3 text-sm">
           <span className="text-muted-foreground">Marge: </span>
           <span className="font-semibold">{marge}%</span>
         </div>
@@ -1152,9 +1152,9 @@ function KlantView({ regels, totaal, totaalBtw }: { regels: RegelRow[]; totaal: 
         </thead>
         <tbody className="divide-y">
           {zichtbaar.map((r) => (
-            <tr key={r.id} className="hover:bg-slate-50">
+            <tr key={r.id} className="hover:bg-muted/40">
               <td className="px-6 py-2.5">
-                <p className="font-medium text-slate-800">{r.klanttekst || r.omschrijving}</p>
+                <p className="font-medium text-foreground">{r.klanttekst || r.omschrijving}</p>
                 {r.regelnummer && <p className="text-xs text-muted-foreground">{r.regelnummer}</p>}
               </td>
               <td className="px-3 py-2.5 text-center text-muted-foreground">{r.eenheid}</td>
@@ -1202,11 +1202,11 @@ function MonteurView({ regels }: { regels: RegelRow[] }) {
         if (!rijen.length) return null;
         return (
           <div key={h}>
-            <div className="px-4 py-1.5 bg-slate-100 border-b text-xs font-semibold uppercase tracking-wide text-slate-600">{h}</div>
+            <div className="px-4 py-1.5 bg-muted border-b text-xs font-semibold uppercase tracking-wide text-muted-foreground">{h}</div>
             <table className="w-full text-sm">
               <tbody className="divide-y">
                 {rijen.map((r) => (
-                  <tr key={r.id} className="hover:bg-slate-50">
+                  <tr key={r.id} className="hover:bg-muted/40">
                     <td className="px-4 py-2.5 font-medium">{r.omschrijving}</td>
                     <td className="px-3 py-2.5 text-center text-muted-foreground w-16">{r.eenheid}</td>
                     <td className="px-3 py-2.5 text-right tabular-nums w-20">{r.hoeveelheid}</td>
@@ -1474,7 +1474,7 @@ export default function ModulesCalculatieDetail() {
   return (
     <div className="flex flex-col min-h-0" style={{ padding: "0" }}>
       {/* Koptekst */}
-      <div className="flex items-center justify-between px-6 py-4 border-b bg-white sticky top-0 z-10 shadow-sm">
+      <div className="flex items-center justify-between px-6 py-4 border-b bg-background sticky top-0 z-10 shadow-sm">
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="icon" onClick={() => navigate("/modules/calculatie")}>
             <ArrowLeft className="h-4 w-4" />
@@ -1482,11 +1482,11 @@ export default function ModulesCalculatieDetail() {
           <div>
             <div className="flex items-center gap-2 flex-wrap">
               {data.referentie && (
-                <span className="font-mono text-xs font-semibold tracking-wide text-slate-500 bg-slate-100 border border-slate-200 rounded px-2 py-0.5 select-all">
+                <span className="font-mono text-xs font-semibold tracking-wide text-muted-foreground bg-muted border border-border rounded px-2 py-0.5 select-all">
                   {data.referentie}
                 </span>
               )}
-              <h1 className="text-xl font-semibold text-slate-900">{data.naam}</h1>
+              <h1 className="text-xl font-semibold text-foreground">{data.naam}</h1>
               <Badge className={`text-xs border ${STATUS_KLEUR[data.status] ?? STATUS_KLEUR.concept}`}>
                 {STATUS_LABEL[data.status] ?? data.status}
               </Badge>
@@ -1532,11 +1532,11 @@ export default function ModulesCalculatieDetail() {
 
       {/* Projectgegevens strip */}
       {(data.referentie || data.klant_naam || data.project_naam || data.gebouw_naam || data.aangemaakt_door_naam) && (
-        <div className="flex items-center gap-6 px-6 py-2.5 border-b bg-slate-50/60 text-sm">
+        <div className="flex items-center gap-6 px-6 py-2.5 border-b bg-muted/40 text-sm">
           {data.referentie && (
             <div className="flex gap-1.5 items-center">
               <span className="text-muted-foreground text-xs">Ref:</span>
-              <span className="font-mono text-xs font-semibold text-slate-700 select-all">{data.referentie}</span>
+              <span className="font-mono text-xs font-semibold text-foreground select-all">{data.referentie}</span>
             </div>
           )}
           {data.klant_naam && (
@@ -1573,7 +1573,7 @@ export default function ModulesCalculatieDetail() {
         <div className="flex-1 min-w-0 flex flex-col">
 
           {/* Spreadsheet toolbar */}
-          <div className="flex items-center justify-between px-4 py-2 border-b bg-white gap-3 sticky top-[69px] z-10">
+          <div className="flex items-center justify-between px-4 py-2 border-b bg-background gap-3 sticky top-[69px] z-10">
             {/* Weergave tabs */}
             <div className="flex rounded-md border overflow-hidden text-xs">
               {(["intern", "directie", "klant", "monteur"] as Weergave[]).map((v) => (
@@ -1582,7 +1582,7 @@ export default function ModulesCalculatieDetail() {
                   onClick={() => setWeergave(v)}
                   className={cn(
                     "px-3 py-1.5 flex items-center gap-1.5 transition-colors",
-                    weergave === v ? "bg-slate-900 text-white" : "bg-white text-slate-600 hover:bg-slate-50"
+                    weergave === v ? "bg-foreground text-background" : "bg-background text-muted-foreground hover:bg-muted/40"
                   )}
                 >
                   {v === "intern" && <LayoutList className="h-3 w-3" />}
@@ -1757,17 +1757,17 @@ export default function ModulesCalculatieDetail() {
                   {/* Bouwplaats/staart toevoegen knoppen als er nog geen zijn */}
                   {weergave === "intern" && (
                     <tr>
-                      <td colSpan={aantalKolommen} className="px-3 py-2 border-t border-slate-100">
+                      <td colSpan={aantalKolommen} className="px-3 py-2 border-t border-border/40">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <Button variant="ghost" size="sm" className="h-7 text-xs text-slate-500" onClick={() => nieuweRegel({})}>
+                          <Button variant="ghost" size="sm" className="h-7 text-xs text-muted-foreground" onClick={() => nieuweRegel({})}>
                             <Plus className="h-3 w-3 mr-1" />
                             Directe regel
                           </Button>
-                          <Button variant="ghost" size="sm" className="h-7 text-xs text-slate-500" onClick={() => nieuweRegel({ is_bouwplaatskosten: true })}>
+                          <Button variant="ghost" size="sm" className="h-7 text-xs text-muted-foreground" onClick={() => nieuweRegel({ is_bouwplaatskosten: true })}>
                             <Plus className="h-3 w-3 mr-1" />
                             Bouwplaatskost
                           </Button>
-                          <Button variant="ghost" size="sm" className="h-7 text-xs text-slate-500" onClick={() => nieuweRegel({ is_staartkosten: true })}>
+                          <Button variant="ghost" size="sm" className="h-7 text-xs text-muted-foreground" onClick={() => nieuweRegel({ is_staartkosten: true })}>
                             <Plus className="h-3 w-3 mr-1" />
                             Staartkost
                           </Button>
@@ -1824,7 +1824,7 @@ export default function ModulesCalculatieDetail() {
         </div>
 
         {/* === Zijpaneel === */}
-        <div className="w-72 shrink-0 border-l bg-slate-50/40 flex flex-col gap-0 overflow-y-auto">
+        <div className="w-72 shrink-0 border-l bg-muted/20 flex flex-col gap-0 overflow-y-auto">
 
           {/* AI-voorstel */}
           <div className="p-4 border-b">
@@ -1874,9 +1874,9 @@ export default function ModulesCalculatieDetail() {
                 </div>
                 <div className="space-y-1 max-h-52 overflow-y-auto">
                   {aiVoorstellen.map((r, i) => (
-                    <div key={i} className="flex items-start gap-1.5 p-1.5 rounded border text-xs hover:bg-slate-50 group/ai">
+                    <div key={i} className="flex items-start gap-1.5 p-1.5 rounded border text-xs hover:bg-muted/40 group/ai">
                       <div className="flex-1 min-w-0">
-                        <p className="font-medium text-slate-800 leading-tight truncate">{r.omschrijving}</p>
+                        <p className="font-medium text-foreground leading-tight truncate">{r.omschrijving}</p>
                         <p className="text-muted-foreground text-[10px]">{r.hoeveelheid} {r.eenheid} &bull; {CATEGORIE_LABEL[r.categorie] ?? r.categorie}</p>
                       </div>
                       <Button variant="ghost" size="icon" className="h-5 w-5 shrink-0 text-green-600 opacity-0 group-hover/ai:opacity-100"
@@ -2108,7 +2108,7 @@ export default function ModulesCalculatieDetail() {
               <p className="text-sm text-muted-foreground text-center py-4">Nog geen versies opgeslagen.</p>
             ) : (
               versieData.map((v) => (
-                <div key={v.id} className="flex items-center gap-3 p-3 rounded-md border hover:bg-slate-50">
+                <div key={v.id} className="flex items-center gap-3 p-3 rounded-md border hover:bg-muted/40">
                   <div className="flex-1 min-w-0">
                     <p className="font-medium text-sm">Versie {v.versienummer}{v.label && ` — ${v.label}`}</p>
                     <p className="text-xs text-muted-foreground">{new Date(v.aangemaakt_op).toLocaleString("nl-NL")}</p>
