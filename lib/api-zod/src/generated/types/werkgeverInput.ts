@@ -35,5 +35,15 @@ export interface WerkgeverInput {
   voettekst?: string | null;
   /** @nullable */
   handtekening_url?: string | null;
+  /**
+     * Object-storage pad van het huisstijllogo voor documenten.
+     * @nullable
+     */
+  logo_url?: string | null;
+  /**
+     * Primaire merkkleur als hex-waarde (bijv.
+     * @nullable
+     */
+  primaire_kleur?: string | null;
   actief?: boolean;
 }

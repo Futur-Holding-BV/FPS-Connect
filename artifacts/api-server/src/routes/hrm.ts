@@ -107,6 +107,8 @@ const mapWerkgever = (w: typeof werkgeversTable.$inferSelect) => ({
   website: w.website,
   voettekst: w.voettekst,
   handtekening_url: w.handtekeningUrl,
+  logo_url: w.logoUrl,
+  primaire_kleur: w.primaireKleur ?? "#F23B0D",
   actief: w.actief,
   aangemaakt_op: iso(w.aangemaaktOp),
   bijgewerkt_op: iso(w.bijgewerktOp),
@@ -135,7 +137,7 @@ router.get("/werkgevers", lezen, async (req, res) => {
 
 router.post("/werkgevers", schrijven, async (req, res) => {
   try {
-    const { naam, cao, logo_document_id, briefpapier_document_id, personeelsbeleid, adres, postcode, plaats, kvk, btw, telefoon, email, website, voettekst, handtekening_url, actief } = req.body;
+    const { naam, cao, logo_document_id, briefpapier_document_id, personeelsbeleid, adres, postcode, plaats, kvk, btw, telefoon, email, website, voettekst, handtekening_url, logo_url, primaire_kleur, actief } = req.body;
     if (!naam || typeof naam !== "string" || !naam.trim()) {
       return res.status(400).json({ error: "naam is verplicht" });
     }
@@ -157,6 +159,8 @@ router.post("/werkgevers", schrijven, async (req, res) => {
         website: website ?? null,
         voettekst: voettekst ?? null,
         handtekeningUrl: handtekening_url ?? null,
+        logoUrl: logo_url ?? null,
+        primaireKleur: primaire_kleur ?? "#F23B0D",
         actief: actief ?? true,
       })
       .returning();
@@ -181,7 +185,7 @@ router.get("/werkgevers/:id", lezen, async (req, res) => {
 router.patch("/werkgevers/:id", schrijven, async (req, res) => {
   try {
     const id = parseId(req.params.id);
-    const { naam, cao, logo_document_id, briefpapier_document_id, personeelsbeleid, adres, postcode, plaats, kvk, btw, telefoon, email, website, voettekst, handtekening_url, actief } = req.body;
+    const { naam, cao, logo_document_id, briefpapier_document_id, personeelsbeleid, adres, postcode, plaats, kvk, btw, telefoon, email, website, voettekst, handtekening_url, logo_url, primaire_kleur, actief } = req.body;
     const nieuweNaam = typeof naam === "string" && naam.trim() ? naam.trim() : undefined;
 
     const w = await db.transaction(async (tx) => {
@@ -206,6 +210,8 @@ router.patch("/werkgevers/:id", schrijven, async (req, res) => {
           website: website !== undefined ? website : undefined,
           voettekst: voettekst !== undefined ? voettekst : undefined,
           handtekeningUrl: handtekening_url !== undefined ? handtekening_url : undefined,
+          logoUrl: logo_url !== undefined ? logo_url : undefined,
+          primaireKleur: primaire_kleur !== undefined ? primaire_kleur : undefined,
           actief,
           bijgewerktOp: new Date(),
         })

@@ -40,6 +40,16 @@ export interface Werkgever {
      * @nullable
      */
   handtekening_url?: string | null;
+  /**
+     * Object-storage pad van het huisstijllogo (PNG/SVG) voor documenten.
+     * @nullable
+     */
+  logo_url?: string | null;
+  /**
+     * Primaire merkkleur als hex-waarde (bijv.
+     * @nullable
+     */
+  primaire_kleur?: string | null;
   actief: boolean;
   aangemaakt_op: string;
   bijgewerkt_op: string;

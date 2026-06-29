@@ -19,7 +19,7 @@ import {
   BookOpen, HardDriveUpload, CalendarCheck2, Settings2, ArchiveRestore,
   Inbox, Building2, Target, Handshake, Newspaper, CalendarRange, KeyRound,
   ClipboardCheck, AlertTriangle, FileArchive, Receipt, ArrowUpRight, ScrollText,
-  UserPlus, UserMinus, Car, GitBranch, ArrowLeft, ChevronDown,
+  UserPlus, UserMinus, Car, GitBranch, ArrowLeft, ChevronDown, Palette,
 } from "lucide-react";
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
 import { Badge } from "@/components/ui/badge";
@@ -743,6 +743,17 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                     <SidebarMenuItem className="pl-5">
                       <SidebarMenuButton
                         asChild
+                        isActive={location === "/organisatie/documentopmaak"}
+                      >
+                        <Link href="/organisatie/documentopmaak">
+                          <Palette />
+                          <span>Documentopmaak</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                    <SidebarMenuItem className="pl-5">
+                      <SidebarMenuButton
+                        asChild
                         isActive={location === "/workflow" || location.startsWith("/workflow")}
                       >
                         <Link href="/workflow">
@@ -1044,19 +1055,6 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                             <Link href="/beheer/rollen-rechten">
                               <KeyRound />
                               <span>Rollen &amp; Rechten</span>
-                            </Link>
-                          </SidebarMenuButton>
-                        </SidebarMenuItem>
-                      )}
-                      {isHoofdbeheerder && (
-                        <SidebarMenuItem className="pl-5">
-                          <SidebarMenuButton
-                            asChild
-                            isActive={location === "/beheer/documentopmaak"}
-                          >
-                            <Link href="/beheer/documentopmaak">
-                              <LayoutTemplate />
-                              <span>Documentopmaak</span>
                             </Link>
                           </SidebarMenuButton>
                         </SidebarMenuItem>

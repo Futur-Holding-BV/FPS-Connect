@@ -33,6 +33,8 @@ export const werkgeversTable = pgTable("werkgevers", {
   website: text("website"),
   voettekst: text("voettekst"),
   handtekeningUrl: text("handtekening_url"),
+  logoUrl: text("logo_url"),
+  primaireKleur: text("primaire_kleur").default("#F23B0D"),
   actief: boolean("actief").notNull().default(true),
   salarisverwerker: text("salarisverwerker"),
   boekhouderNaam: text("boekhouder_naam"),

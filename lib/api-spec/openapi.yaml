@@ -17998,6 +17998,12 @@ components:
         handtekening_url:
           type: ["string", "null"]
           description: URL van de geüploade handtekeningafbeelding (PNG/JPG) voor het certificaat.
+        logo_url:
+          type: ["string", "null"]
+          description: Object-storage pad van het huisstijllogo (PNG/SVG) voor documenten.
+        primaire_kleur:
+          type: ["string", "null"]
+          description: Primaire merkkleur als hex-waarde (bijv. #F23B0D) voor de documentopmaak.
         actief:
           type: boolean
         aangemaakt_op:
@@ -18039,6 +18045,12 @@ components:
           type: ["string", "null"]
         handtekening_url:
           type: ["string", "null"]
+        logo_url:
+          type: ["string", "null"]
+          description: Object-storage pad van het huisstijllogo voor documenten.
+        primaire_kleur:
+          type: ["string", "null"]
+          description: Primaire merkkleur als hex-waarde (bijv. #F23B0D).
         actief:
           type: boolean
 

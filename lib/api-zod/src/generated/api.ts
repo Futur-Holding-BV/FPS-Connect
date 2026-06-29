@@ -7089,6 +7089,8 @@ export const ListWerkgeversResponseItem = zod.object({
   "website": zod.string().nullish(),
   "voettekst": zod.string().nullish(),
   "handtekening_url": zod.string().nullish().describe('URL van de geüploade handtekeningafbeelding (PNG\/JPG) voor het certificaat.'),
+  "logo_url": zod.string().nullish().describe('Object-storage pad van het huisstijllogo (PNG\/SVG) voor documenten.'),
+  "primaire_kleur": zod.string().nullish().describe('Primaire merkkleur als hex-waarde (bijv.'),
   "actief": zod.boolean(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
@@ -7115,6 +7117,8 @@ export const CreateWerkgeverBody = zod.object({
   "website": zod.string().nullish(),
   "voettekst": zod.string().nullish(),
   "handtekening_url": zod.string().nullish(),
+  "logo_url": zod.string().nullish().describe('Object-storage pad van het huisstijllogo voor documenten.'),
+  "primaire_kleur": zod.string().nullish().describe('Primaire merkkleur als hex-waarde (bijv.'),
   "actief": zod.boolean().optional()
 })
 
@@ -7145,6 +7149,8 @@ export const GetWerkgeverResponse = zod.object({
   "website": zod.string().nullish(),
   "voettekst": zod.string().nullish(),
   "handtekening_url": zod.string().nullish().describe('URL van de geüploade handtekeningafbeelding (PNG\/JPG) voor het certificaat.'),
+  "logo_url": zod.string().nullish().describe('Object-storage pad van het huisstijllogo (PNG\/SVG) voor documenten.'),
+  "primaire_kleur": zod.string().nullish().describe('Primaire merkkleur als hex-waarde (bijv.'),
   "actief": zod.boolean(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
@@ -7174,6 +7180,8 @@ export const UpdateWerkgeverBody = zod.object({
   "website": zod.string().nullish(),
   "voettekst": zod.string().nullish(),
   "handtekening_url": zod.string().nullish(),
+  "logo_url": zod.string().nullish().describe('Object-storage pad van het huisstijllogo voor documenten.'),
+  "primaire_kleur": zod.string().nullish().describe('Primaire merkkleur als hex-waarde (bijv.'),
   "actief": zod.boolean().optional()
 })
 
@@ -7194,6 +7202,8 @@ export const UpdateWerkgeverResponse = zod.object({
   "website": zod.string().nullish(),
   "voettekst": zod.string().nullish(),
   "handtekening_url": zod.string().nullish().describe('URL van de geüploade handtekeningafbeelding (PNG\/JPG) voor het certificaat.'),
+  "logo_url": zod.string().nullish().describe('Object-storage pad van het huisstijllogo (PNG\/SVG) voor documenten.'),
+  "primaire_kleur": zod.string().nullish().describe('Primaire merkkleur als hex-waarde (bijv.'),
   "actief": zod.boolean(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
