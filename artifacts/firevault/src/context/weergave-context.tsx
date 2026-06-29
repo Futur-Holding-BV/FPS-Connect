@@ -22,7 +22,7 @@ export interface WeergaveVoorkeuren {
 // ═══════════════════════════════════════════════════════════
 
 export const STANDAARD_VOORKEUREN: WeergaveVoorkeuren = {
-  thema:         "systeem",
+  thema:         "licht",
   kleurthema:    "standaard",
   lettergrootte: "normaal",
   dichtheid:     "normaal",
@@ -140,7 +140,12 @@ const WeergaveContext = createContext<WeergaveContextType | null>(null);
 function laadVoorkeuren(): WeergaveVoorkeuren {
   try {
     const raw = localStorage.getItem("fps.weergave");
-    if (raw) return { ...STANDAARD_VOORKEUREN, ...JSON.parse(raw) };
+    if (raw) {
+      const opgeslagen = JSON.parse(raw) as Partial<WeergaveVoorkeuren>;
+      // Migreer "systeem" naar "licht": de app gebruikt altijd lichtmodus als standaard
+      if (opgeslagen.thema === "systeem") opgeslagen.thema = "licht";
+      return { ...STANDAARD_VOORKEUREN, ...opgeslagen };
+    }
   } catch { /* negeer */ }
   return { ...STANDAARD_VOORKEUREN };
 }
