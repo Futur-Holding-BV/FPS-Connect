@@ -399,6 +399,7 @@ export * from './magazijnDashboardKritiekeArtikelenItem';
 export * from './magazijnDashboardMeestVerbruiktItem';
 export * from './magazijnLocatie';
 export * from './magazijnLocatieInput';
+export * from './magazijnSignalering';
 export * from './mailActieResultaat';
 export * from './mailLogregel';
 export * from './mailOpdrachtbevestigingDemoInput';

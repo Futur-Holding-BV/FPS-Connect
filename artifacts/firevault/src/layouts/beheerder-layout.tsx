@@ -2,7 +2,7 @@ import { Link, useLocation } from "wouter";
 import { useState, useEffect } from "react";
 import { SlimUploadBalk } from "@/components/slim-upload-balk";
 import { useTranslation } from "react-i18next";
-import { useListChatGesprekken } from "@workspace/api-client-react";
+import { useListChatGesprekken, useGetMagazijnSignalering } from "@workspace/api-client-react";
 import { BerichtNotificatieToast } from "@/components/bericht-notificatie-toast";
 import { NieuwsTicker } from "@/components/nieuws-ticker";
 import {
@@ -172,6 +172,24 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
     return (
       <Badge className="ml-auto text-[10px] px-1.5 py-0 min-w-5 h-4 bg-primary group-data-[collapsible=icon]:hidden">
         {totaal > 99 ? "99+" : totaal}
+      </Badge>
+    );
+  }
+
+  function MagazijnKritiekBadge() {
+    const { data, refetch } = useGetMagazijnSignalering();
+    useEffect(() => {
+      const timer = setInterval(() => void refetch(), 60000);
+      return () => clearInterval(timer);
+    }, [refetch]);
+    const aantal = data?.kritiek_aantal ?? 0;
+    if (aantal === 0) return null;
+    return (
+      <Badge
+        variant="outline"
+        className="ml-2 text-[10px] px-1.5 py-0 leading-tight border-destructive/60 text-destructive group-data-[collapsible=icon]:hidden"
+      >
+        {aantal > 99 ? "99+" : aantal}
       </Badge>
     );
   }
@@ -471,6 +489,7 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                     <SidebarGroupLabel asChild>
                       <CollapsibleTrigger className="flex w-full items-center">
                         Magazijn
+                        <MagazijnKritiekBadge />
                         <ChevronDown className="ml-auto h-4 w-4 transition-transform group-data-[state=open]/collapsible:rotate-180 group-data-[collapsible=icon]:hidden" />
                       </CollapsibleTrigger>
                     </SidebarGroupLabel>

@@ -8074,6 +8074,10 @@ export interface ArtikelInput {
   actief?: boolean;
 }
 
+export interface MagazijnSignalering {
+  kritiek_aantal: number;
+}
+
 export type MagazijnDashboardKritiekeArtikelenItem = {
   id?: number;
   naam?: string;

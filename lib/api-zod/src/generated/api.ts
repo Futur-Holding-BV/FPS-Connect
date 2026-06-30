@@ -19743,6 +19743,14 @@ export const DeleteArtikelResponse = zod.void()
 
 
 /**
+ * @summary Aantal artikelen onder minimumvoorraad (voor sidebar-badge)
+ */
+export const GetMagazijnSignaleringResponse = zod.object({
+  "kritiek_aantal": zod.number()
+})
+
+
+/**
  * @summary Magazijn dashboard statistieken
  */
 export const GetMagazijnDashboardResponse = zod.object({

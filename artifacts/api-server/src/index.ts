@@ -3,6 +3,7 @@ import { logger } from "./lib/logger";
 import { ensureSessionTable } from "./lib/session";
 import { planDagelijksBackup } from "./lib/backupService";
 import { planDagelijksePortaalOpruiming } from "./lib/portaalOpruimen";
+import { planDagelijkseMagazijnSignalering } from "./lib/magazijnSignalering";
 
 const rawPort = process.env["PORT"];
 
@@ -41,6 +42,7 @@ ensureSessionTable()
       logger.info({ port }, "Server listening");
       planDagelijksBackup();
       planDagelijksePortaalOpruiming();
+      planDagelijkseMagazijnSignalering();
     });
   })
   .catch((err) => {

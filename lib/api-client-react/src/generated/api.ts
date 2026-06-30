@@ -330,6 +330,7 @@ import type {
   MagazijnDashboard,
   MagazijnLocatie,
   MagazijnLocatieInput,
+  MagazijnSignalering,
   MailActieResultaat,
   MailLogregel,
   MailOpdrachtbevestigingDemoInput,
@@ -55608,6 +55609,83 @@ export const useDeleteArtikel = <TError = ErrorType<unknown>,
       > => {
       return useMutation(getDeleteArtikelMutationOptions(options));
     }
+
+export const getGetMagazijnSignaleringUrl = () => {
+
+
+
+
+  return `/api/magazijn/signalering`
+}
+
+/**
+ * @summary Aantal artikelen onder minimumvoorraad (voor sidebar-badge)
+ */
+export const getMagazijnSignalering = async ( options?: RequestInit): Promise<MagazijnSignalering> => {
+
+  return customFetch<MagazijnSignalering>(getGetMagazijnSignaleringUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetMagazijnSignaleringQueryKey = () => {
+    return [
+    `/api/magazijn/signalering`
+    ] as const;
+    }
+
+
+export const getGetMagazijnSignaleringQueryOptions = <TData = Awaited<ReturnType<typeof getMagazijnSignalering>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMagazijnSignalering>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetMagazijnSignaleringQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getMagazijnSignalering>>> = ({ signal }) => getMagazijnSignalering({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getMagazijnSignalering>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetMagazijnSignaleringQueryResult = NonNullable<Awaited<ReturnType<typeof getMagazijnSignalering>>>
+export type GetMagazijnSignaleringQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Aantal artikelen onder minimumvoorraad (voor sidebar-badge)
+ */
+
+export function useGetMagazijnSignalering<TData = Awaited<ReturnType<typeof getMagazijnSignalering>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMagazijnSignalering>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetMagazijnSignaleringQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
 
 export const getGetMagazijnDashboardUrl = () => {
 

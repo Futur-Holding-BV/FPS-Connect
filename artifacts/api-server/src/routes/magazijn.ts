@@ -193,6 +193,40 @@ async function bijwerkenVoorraad(
 // DASHBOARD
 // ═══════════════════════════════════════════════════════════
 
+// ── Signalering: kritieke artikelen teller (voor sidebar-badge) ──────────────
+
+router.get("/magazijn/signalering", lezen, async (req, res) => {
+  try {
+    const voorraad = await db.select({
+      artikel_id: voorraadTable.artikelId,
+      hoeveelheid: voorraadTable.hoeveelheid,
+    }).from(voorraadTable);
+
+    const artikelen = await db.select({
+      id: artikelenTable.id,
+      minimum_voorraad: sql<number | null>`${artikelenTable}.minimum_voorraad`,
+    }).from(artikelenTable).where(eq(artikelenTable.actief, true));
+
+    const voorraadMap = new Map<number, number>();
+    for (const v of voorraad) {
+      voorraadMap.set(v.artikel_id, (voorraadMap.get(v.artikel_id) ?? 0) + (v.hoeveelheid ?? 0));
+    }
+
+    let kritiekAantal = 0;
+    for (const artikel of artikelen) {
+      const minVoorraad = (artikel as Record<string, unknown>).minimum_voorraad as number | null;
+      if (minVoorraad == null) continue;
+      const hoeveelheid = voorraadMap.get(artikel.id) ?? 0;
+      if (hoeveelheid < minVoorraad) kritiekAantal++;
+    }
+
+    res.json({ kritiek_aantal: kritiekAantal });
+  } catch (err) {
+    logger.error({ err }, "magazijn signalering fout");
+    res.status(500).json({ error: "Serverfout" });
+  }
+});
+
 router.get("/magazijn/dashboard", lezen, async (req, res) => {
   try {
     const voorraad = await db.select({

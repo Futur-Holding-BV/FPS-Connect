@@ -15515,6 +15515,19 @@ paths:
 
   # ── MAGAZIJN ─────────────────────────────────────────────────────────────────
 
+  /magazijn/signalering:
+    get:
+      operationId: getMagazijnSignalering
+      tags: [magazijn]
+      summary: Aantal artikelen onder minimumvoorraad (voor sidebar-badge)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MagazijnSignalering"
+
   /magazijn/dashboard:
     get:
       operationId: getMagazijnDashboard
@@ -28617,6 +28630,12 @@ components:
 
 
     # ── MAGAZIJN ──────────────────────────────────────────────────────────────────
+
+    MagazijnSignalering:
+      type: object
+      required: [kritiek_aantal]
+      properties:
+        kritiek_aantal: { type: integer }
 
     MagazijnDashboard:
       type: object

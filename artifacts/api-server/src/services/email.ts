@@ -51,7 +51,7 @@ export class MailFout extends Error {
   }
 }
 
-export type MailSoort = "test" | "uitnodiging" | "wachtwoord_reset" | "offerte" | "klantvraag" | "ondertekening" | "inkoopbon" | "opdrachtbevestiging";
+export type MailSoort = "test" | "uitnodiging" | "wachtwoord_reset" | "offerte" | "klantvraag" | "ondertekening" | "inkoopbon" | "opdrachtbevestiging" | "magazijn_signalering";
 
 // ── Configuratie-helpers ─────────────────────────────────────────────────────
 export function isGeconfigureerd(): boolean {
@@ -890,6 +890,57 @@ export async function stuurOpdrachtbevestiging(opties: {
   } catch (err) {
     logger.warn({ err, offerteId }, "Opdrachtbevestiging mislukt (niet-kritiek)");
   }
+}
+
+/**
+ * Verstuurt een signalering over artikelen onder minimumvoorraad.
+ */
+export async function stuurMagazijnSignalering(opties: {
+  naarEmail: string;
+  naarNaam?: string | null;
+  kritiekeArtikelen: Array<{ id: number; naam: string; eenheid: string; hoeveelheid: number; minimum_voorraad: number }>;
+}): Promise<void> {
+  const { naarEmail, naarNaam, kritiekeArtikelen } = opties;
+  const aantal = kritiekeArtikelen.length;
+  const onderwerp = `Magazijn: ${aantal} artikel${aantal === 1 ? "" : "en"} onder minimumvoorraad`;
+
+  const regelHtml = kritiekeArtikelen
+    .map(
+      (a) =>
+        `<tr>
+          <td style="padding:8px 12px;border-bottom:1px solid #e4e4e7;font-size:14px;color:#18181b;">${a.naam}</td>
+          <td style="padding:8px 12px;border-bottom:1px solid #e4e4e7;font-size:14px;text-align:right;color:#e11d48;font-weight:600;">${a.hoeveelheid} ${a.eenheid}</td>
+          <td style="padding:8px 12px;border-bottom:1px solid #e4e4e7;font-size:14px;text-align:right;color:#71717a;">${a.minimum_voorraad} ${a.eenheid}</td>
+        </tr>`,
+    )
+    .join("\n");
+
+  const tabel = `
+    <table cellpadding="0" cellspacing="0" width="100%" style="border-collapse:collapse;border:1px solid #e4e4e7;border-radius:6px;margin-bottom:24px;overflow:hidden;">
+      <thead>
+        <tr style="background:#f4f4f5;">
+          <th style="padding:8px 12px;font-size:12px;font-weight:600;color:#71717a;text-align:left;text-transform:uppercase;letter-spacing:.5px;">Artikel</th>
+          <th style="padding:8px 12px;font-size:12px;font-weight:600;color:#71717a;text-align:right;text-transform:uppercase;letter-spacing:.5px;">Huidig</th>
+          <th style="padding:8px 12px;font-size:12px;font-weight:600;color:#71717a;text-align:right;text-transform:uppercase;letter-spacing:.5px;">Minimum</th>
+        </tr>
+      </thead>
+      <tbody>${regelHtml}</tbody>
+    </table>`;
+
+  const html = mailShell({
+    titel: onderwerp,
+    kopje: `${aantal} artikel${aantal === 1 ? "" : "en"} onder minimumvoorraad`,
+    paragrafen: [
+      `In het magazijn ${aantal === 1 ? "staat" : "staan"} momenteel <strong>${aantal} artikel${aantal === 1 ? "" : "en"}</strong> waarvan de voorraad onder het ingestelde minimum is gezakt.`,
+      tabel,
+      "Log in op FPS Connect om de voorraad aan te vullen of een bestelling te plaatsen.",
+    ],
+    knop: { label: "Ga naar Magazijn", link: "https://fpsbrandpreventie.nl/magazijn" },
+    voettekst:
+      "Dit is een automatische dagelijkse signalering van FPS Connect &bull; U ontvangt dit bericht omdat u magazijnbeheer-bevoegdheden heeft.",
+  });
+
+  await verstuurMail({ naarEmail, naarNaam: naarNaam ?? undefined, onderwerp, html, soort: "magazijn_signalering" });
 }
 
 /**
