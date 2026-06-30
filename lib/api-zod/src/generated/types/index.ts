@@ -522,6 +522,7 @@ export * from './opnameSamenvatting';
 export * from './opnameSpotsAanmakenResultaat';
 export * from './orgAiBedrijfsscanResultaat';
 export * from './orgAiBedrijfsscanResultaatAdviezenItem';
+export * from './orgAiCategorieCorrectie';
 export * from './orgAiCategorieCorrectieInput';
 export * from './orgAiInvullenInput';
 export * from './orgAiVerzekeringInput';

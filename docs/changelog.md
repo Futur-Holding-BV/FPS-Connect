@@ -56,6 +56,22 @@ Koppeling magazijn ↔ opdrachten zichtbaar gemaakt via een nieuw Materiaal-tabb
   - Gating via `useBevoegdheid("magazijn", 3)` — alleen beheerders zien de actieknoppen
 - **Detail pagina** (`artifacts/firevault/src/pages/opdrachten/detail.tsx`): Materiaal-tabblad toegevoegd na "Uitvoeringsplanning", met Package-icoon
 
+## 2026-06-30 — AI-leergeschiedenis: overzicht categorie-correcties
+
+**Uitvoering:** volledig | **Diepere lagen:** volledig | **Getest:** typecheck + handmatig door agent
+
+Beheerpagina toegevoegd voor de AI-categorie-correcties die worden opgeslagen in `ai_categorie_correcties`:
+
+- **OpenAPI** (`lib/api-spec/openapi.yaml`): twee nieuwe endpoints toegevoegd:
+  - `GET /organisatie/bedrijfsdocumenten/correcties` — haalt alle opgeslagen correcties op (nieuwste eerst)
+  - `DELETE /organisatie/bedrijfsdocumenten/correcties/{id}` — verwijdert een foutieve correctie
+  - Nieuw schema `OrgAiCategorieCorrectie` met id, ai_voorstel, gekozen, tekst_fragment, aangemaakt_op
+- **API server** (`artifacts/api-server/src/routes/organisatie.ts`): GET- en DELETE-handlers toegevoegd achter `lezen`/`schrijven` middleware
+- **Frontend** (`artifacts/firevault/src/pages/organisatie/bedrijfsdocumenten.tsx`): inklapbaar paneel "AI-leergeschiedenis" toegevoegd onderaan de Bedrijfsdocumenten-pagina:
+  - Badge toont het totaal aantal opgeslagen correcties
+  - Tabel met kolommen: datum, AI-voorstel (amber badge), gekozen categorie (secondary badge), tekstfragment (ingekort)
+  - Verwijderknop per rij (alleen zichtbaar bij schrijfbevoegdheid niveau 2), met bevestigingsdialoog
+
 ---
 
 ## 2026-06-30 — Barcode scannen in de monteur-app (magazijn)

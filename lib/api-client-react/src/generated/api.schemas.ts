@@ -7897,6 +7897,15 @@ export interface OrgBedrijfsdocumentAnalyseerInput {
   bestand: Blob;
 }
 
+export interface OrgAiCategorieCorrectie {
+  id: number;
+  ai_voorstel: string;
+  gekozen: string;
+  /** @nullable */
+  tekst_fragment?: string | null;
+  aangemaakt_op: string;
+}
+
 export interface OrgAiCategorieCorrectieInput {
   ai_voorstel: string;
   gekozen: string;

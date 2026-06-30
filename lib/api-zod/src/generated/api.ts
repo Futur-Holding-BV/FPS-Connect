@@ -19381,6 +19381,29 @@ export const AnalyseerBedrijfsdocumentResponse = zod.object({
 
 
 /**
+ * @summary Alle opgeslagen AI-categorie-correcties ophalen
+ */
+export const ListAiCategorieCorrectiesResponseItem = zod.object({
+  "id": zod.number(),
+  "ai_voorstel": zod.string(),
+  "gekozen": zod.string(),
+  "tekst_fragment": zod.string().nullish(),
+  "aangemaakt_op": zod.string()
+})
+export const ListAiCategorieCorrectiesResponse = zod.array(ListAiCategorieCorrectiesResponseItem)
+
+
+/**
+ * @summary Verwijder een AI-categorie-correctie
+ */
+export const DeleteAiCategorieCorrectieParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteAiCategorieCorrectieResponse = zod.void()
+
+
+/**
  * @summary Sla een AI-categorie-correctie op zodat toekomstige analyses ervan leren
  */
 export const SlaAiCategorieCorrectieLerenBody = zod.object({

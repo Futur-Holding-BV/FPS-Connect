@@ -15248,6 +15248,36 @@ paths:
         "503":
           description: AI niet geconfigureerd
 
+  /organisatie/bedrijfsdocumenten/correcties:
+    get:
+      operationId: listAiCategorieCorrecties
+      tags: [organisatie]
+      summary: Alle opgeslagen AI-categorie-correcties ophalen
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/OrgAiCategorieCorrectie"
+
+  /organisatie/bedrijfsdocumenten/correcties/{id}:
+    delete:
+      operationId: deleteAiCategorieCorrectie
+      tags: [organisatie]
+      summary: Verwijder een AI-categorie-correctie
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Verwijderd
+
   /organisatie/bedrijfsdocumenten/correctie:
     post:
       operationId: slaAiCategorieCorrectieLeren
@@ -28492,6 +28522,16 @@ components:
         bestand:
           type: string
           format: binary
+
+    OrgAiCategorieCorrectie:
+      type: object
+      required: [id, ai_voorstel, gekozen, aangemaakt_op]
+      properties:
+        id:             { type: integer }
+        ai_voorstel:    { type: string }
+        gekozen:        { type: string }
+        tekst_fragment: { type: ["string", "null"] }
+        aangemaakt_op:  { type: string }
 
     OrgAiCategorieCorrectieInput:
       type: object

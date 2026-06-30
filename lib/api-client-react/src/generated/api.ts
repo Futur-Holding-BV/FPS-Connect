@@ -426,6 +426,7 @@ import type {
   OpnameSamenvatting,
   OpnameSpotsAanmakenResultaat,
   OrgAiBedrijfsscanResultaat,
+  OrgAiCategorieCorrectie,
   OrgAiCategorieCorrectieInput,
   OrgAiInvullenInput,
   OrgAiVerzekeringInput,
@@ -54655,6 +54656,153 @@ export const useAnalyseerBedrijfsdocument = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getAnalyseerBedrijfsdocumentMutationOptions(options));
+    }
+
+export const getListAiCategorieCorrectiesUrl = () => {
+
+
+
+
+  return `/api/organisatie/bedrijfsdocumenten/correcties`
+}
+
+/**
+ * @summary Alle opgeslagen AI-categorie-correcties ophalen
+ */
+export const listAiCategorieCorrecties = async ( options?: RequestInit): Promise<OrgAiCategorieCorrectie[]> => {
+
+  return customFetch<OrgAiCategorieCorrectie[]>(getListAiCategorieCorrectiesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListAiCategorieCorrectiesQueryKey = () => {
+    return [
+    `/api/organisatie/bedrijfsdocumenten/correcties`
+    ] as const;
+    }
+
+
+export const getListAiCategorieCorrectiesQueryOptions = <TData = Awaited<ReturnType<typeof listAiCategorieCorrecties>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAiCategorieCorrecties>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListAiCategorieCorrectiesQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listAiCategorieCorrecties>>> = ({ signal }) => listAiCategorieCorrecties({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listAiCategorieCorrecties>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListAiCategorieCorrectiesQueryResult = NonNullable<Awaited<ReturnType<typeof listAiCategorieCorrecties>>>
+export type ListAiCategorieCorrectiesQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Alle opgeslagen AI-categorie-correcties ophalen
+ */
+
+export function useListAiCategorieCorrecties<TData = Awaited<ReturnType<typeof listAiCategorieCorrecties>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAiCategorieCorrecties>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListAiCategorieCorrectiesQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getDeleteAiCategorieCorrectieUrl = (id: number,) => {
+
+
+
+
+  return `/api/organisatie/bedrijfsdocumenten/correcties/${id}`
+}
+
+/**
+ * @summary Verwijder een AI-categorie-correctie
+ */
+export const deleteAiCategorieCorrectie = async (id: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteAiCategorieCorrectieUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteAiCategorieCorrectieMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteAiCategorieCorrectie>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteAiCategorieCorrectie>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deleteAiCategorieCorrectie'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteAiCategorieCorrectie>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteAiCategorieCorrectie(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteAiCategorieCorrectieMutationResult = NonNullable<Awaited<ReturnType<typeof deleteAiCategorieCorrectie>>>
+
+    export type DeleteAiCategorieCorrectieMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Verwijder een AI-categorie-correctie
+ */
+export const useDeleteAiCategorieCorrectie = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteAiCategorieCorrectie>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteAiCategorieCorrectie>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeleteAiCategorieCorrectieMutationOptions(options));
     }
 
 export const getSlaAiCategorieCorrectieLerenUrl = () => {

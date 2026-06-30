@@ -481,6 +481,40 @@ router.post(
   }
 );
 
+// ── Bedrijfsdocumenten — AI categorie-correcties overzicht ───────────────────
+
+router.get("/organisatie/bedrijfsdocumenten/correcties", lezen, async (req, res) => {
+  try {
+    const rijen = await db
+      .select()
+      .from(aiCategorieCorrectiesTable)
+      .orderBy(desc(aiCategorieCorrectiesTable.aangemaaktOp));
+    res.json(
+      rijen.map((r) => ({
+        id:             r.id,
+        ai_voorstel:    r.aiVoorstel,
+        gekozen:        r.gekozen,
+        tekst_fragment: r.tekstFragment ?? null,
+        aangemaakt_op:  r.aangemaaktOp,
+      }))
+    );
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+router.delete("/organisatie/bedrijfsdocumenten/correcties/:id", schrijven, async (req, res) => {
+  try {
+    const id = parseId(req.params.id);
+    await db.delete(aiCategorieCorrectiesTable).where(eq(aiCategorieCorrectiesTable.id, id));
+    res.status(204).end();
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
 // ── Bedrijfsdocumenten — AI categorie-correctie opslaan ──────────────────────
 
 router.post("/organisatie/bedrijfsdocumenten/correctie", schrijven, async (req, res) => {

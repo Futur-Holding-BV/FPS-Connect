@@ -4,6 +4,9 @@ import {
   useCreateOrgBedrijfsdocument,
   useUpdateOrgBedrijfsdocument,
   useDeleteOrgBedrijfsdocument,
+  useListAiCategorieCorrecties,
+  useDeleteAiCategorieCorrectie,
+  getListAiCategorieCorrectiesQueryKey,
 } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -15,6 +18,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
+import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
 import {
   Loader2,
   Files,
@@ -31,6 +35,9 @@ import {
   AlertTriangle,
   Check,
   Download,
+  ChevronDown,
+  ChevronUp,
+  Brain,
 } from "lucide-react";
 
 const CATEGORIEEN: { waarde: string; label: string; icoon: typeof FileText }[] = [
@@ -137,11 +144,15 @@ async function stuurVeldCorrectie(
 
 export default function BedrijfsdocumentenPagina() {
   const { data: documenten = [], isLoading } = useListOrgBedrijfsdocumenten();
+  const { data: correcties = [] } = useListAiCategorieCorrecties();
   const createDoc = useCreateOrgBedrijfsdocument();
   const updateDoc = useUpdateOrgBedrijfsdocument();
   const deleteDoc = useDeleteOrgBedrijfsdocument();
+  const deleteCorrectie = useDeleteAiCategorieCorrectie();
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { heeftNiveau } = useBevoegdheid();
+  const magSchrijven = heeftNiveau("organisatie", 2);
 
   const [dialoogOpen, setDialoogOpen]           = useState(false);
   const [bewerkId, setBewerkId]                 = useState<number | null>(null);
@@ -154,6 +165,8 @@ export default function BedrijfsdocumentenPagina() {
   const [actieveCat, setActieveCat]             = useState<string>("alle");
   const [bestaandBestandPad, setBestaandBestandPad] = useState<string | null>(null);
   const [vervangBestand, setVervangBestand]     = useState(false);
+  const [correctiesPanelOpen, setCorrectiesPanelOpen] = useState(false);
+  const [verwijderCorrectie, setVerwijderCorrectie]   = useState<number | null>(null);
 
   const hashRef                = useRef<string | null>(null);
   const tekstFragmentRef       = useRef<string | null>(null);
@@ -350,6 +363,17 @@ export default function BedrijfsdocumentenPagina() {
     }
   };
 
+  const verwijderCorrectieFn = async (id: number) => {
+    try {
+      await deleteCorrectie.mutateAsync({ id });
+      queryClient.invalidateQueries({ queryKey: getListAiCategorieCorrectiesQueryKey() });
+      setVerwijderCorrectie(null);
+      toast({ title: "Correctie verwijderd" });
+    } catch {
+      toast({ title: "Verwijderen mislukt", variant: "destructive" });
+    }
+  };
+
   const gefilterdeDocumenten =
     actieveCat === "alle" ? documenten : documenten.filter((d) => d.categorie === actieveCat);
   void gefilterdeDocumenten;
@@ -522,6 +546,89 @@ export default function BedrijfsdocumentenPagina() {
           )}
         </div>
       )}
+
+      {/* ── AI-leergeschiedenis: categorie-correcties ──────────────────────── */}
+      <Card>
+        <CardHeader className="pb-3">
+          <button
+            className="flex items-center gap-2 w-full text-left"
+            onClick={() => setCorrectiesPanelOpen((v) => !v)}
+          >
+            <Brain className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-base">AI-leergeschiedenis</CardTitle>
+            <Badge variant="secondary" className="ml-1">{correcties.length}</Badge>
+            <span className="ml-auto text-muted-foreground">
+              {correctiesPanelOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+            </span>
+          </button>
+          {correctiesPanelOpen && (
+            <p className="text-sm text-muted-foreground mt-1">
+              Elke keer dat een gebruiker een door de AI voorgestelde categorie corrigeert, wordt dat opgeslagen. De AI gebruikt deze correcties als voorbeelden bij toekomstige analyses. Verwijder een rij als de correctie foutief was.
+            </p>
+          )}
+        </CardHeader>
+        {correctiesPanelOpen && (
+          <CardContent className="pt-0">
+            {correcties.length === 0 ? (
+              <p className="text-sm text-muted-foreground italic py-4 text-center">
+                Nog geen correcties opgeslagen. Zodra een gebruiker een AI-categorievoorspelling aanpast, verschijnt dat hier.
+              </p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b text-muted-foreground">
+                      <th className="text-left py-2 pr-4 font-medium">Datum</th>
+                      <th className="text-left py-2 pr-4 font-medium">AI-voorstel</th>
+                      <th className="text-left py-2 pr-4 font-medium">Gekozen categorie</th>
+                      <th className="text-left py-2 pr-4 font-medium">Tekstfragment</th>
+                      {magSchrijven && <th className="py-2 w-8" />}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y">
+                    {correcties.map((c) => (
+                      <tr key={c.id} className="hover:bg-muted/30">
+                        <td className="py-2 pr-4 whitespace-nowrap text-muted-foreground">
+                          {new Date(c.aangemaakt_op).toLocaleDateString("nl-NL", { day: "2-digit", month: "2-digit", year: "numeric" })}
+                        </td>
+                        <td className="py-2 pr-4">
+                          <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-300">
+                            {CATEGORIE_LABELS[c.ai_voorstel] ?? c.ai_voorstel}
+                          </Badge>
+                        </td>
+                        <td className="py-2 pr-4">
+                          <Badge variant="secondary">
+                            {CATEGORIE_LABELS[c.gekozen] ?? c.gekozen}
+                          </Badge>
+                        </td>
+                        <td className="py-2 pr-4 max-w-xs">
+                          {c.tekst_fragment ? (
+                            <span className="text-xs text-muted-foreground line-clamp-2">{c.tekst_fragment}</span>
+                          ) : (
+                            <span className="text-xs text-muted-foreground italic">—</span>
+                          )}
+                        </td>
+                        {magSchrijven && (
+                          <td className="py-2">
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-7 w-7 text-destructive hover:text-destructive"
+                              onClick={() => setVerwijderCorrectie(c.id)}
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </td>
+                        )}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </CardContent>
+        )}
+      </Card>
 
       {/* ── Registreer / bewerkdialoog ─────────────────────────────────────── */}
       <Dialog open={dialoogOpen} onOpenChange={(open) => { if (!open) { setDialoogOpen(false); resetDialoog(); } }}>
@@ -794,6 +901,27 @@ export default function BedrijfsdocumentenPagina() {
               variant="destructive"
               onClick={() => verwijderBevestiging && verwijder(verwijderBevestiging)}
               disabled={deleteDoc.isPending}
+            >
+              Verwijderen
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      {/* ── Verwijder-bevestiging correctie ───────────────────────────────── */}
+      <Dialog open={verwijderCorrectie !== null} onOpenChange={() => setVerwijderCorrectie(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Correctie verwijderen</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Weet u zeker dat u deze AI-correctie wilt verwijderen? De AI zal dit voorbeeld niet meer meenemen bij toekomstige analyses.
+          </p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setVerwijderCorrectie(null)}>Annuleren</Button>
+            <Button
+              variant="destructive"
+              onClick={() => verwijderCorrectie && verwijderCorrectieFn(verwijderCorrectie)}
+              disabled={deleteCorrectie.isPending}
             >
               Verwijderen
             </Button>
