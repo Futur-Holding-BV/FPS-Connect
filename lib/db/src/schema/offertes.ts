@@ -88,6 +88,8 @@ export const offertesTable = pgTable("offertes", {
   betalingstermijnDagen: integer("betalingstermijn_dagen").notNull().default(30),
   betaalwijze: text("betaalwijze"),
   factuurSchema: jsonb("factuur_schema"),
+  // Begrotingsweergave — welke kolommen/rijen zichtbaar zijn in klantdocument
+  begrotingWeergave: jsonb("begroting_weergave"),
   // Voorwaardenbibliotheek-koppeling
   voorwaardenSetId: integer("voorwaarden_set_id").references(() => offerteVoorwaardenSetsTable.id, { onDelete: "set null" }),
   voorwaardenSnapshot: text("voorwaarden_snapshot"),

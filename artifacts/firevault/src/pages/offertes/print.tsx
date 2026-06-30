@@ -63,11 +63,25 @@ export default function OffertePrintPagina() {
   }
 
   const actieveSecties = [...(secties ?? [])].sort((a, b) => a.volgorde - b.volgorde).filter((s) => s.actief);
-  const maatregelen = (regels ?? []).filter((r) => r.categorie !== "algemene_kosten");
-  const algemeenKosten = (regels ?? []).filter((r) => r.categorie === "algemene_kosten");
+  const alleMaatregelen = (regels ?? []).filter((r) => r.categorie !== "algemene_kosten");
+  const alleAlgemeenKosten = (regels ?? []).filter((r) => r.categorie === "algemene_kosten");
   const totaal = (regels ?? []).reduce((s, r) => s + (r.kosten ?? 0), 0);
   const btw = totaal * ((offerte.btw_percentage ?? 21) / 100);
   const inclBtw = totaal + btw;
+
+  const w = {
+    toon_aantal: true, toon_eenheid: true, toon_prijs_per_eenheid: true, toon_ruimte: true,
+    toon_subtotalen: true, toon_subtotaal_excl: true, toon_btw: true, toon_totaal_incl: true,
+    groepering: "categorie" as "categorie" | "geen",
+    optionele_posten: "altijd" as "altijd" | "samengevat" | "verbergen",
+    alleen_totaal: false, titel: "Begroting",
+    ...((offerte as any).begroting_weergave ?? {}),
+  };
+
+  const maatregelen = w.optionele_posten === "verbergen"
+    ? alleMaatregelen.filter((r) => !r.is_optioneel) : alleMaatregelen;
+  const algemeenKosten = w.optionele_posten === "verbergen"
+    ? alleAlgemeenKosten.filter((r) => !r.is_optioneel) : alleAlgemeenKosten;
 
   const werkgever = (werkgevers ?? [])[0];
   const datum = datumNl((offerte as any).datum ?? offerte.aangemaakt_op);
@@ -146,70 +160,153 @@ export default function OffertePrintPagina() {
           </div>
           <div className="px-16 py-12 flex-1">
             <h1 className="text-2xl font-bold text-slate-900 mb-6 pb-3 border-b border-slate-200">
-              Begroting
+              {w.titel || "Begroting"}
             </h1>
 
-            {maatregelen.length > 0 && (
-              <div className="mb-6">
-                <table className="w-full text-sm border-collapse">
-                  <thead>
-                    <tr className="bg-slate-100">
-                      <th className="text-left py-2 px-3 font-semibold">Maatregel</th>
-                      <th className="text-right py-2 px-3 font-semibold w-24">Aantal</th>
-                      <th className="text-right py-2 px-3 font-semibold w-24">Eenheid</th>
-                      <th className="text-right py-2 px-3 font-semibold w-28">Prijs/eh.</th>
-                      <th className="text-right py-2 px-3 font-semibold w-28">Totaal</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {maatregelen.map((r) => (
-                      <tr key={r.id} className="border-b border-slate-100">
-                        <td className="py-2 px-3">
-                          <div>{r.maatregel}</div>
-                          {r.ruimte && <div className="text-xs text-slate-400">{r.ruimte}</div>}
-                        </td>
-                        <td className="py-2 px-3 text-right">{r.aantal}</td>
-                        <td className="py-2 px-3 text-right text-slate-500">{r.eenheid}</td>
-                        <td className="py-2 px-3 text-right">{euro(r.prijs_per_eenheid)}</td>
-                        <td className="py-2 px-3 text-right font-medium">{euro(r.kosten)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-
-            {algemeenKosten.length > 0 && (
-              <div className="mb-6">
-                <div className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Algemene kosten</div>
-                <table className="w-full text-sm border-collapse">
-                  <tbody>
-                    {algemeenKosten.map((r) => (
-                      <tr key={r.id} className="border-b border-slate-100">
-                        <td className="py-2 px-3">{r.maatregel}</td>
-                        <td className="py-2 px-3 text-right">{r.aantal} {r.eenheid}</td>
-                        <td className="py-2 px-3 text-right font-medium">{euro(r.kosten)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-
-            <div className="border-t-2 border-slate-300 pt-4 space-y-1">
-              <div className="flex justify-between text-sm">
-                <span className="text-slate-600">Subtotaal excl. btw</span>
-                <span className="font-medium">{euro(totaal)}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-slate-600">Btw {offerte.btw_percentage ?? 21}%</span>
-                <span className="font-medium">{euro(btw)}</span>
-              </div>
-              <div className="flex justify-between text-base font-bold border-t border-slate-200 pt-2 mt-2">
-                <span>Totaal incl. btw</span>
+            {w.alleen_totaal ? (
+              <div className="flex justify-between items-center text-lg font-bold border-t-2 border-slate-300 pt-4">
+                <span>{w.titel || "Begroting"}</span>
                 <span className="text-primary">{euro(inclBtw)}</span>
               </div>
-            </div>
+            ) : (
+              <>
+                {(() => {
+                  const alleRegels = w.groepering === "geen"
+                    ? (w.optionele_posten === "verbergen"
+                        ? (regels ?? []).filter((r) => !r.is_optioneel)
+                        : (regels ?? []))
+                    : null;
+
+                  function RegelRijPrint({ r }: { r: any }) {
+                    return (
+                      <tr className="border-b border-slate-100">
+                        <td className="py-2 px-3">
+                          <div>{r.maatregel}</div>
+                          {w.toon_ruimte && r.ruimte && <div className="text-xs text-slate-400">{r.ruimte}</div>}
+                          {r.is_optioneel && <div className="text-xs text-amber-600">Optioneel</div>}
+                        </td>
+                        {w.toon_aantal && <td className="py-2 px-3 text-right">{r.aantal}</td>}
+                        {w.toon_eenheid && <td className="py-2 px-3 text-right text-slate-500">{r.eenheid}</td>}
+                        {w.toon_prijs_per_eenheid && <td className="py-2 px-3 text-right">{euro(r.prijs_per_eenheid)}</td>}
+                        <td className="py-2 px-3 text-right font-medium">{euro(r.kosten)}</td>
+                      </tr>
+                    );
+                  }
+
+                  const subtotaalMaatregelen = alleMaatregelen.reduce((s, r) => s + (r.kosten ?? 0), 0);
+                  const subtotaalAlgemeen = alleAlgemeenKosten.reduce((s, r) => s + (r.kosten ?? 0), 0);
+
+                  return (
+                    <div className="mb-6">
+                      <table className="w-full text-sm border-collapse">
+                        <thead>
+                          <tr className="bg-slate-100">
+                            <th className="text-left py-2 px-3 font-semibold">Maatregel</th>
+                            {w.toon_aantal && <th className="text-right py-2 px-3 font-semibold w-24">Aantal</th>}
+                            {w.toon_eenheid && <th className="text-right py-2 px-3 font-semibold w-24">Eenheid</th>}
+                            {w.toon_prijs_per_eenheid && <th className="text-right py-2 px-3 font-semibold w-28">Prijs/eh.</th>}
+                            <th className="text-right py-2 px-3 font-semibold w-28">Totaal</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {alleRegels ? (
+                            alleRegels.map((r) => <RegelRijPrint key={r.id} r={r} />)
+                          ) : (
+                            <>
+                              {maatregelen.length > 0 && (
+                                <>
+                                  <tr className="bg-slate-50">
+                                    <td colSpan={1 + (w.toon_aantal ? 1 : 0) + (w.toon_eenheid ? 1 : 0) + (w.toon_prijs_per_eenheid ? 1 : 0) + 1}
+                                      className="py-1.5 px-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                                      Maatregelen
+                                    </td>
+                                  </tr>
+                                  {w.optionele_posten === "samengevat" ? (
+                                    <>
+                                      {maatregelen.filter((r) => !r.is_optioneel).map((r) => <RegelRijPrint key={r.id} r={r} />)}
+                                      {alleMaatregelen.some((r) => r.is_optioneel) && (
+                                        <tr className="border-b border-slate-100">
+                                          <td colSpan={1 + (w.toon_aantal ? 1 : 0) + (w.toon_eenheid ? 1 : 0) + (w.toon_prijs_per_eenheid ? 1 : 0) + 1}
+                                            className="py-2 px-3 text-xs text-amber-700 italic">
+                                            + {alleMaatregelen.filter((r) => r.is_optioneel).length} optionele post(en) — op verzoek beschikbaar
+                                          </td>
+                                        </tr>
+                                      )}
+                                    </>
+                                  ) : (
+                                    maatregelen.map((r) => <RegelRijPrint key={r.id} r={r} />)
+                                  )}
+                                  {w.toon_subtotalen && (
+                                    <tr className="bg-slate-50/50">
+                                      <td colSpan={1 + (w.toon_aantal ? 1 : 0) + (w.toon_eenheid ? 1 : 0) + (w.toon_prijs_per_eenheid ? 1 : 0)}
+                                        className="py-1.5 px-3 text-right text-xs text-slate-500">Subtotaal maatregelen</td>
+                                      <td className="py-1.5 px-3 text-right text-sm font-semibold">{euro(subtotaalMaatregelen)}</td>
+                                    </tr>
+                                  )}
+                                </>
+                              )}
+                              {algemeenKosten.length > 0 && (
+                                <>
+                                  <tr className="bg-slate-50">
+                                    <td colSpan={1 + (w.toon_aantal ? 1 : 0) + (w.toon_eenheid ? 1 : 0) + (w.toon_prijs_per_eenheid ? 1 : 0) + 1}
+                                      className="py-1.5 px-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                                      Algemene kosten
+                                    </td>
+                                  </tr>
+                                  {w.optionele_posten === "samengevat" ? (
+                                    <>
+                                      {algemeenKosten.filter((r) => !r.is_optioneel).map((r) => <RegelRijPrint key={r.id} r={r} />)}
+                                      {alleAlgemeenKosten.some((r) => r.is_optioneel) && (
+                                        <tr className="border-b border-slate-100">
+                                          <td colSpan={1 + (w.toon_aantal ? 1 : 0) + (w.toon_eenheid ? 1 : 0) + (w.toon_prijs_per_eenheid ? 1 : 0) + 1}
+                                            className="py-2 px-3 text-xs text-amber-700 italic">
+                                            + {alleAlgemeenKosten.filter((r) => r.is_optioneel).length} optionele post(en) — op verzoek beschikbaar
+                                          </td>
+                                        </tr>
+                                      )}
+                                    </>
+                                  ) : (
+                                    algemeenKosten.map((r) => <RegelRijPrint key={r.id} r={r} />)
+                                  )}
+                                  {w.toon_subtotalen && (
+                                    <tr className="bg-slate-50/50">
+                                      <td colSpan={1 + (w.toon_aantal ? 1 : 0) + (w.toon_eenheid ? 1 : 0) + (w.toon_prijs_per_eenheid ? 1 : 0)}
+                                        className="py-1.5 px-3 text-right text-xs text-slate-500">Subtotaal algemene kosten</td>
+                                      <td className="py-1.5 px-3 text-right text-sm font-semibold">{euro(subtotaalAlgemeen)}</td>
+                                    </tr>
+                                  )}
+                                </>
+                              )}
+                            </>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  );
+                })()}
+
+                <div className="border-t-2 border-slate-300 pt-4 space-y-1">
+                  {w.toon_subtotaal_excl && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-slate-600">Subtotaal excl. btw</span>
+                      <span className="font-medium">{euro(totaal)}</span>
+                    </div>
+                  )}
+                  {w.toon_btw && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-slate-600">Btw {offerte.btw_percentage ?? 21}%</span>
+                      <span className="font-medium">{euro(btw)}</span>
+                    </div>
+                  )}
+                  {w.toon_totaal_incl && (
+                    <div className="flex justify-between text-base font-bold border-t border-slate-200 pt-2 mt-2">
+                      <span>Totaal incl. btw</span>
+                      <span className="text-primary">{euro(inclBtw)}</span>
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
 
             <div className="mt-8 grid grid-cols-2 gap-6 text-sm">
               <div className="rounded-md border border-slate-200 p-4 space-y-1">

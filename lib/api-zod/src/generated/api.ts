@@ -9463,6 +9463,20 @@ export const ListOffertesResponseItem = zod.object({
   "portaal_status": zod.string().optional(),
   "auto_project_id": zod.number().nullish(),
   "aangemaakt_door_id": zod.number().nullish(),
+  "begroting_weergave": zod.object({
+  "toon_aantal": zod.boolean().optional(),
+  "toon_eenheid": zod.boolean().optional(),
+  "toon_prijs_per_eenheid": zod.boolean().optional(),
+  "toon_ruimte": zod.boolean().optional(),
+  "toon_subtotalen": zod.boolean().optional(),
+  "toon_subtotaal_excl": zod.boolean().optional(),
+  "toon_btw": zod.boolean().optional(),
+  "toon_totaal_incl": zod.boolean().optional(),
+  "groepering": zod.string().optional(),
+  "optionele_posten": zod.string().optional(),
+  "alleen_totaal": zod.boolean().optional(),
+  "titel": zod.string().optional()
+}).nullish().describe('Weergave-instellingen voor de begrotingstabel in het klantdocument'),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
 })
@@ -9495,7 +9509,21 @@ export const CreateOfferteBody = zod.object({
   "bedrag_excl_btw": zod.number().optional(),
   "btw_percentage": zod.number().optional(),
   "bedrag_incl_btw": zod.number().optional(),
-  "status": zod.string().optional()
+  "status": zod.string().optional(),
+  "begroting_weergave": zod.object({
+  "toon_aantal": zod.boolean().optional(),
+  "toon_eenheid": zod.boolean().optional(),
+  "toon_prijs_per_eenheid": zod.boolean().optional(),
+  "toon_ruimte": zod.boolean().optional(),
+  "toon_subtotalen": zod.boolean().optional(),
+  "toon_subtotaal_excl": zod.boolean().optional(),
+  "toon_btw": zod.boolean().optional(),
+  "toon_totaal_incl": zod.boolean().optional(),
+  "groepering": zod.string().optional(),
+  "optionele_posten": zod.string().optional(),
+  "alleen_totaal": zod.boolean().optional(),
+  "titel": zod.string().optional()
+}).nullish()
 })
 
 export const CreateOfferteResponse = zod.void()
@@ -9540,6 +9568,20 @@ export const GetOfferteResponse = zod.object({
   "portaal_status": zod.string().optional(),
   "auto_project_id": zod.number().nullish(),
   "aangemaakt_door_id": zod.number().nullish(),
+  "begroting_weergave": zod.object({
+  "toon_aantal": zod.boolean().optional(),
+  "toon_eenheid": zod.boolean().optional(),
+  "toon_prijs_per_eenheid": zod.boolean().optional(),
+  "toon_ruimte": zod.boolean().optional(),
+  "toon_subtotalen": zod.boolean().optional(),
+  "toon_subtotaal_excl": zod.boolean().optional(),
+  "toon_btw": zod.boolean().optional(),
+  "toon_totaal_incl": zod.boolean().optional(),
+  "groepering": zod.string().optional(),
+  "optionele_posten": zod.string().optional(),
+  "alleen_totaal": zod.boolean().optional(),
+  "titel": zod.string().optional()
+}).nullish().describe('Weergave-instellingen voor de begrotingstabel in het klantdocument'),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
 })
@@ -9575,7 +9617,21 @@ export const UpdateOfferteBody = zod.object({
   "bedrag_excl_btw": zod.number().optional(),
   "btw_percentage": zod.number().optional(),
   "bedrag_incl_btw": zod.number().optional(),
-  "status": zod.string().optional()
+  "status": zod.string().optional(),
+  "begroting_weergave": zod.object({
+  "toon_aantal": zod.boolean().optional(),
+  "toon_eenheid": zod.boolean().optional(),
+  "toon_prijs_per_eenheid": zod.boolean().optional(),
+  "toon_ruimte": zod.boolean().optional(),
+  "toon_subtotalen": zod.boolean().optional(),
+  "toon_subtotaal_excl": zod.boolean().optional(),
+  "toon_btw": zod.boolean().optional(),
+  "toon_totaal_incl": zod.boolean().optional(),
+  "groepering": zod.string().optional(),
+  "optionele_posten": zod.string().optional(),
+  "alleen_totaal": zod.boolean().optional(),
+  "titel": zod.string().optional()
+}).nullish()
 })
 
 export const UpdateOfferteResponse = zod.object({
@@ -9610,6 +9666,20 @@ export const UpdateOfferteResponse = zod.object({
   "portaal_status": zod.string().optional(),
   "auto_project_id": zod.number().nullish(),
   "aangemaakt_door_id": zod.number().nullish(),
+  "begroting_weergave": zod.object({
+  "toon_aantal": zod.boolean().optional(),
+  "toon_eenheid": zod.boolean().optional(),
+  "toon_prijs_per_eenheid": zod.boolean().optional(),
+  "toon_ruimte": zod.boolean().optional(),
+  "toon_subtotalen": zod.boolean().optional(),
+  "toon_subtotaal_excl": zod.boolean().optional(),
+  "toon_btw": zod.boolean().optional(),
+  "toon_totaal_incl": zod.boolean().optional(),
+  "groepering": zod.string().optional(),
+  "optionele_posten": zod.string().optional(),
+  "alleen_totaal": zod.boolean().optional(),
+  "titel": zod.string().optional()
+}).nullish().describe('Weergave-instellingen voor de begrotingstabel in het klantdocument'),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
 })
@@ -9647,6 +9717,7 @@ export const ListOfferteRegelsResponseItem = zod.object({
   "kosten": zod.number(),
   "volgorde": zod.number(),
   "ai_voorstel": zod.boolean(),
+  "is_optioneel": zod.boolean(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
 })
@@ -9725,6 +9796,7 @@ export const UpdateOfferteRegelResponse = zod.object({
   "kosten": zod.number(),
   "volgorde": zod.number(),
   "ai_voorstel": zod.boolean(),
+  "is_optioneel": zod.boolean(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
 })

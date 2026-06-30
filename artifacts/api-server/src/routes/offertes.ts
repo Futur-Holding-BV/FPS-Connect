@@ -309,6 +309,7 @@ async function offerteNaarJson(o: typeof offertesTable.$inferSelect) {
     status: o.status,
     portaal_status: o.portaalStatus,
     auto_project_id: o.autoProjectId ?? null,
+    begroting_weergave: o.begrotingWeergave ?? null,
     aangemaakt_door_id: o.aangemaaktDoorId,
     aangemaakt_op: iso(o.aangemaaktOp),
     bijgewerkt_op: iso(o.bijgewerktOp),
@@ -543,7 +544,7 @@ router.patch("/offertes/:id", schrijven, async (req, res) => {
     const offerteId = parseId(req.params.id);
     if (await isOfferteBlokkeerd(offerteId))
       return res.status(409).json({ error: "Ondertekende offerte kan niet meer worden gewijzigd." });
-    const { titel, offertenummer, gebouw_id, klant_id, sjabloon_id, opdrachtgever, ons_kenmerk, uw_kenmerk, uw_brief_van, behandeld_door_id, datum, geldigheid_dagen, voorwaarden, betalingstermijn_dagen, betaalwijze, factuur_schema, voorwaarden_set_id, bedrag_excl_btw, btw_percentage, bedrag_incl_btw, status } = req.body;
+    const { titel, offertenummer, gebouw_id, klant_id, sjabloon_id, opdrachtgever, ons_kenmerk, uw_kenmerk, uw_brief_van, behandeld_door_id, datum, geldigheid_dagen, voorwaarden, betalingstermijn_dagen, betaalwijze, factuur_schema, voorwaarden_set_id, bedrag_excl_btw, btw_percentage, bedrag_incl_btw, status, begroting_weergave } = req.body;
     const [o] = await db
       .update(offertesTable)
       .set({
@@ -568,6 +569,7 @@ router.patch("/offertes/:id", schrijven, async (req, res) => {
         ...(btw_percentage !== undefined && { btwPercentage: btw_percentage }),
         ...(bedrag_incl_btw !== undefined && { bedragInclBtw: bedrag_incl_btw }),
         ...(status !== undefined && { status }),
+        ...(begroting_weergave !== undefined && { begrotingWeergave: begroting_weergave }),
         bijgewerktOp: new Date(),
       })
       .where(eq(offertesTable.id, offerteId))

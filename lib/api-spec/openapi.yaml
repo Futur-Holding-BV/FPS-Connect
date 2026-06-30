@@ -20892,6 +20892,22 @@ components:
           type: ["integer", "null"]
         aangemaakt_door_id:
           type: ["integer", "null"]
+        begroting_weergave:
+          type: ["object", "null"]
+          description: Weergave-instellingen voor de begrotingstabel in het klantdocument
+          properties:
+            toon_aantal:        { type: boolean }
+            toon_eenheid:       { type: boolean }
+            toon_prijs_per_eenheid: { type: boolean }
+            toon_ruimte:        { type: boolean }
+            toon_subtotalen:    { type: boolean }
+            toon_subtotaal_excl: { type: boolean }
+            toon_btw:           { type: boolean }
+            toon_totaal_incl:   { type: boolean }
+            groepering:         { type: string }
+            optionele_posten:   { type: string }
+            alleen_totaal:      { type: boolean }
+            titel:              { type: string }
         aangemaakt_op:
           type: string
         bijgewerkt_op:
@@ -20943,10 +20959,25 @@ components:
           type: number
         status:
           type: string
+        begroting_weergave:
+          type: ["object", "null"]
+          properties:
+            toon_aantal:        { type: boolean }
+            toon_eenheid:       { type: boolean }
+            toon_prijs_per_eenheid: { type: boolean }
+            toon_ruimte:        { type: boolean }
+            toon_subtotalen:    { type: boolean }
+            toon_subtotaal_excl: { type: boolean }
+            toon_btw:           { type: boolean }
+            toon_totaal_incl:   { type: boolean }
+            groepering:         { type: string }
+            optionele_posten:   { type: string }
+            alleen_totaal:      { type: boolean }
+            titel:              { type: string }
 
     OfferteRegel:
       type: object
-      required: [id, offerte_id, categorie, maatregel, eenheid, aantal, prijs_per_eenheid, kosten, volgorde, ai_voorstel, aangemaakt_op, bijgewerkt_op]
+      required: [id, offerte_id, categorie, maatregel, eenheid, aantal, prijs_per_eenheid, kosten, volgorde, ai_voorstel, is_optioneel, aangemaakt_op, bijgewerkt_op]
       properties:
         id:
           type: integer
@@ -20975,6 +21006,8 @@ components:
         volgorde:
           type: integer
         ai_voorstel:
+          type: boolean
+        is_optioneel:
           type: boolean
         aangemaakt_op:
           type: string

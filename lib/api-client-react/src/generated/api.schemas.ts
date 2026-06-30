@@ -4009,6 +4009,25 @@ export interface OfferteHoofdstukInput {
  */
 export type OfferteFactuurSchema = { [key: string]: unknown } | null;
 
+/**
+ * Weergave-instellingen voor de begrotingstabel in het klantdocument
+ * @nullable
+ */
+export type OfferteBegrotingWeergave = {
+  toon_aantal?: boolean;
+  toon_eenheid?: boolean;
+  toon_prijs_per_eenheid?: boolean;
+  toon_ruimte?: boolean;
+  toon_subtotalen?: boolean;
+  toon_subtotaal_excl?: boolean;
+  toon_btw?: boolean;
+  toon_totaal_incl?: boolean;
+  groepering?: string;
+  optionele_posten?: string;
+  alleen_totaal?: boolean;
+  titel?: string;
+} | null;
+
 export interface Offerte {
   id: number;
   /** @nullable */
@@ -4059,11 +4078,34 @@ export interface Offerte {
   auto_project_id?: number | null;
   /** @nullable */
   aangemaakt_door_id?: number | null;
+  /**
+     * Weergave-instellingen voor de begrotingstabel in het klantdocument
+     * @nullable
+     */
+  begroting_weergave?: OfferteBegrotingWeergave;
   aangemaakt_op: string;
   bijgewerkt_op: string;
 }
 
 export type OfferteInputFactuurSchema = { [key: string]: unknown };
+
+/**
+ * @nullable
+ */
+export type OfferteInputBegrotingWeergave = {
+  toon_aantal?: boolean;
+  toon_eenheid?: boolean;
+  toon_prijs_per_eenheid?: boolean;
+  toon_ruimte?: boolean;
+  toon_subtotalen?: boolean;
+  toon_subtotaal_excl?: boolean;
+  toon_btw?: boolean;
+  toon_totaal_incl?: boolean;
+  groepering?: string;
+  optionele_posten?: string;
+  alleen_totaal?: boolean;
+  titel?: string;
+} | null;
 
 export interface OfferteInput {
   titel: string;
@@ -4092,6 +4134,8 @@ export interface OfferteInput {
   btw_percentage?: number;
   bedrag_incl_btw?: number;
   status?: string;
+  /** @nullable */
+  begroting_weergave?: OfferteInputBegrotingWeergave;
 }
 
 export interface OfferteRegel {
@@ -4113,6 +4157,7 @@ export interface OfferteRegel {
   kosten: number;
   volgorde: number;
   ai_voorstel: boolean;
+  is_optioneel: boolean;
   aangemaakt_op: string;
   bijgewerkt_op: string;
 }

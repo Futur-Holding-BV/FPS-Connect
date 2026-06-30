@@ -25,6 +25,7 @@ export interface OfferteRegel {
   kosten: number;
   volgorde: number;
   ai_voorstel: boolean;
+  is_optioneel: boolean;
   aangemaakt_op: string;
   bijgewerkt_op: string;
 }

@@ -1119,6 +1119,36 @@ export default function ProposalStudio() {
   );
 }
 
+type BegrotingWeergave = {
+  toon_aantal: boolean;
+  toon_eenheid: boolean;
+  toon_prijs_per_eenheid: boolean;
+  toon_ruimte: boolean;
+  toon_subtotalen: boolean;
+  toon_subtotaal_excl: boolean;
+  toon_btw: boolean;
+  toon_totaal_incl: boolean;
+  groepering: "categorie" | "geen";
+  optionele_posten: "altijd" | "samengevat" | "verbergen";
+  alleen_totaal: boolean;
+  titel: string;
+};
+
+const WEERGAVE_STANDAARD: BegrotingWeergave = {
+  toon_aantal: true,
+  toon_eenheid: true,
+  toon_prijs_per_eenheid: true,
+  toon_ruimte: true,
+  toon_subtotalen: true,
+  toon_subtotaal_excl: true,
+  toon_btw: true,
+  toon_totaal_incl: true,
+  groepering: "categorie",
+  optionele_posten: "altijd",
+  alleen_totaal: false,
+  titel: "Begroting",
+};
+
 function PrijzenTab({
   regels,
   offerte,
@@ -1140,13 +1170,42 @@ function PrijzenTab({
   werkRegelPending: boolean;
   toggleOptioneel: (id: number, huidig: boolean) => Promise<void>;
 }) {
+  const { toast } = useToast();
+  const weergave: BegrotingWeergave = { ...WEERGAVE_STANDAARD, ...(offerte?.begroting_weergave ?? {}) };
+
+  const { mutate: patchOfferte, isPending: slaatWeergaveOp } = useUpdateOfferte({
+    mutation: {
+      onSuccess: () => toast({ title: "Weergave-instellingen opgeslagen" }),
+      onError: () => toast({ title: "Opslaan mislukt", variant: "destructive" }),
+    },
+  });
+
+  function slaWeergaveOp(wijziging: Partial<BegrotingWeergave>) {
+    const nieuw = { ...weergave, ...wijziging };
+    patchOfferte({ id: offerte.id, data: { begroting_weergave: nieuw } as any });
+  }
+
   const maatregelen = regels.filter((r) => r.categorie !== "algemene_kosten");
   const algemeenKosten = regels.filter((r) => r.categorie === "algemene_kosten");
+
+  const zichtbareRegelsMaatregelen = weergave.optionele_posten === "verbergen"
+    ? maatregelen.filter((r) => !r.is_optioneel)
+    : maatregelen;
+  const zichtbareRegelsAlgemeen = weergave.optionele_posten === "verbergen"
+    ? algemeenKosten.filter((r) => !r.is_optioneel)
+    : algemeenKosten;
+
   const subtotaalMaatregelen = maatregelen.reduce((s, r) => s + (r.kosten ?? 0), 0);
   const subtotaalAlgemeen = algemeenKosten.reduce((s, r) => s + (r.kosten ?? 0), 0);
   const totaal = subtotaalMaatregelen + subtotaalAlgemeen;
   const btw = totaal * ((offerte?.btw_percentage ?? 21) / 100);
   const inclBtw = totaal + btw;
+
+  const aantalKolommen = 1
+    + (weergave.toon_eenheid ? 1 : 0)
+    + (weergave.toon_aantal ? 1 : 0)
+    + (weergave.toon_prijs_per_eenheid ? 1 : 0)
+    + 1; // totaal-kolom altijd
 
   if (regels.length === 0) {
     return (
@@ -1174,43 +1233,54 @@ function PrijzenTab({
             <div>
               <div className="font-medium text-sm">{r.maatregel}</div>
               {r.is_optioneel && <div className="text-xs text-amber-700">Optioneel</div>}
-              {r.ruimte && <div className="text-xs text-muted-foreground">{r.ruimte}</div>}
+              {weergave.toon_ruimte && r.ruimte && <div className="text-xs text-muted-foreground">{r.ruimte}</div>}
               {r.snag_referentie && <div className="text-xs text-muted-foreground">{r.snag_referentie}</div>}
             </div>
           </div>
         </td>
-        <td className="py-2 px-3 text-right text-sm text-muted-foreground whitespace-nowrap">{r.eenheid}</td>
-        <td className="py-2 px-3 text-right text-sm">{r.aantal}</td>
-        <td className="py-2 px-3 text-right">
-          {isBewerken ? (
+        {weergave.toon_eenheid && <td className="py-2 px-3 text-right text-sm text-muted-foreground whitespace-nowrap">{r.eenheid}</td>}
+        {weergave.toon_aantal && <td className="py-2 px-3 text-right text-sm">{r.aantal}</td>}
+        {weergave.toon_prijs_per_eenheid && (
+          <td className="py-2 px-3 text-right">
+            {isBewerken ? (
+              <div className="flex items-center gap-1 justify-end">
+                <Input
+                  className="w-24 h-7 text-right text-sm"
+                  value={bewerkPrijs}
+                  onChange={(e) => setBewerkPrijs(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") slaRegelPrijsOp(r.id);
+                    if (e.key === "Escape") setBewerkRegelId(null);
+                  }}
+                  autoFocus
+                />
+                <Button size="icon" className="h-7 w-7" onClick={() => slaRegelPrijsOp(r.id)} disabled={werkRegelPending}>
+                  <Check className="h-3 w-3" />
+                </Button>
+                <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setBewerkRegelId(null)}>
+                  <X className="h-3 w-3" />
+                </Button>
+              </div>
+            ) : (
+              <button
+                className="text-sm hover:underline hover:text-primary text-right w-full"
+                onClick={() => setBewerkRegelId(r.id, r.prijs_per_eenheid)}
+                title="Klik om prijs te bewerken"
+              >
+                {euro(r.prijs_per_eenheid)}
+              </button>
+            )}
+          </td>
+        )}
+        {!weergave.toon_prijs_per_eenheid && isBewerken && (
+          <td className="py-2 px-3 text-right">
             <div className="flex items-center gap-1 justify-end">
-              <Input
-                className="w-24 h-7 text-right text-sm"
-                value={bewerkPrijs}
-                onChange={(e) => setBewerkPrijs(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") slaRegelPrijsOp(r.id);
-                  if (e.key === "Escape") setBewerkRegelId(null);
-                }}
-                autoFocus
-              />
-              <Button size="icon" className="h-7 w-7" onClick={() => slaRegelPrijsOp(r.id)} disabled={werkRegelPending}>
-                <Check className="h-3 w-3" />
-              </Button>
-              <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setBewerkRegelId(null)}>
-                <X className="h-3 w-3" />
-              </Button>
+              <Input className="w-24 h-7 text-right text-sm" value={bewerkPrijs} onChange={(e) => setBewerkPrijs(e.target.value)} autoFocus />
+              <Button size="icon" className="h-7 w-7" onClick={() => slaRegelPrijsOp(r.id)} disabled={werkRegelPending}><Check className="h-3 w-3" /></Button>
+              <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setBewerkRegelId(null)}><X className="h-3 w-3" /></Button>
             </div>
-          ) : (
-            <button
-              className="text-sm hover:underline hover:text-primary text-right w-full"
-              onClick={() => setBewerkRegelId(r.id, r.prijs_per_eenheid)}
-              title="Klik om prijs te bewerken"
-            >
-              {euro(r.prijs_per_eenheid)}
-            </button>
-          )}
-        </td>
+          </td>
+        )}
         <td className="py-2 px-3 text-right text-sm font-medium">{euro(r.kosten ?? 0)}</td>
       </tr>
     );
@@ -1218,64 +1288,241 @@ function PrijzenTab({
 
   return (
     <div className="space-y-4">
+      {/* Weergave-instellingen */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm flex items-center gap-2">
+            <Eye className="h-4 w-4" /> Weergave-instellingen begrotingstabel
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* Begrotingstitel */}
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label className="text-xs">Begrotingstitel</Label>
+              <Input
+                value={weergave.titel}
+                onChange={(e) => slaWeergaveOp({ titel: e.target.value })}
+                placeholder="Begroting"
+                className="h-8 text-sm"
+                disabled={slaatWeergaveOp}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Groepering</Label>
+              <Select value={weergave.groepering} onValueChange={(v) => slaWeergaveOp({ groepering: v as BegrotingWeergave["groepering"] })} disabled={slaatWeergaveOp}>
+                <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="categorie">Per categorie (Maatregelen / Algemene kosten)</SelectItem>
+                  <SelectItem value="geen">Geen groepering — alles in volgorde</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {/* Kolommen */}
+          <div className="space-y-1.5">
+            <Label className="text-xs text-muted-foreground uppercase tracking-wide">Kolommen tonen</Label>
+            <div className="flex flex-wrap gap-2">
+              {(
+                [
+                  { key: "toon_aantal" as const, label: "Aantal" },
+                  { key: "toon_eenheid" as const, label: "Eenheid" },
+                  { key: "toon_prijs_per_eenheid" as const, label: "Prijs / eenheid" },
+                  { key: "toon_ruimte" as const, label: "Ruimte / locatie" },
+                ] as const
+              ).map(({ key, label }) => (
+                <button
+                  key={key}
+                  onClick={() => slaWeergaveOp({ [key]: !weergave[key] })}
+                  disabled={slaatWeergaveOp}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md border text-xs font-medium transition-colors ${
+                    weergave[key]
+                      ? "bg-primary text-primary-foreground border-primary"
+                      : "bg-background text-muted-foreground border-border hover:border-primary/50"
+                  }`}
+                >
+                  {weergave[key] ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Totaalrijen */}
+          <div className="space-y-1.5">
+            <Label className="text-xs text-muted-foreground uppercase tracking-wide">Totaalrijen tonen</Label>
+            <div className="flex flex-wrap gap-2">
+              {(
+                [
+                  { key: "toon_subtotalen" as const, label: "Subtotalen per groep" },
+                  { key: "toon_subtotaal_excl" as const, label: "Subtotaal excl. btw" },
+                  { key: "toon_btw" as const, label: "Btw-rij" },
+                  { key: "toon_totaal_incl" as const, label: "Totaal incl. btw" },
+                ] as const
+              ).map(({ key, label }) => (
+                <button
+                  key={key}
+                  onClick={() => slaWeergaveOp({ [key]: !weergave[key] })}
+                  disabled={slaatWeergaveOp}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md border text-xs font-medium transition-colors ${
+                    weergave[key]
+                      ? "bg-primary text-primary-foreground border-primary"
+                      : "bg-background text-muted-foreground border-border hover:border-primary/50"
+                  }`}
+                >
+                  {weergave[key] ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Optionele posten + alleen totaal */}
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label className="text-xs">Optionele posten</Label>
+              <Select value={weergave.optionele_posten} onValueChange={(v) => slaWeergaveOp({ optionele_posten: v as BegrotingWeergave["optionele_posten"] })} disabled={slaatWeergaveOp}>
+                <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="altijd">Altijd tonen (met keuzeoptie)</SelectItem>
+                  <SelectItem value="samengevat">Samengevat tonen (geen regeldetail)</SelectItem>
+                  <SelectItem value="verbergen">Verbergen (niet zichtbaar voor klant)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Regeldetail</Label>
+              <button
+                onClick={() => slaWeergaveOp({ alleen_totaal: !weergave.alleen_totaal })}
+                disabled={slaatWeergaveOp}
+                className={`w-full flex items-center gap-2 px-3 py-1.5 rounded-md border text-xs font-medium transition-colors h-8 ${
+                  weergave.alleen_totaal
+                    ? "bg-amber-50 text-amber-800 border-amber-300"
+                    : "bg-background text-muted-foreground border-border hover:border-primary/50"
+                }`}
+              >
+                {weergave.alleen_totaal ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}
+                Alleen eindtotaal tonen (geen regeldetail)
+              </button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       <p className="text-xs text-muted-foreground">Klik op een prijs om deze te bewerken. Gebruik het vakje links van een regel om hem als optioneel te markeren — optionele posten zijn zichtbaar in het klantportaal met een keuzeoptie.</p>
+
+      {weergave.alleen_totaal ? (
+        <Card>
+          <CardContent className="py-6">
+            <div className="flex justify-between items-center font-bold text-lg">
+              <span>{weergave.titel || "Begroting"}</span>
+              <span className="text-primary">{euro(inclBtw)}</span>
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">Klant ziet alleen het eindtotaal — geen regeldetail.</p>
+          </CardContent>
+        </Card>
+      ) : (
       <div className="overflow-auto rounded-lg border">
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-muted/50 border-b">
-              <th className="py-2 px-3 text-left font-semibold">Maatregel</th>
-              <th className="py-2 px-3 text-right font-semibold">Eenheid</th>
-              <th className="py-2 px-3 text-right font-semibold">Aantal</th>
-              <th className="py-2 px-3 text-right font-semibold">Prijs/eenheid</th>
+              <th className="py-2 px-3 text-left font-semibold">{weergave.titel || "Maatregel"}</th>
+              {weergave.toon_eenheid && <th className="py-2 px-3 text-right font-semibold">Eenheid</th>}
+              {weergave.toon_aantal && <th className="py-2 px-3 text-right font-semibold">Aantal</th>}
+              {weergave.toon_prijs_per_eenheid && <th className="py-2 px-3 text-right font-semibold">Prijs/eenheid</th>}
               <th className="py-2 px-3 text-right font-semibold">Totaal</th>
             </tr>
           </thead>
           <tbody>
-            {maatregelen.length > 0 && (
+            {weergave.groepering === "categorie" ? (
               <>
-                <tr className="bg-muted/20">
-                  <td colSpan={5} className="py-1.5 px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                    Maatregelen
-                  </td>
-                </tr>
-                {maatregelen.map((r) => <RegelRij key={r.id} r={r} />)}
-                <tr className="bg-muted/10">
-                  <td colSpan={4} className="py-1.5 px-3 text-right text-xs text-muted-foreground">Subtotaal maatregelen</td>
-                  <td className="py-1.5 px-3 text-right text-sm font-semibold">{euro(subtotaalMaatregelen)}</td>
-                </tr>
+                {maatregelen.length > 0 && (
+                  <>
+                    <tr className="bg-muted/20">
+                      <td colSpan={aantalKolommen} className="py-1.5 px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                        Maatregelen
+                      </td>
+                    </tr>
+                    {weergave.optionele_posten === "samengevat" ? (
+                      <>
+                        {maatregelen.filter((r) => !r.is_optioneel).map((r) => <RegelRij key={r.id} r={r} />)}
+                        {maatregelen.some((r) => r.is_optioneel) && (
+                          <tr className="border-b bg-amber-50/30">
+                            <td colSpan={aantalKolommen} className="py-2 px-3 text-xs text-amber-700 italic">
+                              + {maatregelen.filter((r) => r.is_optioneel).length} optionele post(en) — op verzoek beschikbaar
+                            </td>
+                          </tr>
+                        )}
+                      </>
+                    ) : (
+                      zichtbareRegelsMaatregelen.map((r) => <RegelRij key={r.id} r={r} />)
+                    )}
+                    {weergave.toon_subtotalen && (
+                      <tr className="bg-muted/10">
+                        <td colSpan={aantalKolommen - 1} className="py-1.5 px-3 text-right text-xs text-muted-foreground">Subtotaal maatregelen</td>
+                        <td className="py-1.5 px-3 text-right text-sm font-semibold">{euro(subtotaalMaatregelen)}</td>
+                      </tr>
+                    )}
+                  </>
+                )}
+                {algemeenKosten.length > 0 && (
+                  <>
+                    <tr className="bg-muted/20">
+                      <td colSpan={aantalKolommen} className="py-1.5 px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                        Algemene kosten
+                      </td>
+                    </tr>
+                    {weergave.optionele_posten === "samengevat" ? (
+                      <>
+                        {algemeenKosten.filter((r) => !r.is_optioneel).map((r) => <RegelRij key={r.id} r={r} />)}
+                        {algemeenKosten.some((r) => r.is_optioneel) && (
+                          <tr className="border-b bg-amber-50/30">
+                            <td colSpan={aantalKolommen} className="py-2 px-3 text-xs text-amber-700 italic">
+                              + {algemeenKosten.filter((r) => r.is_optioneel).length} optionele post(en) — op verzoek beschikbaar
+                            </td>
+                          </tr>
+                        )}
+                      </>
+                    ) : (
+                      zichtbareRegelsAlgemeen.map((r) => <RegelRij key={r.id} r={r} />)
+                    )}
+                    {weergave.toon_subtotalen && (
+                      <tr className="bg-muted/10">
+                        <td colSpan={aantalKolommen - 1} className="py-1.5 px-3 text-right text-xs text-muted-foreground">Subtotaal algemene kosten</td>
+                        <td className="py-1.5 px-3 text-right text-sm font-semibold">{euro(subtotaalAlgemeen)}</td>
+                      </tr>
+                    )}
+                  </>
+                )}
               </>
-            )}
-            {algemeenKosten.length > 0 && (
-              <>
-                <tr className="bg-muted/20">
-                  <td colSpan={5} className="py-1.5 px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                    Algemene kosten
-                  </td>
-                </tr>
-                {algemeenKosten.map((r) => <RegelRij key={r.id} r={r} />)}
-                <tr className="bg-muted/10">
-                  <td colSpan={4} className="py-1.5 px-3 text-right text-xs text-muted-foreground">Subtotaal algemene kosten</td>
-                  <td className="py-1.5 px-3 text-right text-sm font-semibold">{euro(subtotaalAlgemeen)}</td>
-                </tr>
-              </>
+            ) : (
+              regels.map((r) => <RegelRij key={r.id} r={r} />)
             )}
           </tbody>
           <tfoot>
+            {weergave.toon_subtotaal_excl && (
             <tr className="border-t-2">
-              <td colSpan={4} className="py-2 px-3 text-right text-sm font-semibold">Totaal excl. btw</td>
+              <td colSpan={aantalKolommen - 1} className="py-2 px-3 text-right text-sm font-semibold">Totaal excl. btw</td>
               <td className="py-2 px-3 text-right font-bold">{euro(totaal)}</td>
             </tr>
+            )}
+            {weergave.toon_btw && (
             <tr>
-              <td colSpan={4} className="py-1 px-3 text-right text-xs text-muted-foreground">Btw {offerte?.btw_percentage ?? 21}%</td>
+              <td colSpan={aantalKolommen - 1} className="py-1 px-3 text-right text-xs text-muted-foreground">Btw {offerte?.btw_percentage ?? 21}%</td>
               <td className="py-1 px-3 text-right text-sm">{euro(btw)}</td>
             </tr>
+            )}
+            {weergave.toon_totaal_incl && (
             <tr className="bg-primary text-primary-foreground">
-              <td colSpan={4} className="py-2.5 px-3 text-right font-bold">Totaal incl. btw</td>
+              <td colSpan={aantalKolommen - 1} className="py-2.5 px-3 text-right font-bold">Totaal incl. btw</td>
               <td className="py-2.5 px-3 text-right font-bold text-base">{euro(inclBtw)}</td>
             </tr>
+            )}
           </tfoot>
         </table>
       </div>
+      )}
     </div>
   );
 }
