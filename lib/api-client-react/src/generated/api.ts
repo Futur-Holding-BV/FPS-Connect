@@ -51,6 +51,7 @@ import type {
   BatchExportResultaat,
   Bekwaamheid,
   BekwaamheidInput,
+  BeoordelenInput,
   BoekhouderDashboard,
   BoekhouderUpload,
   BoekhouderUploadInput,
@@ -44520,6 +44521,148 @@ export const useAfkeurenFactuur = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getAfkeurenFactuurMutationOptions(options));
+    }
+
+export const getBeoordelenFactuurPLUrl = (id: number,) => {
+
+
+
+
+  return `/api/facturen/${id}/beoordelen-pl`
+}
+
+/**
+ * @summary Factuur beoordelen als projectleider (goedkeuren / afkeuren / doorzetten naar WVB)
+ */
+export const beoordelenFactuurPL = async (id: number,
+    beoordelenInput: BeoordelenInput, options?: RequestInit): Promise<Factuur> => {
+
+  return customFetch<Factuur>(getBeoordelenFactuurPLUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(beoordelenInput)
+  }
+);}
+
+
+
+
+export const getBeoordelenFactuurPLMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof beoordelenFactuurPL>>, TError,{id: number;data: BodyType<BeoordelenInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof beoordelenFactuurPL>>, TError,{id: number;data: BodyType<BeoordelenInput>}, TContext> => {
+
+const mutationKey = ['beoordelenFactuurPL'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof beoordelenFactuurPL>>, {id: number;data: BodyType<BeoordelenInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  beoordelenFactuurPL(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type BeoordelenFactuurPLMutationResult = NonNullable<Awaited<ReturnType<typeof beoordelenFactuurPL>>>
+    export type BeoordelenFactuurPLMutationBody = BodyType<BeoordelenInput>
+    export type BeoordelenFactuurPLMutationError = ErrorType<void>
+
+    /**
+ * @summary Factuur beoordelen als projectleider (goedkeuren / afkeuren / doorzetten naar WVB)
+ */
+export const useBeoordelenFactuurPL = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof beoordelenFactuurPL>>, TError,{id: number;data: BodyType<BeoordelenInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof beoordelenFactuurPL>>,
+        TError,
+        {id: number;data: BodyType<BeoordelenInput>},
+        TContext
+      > => {
+      return useMutation(getBeoordelenFactuurPLMutationOptions(options));
+    }
+
+export const getBeoordelenFactuurWVBUrl = (id: number,) => {
+
+
+
+
+  return `/api/facturen/${id}/beoordelen-wvb`
+}
+
+/**
+ * @summary Factuur beoordelen als werkvoorbereider (goedkeuren / afkeuren / doorzetten)
+ */
+export const beoordelenFactuurWVB = async (id: number,
+    beoordelenInput: BeoordelenInput, options?: RequestInit): Promise<Factuur> => {
+
+  return customFetch<Factuur>(getBeoordelenFactuurWVBUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(beoordelenInput)
+  }
+);}
+
+
+
+
+export const getBeoordelenFactuurWVBMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof beoordelenFactuurWVB>>, TError,{id: number;data: BodyType<BeoordelenInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof beoordelenFactuurWVB>>, TError,{id: number;data: BodyType<BeoordelenInput>}, TContext> => {
+
+const mutationKey = ['beoordelenFactuurWVB'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof beoordelenFactuurWVB>>, {id: number;data: BodyType<BeoordelenInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  beoordelenFactuurWVB(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type BeoordelenFactuurWVBMutationResult = NonNullable<Awaited<ReturnType<typeof beoordelenFactuurWVB>>>
+    export type BeoordelenFactuurWVBMutationBody = BodyType<BeoordelenInput>
+    export type BeoordelenFactuurWVBMutationError = ErrorType<void>
+
+    /**
+ * @summary Factuur beoordelen als werkvoorbereider (goedkeuren / afkeuren / doorzetten)
+ */
+export const useBeoordelenFactuurWVB = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof beoordelenFactuurWVB>>, TError,{id: number;data: BodyType<BeoordelenInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof beoordelenFactuurWVB>>,
+        TError,
+        {id: number;data: BodyType<BeoordelenInput>},
+        TContext
+      > => {
+      return useMutation(getBeoordelenFactuurWVBMutationOptions(options));
     }
 
 export const getForceerHerexportFactuurUrl = (id: number,) => {

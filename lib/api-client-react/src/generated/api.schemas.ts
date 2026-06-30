@@ -6552,6 +6552,20 @@ export interface FactuurAfkeurenInput {
   reden: string;
 }
 
+export type BeoordelenInputActie = typeof BeoordelenInputActie[keyof typeof BeoordelenInputActie];
+
+
+export const BeoordelenInputActie = {
+  goedkeuren: 'goedkeuren',
+  afkeuren: 'afkeuren',
+  doorzetten: 'doorzetten',
+} as const;
+
+export interface BeoordelenInput {
+  actie: BeoordelenInputActie;
+  reden?: string | null;
+}
+
 export interface FactuurHerexportInput {
   reden?: string | null;
 }

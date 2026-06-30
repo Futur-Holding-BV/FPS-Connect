@@ -690,6 +690,19 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                           </Link>
                         </SidebarMenuButton>
                       </SidebarMenuItem>
+                      {heeftNiveau("financieel", 2) && (
+                        <SidebarMenuItem className="pl-5">
+                          <SidebarMenuButton
+                            asChild
+                            isActive={location === "/financieel/crediteuren"}
+                          >
+                            <Link href="/financieel/crediteuren">
+                              <Inbox />
+                              <span>Crediteuren inbox</span>
+                            </Link>
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                      )}
                       <SidebarMenuItem className="pl-5">
                         <SidebarMenuButton
                           asChild

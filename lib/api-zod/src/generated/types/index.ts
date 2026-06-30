@@ -53,6 +53,8 @@ export * from './authGebruikerTaal';
 export * from './batchExportResultaat';
 export * from './bekwaamheid';
 export * from './bekwaamheidInput';
+export * from './beoordelenInput';
+export * from './beoordelenInputActie';
 export * from './boekhouderDashboard';
 export * from './boekhouderUpload';
 export * from './boekhouderUploadInput';

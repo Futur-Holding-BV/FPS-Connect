@@ -12474,6 +12474,68 @@ paths:
               schema:
                 $ref: "#/components/schemas/Factuur"
 
+  /facturen/{id}/beoordelen-pl:
+    post:
+      operationId: beoordelenFactuurPL
+      summary: Factuur beoordelen als projectleider (goedkeuren / afkeuren / doorzetten naar WVB)
+      tags: [Facturen]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BeoordelenInput"
+      responses:
+        "200":
+          description: Bijgewerkte factuur
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Factuur"
+        "403":
+          description: Geen toegang
+        "404":
+          description: Niet gevonden
+        "422":
+          description: Ongeldige actie of status
+
+  /facturen/{id}/beoordelen-wvb:
+    post:
+      operationId: beoordelenFactuurWVB
+      summary: Factuur beoordelen als werkvoorbereider (goedkeuren / afkeuren / doorzetten)
+      tags: [Facturen]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BeoordelenInput"
+      responses:
+        "200":
+          description: Bijgewerkte factuur
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Factuur"
+        "403":
+          description: Geen toegang
+        "404":
+          description: Niet gevonden
+        "422":
+          description: Ongeldige actie of status
+
   /facturen/{id}/forceer-herexport:
     post:
       operationId: forceerHerexportFactuur
@@ -25384,6 +25446,17 @@ components:
       properties:
         reden:
           type: string
+
+    BeoordelenInput:
+      type: object
+      required: [actie]
+      properties:
+        actie:
+          type: string
+          enum: [goedkeuren, afkeuren, doorzetten]
+        reden:
+          type: string
+          nullable: true
 
     FactuurHerexportInput:
       type: object

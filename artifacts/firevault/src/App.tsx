@@ -95,6 +95,7 @@ import JaarverslagenPagina from "@/pages/organisatie/jaarverslagen";
 import BedrijfsdocumentenPagina from "@/pages/organisatie/bedrijfsdocumenten";
 import WorkflowDesignerPagina from "@/pages/workflow/index";
 import BedrijfsresultatenPagina from "@/pages/financieel/bedrijfsresultaten";
+import CredieurenInboxPagina from "@/pages/financieel/crediteuren/index";
 import DossiersPagina from "@/pages/dossiers/index";
 import OffertesPagina from "@/pages/offertes/index";
 import ProposalStudio from "@/pages/offertes/studio";
@@ -327,6 +328,7 @@ function ConnectPortal() {
         <Route path="/wagenpark/:id" component={WagenparkDetailPagina} />
 
         {/* ── Financieel extra ── */}
+        <Route path="/financieel/crediteuren" component={CredieurenInboxPagina} />
         <Route path="/financieel/bedrijfsresultaten" component={BedrijfsresultatenPagina} />
 
         {/* ── Organisatie ── */}

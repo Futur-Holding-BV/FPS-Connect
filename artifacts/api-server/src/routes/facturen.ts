@@ -109,7 +109,7 @@ router.post("/facturen/upload-url", requireBevoegdheid("financieel", 1), async (
 });
 
 // ── GET /facturen/klaar-voor-export ───────────────────────────────────────────
-router.get("/facturen/klaar-voor-export", requireBevoegdheid("financieel", 2), async (req: Request, res: Response) => {
+router.get("/facturen/klaar-voor-export", requireBevoegdheid("financieel", 4), async (req: Request, res: Response) => {
   const rijen = await db.select().from(facturenTable)
     .where(and(
       eq(facturenTable.status, "klaar_voor_accountview"),
@@ -210,7 +210,7 @@ router.patch("/facturen/:id", requireBevoegdheid("financieel", 1), async (req: R
 });
 
 // ── DELETE /facturen/:id ───────────────────────────────────────────────────────
-router.delete("/facturen/:id", requireBevoegdheid("financieel", 2), async (req: Request, res: Response) => {
+router.delete("/facturen/:id", requireBevoegdheid("financieel", 4), async (req: Request, res: Response) => {
   const id = paramInt(req.params["id"]);
   await db.delete(facturenTable).where(eq(facturenTable.id, id));
   res.status(204).send();
@@ -284,8 +284,7 @@ Zet controle_nodig=true als bedragen onduidelijk zijn of gegevens ontbreken.`,
       try { parsed = JSON.parse(jsonMatch[0]) as ParsedFactuur; } catch { /* laat leeg */ }
     }
 
-    const controleNodig = parsed.controle_nodig ?? false;
-    const nieuweStatus = controleNodig ? "controle_nodig" : "klaar_voor_boeking";
+    const nieuweStatus = "te_beoordelen_pl";
 
     const [updated] = await db.update(facturenTable).set({
       aiMetadata: parsed as Record<string, unknown>,
@@ -312,7 +311,7 @@ Zet controle_nodig=true als bedragen onduidelijk zijn of gegevens ontbreken.`,
 });
 
 // ── POST /facturen/:id/accorderen ──────────────────────────────────────────────
-router.post("/facturen/:id/accorderen", requireBevoegdheid("financieel", 2), async (req: Request, res: Response) => {
+router.post("/facturen/:id/accorderen", requireBevoegdheid("financieel", 4), async (req: Request, res: Response) => {
   const id = paramInt(req.params["id"]);
   const [factuur] = await db.select().from(facturenTable).where(eq(facturenTable.id, id)).limit(1);
   if (!factuur) { res.status(404).json({ error: "Niet gevonden" }); return; }
@@ -331,7 +330,7 @@ router.post("/facturen/:id/accorderen", requireBevoegdheid("financieel", 2), asy
 });
 
 // ── POST /facturen/:id/blokkeren ───────────────────────────────────────────────
-router.post("/facturen/:id/blokkeren", requireBevoegdheid("financieel", 2), async (req: Request, res: Response) => {
+router.post("/facturen/:id/blokkeren", requireBevoegdheid("financieel", 4), async (req: Request, res: Response) => {
   const id = paramInt(req.params["id"]);
   const { geblokkeerd, reden } = req.body as { geblokkeerd?: boolean; reden?: string | null };
 
@@ -347,7 +346,7 @@ router.post("/facturen/:id/blokkeren", requireBevoegdheid("financieel", 2), asyn
 });
 
 // ── POST /facturen/:id/export-accountview ──────────────────────────────────────
-router.post("/facturen/:id/export-accountview", requireBevoegdheid("financieel", 2), async (req: Request, res: Response) => {
+router.post("/facturen/:id/export-accountview", requireBevoegdheid("financieel", 4), async (req: Request, res: Response) => {
   const id = paramInt(req.params["id"]);
   const [factuur] = await db.select().from(facturenTable).where(eq(facturenTable.id, id)).limit(1);
   if (!factuur) { res.status(404).json({ error: "Niet gevonden" }); return; }
@@ -482,7 +481,7 @@ router.get("/facturen/:id/export-logs", requireBevoegdheid("financieel", 1), asy
 });
 
 // ── POST /facturen/:id/afkeuren ────────────────────────────────────────────────
-router.post("/facturen/:id/afkeuren", requireBevoegdheid("financieel", 2), async (req: Request, res: Response) => {
+router.post("/facturen/:id/afkeuren", requireBevoegdheid("financieel", 4), async (req: Request, res: Response) => {
   const id = paramInt(req.params["id"]);
   const { reden } = req.body as { reden?: string };
   if (!reden?.trim()) { res.status(400).json({ error: "Afkeuringsreden is verplicht" }); return; }
@@ -512,8 +511,84 @@ router.post("/facturen/:id/afkeuren", requireBevoegdheid("financieel", 2), async
   res.json(await mapFactuur(updated));
 });
 
+// ── POST /facturen/:id/beoordelen-pl ──────────────────────────────────────────
+router.post("/facturen/:id/beoordelen-pl", requireBevoegdheid("financieel", 2), async (req: Request, res: Response) => {
+  const id = paramInt(req.params["id"]);
+  const { actie, reden } = req.body as { actie?: string; reden?: string };
+
+  if (!["goedkeuren", "afkeuren", "doorzetten"].includes(actie ?? "")) {
+    res.status(422).json({ error: "Ongeldige actie. Gebruik: goedkeuren, afkeuren of doorzetten" }); return;
+  }
+
+  const [factuur] = await db.select().from(facturenTable).where(eq(facturenTable.id, id)).limit(1);
+  if (!factuur) { res.status(404).json({ error: "Niet gevonden" }); return; }
+  if (factuur.status !== "te_beoordelen_pl") {
+    res.status(422).json({ error: "Factuur staat niet in de PL-beoordelingsbox" }); return;
+  }
+
+  const userId = sessionUserId(req);
+
+  if (actie === "afkeuren") {
+    if (!reden?.trim()) { res.status(400).json({ error: "Afkeuringsreden is verplicht" }); return; }
+    const [updated] = await db.update(facturenTable).set({
+      status: "afgekeurd",
+      afgekeurdReden: reden.trim(),
+      afgekeurdOp: new Date(),
+      afgekeurdDoor: userId,
+      bijgewerktOp: new Date(),
+    }).where(eq(facturenTable.id, id)).returning();
+    await db.insert(accountviewExportLogsTable).values({ factuurId: id, gebruikerId: userId, testmodus: false, actie: "pl_afkeuren", status: "geslaagd", foutmelding: `PL afgekeurd: ${reden.trim()}` });
+    res.json(await mapFactuur(updated)); return;
+  }
+
+  const [updated] = await db.update(facturenTable).set({
+    status: "te_beoordelen_wvb",
+    bijgewerktOp: new Date(),
+  }).where(eq(facturenTable.id, id)).returning();
+  await db.insert(accountviewExportLogsTable).values({ factuurId: id, gebruikerId: userId, testmodus: false, actie: `pl_${actie}`, status: "geslaagd", foutmelding: `PL ${actie}` });
+  res.json(await mapFactuur(updated));
+});
+
+// ── POST /facturen/:id/beoordelen-wvb ─────────────────────────────────────────
+router.post("/facturen/:id/beoordelen-wvb", requireBevoegdheid("financieel", 3), async (req: Request, res: Response) => {
+  const id = paramInt(req.params["id"]);
+  const { actie, reden } = req.body as { actie?: string; reden?: string };
+
+  if (!["goedkeuren", "afkeuren", "doorzetten"].includes(actie ?? "")) {
+    res.status(422).json({ error: "Ongeldige actie. Gebruik: goedkeuren, afkeuren of doorzetten" }); return;
+  }
+
+  const [factuur] = await db.select().from(facturenTable).where(eq(facturenTable.id, id)).limit(1);
+  if (!factuur) { res.status(404).json({ error: "Niet gevonden" }); return; }
+  if (factuur.status !== "te_beoordelen_wvb") {
+    res.status(422).json({ error: "Factuur staat niet in de WVB-beoordelingsbox" }); return;
+  }
+
+  const userId = sessionUserId(req);
+
+  if (actie === "afkeuren") {
+    if (!reden?.trim()) { res.status(400).json({ error: "Afkeuringsreden is verplicht" }); return; }
+    const [updatedWvb] = await db.update(facturenTable).set({
+      status: "afgekeurd",
+      afgekeurdReden: reden.trim(),
+      afgekeurdOp: new Date(),
+      afgekeurdDoor: userId,
+      bijgewerktOp: new Date(),
+    }).where(eq(facturenTable.id, id)).returning();
+    await db.insert(accountviewExportLogsTable).values({ factuurId: id, gebruikerId: userId, testmodus: false, actie: "wvb_afkeuren", status: "geslaagd", foutmelding: `WVB afgekeurd: ${reden.trim()}` });
+    res.json(await mapFactuur(updatedWvb)); return;
+  }
+
+  const [updatedWvb] = await db.update(facturenTable).set({
+    status: "klaar_voor_boeking",
+    bijgewerktOp: new Date(),
+  }).where(eq(facturenTable.id, id)).returning();
+  await db.insert(accountviewExportLogsTable).values({ factuurId: id, gebruikerId: userId, testmodus: false, actie: `wvb_${actie}`, status: "geslaagd", foutmelding: `WVB ${actie}` });
+  res.json(await mapFactuur(updatedWvb));
+});
+
 // ── POST /facturen/:id/forceer-herexport ───────────────────────────────────────
-router.post("/facturen/:id/forceer-herexport", requireBevoegdheid("financieel", 2), async (req: Request, res: Response) => {
+router.post("/facturen/:id/forceer-herexport", requireBevoegdheid("financieel", 4), async (req: Request, res: Response) => {
   const id = paramInt(req.params["id"]);
   const { reden } = req.body as { reden?: string };
 
@@ -603,7 +678,7 @@ router.post("/facturen/:id/forceer-herexport", requireBevoegdheid("financieel", 
 });
 
 // ── POST /facturen/batch-export ────────────────────────────────────────────────
-router.post("/facturen/batch-export", requireBevoegdheid("financieel", 2), async (req: Request, res: Response) => {
+router.post("/facturen/batch-export", requireBevoegdheid("financieel", 4), async (req: Request, res: Response) => {
   const { factuur_ids } = req.body as { factuur_ids?: number[] };
   if (!Array.isArray(factuur_ids) || factuur_ids.length === 0) {
     res.status(400).json({ error: "factuur_ids is verplicht en mag niet leeg zijn" }); return;
