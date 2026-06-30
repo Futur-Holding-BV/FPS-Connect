@@ -1,4 +1,4 @@
-import { pgTable, serial, text, integer, boolean, timestamp, numeric, uniqueIndex } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, integer, boolean, timestamp, numeric } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { werkgeversTable } from "./hrm";
@@ -91,9 +91,10 @@ export const documentStudioModellenTable = pgTable("document_studio_modellen", {
   goedgekeurdDoor: integer("goedgekeurd_door"),
   aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
   bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
-}, (t) => [
-  uniqueIndex("document_studio_modellen_werkgever_type_uniq").on(t.werkgeverId, t.documentType),
-]);
+});
+// Unieke constraint (werkgever_id, document_type) is aanwezig in de DB via directe ALTER TABLE.
+// Bewust NIET in het Drizzle-schema: drizzle-kit genereert anders ongeldige migratiesql
+// voor additieve UNIQUE-indexen, wat de deployment-validatiestap laat falen.
 
 export const insertOrgVerzekeringSchema = createInsertSchema(orgVerzekeringenTable).omit({
   id: true,

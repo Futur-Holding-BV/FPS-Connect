@@ -110,7 +110,7 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
   const toonDossiers      = heeftNiveau("dossiers", 1);
   const toonOpname        = heeftNiveau("gebouwen", 1);
   const toonOffertes      = heeftNiveau("offertes", 1);
-  const toonOnderhoud     = heeftNiveau("gebouwen", 1);
+  const toonOnderhoud     = heeftNiveau("onderhoud", 1);
   const toonToolboxen     = heeftNiveau("toolbox", 1);
   const toonSnagstream    = heeftNiveau("bibliotheek", 1);
   const toonFinancieel    = heeftNiveau("financieel", 1);

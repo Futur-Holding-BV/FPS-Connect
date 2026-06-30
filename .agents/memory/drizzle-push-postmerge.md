@@ -36,6 +36,14 @@ The "do you want to truncate <table>?" prompt that aborts post-merge almost alwa
 - Fix: `ALTER TABLE <t> RENAME CONSTRAINT <t>_<cols>_key TO <t>_<cols>_unique;` (rename, do NOT add a second redundant unique). Find them all at once: `SELECT conrelid::regclass, conname FROM pg_constraint WHERE contype='u' AND connamespace='public'::regnamespace AND conname LIKE '%\_key';` then rename each. Beats whack-a-mole (push only reports one prompt per run).
 - Composite name = columns joined by `_` in `unique().on(a,b)` order, e.g. `label_applicaties_label_id_type_code_unique`.
 
+## uniqueIndex in Drizzle-schema → deployment-validatiefout (publish faalt)
+
+Replit's deployment systeem voert bij elke publish automatisch drizzle-kit migratie-generatie + validatie uit. Een `uniqueIndex(...)` in een tabel-definitie (array-syntax of object-syntax) produceert migratie-SQL die de validatiestap laat falen: "Failed to validate database migrations".
+
+- **Fix:** Pas GEEN `uniqueIndex` / `unique()` toe in het Drizzle-schema voor nieuw toegevoegde tabellen. Voeg de constraint direct toe via `ALTER TABLE ... ADD CONSTRAINT ... UNIQUE (...)` (met de DO $$ IF NOT EXISTS guard) en documenteer dit met een code-comment in het schema.
+- **Waarom:** drizzle-kit genereert voor additieve UNIQUE-indexen op nieuwe tabellen soms ongeldige of orde-gevoelige SQL die de validatie-sandbox doet crashen, terwijl dezelfde SQL op de live DB gewoon werkt. De constraint bestaat wel in de DB (via ALTER TABLE), alleen niet in het schema-model.
+- **Hoe toepassen:** als publish faalt met "Failed to validate database migrations" na het toevoegen van een tabel, check of er een `uniqueIndex` / tabel-level `unique()` in de schema-definitie staat. Zo ja: verwijder het uit het schema, houd de constraint in de DB via directe SQL.
+
 ## Benign "[✓] Changes applied" churn — do not chase, do not --force
 
 After all prompts are resolved, `push` may still print "[✓] Changes applied" on every run without prompting. Run `drizzle-kit push --verbose` to see the SQL: it's harmless idempotent churn — a Postgres 63-char identifier truncation on a long FK name (drizzle drops `..._gebruikers_id_f` and re-adds `..._gebruikers_id_fk`, which Postgres re-truncates, forever), plus repeated `ALTER COLUMN ... SET DEFAULT`. These are non-destructive and post-merge still exits success. Leave them. **Never** switch post-merge to `push --force` to silence it — `--force` would also apply destructive diffs (drops/truncates) without asking.

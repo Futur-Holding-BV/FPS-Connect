@@ -10,6 +10,20 @@ Grote roadmap-fases staan ook in `docs/roadmap/gebouwd.md` en `docs/roadmap/acti
 
 ---
 
+## 2026-06-30 — Onderhoudsmodule volledig + deployment fix uniqueIndex
+
+**Uitvoering:** volledig | **Diepere lagen:** volledig | **Getest:** typecheck groen, DB-tabellen bevestigd, workflows draaien
+
+- **Onderhoudsmodule** (`/onderhoud`): volledig gebouwde zelfstandige contractmodule los van de projectworkflow
+  - **DB-schema** (`lib/db/src/schema/onderhoud.ts`): `onderhoudTable`, `onderhoudscontractenTable` (contractnummer OC-YYYY-NNN, gebouw/opdrachtgever/contactpersoon, contracttype, looptijd, indexering, contractwaarde, facturatie/onderhoudsfrequentie, eerstvolgende/laatste onderhoud, automatische verlenging, status), `werkbonnenTable` (werkbonnummer WB-YYYY-NNN, koppeling contract + gebouw, type, kwartaal, datum, monteur, duur, status, resultaat)
+  - **Backend routes**: `onderhoudscontracten.ts` (CRUD + `/statistieken` endpoint: actief/concept/aflopend/verlopen/contractwaarde/achterstallig/werkbonnen_open), `werkbonnen.ts` (CRUD + status-doorschakeling met activiteit-logging); beide geregistreerd in `index.ts`
+  - **Bevoegdheden**: `requireBevoegdheid("onderhoud", 1–4)` voor alle routes; `onderhoud` is volwaardige `ModuleId` in alle presets
+  - **Frontend** (6 bestanden): `index.tsx` (module-hub met tab-navigatie dashboard/contracten/werkbonnen), `dashboard.tsx` (KPI-kaarten actief/contractwaarde/open werkbonnen/onderhoud-deze-maand + signalering aflopend/achterstallig + live lijsten), `contracten.tsx` (filteerbaar overzicht + nieuw-contract dialoog), `contract-detail.tsx` (bewerken inline + werkbonnen per contract + verwijder-bevestiging), `werkbonnen-lijst.tsx` (filter status+type + nieuwe werkbon dialoog), `werkbon-detail.tsx` (statusmachine gepland→in_uitvoering→voltooid, bewerken inline)
+  - **Routing**: `/onderhoud`, `/onderhoud/contracten/:id`, `/onderhoud/werkbonnen/:id` in `App.tsx`
+  - **Nav-gating**: gecorrigeerd van `heeftNiveau("gebouwen", 1)` naar `heeftNiveau("onderhoud", 1)` in `beheerder-layout.tsx`
+  - **OpenAPI + codegen**: alle hooks aanwezig (`useListOnderhoudscontracten`, `useGetOnderhoudscontractenStatistieken`, `useGetOnderhoudscontract`, `useCreateOnderhoudscontract`, `useUpdateOnderhoudscontract`, `useDeleteOnderhoudscontract`, `useListWerkbonnen`, `useGetWerkbon`, `useCreateWerkbon`, `useUpdateWerkbon`, `useDeleteWerkbon`)
+- **Deployment fix**: `uniqueIndex` verwijderd uit `documentStudioModellenTable` Drizzle-schema — additieve UNIQUE-indexen in schema-definitie laten Replit's deployment-validatie falen; constraint blijft in DB via directe ALTER TABLE; patroon gedocumenteerd in memory
+
 ## 2026-06-30 — Document Studio + studioRouter geregistreerd
 
 **Uitvoering:** volledig | **Diepere lagen:** volledig | **Getest:** typecheck groen, api-server bouwt
