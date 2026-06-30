@@ -131,9 +131,7 @@ export default function DocumentStudioPagina() {
     }
     setUploadBezig(true);
     try {
-      const formData = new FormData();
-      formData.append("bestand", bestand);
-      await upload.mutateAsync({ id: uploadModelId, data: formData as unknown as { bestand: Blob } });
+      await upload.mutateAsync({ id: uploadModelId, data: { bestand } });
       invalideer();
       toast({ title: "Referentie ge-upload", description: "Het referentiedocument is opgeslagen." });
       sluitDialoog();
@@ -210,13 +208,31 @@ export default function DocumentStudioPagina() {
               </Select>
             </div>
 
-            {geselecteerdeWerkgever?.primaire_kleur && (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <div
-                  className="w-4 h-4 rounded-full border border-border"
-                  style={{ backgroundColor: geselecteerdeWerkgever.primaire_kleur }}
-                />
-                <span>Merkkleur: {geselecteerdeWerkgever.primaire_kleur}</span>
+            {(geselecteerdeWerkgever?.primaire_kleur || geselecteerdeWerkgever?.logo_url || geselecteerdeWerkgever?.voettekst) && (
+              <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
+                {geselecteerdeWerkgever.primaire_kleur && (
+                  <div className="flex items-center gap-1.5">
+                    <div
+                      className="w-4 h-4 rounded-full border border-border shrink-0"
+                      style={{ backgroundColor: geselecteerdeWerkgever.primaire_kleur }}
+                    />
+                    <span>Merkkleur: {geselecteerdeWerkgever.primaire_kleur}</span>
+                  </div>
+                )}
+                {geselecteerdeWerkgever.logo_url && (
+                  <div className="flex items-center gap-1.5">
+                    <ImageIcon className="h-4 w-4 shrink-0" />
+                    <span>Logo geconfigureerd</span>
+                  </div>
+                )}
+                {geselecteerdeWerkgever.voettekst && (
+                  <div className="flex items-center gap-1.5">
+                    <FileText className="h-4 w-4 shrink-0" />
+                    <span className="truncate max-w-[200px]" title={geselecteerdeWerkgever.voettekst}>
+                      Voettekst: {geselecteerdeWerkgever.voettekst}
+                    </span>
+                  </div>
+                )}
               </div>
             )}
           </div>

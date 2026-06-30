@@ -990,17 +990,19 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                         </Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
-                    <SidebarMenuItem className="pl-5">
-                      <SidebarMenuButton
-                        asChild
-                        isActive={location === "/organisatie/studio" || location.startsWith("/organisatie/studio/")}
-                      >
-                        <Link href="/organisatie/studio">
-                          <LayoutTemplate />
-                          <span>Document Studio</span>
-                        </Link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
+                    {heeftNiveau("organisatie", 1) && (
+                      <SidebarMenuItem className="pl-5">
+                        <SidebarMenuButton
+                          asChild
+                          isActive={location === "/organisatie/studio" || location.startsWith("/organisatie/studio/")}
+                        >
+                          <Link href="/organisatie/studio">
+                            <LayoutTemplate />
+                            <span>Document Studio</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    )}
                     <SidebarMenuItem className="pl-5">
                       <SidebarMenuButton
                         asChild

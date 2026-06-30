@@ -1,4 +1,4 @@
-import { pgTable, serial, text, integer, boolean, timestamp, numeric } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, integer, boolean, timestamp, numeric, uniqueIndex } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { werkgeversTable } from "./hrm";
@@ -91,7 +91,9 @@ export const documentStudioModellenTable = pgTable("document_studio_modellen", {
   goedgekeurdDoor: integer("goedgekeurd_door"),
   aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
   bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
-});
+}, (t) => [
+  uniqueIndex("document_studio_modellen_werkgever_type_uniq").on(t.werkgeverId, t.documentType),
+]);
 
 export const insertOrgVerzekeringSchema = createInsertSchema(orgVerzekeringenTable).omit({
   id: true,
