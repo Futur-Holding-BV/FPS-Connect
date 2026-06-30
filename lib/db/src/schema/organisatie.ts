@@ -48,6 +48,7 @@ export const orgBedrijfsdocumentenTable = pgTable("org_bedrijfsdocumenten", {
   documentId: integer("document_id"),
   opmerkingen: text("opmerkingen"),
   bestandHash: text("bestand_hash"),
+  bestandPad: text("bestand_pad"),
   aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
   bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
 });

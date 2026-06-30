@@ -19276,6 +19276,7 @@ export const ListOrgBedrijfsdocumentenResponseItem = zod.object({
   "document_id": zod.number().nullish(),
   "opmerkingen": zod.string().nullish(),
   "bestand_hash": zod.string().nullish(),
+  "bestand_pad": zod.string().nullish(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
 })
@@ -19296,7 +19297,8 @@ export const CreateOrgBedrijfsdocumentBody = zod.object({
   "status": zod.string().optional(),
   "document_id": zod.number().optional(),
   "opmerkingen": zod.string().optional(),
-  "bestand_hash": zod.string().optional()
+  "bestand_hash": zod.string().optional(),
+  "bestand_pad": zod.string().optional()
 })
 
 export const CreateOrgBedrijfsdocumentResponse = zod.void()
@@ -19320,7 +19322,8 @@ export const UpdateOrgBedrijfsdocumentBody = zod.object({
   "status": zod.string().optional(),
   "document_id": zod.number().optional(),
   "opmerkingen": zod.string().optional(),
-  "bestand_hash": zod.string().optional()
+  "bestand_hash": zod.string().optional(),
+  "bestand_pad": zod.string().optional()
 })
 
 export const UpdateOrgBedrijfsdocumentResponse = zod.object({
@@ -19336,6 +19339,7 @@ export const UpdateOrgBedrijfsdocumentResponse = zod.object({
   "document_id": zod.number().nullish(),
   "opmerkingen": zod.string().nullish(),
   "bestand_hash": zod.string().nullish(),
+  "bestand_pad": zod.string().nullish(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
 })
@@ -19367,6 +19371,7 @@ export const AnalyseerBedrijfsdocumentResponse = zod.object({
   "ingangsdatum": zod.string().nullish(),
   "vervaldatum": zod.string().nullish(),
   "hash": zod.string(),
+  "bestand_pad": zod.string().nullish(),
   "tekstFragment": zod.string().nullish(),
   "dubbeling": zod.object({
   "id": zod.number(),

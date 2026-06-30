@@ -30,6 +30,7 @@ import {
   Sparkles,
   AlertTriangle,
   Check,
+  Download,
 } from "lucide-react";
 
 const CATEGORIEEN: { waarde: string; label: string; icoon: typeof FileText }[] = [
@@ -77,6 +78,7 @@ type Bedrijfsdocument = {
   document_id?: number | null;
   opmerkingen?: string | null;
   bestand_hash?: string | null;
+  bestand_pad?: string | null;
 };
 
 type Dubbeling = { id: number; naam: string };
@@ -129,6 +131,7 @@ export default function BedrijfsdocumentenPagina() {
   const hashRef            = useRef<string | null>(null);
   const tekstFragmentRef   = useRef<string | null>(null);
   const aiVoorgesteldCat   = useRef<string | null>(null);
+  const bestandPadRef      = useRef<string | null>(null);
   const bestandInputRef    = useRef<HTMLInputElement>(null);
 
   const aiActief = aiVelden.size > 0;
@@ -158,6 +161,7 @@ export default function BedrijfsdocumentenPagina() {
     hashRef.current = null;
     tekstFragmentRef.current = null;
     aiVoorgesteldCat.current = null;
+    bestandPadRef.current = null;
     setDubbeling(null);
   };
 
@@ -215,11 +219,13 @@ export default function BedrijfsdocumentenPagina() {
         ingangsdatum: string | null;
         vervaldatum: string | null;
         hash: string;
+        bestand_pad: string | null;
         tekstFragment: string | null;
         dubbeling: Dubbeling | null;
       };
 
       hashRef.current          = data.hash;
+      bestandPadRef.current    = data.bestand_pad ?? null;
       tekstFragmentRef.current = data.tekstFragment ?? null;
       aiVoorgesteldCat.current = data.categorie;
 
@@ -261,6 +267,7 @@ export default function BedrijfsdocumentenPagina() {
       status:       form.status,
       opmerkingen:  form.opmerkingen  || undefined,
       bestand_hash: hashRef.current   ?? undefined,
+      bestand_pad:  bestandPadRef.current ?? undefined,
     };
     try {
       if (bewerkId) {
@@ -432,6 +439,17 @@ export default function BedrijfsdocumentenPagina() {
                                 </div>
                               </div>
                               <div className="flex gap-1 shrink-0">
+                                {(d as Bedrijfsdocument).bestand_pad && (
+                                  <a
+                                    href={`/api/organisatie/bedrijfsdocumenten/${d.id}/download`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    title="Bestand downloaden"
+                                    className="inline-flex items-center justify-center h-7 w-7 rounded-md text-muted-foreground hover:bg-accent hover:text-foreground"
+                                  >
+                                    <Download className="h-3.5 w-3.5" />
+                                  </a>
+                                )}
                                 <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => openBewerken(d as Bedrijfsdocument)}>
                                   <Pencil className="h-3.5 w-3.5" />
                                 </Button>

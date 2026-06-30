@@ -22,6 +22,8 @@ export interface OrgBedrijfsdocumentAnalyse {
   vervaldatum?: string | null;
   hash: string;
   /** @nullable */
+  bestand_pad?: string | null;
+  /** @nullable */
   tekstFragment?: string | null;
   dubbeling?: OrgBedrijfsdocumentAnalyseDubbeling;
 }

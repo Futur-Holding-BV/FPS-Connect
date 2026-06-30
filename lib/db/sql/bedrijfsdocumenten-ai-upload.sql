@@ -6,6 +6,9 @@
 -- ── org_bedrijfsdocumenten: bestand_hash voor dubbelingsdetectie ──
 ALTER TABLE org_bedrijfsdocumenten ADD COLUMN IF NOT EXISTS bestand_hash text;
 
+-- ── org_bedrijfsdocumenten: bestand_pad voor opslag in object storage ──
+ALTER TABLE org_bedrijfsdocumenten ADD COLUMN IF NOT EXISTS bestand_pad text;
+
 -- ── ai_categorie_correcties: leermechanisme voor de analyseer-route ──
 CREATE TABLE IF NOT EXISTS ai_categorie_correcties (
   id           serial      PRIMARY KEY,

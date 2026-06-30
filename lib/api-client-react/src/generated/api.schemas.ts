@@ -7872,6 +7872,8 @@ export interface OrgBedrijfsdocument {
   opmerkingen?: string | null;
   /** @nullable */
   bestand_hash?: string | null;
+  /** @nullable */
+  bestand_pad?: string | null;
   aangemaakt_op: string;
   bijgewerkt_op: string;
 }
@@ -7888,6 +7890,7 @@ export interface OrgBedrijfsdocumentInput {
   document_id?: number;
   opmerkingen?: string;
   bestand_hash?: string;
+  bestand_pad?: string;
 }
 
 export interface OrgBedrijfsdocumentAnalyseerInput {
@@ -7920,6 +7923,8 @@ export interface OrgBedrijfsdocumentAnalyse {
   /** @nullable */
   vervaldatum?: string | null;
   hash: string;
+  /** @nullable */
+  bestand_pad?: string | null;
   /** @nullable */
   tekstFragment?: string | null;
   dubbeling?: OrgBedrijfsdocumentAnalyseDubbeling;

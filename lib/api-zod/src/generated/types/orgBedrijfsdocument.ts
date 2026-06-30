@@ -27,6 +27,8 @@ export interface OrgBedrijfsdocument {
   opmerkingen?: string | null;
   /** @nullable */
   bestand_hash?: string | null;
+  /** @nullable */
+  bestand_pad?: string | null;
   aangemaakt_op: string;
   bijgewerkt_op: string;
 }

@@ -3,12 +3,15 @@
 // en bedrijfsdocumenten/analyseer (AI-extractie + dubbelingsdetectie op sha256-hash).
 import { Router } from "express";
 import { createHash } from "crypto";
+import { randomUUID } from "crypto";
+import { Readable } from "stream";
 import { createRequire } from "module";
 import multer from "multer";
 import { db, orgVerzekeringenTable, orgJaarverslagenTable, orgBedrijfsdocumentenTable, aiCategorieCorrectiesTable } from "@workspace/db";
 import { eq, desc } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
 import { maakOpenAiClient, heeftOpenAi } from "../lib/openai";
+import { ObjectStorageService, ObjectNotFoundError } from "../lib/objectStorage";
 
 const _require = createRequire(import.meta.url);
 const pdfParse: (buf: Buffer) => Promise<{ text: string }> = _require("pdf-parse");
@@ -72,6 +75,7 @@ const mapBedrijfsdocument = (r: typeof orgBedrijfsdocumentenTable.$inferSelect) 
   document_id: r.documentId,
   opmerkingen: r.opmerkingen,
   bestand_hash: r.bestandHash,
+  bestand_pad: r.bestandPad,
   aangemaakt_op: iso(r.aangemaaktOp),
   bijgewerkt_op: iso(r.bijgewerktOp),
 });
@@ -261,7 +265,7 @@ router.get("/organisatie/bedrijfsdocumenten", lezen, async (req, res) => {
 
 router.post("/organisatie/bedrijfsdocumenten", schrijven, async (req, res) => {
   try {
-    const { naam, categorie, omschrijving, uitgever, referentie, ingangsdatum, vervaldatum, status, document_id, opmerkingen, bestand_hash } = req.body;
+    const { naam, categorie, omschrijving, uitgever, referentie, ingangsdatum, vervaldatum, status, document_id, opmerkingen, bestand_hash, bestand_pad } = req.body;
     if (!naam || !categorie) {
       return res.status(400).json({ error: "naam en categorie zijn verplicht" });
     }
@@ -279,6 +283,7 @@ router.post("/organisatie/bedrijfsdocumenten", schrijven, async (req, res) => {
         documentId: document_id ?? null,
         opmerkingen: opmerkingen ?? null,
         bestandHash: bestand_hash ?? null,
+        bestandPad: isGeldigBestandPad(bestand_pad) ? bestand_pad : null,
       })
       .returning();
     res.status(201).json(mapBedrijfsdocument(rij));
@@ -291,7 +296,7 @@ router.post("/organisatie/bedrijfsdocumenten", schrijven, async (req, res) => {
 router.patch("/organisatie/bedrijfsdocumenten/:id", schrijven, async (req, res) => {
   try {
     const id = parseId(req.params.id);
-    const { naam, categorie, omschrijving, uitgever, referentie, ingangsdatum, vervaldatum, status, document_id, opmerkingen, bestand_hash } = req.body;
+    const { naam, categorie, omschrijving, uitgever, referentie, ingangsdatum, vervaldatum, status, document_id, opmerkingen, bestand_hash, bestand_pad } = req.body;
     const [rij] = await db
       .update(orgBedrijfsdocumentenTable)
       .set({
@@ -306,6 +311,7 @@ router.patch("/organisatie/bedrijfsdocumenten/:id", schrijven, async (req, res) 
         ...(document_id !== undefined ? { documentId: document_id } : {}),
         ...(opmerkingen !== undefined ? { opmerkingen } : {}),
         ...(bestand_hash !== undefined ? { bestandHash: bestand_hash } : {}),
+        ...(bestand_pad !== undefined ? { bestandPad: isGeldigBestandPad(bestand_pad) ? bestand_pad : null } : {}),
         bijgewerktOp: new Date(),
       })
       .where(eq(orgBedrijfsdocumentenTable.id, id))
@@ -321,6 +327,14 @@ router.patch("/organisatie/bedrijfsdocumenten/:id", schrijven, async (req, res) 
 // ── Bedrijfsdocumenten — AI analyseer ────────────────────────────────────────
 
 const GELDIGE_CATEGORIEEN = ["contract", "vergunning", "certificaat", "kwaliteitshandboek", "overig"];
+
+const BESTAND_PAD_PREFIX = "/objects/algemeen/bedrijfsdocumenten/";
+
+function isGeldigBestandPad(pad: unknown): pad is string {
+  return typeof pad === "string" && pad.startsWith(BESTAND_PAD_PREFIX);
+}
+
+const oss = new ObjectStorageService();
 
 router.post(
   "/organisatie/bedrijfsdocumenten/analyseer",
@@ -413,6 +427,19 @@ router.post(
         ? String(velden.categorie)
         : "overig";
 
+      // Sla het bestand op in object storage
+      let bestandPad: string | null = null;
+      try {
+        const contentType = req.file.mimetype || "application/octet-stream";
+        const ext = req.file.originalname.includes(".")
+          ? "." + req.file.originalname.split(".").pop()
+          : "";
+        const subPath = `algemeen/bedrijfsdocumenten/${randomUUID()}${ext}`;
+        bestandPad = await oss.uploadBestand(subPath, buffer, contentType);
+      } catch (uploadErr) {
+        req.log.warn({ err: uploadErr }, "Bestandsopslag mislukt — document wordt zonder bestand opgeslagen");
+      }
+
       res.json({
         naam: typeof velden.naam === "string" && velden.naam ? velden.naam : req.file.originalname,
         categorie,
@@ -422,6 +449,7 @@ router.post(
         ingangsdatum: velden.ingangsdatum ?? null,
         vervaldatum: velden.vervaldatum ?? null,
         hash,
+        bestand_pad: bestandPad,
         tekstFragment: tekstBlok.slice(0, 500),
         dubbeling,
       });
@@ -462,6 +490,49 @@ router.delete("/organisatie/bedrijfsdocumenten/:id", schrijven, async (req, res)
     await db.delete(orgBedrijfsdocumentenTable).where(eq(orgBedrijfsdocumentenTable.id, id));
     res.status(204).end();
   } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// ── Bedrijfsdocumenten — bestand downloaden ───────────────────────────────────
+
+router.get("/organisatie/bedrijfsdocumenten/:id/download", lezen, async (req, res) => {
+  try {
+    const id = parseId(req.params.id);
+    const [doc] = await db
+      .select()
+      .from(orgBedrijfsdocumentenTable)
+      .where(eq(orgBedrijfsdocumentenTable.id, id))
+      .limit(1);
+    if (!doc) return res.status(404).json({ error: "Document niet gevonden" });
+    if (!doc.bestandPad) return res.status(404).json({ error: "Geen bestand beschikbaar voor dit document" });
+    if (!isGeldigBestandPad(doc.bestandPad)) {
+      req.log.error({ bestandPad: doc.bestandPad }, "Ongeldig bestand_pad in DB — download geweigerd");
+      return res.status(403).json({ error: "Bestandstoegang geweigerd" });
+    }
+
+    const objectFile = await oss.getObjectEntityFile(doc.bestandPad);
+    const response = await oss.downloadObject(objectFile);
+
+    const veiligeNaam = doc.naam.replace(/[^a-zA-Z0-9\-_.]/g, "_");
+    const ext = doc.bestandPad.includes(".") ? "." + doc.bestandPad.split(".").pop() : "";
+    res.setHeader("Content-Disposition", `attachment; filename="${veiligeNaam}${ext}"`);
+    res.status(response.status);
+    response.headers.forEach((value, key) => {
+      if (key.toLowerCase() !== "content-disposition") res.setHeader(key, value);
+    });
+
+    if (response.body) {
+      const nodeStream = Readable.fromWeb(response.body as ReadableStream<Uint8Array>);
+      nodeStream.pipe(res);
+    } else {
+      res.end();
+    }
+  } catch (err) {
+    if (err instanceof ObjectNotFoundError) {
+      return res.status(404).json({ error: "Bestand niet gevonden in opslag" });
+    }
     req.log.error(err);
     res.status(500).json({ error: "Interne serverfout" });
   }

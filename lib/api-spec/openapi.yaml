@@ -28459,6 +28459,7 @@ components:
         document_id:   { type: ["integer", "null"] }
         opmerkingen:   { type: ["string", "null"] }
         bestand_hash:  { type: ["string", "null"] }
+        bestand_pad:   { type: ["string", "null"] }
         aangemaakt_op: { type: string }
         bijgewerkt_op: { type: string }
 
@@ -28477,6 +28478,7 @@ components:
         document_id:  { type: integer }
         opmerkingen:  { type: string }
         bestand_hash: { type: string }
+        bestand_pad:  { type: string }
 
     OrgBedrijfsdocumentAnalyseerInput:
       type: object
@@ -28507,6 +28509,7 @@ components:
         ingangsdatum:    { type: ["string", "null"] }
         vervaldatum:     { type: ["string", "null"] }
         hash:            { type: string }
+        bestand_pad:     { type: ["string", "null"] }
         tekstFragment:   { type: ["string", "null"] }
         dubbeling:
           type: object

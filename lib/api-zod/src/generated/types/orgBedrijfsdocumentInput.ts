@@ -18,4 +18,5 @@ export interface OrgBedrijfsdocumentInput {
   document_id?: number;
   opmerkingen?: string;
   bestand_hash?: string;
+  bestand_pad?: string;
 }
