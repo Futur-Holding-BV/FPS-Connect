@@ -382,6 +382,7 @@ export * from './maakOfferteResult';
 export * from './maakOpdrachtInput';
 export * from './mailActieResultaat';
 export * from './mailLogregel';
+export * from './mailOpdrachtbevestigingDemoInput';
 export * from './mailStatus';
 export * from './mailTestmailInput';
 export * from './medewerker';

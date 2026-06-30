@@ -11,4 +11,5 @@ export interface AppInstellingenInput {
   support_telefoon?: string;
   support_website?: string;
   extra_disclaimer?: string;
+  opdrachtbevestiging_auto_verzenden?: boolean;
 }

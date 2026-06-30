@@ -4,13 +4,17 @@ import {
   useGetMailLogboek,
   useTestMailVerbinding,
   useSendTestmail,
+  useSendOpdrachtbevestigingDemo,
+  useGetInfoInstellingen,
+  useUpdateInfoInstellingen,
   type MailActieResultaat,
 } from "@workspace/api-client-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
@@ -18,13 +22,18 @@ import { useToast } from "@/hooks/use-toast";
 import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
 import {
   Mail, ShieldCheck, ShieldAlert, Send, PlugZap, RefreshCw,
-  CheckCircle2, XCircle, Loader2,
+  CheckCircle2, XCircle, Loader2, ClipboardCheck, FlaskConical,
 } from "lucide-react";
 
 const SOORT_LABEL: Record<string, string> = {
   test: "Testbericht",
   uitnodiging: "Uitnodiging",
   wachtwoord_reset: "Wachtwoord opnieuw",
+  offerte: "Offerte",
+  klantvraag: "Klantvraag",
+  ondertekening: "Ondertekening",
+  inkoopbon: "Inkoopbon",
+  opdrachtbevestiging: "Opdrachtbevestiging",
 };
 
 const FOUT_LABEL: Record<string, string> = {
@@ -68,10 +77,36 @@ export default function MailBeheer() {
   const [verbindingResultaat, setVerbindingResultaat] = useState<MailActieResultaat | null>(null);
   const [testmailResultaat, setTestmailResultaat] = useState<MailActieResultaat | null>(null);
 
+  const [demoEmail, setDemoEmail] = useState("");
+  const [demoOfferteId, setDemoOfferteId] = useState("");
+  const [demoResultaat, setDemoResultaat] = useState<MailActieResultaat | null>(null);
+
   const statusQuery = useGetMailStatus();
   const logboekQuery = useGetMailLogboek();
   const verbindingTest = useTestMailVerbinding();
   const testmail = useSendTestmail();
+  const demoMutation = useSendOpdrachtbevestigingDemo();
+
+  const instellingenQuery = useGetInfoInstellingen();
+  const updateInstellingen = useUpdateInfoInstellingen();
+
+  const autoVerzenden = instellingenQuery.data?.opdrachtbevestiging_auto_verzenden ?? false;
+
+  async function toggleAutoVerzenden(nieuw: boolean) {
+    try {
+      await updateInstellingen.mutateAsync({
+        data: { opdrachtbevestiging_auto_verzenden: nieuw },
+      });
+      instellingenQuery.refetch();
+      toast({
+        title: nieuw
+          ? "Automatisch verzenden ingeschakeld"
+          : "Automatisch verzenden uitgeschakeld",
+      });
+    } catch {
+      toast({ title: "Opslaan mislukt", variant: "destructive" });
+    }
+  }
 
   if (!magBekijken) {
     return (
@@ -106,6 +141,22 @@ export default function MailBeheer() {
     }
   }
 
+  async function demoVersturen() {
+    setDemoResultaat(null);
+    const offerteIdNum = parseInt(demoOfferteId, 10);
+    if (!demoEmail.includes("@") || isNaN(offerteIdNum) || offerteIdNum < 1) return;
+    try {
+      const r = await demoMutation.mutateAsync({
+        data: { naar_email: demoEmail.trim(), offerte_id: offerteIdNum },
+      });
+      setDemoResultaat(r);
+      if (r.ok) toast({ title: "Demo-opdrachtbevestiging verstuurd" });
+      logboekQuery.refetch();
+    } catch {
+      toast({ title: "Demo versturen mislukt", variant: "destructive" });
+    }
+  }
+
   return (
     <div className="mx-auto max-w-5xl space-y-6 p-6">
       <div className="flex items-center gap-3">
@@ -115,7 +166,7 @@ export default function MailBeheer() {
         <div>
           <h1 className="text-2xl font-bold">Mailinstellingen</h1>
           <p className="text-sm text-muted-foreground">
-            Microsoft 365-koppeling voor uitgaande e-mail (uitnodigingen, herinneringen en testberichten).
+            Microsoft 365-koppeling voor uitgaande e-mail en opdrachtbevestigingen.
           </p>
         </div>
       </div>
@@ -169,6 +220,113 @@ export default function MailBeheer() {
             </>
           ) : (
             <p className="text-sm text-muted-foreground">Status kon niet worden geladen.</p>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Opdrachtbevestiging-instellingen */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <ClipboardCheck className="h-4 w-4 text-primary" />
+            <CardTitle className="text-base">Opdrachtbevestiging</CardTitle>
+          </div>
+          <CardDescription>
+            Na digitale ondertekening van een offerte kan het systeem automatisch een professionele
+            bevestigingsmail sturen naar de klant met de vervolgstappen.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          {magBeheren ? (
+            <>
+              <div className="flex items-center justify-between rounded-lg border p-4">
+                <div className="space-y-0.5">
+                  <p className="text-sm font-medium">Automatisch verzenden na ondertekening</p>
+                  <p className="text-xs text-muted-foreground">
+                    Als ingeschakeld wordt de opdrachtbevestiging direct verstuurd wanneer de klant ondertekent,
+                    mits het CRM-record van de klant een e-mailadres bevat.
+                    Als uitgeschakeld wordt er geen bevestiging verstuurd.
+                  </p>
+                </div>
+                <Switch
+                  checked={autoVerzenden}
+                  onCheckedChange={toggleAutoVerzenden}
+                  disabled={updateInstellingen.isPending || instellingenQuery.isLoading}
+                />
+              </div>
+
+              {autoVerzenden && (
+                <div className="rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">
+                  <p className="font-medium">Automatisch verzenden is ingeschakeld</p>
+                  <p className="mt-1 text-emerald-700">
+                    Na elke ondertekening ontvangt de klant automatisch een bevestigingsmail met de vijf vervolgstappen,
+                    een projectlink en de contactgegevens van de behandelaar.
+                  </p>
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="rounded-md border p-4">
+              <p className="text-sm font-medium">Automatisch verzenden</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {autoVerzenden ? "Ingeschakeld" : "Uitgeschakeld"}
+              </p>
+            </div>
+          )}
+
+          {/* Demo-verzending */}
+          {magBeheren && (
+            <div className="space-y-3 rounded-lg border border-dashed p-4">
+              <div className="flex items-center gap-2">
+                <FlaskConical className="h-4 w-4 text-muted-foreground" />
+                <p className="text-sm font-medium">Demo-opdrachtbevestiging testen</p>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Stuur een voorbeeld-opdrachtbevestiging op basis van een bestaande offerte.
+                De gegevens worden uit de offerte geladen; de mail gaat naar het opgegeven adres.
+              </p>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label htmlFor="demo-email" className="text-xs">Ontvanger</Label>
+                  <Input
+                    id="demo-email"
+                    type="email"
+                    placeholder="naam@voorbeeld.nl"
+                    value={demoEmail}
+                    onChange={(e) => setDemoEmail(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="demo-offerte" className="text-xs">Offerte-ID</Label>
+                  <Input
+                    id="demo-offerte"
+                    type="number"
+                    placeholder="bijv. 42"
+                    value={demoOfferteId}
+                    onChange={(e) => setDemoOfferteId(e.target.value)}
+                  />
+                </div>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={demoVersturen}
+                disabled={
+                  demoMutation.isPending ||
+                  !demoEmail.includes("@") ||
+                  !demoOfferteId ||
+                  parseInt(demoOfferteId, 10) < 1
+                }
+              >
+                {demoMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Send className="h-4 w-4" />
+                )}
+                Demo versturen
+              </Button>
+              {demoResultaat && <MailResultaat resultaat={demoResultaat} />}
+            </div>
           )}
         </CardContent>
       </Card>

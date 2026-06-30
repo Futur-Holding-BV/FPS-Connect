@@ -16,6 +16,8 @@ export interface AppInstellingen {
   support_website?: string | null;
   /** @nullable */
   extra_disclaimer?: string | null;
+  /** Als true wordt de opdrachtbevestigingsmail automatisch naar de klant verstuurd na ondertekening. Als false wordt de mail niet verstuurd. */
+  opdrachtbevestiging_auto_verzenden: boolean;
   bijgewerkt_op: string;
   /** @nullable */
   bijgewerkt_door_id?: number | null;

@@ -21,6 +21,7 @@ router.get("/info/instellingen", async (req, res) => {
         support_telefoon: null,
         support_website: null,
         extra_disclaimer: null,
+        opdrachtbevestiging_auto_verzenden: false,
         bijgewerkt_op: new Date().toISOString(),
         bijgewerkt_door_id: null,
       });
@@ -32,6 +33,7 @@ router.get("/info/instellingen", async (req, res) => {
       support_telefoon: instelling.supportTelefoon,
       support_website: instelling.supportWebsite,
       extra_disclaimer: instelling.extraDisclaimer,
+      opdrachtbevestiging_auto_verzenden: instelling.opdrachtbevestigingAutoVerzenden,
       bijgewerkt_op: instelling.bijgewerktOp.toISOString(),
       bijgewerkt_door_id: instelling.bijgewerktDoorId,
     });
@@ -47,12 +49,13 @@ router.put(
   requireRol("hoofdbeheerder"),
   async (req, res) => {
     try {
-      const { support_email, support_telefoon, support_website, extra_disclaimer } =
+      const { support_email, support_telefoon, support_website, extra_disclaimer, opdrachtbevestiging_auto_verzenden } =
         req.body as {
           support_email?: string;
           support_telefoon?: string;
           support_website?: string;
           extra_disclaimer?: string;
+          opdrachtbevestiging_auto_verzenden?: boolean;
         };
       const gebruikerId = req.session.userId!;
 
@@ -63,6 +66,9 @@ router.put(
         extraDisclaimer: extra_disclaimer ?? null,
         bijgewerktOp: new Date(),
         bijgewerktDoorId: gebruikerId,
+        ...(typeof opdrachtbevestiging_auto_verzenden === "boolean"
+          ? { opdrachtbevestigingAutoVerzenden: opdrachtbevestiging_auto_verzenden }
+          : {}),
       };
 
       const [bestaand] = await db
@@ -91,6 +97,7 @@ router.put(
         support_telefoon: result.supportTelefoon,
         support_website: result.supportWebsite,
         extra_disclaimer: result.extraDisclaimer,
+        opdrachtbevestiging_auto_verzenden: result.opdrachtbevestigingAutoVerzenden,
         bijgewerkt_op: result.bijgewerktOp.toISOString(),
         bijgewerkt_door_id: result.bijgewerktDoorId,
       });

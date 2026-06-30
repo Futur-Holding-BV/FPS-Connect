@@ -51,7 +51,7 @@ export class MailFout extends Error {
   }
 }
 
-export type MailSoort = "test" | "uitnodiging" | "wachtwoord_reset" | "offerte" | "klantvraag" | "ondertekening" | "inkoopbon";
+export type MailSoort = "test" | "uitnodiging" | "wachtwoord_reset" | "offerte" | "klantvraag" | "ondertekening" | "inkoopbon" | "opdrachtbevestiging";
 
 // ── Configuratie-helpers ─────────────────────────────────────────────────────
 export function isGeconfigureerd(): boolean {
@@ -657,6 +657,238 @@ export async function stuurOndertekeningNotificatie(opties: {
     });
   } catch (err) {
     logger.warn({ err, offerteId }, "Ondertekening-notificatiemail mislukt (niet-kritiek)");
+  }
+}
+
+// ── Opdrachtbevestiging HTML ──────────────────────────────────────────────────
+function opdrachtbevestigingHtml(opties: {
+  klantnaam: string;
+  projectnaam: string;
+  werkmaatschappij: string;
+  contactpersoon: string | null;
+  portaalUrl: string;
+  offertenummer: string | null;
+}): string {
+  const { klantnaam, projectnaam, werkmaatschappij, contactpersoon, portaalUrl, offertenummer } = opties;
+  const offerteRegel = offertenummer
+    ? `<p style="margin:0 0 6px;font-size:14px;color:#71717a;">Referentie: offerte ${escapeHtml(offertenummer)}</p>`
+    : "";
+
+  const stappen = [
+    {
+      nummer: "1",
+      titel: "Werkvoorbereiding",
+      tekst: "Wij controleren uw opdracht, verwerken bijzonderheden en stellen het project definitief samen.",
+    },
+    {
+      nummer: "2",
+      titel: "Inkoop",
+      tekst: "De benodigde materialen worden gecontroleerd en waar nodig besteld.",
+    },
+    {
+      nummer: "3",
+      titel: "Planning",
+      tekst: "Zodra de voorbereiding is afgerond nemen wij contact met u op voor een uitvoeringsdatum.",
+    },
+    {
+      nummer: "4",
+      titel: "Uitvoering",
+      tekst: "Onze monteurs voeren de werkzaamheden uit op de afgesproken datum.",
+    },
+    {
+      nummer: "5",
+      titel: "Oplevering",
+      tekst: "Na afronding ontvangt u de opleverdocumentatie en certificaten digitaal via FPS One.",
+    },
+  ];
+
+  const stappenHtml = stappen
+    .map(
+      (s) => `
+              <tr>
+                <td style="padding:0 0 16px;vertical-align:top;">
+                  <table cellpadding="0" cellspacing="0" width="100%">
+                    <tr>
+                      <td style="width:36px;vertical-align:top;padding-right:14px;">
+                        <div style="width:32px;height:32px;background:#F23B0D;border-radius:50%;text-align:center;line-height:32px;font-size:13px;font-weight:700;color:#ffffff;">
+                          ${s.nummer}
+                        </div>
+                      </td>
+                      <td style="vertical-align:top;padding-top:5px;">
+                        <p style="margin:0 0 4px;font-size:14px;font-weight:600;color:#18181b;">${s.titel}</p>
+                        <p style="margin:0;font-size:13px;line-height:1.55;color:#71717a;">${s.tekst}</p>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>`,
+    )
+    .join("\n");
+
+  const contactRegel = contactpersoon
+    ? `<p style="margin:0 0 4px;font-size:14px;color:#3f3f46;">Heeft u vragen? Neem gerust contact op met <strong>${escapeHtml(contactpersoon)}</strong>.</p>`
+    : `<p style="margin:0 0 4px;font-size:14px;color:#3f3f46;">Heeft u vragen? U kunt altijd contact opnemen met ons team.</p>`;
+
+  return `
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Uw opdracht is ontvangen</title>
+</head>
+<body style="margin:0;padding:0;background:#f4f4f5;font-family:system-ui,-apple-system,Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f5;padding:40px 0;">
+    <tr>
+      <td align="center">
+        <table width="580" cellpadding="0" cellspacing="0" style="max-width:580px;background:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.12);">
+
+          <!-- Header -->
+          <tr>
+            <td style="background:#212631;padding:28px 40px;text-align:center;">
+              <p style="margin:0;display:inline-flex;align-items:center;gap:8px;">
+                <span style="display:inline-block;width:28px;height:28px;background:#F23B0D;border-radius:6px;vertical-align:middle;"></span>
+                <span style="color:#ffffff;font-size:16px;letter-spacing:.5px;font-weight:700;vertical-align:middle;">${escapeHtml(werkmaatschappij)}</span>
+              </p>
+              <p style="margin:10px 0 0;color:rgba(255,255,255,.55);font-size:12px;letter-spacing:.2px;">FPS Brandpreventie</p>
+            </td>
+          </tr>
+
+          <!-- Body -->
+          <tr>
+            <td style="padding:40px 40px 32px;">
+
+              <!-- Aanhef -->
+              <h1 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#18181b;">Uw opdracht is ontvangen</h1>
+              <p style="margin:0 0 24px;font-size:15px;line-height:1.6;color:#3f3f46;">
+                Geachte ${escapeHtml(klantnaam)},
+              </p>
+              <p style="margin:0 0 8px;font-size:15px;line-height:1.6;color:#3f3f46;">
+                Hartelijk dank voor uw opdracht. Wij hebben uw akkoord in goede orde ontvangen en zijn direct gestart met de voorbereiding.
+              </p>
+
+              <!-- Projectkaart -->
+              <table cellpadding="0" cellspacing="0" width="100%" style="margin:24px 0 28px;border:1px solid #e4e4e7;border-radius:6px;overflow:hidden;">
+                <tr>
+                  <td style="background:#f9f9f9;padding:16px 20px;border-bottom:1px solid #e4e4e7;">
+                    <p style="margin:0;font-size:11px;font-weight:600;letter-spacing:.8px;color:#a1a1aa;text-transform:uppercase;">Project</p>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:16px 20px;">
+                    <p style="margin:0 0 4px;font-size:17px;font-weight:700;color:#18181b;">${escapeHtml(projectnaam)}</p>
+                    ${offerteRegel}
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Vervolgstappen kop -->
+              <h2 style="margin:0 0 4px;font-size:16px;font-weight:700;color:#18181b;">Wat kunt u verwachten?</h2>
+              <p style="margin:0 0 20px;font-size:14px;color:#71717a;line-height:1.5;">Hieronder vindt u de stappen die wij voor u doorlopen.</p>
+
+              <!-- Stappen -->
+              <table cellpadding="0" cellspacing="0" width="100%">
+                ${stappenHtml}
+              </table>
+
+              <!-- Contact -->
+              <table cellpadding="0" cellspacing="0" width="100%" style="margin:20px 0 28px;background:#fef3f0;border-radius:6px;border:1px solid #fde8e3;">
+                <tr>
+                  <td style="padding:16px 20px;">
+                    ${contactRegel}
+                  </td>
+                </tr>
+              </table>
+
+              <!-- CTA knop -->
+              <table cellpadding="0" cellspacing="0" style="margin:0 auto 8px;">
+                <tr>
+                  <td style="background:#F23B0D;border-radius:6px;">
+                    <a href="${portaalUrl}"
+                      style="display:inline-block;padding:14px 36px;color:#ffffff;font-size:15px;font-weight:600;text-decoration:none;letter-spacing:.3px;">
+                      Project bekijken
+                    </a>
+                  </td>
+                </tr>
+              </table>
+              <p style="margin:12px 0 0;font-size:12px;color:#a1a1aa;text-align:center;word-break:break-all;">${portaalUrl}</p>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="background:#f4f4f5;padding:24px 40px;border-top:1px solid #e4e4e7;">
+              <p style="margin:0;font-size:12px;color:#71717a;text-align:center;">
+                Dit bericht is automatisch verstuurd door ${escapeHtml(werkmaatschappij)} &bull; FPS Brandpreventie &bull; U ontvangt dit omdat u een opdracht heeft verstrekt.
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+}
+
+/**
+ * Stuurt een professionele opdrachtbevestiging naar de klant na ondertekening
+ * van een offerte via het portaal. Fire-and-forget — gooit nooit.
+ */
+export async function stuurOpdrachtbevestiging(opties: {
+  naarEmail: string;
+  naarNaam: string | null;
+  klantnaam: string;
+  projectnaam: string;
+  werkmaatschappij: string;
+  contactpersoon: string | null;
+  portaalUrl: string;
+  offertenummer: string | null;
+  offerteId: number;
+}): Promise<void> {
+  const {
+    naarEmail,
+    naarNaam,
+    klantnaam,
+    projectnaam,
+    werkmaatschappij,
+    contactpersoon,
+    portaalUrl,
+    offertenummer,
+    offerteId,
+  } = opties;
+
+  if (!isGeconfigureerd()) {
+    logger.warn(
+      { offerteId },
+      "E-mailservice niet geconfigureerd — opdrachtbevestiging niet verstuurd",
+    );
+    return;
+  }
+
+  const onderwerp = "Uw opdracht is ontvangen \u2013 we gaan voor u aan de slag";
+
+  const html = opdrachtbevestigingHtml({
+    klantnaam,
+    projectnaam,
+    werkmaatschappij,
+    contactpersoon,
+    portaalUrl,
+    offertenummer,
+  });
+
+  try {
+    await verstuurMail({
+      naarEmail,
+      naarNaam: naarNaam ?? undefined,
+      onderwerp,
+      html,
+      soort: "opdrachtbevestiging",
+    });
+    logger.info({ offerteId, naarEmail }, "Opdrachtbevestiging verstuurd");
+  } catch (err) {
+    logger.warn({ err, offerteId }, "Opdrachtbevestiging mislukt (niet-kritiek)");
   }
 }
 

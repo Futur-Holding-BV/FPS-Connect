@@ -316,6 +316,7 @@ import type {
   MaakOpdrachtInput,
   MailActieResultaat,
   MailLogregel,
+  MailOpdrachtbevestigingDemoInput,
   MailStatus,
   MailTestmailInput,
   Medewerker,
@@ -32295,6 +32296,76 @@ export function useGetMailLogboek<TData = Awaited<ReturnType<typeof getMailLogbo
 
 
 
+
+export const getSendOpdrachtbevestigingDemoUrl = () => {
+
+
+
+
+  return `/api/mail/opdrachtbevestiging/demo`
+}
+
+/**
+ * @summary Stuur een demo-opdrachtbevestiging (alleen hoofdbeheerder)
+ */
+export const sendOpdrachtbevestigingDemo = async (mailOpdrachtbevestigingDemoInput: MailOpdrachtbevestigingDemoInput, options?: RequestInit): Promise<MailActieResultaat> => {
+
+  return customFetch<MailActieResultaat>(getSendOpdrachtbevestigingDemoUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(mailOpdrachtbevestigingDemoInput)
+  }
+);}
+
+
+
+
+export const getSendOpdrachtbevestigingDemoMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof sendOpdrachtbevestigingDemo>>, TError,{data: BodyType<MailOpdrachtbevestigingDemoInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof sendOpdrachtbevestigingDemo>>, TError,{data: BodyType<MailOpdrachtbevestigingDemoInput>}, TContext> => {
+
+const mutationKey = ['sendOpdrachtbevestigingDemo'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof sendOpdrachtbevestigingDemo>>, {data: BodyType<MailOpdrachtbevestigingDemoInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  sendOpdrachtbevestigingDemo(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SendOpdrachtbevestigingDemoMutationResult = NonNullable<Awaited<ReturnType<typeof sendOpdrachtbevestigingDemo>>>
+    export type SendOpdrachtbevestigingDemoMutationBody = BodyType<MailOpdrachtbevestigingDemoInput>
+    export type SendOpdrachtbevestigingDemoMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Stuur een demo-opdrachtbevestiging (alleen hoofdbeheerder)
+ */
+export const useSendOpdrachtbevestigingDemo = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof sendOpdrachtbevestigingDemo>>, TError,{data: BodyType<MailOpdrachtbevestigingDemoInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof sendOpdrachtbevestigingDemo>>,
+        TError,
+        {data: BodyType<MailOpdrachtbevestigingDemoInput>},
+        TContext
+      > => {
+      return useMutation(getSendOpdrachtbevestigingDemoMutationOptions(options));
+    }
 
 export const getListCalculatiesUrl = () => {
 

@@ -75,6 +75,7 @@ export const appInstellingenTable = pgTable("app_instellingen", {
   supportTelefoon: text("support_telefoon"),
   supportWebsite: text("support_website"),
   extraDisclaimer: text("extra_disclaimer"),
+  opdrachtbevestigingAutoVerzenden: boolean("opdrachtbevestiging_auto_verzenden").notNull().default(false),
   bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
   bijgewerktDoorId: integer("bijgewerkt_door_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
 });

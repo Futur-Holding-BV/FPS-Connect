@@ -5382,6 +5382,7 @@ export const GetInfoInstellingenResponse = zod.object({
   "support_telefoon": zod.string().nullish(),
   "support_website": zod.string().nullish(),
   "extra_disclaimer": zod.string().nullish(),
+  "opdrachtbevestiging_auto_verzenden": zod.boolean().describe('Als true wordt de opdrachtbevestigingsmail automatisch naar de klant verstuurd na ondertekening. Als false wordt de mail niet verstuurd.'),
   "bijgewerkt_op": zod.string(),
   "bijgewerkt_door_id": zod.number().nullish()
 })
@@ -5394,7 +5395,8 @@ export const UpdateInfoInstellingenBody = zod.object({
   "support_email": zod.string().optional(),
   "support_telefoon": zod.string().optional(),
   "support_website": zod.string().optional(),
-  "extra_disclaimer": zod.string().optional()
+  "extra_disclaimer": zod.string().optional(),
+  "opdrachtbevestiging_auto_verzenden": zod.boolean().optional()
 })
 
 export const UpdateInfoInstellingenResponse = zod.object({
@@ -5403,6 +5405,7 @@ export const UpdateInfoInstellingenResponse = zod.object({
   "support_telefoon": zod.string().nullish(),
   "support_website": zod.string().nullish(),
   "extra_disclaimer": zod.string().nullish(),
+  "opdrachtbevestiging_auto_verzenden": zod.boolean().describe('Als true wordt de opdrachtbevestigingsmail automatisch naar de klant verstuurd na ondertekening. Als false wordt de mail niet verstuurd.'),
   "bijgewerkt_op": zod.string(),
   "bijgewerkt_door_id": zod.number().nullish()
 })
@@ -11237,6 +11240,22 @@ export const GetMailLogboekResponseItem = zod.object({
   "aangemaakt_op": zod.string()
 })
 export const GetMailLogboekResponse = zod.array(GetMailLogboekResponseItem)
+
+
+/**
+ * @summary Stuur een demo-opdrachtbevestiging (alleen hoofdbeheerder)
+ */
+export const SendOpdrachtbevestigingDemoBody = zod.object({
+  "naar_email": zod.string().describe('E-mailadres waarnaar de demoverzending gaat'),
+  "offerte_id": zod.number().describe('Offerte-ID waarvan de gegevens in de mail worden gebruikt')
+})
+
+export const SendOpdrachtbevestigingDemoResponse = zod.object({
+  "ok": zod.boolean(),
+  "melding": zod.string().optional(),
+  "fout_categorie": zod.string().nullish(),
+  "detail": zod.string().nullish()
+})
 
 
 /**

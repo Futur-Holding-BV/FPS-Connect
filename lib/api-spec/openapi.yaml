@@ -9140,6 +9140,25 @@ paths:
                 items:
                   $ref: "#/components/schemas/MailLogregel"
 
+  /mail/opdrachtbevestiging/demo:
+    post:
+      operationId: sendOpdrachtbevestigingDemo
+      tags: [mail]
+      summary: Stuur een demo-opdrachtbevestiging (alleen hoofdbeheerder)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MailOpdrachtbevestigingDemoInput"
+      responses:
+        "200":
+          description: Resultaat (ok of fout)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MailActieResultaat"
+
   # ── Calculaties (FPS Connect) ─────────────────────────────────────────────
   /calculaties:
     get:
@@ -18319,7 +18338,7 @@ components:
 
     AppInstellingen:
       type: object
-      required: [id, bijgewerkt_op]
+      required: [id, bijgewerkt_op, opdrachtbevestiging_auto_verzenden]
       properties:
         id:
           type: integer
@@ -18331,6 +18350,9 @@ components:
           type: ["string", "null"]
         extra_disclaimer:
           type: ["string", "null"]
+        opdrachtbevestiging_auto_verzenden:
+          type: boolean
+          description: Als true wordt de opdrachtbevestigingsmail automatisch naar de klant verstuurd na ondertekening. Als false wordt de mail niet verstuurd.
         bijgewerkt_op:
           type: string
         bijgewerkt_door_id:
@@ -18347,6 +18369,19 @@ components:
           type: string
         extra_disclaimer:
           type: string
+        opdrachtbevestiging_auto_verzenden:
+          type: boolean
+
+    MailOpdrachtbevestigingDemoInput:
+      type: object
+      required: [naar_email, offerte_id]
+      properties:
+        naar_email:
+          type: string
+          description: E-mailadres waarnaar de demoverzending gaat
+        offerte_id:
+          type: integer
+          description: Offerte-ID waarvan de gegevens in de mail worden gebruikt
 
     # ── APPLICATIES, TOEPASSINGEN & TESTRAPPORTEN ────────────────────────
     VoorzieningType:

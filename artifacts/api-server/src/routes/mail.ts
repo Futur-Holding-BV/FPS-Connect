@@ -1,11 +1,12 @@
 import { Router } from "express";
-import { db, mailLogboekTable } from "@workspace/db";
-import { desc } from "drizzle-orm";
+import { db, mailLogboekTable, offertesTable, crmKlantenTable, gebruikersTable } from "@workspace/db";
+import { desc, eq } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
 import {
   mailConfiguratie,
   testVerbinding,
   stuurTestmail,
+  stuurOpdrachtbevestiging,
   MailFout,
 } from "../services/email";
 
@@ -73,6 +74,72 @@ router.post("/mail/testmail", requireBevoegdheid("systeem", 2), async (req, res)
         melding: err.message,
         detail: err.detail,
       });
+    }
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// POST /mail/opdrachtbevestiging/demo — stuur een demo-opdrachtbevestiging
+router.post("/mail/opdrachtbevestiging/demo", requireBevoegdheid("systeem", 2), async (req, res) => {
+  try {
+    const naar = String(req.body?.naar_email ?? "").trim();
+    const offerteId = Number(req.body?.offerte_id ?? 0);
+    if (!naar || !naar.includes("@")) {
+      return res.status(400).json({ error: "Een geldig e-mailadres is verplicht" });
+    }
+    if (!offerteId || offerteId < 1) {
+      return res.status(400).json({ error: "Een geldig offerte-ID is verplicht" });
+    }
+
+    // Offerte ophalen + eventuele klantgegevens
+    const [offerte] = await db
+      .select()
+      .from(offertesTable)
+      .where(eq(offertesTable.id, offerteId));
+    if (!offerte) {
+      return res.status(404).json({ error: "Offerte niet gevonden" });
+    }
+
+    let klantNaam: string | null = null;
+    if (offerte.klantId != null) {
+      const [klant] = await db
+        .select({ naam: crmKlantenTable.naam })
+        .from(crmKlantenTable)
+        .where(eq(crmKlantenTable.id, offerte.klantId));
+      if (klant) klantNaam = klant.naam;
+    }
+
+    let contactpersoon: string | null = null;
+    if (offerte.behandeldDoorId != null) {
+      const [beh] = await db
+        .select({ naam: gebruikersTable.naam })
+        .from(gebruikersTable)
+        .where(eq(gebruikersTable.id, offerte.behandeldDoorId));
+      if (beh) contactpersoon = beh.naam;
+    }
+
+    const domein = (process.env.REPLIT_DOMAINS ?? "").split(",")[0]?.trim();
+    const portaalUrl = domein
+      ? `https://${domein}/portaal/demo`
+      : "https://fpsbrandpreventie.nl/portaal/demo";
+
+    await stuurOpdrachtbevestiging({
+      naarEmail: naar,
+      naarNaam: null,
+      klantnaam: klantNaam ?? offerte.opdrachtgever ?? "Geachte klant",
+      projectnaam: offerte.titel,
+      werkmaatschappij: "FPS Brandpreventie",
+      contactpersoon,
+      portaalUrl,
+      offertenummer: offerte.offertenummer,
+      offerteId: offerte.id,
+    });
+
+    res.json({ ok: true, melding: `Demo-opdrachtbevestiging verstuurd naar ${naar}.` });
+  } catch (err) {
+    if (err instanceof MailFout) {
+      return res.json({ ok: false, fout_categorie: err.categorie, melding: err.message, detail: err.detail });
     }
     req.log.error(err);
     res.status(500).json({ error: "Interne serverfout" });

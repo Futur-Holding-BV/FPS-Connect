@@ -2361,6 +2361,8 @@ export interface AppInstellingen {
   support_website?: string | null;
   /** @nullable */
   extra_disclaimer?: string | null;
+  /** Als true wordt de opdrachtbevestigingsmail automatisch naar de klant verstuurd na ondertekening. Als false wordt de mail niet verstuurd. */
+  opdrachtbevestiging_auto_verzenden: boolean;
   bijgewerkt_op: string;
   /** @nullable */
   bijgewerkt_door_id?: number | null;
@@ -2371,6 +2373,14 @@ export interface AppInstellingenInput {
   support_telefoon?: string;
   support_website?: string;
   extra_disclaimer?: string;
+  opdrachtbevestiging_auto_verzenden?: boolean;
+}
+
+export interface MailOpdrachtbevestigingDemoInput {
+  /** E-mailadres waarnaar de demoverzending gaat */
+  naar_email: string;
+  /** Offerte-ID waarvan de gegevens in de mail worden gebruikt */
+  offerte_id: number;
 }
 
 export interface VoorzieningType {

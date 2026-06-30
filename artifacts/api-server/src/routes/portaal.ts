@@ -16,9 +16,11 @@ import {
   gebruikersTable,
   gebouwenTable,
   crmCommunicatieTable,
+  crmKlantenTable,
+  appInstellingenTable,
 } from "@workspace/db";
 import { eq, and, desc, ne, or, isNull } from "drizzle-orm";
-import { stuurKlantvraagNotificatie, stuurOndertekeningNotificatie } from "../services/email";
+import { stuurKlantvraagNotificatie, stuurOndertekeningNotificatie, stuurOpdrachtbevestiging } from "../services/email";
 import { logActiviteit } from "../lib/activiteit";
 import { heeftOpenAi, maakOpenAiClient } from "../lib/openai";
 
@@ -566,11 +568,12 @@ router.post("/portaal/:token/ondertekenen", async (req, res) => {
 
     res.status(201).json({ ok: true, project_id: projectId });
 
-    // Notificatiemail — fire-and-forget, blokkeert de respons niet.
+    // Notificatiemail intern (behandelaar) + opdrachtbevestiging klant — fire-and-forget.
     (async () => {
       try {
         let naarEmail: string;
         let naarNaam: string | null = null;
+        let contactpersoonNaam: string | null = null;
 
         if (offerte.behandeldDoorId) {
           const [beheerder] = await db
@@ -580,6 +583,7 @@ router.post("/portaal/:token/ondertekenen", async (req, res) => {
           if (beheerder) {
             naarEmail = beheerder.email;
             naarNaam = beheerder.naam;
+            contactpersoonNaam = beheerder.naam;
           } else {
             naarEmail = process.env.MAIL_MAILBOX ?? "app@fpsbrandpreventie.nl";
           }
@@ -603,6 +607,58 @@ router.post("/portaal/:token/ondertekenen", async (req, res) => {
           opdrachtgever: offerte.opdrachtgever ?? bedrijf,
           connectUrl,
         });
+
+        // Opdrachtbevestiging naar klant — alleen als auto-verzenden aan staat
+        // en er een CRM-klant met e-mailadres bekend is.
+        const [instelling] = await db
+          .select({ autoVerzenden: appInstellingenTable.opdrachtbevestigingAutoVerzenden })
+          .from(appInstellingenTable)
+          .limit(1);
+
+        if (instelling?.autoVerzenden && offerte.klantId != null) {
+          const [klant] = await db
+            .select({ naam: crmKlantenTable.naam, email: crmKlantenTable.email })
+            .from(crmKlantenTable)
+            .where(eq(crmKlantenTable.id, offerte.klantId));
+
+          if (klant?.email) {
+            const portaalUrl = domein
+              ? `https://${domein}/portaal/${req.params.token}`
+              : `https://fpsbrandpreventie.nl/portaal/${req.params.token}`;
+
+            await stuurOpdrachtbevestiging({
+              naarEmail: klant.email,
+              naarNaam: klant.naam,
+              klantnaam: klant.naam,
+              projectnaam: offerte.titel,
+              werkmaatschappij: "FPS Brandpreventie",
+              contactpersoon: contactpersoonNaam,
+              portaalUrl,
+              offertenummer: offerte.offertenummer,
+              offerteId: offerte.id,
+            });
+
+            try {
+              await logActiviteit({
+                type: "opdrachtbevestiging_verzonden",
+                omschrijving: `Opdrachtbevestiging verstuurd naar ${klant.email} voor offerte ${offerte.offertenummer ?? offerte.id}.`,
+                gebouwId: offerte.gebouwId ?? null,
+              });
+            } catch {
+              /* activiteit-log mislukking is niet-kritiek */
+            }
+          } else {
+            req.log.info(
+              { offerteId: offerte.id, klantId: offerte.klantId },
+              "Opdrachtbevestiging overgeslagen: klant heeft geen e-mailadres",
+            );
+          }
+        } else if (!instelling?.autoVerzenden) {
+          req.log.info(
+            { offerteId: offerte.id },
+            "Opdrachtbevestiging overgeslagen: auto-verzenden uitgeschakeld",
+          );
+        }
       } catch (mailErr) {
         req.log.warn(mailErr, "Ondertekening-notificatie mislukt (niet-kritiek)");
       }
