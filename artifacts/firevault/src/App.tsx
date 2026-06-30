@@ -104,6 +104,7 @@ import VerzekeringenPagina from "@/pages/organisatie/verzekeringen";
 import BedrijfsgegevensPagina from "@/pages/organisatie/bedrijfsgegevens";
 import JaarverslagenPagina from "@/pages/organisatie/jaarverslagen";
 import BedrijfsdocumentenPagina from "@/pages/organisatie/bedrijfsdocumenten";
+import DocumentStudioPagina from "@/pages/organisatie/studio";
 import WorkflowDesignerPagina from "@/pages/workflow/index";
 import BedrijfsresultatenPagina from "@/pages/financieel/bedrijfsresultaten";
 import CredieurenInboxPagina from "@/pages/financieel/crediteuren/index";
@@ -366,6 +367,7 @@ function ConnectPortal() {
         <Route path="/organisatie/bedrijfsgegevens" component={BedrijfsgegevensPagina} />
         <Route path="/organisatie/jaarverslagen" component={JaarverslagenPagina} />
         <Route path="/organisatie/bedrijfsdocumenten" component={BedrijfsdocumentenPagina} />
+        <Route path="/organisatie/studio" component={DocumentStudioPagina} />
         <Route path="/workflow" component={WorkflowDesignerPagina} />
         <Route path="/uren" component={UrenPagina} />
         <Route path="/weekstaten" component={WeekstatenPagina} />

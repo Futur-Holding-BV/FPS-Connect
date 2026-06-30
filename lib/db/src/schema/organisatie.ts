@@ -1,6 +1,7 @@
 import { pgTable, serial, text, integer, boolean, timestamp, numeric } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
+import { werkgeversTable } from "./hrm";
 
 // Bedrijfsverzekeringen — polissen per FPS-onderneming
 export const orgVerzekeringenTable = pgTable("org_verzekeringen", {
@@ -74,6 +75,24 @@ export const aiVeldCorrectiesTable = pgTable("ai_veld_correcties", {
   aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
 });
 
+// Document Studio — referentiemodellen en goedgekeurde Connect-templates per werkmaatschappij.
+// Elke rij vertegenwoordigt één documenttype (offerte, brief, factuur…) voor één werkgever.
+// Uniciteit (werkgever_id, document_type) wordt afdwongen via upsert in de API-route.
+export const documentStudioModellenTable = pgTable("document_studio_modellen", {
+  id: serial("id").primaryKey(),
+  werkgeverId: integer("werkgever_id").notNull().references(() => werkgeversTable.id, { onDelete: "cascade" }),
+  documentType: text("document_type").notNull(),
+  naam: text("naam"),
+  status: text("status").notNull().default("geen"),
+  referentieBestandPad: text("referentie_bestand_pad"),
+  connectTemplateJson: text("connect_template_json"),
+  versie: integer("versie").notNull().default(1),
+  goedgekeurdOp: timestamp("goedgekeurd_op"),
+  goedgekeurdDoor: integer("goedgekeurd_door"),
+  aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
+  bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
+});
+
 export const insertOrgVerzekeringSchema = createInsertSchema(orgVerzekeringenTable).omit({
   id: true,
   aangemaaktOp: true,
@@ -89,6 +108,11 @@ export const insertOrgBedrijfsdocumentSchema = createInsertSchema(orgBedrijfsdoc
   aangemaaktOp: true,
   bijgewerktOp: true,
 });
+export const insertDocumentStudioModelSchema = createInsertSchema(documentStudioModellenTable).omit({
+  id: true,
+  aangemaaktOp: true,
+  bijgewerktOp: true,
+});
 
 export type OrgVerzekering = typeof orgVerzekeringenTable.$inferSelect;
 export type InsertOrgVerzekering = z.infer<typeof insertOrgVerzekeringSchema>;
@@ -96,3 +120,5 @@ export type OrgJaarverslag = typeof orgJaarverslagenTable.$inferSelect;
 export type InsertOrgJaarverslag = z.infer<typeof insertOrgJaarverslagSchema>;
 export type OrgBedrijfsdocument = typeof orgBedrijfsdocumentenTable.$inferSelect;
 export type InsertOrgBedrijfsdocument = z.infer<typeof insertOrgBedrijfsdocumentSchema>;
+export type DocumentStudioModel = typeof documentStudioModellenTable.$inferSelect;
+export type InsertDocumentStudioModel = z.infer<typeof insertDocumentStudioModelSchema>;

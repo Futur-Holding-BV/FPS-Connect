@@ -10,6 +10,18 @@ Grote roadmap-fases staan ook in `docs/roadmap/gebouwd.md` en `docs/roadmap/acti
 
 ---
 
+## 2026-06-30 — Document Studio + studioRouter geregistreerd
+
+**Uitvoering:** volledig | **Diepere lagen:** volledig | **Getest:** typecheck groen, api-server bouwt
+
+- **Document Studio** (`/organisatie/studio`): nieuwe pagina per werkmaatschappij met kaartgrid voor 8 documenttypen (offerte, brief, e-mail, LMRA, toolbox, inkoopbon, factuur, calculatie); statussysteem geen → referentie → concept → goedgekeurd; drag-and-drop upload-dialoog (PDF/JPG/PNG/WEBP, max 10 MB); werkmaatschappij-selector bovenaan
+- **DB-schema**: `documentStudioModellenTable` in `lib/db/src/schema/organisatie.ts`; db push geslaagd
+- **OpenAPI + codegen**: studio-paden en -schemas in openapi.yaml; hooks `useListDocumentStudioModellen`, `useUpsertDocumentStudioModel`, `useUpdateDocumentStudioModel`, `useUploadDocumentStudioReferentie` gegenereerd
+- **API-route** `artifacts/api-server/src/routes/studio.ts` geregistreerd in `index.ts`
+- **Nav-item** "Document Studio" (LayoutTemplate-icoon) toegevoegd onder Organisatie in `beheerder-layout.tsx`
+- **Route** `/organisatie/studio` toegevoegd in `App.tsx`
+- **Onderhoudsmodule geconstateerd al volledig gebouwd** (schema, routes, frontend index/dashboard/contracten/contract-detail/werkbonnen-lijst/werkbon-detail, App.tsx-routes, OpenAPI-spec) — sessietaken T001–T005 waren reeds gereed
+
 ## 2026-06-30 — Slim uploaden: verbeterde AI-intelligentie + post-merge bugfix
 
 **Uitvoering:** volledig | **Diepere lagen:** volledig | **Getest:** typecheck groen

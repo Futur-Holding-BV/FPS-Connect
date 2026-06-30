@@ -20243,3 +20243,138 @@ export const ListImportLogsResponseItem = zod.object({
 export const ListImportLogsResponse = zod.array(ListImportLogsResponseItem)
 
 
+/**
+ * @summary Document Studio modellen ophalen (filter op werkgever_id)
+ */
+export const ListDocumentStudioModellenQueryParams = zod.object({
+  "werkgever_id": zod.coerce.number().optional()
+})
+
+export const ListDocumentStudioModellenResponseItem = zod.object({
+  "id": zod.number(),
+  "werkgever_id": zod.number(),
+  "werkgever_naam": zod.string().nullish(),
+  "document_type": zod.string(),
+  "naam": zod.string().nullish(),
+  "status": zod.string(),
+  "referentie_bestand_pad": zod.string().nullish(),
+  "connect_template_json": zod.string().nullish(),
+  "versie": zod.number(),
+  "goedgekeurd_op": zod.string().nullish(),
+  "goedgekeurd_door": zod.number().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string().nullish()
+})
+export const ListDocumentStudioModellenResponse = zod.array(ListDocumentStudioModellenResponseItem)
+
+
+/**
+ * @summary Document Studio model aanmaken of bijwerken (upsert op werkgever_id + document_type)
+ */
+export const UpsertDocumentStudioModelBody = zod.object({
+  "werkgever_id": zod.number(),
+  "document_type": zod.string(),
+  "naam": zod.string().nullish(),
+  "status": zod.string().optional()
+})
+
+export const UpsertDocumentStudioModelResponse = zod.object({
+  "id": zod.number(),
+  "werkgever_id": zod.number(),
+  "werkgever_naam": zod.string().nullish(),
+  "document_type": zod.string(),
+  "naam": zod.string().nullish(),
+  "status": zod.string(),
+  "referentie_bestand_pad": zod.string().nullish(),
+  "connect_template_json": zod.string().nullish(),
+  "versie": zod.number(),
+  "goedgekeurd_op": zod.string().nullish(),
+  "goedgekeurd_door": zod.number().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string().nullish()
+})
+
+
+/**
+ * @summary Document Studio model ophalen
+ */
+export const GetDocumentStudioModelParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetDocumentStudioModelResponse = zod.object({
+  "id": zod.number(),
+  "werkgever_id": zod.number(),
+  "werkgever_naam": zod.string().nullish(),
+  "document_type": zod.string(),
+  "naam": zod.string().nullish(),
+  "status": zod.string(),
+  "referentie_bestand_pad": zod.string().nullish(),
+  "connect_template_json": zod.string().nullish(),
+  "versie": zod.number(),
+  "goedgekeurd_op": zod.string().nullish(),
+  "goedgekeurd_door": zod.number().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string().nullish()
+})
+
+
+/**
+ * @summary Document Studio model bijwerken
+ */
+export const UpdateDocumentStudioModelParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateDocumentStudioModelBody = zod.object({
+  "naam": zod.string().nullish(),
+  "status": zod.string().optional(),
+  "connect_template_json": zod.string().nullish(),
+  "goedgekeurd_door": zod.number().nullish()
+})
+
+export const UpdateDocumentStudioModelResponse = zod.object({
+  "id": zod.number(),
+  "werkgever_id": zod.number(),
+  "werkgever_naam": zod.string().nullish(),
+  "document_type": zod.string(),
+  "naam": zod.string().nullish(),
+  "status": zod.string(),
+  "referentie_bestand_pad": zod.string().nullish(),
+  "connect_template_json": zod.string().nullish(),
+  "versie": zod.number(),
+  "goedgekeurd_op": zod.string().nullish(),
+  "goedgekeurd_door": zod.number().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string().nullish()
+})
+
+
+/**
+ * @summary Referentiebestand uploaden voor een Document Studio model
+ */
+export const UploadDocumentStudioReferentieParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UploadDocumentStudioReferentieBody = zod.object({
+  "bestand": zod.instanceof(File)
+})
+
+export const UploadDocumentStudioReferentieResponse = zod.object({
+  "id": zod.number(),
+  "werkgever_id": zod.number(),
+  "werkgever_naam": zod.string().nullish(),
+  "document_type": zod.string(),
+  "naam": zod.string().nullish(),
+  "status": zod.string(),
+  "referentie_bestand_pad": zod.string().nullish(),
+  "connect_template_json": zod.string().nullish(),
+  "versie": zod.number(),
+  "goedgekeurd_op": zod.string().nullish(),
+  "goedgekeurd_door": zod.number().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string().nullish()
+})
+
+

@@ -124,6 +124,10 @@ import type {
   DocumentKoppelingInput,
   DocumentLogboekRegel,
   DocumentSignaleringen,
+  DocumentStudioModel,
+  DocumentStudioModelInput,
+  DocumentStudioModelUpdate,
+  DocumentStudioReferentieUploadBody,
   DocumentToepassingenInput,
   DocumentUpdate,
   Dossier,
@@ -268,6 +272,7 @@ import type {
   ListCrmContactpersonenAllParams,
   ListCrmProjectkansenParams,
   ListDocumentLogboekParams,
+  ListDocumentStudioModellenParams,
   ListDocumentenParams,
   ListExportlogParams,
   ListFabrikantenParams,
@@ -57401,4 +57406,379 @@ export function useListImportLogs<TData = Awaited<ReturnType<typeof listImportLo
 
 
 
+
+export const getListDocumentStudioModellenUrl = (params?: ListDocumentStudioModellenParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/studio/modellen?${stringifiedParams}` : `/api/studio/modellen`
+}
+
+/**
+ * @summary Document Studio modellen ophalen (filter op werkgever_id)
+ */
+export const listDocumentStudioModellen = async (params?: ListDocumentStudioModellenParams, options?: RequestInit): Promise<DocumentStudioModel[]> => {
+
+  return customFetch<DocumentStudioModel[]>(getListDocumentStudioModellenUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListDocumentStudioModellenQueryKey = (params?: ListDocumentStudioModellenParams,) => {
+    return [
+    `/api/studio/modellen`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListDocumentStudioModellenQueryOptions = <TData = Awaited<ReturnType<typeof listDocumentStudioModellen>>, TError = ErrorType<unknown>>(params?: ListDocumentStudioModellenParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listDocumentStudioModellen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListDocumentStudioModellenQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listDocumentStudioModellen>>> = ({ signal }) => listDocumentStudioModellen(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listDocumentStudioModellen>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListDocumentStudioModellenQueryResult = NonNullable<Awaited<ReturnType<typeof listDocumentStudioModellen>>>
+export type ListDocumentStudioModellenQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Document Studio modellen ophalen (filter op werkgever_id)
+ */
+
+export function useListDocumentStudioModellen<TData = Awaited<ReturnType<typeof listDocumentStudioModellen>>, TError = ErrorType<unknown>>(
+ params?: ListDocumentStudioModellenParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listDocumentStudioModellen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListDocumentStudioModellenQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getUpsertDocumentStudioModelUrl = () => {
+
+
+
+
+  return `/api/studio/modellen`
+}
+
+/**
+ * @summary Document Studio model aanmaken of bijwerken (upsert op werkgever_id + document_type)
+ */
+export const upsertDocumentStudioModel = async (documentStudioModelInput: DocumentStudioModelInput, options?: RequestInit): Promise<DocumentStudioModel> => {
+
+  return customFetch<DocumentStudioModel>(getUpsertDocumentStudioModelUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(documentStudioModelInput)
+  }
+);}
+
+
+
+
+export const getUpsertDocumentStudioModelMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof upsertDocumentStudioModel>>, TError,{data: BodyType<DocumentStudioModelInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof upsertDocumentStudioModel>>, TError,{data: BodyType<DocumentStudioModelInput>}, TContext> => {
+
+const mutationKey = ['upsertDocumentStudioModel'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof upsertDocumentStudioModel>>, {data: BodyType<DocumentStudioModelInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  upsertDocumentStudioModel(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpsertDocumentStudioModelMutationResult = NonNullable<Awaited<ReturnType<typeof upsertDocumentStudioModel>>>
+    export type UpsertDocumentStudioModelMutationBody = BodyType<DocumentStudioModelInput>
+    export type UpsertDocumentStudioModelMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Document Studio model aanmaken of bijwerken (upsert op werkgever_id + document_type)
+ */
+export const useUpsertDocumentStudioModel = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof upsertDocumentStudioModel>>, TError,{data: BodyType<DocumentStudioModelInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof upsertDocumentStudioModel>>,
+        TError,
+        {data: BodyType<DocumentStudioModelInput>},
+        TContext
+      > => {
+      return useMutation(getUpsertDocumentStudioModelMutationOptions(options));
+    }
+
+export const getGetDocumentStudioModelUrl = (id: number,) => {
+
+
+
+
+  return `/api/studio/modellen/${id}`
+}
+
+/**
+ * @summary Document Studio model ophalen
+ */
+export const getDocumentStudioModel = async (id: number, options?: RequestInit): Promise<DocumentStudioModel> => {
+
+  return customFetch<DocumentStudioModel>(getGetDocumentStudioModelUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetDocumentStudioModelQueryKey = (id: number,) => {
+    return [
+    `/api/studio/modellen/${id}`
+    ] as const;
+    }
+
+
+export const getGetDocumentStudioModelQueryOptions = <TData = Awaited<ReturnType<typeof getDocumentStudioModel>>, TError = ErrorType<void>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getDocumentStudioModel>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetDocumentStudioModelQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getDocumentStudioModel>>> = ({ signal }) => getDocumentStudioModel(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getDocumentStudioModel>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetDocumentStudioModelQueryResult = NonNullable<Awaited<ReturnType<typeof getDocumentStudioModel>>>
+export type GetDocumentStudioModelQueryError = ErrorType<void>
+
+
+/**
+ * @summary Document Studio model ophalen
+ */
+
+export function useGetDocumentStudioModel<TData = Awaited<ReturnType<typeof getDocumentStudioModel>>, TError = ErrorType<void>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getDocumentStudioModel>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetDocumentStudioModelQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getUpdateDocumentStudioModelUrl = (id: number,) => {
+
+
+
+
+  return `/api/studio/modellen/${id}`
+}
+
+/**
+ * @summary Document Studio model bijwerken
+ */
+export const updateDocumentStudioModel = async (id: number,
+    documentStudioModelUpdate: DocumentStudioModelUpdate, options?: RequestInit): Promise<DocumentStudioModel> => {
+
+  return customFetch<DocumentStudioModel>(getUpdateDocumentStudioModelUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(documentStudioModelUpdate)
+  }
+);}
+
+
+
+
+export const getUpdateDocumentStudioModelMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateDocumentStudioModel>>, TError,{id: number;data: BodyType<DocumentStudioModelUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateDocumentStudioModel>>, TError,{id: number;data: BodyType<DocumentStudioModelUpdate>}, TContext> => {
+
+const mutationKey = ['updateDocumentStudioModel'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateDocumentStudioModel>>, {id: number;data: BodyType<DocumentStudioModelUpdate>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateDocumentStudioModel(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateDocumentStudioModelMutationResult = NonNullable<Awaited<ReturnType<typeof updateDocumentStudioModel>>>
+    export type UpdateDocumentStudioModelMutationBody = BodyType<DocumentStudioModelUpdate>
+    export type UpdateDocumentStudioModelMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Document Studio model bijwerken
+ */
+export const useUpdateDocumentStudioModel = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateDocumentStudioModel>>, TError,{id: number;data: BodyType<DocumentStudioModelUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateDocumentStudioModel>>,
+        TError,
+        {id: number;data: BodyType<DocumentStudioModelUpdate>},
+        TContext
+      > => {
+      return useMutation(getUpdateDocumentStudioModelMutationOptions(options));
+    }
+
+export const getUploadDocumentStudioReferentieUrl = (id: number,) => {
+
+
+
+
+  return `/api/studio/modellen/${id}/referentie-upload`
+}
+
+/**
+ * @summary Referentiebestand uploaden voor een Document Studio model
+ */
+export const uploadDocumentStudioReferentie = async (id: number,
+    documentStudioReferentieUploadBody: DocumentStudioReferentieUploadBody, options?: RequestInit): Promise<DocumentStudioModel> => {
+    const formData = new FormData();
+formData.append(`bestand`, documentStudioReferentieUploadBody.bestand);
+
+  return customFetch<DocumentStudioModel>(getUploadDocumentStudioReferentieUrl(id),
+  {
+    ...options,
+    method: 'POST'
+    ,
+    body: formData
+  }
+);}
+
+
+
+
+export const getUploadDocumentStudioReferentieMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof uploadDocumentStudioReferentie>>, TError,{id: number;data: BodyType<DocumentStudioReferentieUploadBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof uploadDocumentStudioReferentie>>, TError,{id: number;data: BodyType<DocumentStudioReferentieUploadBody>}, TContext> => {
+
+const mutationKey = ['uploadDocumentStudioReferentie'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof uploadDocumentStudioReferentie>>, {id: number;data: BodyType<DocumentStudioReferentieUploadBody>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  uploadDocumentStudioReferentie(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UploadDocumentStudioReferentieMutationResult = NonNullable<Awaited<ReturnType<typeof uploadDocumentStudioReferentie>>>
+    export type UploadDocumentStudioReferentieMutationBody = BodyType<DocumentStudioReferentieUploadBody>
+    export type UploadDocumentStudioReferentieMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Referentiebestand uploaden voor een Document Studio model
+ */
+export const useUploadDocumentStudioReferentie = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof uploadDocumentStudioReferentie>>, TError,{id: number;data: BodyType<DocumentStudioReferentieUploadBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof uploadDocumentStudioReferentie>>,
+        TError,
+        {id: number;data: BodyType<DocumentStudioReferentieUploadBody>},
+        TContext
+      > => {
+      return useMutation(getUploadDocumentStudioReferentieMutationOptions(options));
+    }
 

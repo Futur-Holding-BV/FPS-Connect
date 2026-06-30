@@ -15966,6 +15966,112 @@ paths:
                 items:
                   $ref: "#/components/schemas/ImportLog"
 
+  /studio/modellen:
+    get:
+      operationId: listDocumentStudioModellen
+      tags: [studio]
+      summary: Document Studio modellen ophalen (filter op werkgever_id)
+      parameters:
+        - in: query
+          name: werkgever_id
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DocumentStudioModel"
+    post:
+      operationId: upsertDocumentStudioModel
+      tags: [studio]
+      summary: Document Studio model aanmaken of bijwerken (upsert op werkgever_id + document_type)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DocumentStudioModelInput"
+      responses:
+        "200":
+          description: Aangemaakt of bijgewerkt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DocumentStudioModel"
+
+  /studio/modellen/{id}:
+    get:
+      operationId: getDocumentStudioModel
+      tags: [studio]
+      summary: Document Studio model ophalen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DocumentStudioModel"
+        "404":
+          description: Niet gevonden
+    patch:
+      operationId: updateDocumentStudioModel
+      tags: [studio]
+      summary: Document Studio model bijwerken
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DocumentStudioModelUpdate"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DocumentStudioModel"
+
+  /studio/modellen/{id}/referentie-upload:
+    post:
+      operationId: uploadDocumentStudioReferentie
+      tags: [studio]
+      summary: Referentiebestand uploaden voor een Document Studio model
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: "#/components/schemas/DocumentStudioReferentieUploadBody"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DocumentStudioModel"
+
 components:
   schemas:
     NieuwsItem:
@@ -29199,3 +29305,48 @@ components:
         status:                 { type: string }
         opmerkingen:            { type: ["string", "null"] }
         resultaat:              { type: ["string", "null"] }
+
+    # ── Document Studio ───────────────────────────────────────────────────────
+
+    DocumentStudioModel:
+      type: object
+      required: [id, werkgever_id, document_type, status, versie, aangemaakt_op]
+      properties:
+        id:                       { type: integer }
+        werkgever_id:             { type: integer }
+        werkgever_naam:           { type: ["string", "null"] }
+        document_type:            { type: string }
+        naam:                     { type: ["string", "null"] }
+        status:                   { type: string }
+        referentie_bestand_pad:   { type: ["string", "null"] }
+        connect_template_json:    { type: ["string", "null"] }
+        versie:                   { type: integer }
+        goedgekeurd_op:           { type: ["string", "null"] }
+        goedgekeurd_door:         { type: ["integer", "null"] }
+        aangemaakt_op:            { type: string }
+        bijgewerkt_op:            { type: ["string", "null"] }
+
+    DocumentStudioModelInput:
+      type: object
+      required: [werkgever_id, document_type]
+      properties:
+        werkgever_id:             { type: integer }
+        document_type:            { type: string }
+        naam:                     { type: ["string", "null"] }
+        status:                   { type: string }
+
+    DocumentStudioModelUpdate:
+      type: object
+      properties:
+        naam:                     { type: ["string", "null"] }
+        status:                   { type: string }
+        connect_template_json:    { type: ["string", "null"] }
+        goedgekeurd_door:         { type: ["integer", "null"] }
+
+    DocumentStudioReferentieUploadBody:
+      type: object
+      required: [bestand]
+      properties:
+        bestand:
+          type: string
+          format: binary

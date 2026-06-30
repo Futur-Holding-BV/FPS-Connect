@@ -8661,6 +8661,51 @@ export interface WerkbonUpdate {
   resultaat?: string | null;
 }
 
+export interface DocumentStudioModel {
+  id: number;
+  werkgever_id: number;
+  /** @nullable */
+  werkgever_naam?: string | null;
+  document_type: string;
+  /** @nullable */
+  naam?: string | null;
+  status: string;
+  /** @nullable */
+  referentie_bestand_pad?: string | null;
+  /** @nullable */
+  connect_template_json?: string | null;
+  versie: number;
+  /** @nullable */
+  goedgekeurd_op?: string | null;
+  /** @nullable */
+  goedgekeurd_door?: number | null;
+  aangemaakt_op: string;
+  /** @nullable */
+  bijgewerkt_op?: string | null;
+}
+
+export interface DocumentStudioModelInput {
+  werkgever_id: number;
+  document_type: string;
+  /** @nullable */
+  naam?: string | null;
+  status?: string;
+}
+
+export interface DocumentStudioModelUpdate {
+  /** @nullable */
+  naam?: string | null;
+  status?: string;
+  /** @nullable */
+  connect_template_json?: string | null;
+  /** @nullable */
+  goedgekeurd_door?: number | null;
+}
+
+export interface DocumentStudioReferentieUploadBody {
+  bestand: Blob;
+}
+
 export type GetRecenteActiviteitParams = {
 limit?: number;
 };
@@ -9225,5 +9270,9 @@ export type ListReserveringenParams = {
 artikel_id?: number;
 opdracht_id?: number;
 status?: string;
+};
+
+export type ListDocumentStudioModellenParams = {
+werkgever_id?: number;
 };
 
