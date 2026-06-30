@@ -152,6 +152,8 @@ export default function BedrijfsdocumentenPagina() {
   const [dubbeling, setDubbeling]               = useState<Dubbeling | null>(null);
   const [verwijderBevestiging, setVerwijderBevestiging] = useState<number | null>(null);
   const [actieveCat, setActieveCat]             = useState<string>("alle");
+  const [bestaandBestandPad, setBestaandBestandPad] = useState<string | null>(null);
+  const [vervangBestand, setVervangBestand]     = useState(false);
 
   const hashRef                = useRef<string | null>(null);
   const tekstFragmentRef       = useRef<string | null>(null);
@@ -205,6 +207,8 @@ export default function BedrijfsdocumentenPagina() {
     bestandPadRef.current = null;
     aiVoorgesteldeVelden.current = {};
     setDubbeling(null);
+    setBestaandBestandPad(null);
+    setVervangBestand(false);
   };
 
   const openNieuw = (cat?: string) => {
@@ -229,6 +233,7 @@ export default function BedrijfsdocumentenPagina() {
     });
     resetDialoog();
     hashRef.current = d.bestand_hash ?? null;
+    setBestaandBestandPad(d.bestand_pad ?? null);
     setDialoogOpen(true);
   };
 
@@ -526,8 +531,20 @@ export default function BedrijfsdocumentenPagina() {
           </DialogHeader>
           <div className="space-y-4 py-2">
 
-            {/* Uploadzone — alleen bij nieuw document */}
-            {!bewerkId && (
+            {/* Uploadzone — bij nieuw document altijd, bij bewerken afhankelijk van bestand_pad */}
+            {bewerkId && bestaandBestandPad && !vervangBestand ? (
+              <div className="flex items-center gap-2 rounded-lg border bg-muted/40 px-3 py-2">
+                <Upload className="h-4 w-4 text-muted-foreground shrink-0" />
+                <span className="text-sm text-muted-foreground flex-1 truncate">Bestand gekoppeld</span>
+                <button
+                  type="button"
+                  className="text-xs text-primary hover:underline shrink-0"
+                  onClick={() => setVervangBestand(true)}
+                >
+                  Vervang bestand
+                </button>
+              </div>
+            ) : (!bewerkId || !bestaandBestandPad || vervangBestand) && (
               <div
                 className={`relative border-2 border-dashed rounded-lg p-5 text-center transition-colors cursor-pointer
                   ${sleepActief ? "border-primary bg-primary/5" : "border-muted-foreground/30 hover:border-primary/50 hover:bg-muted/30"}
@@ -562,7 +579,9 @@ export default function BedrijfsdocumentenPagina() {
                   <div className="flex flex-col items-center gap-2">
                     <Upload className="h-6 w-6 text-muted-foreground" />
                     <p className="text-sm font-medium">Sleep een bestand hierheen of klik om te kiezen</p>
-                    <p className="text-xs text-muted-foreground">PDF, Word of afbeelding — AI vult de velden automatisch in</p>
+                    <p className="text-xs text-muted-foreground">
+                      {bewerkId ? "PDF, Word of afbeelding" : "PDF, Word of afbeelding — AI vult de velden automatisch in"}
+                    </p>
                   </div>
                 )}
               </div>
