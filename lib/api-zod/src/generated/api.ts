@@ -20484,6 +20484,30 @@ export const GetActiefDocumentStudioModelResponse = zod.object({
 
 
 /**
+ * @summary Alle actieve (goedgekeurde) templates voor een werkgever ophalen (bulk)
+ */
+export const ListActieveDocumentStudioModellenParams = zod.object({
+  "werkgever_id": zod.coerce.number()
+})
+
+export const ListActieveDocumentStudioModellenResponse = zod.record(zod.string(), zod.object({
+  "id": zod.number(),
+  "werkgever_id": zod.number(),
+  "werkgever_naam": zod.string().nullish(),
+  "document_type": zod.string(),
+  "naam": zod.string().nullish(),
+  "status": zod.string(),
+  "referentie_bestand_pad": zod.string().nullish(),
+  "connect_template_json": zod.string().nullish(),
+  "versie": zod.number(),
+  "goedgekeurd_op": zod.string().nullish(),
+  "goedgekeurd_door": zod.number().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string().nullish()
+}))
+
+
+/**
  * @summary Werkgevers ophalen voor Document Studio selector (gated op organisatie:lezen)
  */
 export const ListStudioWerkgeversResponseItem = zod.object({

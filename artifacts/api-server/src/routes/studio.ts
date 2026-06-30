@@ -184,6 +184,35 @@ router.get("/studio/modellen/actief", lezen, async (req, res) => {
   }
 });
 
+// ── Actieve modellen bulk — alle goedgekeurde templates voor een werkgever ────
+
+router.get("/studio/werkgevers/:werkgever_id/modellen/actief", lezen, async (req, res) => {
+  try {
+    const werkgeverId = parseId(req.params.werkgever_id);
+    if (!werkgeverId) return res.status(400).json({ error: "werkgever_id ongeldig" });
+
+    const rijen = await db
+      .select({ model: documentStudioModellenTable, naam: werkgeversTable.naam })
+      .from(documentStudioModellenTable)
+      .leftJoin(werkgeversTable, eq(documentStudioModellenTable.werkgeverId, werkgeversTable.id))
+      .where(
+        and(
+          eq(documentStudioModellenTable.werkgeverId, werkgeverId),
+          eq(documentStudioModellenTable.status, "goedgekeurd"),
+        ),
+      );
+
+    const result: Record<string, ReturnType<typeof mapModel>> = {};
+    for (const rij of rijen) {
+      result[rij.model.documentType] = mapModel(rij.model, rij.naam);
+    }
+    res.json(result);
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
 // ── Get by id ─────────────────────────────────────────────────────────────────
 
 router.get("/studio/modellen/:id", lezen, async (req, res) => {

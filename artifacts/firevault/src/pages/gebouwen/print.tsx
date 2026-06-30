@@ -27,12 +27,11 @@ import {
   useAccordeerCertificaat,
   useListWerkgevers,
   useListStudioWerkgevers,
-  useGetActiefDocumentStudioModel,
-  getGetActiefDocumentStudioModelQueryKey,
   type Verdieping,
   type VoorzieningType,
   type Cluster,
 } from "@workspace/api-client-react";
+import { useActiefStudioModel } from "@/hooks/use-actief-studio-model";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -1393,15 +1392,12 @@ export default function GebouwPrint() {
   const { data: huidigRapport }             = useGetRapport(gebouwId, rapportId ?? 0);
   const { data: werkgevers }                = useListWerkgevers();
   const { data: studioWerkgevers }          = useListStudioWerkgevers();
-  const studioWerkgeverId = (studioWerkgevers ?? [])[0]?.id ?? 0;
-  const { data: actiefStudioModel } = useGetActiefDocumentStudioModel(
-    { werkgever_id: studioWerkgeverId, document_type: "offerte" },
-    { query: {
-      queryKey: getGetActiefDocumentStudioModelQueryKey({ werkgever_id: studioWerkgeverId, document_type: "offerte" }),
-      enabled: !!studioWerkgeverId,
-      retry: false,
-    } },
+  const studioWerkgeverId = (
+    (studioWerkgevers ?? []).find(w => w.naam === ((werkgevers ?? [])[0]?.naam))?.id
+    ?? (studioWerkgevers ?? [])[0]?.id
+    ?? null
   );
+  const actiefStudioModel = useActiefStudioModel(studioWerkgeverId, "offerte");
   const updateRapport = useUpdateRapport();
   const accordeerCertificaat = useAccordeerCertificaat();
 

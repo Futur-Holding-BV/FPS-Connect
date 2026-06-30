@@ -267,6 +267,7 @@ import type {
   LeesBevestiging,
   Leverancier,
   LeverancierInput,
+  ListActieveDocumentStudioModellen200,
   ListAlleVerlofAanvragenParams,
   ListArtikelenParams,
   ListBedrijfssluitingenParams,
@@ -58070,6 +58071,83 @@ export function useGetActiefDocumentStudioModel<TData = Awaited<ReturnType<typeo
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetActiefDocumentStudioModelQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getListActieveDocumentStudioModellenUrl = (werkgeverId: number,) => {
+
+
+
+
+  return `/api/studio/werkgevers/${werkgeverId}/modellen/actief`
+}
+
+/**
+ * @summary Alle actieve (goedgekeurde) templates voor een werkgever ophalen (bulk)
+ */
+export const listActieveDocumentStudioModellen = async (werkgeverId: number, options?: RequestInit): Promise<ListActieveDocumentStudioModellen200> => {
+
+  return customFetch<ListActieveDocumentStudioModellen200>(getListActieveDocumentStudioModellenUrl(werkgeverId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListActieveDocumentStudioModellenQueryKey = (werkgeverId: number,) => {
+    return [
+    `/api/studio/werkgevers/${werkgeverId}/modellen/actief`
+    ] as const;
+    }
+
+
+export const getListActieveDocumentStudioModellenQueryOptions = <TData = Awaited<ReturnType<typeof listActieveDocumentStudioModellen>>, TError = ErrorType<unknown>>(werkgeverId: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listActieveDocumentStudioModellen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListActieveDocumentStudioModellenQueryKey(werkgeverId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listActieveDocumentStudioModellen>>> = ({ signal }) => listActieveDocumentStudioModellen(werkgeverId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: werkgeverId !== null && werkgeverId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listActieveDocumentStudioModellen>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListActieveDocumentStudioModellenQueryResult = NonNullable<Awaited<ReturnType<typeof listActieveDocumentStudioModellen>>>
+export type ListActieveDocumentStudioModellenQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Alle actieve (goedgekeurde) templates voor een werkgever ophalen (bulk)
+ */
+
+export function useListActieveDocumentStudioModellen<TData = Awaited<ReturnType<typeof listActieveDocumentStudioModellen>>, TError = ErrorType<unknown>>(
+ werkgeverId: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listActieveDocumentStudioModellen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListActieveDocumentStudioModellenQueryOptions(werkgeverId,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

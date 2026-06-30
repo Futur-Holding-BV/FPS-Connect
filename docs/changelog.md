@@ -12,13 +12,16 @@ Grote roadmap-fases staan ook in `docs/roadmap/gebouwd.md` en `docs/roadmap/acti
 
 ## 2026-06-30 — Document Studio: templates actief in Connect-modules
 
-**Uitvoering:** volledig | **Diepere lagen:** volledig | **Getest:** typecheck groen, codegen geslaagd, workflows herstart
+**Uitvoering:** volledig | **Diepere lagen:** volledig | **Getest:** typecheck groen (firevault + api-server), codegen geslaagd, workflows herstart
 
-- **API `GET /studio/modellen/actief`**: geeft het goedgekeurde (Model 0) template terug voor een `werkgever_id` + `document_type` combinatie; 404 als er geen goedgekeurd model is; volgorde vóór `/:id` in Express zodat "actief" niet als ID wordt gematch
-- **Gegenereerde hook** `useGetActiefDocumentStudioModel` via Orval codegen
-- **Offertes print** (`offertes/print.tsx`): haalt actief "offerte"-template op via `useListStudioWerkgevers` + `useGetActiefDocumentStudioModel`; past `--color-primary` CSS-variabele toe op root-div (cascade naar VoorbladA-kleurband, `text-primary` bedragen); gebruikt werkgever `logo_url` in plaats van hardcoded pad; `mij.primaireKleur` gevuld; "Opmaak: Model 0 — Werkgever" badge zichtbaar in preview (print:hidden)
-- **Opleverrapporten print** (`gebouwen/print.tsx`): zelfde template-integratie; overschrijft `.prt-cover-accentlijn` achtergrond met template-kleur via inline style; overschrijft voettekst-tagline met `studioVoettekst` (fallback "Brandveiligheid door vakmanschap")
-- **Document Studio kaart** (`studio.tsx`): goedgekeurde kaarten tonen "Actief in: Offertes, Opleverrapporten" badges via `DOCUMENT_TYPE_MODULES`-mapping; alleen bij status `goedgekeurd` en alleen als er modules in de mapping staan
+- **API `GET /studio/modellen/actief`**: enkelvoudige lookup op werkgever_id + document_type; 404 als geen goedgekeurd model; Express-volgorde vóór `/:id`
+- **API `GET /studio/werkgevers/:id/modellen/actief`** (bulk): geeft `Record<documentType, DocumentStudioModel>` terug met alle goedgekeurde templates voor een werkgever in één call; gebruikt `parseId` voor type-veilige param-parsing
+- **Codegen**: `useListActieveDocumentStudioModellen` + `getListActieveDocumentStudioModellenQueryKey` gegenereerd
+- **Shared hook** `use-actief-studio-model.ts` (`artifacts/firevault/src/hooks/`): `useActiefStudioModel(werkgeverId, documentType)` — wraps bulk-hook, normaliseert 404/ontbrekend naar `null`, `throwOnError: false`
+- **Werkgever-matching op naam**: studioWerkgever wordt gezocht op `naam === werkgevers[0].naam` (of werkgeverNaam in gebouwen) met fallback op `studioWerkgevers[0]`; nooit meer blind `[0]` in multi-werkmaatschappij context
+- **Offertes print** (`offertes/print.tsx`): gebruikt shared hook; `--color-primary` CSS-var op root-div (cascade VoorbladA); `logo_url` uit Studio werkgever; "Opmaak: Model 0" badge (print:hidden)
+- **Opleverrapporten print** (`gebouwen/print.tsx`): gebruikt shared hook; `.prt-cover-accentlijn` background via inline style; voettekst-tagline uit template (fallback "Brandveiligheid door vakmanschap")
+- **Document Studio kaart** (`studio.tsx`): `DOCUMENT_TYPE_MODULES` mapping; "Actief in:" badges op goedgekeurde kaarten
 
 ---
 

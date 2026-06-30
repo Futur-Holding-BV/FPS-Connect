@@ -7,13 +7,12 @@ import {
   useListOfferteBijlagen,
   useListWerkgevers,
   useListStudioWerkgevers,
-  useGetActiefDocumentStudioModel,
   getGetOfferteQueryKey,
   getListOfferteSectiesQueryKey,
   getListOfferteRegelsQueryKey,
   getListOfferteBijlagenQueryKey,
-  getGetActiefDocumentStudioModelQueryKey,
 } from "@workspace/api-client-react";
+import { useActiefStudioModel } from "@/hooks/use-actief-studio-model";
 import { DocumentFrame, DocumentVoet } from "@/components/documentopmaak/DocumentFrame";
 import { VoorbladA } from "@/components/documentopmaak/FamilieA";
 import { CheckCircle2 } from "lucide-react";
@@ -45,15 +44,12 @@ export default function OffertePrintPagina() {
   });
   const { data: werkgevers } = useListWerkgevers();
   const { data: studioWerkgevers } = useListStudioWerkgevers();
-  const studioWerkgeverId = (studioWerkgevers ?? [])[0]?.id ?? 0;
-  const { data: actiefModel } = useGetActiefDocumentStudioModel(
-    { werkgever_id: studioWerkgeverId, document_type: "offerte" },
-    { query: {
-      queryKey: getGetActiefDocumentStudioModelQueryKey({ werkgever_id: studioWerkgeverId, document_type: "offerte" }),
-      enabled: !!studioWerkgeverId,
-      retry: false,
-    } },
+  const studioWerkgeverId = (
+    (studioWerkgevers ?? []).find(w => w.naam === ((werkgevers ?? [])[0]?.naam))?.id
+    ?? (studioWerkgevers ?? [])[0]?.id
+    ?? null
   );
+  const actiefModel = useActiefStudioModel(studioWerkgeverId, "offerte");
 
   const klaar = !offerteLoading && !sectiesLoading && !regelsLoading;
 
