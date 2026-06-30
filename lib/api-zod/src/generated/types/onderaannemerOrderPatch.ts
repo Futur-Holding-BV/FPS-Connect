@@ -6,16 +6,15 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface InkoopplanRegelPatch {
+export interface OnderaannemerOrderPatch {
   omschrijving?: string;
-  hoeveelheid?: number;
-  eenheid?: string;
-  leverancier?: string;
-  inkoopprijs?: number;
-  gewenste_leverdatum?: string;
-  besteldatum?: string;
-  levertijd_weken?: number;
+  bedrijf?: string;
+  contactpersoon?: string;
+  werkzaamheden?: string;
+  bedrag_excl_btw?: number;
+  btw_percentage?: number;
   status?: string;
+  gewenste_startdatum?: string;
+  gewenste_einddatum?: string;
   opmerkingen?: string;
-  type?: string;
 }

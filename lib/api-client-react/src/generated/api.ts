@@ -239,6 +239,7 @@ import type {
   InkoopbonPatch,
   InkoopbonVerzendInput,
   InkoopplanRegel,
+  InkoopplanRegelAanmaken,
   InkoopplanRegelPatch,
   Inkoopplanning,
   Inspectie,
@@ -380,6 +381,9 @@ import type {
   OfferteVraag,
   OfferteVraagAntwoordInput,
   OnboardingFout,
+  OnderaannemerOrder,
+  OnderaannemerOrderInput,
+  OnderaannemerOrderPatch,
   OnderhandenWerkItem,
   OnderhandenWerkOverrideInput,
   OnderhoudInput,
@@ -30777,6 +30781,77 @@ export const useVaststellenInkoopplanning = <TError = ErrorType<unknown>,
       return useMutation(getVaststellenInkoopplanningMutationOptions(options));
     }
 
+export const getCreateInkoopplanRegelUrl = (id: number,) => {
+
+
+
+
+  return `/api/opdrachten/${id}/inkoopplanning/regels`
+}
+
+/**
+ * @summary Vrije inkoop-regel handmatig toevoegen (maakt plan aan indien nog niet aanwezig)
+ */
+export const createInkoopplanRegel = async (id: number,
+    inkoopplanRegelAanmaken: InkoopplanRegelAanmaken, options?: RequestInit): Promise<Inkoopplanning> => {
+
+  return customFetch<Inkoopplanning>(getCreateInkoopplanRegelUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(inkoopplanRegelAanmaken)
+  }
+);}
+
+
+
+
+export const getCreateInkoopplanRegelMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createInkoopplanRegel>>, TError,{id: number;data: BodyType<InkoopplanRegelAanmaken>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createInkoopplanRegel>>, TError,{id: number;data: BodyType<InkoopplanRegelAanmaken>}, TContext> => {
+
+const mutationKey = ['createInkoopplanRegel'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createInkoopplanRegel>>, {id: number;data: BodyType<InkoopplanRegelAanmaken>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  createInkoopplanRegel(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateInkoopplanRegelMutationResult = NonNullable<Awaited<ReturnType<typeof createInkoopplanRegel>>>
+    export type CreateInkoopplanRegelMutationBody = BodyType<InkoopplanRegelAanmaken>
+    export type CreateInkoopplanRegelMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Vrije inkoop-regel handmatig toevoegen (maakt plan aan indien nog niet aanwezig)
+ */
+export const useCreateInkoopplanRegel = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createInkoopplanRegel>>, TError,{id: number;data: BodyType<InkoopplanRegelAanmaken>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createInkoopplanRegel>>,
+        TError,
+        {id: number;data: BodyType<InkoopplanRegelAanmaken>},
+        TContext
+      > => {
+      return useMutation(getCreateInkoopplanRegelMutationOptions(options));
+    }
+
 export const getPatchInkoopplanRegelUrl = (id: number,
     regelId: number,) => {
 
@@ -30848,6 +30923,78 @@ export const usePatchInkoopplanRegel = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getPatchInkoopplanRegelMutationOptions(options));
+    }
+
+export const getDeleteInkoopplanRegelUrl = (id: number,
+    regelId: number,) => {
+
+
+
+
+  return `/api/opdrachten/${id}/inkoopplanning/regels/${regelId}`
+}
+
+/**
+ * @summary Inkoop-regel verwijderen
+ */
+export const deleteInkoopplanRegel = async (id: number,
+    regelId: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteInkoopplanRegelUrl(id,regelId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteInkoopplanRegelMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteInkoopplanRegel>>, TError,{id: number;regelId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteInkoopplanRegel>>, TError,{id: number;regelId: number}, TContext> => {
+
+const mutationKey = ['deleteInkoopplanRegel'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteInkoopplanRegel>>, {id: number;regelId: number}> = (props) => {
+          const {id,regelId} = props ?? {};
+
+          return  deleteInkoopplanRegel(id,regelId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteInkoopplanRegelMutationResult = NonNullable<Awaited<ReturnType<typeof deleteInkoopplanRegel>>>
+
+    export type DeleteInkoopplanRegelMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Inkoop-regel verwijderen
+ */
+export const useDeleteInkoopplanRegel = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteInkoopplanRegel>>, TError,{id: number;regelId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteInkoopplanRegel>>,
+        TError,
+        {id: number;regelId: number},
+        TContext
+      > => {
+      return useMutation(getDeleteInkoopplanRegelMutationOptions(options));
     }
 
 export const getListInkoopbonnenUrl = (id: number,) => {
@@ -31284,6 +31431,299 @@ export const useVerzendInkoopbon = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getVerzendInkoopbonMutationOptions(options));
+    }
+
+export const getListOnderaannemeOrdersUrl = (id: number,) => {
+
+
+
+
+  return `/api/opdrachten/${id}/onderaanneming`
+}
+
+/**
+ * @summary Onderaannemer-orders van opdracht ophalen
+ */
+export const listOnderaannemeOrders = async (id: number, options?: RequestInit): Promise<OnderaannemerOrder[]> => {
+
+  return customFetch<OnderaannemerOrder[]>(getListOnderaannemeOrdersUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListOnderaannemeOrdersQueryKey = (id: number,) => {
+    return [
+    `/api/opdrachten/${id}/onderaanneming`
+    ] as const;
+    }
+
+
+export const getListOnderaannemeOrdersQueryOptions = <TData = Awaited<ReturnType<typeof listOnderaannemeOrders>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listOnderaannemeOrders>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListOnderaannemeOrdersQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listOnderaannemeOrders>>> = ({ signal }) => listOnderaannemeOrders(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listOnderaannemeOrders>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListOnderaannemeOrdersQueryResult = NonNullable<Awaited<ReturnType<typeof listOnderaannemeOrders>>>
+export type ListOnderaannemeOrdersQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Onderaannemer-orders van opdracht ophalen
+ */
+
+export function useListOnderaannemeOrders<TData = Awaited<ReturnType<typeof listOnderaannemeOrders>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listOnderaannemeOrders>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListOnderaannemeOrdersQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateOnderaannemeOrderUrl = (id: number,) => {
+
+
+
+
+  return `/api/opdrachten/${id}/onderaanneming`
+}
+
+/**
+ * @summary Nieuwe onderaannemer-order aanmaken
+ */
+export const createOnderaannemeOrder = async (id: number,
+    onderaannemerOrderInput: OnderaannemerOrderInput, options?: RequestInit): Promise<OnderaannemerOrder> => {
+
+  return customFetch<OnderaannemerOrder>(getCreateOnderaannemeOrderUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(onderaannemerOrderInput)
+  }
+);}
+
+
+
+
+export const getCreateOnderaannemeOrderMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createOnderaannemeOrder>>, TError,{id: number;data: BodyType<OnderaannemerOrderInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createOnderaannemeOrder>>, TError,{id: number;data: BodyType<OnderaannemerOrderInput>}, TContext> => {
+
+const mutationKey = ['createOnderaannemeOrder'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createOnderaannemeOrder>>, {id: number;data: BodyType<OnderaannemerOrderInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  createOnderaannemeOrder(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateOnderaannemeOrderMutationResult = NonNullable<Awaited<ReturnType<typeof createOnderaannemeOrder>>>
+    export type CreateOnderaannemeOrderMutationBody = BodyType<OnderaannemerOrderInput>
+    export type CreateOnderaannemeOrderMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Nieuwe onderaannemer-order aanmaken
+ */
+export const useCreateOnderaannemeOrder = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createOnderaannemeOrder>>, TError,{id: number;data: BodyType<OnderaannemerOrderInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createOnderaannemeOrder>>,
+        TError,
+        {id: number;data: BodyType<OnderaannemerOrderInput>},
+        TContext
+      > => {
+      return useMutation(getCreateOnderaannemeOrderMutationOptions(options));
+    }
+
+export const getPatchOnderaannemeOrderUrl = (id: number,
+    orderId: number,) => {
+
+
+
+
+  return `/api/opdrachten/${id}/onderaanneming/${orderId}`
+}
+
+/**
+ * @summary Onderaannemer-order bijwerken
+ */
+export const patchOnderaannemeOrder = async (id: number,
+    orderId: number,
+    onderaannemerOrderPatch: OnderaannemerOrderPatch, options?: RequestInit): Promise<OnderaannemerOrder> => {
+
+  return customFetch<OnderaannemerOrder>(getPatchOnderaannemeOrderUrl(id,orderId),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(onderaannemerOrderPatch)
+  }
+);}
+
+
+
+
+export const getPatchOnderaannemeOrderMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof patchOnderaannemeOrder>>, TError,{id: number;orderId: number;data: BodyType<OnderaannemerOrderPatch>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof patchOnderaannemeOrder>>, TError,{id: number;orderId: number;data: BodyType<OnderaannemerOrderPatch>}, TContext> => {
+
+const mutationKey = ['patchOnderaannemeOrder'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof patchOnderaannemeOrder>>, {id: number;orderId: number;data: BodyType<OnderaannemerOrderPatch>}> = (props) => {
+          const {id,orderId,data} = props ?? {};
+
+          return  patchOnderaannemeOrder(id,orderId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PatchOnderaannemeOrderMutationResult = NonNullable<Awaited<ReturnType<typeof patchOnderaannemeOrder>>>
+    export type PatchOnderaannemeOrderMutationBody = BodyType<OnderaannemerOrderPatch>
+    export type PatchOnderaannemeOrderMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Onderaannemer-order bijwerken
+ */
+export const usePatchOnderaannemeOrder = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof patchOnderaannemeOrder>>, TError,{id: number;orderId: number;data: BodyType<OnderaannemerOrderPatch>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof patchOnderaannemeOrder>>,
+        TError,
+        {id: number;orderId: number;data: BodyType<OnderaannemerOrderPatch>},
+        TContext
+      > => {
+      return useMutation(getPatchOnderaannemeOrderMutationOptions(options));
+    }
+
+export const getDeleteOnderaannemeOrderUrl = (id: number,
+    orderId: number,) => {
+
+
+
+
+  return `/api/opdrachten/${id}/onderaanneming/${orderId}`
+}
+
+/**
+ * @summary Onderaannemer-order verwijderen
+ */
+export const deleteOnderaannemeOrder = async (id: number,
+    orderId: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteOnderaannemeOrderUrl(id,orderId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteOnderaannemeOrderMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteOnderaannemeOrder>>, TError,{id: number;orderId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteOnderaannemeOrder>>, TError,{id: number;orderId: number}, TContext> => {
+
+const mutationKey = ['deleteOnderaannemeOrder'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteOnderaannemeOrder>>, {id: number;orderId: number}> = (props) => {
+          const {id,orderId} = props ?? {};
+
+          return  deleteOnderaannemeOrder(id,orderId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteOnderaannemeOrderMutationResult = NonNullable<Awaited<ReturnType<typeof deleteOnderaannemeOrder>>>
+
+    export type DeleteOnderaannemeOrderMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Onderaannemer-order verwijderen
+ */
+export const useDeleteOnderaannemeOrder = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteOnderaannemeOrder>>, TError,{id: number;orderId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteOnderaannemeOrder>>,
+        TError,
+        {id: number;orderId: number},
+        TContext
+      > => {
+      return useMutation(getDeleteOnderaannemeOrderMutationOptions(options));
     }
 
 export const getGetUitvoeringsplanningUrl = (id: number,) => {

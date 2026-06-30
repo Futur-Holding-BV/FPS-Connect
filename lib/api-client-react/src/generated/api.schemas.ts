@@ -4554,6 +4554,14 @@ export const InkoopplanRegelStatus = {
   geleverd: 'geleverd',
 } as const;
 
+export type InkoopplanRegelBron = typeof InkoopplanRegelBron[keyof typeof InkoopplanRegelBron];
+
+
+export const InkoopplanRegelBron = {
+  calculatie: 'calculatie',
+  vrij: 'vrij',
+} as const;
+
 export interface InkoopplanRegel {
   id: number;
   inkoopplan_id: number;
@@ -4588,12 +4596,16 @@ export interface InkoopplanRegel {
   ai_motivatie?: string | null;
   /** @nullable */
   opmerkingen?: string | null;
+  bron?: InkoopplanRegelBron;
   volgorde: number;
   aangemaakt_op?: string;
   bijgewerkt_op?: string;
 }
 
 export interface InkoopplanRegelPatch {
+  omschrijving?: string;
+  hoeveelheid?: number;
+  eenheid?: string;
   leverancier?: string;
   inkoopprijs?: number;
   gewenste_leverdatum?: string;
@@ -4602,6 +4614,77 @@ export interface InkoopplanRegelPatch {
   status?: string;
   opmerkingen?: string;
   type?: string;
+}
+
+export interface InkoopplanRegelAanmaken {
+  omschrijving: string;
+  hoeveelheid?: number;
+  eenheid?: string;
+  leverancier?: string;
+  inkoopprijs?: number;
+  gewenste_leverdatum?: string;
+  type?: string;
+  opmerkingen?: string;
+}
+
+export type OnderaannemerOrderStatus = typeof OnderaannemerOrderStatus[keyof typeof OnderaannemerOrderStatus];
+
+
+export const OnderaannemerOrderStatus = {
+  concept: 'concept',
+  uitbesteed: 'uitbesteed',
+  uitgevoerd: 'uitgevoerd',
+  betaald: 'betaald',
+  geannuleerd: 'geannuleerd',
+} as const;
+
+export interface OnderaannemerOrder {
+  id: number;
+  opdracht_id: number;
+  omschrijving: string;
+  /** @nullable */
+  bedrijf?: string | null;
+  /** @nullable */
+  contactpersoon?: string | null;
+  /** @nullable */
+  werkzaamheden?: string | null;
+  /** @nullable */
+  bedrag_excl_btw?: number | null;
+  btw_percentage: number;
+  status: OnderaannemerOrderStatus;
+  /** @nullable */
+  gewenste_startdatum?: string | null;
+  /** @nullable */
+  gewenste_einddatum?: string | null;
+  /** @nullable */
+  opmerkingen?: string | null;
+  aangemaakt_op: string;
+  bijgewerkt_op: string;
+}
+
+export interface OnderaannemerOrderInput {
+  omschrijving: string;
+  bedrijf?: string;
+  contactpersoon?: string;
+  werkzaamheden?: string;
+  bedrag_excl_btw?: number;
+  btw_percentage?: number;
+  gewenste_startdatum?: string;
+  gewenste_einddatum?: string;
+  opmerkingen?: string;
+}
+
+export interface OnderaannemerOrderPatch {
+  omschrijving?: string;
+  bedrijf?: string;
+  contactpersoon?: string;
+  werkzaamheden?: string;
+  bedrag_excl_btw?: number;
+  btw_percentage?: number;
+  status?: string;
+  gewenste_startdatum?: string;
+  gewenste_einddatum?: string;
+  opmerkingen?: string;
 }
 
 export type InkoopplanningStatus = typeof InkoopplanningStatus[keyof typeof InkoopplanningStatus];

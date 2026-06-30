@@ -5,6 +5,8 @@ import {
   useGenereerInkoopplanning,
   useVaststellenInkoopplanning,
   usePatchInkoopplanRegel,
+  useCreateInkoopplanRegel,
+  useDeleteInkoopplanRegel,
   useListInkoopbonnen,
   useCreateInkoopbon,
   usePatchInkoopbon,
@@ -30,7 +32,7 @@ import {
 } from "@/components/ui/dialog";
 import {
   Sparkles, Check, Package, Truck, Clock, AlertTriangle,
-  Plus, Trash2, ChevronDown, ChevronUp, Mail, Send, Bot,
+  Plus, Trash2, ChevronDown, ChevronUp, Mail, Send, Bot, PenLine,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
@@ -88,6 +90,17 @@ function InkoopRegelRij({ regel, opdrachtId, planId }: InkoopRegelRijProps) {
       onError: () => toast({ title: "Opslaan mislukt", variant: "destructive" }),
     },
   });
+  void planId;
+
+  const deleteMutatie = useDeleteInkoopplanRegel({
+    mutation: {
+      onSuccess: () => {
+        qc.invalidateQueries({ queryKey: getGetInkoopplanningQueryKey(opdrachtId) });
+        toast({ title: "Regel verwijderd" });
+      },
+      onError: () => toast({ title: "Verwijderen mislukt", variant: "destructive" }),
+    },
+  });
 
   const typeInfo = TYPE_LABELS[type] ?? TYPE_LABELS.standaard;
   const statusInfo = STATUS_LABELS[status] ?? STATUS_LABELS.open;
@@ -118,6 +131,12 @@ function InkoopRegelRij({ regel, opdrachtId, planId }: InkoopRegelRijProps) {
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-sm font-medium truncate">{regel.omschrijving}</span>
             <Badge variant="outline" className={`text-xs ${typeInfo.kleur}`}>{typeInfo.label}</Badge>
+            {(regel as { bron?: string }).bron === "vrij" && (
+              <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
+                <PenLine className="h-2.5 w-2.5 mr-1" />
+                Handmatig
+              </Badge>
+            )}
             <Badge variant="outline" className={`text-xs ${statusInfo.kleur}`}>{statusInfo.label}</Badge>
             {regel.ai_motivatie && (
               <Sparkles className="h-3 w-3 text-amber-500 shrink-0" />
@@ -135,7 +154,18 @@ function InkoopRegelRij({ regel, opdrachtId, planId }: InkoopRegelRijProps) {
             )}
           </div>
         </div>
-        {open ? <ChevronUp className="h-4 w-4 text-muted-foreground shrink-0" /> : <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />}
+        <div className="flex items-center gap-1 shrink-0" onClick={e => e.stopPropagation()}>
+          {(regel as { bron?: string }).bron === "vrij" && (
+            <Button
+              size="icon" variant="ghost" className="h-6 w-6 text-muted-foreground hover:text-destructive"
+              onClick={() => deleteMutatie.mutate({ id: opdrachtId, regelId: regel.id })}
+              disabled={deleteMutatie.isPending}
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </Button>
+          )}
+          {open ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+        </div>
       </div>
 
       {open && (
@@ -758,10 +788,92 @@ interface InkoopplanningTabProps {
   opdrachtId: number;
 }
 
+interface VrijeRegelFormState {
+  omschrijving: string;
+  hoeveelheid: string;
+  eenheid: string;
+  leverancier: string;
+  inkoopprijs: string;
+}
+
+function VrijeRegelDialoog({ open, onClose, opdrachtId }: { open: boolean; onClose: () => void; opdrachtId: number }) {
+  const [form, setForm] = useState<VrijeRegelFormState>({ omschrijving: "", hoeveelheid: "1", eenheid: "st", leverancier: "", inkoopprijs: "" });
+  const { toast } = useToast();
+  const qc = useQueryClient();
+
+  const maakAan = useCreateInkoopplanRegel({
+    mutation: {
+      onSuccess: () => {
+        qc.invalidateQueries({ queryKey: getGetInkoopplanningQueryKey(opdrachtId) });
+        toast({ title: "Regel toegevoegd" });
+        onClose();
+      },
+      onError: () => toast({ title: "Toevoegen mislukt", variant: "destructive" }),
+    },
+  });
+
+  function set(k: keyof VrijeRegelFormState, v: string) { setForm(prev => ({ ...prev, [k]: v })); }
+
+  function bewaar() {
+    if (!form.omschrijving.trim()) return;
+    maakAan.mutate({
+      id: opdrachtId,
+      data: {
+        omschrijving: form.omschrijving.trim(),
+        hoeveelheid: form.hoeveelheid ? parseFloat(form.hoeveelheid) : 1,
+        eenheid: form.eenheid || "st",
+        leverancier: form.leverancier || undefined,
+        inkoopprijs: form.inkoopprijs ? parseFloat(form.inkoopprijs) : undefined,
+      },
+    });
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="max-w-sm">
+        <DialogHeader>
+          <DialogTitle>Materiaalregel handmatig toevoegen</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-3">
+          <div>
+            <label className="text-xs text-muted-foreground mb-1 block">Omschrijving *</label>
+            <Input placeholder="Bijv. Brandwerend kit 750ml" value={form.omschrijving} onChange={e => set("omschrijving", e.target.value)} />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs text-muted-foreground mb-1 block">Hoeveelheid</label>
+              <Input type="number" min={0} step="0.01" value={form.hoeveelheid} onChange={e => set("hoeveelheid", e.target.value)} />
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground mb-1 block">Eenheid</label>
+              <Input placeholder="st, m, m2..." value={form.eenheid} onChange={e => set("eenheid", e.target.value)} />
+            </div>
+          </div>
+          <div>
+            <label className="text-xs text-muted-foreground mb-1 block">Leverancier</label>
+            <Input placeholder="Optioneel" value={form.leverancier} onChange={e => set("leverancier", e.target.value)} />
+          </div>
+          <div>
+            <label className="text-xs text-muted-foreground mb-1 block">Inkoopprijs (excl. BTW)</label>
+            <Input type="number" min={0} step="0.01" placeholder="0,00" value={form.inkoopprijs} onChange={e => set("inkoopprijs", e.target.value)} />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>Annuleren</Button>
+          <Button onClick={bewaar} disabled={!form.omschrijving.trim() || maakAan.isPending}>
+            {maakAan.isPending ? "Toevoegen..." : "Toevoegen"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export default function InkoopplanningTab({ opdrachtId }: InkoopplanningTabProps) {
   const [bonDialoog, setBonDialoog] = useState(false);
   const [aiDialoogOpen, setAiDialoogOpen] = useState(false);
   const [aiSuggesties, setAiSuggesties] = useState<InkoopbonAiSuggestieResultaat | null>(null);
+  const [handmatigOpen, setHandmatigOpen] = useState(false);
   const { toast } = useToast();
   const qc = useQueryClient();
 
@@ -865,7 +977,15 @@ export default function InkoopplanningTab({ opdrachtId }: InkoopplanningTabProps
             </Badge>
           )}
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setHandmatigOpen(true)}
+          >
+            <Plus className="h-3.5 w-3.5" />
+            Handmatig toevoegen
+          </Button>
           <Button
             variant="outline"
             size="sm"
@@ -993,6 +1113,12 @@ export default function InkoopplanningTab({ opdrachtId }: InkoopplanningTabProps
           </div>
         )}
       </div>
+
+      <VrijeRegelDialoog
+        open={handmatigOpen}
+        onClose={() => setHandmatigOpen(false)}
+        opdrachtId={opdrachtId}
+      />
 
       <NieuweInkoopbonDialoog
         opdrachtId={opdrachtId}

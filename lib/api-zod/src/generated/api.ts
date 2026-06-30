@@ -10667,6 +10667,7 @@ export const GetInkoopplanningResponse = zod.object({
   "status": zod.enum(['open', 'uit_voorraad', 'besteld', 'geleverd']),
   "ai_motivatie": zod.string().nullish(),
   "opmerkingen": zod.string().nullish(),
+  "bron": zod.enum(['calculatie', 'vrij']).optional(),
   "volgorde": zod.number(),
   "aangemaakt_op": zod.string().optional(),
   "bijgewerkt_op": zod.string().optional()
@@ -10714,6 +10715,7 @@ export const GenereerInkoopplanningResponse = zod.object({
   "status": zod.enum(['open', 'uit_voorraad', 'besteld', 'geleverd']),
   "ai_motivatie": zod.string().nullish(),
   "opmerkingen": zod.string().nullish(),
+  "bron": zod.enum(['calculatie', 'vrij']).optional(),
   "volgorde": zod.number(),
   "aangemaakt_op": zod.string().optional(),
   "bijgewerkt_op": zod.string().optional()
@@ -10761,11 +10763,33 @@ export const VaststellenInkoopplanningResponse = zod.object({
   "status": zod.enum(['open', 'uit_voorraad', 'besteld', 'geleverd']),
   "ai_motivatie": zod.string().nullish(),
   "opmerkingen": zod.string().nullish(),
+  "bron": zod.enum(['calculatie', 'vrij']).optional(),
   "volgorde": zod.number(),
   "aangemaakt_op": zod.string().optional(),
   "bijgewerkt_op": zod.string().optional()
 }))
 })
+
+
+/**
+ * @summary Vrije inkoop-regel handmatig toevoegen (maakt plan aan indien nog niet aanwezig)
+ */
+export const CreateInkoopplanRegelParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const CreateInkoopplanRegelBody = zod.object({
+  "omschrijving": zod.string(),
+  "hoeveelheid": zod.number().optional(),
+  "eenheid": zod.string().optional(),
+  "leverancier": zod.string().optional(),
+  "inkoopprijs": zod.number().optional(),
+  "gewenste_leverdatum": zod.string().optional(),
+  "type": zod.string().optional(),
+  "opmerkingen": zod.string().optional()
+})
+
+export const CreateInkoopplanRegelResponse = zod.void()
 
 
 /**
@@ -10777,6 +10801,9 @@ export const PatchInkoopplanRegelParams = zod.object({
 })
 
 export const PatchInkoopplanRegelBody = zod.object({
+  "omschrijving": zod.string().optional(),
+  "hoeveelheid": zod.number().optional(),
+  "eenheid": zod.string().optional(),
   "leverancier": zod.string().optional(),
   "inkoopprijs": zod.number().optional(),
   "gewenste_leverdatum": zod.string().optional(),
@@ -10808,10 +10835,22 @@ export const PatchInkoopplanRegelResponse = zod.object({
   "status": zod.enum(['open', 'uit_voorraad', 'besteld', 'geleverd']),
   "ai_motivatie": zod.string().nullish(),
   "opmerkingen": zod.string().nullish(),
+  "bron": zod.enum(['calculatie', 'vrij']).optional(),
   "volgorde": zod.number(),
   "aangemaakt_op": zod.string().optional(),
   "bijgewerkt_op": zod.string().optional()
 })
+
+
+/**
+ * @summary Inkoop-regel verwijderen
+ */
+export const DeleteInkoopplanRegelParams = zod.object({
+  "id": zod.coerce.number(),
+  "regelId": zod.coerce.number()
+})
+
+export const DeleteInkoopplanRegelResponse = zod.void()
 
 
 /**
@@ -11003,6 +11042,104 @@ export const VerzendInkoopbonResponse = zod.object({
   "volgorde": zod.number()
 })).optional()
 })
+
+
+/**
+ * @summary Onderaannemer-orders van opdracht ophalen
+ */
+export const ListOnderaannemeOrdersParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ListOnderaannemeOrdersResponseItem = zod.object({
+  "id": zod.number(),
+  "opdracht_id": zod.number(),
+  "omschrijving": zod.string(),
+  "bedrijf": zod.string().nullish(),
+  "contactpersoon": zod.string().nullish(),
+  "werkzaamheden": zod.string().nullish(),
+  "bedrag_excl_btw": zod.number().nullish(),
+  "btw_percentage": zod.number(),
+  "status": zod.enum(['concept', 'uitbesteed', 'uitgevoerd', 'betaald', 'geannuleerd']),
+  "gewenste_startdatum": zod.string().nullish(),
+  "gewenste_einddatum": zod.string().nullish(),
+  "opmerkingen": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+export const ListOnderaannemeOrdersResponse = zod.array(ListOnderaannemeOrdersResponseItem)
+
+
+/**
+ * @summary Nieuwe onderaannemer-order aanmaken
+ */
+export const CreateOnderaannemeOrderParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const CreateOnderaannemeOrderBody = zod.object({
+  "omschrijving": zod.string(),
+  "bedrijf": zod.string().optional(),
+  "contactpersoon": zod.string().optional(),
+  "werkzaamheden": zod.string().optional(),
+  "bedrag_excl_btw": zod.number().optional(),
+  "btw_percentage": zod.number().optional(),
+  "gewenste_startdatum": zod.string().optional(),
+  "gewenste_einddatum": zod.string().optional(),
+  "opmerkingen": zod.string().optional()
+})
+
+export const CreateOnderaannemeOrderResponse = zod.void()
+
+
+/**
+ * @summary Onderaannemer-order bijwerken
+ */
+export const PatchOnderaannemeOrderParams = zod.object({
+  "id": zod.coerce.number(),
+  "orderId": zod.coerce.number()
+})
+
+export const PatchOnderaannemeOrderBody = zod.object({
+  "omschrijving": zod.string().optional(),
+  "bedrijf": zod.string().optional(),
+  "contactpersoon": zod.string().optional(),
+  "werkzaamheden": zod.string().optional(),
+  "bedrag_excl_btw": zod.number().optional(),
+  "btw_percentage": zod.number().optional(),
+  "status": zod.string().optional(),
+  "gewenste_startdatum": zod.string().optional(),
+  "gewenste_einddatum": zod.string().optional(),
+  "opmerkingen": zod.string().optional()
+})
+
+export const PatchOnderaannemeOrderResponse = zod.object({
+  "id": zod.number(),
+  "opdracht_id": zod.number(),
+  "omschrijving": zod.string(),
+  "bedrijf": zod.string().nullish(),
+  "contactpersoon": zod.string().nullish(),
+  "werkzaamheden": zod.string().nullish(),
+  "bedrag_excl_btw": zod.number().nullish(),
+  "btw_percentage": zod.number(),
+  "status": zod.enum(['concept', 'uitbesteed', 'uitgevoerd', 'betaald', 'geannuleerd']),
+  "gewenste_startdatum": zod.string().nullish(),
+  "gewenste_einddatum": zod.string().nullish(),
+  "opmerkingen": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+
+
+/**
+ * @summary Onderaannemer-order verwijderen
+ */
+export const DeleteOnderaannemeOrderParams = zod.object({
+  "id": zod.coerce.number(),
+  "orderId": zod.coerce.number()
+})
+
+export const DeleteOnderaannemeOrderResponse = zod.void()
 
 
 /**

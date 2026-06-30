@@ -6,16 +6,13 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface InkoopplanRegelPatch {
-  omschrijving?: string;
+export interface InkoopplanRegelAanmaken {
+  omschrijving: string;
   hoeveelheid?: number;
   eenheid?: string;
   leverancier?: string;
   inkoopprijs?: number;
   gewenste_leverdatum?: string;
-  besteldatum?: string;
-  levertijd_weken?: number;
-  status?: string;
-  opmerkingen?: string;
   type?: string;
+  opmerkingen?: string;
 }

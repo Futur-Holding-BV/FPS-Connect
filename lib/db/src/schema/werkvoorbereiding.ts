@@ -3,6 +3,7 @@ import { gebruikersTable } from "./gebruikers";
 import { opdrachtenTable } from "./opdrachten";
 import { werkbegrotingRegelsTable } from "./planning";
 import { leveranciersTable } from "./leveranciers";
+void leveranciersTable;
 
 // ── INKOOPPLANNEN ─────────────────────────────────────────────────────────────
 // AI-gegenereerde inkoopplanning per opdracht; één actief plan per opdracht.
@@ -51,6 +52,8 @@ export const inkoopplanRegelsTable = pgTable("inkoopplan_regels", {
   status: text("status").notNull().default("open"),
   aiMotivatie: text("ai_motivatie"),              // AI-toelichting type/besparing/levertijd
   opmerkingen: text("opmerkingen"),
+  // calculatie = afgeleid uit werkbegroting/AI; vrij = handmatig toegevoegd
+  bron: text("bron").notNull().default("calculatie"),
   volgorde: integer("volgorde").notNull().default(0),
   aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
   bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
@@ -135,6 +138,29 @@ export const uitvoeringsplanTakenTable = pgTable("uitvoeringsplan_taken", {
   aiMotivatie: text("ai_motivatie"),
   opmerkingen: text("opmerkingen"),
   aiGegenereerd: boolean("ai_gegenereerd").notNull().default(true),
+  aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
+  bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
+});
+
+// ── ONDERAANNEMER ORDERS ───────────────────────────────────────────────────────
+// Uitbestedingsopdrachten aan onderaannemers, per opdracht.
+// Status: concept → uitbesteed → uitgevoerd → betaald
+// Kan los van de inkoopplanning bestaan (niet per se afgeleid uit werkbegroting).
+
+export const onderaannemeOrdersTable = pgTable("onderaannemer_orders", {
+  id: serial("id").primaryKey(),
+  opdrachtId: integer("opdracht_id").notNull().references(() => opdrachtenTable.id, { onDelete: "cascade" }),
+  omschrijving: text("omschrijving").notNull(),
+  bedrijf: text("bedrijf"),
+  contactpersoon: text("contactpersoon"),
+  werkzaamheden: text("werkzaamheden"),
+  bedragExclBtw: real("bedrag_excl_btw"),
+  btwPercentage: real("btw_percentage").notNull().default(21),
+  // concept | uitbesteed | uitgevoerd | betaald | geannuleerd
+  status: text("status").notNull().default("concept"),
+  gewensteStartdatum: text("gewenste_startdatum"),
+  gewensteEinddatum: text("gewenste_einddatum"),
+  opmerkingen: text("opmerkingen"),
   aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
   bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
 });

@@ -14,6 +14,7 @@ import {
   uitvoeringsplanTakenTable,
   gebruikersTable,
   leveranciersTable,
+  onderaannemeOrdersTable,
 } from "@workspace/db";
 import { eq, and, asc } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
@@ -67,7 +68,27 @@ function mapInkoopRegel(r: typeof inkoopplanRegelsTable.$inferSelect) {
     status: r.status,
     ai_motivatie: r.aiMotivatie ?? null,
     opmerkingen: r.opmerkingen ?? null,
+    bron: r.bron,
     volgorde: r.volgorde,
+    aangemaakt_op: iso(r.aangemaaktOp)!,
+    bijgewerkt_op: iso(r.bijgewerktOp)!,
+  };
+}
+
+function mapOnderaannemer(r: typeof onderaannemeOrdersTable.$inferSelect) {
+  return {
+    id: r.id,
+    opdracht_id: r.opdrachtId,
+    omschrijving: r.omschrijving,
+    bedrijf: r.bedrijf ?? null,
+    contactpersoon: r.contactpersoon ?? null,
+    werkzaamheden: r.werkzaamheden ?? null,
+    bedrag_excl_btw: r.bedragExclBtw ?? null,
+    btw_percentage: r.btwPercentage,
+    status: r.status,
+    gewenste_startdatum: r.gewensteStartdatum ?? null,
+    gewenste_einddatum: r.gewensteEinddatum ?? null,
+    opmerkingen: r.opmerkingen ?? null,
     aangemaakt_op: iso(r.aangemaaktOp)!,
     bijgewerkt_op: iso(r.bijgewerktOp)!,
   };
@@ -485,6 +506,9 @@ router.patch("/opdrachten/:id/inkoopplanning/regels/:regelId", schrijven, async 
       "levertijdWeken", "status", "opmerkingen", "type",
     ];
     const bodyMap: Record<string, string> = {
+      omschrijving: "omschrijving",
+      hoeveelheid: "hoeveelheid",
+      eenheid: "eenheid",
       leverancier: "leverancier",
       inkoopprijs: "inkoopprijs",
       gewenste_leverdatum: "gewensteLeverdatum",
@@ -1221,6 +1245,187 @@ router.patch("/opdrachten/:id/uitvoeringsplanning/taken/:taakId", schrijven, asy
     res.json(mapUitvoeringsplanTaak(updated));
   } catch (err) {
     logger.error({ err }, "patchUitvoeringsplanTaak fout");
+    res.status(500).json({ error: "Serverfout" });
+  }
+});
+
+// ── POST /opdrachten/:id/inkoopplanning/regels ────────────────────────────
+// Handmatig een vrije inkoop-regel toevoegen (bron='vrij').
+// Maakt een inkoopplan aan als dat nog niet bestaat.
+
+router.post("/opdrachten/:id/inkoopplanning/regels", schrijven, async (req, res) => {
+  const id = parseInt(String(req.params.id), 10);
+  if (isNaN(id)) { res.status(400).json({ error: "Ongeldig id" }); return; }
+
+  const body = req.body as Record<string, unknown>;
+  const omschrijving = String(body.omschrijving ?? "").trim();
+  if (!omschrijving) { res.status(400).json({ error: "Omschrijving is verplicht" }); return; }
+
+  try {
+    let [plan] = await db.select().from(inkoopplannenTable)
+      .where(eq(inkoopplannenTable.opdrachtId, id));
+
+    if (!plan) {
+      [plan] = await db.insert(inkoopplannenTable).values({
+        opdrachtId: id,
+        status: "concept",
+        aiGegenereerd: false,
+        bijgewerktOp: new Date(),
+      }).returning();
+    }
+
+    await db.insert(inkoopplanRegelsTable).values({
+      inkoopplanId: plan.id,
+      omschrijving,
+      hoeveelheid: typeof body.hoeveelheid === "number" ? body.hoeveelheid : 1,
+      eenheid: typeof body.eenheid === "string" ? body.eenheid : "st",
+      leverancier: typeof body.leverancier === "string" ? body.leverancier : undefined,
+      inkoopprijs: typeof body.inkoopprijs === "number" ? body.inkoopprijs : undefined,
+      gewensteLeverdatum: typeof body.gewenste_leverdatum === "string" ? body.gewenste_leverdatum : undefined,
+      type: typeof body.type === "string" ? body.type : "standaard",
+      opmerkingen: typeof body.opmerkingen === "string" ? body.opmerkingen : undefined,
+      bron: "vrij",
+      bijgewerktOp: new Date(),
+    });
+
+    const regels = await db.select().from(inkoopplanRegelsTable)
+      .where(eq(inkoopplanRegelsTable.inkoopplanId, plan.id))
+      .orderBy(asc(inkoopplanRegelsTable.volgorde), asc(inkoopplanRegelsTable.id));
+
+    res.status(201).json(mapInkoopplan(plan, regels));
+  } catch (err) {
+    logger.error({ err }, "createInkoopplanRegel fout");
+    res.status(500).json({ error: "Serverfout" });
+  }
+});
+
+// ── DELETE /opdrachten/:id/inkoopplanning/regels/:regelId ─────────────────
+
+router.delete("/opdrachten/:id/inkoopplanning/regels/:regelId", schrijven, async (req, res) => {
+  const id = parseInt(String(req.params.id), 10);
+  const regelId = parseInt(String(req.params.regelId), 10);
+  if (isNaN(id) || isNaN(regelId)) { res.status(400).json({ error: "Ongeldig id" }); return; }
+
+  try {
+    const [plan] = await db.select().from(inkoopplannenTable)
+      .where(eq(inkoopplannenTable.opdrachtId, id));
+    if (!plan) { res.status(404).json({ error: "Inkoopplanning niet gevonden" }); return; }
+
+    const deleted = await db.delete(inkoopplanRegelsTable)
+      .where(and(eq(inkoopplanRegelsTable.id, regelId), eq(inkoopplanRegelsTable.inkoopplanId, plan.id)))
+      .returning();
+    if (!deleted.length) { res.status(404).json({ error: "Regel niet gevonden" }); return; }
+
+    res.status(204).send();
+  } catch (err) {
+    logger.error({ err }, "deleteInkoopplanRegel fout");
+    res.status(500).json({ error: "Serverfout" });
+  }
+});
+
+// ── GET /opdrachten/:id/onderaanneming ────────────────────────────────────
+
+router.get("/opdrachten/:id/onderaanneming", lezen, async (req, res) => {
+  const id = parseInt(String(req.params.id), 10);
+  if (isNaN(id)) { res.status(400).json({ error: "Ongeldig id" }); return; }
+
+  try {
+    const orders = await db.select().from(onderaannemeOrdersTable)
+      .where(eq(onderaannemeOrdersTable.opdrachtId, id))
+      .orderBy(asc(onderaannemeOrdersTable.id));
+    res.json(orders.map(mapOnderaannemer));
+  } catch (err) {
+    logger.error({ err }, "listOnderaannemeOrders fout");
+    res.status(500).json({ error: "Serverfout" });
+  }
+});
+
+// ── POST /opdrachten/:id/onderaanneming ───────────────────────────────────
+
+router.post("/opdrachten/:id/onderaanneming", schrijven, async (req, res) => {
+  const id = parseInt(String(req.params.id), 10);
+  if (isNaN(id)) { res.status(400).json({ error: "Ongeldig id" }); return; }
+
+  const body = req.body as Record<string, unknown>;
+  const omschrijving = String(body.omschrijving ?? "").trim();
+  if (!omschrijving) { res.status(400).json({ error: "Omschrijving is verplicht" }); return; }
+
+  try {
+    const [order] = await db.insert(onderaannemeOrdersTable).values({
+      opdrachtId: id,
+      omschrijving,
+      bedrijf: typeof body.bedrijf === "string" ? body.bedrijf : undefined,
+      contactpersoon: typeof body.contactpersoon === "string" ? body.contactpersoon : undefined,
+      werkzaamheden: typeof body.werkzaamheden === "string" ? body.werkzaamheden : undefined,
+      bedragExclBtw: typeof body.bedrag_excl_btw === "number" ? body.bedrag_excl_btw : undefined,
+      btwPercentage: typeof body.btw_percentage === "number" ? body.btw_percentage : 21,
+      gewensteStartdatum: typeof body.gewenste_startdatum === "string" ? body.gewenste_startdatum : undefined,
+      gewensteEinddatum: typeof body.gewenste_einddatum === "string" ? body.gewenste_einddatum : undefined,
+      opmerkingen: typeof body.opmerkingen === "string" ? body.opmerkingen : undefined,
+      bijgewerktOp: new Date(),
+    }).returning();
+    res.status(201).json(mapOnderaannemer(order));
+  } catch (err) {
+    logger.error({ err }, "createOnderaannemeOrder fout");
+    res.status(500).json({ error: "Serverfout" });
+  }
+});
+
+// ── PATCH /opdrachten/:id/onderaanneming/:orderId ─────────────────────────
+
+router.patch("/opdrachten/:id/onderaanneming/:orderId", schrijven, async (req, res) => {
+  const id = parseInt(String(req.params.id), 10);
+  const orderId = parseInt(String(req.params.orderId), 10);
+  if (isNaN(id) || isNaN(orderId)) { res.status(400).json({ error: "Ongeldig id" }); return; }
+
+  const body = req.body as Record<string, unknown>;
+
+  try {
+    const updates: Record<string, unknown> = { bijgewerktOp: new Date() };
+    const bodyMap: Record<string, string> = {
+      omschrijving: "omschrijving",
+      bedrijf: "bedrijf",
+      contactpersoon: "contactpersoon",
+      werkzaamheden: "werkzaamheden",
+      bedrag_excl_btw: "bedragExclBtw",
+      btw_percentage: "btwPercentage",
+      status: "status",
+      gewenste_startdatum: "gewensteStartdatum",
+      gewenste_einddatum: "gewensteEinddatum",
+      opmerkingen: "opmerkingen",
+    };
+    for (const [bodyKey, dbKey] of Object.entries(bodyMap)) {
+      if (body[bodyKey] !== undefined) updates[dbKey] = body[bodyKey];
+    }
+
+    const [updated] = await db.update(onderaannemeOrdersTable)
+      .set(updates as Partial<typeof onderaannemeOrdersTable.$inferInsert>)
+      .where(and(eq(onderaannemeOrdersTable.id, orderId), eq(onderaannemeOrdersTable.opdrachtId, id)))
+      .returning();
+    if (!updated) { res.status(404).json({ error: "Order niet gevonden" }); return; }
+
+    res.json(mapOnderaannemer(updated));
+  } catch (err) {
+    logger.error({ err }, "patchOnderaannemeOrder fout");
+    res.status(500).json({ error: "Serverfout" });
+  }
+});
+
+// ── DELETE /opdrachten/:id/onderaanneming/:orderId ────────────────────────
+
+router.delete("/opdrachten/:id/onderaanneming/:orderId", schrijven, async (req, res) => {
+  const id = parseInt(String(req.params.id), 10);
+  const orderId = parseInt(String(req.params.orderId), 10);
+  if (isNaN(id) || isNaN(orderId)) { res.status(400).json({ error: "Ongeldig id" }); return; }
+
+  try {
+    const deleted = await db.delete(onderaannemeOrdersTable)
+      .where(and(eq(onderaannemeOrdersTable.id, orderId), eq(onderaannemeOrdersTable.opdrachtId, id)))
+      .returning();
+    if (!deleted.length) { res.status(404).json({ error: "Order niet gevonden" }); return; }
+    res.status(204).send();
+  } catch (err) {
+    logger.error({ err }, "deleteOnderaannemeOrder fout");
     res.status(500).json({ error: "Serverfout" });
   }
 });

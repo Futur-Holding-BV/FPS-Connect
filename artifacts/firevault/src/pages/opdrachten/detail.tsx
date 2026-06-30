@@ -27,12 +27,13 @@ import {
 } from "@/components/ui/alert-dialog";
 import {
   ArrowLeft, Sparkles, Check, Clock, AlertTriangle, CalendarCheck,
-  TrendingUp, TrendingDown, Edit2, Package, ShoppingCart,
+  TrendingUp, TrendingDown, Edit2, Package, ShoppingCart, Building2, ShoppingBag,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import InkoopplanningTab from "./inkoopplanning-tab";
 import UitvoeringsplanningTab from "./uitvoeringsplanning-tab";
+import OnderaannemeringTab from "./onderaanneming-tab";
 
 function euro(n: number | null | undefined) {
   return new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR" }).format(n ?? 0);
@@ -184,6 +185,7 @@ export default function OpdrachtDetailPagina() {
   const qc = useQueryClient();
   const { toast } = useToast();
   const [vaststellenDialoog, setVaststellenDialoog] = useState(false);
+  const [activeTab, setActiveTab] = useState("werkbegroting");
 
   const { data: opdracht, isLoading: opdrachtLoading } = useGetOpdracht(opdrachtId);
   const { data: werkbegroting, isLoading: wbLoading } = useGetWerkbegroting(opdrachtId);
@@ -290,12 +292,16 @@ export default function OpdrachtDetailPagina() {
       </div>
 
       {/* Tabs */}
-      <Tabs defaultValue="werkbegroting">
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="flex-wrap h-auto gap-1">
           <TabsTrigger value="werkbegroting">Werkbegroting</TabsTrigger>
           <TabsTrigger value="inkoopplanning">
             <ShoppingCart className="h-3.5 w-3.5 mr-1.5" />
             Inkoopplanning
+          </TabsTrigger>
+          <TabsTrigger value="onderaanneming">
+            <Building2 className="h-3.5 w-3.5 mr-1.5" />
+            Onderaanneming
           </TabsTrigger>
           <TabsTrigger value="uitvoeringsplanning">
             <CalendarCheck className="h-3.5 w-3.5 mr-1.5" />
@@ -314,7 +320,21 @@ export default function OpdrachtDetailPagina() {
               <span>|</span>
               <span>Materiaal: <strong>{euro(totaalMateriaal)}</strong></span>
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
+              <Button
+                size="sm" variant="outline"
+                onClick={() => setActiveTab("inkoopplanning")}
+              >
+                <ShoppingBag className="h-3.5 w-3.5" />
+                Materialen bestellen
+              </Button>
+              <Button
+                size="sm" variant="outline"
+                onClick={() => setActiveTab("onderaanneming")}
+              >
+                <Building2 className="h-3.5 w-3.5" />
+                Onderaannemer
+              </Button>
               <Button
                 size="sm" variant="outline"
                 disabled={aiAnalyseMutatie.isPending}
@@ -396,6 +416,14 @@ export default function OpdrachtDetailPagina() {
         {/* ── Inkoopplanning ── */}
         <TabsContent value="inkoopplanning">
           <InkoopplanningTab opdrachtId={opdrachtId} />
+        </TabsContent>
+
+        {/* ── Onderaanneming ── */}
+        <TabsContent value="onderaanneming">
+          <OnderaannemeringTab
+            opdrachtId={opdrachtId}
+            onNaarMaterialen={() => setActiveTab("inkoopplanning")}
+          />
         </TabsContent>
 
         {/* ── Uitvoeringsplanning ── */}

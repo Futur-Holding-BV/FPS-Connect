@@ -8649,6 +8649,31 @@ paths:
               schema:
                 $ref: "#/components/schemas/Inkoopplanning"
 
+  /opdrachten/{id}/inkoopplanning/regels:
+    post:
+      operationId: createInkoopplanRegel
+      tags: [opdrachten]
+      summary: Vrije inkoop-regel handmatig toevoegen (maakt plan aan indien nog niet aanwezig)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InkoopplanRegelAanmaken"
+      responses:
+        "201":
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Inkoopplanning"
+
   /opdrachten/{id}/inkoopplanning/regels/{regelId}:
     patch:
       operationId: patchInkoopplanRegel
@@ -8678,6 +8703,24 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/InkoopplanRegel"
+    delete:
+      operationId: deleteInkoopplanRegel
+      tags: [opdrachten]
+      summary: Inkoop-regel verwijderen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+        - in: path
+          name: regelId
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Verwijderd
 
   /opdrachten/{id}/inkoopplanning/inkoopbonnen:
     get:
@@ -8819,6 +8862,98 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Inkoopbon"
+
+  /opdrachten/{id}/onderaanneming:
+    get:
+      operationId: listOnderaannemeOrders
+      tags: [opdrachten]
+      summary: Onderaannemer-orders van opdracht ophalen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/OnderaannemerOrder"
+    post:
+      operationId: createOnderaannemeOrder
+      tags: [opdrachten]
+      summary: Nieuwe onderaannemer-order aanmaken
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OnderaannemerOrderInput"
+      responses:
+        "201":
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OnderaannemerOrder"
+
+  /opdrachten/{id}/onderaanneming/{orderId}:
+    patch:
+      operationId: patchOnderaannemeOrder
+      tags: [opdrachten]
+      summary: Onderaannemer-order bijwerken
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+        - in: path
+          name: orderId
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OnderaannemerOrderPatch"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OnderaannemerOrder"
+    delete:
+      operationId: deleteOnderaannemeOrder
+      tags: [opdrachten]
+      summary: Onderaannemer-order verwijderen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+        - in: path
+          name: orderId
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Verwijderd
 
   /opdrachten/{id}/uitvoeringsplanning:
     get:
@@ -21631,6 +21766,9 @@ components:
           type: ["string", "null"]
         opmerkingen:
           type: ["string", "null"]
+        bron:
+          type: string
+          enum: [calculatie, vrij]
         volgorde:
           type: integer
         aangemaakt_op:
@@ -21641,6 +21779,12 @@ components:
     InkoopplanRegelPatch:
       type: object
       properties:
+        omschrijving:
+          type: string
+        hoeveelheid:
+          type: number
+        eenheid:
+          type: string
         leverancier:
           type: string
         inkoopprijs:
@@ -21656,6 +21800,108 @@ components:
         opmerkingen:
           type: string
         type:
+          type: string
+
+    InkoopplanRegelAanmaken:
+      type: object
+      required: [omschrijving]
+      properties:
+        omschrijving:
+          type: string
+        hoeveelheid:
+          type: number
+        eenheid:
+          type: string
+        leverancier:
+          type: string
+        inkoopprijs:
+          type: number
+        gewenste_leverdatum:
+          type: string
+        type:
+          type: string
+        opmerkingen:
+          type: string
+
+    OnderaannemerOrder:
+      type: object
+      required: [id, opdracht_id, omschrijving, status, btw_percentage, aangemaakt_op, bijgewerkt_op]
+      properties:
+        id:
+          type: integer
+        opdracht_id:
+          type: integer
+        omschrijving:
+          type: string
+        bedrijf:
+          type: ["string", "null"]
+        contactpersoon:
+          type: ["string", "null"]
+        werkzaamheden:
+          type: ["string", "null"]
+        bedrag_excl_btw:
+          type: ["number", "null"]
+        btw_percentage:
+          type: number
+        status:
+          type: string
+          enum: [concept, uitbesteed, uitgevoerd, betaald, geannuleerd]
+        gewenste_startdatum:
+          type: ["string", "null"]
+        gewenste_einddatum:
+          type: ["string", "null"]
+        opmerkingen:
+          type: ["string", "null"]
+        aangemaakt_op:
+          type: string
+        bijgewerkt_op:
+          type: string
+
+    OnderaannemerOrderInput:
+      type: object
+      required: [omschrijving]
+      properties:
+        omschrijving:
+          type: string
+        bedrijf:
+          type: string
+        contactpersoon:
+          type: string
+        werkzaamheden:
+          type: string
+        bedrag_excl_btw:
+          type: number
+        btw_percentage:
+          type: number
+        gewenste_startdatum:
+          type: string
+        gewenste_einddatum:
+          type: string
+        opmerkingen:
+          type: string
+
+    OnderaannemerOrderPatch:
+      type: object
+      properties:
+        omschrijving:
+          type: string
+        bedrijf:
+          type: string
+        contactpersoon:
+          type: string
+        werkzaamheden:
+          type: string
+        bedrag_excl_btw:
+          type: number
+        btw_percentage:
+          type: number
+        status:
+          type: string
+        gewenste_startdatum:
+          type: string
+        gewenste_einddatum:
+          type: string
+        opmerkingen:
           type: string
 
     Inkoopplanning:
