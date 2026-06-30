@@ -535,6 +535,18 @@ router.post("/organisatie/bedrijfsdocumenten/veld-correctie", schrijven, async (
 router.delete("/organisatie/bedrijfsdocumenten/:id", schrijven, async (req, res) => {
   try {
     const id = parseId(req.params.id);
+    const [doc] = await db
+      .select({ bestandPad: orgBedrijfsdocumentenTable.bestandPad })
+      .from(orgBedrijfsdocumentenTable)
+      .where(eq(orgBedrijfsdocumentenTable.id, id))
+      .limit(1);
+    if (doc?.bestandPad) {
+      try {
+        await oss.deleteBestand(doc.bestandPad);
+      } catch (opslagFout) {
+        req.log.warn({ err: opslagFout }, "Bestand verwijderen uit opslag mislukt; DB-rij wordt toch verwijderd");
+      }
+    }
     await db.delete(orgBedrijfsdocumentenTable).where(eq(orgBedrijfsdocumentenTable.id, id));
     res.status(204).end();
   } catch (err) {

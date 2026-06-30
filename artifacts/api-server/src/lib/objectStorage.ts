@@ -477,6 +477,30 @@ export class ObjectStorageService {
   }
 
   /**
+   * Verwijder één bestand op basis van zijn objectPath (/objects/...).
+   * Fail-silent: als het bestand al weg is wordt geen fout gegooid.
+   */
+  async deleteBestand(objectPath: string): Promise<void> {
+    if (!objectPath.startsWith("/objects/")) return;
+    const subPath = objectPath.slice("/objects/".length);
+
+    if (isS3Mode()) {
+      const { DeleteObjectCommand } = await import("@aws-sdk/client-s3");
+      await getS3Client().send(
+        new DeleteObjectCommand({ Bucket: getS3Bucket(), Key: subPath }),
+      );
+      return;
+    }
+
+    // GCS-backend
+    const privateObjectDir = this.getPrivateObjectDir();
+    const fullPath = `${privateObjectDir}/${subPath}`;
+    const { bucketName, objectName } = parseGCSObjectPath(fullPath);
+    const file = getGcsStorage().bucket(bucketName).file(objectName);
+    await file.delete({ ignoreNotFound: true });
+  }
+
+  /**
    * Verwijder alle bestanden van een back-up vanuit object storage.
    */
   async deleteBackupFiles(slug: string): Promise<void> {
