@@ -20378,3 +20378,16 @@ export const UploadDocumentStudioReferentieResponse = zod.object({
 })
 
 
+/**
+ * @summary Werkgevers ophalen voor Document Studio selector (gated op organisatie:lezen)
+ */
+export const ListStudioWerkgeversResponseItem = zod.object({
+  "id": zod.number(),
+  "naam": zod.string(),
+  "primaire_kleur": zod.string().nullish(),
+  "logo_url": zod.string().nullish(),
+  "voettekst": zod.string().nullish()
+})
+export const ListStudioWerkgeversResponse = zod.array(ListStudioWerkgeversResponseItem)
+
+

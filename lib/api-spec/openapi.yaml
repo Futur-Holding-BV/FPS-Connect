@@ -16072,6 +16072,21 @@ paths:
               schema:
                 $ref: "#/components/schemas/DocumentStudioModel"
 
+  /studio/werkgevers:
+    get:
+      operationId: listStudioWerkgevers
+      tags: [studio]
+      summary: Werkgevers ophalen voor Document Studio selector (gated op organisatie:lezen)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DocumentStudioWerkgever"
+
 components:
   schemas:
     NieuwsItem:
@@ -29350,3 +29365,13 @@ components:
         bestand:
           type: string
           format: binary
+
+    DocumentStudioWerkgever:
+      type: object
+      required: [id, naam]
+      properties:
+        id:             { type: integer }
+        naam:           { type: string }
+        primaire_kleur: { type: ["string", "null"] }
+        logo_url:       { type: ["string", "null"] }
+        voettekst:      { type: ["string", "null"] }

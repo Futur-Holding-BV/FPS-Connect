@@ -8706,6 +8706,17 @@ export interface DocumentStudioReferentieUploadBody {
   bestand: Blob;
 }
 
+export interface DocumentStudioWerkgever {
+  id: number;
+  naam: string;
+  /** @nullable */
+  primaire_kleur?: string | null;
+  /** @nullable */
+  logo_url?: string | null;
+  /** @nullable */
+  voettekst?: string | null;
+}
+
 export type GetRecenteActiviteitParams = {
 limit?: number;
 };

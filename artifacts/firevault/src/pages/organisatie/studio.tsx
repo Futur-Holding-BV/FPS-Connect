@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback } from "react";
 import {
-  useListWerkgevers,
+  useListStudioWerkgevers,
   useListDocumentStudioModellen,
   useUpsertDocumentStudioModel,
   useUpdateDocumentStudioModel,
@@ -62,7 +62,7 @@ const TOEGESTANE_TYPES = ["application/pdf", "image/jpeg", "image/png", "image/w
 export default function DocumentStudioPagina() {
   const { heeftNiveau } = useBevoegdheid();
   const magSchrijven = heeftNiveau("organisatie", 2);
-  const { data: werkgevers = [], isLoading: laadtWerkgevers } = useListWerkgevers();
+  const { data: werkgevers = [], isLoading: laadtWerkgevers } = useListStudioWerkgevers();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 

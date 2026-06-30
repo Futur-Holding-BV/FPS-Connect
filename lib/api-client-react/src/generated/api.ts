@@ -128,6 +128,7 @@ import type {
   DocumentStudioModelInput,
   DocumentStudioModelUpdate,
   DocumentStudioReferentieUploadBody,
+  DocumentStudioWerkgever,
   DocumentToepassingenInput,
   DocumentUpdate,
   Dossier,
@@ -57781,4 +57782,81 @@ export const useUploadDocumentStudioReferentie = <TError = ErrorType<unknown>,
       > => {
       return useMutation(getUploadDocumentStudioReferentieMutationOptions(options));
     }
+
+export const getListStudioWerkgeversUrl = () => {
+
+
+
+
+  return `/api/studio/werkgevers`
+}
+
+/**
+ * @summary Werkgevers ophalen voor Document Studio selector (gated op organisatie:lezen)
+ */
+export const listStudioWerkgevers = async ( options?: RequestInit): Promise<DocumentStudioWerkgever[]> => {
+
+  return customFetch<DocumentStudioWerkgever[]>(getListStudioWerkgeversUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListStudioWerkgeversQueryKey = () => {
+    return [
+    `/api/studio/werkgevers`
+    ] as const;
+    }
+
+
+export const getListStudioWerkgeversQueryOptions = <TData = Awaited<ReturnType<typeof listStudioWerkgevers>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listStudioWerkgevers>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListStudioWerkgeversQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listStudioWerkgevers>>> = ({ signal }) => listStudioWerkgevers({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listStudioWerkgevers>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListStudioWerkgeversQueryResult = NonNullable<Awaited<ReturnType<typeof listStudioWerkgevers>>>
+export type ListStudioWerkgeversQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Werkgevers ophalen voor Document Studio selector (gated op organisatie:lezen)
+ */
+
+export function useListStudioWerkgevers<TData = Awaited<ReturnType<typeof listStudioWerkgevers>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listStudioWerkgevers>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListStudioWerkgeversQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
 

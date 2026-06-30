@@ -148,6 +148,7 @@ export * from './documentStudioModel';
 export * from './documentStudioModelInput';
 export * from './documentStudioModelUpdate';
 export * from './documentStudioReferentieUploadBody';
+export * from './documentStudioWerkgever';
 export * from './documentToepassingenInput';
 export * from './documentType';
 export * from './documentUpdate';

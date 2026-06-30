@@ -48,6 +48,36 @@ function mapModel(
   };
 }
 
+// ── Werkgevers — selector voor Document Studio (gated op organisatie:1) ───────
+
+router.get("/studio/werkgevers", lezen, async (req, res) => {
+  try {
+    const werkgevers = await db
+      .select({
+        id:           werkgeversTable.id,
+        naam:         werkgeversTable.naam,
+        primaireKleur: werkgeversTable.primaireKleur,
+        logoUrl:      werkgeversTable.logoUrl,
+        voettekst:    werkgeversTable.voettekst,
+      })
+      .from(werkgeversTable)
+      .orderBy(werkgeversTable.naam);
+
+    res.json(
+      werkgevers.map((w) => ({
+        id:             w.id,
+        naam:           w.naam,
+        primaire_kleur: w.primaireKleur ?? null,
+        logo_url:       w.logoUrl ?? null,
+        voettekst:      w.voettekst ?? null,
+      })),
+    );
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
 // ── List — optioneel gefilterd op werkgever_id ────────────────────────────────
 
 router.get("/studio/modellen", lezen, async (req, res) => {
