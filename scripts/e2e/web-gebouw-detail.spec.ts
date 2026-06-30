@@ -160,11 +160,15 @@ test("Web: gebouw-detail en voorziening-detail regressie", async ({ page }) => {
     ).toBeVisible({ timeout: INHOUD_TIMEOUT });
 
     // Lijst: tabelrij met objectnummer óf lege staat.
+    // Gebruik aparte count-check om strict mode violation te voorkomen wanneer
+    // de lege staat als tbody-rij én als losstaande tekst beide zichtbaar zijn.
     const spotRij = page.locator("table tbody tr").filter({ visible: true });
     const leegStaat = zichtbaar(page, "Geen spots gevonden.");
-    await expect(spotRij.first().or(leegStaat.first())).toBeVisible({
-      timeout: INHOUD_TIMEOUT,
-    });
+    await expect(async () => {
+      const heeftRijen = (await spotRij.count()) > 0;
+      const heeftLeeg = (await leegStaat.count()) > 0;
+      expect(heeftRijen || heeftLeeg).toBeTruthy();
+    }).toPass({ timeout: INHOUD_TIMEOUT });
   });
 
   // ── Stap 5: Voorziening-detail ────────────────────────────────────────────
