@@ -1,0 +1,891 @@
+// Magazijn- en Voorraadbeheer (Fase 1 — Kern)
+// Routes: locaties, artikelen-magazijn, voorraad, mutaties, reserveringen, uitgiftes, retouren, dashboard
+import { Router } from "express";
+import {
+  db,
+  magazijnLocatiesTable,
+  voorraadTable,
+  voorraadMutatiesTable,
+  reserveringenTable,
+  artikelenTable,
+  leveranciersTable,
+  opdrachtenTable,
+} from "@workspace/db";
+import { eq, and, asc, desc, ilike, lt, lte, sql } from "drizzle-orm";
+import { requireBevoegdheid } from "../middlewares/auth";
+import { logger } from "../lib/logger";
+
+const router = Router();
+
+const lezen    = requireBevoegdheid("magazijn", 1);
+const schrijven = requireBevoegdheid("magazijn", 2);
+const aanmaken = requireBevoegdheid("magazijn", 3);
+const beheer   = requireBevoegdheid("magazijn", 4);
+
+const iso = (d: Date | null | undefined) => d?.toISOString() ?? null;
+
+// Transaction-aware executor type (drizzle tx or plain db)
+type DbExec = Parameters<Parameters<typeof db.transaction>[0]>[0] | typeof db;
+
+// ── Helpers ────────────────────────────────────────────────────────────────────
+
+function str(v: unknown): string | null {
+  if (v === undefined || v === null || v === "") return null;
+  return String(v);
+}
+
+function num(v: unknown): number | null {
+  if (v === undefined || v === null || v === "") return null;
+  const n = Number(v);
+  return isNaN(n) ? null : n;
+}
+
+function mapLocatie(r: typeof magazijnLocatiesTable.$inferSelect) {
+  return {
+    id: r.id,
+    naam: r.naam,
+    type: r.type,
+    parent_id: r.parentId ?? null,
+    omschrijving: r.omschrijving ?? null,
+    actief: r.actief,
+    aangemaakt_op: iso(r.aangemaaktOp)!,
+    bijgewerkt_op: iso(r.bijgewerktOp)!,
+  };
+}
+
+function mapVoorraad(r: typeof voorraadTable.$inferSelect, artikelNaam?: string | null) {
+  return {
+    id: r.id,
+    artikel_id: r.artikelId,
+    artikel_naam: artikelNaam ?? null,
+    locatie_id: r.locatieId ?? null,
+    hoeveelheid: r.hoeveelheid,
+    gereserveerd: r.gereserveerd,
+    besteld: r.besteld,
+    vrij: Math.max(0, r.hoeveelheid - r.gereserveerd),
+    bijgewerkt_op: iso(r.bijgewerktOp)!,
+  };
+}
+
+function mapMutatie(r: typeof voorraadMutatiesTable.$inferSelect, extra?: { artikel_naam?: string | null; gebruiker_naam?: string | null }) {
+  return {
+    id: r.id,
+    artikel_id: r.artikelId,
+    artikel_naam: extra?.artikel_naam ?? null,
+    locatie_id: r.locatieId ?? null,
+    type: r.type,
+    hoeveelheid: r.hoeveelheid,
+    delta: r.delta,
+    referentie_type: r.referentieType ?? null,
+    referentie_id: r.referentieId ?? null,
+    gebruiker_id: r.gebruikerId ?? null,
+    gebruiker_naam: extra?.gebruiker_naam ?? null,
+    omschrijving: r.omschrijving ?? null,
+    aangemaakt_op: iso(r.aangemaaktOp)!,
+  };
+}
+
+function mapReservering(r: typeof reserveringenTable.$inferSelect, extra?: { artikel_naam?: string | null; opdracht_titel?: string | null }) {
+  return {
+    id: r.id,
+    artikel_id: r.artikelId,
+    artikel_naam: extra?.artikel_naam ?? null,
+    opdracht_id: r.opdrachtId ?? null,
+    opdracht_titel: extra?.opdracht_titel ?? null,
+    hoeveelheid: r.hoeveelheid,
+    gereserveerd_op: iso(r.gereserveerdOp)!,
+    status: r.status,
+    omschrijving: r.omschrijving ?? null,
+    aangemaakt_door_id: r.aangemaaktDoorId ?? null,
+    bijgewerkt_op: iso(r.bijgewerktOp)!,
+  };
+}
+
+function mapArtikelMagazijn(r: typeof artikelenTable.$inferSelect, leverancierNaam?: string | null) {
+  return {
+    id: r.id,
+    code: r.code ?? null,
+    naam: r.naam,
+    omschrijving: r.omschrijving ?? null,
+    eenheid: r.eenheid,
+    categorie: r.categorie ?? null,
+    merk: (r as Record<string, unknown>).merk as string | null ?? null,
+    leverancier_id: r.leverancierId ?? null,
+    leverancier_naam: leverancierNaam ?? null,
+    leveranciers_artikel_nr: (r as Record<string, unknown>).leveranciersArtikelNr as string | null ?? null,
+    inkoopprijs: r.inkoopprijs ?? null,
+    verkoopprijs: r.verkoopprijs ?? null,
+    gemiddeld_inkoopprijs: (r as Record<string, unknown>).gemiddeldInkoopprijs as number | null ?? null,
+    laatste_inkoopprijs: (r as Record<string, unknown>).laatsteInkoopprijs as number | null ?? null,
+    btw_percentage: r.btwPercentage,
+    minimum_voorraad: (r as Record<string, unknown>).minimumVoorraad as number | null ?? null,
+    gewenste_voorraad: (r as Record<string, unknown>).gewensteVoorraad as number | null ?? null,
+    barcode: (r as Record<string, unknown>).barcode as string | null ?? null,
+    locatie_id: (r as Record<string, unknown>).locatieId as number | null ?? null,
+    notities: r.notities ?? null,
+    actief: r.actief,
+    bron: r.bron,
+    aangemaakt_op: iso(r.aangemaaktOp)!,
+    bijgewerkt_op: iso(r.bijgewerktOp)!,
+  };
+}
+
+// ── Voorraad bijwerken (intern hulpfunctie) ────────────────────────────────────
+// Accepts a Drizzle transaction executor (tx) or plain db for non-transactional use.
+// For negative deltas (uitgifte/correctie), call AFTER validating available stock at the
+// call site. hoeveelheid never drops below 0 (GREATEST guard).
+
+async function bijwerkenVoorraad(
+  exec: DbExec,
+  artikelId: number,
+  locatieId: number | null,
+  delta: number,
+  type: string,
+  gebruikerId: number | undefined,
+  referentieType: string | null,
+  referentieId: number | null,
+  omschrijving: string | null,
+) {
+  const whereExpr = locatieId != null
+    ? and(eq(voorraadTable.artikelId, artikelId), eq(voorraadTable.locatieId, locatieId))
+    : and(eq(voorraadTable.artikelId, artikelId), sql`${voorraadTable.locatieId} IS NULL`);
+
+  const bestaand = await exec.select().from(voorraadTable).where(whereExpr).limit(1);
+
+  // Bereken de werkelijk toe te passen delta (hoeveelheid nooit < 0)
+  let actualDelta: number;
+  if (bestaand.length > 0) {
+    actualDelta = delta < 0
+      ? Math.max(delta, -bestaand[0].hoeveelheid) // kan niet verder dan 0 zakken
+      : delta;
+    await exec.update(voorraadTable)
+      .set({
+        hoeveelheid: sql`GREATEST(0, ${voorraadTable.hoeveelheid} + ${delta})`,
+        bijgewerktOp: new Date(),
+      })
+      .where(eq(voorraadTable.id, bestaand[0].id));
+  } else {
+    actualDelta = Math.max(0, delta); // nieuwe rij start altijd op max(0, delta)
+    await exec.insert(voorraadTable).values({
+      artikelId,
+      locatieId,
+      hoeveelheid: actualDelta,
+      gereserveerd: 0,
+      besteld: 0,
+    });
+  }
+
+  // Mutatie logt de werkelijk toegepaste delta (niet de aangevraagde)
+  await exec.insert(voorraadMutatiesTable).values({
+    artikelId,
+    locatieId,
+    type,
+    hoeveelheid: Math.abs(actualDelta),
+    delta: actualDelta,
+    referentieType,
+    referentieId,
+    gebruikerId: gebruikerId ?? null,
+    omschrijving,
+  });
+}
+
+// ═══════════════════════════════════════════════════════════
+// DASHBOARD
+// ═══════════════════════════════════════════════════════════
+
+router.get("/magazijn/dashboard", lezen, async (req, res) => {
+  try {
+    const voorraad = await db.select({
+      artikel_id: voorraadTable.artikelId,
+      hoeveelheid: voorraadTable.hoeveelheid,
+      gereserveerd: voorraadTable.gereserveerd,
+      besteld: voorraadTable.besteld,
+    }).from(voorraadTable);
+
+    const artikelen = await db.select({
+      id: artikelenTable.id,
+      naam: artikelenTable.naam,
+      eenheid: artikelenTable.eenheid,
+      minimum_voorraad: sql<number | null>`${artikelenTable}.minimum_voorraad`,
+      inkoopprijs: artikelenTable.inkoopprijs,
+    }).from(artikelenTable).where(eq(artikelenTable.actief, true));
+
+    const voorraadMap = new Map<number, { hoeveelheid: number; gereserveerd: number; besteld: number }>();
+    for (const v of voorraad) {
+      const existing = voorraadMap.get(v.artikel_id) ?? { hoeveelheid: 0, gereserveerd: 0, besteld: 0 };
+      voorraadMap.set(v.artikel_id, {
+        hoeveelheid: existing.hoeveelheid + (v.hoeveelheid ?? 0),
+        gereserveerd: existing.gereserveerd + (v.gereserveerd ?? 0),
+        besteld: existing.besteld + (v.besteld ?? 0),
+      });
+    }
+
+    let totaalWaarde = 0;
+    let onderMinimum = 0;
+    let totaalGereserveerd = 0;
+    let totaalBesteld = 0;
+    const kritiek: Array<{ id: number; naam: string; eenheid: string; hoeveelheid: number; minimum_voorraad: number }> = [];
+
+    for (const artikel of artikelen) {
+      const v = voorraadMap.get(artikel.id) ?? { hoeveelheid: 0, gereserveerd: 0, besteld: 0 };
+      if (artikel.inkoopprijs) {
+        totaalWaarde += v.hoeveelheid * artikel.inkoopprijs;
+      }
+      totaalGereserveerd += v.gereserveerd;
+      totaalBesteld += v.besteld;
+      const minVoorraad = (artikel as Record<string, unknown>).minimum_voorraad as number | null;
+      if (minVoorraad != null && v.hoeveelheid < minVoorraad) {
+        onderMinimum++;
+        kritiek.push({
+          id: artikel.id,
+          naam: artikel.naam,
+          eenheid: artikel.eenheid,
+          hoeveelheid: v.hoeveelheid,
+          minimum_voorraad: minVoorraad,
+        });
+      }
+    }
+
+    // Meest verbruikte (laatste 30 dagen)
+    const dertigDagenGeleden = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const verbruik = await db.select({
+      artikel_id: voorraadMutatiesTable.artikelId,
+      totaal: sql<number>`SUM(ABS(${voorraadMutatiesTable.delta}))`,
+    })
+      .from(voorraadMutatiesTable)
+      .where(
+        and(
+          eq(voorraadMutatiesTable.type, "uitgifte"),
+          sql`${voorraadMutatiesTable.aangemaaktOp} >= ${dertigDagenGeleden}`,
+        ),
+      )
+      .groupBy(voorraadMutatiesTable.artikelId)
+      .orderBy(desc(sql<number>`SUM(ABS(${voorraadMutatiesTable.delta}))`))
+      .limit(5);
+
+    const verbruikMet = await Promise.all(verbruik.map(async (v) => {
+      const [a] = await db.select({ naam: artikelenTable.naam, eenheid: artikelenTable.eenheid })
+        .from(artikelenTable).where(eq(artikelenTable.id, v.artikel_id)).limit(1);
+      return { artikel_id: v.artikel_id, naam: a?.naam ?? "—", eenheid: a?.eenheid ?? "st", totaal: v.totaal };
+    }));
+
+    res.json({
+      totaal_waarde: Math.round(totaalWaarde * 100) / 100,
+      artikelen_onder_minimum: onderMinimum,
+      totaal_gereserveerd: totaalGereserveerd,
+      totaal_besteld: totaalBesteld,
+      kritieke_artikelen: kritiek.slice(0, 10),
+      meest_verbruikt: verbruikMet,
+    });
+  } catch (err) {
+    logger.error({ err }, "magazijn dashboard fout");
+    res.status(500).json({ error: "Serverfout" });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════
+// LOCATIES
+// ═══════════════════════════════════════════════════════════
+
+router.get("/magazijn/locaties", lezen, async (req, res) => {
+  try {
+    const rijen = await db.select().from(magazijnLocatiesTable).orderBy(asc(magazijnLocatiesTable.naam));
+    res.json(rijen.map(mapLocatie));
+  } catch (err) {
+    logger.error({ err }, "magazijn locaties fout");
+    res.status(500).json({ error: "Serverfout" });
+  }
+});
+
+router.post("/magazijn/locaties", aanmaken, async (req, res) => {
+  try {
+    const body = req.body as Record<string, unknown>;
+    const naam = String(body.naam ?? "").trim();
+    if (!naam) { res.status(422).json({ error: "Naam is verplicht" }); return; }
+
+    const [nieuw] = await db.insert(magazijnLocatiesTable).values({
+      naam,
+      type: str(body.type) ?? "rek",
+      parentId: body.parent_id ? Number(body.parent_id) : null,
+      omschrijving: str(body.omschrijving),
+      actief: body.actief !== false,
+    }).returning();
+
+    res.status(201).json(mapLocatie(nieuw));
+  } catch (err) {
+    logger.error({ err }, "magazijn locatie aanmaken fout");
+    res.status(500).json({ error: "Serverfout" });
+  }
+});
+
+router.get("/magazijn/locaties/:id", lezen, async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const [rij] = await db.select().from(magazijnLocatiesTable).where(eq(magazijnLocatiesTable.id, id)).limit(1);
+    if (!rij) { res.status(404).json({ error: "Locatie niet gevonden" }); return; }
+    res.json(mapLocatie(rij));
+  } catch (err) {
+    logger.error({ err }, "magazijn locatie ophalen fout");
+    res.status(500).json({ error: "Serverfout" });
+  }
+});
+
+router.patch("/magazijn/locaties/:id", schrijven, async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const body = req.body as Record<string, unknown>;
+
+    const updates: Record<string, unknown> = { bijgewerktOp: new Date() };
+    if (typeof body.naam === "string") updates.naam = body.naam.trim();
+    if (body.type !== undefined) updates.type = str(body.type) ?? "rek";
+    if (body.parent_id !== undefined) updates.parentId = body.parent_id ? Number(body.parent_id) : null;
+    if (body.omschrijving !== undefined) updates.omschrijving = str(body.omschrijving);
+    if (body.actief !== undefined) updates.actief = Boolean(body.actief);
+
+    const [bijgewerkt] = await db.update(magazijnLocatiesTable)
+      .set(updates as Partial<typeof magazijnLocatiesTable.$inferInsert>)
+      .where(eq(magazijnLocatiesTable.id, id))
+      .returning();
+
+    if (!bijgewerkt) { res.status(404).json({ error: "Locatie niet gevonden" }); return; }
+    res.json(mapLocatie(bijgewerkt));
+  } catch (err) {
+    logger.error({ err }, "magazijn locatie bijwerken fout");
+    res.status(500).json({ error: "Serverfout" });
+  }
+});
+
+router.delete("/magazijn/locaties/:id", beheer, async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    await db.transaction(async (tx) => {
+      // Ontkoppel artikelen die deze locatie als standaard locatie hadden
+      await tx.update(artikelenTable)
+        .set({ bijgewerktOp: new Date() })
+        .where(sql`${artikelenTable}.locatie_id = ${id}`);
+      await tx.delete(magazijnLocatiesTable).where(eq(magazijnLocatiesTable.id, id));
+    });
+    res.status(204).end();
+  } catch (err) {
+    logger.error({ err }, "magazijn locatie verwijderen fout");
+    res.status(500).json({ error: "Serverfout" });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════
+// ARTIKELEN — magazijn-aanvullende velden (GET detail + PATCH)
+// ═══════════════════════════════════════════════════════════
+
+router.get("/magazijn/artikelen/:id", lezen, async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const [rij] = await db.select({
+      artikel: artikelenTable,
+      leverancier_naam: leveranciersTable.naam,
+    })
+      .from(artikelenTable)
+      .leftJoin(leveranciersTable, eq(artikelenTable.leverancierId, leveranciersTable.id))
+      .where(eq(artikelenTable.id, id))
+      .limit(1);
+    if (!rij) { res.status(404).json({ error: "Artikel niet gevonden" }); return; }
+    res.json(mapArtikelMagazijn(rij.artikel, rij.leverancier_naam));
+  } catch (err) {
+    logger.error({ err }, "magazijn artikel detail fout");
+    res.status(500).json({ error: "Serverfout" });
+  }
+});
+
+router.patch("/magazijn/artikelen/:id", schrijven, async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const body = req.body as Record<string, unknown>;
+
+    const updates: Record<string, unknown> = { bijgewerktOp: new Date() };
+    if (body.minimum_voorraad !== undefined) updates.minimumVoorraad = num(body.minimum_voorraad);
+    if (body.gewenste_voorraad !== undefined) updates.gewensteVoorraad = num(body.gewenste_voorraad);
+    if (body.barcode !== undefined) updates.barcode = str(body.barcode);
+    if (body.locatie_id !== undefined) updates.locatieId = body.locatie_id ? Number(body.locatie_id) : null;
+    if (body.merk !== undefined) updates.merk = str(body.merk);
+    if (body.leveranciers_artikel_nr !== undefined) updates.leveranciersArtikelNr = str(body.leveranciers_artikel_nr);
+    if (body.gemiddeld_inkoopprijs !== undefined) updates.gemiddeldInkoopprijs = num(body.gemiddeld_inkoopprijs);
+
+    const [bijgewerkt] = await db.update(artikelenTable)
+      .set(updates as Partial<typeof artikelenTable.$inferInsert>)
+      .where(eq(artikelenTable.id, id))
+      .returning();
+
+    if (!bijgewerkt) { res.status(404).json({ error: "Artikel niet gevonden" }); return; }
+
+    const [levNaam] = await db.select({ naam: leveranciersTable.naam }).from(leveranciersTable)
+      .where(bijgewerkt.leverancierId != null ? eq(leveranciersTable.id, bijgewerkt.leverancierId) : sql`false`).limit(1);
+
+    res.json(mapArtikelMagazijn(bijgewerkt, levNaam?.naam ?? null));
+  } catch (err) {
+    logger.error({ err }, "magazijn artikel bijwerken fout");
+    res.status(500).json({ error: "Serverfout" });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════
+// VOORRAAD
+// ═══════════════════════════════════════════════════════════
+
+router.get("/magazijn/voorraad", lezen, async (req, res) => {
+  try {
+    const { artikel_id, locatie_id } = req.query as Record<string, string | undefined>;
+
+    const conds = [];
+    if (artikel_id) conds.push(eq(voorraadTable.artikelId, Number(artikel_id)));
+    if (locatie_id) conds.push(eq(voorraadTable.locatieId, Number(locatie_id)));
+
+    const rijen = await db.select({
+      voorraad: voorraadTable,
+      artikel_naam: artikelenTable.naam,
+    })
+      .from(voorraadTable)
+      .leftJoin(artikelenTable, eq(voorraadTable.artikelId, artikelenTable.id))
+      .where(conds.length > 0 ? and(...(conds as [typeof conds[0], ...typeof conds])) : undefined)
+      .orderBy(asc(artikelenTable.naam));
+
+    res.json(rijen.map(r => mapVoorraad(r.voorraad, r.artikel_naam)));
+  } catch (err) {
+    logger.error({ err }, "magazijn voorraad ophalen fout");
+    res.status(500).json({ error: "Serverfout" });
+  }
+});
+
+// Samengevoegd voorraad per artikel (over alle locaties)
+router.get("/magazijn/voorraad/totaal", lezen, async (req, res) => {
+  try {
+    const rijen = await db.select({
+      artikel_id: voorraadTable.artikelId,
+      artikel_naam: artikelenTable.naam,
+      eenheid: artikelenTable.eenheid,
+      minimum_voorraad: sql<number | null>`${artikelenTable}.minimum_voorraad`,
+      gewenste_voorraad: sql<number | null>`${artikelenTable}.gewenste_voorraad`,
+      hoeveelheid: sql<number>`SUM(${voorraadTable.hoeveelheid})`,
+      gereserveerd: sql<number>`SUM(${voorraadTable.gereserveerd})`,
+      besteld: sql<number>`SUM(${voorraadTable.besteld})`,
+    })
+      .from(voorraadTable)
+      .leftJoin(artikelenTable, eq(voorraadTable.artikelId, artikelenTable.id))
+      .groupBy(
+        voorraadTable.artikelId,
+        artikelenTable.naam,
+        artikelenTable.eenheid,
+        sql`${artikelenTable}.minimum_voorraad`,
+        sql`${artikelenTable}.gewenste_voorraad`,
+      )
+      .orderBy(asc(artikelenTable.naam));
+
+    res.json(rijen.map(r => ({
+      artikel_id: r.artikel_id,
+      artikel_naam: r.artikel_naam ?? null,
+      eenheid: r.eenheid ?? "st",
+      minimum_voorraad: r.minimum_voorraad ?? null,
+      gewenste_voorraad: r.gewenste_voorraad ?? null,
+      hoeveelheid: r.hoeveelheid ?? 0,
+      gereserveerd: r.gereserveerd ?? 0,
+      besteld: r.besteld ?? 0,
+      vrij: Math.max(0, (r.hoeveelheid ?? 0) - (r.gereserveerd ?? 0)),
+      onder_minimum: r.minimum_voorraad != null && (r.hoeveelheid ?? 0) < r.minimum_voorraad,
+    })));
+  } catch (err) {
+    logger.error({ err }, "magazijn voorraad totaal fout");
+    res.status(500).json({ error: "Serverfout" });
+  }
+});
+
+// POST: handmatige correctie/inkoop
+router.post("/magazijn/voorraad/correctie", aanmaken, async (req, res) => {
+  try {
+    const body = req.body as Record<string, unknown>;
+    const artikelId = Number(body.artikel_id);
+    const delta = num(body.delta);
+    if (!artikelId || delta == null) { res.status(422).json({ error: "artikel_id en delta zijn verplicht" }); return; }
+
+    const locatieId = body.locatie_id ? Number(body.locatie_id) : null;
+    const type = str(body.type) ?? "correctie";
+    const userId = req.session?.userId as number | undefined;
+
+    await bijwerkenVoorraad(db, artikelId, locatieId, delta, type, userId, null, null, str(body.omschrijving));
+
+    res.status(201).json({ ok: true });
+  } catch (err) {
+    logger.error({ err }, "magazijn voorraad correctie fout");
+    res.status(500).json({ error: "Serverfout" });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════
+// MUTATIES
+// ═══════════════════════════════════════════════════════════
+
+router.get("/magazijn/mutaties", lezen, async (req, res) => {
+  try {
+    const { artikel_id, type, limit: limitQ } = req.query as Record<string, string | undefined>;
+    const maxItems = Math.min(Number(limitQ ?? 100), 500);
+
+    const conds = [];
+    if (artikel_id) conds.push(eq(voorraadMutatiesTable.artikelId, Number(artikel_id)));
+    if (type) conds.push(eq(voorraadMutatiesTable.type, type));
+
+    const rijen = await db.select({
+      mutatie: voorraadMutatiesTable,
+      artikel_naam: artikelenTable.naam,
+    })
+      .from(voorraadMutatiesTable)
+      .leftJoin(artikelenTable, eq(voorraadMutatiesTable.artikelId, artikelenTable.id))
+      .where(conds.length > 0 ? and(...(conds as [typeof conds[0], ...typeof conds])) : undefined)
+      .orderBy(desc(voorraadMutatiesTable.aangemaaktOp))
+      .limit(maxItems);
+
+    res.json(rijen.map(r => mapMutatie(r.mutatie, { artikel_naam: r.artikel_naam })));
+  } catch (err) {
+    logger.error({ err }, "magazijn mutaties fout");
+    res.status(500).json({ error: "Serverfout" });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════
+// RESERVERINGEN
+// ═══════════════════════════════════════════════════════════
+
+router.get("/magazijn/reserveringen", lezen, async (req, res) => {
+  try {
+    const { artikel_id, opdracht_id, status } = req.query as Record<string, string | undefined>;
+
+    const conds = [];
+    if (artikel_id) conds.push(eq(reserveringenTable.artikelId, Number(artikel_id)));
+    if (opdracht_id) conds.push(eq(reserveringenTable.opdrachtId, Number(opdracht_id)));
+    if (status) conds.push(eq(reserveringenTable.status, status));
+
+    const rijen = await db.select({
+      reservering: reserveringenTable,
+      artikel_naam: artikelenTable.naam,
+      opdracht_titel: opdrachtenTable.titel,
+    })
+      .from(reserveringenTable)
+      .leftJoin(artikelenTable, eq(reserveringenTable.artikelId, artikelenTable.id))
+      .leftJoin(opdrachtenTable, eq(reserveringenTable.opdrachtId, opdrachtenTable.id))
+      .where(conds.length > 0 ? and(...(conds as [typeof conds[0], ...typeof conds])) : undefined)
+      .orderBy(desc(reserveringenTable.gereserveerdOp));
+
+    res.json(rijen.map(r => mapReservering(r.reservering, { artikel_naam: r.artikel_naam, opdracht_titel: r.opdracht_titel })));
+  } catch (err) {
+    logger.error({ err }, "magazijn reserveringen fout");
+    res.status(500).json({ error: "Serverfout" });
+  }
+});
+
+router.post("/magazijn/reserveringen", aanmaken, async (req, res) => {
+  try {
+    const body = req.body as Record<string, unknown>;
+    const artikelId = Number(body.artikel_id);
+    const hoeveelheid = num(body.hoeveelheid);
+    if (!artikelId || !hoeveelheid || hoeveelheid <= 0) {
+      res.status(422).json({ error: "artikel_id en hoeveelheid zijn verplicht" }); return;
+    }
+
+    const userId = req.session?.userId as number | undefined;
+
+    // Controleer vrije voorraad vóór de transactie (snelle pre-check)
+    const voorraadRijen = await db.select().from(voorraadTable)
+      .where(eq(voorraadTable.artikelId, artikelId));
+    const totaalVrij = voorraadRijen.reduce((s, v) => s + Math.max(0, v.hoeveelheid - v.gereserveerd), 0);
+
+    if (totaalVrij < hoeveelheid) {
+      res.status(409).json({ error: `Onvoldoende vrije voorraad (${totaalVrij} beschikbaar, ${hoeveelheid} gevraagd)` }); return;
+    }
+
+    // Alle mutaties binnen één transactie voor atomiciteit
+    const res_ = await db.transaction(async (tx) => {
+      const [reservering] = await tx.insert(reserveringenTable).values({
+        artikelId,
+        opdrachtId: body.opdracht_id ? Number(body.opdracht_id) : null,
+        hoeveelheid,
+        status: "open",
+        omschrijving: str(body.omschrijving),
+        aangemaaktDoorId: userId ?? null,
+      }).returning();
+
+      // Reserveer per voorraad-rij (FIFO over locaties)
+      let resterend = hoeveelheid;
+      for (const v of voorraadRijen) {
+        const vrij = Math.max(0, v.hoeveelheid - v.gereserveerd);
+        if (vrij <= 0 || resterend <= 0) continue;
+        const te = Math.min(vrij, resterend);
+        await tx.update(voorraadTable)
+          .set({ gereserveerd: sql`${voorraadTable.gereserveerd} + ${te}`, bijgewerktOp: new Date() })
+          .where(eq(voorraadTable.id, v.id));
+        await tx.insert(voorraadMutatiesTable).values({
+          artikelId,
+          locatieId: v.locatieId,
+          type: "reservering",
+          hoeveelheid: te,
+          delta: 0,
+          referentieType: "reservering",
+          referentieId: reservering.id,
+          gebruikerId: userId ?? null,
+          omschrijving: str(body.omschrijving),
+        });
+        resterend -= te;
+      }
+
+      return reservering;
+    });
+
+    const [artikel] = await db.select({ naam: artikelenTable.naam }).from(artikelenTable).where(eq(artikelenTable.id, artikelId)).limit(1);
+    res.status(201).json(mapReservering(res_, { artikel_naam: artikel?.naam ?? null }));
+  } catch (err) {
+    logger.error({ err }, "magazijn reservering aanmaken fout");
+    res.status(500).json({ error: "Serverfout" });
+  }
+});
+
+router.patch("/magazijn/reserveringen/:id/annuleer", schrijven, async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const [reservering] = await db.select().from(reserveringenTable).where(eq(reserveringenTable.id, id)).limit(1);
+    if (!reservering) { res.status(404).json({ error: "Reservering niet gevonden" }); return; }
+    if (reservering.status === "geannuleerd") { res.status(409).json({ error: "Al geannuleerd" }); return; }
+
+    const userId = req.session?.userId as number | undefined;
+
+    // Haal de oorspronkelijke reserverings-mutaties op (één per betrokken voorraad-rij)
+    // zodat we exact per rij vrijgeven en niet een blind per-artikel update doen.
+    const resMutaties = await db.select().from(voorraadMutatiesTable)
+      .where(and(
+        eq(voorraadMutatiesTable.referentieType, "reservering"),
+        eq(voorraadMutatiesTable.referentieId, id),
+        eq(voorraadMutatiesTable.type, "reservering"),
+      ));
+
+    const bijgewerkt = await db.transaction(async (tx) => {
+      // Vrijgave per betrokken voorraad-rij
+      for (const m of resMutaties) {
+        const whereExpr = m.locatieId != null
+          ? and(eq(voorraadTable.artikelId, reservering.artikelId), eq(voorraadTable.locatieId, m.locatieId))
+          : and(eq(voorraadTable.artikelId, reservering.artikelId), sql`${voorraadTable.locatieId} IS NULL`);
+        await tx.update(voorraadTable)
+          .set({ gereserveerd: sql`GREATEST(0, ${voorraadTable.gereserveerd} - ${m.hoeveelheid})`, bijgewerktOp: new Date() })
+          .where(whereExpr);
+        await tx.insert(voorraadMutatiesTable).values({
+          artikelId: reservering.artikelId,
+          locatieId: m.locatieId,
+          type: "vrijgave",
+          hoeveelheid: m.hoeveelheid,
+          delta: 0,
+          referentieType: "reservering",
+          referentieId: id,
+          gebruikerId: userId ?? null,
+          omschrijving: "Reservering geannuleerd",
+        });
+      }
+
+      // Fallback: als er geen mutatie-rijen zijn (legacy/manueel), gebruik totaal
+      if (resMutaties.length === 0) {
+        await tx.update(voorraadTable)
+          .set({ gereserveerd: sql`GREATEST(0, ${voorraadTable.gereserveerd} - ${reservering.hoeveelheid})`, bijgewerktOp: new Date() })
+          .where(eq(voorraadTable.artikelId, reservering.artikelId));
+      }
+
+      const [r] = await tx.update(reserveringenTable)
+        .set({ status: "geannuleerd", bijgewerktOp: new Date() })
+        .where(eq(reserveringenTable.id, id))
+        .returning();
+      return r;
+    });
+
+    res.json(mapReservering(bijgewerkt));
+  } catch (err) {
+    logger.error({ err }, "magazijn reservering annuleer fout");
+    res.status(500).json({ error: "Serverfout" });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════
+// UITGIFTES
+// ═══════════════════════════════════════════════════════════
+
+router.post("/magazijn/uitgiftes", aanmaken, async (req, res) => {
+  try {
+    const body = req.body as Record<string, unknown>;
+    const opdrachtId = body.opdracht_id ? Number(body.opdracht_id) : null;
+    const regels = (body.regels ?? []) as Array<{ artikel_id: number; hoeveelheid: number; locatie_id?: number | null; reservering_id?: number | null }>;
+
+    if (!regels.length) { res.status(422).json({ error: "Minimaal één artikel is verplicht" }); return; }
+
+    const userId = req.session?.userId as number | undefined;
+
+    // Pre-validatie: controleer per regel of er voldoende (vrije) voorraad is.
+    // Bij een gekoppelde reservering telt de gereserveerde hoeveelheid mee als beschikbaar.
+    for (const regel of regels) {
+      const artikelId = Number(regel.artikel_id);
+      const hoeveelheid = Number(regel.hoeveelheid);
+      const locatieId = regel.locatie_id ? Number(regel.locatie_id) : null;
+
+      const voorraadRijen = await db.select().from(voorraadTable)
+        .where(eq(voorraadTable.artikelId, artikelId));
+
+      if (regel.reservering_id) {
+        // Uitgifte via reservering: totale hoeveelheid (incl. gereserveerd) moet volstaan
+        const totaal = voorraadRijen.reduce((s, v) => s + (v.hoeveelheid ?? 0), 0);
+        if (totaal < hoeveelheid) {
+          res.status(409).json({
+            error: `Onvoldoende voorraad voor artikel ${artikelId}: ${totaal} aanwezig, ${hoeveelheid} gevraagd`,
+          }); return;
+        }
+      } else {
+        // Directe uitgifte: alleen vrije voorraad op de gevraagde locatie
+        const beschikbaar = locatieId != null
+          ? voorraadRijen.filter(v => v.locatieId === locatieId).reduce((s, v) => s + Math.max(0, v.hoeveelheid - v.gereserveerd), 0)
+          : voorraadRijen.reduce((s, v) => s + Math.max(0, v.hoeveelheid - v.gereserveerd), 0);
+        if (beschikbaar < hoeveelheid) {
+          res.status(409).json({
+            error: `Onvoldoende vrije voorraad voor artikel ${artikelId}: ${beschikbaar} vrij, ${hoeveelheid} gevraagd`,
+          }); return;
+        }
+      }
+    }
+
+    // Voer alle mutaties atomisch uit
+    await db.transaction(async (tx) => {
+      for (const regel of regels) {
+        const artikelId = Number(regel.artikel_id);
+        const hoeveelheid = Number(regel.hoeveelheid);
+        const locatieId = regel.locatie_id ? Number(regel.locatie_id) : null;
+
+        if (regel.reservering_id) {
+          const resId = Number(regel.reservering_id);
+
+          // Haal de originele reserverings-mutaties op voor per-rij vrijgave
+          const resMutaties = await tx.select().from(voorraadMutatiesTable)
+            .where(and(
+              eq(voorraadMutatiesTable.referentieType, "reservering"),
+              eq(voorraadMutatiesTable.referentieId, resId),
+              eq(voorraadMutatiesTable.type, "reservering"),
+            ));
+
+          let resterendUitgifte = hoeveelheid;
+
+          if (resMutaties.length > 0) {
+            for (const m of resMutaties) {
+              if (resterendUitgifte <= 0) break;
+              const teNemen = Math.min(m.hoeveelheid, resterendUitgifte);
+              const whereExpr = m.locatieId != null
+                ? and(eq(voorraadTable.artikelId, artikelId), eq(voorraadTable.locatieId, m.locatieId))
+                : and(eq(voorraadTable.artikelId, artikelId), sql`${voorraadTable.locatieId} IS NULL`);
+
+              // Verlaag hoeveelheid én gereserveerd samen op de juiste rij
+              await tx.update(voorraadTable)
+                .set({
+                  hoeveelheid: sql`GREATEST(0, ${voorraadTable.hoeveelheid} - ${teNemen})`,
+                  gereserveerd: sql`GREATEST(0, ${voorraadTable.gereserveerd} - ${teNemen})`,
+                  bijgewerktOp: new Date(),
+                })
+                .where(whereExpr);
+
+              await tx.insert(voorraadMutatiesTable).values({
+                artikelId,
+                locatieId: m.locatieId,
+                type: "uitgifte",
+                hoeveelheid: teNemen,
+                delta: -teNemen,
+                referentieType: opdrachtId ? "opdracht" : "reservering",
+                referentieId: opdrachtId ?? resId,
+                gebruikerId: userId ?? null,
+                omschrijving: str(body.omschrijving),
+              });
+              resterendUitgifte -= teNemen;
+            }
+
+            // Valideer dat alles geleverd kon worden; anders transactie terugdraaien
+            if (resterendUitgifte > 0) {
+              throw new Error(
+                `Uitgifte onvolledig: ${hoeveelheid - resterendUitgifte} van ${hoeveelheid} leverbaar voor artikel ${artikelId}`,
+              );
+            }
+          } else {
+            // Fallback: geen mutatie-rijen beschikbaar (legacy) → neem via bijwerkenVoorraad
+            await bijwerkenVoorraad(tx, artikelId, locatieId, -hoeveelheid, "uitgifte", userId,
+              opdrachtId ? "opdracht" : "reservering", opdrachtId ?? resId, str(body.omschrijving));
+            await tx.update(voorraadTable)
+              .set({ gereserveerd: sql`GREATEST(0, ${voorraadTable.gereserveerd} - ${hoeveelheid})`, bijgewerktOp: new Date() })
+              .where(eq(voorraadTable.artikelId, artikelId));
+          }
+
+          // Markeer reservering als volledig NADAT alle mutaties geslaagd zijn
+          const uitgegevenHoeveelheid = hoeveelheid - resterendUitgifte;
+          const nieuweStatus = uitgegevenHoeveelheid >= hoeveelheid ? "volledig" : "gedeeltelijk";
+          await tx.update(reserveringenTable)
+            .set({ status: nieuweStatus, bijgewerktOp: new Date() })
+            .where(eq(reserveringenTable.id, resId));
+        } else {
+          // Directe uitgifte zonder reservering
+          await bijwerkenVoorraad(tx, artikelId, locatieId, -hoeveelheid, "uitgifte", userId,
+            opdrachtId ? "opdracht" : null, opdrachtId, str(body.omschrijving));
+        }
+      }
+    });
+
+    res.status(201).json({ ok: true, opdracht_id: opdrachtId, regels: regels.map(r => ({ artikel_id: r.artikel_id, hoeveelheid: r.hoeveelheid })) });
+  } catch (err) {
+    logger.error({ err }, "magazijn uitgifte fout");
+    res.status(500).json({ error: "Serverfout" });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════
+// RETOUREN
+// ═══════════════════════════════════════════════════════════
+
+router.post("/magazijn/retouren", aanmaken, async (req, res) => {
+  try {
+    const body = req.body as Record<string, unknown>;
+    const opdrachtId = body.opdracht_id ? Number(body.opdracht_id) : null;
+    const regels = (body.regels ?? []) as Array<{ artikel_id: number; hoeveelheid: number; locatie_id?: number | null; conditie: "goed" | "defect" | "afval" }>;
+
+    if (!regels.length) { res.status(422).json({ error: "Minimaal één artikel is verplicht" }); return; }
+
+    const userId = req.session?.userId as number | undefined;
+
+    await db.transaction(async (tx) => {
+      for (const regel of regels) {
+        const artikelId = Number(regel.artikel_id);
+        const hoeveelheid = Number(regel.hoeveelheid);
+        const locatieId = regel.locatie_id ? Number(regel.locatie_id) : null;
+        const conditie = regel.conditie ?? "goed";
+
+        if (conditie === "goed") {
+          // Goede retour: voorraad omhoog
+          await bijwerkenVoorraad(tx, artikelId, locatieId, hoeveelheid, "retour", userId,
+            opdrachtId ? "opdracht" : null, opdrachtId,
+            `Retour (${conditie}) van ${opdrachtId ? `opdracht ${opdrachtId}` : "onbekend"}`);
+        } else {
+          // Defect/afval: enkel loggen (geen voorraadwijziging)
+          await tx.insert(voorraadMutatiesTable).values({
+            artikelId,
+            locatieId,
+            type: "retour",
+            hoeveelheid,
+            delta: 0,
+            referentieType: opdrachtId ? "opdracht" : null,
+            referentieId: opdrachtId,
+            gebruikerId: userId ?? null,
+            omschrijving: `Retour (${conditie}) — niet teruggeplaatst`,
+          });
+        }
+      }
+    });
+
+    res.status(201).json({ ok: true, opdracht_id: opdrachtId });
+  } catch (err) {
+    logger.error({ err }, "magazijn retour fout");
+    res.status(500).json({ error: "Serverfout" });
+  }
+});
+
+logger.info("magazijn router geladen");
+
+export default router;

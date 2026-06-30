@@ -19702,6 +19702,365 @@ export const DeleteArtikelResponse = zod.void()
 
 
 /**
+ * @summary Magazijn dashboard statistieken
+ */
+export const GetMagazijnDashboardResponse = zod.object({
+  "totaal_waarde": zod.number(),
+  "artikelen_onder_minimum": zod.number(),
+  "totaal_gereserveerd": zod.number(),
+  "totaal_besteld": zod.number(),
+  "kritieke_artikelen": zod.array(zod.object({
+  "id": zod.number().optional(),
+  "naam": zod.string().optional(),
+  "eenheid": zod.string().optional(),
+  "hoeveelheid": zod.number().optional(),
+  "minimum_voorraad": zod.number().optional()
+})),
+  "meest_verbruikt": zod.array(zod.object({
+  "artikel_id": zod.number().optional(),
+  "naam": zod.string().optional(),
+  "eenheid": zod.string().optional(),
+  "totaal": zod.number().optional()
+}))
+})
+
+
+/**
+ * @summary Lijst van magazijnlocaties
+ */
+export const ListMagazijnLocatiesResponseItem = zod.object({
+  "id": zod.number(),
+  "naam": zod.string(),
+  "type": zod.string(),
+  "parent_id": zod.number().nullish(),
+  "omschrijving": zod.string().nullish(),
+  "actief": zod.boolean(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+export const ListMagazijnLocatiesResponse = zod.array(ListMagazijnLocatiesResponseItem)
+
+
+/**
+ * @summary Nieuwe locatie aanmaken
+ */
+export const CreateMagazijnLocatieBody = zod.object({
+  "naam": zod.string(),
+  "type": zod.string().optional(),
+  "parent_id": zod.number().nullish(),
+  "omschrijving": zod.string().optional(),
+  "actief": zod.boolean().optional()
+})
+
+export const CreateMagazijnLocatieResponse = zod.void()
+
+
+/**
+ * @summary Locatie ophalen
+ */
+export const GetMagazijnLocatieParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetMagazijnLocatieResponse = zod.object({
+  "id": zod.number(),
+  "naam": zod.string(),
+  "type": zod.string(),
+  "parent_id": zod.number().nullish(),
+  "omschrijving": zod.string().nullish(),
+  "actief": zod.boolean(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+
+
+/**
+ * @summary Locatie bijwerken
+ */
+export const UpdateMagazijnLocatieParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateMagazijnLocatieBody = zod.object({
+  "naam": zod.string(),
+  "type": zod.string().optional(),
+  "parent_id": zod.number().nullish(),
+  "omschrijving": zod.string().optional(),
+  "actief": zod.boolean().optional()
+})
+
+export const UpdateMagazijnLocatieResponse = zod.object({
+  "id": zod.number(),
+  "naam": zod.string(),
+  "type": zod.string(),
+  "parent_id": zod.number().nullish(),
+  "omschrijving": zod.string().nullish(),
+  "actief": zod.boolean(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+
+
+/**
+ * @summary Locatie verwijderen
+ */
+export const DeleteMagazijnLocatieParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteMagazijnLocatieResponse = zod.void()
+
+
+/**
+ * @summary Magazijn-artikel detail ophalen
+ */
+export const GetMagazijnArtikelParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetMagazijnArtikelResponse = zod.object({
+  "id": zod.number(),
+  "code": zod.string().nullish(),
+  "naam": zod.string(),
+  "omschrijving": zod.string().nullish(),
+  "eenheid": zod.string(),
+  "categorie": zod.string().nullish(),
+  "merk": zod.string().nullish(),
+  "leverancier_id": zod.number().nullish(),
+  "leverancier_naam": zod.string().nullish(),
+  "leveranciers_artikel_nr": zod.string().nullish(),
+  "inkoopprijs": zod.number().nullish(),
+  "verkoopprijs": zod.number().nullish(),
+  "gemiddeld_inkoopprijs": zod.number().nullish(),
+  "laatste_inkoopprijs": zod.number().nullish(),
+  "btw_percentage": zod.number().optional(),
+  "minimum_voorraad": zod.number().nullish(),
+  "gewenste_voorraad": zod.number().nullish(),
+  "barcode": zod.string().nullish(),
+  "locatie_id": zod.number().nullish(),
+  "notities": zod.string().nullish(),
+  "actief": zod.boolean(),
+  "bron": zod.string().optional(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+
+
+/**
+ * @summary Magazijn-velden van een artikel bijwerken
+ */
+export const UpdateMagazijnArtikelParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateMagazijnArtikelBody = zod.object({
+  "minimum_voorraad": zod.number().nullish(),
+  "gewenste_voorraad": zod.number().nullish(),
+  "barcode": zod.string().nullish(),
+  "locatie_id": zod.number().nullish(),
+  "merk": zod.string().nullish(),
+  "leveranciers_artikel_nr": zod.string().nullish(),
+  "gemiddeld_inkoopprijs": zod.number().nullish()
+})
+
+export const UpdateMagazijnArtikelResponse = zod.object({
+  "id": zod.number(),
+  "code": zod.string().nullish(),
+  "naam": zod.string(),
+  "omschrijving": zod.string().nullish(),
+  "eenheid": zod.string(),
+  "categorie": zod.string().nullish(),
+  "inkoopprijs": zod.number().nullish(),
+  "verkoopprijs": zod.number().nullish(),
+  "btw_percentage": zod.number(),
+  "leverancier_id": zod.number().nullish(),
+  "leverancier_naam": zod.string().nullish(),
+  "notities": zod.string().nullish(),
+  "actief": zod.boolean(),
+  "bron": zod.string(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+
+
+/**
+ * @summary Voorraad per artikel en locatie
+ */
+export const ListVoorraadQueryParams = zod.object({
+  "artikel_id": zod.coerce.number().optional(),
+  "locatie_id": zod.coerce.number().optional()
+})
+
+export const ListVoorraadResponseItem = zod.object({
+  "id": zod.number(),
+  "artikel_id": zod.number(),
+  "artikel_naam": zod.string().nullish(),
+  "locatie_id": zod.number().nullish(),
+  "hoeveelheid": zod.number(),
+  "gereserveerd": zod.number(),
+  "besteld": zod.number(),
+  "vrij": zod.number(),
+  "bijgewerkt_op": zod.string()
+})
+export const ListVoorraadResponse = zod.array(ListVoorraadResponseItem)
+
+
+/**
+ * @summary Samengevoegde voorraad per artikel (alle locaties)
+ */
+export const ListVoorraadTotaalResponseItem = zod.object({
+  "artikel_id": zod.number(),
+  "artikel_naam": zod.string().nullish(),
+  "eenheid": zod.string().optional(),
+  "minimum_voorraad": zod.number().nullish(),
+  "gewenste_voorraad": zod.number().nullish(),
+  "hoeveelheid": zod.number(),
+  "gereserveerd": zod.number(),
+  "besteld": zod.number(),
+  "vrij": zod.number(),
+  "onder_minimum": zod.boolean()
+})
+export const ListVoorraadTotaalResponse = zod.array(ListVoorraadTotaalResponseItem)
+
+
+/**
+ * @summary Handmatige voorraadcorrectie of inkoop boeken
+ */
+export const CorrectieVoorraadBody = zod.object({
+  "artikel_id": zod.number(),
+  "locatie_id": zod.number().nullish(),
+  "delta": zod.number(),
+  "type": zod.string().optional(),
+  "omschrijving": zod.string().optional()
+})
+
+export const CorrectieVoorraadResponse = zod.void()
+
+
+/**
+ * @summary Voorraadmutaties ophalen
+ */
+export const listVoorraadMutatiesQueryLimitDefault = 100;
+
+export const ListVoorraadMutatiesQueryParams = zod.object({
+  "artikel_id": zod.coerce.number().optional(),
+  "type": zod.coerce.string().optional(),
+  "limit": zod.coerce.number().default(listVoorraadMutatiesQueryLimitDefault)
+})
+
+export const ListVoorraadMutatiesResponseItem = zod.object({
+  "id": zod.number(),
+  "artikel_id": zod.number(),
+  "artikel_naam": zod.string().nullish(),
+  "locatie_id": zod.number().nullish(),
+  "type": zod.string(),
+  "hoeveelheid": zod.number(),
+  "delta": zod.number(),
+  "referentie_type": zod.string().nullish(),
+  "referentie_id": zod.number().nullish(),
+  "gebruiker_id": zod.number().nullish(),
+  "gebruiker_naam": zod.string().nullish(),
+  "omschrijving": zod.string().nullish(),
+  "aangemaakt_op": zod.string()
+})
+export const ListVoorraadMutatiesResponse = zod.array(ListVoorraadMutatiesResponseItem)
+
+
+/**
+ * @summary Reserveringen ophalen
+ */
+export const ListReserveringenQueryParams = zod.object({
+  "artikel_id": zod.coerce.number().optional(),
+  "opdracht_id": zod.coerce.number().optional(),
+  "status": zod.coerce.string().optional()
+})
+
+export const ListReserveringenResponseItem = zod.object({
+  "id": zod.number(),
+  "artikel_id": zod.number(),
+  "artikel_naam": zod.string().nullish(),
+  "opdracht_id": zod.number().nullish(),
+  "opdracht_titel": zod.string().nullish(),
+  "hoeveelheid": zod.number(),
+  "gereserveerd_op": zod.string(),
+  "status": zod.string(),
+  "omschrijving": zod.string().nullish(),
+  "aangemaakt_door_id": zod.number().nullish(),
+  "bijgewerkt_op": zod.string()
+})
+export const ListReserveringenResponse = zod.array(ListReserveringenResponseItem)
+
+
+/**
+ * @summary Materiaal reserveren voor een opdracht
+ */
+export const CreateReserveringBody = zod.object({
+  "artikel_id": zod.number(),
+  "opdracht_id": zod.number().nullish(),
+  "hoeveelheid": zod.number(),
+  "omschrijving": zod.string().optional()
+})
+
+export const CreateReserveringResponse = zod.void()
+
+
+/**
+ * @summary Reservering annuleren
+ */
+export const AnnuleerReserveringParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const AnnuleerReserveringResponse = zod.object({
+  "id": zod.number(),
+  "artikel_id": zod.number(),
+  "artikel_naam": zod.string().nullish(),
+  "opdracht_id": zod.number().nullish(),
+  "opdracht_titel": zod.string().nullish(),
+  "hoeveelheid": zod.number(),
+  "gereserveerd_op": zod.string(),
+  "status": zod.string(),
+  "omschrijving": zod.string().nullish(),
+  "aangemaakt_door_id": zod.number().nullish(),
+  "bijgewerkt_op": zod.string()
+})
+
+
+/**
+ * @summary Uitgifte van materiaal aan een opdracht
+ */
+export const CreateUitgifteBody = zod.object({
+  "opdracht_id": zod.number().nullish(),
+  "omschrijving": zod.string().optional(),
+  "regels": zod.array(zod.object({
+  "artikel_id": zod.number(),
+  "hoeveelheid": zod.number(),
+  "locatie_id": zod.number().nullish(),
+  "reservering_id": zod.number().nullish()
+}))
+})
+
+export const CreateUitgifteResponse = zod.void()
+
+
+/**
+ * @summary Retour van materiaal na opdracht
+ */
+export const CreateRetourBody = zod.object({
+  "opdracht_id": zod.number().nullish(),
+  "omschrijving": zod.string().optional(),
+  "regels": zod.array(zod.object({
+  "artikel_id": zod.number(),
+  "hoeveelheid": zod.number(),
+  "locatie_id": zod.number().nullish(),
+  "conditie": zod.enum(['goed', 'defect', 'afval'])
+}))
+})
+
+export const CreateRetourResponse = zod.void()
+
+
+/**
  * @summary Bestand uploaden en kolommen + voorbeeldrijen ophalen
  */
 export const ImportPreviewBody = zod.object({

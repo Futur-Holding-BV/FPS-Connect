@@ -58,7 +58,9 @@ tags:
   - name: artikelen
     description: Artikelencatalogus — inkoopartikelen gekoppeld aan leveranciers
   - name: import
-    description: ENK-importmodule — Excel/CSV-import van leveranciers, klanten, artikelen en projecten
+    description: ENK-importmodule
+  - name: magazijn
+    description: Magazijn- en voorraadbeheer — locaties, voorraad, mutaties, reserveringen, uitgiftes en retouren — Excel/CSV-import van leveranciers, klanten, artikelen en projecten
 
 paths:
   /healthz:
@@ -15472,6 +15474,334 @@ paths:
         "204":
           description: Verwijderd
 
+
+  # ── MAGAZIJN ─────────────────────────────────────────────────────────────────
+
+  /magazijn/dashboard:
+    get:
+      operationId: getMagazijnDashboard
+      tags: [magazijn]
+      summary: Magazijn dashboard statistieken
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MagazijnDashboard"
+
+  /magazijn/locaties:
+    get:
+      operationId: listMagazijnLocaties
+      tags: [magazijn]
+      summary: Lijst van magazijnlocaties
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MagazijnLocatie"
+    post:
+      operationId: createMagazijnLocatie
+      tags: [magazijn]
+      summary: Nieuwe locatie aanmaken
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MagazijnLocatieInput"
+      responses:
+        "201":
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MagazijnLocatie"
+
+  /magazijn/locaties/{id}:
+    get:
+      operationId: getMagazijnLocatie
+      tags: [magazijn]
+      summary: Locatie ophalen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MagazijnLocatie"
+        "404":
+          description: Niet gevonden
+    patch:
+      operationId: updateMagazijnLocatie
+      tags: [magazijn]
+      summary: Locatie bijwerken
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MagazijnLocatieInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MagazijnLocatie"
+    delete:
+      operationId: deleteMagazijnLocatie
+      tags: [magazijn]
+      summary: Locatie verwijderen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Verwijderd
+
+  /magazijn/artikelen/{id}:
+    get:
+      operationId: getMagazijnArtikel
+      tags: [magazijn]
+      summary: Magazijn-artikel detail ophalen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MagazijnArtikelItem"
+        "404":
+          description: Niet gevonden
+    patch:
+      operationId: updateMagazijnArtikel
+      tags: [magazijn]
+      summary: Magazijn-velden van een artikel bijwerken
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MagazijnArtikelInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Artikel"
+
+  /magazijn/voorraad:
+    get:
+      operationId: listVoorraad
+      tags: [magazijn]
+      summary: Voorraad per artikel en locatie
+      parameters:
+        - in: query
+          name: artikel_id
+          schema:
+            type: integer
+        - in: query
+          name: locatie_id
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/VoorraadRegel"
+
+  /magazijn/voorraad/totaal:
+    get:
+      operationId: listVoorraadTotaal
+      tags: [magazijn]
+      summary: Samengevoegde voorraad per artikel (alle locaties)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/VoorraadTotaal"
+
+  /magazijn/voorraad/correctie:
+    post:
+      operationId: correctieVoorraad
+      tags: [magazijn]
+      summary: Handmatige voorraadcorrectie of inkoop boeken
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VoorraadCorrectieInput"
+      responses:
+        "201":
+          description: Aangemaakt
+
+  /magazijn/mutaties:
+    get:
+      operationId: listVoorraadMutaties
+      tags: [magazijn]
+      summary: Voorraadmutaties ophalen
+      parameters:
+        - in: query
+          name: artikel_id
+          schema:
+            type: integer
+        - in: query
+          name: type
+          schema:
+            type: string
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 100
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/VoorraadMutatie"
+
+  /magazijn/reserveringen:
+    get:
+      operationId: listReserveringen
+      tags: [magazijn]
+      summary: Reserveringen ophalen
+      parameters:
+        - in: query
+          name: artikel_id
+          schema:
+            type: integer
+        - in: query
+          name: opdracht_id
+          schema:
+            type: integer
+        - in: query
+          name: status
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Reservering"
+    post:
+      operationId: createReservering
+      tags: [magazijn]
+      summary: Materiaal reserveren voor een opdracht
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReserveringInput"
+      responses:
+        "201":
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Reservering"
+        "409":
+          description: Onvoldoende vrije voorraad
+
+  /magazijn/reserveringen/{id}/annuleer:
+    patch:
+      operationId: annuleerReservering
+      tags: [magazijn]
+      summary: Reservering annuleren
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Reservering"
+
+  /magazijn/uitgiftes:
+    post:
+      operationId: createUitgifte
+      tags: [magazijn]
+      summary: Uitgifte van materiaal aan een opdracht
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UitgifteInput"
+      responses:
+        "201":
+          description: Aangemaakt
+
+  /magazijn/retouren:
+    post:
+      operationId: createRetour
+      tags: [magazijn]
+      summary: Retour van materiaal na opdracht
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RetourInput"
+      responses:
+        "201":
+          description: Aangemaakt
+
   # ── IMPORT ───────────────────────────────────────────────────────────────────
 
   /import/preview:
@@ -28206,6 +28536,224 @@ components:
         leverancier_id:     { type: integer }
         notities:           { type: string }
         actief:             { type: boolean }
+
+
+    # ── MAGAZIJN ──────────────────────────────────────────────────────────────────
+
+    MagazijnDashboard:
+      type: object
+      required: [totaal_waarde, artikelen_onder_minimum, totaal_gereserveerd, totaal_besteld, kritieke_artikelen, meest_verbruikt]
+      properties:
+        totaal_waarde:            { type: number }
+        artikelen_onder_minimum:  { type: integer }
+        totaal_gereserveerd:      { type: number }
+        totaal_besteld:           { type: number }
+        kritieke_artikelen:
+          type: array
+          items:
+            type: object
+            properties:
+              id:               { type: integer }
+              naam:             { type: string }
+              eenheid:          { type: string }
+              hoeveelheid:      { type: number }
+              minimum_voorraad: { type: number }
+        meest_verbruikt:
+          type: array
+          items:
+            type: object
+            properties:
+              artikel_id: { type: integer }
+              naam:       { type: string }
+              eenheid:    { type: string }
+              totaal:     { type: number }
+
+    MagazijnLocatie:
+      type: object
+      required: [id, naam, type, actief, aangemaakt_op, bijgewerkt_op]
+      properties:
+        id:           { type: integer }
+        naam:         { type: string }
+        type:         { type: string }
+        parent_id:    { type: ["integer", "null"] }
+        omschrijving: { type: ["string", "null"] }
+        actief:       { type: boolean }
+        aangemaakt_op: { type: string }
+        bijgewerkt_op: { type: string }
+
+    MagazijnLocatieInput:
+      type: object
+      required: [naam]
+      properties:
+        naam:         { type: string }
+        type:         { type: string }
+        parent_id:    { type: ["integer", "null"] }
+        omschrijving: { type: string }
+        actief:       { type: boolean }
+
+    MagazijnArtikelItem:
+      type: object
+      required: [id, naam, eenheid, actief, aangemaakt_op, bijgewerkt_op]
+      properties:
+        id:                    { type: integer }
+        code:                  { type: ["string", "null"] }
+        naam:                  { type: string }
+        omschrijving:          { type: ["string", "null"] }
+        eenheid:               { type: string }
+        categorie:             { type: ["string", "null"] }
+        merk:                  { type: ["string", "null"] }
+        leverancier_id:        { type: ["integer", "null"] }
+        leverancier_naam:      { type: ["string", "null"] }
+        leveranciers_artikel_nr: { type: ["string", "null"] }
+        inkoopprijs:           { type: ["number", "null"] }
+        verkoopprijs:          { type: ["number", "null"] }
+        gemiddeld_inkoopprijs: { type: ["number", "null"] }
+        laatste_inkoopprijs:   { type: ["number", "null"] }
+        btw_percentage:        { type: number }
+        minimum_voorraad:      { type: ["number", "null"] }
+        gewenste_voorraad:     { type: ["number", "null"] }
+        barcode:               { type: ["string", "null"] }
+        locatie_id:            { type: ["integer", "null"] }
+        notities:              { type: ["string", "null"] }
+        actief:                { type: boolean }
+        bron:                  { type: string }
+        aangemaakt_op:         { type: string }
+        bijgewerkt_op:         { type: string }
+
+    MagazijnArtikelInput:
+      type: object
+      properties:
+        minimum_voorraad:      { type: ["number", "null"] }
+        gewenste_voorraad:     { type: ["number", "null"] }
+        barcode:               { type: ["string", "null"] }
+        locatie_id:            { type: ["integer", "null"] }
+        merk:                  { type: ["string", "null"] }
+        leveranciers_artikel_nr: { type: ["string", "null"] }
+        gemiddeld_inkoopprijs: { type: ["number", "null"] }
+
+    VoorraadRegel:
+      type: object
+      required: [id, artikel_id, hoeveelheid, gereserveerd, besteld, vrij, bijgewerkt_op]
+      properties:
+        id:           { type: integer }
+        artikel_id:   { type: integer }
+        artikel_naam: { type: ["string", "null"] }
+        locatie_id:   { type: ["integer", "null"] }
+        hoeveelheid:  { type: number }
+        gereserveerd: { type: number }
+        besteld:      { type: number }
+        vrij:         { type: number }
+        bijgewerkt_op: { type: string }
+
+    VoorraadTotaal:
+      type: object
+      required: [artikel_id, hoeveelheid, gereserveerd, besteld, vrij, onder_minimum]
+      properties:
+        artikel_id:       { type: integer }
+        artikel_naam:     { type: ["string", "null"] }
+        eenheid:          { type: string }
+        minimum_voorraad: { type: ["number", "null"] }
+        gewenste_voorraad: { type: ["number", "null"] }
+        hoeveelheid:      { type: number }
+        gereserveerd:     { type: number }
+        besteld:          { type: number }
+        vrij:             { type: number }
+        onder_minimum:    { type: boolean }
+
+    VoorraadCorrectieInput:
+      type: object
+      required: [artikel_id, delta]
+      properties:
+        artikel_id:  { type: integer }
+        locatie_id:  { type: ["integer", "null"] }
+        delta:       { type: number }
+        type:        { type: string }
+        omschrijving: { type: string }
+
+    VoorraadMutatie:
+      type: object
+      required: [id, artikel_id, type, hoeveelheid, delta, aangemaakt_op]
+      properties:
+        id:              { type: integer }
+        artikel_id:      { type: integer }
+        artikel_naam:    { type: ["string", "null"] }
+        locatie_id:      { type: ["integer", "null"] }
+        type:            { type: string }
+        hoeveelheid:     { type: number }
+        delta:           { type: number }
+        referentie_type: { type: ["string", "null"] }
+        referentie_id:   { type: ["integer", "null"] }
+        gebruiker_id:    { type: ["integer", "null"] }
+        gebruiker_naam:  { type: ["string", "null"] }
+        omschrijving:    { type: ["string", "null"] }
+        aangemaakt_op:   { type: string }
+
+    Reservering:
+      type: object
+      required: [id, artikel_id, hoeveelheid, gereserveerd_op, status, bijgewerkt_op]
+      properties:
+        id:               { type: integer }
+        artikel_id:       { type: integer }
+        artikel_naam:     { type: ["string", "null"] }
+        opdracht_id:      { type: ["integer", "null"] }
+        opdracht_titel:   { type: ["string", "null"] }
+        hoeveelheid:      { type: number }
+        gereserveerd_op:  { type: string }
+        status:           { type: string }
+        omschrijving:     { type: ["string", "null"] }
+        aangemaakt_door_id: { type: ["integer", "null"] }
+        bijgewerkt_op:    { type: string }
+
+    ReserveringInput:
+      type: object
+      required: [artikel_id, hoeveelheid]
+      properties:
+        artikel_id:   { type: integer }
+        opdracht_id:  { type: ["integer", "null"] }
+        hoeveelheid:  { type: number }
+        omschrijving: { type: string }
+
+    UitgifteRegelInput:
+      type: object
+      required: [artikel_id, hoeveelheid]
+      properties:
+        artikel_id:     { type: integer }
+        hoeveelheid:    { type: number }
+        locatie_id:     { type: ["integer", "null"] }
+        reservering_id: { type: ["integer", "null"] }
+
+    UitgifteInput:
+      type: object
+      required: [regels]
+      properties:
+        opdracht_id:  { type: ["integer", "null"] }
+        omschrijving: { type: string }
+        regels:
+          type: array
+          items:
+            $ref: "#/components/schemas/UitgifteRegelInput"
+
+    RetourRegelInput:
+      type: object
+      required: [artikel_id, hoeveelheid, conditie]
+      properties:
+        artikel_id:  { type: integer }
+        hoeveelheid: { type: number }
+        locatie_id:  { type: ["integer", "null"] }
+        conditie:
+          type: string
+          enum: [goed, defect, afval]
+
+    RetourInput:
+      type: object
+      required: [regels]
+      properties:
+        opdracht_id:  { type: ["integer", "null"] }
+        omschrijving: { type: string }
+        regels:
+          type: array
+          items:
+            $ref: "#/components/schemas/RetourRegelInput"
 
     # ── IMPORT ──────────────────────────────────────────────────────────────────
 

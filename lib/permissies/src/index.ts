@@ -127,6 +127,11 @@ export const MODULES = [
     label: "Organisatie",
     omschrijving: "Bedrijfsgegevens, verzekeringen, jaarverslagen en bedrijfsdocumenten",
   },
+  {
+    id: "magazijn",
+    label: "Magazijn",
+    omschrijving: "Voorraadbeheer, locaties, mutaties, reserveringen, uitgiftes en retouren",
+  },
 ] as const;
 
 export type ModuleId = (typeof MODULES)[number]["id"];
@@ -341,6 +346,13 @@ export const PRESETS: Preset[] = [
       wagenpark: 4,
       gereedschappen: 1,
       planning: 1,
+    }),
+  },
+  {
+    naam: "Magazijnbeheerder",
+    bevoegdheden: matrix({
+      magazijn: 4,
+      offertes: 1,
     }),
   },
 ];

@@ -30,6 +30,44 @@ Zelfstandige onderhoudsmodule gebouwd, los van de projectworkflow:
   - `werkbon-detail.tsx` — detailweergave, statusmachine (Start uitvoering / Voltooien), inline bewerken
 - **Routing** (`App.tsx`): routes `/onderhoud/contracten/:id`, `/onderhoud/werkbonnen/:id`, `/onderhoud/:rest*` toegevoegd
 
+## 30 juni 2026
+
+### Fix — Magazijn data-integriteitsfouten (code review)
+Vier kritieke problemen opgelost na code review:
+
+1. **Artikel-detailpagina toegevoegd** — `GET /magazijn/artikelen/:id` endpoint toegevoegd aan OpenAPI + backend; nieuw `MagazijnArtikelItem` schema; codegen uitgevoerd; `artikel-detail.tsx` pagina aangemaakt + route geregistreerd in App.tsx. Dashboard-links naar `/magazijn/artikelen/:id` waren gebroken — nu opgelost.
+
+2. **Voorraad kan niet meer negatief worden** — `bijwerkenVoorraad` gebruikt nu `GREATEST(0, hoeveelheid + delta)` zodat een voorraad-rij nooit onder 0 zakt. Pre-validatie in uitgifte controleert vrije voorraad vóór de mutatie.
+
+3. **Reservering vrijgave per locatie-rij** — `annuleer` gebruikt de oorspronkelijke reservering-mutaties (referentieType="reservering") om exact per betrokken voorraad-rij vrij te geven i.p.v. een blind `LIMIT(1)` op de eerste rij. Zelfde per-rij logica voor uitgifte met reservering_id.
+
+4. **Atomiciteit via DB-transacties** — `reservering aanmaken`, `annuleer`, `uitgifte` en `retour` zijn omgezet naar `db.transaction()`. Halverwege gefaalde mutaties laten geen inconsistente voorraadstatus achter.
+
+---
+
+### Bouw — Magazijn- en voorraadbeheer (Fase 1 kern)
+Volledige nieuwe module voor intern magazijn- en materiaalbeheer: locaties, voorraad per locatie, mutaties, reserveringen, uitgiftes en retouren.
+
+**DB (4 nieuwe tabellen + uitbreiding artikelen):**
+- `magazijn_locaties` — hiërarchisch (rek/vak/bus/ruimte/extern), inclusief parent_id
+- `voorraad` — hoeveelheid + gereserveerd + besteld per artikel+locatie (unieke combinatie)
+- `voorraad_mutaties` — audittrail van alle voorraadwijzigingen (inkoop, uitgifte, retour, correctie, reservering)
+- `reserveringen` — open/gedeeltelijk/volledig/geannuleerd per artikel+opdracht
+- `artikelen` uitgebreid met: merk, leveranciers_artikel_nr, gemiddeld_/laatste_inkoopprijs, minimum_/gewenste_voorraad, barcode, locatie_id
+
+**Backend (OpenAPI + Express):**
+- Permissies: `magazijn` module + `Magazijnbeheerder` preset toegevoegd aan `lib/permissies`
+- OpenAPI: alle paden + schemas voor magazijn (12 endpoints + GET detail) in `lib/api-spec/openapi.yaml`
+- Codegen uitvoerd (hooks + Zod schemas gegenereerd)
+- Express router `artifacts/api-server/src/routes/magazijn.ts` (transactioneel, per-rij vrijgave)
+
+**Frontend (9 pagina's incl. artikel-detail):**
+- Collapsible "Magazijn"-sectie in `beheerder-layout.tsx`, gated op `useBevoegdheid("magazijn", 1)`
+- 9 routes in `App.tsx` onder `/magazijn/*`
+
+- **Uitvoering:** volledig
+- **Getest:** typecheck clean; build succesvol; e2e-web-ci groen
+
 ---
 
 ## 29 juni 2026

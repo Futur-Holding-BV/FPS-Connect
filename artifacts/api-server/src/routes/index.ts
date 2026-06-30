@@ -68,6 +68,7 @@ import importRouter from "./import";
 import onderhandenWerkRouter from "./onderhanden-werk";
 import onderhoudscontractenRouter from "./onderhoudscontracten";
 import werkbonnenRouter from "./werkbonnen";
+import magazijnRouter from "./magazijn";
 import { requireAuth } from "../middlewares/auth";
 import { meldActief } from "../lib/online-tracker";
 
@@ -152,5 +153,6 @@ router.use(importRouter);
 router.use(onderhandenWerkRouter);
 router.use(onderhoudscontractenRouter);
 router.use(werkbonnenRouter);
+router.use(magazijnRouter);
 
 export default router;

@@ -20,7 +20,7 @@ import {
   Inbox, Building2, Target, Handshake, Newspaper, CalendarRange, KeyRound,
   ClipboardCheck, AlertTriangle, FileArchive, Receipt, ArrowUpRight, ScrollText,
   UserPlus, UserMinus, Car, GitBranch, ArrowLeft, ChevronDown, Palette, Monitor,
-  Package, Upload,
+  Package, Upload, MapPin, Archive, ArrowLeftRight, BookmarkCheck,
 } from "lucide-react";
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
 import { Badge } from "@/components/ui/badge";
@@ -119,6 +119,7 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
   const toonScabMail = heeftNiveau("scab_mail", 1);
   const toonBoekhouderPortaal = heeftNiveau("boekhouder_portaal", 1);
   const toonWagenpark = heeftNiveau("wagenpark", 1);
+  const toonMagazijn  = heeftNiveau("magazijn", 1);
   const toonLoonOutput = heeftNiveau("salarisarchief", 2);
 
   const heeftOne = isHoofdbeheerder;
@@ -453,6 +454,114 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                               <Link href="/artikelen">
                                 <Package />
                                 <span>Artikelen</span>
+                              </Link>
+                            </SidebarMenuButton>
+                          </SidebarMenuItem>
+                        </SidebarMenu>
+                      </SidebarGroupContent>
+                    </CollapsibleContent>
+                  </SidebarGroup>
+                </Collapsible>
+              )}
+
+              {/* Magazijn */}
+              {toonMagazijn && (
+                <Collapsible defaultOpen className="group/collapsible">
+                  <SidebarGroup>
+                    <SidebarGroupLabel asChild>
+                      <CollapsibleTrigger className="flex w-full items-center">
+                        Magazijn
+                        <ChevronDown className="ml-auto h-4 w-4 transition-transform group-data-[state=open]/collapsible:rotate-180 group-data-[collapsible=icon]:hidden" />
+                      </CollapsibleTrigger>
+                    </SidebarGroupLabel>
+                    <CollapsibleContent>
+                      <SidebarGroupContent>
+                        <SidebarMenu>
+                          <SidebarMenuItem className="pl-5">
+                            <SidebarMenuButton
+                              asChild
+                              isActive={location === "/magazijn"}
+                            >
+                              <Link href="/magazijn">
+                                <LayoutDashboard />
+                                <span>Dashboard</span>
+                              </Link>
+                            </SidebarMenuButton>
+                          </SidebarMenuItem>
+                          <SidebarMenuItem className="pl-5">
+                            <SidebarMenuButton
+                              asChild
+                              isActive={location === "/magazijn/artikelen"}
+                            >
+                              <Link href="/magazijn/artikelen">
+                                <Package />
+                                <span>Artikelen</span>
+                              </Link>
+                            </SidebarMenuButton>
+                          </SidebarMenuItem>
+                          <SidebarMenuItem className="pl-5">
+                            <SidebarMenuButton
+                              asChild
+                              isActive={location === "/magazijn/locaties"}
+                            >
+                              <Link href="/magazijn/locaties">
+                                <MapPin />
+                                <span>Locaties</span>
+                              </Link>
+                            </SidebarMenuButton>
+                          </SidebarMenuItem>
+                          <SidebarMenuItem className="pl-5">
+                            <SidebarMenuButton
+                              asChild
+                              isActive={location === "/magazijn/voorraad"}
+                            >
+                              <Link href="/magazijn/voorraad">
+                                <Archive />
+                                <span>Voorraad</span>
+                              </Link>
+                            </SidebarMenuButton>
+                          </SidebarMenuItem>
+                          <SidebarMenuItem className="pl-5">
+                            <SidebarMenuButton
+                              asChild
+                              isActive={location === "/magazijn/mutaties"}
+                            >
+                              <Link href="/magazijn/mutaties">
+                                <ArrowLeftRight />
+                                <span>Mutaties</span>
+                              </Link>
+                            </SidebarMenuButton>
+                          </SidebarMenuItem>
+                          <SidebarMenuItem className="pl-5">
+                            <SidebarMenuButton
+                              asChild
+                              isActive={location === "/magazijn/reserveringen"}
+                            >
+                              <Link href="/magazijn/reserveringen">
+                                <BookmarkCheck />
+                                <span>Reserveringen</span>
+                              </Link>
+                            </SidebarMenuButton>
+                          </SidebarMenuItem>
+                          <SidebarMenuItem className="pl-5">
+                            <SidebarMenuButton
+                              asChild
+                              isActive={location === "/magazijn/uitgiftes"}
+                            >
+                              <Link href="/magazijn/uitgiftes">
+                                <PackageCheck />
+                                <span>Uitgifte</span>
+                              </Link>
+                            </SidebarMenuButton>
+                          </SidebarMenuItem>
+                          <SidebarMenuItem className="pl-5">
+                            <SidebarMenuButton
+                              asChild
+                              isActive={location === "/magazijn/retouren"}
+                            >
+                              <Link href="/magazijn/retouren">
+                                <ArchiveRestore />
+                                <span>Retouren</span>
                               </Link>
                             </SidebarMenuButton>
                           </SidebarMenuItem>

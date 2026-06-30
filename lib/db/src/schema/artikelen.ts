@@ -12,14 +12,24 @@ export const artikelenTable = pgTable("artikelen", {
   // Eigenschappen
   eenheid: text("eenheid").notNull().default("st"),      // st | m | m2 | m3 | uur | kg | set
   categorie: text("categorie"),
+  merk: text("merk"),
+
+  // Leverancier
+  leverancierId: integer("leverancier_id").references(() => leveranciersTable.id, { onDelete: "set null" }),
+  leveranciersArtikelNr: text("leveranciers_artikel_nr"),
 
   // Prijzen
   inkoopprijs: real("inkoopprijs"),                      // excl. BTW
   verkoopprijs: real("verkoopprijs"),                    // excl. BTW
+  gemiddeldInkoopprijs: real("gemiddeld_inkoopprijs"),   // gewogen gemiddelde
+  laatsteInkoopprijs: real("laatste_inkoopprijs"),       // meest recente inkoop
   btwPercentage: integer("btw_percentage").notNull().default(21),
 
-  // Leverancier
-  leverancierId: integer("leverancier_id").references(() => leveranciersTable.id, { onDelete: "set null" }),
+  // Magazijn
+  minimumVoorraad: real("minimum_voorraad"),
+  gewensteVoorraad: real("gewenste_voorraad"),
+  barcode: text("barcode"),
+  locatieId: integer("locatie_id"),                      // FK magazijn_locaties, no Drizzle ref to avoid circular
 
   // Meta
   notities: text("notities"),

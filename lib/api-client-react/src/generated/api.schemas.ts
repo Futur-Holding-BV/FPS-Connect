@@ -8036,6 +8036,241 @@ export interface ArtikelInput {
   actief?: boolean;
 }
 
+export type MagazijnDashboardKritiekeArtikelenItem = {
+  id?: number;
+  naam?: string;
+  eenheid?: string;
+  hoeveelheid?: number;
+  minimum_voorraad?: number;
+};
+
+export type MagazijnDashboardMeestVerbruiktItem = {
+  artikel_id?: number;
+  naam?: string;
+  eenheid?: string;
+  totaal?: number;
+};
+
+export interface MagazijnDashboard {
+  totaal_waarde: number;
+  artikelen_onder_minimum: number;
+  totaal_gereserveerd: number;
+  totaal_besteld: number;
+  kritieke_artikelen: MagazijnDashboardKritiekeArtikelenItem[];
+  meest_verbruikt: MagazijnDashboardMeestVerbruiktItem[];
+}
+
+export interface MagazijnLocatie {
+  id: number;
+  naam: string;
+  type: string;
+  /** @nullable */
+  parent_id?: number | null;
+  /** @nullable */
+  omschrijving?: string | null;
+  actief: boolean;
+  aangemaakt_op: string;
+  bijgewerkt_op: string;
+}
+
+export interface MagazijnLocatieInput {
+  naam: string;
+  type?: string;
+  /** @nullable */
+  parent_id?: number | null;
+  omschrijving?: string;
+  actief?: boolean;
+}
+
+export interface MagazijnArtikelItem {
+  id: number;
+  /** @nullable */
+  code?: string | null;
+  naam: string;
+  /** @nullable */
+  omschrijving?: string | null;
+  eenheid: string;
+  /** @nullable */
+  categorie?: string | null;
+  /** @nullable */
+  merk?: string | null;
+  /** @nullable */
+  leverancier_id?: number | null;
+  /** @nullable */
+  leverancier_naam?: string | null;
+  /** @nullable */
+  leveranciers_artikel_nr?: string | null;
+  /** @nullable */
+  inkoopprijs?: number | null;
+  /** @nullable */
+  verkoopprijs?: number | null;
+  /** @nullable */
+  gemiddeld_inkoopprijs?: number | null;
+  /** @nullable */
+  laatste_inkoopprijs?: number | null;
+  btw_percentage?: number;
+  /** @nullable */
+  minimum_voorraad?: number | null;
+  /** @nullable */
+  gewenste_voorraad?: number | null;
+  /** @nullable */
+  barcode?: string | null;
+  /** @nullable */
+  locatie_id?: number | null;
+  /** @nullable */
+  notities?: string | null;
+  actief: boolean;
+  bron?: string;
+  aangemaakt_op: string;
+  bijgewerkt_op: string;
+}
+
+export interface MagazijnArtikelInput {
+  /** @nullable */
+  minimum_voorraad?: number | null;
+  /** @nullable */
+  gewenste_voorraad?: number | null;
+  /** @nullable */
+  barcode?: string | null;
+  /** @nullable */
+  locatie_id?: number | null;
+  /** @nullable */
+  merk?: string | null;
+  /** @nullable */
+  leveranciers_artikel_nr?: string | null;
+  /** @nullable */
+  gemiddeld_inkoopprijs?: number | null;
+}
+
+export interface VoorraadRegel {
+  id: number;
+  artikel_id: number;
+  /** @nullable */
+  artikel_naam?: string | null;
+  /** @nullable */
+  locatie_id?: number | null;
+  hoeveelheid: number;
+  gereserveerd: number;
+  besteld: number;
+  vrij: number;
+  bijgewerkt_op: string;
+}
+
+export interface VoorraadTotaal {
+  artikel_id: number;
+  /** @nullable */
+  artikel_naam?: string | null;
+  eenheid?: string;
+  /** @nullable */
+  minimum_voorraad?: number | null;
+  /** @nullable */
+  gewenste_voorraad?: number | null;
+  hoeveelheid: number;
+  gereserveerd: number;
+  besteld: number;
+  vrij: number;
+  onder_minimum: boolean;
+}
+
+export interface VoorraadCorrectieInput {
+  artikel_id: number;
+  /** @nullable */
+  locatie_id?: number | null;
+  delta: number;
+  type?: string;
+  omschrijving?: string;
+}
+
+export interface VoorraadMutatie {
+  id: number;
+  artikel_id: number;
+  /** @nullable */
+  artikel_naam?: string | null;
+  /** @nullable */
+  locatie_id?: number | null;
+  type: string;
+  hoeveelheid: number;
+  delta: number;
+  /** @nullable */
+  referentie_type?: string | null;
+  /** @nullable */
+  referentie_id?: number | null;
+  /** @nullable */
+  gebruiker_id?: number | null;
+  /** @nullable */
+  gebruiker_naam?: string | null;
+  /** @nullable */
+  omschrijving?: string | null;
+  aangemaakt_op: string;
+}
+
+export interface Reservering {
+  id: number;
+  artikel_id: number;
+  /** @nullable */
+  artikel_naam?: string | null;
+  /** @nullable */
+  opdracht_id?: number | null;
+  /** @nullable */
+  opdracht_titel?: string | null;
+  hoeveelheid: number;
+  gereserveerd_op: string;
+  status: string;
+  /** @nullable */
+  omschrijving?: string | null;
+  /** @nullable */
+  aangemaakt_door_id?: number | null;
+  bijgewerkt_op: string;
+}
+
+export interface ReserveringInput {
+  artikel_id: number;
+  /** @nullable */
+  opdracht_id?: number | null;
+  hoeveelheid: number;
+  omschrijving?: string;
+}
+
+export interface UitgifteRegelInput {
+  artikel_id: number;
+  hoeveelheid: number;
+  /** @nullable */
+  locatie_id?: number | null;
+  /** @nullable */
+  reservering_id?: number | null;
+}
+
+export interface UitgifteInput {
+  /** @nullable */
+  opdracht_id?: number | null;
+  omschrijving?: string;
+  regels: UitgifteRegelInput[];
+}
+
+export type RetourRegelInputConditie = typeof RetourRegelInputConditie[keyof typeof RetourRegelInputConditie];
+
+
+export const RetourRegelInputConditie = {
+  goed: 'goed',
+  defect: 'defect',
+  afval: 'afval',
+} as const;
+
+export interface RetourRegelInput {
+  artikel_id: number;
+  hoeveelheid: number;
+  /** @nullable */
+  locatie_id?: number | null;
+  conditie: RetourRegelInputConditie;
+}
+
+export interface RetourInput {
+  /** @nullable */
+  opdracht_id?: number | null;
+  omschrijving?: string;
+  regels: RetourRegelInput[];
+}
+
 export type ImportUploadBestandType = typeof ImportUploadBestandType[keyof typeof ImportUploadBestandType];
 
 
@@ -8881,5 +9116,22 @@ zoek?: string;
 leverancier_id?: number;
 categorie?: string;
 actief?: boolean;
+};
+
+export type ListVoorraadParams = {
+artikel_id?: number;
+locatie_id?: number;
+};
+
+export type ListVoorraadMutatiesParams = {
+artikel_id?: number;
+type?: string;
+limit?: number;
+};
+
+export type ListReserveringenParams = {
+artikel_id?: number;
+opdracht_id?: number;
+status?: string;
 };
 

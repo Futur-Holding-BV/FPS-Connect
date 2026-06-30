@@ -89,6 +89,15 @@ import GereedschapDetailPagina from "@/pages/gereedschappen/detail";
 import WagenparkPagina from "@/pages/wagenpark/index";
 import WagenparkDetailPagina from "@/pages/wagenpark/detail";
 import WagenparkBrandstofImportPagina from "@/pages/wagenpark/brandstof-import";
+import MagazijnDashboardPagina from "@/pages/magazijn/dashboard";
+import MagazijnArtikelenPagina from "@/pages/magazijn/artikelen";
+import MagazijnArtikelDetailPagina from "@/pages/magazijn/artikel-detail";
+import MagazijnLocatiesPagina from "@/pages/magazijn/locaties";
+import MagazijnVoorraadPagina from "@/pages/magazijn/voorraad";
+import MagazijnMutatiesPagina from "@/pages/magazijn/mutaties";
+import MagazijnReserveringenPagina from "@/pages/magazijn/reserveringen";
+import MagazijnUitgiftesPagina from "@/pages/magazijn/uitgiftes";
+import MagazijnRetourenPagina from "@/pages/magazijn/retouren";
 import HallOfFamePagina from "@/pages/hall-of-fame";
 import AutoparkPagina from "@/pages/organisatie/autopark";
 import VerzekeringenPagina from "@/pages/organisatie/verzekeringen";
@@ -333,6 +342,17 @@ function ConnectPortal() {
         <Route path="/wagenpark" component={WagenparkPagina} />
         <Route path="/wagenpark/brandstof-import" component={WagenparkBrandstofImportPagina} />
         <Route path="/wagenpark/:id" component={WagenparkDetailPagina} />
+
+        {/* ── Magazijn ── */}
+        <Route path="/magazijn" component={MagazijnDashboardPagina} />
+        <Route path="/magazijn/artikelen" component={MagazijnArtikelenPagina} />
+        <Route path="/magazijn/artikelen/:id" component={MagazijnArtikelDetailPagina} />
+        <Route path="/magazijn/locaties" component={MagazijnLocatiesPagina} />
+        <Route path="/magazijn/voorraad" component={MagazijnVoorraadPagina} />
+        <Route path="/magazijn/mutaties" component={MagazijnMutatiesPagina} />
+        <Route path="/magazijn/reserveringen" component={MagazijnReserveringenPagina} />
+        <Route path="/magazijn/uitgiftes" component={MagazijnUitgiftesPagina} />
+        <Route path="/magazijn/retouren" component={MagazijnRetourenPagina} />
 
         {/* ── Financieel extra ── */}
         <Route path="/financieel/crediteuren" component={CredieurenInboxPagina} />
