@@ -81,6 +81,7 @@ import {
   Plus,
   Receipt,
   ExternalLink,
+  LayoutDashboard,
 } from "lucide-react";
 import { useAuth } from "@/context/auth-context";
 import { useRol } from "@/context/rol-context";
@@ -99,6 +100,7 @@ import GebouwPlattegrondHero from "./gebouw-plattegrond-hero";
 import GebouwActiviteit from "./gebouw-activiteit";
 import GebouwStappenplan from "./gebouw-stappenplan";
 import GebouwRapporten from "./gebouw-rapporten";
+import { GebouwDashboard } from "./gebouw-dashboard";
 
 const BEHEERDER_ROLLEN = ["beheerder", "hoofdbeheerder"];
 const TEAM_UITGESLOTEN_ROLLEN = ["hoofdbeheerder", "klant"];
@@ -387,7 +389,7 @@ export default function GebouwDetail() {
   const [bezig, setBezig] = useState(false);
   const [bewerkenOpen, setBewerkenOpen] = useState(false);
   const search = useSearch();
-  const [segment, setSegment] = useState(() => new URLSearchParams(search).get("tab") ?? "project");
+  const [segment, setSegment] = useState(() => new URLSearchParams(search).get("tab") ?? "dashboard");
   const [gereedBezig, setGereedBezig] = useState(false);
   const [herstelBezig, setHerstelBezig] = useState(false);
   const [archiveerBezig, setArchiveerBezig] = useState(false);
@@ -697,7 +699,12 @@ export default function GebouwDetail() {
           ════════════════════════════════════════════════════ */}
       <Tabs value={segment} onValueChange={setSegment} className="w-full">
         <div className="flex items-start justify-between gap-4">
-          <TabsList className="grid w-full max-w-5xl min-w-0 grid-cols-8">
+          <TabsList className="grid w-full max-w-5xl min-w-0 grid-cols-9">
+            <TabsTrigger value="dashboard" className="gap-1.5">
+              <LayoutDashboard className="h-4 w-4 shrink-0" />
+              <span className="hidden sm:inline">Dashboard</span>
+              <span className="sm:hidden">Dash.</span>
+            </TabsTrigger>
             <TabsTrigger value="project" className="gap-1.5">
               <Building2 className="h-4 w-4 shrink-0" />
               <span className="hidden sm:inline">Gebouw</span>
@@ -817,6 +824,21 @@ export default function GebouwDetail() {
             )}
           </div>
         </div>
+
+      <TabsContent value="dashboard" className="mt-6">
+        <GebouwDashboard
+          gebouw={gebouw}
+          toewijzingen={toewijzingen ?? []}
+          gebouwCalcs={gebouwCalcs}
+          gebouwOffertes={gebouwOffertes}
+          gebouwOpnames={gebouwOpnames}
+          gebouwFacturen={gebouwFacturen}
+          openActiepunten={actiepunten}
+          onNavigeer={setSegment}
+          isBeheerder={isBeheerder}
+          heeftFinancieelInzicht={isBeheerder}
+        />
+      </TabsContent>
 
       <TabsContent value="project" className="space-y-4 mt-6">
         <SegmentKop
