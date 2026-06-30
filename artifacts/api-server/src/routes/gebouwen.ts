@@ -11,8 +11,9 @@ import {
   documentenTable,
   documentKoppelingenTable,
   werkgeversTable,
+  facturenTable,
 } from "@workspace/db";
-import { eq, inArray, count, and, sql, max, ne } from "drizzle-orm";
+import { eq, inArray, count, and, sql, max, ne, desc } from "drizzle-orm";
 import { requireBevoegdheid, requireBevoegdheidOfKlant } from "../middlewares/auth";
 import { effectieveContext } from "../utils/rol";
 import { logActiviteit } from "../lib/activiteit";
@@ -969,6 +970,61 @@ router.get("/gebouwen/:id/toewijzingen", lezenGebouwen, async (req, res) => {
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// GET /gebouwen/:id/facturen — inkomende facturen gekoppeld aan dit gebouw (lezenGebouwen)
+router.get("/gebouwen/:id/facturen", lezenGebouwen, async (req, res) => {
+  const gebouwId = parseInt(String(req.params.id), 10);
+  if (isNaN(gebouwId)) { res.status(400).json({ error: "Ongeldig id" }); return; }
+  if (!(await magBijGebouw(req, gebouwId))) { res.status(403).json({ error: "Geen toegang" }); return; }
+
+  try {
+    const facturen = await db.select().from(facturenTable)
+      .where(and(
+        eq(facturenTable.gebouwId, gebouwId),
+        eq(facturenTable.type, "inkoop"),
+      ))
+      .orderBy(desc(facturenTable.aangemaaktOp));
+
+    res.json(facturen.map((f) => ({
+      id: f.id,
+      type: f.type,
+      factuurnummer: f.factuurnummer ?? null,
+      factuurdatum: f.factuurdatum ?? null,
+      vervaldatum: f.vervaldatum ?? null,
+      omschrijving: f.omschrijving ?? null,
+      relatienaam: f.relatienaam ?? null,
+      relatie_code: f.relatieCode ?? null,
+      relatie_adres: f.relatieAdres ?? null,
+      bedrag_excl_btw: f.bedragExclBtw ?? null,
+      btw_bedrag: f.btwBedrag ?? null,
+      bedrag_incl_btw: f.bedragInclBtw ?? null,
+      btw_code: f.btwCode ?? null,
+      grootboekrekening: f.grootboekrekening ?? null,
+      kostenplaats: f.kostenplaats ?? null,
+      dagboek: f.dagboek ?? null,
+      project_code: f.projectCode ?? null,
+      status: f.status,
+      geblokkeerd: f.geblokkeerd,
+      gebouw_id: f.gebouwId ?? null,
+      gebouw_naam: null as string | null,
+      bestandsnaam: f.bestandsnaam ?? null,
+      pdf_url: f.pdfUrl ?? null,
+      ai_gelezen: f.aiGelezen,
+      ai_vertrouwen: f.aiVertrouwen ?? null,
+      opmerkingen: f.opmerkingen ?? null,
+      aangemaakt_op: f.aangemaaktOp.toISOString(),
+      bijgewerkt_op: f.bijgewerktOp.toISOString(),
+      accordering_status: f.accorderingStatus ?? null,
+      accordering_door_id: f.accorderingDoorId ?? null,
+      accordering_op: f.accorderingOp?.toISOString() ?? null,
+      betaalstatus: f.betaalstatus ?? null,
+      betaald_op: f.betaaldOp?.toISOString() ?? null,
+    })));
+  } catch (err) {
+    req.log.error({ err }, "listGebouwFacturen fout");
+    res.status(500).json({ error: "Serverfout" });
   }
 });
 

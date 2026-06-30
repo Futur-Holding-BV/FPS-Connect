@@ -682,6 +682,29 @@ paths:
         "403":
           description: Geen toegang
 
+  /gebouwen/{id}/facturen:
+    get:
+      operationId: listGebouwFacturen
+      tags: [gebouwen]
+      summary: Inkomende facturen gekoppeld aan een gebouw (lees-toegang voor iedereen met gebouwbevoegdheid)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Factuur"
+        "403":
+          description: Geen toegang
+
   /gebouwen/{id}/toewijzingen/{gebruikerId}:
     delete:
       operationId: deleteGebouwToewijzing

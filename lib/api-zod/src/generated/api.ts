@@ -757,6 +757,63 @@ export const GetGebouwSpotsInzichtResponse = zod.object({
 
 
 /**
+ * @summary Inkomende facturen gekoppeld aan een gebouw (lees-toegang voor iedereen met gebouwbevoegdheid)
+ */
+export const ListGebouwFacturenParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ListGebouwFacturenResponseItem = zod.object({
+  "id": zod.number(),
+  "type": zod.string(),
+  "factuurnummer": zod.string().nullish(),
+  "factuurdatum": zod.string().nullish(),
+  "vervaldatum": zod.string().nullish(),
+  "omschrijving": zod.string().nullish(),
+  "relatienaam": zod.string().nullish(),
+  "relatie_code": zod.string().nullish(),
+  "relatie_adres": zod.string().nullish(),
+  "bedrag_excl_btw": zod.string().nullish(),
+  "btw_bedrag": zod.string().nullish(),
+  "bedrag_incl_btw": zod.string().nullish(),
+  "btw_code": zod.string().nullish(),
+  "grootboekrekening": zod.string().nullish(),
+  "kostenplaats": zod.string().nullish(),
+  "dagboek": zod.string().nullish(),
+  "project_code": zod.string().nullish(),
+  "pdf_url": zod.string().nullish(),
+  "bestandsnaam": zod.string().nullish(),
+  "gebouw_id": zod.number().nullish(),
+  "gebouw_naam": zod.string().nullish(),
+  "ai_metadata": zod.record(zod.string(), zod.unknown()).nullish(),
+  "status": zod.string(),
+  "geblokkeerd": zod.boolean(),
+  "blokkering_reden": zod.string().nullish(),
+  "geaccordeerd": zod.boolean(),
+  "geaccordeerd_op": zod.string().nullish(),
+  "geaccordeerd_door_naam": zod.string().nullish(),
+  "accountview_boeking_id": zod.string().nullish(),
+  "accountview_export_op": zod.string().nullish(),
+  "accountview_status": zod.string().nullish(),
+  "accountview_fout": zod.string().nullish(),
+  "payload_hash": zod.string().nullish(),
+  "betaalstatus": zod.string().nullish(),
+  "betaaldatum": zod.string().nullish(),
+  "boekingsnummer": zod.string().nullish(),
+  "terugkoppeling_op": zod.string().nullish(),
+  "afgekeurd": zod.boolean().optional(),
+  "afkeuring_reden": zod.string().nullish(),
+  "afgekeurd_op": zod.string().nullish(),
+  "afgekeurd_door_naam": zod.string().nullish(),
+  "herexport_op": zod.string().nullish(),
+  "herexport_reden": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string().optional()
+})
+export const ListGebouwFacturenResponse = zod.array(ListGebouwFacturenResponseItem)
+
+
+/**
  * @summary Toewijzing verwijderen (alleen beheerder)
  */
 export const DeleteGebouwToewijzingParams = zod.object({

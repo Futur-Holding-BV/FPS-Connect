@@ -2688,6 +2688,83 @@ export function useGetGebouwSpotsInzicht<TData = Awaited<ReturnType<typeof getGe
 
 
 
+export const getListGebouwFacturenUrl = (id: number,) => {
+
+
+
+
+  return `/api/gebouwen/${id}/facturen`
+}
+
+/**
+ * @summary Inkomende facturen gekoppeld aan een gebouw (lees-toegang voor iedereen met gebouwbevoegdheid)
+ */
+export const listGebouwFacturen = async (id: number, options?: RequestInit): Promise<Factuur[]> => {
+
+  return customFetch<Factuur[]>(getListGebouwFacturenUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListGebouwFacturenQueryKey = (id: number,) => {
+    return [
+    `/api/gebouwen/${id}/facturen`
+    ] as const;
+    }
+
+
+export const getListGebouwFacturenQueryOptions = <TData = Awaited<ReturnType<typeof listGebouwFacturen>>, TError = ErrorType<void>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listGebouwFacturen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListGebouwFacturenQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listGebouwFacturen>>> = ({ signal }) => listGebouwFacturen(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listGebouwFacturen>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListGebouwFacturenQueryResult = NonNullable<Awaited<ReturnType<typeof listGebouwFacturen>>>
+export type ListGebouwFacturenQueryError = ErrorType<void>
+
+
+/**
+ * @summary Inkomende facturen gekoppeld aan een gebouw (lees-toegang voor iedereen met gebouwbevoegdheid)
+ */
+
+export function useListGebouwFacturen<TData = Awaited<ReturnType<typeof listGebouwFacturen>>, TError = ErrorType<void>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listGebouwFacturen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListGebouwFacturenQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
 export const getDeleteGebouwToewijzingUrl = (id: number,
     gebruikerId: number,) => {
 

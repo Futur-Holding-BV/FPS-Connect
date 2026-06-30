@@ -16,6 +16,7 @@ import {
   useListModCalculaties,
   useListOffertes,
   useListOpnames,
+  useListGebouwFacturen,
   type Document,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -78,6 +79,8 @@ import {
   Calculator,
   Euro,
   Plus,
+  Receipt,
+  ExternalLink,
 } from "lucide-react";
 import { useAuth } from "@/context/auth-context";
 import { useRol } from "@/context/rol-context";
@@ -373,6 +376,9 @@ export default function GebouwDetail() {
     { gebouw_id: gebouwId },
     { query: { queryKey: ["opnames", gebouwId] } },
   );
+  const { data: gebouwFacturen = [] } = useListGebouwFacturen(gebouwId ?? 0, {
+    query: { enabled: !!gebouwId, queryKey: ["gebouw-facturen", gebouwId] },
+  });
   const afgeleidStatus = bepaalAfgeleidStatus(gebouwCalcs, gebouwOffertes);
 
   const [gekozenGebruikerId, setGekozenGebruikerId] = useState<string>("");
@@ -689,7 +695,7 @@ export default function GebouwDetail() {
           ════════════════════════════════════════════════════ */}
       <Tabs value={segment} onValueChange={setSegment} className="w-full">
         <div className="flex items-start justify-between gap-4">
-          <TabsList className="grid w-full max-w-4xl min-w-0 grid-cols-7">
+          <TabsList className="grid w-full max-w-5xl min-w-0 grid-cols-8">
             <TabsTrigger value="project" className="gap-1.5">
               <Building2 className="h-4 w-4 shrink-0" />
               <span className="hidden sm:inline">Gebouw</span>
@@ -718,6 +724,10 @@ export default function GebouwDetail() {
             <TabsTrigger value="opnames" className="gap-1.5">
               <ListChecks className="h-4 w-4 shrink-0" />
               <span className="hidden sm:inline">Opnames</span>
+            </TabsTrigger>
+            <TabsTrigger value="facturen" className="gap-1.5">
+              <Receipt className="h-4 w-4 shrink-0" />
+              <span className="hidden sm:inline">Facturen</span>
             </TabsTrigger>
           </TabsList>
 
@@ -1387,8 +1397,101 @@ export default function GebouwDetail() {
           </CardContent>
         </Card>
       </TabsContent>
+
+      <TabsContent value="facturen" className="space-y-6 mt-6">
+        <GebouwFacturenTab
+          gebouwId={gebouwId ?? 0}
+          facturen={gebouwFacturen}
+          magBeheren={heeftNiveau("financieel", 2)}
+        />
+      </TabsContent>
       </Tabs>
 
     </div>
+  );
+}
+
+function GebouwFacturenTab({
+  gebouwId,
+  facturen,
+  magBeheren,
+}: {
+  gebouwId: number;
+  facturen: import("@workspace/api-client-react").Factuur[];
+  magBeheren: boolean;
+}) {
+  const STATUSSEN: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
+    nieuw: { label: "Nieuw", variant: "secondary" },
+    in_behandeling: { label: "In behandeling", variant: "secondary" },
+    geaccordeerd: { label: "Geaccordeerd", variant: "default" },
+    afgewezen: { label: "Afgewezen", variant: "destructive" },
+    geexporteerd: { label: "Geexporteerd", variant: "outline" },
+    geblokkeerd: { label: "Geblokkeerd", variant: "destructive" },
+  };
+
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Receipt className="h-4 w-4" />
+            Inkomende facturen
+            {facturen.length > 0 && (
+              <Badge variant="secondary" className="ml-1">{facturen.length}</Badge>
+            )}
+          </CardTitle>
+          {magBeheren && (
+            <Button size="sm" variant="outline" asChild>
+              <a href={`/financieel/facturen?gebouw_id=${gebouwId}`}>
+                <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
+                Beheren
+              </a>
+            </Button>
+          )}
+        </div>
+      </CardHeader>
+      <CardContent className="p-0">
+        {facturen.length === 0 ? (
+          <div className="py-10 text-center text-muted-foreground text-sm">
+            <Receipt className="h-8 w-8 mx-auto mb-2 opacity-20" />
+            <p>Geen inkomende facturen gekoppeld aan dit gebouw</p>
+          </div>
+        ) : (
+          <div className="divide-y text-sm">
+            <div className="grid grid-cols-[1fr_1fr_auto_auto] gap-3 px-6 py-2 text-xs text-muted-foreground font-medium bg-muted/40">
+              <span>Factuurnummer / Leverancier</span>
+              <span>Factuurdatum / Vervaldatum</span>
+              <span className="text-right">Bedrag incl. btw</span>
+              <span>Status</span>
+            </div>
+            {facturen.map((f) => {
+              const st = STATUSSEN[f.status] ?? { label: f.status, variant: "secondary" as const };
+              return (
+                <div key={f.id} className="grid grid-cols-[1fr_1fr_auto_auto] gap-3 px-6 py-3 items-center hover:bg-muted/30 transition-colors">
+                  <div className="min-w-0">
+                    <p className="font-medium truncate">{f.factuurnummer ?? <span className="text-muted-foreground italic">Geen nummer</span>}</p>
+                    <p className="text-xs text-muted-foreground truncate">{f.relatienaam ?? "—"}</p>
+                  </div>
+                  <div>
+                    <p>{f.factuurdatum ? new Date(f.factuurdatum).toLocaleDateString("nl-NL", { day: "numeric", month: "short", year: "numeric" }) : "—"}</p>
+                    {f.vervaldatum && (
+                      <p className="text-xs text-muted-foreground">
+                        Vervalt {new Date(f.vervaldatum).toLocaleDateString("nl-NL", { day: "numeric", month: "short", year: "numeric" })}
+                      </p>
+                    )}
+                  </div>
+                  <span className="text-right tabular-nums font-medium">
+                    {f.bedrag_incl_btw != null
+                      ? new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR" }).format(Number(f.bedrag_incl_btw))
+                      : "—"}
+                  </span>
+                  <Badge variant={st.variant} className="text-xs">{st.label}</Badge>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }
