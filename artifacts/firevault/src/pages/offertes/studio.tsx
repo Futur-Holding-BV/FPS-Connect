@@ -869,15 +869,18 @@ export default function ProposalStudio() {
               <TabsContent value="bijlagen">
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
-                    <h2 className="font-semibold">Bijlagen en verwijzingen</h2>
+                    <div>
+                      <h2 className="font-semibold">Verwijzingen</h2>
+                      <p className="text-xs text-muted-foreground mt-0.5">Certificaten, referenties en documenten die als bijlagelijst in de offerte worden opgenomen.</p>
+                    </div>
                     <Button size="sm" onClick={() => setBijlageDialoogOpen(true)}>
-                      <Plus className="h-3.5 w-3.5" /> Bijlage toevoegen
+                      <Plus className="h-3.5 w-3.5" /> Verwijzing toevoegen
                     </Button>
                   </div>
                   {(bijlagen ?? []).length === 0 ? (
                     <Card>
                       <CardContent className="py-10 text-center text-muted-foreground">
-                        Nog geen bijlagen toegevoegd.
+                        Nog geen verwijzingen toegevoegd. Voeg bijvoorbeeld uw VCA-certificaat, een referentieproject of algemene voorwaarden toe.
                       </CardContent>
                     </Card>
                   ) : (
@@ -1060,15 +1063,22 @@ export default function ProposalStudio() {
 
       <Dialog open={bijlageDialoogOpen} onOpenChange={setBijlageDialoogOpen}>
         <DialogContent>
-          <DialogHeader><DialogTitle>Bijlage toevoegen</DialogTitle></DialogHeader>
+          <DialogHeader>
+            <DialogTitle>Verwijzing toevoegen</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground -mt-1">
+            Voeg een verwijzing toe die in de offerte wordt opgenomen — bijvoorbeeld een certificaat, referentieproject of technisch document. De naam en eventuele link worden afgedrukt als bijlagelijst aan het einde van de offerte.
+          </p>
           <div className="space-y-3">
             <div className="space-y-1.5">
               <Label>Naam *</Label>
               <Input
                 value={bijlageForm.naam}
                 onChange={(e) => setBijlageForm((f) => ({ ...f, naam: e.target.value }))}
-                placeholder="Bijv. Referentielijst 2025"
+                placeholder="Bijv. VCA-certificaat FPS, Referentieproject Gemeente Utrecht"
+                autoFocus
               />
+              <p className="text-xs text-muted-foreground">De naam zoals die in de offerte verschijnt.</p>
             </div>
             <div className="space-y-1.5">
               <Label>Type</Label>
@@ -1085,19 +1095,21 @@ export default function ProposalStudio() {
               </Select>
             </div>
             <div className="space-y-1.5">
-              <Label>Beschrijving</Label>
+              <Label>Toelichting <span className="text-muted-foreground font-normal">(optioneel)</span></Label>
               <Input
                 value={bijlageForm.beschrijving}
                 onChange={(e) => setBijlageForm((f) => ({ ...f, beschrijving: e.target.value }))}
+                placeholder="Bijv. Geldig t/m december 2026, beschikbaar op aanvraag"
               />
             </div>
             <div className="space-y-1.5">
-              <Label>URL (optioneel)</Label>
+              <Label>Link naar document <span className="text-muted-foreground font-normal">(optioneel)</span></Label>
               <Input
                 value={bijlageForm.url}
                 onChange={(e) => setBijlageForm((f) => ({ ...f, url: e.target.value }))}
                 placeholder="https://..."
               />
+              <p className="text-xs text-muted-foreground">Vul een weblink in als het document online staat. Laat leeg als u het document apart meestuurt of op aanvraag beschikbaar stelt.</p>
             </div>
           </div>
           <DialogFooter>
