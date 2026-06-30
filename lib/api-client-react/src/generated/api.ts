@@ -524,6 +524,8 @@ import type {
   SpotsInzicht,
   StatusUpdate,
   StatusVerdeling,
+  StudioBijstuurInput,
+  StudioGenereerInput,
   TaalWijzigen,
   Tekening,
   TekeningAiAnalyseInput,
@@ -57781,6 +57783,218 @@ export const useUploadDocumentStudioReferentie = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getUploadDocumentStudioReferentieMutationOptions(options));
+    }
+
+export const getGenereerStudioTemplateUrl = (id: number,) => {
+
+
+
+
+  return `/api/studio/modellen/${id}/genereer`
+}
+
+/**
+ * @summary AI genereert een Connect-template op basis van het referentiebestand en werkgever-branding
+ */
+export const genereerStudioTemplate = async (id: number,
+    studioGenereerInput: StudioGenereerInput, options?: RequestInit): Promise<DocumentStudioModel> => {
+
+  return customFetch<DocumentStudioModel>(getGenereerStudioTemplateUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(studioGenereerInput)
+  }
+);}
+
+
+
+
+export const getGenereerStudioTemplateMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof genereerStudioTemplate>>, TError,{id: number;data: BodyType<StudioGenereerInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof genereerStudioTemplate>>, TError,{id: number;data: BodyType<StudioGenereerInput>}, TContext> => {
+
+const mutationKey = ['genereerStudioTemplate'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof genereerStudioTemplate>>, {id: number;data: BodyType<StudioGenereerInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  genereerStudioTemplate(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type GenereerStudioTemplateMutationResult = NonNullable<Awaited<ReturnType<typeof genereerStudioTemplate>>>
+    export type GenereerStudioTemplateMutationBody = BodyType<StudioGenereerInput>
+    export type GenereerStudioTemplateMutationError = ErrorType<void>
+
+    /**
+ * @summary AI genereert een Connect-template op basis van het referentiebestand en werkgever-branding
+ */
+export const useGenereerStudioTemplate = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof genereerStudioTemplate>>, TError,{id: number;data: BodyType<StudioGenereerInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof genereerStudioTemplate>>,
+        TError,
+        {id: number;data: BodyType<StudioGenereerInput>},
+        TContext
+      > => {
+      return useMutation(getGenereerStudioTemplateMutationOptions(options));
+    }
+
+export const getBijstuurStudioTemplateUrl = (id: number,) => {
+
+
+
+
+  return `/api/studio/modellen/${id}/bijstuur`
+}
+
+/**
+ * @summary Verfijn het concept-template met een bijstuur-instructie
+ */
+export const bijstuurStudioTemplate = async (id: number,
+    studioBijstuurInput: StudioBijstuurInput, options?: RequestInit): Promise<DocumentStudioModel> => {
+
+  return customFetch<DocumentStudioModel>(getBijstuurStudioTemplateUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(studioBijstuurInput)
+  }
+);}
+
+
+
+
+export const getBijstuurStudioTemplateMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof bijstuurStudioTemplate>>, TError,{id: number;data: BodyType<StudioBijstuurInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof bijstuurStudioTemplate>>, TError,{id: number;data: BodyType<StudioBijstuurInput>}, TContext> => {
+
+const mutationKey = ['bijstuurStudioTemplate'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof bijstuurStudioTemplate>>, {id: number;data: BodyType<StudioBijstuurInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  bijstuurStudioTemplate(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type BijstuurStudioTemplateMutationResult = NonNullable<Awaited<ReturnType<typeof bijstuurStudioTemplate>>>
+    export type BijstuurStudioTemplateMutationBody = BodyType<StudioBijstuurInput>
+    export type BijstuurStudioTemplateMutationError = ErrorType<void>
+
+    /**
+ * @summary Verfijn het concept-template met een bijstuur-instructie
+ */
+export const useBijstuurStudioTemplate = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof bijstuurStudioTemplate>>, TError,{id: number;data: BodyType<StudioBijstuurInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof bijstuurStudioTemplate>>,
+        TError,
+        {id: number;data: BodyType<StudioBijstuurInput>},
+        TContext
+      > => {
+      return useMutation(getBijstuurStudioTemplateMutationOptions(options));
+    }
+
+export const getGoedkeurenStudioTemplateUrl = (id: number,) => {
+
+
+
+
+  return `/api/studio/modellen/${id}/goedkeuren`
+}
+
+/**
+ * @summary Goedkeuren als Model 0 — zet status op goedgekeurd en registreert goedkeurder
+ */
+export const goedkeurenStudioTemplate = async (id: number, options?: RequestInit): Promise<DocumentStudioModel> => {
+
+  return customFetch<DocumentStudioModel>(getGoedkeurenStudioTemplateUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getGoedkeurenStudioTemplateMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof goedkeurenStudioTemplate>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof goedkeurenStudioTemplate>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['goedkeurenStudioTemplate'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof goedkeurenStudioTemplate>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  goedkeurenStudioTemplate(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type GoedkeurenStudioTemplateMutationResult = NonNullable<Awaited<ReturnType<typeof goedkeurenStudioTemplate>>>
+
+    export type GoedkeurenStudioTemplateMutationError = ErrorType<void>
+
+    /**
+ * @summary Goedkeuren als Model 0 — zet status op goedgekeurd en registreert goedkeurder
+ */
+export const useGoedkeurenStudioTemplate = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof goedkeurenStudioTemplate>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof goedkeurenStudioTemplate>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getGoedkeurenStudioTemplateMutationOptions(options));
     }
 
 export const getListStudioWerkgeversUrl = () => {

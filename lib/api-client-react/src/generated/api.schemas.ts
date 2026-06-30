@@ -8717,6 +8717,72 @@ export interface DocumentStudioWerkgever {
   voettekst?: string | null;
 }
 
+export interface StudioGenereerInput {
+  /** @nullable */
+  instructie?: string | null;
+}
+
+export interface StudioBijstuurInput {
+  instructie: string;
+}
+
+export type StudioTemplateJsonFamilie = typeof StudioTemplateJsonFamilie[keyof typeof StudioTemplateJsonFamilie];
+
+
+export const StudioTemplateJsonFamilie = {
+  A: 'A',
+  B: 'B',
+  C: 'C',
+} as const;
+
+export type StudioTemplateJsonKoptekstLogoPositie = typeof StudioTemplateJsonKoptekstLogoPositie[keyof typeof StudioTemplateJsonKoptekstLogoPositie];
+
+
+export const StudioTemplateJsonKoptekstLogoPositie = {
+  links: 'links',
+  rechts: 'rechts',
+  midden: 'midden',
+} as const;
+
+export type StudioTemplateJsonKoptekst = {
+  logo_positie: StudioTemplateJsonKoptekstLogoPositie;
+  titel: string;
+  /** @nullable */
+  subinfo?: string | null;
+};
+
+export type StudioTemplateJsonKleurschema = {
+  primair: string;
+  secundair: string;
+  tekst: string;
+};
+
+export type StudioTemplateJsonSectiesItemType = typeof StudioTemplateJsonSectiesItemType[keyof typeof StudioTemplateJsonSectiesItemType];
+
+
+export const StudioTemplateJsonSectiesItemType = {
+  tekst: 'tekst',
+  tabel: 'tabel',
+  ondertekening: 'ondertekening',
+  checklist: 'checklist',
+} as const;
+
+export type StudioTemplateJsonSectiesItem = {
+  type: StudioTemplateJsonSectiesItemType;
+  /** @nullable */
+  titel?: string | null;
+  inhoud: string;
+};
+
+export interface StudioTemplateJson {
+  familie: StudioTemplateJsonFamilie;
+  koptekst: StudioTemplateJsonKoptekst;
+  kleurschema: StudioTemplateJsonKleurschema;
+  secties: StudioTemplateJsonSectiesItem[];
+  /** @nullable */
+  voettekst?: string | null;
+}
+
 export type GetRecenteActiviteitParams = {
 limit?: number;
 };

@@ -4,6 +4,9 @@ import {
   useListDocumentStudioModellen,
   useUpsertDocumentStudioModel,
   useUploadDocumentStudioReferentie,
+  useGenereerStudioTemplate,
+  useBijstuurStudioTemplate,
+  useGoedkeurenStudioTemplate,
   getListDocumentStudioModellenQueryKey,
 } from "@workspace/api-client-react";
 import type { DocumentStudioModel } from "@workspace/api-client-react";
@@ -11,7 +14,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
@@ -30,8 +34,14 @@ import {
   AlertCircle,
   ImageIcon,
   Building2,
+  Sparkles,
+  RefreshCw,
+  ThumbsUp,
+  ChevronRight,
+  History,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import StudioTemplatePreview from "@/components/documentopmaak/StudioTemplatePreview";
 
 const DOCUMENT_TYPEN: {
   type: string;
@@ -66,6 +76,8 @@ export default function DocumentStudioPagina() {
   const queryClient = useQueryClient();
 
   const [geselecteerdeWerkgeverId, setGeselecteerdeWerkgeverId] = useState<number | null>(null);
+
+  // Upload dialoog
   const [uploadDialoogOpen, setUploadDialoogOpen] = useState(false);
   const [uploadType, setUploadType] = useState<string | null>(null);
   const [uploadModelId, setUploadModelId] = useState<number | null>(null);
@@ -73,24 +85,39 @@ export default function DocumentStudioPagina() {
   const [uploadBezig, setUploadBezig] = useState(false);
   const bestandInputRef = useRef<HTMLInputElement>(null);
 
+  // AI genereer dialoog
+  const [aiDialoogOpen, setAiDialoogOpen] = useState(false);
+  const [aiModelId, setAiModelId] = useState<number | null>(null);
+  const [aiInstructie, setAiInstructie] = useState("");
+  const [aiIteraties, setAiIteraties] = useState<string[]>([]);
+  const [goedkeurBevestigOpen, setGoedkeurBevestigOpen] = useState(false);
+
   const werkgeverId = geselecteerdeWerkgeverId ?? (werkgevers[0]?.id ?? null);
 
   const { data: modellen = [], isLoading: laadtModellen } = useListDocumentStudioModellen(
     werkgeverId ? { werkgever_id: werkgeverId } : undefined,
   );
 
-  const upsert  = useUpsertDocumentStudioModel();
-  const upload  = useUploadDocumentStudioReferentie();
+  const upsert   = useUpsertDocumentStudioModel();
+  const upload   = useUploadDocumentStudioReferentie();
+  const genereer = useGenereerStudioTemplate();
+  const bijstuur = useBijstuurStudioTemplate();
+  const goedkeur = useGoedkeurenStudioTemplate();
+
+  const geselecteerdeWerkgever = werkgevers.find((w) => w.id === werkgeverId);
+  const aiModel = aiModelId ? modellen.find((m) => m.id === aiModelId) : null;
 
   function modelVoorType(type: string): DocumentStudioModel | undefined {
     return modellen.find((m) => m.document_type === type);
   }
 
-  const invalideer = () => {
+  const invalideer = useCallback(() => {
     void queryClient.invalidateQueries({
       queryKey: getListDocumentStudioModellenQueryKey({ werkgever_id: werkgeverId ?? undefined }),
     });
-  };
+  }, [queryClient, werkgeverId]);
+
+  // ── Upload ────────────────────────────────────────────────────────────────
 
   const openUploadDialoog = async (type: string) => {
     if (!werkgeverId) return;
@@ -111,7 +138,7 @@ export default function DocumentStudioPagina() {
     setUploadDialoogOpen(true);
   };
 
-  const sluitDialoog = () => {
+  const sluitUploadDialoog = () => {
     setUploadDialoogOpen(false);
     setUploadType(null);
     setUploadModelId(null);
@@ -132,7 +159,7 @@ export default function DocumentStudioPagina() {
       await upload.mutateAsync({ id: uploadModelId, data: { bestand } });
       invalideer();
       toast({ title: "Referentie ge-upload", description: "Het referentiedocument is opgeslagen." });
-      sluitDialoog();
+      sluitUploadDialoog();
     } catch {
       toast({ title: "Upload mislukt", description: "Probeer het opnieuw.", variant: "destructive" });
     } finally {
@@ -147,8 +174,76 @@ export default function DocumentStudioPagina() {
     if (bestand) void verwerkBestand(bestand);
   }, [verwerkBestand]);
 
-  const geselecteerdeWerkgever = werkgevers.find((w) => w.id === werkgeverId);
+  // ── AI Genereer ───────────────────────────────────────────────────────────
+
+  const openAiDialoog = async (type: string) => {
+    if (!werkgeverId) return;
+    let model = modelVoorType(type);
+    if (!model) {
+      try {
+        model = await upsert.mutateAsync({ data: { werkgever_id: werkgeverId, document_type: type } });
+        invalideer();
+      } catch {
+        toast({ title: "Kon model niet aanmaken", variant: "destructive" });
+        return;
+      }
+    }
+    setAiModelId(model.id);
+    setAiInstructie("");
+    setAiIteraties([]);
+    setAiDialoogOpen(true);
+
+    // Als er nog geen concept is maar wel een referentie, direct genereren
+    if (!model.connect_template_json && model.referentie_bestand_pad) {
+      void triggerGenereer(model.id, null);
+    }
+  };
+
+  const triggerGenereer = async (id: number, instructie: string | null): Promise<void> => {
+    try {
+      await genereer.mutateAsync({ id, data: { instructie: instructie ?? undefined } });
+      invalideer();
+      if (instructie) {
+        setAiIteraties((prev) => [...prev, instructie]);
+        setAiInstructie("");
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Onbekende fout";
+      toast({ title: "Generatie mislukt", description: msg, variant: "destructive" });
+    }
+  };
+
+  const triggerBijstuur = async () => {
+    if (!aiModelId || !aiInstructie.trim()) return;
+    try {
+      await bijstuur.mutateAsync({ id: aiModelId, data: { instructie: aiInstructie.trim() } });
+      setAiIteraties((prev) => [...prev, aiInstructie.trim()]);
+      setAiInstructie("");
+      invalideer();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Onbekende fout";
+      toast({ title: "Verfijning mislukt", description: msg, variant: "destructive" });
+    }
+  };
+
+  const triggerGoedkeuren = async () => {
+    if (!aiModelId) return;
+    try {
+      await goedkeur.mutateAsync({ id: aiModelId });
+      invalideer();
+      setGoedkeurBevestigOpen(false);
+      setAiDialoogOpen(false);
+      toast({ title: "Model 0 goedgekeurd", description: "Het Connect-template is vastgesteld als Model 0." });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Onbekende fout";
+      toast({ title: "Goedkeuren mislukt", description: msg, variant: "destructive" });
+    }
+  };
+
+  const aiBezig = genereer.isPending || bijstuur.isPending;
+
   const typeLabel = DOCUMENT_TYPEN.find((t) => t.type === uploadType)?.label ?? uploadType;
+  const aiTypeLabel = DOCUMENT_TYPEN.find((t) => t.type === aiModel?.document_type)?.label ?? aiModel?.document_type;
 
   if (laadtWerkgevers) {
     return (
@@ -170,7 +265,6 @@ export default function DocumentStudioPagina() {
         </div>
       </div>
 
-      {/* Werkmaatschappij-selector */}
       {werkgevers.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-16 gap-4 text-center">
@@ -187,6 +281,7 @@ export default function DocumentStudioPagina() {
         </Card>
       ) : (
         <>
+          {/* Werkmaatschappij-selector */}
           <div className="flex items-center gap-4">
             <div className="flex-1 max-w-xs">
               <Select
@@ -265,6 +360,8 @@ export default function DocumentStudioPagina() {
                 const model = modelVoorType(type);
                 const status = model?.status ?? "geen";
                 const cfg = STATUS_CONFIG[status] ?? STATUS_CONFIG.geen;
+                const heeftReferentie = Boolean(model?.referentie_bestand_pad);
+                const heeftConcept   = Boolean(model?.connect_template_json);
 
                 return (
                   <Card key={type} className="flex flex-col">
@@ -296,17 +393,39 @@ export default function DocumentStudioPagina() {
                           <span>Referentie aanwezig</span>
                         </div>
                       )}
+                      {model?.goedgekeurd_op && (
+                        <div className="flex items-center gap-1 text-xs text-green-600">
+                          <CheckCircle2 className="h-3 w-3" />
+                          <span>Goedgekeurd op {new Date(model.goedgekeurd_op).toLocaleDateString("nl-NL")}</span>
+                        </div>
+                      )}
                       {magSchrijven && (
-                        <Button
-                          size="sm"
-                          variant={status === "geen" ? "default" : "outline"}
-                          className="w-full mt-auto"
-                          onClick={() => void openUploadDialoog(type)}
-                          disabled={upsert.isPending}
-                        >
-                          <Upload className="h-3.5 w-3.5 mr-1" />
-                          {status === "geen" ? "Referentie uploaden" : "Referentie vervangen"}
-                        </Button>
+                        <div className="flex flex-col gap-2 mt-auto">
+                          {/* Genereer/bekijk knop — beschikbaar als referentie aanwezig is */}
+                          {heeftReferentie && (
+                            <Button
+                              size="sm"
+                              variant={heeftConcept || status === "goedgekeurd" ? "outline" : "default"}
+                              className="w-full"
+                              onClick={() => void openAiDialoog(type)}
+                              disabled={aiBezig}
+                            >
+                              <Sparkles className="h-3.5 w-3.5 mr-1" />
+                              {status === "goedgekeurd" ? "Template bekijken" : heeftConcept ? "Template verfijnen" : "Genereer met AI"}
+                            </Button>
+                          )}
+                          {/* Upload knop */}
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="w-full text-muted-foreground"
+                            onClick={() => void openUploadDialoog(type)}
+                            disabled={upsert.isPending}
+                          >
+                            <Upload className="h-3.5 w-3.5 mr-1" />
+                            {status === "geen" ? "Referentie uploaden" : "Referentie vervangen"}
+                          </Button>
+                        </div>
                       )}
                     </CardContent>
                   </Card>
@@ -317,8 +436,8 @@ export default function DocumentStudioPagina() {
         </>
       )}
 
-      {/* Upload-dialoog */}
-      <Dialog open={uploadDialoogOpen} onOpenChange={(o) => { if (!o) sluitDialoog(); }}>
+      {/* ── Upload-dialoog ─────────────────────────────────────────────────── */}
+      <Dialog open={uploadDialoogOpen} onOpenChange={(o) => { if (!o) sluitUploadDialoog(); }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Referentie uploaden — {typeLabel}</DialogTitle>
@@ -330,7 +449,6 @@ export default function DocumentStudioPagina() {
               <strong>{geselecteerdeWerkgever?.naam}</strong>. Ondersteunde formaten: PDF, JPG, PNG, WEBP (max 10 MB).
             </p>
 
-            {/* Drop-zone */}
             <div
               onDragOver={(e) => { e.preventDefault(); setSleepActief(true); }}
               onDragLeave={() => setSleepActief(false)}
@@ -371,8 +489,185 @@ export default function DocumentStudioPagina() {
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={sluitDialoog} disabled={uploadBezig}>
+            <Button variant="outline" onClick={sluitUploadDialoog} disabled={uploadBezig}>
               Annuleren
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── AI Generatie-dialoog ───────────────────────────────────────────── */}
+      <Dialog open={aiDialoogOpen} onOpenChange={(o) => { if (!o) { setAiDialoogOpen(false); setGoedkeurBevestigOpen(false); } }}>
+        <DialogContent className="max-w-5xl w-full max-h-[90vh] flex flex-col">
+          <DialogHeader className="shrink-0">
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-amber-500" />
+              AI Template Generatie — {aiTypeLabel}
+            </DialogTitle>
+            <DialogDescription>
+              De AI genereert een Connect-template op basis van het referentiebestand en de huisstijl van{" "}
+              <strong>{geselecteerdeWerkgever?.naam}</strong>.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex gap-6 flex-1 min-h-0 overflow-hidden">
+            {/* Links: preview */}
+            <div className="flex-1 overflow-y-auto border rounded-lg bg-gray-50 p-4">
+              {aiBezig && !aiModel?.connect_template_json ? (
+                <div className="flex flex-col items-center justify-center min-h-[300px] gap-3">
+                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                  <p className="text-sm text-muted-foreground">AI genereert template...</p>
+                </div>
+              ) : aiModel?.connect_template_json ? (
+                <StudioTemplatePreview
+                  templateJson={aiModel.connect_template_json}
+                  logoUrl={geselecteerdeWerkgever?.logo_url}
+                  werkgeverNaam={geselecteerdeWerkgever?.naam ?? "Werkmaatschappij"}
+                />
+              ) : (
+                <div className="flex flex-col items-center justify-center min-h-[300px] gap-3 text-center">
+                  <Sparkles className="h-8 w-8 text-muted-foreground" />
+                  <div>
+                    <p className="font-medium text-sm">Nog geen template gegenereerd</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {aiModel?.referentie_bestand_pad
+                        ? "Klik op 'Genereer' om te starten."
+                        : "Upload eerst een referentiebestand, dan kan de AI een template genereren."}
+                    </p>
+                  </div>
+                  {aiModel?.referentie_bestand_pad && (
+                    <Button
+                      onClick={() => void triggerGenereer(aiModel.id, null)}
+                      disabled={aiBezig}
+                    >
+                      {aiBezig ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Sparkles className="h-4 w-4 mr-2" />}
+                      Genereer template
+                    </Button>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Rechts: bijstuur-paneel */}
+            <div className="w-72 shrink-0 flex flex-col gap-4">
+              {/* Status badge */}
+              {aiModel && (
+                <div>
+                  <Badge
+                    className={cn("text-xs", STATUS_CONFIG[aiModel.status]?.klasse ?? STATUS_CONFIG.geen.klasse)}
+                    variant="outline"
+                  >
+                    {STATUS_CONFIG[aiModel.status]?.label ?? "Onbekend"}
+                  </Badge>
+                  {aiModel.status === "goedgekeurd" && aiModel.goedgekeurd_op && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Goedgekeurd op {new Date(aiModel.goedgekeurd_op).toLocaleDateString("nl-NL")}
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* Bijstuur */}
+              {aiModel?.connect_template_json && (
+                <div className="flex flex-col gap-2">
+                  <p className="text-xs font-medium text-foreground">Bijstuur-instructie</p>
+                  <Textarea
+                    value={aiInstructie}
+                    onChange={(e) => setAiInstructie(e.target.value)}
+                    placeholder="bv. &quot;Verklein het logo&quot;, &quot;voeg een ondertekeningsvak toe&quot;, &quot;gebruik een lichtere achtergrond&quot;..."
+                    className="text-xs min-h-[100px] resize-none"
+                    disabled={aiBezig || aiModel.status === "goedgekeurd"}
+                  />
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={!aiInstructie.trim() || aiBezig || aiModel.status === "goedgekeurd"}
+                    onClick={() => void triggerBijstuur()}
+                    className="w-full"
+                  >
+                    {bijstuur.isPending
+                      ? <><Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />Verfijnen...</>
+                      : <><RefreshCw className="h-3.5 w-3.5 mr-1" />Verfijnen</>
+                    }
+                  </Button>
+                </div>
+              )}
+
+              {/* Opnieuw genereren */}
+              {aiModel?.referentie_bestand_pad && aiModel.connect_template_json && aiModel.status !== "goedgekeurd" && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="w-full text-muted-foreground"
+                  disabled={aiBezig}
+                  onClick={() => void triggerGenereer(aiModel.id, null)}
+                >
+                  {genereer.isPending
+                    ? <><Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />Opnieuw genereren...</>
+                    : <><Sparkles className="h-3.5 w-3.5 mr-1" />Opnieuw genereren</>
+                  }
+                </Button>
+              )}
+
+              {/* Iteratiegeschiedenis */}
+              {aiIteraties.length > 0 && (
+                <div className="border rounded-lg p-3 bg-muted/40">
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <History className="h-3.5 w-3.5 text-muted-foreground" />
+                    <p className="text-xs font-medium text-muted-foreground">Bijstuur-geschiedenis</p>
+                  </div>
+                  <ul className="space-y-1.5">
+                    {aiIteraties.map((it, i) => (
+                      <li key={i} className="flex items-start gap-1.5 text-xs text-muted-foreground">
+                        <ChevronRight className="h-3 w-3 shrink-0 mt-0.5" />
+                        <span className="line-clamp-2">{it}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* Goedkeuren */}
+              {aiModel?.connect_template_json && aiModel.status !== "goedgekeurd" && (
+                <div className="mt-auto pt-2 border-t">
+                  <Button
+                    className="w-full"
+                    disabled={aiBezig || goedkeur.isPending}
+                    onClick={() => setGoedkeurBevestigOpen(true)}
+                  >
+                    <ThumbsUp className="h-4 w-4 mr-2" />
+                    Goedkeuren als Model 0
+                  </Button>
+                  <p className="text-xs text-muted-foreground mt-2 text-center">
+                    Dit stelt het template definitief vast als officieel Connect-sjabloon.
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Goedkeur-bevestigingsdialoog ──────────────────────────────────── */}
+      <Dialog open={goedkeurBevestigOpen} onOpenChange={setGoedkeurBevestigOpen}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Model 0 goedkeuren</DialogTitle>
+            <DialogDescription>
+              Weet u zeker dat u dit Connect-template wilt goedkeuren als Model 0 voor{" "}
+              <strong>{geselecteerdeWerkgever?.naam}</strong>? Na goedkeuring wordt het template Connect-breed
+              gebruikt voor dit documenttype.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setGoedkeurBevestigOpen(false)} disabled={goedkeur.isPending}>
+              Annuleren
+            </Button>
+            <Button onClick={() => void triggerGoedkeuren()} disabled={goedkeur.isPending}>
+              {goedkeur.isPending
+                ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Goedkeuren...</>
+                : <><ThumbsUp className="h-4 w-4 mr-2" />Goedkeuren</>
+              }
             </Button>
           </DialogFooter>
         </DialogContent>

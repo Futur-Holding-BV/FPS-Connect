@@ -20379,6 +20379,86 @@ export const UploadDocumentStudioReferentieResponse = zod.object({
 
 
 /**
+ * @summary AI genereert een Connect-template op basis van het referentiebestand en werkgever-branding
+ */
+export const GenereerStudioTemplateParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GenereerStudioTemplateBody = zod.object({
+  "instructie": zod.string().nullish()
+})
+
+export const GenereerStudioTemplateResponse = zod.object({
+  "id": zod.number(),
+  "werkgever_id": zod.number(),
+  "werkgever_naam": zod.string().nullish(),
+  "document_type": zod.string(),
+  "naam": zod.string().nullish(),
+  "status": zod.string(),
+  "referentie_bestand_pad": zod.string().nullish(),
+  "connect_template_json": zod.string().nullish(),
+  "versie": zod.number(),
+  "goedgekeurd_op": zod.string().nullish(),
+  "goedgekeurd_door": zod.number().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string().nullish()
+})
+
+
+/**
+ * @summary Verfijn het concept-template met een bijstuur-instructie
+ */
+export const BijstuurStudioTemplateParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const BijstuurStudioTemplateBody = zod.object({
+  "instructie": zod.string()
+})
+
+export const BijstuurStudioTemplateResponse = zod.object({
+  "id": zod.number(),
+  "werkgever_id": zod.number(),
+  "werkgever_naam": zod.string().nullish(),
+  "document_type": zod.string(),
+  "naam": zod.string().nullish(),
+  "status": zod.string(),
+  "referentie_bestand_pad": zod.string().nullish(),
+  "connect_template_json": zod.string().nullish(),
+  "versie": zod.number(),
+  "goedgekeurd_op": zod.string().nullish(),
+  "goedgekeurd_door": zod.number().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string().nullish()
+})
+
+
+/**
+ * @summary Goedkeuren als Model 0 — zet status op goedgekeurd en registreert goedkeurder
+ */
+export const GoedkeurenStudioTemplateParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GoedkeurenStudioTemplateResponse = zod.object({
+  "id": zod.number(),
+  "werkgever_id": zod.number(),
+  "werkgever_naam": zod.string().nullish(),
+  "document_type": zod.string(),
+  "naam": zod.string().nullish(),
+  "status": zod.string(),
+  "referentie_bestand_pad": zod.string().nullish(),
+  "connect_template_json": zod.string().nullish(),
+  "versie": zod.number(),
+  "goedgekeurd_op": zod.string().nullish(),
+  "goedgekeurd_door": zod.number().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string().nullish()
+})
+
+
+/**
  * @summary Werkgevers ophalen voor Document Studio selector (gated op organisatie:lezen)
  */
 export const ListStudioWerkgeversResponseItem = zod.object({

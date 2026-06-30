@@ -10,6 +10,23 @@ Grote roadmap-fases staan ook in `docs/roadmap/gebouwd.md` en `docs/roadmap/acti
 
 ---
 
+## 2026-06-30 — Document Studio: AI template generatie & Model 0
+
+**Uitvoering:** volledig | **Diepere lagen:** volledig | **Getest:** typecheck groen, codegen geslaagd, workflows draaien
+
+- **AI genereer-endpoint** (`POST /studio/modellen/:id/genereer`): leest referentie-PDF via object storage (pdf-parse), haalt werkgever-branding op (primaireKleur, logo_url, voettekst), stuurt prompt naar GPT-4o, valideert JSON-response, slaat op als `connect_template_json` met status `concept`; families A/B/C automatisch geadviseerd per documenttype; optionele `instructie`-parameter voor eerste generatie
+- **Bijstuur-endpoint** (`POST /studio/modellen/:id/bijstuur`): bestaand concept + bijstuur-instructie → GPT-4o → verfijnd concept; overschrijft huidige concept-json (geen versieboom in deze fase)
+- **Goedkeur-endpoint** (`POST /studio/modellen/:id/goedkeuren`): status → `goedgekeurd`, `goedgekeurd_op` + `goedgekeurd_door` (uit sessie), versie incrementeren, activiteitslog-entry
+- **StudioTemplateJson schema** in OpenAPI: familie, koptekst (logo_positie/titel/subinfo), kleurschema (primair/secundair/tekst), secties (tekst/tabel/ondertekening/checklist), voettekst
+- **StudioTemplatePreview** component (`src/components/documentopmaak/StudioTemplatePreview.tsx`): rendert template_json via DocumentFrame; secties naar correct bloktype (tekst/tabel/ondertekening/checklist); familie-badge; merkkleur-accent; logo-positie links/rechts/midden
+- **AI-generatie UI** in `studio.tsx`:
+  - Kaartgrid uitgebreid: "Genereer met AI" knop per type bij aanwezig referentiebestand; automatisch genereren bij eerste keer openen zonder concept
+  - AI-dialoog (max-w-5xl): preview links (live re-rendered na elke actie), bijstuur-paneel rechts
+  - Bijstuur-instructie + Verfijnen-knop; Opnieuw genereren; iteratiegeschiedenis met alle gegeven instructies in de sessie
+  - Goedkeuren-knop + bevestigingsdialoog (goedgekeurd-state sluit bijstuurveld af, toont datum)
+- **Codegen**: `useGenereerStudioTemplate`, `useBijstuurStudioTemplate`, `useGoedkeurenStudioTemplate` gegenereerd + lib rebuild
+- **Technisch**: pdf-parse via createRequire (CJS-compatibiliteit); buffer-download via createReadStream + Promise; JSON-extractie uit mogelijke markdown-omhulsels; 503 bij invalide AI-JSON
+
 ## 2026-06-30 — Onderhoudsmodule volledig + deployment fix uniqueIndex
 
 **Uitvoering:** volledig | **Diepere lagen:** volledig | **Getest:** typecheck groen, DB-tabellen bevestigd, workflows draaien

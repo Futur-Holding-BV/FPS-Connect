@@ -2,11 +2,19 @@
 // Beheert modellen (geen|referentie|concept|goedgekeurd) per documenttype per werkgever.
 import { Router } from "express";
 import { randomUUID } from "crypto";
+import { createRequire } from "node:module";
 import multer from "multer";
 import { db, documentStudioModellenTable, werkgeversTable } from "@workspace/db";
 import { eq, and } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
 import { ObjectStorageService } from "../lib/objectStorage";
+import { heeftOpenAi, maakOpenAiClient } from "../lib/openai";
+import { logActiviteit } from "../lib/activiteit";
+
+// pdf-parse is CJS-only; gebruik createRequire voor ESM-compatibiliteit.
+const _req = createRequire(import.meta.url);
+type PdfParseFn = (buf: Buffer) => Promise<{ text: string; numpages: number }>;
+const pdfParse: PdfParseFn = (_req("pdf-parse") as { default?: PdfParseFn }).default ?? (_req("pdf-parse") as PdfParseFn);
 
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
@@ -295,5 +303,294 @@ router.post(
     }
   },
 );
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+/** Download een bestand van object storage als Buffer via createReadStream. */
+async function downloadAlsBuffer(pad: string): Promise<Buffer> {
+  const file = await oss.getObjectEntityFile(pad);
+  const stream = file.createReadStream();
+  const chunks: Buffer[] = [];
+  await new Promise<void>((resolve, reject) => {
+    stream.on("data", (chunk: Buffer | Uint8Array) => chunks.push(Buffer.from(chunk)));
+    stream.on("end", resolve);
+    stream.on("error", reject);
+  });
+  return Buffer.concat(chunks);
+}
+
+/** Extraheer leesbare tekst uit een PDF of geef lege string terug voor afbeeldingen. */
+async function extraheerTekst(buffer: Buffer, pad: string): Promise<string> {
+  const ext = pad.split(".").pop()?.toLowerCase() ?? "";
+  if (ext === "pdf") {
+    try {
+      const resultaat = await pdfParse(buffer);
+      return resultaat.text.trim().slice(0, 8000); // limiet voor prompt
+    } catch {
+      return "";
+    }
+  }
+  // Afbeelding: geen tekst-extractie
+  return "";
+}
+
+/** Systeem-prompt voor AI template-generatie. */
+function bouwPrompt(params: {
+  documentType: string;
+  documentTekst: string;
+  heeftAfbeelding: boolean;
+  werkgeverNaam: string;
+  primaireKleur: string | null;
+  voettekst: string | null;
+  instructie?: string | null;
+}): string {
+  const typeNaam: Record<string, string> = {
+    offerte: "Offerte",
+    brief: "Formele brief",
+    email: "E-mail sjabloon",
+    lmra: "LMRA (Laatste Minuut Risico Analyse checklist)",
+    toolbox: "Toolbox-meeting document",
+    inkoopbon: "Inkoopbon",
+    factuur: "Factuur",
+    calculatie: "Calculatie-werkblad",
+  };
+  const familieAdvies: Record<string, string> = {
+    offerte: "A",
+    brief: "B",
+    email: "B",
+    lmra: "C",
+    toolbox: "C",
+    inkoopbon: "C",
+    factuur: "B",
+    calculatie: "C",
+  };
+  const naam = typeNaam[params.documentType] ?? params.documentType;
+  const familie = familieAdvies[params.documentType] ?? "A";
+
+  return `Je bent een document-opmaakexpert voor het Nederlandse brandpreventie-platform FPS Connect.
+Genereer een Connect-template JSON voor een "${naam}" document voor werkmaatschappij "${params.werkgeverNaam}".
+
+Gebruik de volgende branding:
+- Primaire kleur: ${params.primaireKleur ?? "#F23B0D"} (gebruik als kleurschema.primair)
+- Secundaire kleur: een donkerdere of lichtere variant van de primaire kleur
+- Tekstkleur: #1a1a1a (donkergrijs voor leesbaarheid)
+- Voettekst: ${params.voettekst ?? `${params.werkgeverNaam} | Platform voor brandpreventie`}
+
+Geadviseerde familie: ${familie}
+- Familie A = klantdocumenten (offertes, rapporten) — hero-image, vetgedrukte opmaak, representatief
+- Familie B = HRM/juridisch (contracten, brieven, facturen) — professioneel, ondertekeningsvakken, formeel
+- Familie C = interne operationele documenten (LMRA, toolbox, checklists) — gestructureerd, formulier-achtig
+
+${params.documentTekst
+    ? `Referentietekst uit het huidige document (eerste 8000 tekens):\n---\n${params.documentTekst}\n---\n`
+    : params.heeftAfbeelding
+      ? "Het referentiebestand is een afbeelding (geen tekst beschikbaar).\n"
+      : "Geen referentietekst beschikbaar.\n"
+  }
+${params.instructie ? `Extra bijstuur-instructie van de gebruiker: ${params.instructie}\n` : ""}
+Retourneer UITSLUITEND de volgende JSON zonder extra tekst of markdown-omhulsel:
+{
+  "familie": "${familie}",
+  "koptekst": {
+    "logo_positie": "links",
+    "titel": "<documenttitel in het Nederlands, bv. 'Offerte' of 'Arbeidsovereenkomst'>",
+    "subinfo": "<optionele subtitel of null>"
+  },
+  "kleurschema": {
+    "primair": "${params.primaireKleur ?? "#F23B0D"}",
+    "secundair": "<afgeleide kleur>",
+    "tekst": "#1a1a1a"
+  },
+  "secties": [
+    { "type": "tekst|tabel|ondertekening|checklist", "titel": "<sectienaam of null>", "inhoud": "<beknopte placeholder-beschrijving>" }
+  ],
+  "voettekst": "${params.voettekst ?? params.werkgeverNaam}"
+}
+Gebruik maximaal 6 secties. Sectie-inhoud is placeholder-tekst (gebruiker vult later echt content in).`;
+}
+
+// ── AI genereer — genereert concept-template via GPT-4o ───────────────────────
+
+router.post("/studio/modellen/:id/genereer", schrijven, async (req, res) => {
+  try {
+    if (!heeftOpenAi()) {
+      return res.status(503).json({ error: "AI niet beschikbaar — configureer een OpenAI-sleutel" });
+    }
+
+    const id = parseId(req.params.id);
+    const instructie = (req.body as { instructie?: string | null }).instructie ?? null;
+
+    const [rij] = await db
+      .select({ model: documentStudioModellenTable, wgNaam: werkgeversTable.naam, wg: werkgeversTable })
+      .from(documentStudioModellenTable)
+      .leftJoin(werkgeversTable, eq(documentStudioModellenTable.werkgeverId, werkgeversTable.id))
+      .where(eq(documentStudioModellenTable.id, id));
+
+    if (!rij) return res.status(404).json({ error: "Model niet gevonden" });
+    if (!rij.model.referentieBestandPad) {
+      return res.status(400).json({ error: "Upload eerst een referentiebestand voor dit documenttype" });
+    }
+
+    // Referentie ophalen en tekst extraheren
+    let documentTekst = "";
+    let heeftAfbeelding = false;
+    try {
+      const buffer = await downloadAlsBuffer(rij.model.referentieBestandPad);
+      documentTekst = await extraheerTekst(buffer, rij.model.referentieBestandPad);
+      heeftAfbeelding = !rij.model.referentieBestandPad.endsWith(".pdf");
+    } catch (err) {
+      req.log.warn({ err }, "Referentiebestand kon niet worden gelezen — genereer zonder tekst");
+    }
+
+    const prompt = bouwPrompt({
+      documentType:   rij.model.documentType,
+      documentTekst,
+      heeftAfbeelding,
+      werkgeverNaam:  rij.wg?.naam ?? "Werkmaatschappij",
+      primaireKleur:  rij.wg?.primaireKleur ?? null,
+      voettekst:      rij.wg?.voettekst ?? null,
+      instructie,
+    });
+
+    const openai = maakOpenAiClient();
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o",
+      max_tokens: 1200,
+      messages: [
+        { role: "system", content: "Je genereert altijd pure JSON zonder markdown. Retourneer alleen de JSON-structuur." },
+        { role: "user",   content: prompt },
+      ],
+    });
+
+    const tekst = completion.choices[0]?.message?.content?.trim() ?? "";
+    // JSON extraheren uit mogelijke markdown-blokken
+    const json = tekst.replace(/^```[a-z]*\n?/i, "").replace(/\n?```$/i, "").trim();
+
+    // Valideer dat het geldige JSON is
+    JSON.parse(json); // gooit als het invalide JSON is
+
+    const [bijgewerkt] = await db
+      .update(documentStudioModellenTable)
+      .set({
+        connectTemplateJson: json,
+        status:              "concept",
+        bijgewerktOp:        new Date(),
+      })
+      .where(eq(documentStudioModellenTable.id, id))
+      .returning();
+
+    res.json(mapModel(bijgewerkt, rij.wgNaam ?? null));
+  } catch (err) {
+    req.log.error(err);
+    if (err instanceof SyntaxError) {
+      return res.status(503).json({ error: "AI retourneerde geen geldige JSON — probeer opnieuw" });
+    }
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// ── AI bijstuur — verfijn bestaand concept via GPT-4o ────────────────────────
+
+router.post("/studio/modellen/:id/bijstuur", schrijven, async (req, res) => {
+  try {
+    if (!heeftOpenAi()) {
+      return res.status(503).json({ error: "AI niet beschikbaar — configureer een OpenAI-sleutel" });
+    }
+
+    const id = parseId(req.params.id);
+    const { instructie } = req.body as { instructie: string };
+
+    if (!instructie || typeof instructie !== "string" || !instructie.trim()) {
+      return res.status(400).json({ error: "instructie is verplicht" });
+    }
+
+    const [rij] = await db
+      .select({ model: documentStudioModellenTable, wgNaam: werkgeversTable.naam })
+      .from(documentStudioModellenTable)
+      .leftJoin(werkgeversTable, eq(documentStudioModellenTable.werkgeverId, werkgeversTable.id))
+      .where(eq(documentStudioModellenTable.id, id));
+
+    if (!rij) return res.status(404).json({ error: "Model niet gevonden" });
+    if (!rij.model.connectTemplateJson) {
+      return res.status(400).json({ error: "Genereer eerst een concept-template via de genereer-actie" });
+    }
+
+    const completion = await maakOpenAiClient().chat.completions.create({
+      model: "gpt-4o",
+      max_tokens: 1200,
+      messages: [
+        { role: "system", content: "Je past een bestaande Connect-template JSON aan op basis van een bijstuur-instructie. Retourneer ALLEEN de aangepaste JSON-structuur, geen markdown, geen uitleg." },
+        { role: "user",   content: `Huidig template:\n${rij.model.connectTemplateJson}\n\nBijstuur-instructie: ${instructie.trim()}\n\nRetourneer de volledige verbeterde JSON.` },
+      ],
+    });
+
+    const tekst = completion.choices[0]?.message?.content?.trim() ?? "";
+    const json = tekst.replace(/^```[a-z]*\n?/i, "").replace(/\n?```$/i, "").trim();
+
+    JSON.parse(json); // valideer
+
+    const [bijgewerkt] = await db
+      .update(documentStudioModellenTable)
+      .set({
+        connectTemplateJson: json,
+        status:              "concept",
+        bijgewerktOp:        new Date(),
+      })
+      .where(eq(documentStudioModellenTable.id, id))
+      .returning();
+
+    res.json(mapModel(bijgewerkt, rij.wgNaam ?? null));
+  } catch (err) {
+    req.log.error(err);
+    if (err instanceof SyntaxError) {
+      return res.status(503).json({ error: "AI retourneerde geen geldige JSON — probeer opnieuw" });
+    }
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// ── Goedkeuren als Model 0 ────────────────────────────────────────────────────
+
+router.post("/studio/modellen/:id/goedkeuren", schrijven, async (req, res) => {
+  try {
+    const id = parseId(req.params.id);
+    const userId = req.session.userId as number | undefined;
+
+    const [rij] = await db
+      .select({ model: documentStudioModellenTable, wgNaam: werkgeversTable.naam })
+      .from(documentStudioModellenTable)
+      .leftJoin(werkgeversTable, eq(documentStudioModellenTable.werkgeverId, werkgeversTable.id))
+      .where(eq(documentStudioModellenTable.id, id));
+
+    if (!rij) return res.status(404).json({ error: "Model niet gevonden" });
+    if (!rij.model.connectTemplateJson) {
+      return res.status(400).json({ error: "Er is geen concept-template om goed te keuren" });
+    }
+
+    const nu = new Date();
+    const [bijgewerkt] = await db
+      .update(documentStudioModellenTable)
+      .set({
+        status:          "goedgekeurd",
+        goedgekeurdOp:   nu,
+        goedgekeurdDoor: userId ?? null,
+        versie:          rij.model.versie + 1,
+        bijgewerktOp:    nu,
+      })
+      .where(eq(documentStudioModellenTable.id, id))
+      .returning();
+
+    await logActiviteit({
+      gebruikerId:  userId ?? null,
+      type:         "document_gewijzigd",
+      omschrijving: `Document Studio model goedgekeurd als Model 0 (${rij.model.documentType})`,
+    }).catch(() => {});
+
+    res.json(mapModel(bijgewerkt, rij.wgNaam ?? null));
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
 
 export default router;

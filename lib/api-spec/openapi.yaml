@@ -16072,6 +16072,91 @@ paths:
               schema:
                 $ref: "#/components/schemas/DocumentStudioModel"
 
+  /studio/modellen/{id}/genereer:
+    post:
+      operationId: genereerStudioTemplate
+      tags: [studio]
+      summary: AI genereert een Connect-template op basis van het referentiebestand en werkgever-branding
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StudioGenereerInput"
+      responses:
+        "200":
+          description: Gegenereerd concept-template
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DocumentStudioModel"
+        "400":
+          description: Geen referentiebestand of ongeldige invoer
+        "404":
+          description: Niet gevonden
+        "503":
+          description: AI niet beschikbaar
+
+  /studio/modellen/{id}/bijstuur:
+    post:
+      operationId: bijstuurStudioTemplate
+      tags: [studio]
+      summary: Verfijn het concept-template met een bijstuur-instructie
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StudioBijstuurInput"
+      responses:
+        "200":
+          description: Verfijnd concept-template
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DocumentStudioModel"
+        "400":
+          description: Geen concept beschikbaar of ongeldige instructie
+        "404":
+          description: Niet gevonden
+        "503":
+          description: AI niet beschikbaar
+
+  /studio/modellen/{id}/goedkeuren:
+    post:
+      operationId: goedkeurenStudioTemplate
+      tags: [studio]
+      summary: Goedkeuren als Model 0 — zet status op goedgekeurd en registreert goedkeurder
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Goedgekeurd
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DocumentStudioModel"
+        "400":
+          description: Geen concept beschikbaar om goed te keuren
+        "404":
+          description: Niet gevonden
+
   /studio/werkgevers:
     get:
       operationId: listStudioWerkgevers
@@ -29375,3 +29460,46 @@ components:
         primaire_kleur: { type: ["string", "null"] }
         logo_url:       { type: ["string", "null"] }
         voettekst:      { type: ["string", "null"] }
+
+    StudioGenereerInput:
+      type: object
+      properties:
+        instructie: { type: ["string", "null"] }
+
+    StudioBijstuurInput:
+      type: object
+      required: [instructie]
+      properties:
+        instructie: { type: string }
+
+    StudioTemplateJson:
+      type: object
+      required: [familie, koptekst, kleurschema, secties]
+      properties:
+        familie:
+          type: string
+          enum: [A, B, C]
+        koptekst:
+          type: object
+          required: [logo_positie, titel]
+          properties:
+            logo_positie: { type: string, enum: [links, rechts, midden] }
+            titel:        { type: string }
+            subinfo:      { type: ["string", "null"] }
+        kleurschema:
+          type: object
+          required: [primair, secundair, tekst]
+          properties:
+            primair:   { type: string }
+            secundair: { type: string }
+            tekst:     { type: string }
+        secties:
+          type: array
+          items:
+            type: object
+            required: [type, inhoud]
+            properties:
+              type:   { type: string, enum: [tekst, tabel, ondertekening, checklist] }
+              titel:  { type: ["string", "null"] }
+              inhoud: { type: string }
+        voettekst: { type: ["string", "null"] }
