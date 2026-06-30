@@ -17,9 +17,10 @@ import {
   gebouwenTable,
   crmCommunicatieTable,
 } from "@workspace/db";
-import { eq, and, gt, desc, ne, or, isNull } from "drizzle-orm";
+import { eq, and, desc, ne, or, isNull } from "drizzle-orm";
 import { stuurKlantvraagNotificatie, stuurOndertekeningNotificatie } from "../services/email";
 import { logActiviteit } from "../lib/activiteit";
+import { heeftOpenAi, maakOpenAiClient } from "../lib/openai";
 
 const router = Router();
 
@@ -58,28 +59,30 @@ router.get("/portaal/:token", async (req, res) => {
       .where(eq(offertesTable.id, tokenRecord.offerteId));
     if (!offerte) return res.status(404).json({ error: "Offerte niet gevonden." });
 
-    const secties = await db
-      .select()
-      .from(offerteSectiesTable)
-      .where(eq(offerteSectiesTable.offerteId, offerte.id))
-      .orderBy(offerteSectiesTable.volgorde);
+    const [secties, bijlagen, optioneleRegels, verplichtRegels, handtekeningRows] = await Promise.all([
+      db.select().from(offerteSectiesTable).where(eq(offerteSectiesTable.offerteId, offerte.id)).orderBy(offerteSectiesTable.volgorde),
+      db.select().from(offerteBijlagenTable).where(eq(offerteBijlagenTable.offerteId, offerte.id)).orderBy(offerteBijlagenTable.volgorde),
+      db.select().from(offerteRegelsTable).where(and(eq(offerteRegelsTable.offerteId, offerte.id), eq(offerteRegelsTable.isOptioneel, true))).orderBy(offerteRegelsTable.volgorde),
+      db.select().from(offerteRegelsTable).where(and(eq(offerteRegelsTable.offerteId, offerte.id), eq(offerteRegelsTable.isOptioneel, false))).orderBy(offerteRegelsTable.volgorde),
+      db.select().from(offerteHandtekeningenTable).where(eq(offerteHandtekeningenTable.offerteId, offerte.id)).limit(1),
+    ]);
 
-    const bijlagen = await db
-      .select()
-      .from(offerteBijlagenTable)
-      .where(eq(offerteBijlagenTable.offerteId, offerte.id))
-      .orderBy(offerteBijlagenTable.volgorde);
+    const handtekening = handtekeningRows[0];
 
-    const optioneleRegels = await db
-      .select()
-      .from(offerteRegelsTable)
-      .where(and(eq(offerteRegelsTable.offerteId, offerte.id), eq(offerteRegelsTable.isOptioneel, true)))
-      .orderBy(offerteRegelsTable.volgorde);
-
-    const [handtekening] = await db
-      .select()
-      .from(offerteHandtekeningenTable)
-      .where(eq(offerteHandtekeningenTable.offerteId, offerte.id));
+    let contactpersoon: { naam: string; email: string | null; telefoon: string | null } | null = null;
+    if (offerte.behandeldDoorId) {
+      const [behandelaar] = await db
+        .select({ naam: gebruikersTable.naam, email: gebruikersTable.email, telefoon: gebruikersTable.telefoon })
+        .from(gebruikersTable)
+        .where(eq(gebruikersTable.id, offerte.behandeldDoorId));
+      if (behandelaar) {
+        contactpersoon = {
+          naam: behandelaar.naam,
+          email: behandelaar.email ?? null,
+          telefoon: behandelaar.telefoon ?? null,
+        };
+      }
+    }
 
     await db.insert(offerteTrackingTable).values({
       offerteId: offerte.id,
@@ -108,6 +111,7 @@ router.get("/portaal/:token", async (req, res) => {
       kleurthema: offerte.kleurthema,
       portaal_status: offerte.portaalStatus,
       ondertekend: !!handtekening,
+      contactpersoon,
       secties: secties.map((s) => ({
         id: s.id,
         sectie_type: s.sectieType,
@@ -132,6 +136,19 @@ router.get("/portaal/:token", async (req, res) => {
         prijs_per_eenheid: r.prijsPerEenheid,
         kosten: r.kosten,
         optioneel_geselecteerd: r.optioneelGeselecteerd,
+      })),
+      regels: verplichtRegels.map((r) => ({
+        id: r.id,
+        maatregel: r.maatregel,
+        ruimte: r.ruimte ?? null,
+        uitgangspunten: r.uitgangspunten ?? null,
+        categorie: r.categorie,
+        snag_referentie: r.snagReferentie ?? null,
+        eenheid: r.eenheid,
+        aantal: r.aantal,
+        prijs_per_eenheid: r.prijsPerEenheid,
+        kosten: r.kosten,
+        volgorde: r.volgorde,
       })),
     });
   } catch (err) {
@@ -202,6 +219,50 @@ router.patch("/portaal/:token/tracking", async (req, res) => {
   }
 });
 
+// POST /portaal/:token/ai-uitleg — AI-uitleg voor een offerteregel (publiek, rate-limited door token-check)
+router.post("/portaal/:token/ai-uitleg", async (req, res) => {
+  try {
+    const tokenResultaat = await valideerToken(req.params.token);
+    if (!tokenResultaat.gevonden)
+      return res.status(404).json({ error: "Portaallink niet gevonden." });
+    if (tokenResultaat.verlopen)
+      return res.status(410).json({ error: "Uw uitnodiging is verlopen." });
+    const tokenRecord = tokenResultaat.record;
+
+    if (!heeftOpenAi())
+      return res.status(503).json({ error: "AI niet beschikbaar." });
+
+    const regelId = parseInt(String(req.body?.regel_id ?? ""), 10);
+    if (isNaN(regelId)) return res.status(400).json({ error: "Ongeldig regel_id." });
+
+    const [regel] = await db
+      .select()
+      .from(offerteRegelsTable)
+      .where(and(eq(offerteRegelsTable.id, regelId), eq(offerteRegelsTable.offerteId, tokenRecord.offerteId)));
+
+    if (!regel) return res.status(404).json({ error: "Offerteregel niet gevonden." });
+
+    const openai = maakOpenAiClient();
+    const prompt = `Je bent een brandpreventie-expert bij FPS Brandpreventie. Leg aan een klant in begrijpelijke taal uit wat de volgende offertepost inhoudt en waarom deze werkzaamheden nodig zijn. Schrijf maximaal 3 zinnen, in vloeiend Nederlands, zonder vakjargon. Noem géén bedragen of prijzen.
+
+Post: ${regel.maatregel}${regel.ruimte ? `\nLocatie: ${regel.ruimte}` : ""}${regel.uitgangspunten ? `\nUitgangspunten: ${regel.uitgangspunten}` : ""}
+Categorie: ${regel.categorie}
+Hoeveelheid: ${regel.aantal} ${regel.eenheid}`;
+
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o",
+      max_tokens: 300,
+      messages: [{ role: "user", content: prompt }],
+    });
+
+    const uitleg = completion.choices[0]?.message?.content?.trim() ?? "Geen uitleg beschikbaar.";
+    res.json({ uitleg });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
 // POST /portaal/:token/optioneel-werk — klant bevestigt welke optionele posten hij wil
 router.post("/portaal/:token/optioneel-werk", async (req, res) => {
   try {
@@ -256,10 +317,12 @@ router.post("/portaal/:token/vraag", async (req, res) => {
     if (!vraag) return res.status(400).json({ error: "Vraag mag niet leeg zijn." });
     const bezoekerNaam = String(req.body?.naam ?? "").trim() || null;
     const bezoekerEmail = String(req.body?.email ?? "").trim() || null;
+    const rawType = String(req.body?.type ?? "").trim();
+    const type = rawType === "wijziging" ? "wijziging" : "vraag";
 
     const [nieuw] = await db
       .insert(offerteVragenTable)
-      .values({ offerteId: tokenRecord.offerteId, bezoekerNaam, bezoekerEmail, vraag })
+      .values({ offerteId: tokenRecord.offerteId, bezoekerNaam, bezoekerEmail, vraag, type })
       .returning();
 
     res.status(201).json({ id: nieuw.id });
@@ -302,11 +365,14 @@ router.post("/portaal/:token/vraag", async (req, res) => {
           ? `https://${domein}/offertes/${offerte.id}`
           : `https://fpsbrandpreventie.nl/offertes/${offerte.id}`;
 
+        const onderwerpPrefix = type === "wijziging" ? "Wijziging aangevraagd" : "Nieuwe klantvraag";
+        const vraagTekstMetType = type === "wijziging" ? `[WIJZIGING] ${vraag}` : vraag;
+
         await stuurKlantvraagNotificatie({
           naarEmail,
           naarNaam,
           bezoekerNaam,
-          vraagTekst: vraag,
+          vraagTekst: vraagTekstMetType,
           offerteId: offerte.id,
           offertenummer: offerte.offertenummer,
           offerteTitel: offerte.titel,
@@ -577,6 +643,7 @@ router.post("/portaal/:token/afwijzen", async (req, res) => {
         offerteId: offerte.id,
         bezoekerNaam: null,
         vraag: `AFGEWEZEN: ${reden}`,
+        type: "afwijzing",
       });
     }
 

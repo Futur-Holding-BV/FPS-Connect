@@ -187,6 +187,7 @@ import type {
   GetMijnLmraStatusParams,
   GetMijnWeekUrenParams,
   GetPlanningNacalculatieParams,
+  GetPortaalAiUitleg200,
   GetRecenteActiviteitParams,
   GetSalarisMutatiesParams,
   GetSalarisarchiefAuditlogParams,
@@ -420,6 +421,7 @@ import type {
   PlattegrondAiAnalyseInput,
   PlattegrondAiAnalyseResultaat,
   PortaalAfwijzenInput,
+  PortaalAiUitlegInput,
   PortaalHandtekeningInput,
   PortaalOfferte,
   PortaalOptioneelWerkInput,
@@ -31856,6 +31858,77 @@ export const useAfwijzenPortaal = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getAfwijzenPortaalMutationOptions(options));
+    }
+
+export const getGetPortaalAiUitlegUrl = (token: string,) => {
+
+
+
+
+  return `/api/portaal/${token}/ai-uitleg`
+}
+
+/**
+ * @summary AI-uitleg genereren voor een offerteregel (publiek)
+ */
+export const getPortaalAiUitleg = async (token: string,
+    portaalAiUitlegInput: PortaalAiUitlegInput, options?: RequestInit): Promise<GetPortaalAiUitleg200> => {
+
+  return customFetch<GetPortaalAiUitleg200>(getGetPortaalAiUitlegUrl(token),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(portaalAiUitlegInput)
+  }
+);}
+
+
+
+
+export const getGetPortaalAiUitlegMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof getPortaalAiUitleg>>, TError,{token: string;data: BodyType<PortaalAiUitlegInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof getPortaalAiUitleg>>, TError,{token: string;data: BodyType<PortaalAiUitlegInput>}, TContext> => {
+
+const mutationKey = ['getPortaalAiUitleg'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof getPortaalAiUitleg>>, {token: string;data: BodyType<PortaalAiUitlegInput>}> = (props) => {
+          const {token,data} = props ?? {};
+
+          return  getPortaalAiUitleg(token,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type GetPortaalAiUitlegMutationResult = NonNullable<Awaited<ReturnType<typeof getPortaalAiUitleg>>>
+    export type GetPortaalAiUitlegMutationBody = BodyType<PortaalAiUitlegInput>
+    export type GetPortaalAiUitlegMutationError = ErrorType<void>
+
+    /**
+ * @summary AI-uitleg genereren voor een offerteregel (publiek)
+ */
+export const useGetPortaalAiUitleg = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof getPortaalAiUitleg>>, TError,{token: string;data: BodyType<PortaalAiUitlegInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof getPortaalAiUitleg>>,
+        TError,
+        {token: string;data: BodyType<PortaalAiUitlegInput>},
+        TContext
+      > => {
+      return useMutation(getGetPortaalAiUitlegMutationOptions(options));
     }
 
 export const getSavePortaalOptioneelWerkUrl = (token: string,) => {

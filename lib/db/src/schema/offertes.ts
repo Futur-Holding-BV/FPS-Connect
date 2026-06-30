@@ -210,6 +210,7 @@ export const offerteVragenTable = pgTable("offerte_vragen", {
   bezoekerNaam:   text("bezoeker_naam"),
   bezoekerEmail:  text("bezoeker_email"),
   vraag:          text("vraag").notNull(),
+  type:           text("type"),
   antwoord:       text("antwoord"),
   aangemaaktOp:   timestamp("aangemaakt_op").notNull().defaultNow(),
   bijgewerktOp:   timestamp("bijgewerkt_op").notNull().defaultNow(),

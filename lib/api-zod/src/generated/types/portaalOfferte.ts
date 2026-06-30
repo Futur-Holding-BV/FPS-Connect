@@ -5,9 +5,11 @@
  * FPS Brandpreventie - Platform voor brandpreventieve gebouwvoorzieningen
  * OpenAPI spec version: 0.1.0
  */
+import type { PortaalContactpersoon } from './portaalContactpersoon';
 import type { PortaalOfferteBijlagenItem } from './portaalOfferteBijlagenItem';
 import type { PortaalOfferteSectiesItem } from './portaalOfferteSectiesItem';
 import type { PortaalOptioneleRegelItem } from './portaalOptioneleRegelItem';
+import type { PortaalRegelItem } from './portaalRegelItem';
 
 export interface PortaalOfferte {
   id: number;
@@ -26,7 +28,9 @@ export interface PortaalOfferte {
   kleurthema?: string | null;
   portaal_status: string;
   ondertekend: boolean;
+  contactpersoon?: PortaalContactpersoon | null;
   secties: PortaalOfferteSectiesItem[];
   bijlagen: PortaalOfferteBijlagenItem[];
   optionele_regels: PortaalOptioneleRegelItem[];
+  regels: PortaalRegelItem[];
 }

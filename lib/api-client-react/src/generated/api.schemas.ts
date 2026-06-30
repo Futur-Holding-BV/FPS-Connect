@@ -4745,6 +4745,35 @@ export interface PortaalOptioneelWerkInput {
   geselecteerd: PortaalOptioneelWerkInputGeselecteerd;
 }
 
+export interface PortaalRegelItem {
+  id: number;
+  maatregel: string;
+  /** @nullable */
+  ruimte?: string | null;
+  /** @nullable */
+  uitgangspunten?: string | null;
+  categorie: string;
+  /** @nullable */
+  snag_referentie?: string | null;
+  eenheid: string;
+  aantal: number;
+  prijs_per_eenheid: number;
+  kosten: number;
+  volgorde: number;
+}
+
+export interface PortaalContactpersoon {
+  naam: string;
+  /** @nullable */
+  email?: string | null;
+  /** @nullable */
+  telefoon?: string | null;
+}
+
+export interface PortaalAiUitlegInput {
+  regel_id: number;
+}
+
 export interface PortaalOfferte {
   id: number;
   /** @nullable */
@@ -4762,9 +4791,11 @@ export interface PortaalOfferte {
   kleurthema?: string | null;
   portaal_status: string;
   ondertekend: boolean;
+  contactpersoon?: PortaalContactpersoon | null;
   secties: PortaalOfferteSectiesItem[];
   bijlagen: PortaalOfferteBijlagenItem[];
   optionele_regels: PortaalOptioneleRegelItem[];
+  regels: PortaalRegelItem[];
 }
 
 export interface PortaalHandtekeningInput {
@@ -4779,6 +4810,8 @@ export interface PortaalVraagInput {
   /** E-mailadres van de bezoeker (optioneel, voor antwoordnotificatie) */
   email?: string;
   vraag: string;
+  /** Soort melding — "vraag" (standaard) of "wijziging" */
+  type?: string;
 }
 
 export interface PortaalTrackingInput {
@@ -8097,6 +8130,10 @@ export type OndertekenenPortaal201 = {
   ok?: boolean;
   /** @nullable */
   project_id?: number | null;
+};
+
+export type GetPortaalAiUitleg200 = {
+  uitleg: string;
 };
 
 export type AiCalculatieRegels200 = {

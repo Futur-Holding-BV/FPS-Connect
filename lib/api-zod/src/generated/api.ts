@@ -11046,6 +11046,11 @@ export const GetPortaalResponse = zod.object({
   "kleurthema": zod.string().nullish(),
   "portaal_status": zod.string(),
   "ondertekend": zod.boolean(),
+  "contactpersoon": zod.union([zod.object({
+  "naam": zod.string(),
+  "email": zod.string().nullish(),
+  "telefoon": zod.string().nullish()
+}),zod.null()]).optional(),
   "secties": zod.array(zod.object({
   "id": zod.number(),
   "sectie_type": zod.string(),
@@ -11070,6 +11075,19 @@ export const GetPortaalResponse = zod.object({
   "prijs_per_eenheid": zod.number(),
   "kosten": zod.number(),
   "optioneel_geselecteerd": zod.boolean()
+})),
+  "regels": zod.array(zod.object({
+  "id": zod.number(),
+  "maatregel": zod.string(),
+  "ruimte": zod.string().nullish(),
+  "uitgangspunten": zod.string().nullish(),
+  "categorie": zod.string(),
+  "snag_referentie": zod.string().nullish(),
+  "eenheid": zod.string(),
+  "aantal": zod.number(),
+  "prijs_per_eenheid": zod.number(),
+  "kosten": zod.number(),
+  "volgorde": zod.number()
 }))
 })
 
@@ -11098,7 +11116,8 @@ export const CreatePortaalVraagParams = zod.object({
 export const CreatePortaalVraagBody = zod.object({
   "naam": zod.string().optional(),
   "email": zod.string().optional().describe('E-mailadres van de bezoeker (optioneel, voor antwoordnotificatie)'),
-  "vraag": zod.string()
+  "vraag": zod.string(),
+  "type": zod.string().optional().describe('Soort melding — \"vraag\" (standaard) of \"wijziging\"')
 })
 
 export const CreatePortaalVraagResponse = zod.void()
@@ -11133,6 +11152,22 @@ export const AfwijzenPortaalBody = zod.object({
 })
 
 export const AfwijzenPortaalResponse = zod.unknown()
+
+
+/**
+ * @summary AI-uitleg genereren voor een offerteregel (publiek)
+ */
+export const GetPortaalAiUitlegParams = zod.object({
+  "token": zod.coerce.string()
+})
+
+export const GetPortaalAiUitlegBody = zod.object({
+  "regel_id": zod.number()
+})
+
+export const GetPortaalAiUitlegResponse = zod.object({
+  "uitleg": zod.string()
+})
 
 
 /**

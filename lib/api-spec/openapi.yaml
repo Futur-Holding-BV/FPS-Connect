@@ -9015,6 +9015,41 @@ paths:
         "410":
           description: Token verlopen — uitnodiging is niet meer geldig
 
+  /portaal/{token}/ai-uitleg:
+    post:
+      operationId: getPortaalAiUitleg
+      tags: [portaal]
+      summary: AI-uitleg genereren voor een offerteregel (publiek)
+      parameters:
+        - in: path
+          name: token
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PortaalAiUitlegInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [uitleg]
+                properties:
+                  uitleg:
+                    type: string
+        "404":
+          description: Token niet gevonden
+        "410":
+          description: Token verlopen — uitnodiging is niet meer geldig
+        "503":
+          description: AI niet beschikbaar
+
   /portaal/{token}/optioneel-werk:
     post:
       operationId: savePortaalOptioneelWerk
@@ -21737,9 +21772,54 @@ components:
             type: boolean
           description: Map van regel-id (string) naar boolean (geselecteerd of niet)
 
+    PortaalRegelItem:
+      type: object
+      required: [id, maatregel, eenheid, aantal, prijs_per_eenheid, kosten, categorie, volgorde]
+      properties:
+        id:
+          type: integer
+        maatregel:
+          type: string
+        ruimte:
+          type: ["string", "null"]
+        uitgangspunten:
+          type: ["string", "null"]
+        categorie:
+          type: string
+        snag_referentie:
+          type: ["string", "null"]
+        eenheid:
+          type: string
+        aantal:
+          type: number
+        prijs_per_eenheid:
+          type: number
+        kosten:
+          type: number
+        volgorde:
+          type: integer
+
+    PortaalContactpersoon:
+      type: object
+      required: [naam]
+      properties:
+        naam:
+          type: string
+        email:
+          type: ["string", "null"]
+        telefoon:
+          type: ["string", "null"]
+
+    PortaalAiUitlegInput:
+      type: object
+      required: [regel_id]
+      properties:
+        regel_id:
+          type: integer
+
     PortaalOfferte:
       type: object
-      required: [id, titel, geldigheid_dagen, bedrag_excl_btw, btw_percentage, bedrag_incl_btw, portaal_status, ondertekend, secties, bijlagen, optionele_regels]
+      required: [id, titel, geldigheid_dagen, bedrag_excl_btw, btw_percentage, bedrag_incl_btw, portaal_status, ondertekend, secties, bijlagen, optionele_regels, regels]
       properties:
         id:
           type: integer
@@ -21765,6 +21845,10 @@ components:
           type: string
         ondertekend:
           type: boolean
+        contactpersoon:
+          oneOf:
+            - $ref: "#/components/schemas/PortaalContactpersoon"
+            - type: "null"
         secties:
           type: array
           items:
@@ -21777,6 +21861,10 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/PortaalOptioneleRegelItem"
+        regels:
+          type: array
+          items:
+            $ref: "#/components/schemas/PortaalRegelItem"
 
     PortaalHandtekeningInput:
       type: object
@@ -21802,6 +21890,9 @@ components:
           description: E-mailadres van de bezoeker (optioneel, voor antwoordnotificatie)
         vraag:
           type: string
+        type:
+          type: string
+          description: Soort melding — "vraag" (standaard) of "wijziging"
 
     PortaalTrackingInput:
       type: object

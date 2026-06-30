@@ -11,4 +11,6 @@ export interface PortaalVraagInput {
   /** E-mailadres van de bezoeker (optioneel, voor antwoordnotificatie) */
   email?: string;
   vraag: string;
+  /** Soort melding — "vraag" (standaard) of "wijziging" */
+  type?: string;
 }
