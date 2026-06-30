@@ -23,7 +23,17 @@ export interface Opdracht {
   opdrachtgever?: string | null;
   /** @nullable */
   omschrijving?: string | null;
+  /** @nullable */
+  type?: string | null;
   status: string;
+  /** @nullable */
+  gebouw_naam?: string | null;
+  /** @nullable */
+  gebouw_adres?: string | null;
+  /** @nullable */
+  gebouw_postcode?: string | null;
+  /** @nullable */
+  gebouw_stad?: string | null;
   aangemaakt_op: string;
   bijgewerkt_op: string;
   /** @nullable */

@@ -34,7 +34,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import {
   ChevronLeft, ChevronRight, Plus, AlertTriangle, Users,
   Briefcase, Clock, RefreshCw, X,
-  CalendarDays, ChevronDown, Lock, Trash2,
+  CalendarDays, ChevronDown, Lock, Trash2, MapPin,
 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -432,10 +432,25 @@ type OpdrachtenPaneelProps = {
   onInplannen: (gebouwId: number, gebouwNaam: string) => void;
 };
 
+const OPDRACHT_TYPE_LABEL: Record<string, string> = {
+  vast: "Vast",
+  regie: "Regie",
+  overig: "Overig",
+};
+
+const BEGROTING_STATUS_KLEUR: Record<string, string> = {
+  concept:     "bg-amber-100 text-amber-700 border-amber-200",
+  vastgesteld: "bg-emerald-100 text-emerald-700 border-emerald-200",
+  afgerond:    "bg-slate-100 text-slate-600 border-slate-200",
+};
+
 function OpdrachtenPaneel({ opdrachten, ingeplandUrenPerGebouw, onInplannen }: OpdrachtenPaneelProps) {
   const [uitgeklapt, setUitgeklapt] = useState(false);
 
   if (opdrachten.length === 0) return null;
+
+  const metBegroting   = opdrachten.filter(o => (o as Record<string, unknown>).begroting_status === "vastgesteld").length;
+  const zonderBegroting = opdrachten.length - metBegroting;
 
   return (
     <div className="rounded-lg border bg-white overflow-hidden">
@@ -448,6 +463,9 @@ function OpdrachtenPaneel({ opdrachten, ingeplandUrenPerGebouw, onInplannen }: O
           <Briefcase className="h-4 w-4 text-muted-foreground" />
           <span className="text-sm font-semibold text-slate-800">Opdrachten — in te plannen</span>
           <Badge variant="secondary" className="text-xs">{opdrachten.length}</Badge>
+          {zonderBegroting > 0 && (
+            <span className="text-xs text-amber-600 font-medium">{zonderBegroting} zonder begroting</span>
+          )}
         </div>
         <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${uitgeklapt ? "rotate-180" : ""}`} />
       </button>
@@ -458,8 +476,10 @@ function OpdrachtenPaneel({ opdrachten, ingeplandUrenPerGebouw, onInplannen }: O
             <table className="w-full border-collapse">
               <thead>
                 <tr className="border-b bg-slate-50 text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                  <th className="px-4 py-2.5 text-left">Opdracht</th>
-                  <th className="px-3 py-2.5 text-right">Begroot (uren)</th>
+                  <th className="px-4 py-2.5 text-left">Opdracht / Locatie</th>
+                  <th className="px-3 py-2.5 text-left">Type</th>
+                  <th className="px-3 py-2.5 text-left">Begroting</th>
+                  <th className="px-3 py-2.5 text-right">Begroot</th>
                   <th className="px-3 py-2.5 text-right">Ingepland</th>
                   <th className="px-3 py-2.5 text-right">Resterend</th>
                   <th className="px-3 py-2.5 text-center">Actie</th>
@@ -469,52 +489,101 @@ function OpdrachtenPaneel({ opdrachten, ingeplandUrenPerGebouw, onInplannen }: O
                 {opdrachten.map((o) => {
                   const r = o as Record<string, unknown>;
                   const id = r.id as number;
-                  const titel = r.titel as string ?? "Onbekend";
-                  const gebouwId = r.gebouw_id as number | null;
-                  const begroot = (r.begroting_totaal_arbeid_uren as number) ?? 0;
-                  const ingepland = gebouwId ? (ingeplandUrenPerGebouw.get(gebouwId) ?? 0) : 0;
-                  const resterend = Math.max(0, begroot - ingepland);
-                  const pct = begroot > 0 ? Math.min(100, (ingepland / begroot) * 100) : 0;
+                  const titel        = (r.titel as string) ?? "Onbekend";
+                  const werknummer   = r.werknummer as string | null;
+                  const opdrachtgever = r.opdrachtgever as string | null;
+                  const gebouwId     = r.gebouw_id as number | null;
+                  const gebouwNaam   = r.gebouw_naam as string | null;
+                  const gebouwAdres  = r.gebouw_adres as string | null;
+                  const gebouwStad   = r.gebouw_stad as string | null;
+                  const type         = (r.type as string | null) ?? "vast";
+                  const begStatus    = (r.begroting_status as string | null) ?? "concept";
+                  const begroot      = Number(r.begroting_totaal_arbeid_uren ?? 0);
+                  const ingepland    = gebouwId ? (ingeplandUrenPerGebouw.get(gebouwId) ?? 0) : 0;
+                  const resterend    = Math.max(0, begroot - ingepland);
+                  const pct          = begroot > 0 ? Math.min(100, (ingepland / begroot) * 100) : 0;
                   const overplanning = ingepland > begroot;
+                  const kanInplannen = gebouwId !== null;
 
                   return (
                     <tr key={id} className="hover:bg-slate-50/50 transition-colors">
-                      <td className="px-4 py-3">
+                      {/* Opdracht + locatie */}
+                      <td className="px-4 py-3 min-w-56">
                         <Link href={`/opdrachten/${id}`}>
                           <p className="text-sm font-medium text-slate-800 hover:text-primary hover:underline truncate max-w-72">{titel}</p>
                         </Link>
-                        {/* Voortgangsbalk */}
-                        <div className="mt-1.5 h-1 w-full max-w-48 bg-slate-100 rounded-full overflow-hidden">
-                          <div
-                            className={`h-1 rounded-full transition-all ${overplanning ? "bg-red-400" : pct >= 90 ? "bg-amber-400" : "bg-primary"}`}
-                            style={{ width: `${pct}%` }}
-                          />
-                        </div>
+                        {werknummer && (
+                          <p className="text-xs text-muted-foreground mt-0.5">{werknummer}</p>
+                        )}
+                        {opdrachtgever && (
+                          <p className="text-xs text-muted-foreground">{opdrachtgever}</p>
+                        )}
+                        {gebouwNaam && (
+                          <p className="text-xs text-slate-600 mt-1 flex items-center gap-1">
+                            <MapPin className="h-3 w-3 shrink-0 text-muted-foreground" />
+                            <span className="truncate">{gebouwNaam}</span>
+                          </p>
+                        )}
+                        {(gebouwAdres || gebouwStad) && (
+                          <p className="text-xs text-muted-foreground pl-4">
+                            {[gebouwAdres, gebouwStad].filter(Boolean).join(", ")}
+                          </p>
+                        )}
+                        {begroot > 0 && (
+                          <div className="mt-1.5 h-1 w-full max-w-48 bg-slate-100 rounded-full overflow-hidden">
+                            <div
+                              className={`h-1 rounded-full transition-all ${overplanning ? "bg-red-400" : pct >= 90 ? "bg-amber-400" : "bg-primary"}`}
+                              style={{ width: `${pct}%` }}
+                            />
+                          </div>
+                        )}
                       </td>
-                      <td className="px-3 py-3 text-right">
-                        <span className="text-sm text-slate-700">{begroot}u</span>
+                      {/* Type */}
+                      <td className="px-3 py-3 whitespace-nowrap">
+                        <span className="text-xs text-slate-600">{OPDRACHT_TYPE_LABEL[type] ?? type}</span>
                       </td>
-                      <td className="px-3 py-3 text-right">
+                      {/* Begroting status */}
+                      <td className="px-3 py-3 whitespace-nowrap">
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded border text-xs font-medium ${BEGROTING_STATUS_KLEUR[begStatus] ?? "bg-slate-100 text-slate-600 border-slate-200"}`}>
+                          {begStatus === "vastgesteld" ? "Vastgesteld" : begStatus === "concept" ? "Concept" : begStatus}
+                        </span>
+                      </td>
+                      {/* Begroot uren */}
+                      <td className="px-3 py-3 text-right whitespace-nowrap">
+                        {begroot > 0
+                          ? <span className="text-sm text-slate-700">{begroot}u</span>
+                          : <span className="text-xs text-muted-foreground">—</span>
+                        }
+                      </td>
+                      {/* Ingepland */}
+                      <td className="px-3 py-3 text-right whitespace-nowrap">
                         <span className={`text-sm font-medium ${overplanning ? "text-red-600" : "text-slate-700"}`}>
-                          {ingepland}u
+                          {ingepland > 0 ? `${ingepland}u` : <span className="text-muted-foreground text-xs">0u</span>}
                         </span>
                       </td>
-                      <td className="px-3 py-3 text-right">
-                        <span className={`text-sm font-medium ${resterend === 0 && !overplanning ? "text-emerald-600" : overplanning ? "text-red-600" : resterend < begroot * 0.1 ? "text-amber-600" : "text-slate-700"}`}>
-                          {overplanning ? `+${ingepland - begroot}u` : `${resterend}u`}
-                        </span>
+                      {/* Resterend */}
+                      <td className="px-3 py-3 text-right whitespace-nowrap">
+                        {begroot > 0
+                          ? <span className={`text-sm font-medium ${resterend === 0 && !overplanning ? "text-emerald-600" : overplanning ? "text-red-600" : resterend < begroot * 0.1 ? "text-amber-600" : "text-slate-700"}`}>
+                              {overplanning ? `+${ingepland - begroot}u` : `${resterend}u`}
+                            </span>
+                          : <span className="text-xs text-muted-foreground">—</span>
+                        }
                       </td>
-                      <td className="px-3 py-3 text-center">
-                        {gebouwId && resterend > 0 && (
+                      {/* Actie */}
+                      <td className="px-3 py-3 text-center whitespace-nowrap">
+                        {kanInplannen ? (
                           <Button
                             size="sm"
-                            variant="outline"
+                            variant={begStatus === "vastgesteld" ? "default" : "outline"}
                             className="h-7 text-xs"
-                            onClick={() => onInplannen(gebouwId, titel)}
+                            onClick={() => onInplannen(gebouwId!, gebouwNaam ?? titel)}
                           >
                             <Plus className="h-3 w-3 mr-1" />
                             Inplannen
                           </Button>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">Geen gebouw</span>
                         )}
                       </td>
                     </tr>
@@ -628,7 +697,7 @@ export default function ModulesPlanning() {
   const ingePlannenOpdrachten = useMemo(() =>
     actieveOpdrachten.filter((o) => {
       const r = (o as unknown) as Record<string, unknown>;
-      return r.begroting_status === "vastgesteld" && r.begroting_totaal_arbeid_uren && Number(r.begroting_totaal_arbeid_uren) > 0;
+      return r.status === "actief";
     }), [actieveOpdrachten]);
 
   // ── Mutations ────────────────────────────────────────────────────────────

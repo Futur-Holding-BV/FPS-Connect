@@ -30,6 +30,7 @@ function mapOpdracht(
   begrotingId: number | null,
   begrotingStatus: string | null,
   begrotingUren: number | null,
+  g?: { naam: string | null; adres: string | null; postcode: string | null; stad: string | null } | null,
 ) {
   return {
     id: o.id,
@@ -41,7 +42,12 @@ function mapOpdracht(
     werknummer: o.werknummer ?? null,
     opdrachtgever: o.opdrachtgever ?? null,
     omschrijving: o.omschrijving ?? null,
+    type: o.type ?? null,
     status: o.status,
+    gebouw_naam: g?.naam ?? null,
+    gebouw_adres: g?.adres ?? null,
+    gebouw_postcode: g?.postcode ?? null,
+    gebouw_stad: g?.stad ?? null,
     aangemaakt_op: iso(o.aangemaaktOp)!,
     bijgewerkt_op: iso(o.bijgewerktOp)!,
     begroting_id: begrotingId,
@@ -237,9 +243,16 @@ router.get("/opdrachten", lezen, async (req, res) => {
         status: projectBegrotingenTable.status,
         totaalArbeidUren: projectBegrotingenTable.totaalArbeidUren,
       },
+      g: {
+        naam: gebouwenTable.naam,
+        adres: gebouwenTable.adres,
+        postcode: gebouwenTable.postcode,
+        stad: gebouwenTable.stad,
+      },
     })
       .from(opdrachtenTable)
       .leftJoin(projectBegrotingenTable, eq(projectBegrotingenTable.opdrachtId, opdrachtenTable.id))
+      .leftJoin(gebouwenTable, eq(gebouwenTable.id, opdrachtenTable.gebouwId))
       .where(
         and(
           gebouwFilter ? eq(opdrachtenTable.gebouwId, gebouwFilter) : undefined,
@@ -249,7 +262,7 @@ router.get("/opdrachten", lezen, async (req, res) => {
       )
       .orderBy(asc(opdrachtenTable.aangemaaktOp));
 
-    res.json(rows.map(r => mapOpdracht(r.o, r.b?.id ?? null, r.b?.status ?? null, r.b?.totaalArbeidUren ?? null)));
+    res.json(rows.map(r => mapOpdracht(r.o, r.b?.id ?? null, r.b?.status ?? null, r.b?.totaalArbeidUren ?? null, r.g)));
   } catch (err) {
     logger.error({ err }, "listOpdrachten fout");
     res.status(500).json({ error: "Serverfout" });
@@ -270,13 +283,20 @@ router.get("/opdrachten/:id", lezen, async (req, res) => {
         status: projectBegrotingenTable.status,
         totaalArbeidUren: projectBegrotingenTable.totaalArbeidUren,
       },
+      g: {
+        naam: gebouwenTable.naam,
+        adres: gebouwenTable.adres,
+        postcode: gebouwenTable.postcode,
+        stad: gebouwenTable.stad,
+      },
     })
       .from(opdrachtenTable)
       .leftJoin(projectBegrotingenTable, eq(projectBegrotingenTable.opdrachtId, opdrachtenTable.id))
+      .leftJoin(gebouwenTable, eq(gebouwenTable.id, opdrachtenTable.gebouwId))
       .where(eq(opdrachtenTable.id, id));
 
     if (!row) { res.status(404).json({ error: "Opdracht niet gevonden" }); return; }
-    res.json(mapOpdracht(row.o, row.b?.id ?? null, row.b?.status ?? null, row.b?.totaalArbeidUren ?? null));
+    res.json(mapOpdracht(row.o, row.b?.id ?? null, row.b?.status ?? null, row.b?.totaalArbeidUren ?? null, row.g));
   } catch (err) {
     logger.error({ err }, "getOpdracht fout");
     res.status(500).json({ error: "Serverfout" });
@@ -305,7 +325,12 @@ router.patch("/opdrachten/:id", schrijven, async (req, res) => {
       totaalArbeidUren: projectBegrotingenTable.totaalArbeidUren,
     }).from(projectBegrotingenTable).where(eq(projectBegrotingenTable.opdrachtId, id));
 
-    res.json(mapOpdracht(updated, begroting?.id ?? null, begroting?.status ?? null, begroting?.totaalArbeidUren ?? null));
+    const [gebouw] = updated.gebouwId
+      ? await db.select({ naam: gebouwenTable.naam, adres: gebouwenTable.adres, postcode: gebouwenTable.postcode, stad: gebouwenTable.stad })
+          .from(gebouwenTable).where(eq(gebouwenTable.id, updated.gebouwId))
+      : [null];
+
+    res.json(mapOpdracht(updated, begroting?.id ?? null, begroting?.status ?? null, begroting?.totaalArbeidUren ?? null, gebouw ?? null));
   } catch (err) {
     logger.error({ err }, "updateOpdracht fout");
     res.status(500).json({ error: "Serverfout" });

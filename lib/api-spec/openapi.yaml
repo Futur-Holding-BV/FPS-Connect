@@ -21310,8 +21310,18 @@ components:
           type: ["string", "null"]
         omschrijving:
           type: ["string", "null"]
+        type:
+          type: ["string", "null"]
         status:
           type: string
+        gebouw_naam:
+          type: ["string", "null"]
+        gebouw_adres:
+          type: ["string", "null"]
+        gebouw_postcode:
+          type: ["string", "null"]
+        gebouw_stad:
+          type: ["string", "null"]
         aangemaakt_op:
           type: string
         bijgewerkt_op:
