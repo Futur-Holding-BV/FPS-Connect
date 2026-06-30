@@ -29,12 +29,40 @@ interface Props {
   werkgeverNaam?: string;
 }
 
+const FALLBACK_KLEUR = "#F23B0D";
+
 function parseTemplate(json: string): StudioTemplateJson | null {
   try {
-    return JSON.parse(json) as StudioTemplateJson;
+    const parsed = JSON.parse(json) as unknown;
+    if (!parsed || typeof parsed !== "object") return null;
+    const obj = parsed as Record<string, unknown>;
+    // Defensief: verifieer verplichte top-level velden
+    if (!obj.koptekst || typeof obj.koptekst !== "object") return null;
+    if (!obj.kleurschema || typeof obj.kleurschema !== "object") return null;
+    if (!Array.isArray(obj.secties)) return null;
+    return parsed as StudioTemplateJson;
   } catch {
     return null;
   }
+}
+
+function geldige_logo_positie(v: unknown): "links" | "rechts" | "midden" {
+  if (v === "rechts" || v === "midden") return v;
+  return "links";
+}
+
+function geldige_sectie_type(v: unknown): "tekst" | "tabel" | "ondertekening" | "checklist" {
+  if (v === "tabel" || v === "ondertekening" || v === "checklist") return v;
+  return "tekst";
+}
+
+function normaliseerSectie(s: unknown): StudioTemplateSectie {
+  const obj = (s && typeof s === "object" ? s : {}) as Record<string, unknown>;
+  return {
+    type:   geldige_sectie_type(obj.type),
+    titel:  typeof obj.titel === "string" ? obj.titel : null,
+    inhoud: typeof obj.inhoud === "string" ? obj.inhoud : "",
+  };
 }
 
 function SectieBlok({ sectie, kleur }: { sectie: StudioTemplateSectie; kleur: string }) {
@@ -81,7 +109,7 @@ function SectieBlok({ sectie, kleur }: { sectie: StudioTemplateSectie; kleur: st
             </thead>
             <tbody>
               <tr className="border-b border-slate-100">
-                <td className="p-2 text-slate-500 italic">{sectie.inhoud}</td>
+                <td className="p-2 text-slate-500 italic">{sectie.inhoud || "—"}</td>
                 <td className="p-2 text-right text-slate-400">—</td>
               </tr>
             </tbody>
@@ -106,8 +134,19 @@ export default function StudioTemplatePreview({ templateJson, logoUrl, werkgever
     );
   }
 
-  const { koptekst, kleurschema, secties, voettekst, familie } = tmpl;
-  const primaireKleur = kleurschema.primair || "#F23B0D";
+  // Defensieve normalisatie — ook geldige JSON kan losse velden missen bij LLM-output
+  const koptekstObj = (tmpl.koptekst ?? {}) as Record<string, unknown>;
+  const kleurObj    = (tmpl.kleurschema ?? {}) as Record<string, unknown>;
+  const secties     = Array.isArray(tmpl.secties) ? tmpl.secties.map(normaliseerSectie) : [];
+  const familie     = (tmpl.familie === "B" || tmpl.familie === "C") ? tmpl.familie : "A";
+  const voettekst   = typeof tmpl.voettekst === "string" ? tmpl.voettekst : null;
+
+  const primaireKleur = (typeof kleurObj.primair === "string" && kleurObj.primair) ? kleurObj.primair : FALLBACK_KLEUR;
+  const tekstKleur    = (typeof kleurObj.tekst   === "string" && kleurObj.tekst)   ? kleurObj.tekst   : "#1a1a1a";
+  const logoPositie   = geldige_logo_positie(koptekstObj.logo_positie);
+  const koptitel      = typeof koptekstObj.titel   === "string" ? koptekstObj.titel   : "";
+  const subinfo       = typeof koptekstObj.subinfo === "string" ? koptekstObj.subinfo : null;
+
   const logoNode = logoUrl ? (
     <img src={resolveAssetUrl(logoUrl)} alt={werkgeverNaam} className="h-8 object-contain" />
   ) : (
@@ -123,18 +162,18 @@ export default function StudioTemplatePreview({ templateJson, logoUrl, werkgever
         className="px-10 py-6 flex items-center justify-between"
         style={{ borderBottom: `3px solid ${primaireKleur}` }}
       >
-        {koptekst.logo_positie !== "rechts" && logoNode}
-        <div className={koptekst.logo_positie === "midden" ? "text-center flex-1" : "flex-1 px-4"}>
-          <h1 className="text-lg font-bold" style={{ color: kleurschema.tekst ?? "#1a1a1a" }}>
-            {koptekst.titel}
+        {logoPositie !== "rechts" && logoNode}
+        <div className={logoPositie === "midden" ? "text-center flex-1" : "flex-1 px-4"}>
+          <h1 className="text-lg font-bold" style={{ color: tekstKleur }}>
+            {koptitel}
           </h1>
-          {koptekst.subinfo && (
+          {subinfo && (
             <p className="text-xs mt-0.5" style={{ color: primaireKleur }}>
-              {koptekst.subinfo}
+              {subinfo}
             </p>
           )}
         </div>
-        {koptekst.logo_positie === "rechts" && logoNode}
+        {logoPositie === "rechts" && logoNode}
       </div>
 
       {/* Familie-badge */}

@@ -11,6 +11,8 @@ import { ObjectStorageService } from "../lib/objectStorage";
 import { heeftOpenAi, maakOpenAiClient } from "../lib/openai";
 import { logActiviteit } from "../lib/activiteit";
 
+import { z } from "zod";
+
 // pdf-parse is CJS-only; gebruik createRequire voor ESM-compatibiliteit.
 const _req = createRequire(import.meta.url);
 type PdfParseFn = (buf: Buffer) => Promise<{ text: string; numpages: number }>;
@@ -19,6 +21,35 @@ const pdfParse: PdfParseFn = (_req("pdf-parse") as { default?: PdfParseFn }).def
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 const oss = new ObjectStorageService();
+
+// ── Zod schema voor StudioTemplateJson — validatie van AI-output ─────────────
+
+const studioTemplateSectieSchema = z.object({
+  type:   z.enum(["tekst", "tabel", "ondertekening", "checklist"]),
+  titel:  z.string().nullable(),
+  inhoud: z.string(),
+});
+
+const studioTemplateJsonSchema = z.object({
+  familie:    z.enum(["A", "B", "C"]),
+  koptekst:   z.object({
+    logo_positie: z.enum(["links", "rechts", "midden"]),
+    titel:        z.string(),
+    subinfo:      z.string().nullable(),
+  }),
+  kleurschema: z.object({
+    primair:   z.string(),
+    secundair: z.string(),
+    tekst:     z.string(),
+  }),
+  secties:    z.array(studioTemplateSectieSchema),
+  voettekst:  z.string().nullable(),
+});
+
+function valideerTemplateJson(json: string): z.infer<typeof studioTemplateJsonSchema> {
+  const parsed: unknown = JSON.parse(json);
+  return studioTemplateJsonSchema.parse(parsed);
+}
 
 const lezen   = requireBevoegdheid("organisatie", 1);
 const schrijven = requireBevoegdheid("organisatie", 2);
@@ -466,8 +497,8 @@ router.post("/studio/modellen/:id/genereer", schrijven, async (req, res) => {
     // JSON extraheren uit mogelijke markdown-blokken
     const json = tekst.replace(/^```[a-z]*\n?/i, "").replace(/\n?```$/i, "").trim();
 
-    // Valideer dat het geldige JSON is
-    JSON.parse(json); // gooit als het invalide JSON is
+    // Strikte schema-validatie: gooit bij ongeldige JSON én bij ontbrekende/verkeerde velden
+    valideerTemplateJson(json);
 
     const [bijgewerkt] = await db
       .update(documentStudioModellenTable)
@@ -482,8 +513,8 @@ router.post("/studio/modellen/:id/genereer", schrijven, async (req, res) => {
     res.json(mapModel(bijgewerkt, rij.wgNaam ?? null));
   } catch (err) {
     req.log.error(err);
-    if (err instanceof SyntaxError) {
-      return res.status(503).json({ error: "AI retourneerde geen geldige JSON — probeer opnieuw" });
+    if (err instanceof SyntaxError || (err instanceof z.ZodError)) {
+      return res.status(503).json({ error: "AI retourneerde geen geldig template — probeer opnieuw" });
     }
     res.status(500).json({ error: "Interne serverfout" });
   }
@@ -527,7 +558,8 @@ router.post("/studio/modellen/:id/bijstuur", schrijven, async (req, res) => {
     const tekst = completion.choices[0]?.message?.content?.trim() ?? "";
     const json = tekst.replace(/^```[a-z]*\n?/i, "").replace(/\n?```$/i, "").trim();
 
-    JSON.parse(json); // valideer
+    // Strikte schema-validatie: gooit bij ongeldige JSON én bij ontbrekende/verkeerde velden
+    valideerTemplateJson(json);
 
     const [bijgewerkt] = await db
       .update(documentStudioModellenTable)
@@ -542,8 +574,8 @@ router.post("/studio/modellen/:id/bijstuur", schrijven, async (req, res) => {
     res.json(mapModel(bijgewerkt, rij.wgNaam ?? null));
   } catch (err) {
     req.log.error(err);
-    if (err instanceof SyntaxError) {
-      return res.status(503).json({ error: "AI retourneerde geen geldige JSON — probeer opnieuw" });
+    if (err instanceof SyntaxError || err instanceof z.ZodError) {
+      return res.status(503).json({ error: "AI retourneerde geen geldig template — probeer opnieuw" });
     }
     res.status(500).json({ error: "Interne serverfout" });
   }
