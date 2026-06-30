@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   useListOffertePortaalTokens,
@@ -110,8 +110,30 @@ export function VerzendTab({ offerteId, opdrachtgever, titel, vragen, vragenLade
 
   const [openAntwoord, setOpenAntwoord] = useState<number | null>(null);
   const [antwoordForms, setAntwoordForms] = useState<Record<number, AntwoordForm>>({});
+  const autoFillGedaan = useRef(false);
 
   const baseUrl = `${window.location.origin}${import.meta.env.BASE_URL.replace(/\/$/, "")}`;
+
+  // Auto-genereer AI-voorstel zodra de tab opent (eenmalig)
+  useEffect(() => {
+    if (autoFillGedaan.current) return;
+    autoFillGedaan.current = true;
+    void (async () => {
+      try {
+        const voorstel = await aiEmail.mutateAsync({ id: offerteId });
+        setEmailVoorstel(voorstel);
+        setEmailForm((f) => ({
+          ...f,
+          naar_naam: f.naar_naam || opdrachtgever || "",
+          onderwerp: voorstel.onderwerp,
+          tekst: [voorstel.begroeting, "", voorstel.samenvatting, "", voorstel.call_to_action, "", voorstel.afsluiting].join("\n"),
+        }));
+      } catch {
+        // stil falen — gebruiker kan handmatig opnieuw proberen
+      }
+    })();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function getAntwoordForm(vraagId: number): AntwoordForm {
     return antwoordForms[vraagId] ?? { tekst: "", email: "", naam: "" };
@@ -364,58 +386,80 @@ export function VerzendTab({ offerteId, opdrachtgever, titel, vragen, vragenLade
               className="shrink-0"
             >
               <Sparkles className="h-3.5 w-3.5" />
-              {aiEmail.isPending ? "Genereren…" : "AI-voorstel"}
+              {aiEmail.isPending ? "Genereren…" : emailVoorstel ? "Opnieuw genereren" : "AI-voorstel"}
             </Button>
           </div>
 
-          {emailVoorstel && (
-            <div className="rounded-md border bg-amber-50 border-amber-200 p-3 text-xs text-amber-800 space-y-1">
-              <div className="flex items-center gap-1.5 font-medium">
-                <Sparkles className="h-3 w-3" />
-                AI-voorstel gegenereerd — controleer en pas aan voor verzending
+          {aiEmail.isPending && (
+            <div className="rounded-md border bg-slate-50 border-slate-200 p-3 space-y-2">
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <Sparkles className="h-3 w-3 animate-pulse text-primary" />
+                AI stelt e-mail op op basis van de offerte-inhoud…
               </div>
+              <Skeleton className="h-4 w-3/4" />
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-5/6" />
+            </div>
+          )}
+
+          {!aiEmail.isPending && emailVoorstel && (
+            <div className="rounded-md border bg-amber-50 border-amber-200 px-3 py-2 text-xs text-amber-800 flex items-center gap-1.5">
+              <Sparkles className="h-3 w-3 shrink-0" />
+              <span>AI-voorstel ingevuld op basis van offerte-inhoud — controleer en pas aan voor verzending</span>
             </div>
           )}
 
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="space-y-1.5">
               <Label>E-mailadres klant *</Label>
-              <Input
-                type="email"
-                value={emailForm.naar_email}
-                onChange={(e) => setEmailForm((f) => ({ ...f, naar_email: e.target.value }))}
-                placeholder="klant@bedrijf.nl"
-              />
+              {aiEmail.isPending
+                ? <Skeleton className="h-9 w-full" />
+                : <Input
+                    type="email"
+                    value={emailForm.naar_email}
+                    onChange={(e) => setEmailForm((f) => ({ ...f, naar_email: e.target.value }))}
+                    placeholder="klant@bedrijf.nl"
+                  />
+              }
             </div>
             <div className="space-y-1.5">
               <Label>Naam (optioneel)</Label>
-              <Input
-                value={emailForm.naar_naam}
-                onChange={(e) => setEmailForm((f) => ({ ...f, naar_naam: e.target.value }))}
-                placeholder={opdrachtgever ?? ""}
-              />
+              {aiEmail.isPending
+                ? <Skeleton className="h-9 w-full" />
+                : <Input
+                    value={emailForm.naar_naam}
+                    onChange={(e) => setEmailForm((f) => ({ ...f, naar_naam: e.target.value }))}
+                    placeholder={opdrachtgever ?? ""}
+                  />
+              }
             </div>
             <div className="sm:col-span-2 space-y-1.5">
               <Label>Onderwerp *</Label>
-              <Input
-                value={emailForm.onderwerp}
-                onChange={(e) => setEmailForm((f) => ({ ...f, onderwerp: e.target.value }))}
-                placeholder={`Offerte ${titel}`}
-              />
+              {aiEmail.isPending
+                ? <Skeleton className="h-9 w-full" />
+                : <Input
+                    value={emailForm.onderwerp}
+                    onChange={(e) => setEmailForm((f) => ({ ...f, onderwerp: e.target.value }))}
+                    placeholder={`Offerte ${titel}`}
+                  />
+              }
             </div>
             <div className="sm:col-span-2 space-y-1.5">
               <Label>Berichttekst *</Label>
-              <Textarea
-                value={emailForm.tekst}
-                onChange={(e) => setEmailForm((f) => ({ ...f, tekst: e.target.value }))}
-                rows={8}
-                placeholder="Geachte heer/mevrouw…"
-              />
+              {aiEmail.isPending
+                ? <Skeleton className="h-40 w-full" />
+                : <Textarea
+                    value={emailForm.tekst}
+                    onChange={(e) => setEmailForm((f) => ({ ...f, tekst: e.target.value }))}
+                    rows={10}
+                    placeholder="Geachte heer/mevrouw…"
+                  />
+              }
             </div>
           </div>
 
           <div className="flex justify-end">
-            <Button onClick={verstuurEmail} disabled={verzend.isPending}>
+            <Button onClick={verstuurEmail} disabled={verzend.isPending || aiEmail.isPending}>
               <Send className="h-3.5 w-3.5" />
               {verzend.isPending ? "Verzenden…" : "Versturen"}
             </Button>

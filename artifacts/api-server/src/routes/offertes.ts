@@ -1483,53 +1483,104 @@ router.get("/offertes/:id/tracking", lezen, async (req, res) => {
 router.post("/offertes/:id/ai-email", schrijven, async (req, res) => {
   try {
     const offerteId = parseId(req.params.id);
+
     const [offerte] = await db.select().from(offertesTable).where(eq(offertesTable.id, offerteId));
     if (!offerte) return res.status(404).json({ error: "Offerte niet gevonden" });
 
+    // Extra context ophalen: secties, maatregelregels, gebouwnaam
+    const [secties, regels, gebouwRij] = await Promise.all([
+      db.select({ titel: offerteSectiesTable.titel })
+        .from(offerteSectiesTable)
+        .where(and(eq(offerteSectiesTable.offerteId, offerteId), eq(offerteSectiesTable.actief, true)))
+        .orderBy(offerteSectiesTable.volgorde),
+      db.select({ maatregel: offerteRegelsTable.maatregel, categorie: offerteRegelsTable.categorie })
+        .from(offerteRegelsTable)
+        .where(eq(offerteRegelsTable.offerteId, offerteId))
+        .orderBy(offerteRegelsTable.volgorde),
+      offerte.gebouwId
+        ? db.select({ naam: gebouwenTable.naam, stad: gebouwenTable.stad })
+            .from(gebouwenTable).where(eq(gebouwenTable.id, offerte.gebouwId))
+        : Promise.resolve([null]),
+    ]);
+
+    const gebouw = Array.isArray(gebouwRij) ? gebouwRij[0] : null;
+    const maatregelen = regels
+      .filter(r => r.categorie === "maatregel" && r.maatregel?.trim())
+      .map(r => `- ${r.maatregel.trim()}`)
+      .slice(0, 12);
+    const sectietitels = secties.map(s => s.titel).filter(Boolean);
+
+    const locatieTekst = gebouw?.naam
+      ? `${gebouw.naam}${gebouw.stad ? ` (${gebouw.stad})` : ""}`
+      : null;
+
+    const bedragFormatted = new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR" }).format(offerte.bedragInclBtw);
+
+    // Fallback zonder OpenAI
     if (!heeftOpenAi()) {
-      return res.json({
-        onderwerp: `Offerte ${offerte.offertenummer ?? offerte.id} — ${offerte.titel}`,
-        begroeting: `Geachte heer/mevrouw,`,
-        samenvatting: `Bijgevoegd vindt u onze offerte voor ${offerte.titel}.`,
-        call_to_action: `U kunt de offerte online bekijken en ondertekenen via de bijgevoegde link.`,
-        afsluiting: `Met vriendelijke groet,`,
-      });
+      const onderwerp = `Offerte ${offerte.offertenummer ?? offerte.id} — ${offerte.titel}`;
+      const begroeting = `Geachte ${offerte.opdrachtgever ? `heer/mevrouw ${offerte.opdrachtgever}` : "heer/mevrouw"},`;
+      const samenvatting = `Hierbij ontvangt u onze offerte voor ${offerte.titel}${locatieTekst ? ` voor ${locatieTekst}` : ""}.\n\nHet totaalbedrag bedraagt ${bedragFormatted} incl. btw. De offerte is ${offerte.geldigheidDagen} dagen geldig.`;
+      const call_to_action = `Via de bijgevoegde portaallink kunt u de offerte volledig bekijken en digitaal ondertekenen. Heeft u vragen? U kunt deze direct via het portaal stellen.`;
+      const afsluiting = `Met vriendelijke groet,\nTeam FPS Brandpreventie`;
+      return res.json({ onderwerp, begroeting, samenvatting, call_to_action, afsluiting });
     }
 
     const ai = maakOpenAiClient();
     const completion = await ai.chat.completions.create({
       model: "gpt-4o",
-      max_tokens: 600,
+      max_tokens: 900,
       messages: [
         {
           role: "system",
-          content:
-            "Je bent een professionele tekstschrijver voor FPS Brandpreventie. Schrijf zakelijke maar vriendelijke e-mailteksten in het Nederlands.",
+          content: `Je schrijft zakelijke e-mails namens FPS Brandpreventie, een specialist in brand- en rookcompartimentering.
+
+Communicatiestijl FPS:
+- Direct en zelfverzekerd — wij zijn de vakpartij, geen excuses of onnodige omhaal
+- Warm maar zakelijk — persoonlijk aanspreken, niet formeel-stijf ("Geachte heer/mevrouw X,")
+- Concreet — noem het gebouw, de werkzaamheden, het bedrag en de geldigheidsdatum
+- Geen wollige zinnen, geen clichés zoals "in the picture" of "naar aanleiding van"
+- Portaallink wordt uitnodigend gepresenteerd als snelle, digitale manier van ondertekenen
+- Altijd afsluiten met: Met vriendelijke groet, Team FPS Brandpreventie
+- Schrijf in vloeiend Nederlands, taal B2-niveau, leesbaar voor een niet-technische opdrachtgever
+- Houd de tekst beknopt: één alinea introductie, één alinea inhoud/werkzaamheden, één alinea call-to-action`,
         },
         {
           role: "user",
-          content: `Schrijf een begeleidende e-mail voor de volgende offerte:
-Titel: ${offerte.titel}
-Offertenummer: ${offerte.offertenummer ?? "—"}
-Opdrachtgever: ${offerte.opdrachtgever ?? "—"}
-Bedrag incl. btw: €${offerte.bedragInclBtw.toLocaleString("nl-NL", { minimumFractionDigits: 2 })}
-Geldigheid: ${offerte.geldigheidDagen} dagen
+          content: `Schrijf een begeleidende e-mail voor onderstaande offerte. Verwerk zoveel mogelijk context natuurlijk in de tekst.
 
-Geef als JSON terug: { onderwerp, begroeting, samenvatting, call_to_action, afsluiting }`,
+Offertenummer: ${offerte.offertenummer ?? "—"}
+Titel: ${offerte.titel}
+Opdrachtgever: ${offerte.opdrachtgever ?? "—"}
+${locatieTekst ? `Locatie/gebouw: ${locatieTekst}` : ""}
+Totaalbedrag incl. btw: ${bedragFormatted}
+Geldigheid: ${offerte.geldigheidDagen} dagen
+${sectietitels.length ? `\nSeccties in offerte: ${sectietitels.join(", ")}` : ""}
+${maatregelen.length ? `\nWerkzaamheden/maatregelen:\n${maatregelen.join("\n")}` : ""}
+
+Geef als JSON terug (geen extra tekst):
+{
+  "onderwerp": "...",
+  "begroeting": "...",
+  "samenvatting": "...",
+  "call_to_action": "...",
+  "afsluiting": "Met vriendelijke groet,\\nTeam FPS Brandpreventie"
+}`,
         },
       ],
     });
 
     const raw = completion.choices[0]?.message?.content ?? "{}";
     const match = raw.match(/\{[\s\S]*\}/);
-    const parsed = match ? JSON.parse(match[0]) : {};
+    let parsed: Record<string, string> = {};
+    try { parsed = match ? JSON.parse(match[0]) : {}; } catch { parsed = {}; }
 
     res.json({
-      onderwerp: parsed.onderwerp ?? `Offerte ${offerte.offertenummer ?? offerte.id}`,
-      begroeting: parsed.begroeting ?? "Geachte heer/mevrouw,",
-      samenvatting: parsed.samenvatting ?? "",
-      call_to_action: parsed.call_to_action ?? "",
-      afsluiting: parsed.afsluiting ?? "Met vriendelijke groet,",
+      onderwerp:      parsed.onderwerp      ?? `Offerte ${offerte.offertenummer ?? offerte.id} — ${offerte.titel}`,
+      begroeting:     parsed.begroeting     ?? `Geachte ${offerte.opdrachtgever ? `heer/mevrouw ${offerte.opdrachtgever}` : "heer/mevrouw"},`,
+      samenvatting:   parsed.samenvatting   ?? `Hierbij ontvangt u onze offerte voor ${offerte.titel}.`,
+      call_to_action: parsed.call_to_action ?? `Via de bijgevoegde portaallink kunt u de offerte bekijken en digitaal ondertekenen.`,
+      afsluiting:     parsed.afsluiting     ?? `Met vriendelijke groet,\nTeam FPS Brandpreventie`,
     });
   } catch (err) {
     req.log.error(err);
