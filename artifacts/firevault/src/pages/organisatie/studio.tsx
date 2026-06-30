@@ -3,7 +3,6 @@ import {
   useListStudioWerkgevers,
   useListDocumentStudioModellen,
   useUpsertDocumentStudioModel,
-  useUpdateDocumentStudioModel,
   useUploadDocumentStudioReferentie,
   getListDocumentStudioModellenQueryKey,
 } from "@workspace/api-client-react";
@@ -81,7 +80,6 @@ export default function DocumentStudioPagina() {
   );
 
   const upsert  = useUpsertDocumentStudioModel();
-  const update  = useUpdateDocumentStudioModel();
   const upload  = useUploadDocumentStudioReferentie();
 
   function modelVoorType(type: string): DocumentStudioModel | undefined {
