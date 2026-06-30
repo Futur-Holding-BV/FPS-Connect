@@ -15204,6 +15204,44 @@ paths:
         "204":
           description: Verwijderd
 
+  /organisatie/bedrijfsdocumenten/analyseer:
+    post:
+      operationId: analyseerBedrijfsdocument
+      tags: [organisatie]
+      summary: AI-analyse van een geüpload bestand — vult formuliervelden in en detecteert dubbelingen
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: "#/components/schemas/OrgBedrijfsdocumentAnalyseerInput"
+      responses:
+        "200":
+          description: Geëxtraheerde velden en eventuele dubbeling
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrgBedrijfsdocumentAnalyse"
+        "400":
+          description: Bestand ontbreekt of ongeldig formaat
+        "503":
+          description: AI niet geconfigureerd
+
+  /organisatie/bedrijfsdocumenten/correctie:
+    post:
+      operationId: slaAiCategorieCorrectieLeren
+      tags: [organisatie]
+      summary: Sla een AI-categorie-correctie op zodat toekomstige analyses ervan leren
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrgAiCategorieCorrectieInput"
+      responses:
+        "204":
+          description: Opgeslagen
+
   # ── Organisatie — AI ──────────────────────────────────────────────────────────
   /organisatie/ai-invullen:
     post:
@@ -28386,6 +28424,7 @@ components:
         status:        { type: string }
         document_id:   { type: ["integer", "null"] }
         opmerkingen:   { type: ["string", "null"] }
+        bestand_hash:  { type: ["string", "null"] }
         aangemaakt_op: { type: string }
         bijgewerkt_op: { type: string }
 
@@ -28403,6 +28442,45 @@ components:
         status:       { type: string }
         document_id:  { type: integer }
         opmerkingen:  { type: string }
+        bestand_hash: { type: string }
+
+    OrgBedrijfsdocumentAnalyseerInput:
+      type: object
+      required: [bestand]
+      properties:
+        bestand:
+          type: string
+          format: binary
+
+    OrgAiCategorieCorrectieInput:
+      type: object
+      required: [ai_voorstel, gekozen]
+      properties:
+        ai_voorstel:   { type: string }
+        gekozen:       { type: string }
+        hash:          { type: string }
+        tekst_fragment: { type: string }
+
+    OrgBedrijfsdocumentAnalyse:
+      type: object
+      required: [naam, categorie, hash]
+      properties:
+        naam:            { type: string }
+        categorie:       { type: string }
+        omschrijving:    { type: ["string", "null"] }
+        uitgever:        { type: ["string", "null"] }
+        referentie:      { type: ["string", "null"] }
+        ingangsdatum:    { type: ["string", "null"] }
+        vervaldatum:     { type: ["string", "null"] }
+        hash:            { type: string }
+        tekstFragment:   { type: ["string", "null"] }
+        dubbeling:
+          type: object
+          nullable: true
+          required: [id, naam]
+          properties:
+            id:   { type: integer }
+            naam: { type: string }
 
     OrgAiBedrijfsscanResultaat:
       type: object

@@ -32,6 +32,29 @@ Zelfstandige onderhoudsmodule gebouwd, los van de projectworkflow:
 
 ## 30 juni 2026
 
+### Feature — AI-upload bedrijfsdocumenten: categorie-palet + zelflerende correcties
+Na een AI-analyse verschijnt een visueel palet met alle vijf categorieën (Contract,
+Vergunning, Certificaat, Kwaliteitshandboek, Overig) zodat de gebruiker met één klik
+kan corrigeren als de AI de verkeerde categorie kiest. De AI-suggestie is amber
+gemarkeerd. Bij een handmatige correctie wordt de afwijking opgeslagen in
+`ai_categorie_correcties` en als few-shot-voorbeelden meegegeven aan volgende
+analyseprompts — zodat de AI ervan leert.
+
+- **Uitvoering:** volledig — categorie-palet, correctie-endpoint, few-shot injection analyseer-route
+- **Diepere lagen:** volledig — correctie wordt stil verstuurd op klikmoment (niet bij opslaan); palet verdwijnt bij sluiten dialoog
+- **Getest:** typecheck (geen nieuwe fouten); handmatig door agent
+
+### Feature — AI-upload en dubbelingsdetectie bedrijfsdocumenten (taak 135)
+Uploadzone (sleep/klik) bovenaan het registreerdialoog. AI (GPT-4o-mini) analyseert
+het bestand via pdf-parse en vult alle formuliervelden in (geel gemarkeerd conform
+AI-state kleurconventie). Exact-hash dubbelingsdetectie toont inline waarschuwing
+met drie opties: doorgaan, bestaande bijwerken of annuleren. Bestand_hash wordt
+opgeslagen bij create/update zodat toekomstige uploads getoetst worden.
+
+- **Uitvoering:** volledig — uploadzone, AI-extractie, sha256-duplicaatdetectie, amber-markering, hash-opslag
+- **Diepere lagen:** volledig — handmatig invullen zonder upload werkt gewoon door
+- **Getest:** typecheck (geen nieuwe fouten); handmatig door agent
+
 ### Fix — Magazijn data-integriteitsfouten (code review)
 Vier kritieke problemen opgelost na code review:
 

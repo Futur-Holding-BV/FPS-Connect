@@ -1,10 +1,18 @@
 // Organisatie-routes — bedrijfsgegevens, verzekeringen, bedrijfsdocumenten en jaarverslagen.
-// AI-endpoints: ai-invullen (bedrijfsgegevens prefill), verzekeringen/ai-suggesties en ai-bedrijfsscan.
+// AI-endpoints: ai-invullen (bedrijfsgegevens prefill), verzekeringen/ai-suggesties, ai-bedrijfsscan
+// en bedrijfsdocumenten/analyseer (AI-extractie + dubbelingsdetectie op sha256-hash).
 import { Router } from "express";
-import { db, orgVerzekeringenTable, orgJaarverslagenTable, orgBedrijfsdocumentenTable } from "@workspace/db";
+import { createHash } from "crypto";
+import { createRequire } from "module";
+import multer from "multer";
+import { db, orgVerzekeringenTable, orgJaarverslagenTable, orgBedrijfsdocumentenTable, aiCategorieCorrectiesTable } from "@workspace/db";
 import { eq, desc } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
 import { maakOpenAiClient, heeftOpenAi } from "../lib/openai";
+
+const _require = createRequire(import.meta.url);
+const pdfParse: (buf: Buffer) => Promise<{ text: string }> = _require("pdf-parse");
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 20 * 1024 * 1024 } });
 
 const router = Router();
 
@@ -63,6 +71,7 @@ const mapBedrijfsdocument = (r: typeof orgBedrijfsdocumentenTable.$inferSelect) 
   status: r.status,
   document_id: r.documentId,
   opmerkingen: r.opmerkingen,
+  bestand_hash: r.bestandHash,
   aangemaakt_op: iso(r.aangemaaktOp),
   bijgewerkt_op: iso(r.bijgewerktOp),
 });
@@ -252,7 +261,7 @@ router.get("/organisatie/bedrijfsdocumenten", lezen, async (req, res) => {
 
 router.post("/organisatie/bedrijfsdocumenten", schrijven, async (req, res) => {
   try {
-    const { naam, categorie, omschrijving, uitgever, referentie, ingangsdatum, vervaldatum, status, document_id, opmerkingen } = req.body;
+    const { naam, categorie, omschrijving, uitgever, referentie, ingangsdatum, vervaldatum, status, document_id, opmerkingen, bestand_hash } = req.body;
     if (!naam || !categorie) {
       return res.status(400).json({ error: "naam en categorie zijn verplicht" });
     }
@@ -269,6 +278,7 @@ router.post("/organisatie/bedrijfsdocumenten", schrijven, async (req, res) => {
         status: status ?? "actief",
         documentId: document_id ?? null,
         opmerkingen: opmerkingen ?? null,
+        bestandHash: bestand_hash ?? null,
       })
       .returning();
     res.status(201).json(mapBedrijfsdocument(rij));
@@ -281,7 +291,7 @@ router.post("/organisatie/bedrijfsdocumenten", schrijven, async (req, res) => {
 router.patch("/organisatie/bedrijfsdocumenten/:id", schrijven, async (req, res) => {
   try {
     const id = parseId(req.params.id);
-    const { naam, categorie, omschrijving, uitgever, referentie, ingangsdatum, vervaldatum, status, document_id, opmerkingen } = req.body;
+    const { naam, categorie, omschrijving, uitgever, referentie, ingangsdatum, vervaldatum, status, document_id, opmerkingen, bestand_hash } = req.body;
     const [rij] = await db
       .update(orgBedrijfsdocumentenTable)
       .set({
@@ -295,12 +305,151 @@ router.patch("/organisatie/bedrijfsdocumenten/:id", schrijven, async (req, res) 
         ...(status !== undefined ? { status } : {}),
         ...(document_id !== undefined ? { documentId: document_id } : {}),
         ...(opmerkingen !== undefined ? { opmerkingen } : {}),
+        ...(bestand_hash !== undefined ? { bestandHash: bestand_hash } : {}),
         bijgewerktOp: new Date(),
       })
       .where(eq(orgBedrijfsdocumentenTable.id, id))
       .returning();
     if (!rij) return res.status(404).json({ error: "Document niet gevonden" });
     res.json(mapBedrijfsdocument(rij));
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// ── Bedrijfsdocumenten — AI analyseer ────────────────────────────────────────
+
+const GELDIGE_CATEGORIEEN = ["contract", "vergunning", "certificaat", "kwaliteitshandboek", "overig"];
+
+router.post(
+  "/organisatie/bedrijfsdocumenten/analyseer",
+  schrijven,
+  upload.single("bestand"),
+  async (req, res) => {
+    if (!req.file) {
+      return res.status(400).json({ error: "Bestand ontbreekt" });
+    }
+    if (!heeftOpenAi()) {
+      return res.status(503).json({ error: "AI niet geconfigureerd" });
+    }
+
+    try {
+      const buffer = req.file.buffer;
+      const hash = createHash("sha256").update(buffer).digest("hex");
+
+      const bestaand = await db
+        .select({ id: orgBedrijfsdocumentenTable.id, naam: orgBedrijfsdocumentenTable.naam })
+        .from(orgBedrijfsdocumentenTable)
+        .where(eq(orgBedrijfsdocumentenTable.bestandHash, hash))
+        .limit(1);
+      const dubbeling = bestaand.length > 0 ? { id: bestaand[0].id, naam: bestaand[0].naam } : null;
+
+      let tekstBlok = "";
+      const mime = req.file.mimetype;
+      if (mime === "application/pdf" || req.file.originalname.endsWith(".pdf")) {
+        try {
+          const resultaat = await pdfParse(buffer);
+          tekstBlok = (resultaat.text ?? "").slice(0, 8000);
+        } catch {
+          tekstBlok = "";
+        }
+      }
+
+      // Laad recente correcties als few-shot voorbeelden
+      const correcties = await db
+        .select()
+        .from(aiCategorieCorrectiesTable)
+        .orderBy(desc(aiCategorieCorrectiesTable.aangemaaktOp))
+        .limit(10);
+
+      let fewShotSectie = "";
+      if (correcties.length > 0) {
+        const voorbeelden = correcties.map((c) => {
+          const context = c.tekstFragment ? `Documentfragment: "${c.tekstFragment.slice(0, 200)}"` : "(geen tekst)";
+          return `${context}\nAI stelde voor: ${c.aiVoorstel} — gebruiker corrigeerde naar: ${c.gekozen}`;
+        }).join("\n\n");
+        fewShotSectie =
+          "\n\nLeer van deze eerdere correcties door gebruikers — pas je categoriekeuze hier op aan:\n" +
+          voorbeelden;
+      }
+
+      const systeemPrompt =
+        "Je bent een assistent die Nederlandse bedrijfsdocumenten analyseert. " +
+        "Extraheer uit de documenttekst de volgende velden en geef een JSON-object terug: " +
+        "naam (korte herkenbare naam van het document), " +
+        `categorie (exact één van: ${GELDIGE_CATEGORIEEN.join(", ")}), ` +
+        "omschrijving (een zin), " +
+        "uitgever (de organisatie of instantie die het document heeft uitgegeven, of null), " +
+        "referentie (referentienummer of kenmerk, of null), " +
+        "ingangsdatum (JJJJ-MM-DD of null), " +
+        "vervaldatum (JJJJ-MM-DD of null). " +
+        "Als een waarde niet in de tekst staat, gebruik dan null. Geef altijd valide JSON terug." +
+        fewShotSectie;
+
+      const gebruikerTekst = tekstBlok.trim()
+        ? `Documenttekst (eerste 8000 tekens):\n\n${tekstBlok}`
+        : `Bestandsnaam: ${req.file.originalname}\nGeen leesbare tekst beschikbaar — probeer de velden te schatten op basis van de bestandsnaam.`;
+
+      const client = maakOpenAiClient();
+      const completion = await client.chat.completions.create({
+        model: "gpt-4o-mini",
+        max_tokens: 600,
+        messages: [
+          { role: "system", content: systeemPrompt },
+          { role: "user", content: gebruikerTekst },
+        ],
+        response_format: { type: "json_object" },
+      });
+
+      let velden: Record<string, string | null> = {};
+      try {
+        velden = JSON.parse(completion.choices[0]?.message?.content ?? "{}");
+      } catch {
+        velden = {};
+      }
+
+      const categorie = GELDIGE_CATEGORIEEN.includes(String(velden.categorie))
+        ? String(velden.categorie)
+        : "overig";
+
+      res.json({
+        naam: typeof velden.naam === "string" && velden.naam ? velden.naam : req.file.originalname,
+        categorie,
+        omschrijving: velden.omschrijving ?? null,
+        uitgever: velden.uitgever ?? null,
+        referentie: velden.referentie ?? null,
+        ingangsdatum: velden.ingangsdatum ?? null,
+        vervaldatum: velden.vervaldatum ?? null,
+        hash,
+        tekstFragment: tekstBlok.slice(0, 500),
+        dubbeling,
+      });
+    } catch (err) {
+      req.log.error(err);
+      res.status(500).json({ error: "AI-verzoek mislukt" });
+    }
+  }
+);
+
+// ── Bedrijfsdocumenten — AI categorie-correctie opslaan ──────────────────────
+
+router.post("/organisatie/bedrijfsdocumenten/correctie", schrijven, async (req, res) => {
+  try {
+    const { ai_voorstel, gekozen, hash, tekst_fragment } = req.body;
+    if (!ai_voorstel || !gekozen) {
+      return res.status(400).json({ error: "ai_voorstel en gekozen zijn verplicht" });
+    }
+    if (!GELDIGE_CATEGORIEEN.includes(String(gekozen))) {
+      return res.status(400).json({ error: "Ongeldige categorie" });
+    }
+    await db.insert(aiCategorieCorrectiesTable).values({
+      hash: hash ?? null,
+      tekstFragment: tekst_fragment ?? null,
+      aiVoorstel: String(ai_voorstel),
+      gekozen: String(gekozen),
+    });
+    res.status(204).end();
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Interne serverfout" });

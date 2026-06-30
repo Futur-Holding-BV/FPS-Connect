@@ -47,8 +47,19 @@ export const orgBedrijfsdocumentenTable = pgTable("org_bedrijfsdocumenten", {
   status: text("status").notNull().default("actief"),
   documentId: integer("document_id"),
   opmerkingen: text("opmerkingen"),
+  bestandHash: text("bestand_hash"),
   aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
   bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
+});
+
+// AI categorie-correcties — leermechanisme voor de analyseer-route
+export const aiCategorieCorrectiesTable = pgTable("ai_categorie_correcties", {
+  id: serial("id").primaryKey(),
+  hash: text("hash"),
+  tekstFragment: text("tekst_fragment"),
+  aiVoorstel: text("ai_voorstel").notNull(),
+  gekozen: text("gekozen").notNull(),
+  aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
 });
 
 export const insertOrgVerzekeringSchema = createInsertSchema(orgVerzekeringenTable).omit({

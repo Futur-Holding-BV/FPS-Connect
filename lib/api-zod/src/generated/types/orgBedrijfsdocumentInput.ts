@@ -17,4 +17,5 @@ export interface OrgBedrijfsdocumentInput {
   status?: string;
   document_id?: number;
   opmerkingen?: string;
+  bestand_hash?: string;
 }

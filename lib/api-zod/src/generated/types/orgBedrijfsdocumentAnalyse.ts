@@ -5,9 +5,9 @@
  * FPS Brandpreventie - Platform voor brandpreventieve gebouwvoorzieningen
  * OpenAPI spec version: 0.1.0
  */
+import type { OrgBedrijfsdocumentAnalyseDubbeling } from './orgBedrijfsdocumentAnalyseDubbeling';
 
-export interface OrgBedrijfsdocument {
-  id: number;
+export interface OrgBedrijfsdocumentAnalyse {
   naam: string;
   categorie: string;
   /** @nullable */
@@ -20,13 +20,8 @@ export interface OrgBedrijfsdocument {
   ingangsdatum?: string | null;
   /** @nullable */
   vervaldatum?: string | null;
-  status: string;
+  hash: string;
   /** @nullable */
-  document_id?: number | null;
-  /** @nullable */
-  opmerkingen?: string | null;
-  /** @nullable */
-  bestand_hash?: string | null;
-  aangemaakt_op: string;
-  bijgewerkt_op: string;
+  tekstFragment?: string | null;
+  dubbeling?: OrgBedrijfsdocumentAnalyseDubbeling;
 }

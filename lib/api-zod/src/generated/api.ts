@@ -19232,6 +19232,7 @@ export const ListOrgBedrijfsdocumentenResponseItem = zod.object({
   "status": zod.string(),
   "document_id": zod.number().nullish(),
   "opmerkingen": zod.string().nullish(),
+  "bestand_hash": zod.string().nullish(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
 })
@@ -19251,7 +19252,8 @@ export const CreateOrgBedrijfsdocumentBody = zod.object({
   "vervaldatum": zod.string().optional(),
   "status": zod.string().optional(),
   "document_id": zod.number().optional(),
-  "opmerkingen": zod.string().optional()
+  "opmerkingen": zod.string().optional(),
+  "bestand_hash": zod.string().optional()
 })
 
 export const CreateOrgBedrijfsdocumentResponse = zod.void()
@@ -19274,7 +19276,8 @@ export const UpdateOrgBedrijfsdocumentBody = zod.object({
   "vervaldatum": zod.string().optional(),
   "status": zod.string().optional(),
   "document_id": zod.number().optional(),
-  "opmerkingen": zod.string().optional()
+  "opmerkingen": zod.string().optional(),
+  "bestand_hash": zod.string().optional()
 })
 
 export const UpdateOrgBedrijfsdocumentResponse = zod.object({
@@ -19289,6 +19292,7 @@ export const UpdateOrgBedrijfsdocumentResponse = zod.object({
   "status": zod.string(),
   "document_id": zod.number().nullish(),
   "opmerkingen": zod.string().nullish(),
+  "bestand_hash": zod.string().nullish(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
 })
@@ -19302,6 +19306,43 @@ export const DeleteOrgBedrijfsdocumentParams = zod.object({
 })
 
 export const DeleteOrgBedrijfsdocumentResponse = zod.void()
+
+
+/**
+ * @summary AI-analyse van een geüpload bestand — vult formuliervelden in en detecteert dubbelingen
+ */
+export const AnalyseerBedrijfsdocumentBody = zod.object({
+  "bestand": zod.instanceof(File)
+})
+
+export const AnalyseerBedrijfsdocumentResponse = zod.object({
+  "naam": zod.string(),
+  "categorie": zod.string(),
+  "omschrijving": zod.string().nullish(),
+  "uitgever": zod.string().nullish(),
+  "referentie": zod.string().nullish(),
+  "ingangsdatum": zod.string().nullish(),
+  "vervaldatum": zod.string().nullish(),
+  "hash": zod.string(),
+  "tekstFragment": zod.string().nullish(),
+  "dubbeling": zod.object({
+  "id": zod.number(),
+  "naam": zod.string()
+}).nullish()
+})
+
+
+/**
+ * @summary Sla een AI-categorie-correctie op zodat toekomstige analyses ervan leren
+ */
+export const SlaAiCategorieCorrectieLerenBody = zod.object({
+  "ai_voorstel": zod.string(),
+  "gekozen": zod.string(),
+  "hash": zod.string().optional(),
+  "tekst_fragment": zod.string().optional()
+})
+
+export const SlaAiCategorieCorrectieLerenResponse = zod.void()
 
 
 /**

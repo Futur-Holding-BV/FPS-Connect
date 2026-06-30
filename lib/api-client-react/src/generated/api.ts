@@ -424,9 +424,12 @@ import type {
   OpnameSamenvatting,
   OpnameSpotsAanmakenResultaat,
   OrgAiBedrijfsscanResultaat,
+  OrgAiCategorieCorrectieInput,
   OrgAiInvullenInput,
   OrgAiVerzekeringInput,
   OrgBedrijfsdocument,
+  OrgBedrijfsdocumentAnalyse,
+  OrgBedrijfsdocumentAnalyseerInput,
   OrgBedrijfsdocumentInput,
   OrgJaarverslag,
   OrgJaarverslagInput,
@@ -54501,6 +54504,148 @@ export const useDeleteOrgBedrijfsdocument = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getDeleteOrgBedrijfsdocumentMutationOptions(options));
+    }
+
+export const getAnalyseerBedrijfsdocumentUrl = () => {
+
+
+
+
+  return `/api/organisatie/bedrijfsdocumenten/analyseer`
+}
+
+/**
+ * @summary AI-analyse van een geüpload bestand — vult formuliervelden in en detecteert dubbelingen
+ */
+export const analyseerBedrijfsdocument = async (orgBedrijfsdocumentAnalyseerInput: OrgBedrijfsdocumentAnalyseerInput, options?: RequestInit): Promise<OrgBedrijfsdocumentAnalyse> => {
+    const formData = new FormData();
+formData.append(`bestand`, orgBedrijfsdocumentAnalyseerInput.bestand);
+
+  return customFetch<OrgBedrijfsdocumentAnalyse>(getAnalyseerBedrijfsdocumentUrl(),
+  {
+    ...options,
+    method: 'POST'
+    ,
+    body: formData
+  }
+);}
+
+
+
+
+export const getAnalyseerBedrijfsdocumentMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof analyseerBedrijfsdocument>>, TError,{data: BodyType<OrgBedrijfsdocumentAnalyseerInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof analyseerBedrijfsdocument>>, TError,{data: BodyType<OrgBedrijfsdocumentAnalyseerInput>}, TContext> => {
+
+const mutationKey = ['analyseerBedrijfsdocument'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof analyseerBedrijfsdocument>>, {data: BodyType<OrgBedrijfsdocumentAnalyseerInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  analyseerBedrijfsdocument(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AnalyseerBedrijfsdocumentMutationResult = NonNullable<Awaited<ReturnType<typeof analyseerBedrijfsdocument>>>
+    export type AnalyseerBedrijfsdocumentMutationBody = BodyType<OrgBedrijfsdocumentAnalyseerInput>
+    export type AnalyseerBedrijfsdocumentMutationError = ErrorType<void>
+
+    /**
+ * @summary AI-analyse van een geüpload bestand — vult formuliervelden in en detecteert dubbelingen
+ */
+export const useAnalyseerBedrijfsdocument = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof analyseerBedrijfsdocument>>, TError,{data: BodyType<OrgBedrijfsdocumentAnalyseerInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof analyseerBedrijfsdocument>>,
+        TError,
+        {data: BodyType<OrgBedrijfsdocumentAnalyseerInput>},
+        TContext
+      > => {
+      return useMutation(getAnalyseerBedrijfsdocumentMutationOptions(options));
+    }
+
+export const getSlaAiCategorieCorrectieLerenUrl = () => {
+
+
+
+
+  return `/api/organisatie/bedrijfsdocumenten/correctie`
+}
+
+/**
+ * @summary Sla een AI-categorie-correctie op zodat toekomstige analyses ervan leren
+ */
+export const slaAiCategorieCorrectieLeren = async (orgAiCategorieCorrectieInput: OrgAiCategorieCorrectieInput, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getSlaAiCategorieCorrectieLerenUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(orgAiCategorieCorrectieInput)
+  }
+);}
+
+
+
+
+export const getSlaAiCategorieCorrectieLerenMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof slaAiCategorieCorrectieLeren>>, TError,{data: BodyType<OrgAiCategorieCorrectieInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof slaAiCategorieCorrectieLeren>>, TError,{data: BodyType<OrgAiCategorieCorrectieInput>}, TContext> => {
+
+const mutationKey = ['slaAiCategorieCorrectieLeren'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof slaAiCategorieCorrectieLeren>>, {data: BodyType<OrgAiCategorieCorrectieInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  slaAiCategorieCorrectieLeren(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SlaAiCategorieCorrectieLerenMutationResult = NonNullable<Awaited<ReturnType<typeof slaAiCategorieCorrectieLeren>>>
+    export type SlaAiCategorieCorrectieLerenMutationBody = BodyType<OrgAiCategorieCorrectieInput>
+    export type SlaAiCategorieCorrectieLerenMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Sla een AI-categorie-correctie op zodat toekomstige analyses ervan leren
+ */
+export const useSlaAiCategorieCorrectieLeren = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof slaAiCategorieCorrectieLeren>>, TError,{data: BodyType<OrgAiCategorieCorrectieInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof slaAiCategorieCorrectieLeren>>,
+        TError,
+        {data: BodyType<OrgAiCategorieCorrectieInput>},
+        TContext
+      > => {
+      return useMutation(getSlaAiCategorieCorrectieLerenMutationOptions(options));
     }
 
 export const getAiInvullenOrganisatieUrl = () => {

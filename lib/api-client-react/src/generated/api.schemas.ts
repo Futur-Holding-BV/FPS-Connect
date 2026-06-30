@@ -7870,6 +7870,8 @@ export interface OrgBedrijfsdocument {
   document_id?: number | null;
   /** @nullable */
   opmerkingen?: string | null;
+  /** @nullable */
+  bestand_hash?: string | null;
   aangemaakt_op: string;
   bijgewerkt_op: string;
 }
@@ -7885,6 +7887,42 @@ export interface OrgBedrijfsdocumentInput {
   status?: string;
   document_id?: number;
   opmerkingen?: string;
+  bestand_hash?: string;
+}
+
+export interface OrgBedrijfsdocumentAnalyseerInput {
+  bestand: Blob;
+}
+
+export interface OrgAiCategorieCorrectieInput {
+  ai_voorstel: string;
+  gekozen: string;
+  hash?: string;
+  tekst_fragment?: string;
+}
+
+export type OrgBedrijfsdocumentAnalyseDubbeling = {
+  id: number;
+  naam: string;
+} | null;
+
+export interface OrgBedrijfsdocumentAnalyse {
+  naam: string;
+  categorie: string;
+  /** @nullable */
+  omschrijving?: string | null;
+  /** @nullable */
+  uitgever?: string | null;
+  /** @nullable */
+  referentie?: string | null;
+  /** @nullable */
+  ingangsdatum?: string | null;
+  /** @nullable */
+  vervaldatum?: string | null;
+  hash: string;
+  /** @nullable */
+  tekstFragment?: string | null;
+  dubbeling?: OrgBedrijfsdocumentAnalyseDubbeling;
 }
 
 export type OrgAiBedrijfsscanResultaatAdviezenItem = {
