@@ -2338,7 +2338,7 @@ export default function GebouwPrint() {
         </div>
 
         <div className="prt-cover-main">
-          <div className="prt-cover-accentlijn" />
+          <div className="prt-cover-accentlijn" style={studioAccentKleur ? { background: studioAccentKleur } : undefined} />
           <div className="prt-cover-type">{RAPPORT_TYPE_LABEL[rapportType]}</div>
           <div style={{ marginBottom: 4 }}><span className="prt-concept-badge" style={{ fontSize: 10, padding: "2px 8px" }}>Concept — niet definitief</span></div>
           <div className="prt-cover-naam">{gebouw.naam}</div>
@@ -2378,7 +2378,7 @@ export default function GebouwPrint() {
         <div className="prt-cover-voet">
           <div>
             <div className="prt-cover-voet-merk">{werkgeverNaam}</div>
-            <div className="prt-cover-voet-tagline">Brandveiligheid door vakmanschap</div>
+            <div className="prt-cover-voet-tagline">{studioVoettekst ?? "Brandveiligheid door vakmanschap"}</div>
           </div>
           <div className="prt-cover-voet-rechts">
             <div>Documentnummer: <span className="prt-cover-voet-waarde">{documentnummer}</span></div>

@@ -165,7 +165,18 @@ export default function OffertePrintPagina() {
   const factuurSchema = (offerte as any).factuur_schema;
 
   return (
-    <div className="min-h-screen bg-slate-100 py-8 print:bg-white print:p-0">
+    <div
+      className="min-h-screen bg-slate-100 py-8 print:bg-white print:p-0"
+      style={accentKleur ? { "--color-primary": accentKleur } as React.CSSProperties : undefined}
+    >
+      {actiefModel && (
+        <div className="max-w-[210mm] mx-auto mb-2 px-1 print:hidden">
+          <span className="inline-flex items-center gap-1 text-xs bg-green-50 text-green-700 border border-green-200 rounded px-2 py-0.5 font-medium">
+            <CheckCircle2 className="h-3 w-3" />
+            Opmaak: Model 0 — {actiefModel.werkgever_naam ?? mij.naam}
+          </span>
+        </div>
+      )}
       <VoorbladA meta={meta} mij={mij} />
 
       {actieveSecties.map((s, idx) => (

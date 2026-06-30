@@ -10,6 +10,18 @@ Grote roadmap-fases staan ook in `docs/roadmap/gebouwd.md` en `docs/roadmap/acti
 
 ---
 
+## 2026-06-30 — Document Studio: templates actief in Connect-modules
+
+**Uitvoering:** volledig | **Diepere lagen:** volledig | **Getest:** typecheck groen, codegen geslaagd, workflows herstart
+
+- **API `GET /studio/modellen/actief`**: geeft het goedgekeurde (Model 0) template terug voor een `werkgever_id` + `document_type` combinatie; 404 als er geen goedgekeurd model is; volgorde vóór `/:id` in Express zodat "actief" niet als ID wordt gematch
+- **Gegenereerde hook** `useGetActiefDocumentStudioModel` via Orval codegen
+- **Offertes print** (`offertes/print.tsx`): haalt actief "offerte"-template op via `useListStudioWerkgevers` + `useGetActiefDocumentStudioModel`; past `--color-primary` CSS-variabele toe op root-div (cascade naar VoorbladA-kleurband, `text-primary` bedragen); gebruikt werkgever `logo_url` in plaats van hardcoded pad; `mij.primaireKleur` gevuld; "Opmaak: Model 0 — Werkgever" badge zichtbaar in preview (print:hidden)
+- **Opleverrapporten print** (`gebouwen/print.tsx`): zelfde template-integratie; overschrijft `.prt-cover-accentlijn` achtergrond met template-kleur via inline style; overschrijft voettekst-tagline met `studioVoettekst` (fallback "Brandveiligheid door vakmanschap")
+- **Document Studio kaart** (`studio.tsx`): goedgekeurde kaarten tonen "Actief in: Offertes, Opleverrapporten" badges via `DOCUMENT_TYPE_MODULES`-mapping; alleen bij status `goedgekeurd` en alleen als er modules in de mapping staan
+
+---
+
 ## 2026-06-30 — Document Studio: AI template generatie & Model 0
 
 **Uitvoering:** volledig | **Diepere lagen:** volledig | **Getest:** typecheck groen, codegen geslaagd, workflows draaien

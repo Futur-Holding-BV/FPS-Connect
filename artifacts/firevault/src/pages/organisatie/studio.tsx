@@ -68,6 +68,11 @@ const STATUS_CONFIG: Record<string, { label: string; klasse: string; beschrijvin
 
 const TOEGESTANE_TYPES = ["application/pdf", "image/jpeg", "image/png", "image/webp"];
 
+const DOCUMENT_TYPE_MODULES: Record<string, string[]> = {
+  offerte:  ["Offertes", "Opleverrapporten"],
+  factuur:  ["Facturen"],
+};
+
 export default function DocumentStudioPagina() {
   const { heeftNiveau } = useBevoegdheid();
   const magSchrijven = heeftNiveau("organisatie", 2);
@@ -397,6 +402,16 @@ export default function DocumentStudioPagina() {
                         <div className="flex items-center gap-1 text-xs text-green-600">
                           <CheckCircle2 className="h-3 w-3" />
                           <span>Goedgekeurd op {new Date(model.goedgekeurd_op).toLocaleDateString("nl-NL")}</span>
+                        </div>
+                      )}
+                      {status === "goedgekeurd" && (DOCUMENT_TYPE_MODULES[type]?.length ?? 0) > 0 && (
+                        <div className="flex flex-wrap items-center gap-1">
+                          <span className="text-xs text-muted-foreground">Actief in:</span>
+                          {(DOCUMENT_TYPE_MODULES[type] ?? []).map((module) => (
+                            <Badge key={module} className="text-xs bg-primary/10 text-primary border-primary/20" variant="outline">
+                              {module}
+                            </Badge>
+                          ))}
                         </div>
                       )}
                       {magSchrijven && (
