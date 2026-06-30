@@ -12,6 +12,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Plus, Search, Package, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { PaginaHulp } from "@/components/pagina-hulp";
 import { useListLeveranciers } from "@workspace/api-client-react";
 import type { ArtikelInput } from "@workspace/api-client-react";
 
@@ -47,6 +48,7 @@ export default function ArtikelenPagina() {
 
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
+      <PaginaHulp pagina="artikelen" />
       {/* Kop */}
       <div className="flex items-center justify-between gap-4">
         <div>

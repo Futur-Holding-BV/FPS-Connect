@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useListImportLogs } from "@workspace/api-client-react";
 import { Upload, CheckCircle2, AlertCircle, ArrowRight, FileSpreadsheet, RotateCcw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { PaginaHulp } from "@/components/pagina-hulp";
 import { formatDistanceToNow } from "date-fns";
 import { nl } from "date-fns/locale";
 
@@ -158,6 +159,7 @@ export default function ImportPagina() {
 
   return (
     <div className="p-6 max-w-5xl mx-auto space-y-8">
+      <PaginaHulp pagina="beheer-import" />
       <div>
         <h1 className="text-2xl font-semibold">Importeren</h1>
         <p className="text-sm text-muted-foreground mt-1">

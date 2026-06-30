@@ -11,6 +11,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Plus, Search, Building2, Phone, Mail, MapPin } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { PaginaHulp } from "@/components/pagina-hulp";
 
 export default function LeveranciersPagina() {
   const [zoek, setZoek] = useState("");
@@ -31,6 +32,7 @@ export default function LeveranciersPagina() {
 
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
+      <PaginaHulp pagina="leveranciers" />
       {/* Kop */}
       <div className="flex items-center justify-between gap-4">
         <div>

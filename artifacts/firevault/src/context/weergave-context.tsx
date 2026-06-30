@@ -15,6 +15,7 @@ export interface WeergaveVoorkeuren {
   lettergrootte: Lettergrootte;
   dichtheid:     Dichtheid;
   helderheid:    number; // 50–100
+  toonPaginaHulp: boolean;
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -27,6 +28,7 @@ export const STANDAARD_VOORKEUREN: WeergaveVoorkeuren = {
   lettergrootte: "normaal",
   dichtheid:     "normaal",
   helderheid:    100,
+  toonPaginaHulp: true,
 };
 
 const FONT_GROOTTE: Record<Lettergrootte, string> = {
@@ -126,13 +128,14 @@ function pasHelderheidToe(h: number) {
 // ═══════════════════════════════════════════════════════════
 
 interface WeergaveContextType {
-  voorkeuren:       WeergaveVoorkeuren;
-  setThema:         (v: Thema) => void;
-  setKleurthema:    (v: Kleurthema) => void;
-  setLettergrootte: (v: Lettergrootte) => void;
-  setDichtheid:     (v: Dichtheid) => void;
-  setHelderheid:    (v: number) => void;
-  resetAlles:       () => void;
+  voorkeuren:          WeergaveVoorkeuren;
+  setThema:            (v: Thema) => void;
+  setKleurthema:       (v: Kleurthema) => void;
+  setLettergrootte:    (v: Lettergrootte) => void;
+  setDichtheid:        (v: Dichtheid) => void;
+  setHelderheid:       (v: number) => void;
+  setToonPaginaHulp:   (v: boolean) => void;
+  resetAlles:          () => void;
 }
 
 const WeergaveContext = createContext<WeergaveContextType | null>(null);
@@ -179,12 +182,13 @@ export function WeergaveProvider({ children }: { children: ReactNode }) {
   return (
     <WeergaveContext.Provider value={{
       voorkeuren,
-      setThema:         (v) => update({ thema: v }),
-      setKleurthema:    (v) => update({ kleurthema: v }),
-      setLettergrootte: (v) => update({ lettergrootte: v }),
-      setDichtheid:     (v) => update({ dichtheid: v }),
-      setHelderheid:    (v) => update({ helderheid: v }),
-      resetAlles:       () => setVoorkeuren({ ...STANDAARD_VOORKEUREN }),
+      setThema:            (v) => update({ thema: v }),
+      setKleurthema:       (v) => update({ kleurthema: v }),
+      setLettergrootte:    (v) => update({ lettergrootte: v }),
+      setDichtheid:        (v) => update({ dichtheid: v }),
+      setHelderheid:       (v) => update({ helderheid: v }),
+      setToonPaginaHulp:   (v) => update({ toonPaginaHulp: v }),
+      resetAlles:          () => setVoorkeuren({ ...STANDAARD_VOORKEUREN }),
     }}>
       {children}
     </WeergaveContext.Provider>

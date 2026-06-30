@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Wrench, Building, Calendar, AlertTriangle, CheckCircle, Clock, X } from "lucide-react";
 import { useVoorkeur } from "@/hooks/use-voorkeur";
+import { PaginaHulp } from "@/components/pagina-hulp";
 
 const prioriteitKleur: Record<string, string> = {
   laag: "bg-gray-100 text-gray-700 border-gray-200",
@@ -46,6 +47,7 @@ export default function Onderhoud() {
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
+      <PaginaHulp pagina="onderhoud" />
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">{t("onderhoud.titel")}</h1>

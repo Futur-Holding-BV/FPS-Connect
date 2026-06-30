@@ -31,6 +31,7 @@ import { Plus, Search, AlertCircle, Boxes, Pencil, Trash2, Calendar, X } from "l
 import { Link } from "wouter";
 import { Badge } from "@/components/ui/badge";
 import { useVoorkeur } from "@/hooks/use-voorkeur";
+import { PaginaHulp } from "@/components/pagina-hulp";
 import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
 
 const STATUSLABEL: Record<string, string> = {
@@ -123,6 +124,7 @@ export default function Voorzieningen() {
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
+      <PaginaHulp pagina="voorzieningen" />
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">{t("voorzieningen.titel")}</h1>

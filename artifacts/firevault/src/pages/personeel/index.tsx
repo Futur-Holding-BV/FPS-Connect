@@ -70,6 +70,7 @@ import {
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
+import { PaginaHulp } from "@/components/pagina-hulp";
 import {
   Users, Plus, UserPlus, Briefcase, GraduationCap, CalendarClock, AlertTriangle,
   Award, Check, X, ChevronRight, Building2, Pencil, Trash2, HeartPulse,
@@ -689,6 +690,7 @@ export default function PersoneelPagina() {
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
+      <PaginaHulp pagina="personeel" />
       <div>
         <h1 className="text-2xl font-bold text-foreground">Personeel / HRM</h1>
         <p className="text-sm text-muted-foreground">

@@ -29,6 +29,7 @@ import { Search, Building, X, ArrowDownUp, Calendar, BarChart3, Users, Printer, 
 import { useMemo, useState } from "react";
 import { useAuth } from "@/context/auth-context";
 import { useVoorkeur } from "@/hooks/use-voorkeur";
+import { PaginaHulp } from "@/components/pagina-hulp";
 import { GebouwAanmakenDialog } from "./gebouw-aanmaken-dialog";
 
 const BEHEERDER_ROLLEN = ["beheerder", "hoofdbeheerder"];
@@ -392,6 +393,7 @@ export default function Gebouwen() {
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
+      <PaginaHulp pagina="gebouwen" />
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">{t("gebouwen.titel")}</h1>

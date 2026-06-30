@@ -68,6 +68,7 @@ export function WeergaveModal({
   const {
     voorkeuren,
     setThema, setKleurthema, setLettergrootte, setDichtheid, setHelderheid,
+    setToonPaginaHulp,
     resetAlles,
   } = useWeergave();
 
@@ -216,6 +217,34 @@ export function WeergaveModal({
                 Lage helderheid kan tekst moeilijker leesbaar maken.
               </p>
             )}
+          </Sectie>
+
+          {/* ── PAGINAUITLEG ── */}
+          <Sectie titel="Paginauitleg">
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-muted-foreground">
+                Toon uitlegbalk bovenaan elke pagina
+              </p>
+              <button
+                onClick={() => setToonPaginaHulp(!voorkeuren.toonPaginaHulp)}
+                className={cn(
+                  "relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors",
+                  voorkeuren.toonPaginaHulp ? "bg-primary" : "bg-muted",
+                )}
+              >
+                <span
+                  className={cn(
+                    "pointer-events-none inline-block h-3.5 w-3.5 rounded-full bg-white shadow-sm ring-0 transition-transform",
+                    voorkeuren.toonPaginaHulp ? "translate-x-4" : "translate-x-0",
+                  )}
+                />
+              </button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {voorkeuren.toonPaginaHulp
+                ? "Uitlegbalken zijn zichtbaar. Gebruik de X-knop op een pagina om de uitleg voor die sessie te verbergen."
+                : "Uitlegbalken zijn verborgen. Zet ze hier weer aan."}
+            </p>
           </Sectie>
 
           {/* ── LIVE VOORBEELD ── */}

@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
+import { PaginaHulp } from "@/components/pagina-hulp";
 import { FileText, Plus, Search, Sparkles, PenLine, TrendingUp, CheckCircle, Send, Eye, Clock, FolderOpen, XCircle, AlertTriangle, Download, Euro, ArrowRight } from "lucide-react";
 import { Link } from "wouter";
 
@@ -144,6 +145,7 @@ export default function OffertesPagina() {
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
+      <PaginaHulp pagina="offertes" />
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Offertes</h1>

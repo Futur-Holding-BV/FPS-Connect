@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar, Building, CheckCircle, Clock, AlertCircle, FileText, X } from "lucide-react";
 import { useVoorkeur } from "@/hooks/use-voorkeur";
+import { PaginaHulp } from "@/components/pagina-hulp";
 
 const statusKleur: Record<string, string> = {
   gepland: "bg-blue-100 text-blue-800 border-blue-200",
@@ -49,6 +50,7 @@ export default function Inspecties() {
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
+      <PaginaHulp pagina="inspecties" />
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">{t("inspecties.titel")}</h1>

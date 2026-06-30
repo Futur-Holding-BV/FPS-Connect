@@ -43,6 +43,7 @@ import {
 import { useQueryClient } from "@tanstack/react-query";
 import { useRol } from "@/context/rol-context";
 import { useVoorkeur } from "@/hooks/use-voorkeur";
+import { PaginaHulp } from "@/components/pagina-hulp";
 import { Link } from "wouter";
 
 const ROLLEN = ["hoofdbeheerder", "gebruiker", "klant"] as const;
@@ -727,6 +728,7 @@ export default function Gebruikers() {
 
   return (
     <div className="space-y-5 max-w-[1400px] mx-auto">
+      <PaginaHulp pagina="gebruikers" />
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

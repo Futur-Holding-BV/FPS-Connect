@@ -17,6 +17,7 @@ import {
 import { useRol } from "@/context/rol-context";
 import { useAuth } from "@/context/auth-context";
 import { Link } from "wouter";
+import { PaginaHulp } from "@/components/pagina-hulp";
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
 } from "recharts";
@@ -107,6 +108,7 @@ export default function BeheerderDashboard() {
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
+      <PaginaHulp pagina="dashboard-beheerder" />
       <div>
         <h1 className="text-3xl font-bold tracking-tight">
           {t("dashboard.titel")}{functietitel ? ` — ${functietitel}` : ""}

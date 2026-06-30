@@ -86,6 +86,7 @@ import { useAuth } from "@/context/auth-context";
 import { useRol } from "@/context/rol-context";
 import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
 import { useToast } from "@/hooks/use-toast";
+import { PaginaHulp } from "@/components/pagina-hulp";
 import { TYPE_LABELS } from "@/lib/documenten-labels";
 import GebouwPartijen from "./gebouw-partijen";
 import GebouwTekeningen from "./gebouw-tekeningen";
@@ -571,6 +572,7 @@ export default function GebouwDetail() {
 
   return (
     <div className="space-y-8 max-w-7xl mx-auto">
+      <PaginaHulp pagina="gebouw-detail" />
 
       {/* ── Compacte header ── */}
       <div className="flex items-start gap-3">

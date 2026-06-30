@@ -51,6 +51,7 @@ import {
 } from "lucide-react";
 import { VerzendTab } from "./verzend-tab";
 import { useToast } from "@/hooks/use-toast";
+import { PaginaHulp } from "@/components/pagina-hulp";
 
 const STATUS_KLEUR: Record<string, string> = {
   concept: "bg-amber-100 text-amber-800 border-amber-200",
@@ -489,6 +490,7 @@ export default function ProposalStudio() {
       `}</style>
 
       <div className="max-w-7xl mx-auto space-y-4">
+        <PaginaHulp pagina="offerte-studio" />
         {offerte.auto_project_id && offerte.gebouw_id && (
           <div className="flex items-center gap-3 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3">
             <FolderOpen className="h-5 w-5 text-emerald-600 shrink-0" />
