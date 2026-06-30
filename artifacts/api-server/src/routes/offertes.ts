@@ -310,6 +310,10 @@ async function offerteNaarJson(o: typeof offertesTable.$inferSelect) {
     portaal_status: o.portaalStatus,
     auto_project_id: o.autoProjectId ?? null,
     begroting_weergave: o.begrotingWeergave ?? null,
+    presentatie_niveau: o.presentatieNiveau ?? 3,
+    klant_type: o.klantType ?? null,
+    vervolg_opties: o.vervolgOpties ?? null,
+    vervolg_tekst: o.vervolgTekst ?? null,
     aangemaakt_door_id: o.aangemaaktDoorId,
     aangemaakt_op: iso(o.aangemaaktOp),
     bijgewerkt_op: iso(o.bijgewerktOp),
@@ -544,7 +548,7 @@ router.patch("/offertes/:id", schrijven, async (req, res) => {
     const offerteId = parseId(req.params.id);
     if (await isOfferteBlokkeerd(offerteId))
       return res.status(409).json({ error: "Ondertekende offerte kan niet meer worden gewijzigd." });
-    const { titel, offertenummer, gebouw_id, klant_id, sjabloon_id, opdrachtgever, ons_kenmerk, uw_kenmerk, uw_brief_van, behandeld_door_id, datum, geldigheid_dagen, voorwaarden, betalingstermijn_dagen, betaalwijze, factuur_schema, voorwaarden_set_id, bedrag_excl_btw, btw_percentage, bedrag_incl_btw, status, begroting_weergave } = req.body;
+    const { titel, offertenummer, gebouw_id, klant_id, sjabloon_id, opdrachtgever, ons_kenmerk, uw_kenmerk, uw_brief_van, behandeld_door_id, datum, geldigheid_dagen, voorwaarden, betalingstermijn_dagen, betaalwijze, factuur_schema, voorwaarden_set_id, bedrag_excl_btw, btw_percentage, bedrag_incl_btw, status, begroting_weergave, presentatie_niveau, klant_type, vervolg_opties, vervolg_tekst } = req.body;
     const [o] = await db
       .update(offertesTable)
       .set({
@@ -570,12 +574,57 @@ router.patch("/offertes/:id", schrijven, async (req, res) => {
         ...(bedrag_incl_btw !== undefined && { bedragInclBtw: bedrag_incl_btw }),
         ...(status !== undefined && { status }),
         ...(begroting_weergave !== undefined && { begrotingWeergave: begroting_weergave }),
+        ...(presentatie_niveau !== undefined && { presentatieNiveau: presentatie_niveau }),
+        ...(klant_type !== undefined && { klantType: klant_type }),
+        ...(vervolg_opties !== undefined && { vervolgOpties: vervolg_opties }),
+        ...(vervolg_tekst !== undefined && { vervolgTekst: vervolg_tekst }),
         bijgewerktOp: new Date(),
       })
       .where(eq(offertesTable.id, offerteId))
       .returning();
     if (!o) return res.status(404).json({ error: "Offerte niet gevonden" });
     res.json(await offerteNaarJson(o));
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+router.post("/offertes/:id/ai-presentatieniveau", schrijven, async (req, res) => {
+  try {
+    const offerteId = parseId(req.params.id);
+    const [o] = await db.select().from(offertesTable).where(eq(offertesTable.id, offerteId));
+    if (!o) return res.status(404).json({ error: "Offerte niet gevonden" });
+
+    let klantType = o.klantType ?? "bedrijf";
+    if (!klantType && o.klantId) {
+      const [k] = await db.select({ type: crmKlantenTable.type }).from(crmKlantenTable).where(eq(crmKlantenTable.id, o.klantId));
+      if (k?.type) klantType = k.type;
+    }
+
+    const niveauMap: Record<string, number> = {
+      woningcorporatie: 2, gemeente: 2, school: 2, zorginstelling: 2, particulier: 2, gebouweigenaar: 2,
+      VvE: 3, vve: 3, aannemer: 3, installateur: 3, bedrijf: 3,
+      architect: 4,
+    };
+    const niveau = niveauMap[klantType] ?? 3;
+
+    const motivatieMap: Record<number, string> = {
+      1: "Alleen categorietotalen en eindtotaal — geschikt voor klanten die geen detailbegroting nodig hebben.",
+      2: "Omschrijvingen zonder eenheidsprijzen — professioneel en transparant zonder kostprijsgevoelige informatie.",
+      3: "Volledig — standaard voor zakelijke klanten met interesse in de volledige begroting.",
+      4: "Uitgebreid — geschikt voor technisch onderlegde partijen zoals architecten en adviseurs.",
+      5: "Maximaal detail — inclusief aanvullende projectinformatie voor interne verwerking.",
+    };
+    const motivatie = motivatieMap[niveau] ?? motivatieMap[3];
+
+    if (o.klantId) {
+      await db.update(crmKlantenTable)
+        .set({ voorkeursPresentatieNiveau: niveau, bijgewerktOp: new Date() })
+        .where(eq(crmKlantenTable.id, o.klantId));
+    }
+
+    res.json({ niveau, motivatie });
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Interne serverfout" });
@@ -613,6 +662,7 @@ const mapRegel = (r: typeof offerteRegelsTable.$inferSelect) => ({
   ai_voorstel: r.aiVoorstel,
   is_optioneel: r.isOptioneel,
   optioneel_geselecteerd: r.optioneelGeselecteerd,
+  weergave_override: r.weergaveOverride ?? null,
   aangemaakt_op: iso(r.aangemaaktOp),
   bijgewerkt_op: iso(r.bijgewerktOp),
 });
@@ -670,7 +720,7 @@ router.patch("/offerte-regels/:id", schrijven, async (req, res) => {
     if (!bestaandeRegel) return res.status(404).json({ error: "Begrotingsregel niet gevonden" });
     if (await isOfferteBlokkeerd(bestaandeRegel.offerteId))
       return res.status(409).json({ error: "Ondertekende offerte kan niet meer worden gewijzigd." });
-    const { maatregel, categorie, snag_referentie, voorziening_id, ruimte, uitgangspunten, eenheid, aantal, prijs_per_eenheid, kosten, volgorde, ai_voorstel, is_optioneel } = req.body;
+    const { maatregel, categorie, snag_referentie, voorziening_id, ruimte, uitgangspunten, eenheid, aantal, prijs_per_eenheid, kosten, volgorde, ai_voorstel, is_optioneel, weergave_override } = req.body;
     const berekendeKosten = kosten != null ? kosten : (aantal ?? 0) * (prijs_per_eenheid ?? 0);
     const [r] = await db
       .update(offerteRegelsTable)
@@ -688,6 +738,7 @@ router.patch("/offerte-regels/:id", schrijven, async (req, res) => {
         volgorde,
         aiVoorstel: ai_voorstel,
         ...(is_optioneel !== undefined ? { isOptioneel: is_optioneel } : {}),
+        ...(weergave_override !== undefined ? { weergaveOverride: weergave_override } : {}),
         bijgewerktOp: new Date(),
       })
       .where(eq(offerteRegelsTable.id, parseId(req.params.id)))

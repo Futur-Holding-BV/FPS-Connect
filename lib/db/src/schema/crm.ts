@@ -44,6 +44,7 @@ export const crmKlantenTable = pgTable("crm_klanten", {
   relatieStatus: text("relatie_status").default("onbekend"),
   voorkeurFpsBedrijf: text("voorkeur_fps_bedrijf"),
   opmerkingen: text("opmerkingen"),
+  voorkeursPresentatieNiveau: integer("voorkeurs_presentatie_niveau"),
   aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
   bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
 });

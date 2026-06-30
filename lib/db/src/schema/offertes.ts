@@ -93,6 +93,10 @@ export const offertesTable = pgTable("offertes", {
   // Voorwaardenbibliotheek-koppeling
   voorwaardenSetId: integer("voorwaarden_set_id").references(() => offerteVoorwaardenSetsTable.id, { onDelete: "set null" }),
   voorwaardenSnapshot: text("voorwaarden_snapshot"),
+  presentatieNiveau: integer("presentatie_niveau").default(3),
+  klantType: text("klant_type"),
+  vervolgOpties: jsonb("vervolg_opties"),
+  vervolgTekst: text("vervolg_tekst"),
   status: text("status").notNull().default("concept"),
   portaalStatus: text("portaal_status").notNull().default("concept"),
   autoProjectId: integer("auto_project_id").references(() => projectenTable.id, { onDelete: "set null" }),
@@ -122,6 +126,7 @@ export const offerteRegelsTable = pgTable("offerte_regels", {
   aiVoorstel: boolean("ai_voorstel").notNull().default(false),
   isOptioneel: boolean("is_optioneel").notNull().default(false),
   optioneelGeselecteerd: boolean("optioneel_geselecteerd").notNull().default(true),
+  weergaveOverride: text("weergave_override"),
   aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
   bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
 });

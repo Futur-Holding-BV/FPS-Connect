@@ -45,6 +45,7 @@ const mapOrg = (k: typeof crmKlantenTable.$inferSelect) => ({
   relatie_status: k.relatieStatus,
   voorkeur_fps_bedrijf: k.voorkeurFpsBedrijf,
   opmerkingen: k.opmerkingen,
+  voorkeurs_presentatie_niveau: k.voorkeursPresentatieNiveau ?? null,
   aangemaakt_op: iso(k.aangemaaktOp),
   bijgewerkt_op: iso(k.bijgewerktOp),
 });
@@ -230,10 +231,10 @@ router.get("/crm/klanten/:id", lezen, async (req, res) => {
 
 router.patch("/crm/klanten/:id", schrijven, async (req, res) => {
   try {
-    const { naam, type, kvk, adres, postcode, stad, regio, telefoon, email, website, linkedin_url, branche, status, relatie_status, voorkeur_fps_bedrijf, opmerkingen } = req.body;
+    const { naam, type, kvk, adres, postcode, stad, regio, telefoon, email, website, linkedin_url, branche, status, relatie_status, voorkeur_fps_bedrijf, opmerkingen, voorkeurs_presentatie_niveau } = req.body;
     const [k] = await db
       .update(crmKlantenTable)
-      .set({ naam, type, kvk, adres, postcode, stad, regio, telefoon, email, website, linkedinUrl: linkedin_url, branche, status, relatieStatus: relatie_status, voorkeurFpsBedrijf: voorkeur_fps_bedrijf, opmerkingen, bijgewerktOp: new Date() })
+      .set({ naam, type, kvk, adres, postcode, stad, regio, telefoon, email, website, linkedinUrl: linkedin_url, branche, status, relatieStatus: relatie_status, voorkeurFpsBedrijf: voorkeur_fps_bedrijf, opmerkingen, ...(voorkeurs_presentatie_niveau !== undefined && { voorkeursPresentatieNiveau: voorkeurs_presentatie_niveau }), bijgewerktOp: new Date() })
       .where(eq(crmKlantenTable.id, parseId(req.params.id)))
       .returning();
     if (!k) return res.status(404).json({ error: "Organisatie niet gevonden" });

@@ -8343,6 +8343,33 @@ paths:
                 items:
                   $ref: "#/components/schemas/OfferteTrackingEvent"
 
+  /offertes/{id}/ai-presentatieniveau:
+    post:
+      operationId: getAiPresentatieNiveau
+      tags: [offertes]
+      summary: AI-voorstel voor het meest passende presentatieniveau
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: AI-voorstel voor presentatieniveau
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [niveau, motivatie]
+                properties:
+                  niveau:
+                    type: integer
+                    description: Voorgesteld niveau 1-5
+                  motivatie:
+                    type: string
+                    description: Korte uitleg waarom dit niveau past
+
   # ── Opdrachten ────────────────────────────────────────────────────────────
 
   /offertes/{id}/maak-opdracht:
@@ -15291,6 +15318,9 @@ components:
           type: ["string", "null"]
         opmerkingen:
           type: ["string", "null"]
+        voorkeurs_presentatie_niveau:
+          type: ["integer", "null"]
+          description: "Onthouden presentatieniveau voor offertes aan deze klant"
         contactpersonen:
           type: array
           items:
@@ -15343,6 +15373,8 @@ components:
           type: string
         opmerkingen:
           type: string
+        voorkeurs_presentatie_niveau:
+          type: integer
 
     CrmContactpersoon:
       type: object
@@ -20908,6 +20940,18 @@ components:
             optionele_posten:   { type: string }
             alleen_totaal:      { type: boolean }
             titel:              { type: string }
+        presentatie_niveau:
+          type: ["integer", "null"]
+          description: "Weergaveniveau richting klant: 1=Samenvatting, 2=Hoofdstukken+subtotalen, 3=Regeltotalen, 4=Detailbegroting, 5=Volledige open begroting"
+        klant_type:
+          type: ["string", "null"]
+          description: "Doelgroep: woningcorporatie, VvE, gebouweigenaar, bedrijf, gemeente, school, zorginstelling, aannemer, installateur, particulier"
+        vervolg_opties:
+          type: ["object", "null"]
+          description: "Geselecteerde commerciële vervolgopties na uitvoering"
+        vervolg_tekst:
+          type: ["string", "null"]
+          description: "Bewerkbare tekst voor het vervolgadvies in de offerte"
         aangemaakt_op:
           type: string
         bijgewerkt_op:
@@ -20974,6 +21018,14 @@ components:
             optionele_posten:   { type: string }
             alleen_totaal:      { type: boolean }
             titel:              { type: string }
+        presentatie_niveau:
+          type: ["integer", "null"]
+        klant_type:
+          type: ["string", "null"]
+        vervolg_opties:
+          type: ["object", "null"]
+        vervolg_tekst:
+          type: ["string", "null"]
 
     OfferteRegel:
       type: object
@@ -21009,6 +21061,9 @@ components:
           type: boolean
         is_optioneel:
           type: boolean
+        weergave_override:
+          type: ["string", "null"]
+          description: "Handmatige uitzondering: altijd | nooit | null"
         aangemaakt_op:
           type: string
         bijgewerkt_op:
@@ -21042,6 +21097,11 @@ components:
           type: integer
         ai_voorstel:
           type: boolean
+        is_optioneel:
+          type: boolean
+        weergave_override:
+          type: string
+          description: "Handmatige uitzondering: altijd | nooit"
 
     OfferteUitgangspunt:
       type: object

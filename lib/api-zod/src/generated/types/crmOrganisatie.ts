@@ -40,6 +40,11 @@ export interface CrmOrganisatie {
   voorkeur_fps_bedrijf?: string | null;
   /** @nullable */
   opmerkingen?: string | null;
+  /**
+     * Onthouden presentatieniveau voor offertes aan deze klant
+     * @nullable
+     */
+  voorkeurs_presentatie_niveau?: number | null;
   contactpersonen?: CrmContactpersoon[];
   projectkansen?: CrmProjectkans[];
   aangemaakt_op: string;

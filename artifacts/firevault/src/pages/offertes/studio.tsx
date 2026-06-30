@@ -28,6 +28,7 @@ import {
   useMaakOpdracht,
   useListOpdrachten,
   getListOpdrachtenQueryKey,
+  useGetAiPresentatieNiveau,
 } from "@workspace/api-client-react";
 import type { OfferteSectie } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
@@ -44,10 +45,11 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   ArrowLeft, Sparkles, ChevronUp, ChevronDown, Eye, Printer, Plus,
   Trash2, BookOpen, Clock, Paperclip, Check, X, GripVertical, ToggleLeft, ToggleRight, Send,
-  FolderOpen, CreditCard, FileText, Hammer,
+  FolderOpen, CreditCard, FileText, Hammer, Layers,
 } from "lucide-react";
 import { VerzendTab } from "./verzend-tab";
 import { useToast } from "@/hooks/use-toast";
@@ -188,6 +190,26 @@ export default function ProposalStudio() {
   });
   const [conditiesOpgeslagen, setConditiesOpgeslagen] = useState(false);
 
+  const VERVOLG_OPTIES_LABELS: Record<string, string> = {
+    periodiek_onderhoud: "Periodiek onderhoud aanbieden",
+    jaarlijkse_inspectie: "Jaarlijkse inspectie aanbieden",
+    garantie: "Garantie-informatie opnemen",
+    contactpersoon: "Vaste contactpersoon vermelden",
+    bedankmail: "Bedankmail na uitvoering",
+  };
+
+  const [weergaveForm, setWeergaveForm] = useState({
+    presentatie_niveau: 3 as number,
+    klant_type: "" as string,
+    vervolg_opties: [] as string[],
+    vervolg_tekst: "" as string,
+  });
+  const [weergaveOpgeslagen, setWeergaveOpgeslagen] = useState(false);
+  const [weergaveAiLoading, setWeergaveAiLoading] = useState(false);
+  const [weergaveAiVoorstel, setWeergaveAiVoorstel] = useState<{ niveau: number; motivatie: string } | null>(null);
+
+  const aiPresentatieNiveau = useGetAiPresentatieNiveau();
+
   const gesorteerdeSecties = [...(secties ?? [])].sort((a, b) => a.volgorde - b.volgorde);
   const activeSectie = gesorteerdeSecties.find((s) => s.id === activeSectieId) ?? null;
 
@@ -200,8 +222,62 @@ export default function ProposalStudio() {
         voorwaarden_set_id: (offerte as any).voorwaarden_set_id ?? undefined,
         vrije_voorwaarden: (offerte as any).voorwaarden ?? "",
       });
+      setWeergaveForm({
+        presentatie_niveau: (offerte as any).presentatie_niveau ?? 3,
+        klant_type: (offerte as any).klant_type ?? "",
+        vervolg_opties: (offerte as any).vervolg_opties ?? [],
+        vervolg_tekst: (offerte as any).vervolg_tekst ?? "",
+      });
     }
   }, [offerte?.id]);
+
+  async function slaWeergaveOp() {
+    try {
+      await werkOfferte.mutateAsync({
+        id: offerteId,
+        data: {
+          presentatie_niveau: weergaveForm.presentatie_niveau,
+          klant_type: weergaveForm.klant_type || undefined,
+          vervolg_opties: weergaveForm.vervolg_opties,
+          vervolg_tekst: weergaveForm.vervolg_tekst || undefined,
+        } as any,
+      });
+      await queryClient.invalidateQueries({ queryKey: getGetOfferteQueryKey(offerteId) });
+      setWeergaveOpgeslagen(true);
+      setTimeout(() => setWeergaveOpgeslagen(false), 2000);
+      toast({ title: "Weergaveinstellingen opgeslagen" });
+    } catch {
+      toast({ title: "Opslaan mislukt", variant: "destructive" });
+    }
+  }
+
+  async function haalAiNiveauOp() {
+    setWeergaveAiLoading(true);
+    setWeergaveAiVoorstel(null);
+    try {
+      const res = await aiPresentatieNiveau.mutateAsync({ id: offerteId });
+      setWeergaveAiVoorstel(res);
+    } catch {
+      toast({ title: "AI-voorstel mislukt", variant: "destructive" });
+    } finally {
+      setWeergaveAiLoading(false);
+    }
+  }
+
+  function accepteerAiNiveau() {
+    if (!weergaveAiVoorstel) return;
+    setWeergaveForm((f) => ({ ...f, presentatie_niveau: weergaveAiVoorstel.niveau }));
+    setWeergaveAiVoorstel(null);
+  }
+
+  async function slaRegelWeergaveOp(regelId: number, override: string | null) {
+    try {
+      await werkRegel.mutateAsync({ id: regelId, data: { weergave_override: override } as any });
+      await queryClient.invalidateQueries({ queryKey: getListOfferteRegelsQueryKey(offerteId) });
+    } catch {
+      toast({ title: "Opslaan mislukt", variant: "destructive" });
+    }
+  }
 
   async function slaConditiesOp() {
     try {
@@ -636,6 +712,7 @@ export default function ProposalStudio() {
                 <TabsTrigger value="studio"><BookOpen className="h-3.5 w-3.5 mr-1.5" />Studio</TabsTrigger>
                 <TabsTrigger value="prijzen"><span className="mr-1.5">&#8364;</span>Prijzen</TabsTrigger>
                 <TabsTrigger value="condities"><CreditCard className="h-3.5 w-3.5 mr-1.5" />Condities</TabsTrigger>
+                <TabsTrigger value="weergave"><Layers className="h-3.5 w-3.5 mr-1.5" />Weergave</TabsTrigger>
                 <TabsTrigger value="voorbeeld"><Eye className="h-3.5 w-3.5 mr-1.5" />Voorbeeld</TabsTrigger>
                 <TabsTrigger value="bijlagen"><Paperclip className="h-3.5 w-3.5 mr-1.5" />Bijlagen</TabsTrigger>
                 <TabsTrigger value="versies"><Clock className="h-3.5 w-3.5 mr-1.5" />Versies</TabsTrigger>
@@ -841,6 +918,192 @@ export default function ProposalStudio() {
                   <div className="flex justify-end">
                     <Button onClick={slaConditiesOp} disabled={werkOfferte.isPending}>
                       {conditiesOpgeslagen ? <><Check className="h-3.5 w-3.5" /> Opgeslagen</> : werkOfferte.isPending ? "Bezig..." : "Condities opslaan"}
+                    </Button>
+                  </div>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="weergave">
+                <div className="space-y-5">
+                  <Card>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm flex items-center gap-2">
+                        <Layers className="h-4 w-4" /> Presentatieniveau
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <p className="text-xs text-muted-foreground">
+                        Bepaal hoeveel budgetdetail de klant ziet in de offerte-PDF. Niveau 3 is de standaard.
+                      </p>
+
+                      {weergaveAiVoorstel && (
+                        <Card className="border-amber-200 bg-amber-50">
+                          <CardContent className="py-3 space-y-2">
+                            <div className="flex items-center gap-2 text-amber-800 font-semibold text-sm">
+                              <Sparkles className="h-4 w-4" />
+                              AI-voorstel: Niveau {weergaveAiVoorstel.niveau}
+                            </div>
+                            <p className="text-xs text-amber-900">{weergaveAiVoorstel.motivatie}</p>
+                            <div className="flex gap-2">
+                              <Button size="sm" onClick={accepteerAiNiveau}>
+                                <Check className="h-3.5 w-3.5" /> Overnemen
+                              </Button>
+                              <Button size="sm" variant="outline" onClick={() => setWeergaveAiVoorstel(null)}>
+                                <X className="h-3.5 w-3.5" /> Verwerpen
+                              </Button>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      )}
+
+                      <div className="space-y-2">
+                        {[
+                          { niveau: 1, label: "Niveau 1 — Alleen totalen", omschrijving: "Uitsluitend categoriesubtotalen en eindtotaal. Geen regelitems zichtbaar." },
+                          { niveau: 2, label: "Niveau 2 — Omschrijvingen, geen prijzen", omschrijving: "Regelomschrijvingen getoond zonder aantallen en eenheidsprijzen." },
+                          { niveau: 3, label: "Niveau 3 — Volledig (standaard)", omschrijving: "Volledige begroting met omschrijvingen, aantallen, eenheidsprijzen en totalen." },
+                          { niveau: 4, label: "Niveau 4 — Uitgebreid", omschrijving: "Volledig inclusief uitgangspunten en aanvullende technische informatie." },
+                          { niveau: 5, label: "Niveau 5 — Maximaal detail", omschrijving: "Alle beschikbare informatie — voor interne verwerking of technische adviseurs." },
+                        ].map(({ niveau, label, omschrijving }) => (
+                          <label
+                            key={niveau}
+                            className={`flex items-start gap-3 rounded-lg border p-3 cursor-pointer transition-colors ${weergaveForm.presentatie_niveau === niveau ? "border-primary bg-primary/5" : "border-border hover:bg-muted/40"}`}
+                          >
+                            <input
+                              type="radio"
+                              name="presentatie_niveau"
+                              value={niveau}
+                              checked={weergaveForm.presentatie_niveau === niveau}
+                              onChange={() => setWeergaveForm((f) => ({ ...f, presentatie_niveau: niveau }))}
+                              className="mt-0.5 accent-primary"
+                            />
+                            <div>
+                              <div className="text-sm font-medium">{label}</div>
+                              <div className="text-xs text-muted-foreground mt-0.5">{omschrijving}</div>
+                            </div>
+                          </label>
+                        ))}
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-1.5">
+                          <Label>Klanttype</Label>
+                          <Select
+                            value={weergaveForm.klant_type || "geen"}
+                            onValueChange={(v) => setWeergaveForm((f) => ({ ...f, klant_type: v === "geen" ? "" : v }))}
+                          >
+                            <SelectTrigger><SelectValue placeholder="Kies klanttype..." /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="geen">Niet opgegeven</SelectItem>
+                              <SelectItem value="woningcorporatie">Woningcorporatie</SelectItem>
+                              <SelectItem value="VvE">VvE</SelectItem>
+                              <SelectItem value="gemeente">Gemeente</SelectItem>
+                              <SelectItem value="school">School / onderwijsinstelling</SelectItem>
+                              <SelectItem value="zorginstelling">Zorginstelling</SelectItem>
+                              <SelectItem value="architect">Architect / adviseur</SelectItem>
+                              <SelectItem value="aannemer">Aannemer</SelectItem>
+                              <SelectItem value="installateur">Installateur</SelectItem>
+                              <SelectItem value="gebouweigenaar">Gebouweigenaar</SelectItem>
+                              <SelectItem value="bedrijf">Bedrijf (overig)</SelectItem>
+                              <SelectItem value="particulier">Particulier</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="flex items-end">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={haalAiNiveauOp}
+                            disabled={weergaveAiLoading}
+                          >
+                            <Sparkles className="h-3.5 w-3.5" />
+                            {weergaveAiLoading ? "Bezig..." : "AI-voorstel"}
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {(regels ?? []).length > 0 && (
+                    <Card>
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-sm flex items-center gap-2">
+                          <FileText className="h-4 w-4" /> Regeloverschrijvingen
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <p className="text-xs text-muted-foreground mb-3">
+                          Overschrijf per regel of deze altijd of nooit wordt getoond, ongeacht het ingestelde niveau.
+                        </p>
+                        <div className="divide-y">
+                          {(regels ?? []).map((r) => (
+                            <div key={r.id} className="flex items-center justify-between py-2 gap-3">
+                              <div className="flex-1 min-w-0">
+                                <div className="text-sm truncate">{r.maatregel || "(naamloos)"}</div>
+                                {r.categorie && <div className="text-xs text-muted-foreground">{r.categorie}</div>}
+                              </div>
+                              <Select
+                                value={(r as any).weergave_override ?? "niveau"}
+                                onValueChange={(v) => slaRegelWeergaveOp(r.id, v === "niveau" ? null : v)}
+                              >
+                                <SelectTrigger className="w-36 h-7 text-xs">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="niveau">Volg niveau</SelectItem>
+                                  <SelectItem value="altijd">Altijd tonen</SelectItem>
+                                  <SelectItem value="nooit">Nooit tonen</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  <Card>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm flex items-center gap-2">
+                        <Hammer className="h-4 w-4" /> Na uitvoering
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <p className="text-xs text-muted-foreground">
+                        Selecteer welke vervolgopties in de offerte worden opgenomen als commercieel slot.
+                      </p>
+                      <div className="space-y-2">
+                        {Object.entries(VERVOLG_OPTIES_LABELS).map(([sleutel, label]) => (
+                          <label key={sleutel} className="flex items-center gap-2.5 cursor-pointer">
+                            <Checkbox
+                              checked={weergaveForm.vervolg_opties.includes(sleutel)}
+                              onCheckedChange={(checked) =>
+                                setWeergaveForm((f) => ({
+                                  ...f,
+                                  vervolg_opties: checked
+                                    ? [...f.vervolg_opties, sleutel]
+                                    : f.vervolg_opties.filter((o) => o !== sleutel),
+                                }))
+                              }
+                            />
+                            <span className="text-sm">{label}</span>
+                          </label>
+                        ))}
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label>Aanvullende tekst (optioneel)</Label>
+                        <Textarea
+                          value={weergaveForm.vervolg_tekst}
+                          onChange={(e) => setWeergaveForm((f) => ({ ...f, vervolg_tekst: e.target.value }))}
+                          placeholder="Bijv. Voor vragen over onderhoud en garantie kunt u contact opnemen met..."
+                          className="min-h-[100px] text-sm"
+                        />
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <div className="flex justify-end">
+                    <Button onClick={slaWeergaveOp} disabled={werkOfferte.isPending}>
+                      {weergaveOpgeslagen ? <><Check className="h-3.5 w-3.5" /> Opgeslagen</> : werkOfferte.isPending ? "Bezig..." : "Weergave opslaan"}
                     </Button>
                   </div>
                 </div>

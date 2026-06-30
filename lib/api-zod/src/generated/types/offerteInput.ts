@@ -7,6 +7,7 @@
  */
 import type { OfferteInputBegrotingWeergave } from './offerteInputBegrotingWeergave';
 import type { OfferteInputFactuurSchema } from './offerteInputFactuurSchema';
+import type { OfferteInputVervolgOpties } from './offerteInputVervolgOpties';
 
 export interface OfferteInput {
   titel: string;
@@ -37,4 +38,12 @@ export interface OfferteInput {
   status?: string;
   /** @nullable */
   begroting_weergave?: OfferteInputBegrotingWeergave;
+  /** @nullable */
+  presentatie_niveau?: number | null;
+  /** @nullable */
+  klant_type?: string | null;
+  /** @nullable */
+  vervolg_opties?: OfferteInputVervolgOpties;
+  /** @nullable */
+  vervolg_tekst?: string | null;
 }

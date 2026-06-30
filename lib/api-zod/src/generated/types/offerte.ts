@@ -7,6 +7,7 @@
  */
 import type { OfferteBegrotingWeergave } from './offerteBegrotingWeergave';
 import type { OfferteFactuurSchema } from './offerteFactuurSchema';
+import type { OfferteVervolgOpties } from './offerteVervolgOpties';
 
 export interface Offerte {
   id: number;
@@ -63,6 +64,26 @@ export interface Offerte {
      * @nullable
      */
   begroting_weergave?: OfferteBegrotingWeergave;
+  /**
+     * Weergaveniveau richting klant: 1=Samenvatting, 2=Hoofdstukken+subtotalen, 3=Regeltotalen, 4=Detailbegroting, 5=Volledige open begroting
+     * @nullable
+     */
+  presentatie_niveau?: number | null;
+  /**
+     * Doelgroep: woningcorporatie, VvE, gebouweigenaar, bedrijf, gemeente, school, zorginstelling, aannemer, installateur, particulier
+     * @nullable
+     */
+  klant_type?: string | null;
+  /**
+     * Geselecteerde commerciële vervolgopties na uitvoering
+     * @nullable
+     */
+  vervolg_opties?: OfferteVervolgOpties;
+  /**
+     * Bewerkbare tekst voor het vervolgadvies in de offerte
+     * @nullable
+     */
+  vervolg_tekst?: string | null;
   aangemaakt_op: string;
   bijgewerkt_op: string;
 }

@@ -5432,6 +5432,7 @@ export const ListCrmKlantenResponseItem = zod.object({
   "relatie_status": zod.string().nullish(),
   "voorkeur_fps_bedrijf": zod.string().nullish(),
   "opmerkingen": zod.string().nullish(),
+  "voorkeurs_presentatie_niveau": zod.number().nullish().describe('Onthouden presentatieniveau voor offertes aan deze klant'),
   "contactpersonen": zod.array(zod.object({
   "id": zod.number(),
   "klant_id": zod.number().nullable(),
@@ -5494,7 +5495,8 @@ export const CreateCrmKlantBody = zod.object({
   "status": zod.string().optional(),
   "relatie_status": zod.string().optional(),
   "voorkeur_fps_bedrijf": zod.string().optional(),
-  "opmerkingen": zod.string().optional()
+  "opmerkingen": zod.string().optional(),
+  "voorkeurs_presentatie_niveau": zod.number().optional()
 })
 
 export const CreateCrmKlantResponse = zod.void()
@@ -5525,6 +5527,7 @@ export const GetCrmKlantResponse = zod.object({
   "relatie_status": zod.string().nullish(),
   "voorkeur_fps_bedrijf": zod.string().nullish(),
   "opmerkingen": zod.string().nullish(),
+  "voorkeurs_presentatie_niveau": zod.number().nullish().describe('Onthouden presentatieniveau voor offertes aan deze klant'),
   "contactpersonen": zod.array(zod.object({
   "id": zod.number(),
   "klant_id": zod.number().nullable(),
@@ -5590,7 +5593,8 @@ export const UpdateCrmKlantBody = zod.object({
   "status": zod.string().optional(),
   "relatie_status": zod.string().optional(),
   "voorkeur_fps_bedrijf": zod.string().optional(),
-  "opmerkingen": zod.string().optional()
+  "opmerkingen": zod.string().optional(),
+  "voorkeurs_presentatie_niveau": zod.number().optional()
 })
 
 export const UpdateCrmKlantResponse = zod.object({
@@ -5611,6 +5615,7 @@ export const UpdateCrmKlantResponse = zod.object({
   "relatie_status": zod.string().nullish(),
   "voorkeur_fps_bedrijf": zod.string().nullish(),
   "opmerkingen": zod.string().nullish(),
+  "voorkeurs_presentatie_niveau": zod.number().nullish().describe('Onthouden presentatieniveau voor offertes aan deze klant'),
   "contactpersonen": zod.array(zod.object({
   "id": zod.number(),
   "klant_id": zod.number().nullable(),
@@ -9477,6 +9482,12 @@ export const ListOffertesResponseItem = zod.object({
   "alleen_totaal": zod.boolean().optional(),
   "titel": zod.string().optional()
 }).nullish().describe('Weergave-instellingen voor de begrotingstabel in het klantdocument'),
+  "presentatie_niveau": zod.number().nullish().describe('Weergaveniveau richting klant: 1=Samenvatting, 2=Hoofdstukken+subtotalen, 3=Regeltotalen, 4=Detailbegroting, 5=Volledige open begroting'),
+  "klant_type": zod.string().nullish().describe('Doelgroep: woningcorporatie, VvE, gebouweigenaar, bedrijf, gemeente, school, zorginstelling, aannemer, installateur, particulier'),
+  "vervolg_opties": zod.object({
+
+}).passthrough().nullish().describe('Geselecteerde commerciële vervolgopties na uitvoering'),
+  "vervolg_tekst": zod.string().nullish().describe('Bewerkbare tekst voor het vervolgadvies in de offerte'),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
 })
@@ -9523,7 +9534,13 @@ export const CreateOfferteBody = zod.object({
   "optionele_posten": zod.string().optional(),
   "alleen_totaal": zod.boolean().optional(),
   "titel": zod.string().optional()
-}).nullish()
+}).nullish(),
+  "presentatie_niveau": zod.number().nullish(),
+  "klant_type": zod.string().nullish(),
+  "vervolg_opties": zod.object({
+
+}).passthrough().nullish(),
+  "vervolg_tekst": zod.string().nullish()
 })
 
 export const CreateOfferteResponse = zod.void()
@@ -9582,6 +9599,12 @@ export const GetOfferteResponse = zod.object({
   "alleen_totaal": zod.boolean().optional(),
   "titel": zod.string().optional()
 }).nullish().describe('Weergave-instellingen voor de begrotingstabel in het klantdocument'),
+  "presentatie_niveau": zod.number().nullish().describe('Weergaveniveau richting klant: 1=Samenvatting, 2=Hoofdstukken+subtotalen, 3=Regeltotalen, 4=Detailbegroting, 5=Volledige open begroting'),
+  "klant_type": zod.string().nullish().describe('Doelgroep: woningcorporatie, VvE, gebouweigenaar, bedrijf, gemeente, school, zorginstelling, aannemer, installateur, particulier'),
+  "vervolg_opties": zod.object({
+
+}).passthrough().nullish().describe('Geselecteerde commerciële vervolgopties na uitvoering'),
+  "vervolg_tekst": zod.string().nullish().describe('Bewerkbare tekst voor het vervolgadvies in de offerte'),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
 })
@@ -9631,7 +9654,13 @@ export const UpdateOfferteBody = zod.object({
   "optionele_posten": zod.string().optional(),
   "alleen_totaal": zod.boolean().optional(),
   "titel": zod.string().optional()
-}).nullish()
+}).nullish(),
+  "presentatie_niveau": zod.number().nullish(),
+  "klant_type": zod.string().nullish(),
+  "vervolg_opties": zod.object({
+
+}).passthrough().nullish(),
+  "vervolg_tekst": zod.string().nullish()
 })
 
 export const UpdateOfferteResponse = zod.object({
@@ -9680,6 +9709,12 @@ export const UpdateOfferteResponse = zod.object({
   "alleen_totaal": zod.boolean().optional(),
   "titel": zod.string().optional()
 }).nullish().describe('Weergave-instellingen voor de begrotingstabel in het klantdocument'),
+  "presentatie_niveau": zod.number().nullish().describe('Weergaveniveau richting klant: 1=Samenvatting, 2=Hoofdstukken+subtotalen, 3=Regeltotalen, 4=Detailbegroting, 5=Volledige open begroting'),
+  "klant_type": zod.string().nullish().describe('Doelgroep: woningcorporatie, VvE, gebouweigenaar, bedrijf, gemeente, school, zorginstelling, aannemer, installateur, particulier'),
+  "vervolg_opties": zod.object({
+
+}).passthrough().nullish().describe('Geselecteerde commerciële vervolgopties na uitvoering'),
+  "vervolg_tekst": zod.string().nullish().describe('Bewerkbare tekst voor het vervolgadvies in de offerte'),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
 })
@@ -9718,6 +9753,7 @@ export const ListOfferteRegelsResponseItem = zod.object({
   "volgorde": zod.number(),
   "ai_voorstel": zod.boolean(),
   "is_optioneel": zod.boolean(),
+  "weergave_override": zod.string().nullish().describe('Handmatige uitzondering: altijd | nooit | null'),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
 })
@@ -9743,7 +9779,9 @@ export const CreateOfferteRegelBody = zod.object({
   "prijs_per_eenheid": zod.number().optional(),
   "kosten": zod.number().optional(),
   "volgorde": zod.number().optional(),
-  "ai_voorstel": zod.boolean().optional()
+  "ai_voorstel": zod.boolean().optional(),
+  "is_optioneel": zod.boolean().optional(),
+  "weergave_override": zod.string().optional().describe('Handmatige uitzondering: altijd | nooit')
 })
 
 export const CreateOfferteRegelResponse = zod.void()
@@ -9778,7 +9816,9 @@ export const UpdateOfferteRegelBody = zod.object({
   "prijs_per_eenheid": zod.number().optional(),
   "kosten": zod.number().optional(),
   "volgorde": zod.number().optional(),
-  "ai_voorstel": zod.boolean().optional()
+  "ai_voorstel": zod.boolean().optional(),
+  "is_optioneel": zod.boolean().optional(),
+  "weergave_override": zod.string().optional().describe('Handmatige uitzondering: altijd | nooit')
 })
 
 export const UpdateOfferteRegelResponse = zod.object({
@@ -9797,6 +9837,7 @@ export const UpdateOfferteRegelResponse = zod.object({
   "volgorde": zod.number(),
   "ai_voorstel": zod.boolean(),
   "is_optioneel": zod.boolean(),
+  "weergave_override": zod.string().nullish().describe('Handmatige uitzondering: altijd | nooit | null'),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
 })
@@ -10253,6 +10294,19 @@ export const ListOfferteTrackingResponseItem = zod.object({
   "aangemaakt_op": zod.string()
 })
 export const ListOfferteTrackingResponse = zod.array(ListOfferteTrackingResponseItem)
+
+
+/**
+ * @summary AI-voorstel voor het meest passende presentatieniveau
+ */
+export const GetAiPresentatieNiveauParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetAiPresentatieNiveauResponse = zod.object({
+  "niveau": zod.number().describe('Voorgesteld niveau 1-5'),
+  "motivatie": zod.string().describe('Korte uitleg waarom dit niveau past')
+})
 
 
 /**

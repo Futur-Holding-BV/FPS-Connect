@@ -20,4 +20,7 @@ export interface OfferteRegelInput {
   kosten?: number;
   volgorde?: number;
   ai_voorstel?: boolean;
+  is_optioneel?: boolean;
+  /** Handmatige uitzondering: altijd | nooit */
+  weergave_override?: string;
 }

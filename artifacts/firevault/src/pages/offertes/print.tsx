@@ -69,7 +69,9 @@ export default function OffertePrintPagina() {
   const btw = totaal * ((offerte.btw_percentage ?? 21) / 100);
   const inclBtw = totaal + btw;
 
-  const w = {
+  const presentatieNiveau: number = (offerte as any).presentatie_niveau ?? 3;
+
+  const wBase = {
     toon_aantal: true, toon_eenheid: true, toon_prijs_per_eenheid: true, toon_ruimte: true,
     toon_subtotalen: true, toon_subtotaal_excl: true, toon_btw: true, toon_totaal_incl: true,
     groepering: "categorie" as "categorie" | "geen",
@@ -78,10 +80,36 @@ export default function OffertePrintPagina() {
     ...((offerte as any).begroting_weergave ?? {}),
   };
 
-  const maatregelen = w.optionele_posten === "verbergen"
-    ? alleMaatregelen.filter((r) => !r.is_optioneel) : alleMaatregelen;
-  const algemeenKosten = w.optionele_posten === "verbergen"
-    ? alleAlgemeenKosten.filter((r) => !r.is_optioneel) : alleAlgemeenKosten;
+  const niveauOverrides = (() => {
+    if (presentatieNiveau === 1) return { alleen_totaal: true, toon_subtotalen: true, toon_subtotaal_excl: true, toon_btw: true, toon_totaal_incl: true };
+    if (presentatieNiveau === 2) return { toon_aantal: false, toon_eenheid: false, toon_prijs_per_eenheid: false };
+    return {};
+  })();
+
+  const w = { ...wBase, ...niveauOverrides };
+
+  function filterRegelNiveau(r: any) {
+    const ovr = (r as any).weergave_override as string | null | undefined;
+    if (ovr === "altijd") return true;
+    if (ovr === "nooit") return false;
+    return presentatieNiveau >= 1;
+  }
+
+  const maatregelen = (w.optionele_posten === "verbergen"
+    ? alleMaatregelen.filter((r) => !r.is_optioneel) : alleMaatregelen).filter(filterRegelNiveau);
+  const algemeenKosten = (w.optionele_posten === "verbergen"
+    ? alleAlgemeenKosten.filter((r) => !r.is_optioneel) : alleAlgemeenKosten).filter(filterRegelNiveau);
+
+  const VERVOLG_LABELS: Record<string, string> = {
+    periodiek_onderhoud: "Periodiek onderhoud",
+    jaarlijkse_inspectie: "Jaarlijkse inspectie",
+    garantie: "Garantie",
+    contactpersoon: "Vaste contactpersoon",
+    bedankmail: "Opvolgingscontact na uitvoering",
+  };
+  const vervolgOpties: string[] = (offerte as any).vervolg_opties ?? [];
+  const vervolgTekst: string = (offerte as any).vervolg_tekst ?? "";
+  const heeftVervolg = vervolgOpties.length > 0 || !!vervolgTekst;
 
   const werkgever = (werkgevers ?? [])[0];
   const datum = datumNl((offerte as any).datum ?? offerte.aangemaakt_op);
@@ -369,6 +397,48 @@ export default function OffertePrintPagina() {
             </div>
           </div>
           <DocumentVoet meta={{ ...meta, paginaNummer: actieveSecties.length + 3 }} mij={mij} />
+        </DocumentFrame>
+      )}
+
+      {heeftVervolg && (
+        <DocumentFrame paginaEinde={(bijlagen ?? []).length > 0}>
+          <div className="bg-slate-900 text-white px-16 py-6 flex justify-between items-center">
+            <div>
+              <h2 className="text-lg font-bold">{offerte.titel}</h2>
+              <div className="text-slate-400 text-xs mt-0.5">{meta.projectNummer} — {offerte.opdrachtgever}</div>
+            </div>
+            <img
+              src={mij.logoUrl}
+              alt={mij.naam}
+              className="h-7 object-contain brightness-0 invert"
+              onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+            />
+          </div>
+          <div className="px-16 py-12 flex-1">
+            <h1 className="text-2xl font-bold text-slate-900 mb-6 pb-3 border-b border-slate-200">
+              Na uitvoering
+            </h1>
+            {vervolgOpties.length > 0 && (
+              <div className="mb-6 space-y-2">
+                {vervolgOpties.map((sleutel) => (
+                  <div key={sleutel} className="flex items-center gap-3 text-sm text-slate-700">
+                    <div className="w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                      <svg className="w-3 h-3 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                      </svg>
+                    </div>
+                    <span>{VERVOLG_LABELS[sleutel] ?? sleutel}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+            {vervolgTekst && (
+              <div className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap mt-4">
+                {vervolgTekst}
+              </div>
+            )}
+          </div>
+          <DocumentVoet meta={{ ...meta, paginaNummer: actieveSecties.length + 2 }} mij={mij} />
         </DocumentFrame>
       )}
 

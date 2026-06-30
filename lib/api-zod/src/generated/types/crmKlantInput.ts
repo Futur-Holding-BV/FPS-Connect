@@ -23,4 +23,5 @@ export interface CrmKlantInput {
   relatie_status?: string;
   voorkeur_fps_bedrijf?: string;
   opmerkingen?: string;
+  voorkeurs_presentatie_niveau?: number;
 }

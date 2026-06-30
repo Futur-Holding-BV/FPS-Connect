@@ -148,6 +148,11 @@ export interface CrmOrganisatie {
   voorkeur_fps_bedrijf?: string | null;
   /** @nullable */
   opmerkingen?: string | null;
+  /**
+     * Onthouden presentatieniveau voor offertes aan deze klant
+     * @nullable
+     */
+  voorkeurs_presentatie_niveau?: number | null;
   contactpersonen?: CrmContactpersoon[];
   projectkansen?: CrmProjectkans[];
   aangemaakt_op: string;
@@ -173,6 +178,7 @@ export interface CrmKlantInput {
   relatie_status?: string;
   voorkeur_fps_bedrijf?: string;
   opmerkingen?: string;
+  voorkeurs_presentatie_niveau?: number;
 }
 
 export interface CrmContactpersoonInput {
@@ -4028,6 +4034,12 @@ export type OfferteBegrotingWeergave = {
   titel?: string;
 } | null;
 
+/**
+ * Geselecteerde commerciële vervolgopties na uitvoering
+ * @nullable
+ */
+export type OfferteVervolgOpties = { [key: string]: unknown } | null;
+
 export interface Offerte {
   id: number;
   /** @nullable */
@@ -4083,6 +4095,26 @@ export interface Offerte {
      * @nullable
      */
   begroting_weergave?: OfferteBegrotingWeergave;
+  /**
+     * Weergaveniveau richting klant: 1=Samenvatting, 2=Hoofdstukken+subtotalen, 3=Regeltotalen, 4=Detailbegroting, 5=Volledige open begroting
+     * @nullable
+     */
+  presentatie_niveau?: number | null;
+  /**
+     * Doelgroep: woningcorporatie, VvE, gebouweigenaar, bedrijf, gemeente, school, zorginstelling, aannemer, installateur, particulier
+     * @nullable
+     */
+  klant_type?: string | null;
+  /**
+     * Geselecteerde commerciële vervolgopties na uitvoering
+     * @nullable
+     */
+  vervolg_opties?: OfferteVervolgOpties;
+  /**
+     * Bewerkbare tekst voor het vervolgadvies in de offerte
+     * @nullable
+     */
+  vervolg_tekst?: string | null;
   aangemaakt_op: string;
   bijgewerkt_op: string;
 }
@@ -4106,6 +4138,11 @@ export type OfferteInputBegrotingWeergave = {
   alleen_totaal?: boolean;
   titel?: string;
 } | null;
+
+/**
+ * @nullable
+ */
+export type OfferteInputVervolgOpties = { [key: string]: unknown } | null;
 
 export interface OfferteInput {
   titel: string;
@@ -4136,6 +4173,14 @@ export interface OfferteInput {
   status?: string;
   /** @nullable */
   begroting_weergave?: OfferteInputBegrotingWeergave;
+  /** @nullable */
+  presentatie_niveau?: number | null;
+  /** @nullable */
+  klant_type?: string | null;
+  /** @nullable */
+  vervolg_opties?: OfferteInputVervolgOpties;
+  /** @nullable */
+  vervolg_tekst?: string | null;
 }
 
 export interface OfferteRegel {
@@ -4158,6 +4203,11 @@ export interface OfferteRegel {
   volgorde: number;
   ai_voorstel: boolean;
   is_optioneel: boolean;
+  /**
+     * Handmatige uitzondering: altijd | nooit | null
+     * @nullable
+     */
+  weergave_override?: string | null;
   aangemaakt_op: string;
   bijgewerkt_op: string;
 }
@@ -4176,6 +4226,9 @@ export interface OfferteRegelInput {
   kosten?: number;
   volgorde?: number;
   ai_voorstel?: boolean;
+  is_optioneel?: boolean;
+  /** Handmatige uitzondering: altijd | nooit */
+  weergave_override?: string;
 }
 
 export interface OfferteUitgangspunt {
@@ -8219,6 +8272,13 @@ jaar?: number;
 
 export type VerzendOfferte200 = {
   ok?: boolean;
+};
+
+export type GetAiPresentatieNiveau200 = {
+  /** Voorgesteld niveau 1-5 */
+  niveau: number;
+  /** Korte uitleg waarom dit niveau past */
+  motivatie: string;
 };
 
 export type ListOpdrachtenParams = {

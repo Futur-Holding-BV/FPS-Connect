@@ -26,6 +26,11 @@ export interface OfferteRegel {
   volgorde: number;
   ai_voorstel: boolean;
   is_optioneel: boolean;
+  /**
+     * Handmatige uitzondering: altijd | nooit | null
+     * @nullable
+     */
+  weergave_override?: string | null;
   aangemaakt_op: string;
   bijgewerkt_op: string;
 }

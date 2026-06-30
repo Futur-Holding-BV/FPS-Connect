@@ -177,6 +177,7 @@ import type {
   GereedschapInput,
   GereedschapMelding,
   GereedschapMeldingInput,
+  GetAiPresentatieNiveau200,
   GetBoekhouderDashboardParams,
   GetBoekhouderUploadsParams,
   GetCapaciteitBezettingParams,
@@ -29741,6 +29742,76 @@ export function useListOfferteTracking<TData = Awaited<ReturnType<typeof listOff
 
 
 
+
+export const getGetAiPresentatieNiveauUrl = (id: number,) => {
+
+
+
+
+  return `/api/offertes/${id}/ai-presentatieniveau`
+}
+
+/**
+ * @summary AI-voorstel voor het meest passende presentatieniveau
+ */
+export const getAiPresentatieNiveau = async (id: number, options?: RequestInit): Promise<GetAiPresentatieNiveau200> => {
+
+  return customFetch<GetAiPresentatieNiveau200>(getGetAiPresentatieNiveauUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getGetAiPresentatieNiveauMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof getAiPresentatieNiveau>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof getAiPresentatieNiveau>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['getAiPresentatieNiveau'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof getAiPresentatieNiveau>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  getAiPresentatieNiveau(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type GetAiPresentatieNiveauMutationResult = NonNullable<Awaited<ReturnType<typeof getAiPresentatieNiveau>>>
+
+    export type GetAiPresentatieNiveauMutationError = ErrorType<unknown>
+
+    /**
+ * @summary AI-voorstel voor het meest passende presentatieniveau
+ */
+export const useGetAiPresentatieNiveau = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof getAiPresentatieNiveau>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof getAiPresentatieNiveau>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getGetAiPresentatieNiveauMutationOptions(options));
+    }
 
 export const getMaakOpdrachtUrl = (id: number,) => {
 
