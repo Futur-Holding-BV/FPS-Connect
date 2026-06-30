@@ -15451,6 +15451,11 @@ paths:
           name: actief
           schema:
             type: boolean
+        - in: query
+          name: barcode
+          schema:
+            type: string
+          description: Zoek artikel op exacte barcode
       responses:
         "200":
           description: OK
@@ -28625,6 +28630,7 @@ components:
         omschrijving:       { type: ["string", "null"] }
         eenheid:            { type: string }
         categorie:          { type: ["string", "null"] }
+        barcode:            { type: ["string", "null"] }
         inkoopprijs:        { type: ["number", "null"] }
         verkoopprijs:       { type: ["number", "null"] }
         btw_percentage:     { type: integer }

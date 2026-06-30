@@ -19647,6 +19647,7 @@ export const ListLeverancierArtikelenResponseItem = zod.object({
   "omschrijving": zod.string().nullish(),
   "eenheid": zod.string(),
   "categorie": zod.string().nullish(),
+  "barcode": zod.string().nullish(),
   "inkoopprijs": zod.number().nullish(),
   "verkoopprijs": zod.number().nullish(),
   "btw_percentage": zod.number(),
@@ -19668,7 +19669,8 @@ export const ListArtikelenQueryParams = zod.object({
   "zoek": zod.coerce.string().optional(),
   "leverancier_id": zod.coerce.number().optional(),
   "categorie": zod.coerce.string().optional(),
-  "actief": zod.coerce.boolean().optional()
+  "actief": zod.coerce.boolean().optional(),
+  "barcode": zod.coerce.string().optional().describe('Zoek artikel op exacte barcode')
 })
 
 export const ListArtikelenResponseItem = zod.object({
@@ -19678,6 +19680,7 @@ export const ListArtikelenResponseItem = zod.object({
   "omschrijving": zod.string().nullish(),
   "eenheid": zod.string(),
   "categorie": zod.string().nullish(),
+  "barcode": zod.string().nullish(),
   "inkoopprijs": zod.number().nullish(),
   "verkoopprijs": zod.number().nullish(),
   "btw_percentage": zod.number(),
@@ -19726,6 +19729,7 @@ export const GetArtikelResponse = zod.object({
   "omschrijving": zod.string().nullish(),
   "eenheid": zod.string(),
   "categorie": zod.string().nullish(),
+  "barcode": zod.string().nullish(),
   "inkoopprijs": zod.number().nullish(),
   "verkoopprijs": zod.number().nullish(),
   "btw_percentage": zod.number(),
@@ -19767,6 +19771,7 @@ export const PatchArtikelResponse = zod.object({
   "omschrijving": zod.string().nullish(),
   "eenheid": zod.string(),
   "categorie": zod.string().nullish(),
+  "barcode": zod.string().nullish(),
   "inkoopprijs": zod.number().nullish(),
   "verkoopprijs": zod.number().nullish(),
   "btw_percentage": zod.number(),
@@ -19967,6 +19972,7 @@ export const UpdateMagazijnArtikelResponse = zod.object({
   "omschrijving": zod.string().nullish(),
   "eenheid": zod.string(),
   "categorie": zod.string().nullish(),
+  "barcode": zod.string().nullish(),
   "inkoopprijs": zod.number().nullish(),
   "verkoopprijs": zod.number().nullish(),
   "btw_percentage": zod.number(),

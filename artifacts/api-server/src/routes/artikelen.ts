@@ -2,6 +2,7 @@ import { Router } from "express";
 import { db, artikelenTable, leveranciersTable } from "@workspace/db";
 import { eq, ilike, and } from "drizzle-orm";
 import { logger } from "../lib/logger";
+import type { SQL } from "drizzle-orm";
 
 type ArtikelRij = typeof artikelenTable.$inferSelect;
 
@@ -10,13 +11,14 @@ const router = Router();
 // ── GET /artikelen ─────────────────────────────────────────────────────────────
 router.get("/artikelen", async (req, res) => {
   try {
-    const { zoek, leverancier_id, categorie, actief } = req.query as Record<string, string | undefined>;
+    const { zoek, leverancier_id, categorie, actief, barcode } = req.query as Record<string, string | undefined>;
 
     const zoekCond = zoek ? ilike(artikelenTable.naam, `%${zoek}%`) : undefined;
     const leverancierCond = leverancier_id ? eq(artikelenTable.leverancierId, Number(leverancier_id)) : undefined;
     const categorieCond = categorie ? eq(artikelenTable.categorie, categorie) : undefined;
     const actiefCond = actief !== undefined ? eq(artikelenTable.actief, actief === "true") : undefined;
-    const actieveConds = [zoekCond, leverancierCond, categorieCond, actiefCond].filter(Boolean) as Parameters<typeof and>;
+    const barcodeCond = barcode ? eq(artikelenTable.barcode, barcode) : undefined;
+    const actieveConds = [zoekCond, leverancierCond, categorieCond, actiefCond, barcodeCond].filter(Boolean) as SQL[];
 
     const rijen = await db
       .select({
@@ -25,7 +27,7 @@ router.get("/artikelen", async (req, res) => {
       })
       .from(artikelenTable)
       .leftJoin(leveranciersTable, eq(artikelenTable.leverancierId, leveranciersTable.id))
-      .where(actieveConds.length > 0 ? and(...actieveConds) : undefined)
+      .where(actieveConds.length > 0 ? and(...(actieveConds as [SQL, ...SQL[]])) : undefined)
       .orderBy(artikelenTable.naam);
 
     res.json(
@@ -145,6 +147,7 @@ function mapArtikel(r: ArtikelRij, leverancierNaam: string | null) {
     omschrijving: r.omschrijving,
     eenheid: r.eenheid,
     categorie: r.categorie,
+    barcode: r.barcode ?? null,
     inkoopprijs: r.inkoopprijs,
     verkoopprijs: r.verkoopprijs,
     btw_percentage: r.btwPercentage,

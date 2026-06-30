@@ -75,6 +75,7 @@ export default function MenuScherm() {
     { sleutel: "berichten", label: "Berichten", icoon: "chatbubbles-outline", onPress: () => router.push("/berichten") },
     { sleutel: "opname", label: "Opname", icoon: "clipboard-outline", onPress: () => router.push("/opname") },
     { sleutel: "documenten", label: "Documenten", icoon: "folder-outline", onPress: () => router.push("/documenten") },
+    { sleutel: "magazijn", label: "Magazijn scan", icoon: "barcode-outline", onPress: () => router.push("/magazijn/scan" as "/werkdag") },
   ];
 
   const routeMap: Record<string, string> = {
@@ -88,6 +89,7 @@ export default function MenuScherm() {
     berichten: "/berichten",
     opname: "/opname",
     documenten: "/documenten",
+    magazijn: "/magazijn/scan",
   };
 
   // eslint-disable-next-line react-hooks/rules-of-hooks

@@ -8049,6 +8049,8 @@ export interface Artikel {
   /** @nullable */
   categorie?: string | null;
   /** @nullable */
+  barcode?: string | null;
+  /** @nullable */
   inkoopprijs?: number | null;
   /** @nullable */
   verkoopprijs?: number | null;
@@ -9193,6 +9195,10 @@ zoek?: string;
 leverancier_id?: number;
 categorie?: string;
 actief?: boolean;
+/**
+ * Zoek artikel op exacte barcode
+ */
+barcode?: string;
 };
 
 export type ListVoorraadParams = {

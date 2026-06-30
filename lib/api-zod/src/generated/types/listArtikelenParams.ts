@@ -11,4 +11,8 @@ zoek?: string;
 leverancier_id?: number;
 categorie?: string;
 actief?: boolean;
+/**
+ * Zoek artikel op exacte barcode
+ */
+barcode?: string;
 };

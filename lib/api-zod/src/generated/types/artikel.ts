@@ -17,6 +17,8 @@ export interface Artikel {
   /** @nullable */
   categorie?: string | null;
   /** @nullable */
+  barcode?: string | null;
+  /** @nullable */
   inkoopprijs?: number | null;
   /** @nullable */
   verkoopprijs?: number | null;

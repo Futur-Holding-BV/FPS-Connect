@@ -47,6 +47,26 @@ Koppeling magazijn ↔ opdrachten zichtbaar gemaakt via een nieuw Materiaal-tabb
 
 ---
 
+## 2026-06-30 — Barcode scannen in de monteur-app (magazijn)
+
+**Uitvoering:** volledig | **Diepere lagen:** volledig | **Getest:** typecheck groen (monteur-app)
+
+Nieuw scanscherm toegevoegd aan de FPS Monteur-app waarmee monteurs een artikelbarcode scannen en direct een uitgifte of retour registreren:
+
+- **OpenAPI uitgebreid**: `GET /artikelen` heeft nu een `barcode` query-parameter; `Artikel`-schema heeft nu het `barcode`-veld (was aanwezig in DB maar niet in API-respons).
+- **Backend** (`artifacts/api-server/src/routes/artikelen.ts`): barcode-filter toegevoegd aan de lijst-query; `mapArtikel` geeft `barcode` terug.
+- **Codegen uitgevoerd**: `ListArtikelenParams.barcode` en `Artikel.barcode` beschikbaar in alle gegenereerde hooks.
+- **expo-camera geïnstalleerd** in `@workspace/monteur-app`.
+- **Nieuw scherm** `artifacts/monteur-app/app/magazijn/scan.tsx`:
+  - Vraagt cameramachtiging aan; toont instructie bij geweigerde toegang.
+  - `CameraView` met `onBarcodeScanned` — ondersteunt EAN-13, EAN-8, Code128, Code39, QR, UPC-A, UPC-E.
+  - Na scan: `listArtikelen({ barcode })` call; toont artikel-info (naam, code, categorie, omschrijving).
+  - Haalt vrije voorraad op via `useListVoorraadTotaal` (client-side gefilterd op artikel_id); kleurcodering rood bij/onder minimum.
+  - Haalt minimum_voorraad/gewenste_voorraad op via `useGetMagazijnArtikel`.
+  - Actiekiezer uitgifte/retour met hoeveelheid-input; verwerkt via `useCreateUitgifte` / `useCreateRetour`.
+  - Foutmeldingen en succesbericht via Alert; "Opnieuw" knop keert terug naar de scanner.
+- **Menu** (`app/menu.tsx`): "Magazijn scan" toegevoegd aan de `meerActies`-lijst (icoon: `barcode-outline`), route `/magazijn/scan`.
+
 ## 2026-06-30 — Onderhoudsmodule (contracten + werkbonnen)
 
 **Uitvoering:** volledig | **Diepere lagen:** volledig | **Getest:** typecheck + e2e groen
