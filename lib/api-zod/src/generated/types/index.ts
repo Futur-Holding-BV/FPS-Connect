@@ -496,6 +496,8 @@ export * from './onderhoudVoltooien';
 export * from './ondertekenenPortaal201';
 export * from './onlineGebruiker';
 export * from './opdracht';
+export * from './opdrachtMateriaal';
+export * from './opdrachtMateriaalRegel';
 export * from './opdrachtNacalculatie';
 export * from './opdrachtNacalculatieRegel';
 export * from './opdrachtPatch';

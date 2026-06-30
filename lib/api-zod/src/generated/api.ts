@@ -11655,6 +11655,49 @@ export const PatchUitvoeringsplanTaakResponse = zod.object({
 
 
 /**
+ * @summary Materiaallijst per opdracht (reserveringen + uitgiftes)
+ */
+export const GetOpdrachtMateriaalParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetOpdrachtMateriaalResponse = zod.object({
+  "reserveringen": zod.array(zod.object({
+  "id": zod.number(),
+  "artikel_id": zod.number(),
+  "artikel_naam": zod.string().nullish(),
+  "artikel_code": zod.string().nullish(),
+  "eenheid": zod.string(),
+  "hoeveelheid": zod.number(),
+  "inkoopprijs": zod.number().nullish(),
+  "totaal_kosten": zod.number().nullish(),
+  "type": zod.string(),
+  "status": zod.string().nullish(),
+  "omschrijving": zod.string().nullish(),
+  "datum": zod.string(),
+  "reservering_id": zod.number().nullish()
+})),
+  "uitgiftes": zod.array(zod.object({
+  "id": zod.number(),
+  "artikel_id": zod.number(),
+  "artikel_naam": zod.string().nullish(),
+  "artikel_code": zod.string().nullish(),
+  "eenheid": zod.string(),
+  "hoeveelheid": zod.number(),
+  "inkoopprijs": zod.number().nullish(),
+  "totaal_kosten": zod.number().nullish(),
+  "type": zod.string(),
+  "status": zod.string().nullish(),
+  "omschrijving": zod.string().nullish(),
+  "datum": zod.string(),
+  "reservering_id": zod.number().nullish()
+})),
+  "totaal_kosten_reserveringen": zod.number(),
+  "totaal_kosten_uitgiftes": zod.number()
+})
+
+
+/**
  * @summary Offerte via portaaltoken ophalen (publiek)
  */
 export const GetPortaalParams = zod.object({

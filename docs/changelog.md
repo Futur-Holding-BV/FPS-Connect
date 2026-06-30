@@ -10,6 +10,26 @@ Grote roadmap-fases staan ook in `docs/roadmap/gebouwd.md` en `docs/roadmap/acti
 
 ---
 
+## 2026-06-30 — Materiaallijst per opdracht in het opdrachtdossier
+
+**Uitvoering:** volledig | **Diepere lagen:** volledig | **Getest:** typecheck groen + API health check
+
+Koppeling magazijn ↔ opdrachten zichtbaar gemaakt via een nieuw Materiaal-tabblad op de opdracht-detailpagina:
+
+- **OpenAPI** (`lib/api-spec/openapi.yaml`): nieuw endpoint `GET /opdrachten/{id}/materiaal` + twee nieuwe schemas (`OpdrachtMateriaal`, `OpdrachtMateriaalRegel`)
+- **Codegen** uitgevoerd: nieuwe hook `useGetOpdrachtMateriaal` gegenereerd in `lib/api-client-react/`
+- **Backend route** (`artifacts/api-server/src/routes/opdrachten.ts`): queries reserveringen op `opdracht_id` + voorraadmutaties op `referentieType="opdracht"` (uitgifte + retour); verrijkt met artikelnaam, artikelcode, eenheid en inkoopprijs; berekent `totaal_kosten_reserveringen` en `totaal_kosten_uitgiftes` als indicatief totaal (hoeveelheid × inkoopprijs)
+- **Frontend tab** (`artifacts/firevault/src/pages/opdrachten/materiaal-tab.tsx`): nieuw component met:
+  - Kostenoverzicht-kaarten (gereserveerd + uitgegeven indicatietotalen)
+  - Reserveringen-tabel met status-badge (open/gedeeltelijk/volledig/geannuleerd), datum, prijs/eenheid en totaalkosten; beheerder kan open reserveringen annuleren
+  - Uitgiftes-tabel met type-badge (uitgifte/retour) en indicatieve kosten
+  - "Uitgifte registreren"-dialoog: kies bestaande open reservering (inclusief max-hoeveelheid) of voer artikel-ID direct in
+  - "Retour registreren"-dialoog: artikel-ID, hoeveelheid en conditie (goed/defect/afval)
+  - Gating via `useBevoegdheid("magazijn", 3)` — alleen beheerders zien de actieknoppen
+- **Detail pagina** (`artifacts/firevault/src/pages/opdrachten/detail.tsx`): Materiaal-tabblad toegevoegd na "Uitvoeringsplanning", met Package-icoon
+
+---
+
 ## 2026-06-30 — Onderhoudsmodule (contracten + werkbonnen)
 
 **Uitvoering:** volledig | **Diepere lagen:** volledig | **Getest:** typecheck + e2e groen

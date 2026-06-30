@@ -34,6 +34,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import InkoopplanningTab from "./inkoopplanning-tab";
 import UitvoeringsplanningTab from "./uitvoeringsplanning-tab";
 import OnderaannemeringTab from "./onderaanneming-tab";
+import MateriaaltabTab from "./materiaal-tab";
 
 function euro(n: number | null | undefined) {
   return new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR" }).format(n ?? 0);
@@ -307,6 +308,10 @@ export default function OpdrachtDetailPagina() {
             <CalendarCheck className="h-3.5 w-3.5 mr-1.5" />
             Uitvoeringsplanning
           </TabsTrigger>
+          <TabsTrigger value="materiaal">
+            <Package className="h-3.5 w-3.5 mr-1.5" />
+            Materiaal
+          </TabsTrigger>
           <TabsTrigger value="nacalculatie">Nacalculatie</TabsTrigger>
           <TabsTrigger value="planning">Planning-uren</TabsTrigger>
           {aiAnalyse && <TabsTrigger value="ai">AI-analyse</TabsTrigger>}
@@ -429,6 +434,11 @@ export default function OpdrachtDetailPagina() {
         {/* ── Uitvoeringsplanning ── */}
         <TabsContent value="uitvoeringsplanning">
           <UitvoeringsplanningTab opdrachtId={opdrachtId} />
+        </TabsContent>
+
+        {/* ── Materiaal ── */}
+        <TabsContent value="materiaal">
+          <MateriaaltabTab opdrachtId={opdrachtId} />
         </TabsContent>
 
         {/* ── Nacalculatie ── */}

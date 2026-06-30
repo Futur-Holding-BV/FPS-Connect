@@ -8313,6 +8313,36 @@ export interface RetourInput {
   regels: RetourRegelInput[];
 }
 
+export interface OpdrachtMateriaalRegel {
+  id: number;
+  artikel_id: number;
+  /** @nullable */
+  artikel_naam?: string | null;
+  /** @nullable */
+  artikel_code?: string | null;
+  eenheid: string;
+  hoeveelheid: number;
+  /** @nullable */
+  inkoopprijs?: number | null;
+  /** @nullable */
+  totaal_kosten?: number | null;
+  type: string;
+  /** @nullable */
+  status?: string | null;
+  /** @nullable */
+  omschrijving?: string | null;
+  datum: string;
+  /** @nullable */
+  reservering_id?: number | null;
+}
+
+export interface OpdrachtMateriaal {
+  reserveringen: OpdrachtMateriaalRegel[];
+  uitgiftes: OpdrachtMateriaalRegel[];
+  totaal_kosten_reserveringen: number;
+  totaal_kosten_uitgiftes: number;
+}
+
 export type ImportUploadBestandType = typeof ImportUploadBestandType[keyof typeof ImportUploadBestandType];
 
 

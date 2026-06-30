@@ -14,8 +14,11 @@ import {
   medewerkersTable,
   gebruikersTable,
   gebouwenTable,
+  reserveringenTable,
+  voorraadMutatiesTable,
+  artikelenTable,
 } from "@workspace/db";
-import { eq, and, sql, sum, asc, isNull } from "drizzle-orm";
+import { eq, and, sql, sum, asc, isNull, desc, or } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
 import { logger } from "../lib/logger";
 
@@ -583,6 +586,107 @@ router.get("/opdrachten/:id/planning-uren", lezen, async (req, res) => {
     })));
   } catch (err) {
     logger.error({ err }, "listOpdrachtPlanningUren fout");
+    res.status(500).json({ error: "Serverfout" });
+  }
+});
+
+// ── Materiaallijst per opdracht ─────────────────────────────────────────────
+router.get("/opdrachten/:id/materiaal", lezen, async (req, res) => {
+  const id = parseInt(String(req.params.id), 10);
+  if (isNaN(id)) { res.status(400).json({ error: "Ongeldig id" }); return; }
+
+  try {
+    const [opdracht] = await db.select({ id: opdrachtenTable.id })
+      .from(opdrachtenTable).where(eq(opdrachtenTable.id, id)).limit(1);
+    if (!opdracht) { res.status(404).json({ error: "Opdracht niet gevonden" }); return; }
+
+    const iso = (d: Date | null | undefined) => d?.toISOString() ?? new Date().toISOString();
+
+    // Reserveringen gekoppeld aan deze opdracht (alleen open/gedeeltelijk)
+    const reserveringRijen = await db.select({
+      reservering: reserveringenTable,
+      artikel_naam: artikelenTable.naam,
+      artikel_code: artikelenTable.code,
+      eenheid: artikelenTable.eenheid,
+      inkoopprijs: artikelenTable.inkoopprijs,
+    })
+      .from(reserveringenTable)
+      .leftJoin(artikelenTable, eq(reserveringenTable.artikelId, artikelenTable.id))
+      .where(eq(reserveringenTable.opdrachtId, id))
+      .orderBy(desc(reserveringenTable.gereserveerdOp));
+
+    // Uitgiftes-mutaties voor deze opdracht (referentieType = "opdracht")
+    const uitgifte_mutaties = await db.select({
+      mutatie: voorraadMutatiesTable,
+      artikel_naam: artikelenTable.naam,
+      artikel_code: artikelenTable.code,
+      eenheid: artikelenTable.eenheid,
+      inkoopprijs: artikelenTable.inkoopprijs,
+    })
+      .from(voorraadMutatiesTable)
+      .leftJoin(artikelenTable, eq(voorraadMutatiesTable.artikelId, artikelenTable.id))
+      .where(
+        and(
+          eq(voorraadMutatiesTable.referentieType, "opdracht"),
+          eq(voorraadMutatiesTable.referentieId, id),
+          or(
+            eq(voorraadMutatiesTable.type, "uitgifte"),
+            eq(voorraadMutatiesTable.type, "retour"),
+          ),
+        ),
+      )
+      .orderBy(desc(voorraadMutatiesTable.aangemaaktOp));
+
+    const reserveringen = reserveringRijen.map(r => {
+      const prijs = r.inkoopprijs ?? null;
+      const totaal = prijs != null ? Math.round(prijs * r.reservering.hoeveelheid * 100) / 100 : null;
+      return {
+        id: r.reservering.id,
+        artikel_id: r.reservering.artikelId,
+        artikel_naam: r.artikel_naam ?? null,
+        artikel_code: r.artikel_code ?? null,
+        eenheid: r.eenheid ?? "st",
+        hoeveelheid: r.reservering.hoeveelheid,
+        inkoopprijs: prijs,
+        totaal_kosten: totaal,
+        type: "reservering",
+        status: r.reservering.status,
+        omschrijving: r.reservering.omschrijving ?? null,
+        datum: iso(r.reservering.gereserveerdOp),
+        reservering_id: r.reservering.id,
+      };
+    });
+
+    const uitgiftes = uitgifte_mutaties.map(m => {
+      const prijs = m.inkoopprijs ?? null;
+      const hoeveelheid = Math.abs(m.mutatie.hoeveelheid ?? 0);
+      const totaal = prijs != null ? Math.round(prijs * hoeveelheid * 100) / 100 : null;
+      return {
+        id: m.mutatie.id,
+        artikel_id: m.mutatie.artikelId,
+        artikel_naam: m.artikel_naam ?? null,
+        artikel_code: m.artikel_code ?? null,
+        eenheid: m.eenheid ?? "st",
+        hoeveelheid,
+        inkoopprijs: prijs,
+        totaal_kosten: totaal,
+        type: m.mutatie.type,
+        status: null,
+        omschrijving: m.mutatie.omschrijving ?? null,
+        datum: iso(m.mutatie.aangemaaktOp),
+        reservering_id: null,
+      };
+    });
+
+    // Totaalkosten alleen op openstaande reserveringen (open + gedeeltelijk), niet op gesloten/geannuleerd
+    const totaal_kosten_reserveringen = reserveringen
+      .filter(r => r.status === "open" || r.status === "gedeeltelijk")
+      .reduce((s, r) => s + (r.totaal_kosten ?? 0), 0);
+    const totaal_kosten_uitgiftes = uitgiftes.filter(u => u.type === "uitgifte").reduce((s, u) => s + (u.totaal_kosten ?? 0), 0);
+
+    res.json({ reserveringen, uitgiftes, totaal_kosten_reserveringen, totaal_kosten_uitgiftes });
+  } catch (err) {
+    logger.error({ err }, "getOpdrachtMateriaal fout");
     res.status(500).json({ error: "Serverfout" });
   }
 });

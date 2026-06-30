@@ -9253,6 +9253,27 @@ paths:
               schema:
                 $ref: "#/components/schemas/UitvoeringsplanTaak"
 
+  /opdrachten/{id}/materiaal:
+    get:
+      operationId: getOpdrachtMateriaal
+      tags: [opdrachten]
+      summary: Materiaallijst per opdracht (reserveringen + uitgiftes)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OpdrachtMateriaal"
+        "404":
+          description: Opdracht niet gevonden
+
   # ── Klantportaal (publiek, geen authenticatie) ─────────────────────────────
   /portaal/{token}:
     get:
@@ -28851,6 +28872,39 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/RetourRegelInput"
+
+    OpdrachtMateriaalRegel:
+      type: object
+      required: [id, artikel_id, hoeveelheid, eenheid, type, datum]
+      properties:
+        id:            { type: integer }
+        artikel_id:    { type: integer }
+        artikel_naam:  { type: ["string", "null"] }
+        artikel_code:  { type: ["string", "null"] }
+        eenheid:       { type: string }
+        hoeveelheid:   { type: number }
+        inkoopprijs:   { type: ["number", "null"] }
+        totaal_kosten: { type: ["number", "null"] }
+        type:          { type: string }
+        status:        { type: ["string", "null"] }
+        omschrijving:  { type: ["string", "null"] }
+        datum:         { type: string }
+        reservering_id: { type: ["integer", "null"] }
+
+    OpdrachtMateriaal:
+      type: object
+      required: [reserveringen, uitgiftes, totaal_kosten_reserveringen, totaal_kosten_uitgiftes]
+      properties:
+        reserveringen:
+          type: array
+          items:
+            $ref: "#/components/schemas/OpdrachtMateriaalRegel"
+        uitgiftes:
+          type: array
+          items:
+            $ref: "#/components/schemas/OpdrachtMateriaalRegel"
+        totaal_kosten_reserveringen: { type: number }
+        totaal_kosten_uitgiftes:     { type: number }
 
     # ── IMPORT ──────────────────────────────────────────────────────────────────
 

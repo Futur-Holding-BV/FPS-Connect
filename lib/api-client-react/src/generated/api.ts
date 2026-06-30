@@ -408,6 +408,7 @@ import type {
   OndertekenenPortaal201,
   OnlineGebruiker,
   Opdracht,
+  OpdrachtMateriaal,
   OpdrachtNacalculatie,
   OpdrachtPatch,
   Opleiding,
@@ -32865,6 +32866,83 @@ export const usePatchUitvoeringsplanTaak = <TError = ErrorType<unknown>,
       > => {
       return useMutation(getPatchUitvoeringsplanTaakMutationOptions(options));
     }
+
+export const getGetOpdrachtMateriaalUrl = (id: number,) => {
+
+
+
+
+  return `/api/opdrachten/${id}/materiaal`
+}
+
+/**
+ * @summary Materiaallijst per opdracht (reserveringen + uitgiftes)
+ */
+export const getOpdrachtMateriaal = async (id: number, options?: RequestInit): Promise<OpdrachtMateriaal> => {
+
+  return customFetch<OpdrachtMateriaal>(getGetOpdrachtMateriaalUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetOpdrachtMateriaalQueryKey = (id: number,) => {
+    return [
+    `/api/opdrachten/${id}/materiaal`
+    ] as const;
+    }
+
+
+export const getGetOpdrachtMateriaalQueryOptions = <TData = Awaited<ReturnType<typeof getOpdrachtMateriaal>>, TError = ErrorType<void>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getOpdrachtMateriaal>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetOpdrachtMateriaalQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getOpdrachtMateriaal>>> = ({ signal }) => getOpdrachtMateriaal(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getOpdrachtMateriaal>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetOpdrachtMateriaalQueryResult = NonNullable<Awaited<ReturnType<typeof getOpdrachtMateriaal>>>
+export type GetOpdrachtMateriaalQueryError = ErrorType<void>
+
+
+/**
+ * @summary Materiaallijst per opdracht (reserveringen + uitgiftes)
+ */
+
+export function useGetOpdrachtMateriaal<TData = Awaited<ReturnType<typeof getOpdrachtMateriaal>>, TError = ErrorType<void>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getOpdrachtMateriaal>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetOpdrachtMateriaalQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
 
 export const getGetPortaalUrl = (token: string,) => {
 
