@@ -16032,6 +16032,125 @@ export const GetFinancieelDashboardResponse = zod.object({
 
 
 /**
+ * @summary Onderhanden werk overzicht per project (peildatum)
+ */
+export const ListOnderhandenWerkQueryParams = zod.object({
+  "peildatum": zod.coerce.string().nullish().describe('Peildatum YYYY-MM-DD (standaard: vandaag)'),
+  "werkmaatschappij": zod.coerce.string().nullish(),
+  "status": zod.coerce.string().nullish()
+})
+
+export const ListOnderhandenWerkResponseItem = zod.object({
+  "opdracht_id": zod.number(),
+  "titel": zod.string(),
+  "werknummer": zod.string().nullish(),
+  "opdrachtgever": zod.string().nullish(),
+  "werkmaatschappij": zod.string().nullish(),
+  "gebouw_naam": zod.string().nullish(),
+  "opdracht_status": zod.string(),
+  "opdrachtsom": zod.number().nullish(),
+  "begrote_kosten": zod.number().nullish(),
+  "geboekte_uren": zod.number(),
+  "geboekte_kosten_inkoop": zod.number(),
+  "gefactureerd": zod.number(),
+  "nog_te_factureren": zod.number(),
+  "verwachte_marge_pct": zod.number().nullish(),
+  "actuele_marge": zod.number().nullish(),
+  "percentage_gereed": zod.number().nullish(),
+  "waarde_ohw": zod.number(),
+  "waarderingsmethode": zod.string(),
+  "opmerkingen": zod.string().nullish(),
+  "signaleringen": zod.array(zod.string()),
+  "aangemaakt_op": zod.string()
+})
+export const ListOnderhandenWerkResponse = zod.array(ListOnderhandenWerkResponseItem)
+
+
+/**
+ * @summary PL-instellingen onderhanden werk bijwerken (methode, percentage, opmerkingen)
+ */
+export const UpdateOnderhandenWerkOverrideParams = zod.object({
+  "opdracht_id": zod.coerce.number()
+})
+
+export const UpdateOnderhandenWerkOverrideBody = zod.object({
+  "waarderingsmethode": zod.enum(['percentage_gereed', 'werkelijke_kosten', 'handmatig', 'ai_voorstel']).nullish(),
+  "percentage_gereed": zod.number().nullish(),
+  "handmatig_bedrag": zod.number().nullish(),
+  "opmerkingen": zod.string().nullish()
+})
+
+export const UpdateOnderhandenWerkOverrideResponse = zod.object({
+  "opdracht_id": zod.number(),
+  "titel": zod.string(),
+  "werknummer": zod.string().nullish(),
+  "opdrachtgever": zod.string().nullish(),
+  "werkmaatschappij": zod.string().nullish(),
+  "gebouw_naam": zod.string().nullish(),
+  "opdracht_status": zod.string(),
+  "opdrachtsom": zod.number().nullish(),
+  "begrote_kosten": zod.number().nullish(),
+  "geboekte_uren": zod.number(),
+  "geboekte_kosten_inkoop": zod.number(),
+  "gefactureerd": zod.number(),
+  "nog_te_factureren": zod.number(),
+  "verwachte_marge_pct": zod.number().nullish(),
+  "actuele_marge": zod.number().nullish(),
+  "percentage_gereed": zod.number().nullish(),
+  "waarde_ohw": zod.number(),
+  "waarderingsmethode": zod.string(),
+  "opmerkingen": zod.string().nullish(),
+  "signaleringen": zod.array(zod.string()),
+  "aangemaakt_op": zod.string()
+})
+
+
+/**
+ * @summary Jaarrekeningoverzicht onderhanden werk per peildatum
+ */
+export const GetJarrekeningOnderhandenWerkQueryParams = zod.object({
+  "peildatum": zod.coerce.string().describe('Peildatum YYYY-MM-DD (bijv. 31-12-2025)'),
+  "werkmaatschappij": zod.coerce.string().nullish()
+})
+
+export const GetJarrekeningOnderhandenWerkResponse = zod.object({
+  "peildatum": zod.string(),
+  "items": zod.array(zod.object({
+  "opdracht_id": zod.number(),
+  "titel": zod.string(),
+  "werknummer": zod.string().nullish(),
+  "opdrachtgever": zod.string().nullish(),
+  "werkmaatschappij": zod.string().nullish(),
+  "gebouw_naam": zod.string().nullish(),
+  "opdracht_status": zod.string(),
+  "opdrachtsom": zod.number().nullish(),
+  "begrote_kosten": zod.number().nullish(),
+  "geboekte_uren": zod.number(),
+  "geboekte_kosten_inkoop": zod.number(),
+  "gefactureerd": zod.number(),
+  "nog_te_factureren": zod.number(),
+  "verwachte_marge_pct": zod.number().nullish(),
+  "actuele_marge": zod.number().nullish(),
+  "percentage_gereed": zod.number().nullish(),
+  "waarde_ohw": zod.number(),
+  "waarderingsmethode": zod.string(),
+  "opmerkingen": zod.string().nullish(),
+  "signaleringen": zod.array(zod.string()),
+  "aangemaakt_op": zod.string()
+})),
+  "totalen": zod.object({
+  "totaal_opdrachtsom": zod.number().optional(),
+  "totaal_gefactureerd": zod.number().optional(),
+  "totaal_nog_te_factureren": zod.number().optional(),
+  "totaal_waarde_ohw": zod.number().optional(),
+  "totaal_geboekte_kosten": zod.number().optional(),
+  "aantal_projecten": zod.number().optional(),
+  "aantal_met_signalering": zod.number().optional()
+})
+})
+
+
+/**
  * @summary AccountView relatie-mapping ophalen
  */
 export const ListRelatieMappingResponseItem = zod.object({

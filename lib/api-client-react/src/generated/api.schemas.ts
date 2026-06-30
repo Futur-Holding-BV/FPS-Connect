@@ -6566,6 +6566,63 @@ export interface BeoordelenInput {
   reden?: string | null;
 }
 
+export interface OnderhandenWerkItem {
+  opdracht_id: number;
+  titel: string;
+  werknummer?: string | null;
+  opdrachtgever?: string | null;
+  werkmaatschappij?: string | null;
+  gebouw_naam?: string | null;
+  opdracht_status: string;
+  opdrachtsom?: number | null;
+  begrote_kosten?: number | null;
+  geboekte_uren: number;
+  geboekte_kosten_inkoop: number;
+  gefactureerd: number;
+  nog_te_factureren: number;
+  verwachte_marge_pct?: number | null;
+  actuele_marge?: number | null;
+  percentage_gereed?: number | null;
+  waarde_ohw: number;
+  waarderingsmethode: string;
+  opmerkingen?: string | null;
+  signaleringen: string[];
+  aangemaakt_op: string;
+}
+
+export type OnderhandenWerkOverrideInputWaarderingsmethode = typeof OnderhandenWerkOverrideInputWaarderingsmethode[keyof typeof OnderhandenWerkOverrideInputWaarderingsmethode] | null;
+
+
+export const OnderhandenWerkOverrideInputWaarderingsmethode = {
+  percentage_gereed: 'percentage_gereed',
+  werkelijke_kosten: 'werkelijke_kosten',
+  handmatig: 'handmatig',
+  ai_voorstel: 'ai_voorstel',
+} as const;
+
+export interface OnderhandenWerkOverrideInput {
+  waarderingsmethode?: OnderhandenWerkOverrideInputWaarderingsmethode;
+  percentage_gereed?: number | null;
+  handmatig_bedrag?: number | null;
+  opmerkingen?: string | null;
+}
+
+export type JarrekeningOnderhandenWerkTotalen = {
+  totaal_opdrachtsom?: number;
+  totaal_gefactureerd?: number;
+  totaal_nog_te_factureren?: number;
+  totaal_waarde_ohw?: number;
+  totaal_geboekte_kosten?: number;
+  aantal_projecten?: number;
+  aantal_met_signalering?: number;
+};
+
+export interface JarrekeningOnderhandenWerk {
+  peildatum: string;
+  items: OnderhandenWerkItem[];
+  totalen: JarrekeningOnderhandenWerkTotalen;
+}
+
 export interface FactuurHerexportInput {
   reden?: string | null;
 }
@@ -8182,6 +8239,23 @@ actie?: string;
 van?: string;
 tot?: string;
 limit?: number;
+};
+
+export type ListOnderhandenWerkParams = {
+/**
+ * Peildatum YYYY-MM-DD (standaard: vandaag)
+ */
+peildatum?: string | null;
+werkmaatschappij?: string | null;
+status?: string | null;
+};
+
+export type GetJarrekeningOnderhandenWerkParams = {
+/**
+ * Peildatum YYYY-MM-DD (bijv. 31-12-2025)
+ */
+peildatum: string;
+werkmaatschappij?: string | null;
 };
 
 export type GetSalarisarchiefDocumentenParams = {

@@ -65,6 +65,7 @@ import organisatieRouter from "./organisatie";
 import leveranciersRouter from "./leveranciers";
 import artikelenRouter from "./artikelen";
 import importRouter from "./import";
+import onderhandenWerkRouter from "./onderhanden-werk";
 import { requireAuth } from "../middlewares/auth";
 import { meldActief } from "../lib/online-tracker";
 
@@ -146,5 +147,6 @@ router.use(organisatieRouter);
 router.use(leveranciersRouter);
 router.use(artikelenRouter);
 router.use(importRouter);
+router.use(onderhandenWerkRouter);
 
 export default router;

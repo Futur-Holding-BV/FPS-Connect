@@ -1,4 +1,4 @@
-import { pgTable, serial, text, integer, timestamp, boolean, numeric, jsonb, unique } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, integer, timestamp, boolean, numeric, jsonb, unique, real } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { gebouwenTable } from "./gebouwen";
@@ -100,6 +100,21 @@ export const facturenTable = pgTable("facturen", {
   herexportOp: timestamp("herexport_op"),
   herexportDoor: integer("herexport_door").references(() => gebruikersTable.id, { onDelete: "set null" }),
   herexportReden: text("herexport_reden"),
+
+  // AI verwerking
+  aiGelezen: boolean("ai_gelezen").notNull().default(false),
+  aiVertrouwen: real("ai_vertrouwen"),
+
+  // Opmerkingen
+  opmerkingen: text("opmerkingen"),
+
+  // Accordering (gedetailleerde status — naast de boolean geaccordeerd)
+  accorderingStatus: text("accordering_status"),
+  accorderingDoorId: integer("accordering_door_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
+  accorderingOp: timestamp("accordering_op"),
+
+  // Betaaldatum als timestamp (naast betaaldatum als tekst)
+  betaaldOp: timestamp("betaald_op"),
 
   // Beheer
   uploaderId: integer("uploader_id").references(() => gebruikersTable.id, { onDelete: "set null" }),

@@ -181,6 +181,7 @@ import type {
   GetCrmAiCoach503,
   GetFactuurUploadUrl200,
   GetGebouwGevelbeeld200,
+  GetJarrekeningOnderhandenWerkParams,
   GetLoonOutputParams,
   GetMedewerkerDocumentDownloadUrl200,
   GetMijnLmraStatusParams,
@@ -245,6 +246,7 @@ import type {
   JaarAfsluitingRegel,
   JaarAfsluitingRegelInput,
   JaarAfsluitingResultaat,
+  JarrekeningOnderhandenWerk,
   KaartEmbed,
   LaadBrandstofImport200,
   Label,
@@ -276,6 +278,7 @@ import type {
   ListMijnActiviteitenParams,
   ListModCalculatiesParams,
   ListMuisGebeurtenissenParams,
+  ListOnderhandenWerkParams,
   ListOnderhoudParams,
   ListOpdrachtenParams,
   ListOpnamePlattegrondItemsParams,
@@ -370,6 +373,8 @@ import type {
   OfferteVraag,
   OfferteVraagAntwoordInput,
   OnboardingFout,
+  OnderhandenWerkItem,
+  OnderhandenWerkOverrideInput,
   OnderhoudInput,
   OnderhoudUpdate,
   OnderhoudVoltooien,
@@ -44955,6 +44960,245 @@ export function useGetFinancieelDashboard<TData = Awaited<ReturnType<typeof getF
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetFinancieelDashboardQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getListOnderhandenWerkUrl = (params?: ListOnderhandenWerkParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/financieel/onderhanden-werk?${stringifiedParams}` : `/api/financieel/onderhanden-werk`
+}
+
+/**
+ * @summary Onderhanden werk overzicht per project (peildatum)
+ */
+export const listOnderhandenWerk = async (params?: ListOnderhandenWerkParams, options?: RequestInit): Promise<OnderhandenWerkItem[]> => {
+
+  return customFetch<OnderhandenWerkItem[]>(getListOnderhandenWerkUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListOnderhandenWerkQueryKey = (params?: ListOnderhandenWerkParams,) => {
+    return [
+    `/api/financieel/onderhanden-werk`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListOnderhandenWerkQueryOptions = <TData = Awaited<ReturnType<typeof listOnderhandenWerk>>, TError = ErrorType<unknown>>(params?: ListOnderhandenWerkParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listOnderhandenWerk>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListOnderhandenWerkQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listOnderhandenWerk>>> = ({ signal }) => listOnderhandenWerk(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listOnderhandenWerk>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListOnderhandenWerkQueryResult = NonNullable<Awaited<ReturnType<typeof listOnderhandenWerk>>>
+export type ListOnderhandenWerkQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Onderhanden werk overzicht per project (peildatum)
+ */
+
+export function useListOnderhandenWerk<TData = Awaited<ReturnType<typeof listOnderhandenWerk>>, TError = ErrorType<unknown>>(
+ params?: ListOnderhandenWerkParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listOnderhandenWerk>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListOnderhandenWerkQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getUpdateOnderhandenWerkOverrideUrl = (opdrachtId: number,) => {
+
+
+
+
+  return `/api/financieel/onderhanden-werk/${opdrachtId}`
+}
+
+/**
+ * @summary PL-instellingen onderhanden werk bijwerken (methode, percentage, opmerkingen)
+ */
+export const updateOnderhandenWerkOverride = async (opdrachtId: number,
+    onderhandenWerkOverrideInput: OnderhandenWerkOverrideInput, options?: RequestInit): Promise<OnderhandenWerkItem> => {
+
+  return customFetch<OnderhandenWerkItem>(getUpdateOnderhandenWerkOverrideUrl(opdrachtId),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(onderhandenWerkOverrideInput)
+  }
+);}
+
+
+
+
+export const getUpdateOnderhandenWerkOverrideMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateOnderhandenWerkOverride>>, TError,{opdrachtId: number;data: BodyType<OnderhandenWerkOverrideInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateOnderhandenWerkOverride>>, TError,{opdrachtId: number;data: BodyType<OnderhandenWerkOverrideInput>}, TContext> => {
+
+const mutationKey = ['updateOnderhandenWerkOverride'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateOnderhandenWerkOverride>>, {opdrachtId: number;data: BodyType<OnderhandenWerkOverrideInput>}> = (props) => {
+          const {opdrachtId,data} = props ?? {};
+
+          return  updateOnderhandenWerkOverride(opdrachtId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateOnderhandenWerkOverrideMutationResult = NonNullable<Awaited<ReturnType<typeof updateOnderhandenWerkOverride>>>
+    export type UpdateOnderhandenWerkOverrideMutationBody = BodyType<OnderhandenWerkOverrideInput>
+    export type UpdateOnderhandenWerkOverrideMutationError = ErrorType<void>
+
+    /**
+ * @summary PL-instellingen onderhanden werk bijwerken (methode, percentage, opmerkingen)
+ */
+export const useUpdateOnderhandenWerkOverride = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateOnderhandenWerkOverride>>, TError,{opdrachtId: number;data: BodyType<OnderhandenWerkOverrideInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateOnderhandenWerkOverride>>,
+        TError,
+        {opdrachtId: number;data: BodyType<OnderhandenWerkOverrideInput>},
+        TContext
+      > => {
+      return useMutation(getUpdateOnderhandenWerkOverrideMutationOptions(options));
+    }
+
+export const getGetJarrekeningOnderhandenWerkUrl = (params: GetJarrekeningOnderhandenWerkParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/financieel/jaarrekening/onderhanden-werk?${stringifiedParams}` : `/api/financieel/jaarrekening/onderhanden-werk`
+}
+
+/**
+ * @summary Jaarrekeningoverzicht onderhanden werk per peildatum
+ */
+export const getJarrekeningOnderhandenWerk = async (params: GetJarrekeningOnderhandenWerkParams, options?: RequestInit): Promise<JarrekeningOnderhandenWerk> => {
+
+  return customFetch<JarrekeningOnderhandenWerk>(getGetJarrekeningOnderhandenWerkUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetJarrekeningOnderhandenWerkQueryKey = (params?: GetJarrekeningOnderhandenWerkParams,) => {
+    return [
+    `/api/financieel/jaarrekening/onderhanden-werk`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetJarrekeningOnderhandenWerkQueryOptions = <TData = Awaited<ReturnType<typeof getJarrekeningOnderhandenWerk>>, TError = ErrorType<unknown>>(params: GetJarrekeningOnderhandenWerkParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getJarrekeningOnderhandenWerk>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetJarrekeningOnderhandenWerkQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getJarrekeningOnderhandenWerk>>> = ({ signal }) => getJarrekeningOnderhandenWerk(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getJarrekeningOnderhandenWerk>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetJarrekeningOnderhandenWerkQueryResult = NonNullable<Awaited<ReturnType<typeof getJarrekeningOnderhandenWerk>>>
+export type GetJarrekeningOnderhandenWerkQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Jaarrekeningoverzicht onderhanden werk per peildatum
+ */
+
+export function useGetJarrekeningOnderhandenWerk<TData = Awaited<ReturnType<typeof getJarrekeningOnderhandenWerk>>, TError = ErrorType<unknown>>(
+ params: GetJarrekeningOnderhandenWerkParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getJarrekeningOnderhandenWerk>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetJarrekeningOnderhandenWerkQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

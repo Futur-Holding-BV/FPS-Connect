@@ -12633,6 +12633,90 @@ paths:
               schema:
                 $ref: "#/components/schemas/FinancieelDashboard"
 
+  /financieel/onderhanden-werk:
+    get:
+      operationId: listOnderhandenWerk
+      summary: Onderhanden werk overzicht per project (peildatum)
+      tags: [Financieel]
+      parameters:
+        - name: peildatum
+          in: query
+          schema:
+            type: string
+            nullable: true
+          description: "Peildatum YYYY-MM-DD (standaard: vandaag)"
+        - name: werkmaatschappij
+          in: query
+          schema:
+            type: string
+            nullable: true
+        - name: status
+          in: query
+          schema:
+            type: string
+            nullable: true
+      responses:
+        "200":
+          description: Onderhanden werk items
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/OnderhandenWerkItem"
+
+  /financieel/onderhanden-werk/{opdracht_id}:
+    patch:
+      operationId: updateOnderhandenWerkOverride
+      summary: PL-instellingen onderhanden werk bijwerken (methode, percentage, opmerkingen)
+      tags: [Financieel]
+      parameters:
+        - name: opdracht_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OnderhandenWerkOverrideInput"
+      responses:
+        "200":
+          description: Bijgewerkt item
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OnderhandenWerkItem"
+        "404":
+          description: Niet gevonden
+
+  /financieel/jaarrekening/onderhanden-werk:
+    get:
+      operationId: getJarrekeningOnderhandenWerk
+      summary: Jaarrekeningoverzicht onderhanden werk per peildatum
+      tags: [Financieel]
+      parameters:
+        - name: peildatum
+          in: query
+          required: true
+          schema:
+            type: string
+          description: "Peildatum YYYY-MM-DD (bijv. 31-12-2025)"
+        - name: werkmaatschappij
+          in: query
+          schema:
+            type: string
+            nullable: true
+      responses:
+        "200":
+          description: Jaarrekeningoverzicht
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JarrekeningOnderhandenWerk"
+
   /accountview/relatie-mapping:
     get:
       operationId: listRelatieMapping
@@ -25457,6 +25541,71 @@ components:
         reden:
           type: string
           nullable: true
+
+    OnderhandenWerkItem:
+      type: object
+      required: [opdracht_id, titel, opdracht_status, geboekte_uren, geboekte_kosten_inkoop, gefactureerd, nog_te_factureren, waarde_ohw, waarderingsmethode, signaleringen, aangemaakt_op]
+      properties:
+        opdracht_id: { type: integer }
+        titel: { type: string }
+        werknummer: { type: string, nullable: true }
+        opdrachtgever: { type: string, nullable: true }
+        werkmaatschappij: { type: string, nullable: true }
+        gebouw_naam: { type: string, nullable: true }
+        opdracht_status: { type: string }
+        opdrachtsom: { type: number, nullable: true }
+        begrote_kosten: { type: number, nullable: true }
+        geboekte_uren: { type: number }
+        geboekte_kosten_inkoop: { type: number }
+        gefactureerd: { type: number }
+        nog_te_factureren: { type: number }
+        verwachte_marge_pct: { type: number, nullable: true }
+        actuele_marge: { type: number, nullable: true }
+        percentage_gereed: { type: number, nullable: true }
+        waarde_ohw: { type: number }
+        waarderingsmethode: { type: string }
+        opmerkingen: { type: string, nullable: true }
+        signaleringen:
+          type: array
+          items: { type: string }
+        aangemaakt_op: { type: string }
+
+    OnderhandenWerkOverrideInput:
+      type: object
+      properties:
+        waarderingsmethode:
+          type: string
+          nullable: true
+          enum: [percentage_gereed, werkelijke_kosten, handmatig, ai_voorstel]
+        percentage_gereed:
+          type: number
+          nullable: true
+        handmatig_bedrag:
+          type: number
+          nullable: true
+        opmerkingen:
+          type: string
+          nullable: true
+
+    JarrekeningOnderhandenWerk:
+      type: object
+      required: [peildatum, items, totalen]
+      properties:
+        peildatum: { type: string }
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/OnderhandenWerkItem"
+        totalen:
+          type: object
+          properties:
+            totaal_opdrachtsom: { type: number }
+            totaal_gefactureerd: { type: number }
+            totaal_nog_te_factureren: { type: number }
+            totaal_waarde_ohw: { type: number }
+            totaal_geboekte_kosten: { type: number }
+            aantal_projecten: { type: integer }
+            aantal_met_signalering: { type: integer }
 
     FactuurHerexportInput:
       type: object

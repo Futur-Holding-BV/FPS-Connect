@@ -717,6 +717,28 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                       <SidebarMenuItem className="pl-5">
                         <SidebarMenuButton
                           asChild
+                          isActive={location === "/financieel/onderhanden-werk"}
+                        >
+                          <Link href="/financieel/onderhanden-werk">
+                            <Calculator />
+                            <span>Onderhanden werk</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                      <SidebarMenuItem className="pl-5">
+                        <SidebarMenuButton
+                          asChild
+                          isActive={location === "/financieel/jaarrekening"}
+                        >
+                          <Link href="/financieel/jaarrekening">
+                            <BookOpen />
+                            <span>Jaarrekening OHW</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                      <SidebarMenuItem className="pl-5">
+                        <SidebarMenuButton
+                          asChild
                           isActive={location === "/facturen/klaar-voor-export"}
                         >
                           <Link href="/facturen/klaar-voor-export">

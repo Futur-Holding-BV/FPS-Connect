@@ -96,6 +96,8 @@ import BedrijfsdocumentenPagina from "@/pages/organisatie/bedrijfsdocumenten";
 import WorkflowDesignerPagina from "@/pages/workflow/index";
 import BedrijfsresultatenPagina from "@/pages/financieel/bedrijfsresultaten";
 import CredieurenInboxPagina from "@/pages/financieel/crediteuren/index";
+import OnderhandenWerkPagina from "@/pages/financieel/onderhanden-werk/index";
+import JarrekeningPagina from "@/pages/financieel/jaarrekening/index";
 import DossiersPagina from "@/pages/dossiers/index";
 import OffertesPagina from "@/pages/offertes/index";
 import ProposalStudio from "@/pages/offertes/studio";
@@ -330,6 +332,8 @@ function ConnectPortal() {
         {/* ── Financieel extra ── */}
         <Route path="/financieel/crediteuren" component={CredieurenInboxPagina} />
         <Route path="/financieel/bedrijfsresultaten" component={BedrijfsresultatenPagina} />
+        <Route path="/financieel/onderhanden-werk" component={OnderhandenWerkPagina} />
+        <Route path="/financieel/jaarrekening" component={JarrekeningPagina} />
 
         {/* ── Organisatie ── */}
         <Route path="/organisatie/autopark" component={AutoparkPagina} />
