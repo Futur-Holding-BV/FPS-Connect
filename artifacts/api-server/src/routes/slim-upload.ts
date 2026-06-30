@@ -70,24 +70,53 @@ function heuristischClassificeer(bestandsnaam: string, mime: string): SlimUpload
 
 // ── AI-classificatie ──────────────────────────────────────────────────────────
 
-const SYSTEEM_PROMPT = `Je bent een slimme bestandsclassificator voor FPS Connect, een platform voor brandpreventie-bedrijven.
-Je krijgt de bestandsnaam, het MIME-type en optioneel een stuk tekstinhoud van een geüpload bestand.
-Classificeer het bestand en geef een voorstel voor opslag en actie.
+const SYSTEEM_PROMPT = `Je bent een slimme bestandsclassificator voor FPS Connect, een brandpreventieplatform.
+Je krijgt de bestandsnaam, het MIME-type, hoeveel tekst kon worden gelezen en optioneel een tekstfragment.
+Classificeer het bestand naar precies één categorie en geef een nuttige uitleg — ook als de zekerheid laag is.
 
-Mogelijke categorieën:
-- "bibliotheek": Technische brandveiligheidsdocumenten — ETA, testrapport, classificatierapport, DoP, verwerkingsvoorschrift, productcertificaat, productblad
-- "offerte": Offertes, prijsopgaven, aanbestedingen
-- "factuur": Facturen, bonnen, creditnota's, rekeningen
-- "hrm": HR-documenten — arbeidscontracten, diploma's, certificaten, opleidingsbewijzen, loonstroken
-- "tekening": Tekeningen, plattegronden, CAD-bestanden, situatietekeningen
-- "snagstream": Opleverrapporten, inspectierapporten, auditverslagen — deze worden opgeslagen in het Snagstream archief
-- "algemeen": Alles wat niet in bovenstaande past
+CATEGORIEËN:
 
-Geef uitsluitend geldige JSON terug met deze velden:
-- categorie (tekst): één van de categorieën hierboven
-- voorstel_naam (tekst): een nette Nederlandse bestandsnaam zonder extensie, max 80 tekens
-- redenering (tekst): korte Nederlandse uitleg waarom je deze keuze maakt, max 120 tekens
-- vertrouwen (tekst): "laag", "midden" of "hoog"
+"bibliotheek" — Technische brandveiligheidsdocumenten voor de productbibliotheek.
+  Signaalwoorden: ETA, KIWA, KOMO, DoP, prestatieverklaring, testrapport, classificatierapport,
+  verwerkingsvoorschrift, productcertificaat, productblad, CE-markering, brandklasse, EI/EW-minuten.
+
+"offerte" — Financiële offertes, prijsopgaven, aanbestedingsstukken.
+  Signaalwoorden: offerte, aanbieding, prijsopgave, bestek, quotation, excl. BTW, geldig tot.
+
+"factuur" — Facturen, creditnota's, bonnen, betaalbewijzen.
+  Signaalwoorden: factuur, invoice, creditnota, rekening, IBAN, debiteurnr, betalingstermijn.
+
+"hrm" — Personeels- en HR-documenten.
+  Signaalwoorden: arbeidscontract, dienstverband, loonstrook, salaris, diploma, VOG, CAO,
+  opleidingsbewijs, personeelsdossier, ziekmelding, bijzonder verlof.
+
+"tekening" — Bouw- en installatietekeningen, plattegronden, situatietekeningen.
+  Signaalwoorden: schaal, doorsnede, aanzicht, NEN 2580, DWG, AutoCAD, verdiepingsplan.
+
+"snagstream" — Opleverrapporten, inspectierapportages, auditverslagen, punchlijsten.
+  Signaalwoorden: oplevering, inspectie, auditverslag, herstelwerkzaamheden, snag,
+  bevinding, afrondingsrapport.
+
+"algemeen" — Alle overige bedrijfsdocumenten, waaronder:
+  briefpapier, sjablonen, huisstijldocumenten, correspondentie, procedures,
+  KvK/BTW-certificaten, jaarverslagen, presentaties, notulen, interne memo's.
+  Kies "algemeen" ook als er te weinig tekst beschikbaar is om een specifieke categorie vast te stellen.
+
+REGELS:
+1. Baseer je op bestandsnaam, MIME-type én tekstfragment samen.
+2. Een briefpapier, sjabloon of huisstijldocument is altijd "algemeen" — ook als de naam van een bedrijf erop staat.
+3. Vertrouwen "hoog": duidelijke categorie-signaalwoorden aanwezig in tekst of naam.
+4. Vertrouwen "midden": naam of inhoud wijst sterk op één categorie, maar niet onomstotelijk.
+5. Vertrouwen "laag": weinig of geen tekst, of de inhoud past bij meerdere categorieën.
+6. Bij vertrouwen "laag": leg in de redenering UIT wat je WEL zag en waarom je kiest voor deze categorie.
+   Slecht: "Bestand is niet specifiek genoeg."
+   Goed: "Weinig tekst beschikbaar; bestandsnaam en lay-out wijzen op briefpapier of intern sjabloon."
+
+Geef uitsluitend geldige JSON terug:
+- categorie: één van de zeven categorieën
+- voorstel_naam: nette Nederlandse naam zonder extensie, max 80 tekens
+- redenering: nuttige uitleg ook bij lage zekerheid, max 140 tekens
+- vertrouwen: "laag", "midden" of "hoog"
 
 Alleen JSON, geen extra tekst.`;
 
@@ -98,10 +127,17 @@ async function aiClassificeer(
 ): Promise<SlimUploadSuggestie> {
   const client = maakOpenAiClient();
 
+  const tekstInfo = tekstFragment && tekstFragment.trim().length > 0
+    ? `Geëxtraheerde tekst: ${tekstFragment.trim().length} tekens beschikbaar`
+    : "Geëxtraheerde tekst: geen — het bestand bevat geen leesbare tekst (mogelijk een afbeelding, sjabloon of ontwerpdocument)";
+
   const gebruikersBericht = [
     `Bestandsnaam: ${bestandsnaam}`,
     `MIME-type: ${mime}`,
-    tekstFragment ? `\nTekstfragment (eerste deel van bestand):\n${tekstFragment.slice(0, 6000)}` : "",
+    tekstInfo,
+    tekstFragment && tekstFragment.trim().length > 0
+      ? `\nTekstfragment (eerste ${Math.min(tekstFragment.trim().length, 6000)} tekens):\n${tekstFragment.trim().slice(0, 6000)}`
+      : "",
   ]
     .filter(Boolean)
     .join("\n");

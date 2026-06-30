@@ -186,19 +186,6 @@ export default function BedrijfsdocumentenPagina() {
     }
   };
 
-  const handleVeldBlur = (k: keyof typeof leegForm, eindWaarde: string) => {
-    // Als veld was AI-ingevuld — stuur correctie als de waarde verschilt van het AI-voorstel
-    const aiVoorstel = aiVoorgesteldeVelden.current[k] ?? null;
-    if (
-      aiVoorstel !== null &&
-      eindWaarde !== aiVoorstel &&
-      (VELD_CORRECTIE_VELDEN as ReadonlyArray<string>).includes(k)
-    ) {
-      void stuurVeldCorrectie(k, aiVoorstel, eindWaarde, hashRef.current, tekstFragmentRef.current);
-      delete aiVoorgesteldeVelden.current[k];
-    }
-  };
-
   const kiesCategorieHandmatig = (waarde: string) => {
     const was = form.categorie;
     setFormVeld("categorie", waarde);

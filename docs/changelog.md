@@ -10,6 +10,17 @@ Grote roadmap-fases staan ook in `docs/roadmap/gebouwd.md` en `docs/roadmap/acti
 
 ---
 
+## 2026-06-30 — Slim uploaden: verbeterde AI-intelligentie + post-merge bugfix
+
+**Uitvoering:** volledig | **Diepere lagen:** volledig | **Getest:** typecheck groen
+
+- **Betere AI-prompt** (`slim-upload.ts`): elke categorie heeft nu expliciete signaalwoorden en voorbeelden; briefpapier/sjablonen worden expliciet als "algemeen" aangemerkt; bij lage zekerheid geeft de AI een nuttige redenering in plaats van "niet specifiek genoeg"
+- **Betere context naar AI**: de AI krijgt nu te horen hoeveel tekst er kon worden geëxtraheerd; bij een lege PDF ("geen leesbare tekst — mogelijk een afbeelding, sjabloon of ontwerpdocument") is het duidelijk waarom de zekerheid laag is
+- **Bugfix**: dubbele `handleVeldBlur`-declaratie in `bedrijfsdocumenten.tsx` verwijderd (ingevoerd door taakagent-merge #140)
+- **Post-merge codegen**: na merges van taakagenten (#134–#141) opnieuw codegen gedraaid; hooks voor magazijn, opdracht-materiaal en AI-correcties beschikbaar
+
+---
+
 ## 2026-06-30 — AI veld-correcties: leren van naam, uitgever, referentie etc.
 
 **Uitvoering:** volledig | **Diepere lagen:** volledig | **Getest:** typecheck groen (TS7030 pre-existing in api-server)
