@@ -27,4 +27,6 @@ export interface PlanningItemInput {
   notities?: string | null;
   opdracht_type?: string | null;
   locaties?: string | null;
+  /** true = gebruiker heeft bewust de override-code ingevoerd om op een gesloten dag in te plannen */
+  override_bevestigd?: boolean | null;
 }

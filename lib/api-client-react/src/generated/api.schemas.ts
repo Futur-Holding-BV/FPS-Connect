@@ -5178,6 +5178,8 @@ export interface PlanningItem {
   /** JSON-array met bouwnummers/locaties */
   locaties?: string | null;
   aangemaakt_op?: string;
+  /** true als item aangemaakt is op een feestdag of bedrijfssluiting (na override) */
+  op_gesloten_dag?: boolean;
 }
 
 export interface PlanningItemInput {
@@ -5201,6 +5203,8 @@ export interface PlanningItemInput {
   notities?: string | null;
   opdracht_type?: string | null;
   locaties?: string | null;
+  /** true = gebruiker heeft bewust de override-code ingevoerd om op een gesloten dag in te plannen */
+  override_bevestigd?: boolean | null;
 }
 
 export interface PlanningAfwezigheid {
@@ -5222,6 +5226,37 @@ export interface PlanningAfwezigheidInput {
   datum_eind: string;
   omschrijving?: string | null;
   status?: string;
+}
+
+export interface BedrijfsSluiting {
+  id: number;
+  naam: string;
+  datum_start: string;
+  datum_eind: string;
+  /** bedrijfssluiting | zomervakantie | kerstperiode | bouwvak | collectief_verlof | overig */
+  type: string;
+  omschrijving?: string | null;
+  aangemaakt_op: string;
+  bijgewerkt_op?: string;
+}
+
+export interface BedrijfsSluitingInput {
+  naam: string;
+  datum_start: string;
+  datum_eind: string;
+  type?: string;
+  omschrijving?: string | null;
+}
+
+export interface PlanningGeslotenDag {
+  /** YYYY-MM-DD */
+  datum: string;
+  naam: string;
+  type?: string | null;
+  /** feestdag | bedrijfssluiting */
+  bron: string;
+  /** ID van de bedrijfssluiting (alleen bij bron=bedrijfssluiting) */
+  sluiting_id?: number | null;
 }
 
 export interface ProjectBegroting {
@@ -8166,6 +8201,15 @@ medewerker_id?: number;
 
 export type ListPlanningAfwezigheidParams = {
 medewerker_id?: number;
+};
+
+export type ListPlanningGeslotenDagenParams = {
+van: string;
+tot: string;
+};
+
+export type ListBedrijfssluitingenParams = {
+jaar?: number;
 };
 
 export type ListProjectBegrotingenParams = {

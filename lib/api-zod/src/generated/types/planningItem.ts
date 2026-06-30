@@ -33,4 +33,6 @@ export interface PlanningItem {
   /** JSON-array met bouwnummers/locaties */
   locaties?: string | null;
   aangemaakt_op?: string;
+  /** true als item aangemaakt is op een feestdag of bedrijfssluiting (na override) */
+  op_gesloten_dag?: boolean;
 }

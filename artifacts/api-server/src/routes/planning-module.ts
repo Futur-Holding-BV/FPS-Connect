@@ -5,6 +5,8 @@ import {
   db,
   planningItemsTable,
   planningAfwezigheidTable,
+  bedrijfssluitingenTable,
+  feestdagenTable,
   medewerkersTable,
   gebouwenTable,
   gebruikersTable,
@@ -51,8 +53,32 @@ function mapItem(item: typeof planningItemsTable.$inferSelect, medewerkNaam: str
     werknummer: item.werknummer ?? null,
     dag_notities: item.dagNotities ?? null,
     notities: item.notities ?? null,
+    op_gesloten_dag: item.opGeslotenDag,
     aangemaakt_op: iso(item.aangemaaktOp),
   };
+}
+
+// ── Helper: check of een datum een gesloten dag is ────────────────────────
+async function isGeslotenDag(datum: string): Promise<{ gesloten: boolean; naam: string; bron: string }> {
+  const jaar = parseInt(datum.slice(0, 4), 10);
+
+  const [feestdag, sluiting] = await Promise.all([
+    db.select({ naam: feestdagenTable.naam })
+      .from(feestdagenTable)
+      .where(and(eq(feestdagenTable.jaar, jaar), eq(feestdagenTable.datum, datum)))
+      .limit(1),
+    db.select({ naam: bedrijfssluitingenTable.naam })
+      .from(bedrijfssluitingenTable)
+      .where(and(
+        lte(bedrijfssluitingenTable.datumStart, datum),
+        gte(bedrijfssluitingenTable.datumEind, datum),
+      ))
+      .limit(1),
+  ]);
+
+  if (feestdag[0]) return { gesloten: true, naam: feestdag[0].naam, bron: "feestdag" };
+  if (sluiting[0]) return { gesloten: true, naam: sluiting[0].naam, bron: "bedrijfssluiting" };
+  return { gesloten: false, naam: "", bron: "" };
 }
 
 // ── Medewerkers voor planning ─────────────────────────────────────────────
@@ -206,10 +232,26 @@ router.post("/modules/planning/items", aanmakenPlanning, async (req, res) => {
       datum_start, datum_eind, tijd_start, tijd_eind, uren,
       status = "concept", type = "uitvoering", notities,
       werknummer, dag_notities, opdracht_type, locaties,
+      override_bevestigd,
     } = req.body as Record<string, unknown>;
 
     if (!datum_start || !datum_eind) {
       return res.status(400).json({ error: "datum_start en datum_eind zijn verplicht" });
+    }
+
+    // Controleer of de datum een feestdag of bedrijfssluiting is.
+    // Als override_bevestigd niet true is, weigeren we de aanmaak met 409.
+    const datumStr = String(datum_start);
+    const geslotenInfo = await isGeslotenDag(datumStr);
+    const isOverride = override_bevestigd === true;
+
+    if (geslotenInfo.gesloten && !isOverride) {
+      return res.status(409).json({
+        error: "gesloten_dag",
+        naam: geslotenInfo.naam,
+        bron: geslotenInfo.bron,
+        bericht: `${datumStr} is een gesloten dag (${geslotenInfo.naam}). Voer de override-code in om toch in te plannen.`,
+      });
     }
 
     const titelStr = titel
@@ -223,7 +265,7 @@ router.post("/modules/planning/items", aanmakenPlanning, async (req, res) => {
       gebouwId:       gebouw_id     ? Number(gebouw_id)     : null,
       projectId:      project_id    ? Number(project_id)    : null,
       projectNaam:    project_naam  ? String(project_naam)  : null,
-      datumStart:     String(datum_start),
+      datumStart:     datumStr,
       datumEind:      String(datum_eind),
       tijdStart:      tijd_start    ? String(tijd_start)    : null,
       tijdEind:       tijd_eind     ? String(tijd_eind)     : null,
@@ -235,6 +277,7 @@ router.post("/modules/planning/items", aanmakenPlanning, async (req, res) => {
       werknummer:     werknummer    ? String(werknummer)    : null,
       dagNotities:    dag_notities  ? String(dag_notities)  : null,
       notities:       notities      ? String(notities)      : null,
+      opGeslotenDag:  geslotenInfo.gesloten && isOverride,
       aangemaaktDoorId: (req as any).session?.gebruikerId ?? null,
     }).returning();
 
@@ -411,6 +454,147 @@ router.delete("/modules/planning/afwezigheid/:id", schrijvenPlanning, async (req
   try {
     const id = parseId(req.params["id"]);
     await db.delete(planningAfwezigheidTable).where(eq(planningAfwezigheidTable.id, id));
+    res.status(204).end();
+  } catch (e) {
+    req.log.error(e);
+    res.status(500).json({ error: "Interne fout" });
+  }
+});
+
+// ── Gesloten dagen (feestdagen + bedrijfssluitingen samengevoegd) ─────────
+
+router.get("/modules/planning/gesloten-dagen", lezenPlanning, async (req, res) => {
+  try {
+    const van = String(req.query.van ?? "");
+    const tot = String(req.query.tot ?? "");
+    if (!van || !tot) return res.status(400).json({ error: "van en tot zijn verplicht" });
+
+    const jaarVan = parseInt(van.slice(0, 4), 10);
+    const jaarTot = parseInt(tot.slice(0, 4), 10);
+    const jaren = Array.from({ length: jaarTot - jaarVan + 1 }, (_, i) => jaarVan + i);
+
+    const [feestdagen, sluitingen] = await Promise.all([
+      db.select({ datum: feestdagenTable.datum, naam: feestdagenTable.naam })
+        .from(feestdagenTable)
+        .where(and(
+          inArray(feestdagenTable.jaar, jaren),
+          gte(feestdagenTable.datum, van),
+          lte(feestdagenTable.datum, tot),
+        )),
+      db.select({
+        id: bedrijfssluitingenTable.id,
+        naam: bedrijfssluitingenTable.naam,
+        type: bedrijfssluitingenTable.type,
+        datumStart: bedrijfssluitingenTable.datumStart,
+        datumEind: bedrijfssluitingenTable.datumEind,
+      })
+        .from(bedrijfssluitingenTable)
+        .where(and(
+          lte(bedrijfssluitingenTable.datumStart, tot),
+          gte(bedrijfssluitingenTable.datumEind, van),
+        )),
+    ]);
+
+    const resultaten: { datum: string; naam: string; type: string | null; bron: string; sluiting_id: number | null }[] = [];
+
+    for (const f of feestdagen) {
+      resultaten.push({ datum: f.datum, naam: f.naam, type: "feestdag", bron: "feestdag", sluiting_id: null });
+    }
+
+    // Vouw bedrijfssluitingen uit per dag
+    for (const s of sluitingen) {
+      let cursor = new Date(s.datumStart + "T00:00:00");
+      const eindDatum = new Date(s.datumEind + "T00:00:00");
+      while (cursor <= eindDatum) {
+        const dagStr = cursor.toISOString().slice(0, 10);
+        if (dagStr >= van && dagStr <= tot) {
+          resultaten.push({ datum: dagStr, naam: s.naam, type: s.type, bron: "bedrijfssluiting", sluiting_id: s.id });
+        }
+        cursor.setDate(cursor.getDate() + 1);
+      }
+    }
+
+    resultaten.sort((a, b) => a.datum.localeCompare(b.datum));
+    res.json(resultaten);
+  } catch (e) {
+    req.log.error(e);
+    res.status(500).json({ error: "Interne fout" });
+  }
+});
+
+// ── Bedrijfssluitingen CRUD ───────────────────────────────────────────────
+
+function mapSluiting(s: typeof bedrijfssluitingenTable.$inferSelect) {
+  return {
+    id: s.id,
+    naam: s.naam,
+    datum_start: s.datumStart,
+    datum_eind: s.datumEind,
+    type: s.type,
+    omschrijving: s.omschrijving ?? null,
+    aangemaakt_op: iso(s.aangemaaktOp),
+    bijgewerkt_op: iso(s.bijgewerktOp),
+  };
+}
+
+router.get("/modules/planning/bedrijfssluitingen", lezenPlanning, async (req, res) => {
+  try {
+    const jaar = req.query.jaar ? parseInt(String(req.query.jaar), 10) : undefined;
+    let rows = await db.select().from(bedrijfssluitingenTable).orderBy(asc(bedrijfssluitingenTable.datumStart));
+    if (jaar) {
+      rows = rows.filter((r) => r.datumStart.startsWith(String(jaar)) || r.datumEind.startsWith(String(jaar)));
+    }
+    res.json(rows.map(mapSluiting));
+  } catch (e) {
+    req.log.error(e);
+    res.status(500).json({ error: "Interne fout" });
+  }
+});
+
+router.post("/modules/planning/bedrijfssluitingen", schrijvenPlanning, async (req, res) => {
+  try {
+    const { naam, datum_start, datum_eind, type = "bedrijfssluiting", omschrijving } = req.body as Record<string, unknown>;
+    if (!naam || !datum_start || !datum_eind) {
+      return res.status(400).json({ error: "naam, datum_start en datum_eind zijn verplicht" });
+    }
+    const [row] = await db.insert(bedrijfssluitingenTable).values({
+      naam: String(naam),
+      datumStart: String(datum_start),
+      datumEind: String(datum_eind),
+      type: String(type),
+      omschrijving: omschrijving ? String(omschrijving) : null,
+      aangemaaktDoorId: (req as any).session?.gebruikerId ?? null,
+    }).returning();
+    res.status(201).json(mapSluiting(row));
+  } catch (e) {
+    req.log.error(e);
+    res.status(500).json({ error: "Interne fout" });
+  }
+});
+
+router.patch("/modules/planning/bedrijfssluitingen/:id", schrijvenPlanning, async (req, res) => {
+  try {
+    const id = parseId(req.params["id"]);
+    const body = req.body as Record<string, unknown>;
+    const update: Partial<typeof bedrijfssluitingenTable.$inferInsert> = { bijgewerktOp: new Date() };
+    if (body.naam        !== undefined) update.naam        = String(body.naam);
+    if (body.datum_start !== undefined) update.datumStart  = String(body.datum_start);
+    if (body.datum_eind  !== undefined) update.datumEind   = String(body.datum_eind);
+    if (body.type        !== undefined) update.type        = String(body.type);
+    if (body.omschrijving !== undefined) update.omschrijving = body.omschrijving ? String(body.omschrijving) : null;
+    const [row] = await db.update(bedrijfssluitingenTable).set(update).where(eq(bedrijfssluitingenTable.id, id)).returning();
+    if (!row) return res.status(404).json({ error: "Niet gevonden" });
+    res.json(mapSluiting(row));
+  } catch (e) {
+    req.log.error(e);
+    res.status(500).json({ error: "Interne fout" });
+  }
+});
+
+router.delete("/modules/planning/bedrijfssluitingen/:id", schrijvenPlanning, async (req, res) => {
+  try {
+    const id = parseId(req.params["id"]);
+    await db.delete(bedrijfssluitingenTable).where(eq(bedrijfssluitingenTable.id, id));
     res.status(204).end();
   } catch (e) {
     req.log.error(e);

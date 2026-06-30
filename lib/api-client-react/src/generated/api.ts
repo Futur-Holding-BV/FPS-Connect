@@ -49,6 +49,8 @@ import type {
   AssignClusterMonteur200,
   AuthGebruiker,
   BatchExportResultaat,
+  BedrijfsSluiting,
+  BedrijfsSluitingInput,
   Bekwaamheid,
   BekwaamheidInput,
   BeoordelenInput,
@@ -259,6 +261,7 @@ import type {
   LeverancierInput,
   ListAlleVerlofAanvragenParams,
   ListArtikelenParams,
+  ListBedrijfssluitingenParams,
   ListBrandstofImportenParams,
   ListCrmContactpersonenAllParams,
   ListCrmProjectkansenParams,
@@ -285,6 +288,7 @@ import type {
   ListOpnamePlattegrondItemsParams,
   ListOpnamesParams,
   ListPlanningAfwezigheidParams,
+  ListPlanningGeslotenDagenParams,
   ListPlanningItemsParams,
   ListPlanningMedewerkersParams,
   ListPlanningMeerwerkParams,
@@ -413,6 +417,7 @@ import type {
   PlanningAfwezigheid,
   PlanningAfwezigheidInput,
   PlanningDiagnose,
+  PlanningGeslotenDag,
   PlanningItem,
   PlanningItemInput,
   PlanningMedewerker,
@@ -34146,6 +34151,385 @@ export const useDeletePlanningAfwezigheid = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getDeletePlanningAfwezigheidMutationOptions(options));
+    }
+
+export const getListPlanningGeslotenDagenUrl = (params: ListPlanningGeslotenDagenParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/modules/planning/gesloten-dagen?${stringifiedParams}` : `/api/modules/planning/gesloten-dagen`
+}
+
+/**
+ * @summary Gesloten dagen ophalen (feestdagen + bedrijfssluitingen)
+ */
+export const listPlanningGeslotenDagen = async (params: ListPlanningGeslotenDagenParams, options?: RequestInit): Promise<PlanningGeslotenDag[]> => {
+
+  return customFetch<PlanningGeslotenDag[]>(getListPlanningGeslotenDagenUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListPlanningGeslotenDagenQueryKey = (params?: ListPlanningGeslotenDagenParams,) => {
+    return [
+    `/api/modules/planning/gesloten-dagen`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListPlanningGeslotenDagenQueryOptions = <TData = Awaited<ReturnType<typeof listPlanningGeslotenDagen>>, TError = ErrorType<unknown>>(params: ListPlanningGeslotenDagenParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listPlanningGeslotenDagen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListPlanningGeslotenDagenQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listPlanningGeslotenDagen>>> = ({ signal }) => listPlanningGeslotenDagen(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listPlanningGeslotenDagen>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListPlanningGeslotenDagenQueryResult = NonNullable<Awaited<ReturnType<typeof listPlanningGeslotenDagen>>>
+export type ListPlanningGeslotenDagenQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Gesloten dagen ophalen (feestdagen + bedrijfssluitingen)
+ */
+
+export function useListPlanningGeslotenDagen<TData = Awaited<ReturnType<typeof listPlanningGeslotenDagen>>, TError = ErrorType<unknown>>(
+ params: ListPlanningGeslotenDagenParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listPlanningGeslotenDagen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListPlanningGeslotenDagenQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getListBedrijfssluitingenUrl = (params?: ListBedrijfssluitingenParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/modules/planning/bedrijfssluitingen?${stringifiedParams}` : `/api/modules/planning/bedrijfssluitingen`
+}
+
+/**
+ * @summary Bedrijfssluitingen ophalen
+ */
+export const listBedrijfssluitingen = async (params?: ListBedrijfssluitingenParams, options?: RequestInit): Promise<BedrijfsSluiting[]> => {
+
+  return customFetch<BedrijfsSluiting[]>(getListBedrijfssluitingenUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListBedrijfssluitingenQueryKey = (params?: ListBedrijfssluitingenParams,) => {
+    return [
+    `/api/modules/planning/bedrijfssluitingen`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListBedrijfssluitingenQueryOptions = <TData = Awaited<ReturnType<typeof listBedrijfssluitingen>>, TError = ErrorType<unknown>>(params?: ListBedrijfssluitingenParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listBedrijfssluitingen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListBedrijfssluitingenQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listBedrijfssluitingen>>> = ({ signal }) => listBedrijfssluitingen(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listBedrijfssluitingen>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListBedrijfssluitingenQueryResult = NonNullable<Awaited<ReturnType<typeof listBedrijfssluitingen>>>
+export type ListBedrijfssluitingenQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Bedrijfssluitingen ophalen
+ */
+
+export function useListBedrijfssluitingen<TData = Awaited<ReturnType<typeof listBedrijfssluitingen>>, TError = ErrorType<unknown>>(
+ params?: ListBedrijfssluitingenParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listBedrijfssluitingen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListBedrijfssluitingenQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateBedrijfsSluitingUrl = () => {
+
+
+
+
+  return `/api/modules/planning/bedrijfssluitingen`
+}
+
+/**
+ * @summary Bedrijfssluiting aanmaken
+ */
+export const createBedrijfsSluiting = async (bedrijfsSluitingInput: BedrijfsSluitingInput, options?: RequestInit): Promise<BedrijfsSluiting> => {
+
+  return customFetch<BedrijfsSluiting>(getCreateBedrijfsSluitingUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(bedrijfsSluitingInput)
+  }
+);}
+
+
+
+
+export const getCreateBedrijfsSluitingMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createBedrijfsSluiting>>, TError,{data: BodyType<BedrijfsSluitingInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createBedrijfsSluiting>>, TError,{data: BodyType<BedrijfsSluitingInput>}, TContext> => {
+
+const mutationKey = ['createBedrijfsSluiting'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createBedrijfsSluiting>>, {data: BodyType<BedrijfsSluitingInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createBedrijfsSluiting(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateBedrijfsSluitingMutationResult = NonNullable<Awaited<ReturnType<typeof createBedrijfsSluiting>>>
+    export type CreateBedrijfsSluitingMutationBody = BodyType<BedrijfsSluitingInput>
+    export type CreateBedrijfsSluitingMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Bedrijfssluiting aanmaken
+ */
+export const useCreateBedrijfsSluiting = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createBedrijfsSluiting>>, TError,{data: BodyType<BedrijfsSluitingInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createBedrijfsSluiting>>,
+        TError,
+        {data: BodyType<BedrijfsSluitingInput>},
+        TContext
+      > => {
+      return useMutation(getCreateBedrijfsSluitingMutationOptions(options));
+    }
+
+export const getUpdateBedrijfsSluitingUrl = (id: number,) => {
+
+
+
+
+  return `/api/modules/planning/bedrijfssluitingen/${id}`
+}
+
+/**
+ * @summary Bedrijfssluiting bijwerken
+ */
+export const updateBedrijfsSluiting = async (id: number,
+    bedrijfsSluitingInput: BedrijfsSluitingInput, options?: RequestInit): Promise<BedrijfsSluiting> => {
+
+  return customFetch<BedrijfsSluiting>(getUpdateBedrijfsSluitingUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(bedrijfsSluitingInput)
+  }
+);}
+
+
+
+
+export const getUpdateBedrijfsSluitingMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateBedrijfsSluiting>>, TError,{id: number;data: BodyType<BedrijfsSluitingInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateBedrijfsSluiting>>, TError,{id: number;data: BodyType<BedrijfsSluitingInput>}, TContext> => {
+
+const mutationKey = ['updateBedrijfsSluiting'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateBedrijfsSluiting>>, {id: number;data: BodyType<BedrijfsSluitingInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateBedrijfsSluiting(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateBedrijfsSluitingMutationResult = NonNullable<Awaited<ReturnType<typeof updateBedrijfsSluiting>>>
+    export type UpdateBedrijfsSluitingMutationBody = BodyType<BedrijfsSluitingInput>
+    export type UpdateBedrijfsSluitingMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Bedrijfssluiting bijwerken
+ */
+export const useUpdateBedrijfsSluiting = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateBedrijfsSluiting>>, TError,{id: number;data: BodyType<BedrijfsSluitingInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateBedrijfsSluiting>>,
+        TError,
+        {id: number;data: BodyType<BedrijfsSluitingInput>},
+        TContext
+      > => {
+      return useMutation(getUpdateBedrijfsSluitingMutationOptions(options));
+    }
+
+export const getDeleteBedrijfsSluitingUrl = (id: number,) => {
+
+
+
+
+  return `/api/modules/planning/bedrijfssluitingen/${id}`
+}
+
+/**
+ * @summary Bedrijfssluiting verwijderen
+ */
+export const deleteBedrijfsSluiting = async (id: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteBedrijfsSluitingUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteBedrijfsSluitingMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteBedrijfsSluiting>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteBedrijfsSluiting>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deleteBedrijfsSluiting'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteBedrijfsSluiting>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteBedrijfsSluiting(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteBedrijfsSluitingMutationResult = NonNullable<Awaited<ReturnType<typeof deleteBedrijfsSluiting>>>
+
+    export type DeleteBedrijfsSluitingMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Bedrijfssluiting verwijderen
+ */
+export const useDeleteBedrijfsSluiting = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteBedrijfsSluiting>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteBedrijfsSluiting>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeleteBedrijfsSluitingMutationOptions(options));
     }
 
 export const getListProjectBegrotingenUrl = (params?: ListProjectBegrotingenParams,) => {

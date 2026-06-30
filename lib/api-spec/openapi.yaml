@@ -9647,6 +9647,107 @@ paths:
         '204':
           description: Verwijderd
 
+  /modules/planning/gesloten-dagen:
+    get:
+      operationId: listPlanningGeslotenDagen
+      summary: Gesloten dagen ophalen (feestdagen + bedrijfssluitingen)
+      tags: [PlanningModule]
+      parameters:
+        - in: query
+          name: van
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: tot
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PlanningGeslotenDag'
+
+  /modules/planning/bedrijfssluitingen:
+    get:
+      operationId: listBedrijfssluitingen
+      summary: Bedrijfssluitingen ophalen
+      tags: [PlanningModule]
+      parameters:
+        - in: query
+          name: jaar
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/BedrijfsSluiting'
+    post:
+      operationId: createBedrijfsSluiting
+      summary: Bedrijfssluiting aanmaken
+      tags: [PlanningModule]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BedrijfsSluitingInput'
+      responses:
+        '201':
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BedrijfsSluiting'
+
+  /modules/planning/bedrijfssluitingen/{id}:
+    patch:
+      operationId: updateBedrijfsSluiting
+      summary: Bedrijfssluiting bijwerken
+      tags: [PlanningModule]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BedrijfsSluitingInput'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BedrijfsSluiting'
+    delete:
+      operationId: deleteBedrijfsSluiting
+      summary: Bedrijfssluiting verwijderen
+      tags: [PlanningModule]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Verwijderd
+
   /modules/planning/begrotingen:
     get:
       operationId: listProjectBegrotingen
@@ -22549,6 +22650,9 @@ components:
           description: "JSON-array met bouwnummers/locaties"
         aangemaakt_op:
           type: string
+        op_gesloten_dag:
+          type: boolean
+          description: "true als item aangemaakt is op een feestdag of bedrijfssluiting (na override)"
 
     PlanningItemInput:
       type: object
@@ -22606,6 +22710,10 @@ components:
         locaties:
           type: string
           nullable: true
+        override_bevestigd:
+          type: boolean
+          nullable: true
+          description: "true = gebruiker heeft bewust de override-code ingevoerd om op een gesloten dag in te plannen"
 
     PlanningAfwezigheid:
       type: object
@@ -22649,6 +22757,65 @@ components:
           nullable: true
         status:
           type: string
+
+    BedrijfsSluiting:
+      type: object
+      required: [id, naam, datum_start, datum_eind, type, aangemaakt_op]
+      properties:
+        id:
+          type: integer
+        naam:
+          type: string
+        datum_start:
+          type: string
+        datum_eind:
+          type: string
+        type:
+          type: string
+          description: "bedrijfssluiting | zomervakantie | kerstperiode | bouwvak | collectief_verlof | overig"
+        omschrijving:
+          type: string
+          nullable: true
+        aangemaakt_op:
+          type: string
+        bijgewerkt_op:
+          type: string
+
+    BedrijfsSluitingInput:
+      type: object
+      required: [naam, datum_start, datum_eind]
+      properties:
+        naam:
+          type: string
+        datum_start:
+          type: string
+        datum_eind:
+          type: string
+        type:
+          type: string
+        omschrijving:
+          type: string
+          nullable: true
+
+    PlanningGeslotenDag:
+      type: object
+      required: [datum, naam, bron]
+      properties:
+        datum:
+          type: string
+          description: "YYYY-MM-DD"
+        naam:
+          type: string
+        type:
+          type: string
+          nullable: true
+        bron:
+          type: string
+          description: "feestdag | bedrijfssluiting"
+        sluiting_id:
+          type: integer
+          nullable: true
+          description: "ID van de bedrijfssluiting (alleen bij bron=bedrijfssluiting)"
 
     ProjectBegroting:
       type: object

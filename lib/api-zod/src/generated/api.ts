@@ -11547,7 +11547,8 @@ export const ListPlanningItemsResponseItem = zod.object({
   "notities": zod.string().nullish(),
   "opdracht_type": zod.string().nullish().describe('hoofdopdracht of meerwerk'),
   "locaties": zod.string().nullish().describe('JSON-array met bouwnummers\/locaties'),
-  "aangemaakt_op": zod.string().optional()
+  "aangemaakt_op": zod.string().optional(),
+  "op_gesloten_dag": zod.boolean().optional().describe('true als item aangemaakt is op een feestdag of bedrijfssluiting (na override)')
 })
 export const ListPlanningItemsResponse = zod.array(ListPlanningItemsResponseItem)
 
@@ -11574,7 +11575,8 @@ export const CreatePlanningItemBody = zod.object({
   "type": zod.string(),
   "notities": zod.string().nullish(),
   "opdracht_type": zod.string().nullish(),
-  "locaties": zod.string().nullish()
+  "locaties": zod.string().nullish(),
+  "override_bevestigd": zod.boolean().nullish().describe('true = gebruiker heeft bewust de override-code ingevoerd om op een gesloten dag in te plannen')
 })
 
 export const CreatePlanningItemResponse = zod.void()
@@ -11610,7 +11612,8 @@ export const GetPlanningItemResponse = zod.object({
   "notities": zod.string().nullish(),
   "opdracht_type": zod.string().nullish().describe('hoofdopdracht of meerwerk'),
   "locaties": zod.string().nullish().describe('JSON-array met bouwnummers\/locaties'),
-  "aangemaakt_op": zod.string().optional()
+  "aangemaakt_op": zod.string().optional(),
+  "op_gesloten_dag": zod.boolean().optional().describe('true als item aangemaakt is op een feestdag of bedrijfssluiting (na override)')
 })
 
 
@@ -11640,7 +11643,8 @@ export const UpdatePlanningItemBody = zod.object({
   "type": zod.string(),
   "notities": zod.string().nullish(),
   "opdracht_type": zod.string().nullish(),
-  "locaties": zod.string().nullish()
+  "locaties": zod.string().nullish(),
+  "override_bevestigd": zod.boolean().nullish().describe('true = gebruiker heeft bewust de override-code ingevoerd om op een gesloten dag in te plannen')
 })
 
 export const UpdatePlanningItemResponse = zod.object({
@@ -11666,7 +11670,8 @@ export const UpdatePlanningItemResponse = zod.object({
   "notities": zod.string().nullish(),
   "opdracht_type": zod.string().nullish().describe('hoofdopdracht of meerwerk'),
   "locaties": zod.string().nullish().describe('JSON-array met bouwnummers\/locaties'),
-  "aangemaakt_op": zod.string().optional()
+  "aangemaakt_op": zod.string().optional(),
+  "op_gesloten_dag": zod.boolean().optional().describe('true als item aangemaakt is op een feestdag of bedrijfssluiting (na override)')
 })
 
 
@@ -11853,6 +11858,95 @@ export const DeletePlanningAfwezigheidParams = zod.object({
 })
 
 export const DeletePlanningAfwezigheidResponse = zod.void()
+
+
+/**
+ * @summary Gesloten dagen ophalen (feestdagen + bedrijfssluitingen)
+ */
+export const ListPlanningGeslotenDagenQueryParams = zod.object({
+  "van": zod.coerce.string(),
+  "tot": zod.coerce.string()
+})
+
+export const ListPlanningGeslotenDagenResponseItem = zod.object({
+  "datum": zod.string().describe('YYYY-MM-DD'),
+  "naam": zod.string(),
+  "type": zod.string().nullish(),
+  "bron": zod.string().describe('feestdag | bedrijfssluiting'),
+  "sluiting_id": zod.number().nullish().describe('ID van de bedrijfssluiting (alleen bij bron=bedrijfssluiting)')
+})
+export const ListPlanningGeslotenDagenResponse = zod.array(ListPlanningGeslotenDagenResponseItem)
+
+
+/**
+ * @summary Bedrijfssluitingen ophalen
+ */
+export const ListBedrijfssluitingenQueryParams = zod.object({
+  "jaar": zod.coerce.number().optional()
+})
+
+export const ListBedrijfssluitingenResponseItem = zod.object({
+  "id": zod.number(),
+  "naam": zod.string(),
+  "datum_start": zod.string(),
+  "datum_eind": zod.string(),
+  "type": zod.string().describe('bedrijfssluiting | zomervakantie | kerstperiode | bouwvak | collectief_verlof | overig'),
+  "omschrijving": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string().optional()
+})
+export const ListBedrijfssluitingenResponse = zod.array(ListBedrijfssluitingenResponseItem)
+
+
+/**
+ * @summary Bedrijfssluiting aanmaken
+ */
+export const CreateBedrijfsSluitingBody = zod.object({
+  "naam": zod.string(),
+  "datum_start": zod.string(),
+  "datum_eind": zod.string(),
+  "type": zod.string().optional(),
+  "omschrijving": zod.string().nullish()
+})
+
+export const CreateBedrijfsSluitingResponse = zod.void()
+
+
+/**
+ * @summary Bedrijfssluiting bijwerken
+ */
+export const UpdateBedrijfsSluitingParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateBedrijfsSluitingBody = zod.object({
+  "naam": zod.string(),
+  "datum_start": zod.string(),
+  "datum_eind": zod.string(),
+  "type": zod.string().optional(),
+  "omschrijving": zod.string().nullish()
+})
+
+export const UpdateBedrijfsSluitingResponse = zod.object({
+  "id": zod.number(),
+  "naam": zod.string(),
+  "datum_start": zod.string(),
+  "datum_eind": zod.string(),
+  "type": zod.string().describe('bedrijfssluiting | zomervakantie | kerstperiode | bouwvak | collectief_verlof | overig'),
+  "omschrijving": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string().optional()
+})
+
+
+/**
+ * @summary Bedrijfssluiting verwijderen
+ */
+export const DeleteBedrijfsSluitingParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteBedrijfsSluitingResponse = zod.void()
 
 
 /**

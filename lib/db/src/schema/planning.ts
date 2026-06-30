@@ -29,6 +29,25 @@ export const planningItemsTable = pgTable("planning_items", {
   dagNotities: text("dag_notities"),
   notities: text("notities"),
   uitvoeringStatus: text("uitvoering_status").notNull().default("gepland"),
+  // Wordt true als het item is aangemaakt op een feestdag of bedrijfssluiting (na override).
+  // Dient als audit-trail en basis voor eventuele ADV-compensatie in HRM.
+  opGeslotenDag: boolean("op_gesloten_dag").notNull().default(false),
+  aangemaaktDoorId: integer("aangemaakt_door_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
+  aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
+  bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
+});
+
+// Bedrijfssluitingen — collectieve vrije perioden die de hele organisatie betreffen:
+// bouwvak, kerstperiode, zomervakantie, collectief verlof, etc.
+// Worden samengevoegd met feestdagenTable bij GET /modules/planning/gesloten-dagen.
+export const bedrijfssluitingenTable = pgTable("bedrijfssluitingen", {
+  id: serial("id").primaryKey(),
+  naam: text("naam").notNull(),
+  datumStart: text("datum_start").notNull(),
+  datumEind: text("datum_eind").notNull(),
+  // bedrijfssluiting | zomervakantie | kerstperiode | bouwvak | collectief_verlof | overig
+  type: text("type").notNull().default("bedrijfssluiting"),
+  omschrijving: text("omschrijving"),
   aangemaaktDoorId: integer("aangemaakt_door_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
   aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
   bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),

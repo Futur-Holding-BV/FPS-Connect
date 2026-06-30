@@ -11,6 +11,10 @@ import {
   useGetPlanningDiagnose,
   usePostPlanningReistijdSchatting,
   useListOpdrachten,
+  useListPlanningGeslotenDagen,
+  useListBedrijfssluitingen,
+  useCreateBedrijfsSluiting,
+  useDeleteBedrijfsSluiting,
 } from "@workspace/api-client-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -30,7 +34,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import {
   ChevronLeft, ChevronRight, Plus, AlertTriangle, Users,
   Briefcase, Clock, RefreshCw, X,
-  CalendarDays, ChevronDown,
+  CalendarDays, ChevronDown, Lock, Trash2,
 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -538,6 +542,22 @@ export default function ModulesPlanning() {
   const [filterWerkmaatschappij, setFilterWerkmaatschappij] = useState<string>("alle");
   const [filterAlleenUitvoerend, setFilterAlleenUitvoerend] = useState(true);
 
+  // ── Gesloten-dag override flow ────────────────────────────────────────────
+  const [overrideDialoog, setOverrideDialoog] = useState<{
+    datum: string; naam: string; bron: string;
+    medewerkerId?: number; gebouwId?: number;
+  } | null>(null);
+  const [overrideCode, setOverrideCode] = useState("");
+  const [overrideError, setOverrideError] = useState<string | null>(null);
+  const [overrideBevestigd, setOverrideBevestigd] = useState(false);
+
+  // ── Bedrijfssluitingen beheer dialoog ────────────────────────────────────
+  const [sluitingenDialoog, setSluitingenDialoog] = useState(false);
+  const [nieuweSluitingNaam, setNieuweSluitingNaam] = useState("");
+  const [nieuweSluitingVan, setNieuweSluitingVan] = useState("");
+  const [nieuweSluitingTot, setNieuweSluitingTot] = useState("");
+  const [nieuweSluitingType, setNieuweSluitingType] = useState("bedrijfssluiting");
+
   const queryClient = useQueryClient();
 
   // ── Datum bereik ─────────────────────────────────────────────────────────
@@ -585,6 +605,26 @@ export default function ModulesPlanning() {
     { query: { queryKey: ["opdrachten-actief"] } }
   );
 
+  // Gesloten dagen ophalen (feestdagen + bedrijfssluitingen) voor zichtbaar bereik
+  const { data: geslotenDagen = [] } = useListPlanningGeslotenDagen(
+    { van, tot },
+    { query: { queryKey: ["planning-gesloten-dagen", van, tot] } }
+  );
+
+  // Bedrijfssluitingen voor beheer
+  const { data: bedrijfssluitingen = [], refetch: refetchSluitingen } = useListBedrijfssluitingen(
+    {},
+    { query: { queryKey: ["bedrijfssluitingen"] } }
+  );
+
+  const geslotenDagenMap = useMemo(() => {
+    const m = new Map<string, { naam: string; bron: string; type: string | null }>();
+    for (const g of geslotenDagen as Array<{ datum: string; naam: string; bron: string; type: string | null }>) {
+      m.set(g.datum, { naam: g.naam, bron: g.bron, type: g.type });
+    }
+    return m;
+  }, [geslotenDagen]);
+
   const ingePlannenOpdrachten = useMemo(() =>
     actieveOpdrachten.filter((o) => {
       const r = (o as unknown) as Record<string, unknown>;
@@ -610,6 +650,12 @@ export default function ModulesPlanning() {
   const reistijdMut = usePostPlanningReistijdSchatting({
     mutation: { onSuccess: (data) => setReistijdSchatting(data) },
   });
+  const createSluitingMut = useCreateBedrijfsSluiting({
+    mutation: { onSuccess: () => { void refetchSluitingen(); queryClient.invalidateQueries({ queryKey: ["planning-gesloten-dagen"] }); } },
+  });
+  const deleteSluitingMut = useDeleteBedrijfsSluiting({
+    mutation: { onSuccess: () => { void refetchSluitingen(); queryClient.invalidateQueries({ queryKey: ["planning-gesloten-dagen"] }); } },
+  });
 
   // ── Navigatie ─────────────────────────────────────────────────────────────
 
@@ -632,6 +678,49 @@ export default function ModulesPlanning() {
     setBewerkenId(null);
     setOpslaan(false);
     setReistijdSchatting(null);
+    setOverrideBevestigd(false);
+  }
+
+  // Interceptor: als de dag gesloten is, toon override-dialoog; anders direct openNieuw
+  function handleDagKlik(medewerkerId?: number, datum?: string, gebouwId?: number) {
+    if (!datum) { openNieuw(medewerkerId, datum, gebouwId); return; }
+    const info = geslotenDagenMap.get(datum);
+    if (info) {
+      setOverrideDialoog({ datum, naam: info.naam, bron: info.bron, medewerkerId, gebouwId });
+      setOverrideCode("");
+      setOverrideError(null);
+    } else {
+      openNieuw(medewerkerId, datum, gebouwId);
+    }
+  }
+
+  function bevestigOverride() {
+    if (overrideCode !== "5604") {
+      setOverrideError("Onjuiste code. Vraag de hoofdbeheerder.");
+      return;
+    }
+    if (!overrideDialoog) return;
+    setOverrideBevestigd(true);
+    const { medewerkerId, datum, gebouwId } = overrideDialoog;
+    setOverrideDialoog(null);
+    setOverrideCode("");
+    setOverrideError(null);
+    openNieuw(medewerkerId, datum, gebouwId);
+  }
+
+  async function voegSluitingToe() {
+    if (!nieuweSluitingNaam || !nieuweSluitingVan || !nieuweSluitingTot) return;
+    await createSluitingMut.mutateAsync({
+      data: {
+        naam: nieuweSluitingNaam,
+        datum_start: nieuweSluitingVan,
+        datum_eind: nieuweSluitingTot,
+        type: nieuweSluitingType,
+      },
+    });
+    setNieuweSluitingNaam("");
+    setNieuweSluitingVan("");
+    setNieuweSluitingTot("");
   }
 
   function openNieuw(medewerkerId?: number, datum?: string, gebouwId?: number) {
@@ -735,6 +824,7 @@ export default function ModulesPlanning() {
       gebouw_id: dialoog.gebouw_id ?? undefined,
       project_naam: dialoog.project_naam || undefined,
       notities: dialoog.notities || undefined,
+      ...(overrideBevestigd ? { override_bevestigd: true } : {}),
     };
     try {
       if (bewerkenId) {
@@ -819,6 +909,7 @@ export default function ModulesPlanning() {
       .filter((it) => it.medewerker_id === med.id && it.datum_start <= dag && it.datum_eind >= dag)
       .sort((a, b) => (a.tijd_start ?? "00:00").localeCompare(b.tijd_start ?? "00:00"));
     const isAfwezig = afwezigheidDagen.has(`${med.id}_${dag}`);
+    const geslotenInfo = geslotenDagenMap.get(dag);
     return (
       <div className="space-y-0.5">
         {isAfwezig && dagItems.length === 0 && (
@@ -830,6 +921,7 @@ export default function ModulesPlanning() {
           const ddLabel = dagdeelLabel(item.tijd_start, item.tijd_eind);
           const dd = dagdeelUitTijd(item.tijd_start, item.tijd_eind);
           const projectLabel = item.gebouw_naam ?? item.project_naam ?? item.titel;
+          const isOpGeslotenDag = (item as unknown as Record<string, unknown>).op_gesloten_dag === true;
           return (
             <Tooltip key={item.id}>
               <TooltipTrigger asChild>
@@ -837,6 +929,9 @@ export default function ModulesPlanning() {
                   className={`w-full rounded border px-1 py-0.5 text-left text-[10px] transition-all hover:opacity-80 ${STATUS_KLEUR[item.status] ?? STATUS_KLEUR["concept"]}`}
                   onClick={(e) => { e.stopPropagation(); openBewerken(item); }}
                 >
+                  {isOpGeslotenDag && (
+                    <Lock className="h-2.5 w-2.5 inline mr-0.5 text-amber-600" />
+                  )}
                   {ddLabel && (
                     <span className={`inline-block rounded px-1 py-0 text-[9px] font-mono mr-0.5 border ${DAGDEEL_KLEUR[dd] ?? "bg-slate-50 text-slate-500 border-slate-200"}`}>
                       {ddLabel}
@@ -853,17 +948,26 @@ export default function ModulesPlanning() {
                   <p className="text-xs opacity-70">{item.project_naam}</p>
                 )}
                 <p className="text-xs">{item.uren} uur · {item.status}</p>
+                {isOpGeslotenDag && <p className="text-xs text-amber-600">Ingepland op gesloten dag (override)</p>}
                 {item.notities && <p className="text-xs opacity-70">{item.notities}</p>}
               </TooltipContent>
             </Tooltip>
           );
         })}
-        <button
-          className="w-full rounded p-0.5 text-[10px] text-muted-foreground opacity-0 hover:opacity-100 hover:bg-slate-200 hover:text-slate-700 transition-all"
-          onClick={(e) => { e.stopPropagation(); openNieuw(med.id, dag); }}
-        >
-          <Plus className="h-3 w-3 inline" />
-        </button>
+        {!geslotenInfo && (
+          <button
+            className="w-full rounded p-0.5 text-[10px] text-muted-foreground opacity-0 hover:opacity-100 hover:bg-slate-200 hover:text-slate-700 transition-all"
+            onClick={(e) => { e.stopPropagation(); handleDagKlik(med.id, dag); }}
+          >
+            <Plus className="h-3 w-3 inline" />
+          </button>
+        )}
+        {geslotenInfo && dagItems.length === 0 && (
+          <div className="rounded border border-slate-200 bg-slate-50 px-1.5 py-1 text-[10px] text-slate-500 flex items-center gap-1">
+            <Lock className="h-2.5 w-2.5 shrink-0" />
+            <span className="truncate">{geslotenInfo.naam}</span>
+          </div>
+        )}
       </div>
     );
   }
@@ -911,6 +1015,10 @@ export default function ModulesPlanning() {
                   Medewerkers
                 </Button>
               </Link>
+              <Button variant="outline" size="sm" onClick={() => setSluitingenDialoog(true)}>
+                <Lock className="h-3.5 w-3.5 mr-1.5" />
+                Gesloten dagen
+              </Button>
               <Button size="sm" onClick={() => openNieuw()}>
                 <Plus className="h-3.5 w-3.5 mr-1.5" />
                 Inplannen
@@ -1044,12 +1152,20 @@ export default function ModulesPlanning() {
                           weekDatums.map((dag, di) => (
                             <th
                               key={dag}
-                              className={`px-1 py-3 text-center text-xs font-medium uppercase tracking-wide ${dag === vandaagStr ? "bg-primary/5 text-primary" : "text-muted-foreground"} ${di === 0 && wi > 0 ? "border-l-2 border-l-slate-300" : "border-l border-l-slate-100"}`}
+                              className={`px-1 py-2 text-center text-xs font-medium uppercase tracking-wide ${dag === vandaagStr ? "bg-primary/5 text-primary" : geslotenDagenMap.has(dag) ? "bg-slate-100 text-slate-400" : "text-muted-foreground"} ${di === 0 && wi > 0 ? "border-l-2 border-l-slate-300" : "border-l border-l-slate-100"}`}
                             >
-                              <div>{WERKDAGEN_KORT[di]}</div>
-                              <div className={`text-sm font-semibold mt-0.5 ${dag === vandaagStr ? "text-primary" : "text-slate-800"}`}>
+                              <div className="flex items-center justify-center gap-0.5">
+                                {geslotenDagenMap.has(dag) && <Lock className="h-2.5 w-2.5 text-slate-400" />}
+                                <span>{WERKDAGEN_KORT[di]}</span>
+                              </div>
+                              <div className={`text-sm font-semibold mt-0.5 ${dag === vandaagStr ? "text-primary" : geslotenDagenMap.has(dag) ? "text-slate-400 line-through" : "text-slate-800"}`}>
                                 {new Date(dag + "T00:00:00").getDate()}
                               </div>
+                              {geslotenDagenMap.has(dag) && (
+                                <div className="text-[8px] font-normal normal-case text-slate-400 truncate max-w-[80px] leading-tight mt-0.5">
+                                  {geslotenDagenMap.get(dag)!.naam}
+                                </div>
+                              )}
                             </th>
                           ))
                         )}
@@ -1103,9 +1219,9 @@ export default function ModulesPlanning() {
                               weekDatums.map((dag, di) => (
                                 <td
                                   key={dag}
-                                  className={`px-1 py-1 align-top cursor-pointer hover:bg-slate-50 transition-colors ${dag === vandaagStr ? "bg-primary/5 hover:bg-primary/10" : ""} ${di === 0 && wi > 0 ? "border-l-2 border-l-slate-300" : "border-l border-l-slate-100"}`}
+                                  className={`px-1 py-1 align-top cursor-pointer hover:bg-slate-50 transition-colors ${dag === vandaagStr ? "bg-primary/5 hover:bg-primary/10" : ""} ${geslotenDagenMap.has(dag) ? "bg-slate-50/70" : ""} ${di === 0 && wi > 0 ? "border-l-2 border-l-slate-300" : "border-l border-l-slate-100"}`}
                                   style={{ minHeight: 64, verticalAlign: "top", minWidth: 90 }}
-                                  onClick={() => openNieuw(med.id, dag)}
+                                  onClick={() => handleDagKlik(med.id, dag)}
                                 >
                                   {renderDagCelInhoud(med, dag)}
                                 </td>
@@ -1538,6 +1654,147 @@ export default function ModulesPlanning() {
         )}
 
       </div>
+
+      {/* ── Override-dialoog: inplannen op gesloten dag ─────────────── */}
+      {overrideDialoog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-xl shadow-2xl p-6 w-[380px] space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="rounded-full bg-amber-100 p-2">
+                <Lock className="h-5 w-5 text-amber-600" />
+              </div>
+              <div>
+                <h2 className="text-sm font-semibold text-slate-800">Gesloten dag</h2>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {new Date(overrideDialoog.datum + "T00:00:00").toLocaleDateString("nl-NL", { weekday: "long", day: "numeric", month: "long" })}
+                </p>
+              </div>
+            </div>
+            <p className="text-sm text-slate-700">
+              <span className="font-medium">{overrideDialoog.naam}</span> is een gesloten dag
+              {overrideDialoog.bron === "feestdag" ? " (feestdag)" : " (bedrijfssluiting)"}.
+              Inplannen op deze dag is niet standaard toegestaan.
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Voer de override-code in om toch in te plannen. Alleen hoofdbeheerders kennen deze code.
+            </p>
+            <div className="space-y-1.5">
+              <Input
+                type="password"
+                placeholder="Override-code"
+                value={overrideCode}
+                onChange={(e) => { setOverrideCode(e.target.value); setOverrideError(null); }}
+                onKeyDown={(e) => e.key === "Enter" && bevestigOverride()}
+                autoFocus
+              />
+              {overrideError && <p className="text-xs text-destructive">{overrideError}</p>}
+            </div>
+            <div className="flex justify-end gap-2 pt-1">
+              <Button variant="outline" size="sm" onClick={() => { setOverrideDialoog(null); setOverrideCode(""); setOverrideError(null); }}>
+                Annuleren
+              </Button>
+              <Button size="sm" onClick={bevestigOverride}>
+                Doorgaan
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Bedrijfssluitingen beheer-dialoog ───────────────────────── */}
+      {sluitingenDialoog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-xl shadow-2xl w-[520px] max-h-[80vh] flex flex-col">
+            <div className="flex items-center justify-between px-5 py-4 border-b">
+              <h2 className="text-sm font-semibold">Gesloten dagen beheren</h2>
+              <button onClick={() => setSluitingenDialoog(false)} className="rounded-md p-1.5 hover:bg-slate-100">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-5 space-y-5">
+              {/* Nieuwe sluiting toevoegen */}
+              <div className="space-y-3">
+                <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Nieuwe bedrijfssluiting toevoegen</h3>
+                <div className="space-y-2">
+                  <Input
+                    placeholder="Naam (bijv. Kerstvakantie, Bouwvak)"
+                    value={nieuweSluitingNaam}
+                    onChange={(e) => setNieuweSluitingNaam(e.target.value)}
+                  />
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-1">
+                      <Label className="text-xs">Van</Label>
+                      <Input type="date" value={nieuweSluitingVan} onChange={(e) => setNieuweSluitingVan(e.target.value)} />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Tot en met</Label>
+                      <Input type="date" value={nieuweSluitingTot} onChange={(e) => setNieuweSluitingTot(e.target.value)} />
+                    </div>
+                  </div>
+                  <Select value={nieuweSluitingType} onValueChange={setNieuweSluitingType}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="bedrijfssluiting">Bedrijfssluiting</SelectItem>
+                      <SelectItem value="bouwvak">Bouwvak</SelectItem>
+                      <SelectItem value="vakantie">Vakantie</SelectItem>
+                      <SelectItem value="overig">Overig</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    size="sm"
+                    onClick={voegSluitingToe}
+                    disabled={!nieuweSluitingNaam || !nieuweSluitingVan || !nieuweSluitingTot || createSluitingMut.isPending}
+                  >
+                    <Plus className="h-3.5 w-3.5 mr-1.5" />
+                    Toevoegen
+                  </Button>
+                </div>
+              </div>
+
+              {/* Bestaande sluitingen */}
+              <div className="space-y-2">
+                <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Bestaande bedrijfssluitingen ({(bedrijfssluitingen as Array<{ id: number; naam: string; datum_start: string; datum_eind: string; type: string | null }>).length})
+                </h3>
+                {(bedrijfssluitingen as Array<{ id: number; naam: string; datum_start: string; datum_eind: string; type: string | null }>).length === 0 ? (
+                  <p className="text-sm text-muted-foreground">Geen bedrijfssluitingen geregistreerd.</p>
+                ) : (
+                  <div className="divide-y rounded border">
+                    {(bedrijfssluitingen as Array<{ id: number; naam: string; datum_start: string; datum_eind: string; type: string | null }>).map((s) => (
+                      <div key={s.id} className="flex items-center justify-between px-3 py-2.5 hover:bg-slate-50">
+                        <div>
+                          <p className="text-sm font-medium">{s.naam}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {new Date(s.datum_start + "T00:00:00").toLocaleDateString("nl-NL", { day: "numeric", month: "short", year: "numeric" })}
+                            {" — "}
+                            {new Date(s.datum_eind + "T00:00:00").toLocaleDateString("nl-NL", { day: "numeric", month: "short", year: "numeric" })}
+                            {s.type && <span className="ml-2 opacity-60">({s.type})</span>}
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => deleteSluitingMut.mutate({ id: s.id })}
+                          className="rounded p-1 hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+                          title="Verwijderen"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <p className="text-xs text-muted-foreground bg-slate-50 rounded p-3">
+                Feestdagen worden automatisch bepaald via de feestdagenkalender en hoeven hier niet ingevoerd te worden.
+                Override-code voor het inplannen op een gesloten dag: vraag dit bij de systeembeheerder op.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
     </TooltipProvider>
   );
 }
