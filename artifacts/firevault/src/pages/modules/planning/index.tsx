@@ -835,7 +835,7 @@ export default function ModulesPlanning() {
               <TooltipTrigger asChild>
                 <button
                   className={`w-full rounded border px-1 py-0.5 text-left text-[10px] transition-all hover:opacity-80 ${STATUS_KLEUR[item.status] ?? STATUS_KLEUR["concept"]}`}
-                  onClick={() => openBewerken(item)}
+                  onClick={(e) => { e.stopPropagation(); openBewerken(item); }}
                 >
                   {ddLabel && (
                     <span className={`inline-block rounded px-1 py-0 text-[9px] font-mono mr-0.5 border ${DAGDEEL_KLEUR[dd] ?? "bg-slate-50 text-slate-500 border-slate-200"}`}>
@@ -860,7 +860,7 @@ export default function ModulesPlanning() {
         })}
         <button
           className="w-full rounded p-0.5 text-[10px] text-muted-foreground opacity-0 hover:opacity-100 hover:bg-slate-200 hover:text-slate-700 transition-all"
-          onClick={() => openNieuw(med.id, dag)}
+          onClick={(e) => { e.stopPropagation(); openNieuw(med.id, dag); }}
         >
           <Plus className="h-3 w-3 inline" />
         </button>
@@ -1103,8 +1103,9 @@ export default function ModulesPlanning() {
                               weekDatums.map((dag, di) => (
                                 <td
                                   key={dag}
-                                  className={`px-1 py-1 align-top ${dag === vandaagStr ? "bg-primary/5" : ""} ${di === 0 && wi > 0 ? "border-l-2 border-l-slate-300" : "border-l border-l-slate-100"}`}
+                                  className={`px-1 py-1 align-top cursor-pointer hover:bg-slate-50 transition-colors ${dag === vandaagStr ? "bg-primary/5 hover:bg-primary/10" : ""} ${di === 0 && wi > 0 ? "border-l-2 border-l-slate-300" : "border-l border-l-slate-100"}`}
                                   style={{ minHeight: 64, verticalAlign: "top", minWidth: 90 }}
+                                  onClick={() => openNieuw(med.id, dag)}
                                 >
                                   {renderDagCelInhoud(med, dag)}
                                 </td>
