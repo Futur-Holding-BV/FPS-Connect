@@ -20,7 +20,7 @@ export function NieuwsTicker() {
   const trackRef = useRef<HTMLDivElement>(null);
 
   const heeftNieuws = !isLoading && nieuws.length > 0;
-  const duur = Math.max(30, Math.round(nieuws.length * 5));
+  const duur = Math.max(15, Math.round(nieuws.length * 2.5));
 
   return (
     <>
